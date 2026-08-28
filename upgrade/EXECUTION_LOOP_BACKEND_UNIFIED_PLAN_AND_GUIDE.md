@@ -1324,8 +1324,8 @@ Append rows here. Do not create another active request file.
 | BR-EX-57 | 2026-08-26 | Live Full Operations `/deployments/live/{id}` | Hi-fi 1f masthead/meta/lifecycle strip, 5-cell KPI, broker & reconciliation truth (incl. mismatch object), open exposure table, protective ladder + last operation, 30d contribution bars are not in v1 | Additive fields on `live-full.v1` → v1.1 (BR-EX-57) | as v1 + DERIVED contrib.v1 | read-only (actions unchanged, ADMIN step-up) | 1 deployment; positions ≤200; bars 30 | existing contract; decision ids | missing → v1 rendering | fixture update; lifecycle decision-id consistency; frontend `liveFull.test` | Codex | N09 · N10 | `RECEIVED` | `LiveFullOperationsScreen` — `live.smoke.ts.full` deleted on delivery | none | hi-fi "Live Full Operations (WF 1f)"; appendix A.57 |
 | BR-EX-58 | 2026-08-26 | Stage workbenches (Paper/Sandbox/Canary/Live) — Guard rail | Blocker codes arrive raw from 3–4 sources; no human label, owner, since, resolution link or ordering — the rail reads as a log dump | Facts (read): `blocker-catalog.v1` (code → label, severity, owner, resolves_via href template, doc, rank) + stage contracts carry `blockers[{code, since, source, ref}]` instead of bare `blockerCodes[]` | PORTAL_CONTROL (catalog, Portal-owned) · each source keeps its codes | read-only · low | ≤200 codes; ETag | any viewer | code missing from catalog → raw code shown, never invented | none | fixture `execution-blocker-catalog.valid.json`; all stage-fixture codes ∈ catalog test | Codex | N09 | `RECEIVED` | `ExecutionContextRail` blockers | none | appendix L.7 |
 | BR-EX-59 | 2026-08-26 | Canary Control Room `/deployments/live/{id}/canary` | Hi-fi 1e masthead (trial day, exit-review countdown, GUARDED/DEGRADED), lineage + lifecycle strips, 5-cell KPI, live-vs-paper-vs-backtest lines on one digest, envelope bars with at-cap, positions with ACK latency, incidents/recon, 14-day trial timeline with recorded checkpoints, exit-readiness gates (server mirror), marginal contribution, promotion decision options are not in v1 | Additive fields on `canary-control-room.v1` → v1.1 (BR-EX-59) | PORTAL_CONTROL (trial, gates, checkpoints, decision) · DERIVED (equity_projection.v1, marginal.v1) · TRADING_SYSTEM (positions, orders, ack) · BROKER (sync) | read-only + existing governed actions · high: "elapsed time alone never promotes" — gates are server-enforced, screen mirrors | 1 deployment; 3 series ≤400 pts; timeline ≤30 days | existing contract; approvals/conditions; exit reviews; paper twin dep_94; backtest run | missing → v1 rendering; sync STALE → readiness DEGRADED + scale blocked | fixture update; gate-mirror + timeline consistency tests; frontend `canary.test` | Codex | N09 · N10 | `RECEIVED` | `CanaryControlRoomScreen` — smoke `canary.smoke.ts` deleted on delivery | none | hi-fi "Canary Control Room (WF 1e)"; appendix A.59 |
-| BR-EX-60 | 2026-08-28 | Sandbox `/deployments/sandbox` (entry screen WF 1d) | No sandbox overview: operator cannot see what is in certification, how far each deployment got, which step is holding it, whether a certification has been stalled for weeks, testnet order-journal counts, venue connectivity baselines, or what has been certified in the last 90d | Facts + aggregates (read): `sandbox-overview.v1` — summary, KPI strip (in certification, halted by finding vs by operator, open findings with worst severity, test-fund equity flagged `enters_portfolio_nav:false`, broker sync age vs policy), rows (alpha·deployment, venue·account, portfolio → target + pending approval, seven `certification.steps[]` with `passed`/`current_step`, runtime_state + halt_reason, `in_stage_days` + `stalled`, next_step with action_key + blocker_codes, lineage r1/r2/paper_exit, note), 7d order journal per deployment (orders/filled/rejected/expired/success_pct exact) + normalized executed order types with `required`/`certified` + reject reasons, 24h connectivity (ACK/fill p50-p95, ws reconnects, rate-limit hits, baseline vs SLO rule), recently certified 90d with promotion target | PORTAL_PROJECTION over `strategy_deployments(mode='sandbox')` ⋈ `accounts` ⋈ `venue_accounts` ⋈ `portfolio_allocations`; certification state from the PORTAL certification machine (overview re-reads, never recomputes); `orders`/`fills`/`domain_events` TRADING_SYSTEM; `broker_account_sync_current_state` BROKER; DERIVED success_pct/latency | read-only · medium: test-fund equity must never enter portfolio NAV, and a stalled certification must surface rather than expire silently | ≤50 deployments in certification; journal window 7d exact counts; connectivity 24h; as_of per second | registry feature `SANDBOX_TRADING` (screen still `data_mode: NONE` — codex flips it on delivery); BR-EX-43 alerts summary | source unreadable → `panel_state: "unavailable"` per branch, never an empty array read as clean; `runtime_state` absent stays null (screen renders "runtime not stated") | fixture `execution-sandbox-overview.valid.json`; tests: `passed == count(PASS)`, `current_step` = first non-PASS, `success_pct == filled/orders` exact, `test_fund_equity.enters_portfolio_nav == false` and absent from every portfolio NAV, `stalled ⇒ meta.stalled_rule != null`; frontend `sandbox.test` | Codex | N09 (Portal projection) · N10 (derivations) · N11 (order/fill adapters) | `RECEIVED` | `SandboxOverview` — smoke `sandbox.smoke.ts` (overview half) deleted on delivery | none until approved | hi-fi "Sandbox Overview (entry for WF 1d)"; appendix O.2 |
-| BR-EX-61 | 2026-08-28 | Sandbox Certification `/deployments/sandbox/{id}` (WF 1d) | v1 publishes steps, findings, source panels, promotion plans and timeline, but not what the hi-fi workbench decides on: identity + credential status, broker REST freshness vs policy, the internal/broker/difference triptych as an authoritative diff, findings rows with local/broker values and the action each one takes, order-type certification (including the types the alpha requires in production but has never exercised), execution quality with INSUFFICIENT_DATA, the bounded smoke plan, the cleanup checklist, the four actions with their blockers, and the peers in certification | Additive fields on `sandbox-certification.v1` → v1.1: `identity`, `broker_freshness`, `reconciliation_view{internal,broker,difference}` (diff.v1, server-computed), `findings_rows[]`, `order_type_certification{rows[],blocking,blocking_rule}`, `execution_quality` (ack/fill p50-p95, slippage state, reject rate), `smoke_plan` (bounded: qty, capital cap, timebox, on_expiry, approved_by, state), `cleanup{rows[],exit_rule}`, `actions[]{key,label,enabled,risk_tier,blocker_codes}`, `peers[]`; plus command routes `sandbox.broker_sync` / `sandbox.reconcile_dry_run` / `sandbox.smoke_open` / `sandbox.request_exit_review` as plan → apply → verify | PORTAL_CONTROL (certification machine, smoke plan, command policy) · BROKER (`broker_account_sync_current_state`) · TRADING_SYSTEM (`orders`, `fills`, `positions_v2`, `order_pending_exposure`, `domain_events`) · DERIVED (diff.v1, execution_quality.v1) | read + four governed mutations (ADMIN step-up) · high: certification is the gate before real capital — `enabled:true` must be a deliberate decision, fail-closed by default | 1 deployment/screen; findings ≤200 keyset; peers ≤20 | existing `sandbox-certification.v1` (additive, no field retyped); BR-EX-58 blocker catalog; BR-EX-41 stage telemetry | any missing branch → v1 rendering; broker STALE / CRITICAL finding / cleanup pending ⇒ smoke + exit actions disabled with codes; slippage under min samples ⇒ INSUFFICIENT_DATA, never 0 | fixtures `execution-sandbox-certification.dep_77.v1_1.valid.json` + `.dep_91.v1_1.valid.json` (CRITICAL branch); tests: CRITICAL OPEN ⇒ recon step FAIL + smoke BLOCKED + `actions[smoke_open].enabled==false` with non-empty codes; `slippage.state=='INSUFFICIENT_DATA'` carries no `value`; a `required:true` order type not CERTIFIED ⇒ `progress.eligible==false`; v1 suite re-runs unchanged; frontend `sandbox.test` | Codex | N09 · N10 · N11 · N13 (activation for the four actions) | `RECEIVED` | `SandboxCertificationScreen` — smoke `sandbox.smoke.ts` (certification half) deleted on delivery | four `sandbox.*` actions are activation-gated (ADMIN step-up, plan → apply → verify) | hi-fi "Sandbox Certification (WF 1d)"; appendix O.3 · O.5 |
+| BR-EX-60 | 2026-08-28 | Sandbox `/deployments/sandbox` (entry screen WF 1d) | No sandbox overview: operator cannot see what is in certification, how far each deployment got, which step is holding it, whether a certification has been stalled for weeks, testnet order-journal counts, venue connectivity baselines, or what has been certified in the last 90d | Facts + aggregates (read): `sandbox-overview.v1` — summary, KPI strip (in certification, halted by finding vs by operator, open findings with worst severity, test-fund equity flagged `enters_portfolio_nav:false`, broker sync age vs policy), rows (alpha·deployment, venue·account, portfolio → target + pending approval, seven `certification.steps[]` with `passed`/`current_step`, runtime_state + halt_reason, `in_stage_days` + `stalled`, next_step with action_key + blocker_codes, lineage r1/r2/paper_exit, note), 7d order journal per deployment (orders/filled/rejected/expired/success_pct exact) + normalized executed order types with `required`/`certified` + reject reasons, 24h connectivity (ACK/fill p50-p95, ws reconnects, rate-limit hits, baseline vs SLO rule), recently certified 90d with promotion target | PORTAL_PROJECTION over `strategy_deployments(mode='sandbox')` ⋈ `accounts` ⋈ `venue_accounts` ⋈ `portfolio_allocations`; certification state from the PORTAL certification machine (overview re-reads, never recomputes); `orders`/`fills`/`domain_events` TRADING_SYSTEM; `broker_account_sync_current_state` BROKER; DERIVED success_pct/latency | read-only · medium: test-fund equity must never enter portfolio NAV, and a stalled certification must surface rather than expire silently | ≤50 deployments in certification; journal window 7d exact counts; connectivity 24h; as_of per second | registry feature `SANDBOX_TRADING` (screen still `data_mode: NONE` — codex flips it on delivery); BR-EX-43 alerts summary | source unreadable → `panel_state: "unavailable"` per branch, never an empty array read as clean; `runtime_state` absent stays null (screen renders "runtime not stated") | fixture `execution-sandbox-overview.valid.json`; tests: `passed == count(PASS)`, `current_step` = first non-PASS, `success_pct == filled/orders` exact, `test_fund_equity.enters_portfolio_nav == false` and absent from every portfolio NAV, `stalled ⇒ meta.stalled_rule != null`; frontend `sandbox.test` | Codex | N09 (Portal projection) · N10 (derivations) · N11 (order/fill adapters) | `RECEIVED` | `SandboxOverview` — smoke `sandbox.smoke.ts` (overview half) deleted on delivery | none until approved | hi-fi "Sandbox Overview (entry for WF 1d)"; **full spec §7.4.2**; UI rationale appendix O.2 |
+| BR-EX-61 | 2026-08-28 | Sandbox Certification `/deployments/sandbox/{id}` (WF 1d) | v1 publishes steps, findings, source panels, promotion plans and timeline, but not what the hi-fi workbench decides on: identity + credential status, broker REST freshness vs policy, the internal/broker/difference triptych as an authoritative diff, findings rows with local/broker values and the action each one takes, order-type certification (including the types the alpha requires in production but has never exercised), execution quality with INSUFFICIENT_DATA, the bounded smoke plan, the cleanup checklist, the four actions with their blockers, and the peers in certification | Additive fields on `sandbox-certification.v1` → v1.1: `identity`, `broker_freshness`, `reconciliation_view{internal,broker,difference}` (diff.v1, server-computed), `findings_rows[]`, `order_type_certification{rows[],blocking,blocking_rule}`, `execution_quality` (ack/fill p50-p95, slippage state, reject rate), `smoke_plan` (bounded: qty, capital cap, timebox, on_expiry, approved_by, state), `cleanup{rows[],exit_rule}`, `actions[]{key,label,enabled,risk_tier,blocker_codes}`, `peers[]`; plus command routes `sandbox.broker_sync` / `sandbox.reconcile_dry_run` / `sandbox.smoke_open` / `sandbox.request_exit_review` as plan → apply → verify | PORTAL_CONTROL (certification machine, smoke plan, command policy) · BROKER (`broker_account_sync_current_state`) · TRADING_SYSTEM (`orders`, `fills`, `positions_v2`, `order_pending_exposure`, `domain_events`) · DERIVED (diff.v1, execution_quality.v1) | read + four governed mutations (ADMIN step-up) · high: certification is the gate before real capital — `enabled:true` must be a deliberate decision, fail-closed by default | 1 deployment/screen; findings ≤200 keyset; peers ≤20 | existing `sandbox-certification.v1` (additive, no field retyped); BR-EX-58 blocker catalog; BR-EX-41 stage telemetry | any missing branch → v1 rendering; broker STALE / CRITICAL finding / cleanup pending ⇒ smoke + exit actions disabled with codes; slippage under min samples ⇒ INSUFFICIENT_DATA, never 0 | fixtures `execution-sandbox-certification.dep_77.v1_1.valid.json` + `.dep_91.v1_1.valid.json` (CRITICAL branch); tests: CRITICAL OPEN ⇒ recon step FAIL + smoke BLOCKED + `actions[smoke_open].enabled==false` with non-empty codes; `slippage.state=='INSUFFICIENT_DATA'` carries no `value`; a `required:true` order type not CERTIFIED ⇒ `progress.eligible==false`; v1 suite re-runs unchanged; frontend `sandbox.test` | Codex | N09 · N10 · N11 · N13 (activation for the four actions) | `RECEIVED` | `SandboxCertificationScreen` — smoke `sandbox.smoke.ts` (certification half) deleted on delivery | four `sandbox.*` actions are activation-gated (ADMIN step-up, plan → apply → verify) | hi-fi "Sandbox Certification (WF 1d)"; **full spec §7.4.3**, decisions §7.4.6; UI rationale appendix O.3 · O.5 |
 | _next: BR-EX-60_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
@@ -1343,6 +1343,325 @@ A request is returned as `NEEDS_CLARIFICATION` if it omits any of:
 A request is `REJECTED` when it asks Portal to infer financial truth, bypass typed source contracts,
 use generic DB/Redis/CLI access, expose secrets, collapse safety states or enable a command through a
 read capability.
+
+---
+
+### 7.4 BR-EX-60 / BR-EX-61 — full specification (Sandbox Overview + Sandbox Certification v1.1)
+
+Written into this file rather than left in a frontend appendix: §7 says a request becomes
+schedulable only when it lives here. The frontend hi-fi document carries the same content with
+screenshots and the per-field UI rationale; if the two ever disagree, **this section wins**.
+
+Frontend state at 2026-08-28: both screens are built and running on
+`apps/portal/frontend/src/execution/sandbox.smoke.ts`, which prints a smoke warning on every page
+and carries the deletion contract at its file head. Delivering these two rows retires that module.
+
+#### 7.4.1 Domain — what a sandbox certification is
+
+Sandbox is not "paper with more realism". It is the **venue-integration certification gate**: proof
+that this exact `(alpha artifact, venue, credential, account binding)` can place a real testnet
+order, fill it, cancel it, and that internal state matches broker state — before any real capital is
+allocated. Seven ordered steps, and the **server owns the order**; the browser never computes which
+step is current.
+
+| # | `step_key` | Meaning | Source of truth |
+|---|---|---|---|
+| 1 | `account` | virtual account exists for `(strategy_id, account_id, mode='sandbox', venue)` | `accounts` ⋈ `strategy_deployments` |
+| 2 | `binding` | binding to the physical account is verified | `venue_accounts(external_account_ref)` + `venue_credentials(status)` |
+| 3 | `broker_sync` | REST/ws snapshot is fresh against the venue policy | `broker_account_sync_current_state(synced_at, status)` |
+| 4 | `recon_dry_run` | dry-run reconcile is clean — **fail-closed** on any OPEN CRITICAL finding | `reconciliation_findings(mode='sandbox', status='OPEN')` |
+| 5 | `smoke` | a bounded smoke plan is approved and applied | Portal smoke plan `sp_*` + `operator_operations` |
+| 6 | `cleanup` | no open order, no residual position, reservations released, final sync done | `orders`, `positions_v2`, `order_pending_exposure` |
+| 7 | `exit_review` | Sandbox Exit Review `SX-*` requested and approved | Portal exit reviews |
+
+Three domain laws the UI must never invent, so the server must carry them explicitly:
+
+1. **Test funds never enter portfolio NAV.** Testnet equity is certification evidence, not capital.
+   It is published on its own branch with `enters_portfolio_nav: false`, and it must not appear in
+   any portfolio NAV total.
+2. **A stalled certification never expires silently.** A large `in_stage_days` (36d in the current
+   cast) is a signal, not a rendering bug. The server marks `stalled` against its own threshold and
+   publishes that threshold; the browser has no timeout of its own.
+3. **Certification requires every order type the alpha uses in production.** An alpha whose exit path
+   uses `REDUCE_ONLY` and has never sent one on testnet is not certified, however well its other
+   orders filled.
+
+#### 7.4.2 BR-EX-60 — `GET /api/v1/execution/sandbox/overview` → `sandbox-overview.v1`
+
+```json
+{
+  "as_of": "2026-08-28T04:54:32Z",
+  "meta": { "stalled_rule": "no VERIFIED operator_operation in 7d and in stage > 14d" },
+  "summary": { "in_certification": 2, "venues": 2, "test_funds_only": true },
+  "kpis": {
+    "in_certification": { "value": 2, "note": "certification = 7-step gate to canary" },
+    "halted": { "value": 2, "by_finding": 1, "by_operator": 1 },
+    "open_findings": { "value": 1, "worst_severity": "CRITICAL", "ref": { "kind": "deployment", "id": "dep_91" } },
+    "test_fund_equity": { "value": "20000", "ccy": "USDT", "enters_portfolio_nav": false },
+    "broker_sync": { "age_seconds": 10, "policy_seconds": 60, "state": "OK", "detail": "OKX rest · BIN-T1 ws OK" }
+  },
+  "rows": [
+    {
+      "deployment_id": "dep_77", "alpha": "Carry v3.2", "alpha_version_id": "av_2103",
+      "venue": "OKX_TESTNET", "account_id": "acct-sbx-carry-okx",
+      "portfolio_id": "PF-CRYPTO", "target_portfolio_id": "PF-MAIN",
+      "target_approval": { "id": "AP-352", "status": "PENDING" },
+      "certification": { "passed": 5, "total": 7, "current_step": "smoke", "steps": [
+        { "key": "account", "state": "PASS" }, { "key": "binding", "state": "PASS" },
+        { "key": "broker_sync", "state": "PASS" }, { "key": "recon_dry_run", "state": "PASS" },
+        { "key": "smoke", "state": "PENDING" }, { "key": "cleanup", "state": "NOT_STARTED" },
+        { "key": "exit_review", "state": "NOT_STARTED" } ] },
+      "runtime_state": "HALTED", "halt_reason": "OPERATOR",
+      "in_stage_days": 9, "stalled": false,
+      "next_step": { "label": "run smoke activation", "action_key": "sandbox.smoke_open", "enabled": false, "blocker_codes": [] },
+      "lineage": { "r1_id": "AP-101", "r2_id": "AP-207", "paper_exit_id": "PX-29" },
+      "note": "smoke plan approved, awaiting apply · cleanup + exit review remain"
+    },
+    {
+      "deployment_id": "dep_91", "alpha": "Grid v2.1", "alpha_version_id": "av_2041",
+      "venue": "OKX_TESTNET", "account_id": "acct-sbx-grid-okx",
+      "portfolio_id": "PF-CRYPTO", "target_portfolio_id": null, "target_approval": null,
+      "certification": { "passed": 3, "total": 7, "current_step": "recon_dry_run", "steps": [
+        { "key": "account", "state": "PASS" }, { "key": "binding", "state": "PASS" },
+        { "key": "broker_sync", "state": "PASS" }, { "key": "recon_dry_run", "state": "FAIL" },
+        { "key": "smoke", "state": "BLOCKED" }, { "key": "cleanup", "state": "NOT_STARTED" },
+        { "key": "exit_review", "state": "NOT_STARTED" } ] },
+      "runtime_state": "HALTED", "halt_reason": "FINDING",
+      "in_stage_days": 36, "stalled": true,
+      "next_step": { "label": "resolve finding → re-run dry-run", "action_key": "sandbox.reconcile_dry_run", "enabled": false, "blocker_codes": ["CRITICAL_FINDING_OPEN"] },
+      "lineage": { "r1_id": "AP-118", "r2_id": "AP-152", "paper_exit_id": "PX-22" },
+      "note": "CRITICAL: position mismatch BTC-USDT-SWAP local 0.0000 vs broker 0.0300 · certification fail-closed at step 4"
+    }
+  ],
+  "order_journal": {
+    "window_days": 7, "exact": true,
+    "rows": [
+      { "deployment_id": "dep_77", "alpha": "Carry", "orders": 151, "filled": 142, "rejected": 6, "expired": 3, "success_pct": "0.940" },
+      { "deployment_id": "dep_91", "alpha": "Grid", "orders": 96, "filled": 81, "rejected": 14, "expired": 1, "success_pct": "0.844" }
+    ],
+    "order_types": [
+      { "type": "LIMIT", "count": 148, "certified": true }, { "type": "MARKET", "count": 42, "certified": true },
+      { "type": "STOP_MARKET", "count": 21, "certified": true }, { "type": "POST_ONLY", "count": 30, "certified": true },
+      { "type": "OCO", "count": 4, "certified": false, "required_min": 10 },
+      { "type": "REDUCE_ONLY", "count": 0, "certified": false, "required": true }
+    ],
+    "reject_reasons": [ { "code": "POST_ONLY_CROSS", "count": 11 }, { "code": "MIN_NOTIONAL", "count": 5 }, { "code": "RATE_LIMIT", "count": 4 } ]
+  },
+  "connectivity": {
+    "window_hours": 24,
+    "ack_latency_ms": { "p50": 40, "p95": 125 }, "fill_latency_ms": { "p50": 123, "p95": 321 },
+    "ws_reconnects": 3, "rate_limit_hits": 4,
+    "baseline_note": "testnet sets the baseline expectation, not the production SLO",
+    "finding_rule": "sustained p95 > 2x baseline raises a finding"
+  },
+  "recently_certified": [
+    { "at": "2026-07-30", "alpha": "Grid v2.1", "venue": "BINANCE", "verdict": "certified", "passed": 7, "total": 7, "exit_review_id": "SX-14", "promoted_to": { "stage": "CANARY", "deployment_id": "dep_88" } },
+    { "at": "2026-07-18", "alpha": "MM v1.1", "venue": "BINANCE", "verdict": "certified", "passed": 7, "total": 7, "exit_review_id": "SX-11", "promoted_to": { "stage": "CANARY", "deployment_id": "dep_63", "day": 2, "total_days": 14 } }
+  ]
+}
+```
+
+**Source mapping (`DB_ALPHA_PORTFOLIO_ACCOUNT_SCHEMA_GUIDE.md`, 88 tables):**
+
+| field | table · column |
+|---|---|
+| `rows[]` | `strategy_deployments` WHERE `mode='sandbox'` AND stage `SANDBOX_VALIDATION` — the list derives from the registry; a new sandbox deployment must appear with zero code |
+| `rows[].alpha`, `alpha_version_id` | `strategies` ⋈ `alpha_ledger(artifact_digest)` |
+| `rows[].venue`, `account_id` | `accounts(account_id, mode, venue)` ⋈ `venue_accounts(external_account_ref)` |
+| `rows[].portfolio_id`, `target_portfolio_id` | `portfolio_allocations` (current) + Portal approval `AP-352` (proposed target) |
+| `rows[].certification.steps[]` | the Portal certification state machine already behind `sandbox-certification.v1` — the overview **re-reads** it, it does not recompute |
+| `rows[].runtime_state`, `halt_reason` | `strategy_deployments(runtime_state)` + `operator_operations(operation_type='deployment.halt', reason)`; `FINDING` when a CRITICAL `reconciliation_findings` row is OPEN |
+| `rows[].in_stage_days`, `stalled` | now − `strategy_deployments(stage_entered_at)`; threshold is the server's and is published in `meta.stalled_rule` |
+| `kpis.test_fund_equity` | Σ `account_equity_snapshots(equity)` for `mode='sandbox'` accounts — the `enters_portfolio_nav:false` flag is mandatory |
+| `kpis.broker_sync` | `broker_account_sync_current_state(synced_at, status)` vs `account_policies`/venue policy |
+| `order_journal.rows[]` | `orders` WHERE `mode='sandbox'` AND `submitted_at >= now()-7d`, grouped by `strategy_id`; `filled` = `status='FILLED'`; `rejected` = `status IN ('REJECTED','RISK_REJECTED')`; `expired` = `status='EXPIRED'` |
+| `order_journal.order_types[]` | `orders(order_type, post_only, reduce_only)` — `POST_ONLY`/`REDUCE_ONLY` are **flags, not `order_type` values**, so the server must publish one normalised "types exercised" list; `required` comes from the alpha's production manifest |
+| `order_journal.reject_reasons[]` | `orders(error_code)` + `raw_response` |
+| `connectivity.ack_latency_ms` | `domain_events` ACK − SUBMIT per `client_order_id` (gateway timestamps) |
+| `connectivity.fill_latency_ms` | first `fills(trade_time)` − `orders(submitted_at)` |
+| `connectivity.ws_reconnects`, `rate_limit_hits` | `service_heartbeats` / `venue_rate_limits`, 24h |
+| `recently_certified[]` | Portal exit reviews `SX-*` with a CERTIFIED verdict in 90d ⋈ `strategy_deployments` after promotion |
+
+**Server rules (the browser is not allowed to derive any of these):**
+
+1. `certification.passed == count(steps[].state == 'PASS')`, and `current_step` is the first
+   non-PASS step. If those two disagree it is a server bug, not something the frontend softens.
+2. `runtime_state` is a published value or `null`. An absence is **not** translated into `HALTED`;
+   the screen renders `runtime not stated`.
+3. `success_pct` is an exact decimal (`filled / orders`), not rounded at the server and rounded again
+   at the client.
+4. `order_types[].certified` is a server decision (enough samples, no unexplained rejects), never
+   `count > 0`.
+5. `stalled` must be accompanied by the threshold used, in `meta.stalled_rule`.
+6. Empty is not clean: when a source cannot be read, that branch is `panel_state: "unavailable"`
+   rather than an empty array.
+
+#### 7.4.3 BR-EX-61 — `sandbox-certification.v1` → v1.1 (additive) + `sandbox.*` commands
+
+Ten additive branches; no existing field is renamed or retyped.
+
+```json
+{
+  "identity": { "alpha": "Carry v3.2", "venue": "OKX TESTNET", "credential": { "id": "OKX-01", "status": "VALID" }, "external_account_ref": "okx_main_01" },
+  "broker_freshness": { "source": "REST", "age_seconds": 40, "policy_seconds": 60, "state": "FRESH", "as_of": "2026-08-28T04:55:02Z" },
+  "reconciliation_view": {
+    "internal": { "positions": 0, "open_orders": 0, "equity": "10000.00", "reservations": 0, "authority": "EXECUTION" },
+    "broker": { "positions": 0, "open_orders": 0, "balance": "10000.84", "source": "REST snapshot", "as_of": "2026-08-28T10:41:20Z", "digest": "8c1a…" },
+    "difference": { "positions": "MATCH", "open_orders": "MATCH", "balance": { "state": "DELTA", "value": "0.84", "severity": "INFO", "explanation": "testnet faucet interest" }, "formula": "diff.v1" }
+  },
+  "findings_rows": [
+    { "finding_id": "…", "status": "OPEN", "severity": "INFO", "identity": "balance USDT", "local": "10000.00", "broker": "10000.84", "action": { "kind": "ACCEPT", "label": "accept — testnet faucet interest", "href": null } }
+  ],
+  "order_type_certification": {
+    "venue_scope": "OKX perp",
+    "rows": [
+      { "type": "MARKET", "state": "CERTIFIED", "evidence": "4/4 smoke fills" },
+      { "type": "LIMIT", "state": "CERTIFIED", "evidence": "place/amend/cancel" },
+      { "type": "STOP", "state": "PENDING", "evidence": "venue trigger semantics unverified" },
+      { "type": "TAKE_PROFIT", "state": "UNTESTED", "evidence": null },
+      { "type": "TIF", "state": "CERTIFIED", "evidence": "GTC · IOC" }
+    ],
+    "blocking": false,
+    "blocking_rule": "strategy uses MARKET + LIMIT only — STOP/TP certification not blocking for this deployment"
+  },
+  "execution_quality": {
+    "ack_latency_ms": { "p50": 210, "p95": 480, "samples": 9 },
+    "fill_latency_ms": { "p50": 340, "samples": 4 },
+    "slippage": { "state": "INSUFFICIENT_DATA", "min_samples": 30, "samples": 4 },
+    "reject_rate": { "rejected": 0, "total": 9 },
+    "formula": "execution_quality.v1", "source": "command journal decision→ACK→fill"
+  },
+  "smoke_plan": {
+    "plan_id": "sp_07", "bounded": true, "quantity": "0.0010", "instrument": "BTC-USDT-SWAP",
+    "capital_cap": { "value": "50.00", "ccy": "USDT" }, "timebox_minutes": 30, "on_expiry": "AUTO_HALT",
+    "operator": "Stan", "approved_by": "AP-207", "state": "APPROVED_AWAITING_APPLY"
+  },
+  "cleanup": {
+    "rows": [
+      { "key": "no_open_order", "ok": true }, { "key": "no_residual_position", "ok": true },
+      { "key": "reservations_released", "ok": true }, { "key": "final_sync_and_clean_recon", "ok": false }
+    ],
+    "exit_rule": "clean exposure → final sync → clean dry-run → return HALTED"
+  },
+  "actions": [
+    { "key": "sandbox.broker_sync", "label": "Sync broker", "enabled": true, "risk_tier": "T1", "blocker_codes": [] },
+    { "key": "sandbox.reconcile_dry_run", "label": "Dry-run reconcile", "enabled": true, "risk_tier": "T1", "blocker_codes": [] },
+    { "key": "sandbox.smoke_open", "label": "Open smoke window", "enabled": true, "risk_tier": "T2", "blocker_codes": [] },
+    { "key": "sandbox.request_exit_review", "label": "Request Sandbox Exit Review", "enabled": false, "risk_tier": "T2", "blocker_codes": ["CLEANUP_PENDING"] }
+  ],
+  "peers": [ { "deployment_id": "dep_91", "alpha": "Grid v2.1", "venue": "OKX TESTNET", "passed": 3, "total": 7, "halt_reason": "FINDING" } ]
+}
+```
+
+**Source mapping:**
+
+| field | table · column |
+|---|---|
+| `identity.credential` | `venue_credentials(status, rotated_at)` — status only; **no key material in any payload** |
+| `broker_freshness` | `broker_account_sync_current_state(synced_at, status, source)` vs venue policy |
+| `reconciliation_view.internal` | `positions_v2`, `orders(status IN ACCEPTED/PARTIALLY_FILLED)`, `account_equity_snapshots(equity)`, `order_pending_exposure` |
+| `reconciliation_view.broker` | `broker_account_sync_current_state(positions, open_orders, balances, execution_state_digest)` |
+| `reconciliation_view.difference` | DERIVED `diff.v1` — the **server** computes it; the browser only colours it |
+| `findings_rows[]` | `reconciliation_findings(mode='sandbox', account_id)` ⋈ `details` (local/broker values) |
+| `order_type_certification` | `orders(order_type, post_only, reduce_only, status)` for `mode='sandbox'` + the alpha's production manifest |
+| `execution_quality` | `domain_events` (decision→ACK), `fills(trade_time)`, `orders(status)` |
+| `smoke_plan` | Portal smoke plan `sp_*` + approval scope `AP-207` + `operator_operations(status)` |
+| `cleanup.rows[]` | `orders`, `positions_v2`, `order_pending_exposure`, `broker_account_sync_current_state` |
+| `actions[].enabled` | Portal command policy — fail-closed by default; `enabled:true` must be a deliberate decision |
+| `peers[]` | the same query as BR-EX-60's `rows[]`, limited to deployments in certification |
+
+**Server rules:**
+
+1. **Fail-closed is an invariant, not a style.** `actions[].enabled` for `sandbox.smoke_open` and
+   `sandbox.request_exit_review` must be `false` when `broker_freshness.state != FRESH`, **or** a
+   CRITICAL finding is OPEN, **or** any `cleanup.rows[].ok` is false. The frontend hides such an
+   action rather than disabling it: an absent control is the honest answer to "cannot".
+2. `slippage.state = "INSUFFICIENT_DATA"` when `samples < min_samples`, with **no** `value` field.
+   Never 0, never a provisional number.
+3. `difference` is not three words the client derives. `MATCH` / `DELTA` / `MISMATCH` is an
+   authoritative conclusion with a `severity`; an unreadable source makes that branch `unavailable`,
+   never `MATCH`.
+4. `order_type_certification.blocking: false` must carry `blocking_rule` saying **why** it does not
+   block. A flag without a reason is a flag nobody can check.
+5. `peers[]` must not carry `runtime_state` unless the server publishes it — the frontend switcher
+   already dropped the word HALTED for this reason.
+6. v1.1 is additive: every existing field keeps its name and type.
+
+**Command routes (plan → apply → verify, ADMIN step-up, delivered with BR-EX-61):**
+
+```
+POST /api/v1/execution/sandbox/{deployment_id}/plan   { action_key }                  -> plan.v1
+POST /api/v1/execution/sandbox/{deployment_id}/apply  { plan_id, idempotency_key }    -> operation.v1
+GET  /api/v1/execution/operations/{operation_id}                                      -> verify state
+```
+
+Typed errors the screens already render:
+
+| Situation | Response | Frontend behaviour |
+|---|---|---|
+| certification blocked | `409 {"error":{"code":"CERTIFICATION_BLOCKED","blocker_codes":["CRITICAL_FINDING_OPEN"]}}` | the action is **not** a disabled button; it becomes text naming the blocker |
+| broker snapshot too old | `409 {"error":{"code":"BROKER_STALE","age_seconds":88,"policy_seconds":60}}` | STALE chip with the real age; smoke/exit blocked, sync and dry-run stay open |
+| second smoke window | `409 {"error":{"code":"SMOKE_WINDOW_OPEN","plan_id":"sp_07"}}` | points at the open window instead of opening another |
+| step-up missing | `428 {"error":{"code":"STEP_UP_REQUIRED"}}` | step-up drawer; no apply |
+| verify returns PARTIAL | `operation.v1 {"status":"PARTIAL"}` | **never rendered green** — PARTIAL is a third state, not "nearly done" |
+
+#### 7.4.4 Definition of Ready (§5.1), pre-filled
+
+| Package | Owner · env | Authority & scope R/W | Schema rev · compat | Scale / freshness / completeness | Auth / RBAC / SoD | Failure / unavailable / rollback | Dependency | Test corpus & exit evidence |
+|---|---|---|---|---|---|---|---|---|
+| **BR-EX-60** | Codex · Portal `dev` fixture→shadow | READ; PORTAL_PROJECTION over `strategy_deployments(mode='sandbox')` ⋈ accounts ⋈ venue_accounts ⋈ allocations · TRADING_SYSTEM (`orders`/`fills`/`domain_events`) · BROKER (sync) · DERIVED (success_pct, latency) | new `sandbox-overview.v1` | ≤50 deployments in certification; journal 7d exact counts; connectivity 24h; freshness = `as_of` per second | any Execution viewer; no write | unreadable source → `panel_state:"unavailable"` per branch; an empty array is never read as clean; `runtime_state` null stays null | registry screen `SANDBOX_TRADING_SCREEN` is still `data_mode: NONE` → **[codex decides]**; BR-EX-43 alerts summary | fixture `execution-sandbox-overview.valid.json`; tests 7.4.5 (1)(2)(3)(8); frontend `sandbox.test` |
+| **BR-EX-61** | Codex · `dev` | READ + four governed mutations; PORTAL_CONTROL (certification machine, smoke plan, command policy) · BROKER · TRADING_SYSTEM · DERIVED (`diff.v1`, `execution_quality.v1`) | `sandbox-certification.v1` → v1.1 additive + four `sandbox.*` routes | 1 deployment/screen; findings ≤200 keyset; peers ≤20 | viewer read; four actions ADMIN step-up, plan → apply → verify, fail-closed by default | missing additive branch → v1 rendering; broker STALE / CRITICAL finding / cleanup pending ⇒ smoke + exit disabled with codes; slippage under the sample floor ⇒ INSUFFICIENT_DATA, never 0 | existing `sandbox-certification.v1`; BR-EX-58 blocker catalog; BR-EX-41 stage telemetry; **[codex decides]** 7.4.6 (2)–(5) | fixtures `execution-sandbox-certification.dep_77.v1_1.valid.json` + `.dep_91.v1_1.valid.json`; tests 7.4.5 (4)–(7); frontend `sandbox.test`, `certification.test` re-run unchanged |
+
+OpenAPI paths (names are codex's to finalise):
+
+```yaml
+paths:
+  /api/v1/execution/sandbox/overview:              # GET  -> sandbox-overview.v1        (BR-EX-60)
+  /api/v1/execution/sandbox/{deployment_id}:       # GET  -> sandbox-certification.v1.1 (BR-EX-61)
+  /api/v1/execution/sandbox/{deployment_id}/plan:  # POST {action_key}                  (BR-EX-61)
+  /api/v1/execution/sandbox/{deployment_id}/apply: # POST {plan_id, idempotency_key}    (BR-EX-61)
+```
+
+#### 7.4.5 Required tests
+
+Fixtures: `execution-sandbox-overview.valid.json`,
+`execution-sandbox-certification.dep_77.v1_1.valid.json`,
+`execution-sandbox-certification.dep_91.v1_1.valid.json` (the CRITICAL branch).
+
+1. `passed == count(state=='PASS')` and `current_step` is the first non-PASS step, on both fixtures.
+2. `test_fund_equity.enters_portfolio_nav == false`, and that value appears in no `portfolio-360` NAV.
+3. `success_pct == filled / orders` (exact decimal) for every journal row.
+4. dep_91 fixture: a CRITICAL OPEN finding ⇒ `steps.recon_dry_run.state == 'FAIL'`,
+   `smoke.state == 'BLOCKED'`, `actions[smoke_open].enabled == false` with non-empty `blocker_codes`.
+5. `slippage.state == 'INSUFFICIENT_DATA'` when `samples < min_samples`, and no `value` field beside it.
+6. an order type with `required: true` that is not CERTIFIED ⇒ `progress.eligible == false`.
+7. v1.1 additive: the whole `sandbox-certification.v1` suite re-runs unmodified.
+8. `stalled == true` ⇒ `meta.stalled_rule` is not null.
+
+#### 7.4.6 Decisions codex must confirm (not guess)
+
+1. **Entry-screen route.** The registry has `SANDBOX_TRADING_SCREEN` at `/deployments/sandbox`
+   (COMMISSIONED, `data_mode: NONE`) and `EXECUTION_SANDBOX_CERTIFICATION_SCREEN` at
+   `/deployments/sandbox/:deploymentId`. The frontend mounts the overview on the feature's canonical
+   route. On delivery, codex flips `data_mode` and points that screen at the new contract.
+2. **`POST_ONLY` / `REDUCE_ONLY` are flags, not `order_type` values.** The normalised "types
+   exercised" list and the source of `required` (alpha manifest or deployment config) need one rule.
+3. **The `stalled` threshold.** Proposed: > 14d with no progress; codex confirms and publishes it in
+   `meta.stalled_rule`.
+4. **Testnet venue naming.** `OKX_TESTNET` versus `OKX` + `testnet: true` — either is fine, but it
+   must be one, because Account/Broker 360 and the Blotter read the same field.
+5. **Where the smoke plan lives.** Is `sp_*` a new Portal table, or `operator_operations` with
+   `operation_type='sandbox.smoke'`? This also decides how the Admin Action Drawer lists it.
+
+#### 7.4.7 Delivery order and what the frontend retires
+
+- **BR-EX-60 lands:** frontend deletes the overview half of `sandbox.smoke.ts`
+  (`SANDBOX_SMOKE_DATA`, `useSandboxTick`), codex flips the registry `data_mode`, and the
+  `el-v2-08-sandbox-overview` baseline is recorded.
+- **BR-EX-61 lands:** frontend deletes the certification half (`CERT_SMOKE_DATA`, `useCertTick`) and
+  the module itself, re-records `execution-sandbox-certification-1d-*` and
+  `el-v2-06-sandbox-dep-77`, and wires the four `sandbox.*` actions to plan → apply → verify once
+  N13 approves activation.
 
 ---
 
@@ -1427,6 +1746,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
+| **BR-EX-60/61 — full specification** | **§7.4 of this file** (domain, both response shapes, source mapping to real columns, server rules, command routes and typed errors, DoR, required tests, open decisions, delivery order). The frontend document below carries the same content with screenshots and per-field UI rationale; **§7.4 wins on disagreement.** |
 | **Hi-fi V2 requests BR-EX-41…61 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–O; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full; M = BR-EX-59 canary; N = screen ↔ request coverage matrix and remaining gaps; O = BR-EX-60/61 sandbox overview + certification v1.1, with the seven certification steps mapped to real columns, the fail-closed rules, the four `sandbox.*` command routes and the five decisions codex must confirm); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
 | UI/UX authority for those requests — what each screen must show and why | hi-fi files `…/Design system discussion request_version2/HiFi *.dc.html` + owner screenshots 2026-08-25; grammar and per-screen smoke table `…/DESIGN_GRAMMAR_V3.md` (§8); audit `…/AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md` |
 | Frontend smoke modules to delete on delivery (one per screen, contract at file head) | `apps/portal/frontend/src/execution/{commandCenter,incident,operationsQueue,blotter,stage,alpha360}.smoke.ts` |
@@ -1455,3 +1775,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-26 | N14A Portal release authority closed | six digest-pinned images, CI-bound SBOM/SLSA/Trivy/signature evidence, owner acceptance contract, dev/stable isolation and PostgreSQL restore/forward-fix rehearsal complete; N14B owner binding pending, source/runtime inactive |
 | 2026-08-26 | N15A four-interface gateway authority closed | independent Query/Command/Event/Artifact negotiation, split identities, bounded transports, Event continuity, Artifact reference policy and local fault doubles complete; N15B owner publication pending, network/source/runtime inactive |
 | 2026-08-27 | N16A same-domain emergency-routing authority closed | same-origin/origin-isolation templates, short session/WebAuthn ceremony, typed health/failure states, immutable audit and local Research/Cloudflare/origin/rollback drills complete; R3 unpublished, R4 forbidden, N16B pending, public route/source/runtime inactive |
+| 2026-08-28 | Claude: §7.2 BR-EX-60/61 appended (`RECEIVED`) and specified in full in §7.4 — Sandbox Overview `sandbox-overview.v1` (new) + Sandbox Certification v1.1 (additive) with four `sandbox.*` command routes | documentation only; no runtime/profile/source/command change; five decisions listed in §7.4.6 are codex's to confirm; frontend screens are built and running on smoke until delivery |
