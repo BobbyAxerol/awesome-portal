@@ -5916,3 +5916,39 @@
 .exec-pw .exec-gate-panel > .exec-blotter-note { padding: 0 14px 8px; }
 @media (max-width: 1023px) { .exec-pw-grid, .exec-pw-grid[data-ratio="1"] { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 767px) { .exec-pw-masthead { gap: 6px 8px; } }
+
+/* ── Paper Exit Review — hi-fi WF 4b, owner 2026-08-28. Governance light, so
+   every colour is a token: the same markup reads on the dark deployments
+   surface if a reader switches theme. The hi-fi asks the decision in the title
+   and puts all four evidence panels on the page, because a reviewer who has to
+   open a tab to see the risk panel will decide without it. */
+.exec-px-masthead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 8px; }
+.exec-px-kind { font: 600 10px/14px var(--font-mono); letter-spacing: 0.08em; color: var(--stage-paper); border: 1px solid var(--stage-paper); padding: 1px 7px; }
+.exec-px-h1 { margin: 0; font: 300 22px/1.3 var(--font-body); color: var(--ink); min-width: 0; }
+.exec-px-dim { color: var(--ink-faint); }
+.exec-px-gate { font: 600 11px/16px var(--font-mono); padding: 1px 8px; }
+.exec-px-gate[data-tone="good"] { background: var(--good-bg); color: var(--good); }
+.exec-px-gate[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+.exec-px-gate[data-tone="bad"] { background: var(--bad-bg); color: var(--bad); }
+.exec-px-wf { font: 400 9px/12px var(--font-mono); color: var(--ink-faint); border: 1px dashed var(--line-strong); padding: 1px 6px; }
+.exec-px-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-bottom: 10px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-px-meta b { color: var(--ink); font-weight: 500; }
+.exec-px-spacer { flex: 1; }
+.exec-px-quorum { color: var(--ink-faint); }
+.exec-px-summary { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-px-grid { display: grid; gap: 14px; margin-bottom: 14px; }
+.exec-px-grid[data-cols="auto"] { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.exec-px-grid[data-cols="two"] { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.exec-px-grid > * { min-width: 0; }
+.exec-px-panel { display: flex; flex-direction: column; }
+.exec-px-plan { padding: 0; }
+.exec-px-plannote { margin: 0; padding: 8px 14px 12px; font: 400 10px/16px var(--font-mono); color: var(--ink-faint); }
+.exec-px-recommend { margin: 8px 0 0; font: 400 12px/20px var(--font-body); color: var(--ink-soft); }
+.exec-px-recommend b { color: var(--ink); }
+.exec-px-note { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.exec-px-notelabel { font: 400 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-px-notebox { font: 400 12px/18px var(--font-mono); color: var(--ink); background: var(--paper-sunken); border: 1px solid var(--line); border-bottom: 1px solid var(--ink); padding: 8px 10px; resize: vertical; }
+.exec-px-notebox:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.exec-px-pointer { margin: 0; font: 400 12px/20px var(--font-body); color: var(--ink-soft); }
+.exec-px-copy { font: 400 10px/14px var(--font-mono); color: var(--accent); background: transparent; border: 1px solid var(--line); padding: 0 6px; margin-left: 6px; cursor: pointer; }
+.exec-px-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
