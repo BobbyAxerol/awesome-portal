@@ -1337,3 +1337,15 @@ readiness. `paper-workbench.v1` publishes readiness and freshness but **not
 runtime**, so the chip is absent rather than invented: a screen that printed
 ACTIVE from a readiness field would say a stopped deployment is running. Added
 to BR-EX-62 (§7.5.1) as `runtime_state`.
+
+### 8.24 Paper entry: the owner's hi-fi arrived, the stopgap list retired (2026-08-28)
+
+§8.22 recorded a minimal list at `/deployments/paper` because no hi-fi existed
+for the route. It does now — "Paper Overview (entry for WF 1c/4h)" — and the
+screen is that overview, measured from the file before building (KPI cells
+8/12 with mono-16 values, funnel bars 7px, the runway's 185/320/148/92/104/128
+grid, 18px day cells). Two hues the hi-fi mutes on purpose became tokens
+(`--good-dim`, `--bad-dim`) because thirty day-cells with full-strength borders
+read as noise and the token gate rightly refuses hues declared outside the
+token file. BR-EX-62 was amended the same day: `paper-list.v1` grows into
+`paper-overview.v1` (§7.5.1 of the unified plan).

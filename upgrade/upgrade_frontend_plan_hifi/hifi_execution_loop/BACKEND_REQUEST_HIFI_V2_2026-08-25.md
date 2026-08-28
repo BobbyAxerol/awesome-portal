@@ -1255,7 +1255,8 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 | Live Overview `/deployments/live` | entry | done | 56 · 43 | 56 | — |
 | Live Full `/deployments/live/:id` | 1f | done | 57 · 41 · 58 (rail) | 57 · 41 | — |
 | Canary Control Room `/deployments/live/:id/canary` | 1e | done | 59 · 41 · 58 | 59 · 41 | — |
-| Paper Workbench `/deployments/paper/:id` | 1c | done (2026-08-28) | 62 · 41 | 62 · 41 | phần lớn hi-fi đã có trong contract; 62 chỉ xin phần vẽ + list route |
+| Paper Overview `/deployments/paper` | entry 1c/4h | done (2026-08-28) | 62 (`paper-overview.v1`) · 43 | 62 | hi-fi giao cùng ngày; KPI + funnel 7d + runway day-signs + left-paper 90d; VND không bao giờ cộng vào USDT |
+| Paper Workbench `/deployments/paper/:id` | 1c | done (2026-08-28) | 62 · 41 | 62 · 41 | phần lớn hi-fi đã có trong contract; 62 xin phần vẽ + overview |
 | Paper Workbench VNM `/deployments/paper/:id/vn-market` | 4h | done (2026-08-28) | 62 (`session_shading`) | 62 | biến thể chọn theo venue có lịch, không theo id trên route |
 | Paper Exit Review `/governance/exit-reviews/:id` | 4b | done (2026-08-28) | 63 · 36 (cũ) | 63 | 4 panel bằng chứng + plan + conditions lên thẳng trang |
 | Sandbox Overview `/deployments/sandbox` | entry 1d | done (2026-08-28) | 60 · 43 | 60 | registry `SANDBOX_TRADING_SCREEN` vẫn `data_mode: NONE` → codex đổi khi 60 giao (O.5.1) |
