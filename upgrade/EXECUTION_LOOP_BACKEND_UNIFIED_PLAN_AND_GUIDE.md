@@ -1951,6 +1951,32 @@ under 41/50/56/57/59/62 arrives chart-ready: the generators in `paper.smoke.ts` 
 canaryStageSeries) are the reference fixtures for what the components consume, and they delete
 with their parent rows.
 
+#### 7.6.6 Amendment 2026-08-28 (Portfolio pass) — additive to BR-EX-34 and BR-EX-51
+
+The Portfolio 360 fix pass (frontend commit `9709679`) replaced the last SVG stand-ins on
+that screen with `marketChart` components. Three consequences for already-filed rows, all
+additive — no retype:
+
+1. **BR-EX-34 gains two named series consumers.** `PF_CHARTS.rho` (30×1d ρ(NAV, benchmark)
+   points with `threshold: 0.6` and a breach window 2026-08-12→14 peaking 0.63) and
+   `PF_CHARTS.ddOverlap` (per-alpha drawdown episodes `{from,to,depthPct}` + a joint window
+   with its regime label, `INSUFFICIENT_DATA` as an explicit row state) in
+   `portfolio360.smoke.ts` are the reference fixtures for the ρ-timeline and drawdown-overlap
+   series. When BR-EX-34 publishes them, the shapes must match: episodes are intervals with a
+   depth, never a resampled line; the joint window is server-derived (≥2 alphas in drawdown),
+   never recomputed in the browser; both carry `chart-series.rules.v1` (§7.6.1) — the
+   threshold/annotation obey rule 6, the timeline obeys rules 1/7/8.
+2. **BR-EX-51 actions have their UI anchor points.** `Rebalance plan ▾` and `Report pack` on
+   `PortfolioThreeSixty` are now active controls opening plan-preview panels; the `Apply` /
+   `Generate` buttons inside are the single enable points for the plan → apply → verify route
+   and the report-pack export. The preview's KV grid (operation · targets · writes ·
+   governance) is the exact field list the plan endpoint should echo back; targets shown today
+   are labeled estimates from the what-if panel (`marginal.v1`).
+3. **The influence map consumes the published matrix only.** `InfluenceMap` derives nodes
+   (radius = exposure share) and edges (|ρ| ≥ threshold) from the packed correlation matrix
+   already published — no new series requested; `PF_CHARTS.influence` on the Structure
+   overview panel is presentation smoke and deletes with BR-EX-51.
+
 ---
 
 ## 8. Test and evidence matrix
@@ -2068,3 +2094,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-28 | Claude: §7.2 BR-EX-60/61 appended (`RECEIVED`) and specified in full in §7.4 — Sandbox Overview `sandbox-overview.v1` (new) + Sandbox Certification v1.1 (additive) with four `sandbox.*` command routes | documentation only; no runtime/profile/source/command change; five decisions listed in §7.4.6 are codex's to confirm; frontend screens are built and running on smoke until delivery |
 | 2026-08-28 | Claude: §7.2 BR-EX-62/63 appended (`RECEIVED`) and specified in full in §7.5 — Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1 | documentation only; no runtime/profile/source/command change; the Paper contract already carries most of its hi-fi, so these two rows are deliberately small; four decisions in §7.5.5 are codex's to confirm | · amended same day for the delivered Paper Overview hi-fi (`paper-overview.v1` supersedes the bare `paper-list.v1`, §7.5.1)
 | 2026-08-28 | Claude: §7.2 BR-EX-64 appended (`RECEIVED`) and specified in §7.6 — the chart series contract, written after the real-chart pass replaced every SVG stand-in on Paper/Canary/Live; §7.6.2 carries additive amendments to BR-EX-57/59/62 and escalates the OHLC-owner decision (§7.5.5(1)) now blocking two screens | documentation only; no runtime/profile/source/command change |
+| 2026-08-28 | Claude: §7.6.6 appended — Portfolio 360 pass names `PF_CHARTS.rho`/`PF_CHARTS.ddOverlap` as reference fixtures for BR-EX-34's ρ-timeline and drawdown-overlap series, and records the now-active Rebalance plan / Report pack controls as BR-EX-51's enable points | documentation only; no runtime/profile/source/command change |
