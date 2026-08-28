@@ -1115,3 +1115,46 @@ return `<Screen>Data = Omit<Props, handlers>`; behaviour comes from
 `src/execution/previewControllers.tsx` on product routes and from
 `testHandlers.ts` spies in tests. Capability is never inferred from handler
 presence (`AccountBroker360.operatorAdmin` decides visibility alone).
+
+### 8.20 Sandbox: a new entry screen, and one route that had none (2026-08-28)
+
+Recorded per §7.3 — this is a screen the plan did not list.
+
+`/deployments/sandbox` is the canonical route of the `SANDBOX_TRADING` feature,
+and it had no screen: entering it opened the certification workbench for
+whichever deployment the fixture happened to carry. So the question the
+workflow starts with — *what is in certification, and what is holding it* — had
+no page. `SandboxOverview` now answers it (hi-fi "Sandbox Overview (entry for
+WF 1d)"), and `/deployments/sandbox/:deploymentId` keeps the workbench, the
+same split Live and Alpha Fleet already use.
+
+Three decisions worth keeping:
+
+1. **The hi-fi's demo toggle is not a toggle.** The hi-fi drives its
+   `reconFinding: NONE | CRITICAL` state from a prop. Here it is the difference
+   between two real deployments — `dep_77` (clean, 5/7) and `dep_91` (CRITICAL
+   finding, 3/7) — so both states are reachable by switching deployment and
+   neither is a mode the data cannot produce. The workbench therefore takes the
+   route's `deploymentId`: the fixture publishes one document, so without it the
+   switcher would always land back on the same page.
+2. **Two claims stay the contract's.** The masthead renders `runtime not stated`
+   rather than the hi-fi's `HALTED`, and the readiness verdict comes from the
+   same gate the rail reads. The switcher also stopped repeating a runtime word
+   for its peer. Everything else in the hi-fi body is smoke and says so.
+3. **A blocked action is not a disabled button.** `Open smoke window` and
+   `Request Sandbox Exit Review` are rendered as controls only when the server
+   would accept them; when blocked they are text naming the blocker. The three
+   available actions each open their plan, and Apply is disabled with the reason
+   — the `sandbox.*` command routes land with BR-EX-61.
+
+Backend requests: **BR-EX-60** (`sandbox-overview.v1`, new) and **BR-EX-61**
+(`sandbox-certification.v1.1`, additive + four command routes), filed in §7.2 of
+the unified plan with field-level detail in appendix O of
+`upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md`.
+Smoke module `src/execution/sandbox.smoke.ts` carries the deletion contract.
+
+Open for codex (appendix O.5): the registry screen `SANDBOX_TRADING_SCREEN` is
+still `data_mode: NONE`; `POST_ONLY`/`REDUCE_ONLY` are order flags, not order
+types, so the "executed types" list needs a normalisation rule; the `stalled`
+threshold; testnet venue naming (`OKX_TESTNET` vs `OKX` + `testnet:true`); and
+where the smoke plan `sp_*` lives.

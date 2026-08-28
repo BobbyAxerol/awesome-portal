@@ -1202,7 +1202,8 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 | Live Full `/deployments/live/:id` | 1f | done | 57 · 41 · 58 (rail) | 57 · 41 | — |
 | Canary Control Room `/deployments/live/:id/canary` | 1e | done | 59 · 41 · 58 | 59 · 41 | — |
 | Paper Workbench `/deployments/paper/:id` | 1c | grammar v3 + visuals 41 | 41 · (hi-fi pass chưa làm) | 41 | **chờ hi-fi từ Bobby** để restyle như Live/Canary |
-| Sandbox Certification `/deployments/sandbox/:id` | 1d | grammar v3 + visuals 41 | 41 | 41 | như trên |
+| Sandbox Overview `/deployments/sandbox` | entry 1d | done (2026-08-28) | 60 · 43 | 60 | registry `SANDBOX_TRADING_SCREEN` vẫn `data_mode: NONE` → codex đổi khi 60 giao (O.5.1) |
+| Sandbox Certification `/deployments/sandbox/:id` | 1d | done (2026-08-28) | 61 · 41 · 58 | 61 · 41 | command routes `sandbox.*` đi cùng 61 (O.3.3) |
 | Approval Inbox `/governance/approvals` | 2c | grammar v3 | BR-EX-30 (cũ) | — | hi-fi pass chưa làm |
 | Gate R1/R2 review `/governance/approvals/:id/r1|r2` | 2d/2e | grammar v3 | 30 · 35 | — | như trên |
 | Paper Exit Review `/governance/exit-reviews/:id` | 1c' | grammar v3 | 36 (cũ) | — | như trên |
@@ -1214,3 +1215,314 @@ Ký hiệu: **DB** = bảng trong trading DB (88 bảng/2 view); **TS route** = 
 
 **Việc frontend đã tự sửa trong đợt rà (không cần backend):** breadcrumb list-route không mang entity fixture; incident h1 = id trên route; canary rows → Canary room; link approvals mang `/r1|/r2`; passport/evidence anchor → tab Audit; rail/strip/telemetry một grammar trên mọi surface.
 
+
+---
+
+# Phụ lục O — BR-EX-60 · Sandbox Overview v1 và BR-EX-61 · Sandbox Certification v1.1
+
+> Viết 2026-08-28 sau khi dựng hai màn theo hi-fi WF 1d
+> (`HiFi Sandbox Overview.dc.html`, `HiFi Sandbox Certification.dc.html`).
+> Frontend đang chạy bằng `apps/portal/frontend/src/execution/sandbox.smoke.ts`;
+> **xoá module đó khi hai contract dưới đây giao**. Contract `sandbox-certification.v1`
+> hiện có vẫn giữ nguyên và **không được đổi kiểu trường nào** — O.3 chỉ thêm
+> (additive), như cách BR-EX-57 làm với `live-full.v1.1`.
+
+## O.1 Domain — certification là gì (hi-fi 1d + DB guide)
+
+Sandbox **không phải** "paper có thật hơn". Nó là **cổng chứng nhận tích hợp
+venue**: chứng minh rằng đúng cặp `(alpha artifact, venue, credential,
+account binding)` đặt được lệnh thật trên testnet, khớp, huỷ, và trạng thái nội
+bộ khớp trạng thái broker — trước khi bất kỳ đồng vốn thật nào được cấp.
+
+Bảy bước, thứ tự do server quyết (frontend **không** tự suy ra bước hiện tại):
+
+| # | step_key | Ý nghĩa | Nguồn sự thật |
+|---|---|---|---|
+| 1 | `account` | virtual account tồn tại đúng `(strategy_id, account_id, mode='sandbox', venue)` | `accounts` ⋈ `strategy_deployments` |
+| 2 | `binding` | binding tới physical account đã verify | `venue_accounts(external_account_ref)` + `venue_credentials(status)` |
+| 3 | `broker_sync` | snapshot REST/ws còn tươi so với policy venue | `broker_account_sync_current_state(synced_at, status)` |
+| 4 | `recon_dry_run` | dry-run reconcile sạch — **fail-closed** nếu có finding CRITICAL đang OPEN | `reconciliation_findings(mode='sandbox', status='OPEN')` |
+| 5 | `smoke` | smoke plan bounded được duyệt và đã apply | PORTAL smoke plan `sp_*` + `operator_operations` |
+| 6 | `cleanup` | không còn open order / residual position / reservation, đã final sync | `orders(status IN ACCEPTED/PARTIALLY_FILLED)`, `positions_v2`, `order_pending_exposure` |
+| 7 | `exit_review` | Sandbox Exit Review `SX-*` được yêu cầu và duyệt | PORTAL exit reviews |
+
+Hai luật miền phải hiện trên UI và **không được suy diễn ở frontend**:
+
+1. **Test funds không bao giờ vào NAV portfolio.** Equity testnet là bằng chứng
+   chứng nhận, không phải vốn. Server phải trả nó ở nhánh riêng
+   (`test_fund_equity`), không nằm trong bất kỳ tổng NAV nào.
+2. **Certification đứng im không tự hết hạn.** `in_stage_days` lớn (36d) là một
+   *tín hiệu*, không phải lỗi hiển thị; server trả `stalled: true` theo ngưỡng
+   của nó, frontend chỉ tô. Không có timeout ngầm nào ở phía UI.
+
+Và một luật thứ ba mà hi-fi nói bằng chữ nhỏ nhưng là điều kiện đóng của bước 5:
+**chứng nhận đòi mọi order type mà alpha dùng trong production.** Một alpha dùng
+`REDUCE_ONLY` ở nhánh thoát mà chưa từng gửi `REDUCE_ONLY` trên testnet thì chưa
+được chứng nhận, dù 100% lệnh khác đều khớp.
+
+## O.2 BR-EX-60 · `sandbox-overview.v1` — màn entry
+
+`GET /api/v1/execution/sandbox/overview` → `sandbox-overview.v1`
+
+### O.2.1 Response mẫu (khớp `sandbox.smoke.ts`, rút gọn)
+
+```json
+{
+  "as_of": "2026-08-28T04:54:32Z",
+  "summary": { "in_certification": 2, "venues": 2, "test_funds_only": true },
+  "kpis": {
+    "in_certification": { "value": 2, "note": "certification = 7-step gate to canary" },
+    "halted": { "value": 2, "by_finding": 1, "by_operator": 1 },
+    "open_findings": { "value": 1, "worst_severity": "CRITICAL", "ref": { "kind": "deployment", "id": "dep_91" } },
+    "test_fund_equity": { "value": "20000", "ccy": "USDT", "enters_portfolio_nav": false },
+    "broker_sync": { "age_seconds": 10, "policy_seconds": 60, "state": "OK", "detail": "OKX rest · BIN-T1 ws OK" }
+  },
+  "rows": [
+    {
+      "deployment_id": "dep_77", "alpha": "Carry v3.2", "alpha_version_id": "av_2103",
+      "venue": "OKX_TESTNET", "account_id": "acct-sbx-carry-okx",
+      "portfolio_id": "PF-CRYPTO", "target_portfolio_id": "PF-MAIN",
+      "target_approval": { "id": "AP-352", "status": "PENDING" },
+      "certification": {
+        "passed": 5, "total": 7, "current_step": "smoke",
+        "steps": [
+          { "key": "account", "state": "PASS" }, { "key": "binding", "state": "PASS" },
+          { "key": "broker_sync", "state": "PASS" }, { "key": "recon_dry_run", "state": "PASS" },
+          { "key": "smoke", "state": "PENDING" }, { "key": "cleanup", "state": "NOT_STARTED" },
+          { "key": "exit_review", "state": "NOT_STARTED" }
+        ]
+      },
+      "runtime_state": "HALTED", "halt_reason": "OPERATOR",
+      "in_stage_days": 9, "stalled": false,
+      "next_step": { "label": "run smoke activation", "action_key": "sandbox.smoke_open", "enabled": false, "blocker_codes": [] },
+      "lineage": { "r1_id": "AP-101", "r2_id": "AP-207", "paper_exit_id": "PX-29" },
+      "note": "smoke plan approved, awaiting apply · cleanup + exit review remain"
+    },
+    {
+      "deployment_id": "dep_91", "alpha": "Grid v2.1", "alpha_version_id": "av_2041",
+      "venue": "OKX_TESTNET", "account_id": "acct-sbx-grid-okx",
+      "portfolio_id": "PF-CRYPTO", "target_portfolio_id": null, "target_approval": null,
+      "certification": { "passed": 3, "total": 7, "current_step": "recon_dry_run",
+        "steps": [ { "key": "account", "state": "PASS" }, { "key": "binding", "state": "PASS" }, { "key": "broker_sync", "state": "PASS" }, { "key": "recon_dry_run", "state": "FAIL" }, { "key": "smoke", "state": "BLOCKED" }, { "key": "cleanup", "state": "NOT_STARTED" }, { "key": "exit_review", "state": "NOT_STARTED" } ] },
+      "runtime_state": "HALTED", "halt_reason": "FINDING",
+      "in_stage_days": 36, "stalled": true,
+      "next_step": { "label": "resolve finding → re-run dry-run", "action_key": "sandbox.reconcile_dry_run", "enabled": false, "blocker_codes": ["CRITICAL_FINDING_OPEN"] },
+      "lineage": { "r1_id": "AP-118", "r2_id": "AP-152", "paper_exit_id": "PX-22" },
+      "note": "CRITICAL: position mismatch BTC-USDT-SWAP local 0.0000 vs broker 0.0300 · certification fail-closed at step 4"
+    }
+  ],
+  "order_journal": {
+    "window_days": 7, "exact": true,
+    "rows": [
+      { "deployment_id": "dep_77", "alpha": "Carry", "orders": 151, "filled": 142, "rejected": 6, "expired": 3, "success_pct": "0.940" },
+      { "deployment_id": "dep_91", "alpha": "Grid", "orders": 96, "filled": 81, "rejected": 14, "expired": 1, "success_pct": "0.844" }
+    ],
+    "order_types": [
+      { "type": "LIMIT", "count": 148, "certified": true }, { "type": "MARKET", "count": 42, "certified": true },
+      { "type": "STOP_MARKET", "count": 21, "certified": true }, { "type": "POST_ONLY", "count": 30, "certified": true },
+      { "type": "OCO", "count": 4, "certified": false, "required_min": 10 },
+      { "type": "REDUCE_ONLY", "count": 0, "certified": false, "required": true }
+    ],
+    "reject_reasons": [ { "code": "POST_ONLY_CROSS", "count": 11 }, { "code": "MIN_NOTIONAL", "count": 5 }, { "code": "RATE_LIMIT", "count": 4 } ]
+  },
+  "connectivity": {
+    "window_hours": 24,
+    "ack_latency_ms": { "p50": 40, "p95": 125 },
+    "fill_latency_ms": { "p50": 123, "p95": 321 },
+    "ws_reconnects": 3, "rate_limit_hits": 4,
+    "baseline_note": "testnet sets the baseline expectation, not the production SLO",
+    "finding_rule": "sustained p95 > 2× baseline raises a finding"
+  },
+  "recently_certified": [
+    { "at": "2026-07-30", "alpha": "Grid v2.1", "venue": "BINANCE", "verdict": "certified", "passed": 7, "total": 7, "exit_review_id": "SX-14", "promoted_to": { "stage": "CANARY", "deployment_id": "dep_88" } },
+    { "at": "2026-07-18", "alpha": "MM v1.1", "venue": "BINANCE", "verdict": "certified", "passed": 7, "total": 7, "exit_review_id": "SX-11", "promoted_to": { "stage": "CANARY", "deployment_id": "dep_63", "day": 2, "total_days": 14 } }
+  ]
+}
+```
+
+### O.2.2 Nguồn theo cột thật (DB guide 88 bảng)
+
+| field | bảng · cột |
+|---|---|
+| `rows[]` | `strategy_deployments` WHERE `mode='sandbox'` AND stage `SANDBOX_VALIDATION` — **danh sách sinh từ registry**, không hardcode |
+| `rows[].alpha`, `alpha_version_id` | `strategies` ⋈ `alpha_ledger(artifact_digest)` |
+| `rows[].venue`, `account_id` | `accounts(account_id, mode, venue)` ⋈ `venue_accounts(external_account_ref)` |
+| `rows[].portfolio_id`, `target_portfolio_id` | `portfolio_allocations` (hiện tại) + PORTAL approval `AP-352` (đích đề nghị) |
+| `rows[].certification.steps[]` | PORTAL certification state machine (đã có ở `sandbox-certification.v1`) — overview **đọc lại**, không tính lại |
+| `rows[].runtime_state`, `halt_reason` | `strategy_deployments(runtime_state)` + `operator_operations(operation_type='deployment.halt', reason)`; `FINDING` khi có `reconciliation_findings(severity='CRITICAL', status='OPEN')` |
+| `rows[].in_stage_days`, `stalled` | now − `strategy_deployments(stage_entered_at)`; `stalled` theo ngưỡng server (đề nghị: > 14d và không có `operator_operations` VERIFIED trong 7d) |
+| `kpis.test_fund_equity` | Σ `account_equity_snapshots(equity)` của các account `mode='sandbox'` — **cờ `enters_portfolio_nav: false` là bắt buộc** |
+| `kpis.broker_sync` | `broker_account_sync_current_state(synced_at, status)` vs `account_policies`/venue policy |
+| `order_journal.rows[]` | `orders` WHERE `mode='sandbox'` AND `submitted_at ≥ now()-7d`, group theo `strategy_id`; `filled` = `status='FILLED'`; `rejected` = `status IN ('REJECTED','RISK_REJECTED')`; `expired` = `status='EXPIRED'` |
+| `order_journal.order_types[]` | `orders(order_type, post_only, reduce_only)` — `POST_ONLY`/`REDUCE_ONLY` là **cờ**, không phải `order_type`, nên server phải chuẩn hoá về một danh sách "loại đã thực thi"; `required` lấy từ manifest của alpha (loại nó dùng trong production) |
+| `order_journal.reject_reasons[]` | `orders(error_code)` + `raw_response` |
+| `connectivity.ack_latency_ms` | `domain_events` ACK − SUBMIT theo `client_order_id` (gateway timestamps) |
+| `connectivity.fill_latency_ms` | first `fills(trade_time)` − `orders(submitted_at)` |
+| `connectivity.ws_reconnects`, `rate_limit_hits` | `service_heartbeats` / `venue_rate_limits` 24h |
+| `recently_certified[]` | PORTAL exit reviews `SX-*` verdict CERTIFIED trong 90d ⋈ `strategy_deployments` sau khi promote |
+
+### O.2.3 Quy tắc (server phải giữ, frontend không được suy diễn)
+
+1. `certification.passed == count(steps[].state == 'PASS')`, và `current_step` là
+   bước không-PASS đầu tiên. Nếu hai giá trị lệch nhau, đó là bug server, không
+   phải chuyện frontend "sửa mềm".
+2. `runtime_state` là giá trị publish được hoặc `null`. **Không** dịch một absence
+   thành `HALTED` — frontend đang render "runtime not stated" và sẽ giữ như vậy.
+3. `success_pct` là decimal exact (`filled / orders`), không làm tròn ở server rồi
+   lại làm tròn ở client.
+4. `order_types[].certified` là quyết định của server (đủ số mẫu tối thiểu +
+   không có reject chưa giải thích), không phải `count > 0`.
+5. `stalled` phải kèm ngưỡng đã dùng trong `meta.stalled_rule` để UI in được lý do.
+6. Rỗng ≠ sạch: khi không đọc được nguồn nào, trả `panel_state: "unavailable"`
+   cho nhánh đó thay vì mảng rỗng.
+
+## O.3 BR-EX-61 · `sandbox-certification.v1.1` — bổ sung cho workbench
+
+Contract v1 đã có: `steps[]`, `findings`, `source_panels[]`, `promotion_plans[]`,
+`timeline`, `progress`, `lineage`, `actor_roles`. Hi-fi 1d cần thêm **sáu nhánh**,
+tất cả additive:
+
+```json
+{
+  "identity": { "alpha": "Carry v3.2", "venue": "OKX TESTNET", "credential": { "id": "OKX-01", "status": "VALID" }, "external_account_ref": "okx_main_01" },
+  "broker_freshness": { "source": "REST", "age_seconds": 40, "policy_seconds": 60, "state": "FRESH", "as_of": "2026-08-28T04:55:02Z" },
+  "reconciliation_view": {
+    "internal": { "positions": 0, "open_orders": 0, "equity": "10000.00", "reservations": 0, "authority": "EXECUTION" },
+    "broker": { "positions": 0, "open_orders": 0, "balance": "10000.84", "source": "REST snapshot", "as_of": "2026-08-28T10:41:20Z", "digest": "8c1a…" },
+    "difference": { "positions": "MATCH", "open_orders": "MATCH", "balance": { "state": "DELTA", "value": "0.84", "severity": "INFO", "explanation": "testnet faucet interest" }, "formula": "diff.v1" }
+  },
+  "findings_rows": [
+    { "finding_id": "…", "status": "OPEN", "severity": "INFO", "identity": "balance USDT", "local": "10000.00", "broker": "10000.84", "action": { "kind": "ACCEPT", "label": "accept — testnet faucet interest", "href": null } }
+  ],
+  "order_type_certification": {
+    "venue_scope": "OKX perp",
+    "rows": [
+      { "type": "MARKET", "state": "CERTIFIED", "evidence": "4/4 smoke fills" },
+      { "type": "LIMIT", "state": "CERTIFIED", "evidence": "place/amend/cancel" },
+      { "type": "STOP", "state": "PENDING", "evidence": "venue trigger semantics unverified" },
+      { "type": "TAKE_PROFIT", "state": "UNTESTED", "evidence": null },
+      { "type": "TIF", "state": "CERTIFIED", "evidence": "GTC · IOC" }
+    ],
+    "blocking": false,
+    "blocking_rule": "strategy uses MARKET + LIMIT only — STOP/TP certification not blocking for this deployment"
+  },
+  "execution_quality": {
+    "ack_latency_ms": { "p50": 210, "p95": 480, "samples": 9 },
+    "fill_latency_ms": { "p50": 340, "samples": 4 },
+    "slippage": { "state": "INSUFFICIENT_DATA", "min_samples": 30, "samples": 4 },
+    "reject_rate": { "rejected": 0, "total": 9 },
+    "formula": "execution_quality.v1", "source": "command journal decision→ACK→fill"
+  },
+  "smoke_plan": {
+    "plan_id": "sp_07", "bounded": true,
+    "quantity": "0.0010", "instrument": "BTC-USDT-SWAP",
+    "capital_cap": { "value": "50.00", "ccy": "USDT" },
+    "timebox_minutes": 30, "on_expiry": "AUTO_HALT",
+    "operator": "Stan", "approved_by": "AP-207",
+    "state": "APPROVED_AWAITING_APPLY"
+  },
+  "cleanup": {
+    "rows": [
+      { "key": "no_open_order", "ok": true }, { "key": "no_residual_position", "ok": true },
+      { "key": "reservations_released", "ok": true }, { "key": "final_sync_and_clean_recon", "ok": false }
+    ],
+    "exit_rule": "clean exposure → final sync → clean dry-run → return HALTED"
+  },
+  "actions": [
+    { "key": "sandbox.broker_sync", "label": "Sync broker", "enabled": true, "risk_tier": "T1", "blocker_codes": [] },
+    { "key": "sandbox.reconcile_dry_run", "label": "Dry-run reconcile", "enabled": true, "risk_tier": "T1", "blocker_codes": [] },
+    { "key": "sandbox.smoke_open", "label": "Open smoke window", "enabled": true, "risk_tier": "T2", "blocker_codes": [] },
+    { "key": "sandbox.request_exit_review", "label": "Request Sandbox Exit Review", "enabled": false, "risk_tier": "T2", "blocker_codes": ["CLEANUP_PENDING"] }
+  ],
+  "peers": [ { "deployment_id": "dep_91", "alpha": "Grid v2.1", "venue": "OKX TESTNET", "passed": 3, "total": 7, "halt_reason": "FINDING" } ]
+}
+```
+
+### O.3.1 Nguồn theo cột thật
+
+| field | bảng · cột |
+|---|---|
+| `identity.credential` | `venue_credentials(status, rotated_at)` — chỉ status, **không bao giờ** trả key material |
+| `broker_freshness` | `broker_account_sync_current_state(synced_at, status, source)` vs venue policy |
+| `reconciliation_view.internal` | `positions_v2`, `orders(status ACCEPTED/PARTIALLY_FILLED)`, `account_equity_snapshots(equity)`, `order_pending_exposure` |
+| `reconciliation_view.broker` | `broker_account_sync_current_state(positions, open_orders, balances, execution_state_digest)` |
+| `reconciliation_view.difference` | DERIVED `diff.v1` — **server tính**, frontend chỉ tô màu |
+| `findings_rows[]` | `reconciliation_findings(mode='sandbox', account_id)` ⋈ `details` (local/broker value) |
+| `order_type_certification` | `orders(order_type, post_only, reduce_only, status)` mode='sandbox' + manifest loại alpha dùng |
+| `execution_quality` | `domain_events` (decision→ACK), `fills(trade_time)`, `orders(status)` |
+| `smoke_plan` | PORTAL smoke plan `sp_*` + approval scope `AP-207` + `operator_operations(status)` |
+| `cleanup.rows[]` | `orders`, `positions_v2`, `order_pending_exposure`, `broker_account_sync_current_state` |
+| `actions[].enabled` | PORTAL command policy — **fail-closed mặc định**, `enabled:true` phải là quyết định có chủ đích |
+| `peers[]` | cùng truy vấn `rows[]` của BR-EX-60, giới hạn các deployment đang certification |
+
+### O.3.2 Quy tắc
+
+1. **Fail-closed là bất biến, không phải style**: `actions[].enabled` cho
+   `sandbox.smoke_open` và `sandbox.request_exit_review` phải `false` khi
+   `broker_freshness.state != FRESH` **hoặc** có finding CRITICAL OPEN **hoặc**
+   `cleanup.rows` còn `ok:false`. Frontend đang ẩn nút (không phải disable) khi
+   server nói blocked — nút vắng mặt là câu trả lời đúng cho "không thể".
+2. `slippage.state = INSUFFICIENT_DATA` khi `samples < min_samples`. **Không trả
+   0**, không trả giá trị "tạm" — luật `INSUFFICIENT_DATA` của EL-V2 áp ở đây.
+3. `difference` không được là ba từ do client suy ra. `MATCH`/`DELTA`/`MISMATCH`
+   là kết luận có thẩm quyền, kèm `severity`, và nếu nguồn nào không đọc được thì
+   nhánh đó là `unavailable` chứ không phải `MATCH`.
+4. `order_type_certification.blocking` phải nói rõ *vì sao không chặn* khi
+   `false` — hi-fi in đúng câu đó, và một cờ không lý do là một cờ không kiểm được.
+5. `peers[]` **không** mang `runtime_state` nếu server không publish nó; frontend
+   đã bỏ chữ HALTED khỏi switcher vì lý do này.
+6. v1.1 additive: mọi field cũ giữ nguyên tên và kiểu.
+
+### O.3.3 Command routes (đi sau, cùng BR-EX-61)
+
+Ba action đầu là plan → apply → verify như mọi mutation khác:
+
+```
+POST /api/v1/execution/sandbox/{deployment_id}/plan   { action_key }  → plan.v1
+POST /api/v1/execution/sandbox/{deployment_id}/apply  { plan_id, idempotency_key } → operation.v1
+GET  /api/v1/execution/operations/{operation_id}      → verify state
+```
+
+Lỗi bắt buộc: `409 CERTIFICATION_BLOCKED {blocker_codes[]}`,
+`409 BROKER_STALE {age_seconds, policy_seconds}`, `428 STEP_UP_REQUIRED`,
+`409 SMOKE_WINDOW_OPEN` (không mở hai cửa sổ cùng lúc).
+`PARTIAL` không bao giờ render xanh — verify phải phân biệt
+`VERIFIED` / `PARTIAL` / `FAILED`.
+
+## O.4 Test bắt buộc
+
+Fixtures: `execution-sandbox-overview.valid.json`,
+`execution-sandbox-certification.dep_77.v1_1.valid.json`,
+`execution-sandbox-certification.dep_91.v1_1.valid.json` (nhánh CRITICAL).
+
+1. `passed == count(state=='PASS')` và `current_step` = bước không-PASS đầu tiên,
+   trên cả hai fixture.
+2. `test_fund_equity.enters_portfolio_nav == false` và giá trị đó **không** xuất
+   hiện trong bất kỳ tổng NAV nào của `portfolio-360`.
+3. `success_pct == filled / orders` (decimal exact) cho từng dòng journal.
+4. Fixture dep_91: có `reconciliation_findings` CRITICAL OPEN ⇒
+   `steps.recon_dry_run.state == 'FAIL'`, `smoke.state == 'BLOCKED'`,
+   `actions[smoke_open].enabled == false` với `blocker_codes` không rỗng.
+5. `slippage.state == 'INSUFFICIENT_DATA'` khi `samples < min_samples`, và
+   không có trường `value` nào đi kèm.
+6. `order_type_certification` có ít nhất một loại `required: true` chưa
+   `CERTIFIED` ⇒ `progress.eligible == false`.
+7. v1.1 additive: chạy lại toàn bộ test của `sandbox-certification.v1` không sửa.
+8. `stalled == true` ⇒ `meta.stalled_rule` không null.
+
+## O.5 Việc codex phải chốt (không đoán)
+
+1. **Route của màn entry.** Registry đang có `SANDBOX_TRADING_SCREEN` ở
+   `/deployments/sandbox` (COMMISSIONED, `data_mode: NONE`) và
+   `EXECUTION_SANDBOX_CERTIFICATION_SCREEN` ở `/deployments/sandbox/:deploymentId`.
+   Frontend đang mount overview ở canonical route của feature. Khi BR-EX-60 giao,
+   codex đổi `data_mode` của `SANDBOX_TRADING_SCREEN` và trỏ nó vào contract mới.
+2. **`POST_ONLY` / `REDUCE_ONLY` là cờ, không phải `order_type`.** Cần chốt danh
+   sách chuẩn hoá "loại lệnh đã thực thi" mà UI hiển thị, và nguồn của
+   `required` (manifest alpha hay cấu hình deployment).
+3. **Ngưỡng `stalled`.** Đề nghị > 14d không tiến triển; codex chốt và trả trong
+   `meta.stalled_rule`.
+4. **Testnet venue naming.** `OKX_TESTNET` vs `OKX` + cờ `testnet: true` — hai
+   cách đều được, nhưng phải một cách, vì Account/Broker 360 và Blotter cũng đọc.
+5. **Smoke plan ở đâu.** `sp_*` là bảng PORTAL mới hay `operator_operations` với
+   `operation_type='sandbox.smoke'`? Ảnh hưởng cả Admin Action Drawer.
