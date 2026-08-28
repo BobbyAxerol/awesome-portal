@@ -1349,3 +1349,34 @@ grid, 18px day cells). Two hues the hi-fi mutes on purpose became tokens
 read as noise and the token gate rightly refuses hues declared outside the
 token file. BR-EX-62 was amended the same day: `paper-list.v1` grows into
 `paper-overview.v1` (§7.5.1 of the unified plan).
+
+### 8.25 Backend request đang treo — BR-EX-64 (mở 2026-08-28)
+
+Theo CLAUDE.md §5. Intake chính thức: §7.2 + §7.6 của
+`portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+(commit `896df0f`).
+
+```text
+Backend request (@codex) — BR-EX-64
+- Endpoint/field cần: không có endpoint mới — một schema fragment dùng chung
+  `chart-series.rules.v1`, $ref bởi mọi series được vẽ (41/50/56/57/59/62):
+  điểm số + timestamp ISO UTC (không bao giờ toạ độ đã scale) · tiền là decimal
+  string · venue đóng cửa = gap tường minh, không nội suy · tổng in cạnh series
+  = đúng tổng series · marker nào cũng mang journal id của nó · annotation bằng
+  đúng giá trị series tại bucket của nó · cap + downsample giữ extrema và khai
+  báo method · tooltip provenance (authority · as_of · formula_version) bắt
+  buộc · overlay đa stage chung một join_digest · một chủ sở hữu duy nhất cho
+  OHLC.
+- Lý do UI: pass chart thật 2026-08-28 thay toàn bộ SVG mô phỏng trên
+  Paper/Canary/Live bằng ECharts (marketChart.tsx) — các rule trên đang được
+  viết lặp ở từng phụ lục và lệch dần; UI đã va từng cái: bar smoke phải
+  *scale* mới khớp tổng in dưới nó, annotation DD ghi Aug 12 nhưng ngồi Jul 25
+  cho tới khi data mang đúng đáy.
+- Ảnh hưởng hiện tại: BR-EX-41/50/56/57/59/62 đã proven-renderable end-to-end;
+  generator trong paper.smoke.ts / canary.smoke.ts là fixture tham chiếu.
+- Đề xuất schema: §7.6 đầy đủ (10 rule, DoR §7.6.3, 6 test §7.6.4, amendment
+  additive cho 57/59/62 ở §7.6.2).
+- Codex phải chốt (leo thang): §7.5.5(1) — OHLC thuộc data-layer snapshot ds_*
+  hay Trading System market route; HAI màn đang chặn trên quyết định này
+  (Paper overlay 62 + Trade Replay 50).
+```
