@@ -21,7 +21,8 @@
  *      will keep asking.
  */
 import { Fragment, useState, type ReactNode } from "react";
-import { clockOf, paperSmoke, paperVariant, untilVnOpen, usePaperTick, PAPER_SMOKE_WARNING } from "../paper.smoke";
+import { clockOf, corrSeries, paperCandles, paperSmoke, paperVariant, researchBand, untilVnOpen, usePaperTick, vnSessions, PAPER_SMOKE_WARNING } from "../paper.smoke";
+import { CandlesChart, LinesChart } from "../components/marketChart";
 import { CapGauges, HistogramChart, SparkTile } from "../components/visuals";
 import type { StageVisuals } from "../stage.smoke";
 
@@ -562,7 +563,7 @@ export function PaperWorkbench({
                   <span className="exec-a3-spacer" />
                   <span className="exec-pw-note">{calendar ? hifi.chart.legend : hifi.chart.legend}</span>
                 </header>
-                <div className="exec-pw-plot">{hifi.kind === "vnm" ? <VnEquity chart={hifi.chart} /> : <CryptoEquity chart={hifi.chart} />}</div>
+                <div className="exec-pw-plot exec-pw-chartplot">{hifi.kind === "vnm" ? <VnEquity asOf={envelope.asOf} /> : <CryptoEquity asOf={envelope.asOf} />}</div>
                 <footer className="exec-pw-foot">
                   {hifi.kind === "vnm" ? hifi.chart.foot : `${hifi.chartFoot} · as_of ${clockOf(envelope.asOf)}`}
                 </footer>
@@ -592,7 +593,7 @@ export function PaperWorkbench({
                     <span className="exec-a3-spacer" />
                     <span className="exec-pw-note">{hifi.overlay.legend}</span>
                   </header>
-                  <div className="exec-pw-plot"><Overlay overlay={hifi.overlay} /></div>
+                  <div className="exec-pw-plot exec-pw-chartplot"><Overlay asOf={envelope.asOf} /></div>
                   <footer className="exec-pw-foot">{hifi.overlay.foot}</footer>
                 </section>
               ) : null}
@@ -616,7 +617,7 @@ export function PaperWorkbench({
                     <span className="exec-a3-spacer" />
                     <span className="exec-pw-note">{hifi.correlation.head}</span>
                   </header>
-                  <div className="exec-pw-plot"><Correlation correlation={hifi.correlation} /></div>
+                  <div className="exec-pw-plot exec-pw-chartplot"><Correlation asOf={envelope.asOf} /></div>
                   <footer className="exec-pw-foot exec-pw-corrfoot">
                     {/* ρ is already on the chart's own labels; repeating it here
                         is the same number twice in one panel. */}
@@ -759,67 +760,92 @@ function PanelPointer({ what }: { what: string }) {
   return <p className="exec-pw-pointer">{what} is on the workbench above — it is not repeated here.</p>;
 }
 
+
+/** Drift vs the backtest expectation: dashed expected, solid paper, ±1σ band. */
+function DriftChart() {
+  const rows = researchBand(12, "2026-08-22", 0.02);
+  return (
+    <LinesChart
+      height={150}
+      series={[
+        { name: "backtest expected", tone: "mute", dashed: true, width: 1.4, points: rows.map((r) => [r.t, r.bt] as const) },
+        { name: "paper", tone: "good", width: 2, points: rows.map((r) => [r.t, r.pp] as const) },
+      ]}
+      band={{ points: rows.map((r) => [r.t, r.lo, r.hi] as const) }}
+      yFormatter={(v) => `${v.toFixed(1)}pt`}
+      provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "drift.v1 · run_5512" }}
+      ariaLabel="Paper against the backtest expectation, inside a one-sigma band"
+    />
+  );
+}
+
 /** Equity vs the approved run: expected band, backtest dashed, paper solid. */
-function CryptoEquity({ chart }: { chart: typeof import("../paper.smoke").PAPER_SMOKE_DATA.crypto.chart }) {
+function CryptoEquity({ asOf }: { asOf: string | null }) {
+  const rows = researchBand(30, "2026-08-22", 0.012);
+  // The projection's own annotation — the KPI strip's −2.14% max drawdown,
+  // placed on the day it happened. The chart repeats, it never recomputes.
+  const dd = rows.reduce((min, r) => (r.pp < min.pp ? r : min), rows[0]);
   return (
-    <svg viewBox="0 0 640 240" className="exec-pw-svg" role="img" aria-label="Paper equity against the backtest line and the expected band" style={{ fontFamily: "var(--font-mono)" }}>
-      <polygon points={chart.band} fill="var(--accent)" opacity="0.14" />
-      <polyline points={chart.backtest} fill="none" stroke="var(--ink-faint)" strokeWidth="1.5" strokeDasharray="5 4" />
-      <polyline points={chart.paper} fill="none" stroke="var(--accent)" strokeWidth="2" />
-      {chart.marker ? (
-        <>
-          <circle cx={chart.marker.x} cy={chart.marker.y} r="3.5" fill="none" stroke="var(--bad)" strokeWidth="1.5" />
-          <text x={chart.marker.x + 8} y={chart.marker.y + 14} fontSize="9" fill="var(--bad)">{chart.marker.label}</text>
-        </>
-      ) : null}
-    </svg>
+    <LinesChart
+      height={230}
+      series={[
+        { name: "backtest", tone: "mute", dashed: true, width: 1.4, points: rows.map((r) => [r.t, r.bt] as const) },
+        { name: "paper", tone: "accent", width: 2, points: rows.map((r) => [r.t, r.pp] as const) },
+      ]}
+      band={{ points: rows.map((r) => [r.t, r.lo, r.hi] as const) }}
+      annotation={{ t: dd.t, v: dd.pp, label: "DD −2.14% · Aug 12", tone: "bad" }}
+      yFormatter={(v) => `${v.toFixed(1)}%`}
+      provenance={{ authority: "EXECUTION", asOf: asOf ?? "—", formula: "equity_projection.v1" }}
+      ariaLabel="Paper equity against the backtest line and the expected band"
+    />
   );
 }
 
-/** VN equity: a line that only exists inside a session, and shading where the market is shut. */
-function VnEquity({ chart }: { chart: typeof import("../paper.smoke").PAPER_SMOKE_DATA.vnm.chart }) {
+/** VN equity: the line exists only inside a session; the closed windows are the venue's calendar, drawn as areas. */
+function VnEquity({ asOf }: { asOf: string | null }) {
+  const vn = vnSessions();
   return (
-    <svg viewBox="0 0 640 220" className="exec-pw-svg" role="img" aria-label="Equity by session, shaded where the market is closed" style={{ fontFamily: "var(--font-mono)" }}>
-      {chart.closed.map((c) => <rect key={c.x} x={c.x} y="10" width={c.w} height="190" fill="var(--paper-sunken)" />)}
-      <text x={chart.closedLabel.x} y={chart.closedLabel.y} fontSize="10" fill="var(--ink-mute)">{chart.closedLabel.text}</text>
-      {chart.sessions.map((pts) => <polyline key={pts} points={pts} fill="none" stroke="var(--accent)" strokeWidth="2" />)}
-      <circle cx={chart.tip.x} cy={chart.tip.y} r="3.5" fill="var(--accent)" />
-      <text x={chart.tip.x - 80} y={chart.tip.y - 14} fontSize="10" fill="var(--accent)">{chart.tip.label}</text>
-    </svg>
+    <LinesChart
+      height={230}
+      series={[{ name: "equity", tone: "accent", width: 2, points: vn.points }]}
+      closedWindows={vn.closed}
+      annotation={{ t: vn.frozen.t, v: vn.frozen.v, label: "frozen at close", tone: "accent" }}
+      yFormatter={(v) => `${(v / 1_000_000).toFixed(0)}M`}
+      provenance={{ authority: "EXECUTION", asOf: asOf ?? "—", formula: "equity_projection.v1" }}
+      ariaLabel="Equity by session, shaded where the market is closed"
+    />
   );
 }
 
-/** Candles with the buy / sell / fill markers that drill into the order journal. */
-function Overlay({ overlay }: { overlay: typeof import("../paper.smoke").PAPER_SMOKE_DATA.crypto.overlay }) {
+/** Real candles with the order journal on them — a marker answers the hover with its order. */
+function Overlay({ asOf }: { asOf: string | null }) {
+  const { candles, markers } = paperCandles();
   return (
-    <svg viewBox="0 0 640 200" className="exec-pw-svg" role="img" aria-label="Candles with order and fill markers" style={{ fontFamily: "var(--font-mono)" }}>
-      <g transform="scale(1 1.667)">
-        {overlay.candles.map((c) => (
-          <g key={c.x}>
-            <line x1={c.x + 7} y1={c.hi} x2={c.x + 7} y2={c.lo} stroke={c.up ? "var(--good)" : "var(--bad)"} strokeWidth="1" />
-            <rect x={c.x} y={c.top} width="14" height={c.h} fill={c.up ? "var(--good-bg)" : "var(--bad-bg)"} stroke={c.up ? "var(--good)" : "var(--bad)"} />
-          </g>
-        ))}
-      </g>
-      <polygon points={`${overlay.buy.x},${overlay.buy.y} ${overlay.buy.x - 6},${overlay.buy.y + 17} ${overlay.buy.x + 6},${overlay.buy.y + 17}`} fill="var(--good)" />
-      <polygon points={`${overlay.sell.x},${overlay.sell.y} ${overlay.sell.x - 6},${overlay.sell.y - 17} ${overlay.sell.x + 6},${overlay.sell.y - 17}`} fill="var(--bad)" />
-      <circle cx={overlay.fill.x} cy={overlay.fill.y} r="4" fill="var(--accent)" />
-      <text x={overlay.fill.x + 9} y={overlay.fill.y + 4} fontSize="9" fill="var(--ink-faint)">{overlay.fill.label}</text>
-    </svg>
+    <CandlesChart
+      height={210}
+      candles={candles}
+      markers={markers}
+      provenance={{ authority: "EXECUTION", asOf: asOf ?? "—", formula: "BINANCE data_layer snapshot ds_5512" }}
+      ariaLabel="Candles with order and fill markers"
+    />
   );
 }
 
-/** Rolling correlation against the portfolio and the benchmark, around ρ = 0. */
-function Correlation({ correlation }: { correlation: typeof import("../paper.smoke").PAPER_SMOKE_DATA.crypto.correlation }) {
+/** Rolling correlation vs portfolio and benchmark, around rho = 0. */
+function Correlation({ asOf }: { asOf: string | null }) {
+  const rows = corrSeries("2026-08-22");
   return (
-    <svg viewBox="0 0 640 160" className="exec-pw-svg" role="img" aria-label="Rolling correlation vs portfolio and benchmark" style={{ fontFamily: "var(--font-mono)" }}>
-      <line x1="0" y1="120" x2="640" y2="120" stroke="var(--line)" strokeWidth="1" strokeDasharray="3 4" />
-      <text x="4" y="115" fontSize="9" fill="var(--ink-mute)">ρ = 0</text>
-      <polyline points={correlation.portfolio} fill="none" stroke="var(--accent)" strokeWidth="2" />
-      <polyline points={correlation.benchmark} fill="none" stroke="var(--stage-paper)" strokeWidth="1.5" strokeDasharray="5 4" />
-      <text x="470" y="24" fontSize="9" fill="var(--accent)">{correlation.labels.portfolio}</text>
-      <text x="470" y="152" fontSize="9" fill="var(--stage-paper)">{correlation.labels.benchmark}</text>
-    </svg>
+    <LinesChart
+      height={170}
+      series={[
+        { name: "ρ vs portfolio", tone: "accent", width: 2, points: rows.map((r) => [r.t, r.pf] as const) },
+        { name: "ρ vs benchmark", tone: "paper", dashed: true, width: 1.4, points: rows.map((r) => [r.t, r.bm] as const) },
+      ]}
+      zeroLine={{ label: "ρ = 0" }}
+      yFormatter={(v) => v.toFixed(2)}
+      provenance={{ authority: "DERIVED", asOf: asOf ?? "—", formula: "corr.v1 · cov_30d_v2" }}
+      ariaLabel="Rolling correlation vs portfolio and benchmark"
+    />
   );
 }
 
@@ -888,22 +914,13 @@ function Drift({
     <section className="exec-pw-panel" aria-label="Drift vs approved evidence">
       <header className="exec-pw-head">
         <span className="exec-pw-title">Drift vs backtest</span>
-        {/* The legend belongs in the header with every other panel's legend on
-            this page. Painted inside the plot it was 237px of text in a 211px
-            box at tablet width — a legend drawn past the edge of its own
-            chart. */}
         <span className="exec-pw-note">{head.legend}</span>
         <span className="exec-a3-spacer" />
         <span className="exec-pw-driftnow" data-tone={head.tone}>{head.now}</span>
-        <span className="exec-pw-note">{head.legend} · {head.run}</span>
+        <span className="exec-pw-note">{head.run}</span>
       </header>
-      <div className="exec-pw-plot exec-pw-driftplot">
-        <svg viewBox="0 0 620 150" className="exec-pw-svg" role="img" aria-label="Paper against the backtest expectation, inside a one-sigma band" style={{ fontFamily: "var(--font-mono)" }}>
-          <polygon points={head.band} fill="var(--accent)" opacity="0.10" />
-          <polyline points={head.backtest} fill="none" stroke="var(--ink-faint)" strokeWidth="1.5" strokeDasharray="5 4" />
-          <polyline points={head.paper} fill="none" stroke="var(--good)" strokeWidth="2" />
-          <circle cx={head.tip.x} cy={head.tip.y} r="3.5" fill="var(--good)" />
-        </svg>
+      <div className="exec-pw-plot exec-pw-driftplot exec-pw-chartplot">
+        <DriftChart />
       </div>
       <p className="exec-pw-driftwindow">{head.window}</p>
       {/* Three columns, as the hi-fi draws them: what was approved, what paper

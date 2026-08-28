@@ -5984,7 +5984,13 @@
 .exec-pw .exec-strip-cell .exec-role-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
 .exec-pw-meta { padding: 7px 12px; gap: 4px 16px; font: 400 11px/16px var(--font-mono); }
 .exec-pw-masthead { gap: 6px 10px; padding-bottom: 10px; }
-.exec-pw .exec-ws-main { gap: 0; }
+/* The canvas grid adds its own gap on top of every block's hi-fi margin —
+   two spacings where the hi-fi has one is exactly the "dãn rộng quá" the
+   owner saw. The blocks carry their measured 10–14px; the canvas adds none. */
+.exec-pw .exec-ws-canvas, .exec-px .exec-ws-canvas { gap: 0; }
+.exec-pw .exec-ws { row-gap: 0; }
+.exec-pw-chartplot { padding: 6px 8px 0; display: block; }
+.exec-mc { margin: 0; width: 100%; min-width: 0; }
 .exec-pw-ordersfoot { margin: 8px 0 0; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
 
 /* ── Paper fact grids — the hi-fi's own grammar, measured from

@@ -34,6 +34,37 @@ export const CANARY_SMOKE_DATA = {
   actionsFoot: "all actions: step-up auth + dual approval · plan → apply → verify · PARTIAL never renders green",
 };
 
+
+/**
+ * Numeric stage series for the real chart (the polyline strings above stay
+ * only for the coordinates the timeline still uses). Normalized to 1.0 at the
+ * window start; live begins at the canary start and is joined to the other
+ * stages by the artifact digest alone. Deterministic — no Math.random.
+ */
+export function canaryStageSeries(): {
+  backtest: [string, number][]; paper: [string, number][]; live: [string, number][];
+  canaryStart: string;
+} {
+  const det = (i: number, seed: number) => { const x = Math.sin(i * 12.9898 + seed) * 43758.5453; return (x - Math.floor(x)) - 0.5; };
+  const end = Date.UTC(2026, 7, 22), day = 86_400_000;
+  const d = (i: number) => new Date(end - (29 - i) * day).toISOString().slice(0, 10);
+  const backtest: [string, number][] = []; const paper: [string, number][] = []; const live: [string, number][] = [];
+  let bt = 1, pp = 1;
+  for (let i = 0; i < 30; i++) {
+    bt += 0.004 + det(i, 2.7) * 0.003;
+    pp += 0.0035 + det(i, 6.1) * 0.004;
+    backtest.push([d(i), Math.round(bt * 1e4) / 1e4]);
+    paper.push([d(i), Math.round(pp * 1e4) / 1e4]);
+  }
+  // canary start 2026-08-13 = index 21; live tracks paper with its own noise
+  let lv = paper[21][1];
+  for (let i = 21; i < 30; i++) {
+    lv += 0.003 + det(i, 9.9) * 0.005;
+    live.push([d(i), Math.round(lv * 1e4) / 1e4]);
+  }
+  return { backtest, paper, live, canaryStart: d(21) };
+}
+
 export function canarySmoke() {
   return CANARY_SMOKE ? CANARY_SMOKE_DATA : null;
 }

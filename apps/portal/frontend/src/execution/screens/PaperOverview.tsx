@@ -14,9 +14,10 @@ import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
 import {
-  paperClock, paperSmoke, poCells, poEquityLine, poSpark, untilVnOpen, usePaperTick,
+  overviewReturns, paperClock, paperSmoke, poCells, poSpark, untilVnOpen, usePaperTick,
   PAPER_OVERVIEW, type PoBoardRow,
 } from "../paper.smoke";
+import { LinesChart } from "../components/marketChart";
 
 const PO = PAPER_OVERVIEW;
 
@@ -91,12 +92,16 @@ export function PaperOverview() {
                 <span className="exec-po-note" data-size="9">{PO.equity.head}</span>
               </header>
               <div className="exec-po-plot">
-                <svg viewBox="0 0 560 120" className="exec-po-svg" role="img" aria-label="Cumulative return per deployment, own currency" style={{ fontFamily: "var(--font-mono)" }}>
-                  <line x1="0" y1="96" x2="560" y2="96" stroke="var(--line-soft)" strokeWidth="1" />
-                  {PO.equity.lines.map((l) => (
-                    <polyline key={l.tone} points={poEquityLine(l.amp, l.gain, now.getTime())} fill="none" stroke={`var(--${l.tone === "paper" ? "stage-paper" : l.tone})`} strokeWidth="1.8" />
-                  ))}
-                </svg>
+                {/* A real chart, not a stand-in: axes, hover, and each series
+                    normalized in its own currency — the tooltip says so. */}
+                <LinesChart
+                  height={150}
+                  series={overviewReturns("2026-08-22").map((l) => ({ name: l.name, tone: l.tone, points: l.points }))}
+                  zeroLine={{ label: "0%" }}
+                  yFormatter={(v) => `${v.toFixed(1)}%`}
+                  provenance={{ authority: "DERIVED", asOf: paperClock(now), formula: "equity_projection.v1 · own currency, never mixed" }}
+                  ariaLabel="Cumulative return per deployment, own currency"
+                />
               </div>
               <footer className="exec-po-legend">
                 {PO.equity.legend.map((l) => <span key={l.label} data-tone={l.tone}>{l.label}</span>)}

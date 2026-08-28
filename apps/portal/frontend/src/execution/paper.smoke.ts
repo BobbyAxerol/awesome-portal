@@ -284,14 +284,6 @@ export const PAPER_OVERVIEW = {
   },
 };
 
-/** The hi-fi's equity line: 30 points on a clock-phased sine, 560×120 box. */
-export function poEquityLine(amp: number, gain: number, nowMs: number): string {
-  const ph = nowMs / 1600;
-  return Array.from({ length: 30 }, (_, i) =>
-    `${((i / 29) * 560).toFixed(1)},${(96 - (i / 29) * gain - amp * Math.sin(i / 4 + ph) * 8 - Math.sin(i * 2.7 + ph * 2) * 2).toFixed(1)}`,
-  ).join(" ");
-}
-
 /** The hi-fi's drift sparkline: 26 points, 130×26 box around a midline. */
 export function poSpark(amp: number, drop: number): string {
   const n = 26;
@@ -307,6 +299,105 @@ export function poCells(days: PoBoardRow["days"]): PoDay[] {
   if (out.length < days.total) out.push({ kind: days.liveToday ? "today" : "next" });
   while (out.length < days.total) out.push({ kind: "ahead" });
   return out;
+}
+
+
+/* ---------------------------------------------------------------------------
+ * Real-chart data — deterministic series for the ECharts panels that replaced
+ * the SVG stand-ins (owner 2026-08-28: "làm biểu đồ thật, không mô phỏng").
+ * Fixed timestamps, no Math.random: a frozen clock gives identical pixels.
+ * ------------------------------------------------------------------------ */
+
+function det(i: number, seed: number): number {
+  const x = Math.sin(i * 12.9898 + seed) * 43758.5453;
+  return (x - Math.floor(x)) - 0.5;
+}
+
+/** 24 hourly BTCUSDT candles ending at the fixture's as_of, with the journal on top. */
+export function paperCandles(): { candles: { t: string; o: number; h: number; l: number; c: number }[]; markers: { kind: "BUY" | "SELL" | "FILL"; t: string; price: number; label: string }[] } {
+  const candles = [] as { t: string; o: number; h: number; l: number; c: number }[];
+  let px = 60_950;
+  for (let i = 0; i < 24; i++) {
+    const drift = 14 + det(i, 3.1) * 90;                    // slow up-trend, both signs
+    const o = px;
+    const c = Math.round((o + drift) * 100) / 100;
+    const h = Math.round((Math.max(o, c) + 40 + det(i, 7.7) * 25) * 100) / 100;
+    const l = Math.round((Math.min(o, c) - 40 - det(i, 5.3) * 25) * 100) / 100;
+    const hour = String((11 + i) % 24).padStart(2, "0");    // 11:00 … 10:00, ends at the 10:xx as_of
+    candles.push({ t: `${hour}:00`, o: Math.round(o * 100) / 100, h, l, c });
+    px = c;
+  }
+  const at = (i: number) => candles[i].t;
+  return {
+    candles,
+    markers: [
+      { kind: "BUY", t: at(5), price: candles[5].l - 60, label: "LIMIT BUY 0.0150 · ord_9a03" },
+      { kind: "SELL", t: at(14), price: candles[14].h + 60, label: "LIMIT SELL 0.4000 · ord_9a02" },
+      { kind: "FILL", t: at(22), price: 61_240.5, label: "fill 0.0200 @ 61,240.50 · fl_1" },
+    ],
+  };
+}
+
+/** Daily points over a window: [date, backtest, paper, lo, hi] — the research band. */
+export function researchBand(days: number, endIso: string, lag: number): { t: string; bt: number; pp: number; lo: number; hi: number }[] {
+  const end = new Date(endIso).getTime();
+  const out = [] as { t: string; bt: number; pp: number; lo: number; hi: number }[];
+  let bt = 0, pp = 0;
+  for (let i = 0; i < days; i++) {
+    bt += 0.12 + 0.05 * Math.sin(i / 4) + det(i, 2.2) * 0.04;
+    pp += 0.12 + 0.05 * Math.sin(i / 4) + det(i, 9.1) * 0.1 - lag;
+    const s = 0.25 + i * 0.028;
+    const t = new Date(end - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10);
+    out.push({ t, bt: r2(bt), pp: r2(pp), lo: r2(bt - s), hi: r2(bt + s) });
+  }
+  return out;
+}
+const r2 = (v: number) => Math.round(v * 100) / 100;
+
+/** Rolling ρ vs portfolio and vs benchmark, 30 daily samples. */
+export function corrSeries(endIso: string): { t: string; pf: number; bm: number }[] {
+  const end = new Date(endIso).getTime();
+  return Array.from({ length: 30 }, (_, i) => ({
+    t: new Date(end - (29 - i) * 86_400_000).toISOString().slice(0, 10),
+    pf: r2(0.2 + (i / 29) * 0.11 + det(i, 4.4) * 0.05),
+    bm: r2(0.16 + det(i, 6.6) * 0.04),
+  }));
+}
+
+/** VN equity by session with the closed windows the venue calendar publishes. */
+export function vnSessions(): { points: [string, number][]; closed: { from: string; to: string; label?: string }[]; frozen: { t: string; v: number } } {
+  const days = ["2026-08-19", "2026-08-20", "2026-08-21"];
+  const points: [string, number][] = [];
+  let v = 1_000_000_000;
+  let n = 0;
+  for (const d of days) {
+    for (const hm of ["09:00", "10:00", "11:00", "11:30", "13:00", "14:00", "14:45"]) {
+      v += 2_400_000 + det(n++, 8.8) * 6_000_000;
+      points.push([`${d} ${hm}`, Math.round(v)]);
+    }
+  }
+  return {
+    points,
+    closed: [
+      { from: "2026-08-19 14:45", to: "2026-08-20 09:00", label: "closed 14:45→09:00" },
+      { from: "2026-08-20 14:45", to: "2026-08-21 09:00" },
+    ],
+    frozen: { t: points[points.length - 1][0], v: points[points.length - 1][1] },
+  };
+}
+
+/** Cumulative return per deployment for the overview — own currency, normalized %. */
+export function overviewReturns(endIso: string): { name: string; tone: "accent" | "good" | "paper"; points: [string, number][] }[] {
+  const end = new Date(endIso).getTime();
+  const mk = (seed: number, gain: number) => Array.from({ length: 30 }, (_, i) => [
+    new Date(end - (29 - i) * 86_400_000).toISOString().slice(0, 10),
+    r2((i / 29) * gain + det(i, seed) * 0.35 + Math.sin(i / 4 + seed) * 0.18),
+  ] as [string, number]);
+  return [
+    { name: "Carry", tone: "accent", points: mk(3.3, 3.3) },
+    { name: "Grid", tone: "good", points: mk(5.1, 3.1) },
+    { name: "VnMomo", tone: "paper", points: mk(7.9, 5.2) },
+  ];
 }
 
 export function paperSmoke() {

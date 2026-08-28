@@ -11,7 +11,8 @@
 import { useState, type ReactNode } from "react";
 import { Hint } from "../components/hint";
 import { ExecutionSurface } from "../ExecutionSurface";
-import { canarySmoke, clockZ, exitIn, fmtPlus, useCanaryTick } from "../canary.smoke";
+import { LinesChart } from "../components/marketChart";
+import { canarySmoke, canaryStageSeries, clockZ, exitIn, fmtPlus, useCanaryTick } from "../canary.smoke";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
 import { CapGauges, HistogramChart, PositionsTable, SparkTile, StageLinesChart } from "../components/visuals";
@@ -54,6 +55,26 @@ export function ActionGroup({ policy, title, brokerStale }: { policy: CanaryActi
 
 const TABS = ["Envelope", "Positions & orders", "Reconciliation", "Guard rule"] as const;
 type Tab = (typeof TABS)[number];
+
+
+/** Live vs paper vs backtest on one digest, with the canary start marked. */
+function StageLines() {
+  const st = canaryStageSeries();
+  return (
+    <LinesChart
+      height={230}
+      series={[
+        { name: "backtest", tone: "mute", dashed: true, width: 1.2, points: st.backtest },
+        { name: "paper", tone: "paper", dashed: true, width: 1.5, points: st.paper },
+        { name: "live", tone: "accent", width: 2.4, points: st.live },
+      ]}
+      verticalLines={[{ t: st.canaryStart, label: "canary start · Aug 13", tone: "bad" }]}
+      yFormatter={(v) => v.toFixed(3)}
+      provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "equity_projection.v1 · joined by sha256:41bb7d…c4" }}
+      ariaLabel="Normalized equity: live, paper, backtest"
+    />
+  );
+}
 
 export function CanaryControlRoomScreen({
   room,
@@ -192,15 +213,11 @@ export function CanaryControlRoomScreen({
               <div className="exec-pf2-grid" data-ratio="1.55">
                 <section className="exec-pf2-panel" aria-label="Live vs Paper vs Backtest (hi-fi)">
                   <header className="exec-pf2-head"><span className="exec-pf2-title">Live vs Paper vs Backtest — same artifact digest</span><span className="exec-pf2-spacer" /><span className="exec-cn-legend">live —— · paper – – · backtest ····</span></header>
-                  <div className="exec-pf2-plotpad">
-                    <svg viewBox="0 0 640 240" className="exec-cn-svg" role="img" aria-label="Normalized equity: live, paper, backtest" style={{ fontFamily: "var(--font-mono)" }}>
-                      <polyline points={smoke.chart.backtest} fill="none" stroke="var(--ink-mute)" strokeWidth="1.5" strokeDasharray="2 4" />
-                      <polyline points={smoke.chart.paper} fill="none" stroke="var(--stage-paper)" strokeWidth="1.5" strokeDasharray="6 4" />
-                      <polyline points={smoke.chart.live} fill="none" stroke="var(--accent)" strokeWidth="2.5" />
-                      <line x1={smoke.chart.start.x} y1="12" x2={smoke.chart.start.x} y2="228" stroke="var(--bad)" strokeWidth="1" strokeDasharray="3 3" />
-                      <text x={smoke.chart.start.x + 4} y="28" fontSize="9" fill="var(--bad)">{smoke.chart.start.label}</text>
-                      <text x={smoke.chart.liveLabel.x} y={smoke.chart.liveLabel.y} fontSize="9" fill="var(--accent)">{smoke.chart.liveLabel.t}</text>
-                    </svg>
+                  <div className="exec-pf2-plotpad exec-pw-chartplot">
+                    {/* A real chart, not a stand-in: three stages joined by the
+                        artifact digest, differentiated by line style — never by
+                        colour alone — with the canary start marked in time. */}
+                    <StageLines />
                   </div>
                   <footer className="exec-pf2-foot">{smoke.chart.foot}</footer>
                 </section>

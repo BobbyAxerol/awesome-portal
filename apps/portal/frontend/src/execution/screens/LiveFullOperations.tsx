@@ -11,6 +11,7 @@
  */
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { BarsChart } from "../components/marketChart";
 import { liveSmoke } from "../live.smoke";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
@@ -242,12 +243,26 @@ export function LiveFullOperationsScreen({
               </section>
               <section className="exec-pf2-panel" aria-label="Contribution & edge evidence (hi-fi)">
                 <header className="exec-pf2-head"><span className="exec-pf2-title">Contribution &amp; edge evidence · 30d</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">{smoke.full.contribution.meta}</span></header>
-                <div className="exec-lf-bars">
+                <div className="exec-lf-bars exec-pw-chartplot">
                   <div className="exec-pf2-note exec-lf-bartitle">{smoke.full.contribution.title}</div>
-                  <svg viewBox="0 0 640 190" className="exec-lf-barsvg" role="img" aria-label="Daily PnL contribution, 30 days" style={{ fontFamily: "var(--font-mono)" }}>
-                    <line x1="0" y1="150" x2="640" y2="150" stroke="var(--line)" strokeWidth="1" />
-                    {smoke.full.contribution.bars.map((v, i) => <rect key={i} x={16 + i * 44} y={v >= 0 ? 150 - v : 150} width="30" height={Math.abs(v)} fill={v >= 0 ? "var(--good-bg)" : "var(--bad-bg)"} stroke={v >= 0 ? "var(--good)" : "var(--bad)"} strokeWidth="0.5" />)}
-                  </svg>
+                  {/* Real bars on a real scale: each bar hovers to its date and
+                      exact figure, and the series is scaled so it sums to the
+                      30d total printed under it — a chart that disagrees with
+                      its own caption is worse than no chart. */}
+                  <BarsChart
+                    height={170}
+                    points={(() => {
+                      const bars = smoke.full.contribution.bars;
+                      const scale = 3102.44 / bars.reduce((a, b) => a + b, 0);
+                      return bars.map((v, i) => {
+                        const day = new Date(Date.UTC(2026, 7, 22) - (bars.length - 1 - i) * 86_400_000);
+                        return [day.toISOString().slice(5, 10), Math.round(v * scale * 100) / 100] as const;
+                      });
+                    })()}
+                    yFormatter={(v) => v.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                    provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "contrib.v1 · net of fees" }}
+                    ariaLabel="Daily PnL contribution, 30 days"
+                  />
                 </div>
                 <div className="exec-lf-facts"><span>30d contribution <b data-tone="good">{smoke.full.contribution.total}</b></span><span>cost drag {smoke.full.contribution.drag}</span><span className="exec-pf2-dim">detailed edge decomposition → <a href={`/deployments/portfolios/${live.portfolioId ?? "PF-CRYPTO"}`}>Portfolio 360°</a> · research evidence → <a href="/deployments/alphas/av_2041?tab=Audit">Artifact Passport</a> (drill-down)</span></div>
               </section>
