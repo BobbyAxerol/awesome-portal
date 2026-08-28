@@ -87,7 +87,9 @@ function driftSeries(lag: number, latePenalty: number) {
     tip: { x: X(pp.length - 1), y: Y(pp[pp.length - 1]) },
     now: `${gap.toFixed(2)}pt vs expected`,
     tone: (Math.abs(gap) > half ? "bad" : Math.abs(gap) > 0.5 * half ? "warn" : "good") as "good" | "warn" | "bad",
-    legend: "— — backtest expected · —— paper · band ±1σ",
+    // Short enough to sit inside the plot at every width: a legend painted
+    // past the edge of its own chart is a legend nobody reads.
+    legend: "– – backtest · —— paper · ±1σ band",
   };
 }
 

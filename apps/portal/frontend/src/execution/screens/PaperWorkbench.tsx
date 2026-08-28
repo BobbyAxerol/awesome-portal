@@ -880,6 +880,11 @@ function Drift({
     <section className="exec-pw-panel" aria-label="Drift vs approved evidence">
       <header className="exec-pw-head">
         <span className="exec-pw-title">Drift vs backtest</span>
+        {/* The legend belongs in the header with every other panel's legend on
+            this page. Painted inside the plot it was 237px of text in a 211px
+            box at tablet width — a legend drawn past the edge of its own
+            chart. */}
+        <span className="exec-pw-note">{head.legend}</span>
         <span className="exec-a3-spacer" />
         <span className="exec-pw-driftnow" data-tone={head.tone}>{head.now}</span>
         <span className="exec-pw-note">{head.run}</span>
@@ -890,7 +895,6 @@ function Drift({
           <polyline points={head.backtest} fill="none" stroke="var(--ink-faint)" strokeWidth="1.5" strokeDasharray="5 4" />
           <polyline points={head.paper} fill="none" stroke="var(--good)" strokeWidth="2" />
           <circle cx={head.tip.x} cy={head.tip.y} r="3.5" fill="var(--good)" />
-          <text x="8" y="14" fontSize="9" fill="var(--ink-mute)">{head.legend}</text>
         </svg>
       </div>
       <p className="exec-pw-driftwindow">{head.window}</p>

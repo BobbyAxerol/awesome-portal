@@ -6092,3 +6092,9 @@
 /* hi-fi Paper Exit Review is a 1200px page, not a 1440px one: four evidence
    panels read better at 2×2 than stretched across the full canvas. */
 .exec-px .exec-ws { max-width: 1200px; }
+/* At phone and tablet width the lifecycle legend must not hold the flex row
+   open: the rail scrolls on its own, so it needs to be allowed to shrink, and
+   the legend wraps under it instead of pushing the page sideways. */
+.exec-pw-life { flex-wrap: wrap; }
+.exec-pw-life > .exec-rail { min-width: 0; }
+@media (max-width: 899px) { .exec-pw-lifelegend { white-space: normal; } }

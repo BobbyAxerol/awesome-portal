@@ -109,81 +109,6 @@
   "detail": "/administration/actions?operation=op_1251"
  },
  {
-  "route": "/execution/operations",
-  "index": 4,
-  "tag": "BUTTON",
-  "text": "op_1253",
-  "verdict": "changed"
- },
- {
-  "route": "/execution/operations",
-  "index": 5,
-  "tag": "A",
-  "text": "review in incident inc_44 →",
-  "verdict": "navigated",
-  "detail": "/execution/operations/incidents/inc_44"
- },
- {
-  "route": "/execution/operations",
-  "index": 6,
-  "tag": "A",
-  "text": "cmd_9f12",
-  "verdict": "navigated",
-  "detail": "/administration/actions?operation=op_1253"
- },
- {
-  "route": "/execution/operations",
-  "index": 7,
-  "tag": "BUTTON",
-  "text": "op_1255",
-  "verdict": "changed"
- },
- {
-  "route": "/execution/operations",
-  "index": 8,
-  "tag": "BUTTON",
-  "text": "op_fixture_queue_1",
-  "verdict": "changed"
- },
- {
-  "route": "/execution/operations",
-  "index": 9,
-  "tag": "BUTTON",
-  "text": "Close alerts",
-  "verdict": "changed"
- },
- {
-  "route": "/execution/operations",
-  "index": 10,
-  "tag": "A",
-  "text": "CRITICAL · 02:00Position MISMATCH — acct-live-gr",
-  "verdict": "navigated",
-  "detail": "/execution/operations/incidents/inc_44"
- },
- {
-  "route": "/execution/operations",
-  "index": 11,
-  "tag": "A",
-  "text": "WARN · 4mBroker sync STALE — dep_91 · OKXage 88s",
-  "verdict": "navigated",
-  "detail": "/deployments/sandbox/dep_77"
- },
- {
-  "route": "/execution/operations",
-  "index": 12,
-  "tag": "A",
-  "text": "WARN · 06:00op_1251 PARTIAL unresolvedemergency-",
-  "verdict": "changed"
- },
- {
-  "route": "/execution/operations",
-  "index": 13,
-  "tag": "A",
-  "text": "INFO · 1dCondition expiring in 7d — capacity cap",
-  "verdict": "navigated",
-  "detail": "/governance/approvals"
- },
- {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 0,
   "tag": "A",
@@ -751,7 +676,7 @@
   "tag": "BUTTON",
   "text": "Request Paper Exit Review",
   "verdict": "navigated",
-  "detail": "/governance/exit-reviews/EX-771?from=%2Fdeployments%2Fpaper%2Fdep_94%3Ftab%3DOverview"
+  "detail": "/governance/exit-reviews/EX-771?from=%2Fdeployments%2Fpaper%2Fdep_94%3Ftab%3DOrders"
  },
  {
   "route": "/deployments/paper/dep_94",
@@ -779,7 +704,8 @@
   "index": 20,
   "tag": "BUTTON",
   "text": "Overview",
-  "verdict": "skipped:selected"
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Overview"
  },
  {
   "route": "/deployments/paper/dep_94",
@@ -794,8 +720,7 @@
   "index": 22,
   "tag": "BUTTON",
   "text": "Orders",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94?tab=Orders"
+  "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_94",
@@ -1046,7 +971,8 @@
   "index": 19,
   "tag": "BUTTON",
   "text": "Overview",
-  "verdict": "skipped:selected"
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Overview"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
@@ -1061,8 +987,7 @@
   "index": 21,
   "tag": "BUTTON",
   "text": "Orders",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Orders"
+  "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
@@ -1897,100 +1822,6 @@
   "text": "Partial",
   "verdict": "navigated",
   "detail": "/deployments/blotter?filter=PARTIAL"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 17,
-  "tag": "BUTTON",
-  "text": "Rejected",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=REJECTED"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 18,
-  "tag": "BUTTON",
-  "text": "Reset the cross-filter chart selection · Aug 12 ",
-  "verdict": "changed"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 19,
-  "tag": "A",
-  "text": "ord_8841",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8841"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 20,
-  "tag": "A",
-  "text": "ord_8843",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8843"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 21,
-  "tag": "A",
-  "text": "br_0092",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=br_0092"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 22,
-  "tag": "A",
-  "text": "ord_8832.E",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8832.E"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 23,
-  "tag": "A",
-  "text": "ord_8832.TP",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8832.TP"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 24,
-  "tag": "A",
-  "text": "ord_8832.SL",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8832.SL"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 25,
-  "tag": "A",
-  "text": "ord_8820",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8820"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 26,
-  "tag": "A",
-  "text": "ord_8817",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8817"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 27,
-  "tag": "A",
-  "text": "ord_8815",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?order=ord_8815"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 28,
-  "tag": "BUTTON",
-  "text": "▼ load older",
-  "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
