@@ -110,6 +110,42 @@ for name, digest in owner_manifest.get("files", {}).items():
     if files.get(f"owner-publication/{name}") != digest:
         raise SystemExit(f"Owner publication member is not pinned: {name}")
 
+runtime_overlay_manifest = json.loads(
+    (pack / "owner-runtime-overlay/manager-v2-runtime-qualification.manifest.json").read_text(
+        encoding="utf-8"
+    )
+)
+if runtime_overlay_manifest.get("contract_revision") != "trading-system.portal-execution.manager-v2.runtime.v1":
+    raise SystemExit("Manager runtime overlay revision drifted")
+if runtime_overlay_manifest.get("status") != "OWNER_LOOPBACK_QUALIFICATION_PASSED_CLEANED_UP":
+    raise SystemExit("Manager runtime overlay historical qualification state drifted")
+for name, digest in runtime_overlay_manifest.get("files", {}).items():
+    if files.get(f"owner-runtime-overlay/{name}") != digest:
+        raise SystemExit(f"Manager runtime overlay member is not pinned: {name}")
+runtime_overlay = json.loads(
+    (pack / "owner-runtime-overlay/manager-v2-runtime-qualification.json").read_text(encoding="utf-8")
+)
+if (
+    runtime_overlay.get("base_source_dark_contract", {}).get("revision")
+    != "trading-system.portal-execution.manager-v2.v1"
+    or runtime_overlay.get("profile", {}).get("profile_id") != "PAPER_BINANCE_USDM"
+    or runtime_overlay.get("limits", {}).get("maximum_page_rows") != 200
+    or runtime_overlay.get("limits", {}).get("maximum_response_bytes") != 1_048_576
+    or runtime_overlay.get("wire_overlay", {}).get("manager_record_required_addition") != "record_key"
+):
+    raise SystemExit("Manager runtime overlay no longer binds the approved wire delta")
+dto_handoff = (pack / "RUST_DTO_HANDOFF.md").read_text(encoding="utf-8")
+for marker in (
+    "MANAGER_V2_CONTRACT_VERSION",
+    "OpaqueCursor",
+    "CatalogueDigest",
+    "ManagerEnvelope",
+    "ManagerUnavailable",
+    "ManagerValue",
+):
+    if marker not in dto_handoff:
+        raise SystemExit("Manager Rust DTO handoff is incomplete")
+
 publication = json.loads(
     (pack / "owner-publication/manager-v2-private-paper-publication.json").read_text(encoding="utf-8")
 )
@@ -130,6 +166,10 @@ for field in (
 truthful = publication.get("truthful_readiness", {})
 if truthful.get("private_same_host_route_qualified") is not True:
     raise SystemExit("Manager publication is missing private route qualification")
+if publication.get("owner_loopback_overlay", {}).get("manifest_sha256") != files.get(
+    "owner-runtime-overlay/manager-v2-runtime-qualification.manifest.json"
+):
+    raise SystemExit("Manager publication does not bind the imported runtime overlay")
 if any(truthful.get(field) is not False for field in (
     "portal_product_consumer_implemented", "public_or_production_authoritative",
     "high_availability_or_independent_failure_domain", "n11_v1_complete",

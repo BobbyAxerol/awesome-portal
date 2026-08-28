@@ -7,6 +7,12 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- [EX-BE-02 — Manager-v2 Backend Consumer](./EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md)
+  — **Complete / backend only / no runtime activation:** separate sealed Rust
+  contract/client crates consume exactly the already-qualified five Manager-v2
+  Paper GET routes with workload mTLS. No Edge route, browser/UI, cache,
+  projection, database write, poller or runtime activation is in scope.
+
 - [EX-BE-02 — Manager-v2 Paper Read Route and Owner Handoff](./EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md)
   — **Complete / private Paper route qualified / no product consumer:**
   byte-locked owner contract/publication import, five exact Source Proxy

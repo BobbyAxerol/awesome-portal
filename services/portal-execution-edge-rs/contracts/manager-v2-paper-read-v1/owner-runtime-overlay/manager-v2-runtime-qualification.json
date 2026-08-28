@@ -1,0 +1,99 @@
+{
+  "schema_version": "trading-system.portal-execution.manager-v2.runtime-overlay.v1",
+  "contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "status": "OWNER_LOOPBACK_QUALIFICATION_PASSED_CLEANED_UP",
+  "base_source_dark_contract": {
+    "revision": "trading-system.portal-execution.manager-v2.v1",
+    "manifest_path": "contracts/portal-execution-owner/ts-oc-03c-5/manager-v2.manifest.json",
+    "manifest_sha256": "sha256:aa0b5d78b8dd70045e9028881b70a194658fdce8c3bee02cf02756051aaa3390",
+    "mutation": "FORBIDDEN"
+  },
+  "profile": {
+    "profile_id": "PAPER_BINANCE_USDM",
+    "caller_selectable": false,
+    "sandbox": false,
+    "canary": false,
+    "live": false
+  },
+  "transport": {
+    "tls_version": "TLSv1.3",
+    "mTLS": "REQUIRED",
+    "delegated_jwt": "REQUIRED_CERTIFICATE_BOUND_EDDSA",
+    "jwt_maximum_ttl_seconds": 300,
+    "issuer_private_key_in_facade": false
+  },
+  "limits": {
+    "maximum_page_rows": 200,
+    "maximum_response_bytes": 1048576,
+    "cursor": "FERNET_ENCRYPTED_OPAQUE_RELATION_CATALOGUE_PROFILE_BOUND",
+    "record_key": "FERNET_ENCRYPTED_OPAQUE_RELATION_CATALOGUE_PROFILE_BOUND",
+    "fixed_rate_and_concurrency": "PRIVATE_RUNTIME_CONFIGURATION"
+  },
+  "catalogue": {
+    "relation_count": 96,
+    "source_dark_catalogue_sha256": "sha256:0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44",
+    "runtime_query_status": "QUALIFIED_TS_OC_03D1",
+    "key_classes": [
+      "PRIMARY_KEY",
+      "UNIQUE_INDEX",
+      "EXPRESSION_UNIQUE_INDEX",
+      "VIEW_SOURCE_COMPOSITE"
+    ],
+    "safe_columns": "EXPLICIT_CATALOGUE_COLUMNS_MINUS_SECRET_AND_RAW_PAYLOAD_COLUMNS",
+    "structured_values": "RECURSIVELY_REDACTED_TAGGED_MANAGER_VALUE"
+  },
+  "operations": [
+    {
+      "operation_id": "managerCatalog",
+      "method": "GET",
+      "path_template": "/portal/execution/v2/manager/catalog"
+    },
+    {
+      "operation_id": "managerRelationRecords",
+      "method": "GET",
+      "path_template": "/portal/execution/v2/manager/records/{schema}/{relation}"
+    },
+    {
+      "operation_id": "managerRelationRecord",
+      "method": "GET",
+      "path_template": "/portal/execution/v2/manager/records/{schema}/{relation}/{key}"
+    },
+    {
+      "operation_id": "managerProjection",
+      "method": "GET",
+      "path_template": "/portal/execution/v2/manager/projections/{kind}"
+    },
+    {
+      "operation_id": "managerCapabilities",
+      "method": "GET",
+      "path_template": "/portal/execution/v2/manager/capabilities"
+    }
+  ],
+  "runtime_state": {
+    "registered": true,
+    "source_binding": true,
+    "owner_loopback_qualified": true,
+    "portal_reachable": false,
+    "portal_deployment_changed": false
+  },
+  "wire_overlay": {
+    "envelope_shape": "INHERITS_MANAGER_V2_V1_WITH_RUNTIME_CONTRACT_VERSION",
+    "manager_record_required_addition": "record_key",
+    "key_descriptor_status_additions": [
+      "EXPRESSION_UNIQUE_INDEX",
+      "VIEW_SOURCE_COMPOSITE"
+    ],
+    "capability_status": "OWNER_LOOPBACK_QUALIFIED",
+    "catalogue_query_status": "QUALIFIED_TS_OC_03D1"
+  },
+  "forbidden": [
+    "PUBLIC_LISTENER",
+    "PORTAL_DATABASE_DSN_OR_ROLE",
+    "SQL_OR_ARBITRARY_FIELD_OR_SORT_INPUT",
+    "COMMAND_REDIS_BROKER_CLI",
+    "EVENT_SSE_REPLAY",
+    "SANDBOX_CANARY_LIVE",
+    "V1_OR_D4_ROUTE_MUTATION"
+  ],
+  "portal_handoff_boundary": "The immutable deployed Portal Source Proxy has no Manager-v2 location and remains untouched. A Portal-owned mTLS proxy/client route is a separate change-window action."
+}

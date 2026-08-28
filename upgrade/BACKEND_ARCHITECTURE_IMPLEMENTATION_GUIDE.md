@@ -1271,8 +1271,20 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Edge, projection PostgreSQL, D4/V1 config and all ingestion/query/SSE/
   command flags remain unchanged/false. This is neither public, D4 activation,
   HA, Sandbox, Canary, Live nor production-authoritative evidence; it also
-  does not add a Rust Manager client, projection or UI feature. Detail:
+  did not add a Rust Manager client, projection or UI feature at the time of
+  route handoff. Detail:
   [`EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md`](./backend/EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md).
+- **EX-BE-02 Manager-v2 backend consumer (2026-08-28, complete / backend only
+  / no runtime activation):** the additive sealed Rust contract/client pair is
+  now independent of V1 `ts-transport`, imports/hash-pins the owner DTO/runtime
+  overlay and can issue only the five qualified private Paper GET requests
+  through Source Proxy using workload mTLS. It enforces the runtime contract
+  header/revision, catalogue-bound relation/cursor/key handling, exact decimal
+  values, a 200-row/1-MiB envelope and typed unavailability. Isolated 11-test,
+  rustfmt, strict Clippy and offline D2 gates passed. It does not add an Edge service route,
+  browser/UI, cache/projection, PostgreSQL change, poller, Source Proxy/D4/V1
+  modification, command/Event/SSE/replay or runtime activation. Detail:
+  [`EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md`](./backend/EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

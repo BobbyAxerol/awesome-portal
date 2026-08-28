@@ -133,9 +133,12 @@ evidence remain outside Git.
 
 This is a private same-host Paper route qualification, not a public listener,
 D4 activation, HA/independent-failure-domain, Sandbox, Canary, Live or
-production-authoritative result. The existing Rust Edge has no Manager-v2
-consumer by design; a later bounded client/projection/UI slice remains a
-separate product request.
+production-authoritative result. The subsequent backend-only bounded client
+library is recorded at
+[`EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md`](./EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md),
+but it is intentionally not wired into `edge-service` or an active Portal API.
+It does not approve UI, a browser route, cache/projection, DB write or Edge
+runtime activation.
 
 ## Deployment and rollback boundary
 
