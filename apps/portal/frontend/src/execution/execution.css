@@ -6085,3 +6085,10 @@
 .exec-px .exec-px-panel > .exec-condition-list, .exec-px .exec-px-panel > .exec-px-recommend,
 .exec-px .exec-px-panel > .exec-px-note { padding-left: 14px; padding-right: 14px; }
 .exec-px .exec-px-panel > .exec-px-note { padding-bottom: 12px; }
+/* The shared masthead is `space-between` for a two-block header; the hi-fi's
+   Paper headers are one run of chips reading left to right, so the gate word
+   sits beside the question it answers rather than a screen away from it. */
+.exec-pw-masthead, .exec-px-masthead { justify-content: flex-start; align-items: center; border-bottom: 0; }
+/* hi-fi Paper Exit Review is a 1200px page, not a 1440px one: four evidence
+   panels read better at 2×2 than stretched across the full canvas. */
+.exec-px .exec-ws { max-width: 1200px; }

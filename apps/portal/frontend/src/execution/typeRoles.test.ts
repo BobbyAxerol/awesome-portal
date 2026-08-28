@@ -71,6 +71,10 @@ describe("the locked role scale", () => {
     const offenders = rules
       // Command Center v4 matches hi-fi 5a to the letter (owner, 2026-08-25):
       // mono 11px uppercase panel titles and 10px uppercase cell labels.
+      // A comment sitting above a rule is captured with its selector, which
+      // made the prefix test fail on a rule that is exempt — the comment was
+      // never the thing being audited.
+      .map(([m, sel, body]) => [m, sel.replace(/\/\*[\s\S]*?\*\//g, "").trim(), body] as [string, string, string])
       .filter(([, sel, body]) => /text-transform\s*:\s*uppercase/.test(body) && !/--exec-font-th\)/.test(body) && !/\.exec-role-th/.test(sel) && !/^\s*\.exec-(cc|inc2|oq|bl|af|a3|rp|pf2|ab|bd|ac|lv|lf|cn|sbc|sb|pw|px|360|surface)[-\s]/.test(sel))
       .map(([, sel]) => sel.trim().replace(/\s+/g, " ").slice(0, 60));
     expect(offenders).toEqual([]);
