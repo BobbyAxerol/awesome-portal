@@ -4537,7 +4537,7 @@
 .exec-pf-matrix td[data-self="true"] { background: var(--line); }
 .exec-pf-cellbtn { all: unset; cursor: pointer; display: block; width: 100%; }
 /* Influence map — real graph in a contained frame; the stretched SVG is gone */
-.exec-influence-wrap { margin: 0; display: grid; gap: 6px; }
+.exec-influence-wrap { margin: 0 auto; display: grid; gap: 6px; width: 100%; max-width: 430px; }
 .exec-influence-wrap .exec-role-meta { padding: 0 2px; }
 
 

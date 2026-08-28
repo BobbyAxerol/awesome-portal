@@ -258,7 +258,7 @@ export function InfluenceMap({ matrix, exposures, threshold = "0.5" }: { matrix:
       {/* The published matrix drawn as a real graph, at a contained height —
           the 320×240 SVG this replaces stretched to the full canvas width. */}
       <InfluenceGraph
-        height={260}
+        height={320}
         nodes={matrix.labels.map((l) => ({ id: l.entityId, label: l.displayName, sharePct: share(l.entityId), kind: "alpha" as const }))}
         edges={edges.map((e) => ({ a: matrix.labels[e.a].entityId, b: matrix.labels[e.b].entityId, rho: Number(e.rho) }))}
         provenance={{ authority: "DERIVED", asOf: "published matrix", formula: "corr.v1" }}

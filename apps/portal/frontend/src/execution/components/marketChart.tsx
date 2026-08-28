@@ -387,9 +387,9 @@ export function InfluenceGraph({
         type: "graph",
         layout: "none",
         coordinateSystem: undefined,
-        left: 24, right: 24, top: 16, bottom: 16,
+        left: 48, right: 48, top: 28, bottom: 28,
         symbolSize: 10,
-        label: { show: true, color: t.ink, fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
+        label: { show: true, position: "bottom" as const, distance: 4, color: t.ink, fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
         edgeLabel: {
           show: true, fontSize: 9, color: t.inkFaint,
           formatter: (p) => (p as unknown as { data: { value: number } }).data.value.toFixed(2),
