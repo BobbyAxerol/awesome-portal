@@ -1255,6 +1255,24 @@ deep-dive → ADR → slice → evidence discipline documented above.
   backpressure and 24-hour soak before read-profile promotion. No Trading
   System edit or runtime change is authorized by this finding. Detail:
   [`EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md`](./backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md).
+- **EX-BE-02 Manager-v2 Paper read handoff (2026-08-28, complete / private
+  Paper route qualified / no product consumer):** the Portal worktree imports
+  the owner pack at
+  `services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1/` and
+  hash-locks every byte. A distinct `manager-paper-read` Source Proxy mode
+  renders only its separate six-location include: one internal mTLS token
+  issuer plus five exact Manager GET routes, TLS 1.3 on both hops and no
+  V1/API-key fallback. The static gate rejects hash/secret/route drift and
+  confirms the 24 N11-v1 entries remain unavailable; offline and image-backed
+  isolated gates passed. In the approved private window, exactly the two new
+  loopback Manager containers were started and only Source Proxy was recreated.
+  Real mTLS route, method/unknown/no-client denial, issuer/facade
+  loss/recovery and exact D2-dark rollback/reapply proof passed. Execution
+  Edge, projection PostgreSQL, D4/V1 config and all ingestion/query/SSE/
+  command flags remain unchanged/false. This is neither public, D4 activation,
+  HA, Sandbox, Canary, Live nor production-authoritative evidence; it also
+  does not add a Rust Manager client, projection or UI feature. Detail:
+  [`EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md`](./backend/EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

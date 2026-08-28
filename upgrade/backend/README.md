@@ -7,6 +7,14 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- [EX-BE-02 — Manager-v2 Paper Read Route and Owner Handoff](./EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md)
+  — **Complete / private Paper route qualified / no product consumer:**
+  byte-locked owner contract/publication import, five exact Source Proxy
+  routes backed by mTLS and a short-lived certificate-bound JWT issuer, and
+  real private route/fault/rollback qualification are complete. It neither
+  modifies D4/V1 nor enables Edge ingestion/query/SSE/commands, a database
+  client, projection/UI consumer or Sandbox/Canary/Live authority.
+
 - [BAR-01 — Feature/Screen/Concern Registry & Command Center Summary Contract](./BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
   — contract backend cho U02/U03. **Backend contract complete (BE1–BE6):**
   registry + API, hai read-only summary adapter, deadline-aware aggregator,

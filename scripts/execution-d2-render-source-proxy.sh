@@ -4,16 +4,18 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --env-file PATH --output ABSOLUTE_PATH\n' "$0" >&2
+  printf 'Usage: %s --env-file PATH --output ABSOLUTE_PATH [--manager-locations-output ABSOLUTE_PATH]\n' "$0" >&2
   exit 2
 }
 
 env_file=""
 output=""
+manager_locations_output=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --env-file) [[ $# -ge 2 ]] || usage; env_file="$2"; shift 2 ;;
     --output) [[ $# -ge 2 ]] || usage; output="$2"; shift 2 ;;
+    --manager-locations-output) [[ $# -ge 2 ]] || usage; manager_locations_output="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
@@ -21,6 +23,7 @@ done
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 template="${root_dir}/deploy/execution-d1/source-proxy/nginx.conf.template"
+manager_locations_template="${root_dir}/deploy/execution-d1/source-proxy/manager-v2-locations.conf.template"
 "${root_dir}/scripts/execution-d2-preflight.sh" --env-file "${env_file}" --mode template >/dev/null
 
 read_value() {
@@ -35,14 +38,26 @@ case "${source_mode}" in
   dark)
     public_probe_guard='return 503;'
     alpha_read_guard='return 503;'
+    manager_read_include='# Manager-v2 Paper route disabled'
     ;;
   contract-probe)
     public_probe_guard='# D3 contract-probe gate accepted'
     alpha_read_guard='return 503;'
+    manager_read_include='# Manager-v2 Paper route disabled'
     ;;
   paper-read)
     public_probe_guard='# D3 contract-probe gate accepted'
     alpha_read_guard='# D4 source-read gate accepted'
+    manager_read_include='# Manager-v2 Paper route disabled'
+    ;;
+  manager-paper-read)
+    public_probe_guard='return 503;'
+    alpha_read_guard='return 503;'
+    [[ -n "${manager_locations_output}" && "${manager_locations_output}" == /* ]] || {
+      printf 'Manager-paper-read rendering requires --manager-locations-output.\n' >&2
+      exit 1
+    }
+    manager_read_include='include /run/secrets/manager-v2-locations.conf;'
     ;;
   *) printf 'D2 renderer rejected an unknown Source Proxy source mode.\n' >&2; exit 1 ;;
 esac
@@ -52,14 +67,49 @@ output_dir="$(dirname "${output}")"
   printf 'D2 renderer requires an existing non-symlink output directory.\n' >&2
   exit 1
 }
+[[ ! -e "${output}" || ! -L "${output}" ]] || {
+  printf 'D2 renderer refuses a symlink configuration output.\n' >&2
+  exit 1
+}
+if [[ -n "${manager_locations_output}" ]]; then
+  manager_output_dir="$(dirname "${manager_locations_output}")"
+  [[ -d "${manager_output_dir}" && ! -L "${manager_output_dir}" ]] || {
+    printf 'D2 renderer requires a non-symlink Manager output directory.\n' >&2
+    exit 1
+  }
+  [[ ! -e "${manager_locations_output}" || ! -L "${manager_locations_output}" ]] || {
+    printf 'D2 renderer refuses a symlink Manager locations output.\n' >&2
+    exit 1
+  }
+fi
 temporary="$(mktemp "${output}.tmp.XXXXXX")"
-cleanup() { rm -f -- "${temporary}"; }
+manager_temporary=""
+cleanup() {
+  rm -f -- "${temporary}"
+  [[ -z "${manager_temporary}" ]] || rm -f -- "${manager_temporary}"
+}
 trap cleanup EXIT
+if [[ "${source_mode}" == manager-paper-read ]]; then
+  manager_temporary="$(mktemp "${manager_locations_output}.tmp.XXXXXX")"
+  cp -- "${manager_locations_template}" "${manager_temporary}"
+  if grep -Eq '__[A-Z0-9_]+__' "${manager_temporary}"; then
+    printf 'D2 renderer found an unresolved Manager locations placeholder.\n' >&2
+    exit 1
+  fi
+  chmod 0640 "${manager_temporary}"
+  chgrp "${runtime_gid}" "${manager_temporary}" || {
+    printf 'D2 renderer could not assign the configured portal-runtime group.\n' >&2
+    exit 1
+  }
+  mv -f -- "${manager_temporary}" "${manager_locations_output}"
+  manager_temporary=""
+fi
 sed \
   -e "s/__PORTAL_BRIDGE_GATEWAY_IP__/${bridge_ip}/g" \
   -e "s/__SOURCE_PROXY_PRIVATE_PORT__/${private_port}/g" \
   -e "s/__PUBLIC_PROBE_GUARD__/${public_probe_guard}/g" \
   -e "s/__ALPHA_READ_GUARD__/${alpha_read_guard}/g" \
+  -e "s@__MANAGER_READ_INCLUDE__@${manager_read_include}@g" \
   "${template}" > "${temporary}"
 if grep -Eq '__[A-Z0-9_]+__' "${temporary}"; then
   printf 'D2 renderer left an unresolved configuration placeholder.\n' >&2

@@ -1,0 +1,100 @@
+{
+  "schema_version": "trading-system.portal-execution.manager-v2.private-paper-publication.v1",
+  "status": "PRIVATE_PAPER_ROUTE_QUALIFIED",
+  "contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "base_source_dark_contract": {
+    "revision": "trading-system.portal-execution.manager-v2.v1",
+    "manifest_sha256": "sha256:aa0b5d78b8dd70045e9028881b70a194658fdce8c3bee02cf02756051aaa3390",
+    "mutation": "FORBIDDEN"
+  },
+  "owner_loopback_overlay": {
+    "manifest_sha256": "sha256:281f2b73094e423bd888e3562e861cab07137f4878c43fd62d7ce43abb565c60",
+    "historical_status": "OWNER_LOOPBACK_QUALIFICATION_PASSED_CLEANED_UP"
+  },
+  "scope": {
+    "profile_id": "PAPER_BINANCE_USDM",
+    "public_listener": false,
+    "sandbox": false,
+    "canary": false,
+    "live": false,
+    "command": false,
+    "redis": false,
+    "broker": false,
+    "cli_execution": false,
+    "event_sse_replay": false,
+    "portal_database_dsn_or_role": false
+  },
+  "operations": [
+    {"method": "GET", "path_template": "/portal/execution/v2/manager/catalog"},
+    {"method": "GET", "path_template": "/portal/execution/v2/manager/records/{schema}/{relation}"},
+    {"method": "GET", "path_template": "/portal/execution/v2/manager/records/{schema}/{relation}/{key}"},
+    {"method": "GET", "path_template": "/portal/execution/v2/manager/projections/{kind}"},
+    {"method": "GET", "path_template": "/portal/execution/v2/manager/capabilities"}
+  ],
+  "transport": {
+    "incoming_portal_mtls": "TLSv1.3_REQUIRED",
+    "proxy_to_issuer_mtls": "TLSv1.3_REQUIRED",
+    "proxy_to_facade_mtls": "TLSv1.3_REQUIRED",
+    "delegated_jwt": "FRESH_CERTIFICATE_BOUND_EDDSA",
+    "jwt_maximum_ttl_seconds": 300,
+    "configured_issuer_ttl_seconds": 120,
+    "issuer_database_mount": false,
+    "facade_issuer_private_key_mount": false
+  },
+  "bounds": {
+    "maximum_page_rows": 200,
+    "maximum_response_bytes": 1048576,
+    "source_proxy_rate_limit_per_minute": 600,
+    "facade_rate_limit_per_minute": 600,
+    "issuer_rate_limit_per_minute": 600,
+    "facade_and_issuer_maximum_concurrency": 2
+  },
+  "qualified_runtime": {
+    "manager_runtime_image_id_sha256": "sha256:2e80ad385ba67c3f553545d3e92cdf2214e2936a60179dac48d7438e55867fad",
+    "manager_runtime_image_distribution": "LOCAL_OWNER_QUALIFICATION_IMAGE_ONLY",
+    "source_proxy_image_digest": "sha256:dafa9e70a3d90cd079147d149dbbaa8ac8a3a9db079b0cf8099892a7f1d5fbe7",
+    "portal_source_proxy_recreated_only": true,
+    "execution_edge_restarted": false,
+    "projection_postgres_restarted": false,
+    "d4_or_v1_config_mutated": false,
+    "database_schema_data_role_grant_index_mutated": false
+  },
+  "evidence_bindings": {
+    "private_material_provision_sha256": "sha256:8a812c69e301a49fa16b7b5f2390243fae4840b2d15d331518c373b235012d97",
+    "private_joint_source_proxy_sha256": "sha256:37ae0c58ff860493eaf2e61571ac363a7a58f3357bc8f8902dc2e18f90f0709f",
+    "private_fault_recovery_sha256": "sha256:f843cdf0aac4345d1ad2fca6cd4171344fc7b65c7857e9beb2339ef2086487e5",
+    "private_rollback_rehearsal_sha256": "sha256:d0a05e268eae6f517e32c23394053a315d9d94dd86033c2b3297ebe24f4ad502",
+    "portal_manager_locations_template_sha256": "sha256:805f839c989b339cfb6d17e8ec7ca43e3970bc3e90cbd19e0d301ac8b490233b",
+    "portal_rendered_manager_locations_sha256": "sha256:805f839c989b339cfb6d17e8ec7ca43e3970bc3e90cbd19e0d301ac8b490233b",
+    "portal_rendered_main_config_sha256": "sha256:3844862b596458d90011fa2e944845b402b5297879c6308762603f6522aaf6b7"
+  },
+  "acceptance": {
+    "catalogue_relations_checked": 96,
+    "capability_count": 5,
+    "bounded_record_and_projection_checked": true,
+    "post_and_head_denied": true,
+    "unknown_manager_route_denied": true,
+    "missing_portal_client_mtls_denied": true,
+    "v1_remains_dark": true,
+    "issuer_loss_status": 500,
+    "facade_loss_status": 502,
+    "recovery_status": 200,
+    "rollback_manager_route_status": 404,
+    "reapply_manager_route_status": 200
+  },
+  "truthful_readiness": {
+    "private_same_host_route_qualified": true,
+    "portal_product_consumer_implemented": false,
+    "public_or_production_authoritative": false,
+    "high_availability_or_independent_failure_domain": false,
+    "n11_v1_complete": false
+  },
+  "sanitization": {
+    "contains_business_rows": false,
+    "contains_credentials_or_private_keys": false,
+    "contains_dsn": false,
+    "contains_runtime_env_values": false,
+    "contains_raw_sql": false,
+    "contains_private_spiffe_value": false
+  }
+}

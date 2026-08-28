@@ -1,0 +1,75 @@
+{
+  "schema_version": "trading-system.portal-execution.semantic-rulings.v1",
+  "campaign_revision": "portal.execution.trading-system-owner-request.v2",
+  "status": "CONTRACT_FREEZE_ONLY",
+  "rulings": [
+    {
+      "id": "SEM-N02-TRANSPORT",
+      "subject": "event_transport",
+      "status": "PENDING_CONTRACT_RESOLUTION",
+      "ruling": "GET_AND_STREAM_ARE_NOT_SILENTLY_EQUIVALENT",
+      "effect": "EVENT_RUNTIME_TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "SEM-N11-WORKSPACE",
+      "subject": "workspace_environment_scope",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_PRIVATE_OWNER_CONTROLLED_OPAQUE_MAPPING_HAS_BEEN_APPROVED",
+      "effect": "NO_INTERNAL_IDENTIFIER_DISCLOSURE"
+    },
+    {
+      "id": "SEM-N11-ORDER-STATUS",
+      "subject": "order_status_buckets",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_V2_OWNER_PUBLICATION_UNTIL_AUTHORITATIVE_STATUS_MAPPING_IS_AUDITED",
+      "effect": "NO_PORTAL_BUCKET_INFERENCE"
+    },
+    {
+      "id": "SEM-N11-FUNNEL",
+      "subject": "order_funnel",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_SIGNAL_OR_INTENT_STAGE_FACTS_PUBLISHED",
+      "effect": "FOUR_STAGE_SEMANTICS_NOT_CLAIMED"
+    },
+    {
+      "id": "SEM-N11-BINDING-EXPOSURE",
+      "subject": "binding_exposure_verdict",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_AUDITED_FULL_VIRTUAL_AND_PHYSICAL_POPULATION",
+      "effect": "MISSING_OR_STALE_CANNOT_BE_ZERO_OR_OK"
+    },
+    {
+      "id": "SEM-N11-CORRELATION",
+      "subject": "packed_correlation",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_OWNER_SELECTED_DIAGONAL_OR_SAMPLE_COUNT_SOURCE",
+      "effect": "NO_PACKED_CORRELATION_PUBLICATION"
+    },
+    {
+      "id": "SEM-N11-VNM",
+      "subject": "vnm_calendar_session_order_types",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_AUTHORITATIVE_VNM_CALENDAR_OR_SESSION_ADAPTER_AUDITED",
+      "effect": "NO_PORTAL_VENUE_SEMANTIC_INFERENCE"
+    },
+    {
+      "id": "SEM-N12-R3-R4",
+      "subject": "command_step_up_and_separation_of_duties",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_ATTESTATION_ISSUER_CLAIMS_OR_REVOCATION_POLICY_FROZEN",
+      "effect": "NO_R3_OR_R4_COMMAND_PUBLICATION"
+    },
+    {
+      "id": "SEM-N15-ARTIFACT",
+      "subject": "artifact_compatibility",
+      "status": "TYPED_UNAVAILABLE",
+      "ruling": "NO_N15_TRUST_ROOT_OR_WORKLOAD_SCOPED_ACCESS_CONTRACT",
+      "effect": "NO_ARTIFACT_UPLOAD_OR_RETRIEVE_ROUTE"
+    }
+  ],
+  "authority": {
+    "portal_activation": false,
+    "runtime_change": false,
+    "business_semantics_invented": false
+  }
+}

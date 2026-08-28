@@ -1,0 +1,244 @@
+{
+  "schema_version": "trading-system.portal-execution.query-freeze.v1",
+  "request_revision": "portal.execution.external-read-request.v1",
+  "status": "CONTRACT_FREEZE_ONLY",
+  "partial_publication": true,
+  "common_requirements": {
+    "method": "GET",
+    "authentication": "MTLS_AND_DELEGATED_JWT",
+    "workspace_id_required": true,
+    "environment_required": true,
+    "exact_resource_scope_required": true,
+    "authority_envelope": "EXECUTION_CELL",
+    "exact_decimal_strings": true,
+    "public_listener": false,
+    "portal_activation": false
+  },
+  "unavailability_reason_code": "NO_EXACT_PORTAL_EXECUTION_V1_SURFACE_OR_DELEGATED_READ_AUTH",
+  "capabilities": [
+    {
+      "id": "orders.list",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/orders",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 8388608,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "orders.trace",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/orders/{resource_id}/trace",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "orders.legs",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/order-groups/{resource_id}/legs",
+      "pagination": "NONE",
+      "maximum_page_rows": 8,
+      "maximum_response_bytes": 524288,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "orders.fills",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/orders/{resource_id}/fills",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 8388608,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "deployments.positions",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/deployments/{resource_id}/positions",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 500,
+      "maximum_response_bytes": 8388608,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "deployments.execution-quality",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/deployments/{resource_id}/execution-quality",
+      "pagination": "NONE",
+      "maximum_page_rows": 12,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "deployments.contribution",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/deployments/{resource_id}/contribution",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 400,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "bindings.snapshot",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/broker-bindings/{resource_id}",
+      "pagination": "NONE",
+      "maximum_page_rows": 50,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "bindings.exposure-verdict",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/broker-bindings/{resource_id}/exposure-verdict",
+      "pagination": "NONE",
+      "maximum_page_rows": 50,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "portfolios.correlation-samples",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/portfolios/{resource_id}/correlation-samples",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 5000,
+      "maximum_response_bytes": 8388608,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "venues.calendar",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/venues/{resource_id}/calendar",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 400,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "market.ticks",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/market/ticks",
+      "pagination": "NONE",
+      "maximum_page_rows": 50,
+      "maximum_response_bytes": 524288,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "market.candles",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/market/candles",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 2000,
+      "maximum_response_bytes": 8388608,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "accounts.current",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/accounts/{resource_id}",
+      "pagination": "NONE",
+      "maximum_page_rows": 50,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "sessions.current",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/sessions/{resource_id}",
+      "pagination": "NONE",
+      "maximum_page_rows": 50,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "reconciliation.current",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/reconciliation",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 4194304,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.command-journal",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/command-journal",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 4194304,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.findings",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/findings",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 4194304,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.alerts",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/alerts",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.dead-letters",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/dead-letters",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 4194304,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.trace-order",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/trace-order/{resource_id}",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 500,
+      "maximum_response_bytes": 4194304,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.streams",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/streams",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.alpha-activity",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/alpha-activity",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 4194304,
+      "status": "TYPED_UNAVAILABLE"
+    },
+    {
+      "id": "ops.redis-retention",
+      "method": "GET",
+      "path_template": "/portal/execution/v1/ops/redis-retention",
+      "pagination": "KEYSET",
+      "maximum_page_rows": 200,
+      "maximum_response_bytes": 2097152,
+      "status": "TYPED_UNAVAILABLE"
+    }
+  ],
+  "authority": {
+    "read_only": true,
+    "portal_database_credential": false,
+    "portal_redis_authority": false,
+    "portal_cli_authority": false,
+    "portal_broker_authority": false,
+    "command_or_mutation": false
+  }
+}

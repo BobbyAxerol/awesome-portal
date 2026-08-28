@@ -17,6 +17,178 @@ probe_renderer="${root_dir}/scripts/execution-d3-render-probe-env.sh"
 env_example="${root_dir}/deploy/execution-d1/edge-source-proxy.env.example"
 compose_base="${root_dir}/deploy/compose.execution-edge.yaml"
 compose_dark="${root_dir}/deploy/execution-d1/compose.dark.yaml"
+manager_contract_dir="${root_dir}/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1"
+
+# The Manager-v2 handoff is an imported owner pack, not a loose collection of
+# examples.  Reject byte drift, accidental secret material, route widening and
+# any attempt to describe the five private Paper routes as a completed N11-v1
+# or an already-consumed Portal feature before constructing an offline fixture.
+python3 - "${root_dir}" "${manager_contract_dir}" <<'PY'
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+import re
+import sys
+
+
+root = Path(sys.argv[1]).resolve()
+pack = Path(sys.argv[2]).resolve()
+if pack.parent.parent.parent.parent != root:
+    raise SystemExit("Manager contract pack must remain inside this Portal worktree")
+
+lock_path = pack / "contract-pack.lock.json"
+if not lock_path.is_file():
+    raise SystemExit("Manager contract import lock is missing")
+lock = json.loads(lock_path.read_text(encoding="utf-8"))
+if lock.get("schema_version") != "portal.execution.manager-v2-paper-read.import-lock.v1":
+    raise SystemExit("Manager contract import lock schema is not recognized")
+if lock.get("status") != "PRIVATE_PAPER_ROUTE_QUALIFIED_NO_PRODUCT_CONSUMER":
+    raise SystemExit("Manager contract import readiness is not the approved private handoff")
+
+expected_paths = {
+    "/portal/execution/v2/manager/catalog",
+    "/portal/execution/v2/manager/capabilities",
+    "/portal/execution/v2/manager/projections/{kind}",
+    "/portal/execution/v2/manager/records/{schema}/{relation}",
+    "/portal/execution/v2/manager/records/{schema}/{relation}/{key}",
+}
+files = lock.get("files")
+if not isinstance(files, dict) or not files:
+    raise SystemExit("Manager contract import lock has no pinned files")
+expected_files = set(files) | {"README.md", "contract-pack.lock.json"}
+actual_files = {
+    path.relative_to(pack).as_posix()
+    for path in pack.rglob("*")
+    if path.is_file()
+}
+if actual_files != expected_files:
+    raise SystemExit("Manager contract import has unpinned or missing files")
+
+for relative_path, expected_digest in files.items():
+    relative = Path(relative_path)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise SystemExit("Manager contract import lock contains an unsafe path")
+    source = pack / relative
+    if not source.is_file():
+        raise SystemExit(f"Manager contract import file is missing: {relative_path}")
+    actual_digest = "sha256:" + hashlib.sha256(source.read_bytes()).hexdigest()
+    if actual_digest != expected_digest:
+        raise SystemExit(f"Manager contract import digest drift: {relative_path}")
+
+secret_markers = (
+    b"-----BEGIN PRIVATE KEY-----",
+    b"-----BEGIN RSA PRIVATE KEY-----",
+    b"-----BEGIN EC PRIVATE KEY-----",
+    b"postgresql://",
+    b"postgres://",
+    b"AWS_SECRET_ACCESS_KEY=",
+    b"DB_LOGIN_SECRET=",
+    b"JWT_PRIVATE_KEY=",
+    b"MTLS_PRIVATE_KEY=",
+)
+for relative_path in files:
+    payload = (pack / relative_path).read_bytes()
+    if any(marker.lower() in payload.lower() for marker in secret_markers):
+        raise SystemExit(f"Manager contract import contains secret-shaped content: {relative_path}")
+
+owner_manifest = json.loads(
+    (pack / "owner-publication/owner-publication.manifest.json").read_text(encoding="utf-8")
+)
+if owner_manifest.get("status") != "OWNER_PUBLISHED_PRIVATE_PAPER_ROUTE_QUALIFIED":
+    raise SystemExit("Owner publication has not reached the qualified handoff state")
+if owner_manifest.get("n11_v1_complete") is not False:
+    raise SystemExit("Owner publication incorrectly claims N11-v1 completeness")
+if owner_manifest.get("portal_product_consumer_implemented") is not False:
+    raise SystemExit("Owner publication incorrectly claims a Portal product consumer")
+if lock.get("owner_publication_manifest_sha256") != files.get(
+    "owner-publication/owner-publication.manifest.json"
+):
+    raise SystemExit("Owner publication manifest lock is inconsistent")
+for name, digest in owner_manifest.get("files", {}).items():
+    if files.get(f"owner-publication/{name}") != digest:
+        raise SystemExit(f"Owner publication member is not pinned: {name}")
+
+publication = json.loads(
+    (pack / "owner-publication/manager-v2-private-paper-publication.json").read_text(encoding="utf-8")
+)
+operations = publication.get("operations")
+published_paths = {
+    operation.get("path_template")
+    for operation in operations if operation.get("method") == "GET"
+} if isinstance(operations, list) else set()
+if len(operations or []) != 5 or published_paths != expected_paths:
+    raise SystemExit("Manager publication does not pin exactly the five approved GET routes")
+scope = publication.get("scope", {})
+for field in (
+    "public_listener", "sandbox", "canary", "live", "command", "redis",
+    "broker", "cli_execution", "event_sse_replay", "portal_database_dsn_or_role",
+):
+    if scope.get(field) is not False:
+        raise SystemExit(f"Manager publication widened forbidden scope: {field}")
+truthful = publication.get("truthful_readiness", {})
+if truthful.get("private_same_host_route_qualified") is not True:
+    raise SystemExit("Manager publication is missing private route qualification")
+if any(truthful.get(field) is not False for field in (
+    "portal_product_consumer_implemented", "public_or_production_authoritative",
+    "high_availability_or_independent_failure_domain", "n11_v1_complete",
+)):
+    raise SystemExit("Manager publication overstates route readiness")
+
+acceptance = json.loads(
+    (pack / "owner-publication/n11-v1-acceptance.json").read_text(encoding="utf-8")
+)
+if (
+    acceptance.get("capability_count") != 24
+    or acceptance.get("typed_unavailable_capability_count") != 24
+    or acceptance.get("implemented_capability_count") != 0
+    or acceptance.get("complete_24_route_claim") is not False
+    or acceptance.get("manager_v2_is_n11_v1") is not False
+):
+    raise SystemExit("N11-v1 acceptance is no longer the truthful unavailable result")
+freeze = json.loads(
+    (pack / "owner-publication/n11-v1-capability-freeze.json").read_text(encoding="utf-8")
+)
+capabilities = freeze.get("capabilities")
+if not isinstance(capabilities, list) or len(capabilities) != 24 or any(
+    entry.get("status") != "TYPED_UNAVAILABLE" for entry in capabilities
+):
+    raise SystemExit("N11-v1 freeze no longer contains exactly 24 typed-unavailable capabilities")
+
+openapi = json.loads((pack / "manager-v2.openapi.json").read_text(encoding="utf-8"))
+if openapi.get("x-contract-revision") != "trading-system.portal-execution.manager-v2.v1":
+    raise SystemExit("Manager OpenAPI revision drifted")
+if set(openapi.get("paths", {})) != expected_paths:
+    raise SystemExit("Manager OpenAPI does not match the frozen five-route surface")
+if any(set(path_item) != {"get"} for path_item in openapi["paths"].values()):
+    raise SystemExit("Manager OpenAPI permits a non-GET operation")
+
+template = pack / "source-proxy-manager-v2-locations.conf.template"
+active_template = root / "deploy/execution-d1/source-proxy/manager-v2-locations.conf.template"
+if template.read_bytes() != active_template.read_bytes():
+    raise SystemExit("Imported Manager route template does not match the active template")
+locations = template.read_text(encoding="utf-8")
+if locations.count("auth_request /_manager_v2_issue;") != 5:
+    raise SystemExit("Manager route template does not have five issuer gates")
+if locations.count("proxy_pass https://127.0.0.1:8023;") != 5:
+    raise SystemExit("Manager route template does not have five facade upstreams")
+if locations.count("proxy_pass https://127.0.0.1:8024/internal/issue;") != 1:
+    raise SystemExit("Manager route template does not have exactly one issuer upstream")
+if re.search(r"X-API-Key|/v1/|proxy_pass\\s+http:", locations):
+    raise SystemExit("Manager route template widened into an unapproved legacy path")
+
+assertions = lock.get("assertions", {})
+if assertions.get("private_same_host_route_qualified") is not True or any(
+    assertions.get(field) is not False for field in (
+        "portal_product_consumer_implemented", "n11_v1_complete",
+        "public_or_production_authoritative", "direct_database_access",
+        "d4_or_v1_widened", "sandbox", "canary", "live", "command",
+        "event_sse_replay",
+    )
+):
+    raise SystemExit("Manager contract import assertions are inconsistent")
+PY
 
 python3 - "${compose_base}" "${compose_dark}" <<'PY'
 from pathlib import Path
@@ -140,11 +312,12 @@ make_leaf() {
     -CA "${pki_dir}/${ca}.crt" -CAkey "${pki_dir}/${ca}.key" -CAcreateserial \
     -extfile "${pki_dir}/${name}.ext" -out "${pki_dir}/${name}.crt" >/dev/null 2>&1
 }
-for ca in edge-ca sgp-client-ca source-server-ca projection-client-ca projection-db-ca; do make_ca "${ca}"; done
+for ca in edge-ca sgp-client-ca source-server-ca projection-client-ca projection-db-ca manager-ca; do make_ca "${ca}"; done
 make_leaf edge-server edge-ca serverAuth
 make_leaf source-proxy-server source-server-ca serverAuth
 make_leaf source-proxy-client projection-client-ca clientAuth
 make_leaf projection-postgres projection-db-ca serverAuth DNS:projection-postgres
+make_leaf manager-v2-client manager-ca clientAuth
 
 cp "${pki_dir}/edge-server.crt" "${edge_secrets}/edge-server.crt"
 cp "${pki_dir}/edge-server.key" "${edge_secrets}/edge-server.key"
@@ -182,6 +355,11 @@ printf '0123456789abcdef0123456789abcdef\n' \
 cp "${pki_dir}/source-proxy-server.crt" "${proxy_secrets}/source-proxy-server.crt"
 cp "${pki_dir}/source-proxy-server.key" "${proxy_secrets}/source-proxy-server.key"
 cp "${pki_dir}/projection-client-ca.crt" "${proxy_secrets}/projection-ingestor-ca.crt"
+{
+  cat "${pki_dir}/manager-v2-client.crt"
+  cat "${pki_dir}/manager-v2-client.key"
+} > "${proxy_secrets}/manager-v2-client.pem"
+cp "${pki_dir}/manager-ca.crt" "${proxy_secrets}/manager-v2-ca.crt"
 cp "${pki_dir}/projection-db-ca.crt" "${edge_secrets}/projection-db-ca.crt"
 cp "${pki_dir}/projection-postgres.crt" "${projection_secrets}/projection-postgres.crt"
 cp "${pki_dir}/projection-postgres.key" "${projection_secrets}/projection-postgres.key"
@@ -207,12 +385,14 @@ for file in edge-server.key source-proxy-client.pem source-proxy-admission-token
   chmod 0640 "${edge_secrets}/${file}"
   chgrp "${runtime_gid}" "${edge_secrets}/${file}"
 done
-for file in source-proxy-server.crt projection-ingestor-ca.crt; do
+for file in source-proxy-server.crt projection-ingestor-ca.crt manager-v2-ca.crt; do
   chmod 0644 "${proxy_secrets}/${file}"
   chgrp "${runtime_gid}" "${proxy_secrets}/${file}"
 done
-chmod 0640 "${proxy_secrets}/source-proxy-server.key"
-chgrp "${runtime_gid}" "${proxy_secrets}/source-proxy-server.key"
+for file in source-proxy-server.key manager-v2-client.pem; do
+  chmod 0640 "${proxy_secrets}/${file}"
+  chgrp "${runtime_gid}" "${proxy_secrets}/${file}"
+done
 printf 'proxy_set_header X-Portal-Source-Mode dark;\n' \
   > "${proxy_secrets}/trading-system-read-header.conf"
 chmod 0640 "${proxy_secrets}/trading-system-read-header.conf"
@@ -250,6 +430,56 @@ if grep -Fq 'X-API-Key' "${proxy_config}"; then
   printf 'D2 dark Source Proxy unexpectedly rendered a Trading System API key.\n' >&2
   exit 1
 fi
+
+# Manager-v2 is a separate private Paper-only route set.  It keeps V1 dark,
+# uses one Source-Proxy-held client leaf, and accepts only the five bounded
+# owner routes through the short-lived certificate-bound token issuer.
+manager_config="${tmp_dir}/srv/primus/portal/source-proxy/nginx.manager-v2.conf"
+manager_locations="${proxy_secrets}/manager-v2-locations.conf"
+cp "${tmp_dir}/candidate.env" "${tmp_dir}/manager.env"
+sed -i \
+  -e 's/^SOURCE_PROXY_SOURCE_MODE=dark$/SOURCE_PROXY_SOURCE_MODE=manager-paper-read/' \
+  -e "s#^SOURCE_PROXY_CONFIG_FILE=.*#SOURCE_PROXY_CONFIG_FILE=${manager_config}#" \
+  "${tmp_dir}/manager.env"
+chmod 0600 "${tmp_dir}/manager.env"
+"${renderer}" --env-file "${tmp_dir}/manager.env" --output "${manager_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
+"${preflight}" --env-file "${tmp_dir}/manager.env" --mode manager-offline >/dev/null
+[[ "$(grep -c 'return 503;' "${manager_config}")" -eq 7 ]]
+[[ "$(grep -Fxc '        include /run/secrets/manager-v2-locations.conf;' "${manager_config}")" -eq 1 ]]
+[[ "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations}")" -eq 5 ]]
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8023;' "${manager_locations}")" -eq 5 ]]
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8024/internal/issue;' "${manager_locations}")" -eq 1 ]]
+if grep -Eq 'X-API-Key|/v1/|proxy_pass[[:space:]]+http:' "${manager_locations}"; then
+  printf 'Manager-v2 route fixture unexpectedly widened into a legacy path.\n' >&2
+  exit 1
+fi
+sed -i 's#127\.0\.0\.1:8023#127.0.0.1:8025#' "${manager_locations}"
+if "${preflight}" --env-file "${tmp_dir}/manager.env" --mode manager-offline \
+    >/dev/null 2>&1; then
+  printf 'Manager preflight unexpectedly accepted an unapproved facade upstream.\n' >&2
+  exit 1
+fi
+"${renderer}" --env-file "${tmp_dir}/manager.env" --output "${manager_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
+rm -f -- "${proxy_secrets}/manager-v2-client.pem"
+if "${preflight}" --env-file "${tmp_dir}/manager.env" --mode manager-offline \
+    >/dev/null 2>&1; then
+  printf 'Manager preflight unexpectedly accepted a missing client identity.\n' >&2
+  exit 1
+fi
+{
+  cat "${pki_dir}/manager-v2-client.crt"
+  cat "${pki_dir}/manager-v2-client.key"
+} > "${proxy_secrets}/manager-v2-client.pem"
+chmod 0640 "${proxy_secrets}/manager-v2-client.pem"
+chgrp "${runtime_gid}" "${proxy_secrets}/manager-v2-client.pem"
+"${preflight}" --env-file "${tmp_dir}/manager.env" --mode manager-offline >/dev/null
+manager_proxy_syntax_config="${tmp_dir}/source-proxy.manager.syntax-test.conf"
+sed 's/listen 172\.23\.0\.1:8444 ssl;/listen 127.0.0.1:18445 ssl;/' \
+  "${manager_config}" > "${manager_proxy_syntax_config}"
+chmod 0640 "${manager_proxy_syntax_config}"
+chgrp "${runtime_gid}" "${manager_proxy_syntax_config}"
 
 # The same accepted D2 identity boundary may be promoted to D3 only by the
 # three-field probe-only delta. Public contracts/health open; all four
@@ -380,6 +610,13 @@ if [[ "${build_images}" == true ]]; then
   "${docker_cli[@]}" run --rm --network none --read-only --cap-drop ALL \
     --security-opt no-new-privileges --group-add "${runtime_gid}" \
     --volume "${proxy_syntax_config}:/etc/nginx/nginx.conf:ro" \
+    --volume "${proxy_secrets}:/run/secrets:ro" \
+    --tmpfs /tmp:rw,noexec,nosuid,nodev,size=8m \
+    --tmpfs /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0750,uid=101,gid=101 \
+    --entrypoint nginx portal-source-proxy:pre-iam-05 -t -q
+  "${docker_cli[@]}" run --rm --network none --read-only --cap-drop ALL \
+    --security-opt no-new-privileges --group-add "${runtime_gid}" \
+    --volume "${manager_proxy_syntax_config}:/etc/nginx/nginx.conf:ro" \
     --volume "${proxy_secrets}:/run/secrets:ro" \
     --tmpfs /tmp:rw,noexec,nosuid,nodev,size=8m \
     --tmpfs /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0750,uid=101,gid=101 \

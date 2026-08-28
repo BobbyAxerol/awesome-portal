@@ -1,0 +1,11 @@
+{
+  "schema_version": "trading-system.portal-execution.n11-owner-fixture-index.v1",
+  "status": "OWNER_PUBLISHED_PARTIAL",
+  "source_capability_freeze_sha256": "sha256:33566921539e5327b7f3deae0e5dea7b98ff95e515c87bb7bbd67c052e6d5e1b",
+  "capability_count": 24,
+  "callable_v1_fixture_count": 0,
+  "fixture_status": "NOT_PUBLISHED_NO_EXACT_CALLABLE_V1_ROUTE",
+  "synthetic_placeholder_fixture_created": false,
+  "business_rows_included": false,
+  "portal_activation": false
+}
