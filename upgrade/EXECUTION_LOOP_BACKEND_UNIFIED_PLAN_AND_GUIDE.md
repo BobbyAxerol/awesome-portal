@@ -1328,6 +1328,7 @@ Append rows here. Do not create another active request file.
 | BR-EX-61 | 2026-08-28 | Sandbox Certification `/deployments/sandbox/{id}` (WF 1d) | v1 publishes steps, findings, source panels, promotion plans and timeline, but not what the hi-fi workbench decides on: identity + credential status, broker REST freshness vs policy, the internal/broker/difference triptych as an authoritative diff, findings rows with local/broker values and the action each one takes, order-type certification (including the types the alpha requires in production but has never exercised), execution quality with INSUFFICIENT_DATA, the bounded smoke plan, the cleanup checklist, the four actions with their blockers, and the peers in certification | Additive fields on `sandbox-certification.v1` → v1.1: `identity`, `broker_freshness`, `reconciliation_view{internal,broker,difference}` (diff.v1, server-computed), `findings_rows[]`, `order_type_certification{rows[],blocking,blocking_rule}`, `execution_quality` (ack/fill p50-p95, slippage state, reject rate), `smoke_plan` (bounded: qty, capital cap, timebox, on_expiry, approved_by, state), `cleanup{rows[],exit_rule}`, `actions[]{key,label,enabled,risk_tier,blocker_codes}`, `peers[]`; plus command routes `sandbox.broker_sync` / `sandbox.reconcile_dry_run` / `sandbox.smoke_open` / `sandbox.request_exit_review` as plan → apply → verify | PORTAL_CONTROL (certification machine, smoke plan, command policy) · BROKER (`broker_account_sync_current_state`) · TRADING_SYSTEM (`orders`, `fills`, `positions_v2`, `order_pending_exposure`, `domain_events`) · DERIVED (diff.v1, execution_quality.v1) | read + four governed mutations (ADMIN step-up) · high: certification is the gate before real capital — `enabled:true` must be a deliberate decision, fail-closed by default | 1 deployment/screen; findings ≤200 keyset; peers ≤20 | existing `sandbox-certification.v1` (additive, no field retyped); BR-EX-58 blocker catalog; BR-EX-41 stage telemetry | any missing branch → v1 rendering; broker STALE / CRITICAL finding / cleanup pending ⇒ smoke + exit actions disabled with codes; slippage under min samples ⇒ INSUFFICIENT_DATA, never 0 | fixtures `execution-sandbox-certification.dep_77.v1_1.valid.json` + `.dep_91.v1_1.valid.json` (CRITICAL branch); tests: CRITICAL OPEN ⇒ recon step FAIL + smoke BLOCKED + `actions[smoke_open].enabled==false` with non-empty codes; `slippage.state=='INSUFFICIENT_DATA'` carries no `value`; a `required:true` order type not CERTIFIED ⇒ `progress.eligible==false`; v1 suite re-runs unchanged; frontend `sandbox.test` | Codex | N09 · N10 · N11 · N13 (activation for the four actions) | `RECEIVED` | `SandboxCertificationScreen` — smoke `sandbox.smoke.ts` (certification half) deleted on delivery | four `sandbox.*` actions are activation-gated (ADMIN step-up, plan → apply → verify) | hi-fi "Sandbox Certification (WF 1d)"; **full spec §7.4.3**, decisions §7.4.6; UI rationale appendix O.3 · O.5 |
 | BR-EX-62 | 2026-08-28 | Paper Workbench `/deployments/paper/:id` and its VN variant `…/vn-market` (WF 1c · 4h) | The contract publishes the figures but not the drawing: no equity band against the approved run, no candle overlay with order/fill markers, no rolling-correlation series, no venue session shading, and no way to reach the other deployments in paper without already being on one | Additive on `paper-workbench.v1` → v1.1: `peers[]`, `equity_band` (backtest + paper + ±1σ band, joined by artifact digest, with the drawdown annotation), `order_markers` (venue OHLC + BUY/SELL/FILL markers each carrying its order/fill id), `correlation_series` (`corr.v1` vs portfolio and benchmark), `session_shading` (venue closed windows and the frozen-at instant), `report{available,reason}`; plus new `GET /api/v1/execution/paper` → `paper-list.v1` | DERIVED (`equity_projection.v1`, `corr.v1`) · TRADING_SYSTEM (candles, orders, fills) · PORTAL_PROJECTION (peers, gate) · venue calendar | read-only · medium: a backtest joined to a paper series by anything but the artifact digest is the exact failure this panel exists to expose | ≤20 deployments in paper; band and correlation ≤720 pts; candles 120–500; markers ≤500/window; freshness = the projection's own `as_of`, paused against the venue calendar | existing `paper-workbench.v1`; `venues.trading_sessions`; BR-EX-41 stage telemetry; same OHLC question as BR-EX-50 | a missing branch renders the honest state the screen already has; no series ⇒ the panel says so and the KPI strip stands alone; a closed window is published, never inferred from missing points | fixtures `execution-paper-list.valid.json`, `execution-paper-workbench.dep_74.v1_1.valid.json`, `…dep_102.v1_1.valid.json`; tests §7.5.4 (1)–(5); frontend `paper.test`, `vnm.test`, `paperMatrix.test` re-run unchanged | Codex | N09 (projection) · N10 (derivations) · N11 (candles/journal) | `RECEIVED` | `PaperWorkbench` — smoke `paper.smoke.ts` (workbench half) deleted on delivery | none until approved | hi-fi "Paper Workbench (WF 1c)" + "Paper Workbench VNM (WF 4h)"; **full spec §7.5.1**, decisions §7.5.5 |
 | BR-EX-63 | 2026-08-28 | Paper Exit Review `/governance/exit-reviews/:id` (WF 4b) | The review shows the evidence but not the pack it was read from, and offers no reviewer note — so the sentence a reviewer wants recorded beside their decision has nowhere to go | Additive on `paper-exit-review.v1` → v1.1: `evidence_pack{pack_id,digest,href,built_at}` and `reviewer_note{supported,max_length,recorded_with_decision,value}` | PORTAL_CONTROL | read + the existing decision write · medium: a note the reviewer believes was saved and was not is worse than no field | 1 review/screen; note ≤2,000 chars | existing contract | note unsupported ⇒ the field is not rendered rather than rendered and dropped; the digest a review decided against never changes when the pack is rebuilt | fixture update; tests §7.5.4 (6)(7); frontend `paperExit.test` re-run unchanged | Codex | N09 | `RECEIVED` | `PaperExitReview` — smoke `paper.smoke.ts` (exit half) deleted on delivery | none | hi-fi "Paper Exit Review (WF 4b)"; **full spec §7.5.2**, decisions §7.5.5 |
+| BR-EX-64 | 2026-08-28 | Cross-screen — every charted series (Paper 62 · Replay 50 · Live 56/57 · Canary 59 · stage telemetry 41) | The chart rules were being written once per appendix and drifting: pre-scaled coordinates instead of points, totals that disagree with their bars, markers with no journal id, annotations floating off their day, lines interpolated through closed venues | One shared schema fragment `chart-series.rules.v1` ($ref-ed by every charted series): numeric points + ISO UTC timestamps; exact-decimal money; explicit gaps for closed venues; printed totals equal exact sums; every marker carries its journal id; annotations equal the series value at their bucket; caps + extrema-preserving downsample declared; tooltip provenance (authority · as_of · formula_version) required; multi-stage overlays share one `join_digest`; one owner for OHLC | rules bind each series' own authority (PORTAL_PROJECTION / TRADING_SYSTEM / BROKER / DERIVED) | read-only · medium: these are the honesty rules — a chart that disagrees with its caption is worse than no chart | no new endpoints; caps per BR-EX-41 | BR-EX-41/50/56/57/59/62; decision §7.5.5(1) (OHLC owner) escalated — two screens block on it | a series failing a rule fails schema validation, never gets repaired by the portal | fixture linter over every charted `execution-*` fixture; sum/annotation/marker-id/digest/gap checks per §7.6.4; frontend renders each canonical fixture through `marketChart` | Codex | N10 (schema fragment) · N09/N11 (producers) | `RECEIVED` | `components/marketChart.tsx` (CandlesChart · LinesChart · BarsChart) — smoke generators in `paper.smoke.ts`/`canary.smoke.ts` are the reference fixtures, deleted with their parent rows | none | **full spec §7.6**; amendments to 57/59/62 in §7.6.2 |
 | _next: BR-EX-60_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
@@ -1853,6 +1854,105 @@ paths:
 
 ---
 
+### 7.6 BR-EX-64 — chart series contract (cross-screen), written after the real-chart pass
+
+On 2026-08-28 the frontend replaced every hand-drawn SVG chart stand-in on the Paper, Canary and
+Live surfaces with real ECharts panels (`apps/portal/frontend/src/execution/components/marketChart.tsx`:
+candlesticks with journal markers, multi-line with ±band / venue-closed areas / stage markers,
+signed daily bars). That pass is early validation for codex — **the requested shapes in §7.4/§7.5,
+BR-EX-41/50/56/57/59 are now proven renderable end-to-end** — and it surfaced a set of rules that
+apply to *every* charted series, not to one contract. They were being written once per appendix;
+this row states them once, the way BR-EX-58 did for blocker codes.
+
+**Applies to:** `stage-equity.v1` (41.1), `replay.v1` candles/markers (50), `live-overview.v1`
+pulse (56), `live-full.v1.1` `contribution_30d` (57), `canary-control-room.v1.1` `stage_lines`
+(59), `paper-overview.v1` returns/funnel/runway (62), `paper-workbench.v1.1` `equity_band` /
+`order_markers` / `correlation_series` / `session_shading` (62), and any future charted series.
+
+#### 7.6.1 The ten rules
+
+1. **Numeric points, ISO-8601 UTC timestamps — never coordinates.** A series arrives as
+   `[{t, v}]` (or OHLC rows); the portal owns scaling and axes. Pre-scaled x/y pairs cannot be
+   hovered, re-windowed or verified, and are rejected at schema.
+2. **Money is exact-decimal strings; ratios and normalized series are numbers.** Which one each
+   field is, the schema declares — a consumer must not guess from the magnitude.
+3. **A closed venue is a gap, not a segment.** For session-aware venues the series either omits
+   the closed buckets and publishes `gaps: [{from, to, reason: "VENUE_CLOSED"}]` (matching
+   `session_shading`), or carries explicit nulls. The portal draws a break; it never interpolates
+   across a shut market, and it never infers "closed" from missing points (§7.5.1 rule 3 —
+   restated here because it now binds every session-aware series, not only Paper's).
+4. **A printed total equals the exact sum of its series.** `contribution_30d.total == Σ days[].pnl`
+   (exact decimal); funnel counts are monotonic (`signals ≥ orders ≥ fills`, rejected + skipped +
+   queued accounted); a runway's cell count equals its window. Server-verified, fixture-tested —
+   a chart that disagrees with its own caption is worse than no chart, and the frontend currently
+   has to *scale smoke bars* to keep this true, which is exactly the kind of lie BR-EX delivery
+   removes.
+5. **Every marker carries the journal id it came from.** BUY/SELL → `order_id`; FILL →
+   `fill_id`; reject → its typed reason + `order_id`; bracket legs → `bracket_group_id`. The
+   portal renders hover = that record and links it; a marker without an id is decoration and is
+   rejected at schema. (Shared with BR-EX-50's marker↔log consistency test — one rule, two
+   consumers.)
+6. **An annotation owns its bucket.** A published annotation (max drawdown, canary start, frozen
+   at close) is `{t, v, kind, label}`, and `v` must equal the series value at `t` (fixture rule).
+   The chart repeats the projection's own statement; it never recomputes it — the frontend found
+   this the hard way when a DD label said Aug 12 while sitting on Jul 25.
+7. **Point caps and honest downsampling.** Per BR-EX-41: ≤5,000 points/series, panels typically
+   ≤720; when the server downsamples it keeps extrema (min/max or LTTB) and declares
+   `downsample: {method, stride}` so the envelope caption can say so.
+8. **Tooltip provenance is part of the series envelope.** `authority`, `as_of`,
+   `formula_version` are required on every charted series; the portal prints them in every
+   tooltip (§12 chart production contract). A series without them renders as unavailable, not as
+   an anonymous line.
+9. **Multi-stage overlays share one digest.** `stage_lines` and any backtest/paper/live overlay
+   carry `join_digest`; series with different digests must not be returned in one overlay
+   response. Line style differentiates stage; colour never carries the difference alone.
+10. **One owner for OHLC.** `order_markers.candles` (62) and `replay.v1` candles (50) must come
+    from the same source with the same bucket rules — the data-layer snapshot (`ds_*`) or the
+    Trading System market route, but one answer. This is decision §7.5.5(1) = J.4, escalated:
+    two screens now block on it.
+
+#### 7.6.2 Additions to already-filed rows (additive, no retype)
+
+- **BR-EX-62 `paper-overview.v1`** — each `runway[]` row also carries its drift mini-series:
+  `drift_spark: [{t, v}]` (≤26 pts, pt units vs expected) and `drift_now_pt: string` (exact
+  decimal, signed) with `drift_state: WITHIN_BAND|WATCH|FAIL|INSUFFICIENT_DATA` — the row's
+  sparkline and headline number currently come from the same stand-in generator.
+- **BR-EX-62 `equity_band`** — `annotations[]` entries follow rule 6 (`{t, v, kind:
+  "MAX_DRAWDOWN", label}`); the KPI strip's max-drawdown figure and the chart's annotation must
+  be the same published fact.
+- **BR-EX-59 `stage_lines`** — `canary_start_at` must fall on a bucket boundary of the published
+  interval; normalization base is 1.0 at the window start and is stated in the envelope
+  (`normalized_to: 1.0`), so three stages are comparable without the client rebasing.
+- **BR-EX-57 `contribution_30d`** — shape confirmed as `{days: [{d, pnl}], total, cost_drag,
+  formula: "contrib.v1"}` with rule 4 binding `total`.
+
+#### 7.6.3 Definition of Ready (§5.1)
+
+| Package | Owner · env | Authority & scope | Schema rev · compat | Scale | Failure | Dependency | Test corpus |
+|---|---|---|---|---|---|---|---|
+| **BR-EX-64** | Codex · `dev` schema-first | READ; rules bind existing series producers (PORTAL_PROJECTION / TRADING_SYSTEM / BROKER / DERIVED per their own rows) | new `chart-series.rules.v1` — a shared schema fragment (`$ref`-ed by 41/50/56/57/59/62 series), additive everywhere | no new endpoints; caps per BR-EX-41 | a series failing a rule fails schema validation, not rendering — the portal never repairs data | BR-EX-41/50/56/57/59/62; decision §7.5.5(1) for rule 10 | fixture linter: every `execution-*` fixture with a charted series passes rules 1–9; sum-consistency and annotation-equality checks generated per fixture; frontend `marketChart` renders each canonical fixture in a smoke test |
+
+#### 7.6.4 Required tests
+
+1. Rule 4 on every fixture with a total beside a series (contribution, funnel, runway).
+2. Rule 5: schema rejects a marker without its journal id; every marker id in a fixture resolves
+   inside the same fixture's journal.
+3. Rule 6: for every annotation, `v == series[t]` exactly.
+4. Rule 9: mixed-digest overlay is rejected.
+5. Rule 3: a session-aware fixture with a closed window either omits those buckets + publishes
+   `gaps[]`, or carries nulls — a continuous line through a closed window fails.
+6. Rule 7: a downsampled fixture keeps the window's min and max and declares its method.
+
+#### 7.6.5 What the frontend retires on delivery
+
+Nothing directly — BR-EX-64 has no endpoint of its own. Its value is that every series delivered
+under 41/50/56/57/59/62 arrives chart-ready: the generators in `paper.smoke.ts` /
+`canary.smoke.ts` (paperCandles, researchBand, corrSeries, vnSessions, overviewReturns,
+canaryStageSeries) are the reference fixtures for what the components consume, and they delete
+with their parent rows.
+
+---
+
 ## 8. Test and evidence matrix
 
 | Change class | Minimum gate |
@@ -1934,6 +2034,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
+| **BR-EX-64 — chart series contract** | **§7.6 of this file** (the ten rules every charted series obeys, the DoR, the fixture-linter tests, and the additive amendments to 57/59/62 it carries). |
 | **BR-EX-62/63 — full specification** | **§7.5 of this file** (Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1; deliberately small because the Paper contract already carries most of its hi-fi). |
 | **BR-EX-60/61 — full specification** | **§7.4 of this file** (domain, both response shapes, source mapping to real columns, server rules, command routes and typed errors, DoR, required tests, open decisions, delivery order). The frontend document below carries the same content with screenshots and per-field UI rationale; **§7.4 wins on disagreement.** |
 | **Hi-fi V2 requests BR-EX-41…63 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–O; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full; M = BR-EX-59 canary; N = screen ↔ request coverage matrix and remaining gaps; O = BR-EX-60/61 sandbox overview + certification v1.1, with the seven certification steps mapped to real columns, the fail-closed rules, the four `sandbox.*` command routes and the five decisions codex must confirm); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
@@ -1966,3 +2067,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-27 | N16A same-domain emergency-routing authority closed | same-origin/origin-isolation templates, short session/WebAuthn ceremony, typed health/failure states, immutable audit and local Research/Cloudflare/origin/rollback drills complete; R3 unpublished, R4 forbidden, N16B pending, public route/source/runtime inactive |
 | 2026-08-28 | Claude: §7.2 BR-EX-60/61 appended (`RECEIVED`) and specified in full in §7.4 — Sandbox Overview `sandbox-overview.v1` (new) + Sandbox Certification v1.1 (additive) with four `sandbox.*` command routes | documentation only; no runtime/profile/source/command change; five decisions listed in §7.4.6 are codex's to confirm; frontend screens are built and running on smoke until delivery |
 | 2026-08-28 | Claude: §7.2 BR-EX-62/63 appended (`RECEIVED`) and specified in full in §7.5 — Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1 | documentation only; no runtime/profile/source/command change; the Paper contract already carries most of its hi-fi, so these two rows are deliberately small; four decisions in §7.5.5 are codex's to confirm | · amended same day for the delivered Paper Overview hi-fi (`paper-overview.v1` supersedes the bare `paper-list.v1`, §7.5.1)
+| 2026-08-28 | Claude: §7.2 BR-EX-64 appended (`RECEIVED`) and specified in §7.6 — the chart series contract, written after the real-chart pass replaced every SVG stand-in on Paper/Canary/Live; §7.6.2 carries additive amendments to BR-EX-57/59/62 and escalates the OHLC-owner decision (§7.5.5(1)) now blocking two screens | documentation only; no runtime/profile/source/command change |
