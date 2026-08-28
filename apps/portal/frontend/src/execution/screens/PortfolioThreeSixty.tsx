@@ -36,10 +36,11 @@ import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badg
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { EpisodesChart, InfluenceGraph, LinesChart } from "../components/marketChart";
+import { PF_CHARTS } from "../portfolio360.smoke";
 import { PfApprovalsHifi, PfAuditHifi, PfConfigLog, PfCorrMatrix, PfCrossPortfolio, PfDdOverlap, PfEraChart, PfFooterLinks, PfIncidentsHifi, PfInfluence, PfLeadership, PfLedgerHifi, PfLiveStrip, PfMarketCorr, PfSmokeNote, PfStructureExtras, PfWhatIf } from "../components/PortfolioOverview";
 import { pfSmoke } from "../portfolio360.smoke";
 import { useAlphaClock } from "../alpha360.smoke";
-import { EquityChart } from "../components/EquityChart";
 import { ExecutionWorkspace } from "../components/workspace";
 
 /**
@@ -242,33 +243,27 @@ export function absBucket(coefficient: string): "0" | "1" | "2" | "3" | "4" {
  */
 export function InfluenceMap({ matrix, exposures, threshold = "0.5" }: { matrix: PackedCorrelation; exposures: ReadonlyMap<string, string | null>; threshold?: string }) {
   const n = matrix.labels.length;
-  const cx = 160, cy = 120, R = 90;
-  const nodes = matrix.labels.map((l, i) => ({ ...l, x: cx + R * Math.cos((2 * Math.PI * i) / n - Math.PI / 2), y: cy + R * Math.sin((2 * Math.PI * i) / n - Math.PI / 2) }));
   const edges: { a: number; b: number; rho: string }[] = [];
   for (let a = 0; a < n; a += 1) for (let b = a + 1; b < n; b += 1) {
     const rho = correlationAt(matrix, a, b);
     if (rho !== null && compareAbsDecimal(rho, threshold) >= 0) edges.push({ a, b, rho });
   }
-  const radius = (id: string) => {
+  const share = (id: string) => {
     const pct = exposures.get(id);
     const v = pct === null || pct === undefined ? NaN : Number(pct.replace("%", ""));
-    return Number.isFinite(v) ? 6 + Math.min(18, v / 4) : 10;
+    return Number.isFinite(v) ? v : null;
   };
   return (
     <figure className="exec-influence-wrap">
-      <svg className="exec-influence" viewBox="0 0 320 240" role="img" aria-label={`Influence map: ${n} alphas, ${edges.length} edges with |ρ| ≥ ${threshold}`}>
-        {edges.map((e) => (
-          <line key={`${e.a}-${e.b}`} x1={nodes[e.a].x} y1={nodes[e.a].y} x2={nodes[e.b].x} y2={nodes[e.b].y} strokeWidth={1 + 3 * Math.abs(Number(e.rho))} opacity={0.35 + 0.6 * Math.abs(Number(e.rho))}>
-            <title>{`${nodes[e.a].displayName} — ${nodes[e.b].displayName}: ρ ${e.rho}`}</title>
-          </line>
-        ))}
-        {nodes.map((node) => (
-          <g key={node.entityId}>
-            <circle cx={node.x} cy={node.y} r={radius(node.entityId)} />
-            <text x={node.x} y={node.y + radius(node.entityId) + 12} textAnchor="middle">{node.displayName}</text>
-          </g>
-        ))}
-      </svg>
+      {/* The published matrix drawn as a real graph, at a contained height —
+          the 320×240 SVG this replaces stretched to the full canvas width. */}
+      <InfluenceGraph
+        height={260}
+        nodes={matrix.labels.map((l) => ({ id: l.entityId, label: l.displayName, sharePct: share(l.entityId), kind: "alpha" as const }))}
+        edges={edges.map((e) => ({ a: matrix.labels[e.a].entityId, b: matrix.labels[e.b].entityId, rho: Number(e.rho) }))}
+        provenance={{ authority: "DERIVED", asOf: "published matrix", formula: "corr.v1" }}
+        ariaLabel={`Influence map: ${n} alphas, ${edges.length} edges with |ρ| ≥ ${threshold}`}
+      />
       <figcaption className="exec-role-meta">node = alpha (radius = published exposure share) · edge = |ρ| ≥ {threshold} from the published matrix · {edges.length} edges</figcaption>
     </figure>
   );
@@ -740,6 +735,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   } = props;
 
   const [localLens, setLocalLens] = useState<number | null>(null);
+  const [action, setAction] = useState<"rebalance" | "report" | null>(null);
   const lens = lensIndex ?? localLens;
   const setLens = onLensChange ?? setLocalLens;
 
@@ -773,9 +769,48 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         <span className="exec-a3-wf">WF 3a</span>
         <span className="exec-a3-spacer" />
         <span className="exec-a3-source"><b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span></span>
-        <button type="button" className="exec-a3-btn" disabled title="Report pack export is not published (BR-EX-51)">Report pack</button>
-        <button type="button" className="exec-pf2-primary" disabled title="Rebalance plan needs the plan → apply → verify route (BR-EX-51); the Admin Action Drawer carries today's allocation actions">Rebalance plan ▾</button>
+        {/* Active controls: each opens its plan preview; the Apply/Generate
+            inside is the single point BR-EX-51's route will enable. */}
+        <button type="button" className="exec-a3-btn" aria-pressed={action === "report"} onClick={() => setAction(action === "report" ? null : "report")}>Report pack</button>
+        <button type="button" className="exec-pf2-primary" aria-pressed={action === "rebalance"} onClick={() => setAction(action === "rebalance" ? null : "rebalance")}>Rebalance plan<span aria-hidden="true"> ▾</span></button>
       </header>
+      {action === "rebalance" ? (
+        <section className="exec-sbc-plan" aria-label="PLAN · portfolio rebalance">
+          <header className="exec-sbc-planhead">
+            <span className="exec-sbc-plantitle">PLAN · portfolio rebalance — preview</span>
+            <span className="exec-a3-spacer" />
+            <button type="button" className="exec-a3-btn" onClick={() => setAction(null)}>Close</button>
+          </header>
+          <div className="exec-lf-kv">
+            <span className="exec-bd-k">operation</span><span>portfolio.rebalance · {portfolioName}</span>
+            <span className="exec-bd-k">targets</span><span>Grid v2.1 69.8% → 60.0% · Carry v3.2 30.2% → 40.0% — labeled estimates from the what-if panel</span>
+            <span className="exec-bd-k">writes</span><span>capital ledger entries only — positions move by the deployments' own orders, never by this plan</span>
+            <span className="exec-bd-k">governance</span><span>ADMIN step-up · dual approval · plan → apply → verify · PARTIAL never renders green</span>
+          </div>
+          <footer className="exec-sbc-planfoot">
+            <button type="button" className="exec-pf2-primary" disabled title="The rebalance route lands with BR-EX-51; this preview never leaves the browser.">Apply</button>
+            <span>preview only — apply enables when BR-EX-51 ships the plan → apply → verify route · today's allocation actions live in the Admin Action Drawer</span>
+          </footer>
+        </section>
+      ) : null}
+      {action === "report" ? (
+        <section className="exec-sbc-plan" aria-label="Report pack — preview">
+          <header className="exec-sbc-planhead">
+            <span className="exec-sbc-plantitle">Report pack — preview</span>
+            <span className="exec-a3-spacer" />
+            <button type="button" className="exec-a3-btn" onClick={() => setAction(null)}>Close</button>
+          </header>
+          <p className="exec-pw-reportbody">
+            The pack would carry: the live strip and its KPIs, equity vs benchmark by revision era, the
+            correlation matrix with the influence map, drawdown overlap, the capital ledger window, and the
+            approvals touching this portfolio — at the digests they were read at.
+          </p>
+          <footer className="exec-sbc-planfoot">
+            <button type="button" className="exec-pf2-primary" disabled title="Report generation lands with BR-EX-51; nothing is produced here.">Generate</button>
+            <span>preview only — the export route ships with BR-EX-51</span>
+          </footer>
+        </section>
+      ) : null}
       <div className="exec-alpha-scope exec-pf2-scope">
         <span className="exec-a3-scopelabel">Scope</span>
         <span className="exec-pf2-chip">Window {scopeWindow} ▾</span>
@@ -928,23 +963,37 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               <InfluenceMap matrix={correlation} exposures={new Map(holdings.map((h) => [h.alpha, h.exposurePct]))} />
             ) : null}
             <div className="exec-alpha-tiles">
-              <EquityChart
-                compact
-                title={`ρ(NAV, ${benchmark}) · 30d · threshold 0.6`}
-                envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "rho_timeline", sourceRows: null, returnedRows: null, coverage: null }}
-                series={null}
-                height={260}
-                unavailableReason="ρ timeline not published — BR-EX-34. The matrix above is the published correlation."
-              />
-              <EquityChart
-                compact
-                title="Drawdown overlap timeline"
-                envelope={{ window: scopeWindow, interval: "1d", currency: null, asOf: envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: "drawdown_overlap", sourceRows: null, returnedRows: null, coverage: null }}
-                series={null}
-                height={260}
-                unavailableReason="Drawdown overlap series not published — BR-EX-34."
-              />
+              <section className="exec-pf2-panel" aria-label="Correlation timeline vs benchmark">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">ρ(NAV, {benchmark}) · 30d · threshold {PF_CHARTS.rho.threshold}</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">corr.v1</span></header>
+                <div className="exec-pw-chartplot">
+                  <LinesChart
+                    height={210}
+                    series={[{ name: `ρ vs ${benchmark}`, tone: "accent", width: 2, points: PF_CHARTS.rho.points }]}
+                    thresholdLine={{ y: PF_CHARTS.rho.threshold, label: `threshold ${PF_CHARTS.rho.threshold}`, tone: "warn" }}
+                    annotation={{ t: PF_CHARTS.rho.breach.from, v: PF_CHARTS.rho.breach.peak, label: `breach ${PF_CHARTS.rho.breach.from.slice(5)}→${PF_CHARTS.rho.breach.to.slice(5)}`, tone: "warn" }}
+                    yFormatter={(v) => v.toFixed(2)}
+                    provenance={{ authority: "DERIVED", asOf: envelope.asOf ?? "—", formula: "corr.v1 · rho_timeline" }}
+                    ariaLabel={`Rolling correlation of NAV against ${benchmark} with the ${PF_CHARTS.rho.threshold} threshold`}
+                  />
+                </div>
+                <footer className="exec-pf2-foot">{PF_CHARTS.rho.foot}</footer>
+              </section>
+              <section className="exec-pf2-panel" aria-label="Drawdown overlap timeline (contract slot)">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">Drawdown overlap timeline</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">drawdown_overlap.v1</span></header>
+                <div className="exec-pw-chartplot">
+                  <EpisodesChart
+                    height={190}
+                    rows={PF_CHARTS.ddOverlap.rows}
+                    joint={PF_CHARTS.ddOverlap.joint}
+                    window={PF_CHARTS.ddOverlap.window}
+                    provenance={{ authority: "DERIVED", asOf: envelope.asOf ?? "—", formula: "drawdown_overlap.v1" }}
+                    ariaLabel="Drawdown overlap timeline in the published-correlation slot"
+                  />
+                </div>
+                <footer className="exec-pf2-foot">{PF_CHARTS.ddOverlap.foot}</footer>
+              </section>
             </div>
+            <p className="exec-af-smoke">! SMOKE DATA — the ρ timeline and drawdown overlap above are synthetic frames (BR-EX-34 publishes the series; the shapes are the reference); every other figure in this disclosure is the published contract. Delete when BR-EX-34/51 ship</p>
             {insight ? (
               <section className="exec-gate-panel">
                 <div className="exec-360-colmeta">

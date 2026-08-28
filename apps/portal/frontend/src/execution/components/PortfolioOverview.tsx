@@ -6,7 +6,8 @@
  * on the screen below the strip.
  */
 import { useState } from "react";
-import { PF_SMOKE_TABS as T, pfSmoke, usePfTick } from "../portfolio360.smoke";
+import { PF_SMOKE_TABS as T, pfSmoke, usePfTick, PF_CHARTS } from "../portfolio360.smoke";
+import { EpisodesChart, InfluenceGraph } from "./marketChart";
 
 const fmt0 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 const fmt2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -233,20 +234,17 @@ export function PfLeadership({ lens, onLens }: { lens: boolean; onLens: () => vo
 
 export function PfInfluence() {
   if (!pfSmoke()) return null;
-  const m = T.influence;
-  const stroke = (t: string) => (t === "warn" ? "var(--warn)" : "var(--accent)");
+  const m = PF_CHARTS.influence;
   return (
-    <Panel title="Influence map" note="node = exposure · edge = |ρ| > 0.15" label="Influence map (hi-fi)">
-      <div className="exec-pf2-plotpad">
-        <svg viewBox="0 0 400 150" className="exec-pf2-svgauto" role="img" aria-label="Influence map" style={{ fontFamily: "var(--font-mono)" }}>
-          {m.edges.map((e, i) => <line key={i} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke={stroke(e.tone)} strokeWidth={e.w} opacity="0.75" />)}
-          {m.nodes.map((n) => <g key={n.label}><circle cx={n.cx} cy={n.cy} r={n.r} fill="var(--accent-soft)" stroke="var(--accent)" strokeWidth="2" /><text x={n.cx} y={n.cy + 4} textAnchor="middle" fontSize={n.r > 20 ? 10 : 9} fill="var(--ink)">{n.label}</text></g>)}
-          <circle cx={m.insufficient.cx} cy={m.insufficient.cy} r={m.insufficient.r} fill="none" stroke="var(--ink-mute)" strokeWidth="1.5" strokeDasharray="3 3" />
-          <text x={m.insufficient.cx} y={m.insufficient.cy + 21} textAnchor="middle" fontSize="9" fill="var(--ink-mute)">{m.insufficient.label}</text>
-          <rect x={m.bm.x} y={m.bm.y} width="28" height="28" fill="var(--warn-bg)" stroke="var(--warn)" strokeWidth="1.5" />
-          <text x={m.bm.x + 14} y={m.bm.y + 17} textAnchor="middle" fontSize="9" fill="var(--warn)">{m.bm.label}</text>
-          {m.labels.map((l) => <text key={l.t + l.x} x={l.x} y={l.y} fontSize="9" fill={stroke(l.tone)}>{l.t}</text>)}
-        </svg>
+    <Panel title="Influence map" note={`node = exposure · edge = |ρ| > ${m.threshold}`} label="Influence map (hi-fi)">
+      <div className="exec-pf2-plotpad exec-pw-chartplot">
+        <InfluenceGraph
+          height={230}
+          nodes={m.nodes}
+          edges={m.edges}
+          provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "corr.v1 · cov_30d_v2" }}
+          ariaLabel={`Influence map: ${m.nodes.length} nodes, ${m.edges.length} edges with |ρ| > ${m.threshold}`}
+        />
       </div>
       <footer className="exec-pf2-foot">{m.foot}</footer>
     </Panel>
@@ -255,21 +253,18 @@ export function PfInfluence() {
 
 export function PfDdOverlap() {
   if (!pfSmoke()) return null;
-  const d = T.ddOverlap;
+  const d = PF_CHARTS.ddOverlap;
   return (
     <Panel title="Drawdown overlap — do they sink together?" note="bar = DD episode · depth in label" label="Drawdown overlap (hi-fi)">
-      <div className="exec-pf2-plotpad">
-        <svg viewBox="0 0 640 130" className="exec-pf2-svgauto" role="img" aria-label="Drawdown overlap" style={{ fontFamily: "var(--font-mono)" }}>
-          <rect x={d.band.x} y="0" width={d.band.w} height="130" fill="var(--warn)" opacity="0.07" />
-          {d.rows.map((r) => (
-            <g key={r.label}>
-              <text x="4" y={r.y} fontSize="10" fill={r.insufficient ? "var(--ink-mute)" : "var(--ink-soft)"}>{r.label}</text>
-              {r.bars?.map((b, i) => <g key={i}><rect x={b.x} y={r.y - 8} width={b.w} height="10" fill="var(--bad-bg)" stroke="var(--bad)" />{b.depth ? <text x={b.x + b.w + 6} y={r.y} fontSize="9" fill="var(--bad)">{b.depth}</text> : null}</g>)}
-              {r.insufficient ? <text x="120" y={r.y} fontSize="9" fill="var(--ink-mute)">{r.insufficient}</text> : null}
-            </g>
-          ))}
-          <text x={d.band.x} y="126" fontSize="9" fill="var(--warn)">{d.bandLabel}</text>
-        </svg>
+      <div className="exec-pf2-plotpad exec-pw-chartplot">
+        <EpisodesChart
+          height={170}
+          rows={d.rows}
+          joint={d.joint}
+          window={d.window}
+          provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "drawdown_overlap.v1" }}
+          ariaLabel="Drawdown overlap timeline: one row per alpha, episodes peak-to-recovery"
+        />
       </div>
       <footer className="exec-pf2-foot">{d.foot}</footer>
     </Panel>

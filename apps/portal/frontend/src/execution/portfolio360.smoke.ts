@@ -161,6 +161,64 @@ export const PF_SMOKE_TABS = {
   },
 };
 
+
+/* ---------------------------------------------------------------------------
+ * Real-chart frames (owner 2026-08-28: "khai báo smoke data và vẽ chart y như
+ * vậy cho thật"). The pixel-coordinate stand-ins above stay only until every
+ * caller has moved; these frames are the reference fixtures for BR-EX-51/34 —
+ * numeric points, ISO dates, deterministic. Deleted with the parent rows.
+ * ------------------------------------------------------------------------ */
+
+const detC = (i: number, seed: number) => { const x = Math.sin(i * 12.9898 + seed) * 43758.5453; return (x - Math.floor(x)) - 0.5; };
+
+export const PF_CHARTS = {
+  /** node = exposure share · edge = |ρ| > 0.15 · MM has no verdict, dashed. */
+  influence: {
+    threshold: 0.15,
+    nodes: [
+      { id: "carry", label: "Carry", sharePct: 30.2, kind: "alpha" as const },
+      { id: "grid", label: "Grid", sharePct: 69.8, kind: "alpha" as const },
+      { id: "mm", label: "MM (insuff.)", sharePct: null, kind: "alpha" as const, insufficient: true },
+      { id: "bm", label: "BM", sharePct: null, kind: "benchmark" as const },
+    ],
+    edges: [
+      { a: "carry", b: "grid", rho: 0.31 },
+      { a: "grid", b: "bm", rho: 0.55, tone: "warn" as const },
+      { a: "carry", b: "bm", rho: 0.18 },
+    ],
+    foot: "reads the matrix at a glance — same data, corr.v1 · dashed = INSUFFICIENT_DATA",
+  },
+  /** ρ(NAV, benchmark) daily, with the 0.6 policy threshold and its breach. */
+  rho: {
+    threshold: 0.6,
+    breach: { from: "2026-08-12", to: "2026-08-14", peak: 0.63 },
+    points: Array.from({ length: 30 }, (_, i) => {
+      const t = new Date(Date.UTC(2026, 7, 22) - (29 - i) * 86_400_000).toISOString().slice(0, 10);
+      const inBreach = t >= "2026-08-12" && t <= "2026-08-14";
+      const base = 0.35 + (i / 29) * 0.2 + detC(i, 5.5) * 0.03;
+      return [t, Math.round((inBreach ? Math.max(base, 0.6 + 0.03 * (1 - Math.abs(i - 20) / 2)) : Math.min(base, 0.58)) * 100) / 100] as [string, number];
+    }),
+    foot: "ρ(NAV, Crypto Core v3) · 30d · 1d · corr.v1 · sustained ρ > 0.6 raises a finding",
+  },
+  /** Drawdown episodes, peak-to-recovery, and the window where they sank together. */
+  ddOverlap: {
+    window: { from: "2026-07-24", to: "2026-08-22" },
+    rows: [
+      { name: "Grid", episodes: [
+        { from: "2026-07-31", to: "2026-08-04", depth: "−1.4%" },
+        { from: "2026-08-11", to: "2026-08-15", depth: "−2.1%" },
+      ] },
+      { name: "Carry", episodes: [
+        { from: "2026-08-05", to: "2026-08-07", depth: "−0.9%" },
+        { from: "2026-08-12", to: "2026-08-14", depth: "−1.6%" },
+      ] },
+      { name: "MM", episodes: [], insufficient: "INSUFFICIENT_DATA — 9 days observed" },
+    ],
+    joint: { from: "2026-08-12", to: "2026-08-14", label: "Aug 12–14 · joint drawdown · regime: high-vol panic (BTC −6.2%)" },
+    foot: "30d timeline · episode = peak-to-recovery · overlap shading = ≥2 alphas in drawdown",
+  },
+};
+
 export function pfSmoke() {
   return PF_SMOKE ? PF_SMOKE_DATA : null;
 }

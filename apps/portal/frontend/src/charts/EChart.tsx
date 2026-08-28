@@ -1,6 +1,6 @@
 /** Thin ECharts React wrapper: fixed-height figure with resize handling. */
 import * as echarts from "echarts/core";
-import { BarChart, CandlestickChart, LineChart, ScatterChart, HeatmapChart, ParallelChart } from "echarts/charts";
+import { BarChart, CandlestickChart, LineChart, ScatterChart, HeatmapChart, ParallelChart, GraphChart, CustomChart } from "echarts/charts";
 import {
   GridComponent,
   TooltipComponent,
@@ -20,6 +20,8 @@ import type { EChartsOption } from "echarts";
 echarts.use([
   BarChart,
   CandlestickChart,
+  GraphChart,
+  CustomChart,
   LineChart,
   ScatterChart,
   HeatmapChart,

@@ -152,6 +152,7 @@ export function LinesChart({
   closedWindows,
   zeroLine,
   verticalLines,
+  thresholdLine,
   annotation,
   height = 220,
   yFormatter,
@@ -164,6 +165,8 @@ export function LinesChart({
   zeroLine?: { label: string };
   /** Dashed vertical markers — a stage boundary, a session cut. */
   verticalLines?: readonly { t: string; label: string; tone: ChartTone }[];
+  /** A horizontal policy line — a correlation threshold, a limit. */
+  thresholdLine?: { y: number; label: string; tone: ChartTone };
   annotation?: { t: string; v: number; label: string; tone: ChartTone };
   height?: number;
   yFormatter?: (v: number) => string;
@@ -203,7 +206,7 @@ export function LinesChart({
               },
             }
           : {}),
-        ...(i === 0 && (zeroLine || verticalLines?.length)
+        ...(i === 0 && (zeroLine || verticalLines?.length || thresholdLine)
           ? {
               markLine: {
                 silent: true, symbol: "none",
@@ -216,6 +219,13 @@ export function LinesChart({
                     lineStyle: { color: toneColor(v.tone), type: "dashed" as const },
                     label: { formatter: v.label, color: toneColor(v.tone), position: "insideEndTop" as const },
                   })),
+                  ...(thresholdLine
+                    ? [{
+                        yAxis: thresholdLine.y,
+                        lineStyle: { color: toneColor(thresholdLine.tone), type: "dashed" as const },
+                        label: { formatter: thresholdLine.label, color: toneColor(thresholdLine.tone), position: "insideEndTop" as const },
+                      }]
+                    : []),
                 ],
               },
             }
@@ -261,7 +271,7 @@ export function LinesChart({
       },
       series: out,
     });
-  }, [series, band, closedWindows, zeroLine, verticalLines, annotation, yFormatter, provenance]);
+  }, [series, band, closedWindows, zeroLine, verticalLines, thresholdLine, annotation, yFormatter, provenance]);
   return (
     <figure className="exec-mc" role="img" aria-label={ariaLabel}>
       <EChart option={option} height={height} />
@@ -305,6 +315,217 @@ export function BarsChart({
       }],
     });
   }, [points, yFormatter, provenance]);
+  return (
+    <figure className="exec-mc" role="img" aria-label={ariaLabel}>
+      <EChart option={option} height={height} />
+    </figure>
+  );
+}
+
+export interface InfluenceNode {
+  id: string;
+  label: string;
+  /** Exposure share in percent — the node's size. */
+  sharePct: number | null;
+  kind?: "alpha" | "benchmark";
+  /** Dashed and muted: the pair has no verdict, not a zero one. */
+  insufficient?: boolean;
+}
+export interface InfluenceEdge { a: string; b: string; rho: number; tone?: ChartTone }
+
+/**
+ * Influence map as a real graph — ECharts graph series with fixed circular
+ * positions (a force layout seeds randomly, and a chart that lands differently
+ * on every load cannot be screenshot-gated). Node size is exposure share, the
+ * benchmark is a square, an insufficient pair is dashed, and every edge hovers
+ * to its ρ with the formula that produced it.
+ */
+export function InfluenceGraph({
+  nodes,
+  edges,
+  height = 240,
+  provenance,
+  ariaLabel,
+}: {
+  nodes: readonly InfluenceNode[];
+  edges: readonly InfluenceEdge[];
+  height?: number;
+  provenance: { authority: string; asOf: string; formula: string };
+  ariaLabel: string;
+}) {
+  const option = useMemo<EChartsOption>(() => {
+    const t = chartTokens();
+    const accent = toneColor("accent");
+    const warn = toneColor("warn");
+    const alphas = nodes.filter((n) => n.kind !== "benchmark");
+    const bench = nodes.find((n) => n.kind === "benchmark");
+    const cx = 0, cy = 0, R = 100;
+    const pos = new Map<string, [number, number]>();
+    alphas.forEach((n, i) => {
+      const a = (2 * Math.PI * i) / alphas.length - Math.PI / 2;
+      pos.set(n.id, [cx + R * Math.cos(a), cy + R * Math.sin(a)]);
+    });
+    if (bench) pos.set(bench.id, [cx + R * 1.9, cy]);
+    const size = (n: InfluenceNode) =>
+      n.sharePct === null ? 26 : 18 + Math.min(44, n.sharePct * 0.55);
+    return baseOption({
+      legend: { show: false },
+      dataZoom: [],
+      grid: { left: 0, right: 0, top: 0, bottom: 0 },
+      xAxis: { show: false, type: "value" },
+      yAxis: { show: false, type: "value" },
+      tooltip: {
+        trigger: "item",
+        formatter: (p) => {
+          const d = p as unknown as { dataType: string; name: string; data: { value?: number; sharePct?: number | null; insufficient?: boolean } };
+          if (d.dataType === "edge") return `ρ ${(d.data.value ?? 0).toFixed(2)}<br/>${provenanceLines(provenance)}`;
+          if (d.data.insufficient) return `${d.name} · INSUFFICIENT_DATA — no verdict, not a zero<br/>${provenanceLines(provenance)}`;
+          return `${d.name} · exposure ${d.data.sharePct ?? "—"}%<br/>${provenanceLines(provenance)}`;
+        },
+      },
+      series: [{
+        type: "graph",
+        layout: "none",
+        coordinateSystem: undefined,
+        left: 24, right: 24, top: 16, bottom: 16,
+        symbolSize: 10,
+        label: { show: true, color: t.ink, fontSize: 10, fontFamily: "JetBrains Mono, monospace" },
+        edgeLabel: {
+          show: true, fontSize: 9, color: t.inkFaint,
+          formatter: (p) => (p as unknown as { data: { value: number } }).data.value.toFixed(2),
+        },
+        data: nodes.map((n) => ({
+          name: n.label,
+          x: pos.get(n.id)?.[0] ?? 0,
+          y: pos.get(n.id)?.[1] ?? 0,
+          symbol: n.kind === "benchmark" ? "rect" : "circle",
+          symbolSize: size(n),
+          sharePct: n.sharePct,
+          insufficient: n.insufficient,
+          itemStyle: n.insufficient
+            ? { color: "transparent", borderColor: t.inkFaint, borderWidth: 1.5, borderType: "dashed" as const }
+            : n.kind === "benchmark"
+              ? { color: withAlpha(warn, 0.15), borderColor: warn, borderWidth: 1.5 }
+              : { color: withAlpha(accent, 0.2), borderColor: accent, borderWidth: 2 },
+          label: n.insufficient ? { color: t.inkFaint } : undefined,
+        })),
+        links: edges.map((e) => ({
+          source: nodes.find((n) => n.id === e.a)?.label,
+          target: nodes.find((n) => n.id === e.b)?.label,
+          value: e.rho,
+          lineStyle: {
+            color: toneColor(e.tone ?? "accent"),
+            width: 1 + 4 * Math.abs(e.rho),
+            opacity: 0.35 + 0.6 * Math.abs(e.rho),
+            curveness: 0.08,
+          },
+        })),
+      }],
+    });
+  }, [nodes, edges, provenance]);
+  return (
+    <figure className="exec-mc" role="img" aria-label={ariaLabel}>
+      <EChart option={option} height={height} />
+    </figure>
+  );
+}
+
+export interface DdEpisode { from: string; to: string; depth: string }
+export interface DdRow { name: string; episodes: readonly DdEpisode[]; insufficient?: string }
+
+/**
+ * Drawdown episodes as a real timeline — one category row per alpha, a rect
+ * per peak-to-recovery episode (ECharts custom series), and the joint-drawdown
+ * window shaded across every row. An insufficient row states itself in words
+ * on the row, because an empty lane reads as "never sank".
+ */
+export function EpisodesChart({
+  rows,
+  joint,
+  window: win,
+  height = 170,
+  provenance,
+  ariaLabel,
+}: {
+  rows: readonly DdRow[];
+  joint?: { from: string; to: string; label: string };
+  window: { from: string; to: string };
+  height?: number;
+  provenance: { authority: string; asOf: string; formula: string };
+  ariaLabel: string;
+}) {
+  const option = useMemo<EChartsOption>(() => {
+    const t = chartTokens();
+    const bad = toneColor("bad");
+    const warn = toneColor("warn");
+    const cats = rows.map((r) => r.name);
+    const data = rows.flatMap((r, ri) =>
+      r.episodes.map((e) => ({ value: [ri, e.from, e.to, e.depth] as [number, string, string, string] })),
+    );
+    return baseOption({
+      legend: { show: false },
+      dataZoom: [],
+      grid: { left: 8, right: 70, top: 12, bottom: 24, containLabel: true },
+      xAxis: {
+        type: "time", min: win.from, max: win.to,
+        axisLabel: { hideOverlap: true, formatter: (v: number) => new Date(v).toISOString().slice(5, 10) },
+      },
+      yAxis: { type: "category", data: cats, inverse: true, axisLine: { show: false }, axisTick: { show: false } },
+      tooltip: {
+        trigger: "item",
+        formatter: (p) => {
+          const d = (p as unknown as { value: [number, string, string, string] }).value;
+          if (!Array.isArray(d)) return "";
+          return `${cats[d[0]]} · ${d[1]} → ${d[2]} · depth ${d[3]}<br/>${provenanceLines(provenance)}`;
+        },
+      },
+      series: [
+        {
+          type: "custom",
+          encode: { x: [1, 2], y: 0 },
+          data,
+          renderItem: (_params, api) => {
+            const ri = api.value(0) as number;
+            const start = api.coord([api.value(1), ri]);
+            const end = api.coord([api.value(2), ri]);
+            const h = 12;
+            return {
+              type: "group",
+              children: [
+                { type: "rect", shape: { x: start[0], y: start[1] - h / 2, width: Math.max(3, end[0] - start[0]), height: h },
+                  style: { fill: withAlpha(bad, 0.2), stroke: bad, lineWidth: 1 } },
+                { type: "text", style: { text: String(api.value(3)), x: end[0] + 6, y: start[1],
+                  fill: bad, font: "9px JetBrains Mono, monospace", textVerticalAlign: "middle" } },
+              ],
+            };
+          },
+        },
+        // The joint window rides an invisible line so markArea has a host.
+        {
+          type: "line", data: [], silent: true,
+          markArea: joint
+            ? {
+                silent: true,
+                itemStyle: { color: withAlpha(warn, 0.09) },
+                label: { color: warn, fontSize: 9, position: "insideBottom" },
+                data: [[{ xAxis: joint.from, name: joint.label }, { xAxis: joint.to }]],
+              }
+            : undefined,
+        },
+        // Insufficient rows say so in words on the row itself.
+        {
+          type: "scatter", symbolSize: 0, silent: true,
+          data: rows.flatMap((r, ri) => (r.insufficient ? [[win.from, ri, r.insufficient] as [string, number, string]] : [])),
+          label: {
+            show: true, position: "right", color: t.inkFaint, fontSize: 10,
+            fontFamily: "JetBrains Mono, monospace",
+            formatter: (p) => String((p as unknown as { value: [string, number, string] }).value[2]),
+          },
+          encode: { x: 0, y: 1 },
+        },
+      ],
+    });
+  }, [rows, joint, win, provenance]);
   return (
     <figure className="exec-mc" role="img" aria-label={ariaLabel}>
       <EChart option={option} height={height} />

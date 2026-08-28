@@ -77,20 +77,31 @@ describe("Portfolio 360 — heatmap, lens and influence from the published matri
     fireEvent.click(cell);
     expect(onLens).toHaveBeenCalledWith(1);
   });
-  it("draws the influence map from the matrix with edges only above the threshold", () => {
+  it("draws the influence map as a real graph from the matrix, edges only above the threshold", () => {
     const data = portfolio360();
     if (data.correlation?.kind !== "PACKED_MATRIX") throw new Error("fixture must be packed");
     const { container } = render(<InfluenceMap matrix={data.correlation} exposures={new Map()} threshold="0.5" />);
-    const svg = container.querySelector("svg.exec-influence")!;
-    expect(svg.querySelectorAll("circle")).toHaveLength(data.correlation.labels.length);
-    const edges = svg.querySelectorAll("line").length;
-    expect(svg.getAttribute("aria-label")).toContain(`${edges} edges`);
+    expect(container.querySelector("[data-echart]")).toBeTruthy();
+    expect(container.querySelector("figcaption")!.textContent).toMatch(/\d+ edges/);
   });
-  it("ρ timeline and drawdown overlap are honest states, not blank frames", () => {
+  it("ρ timeline and drawdown overlap draw real charts and are labeled as smoke frames", () => {
     const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />);
-    expect(screen.getByText(/ρ timeline not published/)).toBeTruthy();
-    expect(screen.getByText(/Drawdown overlap series not published/)).toBeTruthy();
-    expect(container.querySelectorAll(".exec-chart-unavailable").length).toBeGreaterThanOrEqual(2);
+    const slot = container.querySelector(".exec-alpha-tiles")!;
+    expect(slot.querySelectorAll("[data-echart]").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/sustained ρ > 0.6 raises a finding/)).toBeTruthy();
+    expect(screen.getAllByText(/episode = peak-to-recovery/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/SMOKE DATA — the ρ timeline and drawdown overlap/)).toBeTruthy();
+  });
+  it("Rebalance plan and Report pack are live controls that open previews with a disabled apply", () => {
+    render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360()} />);
+    fireEvent.click(screen.getByRole("button", { name: /Rebalance plan/ }));
+    const plan = screen.getByLabelText("PLAN · portfolio rebalance");
+    expect(within(plan).getAllByText(/plan → apply → verify/).length).toBeGreaterThanOrEqual(1);
+    expect((within(plan).getByRole("button", { name: "Apply" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(within(plan).getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Report pack" }));
+    const pack = screen.getByLabelText("Report pack — preview");
+    expect((within(pack).getByRole("button", { name: "Generate" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
 

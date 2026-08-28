@@ -4536,10 +4536,9 @@
 .exec-pf-matrix td[data-abs="0"] { box-shadow: none; }
 .exec-pf-matrix td[data-self="true"] { background: var(--line); }
 .exec-pf-cellbtn { all: unset; cursor: pointer; display: block; width: 100%; }
-.exec-influence { width: 100%; height: auto; background: var(--surface-3); border: 1px solid var(--line); }
-.exec-influence text { font: var(--exec-font-meta); fill: var(--ink); }
-.exec-influence line { stroke: var(--accent); }
-.exec-influence circle { fill: var(--surface-2); stroke: var(--ink-soft); }
+/* Influence map — real graph in a contained frame; the stretched SVG is gone */
+.exec-influence-wrap { margin: 0; display: grid; gap: 6px; }
+.exec-influence-wrap .exec-role-meta { padding: 0 2px; }
 
 
 /* ===========================================================================
