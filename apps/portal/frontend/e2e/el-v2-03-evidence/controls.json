@@ -2184,12 +2184,26 @@
   "route": "/deployments/portfolios/PF-CRYPTO",
   "index": 0,
   "tag": "BUTTON",
+  "text": "Report pack",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Rebalance plan ▾",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 2,
+  "tag": "BUTTON",
   "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 1,
+  "index": 3,
   "tag": "BUTTON",
   "text": "Structure & Correlation",
   "verdict": "navigated",
@@ -2197,7 +2211,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 2,
+  "index": 4,
   "tag": "BUTTON",
   "text": "Capital Ledger",
   "verdict": "navigated",
@@ -2205,7 +2219,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 3,
+  "index": 5,
   "tag": "BUTTON",
   "text": "Approvals",
   "verdict": "navigated",
@@ -2213,7 +2227,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 4,
+  "index": 6,
   "tag": "BUTTON",
   "text": "Incidents",
   "verdict": "navigated",
@@ -2221,7 +2235,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 5,
+  "index": 7,
   "tag": "BUTTON",
   "text": "Audit",
   "verdict": "navigated",
@@ -2229,7 +2243,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 6,
+  "index": 8,
   "tag": "A",
   "text": "inc_44",
   "verdict": "navigated",
@@ -2237,28 +2251,28 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 7,
+  "index": 9,
   "tag": "BUTTON",
   "text": "30d",
   "verdict": "changed"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 8,
+  "index": 10,
   "tag": "BUTTON",
   "text": "90d",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 9,
+  "index": 11,
   "tag": "BUTTON",
   "text": "All",
   "verdict": "changed"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 10,
+  "index": 12,
   "tag": "A",
   "text": "PF-MAIN",
   "verdict": "navigated",
@@ -2266,7 +2280,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 11,
+  "index": 13,
   "tag": "A",
   "text": "acct-canary-grid",
   "verdict": "navigated",
@@ -2274,7 +2288,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 12,
+  "index": 14,
   "tag": "A",
   "text": "op_1201",
   "verdict": "navigated",
@@ -2282,7 +2296,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 13,
+  "index": 15,
   "tag": "A",
   "text": "acct-paper-grid-drb",
   "verdict": "navigated",
@@ -2290,7 +2304,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 14,
+  "index": 16,
   "tag": "A",
   "text": "op_1240",
   "verdict": "navigated",
@@ -2298,7 +2312,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 15,
+  "index": 17,
   "tag": "A",
   "text": "op_1222",
   "verdict": "navigated",
@@ -2306,7 +2320,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 16,
+  "index": 18,
   "tag": "A",
   "text": "acct-sbx-mm-okx",
   "verdict": "navigated",
@@ -2314,7 +2328,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 17,
+  "index": 19,
   "tag": "A",
   "text": "op_1187",
   "verdict": "navigated",
@@ -2322,7 +2336,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 18,
+  "index": 20,
   "tag": "A",
   "text": "paper-binance-carry-v32",
   "verdict": "navigated",
@@ -2330,7 +2344,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 19,
+  "index": 21,
   "tag": "A",
   "text": "op_1102",
   "verdict": "navigated",
@@ -2338,7 +2352,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 20,
+  "index": 22,
   "tag": "A",
   "text": "op_1044",
   "verdict": "navigated",

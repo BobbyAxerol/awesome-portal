@@ -598,7 +598,7 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
     const cell = page.locator(".exec-pf-matrix tbody tr").first().locator("td button").nth(1);
     await cell.click();
     await expect(page.locator('.exec-pf-matrix [data-lens="true"]').first()).toBeVisible();
-    await expect(page.locator("svg.exec-influence")).toBeVisible();
+    await expect(page.locator(".exec-influence-wrap canvas")).toBeVisible();
   });
 
   for (const [name, route] of [
