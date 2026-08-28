@@ -411,6 +411,7 @@ export const sbClock = (d: Date, z = true) =>
   d.getTime() === 0
     ? "—"
     : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}${z ? "Z" : ""}`;
-/** REST snapshot age against the 60s policy — the hi-fi's `now % 58`. */
-export const sbAge = (d: Date) => (d.getTime() === 0 ? "—" : `${Math.floor((d.getTime() / 1000) % 58)}s`);
+/** REST snapshot age against the venue policy — the hi-fi's `now % 58`. */
+export const sbAgeSeconds = (d: Date) => (d.getTime() === 0 ? 0 : Math.floor((d.getTime() / 1000) % 58));
+export const sbAge = (d: Date) => (d.getTime() === 0 ? "—" : `${sbAgeSeconds(d)}s`);
 export const sbPct = (n: number) => `${n.toFixed(1)}%`;

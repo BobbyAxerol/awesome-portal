@@ -25,7 +25,7 @@ import { PanelState } from "../components/states";
 import { AuthorityWord } from "../components/badges";
 import { SourceTile } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
-import { certSmoke, sbAge, sbClock, useCertTick, SANDBOX_SMOKE_WARNING, type CertKV, type CertSmoke } from "../sandbox.smoke";
+import { certSmoke, sbAge, sbAgeSeconds, sbClock, useCertTick, SANDBOX_SMOKE_WARNING, type CertKV, type CertSmoke } from "../sandbox.smoke";
 import {
   ExecutionContextRail,
   ExecutionDecisionStrip,
@@ -64,6 +64,9 @@ function groupStepReasons(reasons: readonly string[]): RailBlocker[] {
 }
 
 const EVAL_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕", STALE: "!", UNAVAILABLE: "—" };
+
+/** OKX testnet REST policy from the hi-fi; BR-EX-61 publishes it per venue. */
+const BROKER_POLICY_SECONDS = 60;
 
 /**
  * One step of the seven-step stepper (hi-fi 1d): ordinal · name · state on
@@ -191,6 +194,7 @@ export function SandboxCertificationScreen({
   const [plan, setPlan] = useState<string | null>(null);
   const now = useCertTick();
   const smoke = certSmoke(deploymentId ?? certification?.deploymentId);
+  const brokerFresh = sbAgeSeconds(now) < BROKER_POLICY_SECONDS;
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-cert">
@@ -307,7 +311,10 @@ export function SandboxCertificationScreen({
                 <span className="exec-a3-wf">WF 1d</span>
                 <span className="exec-a3-spacer" />
                 <span className="exec-a3-source exec-sbc-broker">
-                  <b>BROKER</b> · <span className="exec-af-livedot" aria-hidden="true" /> rest snapshot age <span data-tone="good">{sbAge(now)}</span> · policy 60s → FRESH · as_of {sbClock(now)}
+                  {/* FRESH is derived from the age against the policy, not
+                      printed as a constant: a word that cannot turn into STALE
+                      is not a freshness reading. */}
+                  <b>BROKER</b> · <span className="exec-af-livedot" aria-hidden="true" /> rest snapshot age <span data-tone={brokerFresh ? "good" : "warn"}>{sbAge(now)}</span> · policy {BROKER_POLICY_SECONDS}s → <span data-tone={brokerFresh ? "good" : "warn"}>{brokerFresh ? "FRESH" : "STALE"}</span> · as_of {sbClock(now)}
                 </span>
               </header>
               <div className="exec-a3-meta exec-sbc-meta">

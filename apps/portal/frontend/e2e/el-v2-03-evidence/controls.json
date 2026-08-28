@@ -882,62 +882,185 @@
  {
   "route": "/deployments/sandbox/dep_77",
   "index": 0,
+  "tag": "A",
+  "text": "← Sandbox overview",
+  "verdict": "navigated",
+  "detail": "/deployments/sandbox"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 1,
+  "tag": "A",
+  "text": "Carry v3.2 · dep_77 · OKX TESTNET — cert 5/7",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 2,
+  "tag": "A",
+  "text": "Grid v2.1 · dep_91 · OKX TESTNET — ⛔ finding ope",
+  "verdict": "navigated",
+  "detail": "/deployments/sandbox/dep_91"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 3,
+  "tag": "A",
+  "text": "sha256:7c2e91…b8",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2103?tab=Audit"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 4,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-101/r1"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 5,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-207/r2"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 6,
+  "tag": "A",
+  "text": "PX-29",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-29"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 7,
+  "tag": "A",
+  "text": "PF-CRYPTO",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 8,
+  "tag": "A",
+  "text": "dep_77",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 9,
+  "tag": "A",
+  "text": "acct-sbx-carry-okx",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-sbx-carry-okx"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 10,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-101/r1"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 11,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-207/r2"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 12,
+  "tag": "A",
+  "text": "PX-29",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-29"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 13,
+  "tag": "BUTTON",
+  "text": "Sync broker",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 14,
+  "tag": "BUTTON",
+  "text": "Dry-run reconcile",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 15,
+  "tag": "BUTTON",
+  "text": "Open smoke window ⌄",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 16,
   "tag": "BUTTON",
   "text": "Reconciliation 0",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 1,
+  "index": 17,
   "tag": "BUTTON",
   "text": "Steps 7",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 2,
+  "index": 18,
   "tag": "BUTTON",
   "text": "Promotion plans 0",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 3,
+  "index": 19,
   "tag": "BUTTON",
   "text": "Timeline 1",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 4,
+  "index": 20,
   "tag": "BUTTON",
   "text": "Copy full ARTIFACT",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 5,
+  "index": 21,
   "tag": "A",
   "text": "AP-101",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 6,
+  "index": 22,
   "tag": "A",
   "text": "AP-207",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 7,
+  "index": 23,
   "tag": "A",
   "text": "PX-29",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 8,
+  "index": 24,
   "tag": "BUTTON",
   "text": "Copy full evidence set",
   "verdict": "skipped:hidden"

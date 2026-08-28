@@ -9,7 +9,7 @@
  * Reads `sandbox.smoke.ts` until BR-EX-60 publishes `sandbox-overview.v1`.
  * Every figure on this screen is smoke and the page says so at the bottom.
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
@@ -23,7 +23,7 @@ const LABEL: Record<SandboxFilter, string> = { all: "All", halted: "Halted", fin
 /** Splices the note's identifiers into links without inventing new words. */
 function Note({ text, links }: { text: string; links: SbLink[] }) {
   if (!links.length) return <>{text}</>;
-  const out: React.ReactNode[] = [];
+  const out: ReactNode[] = [];
   let rest = text;
   for (const l of links) {
     const i = rest.indexOf(l.label);
