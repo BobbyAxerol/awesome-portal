@@ -1727,6 +1727,34 @@ but no runtime, so the frontend renders the chip **absent** rather than deriving
 it from readiness, which would tell an operator a stopped deployment is running.
 Null stays null and the chip stays absent.
 
+**Amended 2026-08-28 (same day):** the owner delivered the missing hi-fi — "Paper Overview (entry
+for WF 1c/4h)" — and the entry screen is now that full overview, not a bare list. `paper-list.v1`
+grows into `paper-overview.v1` (one contract; the switcher reads the same rows):
+
+```json
+{
+  "kpis": {
+    "in_observation": { "count": 3, "by_kind": { "crypto": 2, "vn": 1 } },
+    "gate_met": { "count": 1, "reviews": [ { "review_id": "EX-771", "state": "PENDING" } ] },
+    "next_gate_eta": { "date": "2026-09-15", "deployment_id": "dep_74", "basis": "at current pace" },
+    "capital": [ { "ccy": "USDT/USDC", "value": "120000" }, { "ccy": "VND", "value": "1000000000", "summable": false } ],
+    "drift_alerts": { "watch": 1, "fail": 0, "band": "1sigma" }
+  },
+  "funnel_7d": [ { "deployment_id": "dep_74", "signals": 96, "orders": 71, "fills": 64, "rejected": 5, "reject_reason_top": "RISK_CAP", "skipped": 20, "skip_reason_top": "MIN_QTY", "queued": 0 } ],
+  "runway": [ { "deployment_id": "dep_74", "days": [ { "d": "2026-08-14", "pnl_sign": 1 } ], "window": 30, "today_live": true, "eta": "2026-09-15" } ],
+  "left_paper_90d": [ { "alpha": "Grid v2.1", "venue": "BINANCE", "exit_review_id": "PX-22", "then": [ { "stage": "SANDBOX", "ref": "SX-14" }, { "stage": "CANARY", "deployment_id": "dep_88", "day": 9, "total": 14 } ] } ]
+}
+```
+
+Rules added by the amendment: `capital[]` entries with different currencies are **never summed**
+(`summable:false` is the wire form of the hi-fi's "VND — never summed"); `runway[].days[].pnl_sign`
+is a sign, not a PnL figure — the cells are colored by direction and the money stays in the
+workbench; `funnel_7d` reject/skip reasons are the top typed reason with counts, because "paper
+exists to prove the funnel, not the PnL"; and `left_paper_90d` keeps rejected exits (`RSI v1.4`)
+with their verdicts — a promotion history that hides its rejections is marketing. Sources:
+`orders`/`fills` grouped 7d for the funnel; `account_equity_snapshots` day-signs for the runway;
+Portal exit reviews for gate/left-paper; ETA is the server's pace model, published with its basis.
+
 `GET /api/v1/execution/paper` → `paper-list.v1` for the switcher (the same rows as `peers`, so a
 deployment can be reached without already being on one).
 
@@ -1937,4 +1965,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-26 | N15A four-interface gateway authority closed | independent Query/Command/Event/Artifact negotiation, split identities, bounded transports, Event continuity, Artifact reference policy and local fault doubles complete; N15B owner publication pending, network/source/runtime inactive |
 | 2026-08-27 | N16A same-domain emergency-routing authority closed | same-origin/origin-isolation templates, short session/WebAuthn ceremony, typed health/failure states, immutable audit and local Research/Cloudflare/origin/rollback drills complete; R3 unpublished, R4 forbidden, N16B pending, public route/source/runtime inactive |
 | 2026-08-28 | Claude: §7.2 BR-EX-60/61 appended (`RECEIVED`) and specified in full in §7.4 — Sandbox Overview `sandbox-overview.v1` (new) + Sandbox Certification v1.1 (additive) with four `sandbox.*` command routes | documentation only; no runtime/profile/source/command change; five decisions listed in §7.4.6 are codex's to confirm; frontend screens are built and running on smoke until delivery |
-| 2026-08-28 | Claude: §7.2 BR-EX-62/63 appended (`RECEIVED`) and specified in full in §7.5 — Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1 | documentation only; no runtime/profile/source/command change; the Paper contract already carries most of its hi-fi, so these two rows are deliberately small; four decisions in §7.5.5 are codex's to confirm |
+| 2026-08-28 | Claude: §7.2 BR-EX-62/63 appended (`RECEIVED`) and specified in full in §7.5 — Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1 | documentation only; no runtime/profile/source/command change; the Paper contract already carries most of its hi-fi, so these two rows are deliberately small; four decisions in §7.5.5 are codex's to confirm | · amended same day for the delivered Paper Overview hi-fi (`paper-overview.v1` supersedes the bare `paper-list.v1`, §7.5.1)
