@@ -60,7 +60,12 @@ export const PAPER_SMOKE_DATA = {
   crypto: {
     kind: "crypto" as const,
     dep: "dep_74",
-    alpha360Href: "/deployments/alphas/av_2103",
+    /* The fleet, not a deep link. A per-alpha 360 resolves one cast document in
+       the preview, so `/deployments/alphas/av_2088` opens a page titled with a
+       different alpha — the fleet answers "all deployments" honestly for every
+       alpha and stops being a compromise when BR-EX-49 publishes per-alpha
+       documents. */
+    alpha360Href: "/deployments/alphas",
     wf: "1c",
     chart: {
       band: "0,178 64,168 128,144 192,134 256,126 320,116 384,96 448,86 512,76 576,58 640,48 640,92 576,102 512,120 448,130 384,140 320,160 256,170 192,178 128,188 64,212 0,222",
@@ -99,7 +104,7 @@ export const PAPER_SMOKE_DATA = {
   vnm: {
     kind: "vnm" as const,
     dep: "dep_102",
-    alpha360Href: "/deployments/alphas/av_3110",
+    alpha360Href: "/deployments/alphas",
     wf: "4h",
     chart: {
       /** Shaded rectangles are the closed windows; the line only exists inside a session. */
@@ -148,6 +153,20 @@ export function usePaperTick(): { now: Date; age: string } {
     return () => window.clearInterval(t);
   }, []);
   return { now, age: `${((now.getTime() / 1000) % 4 + 0.8).toFixed(1)}s` };
+}
+
+/**
+ * The masthead prints a clock, never the ISO string.
+ *
+ * `2026-08-22T10:42:01Z` is eleven characters of date the reader already knows,
+ * and those eleven characters are what pushed the hi-fi's single masthead row
+ * onto a second line. The date stays in the provenance drawer, where a reader
+ * who wants it goes looking.
+ */
+export function clockOf(asOf: string | null | undefined): string {
+  if (!asOf) return "—";
+  const m = /(\d{2}:\d{2}:\d{2})/.exec(asOf);
+  return m ? `${m[1]}${asOf.endsWith("Z") ? "Z" : ""}` : asOf;
 }
 
 export const paperClock = (d: Date) =>

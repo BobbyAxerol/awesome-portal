@@ -5963,3 +5963,26 @@
    its cell. `data-hifi-exact` covers the departure. */
 .exec-pw .exec-role-kpi { font: 500 18px/24px var(--font-mono); }
 .exec-pw .exec-strip-value { flex-wrap: wrap; overflow-wrap: anywhere; }
+.exec-px-copy[data-copied="true"] { color: var(--good); border-color: var(--good); }
+
+/* ── Paper density — the hi-fi is a compact page and the shared primitives are
+   not. Owner 2026-08-28: "khoảng cách dòng không tốt như các màn khác". Every
+   rule below is a measurement from `HiFi Paper Workbench.dc.html`, not a taste
+   call: lifecycle rail one 10px line with arrows (not six stacked cells), KPI
+   cells 8px/12px with a 10px label, lineage strip 7px/12px at 11px, and the
+   panels 14px apart. ── */
+.exec-pw .exec-rail { gap: 0; border: 1px solid var(--line-soft); background: var(--paper-sunken); }
+.exec-pw .exec-rail-step { flex-direction: row; align-items: baseline; gap: 6px; padding: 5px 12px; background: transparent; font: 400 10px/14px var(--font-mono); flex: 0 0 auto; }
+.exec-pw .exec-rail-step[data-state="current"] { box-shadow: none; border: 1px solid var(--accent); padding: 4px 11px; color: var(--ink); font-weight: 600; }
+.exec-pw .exec-rail-step[data-state="done"] { color: var(--good); }
+.exec-pw .exec-rail-step[data-state="done"] .exec-rail-link { color: var(--good); }
+.exec-pw .exec-rail-step + .exec-rail-step::before { content: "→"; color: var(--line-strong); margin-right: 6px; }
+.exec-pw .exec-rail-detail { color: var(--ink-mute); }
+.exec-pw .exec-strip { gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.exec-pw .exec-strip-cell { padding: 8px 12px; border: 0; background: var(--paper-raised); gap: 0; }
+.exec-pw .exec-strip-label { font: 400 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-pw .exec-strip-cell .exec-role-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-pw-meta { padding: 7px 12px; gap: 4px 16px; font: 400 11px/16px var(--font-mono); }
+.exec-pw-masthead { gap: 6px 10px; padding-bottom: 10px; }
+.exec-pw .exec-ws-main { gap: 0; }
+.exec-pw-ordersfoot { margin: 8px 0 0; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }

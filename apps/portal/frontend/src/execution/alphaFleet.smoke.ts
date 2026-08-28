@@ -83,7 +83,7 @@ export const FLEET_SMOKE_DATA = {
       note: "dep_63 canary BINANCE · acct-canary-mm-v11 · PF-CRYPTO · PX-31 ✓", noteLinks: [{ label: "acct-canary-mm-v11", href: "/deployments/accounts/acct-canary-mm-v11" }],
     },
     {
-      alpha: "VnMomo v0.9", version: "", href: "/deployments/paper/dep_101", id: "av_2110", digest: "sha256:e44d…", status: "RESEARCH_APPROVED", owner: "Stan",
+      alpha: "VnMomo v0.9", version: "", href: "/deployments/paper/dep_102/vn-market", id: "av_2110", digest: "sha256:e44d…", status: "RESEARCH_APPROVED", owner: "Stan",
       portfolios: [{ label: "PF-MAIN", href: null }],
       stages: [{ label: "PAPER 6/30 sessions", tone: "paper" }, { label: "VN MARKET · 09:00–14:45 ICT", tone: "research", dashed: true }], stageKeys: ["paper"],
       alloc: "500,000,000", allocCcy: "VND", pnl: "+2,140,000", pnlCcy: "VND", dd: "−0.6%", spark: [16, 15, 16, 13, 14, 12, 11],

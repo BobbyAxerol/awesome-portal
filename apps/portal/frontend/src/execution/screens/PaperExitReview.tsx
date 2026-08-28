@@ -217,6 +217,7 @@ export function PaperExitReview({
 }) {
   const [tab, setTab] = useState<ExitTab>("evidence");
   const [note, setNote] = useState("");
+  const [copied, setCopied] = useState(false);
   const smoke = paperSmoke();
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
@@ -417,7 +418,16 @@ export function PaperExitReview({
                     {/* The full digest is never printed — head-6/tail-2 on
                         screen, the whole thing on the clipboard. */}
                     {firstDigest ? (
-                      <button type="button" className="exec-px-copy" onClick={() => onCopyProvenance(l.value)}>Copy</button>
+                      // A control that leaves no trace reads as broken. The
+                      // clipboard is the effect; the label is the receipt.
+                      <button
+                        type="button"
+                        className="exec-px-copy"
+                        data-copied={copied ? "true" : undefined}
+                        onClick={() => { onCopyProvenance(l.value); setCopied(true); }}
+                      >
+                        {copied ? "Copied · full digest" : "Copy"}
+                      </button>
                     ) : null}
                   </span>
                 );

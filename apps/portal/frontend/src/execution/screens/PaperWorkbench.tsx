@@ -21,7 +21,7 @@
  *      will keep asking.
  */
 import { useState, type ReactNode } from "react";
-import { paperSmoke, paperVariant, untilVnOpen, usePaperTick, PAPER_SMOKE_WARNING } from "../paper.smoke";
+import { clockOf, paperSmoke, paperVariant, untilVnOpen, usePaperTick, PAPER_SMOKE_WARNING } from "../paper.smoke";
 import { CapGauges, HistogramChart, SparkTile } from "../components/visuals";
 import type { StageVisuals } from "../stage.smoke";
 
@@ -401,7 +401,7 @@ export function PaperWorkbench({
               {/* One string carries the axis the matrix tests and the clock the
                   hi-fi ticks: authority · freshness · as_of · age. */}
               <span className="exec-a3-source exec-pw-source" data-tone={closed ? "calendar" : envelope.freshness === "STALE" ? "warn" : "good"}>
-                <b>{`${envelope.authority} · ${closed ? "PAUSED" : envelope.freshness}`}</b> · as_of {envelope.asOf ?? "—"}
+                <b>{`${envelope.authority} · ${closed ? "PAUSED" : envelope.freshness}`}</b> · as_of {clockOf(envelope.asOf)}
                 {closed ? <span className="exec-pw-paused"> · aging paused</span> : <span className="exec-pw-age"> · age {age}</span>}
               </span>
               <a className="exec-a3-btn" href="/governance/approvals">View approvals</a>
@@ -683,6 +683,16 @@ export function PaperWorkbench({
             </section>
           ) : null}
         </ExecutionTabs>
+        {hifi?.kind === "vnm" ? (
+          <p className="exec-pw-ordersfoot">
+            {hifi.ordersFoot} · <a href="/deployments/blotter">full blotter →</a>
+          </p>
+        ) : null}
+        {hifi?.kind === "crypto" ? (
+          <p className="exec-pw-ordersfoot">
+            cursor pagination · virtualized · exact values, never abbreviated · <a href="/deployments/blotter">full blotter →</a>
+          </p>
+        ) : null}
         {smoke ? <p className="exec-af-smoke">! {PAPER_SMOKE_WARNING}</p> : null}
       </ExecutionWorkspace>
     </ExecutionSurface>
