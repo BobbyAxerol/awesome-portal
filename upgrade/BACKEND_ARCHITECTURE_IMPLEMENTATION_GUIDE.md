@@ -720,7 +720,12 @@ deep-dive → ADR → slice → evidence discipline documented above.
   The message contract identifies the session-derived actor and provides
   bounded task/assignee/timing context while escaping task-supplied Lark
   markup. Mention resolution is an explicit three-person runtime alias map;
-  missing `open_id` values degrade to names, never guessed identifiers.
+  missing identities degrade to names, never guessed identifiers. The
+  2026-08-28 follow-up makes tenant organization `user_id` the owner-managed
+  input and resolves it through the Lark Contacts API to an app-scoped
+  `open_id`. Resolution is cached and fail-closed; no ID/token/response body is
+  logged. Text and interactive-card renderers use their distinct official
+  mention markup. The retired `LARK_MENTION_MAP` is no longer accepted.
 - **Stable Bobby activation repair (2026-08-27):** activation login now
   atomically consumes the one-time credential and binds its identifier to the
   newly created session. Frame 01C verifies the submitted current credential

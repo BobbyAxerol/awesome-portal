@@ -9,6 +9,22 @@ from dataclasses import replace
 import httpx
 
 from backend.app.infrastructure.lark import LarkWebhookService
+from backend.app.infrastructure.lark_directory import LarkDirectoryError
+
+
+class StubDirectory:
+    def __init__(self, identities):
+        self.identities = identities
+        self.calls = []
+
+    def resolve(self, organization_user_id, _client):
+        self.calls.append(organization_user_id)
+        return self.identities[organization_user_id]
+
+
+class FailingDirectory:
+    def resolve(self, _organization_user_id, _client):
+        raise LarkDirectoryError("directory unavailable")
 
 
 def _queue_notification(client, channel: str = "lark"):
@@ -184,13 +200,15 @@ def test_lark_mentions_owner_when_mapped(client, monkeypatch):
         client.app.state.settings,
         lark_webhook_url="https://open.larksuite.com/open-apis/bot/v2/hook/test",
         lark_webhook_sign_secret="sign-secret",
-        lark_mention_map={"Bobby": "ou_00000000000000000000000000000000", "Thanh Vuong": "ou_11111111111111111111111111111111"},
+        lark_org_user_id_map={"Bobby": "tenant_bobby", "Thanh Vuong": "tenant_thanhvuong"},
     )
-    service = LarkWebhookService(client.app.state.repository, settings)
+    directory = StubDirectory({"tenant_bobby": "ou_00000000000000000000000000000000"})
+    service = LarkWebhookService(client.app.state.repository, settings, directory)
     assert service.flush_pending() == 1
     text = sent_payloads[0]["content"]["text"]
     assert '<at user_id="ou_00000000000000000000000000000000">Bobby</at>' in text
     assert "Thanh Vuong" not in text
+    assert directory.calls == ["tenant_bobby"]
 
 
 def test_lark_mentions_assignee_across_safe_name_aliases(client, monkeypatch):
@@ -220,10 +238,15 @@ def test_lark_mentions_assignee_across_safe_name_aliases(client, monkeypatch):
     settings = replace(
         client.app.state.settings,
         lark_webhook_url="https://open.larksuite.com/open-apis/bot/v2/hook/test",
-        lark_mention_map={"thanhvuong": "ou_11111111111111111111111111111111"},
+        lark_org_user_id_map={"thanhvuong": "tenant_thanhvuong"},
         notification_channels=("lark",),
     )
-    assert LarkWebhookService(client.app.state.repository, settings).flush_pending() == 1
+    directory = StubDirectory(
+        {"tenant_thanhvuong": "ou_11111111111111111111111111111111"}
+    )
+    assert LarkWebhookService(
+        client.app.state.repository, settings, directory
+    ).flush_pending() == 1
     text = sent_payloads[0]["content"]["text"]
     assert '<at user_id="ou_11111111111111111111111111111111">Thanh Vuong</at>' in text
     assert "Mô tả: Verify the stable Lark message contract." in text
@@ -253,7 +276,7 @@ def test_lark_never_mentions_unknown_owner(client, monkeypatch):
         client.app.state.settings,
         lark_webhook_url="https://open.larksuite.com/open-apis/bot/v2/hook/test",
         lark_webhook_sign_secret="sign-secret",
-        lark_mention_map={"Bobby": "ou_00000000000000000000000000000000"},
+        lark_org_user_id_map={"Bobby": "tenant_bobby"},
     )
     service = LarkWebhookService(client.app.state.repository, settings)
     assert service.flush_pending() == 1
@@ -261,10 +284,36 @@ def test_lark_never_mentions_unknown_owner(client, monkeypatch):
     assert "<at" not in text
 
 
+def test_lark_directory_failure_delivers_without_mention(client, monkeypatch):
+    task_id = _queue_notification(client)
+    sent_payloads = []
+
+    def post(_self, url, *, json):
+        sent_payloads.append(json)
+        return httpx.Response(
+            200, json={"code": 0}, request=httpx.Request("POST", url)
+        )
+
+    monkeypatch.setattr(httpx.Client, "post", post)
+    settings = replace(
+        client.app.state.settings,
+        lark_webhook_url="https://open.larksuite.com/open-apis/bot/v2/hook/test",
+        lark_org_user_id_map={"bobby": "tenant_bobby"},
+        notification_channels=("lark",),
+    )
+
+    assert LarkWebhookService(
+        client.app.state.repository, settings, FailingDirectory()
+    ).flush_pending() == 1
+    assert task_id in sent_payloads[0]["content"]["text"]
+    assert "Assignee: Bobby" in sent_payloads[0]["content"]["text"]
+    assert "<at" not in sent_payloads[0]["content"]["text"]
+
+
 def test_lark_escapes_user_supplied_mention_markup(client):
     settings = replace(
         client.app.state.settings,
-        lark_mention_map={"bobby": "ou_00000000000000000000000000000000"},
+        lark_org_user_id_map={"bobby": "tenant_bobby"},
         portal_url="https://portal.example/roadmap-task-board",
     )
     delivery = {
@@ -287,7 +336,7 @@ def test_lark_card_uses_bounded_safe_fields_and_configured_mention_only(client):
     settings = replace(
         client.app.state.settings,
         lark_message_format="card",
-        lark_mention_map={"bobby": "ou_00000000000000000000000000000000"},
+        lark_org_user_id_map={"bobby": "tenant_bobby"},
         portal_url="https://portal.example",
     )
     delivery = {
@@ -302,7 +351,11 @@ def test_lark_card_uses_bounded_safe_fields_and_configured_mention_only(client):
         ),
     }
 
-    payload = LarkWebhookService(client.app.state.repository, settings)._payload(delivery)
+    directory = StubDirectory({"tenant_bobby": "ou_00000000000000000000000000000000"})
+    with httpx.Client() as directory_client:
+        payload = LarkWebhookService(
+            client.app.state.repository, settings, directory
+        )._payload(delivery, client=directory_client)
     encoded = json.dumps(payload, ensure_ascii=False)
 
     assert payload["msg_type"] == "interactive"
@@ -311,7 +364,8 @@ def test_lark_card_uses_bounded_safe_fields_and_configured_mention_only(client):
     assert "Backlog › Ready › In Progress › Validating › Done" in encoded
     assert '<at user_id=\\"all\\">' not in encoded
     assert '‹at user_id=\\"all\\"›all‹/at›' in encoded
-    assert '<at user_id=\\"ou_00000000000000000000000000000000\\">Bobby</at>' in encoded
+    assert '<at id=ou_00000000000000000000000000000000></at>' in encoded
+    assert '<at user_id=\\"ou_00000000000000000000000000000000\\">' not in encoded
     assert "https://portal.example/roadmap-task-board" in encoded
 
 

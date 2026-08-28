@@ -212,3 +212,28 @@ def test_lark_message_format_is_bounded(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("LARK_MESSAGE_FORMAT", "html")
     with pytest.raises(ValueError, match="text or card"):
         Settings.from_environment()
+
+
+def test_lark_org_user_id_map_requires_directory_credentials(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("PORTAL_DATABASE_PATH", str(tmp_path / "portal.db"))
+    monkeypatch.setenv("LARK_ORG_USER_ID_MAP", '{"bobby":"tenant_bobby"}')
+    monkeypatch.delenv("LARK_APP_ID", raising=False)
+    monkeypatch.delenv("LARK_APP_SECRET", raising=False)
+
+    with pytest.raises(ValueError, match="LARK_APP_ID and LARK_APP_SECRET"):
+        Settings.from_environment()
+
+    monkeypatch.setenv("LARK_APP_ID", "cli_test")
+    monkeypatch.setenv("LARK_APP_SECRET", "app-secret")
+    settings = Settings.from_environment()
+    assert settings.lark_org_user_id_map == {"bobby": "tenant_bobby"}
+
+
+def test_lark_org_user_id_map_rejects_markup(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("PORTAL_DATABASE_PATH", str(tmp_path / "portal.db"))
+    monkeypatch.setenv("LARK_APP_ID", "cli_test")
+    monkeypatch.setenv("LARK_APP_SECRET", "app-secret")
+    monkeypatch.setenv("LARK_ORG_USER_ID_MAP", '{"bobby":"<at id=all>"}')
+
+    with pytest.raises(ValueError, match="bounded Lark organization user_ids"):
+        Settings.from_environment()

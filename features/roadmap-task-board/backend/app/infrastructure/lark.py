@@ -20,6 +20,10 @@ from urllib.parse import urlparse
 import httpx
 
 from backend.app.config import Settings
+from backend.app.infrastructure.lark_directory import (
+    LarkDirectoryError,
+    LarkDirectoryResolver,
+)
 from backend.app.infrastructure.repository import PortalRepository
 
 
@@ -30,9 +34,15 @@ class LarkResponseError(Exception):
 class LarkWebhookService:
     CHANNEL = "lark"
 
-    def __init__(self, repository: PortalRepository, settings: Settings):
+    def __init__(
+        self,
+        repository: PortalRepository,
+        settings: Settings,
+        directory: Optional[LarkDirectoryResolver] = None,
+    ):
         self.repository = repository
         self.settings = settings
+        self.directory = directory or LarkDirectoryResolver(settings)
         self.logger = logging.getLogger("portal.lark")
         self._warned_missing_url = False
 
@@ -59,20 +69,38 @@ class LarkWebhookService:
         text = text.replace("<", "‹").replace(">", "›")
         return text if len(text) <= limit else f"{text[: limit - 1]}…"
 
-    def _mention(self, owner: str) -> str:
+    def _organization_user_id(self, owner: str) -> str:
         normalized = self._member_key(owner)
-        open_id = next(
+        return next(
             (
                 configured_id
-                for configured_name, configured_id in self.settings.lark_mention_map.items()
+                for configured_name, configured_id in self.settings.lark_org_user_id_map.items()
                 if self._member_key(configured_name) == normalized
             ),
-            None,
+            "",
         )
+
+    def _mention_open_id(self, owner: str, client: Optional[httpx.Client]) -> str:
+        organization_user_id = self._organization_user_id(owner)
+        if not organization_user_id or client is None:
+            return ""
+        try:
+            return self.directory.resolve(organization_user_id, client)
+        except LarkDirectoryError:
+            # Mention resolution is optional enrichment. Keep the task update
+            # deliverable, but fail closed instead of tagging a wrong person.
+            self.logger.warning("lark_directory_resolution_failed")
+            return ""
+
+    def _text_mention(self, owner: str, open_id: str) -> str:
         if not open_id:
             return ""
         label = self._single_line(owner, "Assignee", 160)
         return f"<at user_id=\"{open_id}\">{label}</at>"
+
+    @staticmethod
+    def _card_mention(open_id: str) -> str:
+        return f"<at id={open_id}></at>" if open_id else ""
 
     @staticmethod
     def _deadline(value: Any) -> Optional[datetime]:
@@ -137,7 +165,9 @@ class LarkWebhookService:
             return ""
         return portal if portal.endswith("/roadmap-task-board") else f"{portal}/roadmap-task-board"
 
-    def _fields(self, delivery: Dict[str, Any]) -> Dict[str, Any]:
+    def _fields(
+        self, delivery: Dict[str, Any], client: Optional[httpx.Client] = None
+    ) -> Dict[str, Any]:
         before = self._load(delivery.get("before_json"))
         after = self._load(delivery.get("after_json"))
         item = after.get("item", {})
@@ -146,7 +176,8 @@ class LarkWebhookService:
         deadline_value = item.get("deadline") or item.get("due_at")
         deadline = self._deadline(deadline_value)
         owner = self._single_line(raw_owner, "Unassigned", 160)
-        mention = self._mention(raw_owner)
+        mention_open_id = self._mention_open_id(raw_owner, client)
+        text_mention = self._text_mention(raw_owner, mention_open_id)
         return {
             "from_status": self._single_line(previous_item.get("status"), "—", 40),
             "to_status": self._single_line(item.get("status"), "—", 40),
@@ -156,8 +187,8 @@ class LarkWebhookService:
                 item.get("description") or item.get("notes"), "Chưa có mô tả"
             ),
             "owner": owner,
-            "assignee": f"{owner} — {mention}" if mention else owner,
-            "mention": mention,
+            "assignee": f"{owner} — {text_mention}" if text_mention else owner,
+            "mention_open_id": mention_open_id,
             "workstream": self._single_line(item.get("workstream"), "General", 160),
             "actor": self._single_line(delivery.get("actor"), "System", 160),
             "assigned_at": self._single_line(
@@ -172,8 +203,10 @@ class LarkWebhookService:
             "task_board_url": self._task_board_url(),
         }
 
-    def _text(self, delivery: Dict[str, Any]) -> str:
-        fields = self._fields(delivery)
+    def _text(
+        self, delivery: Dict[str, Any], client: Optional[httpx.Client] = None
+    ) -> str:
+        fields = self._fields(delivery, client)
         return (
             f"📌 TASK STATUS UPDATED\n"
             f"Người thao tác: {fields['actor']}\n"
@@ -187,12 +220,17 @@ class LarkWebhookService:
             f"Mở task: {fields['task_board_url']}"
         )
 
-    def _card(self, delivery: Dict[str, Any]) -> Dict[str, Any]:
-        fields = self._fields(delivery)
+    def _card(
+        self, delivery: Dict[str, Any], client: Optional[httpx.Client] = None
+    ) -> Dict[str, Any]:
+        fields = self._fields(delivery, client)
         header_template, pipeline_rail = self._status_style(fields["to_status"])
         assignee_element = (
-            {"tag": "lark_md", "content": fields["mention"]}
-            if fields["mention"]
+            {
+                "tag": "lark_md",
+                "content": self._card_mention(fields["mention_open_id"]),
+            }
+            if fields["mention_open_id"]
             else {"tag": "plain_text", "content": fields["owner"]}
         )
         remaining = fields["remaining"]
@@ -330,7 +368,10 @@ class LarkWebhookService:
         }
 
     def _payload(
-        self, delivery: Dict[str, Any], message_format: Optional[str] = None
+        self,
+        delivery: Dict[str, Any],
+        message_format: Optional[str] = None,
+        client: Optional[httpx.Client] = None,
     ) -> Dict[str, Any]:
         timestamp = str(int(time.time()))
         selected = message_format or self.settings.lark_message_format
@@ -339,9 +380,13 @@ class LarkWebhookService:
             "sign": self._sign(timestamp, self.settings.lark_webhook_sign_secret or ""),
         }
         if selected == "card":
-            payload.update({"msg_type": "interactive", "card": self._card(delivery)})
+            payload.update(
+                {"msg_type": "interactive", "card": self._card(delivery, client)}
+            )
         else:
-            payload.update({"msg_type": "text", "content": {"text": self._text(delivery)}})
+            payload.update(
+                {"msg_type": "text", "content": {"text": self._text(delivery, client)}}
+            )
         return payload
 
     @staticmethod
@@ -370,7 +415,8 @@ class LarkWebhookService:
             ):
                 try:
                     response = client.post(
-                        self.settings.lark_webhook_url, json=self._payload(delivery)
+                        self.settings.lark_webhook_url,
+                        json=self._payload(delivery, client=client),
                     )
                     try:
                         self._assert_accepted(response)
@@ -383,7 +429,9 @@ class LarkWebhookService:
                         )
                         fallback = client.post(
                             self.settings.lark_webhook_url,
-                            json=self._payload(delivery, message_format="text"),
+                            json=self._payload(
+                                delivery, message_format="text", client=client
+                            ),
                         )
                         self._assert_accepted(fallback)
                 except (httpx.HTTPError, LarkResponseError) as exc:
