@@ -640,6 +640,9 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
   than app-specific `open_id` values. The private Lark internal-app credential
   resolves `GET /contact/v3/users/{id}?user_id_type=user_id`; only the returned
   bounded `ou_...` value enters message markup and is cached in memory.
+- The owner map may be partial: a blank value is filtered out intentionally,
+  so Bobby can receive readable task updates without self-mentions while Stan
+  and Thanhvuong remain tagged.
 - Directory/token failures are fail-closed mention enrichment failures: the
   task notification still delivers with the escaped assignee name and never
   guesses or tags another user. IDs, tokens and response bodies are not logged.
@@ -648,7 +651,13 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
 - Production Compose passes `LARK_APP_ID`, `LARK_APP_SECRET`, and
   `LARK_ORG_USER_ID_MAP`; the prior `LARK_MENTION_MAP` contract is removed.
   Runtime activation waits for Bobby to populate the private mode-0600 env.
-  Roadmap backend regression evidence: 44/44 tests passed on 2026-08-28.
+  Roadmap backend regression evidence: 45/45 tests passed on 2026-08-28.
+- The first redacted tenant probe accepted the app credential/token exchange
+  (`HTTP 200`, Lark code `0`) but rejected both configured non-blank directory
+  lookups with Lark code `99991672`. The Lark response lists
+  `contact:contact.base:readonly` as the least-privilege alternative. Stable is
+  intentionally unchanged until that app scope is approved/published and its
+  Contact Data Scope includes the intended members.
 
 ## Backend state — 2026-08-27 (stable Bobby activation repair)
 
