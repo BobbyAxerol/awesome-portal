@@ -1326,6 +1326,8 @@ Append rows here. Do not create another active request file.
 | BR-EX-59 | 2026-08-26 | Canary Control Room `/deployments/live/{id}/canary` | Hi-fi 1e masthead (trial day, exit-review countdown, GUARDED/DEGRADED), lineage + lifecycle strips, 5-cell KPI, live-vs-paper-vs-backtest lines on one digest, envelope bars with at-cap, positions with ACK latency, incidents/recon, 14-day trial timeline with recorded checkpoints, exit-readiness gates (server mirror), marginal contribution, promotion decision options are not in v1 | Additive fields on `canary-control-room.v1` → v1.1 (BR-EX-59) | PORTAL_CONTROL (trial, gates, checkpoints, decision) · DERIVED (equity_projection.v1, marginal.v1) · TRADING_SYSTEM (positions, orders, ack) · BROKER (sync) | read-only + existing governed actions · high: "elapsed time alone never promotes" — gates are server-enforced, screen mirrors | 1 deployment; 3 series ≤400 pts; timeline ≤30 days | existing contract; approvals/conditions; exit reviews; paper twin dep_94; backtest run | missing → v1 rendering; sync STALE → readiness DEGRADED + scale blocked | fixture update; gate-mirror + timeline consistency tests; frontend `canary.test` | Codex | N09 · N10 | `RECEIVED` | `CanaryControlRoomScreen` — smoke `canary.smoke.ts` deleted on delivery | none | hi-fi "Canary Control Room (WF 1e)"; appendix A.59 |
 | BR-EX-60 | 2026-08-28 | Sandbox `/deployments/sandbox` (entry screen WF 1d) | No sandbox overview: operator cannot see what is in certification, how far each deployment got, which step is holding it, whether a certification has been stalled for weeks, testnet order-journal counts, venue connectivity baselines, or what has been certified in the last 90d | Facts + aggregates (read): `sandbox-overview.v1` — summary, KPI strip (in certification, halted by finding vs by operator, open findings with worst severity, test-fund equity flagged `enters_portfolio_nav:false`, broker sync age vs policy), rows (alpha·deployment, venue·account, portfolio → target + pending approval, seven `certification.steps[]` with `passed`/`current_step`, runtime_state + halt_reason, `in_stage_days` + `stalled`, next_step with action_key + blocker_codes, lineage r1/r2/paper_exit, note), 7d order journal per deployment (orders/filled/rejected/expired/success_pct exact) + normalized executed order types with `required`/`certified` + reject reasons, 24h connectivity (ACK/fill p50-p95, ws reconnects, rate-limit hits, baseline vs SLO rule), recently certified 90d with promotion target | PORTAL_PROJECTION over `strategy_deployments(mode='sandbox')` ⋈ `accounts` ⋈ `venue_accounts` ⋈ `portfolio_allocations`; certification state from the PORTAL certification machine (overview re-reads, never recomputes); `orders`/`fills`/`domain_events` TRADING_SYSTEM; `broker_account_sync_current_state` BROKER; DERIVED success_pct/latency | read-only · medium: test-fund equity must never enter portfolio NAV, and a stalled certification must surface rather than expire silently | ≤50 deployments in certification; journal window 7d exact counts; connectivity 24h; as_of per second | registry feature `SANDBOX_TRADING` (screen still `data_mode: NONE` — codex flips it on delivery); BR-EX-43 alerts summary | source unreadable → `panel_state: "unavailable"` per branch, never an empty array read as clean; `runtime_state` absent stays null (screen renders "runtime not stated") | fixture `execution-sandbox-overview.valid.json`; tests: `passed == count(PASS)`, `current_step` = first non-PASS, `success_pct == filled/orders` exact, `test_fund_equity.enters_portfolio_nav == false` and absent from every portfolio NAV, `stalled ⇒ meta.stalled_rule != null`; frontend `sandbox.test` | Codex | N09 (Portal projection) · N10 (derivations) · N11 (order/fill adapters) | `RECEIVED` | `SandboxOverview` — smoke `sandbox.smoke.ts` (overview half) deleted on delivery | none until approved | hi-fi "Sandbox Overview (entry for WF 1d)"; **full spec §7.4.2**; UI rationale appendix O.2 |
 | BR-EX-61 | 2026-08-28 | Sandbox Certification `/deployments/sandbox/{id}` (WF 1d) | v1 publishes steps, findings, source panels, promotion plans and timeline, but not what the hi-fi workbench decides on: identity + credential status, broker REST freshness vs policy, the internal/broker/difference triptych as an authoritative diff, findings rows with local/broker values and the action each one takes, order-type certification (including the types the alpha requires in production but has never exercised), execution quality with INSUFFICIENT_DATA, the bounded smoke plan, the cleanup checklist, the four actions with their blockers, and the peers in certification | Additive fields on `sandbox-certification.v1` → v1.1: `identity`, `broker_freshness`, `reconciliation_view{internal,broker,difference}` (diff.v1, server-computed), `findings_rows[]`, `order_type_certification{rows[],blocking,blocking_rule}`, `execution_quality` (ack/fill p50-p95, slippage state, reject rate), `smoke_plan` (bounded: qty, capital cap, timebox, on_expiry, approved_by, state), `cleanup{rows[],exit_rule}`, `actions[]{key,label,enabled,risk_tier,blocker_codes}`, `peers[]`; plus command routes `sandbox.broker_sync` / `sandbox.reconcile_dry_run` / `sandbox.smoke_open` / `sandbox.request_exit_review` as plan → apply → verify | PORTAL_CONTROL (certification machine, smoke plan, command policy) · BROKER (`broker_account_sync_current_state`) · TRADING_SYSTEM (`orders`, `fills`, `positions_v2`, `order_pending_exposure`, `domain_events`) · DERIVED (diff.v1, execution_quality.v1) | read + four governed mutations (ADMIN step-up) · high: certification is the gate before real capital — `enabled:true` must be a deliberate decision, fail-closed by default | 1 deployment/screen; findings ≤200 keyset; peers ≤20 | existing `sandbox-certification.v1` (additive, no field retyped); BR-EX-58 blocker catalog; BR-EX-41 stage telemetry | any missing branch → v1 rendering; broker STALE / CRITICAL finding / cleanup pending ⇒ smoke + exit actions disabled with codes; slippage under min samples ⇒ INSUFFICIENT_DATA, never 0 | fixtures `execution-sandbox-certification.dep_77.v1_1.valid.json` + `.dep_91.v1_1.valid.json` (CRITICAL branch); tests: CRITICAL OPEN ⇒ recon step FAIL + smoke BLOCKED + `actions[smoke_open].enabled==false` with non-empty codes; `slippage.state=='INSUFFICIENT_DATA'` carries no `value`; a `required:true` order type not CERTIFIED ⇒ `progress.eligible==false`; v1 suite re-runs unchanged; frontend `sandbox.test` | Codex | N09 · N10 · N11 · N13 (activation for the four actions) | `RECEIVED` | `SandboxCertificationScreen` — smoke `sandbox.smoke.ts` (certification half) deleted on delivery | four `sandbox.*` actions are activation-gated (ADMIN step-up, plan → apply → verify) | hi-fi "Sandbox Certification (WF 1d)"; **full spec §7.4.3**, decisions §7.4.6; UI rationale appendix O.3 · O.5 |
+| BR-EX-62 | 2026-08-28 | Paper Workbench `/deployments/paper/:id` and its VN variant `…/vn-market` (WF 1c · 4h) | The contract publishes the figures but not the drawing: no equity band against the approved run, no candle overlay with order/fill markers, no rolling-correlation series, no venue session shading, and no way to reach the other deployments in paper without already being on one | Additive on `paper-workbench.v1` → v1.1: `peers[]`, `equity_band` (backtest + paper + ±1σ band, joined by artifact digest, with the drawdown annotation), `order_markers` (venue OHLC + BUY/SELL/FILL markers each carrying its order/fill id), `correlation_series` (`corr.v1` vs portfolio and benchmark), `session_shading` (venue closed windows and the frozen-at instant), `report{available,reason}`; plus new `GET /api/v1/execution/paper` → `paper-list.v1` | DERIVED (`equity_projection.v1`, `corr.v1`) · TRADING_SYSTEM (candles, orders, fills) · PORTAL_PROJECTION (peers, gate) · venue calendar | read-only · medium: a backtest joined to a paper series by anything but the artifact digest is the exact failure this panel exists to expose | ≤20 deployments in paper; band and correlation ≤720 pts; candles 120–500; markers ≤500/window; freshness = the projection's own `as_of`, paused against the venue calendar | existing `paper-workbench.v1`; `venues.trading_sessions`; BR-EX-41 stage telemetry; same OHLC question as BR-EX-50 | a missing branch renders the honest state the screen already has; no series ⇒ the panel says so and the KPI strip stands alone; a closed window is published, never inferred from missing points | fixtures `execution-paper-list.valid.json`, `execution-paper-workbench.dep_74.v1_1.valid.json`, `…dep_102.v1_1.valid.json`; tests §7.5.4 (1)–(5); frontend `paper.test`, `vnm.test`, `paperMatrix.test` re-run unchanged | Codex | N09 (projection) · N10 (derivations) · N11 (candles/journal) | `RECEIVED` | `PaperWorkbench` — smoke `paper.smoke.ts` (workbench half) deleted on delivery | none until approved | hi-fi "Paper Workbench (WF 1c)" + "Paper Workbench VNM (WF 4h)"; **full spec §7.5.1**, decisions §7.5.5 |
+| BR-EX-63 | 2026-08-28 | Paper Exit Review `/governance/exit-reviews/:id` (WF 4b) | The review shows the evidence but not the pack it was read from, and offers no reviewer note — so the sentence a reviewer wants recorded beside their decision has nowhere to go | Additive on `paper-exit-review.v1` → v1.1: `evidence_pack{pack_id,digest,href,built_at}` and `reviewer_note{supported,max_length,recorded_with_decision,value}` | PORTAL_CONTROL | read + the existing decision write · medium: a note the reviewer believes was saved and was not is worse than no field | 1 review/screen; note ≤2,000 chars | existing contract | note unsupported ⇒ the field is not rendered rather than rendered and dropped; the digest a review decided against never changes when the pack is rebuilt | fixture update; tests §7.5.4 (6)(7); frontend `paperExit.test` re-run unchanged | Codex | N09 | `RECEIVED` | `PaperExitReview` — smoke `paper.smoke.ts` (exit half) deleted on delivery | none | hi-fi "Paper Exit Review (WF 4b)"; **full spec §7.5.2**, decisions §7.5.5 |
 | _next: BR-EX-60_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
@@ -1665,6 +1667,154 @@ Fixtures: `execution-sandbox-overview.valid.json`,
 
 ---
 
+### 7.5 BR-EX-62 / BR-EX-63 — full specification (Paper Workbench, its VN variant, Paper Exit Review)
+
+Written here for the same reason as §7.4: §7 says a request is schedulable only once it lives in
+this file.
+
+These two rows are **much smaller than the Sandbox pair**, and the reason is worth stating: the
+Paper contract already publishes almost everything its hi-fi shows. KPIs, lineage, the lifecycle
+rail, the observation gate and its unmet criteria, drift vs the approved run, runtime health,
+accounting, portfolio contribution, orders, fills, positions and sessions all reach the screen
+through `paper-workbench.v1` today. The frontend rebuilt the three screens on 2026-08-28 against
+that data; what it could not get from the contract is listed below, and nothing else.
+
+#### 7.5.1 BR-EX-62 — `paper-workbench.v1` → v1.1 (additive)
+
+Four branches, and one new list route.
+
+```json
+{
+  "peers": [
+    { "deployment_id": "dep_74", "alpha": "Carry v3.2", "venue": "BINANCE", "progress": "12/30", "gate_met": false, "href": "/deployments/paper/dep_74" },
+    { "deployment_id": "dep_94", "alpha": "Grid v2.1", "venue": "DERIBIT", "progress": "30/30", "gate_met": true, "exit_review_id": "EX-771" },
+    { "deployment_id": "dep_102", "alpha": "VnMomo v0.9", "venue": "VN MARKET", "progress": "6/30", "gate_met": false, "session_aware": true }
+  ],
+  "equity_band": {
+    "formula": "equity_projection.v1", "window": "30d", "interval": "1h", "currency": "USDT",
+    "joined_run_id": "run_5512", "join_basis": "artifact_digest",
+    "backtest": [ { "t": "…", "v": "1.0000" } ],
+    "paper":    [ { "t": "…", "v": "1.0000" } ],
+    "expected_band": [ { "t": "…", "lo": "0.98", "hi": "1.02" } ],
+    "annotations": [ { "kind": "MAX_DRAWDOWN", "t": "2026-08-12T00:00:00Z", "v": "-0.0214", "label": "DD −2.14%" } ]
+  },
+  "order_markers": {
+    "symbol": "BTCUSDT", "interval": "1h", "snapshot_id": "ds_5512",
+    "candles": [ { "t": "…", "o": "…", "h": "…", "l": "…", "c": "…" } ],
+    "markers": [ { "kind": "BUY", "t": "…", "price": "61240.50", "order_id": "ord_9a01" },
+                 { "kind": "FILL", "t": "…", "price": "61240.50", "qty": "0.0200", "fill_id": "fl_1" } ]
+  },
+  "correlation_series": {
+    "formula": "corr.v1", "window": "30d", "samples": 720, "coverage": "0.994", "covariance_id": "cov_30d_v2",
+    "vs_portfolio": [ { "t": "…", "rho": "0.31" } ],
+    "vs_benchmark": [ { "t": "…", "rho": "0.18" } ]
+  },
+  "session_shading": {
+    "venue": "VN MARKET", "timezone": "Asia/Ho_Chi_Minh",
+    "closed_windows": [ { "from": "2026-08-20T14:45:00+07:00", "to": "2026-08-21T09:00:00+07:00" } ],
+    "frozen_at": "2026-08-21T14:45:00+07:00"
+  },
+  "report": { "available": false, "reason": "REPORT_ROUTE_UNPUBLISHED" }
+}
+```
+
+`GET /api/v1/execution/paper` → `paper-list.v1` for the switcher (the same rows as `peers`, so a
+deployment can be reached without already being on one).
+
+**Source mapping**
+
+| field | table · column |
+|---|---|
+| `peers[]` / `paper-list.v1` | `strategy_deployments` WHERE `mode='paper'` ⋈ `strategies` ⋈ `accounts`; `progress` and `gate_met` from the observation-policy evaluator that already backs `observation` in v1 |
+| `equity_band.paper` | `account_equity_snapshots(equity, ts)` for the deployment, normalised |
+| `equity_band.backtest` / `expected_band` | the approved run in `alpha_ledger` joined **by `artifact_digest`**, never by name or by time; the band is the run's own ±1σ envelope |
+| `equity_band.annotations` | the max-drawdown point the projection already computes for the KPI — the chart must not recompute it |
+| `order_markers.candles` | venue OHLC for `symbol` at `interval` (the data-layer snapshot named in `snapshot_id`) |
+| `order_markers.markers[]` | `orders(submitted_at, side, price)` and `fills(trade_time, price, quantity)`, each carrying its own id so a marker drills into the journal |
+| `correlation_series` | DERIVED `corr.v1` over `performance_snapshots` for the deployment and its portfolio/benchmark |
+| `session_shading` | `venues.trading_sessions` + the venue holiday calendar — the same source the freshness clock already pauses against |
+
+**Server rules**
+
+1. **The join is the digest.** `equity_band` may only join a backtest to a paper series through
+   `artifact_digest`; `join_basis` must say so. Two series joined by name is the failure this panel
+   exists to make visible.
+2. **A marker carries its id.** Every entry in `order_markers.markers[]` names the `order_id` or
+   `fill_id` it came from; a marker that cannot be drilled into is decoration.
+3. **Session shading is the venue's calendar, not a gap in the data.** A closed window is published
+   as a window; the browser must never infer "closed" from missing points.
+4. `peers[].progress` is the same string the workbench's own rail prints for that deployment, so the
+   switcher can never contradict the page it sits on.
+5. `report.available:false` must carry a reason. The screen renders a preview of what the pack would
+   contain and disables the control with that reason.
+
+#### 7.5.2 BR-EX-63 — `paper-exit-review.v1` → v1.1 (additive)
+
+Two branches only:
+
+```json
+{
+  "evidence_pack": { "pack_id": "ep_4471", "digest": "e9a2…", "href": "/governance/exit-reviews/EX-771/pack", "built_at": "…" },
+  "reviewer_note": { "supported": true, "max_length": 2000, "recorded_with_decision": true, "value": null }
+}
+```
+
+**Server rules**
+
+1. The reviewer note is **recorded with the decision**, never on its own: there is no endpoint that
+   stores a note without an outcome, and the field says so, because a note the reviewer believes was
+   saved and was not is worse than no field at all.
+2. `evidence_pack.digest` is the digest of the evidence as read for **this** review. If the pack is
+   rebuilt, the review keeps the digest it decided against.
+
+#### 7.5.3 Definition of Ready (§5.1), pre-filled
+
+| Package | Owner · env | Authority & scope R/W | Schema rev · compat | Scale / freshness / completeness | Auth / RBAC / SoD | Failure / unavailable / rollback | Dependency | Test corpus & exit evidence |
+|---|---|---|---|---|---|---|---|---|
+| **BR-EX-62** | Codex · `dev` fixture→shadow | READ; PORTAL_PROJECTION (peers, gate) · DERIVED (`equity_projection.v1`, `corr.v1`) · TRADING_SYSTEM (candles, orders, fills) · venue calendar | `paper-workbench.v1` → v1.1 additive + new `paper-list.v1` | ≤20 deployments in paper; band and correlation ≤720 points each; candles 120–500; markers ≤500/window | any Execution viewer; no write | a missing branch renders the honest state the screen already has; no series ⇒ the panel says so and the KPI strip stands alone | existing `paper-workbench.v1`; `venues.trading_sessions`; BR-EX-41 telemetry | fixtures `execution-paper-list.valid.json`, `execution-paper-workbench.dep_74.v1_1.valid.json`, `…dep_102.v1_1.valid.json`; tests 7.5.4 (1)–(5); frontend `paper.test`, `vnm.test`, `paperMatrix.test` re-run unchanged |
+| **BR-EX-63** | Codex · `dev` | READ + the existing decision write | `paper-exit-review.v1` → v1.1 additive | 1 review/screen | reviewer read; decide = existing eligibility + SoD | note unsupported ⇒ the field is not rendered, rather than rendered and dropped | existing contract | fixture update; tests 7.5.4 (6)(7); frontend `paperExit.test` re-run unchanged |
+
+OpenAPI paths:
+
+```yaml
+paths:
+  /api/v1/execution/paper:                       # GET -> paper-list.v1                (BR-EX-62)
+  /api/v1/execution/paper/{deployment_id}:       # v1.1 additive                       (BR-EX-62)
+  /api/v1/execution/exit-reviews/{review_id}:    # v1.1 additive                       (BR-EX-63)
+```
+
+#### 7.5.4 Required tests
+
+1. `equity_band.join_basis == "artifact_digest"` and the backtest run's digest equals the
+   deployment's — a fixture whose digests differ must fail the schema, not render.
+2. Every `order_markers.markers[]` entry resolves to an `order_id` or `fill_id` present in the same
+   fixture's journal.
+3. `session_shading.closed_windows` never overlaps a published equity point.
+4. `peers[].progress` for the deployment being read equals the workbench's own `railDetail`.
+5. `report.available == false ⇒ report.reason != null`.
+6. `reviewer_note.recorded_with_decision == true`, and no route accepts a note without an outcome.
+7. `evidence_pack.digest` is stable across a pack rebuild for an already-decided review.
+
+#### 7.5.5 Decisions codex must confirm (not guess)
+
+1. **Which venue owns the candles.** `order_markers.candles` is venue OHLC; is it served from the
+   data-layer snapshot (`ds_*`) the Paper screen already names, or from the Trading System's market
+   route? This is the same question BR-EX-50 asked for Trade Replay — one answer for both.
+2. **Benchmark identity for `corr.v1`.** The screen prints "vs Crypto Core v3" and "vs VN-Index";
+   the benchmark id must be a field, not a label baked into the derivation.
+3. **The `paper-list.v1` route name.** `/api/v1/execution/paper` collides with the workbench's own
+   prefix; codex picks the final shape.
+4. **Reviewer-note retention.** Is the note part of the immutable decision record, or a separate
+   revisable annotation? The frontend renders the first reading today.
+
+#### 7.5.6 Delivery order and what the frontend retires
+
+- **BR-EX-62 lands:** frontend deletes the workbench half of `paper.smoke.ts` (`PAPER_PEERS`,
+  `crypto`, `vnm`, `usePaperTick`), and re-records `el-v2-06-paper-vnm` and the paper baselines.
+- **BR-EX-63 lands:** the exit half goes and `paper.smoke.ts` is deleted with it.
+
+---
+
 ## 8. Test and evidence matrix
 
 | Change class | Minimum gate |
@@ -1746,8 +1896,9 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Backend completed-slice index | `backend/README.md` |
 | Claude original request/review | `upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_BACKEND_PLAN_REQUEST.md`, `BACKEND_PLAN_REVIEW.md` |
 | Claude scale/current BR requests | `upgrade_frontend_plan_hifi/hifi_execution_loop/EXECUTION_SCALE_AND_REFINE.md` |
+| **BR-EX-62/63 — full specification** | **§7.5 of this file** (Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1; deliberately small because the Paper contract already carries most of its hi-fi). |
 | **BR-EX-60/61 — full specification** | **§7.4 of this file** (domain, both response shapes, source mapping to real columns, server rules, command routes and typed errors, DoR, required tests, open decisions, delivery order). The frontend document below carries the same content with screenshots and per-field UI rationale; **§7.4 wins on disagreement.** |
-| **Hi-fi V2 requests BR-EX-41…61 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–O; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full; M = BR-EX-59 canary; N = screen ↔ request coverage matrix and remaining gaps; O = BR-EX-60/61 sandbox overview + certification v1.1, with the seven certification steps mapped to real columns, the fail-closed rules, the four `sandbox.*` command routes and the five decisions codex must confirm); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
+| **Hi-fi V2 requests BR-EX-41…63 — field-level detail** (types/enums/examples, DoR §5.1 pre-filled per package, OpenAPI path stubs, typed error/state examples, delivery order and per-package smoke retirement) | `upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` (appendices A–O; G/H/I = full JSON examples, derivation rules, errors, live events and required tests for BR-EX-49/50/51; J = source mapping and open decisions; K = BR-EX-52/53/54 bindings/accounts; L = BR-EX-56/57 live overview/full; M = BR-EX-59 canary; N = screen ↔ request coverage matrix and remaining gaps; O = BR-EX-60/61 sandbox overview + certification v1.1, with the seven certification steps mapped to real columns, the fail-closed rules, the four `sandbox.*` command routes and the five decisions codex must confirm); verbatim copy of the §7.2 rows: `…/BACKEND_PLAN_7_2_ROWS_2026-08-25.md` |
 | UI/UX authority for those requests — what each screen must show and why | hi-fi files `…/Design system discussion request_version2/HiFi *.dc.html` + owner screenshots 2026-08-25; grammar and per-screen smoke table `…/DESIGN_GRAMMAR_V3.md` (§8); audit `…/AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md` |
 | Frontend smoke modules to delete on delivery (one per screen, contract at file head) | `apps/portal/frontend/src/execution/{commandCenter,incident,operationsQueue,blotter,stage,alpha360}.smoke.ts` |
 | Shared frontend/backend board | `upgrade_frontend_plan_hifi/hifi_execution_loop/PHASE_TRACKER.md` |
@@ -1776,3 +1927,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-26 | N15A four-interface gateway authority closed | independent Query/Command/Event/Artifact negotiation, split identities, bounded transports, Event continuity, Artifact reference policy and local fault doubles complete; N15B owner publication pending, network/source/runtime inactive |
 | 2026-08-27 | N16A same-domain emergency-routing authority closed | same-origin/origin-isolation templates, short session/WebAuthn ceremony, typed health/failure states, immutable audit and local Research/Cloudflare/origin/rollback drills complete; R3 unpublished, R4 forbidden, N16B pending, public route/source/runtime inactive |
 | 2026-08-28 | Claude: §7.2 BR-EX-60/61 appended (`RECEIVED`) and specified in full in §7.4 — Sandbox Overview `sandbox-overview.v1` (new) + Sandbox Certification v1.1 (additive) with four `sandbox.*` command routes | documentation only; no runtime/profile/source/command change; five decisions listed in §7.4.6 are codex's to confirm; frontend screens are built and running on smoke until delivery |
+| 2026-08-28 | Claude: §7.2 BR-EX-62/63 appended (`RECEIVED`) and specified in full in §7.5 — Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1 | documentation only; no runtime/profile/source/command change; the Paper contract already carries most of its hi-fi, so these two rows are deliberately small; four decisions in §7.5.5 are codex's to confirm |
