@@ -93,13 +93,20 @@ def _lark_org_user_id_map() -> Dict[str, str]:
         isinstance(name, str)
         and bool(name.strip())
         and isinstance(user_id, str)
-        and bool(re.fullmatch(r"[A-Za-z0-9_-]{1,128}", user_id.strip()))
+        and (
+            not user_id.strip()
+            or bool(re.fullmatch(r"[A-Za-z0-9_-]{1,128}", user_id.strip()))
+        )
         for name, user_id in mapping.items()
     ):
         raise ValueError(
             "LARK_ORG_USER_ID_MAP values must be bounded Lark organization user_ids"
         )
-    return {name.strip(): user_id.strip() for name, user_id in mapping.items()}
+    return {
+        name.strip(): user_id.strip()
+        for name, user_id in mapping.items()
+        if user_id.strip()
+    }
 
 
 def _lark_message_format() -> str:

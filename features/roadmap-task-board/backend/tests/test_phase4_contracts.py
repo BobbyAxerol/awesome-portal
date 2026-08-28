@@ -237,3 +237,18 @@ def test_lark_org_user_id_map_rejects_markup(monkeypatch, tmp_path: Path):
 
     with pytest.raises(ValueError, match="bounded Lark organization user_ids"):
         Settings.from_environment()
+
+
+def test_lark_org_user_id_map_allows_unmentioned_blank_member(monkeypatch, tmp_path: Path):
+    monkeypatch.setenv("PORTAL_DATABASE_PATH", str(tmp_path / "portal.db"))
+    monkeypatch.setenv("LARK_APP_ID", "cli_test")
+    monkeypatch.setenv("LARK_APP_SECRET", "app-secret")
+    monkeypatch.setenv(
+        "LARK_ORG_USER_ID_MAP",
+        '{"bobby":"","stan":"tenant_stan","thanhvuong":"tenant_thanhvuong"}',
+    )
+
+    assert Settings.from_environment().lark_org_user_id_map == {
+        "stan": "tenant_stan",
+        "thanhvuong": "tenant_thanhvuong",
+    }
