@@ -1,0 +1,12 @@
+# EX-BE-02B exact-profile Manager-v2 activation overlay.
+#
+# Apply only with one private profile-specific Source Proxy configuration using
+# `manager-profile-read`.  The source profile, Edge environment and delegated
+# assertion are all exact-bound by the preflight and Rust verifier; callers do
+# not select a profile.  This does not enable commands, V1/D4, direct DB/SQL,
+# events, replay, Redis or broker traffic.
+services:
+  execution-edge:
+    environment:
+      EDGE_MANAGER_V2_READ_ENABLED: "true"
+      EDGE_MANAGER_V2_PROFILE_ID: ${EDGE_MANAGER_V2_PROFILE_ID:?set the exact Manager profile ID}

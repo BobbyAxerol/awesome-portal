@@ -1,13 +1,14 @@
 #![forbid(unsafe_code)]
 
 //! Locked, typed contract boundary for the private Trading System Manager-v2
-//! Paper read facade.
+//! profile-bound read facade.
 //!
 //! This crate deliberately models only the five owner-published `GET`
 //! operations. It cannot construct a database query, a caller-selected
 //! profile, or an arbitrary source URL. Relation pages, record keys and
 //! cursors are accepted only after they originate from a validated catalogue
-//! or a prior Manager response with the same fixed profile and catalogue.
+//! or a prior Manager response with the same deployment-bound profile and
+//! catalogue.
 
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -510,7 +511,7 @@ pub enum Completeness {
 pub struct ManagerMeta {
     contract_version: &'static str,
     authority: &'static str,
-    profile_id: &'static str,
+    profile_id: String,
     catalogue_sha256: CatalogueDigest,
     availability: Availability,
     freshness: Freshness,
@@ -531,8 +532,8 @@ impl ManagerMeta {
     }
 
     #[must_use]
-    pub const fn profile_id(&self) -> &'static str {
-        self.profile_id
+    pub fn profile_id(&self) -> &str {
+        &self.profile_id
     }
 
     #[must_use]
@@ -592,7 +593,7 @@ impl<T> ManagerEnvelope<T> {
 pub struct ManagerUnavailable {
     contract_version: &'static str,
     authority: &'static str,
-    profile_id: &'static str,
+    profile_id: String,
     catalogue_sha256: CatalogueDigest,
     availability: Availability,
     reason_code: String,
@@ -600,6 +601,11 @@ pub struct ManagerUnavailable {
 }
 
 impl ManagerUnavailable {
+    #[must_use]
+    pub fn profile_id(&self) -> &str {
+        &self.profile_id
+    }
+
     #[must_use]
     pub fn catalogue_sha256(&self) -> &CatalogueDigest {
         &self.catalogue_sha256
@@ -1066,9 +1072,28 @@ pub fn decode_success(
     request: &ManagerV2Request,
     body: &[u8],
 ) -> Result<ManagerPayload, ContractError> {
+    decode_success_for_profile(request, body, PROFILE_ID)
+}
+
+/// Decodes a `200` body for one exact deployment-bound Manager profile.
+///
+/// The caller supplies this value from sealed deployment configuration, never
+/// from an HTTP request. The historical Paper helper above remains for the
+/// imported Paper contract and its fixtures.
+///
+/// # Errors
+///
+/// Fails closed when the owner response does not carry the exact configured
+/// profile, in addition to the normal contract/cursor/catalogue checks.
+pub fn decode_success_for_profile(
+    request: &ManagerV2Request,
+    body: &[u8],
+    expected_profile_id: &str,
+) -> Result<ManagerPayload, ContractError> {
+    validate_expected_profile_id(expected_profile_id)?;
     match request {
         ManagerV2Request::Catalogue => {
-            let (meta, wire) = parse_envelope::<ManagerCatalogueWire>(body)?;
+            let (meta, wire) = parse_envelope::<ManagerCatalogueWire>(body, expected_profile_id)?;
             let catalogue = decode_catalogue(wire, &meta.catalogue_sha256)?;
             Ok(ManagerPayload::Catalogue(ManagerEnvelope {
                 meta,
@@ -1076,8 +1101,9 @@ pub fn decode_success(
             }))
         }
         ManagerV2Request::Capabilities => {
-            let (meta, wire) = parse_envelope::<ManagerCapabilitiesWire>(body)?;
-            let capabilities = decode_capabilities(wire)?;
+            let (meta, wire) =
+                parse_envelope::<ManagerCapabilitiesWire>(body, expected_profile_id)?;
+            let capabilities = decode_capabilities(wire, expected_profile_id)?;
             Ok(ManagerPayload::Capabilities(ManagerEnvelope {
                 meta,
                 data: capabilities,
@@ -1086,7 +1112,7 @@ pub fn decode_success(
         ManagerV2Request::RelationRecords {
             relation, limit, ..
         } => {
-            let (meta, wire) = parse_envelope::<RelationRecordsWire>(body)?;
+            let (meta, wire) = parse_envelope::<RelationRecordsWire>(body, expected_profile_id)?;
             require_catalogue_digest(&meta, &relation.catalogue_digest)?;
             let records = decode_relation_records(wire, relation, *limit)?;
             Ok(ManagerPayload::RelationRecords(ManagerEnvelope {
@@ -1095,7 +1121,7 @@ pub fn decode_success(
             }))
         }
         ManagerV2Request::Record { relation, .. } => {
-            let (meta, wire) = parse_envelope::<ManagerRecordWire>(body)?;
+            let (meta, wire) = parse_envelope::<ManagerRecordWire>(body, expected_profile_id)?;
             require_catalogue_digest(&meta, &relation.catalogue_digest)?;
             let record = decode_record(wire, relation)?;
             Ok(ManagerPayload::Record(ManagerEnvelope {
@@ -1109,7 +1135,7 @@ pub fn decode_success(
             limit,
             ..
         } => {
-            let (meta, wire) = parse_envelope::<NamedProjectionWire>(body)?;
+            let (meta, wire) = parse_envelope::<NamedProjectionWire>(body, expected_profile_id)?;
             require_catalogue_digest(&meta, &catalogue.catalogue_revision)?;
             let projection = decode_projection(wire, catalogue, *kind, *limit)?;
             Ok(ManagerPayload::Projection(ManagerEnvelope {
@@ -1127,10 +1153,25 @@ pub fn decode_success(
 ///
 /// Rejects success-shaped or unbounded/unknown failure bodies.
 pub fn decode_unavailable(body: &[u8]) -> Result<ManagerUnavailable, ContractError> {
+    decode_unavailable_for_profile(body, PROFILE_ID)
+}
+
+/// Decodes a `503` owner result for one exact deployment-bound Manager
+/// profile. See [`decode_success_for_profile`] for the configuration boundary.
+///
+/// # Errors
+///
+/// Fails closed when the owner result does not carry the exact configured
+/// profile or violates the bounded unavailable-result contract.
+pub fn decode_unavailable_for_profile(
+    body: &[u8],
+    expected_profile_id: &str,
+) -> Result<ManagerUnavailable, ContractError> {
+    validate_expected_profile_id(expected_profile_id)?;
     let wire: ManagerUnavailableWire = parse_json(body)?;
     if wire.contract_version != RUNTIME_CONTRACT_REVISION
         || wire.authority != "EXECUTION_CELL"
-        || wire.profile_id != PROFILE_ID
+        || wire.profile_id != expected_profile_id
         || wire.availability == Availability::Available
     {
         return Err(ContractError::EnvelopeIdentityMismatch);
@@ -1140,7 +1181,7 @@ pub fn decode_unavailable(body: &[u8]) -> Result<ManagerUnavailable, ContractErr
     Ok(ManagerUnavailable {
         contract_version: RUNTIME_CONTRACT_REVISION,
         authority: "EXECUTION_CELL",
-        profile_id: PROFILE_ID,
+        profile_id: expected_profile_id.to_owned(),
         catalogue_sha256: CatalogueDigest::parse(wire.catalogue_sha256)?,
         availability: wire.availability,
         reason_code: wire.reason_code,
@@ -1148,11 +1189,14 @@ pub fn decode_unavailable(body: &[u8]) -> Result<ManagerUnavailable, ContractErr
     })
 }
 
-fn parse_envelope<T: DeserializeOwned>(body: &[u8]) -> Result<(ManagerMeta, T), ContractError> {
+fn parse_envelope<T: DeserializeOwned>(
+    body: &[u8],
+    expected_profile_id: &str,
+) -> Result<(ManagerMeta, T), ContractError> {
     let wire: ManagerEnvelopeWire<T> = parse_json(body)?;
     if wire.contract_version != RUNTIME_CONTRACT_REVISION
         || wire.authority != "EXECUTION_CELL"
-        || wire.profile_id != PROFILE_ID
+        || wire.profile_id != expected_profile_id
         || wire.availability != Availability::Available
     {
         return Err(ContractError::EnvelopeIdentityMismatch);
@@ -1163,7 +1207,7 @@ fn parse_envelope<T: DeserializeOwned>(body: &[u8]) -> Result<(ManagerMeta, T), 
         ManagerMeta {
             contract_version: RUNTIME_CONTRACT_REVISION,
             authority: "EXECUTION_CELL",
-            profile_id: PROFILE_ID,
+            profile_id: expected_profile_id.to_owned(),
             catalogue_sha256: CatalogueDigest::parse(wire.catalogue_sha256)?,
             availability: Availability::Available,
             freshness: wire.freshness,
@@ -1380,8 +1424,11 @@ fn decode_projection(
 
 fn decode_capabilities(
     wire: ManagerCapabilitiesWire,
+    expected_profile_id: &str,
 ) -> Result<ManagerCapabilities, ContractError> {
-    if wire.contract_revision != RUNTIME_CONTRACT_REVISION || wire.active_profile_id != PROFILE_ID {
+    if wire.contract_revision != RUNTIME_CONTRACT_REVISION
+        || wire.active_profile_id != expected_profile_id
+    {
         return Err(ContractError::EnvelopeIdentityMismatch);
     }
     if wire.capabilities.len() != EXPECTED_CAPABILITIES.len() {
@@ -1418,6 +1465,17 @@ fn decode_capabilities(
         });
     }
     Ok(ManagerCapabilities { capabilities })
+}
+
+fn validate_expected_profile_id(profile_id: &str) -> Result<(), ContractError> {
+    if !(3..=128).contains(&profile_id.len())
+        || !profile_id
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return Err(ContractError::EnvelopeIdentityMismatch);
+    }
+    Ok(())
 }
 
 fn decode_manager_value(

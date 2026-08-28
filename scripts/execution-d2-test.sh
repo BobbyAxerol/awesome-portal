@@ -17,6 +17,7 @@ probe_renderer="${root_dir}/scripts/execution-d3-render-probe-env.sh"
 env_example="${root_dir}/deploy/execution-d1/edge-source-proxy.env.example"
 compose_base="${root_dir}/deploy/compose.execution-edge.yaml"
 compose_dark="${root_dir}/deploy/execution-d1/compose.dark.yaml"
+manager_profile_compose="${root_dir}/deploy/execution-manager-v2/compose.profile-read.yaml"
 manager_contract_dir="${root_dir}/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1"
 
 # The Manager-v2 handoff is an imported owner pack, not a loose collection of
@@ -471,9 +472,10 @@ if grep -Fq 'X-API-Key' "${proxy_config}"; then
   exit 1
 fi
 
-# Manager-v2 is a separate private Paper-only route set.  It keeps V1 dark,
-# uses one Source-Proxy-held client leaf, and accepts only the five bounded
-# owner routes through the short-lived certificate-bound token issuer.
+# Manager-v2 keeps V1 dark, uses one Source-Proxy-held client leaf, and accepts
+# only the five bounded owner routes through the short-lived certificate-bound
+# token issuer.  Preserve the frozen historical Paper pack, then prove the
+# profile overlay can alter only its dedicated loopback upstream ports.
 manager_config="${tmp_dir}/srv/primus/portal/source-proxy/nginx.manager-v2.conf"
 manager_locations="${proxy_secrets}/manager-v2-locations.conf"
 cp "${tmp_dir}/candidate.env" "${tmp_dir}/manager.env"
@@ -515,9 +517,46 @@ fi
 chmod 0640 "${proxy_secrets}/manager-v2-client.pem"
 chgrp "${runtime_gid}" "${proxy_secrets}/manager-v2-client.pem"
 "${preflight}" --env-file "${tmp_dir}/manager.env" --mode manager-offline >/dev/null
+manager_active_env="${tmp_dir}/manager-active.env"
+manager_active_config="${tmp_dir}/srv/primus/portal/source-proxy/nginx.manager-live.conf"
+cp "${tmp_dir}/manager.env" "${manager_active_env}"
+sed -i \
+  -e 's/^SOURCE_PROXY_SOURCE_MODE=manager-paper-read$/SOURCE_PROXY_SOURCE_MODE=manager-profile-read/' \
+  -e "s#^SOURCE_PROXY_CONFIG_FILE=.*#SOURCE_PROXY_CONFIG_FILE=${manager_active_config}#" \
+  -e 's/^EDGE_ENVIRONMENT=paper$/EDGE_ENVIRONMENT=live/' \
+  -e 's/^EDGE_DELEGATION_AUDIENCE=portal-execution-edge-paper$/EDGE_DELEGATION_AUDIENCE=portal-execution-edge-live/' \
+  -e 's/^EDGE_MANAGER_V2_READ_ENABLED=false$/EDGE_MANAGER_V2_READ_ENABLED=true/' \
+  -e 's/^EDGE_MANAGER_V2_PROFILE_ID=$/EDGE_MANAGER_V2_PROFILE_ID=LIVE_BINANCE_USDM/' \
+  -e 's/^SOURCE_PROXY_MANAGER_PROFILE_ID=$/SOURCE_PROXY_MANAGER_PROFILE_ID=LIVE_BINANCE_USDM/' \
+  -e 's/^SOURCE_PROXY_MANAGER_FACADE_PORT=$/SOURCE_PROXY_MANAGER_FACADE_PORT=8223/' \
+  -e 's/^SOURCE_PROXY_MANAGER_ISSUER_PORT=$/SOURCE_PROXY_MANAGER_ISSUER_PORT=8224/' \
+  "${manager_active_env}"
+chmod 0600 "${manager_active_env}"
+"${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
+"${preflight}" --env-file "${manager_active_env}" --mode manager-active-offline >/dev/null
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8223;' "${manager_locations}")" -eq 5 ]]
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8224/internal/issue;' "${manager_locations}")" -eq 1 ]]
+sed -i 's/^SOURCE_PROXY_MANAGER_PROFILE_ID=LIVE_BINANCE_USDM$/SOURCE_PROXY_MANAGER_PROFILE_ID=SANDBOX_BINANCE_USDM/' \
+  "${manager_active_env}"
+if "${preflight}" --env-file "${manager_active_env}" --mode manager-active-offline \
+    >/dev/null 2>&1; then
+  printf 'Manager active-read preflight accepted a cross-profile Source Proxy overlay.\n' >&2
+  exit 1
+fi
+sed -i 's/^SOURCE_PROXY_MANAGER_PROFILE_ID=SANDBOX_BINANCE_USDM$/SOURCE_PROXY_MANAGER_PROFILE_ID=LIVE_BINANCE_USDM/' \
+  "${manager_active_env}"
+sed -i 's#127\.0\.0\.1:8223#127.0.0.1:8225#' "${manager_locations}"
+if "${preflight}" --env-file "${manager_active_env}" --mode manager-active-offline \
+    >/dev/null 2>&1; then
+  printf 'Manager profile overlay preflight accepted an unapproved facade upstream.\n' >&2
+  exit 1
+fi
+"${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
 manager_proxy_syntax_config="${tmp_dir}/source-proxy.manager.syntax-test.conf"
 sed 's/listen 172\.23\.0\.1:8444 ssl;/listen 127.0.0.1:18445 ssl;/' \
-  "${manager_config}" > "${manager_proxy_syntax_config}"
+  "${manager_active_config}" > "${manager_proxy_syntax_config}"
 chmod 0640 "${manager_proxy_syntax_config}"
 chgrp "${runtime_gid}" "${manager_proxy_syntax_config}"
 
@@ -570,6 +609,20 @@ compose=("${docker_cli[@]}" compose --project-directory "${root_dir}" -f "${comp
 "${compose[@]}" --env-file "${tmp_dir}/candidate.env" config --quiet
 "${compose[@]}" --env-file "${tmp_dir}/candidate.env" config > "${tmp_dir}/candidate.yaml"
 "${compose[@]}" --env-file "${tmp_dir}/rollback.env" config > "${tmp_dir}/rollback.yaml"
+manager_profile_render=("${docker_cli[@]}" compose --project-directory "${root_dir}" \
+  -f "${compose_base}" -f "${compose_dark}" -f "${manager_profile_compose}")
+"${manager_profile_render[@]}" --env-file "${manager_active_env}" config --quiet
+"${manager_profile_render[@]}" --env-file "${manager_active_env}" config > "${tmp_dir}/manager-profile.yaml"
+grep -Fq 'EDGE_MANAGER_V2_READ_ENABLED: "true"' "${tmp_dir}/manager-profile.yaml"
+grep -Fq 'EDGE_MANAGER_V2_PROFILE_ID: LIVE_BINANCE_USDM' "${tmp_dir}/manager-profile.yaml"
+for flag in EDGE_PROJECTION_INGESTION_ENABLED EDGE_SOURCE_PROBES_ENABLED \
+  EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_COMMAND_RELAY_ENABLED; do
+  grep -Fq "${flag}: \"false\"" "${tmp_dir}/manager-profile.yaml"
+done
+if grep -Eq 'published: "(5432|8000|8444)"' "${tmp_dir}/manager-profile.yaml"; then
+  printf 'Manager profile manifest unexpectedly published DB/Source Proxy/TS traffic.\n' >&2
+  exit 1
+fi
 
 for rendered in "${tmp_dir}/candidate.yaml" "${tmp_dir}/rollback.yaml"; do
   grep -Fq 'EDGE_PROJECTION_INGESTION_ENABLED: "false"' "${rendered}"

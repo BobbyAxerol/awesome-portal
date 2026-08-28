@@ -11,6 +11,7 @@ async function fixture(ttlSeconds = 45) {
     privateKeyPem: await exportPKCS8(privateKey),
     ttlSeconds,
     environment: "paper",
+    profileId: "PAPER_BINANCE_USDM",
   });
   return { service, publicKey: await exportJWK(publicKey) };
 }
@@ -111,6 +112,7 @@ describe("execution delegated read assertions", () => {
       algorithms: ["RS256"],
     });
     expect(payload.resources).toEqual(["execution:manager-v2:read"]);
+    expect(payload.profile_id).toBe("PAPER_BINANCE_USDM");
 
     await expect(
       service.issueReadAssertion({
@@ -123,5 +125,40 @@ describe("execution delegated read assertions", () => {
         authenticationMethods: ["portal_session"],
       }),
     ).rejects.toThrow("principal is invalid");
+  });
+
+  it("refuses the Manager resource when the profile binding is absent or mismatched", async () => {
+    const { privateKey } = await generateKeyPair("RS256", { extractable: true });
+    const missingProfile = await ExecutionDelegationService.create({
+      issuer: "portal-control-api",
+      audience: "portal-execution-edge-live",
+      keyId: "execution-k1",
+      privateKeyPem: await exportPKCS8(privateKey),
+      ttlSeconds: 45,
+      environment: "live",
+    });
+    await expect(
+      missingProfile.issueReadAssertion({
+        principalId: "usr_manager",
+        sessionId: "ses_manager",
+        workspaceId: "ws_research",
+        roles: ["ADMIN"],
+        resources: ["execution:manager-v2:read"],
+        authenticationTime: new Date(),
+        authenticationMethods: ["portal_session"],
+      }),
+    ).rejects.toThrow("exact execution profile");
+
+    await expect(
+      ExecutionDelegationService.create({
+        issuer: "portal-control-api",
+        audience: "portal-execution-edge-live",
+        keyId: "execution-k1",
+        privateKeyPem: await exportPKCS8(privateKey),
+        ttlSeconds: 45,
+        environment: "live",
+        profileId: "SANDBOX_BINANCE_USDM",
+      }),
+    ).rejects.toThrow("outside the read-only boundary");
   });
 });

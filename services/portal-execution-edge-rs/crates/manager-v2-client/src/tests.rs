@@ -110,6 +110,52 @@ async fn sends_only_fixed_manager_get_without_jwt_or_v1_api_key() {
 }
 
 #[tokio::test]
+async fn deployment_profile_is_exact_for_each_manager_response() {
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let sandbox_body = catalogue_body().replace("PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM");
+    let origin = one_response_server(
+        Arc::clone(&captured),
+        "200 OK",
+        qualified_headers(),
+        sandbox_body,
+        Duration::ZERO,
+    )
+    .await;
+    let client = ManagerV2Client::new_for_test_with_profile(
+        &origin,
+        "SANDBOX_BINANCE_USDM",
+        ManagerV2ClientLimits::default(),
+    )
+    .unwrap();
+    assert!(matches!(
+        client.execute(&ManagerV2Request::catalogue()).await,
+        Ok(ManagerRead::Available(ManagerPayload::Catalogue(_)))
+    ));
+
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let origin = one_response_server(
+        captured,
+        "200 OK",
+        qualified_headers(),
+        catalogue_body(),
+        Duration::ZERO,
+    )
+    .await;
+    let client = ManagerV2Client::new_for_test_with_profile(
+        &origin,
+        "SANDBOX_BINANCE_USDM",
+        ManagerV2ClientLimits::default(),
+    )
+    .unwrap();
+    assert!(matches!(
+        client.execute(&ManagerV2Request::catalogue()).await,
+        Err(ManagerV2ClientError::Contract(
+            manager_v2_contract::ContractError::EnvelopeIdentityMismatch
+        ))
+    ));
+}
+
+#[tokio::test]
 async fn typed_503_is_not_empty_success_or_automatic_retry() {
     let captured = Arc::new(Mutex::new(Vec::new()));
     let unavailable = format!(
@@ -259,6 +305,7 @@ async fn queue_is_bounded_before_an_unqualified_second_request_is_sent() {
 fn production_constructor_requires_https_mtls_and_safe_limits() {
     let missing = ManagerV2Client::new(ManagerV2ClientConfig {
         source_proxy_origin: "https://10.88.0.1:8443",
+        profile_id: "PAPER_BINANCE_USDM",
         root_ca_pem: &[],
         client_identity_pem: &[],
         limits: ManagerV2ClientLimits::default(),
@@ -270,6 +317,7 @@ fn production_constructor_requires_https_mtls_and_safe_limits() {
 
     let unsafe_origin = ManagerV2Client::new(ManagerV2ClientConfig {
         source_proxy_origin: "http://10.88.0.1:8443",
+        profile_id: "PAPER_BINANCE_USDM",
         root_ca_pem: b"ca",
         client_identity_pem: b"identity",
         limits: ManagerV2ClientLimits::default(),
@@ -289,5 +337,15 @@ fn production_constructor_requires_https_mtls_and_safe_limits() {
     assert!(matches!(
         unsafe_limits,
         Err(ManagerV2ClientError::UnsafeLimits)
+    ));
+
+    let invalid_profile = ManagerV2Client::new_for_test_with_profile(
+        "http://127.0.0.1:1",
+        "paper-binance",
+        ManagerV2ClientLimits::default(),
+    );
+    assert!(matches!(
+        invalid_profile,
+        Err(ManagerV2ClientError::InvalidProfileId)
     ));
 }

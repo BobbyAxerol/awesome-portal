@@ -1307,6 +1307,27 @@ deep-dive → ADR → slice → evidence discipline documented above.
   Source Proxy, Manager, Trading System, V1/D4, projection, events, SSE and
   commands remain unchanged/dark. Detail:
   [`EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md`](./backend/EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md).
+- **EX-BE-02B Manager-v2 multi-profile read readiness (2026-08-28, implemented
+  / private read-ready / no Live trading traffic):** the historical Paper
+  Manager-v2 route remains compatible and active, while the same bounded
+  read-only surface is now exact-bound for
+  `PAPER_BINANCE_USDM`, `SANDBOX_BINANCE_USDM` and `LIVE_BINANCE_USDM`.
+  Trading System policy, certificate-bound issuer JWT, facade predicate,
+  response/cursor and Portal Rust decoder all require the same deployed
+  profile; the Control API assertion carries it only for the exact
+  `execution:manager-v2:read` resource. A new `manager-profile-read` Source
+  Proxy mode derives its six-location configuration from the byte-locked
+  Paper template and can change only the dedicated facade/issuer loopback
+  ports. It retains TLS 1.3 mTLS, the five GET routes, 200-row/1-MiB bounds,
+  catalogue validation and safe-field redaction; no direct DB/SQL, V1/D4,
+  command, broker, Redis, Event/replay, cache/projection or browser/UI route
+  was added. Private Sandbox and Live projects use isolated ports
+  `8123/8124` and `8223/8224`; their Compose inputs/rendering, profile
+  mismatch denials and isolated Nginx/Edge/PostgreSQL test path passed. A
+  read-only actual source check observed Sandbox data and zero canonical Live
+  rows, so Live is ready but truthfully empty until data exists. No active
+  service was restarted or automatically deployed. Detail:
+  [`EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md`](./backend/EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

@@ -84,6 +84,47 @@ fn build_lock_exposes_only_the_runtime_paper_identity_and_bounds() {
 }
 
 #[test]
+fn deployment_bound_profiles_are_exact_and_keep_the_paper_helper_compatible() {
+    let mut sandbox = catalogue_response();
+    sandbox["profile_id"] = json!("SANDBOX_BINANCE_USDM");
+    let body = serde_json::to_vec(&sandbox).unwrap();
+
+    let ManagerPayload::Catalogue(response) = decode_success_for_profile(
+        &ManagerV2Request::catalogue(),
+        &body,
+        "SANDBOX_BINANCE_USDM",
+    )
+    .unwrap() else {
+        panic!("expected sandbox catalogue");
+    };
+    assert_eq!(response.meta().profile_id(), "SANDBOX_BINANCE_USDM");
+    assert!(matches!(
+        decode_success(&ManagerV2Request::catalogue(), &body),
+        Err(ContractError::EnvelopeIdentityMismatch)
+    ));
+    assert!(matches!(
+        decode_success_for_profile(&ManagerV2Request::catalogue(), &body, "LIVE_BINANCE_USDM"),
+        Err(ContractError::EnvelopeIdentityMismatch)
+    ));
+
+    let unavailable = json!({
+        "contract_version": RUNTIME_CONTRACT_REVISION,
+        "authority": "EXECUTION_CELL",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "catalogue_sha256": DIGEST,
+        "availability": "UNAVAILABLE",
+        "reason_code": "SOURCE_UNAVAILABLE",
+        "trace_id": "manager-v2-live-unavailable"
+    });
+    let parsed = decode_unavailable_for_profile(
+        &serde_json::to_vec(&unavailable).unwrap(),
+        "LIVE_BINANCE_USDM",
+    )
+    .unwrap();
+    assert_eq!(parsed.profile_id(), "LIVE_BINANCE_USDM");
+}
+
+#[test]
 fn catalogue_derived_requests_emit_only_the_five_exact_get_blueprints() {
     let catalogue = catalogue();
     let orders = catalogue.relation("public", "orders").unwrap();

@@ -38,23 +38,23 @@ case "${source_mode}" in
   dark)
     public_probe_guard='return 503;'
     alpha_read_guard='return 503;'
-    manager_read_include='# Manager-v2 Paper route disabled'
+    manager_read_include='# Manager-v2 route disabled'
     ;;
   contract-probe)
     public_probe_guard='# D3 contract-probe gate accepted'
     alpha_read_guard='return 503;'
-    manager_read_include='# Manager-v2 Paper route disabled'
+    manager_read_include='# Manager-v2 route disabled'
     ;;
   paper-read)
     public_probe_guard='# D3 contract-probe gate accepted'
     alpha_read_guard='# D4 source-read gate accepted'
-    manager_read_include='# Manager-v2 Paper route disabled'
+    manager_read_include='# Manager-v2 route disabled'
     ;;
-  manager-paper-read)
+  manager-paper-read|manager-profile-read)
     public_probe_guard='return 503;'
     alpha_read_guard='return 503;'
     [[ -n "${manager_locations_output}" && "${manager_locations_output}" == /* ]] || {
-      printf 'Manager-paper-read rendering requires --manager-locations-output.\n' >&2
+      printf 'Manager read rendering requires --manager-locations-output.\n' >&2
       exit 1
     }
     manager_read_include='include /run/secrets/manager-v2-locations.conf;'
@@ -89,9 +89,17 @@ cleanup() {
   [[ -z "${manager_temporary}" ]] || rm -f -- "${manager_temporary}"
 }
 trap cleanup EXIT
-if [[ "${source_mode}" == manager-paper-read ]]; then
+if [[ "${source_mode}" =~ ^(manager-paper-read|manager-profile-read)$ ]]; then
   manager_temporary="$(mktemp "${manager_locations_output}.tmp.XXXXXX")"
   cp -- "${manager_locations_template}" "${manager_temporary}"
+  if [[ "${source_mode}" == manager-profile-read ]]; then
+    manager_facade_port="$(read_value SOURCE_PROXY_MANAGER_FACADE_PORT)"
+    manager_issuer_port="$(read_value SOURCE_PROXY_MANAGER_ISSUER_PORT)"
+    sed -i \
+      -e "s#127\\.0\\.0\\.1:8023#127.0.0.1:${manager_facade_port}#g" \
+      -e "s#127\\.0\\.0\\.1:8024/internal/issue#127.0.0.1:${manager_issuer_port}/internal/issue#g" \
+      "${manager_temporary}"
+  fi
   if grep -Eq '__[A-Z0-9_]+__' "${manager_temporary}"; then
     printf 'D2 renderer found an unresolved Manager locations placeholder.\n' >&2
     exit 1

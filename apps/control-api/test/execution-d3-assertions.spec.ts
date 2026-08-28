@@ -84,10 +84,12 @@ describe("D3 assertion corpus", () => {
       outputDirectory: output,
       changeWindowId: "CW-MANAGER-V2-TEST",
       resource: "execution:manager-v2:read",
+      profileId: "PAPER_BINANCE_USDM",
     });
 
     expect(decodeJwt(await readFile(join(output, "valid.jwt"), "utf8"))).toMatchObject({
       resources: ["execution:manager-v2:read"],
+      profile_id: "PAPER_BINANCE_USDM",
     });
 
     const invalidOutput = join(root, "invalid");

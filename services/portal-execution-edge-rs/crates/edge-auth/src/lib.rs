@@ -18,6 +18,8 @@ pub struct DelegatedClaims {
     pub scopes: Vec<String>,
     pub resources: Vec<String>,
     pub environment: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_id: Option<String>,
     pub jti: String,
     pub iat: i64,
     pub nbf: i64,
@@ -216,6 +218,7 @@ mod tests {
             scopes: vec!["execution.read".to_owned()],
             resources: vec!["alpha:alpha-paper-1".to_owned()],
             environment: "paper".to_owned(),
+            profile_id: None,
             jti: "assertion_test".to_owned(),
             iat: now,
             nbf: now,

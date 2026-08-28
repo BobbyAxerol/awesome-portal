@@ -117,6 +117,7 @@ struct AppState {
     analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
     manager_v2_client: Option<ManagerV2Client>,
+    manager_v2_profile_id: Option<String>,
 }
 
 #[derive(Debug)]
@@ -138,6 +139,7 @@ struct EdgeConfig {
     source_gateway_digest: String,
     source_probes_enabled: RuntimeGate,
     manager_v2_read_enabled: RuntimeGate,
+    manager_v2_profile_id: Option<String>,
     probe_alpha_id: Option<String>,
     probe_interval: Duration,
     transport_limits: TransportLimits,
@@ -185,6 +187,8 @@ impl EdgeConfig {
             RuntimeGate::from(strict_boolean("EDGE_SOURCE_PROBES_ENABLED", false)?);
         let manager_v2_read_enabled =
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_V2_READ_ENABLED", false)?);
+        let manager_v2_profile_id =
+            manager_v2_profile_from_environment(&environment, manager_v2_read_enabled)?;
         let projection_ingestion_enabled =
             RuntimeGate::from(strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?);
         let realtime_sse_enabled =
@@ -229,6 +233,7 @@ impl EdgeConfig {
             source_gateway_digest: required("EDGE_SOURCE_GATEWAY_DIGEST")?,
             source_probes_enabled,
             manager_v2_read_enabled,
+            manager_v2_profile_id,
             probe_alpha_id: optional("EDGE_PROBE_ALPHA_ID"),
             probe_interval: Duration::from_secs(probe_interval_seconds as u64),
             transport_limits: transport_limits_from_environment()?,
@@ -262,6 +267,21 @@ impl EdgeConfig {
             analytics_source_profile,
         })
     }
+}
+
+fn manager_v2_profile_from_environment(
+    environment: &str,
+    manager_v2_read_enabled: RuntimeGate,
+) -> Result<Option<String>, ConfigError> {
+    let profile_id = optional("EDGE_MANAGER_V2_PROFILE_ID");
+    if manager_v2_read_enabled.is_enabled()
+        && !profile_id
+            .as_deref()
+            .is_some_and(|value| manager_profile_matches_environment(environment, value))
+    {
+        return Err(ConfigError::Invalid("EDGE_MANAGER_V2_PROFILE_ID"));
+    }
+    Ok(profile_id)
 }
 
 fn realtime_freshness_from_environment() -> Result<(FreshnessPolicy, VenueSessionState), ConfigError>
@@ -418,6 +438,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         analytics_query_enabled: config.analytics_query_enabled,
         analytics_source_profile: config.analytics_source_profile,
         manager_v2_client,
+        manager_v2_profile_id: config.manager_v2_profile_id.clone(),
     };
 
     spawn_background_tasks(
@@ -499,8 +520,13 @@ fn manager_v2_client_from_config(
     }
     let client_identity_pem =
         source_identity.ok_or(ConfigError::Missing("EDGE_SOURCE_CLIENT_IDENTITY_FILE"))?;
+    let profile_id = config
+        .manager_v2_profile_id
+        .as_deref()
+        .ok_or(ConfigError::Missing("EDGE_MANAGER_V2_PROFILE_ID"))?;
     Ok(Some(ManagerV2Client::new(ManagerV2ClientConfig {
         source_proxy_origin: &config.source_origin,
+        profile_id,
         root_ca_pem: source_ca,
         client_identity_pem,
         limits: ManagerV2ClientLimits::default(),
@@ -803,7 +829,7 @@ fn manager_request_client<'a>(
     headers: &HeaderMap,
 ) -> Result<&'a ManagerV2Client, Response> {
     let token = bearer(headers).ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
-    state
+    let claims = state
         .verifier
         .verify_read(
             token,
@@ -813,6 +839,9 @@ fn manager_request_client<'a>(
             },
         )
         .map_err(|_| StatusCode::FORBIDDEN.into_response())?;
+    if claims.profile_id.as_deref() != state.manager_v2_profile_id.as_deref() {
+        return Err(StatusCode::FORBIDDEN.into_response());
+    }
     state.manager_v2_client.as_ref().ok_or_else(|| {
         manager_problem(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -839,6 +868,20 @@ fn manager_identifier(value: &str) -> bool {
         && value
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+
+fn manager_profile_matches_environment(environment: &str, profile_id: &str) -> bool {
+    let expected_prefix = match environment {
+        "paper" => "PAPER_",
+        "sandbox" => "SANDBOX_",
+        "live" => "LIVE_",
+        _ => return false,
+    };
+    profile_id.starts_with(expected_prefix)
+        && (expected_prefix.len() + 2..=128).contains(&profile_id.len())
+        && profile_id
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
 }
 
 async fn fetch_manager_catalogue(client: &ManagerV2Client) -> Result<ManagerCatalogue, Response> {
@@ -891,6 +934,7 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
             "Manager source is temporarily unavailable.",
         ),
         ManagerV2ClientError::InvalidSourceProxyOrigin
+        | ManagerV2ClientError::InvalidProfileId
         | ManagerV2ClientError::MissingTrustAnchor
         | ManagerV2ClientError::InvalidTrustAnchor
         | ManagerV2ClientError::MissingClientIdentity
@@ -2178,6 +2222,7 @@ mod tests {
             scopes: vec!["execution.read".to_owned()],
             resources: vec![resource.to_owned()],
             environment: "paper".to_owned(),
+            profile_id: Some("PAPER_BINANCE_USDM".to_owned()),
             jti: "manager-test-assertion".to_owned(),
             iat: now,
             nbf: now,
@@ -2227,6 +2272,7 @@ mod tests {
             analytics_query_enabled: RuntimeGate::Disabled,
             analytics_source_profile: DeliveryProfile::Fixture,
             manager_v2_client: None,
+            manager_v2_profile_id: Some("PAPER_BINANCE_USDM".to_owned()),
         }
     }
 
@@ -2307,6 +2353,43 @@ mod tests {
             panic!("disabled Manager read-through must not create a client");
         };
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+        let mut wrong_profile = manager_claims(now, MANAGER_V2_RESOURCE);
+        wrong_profile.profile_id = Some("SANDBOX_BINANCE_USDM".to_owned());
+        let wrong_profile = signed_manager_claims(&signer, &wrong_profile);
+        headers.insert(
+            AUTHORIZATION,
+            format!("Bearer {wrong_profile}").parse().unwrap(),
+        );
+        let Err(response) = manager_request_client(&state, &headers) else {
+            panic!("a profile-mismatched Manager assertion must be rejected");
+        };
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[test]
+    fn manager_profiles_are_exact_environment_bound() {
+        assert!(manager_profile_matches_environment(
+            "paper",
+            "PAPER_BINANCE_USDM"
+        ));
+        assert!(manager_profile_matches_environment(
+            "sandbox",
+            "SANDBOX_BINANCE_USDM"
+        ));
+        assert!(manager_profile_matches_environment(
+            "live",
+            "LIVE_BINANCE_USDM"
+        ));
+        assert!(!manager_profile_matches_environment(
+            "live",
+            "SANDBOX_BINANCE_USDM"
+        ));
+        assert!(!manager_profile_matches_environment(
+            "paper",
+            "PAPER_binance_USDM"
+        ));
+        assert!(!manager_profile_matches_environment("paper", "PAPER_"));
     }
 
     #[test]
@@ -2396,6 +2479,7 @@ mod tests {
             scopes: vec!["execution.read".to_owned()],
             resources: vec![COMMAND_CENTER_RESOURCE.to_owned()],
             environment: "paper".to_owned(),
+            profile_id: None,
             jti: "assertion".to_owned(),
             iat: 0,
             nbf: 0,

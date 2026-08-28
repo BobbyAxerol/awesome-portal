@@ -50,7 +50,7 @@ http {
             return 200 'ok\n';
         }
 
-        # The file is rendered only for manager-paper-read.  Keeping it absent
+        # The file is rendered only for a Manager read mode. Keeping it absent
         # in D2/D3/D4 prevents Nginx from loading Manager credentials during
         # legacy modes and leaves every Manager route unavailable there.
         __MANAGER_READ_INCLUDE__

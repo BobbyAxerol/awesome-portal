@@ -54,6 +54,7 @@ export interface D3AssertionCorpusOptions {
    * Command Center corpus; Manager-v2 qualification must opt in explicitly.
    */
   resource?: D3AssertionResource;
+  profileId?: string;
   now?: Date;
 }
 
@@ -88,6 +89,7 @@ export async function issueD3AssertionCorpus(
     privateKeyPem,
     ttlSeconds: 45,
     environment: options.environment,
+    profileId: options.profileId,
   });
   const valid = await canonical.issueReadAssertion({
     principalId: "d3-operator-probe",
@@ -174,6 +176,7 @@ function validateOptions(options: D3AssertionCorpusOptions): void {
     !["paper", "sandbox", "live"].includes(options.environment) ||
     !CHANGE_WINDOW.test(options.changeWindowId) ||
     (options.resource !== undefined && !D3_ASSERTION_RESOURCES.includes(options.resource)) ||
+    (options.resource === "execution:manager-v2:read" && options.profileId === undefined) ||
     !isAbsolute(options.privateKeyFile) ||
     !isAbsolute(options.outputDirectory)
   ) {
@@ -248,6 +251,7 @@ async function main(): Promise<void> {
     outputDirectory: argument(args, "--output-directory"),
     changeWindowId: argument(args, "--change-window-id"),
     resource: optionalArgument(args, "--resource") as D3AssertionResource | undefined,
+    profileId: optionalArgument(args, "--profile-id"),
   });
   console.log(`D3 assertion corpus written without token output: ${result.records.length} cases`);
 }

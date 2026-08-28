@@ -7,6 +7,18 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- [EX-BE-02B — Manager-v2 Multi-profile Read Readiness](./EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md)
+  — **Implemented / private read-ready:** the sealed Manager-v2 backend path
+  is now deployment-bound for Paper, Sandbox and Live. Each profile requires
+  the same exact profile identifier in the Edge configuration, delegated
+  assertion, owner facade and Source Proxy upstream overlay; the Proxy can
+  alter only its dedicated loopback facade/issuer ports from the frozen
+  five-GET template. It remains a bounded catalogue read plane, not direct
+  DB/SQL, commands, broker/Event traffic or a browser/UI route. Historical
+  Paper remains active; Sandbox/Live profile deployments are prepared without
+  auto-starting them, and Live currently returns no canonical rows until
+  Trading System produces them.
+
 - [EX-BE-02A — Manager-v2 Edge Read-through API](./EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md)
   — **Backend complete / private Paper runtime qualified:** the existing
   private Rust Edge has four resource-scoped Manager-v2 Paper read-through

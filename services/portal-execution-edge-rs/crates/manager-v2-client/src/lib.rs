@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-//! Narrow mTLS-only transport for the private Manager-v2 Paper facade.
+//! Narrow mTLS-only transport for one private Manager-v2 read profile.
 //!
 //! The client takes only a Source Proxy origin plus the Portal workload trust
 //! anchor/client identity. The Proxy obtains the short-lived delegated JWT;
@@ -10,9 +10,11 @@
 use std::{sync::Arc, time::Duration};
 
 use futures_util::StreamExt as _;
+#[cfg(test)]
+use manager_v2_contract::PROFILE_ID;
 use manager_v2_contract::{
-    decode_success, decode_unavailable, ManagerRead, ManagerV2Request, MAXIMUM_RESPONSE_BYTES,
-    RUNTIME_CONTRACT_REVISION,
+    decode_success_for_profile, decode_unavailable_for_profile, ManagerRead, ManagerV2Request,
+    MAXIMUM_RESPONSE_BYTES, RUNTIME_CONTRACT_REVISION,
 };
 use reqwest::{
     header::{HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE},
@@ -50,6 +52,8 @@ impl Default for ManagerV2ClientLimits {
 /// Private mTLS inputs for the one fixed Source Proxy origin.
 pub struct ManagerV2ClientConfig<'a> {
     pub source_proxy_origin: &'a str,
+    /// Exact profile from the Edge deployment, never a caller-supplied value.
+    pub profile_id: &'a str,
     pub root_ca_pem: &'a [u8],
     pub client_identity_pem: &'a [u8],
     pub limits: ManagerV2ClientLimits,
@@ -60,6 +64,7 @@ pub struct ManagerV2ClientConfig<'a> {
 pub struct ManagerV2Client {
     client: Client,
     source_proxy_origin: Url,
+    profile_id: String,
     semaphore: Arc<Semaphore>,
     limits: ManagerV2ClientLimits,
 }
@@ -81,6 +86,7 @@ impl ManagerV2Client {
         enforce_tls: bool,
     ) -> Result<Self, ManagerV2ClientError> {
         validate_limits(&config.limits)?;
+        validate_profile_id(config.profile_id)?;
         let source_proxy_origin = validate_origin(config.source_proxy_origin, enforce_tls)?;
         if enforce_tls && config.root_ca_pem.is_empty() {
             return Err(ManagerV2ClientError::MissingTrustAnchor);
@@ -113,6 +119,7 @@ impl ManagerV2Client {
         Ok(Self {
             client,
             source_proxy_origin,
+            profile_id: config.profile_id.to_owned(),
             semaphore: Arc::new(Semaphore::new(config.limits.maximum_concurrency)),
             limits: config.limits,
         })
@@ -123,9 +130,19 @@ impl ManagerV2Client {
         source_proxy_origin: &str,
         limits: ManagerV2ClientLimits,
     ) -> Result<Self, ManagerV2ClientError> {
+        Self::new_for_test_with_profile(source_proxy_origin, PROFILE_ID, limits)
+    }
+
+    #[cfg(test)]
+    fn new_for_test_with_profile(
+        source_proxy_origin: &str,
+        profile_id: &str,
+        limits: ManagerV2ClientLimits,
+    ) -> Result<Self, ManagerV2ClientError> {
         Self::build(
             ManagerV2ClientConfig {
                 source_proxy_origin,
+                profile_id,
                 root_ca_pem: &[],
                 client_identity_pem: &[],
                 limits,
@@ -205,10 +222,10 @@ impl ManagerV2Client {
             body.extend_from_slice(&chunk);
         }
         match status {
-            200 => decode_success(request, &body)
+            200 => decode_success_for_profile(request, &body, &self.profile_id)
                 .map(ManagerRead::Available)
                 .map_err(ManagerV2ClientError::from),
-            503 => decode_unavailable(&body)
+            503 => decode_unavailable_for_profile(&body, &self.profile_id)
                 .map(ManagerRead::Unavailable)
                 .map_err(ManagerV2ClientError::from),
             _ => Err(ManagerV2ClientError::UnexpectedHttpStatus(status)),
@@ -247,6 +264,17 @@ fn validate_limits(limits: &ManagerV2ClientLimits) -> Result<(), ManagerV2Client
     Ok(())
 }
 
+fn validate_profile_id(profile_id: &str) -> Result<(), ManagerV2ClientError> {
+    if !(3..=128).contains(&profile_id.len())
+        || !profile_id
+            .bytes()
+            .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return Err(ManagerV2ClientError::InvalidProfileId);
+    }
+    Ok(())
+}
+
 fn validate_response_headers(
     headers: &reqwest::header::HeaderMap,
 ) -> Result<(), ManagerV2ClientError> {
@@ -272,6 +300,8 @@ fn validate_response_headers(
 pub enum ManagerV2ClientError {
     #[error("Manager-v2 Source Proxy origin is invalid")]
     InvalidSourceProxyOrigin,
+    #[error("Manager-v2 deployment profile is invalid")]
+    InvalidProfileId,
     #[error("Manager-v2 Source Proxy trust anchor is required")]
     MissingTrustAnchor,
     #[error("Manager-v2 Source Proxy trust anchor is invalid")]
