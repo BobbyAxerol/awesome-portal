@@ -781,10 +781,12 @@ function DriftChart() {
 
 /** Equity vs the approved run: expected band, backtest dashed, paper solid. */
 function CryptoEquity({ asOf }: { asOf: string | null }) {
-  const rows = researchBand(30, "2026-08-22", 0.012);
-  // The projection's own annotation — the KPI strip's −2.14% max drawdown,
-  // placed on the day it happened. The chart repeats, it never recomputes.
-  const dd = rows.reduce((min, r) => (r.pp < min.pp ? r : min), rows[0]);
+  // The dip sits at index 19 = 2026-08-12: the KPI strip's −2.14% max drawdown
+  // happened on a stated day, and the annotation sits on that day's trough
+  // rather than floating where a label was pinned. Repeats the KPI, never
+  // recomputes it.
+  const rows = researchBand(30, "2026-08-22", 0.012, 19);
+  const dd = rows[19];
   return (
     <LinesChart
       height={230}

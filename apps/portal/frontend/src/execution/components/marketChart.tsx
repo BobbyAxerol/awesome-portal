@@ -89,6 +89,7 @@ export function CandlesChart({
     });
     return baseOption({
       legend: { show: false },
+      dataZoom: [],
       grid: { left: 8, right: 64, top: 12, bottom: 24, containLabel: true },
       xAxis: { type: "category", data: cats, axisLabel: { interval: Math.max(0, Math.ceil(cats.length / 8) - 1) } },
       yAxis: { scale: true, position: "right" },
@@ -234,7 +235,11 @@ export function LinesChart({
     });
     return baseOption({
       legend: { show: false },
+      dataZoom: [],
       grid: { left: 8, right: 56, top: 14, bottom: 24, containLabel: true },
+      // MM-DD with overlap hiding: the full ISO tick of the shared theme is
+      // right for a wide research chart and collides at panel width.
+      xAxis: { type: "time", axisLabel: { hideOverlap: true, formatter: (v: number) => new Date(v).toISOString().slice(5, 10) } },
       yAxis: { scale: true, position: "right", ...(yFormatter ? { axisLabel: { formatter: (v: number) => yFormatter(v) } } : {}) },
       tooltip: {
         formatter: (params) => {
@@ -275,6 +280,7 @@ export function BarsChart({
     const bad = toneColor("bad");
     return baseOption({
       legend: { show: false },
+      dataZoom: [],
       grid: { left: 8, right: 56, top: 12, bottom: 24, containLabel: true },
       xAxis: { type: "category", data: points.map((p) => p[0]), axisLabel: { interval: Math.max(0, Math.ceil(points.length / 7) - 1) } },
       yAxis: { position: "right", ...(yFormatter ? { axisLabel: { formatter: (v: number) => yFormatter(v) } } : {}) },

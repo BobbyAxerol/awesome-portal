@@ -339,16 +339,19 @@ export function paperCandles(): { candles: { t: string; o: number; h: number; l:
 }
 
 /** Daily points over a window: [date, backtest, paper, lo, hi] — the research band. */
-export function researchBand(days: number, endIso: string, lag: number): { t: string; bt: number; pp: number; lo: number; hi: number }[] {
+export function researchBand(days: number, endIso: string, lag: number, dipAt?: number): { t: string; bt: number; pp: number; lo: number; hi: number }[] {
   const end = new Date(endIso).getTime();
   const out = [] as { t: string; bt: number; pp: number; lo: number; hi: number }[];
   let bt = 0, pp = 0;
   for (let i = 0; i < days; i++) {
     bt += 0.12 + 0.05 * Math.sin(i / 4) + det(i, 2.2) * 0.04;
     pp += 0.12 + 0.05 * Math.sin(i / 4) + det(i, 9.1) * 0.1 - lag;
+    // The KPI strip's max drawdown happened on a stated day; the chart's data
+    // carries that trough on that day, so the annotation sits where it says.
+    const dip = dipAt !== undefined ? 0.55 * Math.exp(-((i - dipAt) ** 2) / 3) : 0;
     const s = 0.25 + i * 0.028;
     const t = new Date(end - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10);
-    out.push({ t, bt: r2(bt), pp: r2(pp), lo: r2(bt - s), hi: r2(bt + s) });
+    out.push({ t, bt: r2(bt), pp: r2(pp - dip), lo: r2(bt - s), hi: r2(bt + s) });
   }
   return out;
 }
