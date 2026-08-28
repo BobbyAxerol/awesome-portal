@@ -887,7 +887,7 @@ function Drift({
         <span className="exec-pw-note">{head.legend}</span>
         <span className="exec-a3-spacer" />
         <span className="exec-pw-driftnow" data-tone={head.tone}>{head.now}</span>
-        <span className="exec-pw-note">{head.run}</span>
+        <span className="exec-pw-note">{head.legend} · {head.run}</span>
       </header>
       <div className="exec-pw-plot exec-pw-driftplot">
         <svg viewBox="0 0 620 150" className="exec-pw-svg" role="img" aria-label="Paper against the backtest expectation, inside a one-sigma band" style={{ fontFamily: "var(--font-mono)" }}>
