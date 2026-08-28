@@ -1,6 +1,6 @@
 # EX-BE-02A — Manager-v2 Edge Read-through API
 
-Status: **BACKEND_COMPLETE / RUNTIME_QUALIFICATION_IN_PROGRESS / PAPER_ONLY**
+Status: **BACKEND_COMPLETE / PRIVATE_PAPER_RUNTIME_QUALIFIED / PAPER_ONLY**
 
 Date: 2026-08-28  
 Portal branch: `feat/manager-v2-paper-read`  
@@ -332,3 +332,85 @@ authorized by this implementation.
   with `--network none`, read-only root, the existing root-owned signer mount
   and a fresh SGP 0700 assertion directory. A failed build/transfer/one-shot
   gate stops before any Edge replacement.
+
+### 2026-08-28 — one-shot candidate image build and offline smoke
+
+- Built the Control API candidate from commit `8569428` with the pinned
+  `node:22.23.2-alpine3.24` base. Local immutable image reference:
+  `portal-control-api-manager-v2:8569428`; local image ID:
+  `sha256:05ef7199760bd08928416fa9a6fad868f76e094131e81fb8701b634ba4542f54`
+  (64,532,522 bytes). It is a local qualification candidate only and has not
+  replaced, restarted, published or signed any Control API runtime image.
+- Exercised the final compiled CLI from that image under the intended one-shot
+  constraints: `--network none`, read-only root filesystem, all capabilities
+  dropped, `no-new-privileges`, a bounded noexec tmpfs, caller UID, a temporary
+  0600 RSA key mount and a fresh 0700 evidence directory. It wrote the
+  11-record corpus without token output; the manifest reports only
+  `execution:manager-v2:read` and `valid.jwt` is mode 0600.
+- A first local smoke preflight stopped before the container began because the
+  sandbox disallows `chown` on its temporary directory. Re-running with that
+  directory owner's UID passed; this is not a candidate/runtime defect. Both
+  paths used a cleanup trap, and the disposable key, JWT corpus and directory
+  were removed. No SGP/AWS container or data changed.
+- **Next bounded action:** check that the candidate tag is absent on SGP, then
+  stream the image directly through the strict pinned SSH session to
+  `sudo -n docker load` (no tarball retained). After image-ID verification,
+  run the same isolated signer against the pre-existing SGP secret files.
+
+### 2026-08-28 — private Paper runtime qualification closeout
+
+- The candidate image was streamed directly through the pinned SGP SSH channel
+  and its loaded image ID exactly matched the local build ID. It ran only as
+  `docker run --rm --network none --read-only` with all capabilities dropped,
+  no public port, the existing root-owned delegation-key mount, and a
+  short-lived mode-0700 corpus directory. The real SGP signer preflight
+  produced the exact Manager resource, 11 negative/positive corpus records and
+  a mode-0600 valid token; all preflight artifacts were removed.
+- Two initial operator-runner attempts stopped before any `curl` request: SGP
+  lacks `jq`, and its deliberately root-only runtime parent prevents the
+  operator from traversing a temporary child directory. Both traps removed the
+  corpus. The final matrix used an owner-only `mktemp` directory under `/tmp`
+  (0700) while the signer key remained root-only under `/srv`; this is the
+  correct ephemeral boundary and all artifacts were removed after the run.
+- Immediately before mutation, the retained predecessor Edge was healthy on
+  `ghcr.io/bobbyaxerol/portal-execution-edge@sha256:c67dc1dcb938fc1fa64070ac72d4e1dcc5cace2355ce813e2a3dfc89ba7a480b`.
+  The only runtime mutation was a replacement of
+  `portal-execution-edge-execution-edge-1` with the existing tested candidate
+  `portal-execution-edge-manager-v2:1a6f99b-activation`
+  (`sha256:acf792c7831f1f7a16dcf2a004fa797a9e9b4812ba6b83f6fd0a3ee216f995db`).
+  No Control API service was restarted; Source Proxy, Manager issuer/facade,
+  Trading System, PostgreSQL, roles, secrets and JWKS were not changed.
+- The live container is `running/healthy`, restart count 0, with actual flags:
+  `EDGE_ENVIRONMENT=paper`, `EDGE_MANAGER_V2_READ_ENABLED=true`, and source
+  probes, projection ingestion, realtime SSE, analytics query and command
+  relay all `false`. Source Proxy, both Manager containers and projection
+  PostgreSQL remain healthy with restart count 0.
+- SGP→AWS mTLS TLS 1.3/HTTP-2 qualification passed exactly 6/6; only bounded
+  metadata is retained here:
+
+  | Case | Expected | Result | Bytes | Elapsed | SHA-256 body |
+  | --- | ---: | ---: | ---: | ---: | --- |
+  | catalogue | 200 | 200 | 130537 | 0.287509 s | `aa8a173fbb5e98f583419c44a04a3b297c4bd4b703766ab71f7504da259d5e68` |
+  | capabilities | 200 | 200 | 1520 | 0.171247 s | `5b448e1dfeeaf22e6e63e8441cd5b4aa9f517fd015ac4951994560c533885346` |
+  | `portfolio` projection, limit 1 | 200 | 200 | 1931 | 0.198759 s | `f1d91cc46db0058b69daa8867dc48d14d914e6f7e78f9d20c698ab2e6a8085be` |
+  | first catalogue relation, limit 1 | 200 | 200 | 2103 | 0.184978 s | `547fd9009f46a2b3c9a242cbe294002315fa9a265eb85a54cc59e8069ca6549d` |
+  | valid mTLS, no JWT | 401 | 401 | 0 | 0.199595 s | empty SHA-256 |
+  | valid mTLS, valid JWT with `execution:command-center` | 403 | 403 | 0 | 0.201578 s | empty SHA-256 |
+
+  The successful calls carried only the fresh 45-second
+  `execution:manager-v2:read` assertion; tokens, header files and response
+  bodies were never printed or retained.
+- Post-check from the new Edge start found six Manager Source Proxy requests
+  and zero V1, event or command requests; Edge error-line count was zero and
+  no temporary assertion directory remained. The one-shot Control API
+  candidate image was verified unused and removed from both SGP and local image
+  stores. The active Edge candidate remains retained by its running container.
+- Compose emitted a pre-existing projection-volume label mismatch warning but
+  explicitly left that volume untouched. Projection is dark and was not
+  restarted; reconciling a shared projection-volume label is outside this
+  Manager read qualification and would require separate data-authority review.
+- **Closure:** this phase is runtime-qualified for the fixed private Paper
+  profile. A later Portal Control API/BFF consumer may call these four internal
+  routes for product delivery, but it is not required for this route/runtime
+  qualification and is not a defect of it. Browser/UI, cache/projection,
+  sandbox/canary/live and command scope remain independently gated.
