@@ -1158,3 +1158,63 @@ still `data_mode: NONE`; `POST_ONLY`/`REDUCE_ONLY` are order flags, not order
 types, so the "executed types" list needs a normalisation rule; the `stalled`
 threshold; testnet venue naming (`OKX_TESTNET` vs `OKX` + `testnet:true`); and
 where the smoke plan `sp_*` lives.
+
+### 8.21 Backend request đang treo — BR-EX-60 / BR-EX-61 (mở 2026-08-28)
+
+Theo CLAUDE.md §5. Intake chính thức là §7.2 của
+`portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+(commit `5950da5`); dưới đây là bản rút gọn để soát lại mỗi đầu slice (§7.6).
+
+| Request | Trạng thái | Thứ đang chặn |
+|---|---|---|
+| BR-EX-60 `sandbox-overview.v1` | `RECEIVED` — chờ codex trả `CONTRACT_PLANNED` | màn `/deployments/sandbox` đang chạy hoàn toàn bằng smoke |
+| BR-EX-61 `sandbox-certification.v1.1` + 4 route `sandbox.*` | `RECEIVED` | thân hi-fi của workbench là smoke; 4 action mới có plan, chưa có apply |
+
+```text
+Backend request (@codex) — BR-EX-60
+- Endpoint/field cần: GET /api/v1/execution/sandbox/overview → sandbox-overview.v1
+  (summary · kpis{in_certification, halted{by_finding,by_operator}, open_findings,
+  test_fund_equity{enters_portfolio_nav:false}, broker_sync{age,policy,state}} ·
+  rows[]{deployment, alpha, venue·account, portfolio→target+approval,
+  certification{passed,total,current_step,steps[7]}, runtime_state|null, halt_reason,
+  in_stage_days, stalled, next_step{action_key,enabled,blocker_codes}, lineage, note} ·
+  order_journal{rows[], order_types[], reject_reasons[]} · connectivity · recently_certified[])
+- Lý do UI: /deployments/sandbox là canonical route của feature SANDBOX_TRADING và
+  chưa có màn nào. Câu hỏi mở đầu workflow chứng nhận — "cái gì đang trong
+  certification, cái gì đang chặn nó" — hiện không có chỗ nào trả lời.
+- Ảnh hưởng hiện tại: vào route đó mở thẳng workbench của deployment mà fixture
+  tình cờ mang theo. Màn mới đang đọc src/execution/sandbox.smoke.ts.
+- Đề xuất schema: phụ lục O.2 (response mẫu + map cột thật + 6 quy tắc) và A.60
+  (bảng field/type/null/authority) trong BACKEND_REQUEST_HIFI_V2_2026-08-25.md.
+- Codex phải chốt (không đoán): O.5.1 registry data_mode · O.5.2 chuẩn hoá
+  POST_ONLY/REDUCE_ONLY (là cờ, không phải order_type) · O.5.3 ngưỡng stalled ·
+  O.5.4 tên venue testnet.
+```
+
+```text
+Backend request (@codex) — BR-EX-61
+- Endpoint/field cần: sandbox-certification.v1 → v1.1 (additive: identity ·
+  broker_freshness · reconciliation_view{internal,broker,difference} ·
+  findings_rows[] · order_type_certification · execution_quality · smoke_plan ·
+  cleanup · actions[] · peers[]) + 3 route lệnh:
+  POST …/sandbox/{id}/plan {action_key} → plan.v1
+  POST …/sandbox/{id}/apply {plan_id, idempotency_key} → operation.v1
+  GET  …/operations/{operation_id} → verify
+- Lý do UI: v1 công bố steps/findings/panels/plans/timeline nhưng không công bố
+  thứ mà workbench dùng để quyết: diff nội bộ↔broker có thẩm quyền, các loại
+  lệnh alpha dùng trong production mà chưa từng thực thi, chất lượng thực thi
+  kèm INSUFFICIENT_DATA, smoke plan bounded, checklist cleanup, và bốn action
+  kèm blocker của chúng.
+- Ảnh hưởng hiện tại: thân hi-fi đọc smoke; ba action mở được plan nhưng Apply
+  disabled vì chưa có route. Hai claim vẫn là của contract và không bịa:
+  runtime_state null render "runtime not stated", verdict lấy từ gate.
+- Đề xuất schema: phụ lục O.3 (response mẫu + map cột thật + 6 quy tắc), O.3.3
+  (routes + typed error), A.61 (bảng field), D (5 dòng error mới).
+- Codex phải chốt (không đoán): O.5.5 smoke plan sp_* nằm ở bảng nào (ảnh hưởng
+  cả Admin Action Drawer).
+```
+
+**Bất biến frontend sẽ không tự phá, dù backend trả gì:** test funds không vào
+NAV portfolio; certification đứng im không tự hết hạn; `INSUFFICIENT_DATA`
+không bao giờ thành 0; `PARTIAL` không bao giờ xanh; và một action server sẽ từ
+chối thì **không render thành nút disabled** — nó thành chữ nêu đúng blocker.

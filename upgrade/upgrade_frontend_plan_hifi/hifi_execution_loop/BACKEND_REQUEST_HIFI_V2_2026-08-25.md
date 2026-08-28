@@ -411,6 +411,46 @@ Additive: `masthead`, `meta`, `lifecycle[] + current`, `kpis`, `broker_truth` (k
 
 ---
 
+## A.60 · `sandbox-overview.v1` — Sandbox Overview (entry WF 1d)
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `kpis.in_certification` | `{value:int, note}` | no | PORTAL_PROJECTION | = `len(rows)`; note giải thích "7-step gate to canary" |
+| `kpis.halted` | `{value:int, by_finding:int, by_operator:int}` | no | PORTAL_CONTROL | `value == by_finding + by_operator` (test) |
+| `kpis.open_findings` | `{value:int, worst_severity, ref{kind,id}}` | no | `reconciliation_findings(status='OPEN')` | `worst_severity` ∈ INFO/WARNING/ERROR/CRITICAL |
+| `kpis.test_fund_equity` | `{value:string, ccy, enters_portfolio_nav:false}` | no | `account_equity_snapshots` (mode='sandbox') | **cờ false là bắt buộc**; giá trị này không được xuất hiện trong bất kỳ NAV portfolio nào |
+| `kpis.broker_sync` | `{age_seconds:int, policy_seconds:int, state, detail}` | no | `broker_account_sync_current_state` | `state = OK` chỉ khi `age ≤ policy` |
+| `rows[].certification` | `{passed:int, total:7, current_step, steps[{key,state}]}` | no | PORTAL certification machine | `passed == count(state=='PASS')`; `current_step` = bước không-PASS đầu tiên; `key` ∈ 7 khoá ở O.1 |
+| `rows[].steps[].state` | enum `PASS\|PENDING\|FAIL\|BLOCKED\|NOT_STARTED` | no | như trên | BLOCKED ≠ FAIL: BLOCKED là "bước trước chưa xong" |
+| `rows[].runtime_state` | `string\|null` | **yes** | `strategy_deployments` | null giữ nguyên null — frontend render "runtime not stated", không dịch thành HALTED |
+| `rows[].halt_reason` | enum `FINDING\|OPERATOR\|null` | yes | `operator_operations` + findings | quyết định màu chip status |
+| `rows[].in_stage_days` / `stalled` | `int` / `bool` | no | now − `stage_entered_at` | `stalled == true` ⇒ `meta.stalled_rule` không null |
+| `rows[].next_step` | `{label, action_key, enabled:bool, blocker_codes[]}` | no | PORTAL command policy | fail-closed: `enabled:true` là quyết định có chủ đích |
+| `rows[].target_approval` | `{id, status}\|null` | yes | PORTAL approvals | portfolio đích chỉ hiện khi có approval đang chờ |
+| `order_journal.rows[]` | `[{deployment_id, alpha, orders, filled, rejected, expired, success_pct:string}]` | no | `orders` (mode='sandbox', 7d) | `success_pct == filled/orders` decimal exact, không làm tròn hai lần |
+| `order_journal.order_types[]` | `[{type, count, certified:bool, required?:bool, required_min?:int}]` | no | `orders(order_type, post_only, reduce_only)` + manifest alpha | `POST_ONLY`/`REDUCE_ONLY` là **cờ**, server chuẩn hoá về danh sách "loại đã thực thi" (O.5.2); `certified` là quyết định của server, **không phải** `count > 0` |
+| `connectivity.ack_latency_ms` / `fill_latency_ms` | `{p50:int, p95:int}` | yes | `domain_events` ACK−SUBMIT / `fills.trade_time`−`orders.submitted_at` | testnet = baseline expectation, không phải production SLO |
+| `recently_certified[]` | `[{at, alpha, venue, verdict, passed, total, exit_review_id, promoted_to{stage, deployment_id, day?, total_days?}}]` | no | PORTAL exit reviews `SX-*` 90d | bằng chứng chứng nhận là vĩnh viễn, đi theo artifact |
+
+## A.61 · `sandbox-certification.v1.1` — Sandbox Certification (WF 1d)
+
+Additive trên `sandbox-certification.v1`; không đổi tên/kiểu trường nào đang có.
+
+| field | type | null? | authority | ví dụ / rule |
+|---|---|---|---|---|
+| `identity` | `{alpha, venue, credential{id,status}, external_account_ref}` | no | `venue_credentials`, `venue_accounts` | **không bao giờ** trả key material — chỉ `status` |
+| `broker_freshness` | `{source, age_seconds:int, policy_seconds:int, state, as_of}` | no | `broker_account_sync_current_state` | `state` phải suy ra từ `age` vs `policy` — một chữ FRESH cố định không phải là một reading |
+| `reconciliation_view.internal` | `{positions:int, open_orders:int, equity:string, reservations:int, authority:"EXECUTION"}` | yes | `positions_v2`, `orders`, `account_equity_snapshots`, `order_pending_exposure` | nhánh không đọc được → `unavailable`, không phải 0 |
+| `reconciliation_view.broker` | `{positions, open_orders, balance, source, as_of, digest}` | yes | `broker_account_sync_current_state` | `digest` = `execution_state_digest` |
+| `reconciliation_view.difference` | `{positions, open_orders, balance, formula:"diff.v1"}` mỗi ô `MATCH\|{state:"DELTA",value,severity,explanation}\|MISMATCH` | yes | DERIVED | **server tính**, client chỉ tô; nguồn thiếu → `unavailable`, không bao giờ `MATCH` |
+| `findings_rows[]` | `[{finding_id, status, severity, identity, local, broker, action{kind,label,href}}]` | no | `reconciliation_findings` + `details` | `action.kind` ∈ ACCEPT/RESOLVE/NONE |
+| `order_type_certification` | `{venue_scope, rows[{type,state,evidence}], blocking:bool, blocking_rule:string}` | no | `orders` + manifest alpha | `state` ∈ CERTIFIED/PENDING/UNTESTED; khi `blocking:false` **phải** nói vì sao — một cờ không lý do là một cờ không kiểm được |
+| `execution_quality` | `{ack_latency_ms{p50,p95,samples}, fill_latency_ms{p50,samples}, slippage{state\|value, min_samples, samples}, reject_rate{rejected,total}, formula, source}` | yes | `domain_events`, `fills`, `orders` | `samples < min_samples` ⇒ `state:"INSUFFICIENT_DATA"` và **không có** `value` |
+| `smoke_plan` | `{plan_id, bounded:true, quantity, instrument, capital_cap{value,ccy}, timebox_minutes, on_expiry:"AUTO_HALT", operator, approved_by, state}` | yes | PORTAL smoke plan `sp_*` + approval scope | bounded là bất biến: quantity + capital cap + timebox đều bắt buộc |
+| `cleanup` | `{rows[{key, ok:bool}], exit_rule}` | no | `orders`, `positions_v2`, `order_pending_exposure`, broker sync | `key` ∈ no_open_order / no_residual_position / reservations_released / final_sync_and_clean_recon |
+| `actions[]` | `[{key, label, enabled:bool, risk_tier, blocker_codes[]}]` | no | PORTAL command policy | `key` ∈ `sandbox.broker_sync\|reconcile_dry_run\|smoke_open\|request_exit_review`; fail-closed mặc định (O.3.2.1) |
+| `peers[]` | `[{deployment_id, alpha, venue, passed, total, halt_reason}]` | no | cùng truy vấn `rows[]` của BR-EX-60 | **không** mang `runtime_state` nếu server không publish — switcher đã bỏ chữ HALTED vì lý do này |
+
 # Phụ lục B — Definition of Ready (§5.1 backend plan) điền sẵn cho từng gói
 
 Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền quyết ghi **[codex quyết]**.
@@ -435,6 +475,8 @@ Codex chỉ cần xác nhận/sửa từng ô; ô nào tôi không có quyền q
 | **57** live full v1.1 | Codex · `dev` | READ (+ existing protective actions) | `live-full.v1` → v1.1 additive | 1 deployment/screen; positions ≤200 | viewer read; actions ADMIN step-up | missing additive → v1 rendering | existing contract; exit reviews/approvals ids | fixture update; lifecycle id consistency; frontend `liveFull.test` |
 | **59** canary v1.1 | Codex · `dev` | READ (+ existing protective/scale actions) | `canary-control-room.v1` → v1.1 additive | 1 deployment; series ≤400 pts × 3 | viewer read; actions ADMIN step-up + dual | missing additive → v1 rendering; sync STALE → DEGRADED | existing contract; approvals/conditions; exit reviews; paper twin | fixture update; gate-mirror consistency; frontend `canary.test` |
 | **41** stage telemetry | Codex · `dev` (source-dark schema first, N10) | READ; PORTAL_PROJECTION/TRADING_SYSTEM/BROKER/DERIVED per 41.x | new `stage-equity.v1`, `envelope-consumption.v1`, `execution-quality.v1`, `positions.v1`, `contribution.v1`; `sandbox-certification.v1.1` | ≤5,000 pts/series; caps ≤8; buckets ≤12; positions ≤500 | viewer read | per-panel honest states (today) | N06 Paper qualification for source-backed values | per-kind fixtures; exact-decimal pure-engine tests |
+| **60** sandbox overview | Codex · `dev` profile fixture→shadow | READ; PORTAL_PROJECTION over `strategy_deployments(mode='sandbox')` ⋈ accounts ⋈ venue_accounts ⋈ allocations · TRADING_SYSTEM (`orders`/`fills`/`domain_events`) · BROKER (sync) · DERIVED (success_pct, latency) | new `sandbox-overview.v1` | ≤50 deployments in certification; journal 7d exact counts; connectivity 24h; freshness = `as_of` per second | reader: any Execution viewer; no write | nguồn không đọc được → `panel_state:"unavailable"` cho nhánh đó, mảng rỗng **không** được đọc là sạch; `runtime_state` null giữ null | registry: screen `SANDBOX_TRADING_SCREEN` còn `data_mode: NONE` → **[codex quyết]** khi 60 giao; BR-EX-43 alerts summary | fixture `execution-sandbox-overview.valid.json`; tests O.4.1–3, O.4.8; frontend `sandbox.test` |
+| **61** sandbox cert v1.1 | Codex · `dev` | READ + 4 governed mutations; PORTAL_CONTROL (certification machine, smoke plan, command policy) · BROKER · TRADING_SYSTEM · DERIVED (`diff.v1`, `execution_quality.v1`) | `sandbox-certification.v1` → v1.1 additive (không đổi kiểu trường cũ) + 4 route lệnh `sandbox.*` | 1 deployment/screen; findings ≤200 keyset; peers ≤20 | viewer read; 4 action = ADMIN step-up, plan → apply → verify; fail-closed mặc định | thiếu nhánh additive → render v1; broker STALE / CRITICAL finding / cleanup pending ⇒ smoke + exit disabled kèm codes; slippage dưới ngưỡng ⇒ INSUFFICIENT_DATA, không phải 0 | existing `sandbox-certification.v1`; BR-EX-58 blocker catalog; BR-EX-41 stage telemetry; **[codex quyết]** O.5.2–O.5.5 | fixtures `execution-sandbox-certification.dep_77.v1_1.valid.json` + `.dep_91.v1_1.valid.json`; tests O.4.4–O.4.7; frontend `sandbox.test`, `certification.test` (v1 chạy lại không sửa) |
 
 # Phụ lục C — OpenAPI path stubs (đề xuất; codex quyết tên cuối)
 
@@ -457,6 +499,10 @@ paths:
   /api/v1/execution/live:                      # GET ?filter&venue → live-overview.v1 (BR-EX-56); SSE live.tape
   /api/v1/execution/deployments/{id}/live:     # v1.1 additive (BR-EX-57)
   /api/v1/execution/deployments/{id}/canary:   # v1.1 additive (BR-EX-59)
+  /api/v1/execution/sandbox/overview:          # GET → sandbox-overview.v1 (BR-EX-60)
+  /api/v1/execution/sandbox/{deployment_id}:   # v1.1 additive (BR-EX-61)
+  /api/v1/execution/sandbox/{deployment_id}/plan:   # POST {action_key} → plan.v1        (BR-EX-61)
+  /api/v1/execution/sandbox/{deployment_id}/apply:  # POST {plan_id, idempotency_key} → operation.v1 (BR-EX-61)
   /api/v1/execution/fleet:                     # GET ?stage&venue&owner[&cursor] → fleet-list.v1 (BR-EX-49)
   /api/v1/execution/deployments/{id}/replay:   # GET ?symbol&interval=1h&window=120 → replay.v1 (BR-EX-50)
   /api/v1/execution/deployments/{id}/stage-equity:            # 41.1
@@ -477,6 +523,11 @@ paths:
 | denied | `403 {"error":{"code":"EXECUTION_READ_DENIED"}}` | state denied (không lộ payload) |
 | stream auth hết hạn | `event: error {"code":"AUTH_EXPIRED"}` (corpus hiện có) | chip SESSION EXPIRED, values-as-read |
 | cursor lệch | `409 CURSOR_AHEAD` / `CURSOR_EXPIRED` (H-8) | reload notice |
+| certification bị chặn (BR-EX-61) | `409 {"error":{"code":"CERTIFICATION_BLOCKED","blocker_codes":["CRITICAL_FINDING_OPEN"]}}` | action **không render thành nút disabled** — nó thành chữ nêu đúng blocker |
+| broker snapshot quá hạn (BR-EX-61) | `409 {"error":{"code":"BROKER_STALE","age_seconds":88,"policy_seconds":60}}` | chip STALE + tuổi thật; smoke/exit bị chặn, sync/dry-run vẫn mở |
+| mở hai cửa sổ smoke (BR-EX-61) | `409 {"error":{"code":"SMOKE_WINDOW_OPEN","plan_id":"sp_07"}}` | trỏ về cửa sổ đang mở, không mở cái thứ hai |
+| step-up chưa có (4 action sandbox) | `428 {"error":{"code":"STEP_UP_REQUIRED"}}` | drawer step-up; không apply |
+| verify ra PARTIAL | `operation.v1 {status:"PARTIAL", ...}` | **không bao giờ** render xanh — PARTIAL là trạng thái thứ ba, không phải "gần xong" |
 
 # Phụ lục E — thứ tự giao & điều kiện đóng từng gói (Claude phía frontend)
 
@@ -493,16 +544,19 @@ paths:
 11. **56/57**: xoá `live.smoke.ts`, re-record `el-v2-06-live` + `el-v2-08-live-overview`.
 12. **59**: xoá `canary.smoke.ts`, re-record `el-v2-06-canary`.
 13. **34/40**: xoá `alpha360.smoke.ts`.
+14. **60**: xoá nửa overview của `sandbox.smoke.ts` (`SANDBOX_SMOKE_DATA`, `useSandboxTick`), codex đổi `data_mode` của `SANDBOX_TRADING_SCREEN`, re-record `el-v2-08-sandbox-overview` (baseline mới).
+15. **61**: xoá nửa certification (`CERT_SMOKE_DATA`, `useCertTick`) và cả module, re-record `execution-sandbox-certification-1d-*` + `el-v2-06-sandbox-dep-77`; bốn action `sandbox.*` nối vào plan → apply → verify khi N13 duyệt activation.
 
 Mỗi bước: handoff codex kèm **Required frontend tests**; tôi regenerate `portal-api.d.ts`, nạp fixture canonical
 trong test (không chép tay), ghi `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` vào ledger §3, tick grammar §8.
 
 # Phụ lục F — cách codex nhận request này
 
-- **Intake chính thức:** 19 hàng BR-EX-41…59 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+- **Intake chính thức:** 21 hàng BR-EX-41…61 trong §7.2 của `portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
   (đang là sửa unstaged trên `feat/execution-n04-lease-aware-consumer`). Bản patch để apply lại nếu cần:
-  `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, 8 hàng nguyên văn).
-- **Chi tiết field/type/enum/ví dụ:** phụ lục A; DoR: phụ lục B; path: C; error: D; thứ tự: E.
+  `BACKEND_PLAN_7_2_ROWS_2026-08-25.md` (cùng thư mục, nguyên văn cả 21 hàng).
+- **Chi tiết field/type/enum/ví dụ:** phụ lục A (A.41–A.61); DoR: phụ lục B; path: C; error: D; thứ tự: E.
+- **Đặc tả đầy đủ theo gói:** G (49) · H (50) · I (51) · K (52/53/54) · L (56/57/58) · M (59) · **O (60/61)**; N = ma trận màn ↔ request.
 - Trả lời theo §7.1: `RECEIVED → NEEDS_CLARIFICATION | CONTRACT_PLANNED | OWNER_DECISION_PENDING | EXTERNAL_CONTRACT_PENDING | REJECTED`,
   ghi vào cột Status §7.2 và `EXECUTION_REQUEST_LEDGER.md` §3.
 
