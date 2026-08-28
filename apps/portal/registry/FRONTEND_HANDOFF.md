@@ -1218,3 +1218,36 @@ Backend request (@codex) — BR-EX-61
 NAV portfolio; certification đứng im không tự hết hạn; `INSUFFICIENT_DATA`
 không bao giờ thành 0; `PARTIAL` không bao giờ xanh; và một action server sẽ từ
 chối thì **không render thành nút disabled** — nó thành chữ nêu đúng blocker.
+
+### 8.22 Paper: the hi-fi was mostly already published (2026-08-28)
+
+Recorded per §7.3, because the finding matters more than the change.
+
+Sandbox needed two new contracts. Paper needed almost nothing: `paper-workbench.v1`
+already publishes the KPIs, lineage, lifecycle rail, observation gate and its
+unmet criteria, drift vs the approved run, runtime health, accounting, portfolio
+contribution and all four journals. Rebuilding the three screens to hi-fi WF 1c /
+4h / 4b was therefore a *layout* pass, not a data pass — the smoke module is a
+quarter the size of Sandbox's and holds only drawings plus the switcher.
+
+Four decisions taken while doing it:
+
+1. **The variant is chosen by the venue's calendar, not by the deployment id.**
+   The id on the route is whatever the operator typed; a session-aware venue is
+   a fact of the contract. Keying on the id had the VN screen render the crypto
+   hi-fi whenever the preview route used a different identifier.
+2. **The switcher chip for the deployment being read prints the contract's own
+   progress.** A chip saying 12/30 above a rail saying 30/30 is the page
+   arguing with itself, and the reader has no way to tell which half is stale.
+3. **Panels moved onto the page keep one copy.** Runtime health, accounting,
+   drift and contribution left their tabs for the workbench body; the tabs now
+   name where they went. Two copies of a figure is two things to keep in
+   agreement.
+4. **Full coverage may sit beside an unmet gate.** The exit review's masthead
+   shows `30 / 30 days` next to `GATE UNMET` on purpose — the policy knows
+   things the coverage numbers do not show, and the verdict stays the server's.
+
+Backend requests: **BR-EX-62** (`paper-workbench.v1.1` + `paper-list.v1`) and
+**BR-EX-63** (`paper-exit-review.v1.1`), specified in full in §7.5 of the
+unified plan. Smoke module `src/execution/paper.smoke.ts` carries the deletion
+contract.

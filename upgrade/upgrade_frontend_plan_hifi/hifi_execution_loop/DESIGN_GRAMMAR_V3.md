@@ -89,6 +89,7 @@ re-record baseline màn đó, tick bảng này. Không trộn: smoke chưa bao g
 | Live Overview · Live Full Operations | `live.smoke.ts` | `LIVE_SMOKE`, `LIVE_SMOKE_MOTION` | BR-EX-56/57 (+43) | smoke |
 | Canary Control Room | `canary.smoke.ts` | `CANARY_SMOKE`, `CANARY_SMOKE_MOTION` | BR-EX-59 (+41/43) | smoke |
 | Sandbox Overview · Sandbox Certification | `sandbox.smoke.ts` | `SANDBOX_SMOKE`, `SANDBOX_SMOKE_MOTION` | BR-EX-60/61 (+41/58) | smoke |
+| Paper Workbench · Paper VNM · Paper Exit Review | `paper.smoke.ts` | `PAPER_SMOKE`, `PAPER_SMOKE_MOTION` | BR-EX-62/63 (+41) | smoke |
 | Alpha 360 · Insight | `alpha360.smoke.ts` | `ALPHA_INSIGHT_SMOKE` | BR-EX-34/40 | smoke |
 | Paper / Sandbox / Canary / Live | `stage.smoke.ts` | `STAGE_SMOKE` | BR-EX-41 | smoke |
 | Inbox · R1 · R2 · Exit · Queue · Blotter · Portfolio · Account · Drawer | — | — | (chưa dựng theo hi-fi mới; smoke khi Bobby gửi màn) | fixture contract |
