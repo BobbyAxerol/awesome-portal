@@ -2034,3 +2034,9 @@ The full source-to-Edge path has local/read-only evidence; Live currently has
 no observed canonical rows, so a Live read returns a truthful empty bounded
 result until that state exists. No production profile was auto-deployed or
 restarted by this implementation.
+
+**Final owner-policy coordination (2026-08-28):** the Trading System now also
+rejects a malformed private profile identifier before issuance, verification or
+source binding, using the same uppercase ASCII grammar as Edge and Control API.
+The focused owner Manager suite reran at 44/44 with scoped Ruff clean; this
+does not change Portal runtime configuration, routes or deployment state.

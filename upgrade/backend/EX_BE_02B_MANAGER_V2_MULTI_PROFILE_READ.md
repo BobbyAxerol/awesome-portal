@@ -122,7 +122,7 @@ catalogue contract.
     tests/unit/test_portal_execution_owner_03e_manager_facade.py \
     tests/unit/test_portal_execution_owner_03f_manager_issuer.py \
     tests/unit/test_portal_execution_owner_03f_publication.py
-  # 43 passed; one pre-existing test-only HMAC key-length warning.
+  # 44 passed; one pre-existing test-only HMAC key-length warning.
   ruff check … && ruff format --check …
   # passed; 6 files already formatted.
   ```
