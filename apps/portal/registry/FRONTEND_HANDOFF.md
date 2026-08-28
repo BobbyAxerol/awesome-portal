@@ -1288,3 +1288,52 @@ real routes.
 carry no href while they are pending. A stage a deployment has not reached has
 no decision to link to, and a link that opens someone else's deployment is worse
 than no link.
+
+### 8.23 Paper — the link map, and what the hi-fi asks for that no contract publishes (2026-08-28)
+
+Owner asked twice how the three Paper screens reach each other and the rest of
+the loop, so it is written down rather than answered in chat. Every row below
+was walked by a probe (`e2e/_probe-paper-links.spec.ts`) that opens each link
+and checks it does not land on the registry's not-found: **0 dead**.
+
+**Between the three**
+
+| From | Control | To |
+|---|---|---|
+| Workbench `dep_74` | switcher chip `VnMomo v0.9 · dep_102` | VN workbench |
+| Workbench `dep_74` | switcher chip `Grid v2.1 · dep_94 — 30/30 GATE MET → EX-771` | Paper Exit Review — a met gate goes to its review, not to another workbench |
+| Workbench (either) | `Request Paper Exit Review` | `EX-771?from=<the workbench and its tab>` |
+| VN workbench | switcher chip `Carry v3.2 · dep_74` | crypto workbench |
+| Exit Review | `dep_94` / `sessions` in Observation coverage | back to the workbench, at its Sessions tab |
+
+The switcher chip for the deployment being read prints the **contract's** own
+progress, not the smoke tail, so it can never contradict the rail four lines
+below it.
+
+**Out to the rest of the loop**
+
+| Control | Goes to | Why there |
+|---|---|---|
+| `Alpha 360° — all deployments →` | **Alpha Fleet** | see below — this is a deliberate departure from the hi-fi |
+| lineage `R1` / `R2` | Gate R1 / R2 Review | the decisions this deployment rests on |
+| lineage `portfolio` | Portfolio 360 (`PF-MAIN` / `PF-VN`) | where its capital sits |
+| lineage `account` | Account/Broker 360 | the account it trades through |
+| lineage `venue` | Accounts & Bindings | the binding behind that account |
+| lineage `artifact` | Alpha 360 · Audit tab | the digest everything is joined by |
+| journal footer `full blotter →` | Full Blotter | the order journal at portfolio scale |
+| Exit Review `run_5498` | QuantBT run | the approved evidence drift is measured against |
+| Exit Review `operations` | Operations Queue, scoped to the deployment | |
+| Exit Review activation plan | Sandbox — the next stage the promotion opens | |
+
+**One deliberate departure.** `Alpha 360°` points at the **fleet**, not at
+`/deployments/alphas/<id>`. A per-alpha 360 resolves one cast document in the
+preview, so the deep link opened a page titled with a *different* alpha — from
+Carry v3.2 the reader landed on Grid v2.1. The fleet answers "all deployments"
+correctly for every alpha and stops being a compromise the day BR-EX-49 ships.
+
+**What the hi-fi shows that no contract publishes.** The hi-fi masthead carries
+`● ACTIVE` — the deployment's runtime state — beside `✓ READY`, which is its
+readiness. `paper-workbench.v1` publishes readiness and freshness but **not
+runtime**, so the chip is absent rather than invented: a screen that printed
+ACTIVE from a readiness field would say a stopped deployment is running. Added
+to BR-EX-62 (§7.5.1) as `runtime_state`.
