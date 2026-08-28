@@ -1285,6 +1285,20 @@ deep-dive → ADR → slice → evidence discipline documented above.
   browser/UI, cache/projection, PostgreSQL change, poller, Source Proxy/D4/V1
   modification, command/Event/SSE/replay or runtime activation. Detail:
   [`EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md`](./backend/EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md).
+- **EX-BE-02A Manager-v2 Edge read-through API (2026-08-28, complete /
+  backend only / no runtime activation):** the existing private Rust Edge now
+  exposes four authenticated internal Paper catalogue/capability/projection/
+  relation-page reads through the sealed Manager-v2 client. They are protected
+  by private-server mTLS plus the exact delegated
+  `execution:manager-v2:read` resource and a default-off gate; no V1
+  admission/API key is passed to the Manager client. Responses preserve the
+  owner snapshot authority/as-of/freshness/trace with bounded pagination and
+  do not invent a global sequence. There is no browser/UI, cache/projection,
+  direct Trading DB, V1/D4/Source Proxy change, command/Event/SSE/replay or
+  runtime deployment. Rust 18+6+6 tests, rustfmt, strict Clippy and D2-dark
+  gates passed. A separately approved release must mint the named resource and
+  turn the gate on before active-runtime qualification. Detail:
+  [`EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md`](./backend/EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

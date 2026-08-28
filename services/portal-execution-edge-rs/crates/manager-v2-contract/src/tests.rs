@@ -295,3 +295,50 @@ fn unavailable_and_capabilities_are_typed_and_runtime_qualified() {
         Err(ContractError::InvalidUnavailableResult)
     ));
 }
+
+#[test]
+fn relayed_envelopes_preserve_owner_shape_without_validation_only_state() {
+    let catalogue = catalogue();
+    let orders = catalogue.relation("public", "orders").unwrap();
+    let request =
+        ManagerV2Request::relation_records(orders, None, PageLimit::new(2).unwrap()).unwrap();
+    let page = envelope(json!({
+        "relation": {"schema": "public", "relation": "orders"},
+        "items": [record("public", "orders", "record-key")],
+        "next_cursor": "page-cursor"
+    }));
+    let ManagerPayload::RelationRecords(response) =
+        decode_success(&request, &serde_json::to_vec(&page).unwrap()).unwrap()
+    else {
+        panic!("expected relation page");
+    };
+    let relayed = serde_json::to_value(&response).unwrap();
+    assert_eq!(relayed["contract_version"], RUNTIME_CONTRACT_REVISION);
+    assert_eq!(relayed["authority"], "EXECUTION_CELL");
+    assert_eq!(relayed["profile_id"], PROFILE_ID);
+    assert_eq!(relayed["availability"], "AVAILABLE");
+    assert_eq!(relayed["freshness"], "FRESH");
+    assert_eq!(relayed["data"]["next_cursor"], "page-cursor");
+    assert_eq!(
+        relayed["data"]["items"][0]["fields"]["amount"],
+        json!({"kind": "DECIMAL", "value": "12.5000"})
+    );
+    assert!(relayed.get("meta").is_none());
+    assert!(!relayed.to_string().contains("catalogue_digest"));
+    assert!(!relayed.to_string().contains("safe_column_names"));
+
+    let resumed = OpaqueCursor::from_relation_round_trip(
+        "page-cursor".to_owned(),
+        catalogue.relation("public", "orders").unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        serde_json::to_value(&resumed).unwrap(),
+        json!("page-cursor")
+    );
+    assert!(OpaqueCursor::from_relation_round_trip(
+        "cursor with spaces".to_owned(),
+        catalogue.relation("public", "orders").unwrap(),
+    )
+    .is_err());
+}

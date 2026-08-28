@@ -19,7 +19,7 @@ use analytics::{
     DerivedAnalytics, InsightBatchRequest,
 };
 use axum::{
-    extract::{Path as AxumPath, State},
+    extract::{Path as AxumPath, Query, State},
     http::{header::AUTHORIZATION, HeaderMap, HeaderValue, StatusCode},
     response::{sse::Event, IntoResponse, Response, Sse},
     routing::{get, post},
@@ -32,6 +32,13 @@ use execution_contracts::{
     CanonicalId, CapabilitySnapshot, CapabilityState, DeliveryProfile, ExecutionReadCapability,
 };
 use futures_util::stream;
+use manager_v2_client::{
+    ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError, ManagerV2ClientLimits,
+};
+use manager_v2_contract::{
+    ManagerCatalogue, ManagerPayload, ManagerRead, ManagerV2Request, OpaqueCursor, PageLimit,
+    ProjectionKind, DEFAULT_PAGE_LIMIT, MAXIMUM_RESPONSE_BYTES,
+};
 use projection_core::{
     evaluate_freshness, resume_decision, FreshnessInput, FreshnessPolicy, ProjectionCursor,
     ProjectionScope, ResumeDecision, VenueSessionState,
@@ -64,6 +71,7 @@ use ts_transport::{
 
 const MAX_SECRET_FILE_BYTES: u64 = 1024 * 1024;
 const ANALYTICS_SCREEN_SCHEMA_VERSION: &str = "execution.analytics.screen.v1";
+const MANAGER_V2_RESOURCE: &str = "execution:manager-v2:read";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeGate {
@@ -108,6 +116,7 @@ struct AppState {
     realtime_venue_session: VenueSessionState,
     analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
+    manager_v2_client: Option<ManagerV2Client>,
 }
 
 #[derive(Debug)]
@@ -128,6 +137,7 @@ struct EdgeConfig {
     source_api_key_file: Option<PathBuf>,
     source_gateway_digest: String,
     source_probes_enabled: RuntimeGate,
+    manager_v2_read_enabled: RuntimeGate,
     probe_alpha_id: Option<String>,
     probe_interval: Duration,
     transport_limits: TransportLimits,
@@ -173,6 +183,8 @@ impl EdgeConfig {
         let probe_interval_seconds = bounded_usize("EDGE_PROBE_INTERVAL_SECONDS", 30, 5, 300)?;
         let source_probes_enabled =
             RuntimeGate::from(strict_boolean("EDGE_SOURCE_PROBES_ENABLED", false)?);
+        let manager_v2_read_enabled =
+            RuntimeGate::from(strict_boolean("EDGE_MANAGER_V2_READ_ENABLED", false)?);
         let projection_ingestion_enabled =
             RuntimeGate::from(strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?);
         let realtime_sse_enabled =
@@ -216,6 +228,7 @@ impl EdgeConfig {
             source_api_key_file: optional_path("EDGE_SOURCE_API_KEY_FILE"),
             source_gateway_digest: required("EDGE_SOURCE_GATEWAY_DIGEST")?,
             source_probes_enabled,
+            manager_v2_read_enabled,
             probe_alpha_id: optional("EDGE_PROBE_ALPHA_ID"),
             probe_interval: Duration::from_secs(probe_interval_seconds as u64),
             transport_limits: transport_limits_from_environment()?,
@@ -337,21 +350,13 @@ async fn main() -> Result<(), ServiceError> {
 }
 
 async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
-    let certificate = read_file(&config.tls_certificate_file)?;
-    let private_key = read_file(&config.tls_private_key_file)?;
-    let client_ca = read_file(&config.tls_client_ca_file)?;
+    let EdgeTlsMaterial {
+        certificate,
+        private_key,
+        client_ca,
+    } = edge_tls_material(&config)?;
     let jwks = read_text(&config.delegation_jwks_file)?;
-    let source_ca = read_file(&config.source_ca_file)?;
-    let source_identity = config
-        .source_client_identity_file
-        .as_deref()
-        .map(read_file)
-        .transpose()?;
-    let source_api_key = config
-        .source_api_key_file
-        .as_deref()
-        .map(read_text)
-        .transpose()?;
+    let source_material = source_material(&config)?;
     let projection_store = connect_projection_store(&config).await?;
 
     let verifier = DelegationVerifier::from_jwks_json(
@@ -363,12 +368,17 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     )?;
     let source_client = BoundedSourceClient::new(SourceTransportConfig {
         source_origin: &config.source_origin,
-        root_ca_pem: &source_ca,
-        client_identity_pem: source_identity.as_deref(),
-        source_api_key: source_api_key.as_deref().map(str::trim),
+        root_ca_pem: &source_material.ca,
+        client_identity_pem: source_material.identity.as_deref(),
+        source_api_key: source_material.api_key.as_deref().map(str::trim),
         observed_gateway_digest: &config.source_gateway_digest,
         limits: config.transport_limits.clone(),
     })?;
+    let manager_v2_client = manager_v2_client_from_config(
+        &config,
+        &source_material.ca,
+        source_material.identity.as_deref(),
+    )?;
     let negotiator = CapabilityNegotiator::new(source_client);
     let initial_snapshot = if config.source_probes_enabled.is_enabled() {
         Some(negotiator.probe(config.probe_alpha_id.as_deref()).await)
@@ -407,6 +417,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         realtime_venue_session: config.realtime_venue_session,
         analytics_query_enabled: config.analytics_query_enabled,
         analytics_source_profile: config.analytics_source_profile,
+        manager_v2_client,
     };
 
     spawn_background_tasks(
@@ -440,6 +451,60 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
             Ok(())
         }
     }
+}
+
+struct EdgeTlsMaterial {
+    certificate: Vec<u8>,
+    private_key: Vec<u8>,
+    client_ca: Vec<u8>,
+}
+
+fn edge_tls_material(config: &EdgeConfig) -> Result<EdgeTlsMaterial, ServiceError> {
+    Ok(EdgeTlsMaterial {
+        certificate: read_file(&config.tls_certificate_file)?,
+        private_key: read_file(&config.tls_private_key_file)?,
+        client_ca: read_file(&config.tls_client_ca_file)?,
+    })
+}
+
+struct SourceMaterial {
+    ca: Vec<u8>,
+    identity: Option<Vec<u8>>,
+    api_key: Option<String>,
+}
+
+fn source_material(config: &EdgeConfig) -> Result<SourceMaterial, ServiceError> {
+    Ok(SourceMaterial {
+        ca: read_file(&config.source_ca_file)?,
+        identity: config
+            .source_client_identity_file
+            .as_deref()
+            .map(read_file)
+            .transpose()?,
+        api_key: config
+            .source_api_key_file
+            .as_deref()
+            .map(read_text)
+            .transpose()?,
+    })
+}
+
+fn manager_v2_client_from_config(
+    config: &EdgeConfig,
+    source_ca: &[u8],
+    source_identity: Option<&[u8]>,
+) -> Result<Option<ManagerV2Client>, ServiceError> {
+    if !config.manager_v2_read_enabled.is_enabled() {
+        return Ok(None);
+    }
+    let client_identity_pem =
+        source_identity.ok_or(ConfigError::Missing("EDGE_SOURCE_CLIENT_IDENTITY_FILE"))?;
+    Ok(Some(ManagerV2Client::new(ManagerV2ClientConfig {
+        source_proxy_origin: &config.source_origin,
+        root_ca_pem: source_ca,
+        client_identity_pem,
+        limits: ManagerV2ClientLimits::default(),
+    })?))
 }
 
 async fn connect_projection_store(
@@ -509,6 +574,19 @@ fn spawn_background_tasks(
 fn private_router(state: AppState) -> Router {
     Router::new()
         .route("/internal/v1/compatibility", get(compatibility))
+        .route("/internal/v2/manager/catalogue", get(manager_catalogue))
+        .route(
+            "/internal/v2/manager/capabilities",
+            get(manager_capabilities),
+        )
+        .route(
+            "/internal/v2/manager/projections/:kind",
+            get(manager_projection),
+        )
+        .route(
+            "/internal/v2/manager/relations/:schema/:relation",
+            get(manager_relation_records),
+        )
         .route("/internal/v1/realtime/stream", get(realtime_stream))
         .route(
             "/internal/v1/screens/gate-r2/:approval_id/capital-preview",
@@ -565,6 +643,309 @@ async fn compatibility(State(state): State<AppState>, headers: HeaderMap) -> Res
         Some(snapshot) => Json(snapshot).into_response(),
         None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ManagerPageQuery {
+    limit: Option<u16>,
+    cursor: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ManagerProblemBody {
+    error: ManagerProblem,
+}
+
+#[derive(Serialize)]
+struct ManagerProblem {
+    code: &'static str,
+    message: &'static str,
+}
+
+async fn manager_catalogue(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let client = match manager_request_client(&state, &headers) {
+        Ok(client) => client,
+        Err(response) => return response,
+    };
+    manager_read_response(
+        client.execute(&ManagerV2Request::catalogue()).await,
+        |payload| match payload {
+            ManagerPayload::Catalogue(envelope) => Some(envelope),
+            _ => None,
+        },
+    )
+}
+
+async fn manager_capabilities(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let client = match manager_request_client(&state, &headers) {
+        Ok(client) => client,
+        Err(response) => return response,
+    };
+    manager_read_response(
+        client.execute(&ManagerV2Request::capabilities()).await,
+        |payload| match payload {
+            ManagerPayload::Capabilities(envelope) => Some(envelope),
+            _ => None,
+        },
+    )
+}
+
+async fn manager_projection(
+    State(state): State<AppState>,
+    AxumPath(kind): AxumPath<String>,
+    Query(query): Query<ManagerPageQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let client = match manager_request_client(&state, &headers) {
+        Ok(client) => client,
+        Err(response) => return response,
+    };
+    let Some(kind) = ProjectionKind::from_path_segment(&kind) else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_V2_INVALID_PROJECTION",
+            "The requested Manager projection is not part of the fixed contract.",
+        );
+    };
+    let limit = match manager_page_limit(query.limit) {
+        Ok(limit) => limit,
+        Err(response) => return response,
+    };
+    let catalogue = match fetch_manager_catalogue(client).await {
+        Ok(catalogue) => catalogue,
+        Err(response) => return response,
+    };
+    let Ok(cursor) = query
+        .cursor
+        .map(|value| OpaqueCursor::from_projection_round_trip(value, &catalogue, kind))
+        .transpose()
+    else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_V2_INVALID_CURSOR",
+            "The Manager pagination cursor is invalid for this request.",
+        );
+    };
+    let Ok(request) = ManagerV2Request::projection(&catalogue, kind, cursor.as_ref(), limit) else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_V2_INVALID_CURSOR",
+            "The Manager pagination cursor is invalid for this request.",
+        );
+    };
+    manager_read_response(client.execute(&request).await, |payload| match payload {
+        ManagerPayload::Projection(envelope) => Some(envelope),
+        _ => None,
+    })
+}
+
+async fn manager_relation_records(
+    State(state): State<AppState>,
+    AxumPath((schema, relation)): AxumPath<(String, String)>,
+    Query(query): Query<ManagerPageQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let client = match manager_request_client(&state, &headers) {
+        Ok(client) => client,
+        Err(response) => return response,
+    };
+    if !manager_identifier(&schema) || !manager_identifier(&relation) {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_V2_INVALID_RELATION",
+            "The requested Manager relation is invalid.",
+        );
+    }
+    let limit = match manager_page_limit(query.limit) {
+        Ok(limit) => limit,
+        Err(response) => return response,
+    };
+    let catalogue = match fetch_manager_catalogue(client).await {
+        Ok(catalogue) => catalogue,
+        Err(response) => return response,
+    };
+    let Some(catalogued_relation) = catalogue.relation(&schema, &relation) else {
+        return manager_problem(
+            StatusCode::NOT_FOUND,
+            "MANAGER_V2_RELATION_NOT_CATALOGUED",
+            "The requested relation is not present in the active Manager catalogue.",
+        );
+    };
+    let Ok(cursor) = query
+        .cursor
+        .map(|value| OpaqueCursor::from_relation_round_trip(value, catalogued_relation))
+        .transpose()
+    else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_V2_INVALID_CURSOR",
+            "The Manager pagination cursor is invalid for this relation.",
+        );
+    };
+    let Ok(request) =
+        ManagerV2Request::relation_records(catalogued_relation, cursor.as_ref(), limit)
+    else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_V2_INVALID_CURSOR",
+            "The Manager pagination cursor is invalid for this relation.",
+        );
+    };
+    manager_read_response(client.execute(&request).await, |payload| match payload {
+        ManagerPayload::RelationRecords(envelope) => Some(envelope),
+        _ => None,
+    })
+}
+
+fn manager_request_client<'a>(
+    state: &'a AppState,
+    headers: &HeaderMap,
+) -> Result<&'a ManagerV2Client, Response> {
+    let token = bearer(headers).ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
+    state
+        .verifier
+        .verify_read(
+            token,
+            &RequiredRead {
+                environment: &state.environment,
+                resource: Some(MANAGER_V2_RESOURCE),
+            },
+        )
+        .map_err(|_| StatusCode::FORBIDDEN.into_response())?;
+    state.manager_v2_client.as_ref().ok_or_else(|| {
+        manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "MANAGER_V2_READ_DISABLED",
+            "Manager read-through is disabled for this Edge runtime.",
+        )
+    })
+}
+
+fn manager_page_limit(value: Option<u16>) -> Result<PageLimit, Response> {
+    PageLimit::new(value.unwrap_or(DEFAULT_PAGE_LIMIT)).map_err(|_| {
+        manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_V2_INVALID_PAGE_LIMIT",
+            "The Manager page limit must be between 1 and 200.",
+        )
+    })
+}
+
+fn manager_identifier(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= 63
+        && matches!(value.as_bytes().first(), Some(byte) if byte.is_ascii_alphabetic() || *byte == b'_')
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+
+async fn fetch_manager_catalogue(client: &ManagerV2Client) -> Result<ManagerCatalogue, Response> {
+    match client.execute(&ManagerV2Request::catalogue()).await {
+        Ok(ManagerRead::Available(ManagerPayload::Catalogue(envelope))) => Ok(envelope.into_data()),
+        Ok(ManagerRead::Available(_)) => Err(manager_problem(
+            StatusCode::BAD_GATEWAY,
+            "MANAGER_V2_UNEXPECTED_PAYLOAD",
+            "Manager returned a response that does not match the requested operation.",
+        )),
+        Ok(ManagerRead::Unavailable(unavailable)) => Err(manager_json_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            unavailable,
+        )),
+        Err(error) => Err(manager_client_error_response(&error)),
+    }
+}
+
+fn manager_read_response<T, F>(
+    read: Result<ManagerRead, ManagerV2ClientError>,
+    select: F,
+) -> Response
+where
+    T: Serialize,
+    F: FnOnce(ManagerPayload) -> Option<T>,
+{
+    match read {
+        Ok(ManagerRead::Available(payload)) => match select(payload) {
+            Some(payload) => manager_json_response(StatusCode::OK, payload),
+            None => manager_problem(
+                StatusCode::BAD_GATEWAY,
+                "MANAGER_V2_UNEXPECTED_PAYLOAD",
+                "Manager returned a response that does not match the requested operation.",
+            ),
+        },
+        Ok(ManagerRead::Unavailable(unavailable)) => {
+            manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable)
+        }
+        Err(error) => manager_client_error_response(&error),
+    }
+}
+
+fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
+    match error {
+        ManagerV2ClientError::QueueSaturated
+        | ManagerV2ClientError::QueueClosed
+        | ManagerV2ClientError::RequestFailed => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "MANAGER_V2_SOURCE_UNAVAILABLE",
+            "Manager source is temporarily unavailable.",
+        ),
+        ManagerV2ClientError::InvalidSourceProxyOrigin
+        | ManagerV2ClientError::MissingTrustAnchor
+        | ManagerV2ClientError::InvalidTrustAnchor
+        | ManagerV2ClientError::MissingClientIdentity
+        | ManagerV2ClientError::InvalidClientIdentity
+        | ManagerV2ClientError::UnsafeLimits
+        | ManagerV2ClientError::ClientConfiguration
+        | ManagerV2ClientError::RedirectDenied
+        | ManagerV2ClientError::ContractHeaderMismatch
+        | ManagerV2ClientError::InvalidContentType
+        | ManagerV2ClientError::ResponseTooLarge
+        | ManagerV2ClientError::UnexpectedHttpStatus(_)
+        | ManagerV2ClientError::Contract(_) => manager_problem(
+            StatusCode::BAD_GATEWAY,
+            "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+            "Manager source response did not satisfy the fixed read contract.",
+        ),
+    }
+}
+
+fn manager_json_response<T: Serialize>(status: StatusCode, payload: T) -> Response {
+    let body = match serde_json::to_vec(&payload) {
+        Ok(body) if body.len() <= MAXIMUM_RESPONSE_BYTES => body,
+        Ok(_) => {
+            return manager_problem(
+                StatusCode::BAD_GATEWAY,
+                "MANAGER_V2_RESPONSE_LIMIT_EXCEEDED",
+                "Manager response exceeded the published byte limit.",
+            );
+        }
+        Err(_) => {
+            return manager_problem(
+                StatusCode::BAD_GATEWAY,
+                "MANAGER_V2_RESPONSE_SERIALIZATION_FAILED",
+                "Manager response could not be serialized safely.",
+            );
+        }
+    };
+    let mut response = (status, [("content-type", "application/json")], body).into_response();
+    let headers = response.headers_mut();
+    headers.insert("cache-control", HeaderValue::from_static("no-store"));
+    headers.insert(
+        "x-content-type-options",
+        HeaderValue::from_static("nosniff"),
+    );
+    response
+}
+
+fn manager_problem(status: StatusCode, code: &'static str, message: &'static str) -> Response {
+    (
+        status,
+        Json(ManagerProblemBody {
+            error: ManagerProblem { code, message },
+        }),
+    )
+        .into_response()
 }
 
 async fn capital_preview(
@@ -1714,6 +2095,8 @@ enum ServiceError {
     #[error(transparent)]
     Transport(#[from] ts_transport::TransportError),
     #[error(transparent)]
+    ManagerTransport(#[from] ManagerV2ClientError),
+    #[error(transparent)]
     ProjectionStore(#[from] projection_store_pg::StoreError),
     #[error(transparent)]
     D4Command(#[from] d4_command::D4CommandError),
@@ -1739,7 +2122,16 @@ mod tests {
         BindingExposureResult, CapitalLedgerResult, CapitalPreview, CorrelationResult,
         InsightBatch, OrderFunnel,
     };
+    use axum::body::to_bytes;
+    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+    use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
     use rcgen::{BasicConstraints, CertificateParams, ExtendedKeyUsagePurpose, IsCa, KeyPair};
+    use rsa::{
+        pkcs8::{EncodePrivateKey, LineEnding},
+        rand_core::OsRng,
+        traits::PublicKeyParts,
+        RsaPrivateKey, RsaPublicKey,
+    };
     use rustls::pki_types::{CertificateDer, UnixTime};
     use serde::de::DeserializeOwned;
 
@@ -1748,6 +2140,94 @@ mod tests {
     struct CertificateFixture {
         ca_pem: String,
         client_der: Vec<u8>,
+    }
+
+    struct DelegationTestSigner {
+        encoding: EncodingKey,
+        jwks: String,
+    }
+
+    fn delegation_test_signer() -> DelegationTestSigner {
+        let private = RsaPrivateKey::new(&mut OsRng, 2048).unwrap();
+        let public = RsaPublicKey::from(&private);
+        let pem = private.to_pkcs8_pem(LineEnding::LF).unwrap();
+        DelegationTestSigner {
+            encoding: EncodingKey::from_rsa_pem(pem.as_bytes()).unwrap(),
+            jwks: serde_json::json!({
+                "keys": [{
+                    "kty": "RSA",
+                    "kid": "manager-edge-test-k1",
+                    "use": "sig",
+                    "alg": "RS256",
+                    "n": URL_SAFE_NO_PAD.encode(public.n().to_bytes_be()),
+                    "e": URL_SAFE_NO_PAD.encode(public.e().to_bytes_be())
+                }]
+            })
+            .to_string(),
+        }
+    }
+
+    fn manager_claims(now: i64, resource: &str) -> DelegatedClaims {
+        DelegatedClaims {
+            iss: "portal-control-api".to_owned(),
+            aud: "portal-execution-edge-paper".to_owned(),
+            sub: "manager-test-user".to_owned(),
+            sid: "manager-test-session".to_owned(),
+            workspace_id: "manager-test-workspace".to_owned(),
+            roles: vec!["MANAGER".to_owned()],
+            scopes: vec!["execution.read".to_owned()],
+            resources: vec![resource.to_owned()],
+            environment: "paper".to_owned(),
+            jti: "manager-test-assertion".to_owned(),
+            iat: now,
+            nbf: now,
+            exp: now + 60,
+            auth_time: now - 1,
+            amr: vec!["portal_session".to_owned()],
+        }
+    }
+
+    fn signed_manager_claims(signer: &DelegationTestSigner, claims: &DelegatedClaims) -> String {
+        encode(
+            &Header {
+                alg: Algorithm::RS256,
+                kid: Some("manager-edge-test-k1".to_owned()),
+                ..Header::default()
+            },
+            claims,
+            &signer.encoding,
+        )
+        .unwrap()
+    }
+
+    fn disabled_manager_state(verifier: DelegationVerifier) -> AppState {
+        AppState {
+            environment: "paper".to_owned(),
+            verifier,
+            snapshot: Arc::new(RwLock::new(None)),
+            source_probe_required: RuntimeGate::Disabled,
+            projection_store_required: RuntimeGate::Disabled,
+            projection_store_ready: Arc::new(RwLock::new(false)),
+            projection_ingestion_required: RuntimeGate::Disabled,
+            projection_ingestion_ready: Arc::new(RwLock::new(false)),
+            realtime_required: RuntimeGate::Disabled,
+            realtime_poller_ready: Arc::new(RwLock::new(false)),
+            projection_store: None,
+            realtime_hub: None,
+            realtime_replay_limit: 1,
+            realtime_heartbeat: Duration::from_secs(5),
+            realtime_epoch_jitter: Duration::ZERO,
+            realtime_freshness_policy: FreshnessPolicy {
+                policy_version: "manager-test-policy".to_owned(),
+                warning_after_ms: 0,
+                stale_after_ms: 1,
+                maximum_future_skew_ms: 0,
+            },
+            realtime_venue_session: VenueSessionState::Unknown,
+            analytics_query_enabled: RuntimeGate::Disabled,
+            analytics_source_profile: DeliveryProfile::Fixture,
+            manager_v2_client: None,
+        }
     }
 
     fn certificate_fixture(common_name: &str) -> CertificateFixture {
@@ -1784,6 +2264,107 @@ mod tests {
         assert_eq!(bearer(&headers), None);
         headers.insert(AUTHORIZATION, "Bearer assertion".parse().unwrap());
         assert_eq!(bearer(&headers), Some("assertion"));
+    }
+
+    #[test]
+    fn manager_read_gate_requires_the_named_resource_and_fails_closed_when_disabled() {
+        let signer = delegation_test_signer();
+        let verifier = DelegationVerifier::from_jwks_json(
+            &signer.jwks,
+            "portal-control-api",
+            "portal-execution-edge-paper",
+            60,
+            3,
+        )
+        .unwrap();
+        let state = disabled_manager_state(verifier);
+        let mut headers = HeaderMap::new();
+
+        let Err(response) = manager_request_client(&state, &headers) else {
+            panic!("missing bearer assertion must be rejected");
+        };
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let now = Utc::now().timestamp();
+        let wrong_resource =
+            signed_manager_claims(&signer, &manager_claims(now, COMMAND_CENTER_RESOURCE));
+        headers.insert(
+            AUTHORIZATION,
+            format!("Bearer {wrong_resource}").parse().unwrap(),
+        );
+        let Err(response) = manager_request_client(&state, &headers) else {
+            panic!("a different execution resource must be rejected");
+        };
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let manager_resource =
+            signed_manager_claims(&signer, &manager_claims(now, MANAGER_V2_RESOURCE));
+        headers.insert(
+            AUTHORIZATION,
+            format!("Bearer {manager_resource}").parse().unwrap(),
+        );
+        let Err(response) = manager_request_client(&state, &headers) else {
+            panic!("disabled Manager read-through must not create a client");
+        };
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn manager_query_inputs_and_local_error_mapping_are_bounded() {
+        assert!(manager_identifier("public"));
+        assert!(manager_identifier("_internal_42"));
+        assert!(!manager_identifier("public.orders"));
+        assert!(!manager_identifier("orders/escape"));
+        assert!(!manager_identifier("9orders"));
+        assert!(!manager_identifier(&"x".repeat(64)));
+        assert_eq!(manager_page_limit(None).unwrap().get(), DEFAULT_PAGE_LIMIT);
+        assert_eq!(manager_page_limit(Some(200)).unwrap().get(), 200);
+        let Err(response) = manager_page_limit(Some(0)) else {
+            panic!("zero must be rejected");
+        };
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let Err(response) = manager_page_limit(Some(201)) else {
+            panic!("oversized page must be rejected");
+        };
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            manager_client_error_response(&ManagerV2ClientError::RequestFailed).status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+        assert_eq!(
+            manager_client_error_response(&ManagerV2ClientError::ContractHeaderMismatch).status(),
+            StatusCode::BAD_GATEWAY
+        );
+    }
+
+    #[tokio::test]
+    async fn manager_source_unavailable_is_relayed_as_a_typed_owner_envelope() {
+        let unavailable = manager_v2_contract::decode_unavailable(
+            format!(
+                concat!(
+                    r#"{{"contract_version":"{}","authority":"EXECUTION_CELL","profile_id":"PAPER_BINANCE_USDM","catalogue_sha256":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","availability":"UNAVAILABLE","reason_code":"SOURCE_UNAVAILABLE","trace_id":"manager-edge-test"}}"#
+                ),
+                manager_v2_contract::RUNTIME_CONTRACT_REVISION
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+        let response = manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable);
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(response.headers().get("cache-control").unwrap(), "no-store");
+        let body = to_bytes(response.into_body(), 4096).await.unwrap();
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&body).unwrap(),
+            serde_json::json!({
+                "contract_version": manager_v2_contract::RUNTIME_CONTRACT_REVISION,
+                "authority": "EXECUTION_CELL",
+                "profile_id": "PAPER_BINANCE_USDM",
+                "catalogue_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "availability": "UNAVAILABLE",
+                "reason_code": "SOURCE_UNAVAILABLE",
+                "trace_id": "manager-edge-test"
+            })
+        );
     }
 
     #[test]

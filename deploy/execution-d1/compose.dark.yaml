@@ -16,6 +16,7 @@ services:
       # injects the real TS read identity, which never enters this container.
       EDGE_SOURCE_API_KEY_FILE: ${EDGE_SOURCE_API_KEY_FILE:?set the Source Proxy admission-token file}
       EDGE_SOURCE_PROBES_ENABLED: "false"
+      EDGE_MANAGER_V2_READ_ENABLED: "false"
       EDGE_PROJECTION_INGESTION_ENABLED: "false"
       EDGE_REALTIME_SSE_ENABLED: "false"
       EDGE_ANALYTICS_QUERY_ENABLED: "false"

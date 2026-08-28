@@ -16,7 +16,7 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use execution_contracts::DecimalString;
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use thiserror::Error;
 
@@ -83,7 +83,7 @@ impl Default for PageLimit {
 }
 
 /// The only named projections published by the owner runtime overlay.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ProjectionKind {
     Portfolio,
@@ -96,6 +96,20 @@ pub enum ProjectionKind {
 }
 
 impl ProjectionKind {
+    #[must_use]
+    pub fn from_path_segment(value: &str) -> Option<Self> {
+        match value {
+            "portfolio" => Some(Self::Portfolio),
+            "account" => Some(Self::Account),
+            "order" => Some(Self::Order),
+            "fill" => Some(Self::Fill),
+            "position" => Some(Self::Position),
+            "reconciliation" => Some(Self::Reconciliation),
+            "command_journal" => Some(Self::CommandJournal),
+            _ => None,
+        }
+    }
+
     #[must_use]
     pub const fn path_segment(self) -> &'static str {
         match self {
@@ -113,6 +127,15 @@ impl ProjectionKind {
 /// SHA-256 identity of one owner-published relation catalogue.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CatalogueDigest(String);
+
+impl Serialize for CatalogueDigest {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0)
+    }
+}
 
 impl CatalogueDigest {
     fn parse(raw: String) -> Result<Self, ContractError> {
@@ -153,6 +176,57 @@ impl OpaqueCursor {
     pub fn as_str(&self) -> &str {
         &self.value
     }
+
+    /// Reconstructs a source-issued cursor after an authenticated Portal HTTP
+    /// round trip. The caller supplies the exact catalogue relation it is
+    /// resuming; the owner facade remains authoritative for the opaque token.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ContractError::InvalidOpaqueToken`] when the returned token is
+    /// not within the owner-published opaque-token syntax and size bound.
+    pub fn from_relation_round_trip(
+        value: String,
+        relation: &CataloguedRelation,
+    ) -> Result<Self, ContractError> {
+        Self::parse(
+            value,
+            CursorBinding::Relation {
+                relation: relation.id.clone(),
+                catalogue_digest: relation.catalogue_digest.clone(),
+            },
+        )
+    }
+
+    /// Reconstructs a source-issued projection cursor after an authenticated
+    /// Portal HTTP round trip, retaining its catalogue and projection binding.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ContractError::InvalidOpaqueToken`] when the returned token is
+    /// not within the owner-published opaque-token syntax and size bound.
+    pub fn from_projection_round_trip(
+        value: String,
+        catalogue: &ManagerCatalogue,
+        kind: ProjectionKind,
+    ) -> Result<Self, ContractError> {
+        Self::parse(
+            value,
+            CursorBinding::Projection {
+                kind,
+                catalogue_digest: catalogue.catalogue_revision.clone(),
+            },
+        )
+    }
+}
+
+impl Serialize for OpaqueCursor {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.value)
+    }
 }
 
 impl fmt::Debug for OpaqueCursor {
@@ -177,6 +251,15 @@ impl OpaqueRecordKey {
     }
 }
 
+impl Serialize for OpaqueRecordKey {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.0)
+    }
+}
+
 impl fmt::Debug for OpaqueRecordKey {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("OpaqueRecordKey([REDACTED])")
@@ -184,7 +267,7 @@ impl fmt::Debug for OpaqueRecordKey {
 }
 
 /// One allowlisted application relation from the owner catalogue.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct RelationId {
     schema: String,
     relation: String,
@@ -209,7 +292,7 @@ impl RelationId {
 }
 
 /// A returnable column the owner has explicitly included in its catalogue.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SafeColumn {
     name: String,
     ordinal: u32,
@@ -240,7 +323,7 @@ impl SafeColumn {
 }
 
 /// Runtime-qualified key proof for a catalogue relation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum KeyStatus {
     PrimaryKey,
@@ -251,7 +334,7 @@ pub enum KeyStatus {
 
 /// An owner-selected key descriptor. It is informational; callers never turn
 /// it into a query or choose its columns.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct KeyDescriptor {
     status: KeyStatus,
     name: Option<String>,
@@ -276,7 +359,7 @@ impl KeyDescriptor {
 }
 
 /// Owner-recognized relation kind.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum RelationKind {
     Table,
@@ -287,7 +370,7 @@ pub enum RelationKind {
 }
 
 /// Fixed Paper profile classification published by the owner catalogue.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ProfileClassification {
     RelationProfileMarkersPresent,
@@ -295,16 +378,19 @@ pub enum ProfileClassification {
 }
 
 /// A relation reference tied to exactly one validated catalogue digest.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CataloguedRelation {
     id: RelationId,
     kind: RelationKind,
     safe_columns: Vec<SafeColumn>,
+    #[serde(skip_serializing)]
     safe_column_names: BTreeSet<String>,
     secret_cell_excluded_column_count: u32,
     key: KeyDescriptor,
     profile_classification: ProfileClassification,
     profile_columns: Vec<String>,
+    query_status: String,
+    #[serde(skip_serializing)]
     catalogue_digest: CatalogueDigest,
 }
 
@@ -356,9 +442,10 @@ impl CataloguedRelation {
 
 /// The validated owner catalogue. It is the only source of relation references
 /// accepted by the relation-page request builder.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ManagerCatalogue {
     catalogue_revision: CatalogueDigest,
+    relation_count: usize,
     relations: Vec<CataloguedRelation>,
 }
 
@@ -388,7 +475,7 @@ impl ManagerCatalogue {
 }
 
 /// Availability state returned by the owner facade.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Availability {
     Available,
@@ -399,7 +486,7 @@ pub enum Availability {
 }
 
 /// Freshness supplied by the owner facade; it is never inferred locally.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Freshness {
     Fresh,
@@ -410,7 +497,7 @@ pub enum Freshness {
 }
 
 /// Completeness supplied by the owner facade; it is never inferred locally.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Completeness {
     Complete,
@@ -419,12 +506,13 @@ pub enum Completeness {
 }
 
 /// Shared metadata for an available owner response.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ManagerMeta {
     contract_version: &'static str,
     authority: &'static str,
     profile_id: &'static str,
     catalogue_sha256: CatalogueDigest,
+    availability: Availability,
     freshness: Freshness,
     completeness: Completeness,
     trace_id: String,
@@ -474,8 +562,9 @@ impl ManagerMeta {
 }
 
 /// One successful, typed owner response.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ManagerEnvelope<T> {
+    #[serde(flatten)]
     meta: ManagerMeta,
     data: T,
 }
@@ -499,8 +588,11 @@ impl<T> ManagerEnvelope<T> {
 
 /// A typed owner unavailability result. It is not an empty success and carries
 /// no retry instruction for this client to apply automatically.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ManagerUnavailable {
+    contract_version: &'static str,
+    authority: &'static str,
+    profile_id: &'static str,
     catalogue_sha256: CatalogueDigest,
     availability: Availability,
     reason_code: String,
@@ -542,13 +634,58 @@ pub enum ManagerValue {
     Object(BTreeMap<String, Self>),
 }
 
+impl Serialize for ManagerValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(2))?;
+        match self {
+            Self::Null => {
+                map.serialize_entry("kind", "NULL")?;
+                map.serialize_entry("value", &Option::<()>::None)?;
+            }
+            Self::Boolean(value) => {
+                map.serialize_entry("kind", "BOOLEAN")?;
+                map.serialize_entry("value", value)?;
+            }
+            Self::Integer(value) => {
+                map.serialize_entry("kind", "INTEGER")?;
+                map.serialize_entry("value", value)?;
+            }
+            Self::Decimal(value) => {
+                map.serialize_entry("kind", "DECIMAL")?;
+                map.serialize_entry("value", value)?;
+            }
+            Self::Text(value) => {
+                map.serialize_entry("kind", "TEXT")?;
+                map.serialize_entry("value", value)?;
+            }
+            Self::Timestamp(value) => {
+                map.serialize_entry("kind", "TIMESTAMP")?;
+                map.serialize_entry("value", value)?;
+            }
+            Self::Array(value) => {
+                map.serialize_entry("kind", "ARRAY")?;
+                map.serialize_entry("value", value)?;
+            }
+            Self::Object(value) => {
+                map.serialize_entry("kind", "OBJECT")?;
+                map.serialize_entry("value", value)?;
+            }
+        }
+        map.end()
+    }
+}
+
 /// A safe, catalogue-validated record. Its opaque key can only be used to
 /// retrieve this exact record relation through [`ManagerV2Request::record`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ManagerRecord {
     relation: RelationId,
     record_key: OpaqueRecordKey,
     fields: BTreeMap<String, ManagerValue>,
+    #[serde(skip_serializing)]
     catalogue_digest: CatalogueDigest,
 }
 
@@ -570,7 +707,7 @@ impl ManagerRecord {
 }
 
 /// One owner-bounded relation page.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct RelationRecords {
     relation: RelationId,
     items: Vec<ManagerRecord>,
@@ -595,7 +732,7 @@ impl RelationRecords {
 }
 
 /// One owner-defined projection page.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct NamedProjection {
     kind: ProjectionKind,
     items: Vec<ManagerRecord>,
@@ -621,7 +758,7 @@ impl NamedProjection {
 
 /// One owner-declared runtime capability. This describes the facade's own
 /// qualification state, not the Portal Source Proxy reachability result.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ManagerCapability {
     operation_id: String,
     path_template: String,
@@ -664,7 +801,7 @@ impl ManagerCapability {
 }
 
 /// The exact five facade capability descriptors.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ManagerCapabilities {
     capabilities: Vec<ManagerCapability>,
 }
@@ -677,7 +814,8 @@ impl ManagerCapabilities {
 }
 
 /// Typed successful payloads for the fixed request surface.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(untagged)]
 pub enum ManagerPayload {
     Catalogue(ManagerEnvelope<ManagerCatalogue>),
     Capabilities(ManagerEnvelope<ManagerCapabilities>),
@@ -1000,6 +1138,9 @@ pub fn decode_unavailable(body: &[u8]) -> Result<ManagerUnavailable, ContractErr
     validate_reason_code(&wire.reason_code)?;
     validate_trace_id(&wire.trace_id)?;
     Ok(ManagerUnavailable {
+        contract_version: RUNTIME_CONTRACT_REVISION,
+        authority: "EXECUTION_CELL",
+        profile_id: PROFILE_ID,
         catalogue_sha256: CatalogueDigest::parse(wire.catalogue_sha256)?,
         availability: wire.availability,
         reason_code: wire.reason_code,
@@ -1024,6 +1165,7 @@ fn parse_envelope<T: DeserializeOwned>(body: &[u8]) -> Result<(ManagerMeta, T), 
             authority: "EXECUTION_CELL",
             profile_id: PROFILE_ID,
             catalogue_sha256: CatalogueDigest::parse(wire.catalogue_sha256)?,
+            availability: Availability::Available,
             freshness: wire.freshness,
             completeness: wire.completeness,
             trace_id: wire.trace_id,
@@ -1090,12 +1232,14 @@ fn decode_catalogue(
             key,
             profile_classification,
             profile_columns,
+            query_status: relation.query_status,
             catalogue_digest: revision.clone(),
         });
     }
     relations.sort_by(|left, right| left.id.cmp(&right.id));
     Ok(ManagerCatalogue {
         catalogue_revision: revision,
+        relation_count: wire.relation_count,
         relations,
     })
 }

@@ -791,6 +791,7 @@ if [[ "${build_images}" == true ]]; then
     --env EDGE_SOURCE_API_KEY_FILE=/run/secrets/source-proxy-admission-token \
     --env EDGE_SOURCE_GATEWAY_DIGEST=sha256:8a81f121f068bec80821c5f3be38c8865682e248147f1ca808800a18ea8c1fde \
     --env EDGE_SOURCE_PROBES_ENABLED=false \
+    --env EDGE_MANAGER_V2_READ_ENABLED=false \
     --env EDGE_PROJECTION_INGESTION_ENABLED=false \
     --env EDGE_REALTIME_SSE_ENABLED=false \
     --env EDGE_ANALYTICS_QUERY_ENABLED=false \

@@ -508,6 +508,8 @@ dependencies = [
  "execution-contracts",
  "futures-util",
  "jsonwebtoken",
+ "manager-v2-client",
+ "manager-v2-contract",
  "paper-source-ingestor",
  "paper-source-runner",
  "paper-source-transport",

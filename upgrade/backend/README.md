@@ -7,6 +7,12 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- [EX-BE-02A — Manager-v2 Edge Read-through API](./EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md)
+  — **Complete / backend only / no runtime activation:** the existing private
+  Rust Edge now has four resource-scoped Manager-v2 Paper read-through routes
+  behind a default-off gate. It adds neither UI nor a cache/projection, direct
+  DB access, V1/D4 change, command/event/SSE authority or a runtime deployment.
+
 - [EX-BE-02 — Manager-v2 Backend Consumer](./EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md)
   — **Complete / backend only / no runtime activation:** separate sealed Rust
   contract/client crates consume exactly the already-qualified five Manager-v2
