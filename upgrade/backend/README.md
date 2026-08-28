@@ -906,14 +906,30 @@ alphas are never executable. Fixtures: `visual-baseline-run` (COMPLETED) +
 - Claude's `LARK_CARD_DESIGN_2026-08-27.md` is implemented behind the bounded
   `LARK_MESSAGE_FORMAT=text|card` deployment setting.
 - Text and card rendering share one normalized field contract. Task content is
-  always treated as untrusted text; only an allowlisted `LARK_MENTION_MAP`
-  entry may emit an assignee mention.
+  always treated as untrusted text; only an allowlisted
+  `LARK_ORG_USER_ID_MAP` entry may start assignee resolution.
 - A rejected interactive card falls back to the exact text renderer once in
   the same outbox attempt. Network failures remain normal bounded retries and
   never cause a second immediate request.
 - The Planning dev dependency set includes Starlette's current `httpx2` test
   transport explicitly; a clean 2026 resolver must not silently fall back to
   the deprecated `httpx` TestClient path and hang before application startup.
+
+### Organization user_id mention resolution
+
+- Bobby supplies stable, tenant-scoped organization `user_id` values rather
+  than app-specific `open_id` values. The private Lark internal-app credential
+  resolves `GET /contact/v3/users/{id}?user_id_type=user_id`; only the returned
+  bounded `ou_...` value enters message markup and is cached in memory.
+- Directory/token failures are fail-closed mention enrichment failures: the
+  task notification still delivers with the escaped assignee name and never
+  guesses or tags another user. IDs, tokens and response bodies are not logged.
+- Plain text uses Lark's text mention syntax while interactive cards use the
+  card-native `<at id=ou_...></at>` syntax. Unknown assignees remain plain text.
+- Production Compose passes `LARK_APP_ID`, `LARK_APP_SECRET`, and
+  `LARK_ORG_USER_ID_MAP`; the prior `LARK_MENTION_MAP` contract is removed.
+  Runtime activation waits for Bobby to populate the private mode-0600 env.
+  Roadmap backend regression evidence: 44/44 tests passed on 2026-08-28.
 
 ## Backend state — 2026-08-27 (stable Bobby activation repair)
 

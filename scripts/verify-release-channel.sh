@@ -88,6 +88,7 @@ notification_channels_compact="${notification_channels//[[:space:]]/}"
 if [[ ",${notification_channels_compact}," == *,lark,* ]]; then
   lark_webhook_url="$(read_setting LARK_WEBHOOK_URL)"
   lark_webhook_sign_secret="$(read_setting LARK_WEBHOOK_SIGN_SECRET)"
+  lark_org_user_id_map="$(read_setting LARK_ORG_USER_ID_MAP)"
   [[ "${lark_webhook_url}" == https://open.larksuite.com/open-apis/bot/* ]] || {
     printf 'Lark notifications require an open.larksuite.com HTTPS bot URL.\n' >&2
     exit 1
@@ -96,6 +97,12 @@ if [[ ",${notification_channels_compact}," == *,lark,* ]]; then
     printf 'Lark notifications require LARK_WEBHOOK_SIGN_SECRET.\n' >&2
     exit 1
   }
+  if [[ -n "${lark_org_user_id_map}" ]]; then
+    [[ -n "$(read_setting LARK_APP_ID)" && -n "$(read_setting LARK_APP_SECRET)" ]] || {
+      printf 'Lark organization user_id mentions require app directory credentials.\n' >&2
+      exit 1
+    }
+  fi
 fi
 
 if [[ "${channel}" == "stable" ]]; then

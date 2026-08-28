@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional, Tuple
@@ -71,25 +72,34 @@ def _notification_channels() -> Tuple[str, ...]:
     return channels
 
 
-def _lark_mention_map() -> Dict[str, str]:
-    """Team member name -> Lark open_id used for @-mentions in notifications.
+def _lark_org_user_id_map() -> Dict[str, str]:
+    """Portal member name -> tenant-scoped Lark organization user_id.
 
     Only the Portal team is mentioned; unknown owners are never mentioned.
-    Open IDs are runtime configuration (LARK_MENTION_MAP JSON), not secrets,
-    but the map must never be echoed into logs or UI payloads.
+    The directory adapter resolves these stable tenant IDs to app-scoped
+    ``open_id`` values before rendering a mention. The map must never be echoed
+    into logs or UI payloads.
     """
-    raw = os.getenv("LARK_MENTION_MAP", "").strip()
+    raw = os.getenv("LARK_ORG_USER_ID_MAP", "").strip()
     if not raw:
         return {}
     try:
         mapping = json.loads(raw)
     except ValueError as exc:
-        raise ValueError("LARK_MENTION_MAP must be a JSON object of name -> open_id") from exc
+        raise ValueError(
+            "LARK_ORG_USER_ID_MAP must be a JSON object of name -> organization user_id"
+        ) from exc
     if not isinstance(mapping, dict) or not all(
-        isinstance(k, str) and isinstance(v, str) and v.startswith("ou_") for k, v in mapping.items()
+        isinstance(name, str)
+        and bool(name.strip())
+        and isinstance(user_id, str)
+        and bool(re.fullmatch(r"[A-Za-z0-9_-]{1,128}", user_id.strip()))
+        for name, user_id in mapping.items()
     ):
-        raise ValueError("LARK_MENTION_MAP values must be Lark open_ids (ou_...)")
-    return {str(name).strip(): open_id for name, open_id in mapping.items() if str(name).strip()}
+        raise ValueError(
+            "LARK_ORG_USER_ID_MAP values must be bounded Lark organization user_ids"
+        )
+    return {name.strip(): user_id.strip() for name, user_id in mapping.items()}
 
 
 def _lark_message_format() -> str:
@@ -112,7 +122,9 @@ class Settings:
     webhook_max_attempts: int
     lark_webhook_url: Optional[str] = None
     lark_webhook_sign_secret: Optional[str] = None
-    lark_mention_map: Dict[str, str] = field(default_factory=dict)
+    lark_app_id: Optional[str] = None
+    lark_app_secret: Optional[str] = None
+    lark_org_user_id_map: Dict[str, str] = field(default_factory=dict)
     lark_message_format: str = "text"
     notification_channels: Tuple[str, ...] = ("discord",)
     environment: str = "development"
@@ -127,9 +139,17 @@ class Settings:
         environment = _environment()
         notification_channels = _notification_channels()
         lark_webhook_url = _lark_webhook_url()
+        lark_app_id = os.getenv("LARK_APP_ID", "").strip() or None
+        lark_app_secret = os.getenv("LARK_APP_SECRET", "").strip() or None
+        lark_org_user_id_map = _lark_org_user_id_map()
         if "lark" in notification_channels and not lark_webhook_url:
             raise ValueError(
                 "LARK_WEBHOOK_URL is required when PORTAL_NOTIFY_CHANNELS enables lark"
+            )
+        if lark_org_user_id_map and (not lark_app_id or not lark_app_secret):
+            raise ValueError(
+                "LARK_APP_ID and LARK_APP_SECRET are required when "
+                "LARK_ORG_USER_ID_MAP enables Lark mentions"
             )
         configured_origins = os.getenv("PORTAL_CORS_ORIGINS")
         cors_origins = _csv(configured_origins) if configured_origins is not None else (
@@ -145,7 +165,9 @@ class Settings:
             discord_webhook_url=_discord_webhook_url(),
             lark_webhook_url=lark_webhook_url,
             lark_webhook_sign_secret=os.getenv("LARK_WEBHOOK_SIGN_SECRET", "").strip() or None,
-            lark_mention_map=_lark_mention_map(),
+            lark_app_id=lark_app_id,
+            lark_app_secret=lark_app_secret,
+            lark_org_user_id_map=lark_org_user_id_map,
             lark_message_format=_lark_message_format(),
             portal_url=os.getenv("PORTAL_PUBLIC_URL", "http://127.0.0.1:8000").rstrip("/"),
             default_actor=os.getenv("PORTAL_DEFAULT_ACTOR", "local-user"),
