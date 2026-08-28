@@ -54,6 +54,45 @@ export interface PaperChart {
 
 export interface Candle { x: number; hi: number; lo: number; top: number; h: number; up: boolean }
 
+
+/* ---------------------------------------------------------------------------
+ * Drift vs backtest — the hi-fi's own deterministic series, ported verbatim.
+ *
+ * 48 buckets of cumulative return: the backtest curve, the paper curve running
+ * slightly under it (and further under after bucket 30), and a ±1σ band that
+ * widens with the horizon. `now` is the gap at the last bucket and its tone is
+ * the hi-fi's rule — outside the band is bad, past half the band is a watch.
+ * No `Math.random`, so a frozen-clock baseline is reproducible.
+ * ------------------------------------------------------------------------ */
+function driftSeries(lag: number, latePenalty: number) {
+  const n = 48, bt: number[] = [], pp: number[] = [], up: number[] = [], dn: number[] = [];
+  let b = 0, p = 0;
+  for (let i = 0; i < n; i++) {
+    const step = 0.09 + 0.05 * Math.sin(i / 5);
+    b += step;
+    p += step - lag - (i > 30 ? latePenalty : 0);
+    const s = 0.55 + i * 0.055;
+    bt.push(b); pp.push(p); up.push(b + s); dn.push(b - s);
+  }
+  const all = [...up, ...dn], mn = Math.min(...all), mx = Math.max(...all), rg = mx - mn || 1;
+  const X = (i: number) => (8 + (i / (n - 1)) * 604).toFixed(1);
+  const Y = (v: number) => (140 - ((v - mn) / rg) * 118).toFixed(1);
+  const line = (a: number[]) => a.map((v, i) => `${X(i)},${Y(v)}`).join(" ");
+  const band = up.map((v, i) => `${X(i)},${Y(v)}`).join(" ") + " " +
+    dn.slice().reverse().map((v, i) => `${X(dn.length - 1 - i)},${Y(v)}`).join(" ");
+  const gap = pp[pp.length - 1] - bt[bt.length - 1];
+  const half = up[up.length - 1] - bt[bt.length - 1];
+  return {
+    band, backtest: line(bt), paper: line(pp),
+    tip: { x: X(pp.length - 1), y: Y(pp[pp.length - 1]) },
+    now: `${gap.toFixed(2)}pt vs expected`,
+    tone: (Math.abs(gap) > half ? "bad" : Math.abs(gap) > 0.5 * half ? "warn" : "good") as "good" | "warn" | "bad",
+    legend: "— — backtest expected · —— paper · band ±1σ",
+  };
+}
+
+
+
 export const PAPER_SMOKE_DATA = {
   warning: PAPER_SMOKE_WARNING,
   peers: PAPER_PEERS,
@@ -98,7 +137,7 @@ export const PAPER_SMOKE_DATA = {
       labels: { portfolio: "ρ vs portfolio 0.31", benchmark: "ρ vs benchmark 0.18" },
       foot: "30d · 720 samples · coverage 99.4% · corr.v1 · cov_30d_v2",
     },
-    driftHead: { run: "run_5512 · drift.v1", rule: "WATCH warns · FAIL blocks exit" },
+    drift: { ...driftSeries(0.012, 0.01), run: "run_5512 · drift.v1", window: "12d · same signals, same buckets · exits band → FAIL", rule: "WATCH warns · FAIL blocks exit", columns: ["backtest", "paper (12d)"] },
     chartFoot: "30d · 1h buckets · USDT · EXECUTION · equity_projection.v1 · 720/720 buckets · joined to run_5512 by artifact digest",
   },
   vnm: {
@@ -116,7 +155,12 @@ export const PAPER_SMOKE_DATA = {
       foot: "9d · sessions 09:00–14:45 ICT · VND · equity_projection.v1",
     },
     ordersFoot: "lot 100 · native LO/ATO/ATC",
-    driftHead: { run: "run_5512 · drift.v1", rule: "WATCH warns · FAIL blocks exit" },
+    drift: { ...driftSeries(0.014, 0.006), run: "run_5498 · drift.v1", window: "9 sessions · same signals, same buckets", rule: "WATCH warns · FAIL blocks exit", columns: ["backtest", "paper (9d)"] },
+    /* The VN hi-fi carries a third line in every KPI cell; the crypto one does
+       not. Each line is a fact the page already holds — the gate, the policy,
+       the portfolio ledger, the session clock — said once more where the figure
+       it qualifies is. `{untilOpen}` is filled from the venue calendar. */
+    kpiNotes: ["gate 6/30 sessions", "+5.24% on allocation", "limit 6% · policy obs_33", "PF-VN · paper ledger", "final at 14:45 ICT · opens in {untilOpen}"],
   },
   /** Paper Exit Review (WF 4b) — the one thing its contract does not carry. */
   exit: {

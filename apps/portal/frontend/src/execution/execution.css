@@ -5986,3 +5986,102 @@
 .exec-pw-masthead { gap: 6px 10px; padding-bottom: 10px; }
 .exec-pw .exec-ws-main { gap: 0; }
 .exec-pw-ordersfoot { margin: 8px 0 0; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+
+/* ── Paper fact grids — the hi-fi's own grammar, measured from
+   `HiFi Paper Workbench.dc.html`: label mono 10px uppercase in a
+   `minmax(96px,36%)` track, value mono 12px, one 5px/12px gap. The shared
+   `exec-360-facts` puts sans labels at 13px in a wide column, which is what
+   made Runtime health and Accounting read as a different screen. ── */
+.exec-pw-facts { display: grid; grid-template-columns: minmax(96px, 36%) minmax(0, 1fr); gap: 5px 12px; padding: 10px 14px; font: 400 12px/18px var(--font-mono); color: var(--ink); overflow-wrap: anywhere; }
+.exec-pw-factk { font: 400 10px/18px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+.exec-pw-factv { color: var(--ink); }
+.exec-pw-factnote { color: var(--ink-mute); }
+.exec-pw-factabsent { color: var(--ink-mute); border-bottom: 1px dashed var(--ink-faint); }
+
+/* Drift: three columns wide enough to read, and the verdict said in words
+   beside the observation. A chip in a fourth column is what a half-width panel
+   was clipping, and a clipped verdict is a verdict nobody read. */
+.exec-pw-drift { display: grid; grid-template-columns: minmax(120px, 40%) minmax(0, 1fr) minmax(0, 1fr); gap: 5px 12px; padding: 10px 14px 0; font: 400 12px/18px var(--font-mono); color: var(--ink); overflow-wrap: anywhere; }
+.exec-pw-driftk { font: 400 10px/18px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+.exec-pw-driftv { color: var(--ink); }
+.exec-pw-driftv [data-tone="good"] { color: var(--good); }
+.exec-pw-driftv [data-tone="warn"] { color: var(--warn); }
+.exec-pw-driftv [data-tone="bad"] { color: var(--bad); }
+.exec-pw-driftv [data-tone="mute"] { color: var(--ink-mute); }
+.exec-pw-driftabsent { color: var(--ink-mute); }
+.exec-pw-driftnow { font: 600 11px/16px var(--font-mono); font-variant-numeric: tabular-nums; }
+.exec-pw-driftnow[data-tone="good"] { color: var(--good); }
+.exec-pw-driftnow[data-tone="warn"] { color: var(--warn); }
+.exec-pw-driftnow[data-tone="bad"] { color: var(--bad); }
+.exec-pw-driftplot { padding: 12px 14px 4px; }
+.exec-pw-driftwindow { margin: 0; padding: 6px 14px 0; font: 400 10px/16px var(--font-mono); color: var(--ink-mute); }
+.exec-pw-driftcontract { padding: 0 14px 10px; }
+.exec-pw-driftcontract > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; }
+
+/* ── Paper: the canvas gets the hi-fi's width back ─────────────────────────
+   Owner review 2026-08-28, and the measurement behind it: the canvas was 816px
+   where `HiFi Paper Workbench.dc.html` draws on ~1400. The 340px context rail
+   is what took the difference, and it is why the switcher, the lineage strip
+   and every panel header wrapped onto a second line — the loose page Bobby saw
+   was one column too narrow, not one padding too big.
+
+   The rail is still published (EL-V2-06 keeps it in the stage anatomy): it
+   moves under the page as a full-width four-column footer. Nothing it carries
+   is lost — and nothing it carries is new, because the hi-fi already puts the
+   gate in its own panel, the blockers in the drift table, and the freshness on
+   the masthead. */
+@media (min-width: 1280px) {
+  .exec-pw .exec-ws[data-has-rail="true"],
+  .exec-px .exec-ws[data-has-rail="true"] { grid-template-columns: minmax(0, 1fr); }
+  .exec-pw .exec-ws-rail, .exec-px .exec-ws-rail { position: static; top: auto; }
+}
+.exec-pw .exec-ws-rail, .exec-px .exec-ws-rail { order: 9; }
+.exec-pw .exec-context-rail, .exec-px .exec-context-rail {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 14px; align-items: start;
+}
+/* hi-fi masthead: gap 8/12, 14px under it. */
+.exec-pw-masthead { gap: 8px 12px; padding-bottom: 14px; }
+/* hi-fi observation gate: 14px pad, 11px between criteria. */
+.exec-pw-gate { padding: 14px; gap: 11px; }
+/* hi-fi observation gate: label and count on one 12px mono line, then a 6px
+   track with its own border — a 4px hairline on a flat background reads as a
+   divider, not as a measure. */
+.exec-pw-gate .exec-progress { gap: 11px; }
+.exec-pw-gate .exec-progress > div { display: flex; flex-direction: column; gap: 4px; }
+.exec-pw-gate .exec-progress-head { font: 400 12px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-pw-gate .exec-progress-value { color: var(--ink); }
+.exec-pw-gate .exec-progress-track { height: 6px; background: var(--paper-sunken); border: 1px solid var(--line); }
+.exec-pw-gate .exec-progress-rule { font: 400 10px/16px var(--font-mono); color: var(--ink-mute); }
+.exec-pw-life { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.exec-pw-life > .exec-rail { flex: 1; margin: 0; }
+.exec-pw-lifelegend { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); white-space: nowrap; }
+.exec-pw-right { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-left: auto; }
+/* Panels size to their content, as the hi-fi's do. Stretching them to the
+   tallest sibling left the observation gate and the contribution panel with a
+   half-screen of empty box under four rows of text. */
+.exec-pw-grid { align-items: start; }
+.exec-pw-stack { align-self: stretch; }
+/* Two panels of honestly different height should end where their content ends;
+   stretching the shorter one leaves an empty bordered box the reader tries to
+   read. */
+.exec-pw-grid[data-ratio="1"] { align-items: start; }
+
+/* Exit review panel grammar — the hi-fi's titles are mono 11px uppercase in
+   the muted ink, and its evidence lines are mono 12px. Sans 15px bold titles
+   over sans 13px rows is a different screen, which is what the review looked
+   like beside its own hi-fi. */
+.exec-px .exec-gate-panel > .exec-section-title,
+.exec-px .exec-px-panel > .exec-section-title {
+  font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-faint); padding: 10px 14px; margin: 0; border-bottom: 1px solid var(--line-soft);
+}
+.exec-px .exec-gate-rc { text-transform: none; letter-spacing: 0; color: var(--ink-mute); }
+.exec-px .exec-evidence { padding: 12px 14px; gap: 7px; }
+.exec-px .exec-evidence-row { font: 400 12px/18px var(--font-mono); color: var(--ink-soft); }
+.exec-px .exec-evidence-detail { color: var(--ink-mute); }
+.exec-px .exec-evidence-link { font: 400 11px/16px var(--font-mono); }
+.exec-px .exec-gate-panel { padding: 0; }
+.exec-px .exec-px-panel > .exec-condition-list, .exec-px .exec-px-panel > .exec-px-recommend,
+.exec-px .exec-px-panel > .exec-px-note { padding-left: 14px; padding-right: 14px; }
+.exec-px .exec-px-panel > .exec-px-note { padding-bottom: 12px; }

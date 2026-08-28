@@ -20,7 +20,7 @@
  *      disabling them. A button somebody may never press is a question they
  *      will keep asking.
  */
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { clockOf, paperSmoke, paperVariant, untilVnOpen, usePaperTick, PAPER_SMOKE_WARNING } from "../paper.smoke";
 import { CapGauges, HistogramChart, SparkTile } from "../components/visuals";
 import type { StageVisuals } from "../stage.smoke";
@@ -206,6 +206,16 @@ function Num({ value, absent = "not published" }: { value: string | null; absent
     <span className="exec-gate-unverified">{absent}</span>
   );
 }
+
+/** The hi-fi says the verdict in words beside the number, not as a chip. */
+const DRIFT_WORD: Record<DriftRow["verdict"], string> = {
+  WITHIN_BAND: "within band",
+  WATCH: "watch",
+  FAIL: "fail",
+  INSUFFICIENT_DATA: "INSUFFICIENT_DATA",
+};
+
+type DriftHead = typeof import("../paper.smoke").PAPER_SMOKE_DATA.crypto.drift;
 
 const DRIFT_TONE: Record<DriftRow["verdict"], "good" | "warn" | "bad" | "mute"> = {
   WITHIN_BAND: "good",
@@ -398,17 +408,22 @@ export function PaperWorkbench({
               <span className="exec-pw-chip" data-tone={readiness === "READY" ? "good" : readiness === "BLOCKED" ? "bad" : "warn"}>{readiness}</span>
               <span className="exec-a3-wf">WF {hifi!.wf}</span>
               <span className="exec-a3-spacer" />
-              {/* One string carries the axis the matrix tests and the clock the
-                  hi-fi ticks: authority · freshness · as_of · age. */}
-              <span className="exec-a3-source exec-pw-source" data-tone={closed ? "calendar" : envelope.freshness === "STALE" ? "warn" : "good"}>
-                <b>{`${envelope.authority} · ${closed ? "PAUSED" : envelope.freshness}`}</b> · as_of {clockOf(envelope.asOf)}
-                {closed ? <span className="exec-pw-paused"> · aging paused</span> : <span className="exec-pw-age"> · age {age}</span>}
+              {/* The right-hand cluster wraps as one unit. Loose, the freshness
+                  chip took the whole free line and pushed the two controls onto
+                  a second row on their own. */}
+              <span className="exec-pw-right">
+                {/* One string carries the axis the matrix tests and the clock the
+                    hi-fi ticks: authority · freshness · as_of · age. */}
+                <span className="exec-a3-source exec-pw-source" data-tone={closed ? "calendar" : envelope.freshness === "STALE" ? "warn" : "good"}>
+                  <b>{`${envelope.authority} · ${closed ? "PAUSED" : envelope.freshness}`}</b> · as_of {clockOf(envelope.asOf)}
+                  {closed ? <span className="exec-pw-paused"> · aging paused</span> : <span className="exec-pw-age"> · age {age}</span>}
+                </span>
+                <a className="exec-a3-btn" href="/governance/approvals">View approvals</a>
+                <button type="button" className="exec-a3-btn" aria-expanded={report} onClick={() => setReport((v) => !v)}>Report</button>
+                {operatorAdmin ? (
+                  <button type="button" className="exec-pw-primary" onClick={onAdminActions}>Admin actions<span aria-hidden="true"> ⌄</span></button>
+                ) : null}
               </span>
-              <a className="exec-a3-btn" href="/governance/approvals">View approvals</a>
-              <button type="button" className="exec-a3-btn" aria-expanded={report} onClick={() => setReport((v) => !v)}>Report</button>
-              {operatorAdmin ? (
-                <button type="button" className="exec-pw-primary" onClick={onAdminActions}>Admin actions<span aria-hidden="true"> ⌄</span></button>
-              ) : null}
             </header>
             {report ? (
               <section className="exec-pw-report" aria-label="Observation report — preview">
@@ -503,9 +518,23 @@ export function PaperWorkbench({
             </details>
           </div>
         ) : null}
-        <LifecycleRail steps={stageRail({ stage, r1, r2, detail: railDetail })} />
+        {hifi ? (
+          <div className="exec-pw-life">
+            <LifecycleRail steps={stageRail({ stage, r1, r2, detail: railDetail })} />
+            <span className="exec-pw-lifelegend">lifecycle · ✓ links its decision · ● current stage</span>
+          </div>
+        ) : (
+          <LifecycleRail steps={stageRail({ stage, r1, r2, detail: railDetail })} />
+        )}
         <ExecutionDecisionStrip
-          metrics={kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, unit: kpi.unit ?? null }))}
+          metrics={kpis.map((kpi, i) => ({
+            label: kpi.label,
+            value: kpi.value,
+            unit: kpi.unit ?? null,
+            // The VN hi-fi qualifies each figure with one line; the crypto one
+            // does not, and inventing five lines for it would be noise.
+            note: hifi?.kind === "vnm" ? (hifi.kpiNotes[i] ?? null)?.replace("{untilOpen}", untilVnOpen(now)) ?? null : null,
+          }))}
         />
         {hifi ? (
           <>
@@ -518,7 +547,7 @@ export function PaperWorkbench({
                 </header>
                 <div className="exec-pw-plot">{hifi.kind === "vnm" ? <VnEquity chart={hifi.chart} /> : <CryptoEquity chart={hifi.chart} />}</div>
                 <footer className="exec-pw-foot">
-                  {hifi.kind === "vnm" ? hifi.chart.foot : `${hifi.chartFoot} · as_of ${envelope.asOf ?? "—"}`}
+                  {hifi.kind === "vnm" ? hifi.chart.foot : `${hifi.chartFoot} · as_of ${clockOf(envelope.asOf)}`}
                 </footer>
               </section>
               <section className="exec-pw-panel" aria-label="Observation gate">
@@ -552,13 +581,13 @@ export function PaperWorkbench({
               ) : null}
               {hifi.kind === "crypto" ? (
                 <div className="exec-pw-stack">
-                  <FactPanel title="Runtime health" rows={runtime} />
-                  <FactPanel title="Accounting" rows={accounting} />
+                  <FactPanel title="Runtime health" rows={runtime} hifi />
+                  <FactPanel title="Accounting" rows={accounting} hifi />
                 </div>
               ) : (
                 <>
-                  <FactPanel title="Runtime health" rows={runtime} />
-                  <FactPanel title="Accounting" rows={accounting} />
+                  <FactPanel title="Runtime health" rows={runtime} hifi />
+                  <FactPanel title="Accounting" rows={accounting} hifi />
                 </>
               )}
             </div>
@@ -572,16 +601,18 @@ export function PaperWorkbench({
                   </header>
                   <div className="exec-pw-plot"><Correlation correlation={hifi.correlation} /></div>
                   <footer className="exec-pw-foot exec-pw-corrfoot">
-                    {contribution.map((row) => (
+                    {/* ρ is already on the chart's own labels; repeating it here
+                        is the same number twice in one panel. */}
+                    {contribution.filter((row) => !row.label.startsWith("ρ")).map((row) => (
                       <span key={row.label}>{row.label} <b>{row.value ?? "not published"}</b></span>
                     ))}
                     <span className="exec-pw-dim">{hifi.correlation.foot}</span>
                   </footer>
                 </section>
               ) : (
-                <FactPanel title="Portfolio contribution · rolling correlation" rows={contribution} />
+                <FactPanel title="Portfolio contribution · rolling correlation" rows={contribution} hifi />
               )}
-              <Drift drift={shownDrift.shown} note={driftNote} notice={driftNotice} head={hifi.driftHead} />
+              <Drift drift={shownDrift.shown} note={driftNote} notice={driftNotice} head={hifi.drift} />
             </div>
             {equity ? (
               <details className="exec-pw-contract">
@@ -788,54 +819,96 @@ function Drift({
   drift: readonly DriftRow[];
   note?: string | null;
   notice: string | null;
-  head: { run: string; rule: string } | null;
+  head: DriftHead | null;
 }) {
-  return (
-    <section className="exec-gate-panel exec-pw-panel" aria-label="Drift vs approved evidence">
-      {head ? (
-        <header className="exec-pw-head">
-          <span className="exec-pw-title">Drift vs backtest</span>
-          <span className="exec-a3-spacer" />
-          <span className="exec-pw-note">{head.run}</span>
-        </header>
-      ) : (
-        <ExecutionSectionTitle>Drift vs approved evidence</ExecutionSectionTitle>
-      )}
-      <div className="exec-scroll-x">
-        <table className="exec-360-sync">
-          <caption className="exec-blotter-note">
-            {/* `driftNote` carries the server's own sentence; absence of it is
-                absence of the statement, not confirmation. */}
-            {note ?? "No linkage to the approved run is stated. Absence is not a match."}
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">measure</th>
-              <th scope="col">approved</th>
-              <th scope="col">observed</th>
-              <th scope="col">verdict</th>
+  const table = (
+    <div className="exec-scroll-x">
+      <table className="exec-360-sync">
+        <caption className="exec-blotter-note">
+          {/* `driftNote` carries the server's own sentence; absence of it is
+              absence of the statement, not confirmation. */}
+          {note ?? "No linkage to the approved run is stated. Absence is not a match."}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">measure</th>
+            <th scope="col">approved</th>
+            <th scope="col">observed</th>
+            <th scope="col">verdict</th>
+          </tr>
+        </thead>
+        <tbody>
+          {drift.map((row) => (
+            <tr key={row.label} data-verdict={row.verdict}>
+              <th scope="row">{row.label}</th>
+              <td><Num value={row.expected} /></td>
+              <td><Num value={row.observed} /></td>
+              <td>
+                <StatusChip label={row.verdict} tone={DRIFT_TONE[row.verdict]} />
+                {row.note ? <span className="exec-blotter-note"> {row.note}</span> : null}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {drift.map((row) => (
-              <tr key={row.label} data-verdict={row.verdict}>
-                <th scope="row">{row.label}</th>
-                <td><Num value={row.expected} /></td>
-                <td><Num value={row.observed} /></td>
-                <td>
-                  <StatusChip label={row.verdict} tone={DRIFT_TONE[row.verdict]} />
-                  {row.note ? <span className="exec-blotter-note"> {row.note}</span> : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+  if (!head) {
+    return (
+      <section className="exec-gate-panel" aria-label="Drift vs approved evidence">
+        <ExecutionSectionTitle>Drift vs approved evidence</ExecutionSectionTitle>
+        {table}
+        {notice ? <p className="exec-blotter-note">{notice}</p> : null}
+        <details>
+          <summary>How drift feeds Paper Exit Review</summary>
+          <p className="exec-evidence-caption">A WATCH item blocks nothing; a FAIL item blocks the exit.</p>
+        </details>
+      </section>
+    );
+  }
+  return (
+    <section className="exec-pw-panel" aria-label="Drift vs approved evidence">
+      <header className="exec-pw-head">
+        <span className="exec-pw-title">Drift vs backtest</span>
+        <span className="exec-a3-spacer" />
+        <span className="exec-pw-driftnow" data-tone={head.tone}>{head.now}</span>
+        <span className="exec-pw-note">{head.run}</span>
+      </header>
+      <div className="exec-pw-plot exec-pw-driftplot">
+        <svg viewBox="0 0 620 150" className="exec-pw-svg" role="img" aria-label="Paper against the backtest expectation, inside a one-sigma band" style={{ fontFamily: "var(--font-mono)" }}>
+          <polygon points={head.band} fill="var(--accent)" opacity="0.10" />
+          <polyline points={head.backtest} fill="none" stroke="var(--ink-faint)" strokeWidth="1.5" strokeDasharray="5 4" />
+          <polyline points={head.paper} fill="none" stroke="var(--good)" strokeWidth="2" />
+          <circle cx={head.tip.x} cy={head.tip.y} r="3.5" fill="var(--good)" />
+          <text x="8" y="14" fontSize="9" fill="var(--ink-mute)">{head.legend}</text>
+        </svg>
       </div>
-      {notice ? <p className="exec-blotter-note">{notice}</p> : null}
-      {head ? <footer className="exec-pw-foot">{head.rule}</footer> : null}
-      <details>
-        <summary>How drift feeds Paper Exit Review</summary>
+      <p className="exec-pw-driftwindow">{head.window}</p>
+      {/* Three columns, as the hi-fi draws them: what was approved, what paper
+          did, and the server's verdict said in words beside the observation —
+          not a chip in a fourth column that a half-width panel then clips. */}
+      <div className="exec-pw-drift">
+        <span className="exec-pw-driftk" />
+        <span className="exec-pw-driftk">{head.columns[0]}</span>
+        <span className="exec-pw-driftk">{head.columns[1]}</span>
+        {drift.map((row) => (
+          <Fragment key={row.label}>
+            <span className="exec-pw-driftk">{row.label}</span>
+            <span className="exec-pw-driftv">{row.expected ?? <span className="exec-pw-driftabsent">not published</span>}</span>
+            <span className="exec-pw-driftv">
+              {row.observed ?? <span className="exec-pw-driftabsent">not published</span>}{" "}
+              <span data-tone={DRIFT_TONE[row.verdict]}>{DRIFT_WORD[row.verdict]}</span>
+              {row.note ? <span className="exec-pw-driftabsent"> ({row.note})</span> : null}
+            </span>
+          </Fragment>
+        ))}
+      </div>
+      {notice ? <p className="exec-pw-driftwindow">{notice}</p> : null}
+      <footer className="exec-pw-foot">{head.rule}</footer>
+      <details className="exec-pw-driftcontract">
+        <summary>the published rows · drift.v1 — and how they feed Paper Exit Review</summary>
         <p className="exec-evidence-caption">A WATCH item blocks nothing; a FAIL item blocks the exit.</p>
+        {table}
       </details>
     </section>
   );
@@ -844,10 +917,33 @@ function Drift({
 function FactPanel({
   title,
   rows,
+  hifi,
 }: {
   title: string;
   rows: readonly { label: string; value: string | null; note?: string | null }[];
+  /** The hi-fi's own grammar: mono 10px label, mono 12px value, one 5px/12px grid. */
+  hifi?: boolean;
 }) {
+  if (hifi) {
+    return (
+      <section className="exec-pw-panel" aria-label={title}>
+        <header className="exec-pw-head">
+          <span className="exec-pw-title">{title}</span>
+        </header>
+        <div className="exec-pw-facts">
+          {rows.map((row) => (
+            <Fragment key={row.label}>
+              <span className="exec-pw-factk">{row.label}</span>
+              <span className="exec-pw-factv">
+                {row.value ?? <span className="exec-pw-factabsent">not published</span>}
+                {row.note ? <span className="exec-pw-factnote"> {row.note}</span> : null}
+              </span>
+            </Fragment>
+          ))}
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">{title}</div>

@@ -162,7 +162,10 @@ export function PaperWorkbenchPreview({
   initial?: Partial<PaperWorkbenchData>;
 }) {
   const navigate = useNavigate();
-  const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Overview");
+  // The hi-fi ends the workbench on the order journal, and so does the page:
+  // Overview now points at panels that moved up, so landing on it shows a
+  // signpost where the reader expected the day's orders.
+  const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const { record, view } = useSimulationLedger();
   const base = useMemo(() => {
     const data = variant === "vnm" ? vnmWorkbench({ deploymentId, ...initial }) : paperWorkbench({ ...GATE_MET, deploymentId, ...initial });
