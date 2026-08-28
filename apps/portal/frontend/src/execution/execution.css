@@ -5840,3 +5840,79 @@
 @keyframes exec-sb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 @keyframes exec-sb-edge { 0%, 100% { border-left-color: var(--bad); } 50% { border-left-color: var(--warn); } }
 @keyframes exec-sb-edgeline { 0%, 100% { border-left-color: var(--bad); } 50% { border-left-color: var(--warn); } }
+
+/* ── Paper Workbench + its VN-market variant — hi-fi WF 1c / 4h, owner
+   2026-08-28. The page keeps the shared anatomy (rail, strip, tabs) and takes
+   the hi-fi's proportions: page 1440 · h1 300 22 · switcher chips mono 10 ·
+   the observation gate BESIDE the equity chart, never below it, because Paper
+   exists to leave Paper. Everything here is presentation; the figures are the
+   contract's. `.exec-pw` is `data-hifi-exact`, so §5.2's scale audit stands
+   aside for the hi-fi's mono 9/10/11/12 and its 18px KPI figures. */
+.exec-pw .exec-ws { max-width: 1440px; }
+.exec-pw-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; font: 400 10px/14px var(--font-mono); }
+.exec-pw-switchlabel { color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.08em; }
+.exec-pw-tab { color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); padding: 4px 10px; }
+.exec-pw-tab[data-active="true"] { color: var(--paper); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.exec-pw-met { color: var(--good); font-weight: 400; }
+.exec-pw-tab[data-active="true"] .exec-pw-met { color: var(--paper); }
+.exec-pw-masthead { padding-bottom: 12px; }
+.exec-pw-360 { font: 400 10px/14px var(--font-mono); color: var(--accent); border: 1px solid var(--line); background: var(--paper-raised); padding: 2px 8px; }
+.exec-pw-stage { color: var(--stage-paper); border-color: var(--stage-paper); }
+.exec-pw-chip { font: 600 11px/16px var(--font-mono); padding: 1px 8px; white-space: nowrap; }
+.exec-pw-chip[data-tone="good"] { background: var(--good-bg); color: var(--good); }
+.exec-pw-chip[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+.exec-pw-chip[data-tone="bad"] { background: var(--bad-bg); color: var(--bad); }
+/* The calendar word sits on the raised surface, so it takes the readable
+   accent rather than the strong one: 3.03:1 is not a legible pair. */
+.exec-pw-chip[data-tone="calendar"] { background: var(--surface-2); color: var(--accent); }
+.exec-pw-source[data-tone="warn"] b { color: var(--warn); }
+.exec-pw-source[data-tone="calendar"] b { color: var(--accent); }
+.exec-pw-age { color: var(--good); font-variant-numeric: tabular-nums; }
+.exec-pw-paused { color: var(--accent); }
+.exec-pw-primary { font: 600 11px/16px var(--font-mono); color: var(--on-accent); background: var(--accent-strong); border: 0; padding: 6px 14px; cursor: pointer; }
+.exec-pw-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.exec-pw-meta { margin-bottom: 14px; }
+.exec-pw-meta b[data-tone="warn"] { color: var(--warn); font-weight: 400; }
+.exec-pw-meta b[data-tone="good"] { color: var(--good); font-weight: 400; }
+.exec-pw-report { border: 1px solid var(--accent); background: var(--paper-raised); margin-bottom: 14px; }
+.exec-pw-reporthead { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--line-soft); }
+.exec-pw-reporttitle { font: 600 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+.exec-pw-reportbody { margin: 0; padding: 12px 14px; font: 400 12px/20px var(--font-body); color: var(--ink-soft); max-width: var(--exec-measure); }
+.exec-pw-reportfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid var(--line-soft); font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+
+.exec-pw-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
+.exec-pw-grid[data-ratio="1"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.exec-pw-grid > * { min-width: 0; }
+.exec-pw-stack { display: flex; flex-direction: column; gap: 14px; }
+.exec-pw-panel { border: 1px solid var(--line); background: var(--paper-raised); display: flex; flex-direction: column; min-width: 0; }
+.exec-pw-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+.exec-pw-title { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-pw-note { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-pw-plot { padding: 14px 14px 6px; flex: 1; display: flex; align-items: center; overflow: hidden; }
+.exec-pw-svg { width: 100%; height: auto; display: block; }
+.exec-pw-foot { padding: 6px 14px 10px; margin-top: auto; font: 400 10px/16px var(--font-mono); color: var(--ink-mute); }
+.exec-pw-corrfoot { display: flex; flex-wrap: wrap; gap: 4px 18px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-pw-corrfoot b { color: var(--ink); font-weight: 500; }
+.exec-pw-dim { color: var(--ink-mute); }
+.exec-pw-gate { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.exec-pw-cta { display: flex; }
+.exec-pw-unmet { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font: 400 10px/14px var(--font-mono); color: var(--warn); }
+.exec-pw-pointer { margin: 0; font: 400 12px/20px var(--font-body); color: var(--ink-soft); }
+.exec-pw-contract { margin-bottom: 14px; }
+.exec-pw-contract > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }
+/* The shared primitives take the hi-fi's proportions on this surface only. */
+.exec-pw .exec-strip { margin-bottom: 14px; }
+.exec-pw .exec-rail { margin-bottom: 14px; }
+.exec-pw .exec-gate-panel { padding: 0; }
+.exec-pw .exec-gate-panel > .exec-section-title { padding: 10px 14px 0; }
+.exec-pw .exec-gate-panel .exec-scroll-x { padding: 0 4px; }
+/* The drift table sits in half a column here, so it wraps instead of being
+   painted past the panel edge — a clipped verdict is a verdict nobody read. */
+.exec-pw .exec-gate-panel table.exec-360-sync { min-width: 420px; width: 100%; }
+.exec-pw .exec-gate-panel table.exec-360-sync td, .exec-pw .exec-gate-panel table.exec-360-sync th { overflow-wrap: anywhere; }
+.exec-pw-telemetry { margin-bottom: 14px; }
+.exec-pw-telemetry > summary { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); cursor: pointer; margin-bottom: 8px; }
+.exec-pw .exec-gate-panel > details { padding: 0 14px 10px; }
+.exec-pw .exec-gate-panel > .exec-blotter-note { padding: 0 14px 8px; }
+@media (max-width: 1023px) { .exec-pw-grid, .exec-pw-grid[data-ratio="1"] { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767px) { .exec-pw-masthead { gap: 6px 8px; } }
