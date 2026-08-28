@@ -403,6 +403,11 @@
   --good-bg: #071f11;
   --bad: #fa4d56;
   --bad-bg: #2d0709;
+  /* Muted strokes for dense day-cell grids (hi-fi Paper Overview): thirty
+     cells with full-strength borders read as noise; the verdict lives in the
+     drift column, not in the cell outlines. */
+  --good-dim: #2e7d44;
+  --bad-dim: #8f3a42;
   /* One step below the banner fill, for a tinted table row. */
   --bad-bg-soft: #1f0507;
   --warn: #f1c21b;
