@@ -1,6 +1,6 @@
 # EX-BE-02A — Manager-v2 Edge Read-through API
 
-Status: **COMPLETE / BACKEND_ONLY / NO_RUNTIME_ACTIVATION**
+Status: **BACKEND_COMPLETE / RUNTIME_ACTIVATION_PREPARED / SGP_HOST_KEY_PIN_REQUIRED / PAPER_ONLY**
 
 Date: 2026-08-28  
 Portal branch: `feat/manager-v2-paper-read`  
@@ -159,3 +159,65 @@ authorized by this implementation.
   delegated resource, then an owner-approved release/change window can set
   `EDGE_MANAGER_V2_READ_ENABLED=true` and qualify the active runtime. That is
   an operational activation gate, not remaining implementation debt.
+
+### 2026-08-28 — owner-approved Paper runtime activation (pre-change freeze)
+
+- The owner explicitly authorized activating and testing this Manager-v2 Paper
+  read-through path. The permitted runtime blast radius is one replacement of
+  `portal-execution-edge-execution-edge-1` only. The already-running Source
+  Proxy and the two Trading System Manager loopback containers are evidence
+  prerequisites and must not be recreated, reconfigured or otherwise changed.
+- The required code/config delta is intentionally narrow: allow the one exact
+  Control API delegated resource `execution:manager-v2:read` (no wildcard or
+  new scope), and add a dedicated Compose overlay that changes only
+  `EDGE_MANAGER_V2_READ_ENABLED` from inherited dark `false` to `true`.
+  Existing probes, projection ingestion, analytics, SSE and command flags
+  remain false.
+- Positive qualification must originate from the SGP Control API trust domain
+  using its existing private mTLS client identity and RS256 signing key. It
+  will obtain a fresh, short-lived `execution.read` assertion for the exact
+  Manager resource, then call catalogue, capabilities, one bounded projection
+  and one bounded catalogue relation page. Evidence records only status,
+  response byte count, digest/count/timing and trace hash; it never records a
+  JWT, certificate/private key or business row.
+- Negative qualification must prove wrong/missing resource denial and the
+  retained dark state of V1/D4, ingestion, analytics, SSE and commands. A
+  failed deploy, health/readiness failure, failed positive probe or unexpected
+  source status triggers rollback to the prior immutable Edge image with the
+  dark overlay; Source Proxy and Trading System are untouched.
+- Preflight found an honest external dependency: the configured SGP host has
+  no locally pinned SSH host key. Its new key will not be accepted
+  automatically. The activation may continue only after an independently
+  verified SGP host-key pin is available; no substitute test signer, Edge JWKS
+  change or copied Control API private key is permitted.
+
+### 2026-08-28 — activation preparation evidence
+
+- Added the exact literal `execution:manager-v2:read` to the Control API
+  delegated-read allowlist. It does not add a scope, wildcard, command claim or
+  browser credential. TypeScript build and the focused
+  `execution-delegation.spec.ts` gate passed **5/5**, including a rejection of
+  `execution:manager-v2:*`.
+- Added `deploy/execution-manager-v2/compose.paper-read.yaml`. Rendered with
+  the existing Manager-v2 runtime env, it has
+  `EDGE_MANAGER_V2_READ_ENABLED=true` while source probes, projection
+  ingestion, analytics, realtime SSE and command relay remain `false` and the
+  environment remains `paper`.
+- Built the current-worktree Rust Edge candidate successfully:
+  local image ID
+  `sha256:acf792c7831f1f7a16dcf2a004fa797a9e9b4812ba6b83f6fd0a3ee216f995db`.
+  It is a local qualification candidate only, not a published/signed release
+  or production-authoritative evidence.
+- Baseline inspection found the current Edge healthy on the prior immutable
+  image, with the separately-qualified Source Proxy healthy and both Manager
+  issuer/facade containers running. No container, Source Proxy config,
+  Trading System, database, role, secret, JWT/JWKS or business data was
+  changed during preparation.
+- **Current gate:** no trusted SGP SSH host-key pin is available locally, so
+  the Control API private signer and mTLS client cannot be accessed safely for
+  the real positive probe. The Edge container has therefore **not** been
+  recreated and the Manager gate is still false in the active runtime. The
+  next permitted input is an independently verified SGP host-key fingerprint
+  (or a pre-pinned `known_hosts` line); then deploy the exact Control API/Edge
+  candidate pair, mint one fresh assertion and run the frozen positive/
+  negative qualification with rollback on any failure.

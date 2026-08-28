@@ -93,4 +93,35 @@ describe("execution delegated read assertions", () => {
     });
     expect(payload.resources).toEqual(["execution:command-center"]);
   });
+
+  it("supports only the exact Manager-v2 Paper read resource", async () => {
+    const { service, publicKey } = await fixture();
+    const token = await service.issueReadAssertion({
+      principalId: "usr_manager",
+      sessionId: "ses_manager",
+      workspaceId: "ws_research",
+      roles: ["ADMIN"],
+      resources: ["execution:manager-v2:read"],
+      authenticationTime: new Date(),
+      authenticationMethods: ["portal_session"],
+    });
+    const { payload } = await jwtVerify(token, publicKey, {
+      issuer: "portal-control-api",
+      audience: "portal-execution-edge-paper",
+      algorithms: ["RS256"],
+    });
+    expect(payload.resources).toEqual(["execution:manager-v2:read"]);
+
+    await expect(
+      service.issueReadAssertion({
+        principalId: "usr_manager",
+        sessionId: "ses_manager",
+        workspaceId: "ws_research",
+        roles: ["ADMIN"],
+        resources: ["execution:manager-v2:*"],
+        authenticationTime: new Date(),
+        authenticationMethods: ["portal_session"],
+      }),
+    ).rejects.toThrow("principal is invalid");
+  });
 });

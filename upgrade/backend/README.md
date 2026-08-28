@@ -8,10 +8,12 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [EX-BE-02A — Manager-v2 Edge Read-through API](./EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md)
-  — **Complete / backend only / no runtime activation:** the existing private
-  Rust Edge now has four resource-scoped Manager-v2 Paper read-through routes
-  behind a default-off gate. It adds neither UI nor a cache/projection, direct
-  DB access, V1/D4 change, command/event/SSE authority or a runtime deployment.
+  — **Backend complete / Paper runtime activation prepared:** the existing
+  private Rust Edge has four resource-scoped Manager-v2 Paper read-through
+  routes. The owner-approved narrow Edge-only activation is prepared and waits
+  only for the independently pinned SGP host key needed to use the real Control
+  API signer/mTLS client; Source Proxy, Trading System and all V1/D4/command/
+  event/SSE paths remain untouched and dark.
 
 - [EX-BE-02 — Manager-v2 Backend Consumer](./EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md)
   — **Complete / backend only / no runtime activation:** separate sealed Rust
