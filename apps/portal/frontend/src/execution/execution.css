@@ -5304,6 +5304,14 @@
 .exec-a3 .exec-alpha-kpi .exec-gate-unverified { font: 400 11px/16px var(--font-mono); }
 .exec-a3 .exec-grid-2 { gap: 14px; }
 .exec-a3 .exec-chart-tile, .exec-a3 .exec-chart-unavailable { border: 1px solid var(--line); background: var(--paper-raised); }
+/* Alpha 360 reads at the same density as the other 360s: chart captions and
+   honest-state bodies are mono meta, not 12–13px sans (Bobby, 2026-08-29). */
+.exec-a3 .exec-role-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-chart-unavailable-body { font: 400 11px/16px var(--font-mono); }
+.exec-a3-stagelegend { display: flex; gap: 14px; margin: 2px 0 0; font: 400 10px/14px var(--font-mono); }
+.exec-a3-stagelegend [data-tone="accent"] { color: var(--accent); }
+.exec-a3-stagelegend [data-tone="warn"] { color: var(--warn); }
+.exec-a3-stagelegend [data-tone="good"] { color: var(--good); }
 .exec-a3 .exec-chart-head h3, .exec-a3 .exec-section-title { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
 @media (max-width: 1023px) { .exec-a3 .exec-alpha-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 599px) { .exec-a3 .exec-alpha-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

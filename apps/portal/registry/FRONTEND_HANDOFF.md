@@ -1428,3 +1428,22 @@ bên portal-backend-plan), row mirror trong `BACKEND_PLAN_7_2_ROWS_2026-08-25.md
 
 Register giờ là BR-EX-41…66, tất cả `RECEIVED`. Quyết định treo duy nhất vẫn là
 OHLC owner §7.5.5(1).
+
+### 8.28 Alpha 360 — contribution chart sửa lỗi, equity-by-stage thành chart thật (2026-08-29)
+
+- `ContributionChart` (shared): bỏ dataZoom slider thừa, trục giá trị về gốc 0
+  (trước đó `scale:true` làm bar USDC vẽ từ 900 — đọc như một phần của chính
+  nó), `barMaxWidth:48`, label mono 10px không viền, tooltip mang provenance
+  (authority · as_of · formula) theo §12 tooltip contract — formula
+  `contribution.v1 (BR-EX-41)`.
+- Khung "Equity series not published" trên Overview thay bằng chart thật:
+  `alphaStageEquity()` trong `alpha360.smoke.ts` — 3 line paper/sandbox/canary
+  chuẩn hoá 1.0 tại stage entry, 30d, sandbox vào ngày 8, canary ngày 21 khớp
+  deployment map; DOM legend theo tone; SMOKE note "Delete when BR-EX-41/34
+  ship". Đây là reference shape cho series `stage-equity` của BR-EX-41 (đã
+  file, không cần request mới). Path honest-state giữ nguyên khi `equity` null.
+- Typography đồng bộ: trong `.exec-a3`, `exec-role-meta` về 10px mono và
+  `exec-chart-unavailable-body` về 11px mono (trước là 12–13px sans, to hơn
+  các màn 360 khác).
+- Guard `MONEY_ARITHMETIC` bắt chữ "stage-equity" trong JSX text (dấu `-`
+  trước `equity`) — đổi chữ, không đổi gate.

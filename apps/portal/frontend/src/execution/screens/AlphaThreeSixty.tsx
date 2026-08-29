@@ -40,9 +40,10 @@ import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { TradeReplay } from "../components/TradeReplay";
-import { useAlphaClock } from "../alpha360.smoke";
+import { alphaStageEquity, useAlphaClock } from "../alpha360.smoke";
 import { EnvelopeCaption, EquityChart, type EquitySeries } from "../components/EquityChart";
 import { ContributionChart } from "../components/ContributionChart";
+import { LinesChart } from "../components/marketChart";
 import { ExecutionWorkspace, shortDigest } from "../components/workspace";
 
 /**
@@ -515,7 +516,24 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 not. */}
             <div className="exec-grid-2" data-ratio="1.35">
               {equity ? (
-                <div data-scope-panel="equity"><EquityChart title={`Equity by stage · ${scope.venue} · ${scope.window}`} envelope={equity.envelope} series={equity.series ?? null} /></div>
+                <div data-scope-panel="equity">
+                  {equity.series ? (
+                    <EquityChart title={`Equity by stage · ${scope.venue} · ${scope.window}`} envelope={equity.envelope} series={equity.series} />
+                  ) : (
+                    <section className="exec-chart-tile" aria-label={`Equity by stage · ${scope.venue} · ${scope.window}`}>
+                      <h3 className="exec-section-title">Equity by stage · {scope.venue} · {scope.window}</h3>
+                      <p className="exec-a3-stagelegend" aria-hidden="true"><span data-tone="accent">— paper</span><span data-tone="warn">— sandbox</span><span data-tone="good">— canary</span></p>
+                      <LinesChart
+                        height={200}
+                        series={alphaStageEquity()}
+                        yFormatter={(v) => v.toFixed(3)}
+                        provenance={{ authority: "DERIVED", asOf: equity.envelope.asOf ?? "—", formula: equity.envelope.formulaVersion ?? "equity_projection.v1" }}
+                        ariaLabel={`Equity by stage, normalized at stage entry — ${scope.venue}, ${scope.window}`}
+                      />
+                      <p className="exec-af-smoke">! SMOKE DATA — normalized 1.0 at stage entry · series joined by artifact digest · reference shape for the BR-EX-41 stage equity series. Delete when BR-EX-41/34 ship</p>
+                    </section>
+                  )}
+                </div>
               ) : (
                 <PanelState
                   status="unavailable"
@@ -523,7 +541,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 />
               )}
               <div data-scope-panel="contribution">
-                <ContributionChart rows={contributions} />
+                <ContributionChart rows={contributions} provenance={{ authority: "DERIVED", asOf: envelope.asOf ?? "—", formula: "contribution.v1 (BR-EX-41)" }} />
                 <Contribution rows={contributions} />
               </div>
             </div>

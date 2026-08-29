@@ -105,3 +105,32 @@ export function useAlphaClock(asOf: string | null | undefined): string | null {
   if (!ALPHA_INSIGHT_SMOKE || !asOf) return null;
   return `${(1.4 + (t % 46) / 10).toFixed(1)}s`;
 }
+
+/**
+ * SMOKE — Equity by stage for the Overview overlay (BR-EX-41 `stage-equity`).
+ * Three normalized lines (1.0 at stage entry), 30 daily points to 2026-08-22:
+ * paper runs the whole window, sandbox enters at day 8, canary at day 21 —
+ * the staged reality the deployment map above already states. Reference
+ * fixture for the shape BR-EX-41 publishes; delete with this file.
+ */
+export function alphaStageEquity(): { name: string; tone: "accent" | "warn" | "good"; points: [string, number][] }[] {
+  const day = (i: number) => new Date(Date.UTC(2026, 6, 24 + i)).toISOString().slice(0, 10);
+  const det = (i: number, seed: number) => {
+    const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const walk = (from: number, seed: number, drift: number): [string, number][] => {
+    let v = 1;
+    const out: [string, number][] = [];
+    for (let i = from; i < 30; i += 1) {
+      out.push([day(i), Number(v.toFixed(4))]);
+      v *= 1 + drift + (det(i, seed) - 0.5) * 0.006;
+    }
+    return out;
+  };
+  return [
+    { name: "Paper", tone: "accent", points: walk(0, 3, 0.0011) },
+    { name: "Sandbox", tone: "warn", points: walk(8, 7, 0.0008) },
+    { name: "Canary", tone: "good", points: walk(21, 11, 0.0014) },
+  ];
+}
