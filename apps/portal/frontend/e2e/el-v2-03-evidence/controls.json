@@ -13,7 +13,7 @@
   "tag": "BUTTON",
   "text": "2OPERATIONProtective action partial — dep_88 · 2",
   "verdict": "navigated",
-  "detail": "/execution/operations/op_1251"
+  "detail": "/execution/operations?operation=op_1251"
  },
  {
   "route": "/execution",
@@ -27,13 +27,45 @@
   "route": "/execution",
   "index": 3,
   "tag": "A",
+  "text": "dep_74",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_74"
+ },
+ {
+  "route": "/execution",
+  "index": 4,
+  "tag": "A",
+  "text": "dep_88",
+  "verdict": "navigated",
+  "detail": "/deployments/live/dep_88/canary"
+ },
+ {
+  "route": "/execution",
+  "index": 5,
+  "tag": "A",
   "text": "Grid v2.1",
   "verdict": "navigated",
   "detail": "/deployments/alphas/av_2041"
  },
  {
   "route": "/execution",
-  "index": 4,
+  "index": 6,
+  "tag": "A",
+  "text": "PX-22",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-22"
+ },
+ {
+  "route": "/execution",
+  "index": 7,
+  "tag": "A",
+  "text": "DERIBIT · EX-771",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/EX-771"
+ },
+ {
+  "route": "/execution",
+  "index": 8,
   "tag": "A",
   "text": "Carry v3.2",
   "verdict": "navigated",
@@ -41,7 +73,7 @@
  },
  {
   "route": "/execution",
-  "index": 5,
+  "index": 9,
   "tag": "A",
   "text": "MM v1.1",
   "verdict": "navigated",
@@ -49,7 +81,15 @@
  },
  {
   "route": "/execution",
-  "index": 6,
+  "index": 10,
+  "tag": "A",
+  "text": "PX-31",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-31"
+ },
+ {
+  "route": "/execution",
+  "index": 11,
   "tag": "A",
   "text": "VnMomo v0.9",
   "verdict": "navigated",
@@ -57,7 +97,7 @@
  },
  {
   "route": "/execution",
-  "index": 7,
+  "index": 12,
   "tag": "A",
   "text": "R1 review · Momentum v4",
   "verdict": "navigated",
@@ -65,7 +105,7 @@
  },
  {
   "route": "/execution",
-  "index": 8,
+  "index": 13,
   "tag": "A",
   "text": "Capital condition expires",
   "verdict": "navigated",
@@ -73,11 +113,11 @@
  },
  {
   "route": "/execution",
-  "index": 9,
+  "index": 14,
   "tag": "A",
   "text": "Last verified protective action",
   "verdict": "navigated",
-  "detail": "/execution/operations/op_1249"
+  "detail": "/execution/operations?operation=op_1249"
  },
  {
   "route": "/execution/operations",
@@ -119,13 +159,21 @@
   "route": "/execution/operations",
   "index": 5,
   "tag": "A",
+  "text": "acct-live-grid-v21",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-live-grid-v21"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 6,
+  "tag": "A",
   "text": "review in incident inc_44 →",
   "verdict": "navigated",
   "detail": "/execution/operations/incidents/inc_44"
  },
  {
   "route": "/execution/operations",
-  "index": 6,
+  "index": 7,
   "tag": "A",
   "text": "cmd_9f12",
   "verdict": "navigated",
@@ -133,28 +181,36 @@
  },
  {
   "route": "/execution/operations",
-  "index": 7,
+  "index": 8,
   "tag": "BUTTON",
   "text": "op_1255",
   "verdict": "changed"
  },
  {
   "route": "/execution/operations",
-  "index": 8,
+  "index": 9,
+  "tag": "A",
+  "text": "acct-sbx-carry-okx",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-sbx-carry-okx"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 10,
   "tag": "BUTTON",
   "text": "op_fixture_queue_1",
   "verdict": "changed"
  },
  {
   "route": "/execution/operations",
-  "index": 9,
+  "index": 11,
   "tag": "BUTTON",
   "text": "Close alerts",
   "verdict": "changed"
  },
  {
   "route": "/execution/operations",
-  "index": 10,
+  "index": 12,
   "tag": "A",
   "text": "CRITICAL · 02:00Position MISMATCH — acct-live-gr",
   "verdict": "navigated",
@@ -162,7 +218,7 @@
  },
  {
   "route": "/execution/operations",
-  "index": 11,
+  "index": 13,
   "tag": "A",
   "text": "WARN · 4mBroker sync STALE — dep_91 · OKXage 88s",
   "verdict": "navigated",
@@ -170,14 +226,14 @@
  },
  {
   "route": "/execution/operations",
-  "index": 12,
+  "index": 14,
   "tag": "A",
   "text": "WARN · 06:00op_1251 PARTIAL unresolvedemergency-",
   "verdict": "changed"
  },
  {
   "route": "/execution/operations",
-  "index": 13,
+  "index": 15,
   "tag": "A",
   "text": "INFO · 1dCondition expiring in 7d — capacity cap",
   "verdict": "navigated",
@@ -187,13 +243,21 @@
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 0,
   "tag": "A",
+  "text": "acct-live-grid-v21",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-live-grid-v21"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 1,
+  "tag": "A",
   "text": "rf_2101",
   "verdict": "navigated",
   "detail": "/deployments/blotter"
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
-  "index": 1,
+  "index": 2,
   "tag": "A",
   "text": "dep_88",
   "verdict": "navigated",
@@ -201,7 +265,7 @@
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
-  "index": 2,
+  "index": 3,
   "tag": "A",
   "text": "op_1252",
   "verdict": "navigated",
@@ -209,7 +273,7 @@
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
-  "index": 3,
+  "index": 4,
   "tag": "A",
   "text": "op_1253",
   "verdict": "navigated",
@@ -217,7 +281,7 @@
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
-  "index": 4,
+  "index": 5,
   "tag": "A",
   "text": "Open apply plan — reconcile from broker ▸",
   "verdict": "navigated",
@@ -225,7 +289,7 @@
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
-  "index": 5,
+  "index": 6,
   "tag": "BUTTON",
   "text": "op_fixture_1253",
   "verdict": "navigated",
@@ -233,7 +297,7 @@
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
-  "index": 6,
+  "index": 7,
   "tag": "A",
   "text": "op_1252",
   "verdict": "navigated",
@@ -241,7 +305,7 @@
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
-  "index": 7,
+  "index": 8,
   "tag": "A",
   "text": "apply plan ▸",
   "verdict": "navigated",
@@ -1148,12 +1212,20 @@
   "route": "/deployments/sandbox/dep_77",
   "index": 8,
   "tag": "A",
+  "text": "R2 AP-352 pending",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-352/r2"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 9,
+  "tag": "A",
   "text": "dep_77",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 9,
+  "index": 10,
   "tag": "A",
   "text": "acct-sbx-carry-okx",
   "verdict": "navigated",
@@ -1161,7 +1233,7 @@
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 10,
+  "index": 11,
   "tag": "A",
   "text": "AP-101",
   "verdict": "navigated",
@@ -1169,7 +1241,7 @@
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 11,
+  "index": 12,
   "tag": "A",
   "text": "AP-207",
   "verdict": "navigated",
@@ -1177,7 +1249,7 @@
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 12,
+  "index": 13,
   "tag": "A",
   "text": "PX-29",
   "verdict": "navigated",
@@ -1185,84 +1257,84 @@
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 13,
+  "index": 14,
   "tag": "BUTTON",
   "text": "Sync broker",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 14,
+  "index": 15,
   "tag": "BUTTON",
   "text": "Dry-run reconcile",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 15,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Open smoke window ⌄",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 16,
+  "index": 17,
   "tag": "BUTTON",
   "text": "Reconciliation 0",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 17,
+  "index": 18,
   "tag": "BUTTON",
   "text": "Steps 7",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 18,
+  "index": 19,
   "tag": "BUTTON",
   "text": "Promotion plans 0",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 19,
+  "index": 20,
   "tag": "BUTTON",
   "text": "Timeline 1",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 20,
+  "index": 21,
   "tag": "BUTTON",
   "text": "Copy full ARTIFACT",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 21,
+  "index": 22,
   "tag": "A",
   "text": "AP-101",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 22,
+  "index": 23,
   "tag": "A",
   "text": "AP-207",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 23,
+  "index": 24,
   "tag": "A",
   "text": "PX-29",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 24,
+  "index": 25,
   "tag": "BUTTON",
   "text": "Copy full evidence set",
   "verdict": "skipped:hidden"
@@ -1375,13 +1447,21 @@
   "route": "/deployments/live/dep_88/canary",
   "index": 13,
   "tag": "A",
+  "text": "AP-311",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-311/r2"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 14,
+  "tag": "A",
   "text": "full blotter →",
   "verdict": "navigated",
   "detail": "/deployments/blotter"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 14,
+  "index": 15,
   "tag": "A",
   "text": "rec_881",
   "verdict": "navigated",
@@ -1389,7 +1469,7 @@
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 15,
+  "index": 16,
   "tag": "A",
   "text": "Live board",
   "verdict": "navigated",
@@ -1397,7 +1477,7 @@
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 16,
+  "index": 17,
   "tag": "A",
   "text": "cr_301",
   "verdict": "navigated",
@@ -1405,7 +1485,7 @@
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 17,
+  "index": 18,
   "tag": "A",
   "text": "cr_307",
   "verdict": "navigated",
@@ -1413,7 +1493,15 @@
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 18,
+  "index": 19,
+  "tag": "A",
+  "text": "dep_94",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 20,
   "tag": "A",
   "text": "rec_881",
   "verdict": "navigated",
@@ -1421,7 +1509,7 @@
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 19,
+  "index": 21,
   "tag": "A",
   "text": "top-1 would reach 74% — see Portfolio 360°",
   "verdict": "navigated",
@@ -1429,7 +1517,7 @@
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 20,
+  "index": 22,
   "tag": "A",
   "text": "preview pack →",
   "verdict": "navigated",
@@ -1437,63 +1525,63 @@
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 21,
+  "index": 23,
   "tag": "BUTTON",
   "text": "Envelope",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 22,
+  "index": 24,
   "tag": "BUTTON",
   "text": "Positions & orders",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 23,
+  "index": 25,
   "tag": "BUTTON",
   "text": "Reconciliation",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 24,
+  "index": 26,
   "tag": "BUTTON",
   "text": "Guard rule",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 25,
+  "index": 27,
   "tag": "BUTTON",
   "text": "Copy full ARTIFACT",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 26,
+  "index": 28,
   "tag": "A",
   "text": "AP-118",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 27,
+  "index": 29,
   "tag": "A",
   "text": "AP-152",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 28,
+  "index": 30,
   "tag": "A",
   "text": "SX-14",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 29,
+  "index": 31,
   "tag": "BUTTON",
   "text": "Copy full evidence set",
   "verdict": "skipped:hidden"
