@@ -9,9 +9,10 @@
  */
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { SparkLine } from "../components/marketChart";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
-import { fleetSmoke, fmt2, useFleetTick, type FleetDeployment, type FleetRow, type StageChip } from "../alphaFleet.smoke";
+import { fleetSmoke, fmt2, useFleetTick, type FleetDeployment, type FleetRow, type StageChip , fleetSparkSeries } from "../alphaFleet.smoke";
 
 export const FLEET_FILTERS = ["all", "live", "canary", "sandbox", "paper", "research"] as const;
 export type FleetFilter = (typeof FLEET_FILTERS)[number];
@@ -27,11 +28,7 @@ function Chip({ chip }: { chip: StageChip }) {
 }
 
 function Spark({ pts }: { pts: number[] }) {
-  return (
-    <svg viewBox="0 0 90 24" preserveAspectRatio="none" className="exec-af-spark" aria-hidden="true">
-      <polyline points={pts.map((y, i) => `${(i * 90) / (pts.length - 1)},${y}`).join(" ")} fill="none" stroke="var(--good)" strokeWidth="1.5" />
-    </svg>
-  );
+  return <SparkLine points={fleetSparkSeries(pts)} tone="good" height={24} width={90} />;
 }
 
 function Note({ text, links }: { text: string; links?: { label: string; href: string }[] }) {

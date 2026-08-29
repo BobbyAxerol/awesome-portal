@@ -197,3 +197,8 @@ export function sparkPoints(values: number[], w = 260, h = 36): string {
   const rng = max - min || 1;
   return sp.map((v, i) => `${((i / (sp.length - 1)) * w).toFixed(1)},${(h - 4 - ((v - min) / rng) * (h - 8) + 2).toFixed(1)}`).join(" ");
 }
+
+/** The live mismatch spark as data — one point per minute from detection. */
+export function incidentSparkSeries(values: readonly number[]): [string, number][] {
+  return values.map((v, i) => [new Date(Date.UTC(2026, 7, 22, 10, 0) + i * 60_000).toISOString(), v]);
+}

@@ -155,3 +155,11 @@ export function sparkPolyline(values: number[], w = 220, h = 26): string {
   const max = Math.max(...values, 1);
   return values.map((v, i) => `${((i / (values.length - 1)) * w).toFixed(0)},${(h - 2 - (v / max) * (h - 6)).toFixed(0)}`).join(" ");
 }
+
+/** 24h throughput as data — real counts per hourly bucket ending 10:00Z. */
+export function throughputSeries(values: readonly number[]): [string, number][] {
+  return values.map((v, i) => [
+    new Date(Date.UTC(2026, 7, 22, 10) - (values.length - 1 - i) * 3_600_000).toISOString(),
+    v,
+  ]);
+}

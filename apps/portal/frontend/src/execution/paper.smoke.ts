@@ -460,3 +460,12 @@ export function untilVnOpen(now: Date): string {
   const p2 = (n: number) => String(n).padStart(2, "0");
   return `${Math.floor(left / 3600)}h ${p2(Math.floor((left % 3600) / 60))}m ${p2(left % 60)}s`;
 }
+
+/** Drift spark as data — the drift value itself (up is up), hourly, 26 points. */
+export function poSparkSeries(amp: number, drop: number): [string, number][] {
+  const n = 26;
+  return Array.from({ length: n }, (_, i) => [
+    new Date(Date.UTC(2026, 7, 22) - (n - 1 - i) * 3_600_000).toISOString(),
+    Number((amp * Math.sin(i / 6) - (i / n) * drop).toFixed(2)),
+  ]);
+}

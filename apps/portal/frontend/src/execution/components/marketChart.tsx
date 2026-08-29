@@ -614,10 +614,13 @@ export function SparkLine({
   points,
   tone = "good",
   height = 20,
+  width,
 }: {
   points: readonly (readonly [string, number | null])[];
   tone?: ChartTone;
   height?: number;
+  /** Cell width; a string ("100%") stretches with the container. */
+  width?: number | string;
 }) {
   const option = useMemo<EChartsOption>(() => {
     const color = toneColor(tone);
@@ -638,7 +641,7 @@ export function SparkLine({
     };
   }, [points, tone]);
   return (
-    <span className="exec-mc-spark" aria-hidden="true">
+    <span className="exec-mc-spark" aria-hidden="true" style={width !== undefined ? { width } : undefined}>
       <EChart option={option} height={height} />
     </span>
   );

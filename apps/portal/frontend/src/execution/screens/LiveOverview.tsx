@@ -4,10 +4,11 @@
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { SparkLine } from "../components/marketChart";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
 import { usePresentationChrome } from "../../app/presentation";
-import { clockOf, fmt0, fmtPnl, liveSmoke, sparkOf, useLiveTick, type LiveRow } from "../live.smoke";
+import { clockOf, fmt0, fmtPnl, liveSmoke, sparkSeries, useLiveTick, type LiveRow } from "../live.smoke";
 
 export const LIVE_FILTERS = ["all", "full", "canary", "issues"] as const;
 export type LiveFilter = (typeof LIVE_FILTERS)[number];
@@ -105,7 +106,7 @@ function LiveRows({ r, j, sp, incAge }: { r: LiveRow; j: number; sp: number[]; i
         <td data-numeric="true" className="exec-af-dim">{r.exposure}</td>
         <td data-numeric="true" data-tone="good">{fmtPnl(r.pnlBase + j * r.pnlK)}</td>
         <td data-numeric="true" className="exec-af-dim">{r.dd}</td>
-        <td><svg viewBox="0 0 90 20" preserveAspectRatio="none" className="exec-lv-spark" aria-hidden="true"><polyline points={sparkOf(sp, r.sparkScale, r.sparkOff)} fill="none" stroke={r.sparkTone === "bad" ? "var(--bad)" : "var(--good)"} strokeWidth="1.3" /></svg></td>
+        <td><SparkLine points={sparkSeries(sp, r.sparkScale, r.sparkOff)} tone={r.sparkTone} height={20} width={90} /></td>
         <td><span className="exec-lv-health" data-tone={r.health.tone} data-pulse={r.health.pulse ? "true" : undefined}>{r.health.label}</span></td>
       </tr>
       <tr className="exec-af-note exec-lv-note" data-hot={r.hot ? "true" : undefined}><td colSpan={9}><Note text={r.note.replace("{incAge}", incAge)} links={r.noteLinks} /></td></tr>

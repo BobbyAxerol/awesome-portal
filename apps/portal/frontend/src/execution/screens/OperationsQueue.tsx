@@ -27,13 +27,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { ExecutionSurface } from "../ExecutionSurface";
+import { SparkLine } from "../components/marketChart";
 import { PanelState } from "../components/states";
 import { formatAge } from "../components/badges";
 import { ExecutionWorkspace } from "../components/workspace";
 import { usePresentationChrome } from "../../app/presentation";
 import type { PanelStatus } from "../contracts";
 import type { OperationsQueue, QueueRow, TriageState } from "../operations";
-import { fmtAge, queueSmoke, sparkPolyline, useQueueTick, type DetailPart, type QueueSmokeRow } from "../operationsQueue.smoke";
+import { fmtAge, queueSmoke, throughputSeries, useQueueTick, type DetailPart, type QueueSmokeRow } from "../operationsQueue.smoke";
 
 /** The hi-fi's three chips. Applied server-side; they never filter loaded rows. */
 export const QUEUE_FILTERS = ["NEEDS_ATTENTION", "MINE", "ALL_24H"] as const;
@@ -280,7 +281,7 @@ export function OperationsQueueScreen({
                 ))}
                 <div className="exec-oq-kpi exec-oq-kpiwide">
                   <div className="exec-oq-kpilabel" data-tone="mute">Throughput — verified/h · 24h</div>
-                  <svg className="exec-oq-spark" viewBox="0 0 220 26" preserveAspectRatio="none" aria-hidden="true"><polyline points={sparkPolyline(smoke.throughput)} fill="none" strokeWidth="1.5" /></svg>
+                  <SparkLine points={throughputSeries(smoke.throughput)} tone="good" height={26} width="100%" />
                 </div>
               </div>
             ) : (

@@ -81,3 +81,12 @@ export const fmtPnl = (v: number) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toLoc
 export const fmt0 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 export const clockOf = (d: Date, z = true) => (d.getTime() === 0 ? "—" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}${z ? "Z" : ""}`);
 export const sparkOf = (sp: number[], scale: number, off: number) => { const pts = sp.length > 1 ? sp : [0, 0]; return pts.map((v, i) => `${(i / (pts.length - 1)) * 90},${10 - v * scale + off}`).join(" "); };
+
+/** The ticking spark as data — value = v·scale − off (up is up), one point per ~1.4s tick. */
+export function sparkSeries(sp: readonly number[], scale: number, off: number): [string, number][] {
+  const pts = sp.length > 1 ? sp : [0, 0];
+  return pts.map((v, i) => [
+    new Date(Date.UTC(2026, 7, 22, 10, 42, 1) + i * 1400).toISOString(),
+    Number((v * scale - off).toFixed(2)),
+  ]);
+}

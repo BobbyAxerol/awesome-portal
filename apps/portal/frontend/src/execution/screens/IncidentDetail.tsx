@@ -9,11 +9,12 @@
  */
 import type { ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { SparkLine } from "../components/marketChart";
 import { PanelState } from "../components/states";
 import { ExecutionWorkspace, shortDigest } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
 import { blockerText, incidentRail, type IncidentCollection, type IncidentDetail as Incident } from "../operations";
-import { hhmm, incidentSmoke, mmss, sparkPoints, useIncidentLive, type GateRow, type OpRow } from "../incident.smoke";
+import { hhmm, incidentSmoke, incidentSparkSeries, mmss, useIncidentLive, type GateRow, type OpRow } from "../incident.smoke";
 
 const PANEL_TITLE: Record<string, string> = {
   findings: "Findings",
@@ -180,9 +181,7 @@ export function IncidentDetailScreen({
               <span className="exec-inc2-price">
                 {smoke.symbol} <b data-tone={resolved ? "mute" : up ? "good" : "bad"}>{priceText}</b> <span data-tone={resolved ? "mute" : up ? "good" : "bad"}>{up ? "▲" : "▼"}</span>
               </span>
-              <svg className="exec-inc2-spark" viewBox="0 0 260 36" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points={sparkPoints(live.spark)} fill="none" strokeWidth="1.5" />
-              </svg>
+              <SparkLine points={incidentSparkSeries(live.spark)} tone="accent" height={36} width="100%" />
               <span className="exec-inc2-delta">unreconciled Δ {smoke.deltaQty} {smoke.deltaUnit} ≈ <b>{deltaValue}</b></span>
               <span className="exec-inc2-marketnote" data-tone={resolved ? "good" : undefined}>
                 {resolved ? `resolved in ${smoke.resolved.resolvedIn} — Δ converged to broker before re-pricing exceeded tolerance` : "the market does not wait — the unreconciled Δ re-prices every tick while orders stay fail-closed"}

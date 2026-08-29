@@ -14,10 +14,10 @@ import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
 import {
-  overviewReturns, paperClock, paperSmoke, poCells, poSpark, untilVnOpen, usePaperTick,
+  overviewReturns, paperClock, paperSmoke, poCells, poSparkSeries, untilVnOpen, usePaperTick,
   PAPER_OVERVIEW, type PoBoardRow,
 } from "../paper.smoke";
-import { LinesChart } from "../components/marketChart";
+import { LinesChart, SparkLine } from "../components/marketChart";
 
 const PO = PAPER_OVERVIEW;
 
@@ -203,10 +203,7 @@ function BoardRow({ r, now, onOpen }: { r: PoBoardRow; now: Date; onOpen: () => 
       </div>
       <div className="exec-po-drift">
         <div className="exec-po-driftlabel">drift · <span data-tone={r.drift.tone}>{r.drift.label}</span></div>
-        <svg viewBox="0 0 130 26" className="exec-po-sparksvg" aria-hidden="true">
-          <line x1="0" y1="13" x2="130" y2="13" stroke="var(--line-soft)" strokeWidth="1" />
-          <polyline points={poSpark(r.drift.spark.amp, r.drift.spark.drop)} fill="none" stroke={r.drift.tone === "warn" ? "var(--warn)" : r.drift.tone === "good" ? "var(--good)" : "var(--ink-mute)"} strokeWidth="1.5" />
-        </svg>
+<SparkLine points={poSparkSeries(r.drift.spark.amp, r.drift.spark.drop)} tone={r.drift.tone === "warn" ? "warn" : r.drift.tone === "good" ? "good" : "mute"} height={26} width={130} />
       </div>
       <div className="exec-po-stats">win {r.win}<br />rej {r.rej}<br />fees {r.fees}</div>
       <div className="exec-po-pnl">{r.pnl}<div className="exec-po-pnlsub">net pnl</div></div>
