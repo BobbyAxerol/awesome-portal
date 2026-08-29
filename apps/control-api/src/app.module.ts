@@ -25,6 +25,8 @@ import { ExecutionRealtimeController } from "./execution/realtime.controller";
 import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
 import { ExecutionAnalyticsController } from "./execution/analytics.controller";
 import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
+import { ExecutionCurrentSourceController } from "./execution/current-source.controller";
+import { ExecutionCurrentSourceProxy } from "./execution/current-source.proxy";
 import { CommandCenterController } from "./command-center/command-center.controller";
 import { CommandCenterRepository } from "./command-center/command-center.repository";
 import { CommandCenterService } from "./command-center/command-center.service";
@@ -61,6 +63,7 @@ export class AppModule {
         GovernanceController,
         ExecutionRealtimeController,
         ExecutionAnalyticsController,
+        ExecutionCurrentSourceController,
         CommandCenterController,
         IncidentController,
         SandboxCertificationController,
@@ -122,6 +125,11 @@ export class AppModule {
         {
           provide: ExecutionAnalyticsProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionAnalyticsProxy.create(cfg),
+          inject: [CONTROL_API_CONFIG],
+        },
+        {
+          provide: ExecutionCurrentSourceProxy,
+          useFactory: (cfg: ControlApiConfig) => ExecutionCurrentSourceProxy.create(cfg),
           inject: [CONTROL_API_CONFIG],
         },
         {

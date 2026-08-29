@@ -1,0 +1,185 @@
+import { exportJWK, exportPKCS8, generateKeyPair, jwtVerify } from "jose";
+import { describe, expect, it } from "vitest";
+import { loadConfig } from "../src/config";
+import {
+  currentSourceResource,
+  ExecutionDelegationService,
+} from "../src/execution/delegation";
+import {
+  CurrentSourceBulkhead,
+  CurrentSourceProxyError,
+  currentSourcePath,
+  currentSourceUpstreamError,
+} from "../src/execution/current-source.proxy";
+
+const base = {
+  DATABASE_URL: "postgres://portal:portal@localhost/portal",
+  PORTAL_ENV: "local",
+  AUTH_MODE: "dev",
+};
+
+const edgeIdentity = {
+  FEATURE_EXECUTION_EDGE: "true",
+  EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/execution-edge/delegation.pem",
+  EXECUTION_EDGE_CA_FILE: "/run/secrets/execution-edge/ca.crt",
+  EXECUTION_EDGE_CLIENT_CERT_FILE: "/run/secrets/execution-edge/client.crt",
+  EXECUTION_EDGE_CLIENT_KEY_FILE: "/run/secrets/execution-edge/client.key",
+};
+
+describe("N13B current-source BFF boundary", () => {
+  it("keeps every profile dark by default and independently configurable", () => {
+    const dark = loadConfig(base);
+    expect(dark.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER).toBe("false");
+    expect(dark.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX).toBe("false");
+    expect(dark.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE).toBe("false");
+
+    const paper = loadConfig({
+      ...base,
+      ...edgeIdentity,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper-edge.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+    });
+    expect(paper.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER).toBe("true");
+    expect(paper.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX).toBe("false");
+    expect(paper.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE).toBe("false");
+  });
+
+  it("fails closed on missing, non-TLS or drifted profile pins", () => {
+    expect(() => loadConfig({
+      ...base,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+    })).toThrow(/FEATURE_EXECUTION_EDGE/);
+    expect(() => loadConfig({
+      ...base,
+      ...edgeIdentity,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+    })).toThrow(/EXECUTION_EDGE_PAPER_ORIGIN/);
+    expect(() => loadConfig({
+      ...base,
+      ...edgeIdentity,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "http://paper-edge.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_OTHER",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+    })).toThrow(/HTTPS/);
+    expect(() => loadConfig({
+      ...base,
+      ...edgeIdentity,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper-edge.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_OTHER",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+    })).toThrow(/N13B pins/);
+  });
+
+  it("mints only exact screen/profile resources", async () => {
+    const { privateKey, publicKey } = await generateKeyPair("RS256", { extractable: true });
+    const delegation = await ExecutionDelegationService.create({
+      issuer: "portal-control-api",
+      audience: "portal-execution-edge-sandbox",
+      keyId: "execution-k1",
+      privateKeyPem: await exportPKCS8(privateKey),
+      ttlSeconds: 45,
+      environment: "sandbox",
+      profileId: "SANDBOX_BINANCE_USDM",
+    });
+    const resource = currentSourceResource("EXECUTION_SANDBOX_CERTIFICATION_SCREEN");
+    const token = await delegation.issueReadAssertion({
+      principalId: "usr_bobby",
+      sessionId: "ses_1",
+      workspaceId: "ws_1",
+      roles: ["ADMIN"],
+      resources: [resource],
+      authenticationTime: new Date("2026-08-29T00:00:00Z"),
+      authenticationMethods: ["portal_session"],
+    });
+    const { payload } = await jwtVerify(token, await exportJWK(publicKey), {
+      issuer: "portal-control-api",
+      audience: "portal-execution-edge-sandbox",
+      algorithms: ["RS256"],
+    });
+    expect(payload.resources).toEqual([resource]);
+    expect(payload.profile_id).toBe("SANDBOX_BINANCE_USDM");
+    expect(() => currentSourceResource("OTHER_SCREEN")).toThrow(/outside the N13B contract/);
+  });
+
+  it("builds only bounded screen/source/relation paths and profile-bound cursors", () => {
+    expect(currentSourcePath("paper", "EXECUTION_FULL_BLOTTER_SCREEN")).toBe(
+      "/internal/v1/current-source/screens/EXECUTION_FULL_BLOTTER_SCREEN",
+    );
+    expect(currentSourcePath(
+      "live",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "manager.orders",
+      "orders",
+      { limit: 50, cursor: "opaque+/=" },
+    )).toBe(
+      "/internal/v1/current-source/screens/EXECUTION_LIVE_FULL_OPERATIONS_SCREEN" +
+      "/sources/manager.orders/relations/orders?limit=50&cursor=opaque%2B%2F%3D",
+    );
+    expect(() => currentSourcePath("canary", "LIVE_OPERATIONS_SCREEN"))
+      .toThrowError(CurrentSourceProxyError);
+    expect(() => currentSourcePath(
+      "paper",
+      "PAPER_TRADING_SCREEN",
+      "manager.orders",
+      "../orders",
+    )).toThrowError(CurrentSourceProxyError);
+    expect(() => currentSourcePath(
+      "paper",
+      "PAPER_TRADING_SCREEN",
+      "manager.orders",
+      "orders",
+      { limit: 201 },
+    )).toThrowError(CurrentSourceProxyError);
+  });
+
+  it("preserves typed availability without leaking arbitrary upstream detail", () => {
+    const typed = currentSourceUpstreamError(Buffer.from(JSON.stringify({
+      error: {
+        code: "CURRENT_SOURCE_UNAVAILABLE",
+        message: "do not forward this upstream detail",
+        classification: "CONNECTED",
+        availability: "UNAVAILABLE",
+        reason_code: "MANAGER_TEMPORARILY_UNAVAILABLE",
+      },
+    })), true, 503);
+    expect(typed).toMatchObject({
+      code: "CURRENT_SOURCE_UNAVAILABLE",
+      status: 503,
+      details: {
+        classification: "CONNECTED",
+        availability: "UNAVAILABLE",
+        reason_code: "MANAGER_TEMPORARILY_UNAVAILABLE",
+      },
+    });
+    expect(typed.message).toBe("CURRENT_SOURCE_UNAVAILABLE");
+
+    const rejected = currentSourceUpstreamError(Buffer.from(JSON.stringify({
+      error: { code: "SOURCE_SECRET_DETAIL", message: "secret" },
+    })), true, 403);
+    expect(rejected).toMatchObject({
+      code: "N13B_DELEGATED_IDENTITY_REJECTED",
+      status: 502,
+    });
+  });
+
+  it("bounds shared profile concurrency and queue residence", async () => {
+    const bulkhead = new CurrentSourceBulkhead(1, 1, 1_000);
+    const releaseFirst = await bulkhead.acquire();
+    const second = bulkhead.acquire();
+    await expect(bulkhead.acquire()).rejects.toMatchObject({
+      code: "N13B_QUEUE_FULL",
+      status: 503,
+    });
+    releaseFirst();
+    (await second)();
+
+    const expiring = new CurrentSourceBulkhead(1, 1, 10);
+    const release = await expiring.acquire();
+    await expect(expiring.acquire()).rejects.toMatchObject({ code: "N13B_QUEUE_TIMEOUT" });
+    release();
+  });
+});

@@ -17,6 +17,11 @@ const ServiceOriginSchema = z
     );
   }, "service base URL must be an HTTP(S) origin without credentials, path, query or fragment");
 
+const OptionalServiceOriginSchema = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  ServiceOriginSchema.optional(),
+);
+
 const EnvSchema = z.object({
   NODE_ENV: z.string().default("development"),
   PORTAL_ENV: z.enum(["local", "research", "paper", "sandbox", "live"]).default("research"),
@@ -89,6 +94,9 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_RELAY: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
   COMMAND_CENTER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(128 * 1024),
   EXECUTION_EDGE_ORIGIN: ServiceOriginSchema.default("https://portal-execution-edge:8443"),
   EXECUTION_EDGE_ENVIRONMENT: z.enum(["paper", "sandbox", "live"]).default("paper"),
@@ -103,6 +111,33 @@ const EnvSchema = z.object({
   EXECUTION_EDGE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("execution-k1"),
   EXECUTION_EDGE_DELEGATION_ISSUER: z.string().min(1).default("portal-control-api"),
   EXECUTION_EDGE_DELEGATION_AUDIENCE: z.string().min(1).default("portal-execution-edge"),
+  EXECUTION_EDGE_PAPER_ORIGIN: OptionalServiceOriginSchema,
+  EXECUTION_EDGE_PAPER_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
+  ),
+  EXECUTION_EDGE_PAPER_AUDIENCE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).max(160).optional(),
+  ),
+  EXECUTION_EDGE_SANDBOX_ORIGIN: OptionalServiceOriginSchema,
+  EXECUTION_EDGE_SANDBOX_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^SANDBOX_[A-Z0-9_]{2,120}$/).optional(),
+  ),
+  EXECUTION_EDGE_SANDBOX_AUDIENCE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).max(160).optional(),
+  ),
+  EXECUTION_EDGE_LIVE_ORIGIN: OptionalServiceOriginSchema,
+  EXECUTION_EDGE_LIVE_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^LIVE_[A-Z0-9_]{2,120}$/).optional(),
+  ),
+  EXECUTION_EDGE_LIVE_AUDIENCE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).max(160).optional(),
+  ),
   EXECUTION_EDGE_DELEGATION_TTL_SECONDS: z.coerce.number().int().min(1).max(60).default(45),
   EXECUTION_EDGE_CA_FILE: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -121,6 +156,11 @@ const EnvSchema = z.object({
   EXECUTION_EDGE_ANALYTICS_MAXIMUM_CONCURRENCY: z.coerce.number().int().min(1).max(512).default(64),
   EXECUTION_EDGE_ANALYTICS_MAXIMUM_QUEUE: z.coerce.number().int().min(0).max(2_048).default(128),
   EXECUTION_EDGE_ANALYTICS_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(10).max(5_000).default(250),
+  EXECUTION_EDGE_CURRENT_SOURCE_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(250).max(30_000).default(5_000),
+  EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES: z.coerce.number().int().min(64 * 1024).max(4 * 1024 * 1024).default(2 * 1024 * 1024),
+  EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY: z.coerce.number().int().min(1).max(512).default(64),
+  EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_QUEUE: z.coerce.number().int().min(0).max(2_048).default(128),
+  EXECUTION_EDGE_CURRENT_SOURCE_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(10).max(5_000).default(250),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 
@@ -231,6 +271,67 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.FEATURE_EXECUTION_COMMAND_RELAY === "true") {
     throw new Error("FEATURE_EXECUTION_COMMAND_RELAY is not commissioned in EX-BE-05b/F0");
+  }
+  const currentSourceProfiles = [
+    {
+      environment: "paper",
+      feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER,
+      origin: config.EXECUTION_EDGE_PAPER_ORIGIN,
+      profileId: config.EXECUTION_EDGE_PAPER_PROFILE_ID,
+      audience: config.EXECUTION_EDGE_PAPER_AUDIENCE,
+      expectedProfileId: "PAPER_BINANCE_USDM",
+      expectedAudience: "portal-execution-edge-paper",
+    },
+    {
+      environment: "sandbox",
+      feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX,
+      origin: config.EXECUTION_EDGE_SANDBOX_ORIGIN,
+      profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID,
+      audience: config.EXECUTION_EDGE_SANDBOX_AUDIENCE,
+      expectedProfileId: "SANDBOX_BINANCE_USDM",
+      expectedAudience: "portal-execution-edge-sandbox",
+    },
+    {
+      environment: "live",
+      feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE,
+      origin: config.EXECUTION_EDGE_LIVE_ORIGIN,
+      profileId: config.EXECUTION_EDGE_LIVE_PROFILE_ID,
+      audience: config.EXECUTION_EDGE_LIVE_AUDIENCE,
+      expectedProfileId: "LIVE_BINANCE_USDM",
+      expectedAudience: "portal-execution-edge-live",
+    },
+  ] as const;
+  for (const profile of currentSourceProfiles) {
+    if (profile.feature !== "true") continue;
+    if (config.FEATURE_EXECUTION_EDGE !== "true") {
+      throw new Error(
+        `current-source ${profile.environment} delivery requires FEATURE_EXECUTION_EDGE=true`,
+      );
+    }
+    const missing = [
+      ["EXECUTION_EDGE_CA_FILE", config.EXECUTION_EDGE_CA_FILE],
+      ["EXECUTION_EDGE_CLIENT_CERT_FILE", config.EXECUTION_EDGE_CLIENT_CERT_FILE],
+      ["EXECUTION_EDGE_CLIENT_KEY_FILE", config.EXECUTION_EDGE_CLIENT_KEY_FILE],
+      [`EXECUTION_EDGE_${profile.environment.toUpperCase()}_ORIGIN`, profile.origin],
+      [`EXECUTION_EDGE_${profile.environment.toUpperCase()}_PROFILE_ID`, profile.profileId],
+      [`EXECUTION_EDGE_${profile.environment.toUpperCase()}_AUDIENCE`, profile.audience],
+    ].filter(([, value]) => value === undefined).map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(
+        `current-source ${profile.environment} delivery requires: ${missing.join(", ")}`,
+      );
+    }
+    if (new URL(profile.origin!).protocol !== "https:") {
+      throw new Error(`current-source ${profile.environment} origin must use HTTPS`);
+    }
+    if (
+      profile.profileId !== profile.expectedProfileId ||
+      profile.audience !== profile.expectedAudience
+    ) {
+      throw new Error(
+        `current-source ${profile.environment} profile and audience must match the N13B pins`,
+      );
+    }
   }
   if (
     config.FEATURE_EXECUTION_REALTIME_SSE === "true" ||

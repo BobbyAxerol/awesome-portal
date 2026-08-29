@@ -5,6 +5,42 @@ import type { Role } from "../domain";
 const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:(?:command-center|manager-v2:read)|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|account-broker-360|paper-workbench):[A-Za-z0-9._-]{1,128})$/;
 const MANAGER_V2_RESOURCE = "execution:manager-v2:read";
 const PROFILE_ID_PATTERN = /^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/;
+const CURRENT_SOURCE_RESOURCE_PATTERN =
+  /^execution:current-source:([A-Z][A-Z0-9_]{2,95}):read$/;
+
+export const CURRENT_SOURCE_SCREEN_IDS = [
+  "PAPER_TRADING_SCREEN",
+  "SANDBOX_TRADING_SCREEN",
+  "LIVE_OPERATIONS_SCREEN",
+  "EXECUTION_COMMAND_CENTER_SCREEN",
+  "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+  "EXECUTION_INCIDENT_DETAIL_SCREEN",
+  "EXECUTION_APPROVAL_INBOX_SCREEN",
+  "EXECUTION_GATE_R1_REVIEW_SCREEN",
+  "EXECUTION_GATE_R2_REVIEW_SCREEN",
+  "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+  "EXECUTION_PAPER_WORKBENCH_SCREEN",
+  "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+  "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+  "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+  "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+  "EXECUTION_FULL_BLOTTER_SCREEN",
+  "EXECUTION_ALPHA_360_SCREEN",
+  "EXECUTION_PORTFOLIO_360_SCREEN",
+  "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+  "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
+] as const;
+
+export type CurrentSourceScreenId = (typeof CURRENT_SOURCE_SCREEN_IDS)[number];
+
+const CURRENT_SOURCE_SCREENS = new Set<string>(CURRENT_SOURCE_SCREEN_IDS);
+
+export function currentSourceResource(screenId: string): string {
+  if (!CURRENT_SOURCE_SCREENS.has(screenId)) {
+    throw new Error("current-source screen is outside the N13B contract");
+  }
+  return `execution:current-source:${screenId}:read`;
+}
 
 export interface ExecutionDelegationConfig {
   issuer: string;
@@ -56,9 +92,12 @@ export class ExecutionDelegationService {
 
   async issueReadAssertion(principal: ExecutionReadPrincipal): Promise<string> {
     validatePrincipal(principal);
-    const requestsManagerRead = principal.resources.includes(MANAGER_V2_RESOURCE);
-    if (requestsManagerRead && !this.config.profileId) {
-      throw new Error("Manager-v2 read assertions require an exact execution profile");
+    const requestsProfileBoundRead = principal.resources.some(
+      (resource) =>
+        resource === MANAGER_V2_RESOURCE || CURRENT_SOURCE_RESOURCE_PATTERN.test(resource),
+    );
+    if (requestsProfileBoundRead && !this.config.profileId) {
+      throw new Error("profile-bound read assertions require an exact execution profile");
     }
     const now = Math.floor(Date.now() / 1000);
     return new SignJWT({
@@ -68,7 +107,7 @@ export class ExecutionDelegationService {
       scopes: ["execution.read"],
       resources: [...new Set(principal.resources)].sort(),
       environment: this.config.environment,
-      ...(requestsManagerRead ? { profile_id: this.config.profileId } : {}),
+      ...(requestsProfileBoundRead ? { profile_id: this.config.profileId } : {}),
       auth_time: Math.floor(principal.authenticationTime.getTime() / 1000),
       amr: [...new Set(principal.authenticationMethods)].sort(),
     })
@@ -109,10 +148,16 @@ function validatePrincipal(principal: ExecutionReadPrincipal): void {
     principal.roles.length === 0 ||
     principal.resources.length === 0 ||
     principal.resources.length > 32 ||
-    principal.resources.some((resource) => !RESOURCE_PATTERN.test(resource)) ||
+    principal.resources.some((resource) => !validResource(resource)) ||
     principal.authenticationMethods.length === 0 ||
     Number.isNaN(principal.authenticationTime.getTime())
   ) {
     throw new Error("execution read principal is invalid");
   }
+}
+
+function validResource(resource: string): boolean {
+  if (RESOURCE_PATTERN.test(resource)) return true;
+  const match = CURRENT_SOURCE_RESOURCE_PATTERN.exec(resource);
+  return match !== null && CURRENT_SOURCE_SCREENS.has(match[1]);
 }

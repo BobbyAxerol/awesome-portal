@@ -573,6 +573,9 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/execution/analytics.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution/analytics.proxy.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-analytics.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/current-source.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/current-source.proxy.ts" \
+  "${ROOT_DIR}/apps/control-api/test/execution-current-source.spec.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.service.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/argon.ts" \

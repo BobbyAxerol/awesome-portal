@@ -12,6 +12,7 @@ import { GovernanceError } from "./governance/governance.service";
 import { QueryContractError } from "./query";
 import { AnalyticsProxyError } from "./execution/analytics.proxy";
 import { CommandCenterError } from "./command-center/command-center.service";
+import { CurrentSourceProxyError } from "./execution/current-source.proxy";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -30,12 +31,16 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof GovernanceError ||
       exception instanceof QueryContractError ||
       exception instanceof AnalyticsProxyError ||
+      exception instanceof CurrentSourceProxyError ||
       exception instanceof CommandCenterError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },
         request_id: requestId,
         ...(exception instanceof GovernanceError && exception.details
+          ? { details: exception.details }
+          : {}),
+        ...(exception instanceof CurrentSourceProxyError && exception.details
           ? { details: exception.details }
           : {}),
       });
