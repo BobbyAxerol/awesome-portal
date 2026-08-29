@@ -391,8 +391,8 @@ test.describe("EL-V2-05 · governance chain", () => {
     await expect(page).toHaveURL(/\/governance\/approvals$/);
     await page.getByRole("button", { name: /AP-352/ }).first().click();
     await expect(page).toHaveURL(/\/governance\/approvals\/AP-352\/r2/);
-    await page.getByRole("tab", { name: /R1 reference/ }).click();
-    await page.getByRole("link", { name: /^AP-/ }).first().click();
+    // Hi-fi 1b: the R1 lineage lives on the meta line — its chip is the link.
+    await page.getByRole("link", { name: /^AP-\d+$/ }).first().click();
     await expect(page).toHaveURL(/\/governance\/approvals\/AP-\d+\/r1/);
     await page.goBack();
     await expect(page).toHaveURL(/\/governance\/approvals\/AP-352\/r2/);

@@ -883,6 +883,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
         approverRole={d?.approverRole ?? undefined}
         sla={d?.sla ?? undefined}
         panels={d?.panels ?? []}
+        plan={d?.activationPlan ?? null}
         recommendation={d?.recommendation ?? undefined}
         status={state.status}
         reason={state.reason}

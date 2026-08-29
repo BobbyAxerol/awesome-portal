@@ -1603,3 +1603,26 @@ Capital preview là inverse panel duy nhất (`--gov-inverse-line`); test cũ
 "never an inverted surface" (codex-era) viết lại theo hi-fi owner; typeRoles
 exemption thêm `gov|gate`; token mới `--warn-bg`(light)/`--gov-exit`. Tests
 1724 pass; baselines governance đổi toàn bộ có chủ ý ở gate kế.
+
+### 8.33 Governance polish pass 2 + Paper Exit Review (2026-08-30, ảnh 1/2/3)
+
+- **Typography trong panel**: input/textarea/composer/empty-state trong
+  `.exec-gov` về mono 12px compact; ConditionComposer gọn sau "+ add
+  condition" (details/summary, chuẩn hi-fi "CONDITION … + add"); grid2
+  `align-items: start` — hết panel trống kéo trắng nửa trang.
+- **Capital preview**: cột AFTER hết bị cắt (mono 11px, note wrap dưới số);
+  khối inverse giờ **re-scope token trong tokens.css** — một palette near-black
+  cố định mọi theme, mọi con (badge/state/note) tự đúng màu; specificity đôi
+  để không bị rule panel sau đè.
+- **A11y sạch 40/40 surface-audit**: phát hiện `--accent-contrast` là
+  convention có sẵn nhưng chưa từng được định nghĩa (nút Approve sống bằng
+  fallback) — nay định nghĩa theo `--accent-strong` từng theme; chip filter
+  active dùng đúng cặp đó; chip active-nhưng-disabled giữ cặp màu (1.49:1 cũ);
+  mobile: KV collapse, chip policy wrap — clipped audit xanh.
+- **Paper Exit Review**: `governance.paper-exit.v1` **có publish
+  `activation_plan`** mà màn nói "not published" — reader/fixture/container đã
+  nối đủ (mode PREVIEW_ONLY · target stage · authority semantics · external
+  side effect, cờ nguy hiểm đọc `!== false` theo fail-closed gate); bỏ khối
+  tabs "pointer" thừa; root mang `.exec-gov` để ăn polish.
+- Journey R2→R1 đổi theo metaline chip link (tab R1 reference đã bỏ).
+  Tests 1724 pass.

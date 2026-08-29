@@ -776,7 +776,7 @@
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--accent-strong);
   background: var(--accent-strong);
-  color: var(--on-accent);
+  color: var(--accent-contrast);
   cursor: pointer;
   min-height: 30px;
 }
@@ -1136,9 +1136,11 @@
 }
 
 .exec-inbox-filter[data-active="true"] {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--paper);
+  /* The same pairing as the apply button — accent-strong carries text safely
+     in every theme; bare --accent does not. */
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
   font-weight: 600;
 }
 
@@ -1282,12 +1284,11 @@
 .exec-gate-fitbody .exec-gov-kv, .exec-gov-kv[data-flush="true"] { padding: 0; }
 .exec-gate-obsbody { padding: 14px; }
 .exec-gov-kv .exec-gov-v[data-tone="good"] { color: var(--good); }
-/* The one deliberately inverse block: the EXECUTION-vocabulary capital
-   preview stays near-black inside the light review room (hi-fi 1b). */
-.exec-gov-inverse { border: 1px solid var(--ink); background: var(--ink); color: var(--paper); }
-.exec-gov-inverse .exec-gov-paneltitle { color: var(--paper-sunken); opacity: 0.8; }
-.exec-gov-inverse .exec-gov-panelhead { border-bottom-color: var(--gov-inverse-line); }
-.exec-gate-policychip[data-inverse="true"] { background: none; border-color: var(--gov-inverse-line); color: var(--paper); }
+/* The one deliberately inverse block (hi-fi 1b): near-black in every theme.
+   Its palette is re-scoped in tokens.css, so children just use tokens. */
+/* Doubled class beats the later panel-background rules without !important. */
+.exec-gov-inverse.exec-gov-inverse { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); }
+.exec-gate-policychip[data-inverse="true"] { background: none; border-color: var(--line-strong); color: var(--ink); }
 /* Gate R1/R2 hi-fi additions: policy chips, criteria verdicts, stage chips,
    portfolio-fit bar, window-role legend. */
 .exec-gate-panelhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -1372,6 +1373,8 @@
   color: var(--ink-mute);
   border-color: var(--line-soft);
 }
+/* A disabled ACTIVE chip keeps its pairing — faint-on-accent was 1.49:1. */
+.exec-inbox-filter[data-active="true"]:disabled { color: var(--accent-contrast); opacity: 0.75; }
 
 .exec-gate-banner {
   font: var(--exec-font-body);
@@ -1590,11 +1593,45 @@
 /* The hi-fi's footer strip. "visibility ≠ authority" is the sentence that
  * explains the dimmed rows; without it the dimming reads as a rendering bug. */
 
+/* Governance polish (owner feedback 2026-08-30, ảnh 2/3): mono type inside
+   panels, compact empty states, no stretched dead space, hi-fi condition UI. */
+.exec-gov-grid2 { align-items: start; }
+/* Mobile: nothing clipped without a scroll — KV collapses, chips wrap. */
+.exec-gov-h1 { min-width: 0; overflow-wrap: anywhere; }
+.exec-gate-policychip { white-space: normal; }
+.exec-gate-checklines span { min-width: 0; overflow-wrap: anywhere; }
+.exec-gov-head > *, .exec-gov-panelhead > *, .exec-gov-metaline > * { min-width: 0; }
+@media (max-width: 640px) {
+  .exec-gov-kv { grid-template-columns: minmax(0, 1fr); }
+  .exec-gov-kv > .exec-gov-k { margin-top: 6px; }
+}
+.exec-gov .exec-state { padding: 12px 14px; border: none; background: none; }
+.exec-gov .exec-state-title { font: 600 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
+.exec-gov .exec-state-reason { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); max-width: 62ch; }
+.exec-gov input, .exec-gov textarea, .exec-gov select { font: 400 12px/18px var(--font-mono); }
+.exec-gov .exec-composer { border: 1px solid var(--line); background: var(--paper-sunken); padding: 8px 10px; gap: 6px; }
+.exec-gov .exec-composer .input { padding: 4px 8px; }
+.exec-gov .exec-composer-field { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); gap: 3px; }
+.exec-gov .exec-composer label { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); }
+.exec-gov .exec-composer-hint, .exec-gov .exec-composer p { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-gov-addcond > summary { list-style: none; cursor: pointer; font: 600 11px/16px var(--font-mono); color: var(--accent); }
+.exec-gov-addcond > summary::-webkit-details-marker { display: none; }
+.exec-gov-addcond[open] > summary { margin-bottom: 8px; }
+.exec-gov .exec-condition { font: 400 11px/16px var(--font-mono); background: var(--paper-sunken); border: 1px solid var(--line); padding: 8px 10px; }
+.exec-gov .exec-condition-empty { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); }
+/* Capital preview must show its AFTER column: mono 11, tight cells, and the
+   prose note wraps under the number instead of stretching the row. */
+.exec-gov-inverse .exec-gate-capital th, .exec-gov-inverse .exec-gate-capital td { font: 400 11px/16px var(--font-mono); padding: 5px 10px; }
+.exec-gov-inverse .exec-gate-capital td:last-child { white-space: normal; }
+.exec-gov-inverse .exec-gate-capital .exec-gate-note { display: block; white-space: normal; color: var(--ink-faint); }
+.exec-gov-inverse .exec-gate-capital td, .exec-gov-inverse .exec-gate-capital tbody th { color: var(--ink-mute); }
+.exec-gov-inverse .exec-gate-capital td.exec-num { color: var(--ink); }
+
 /* ── Governance review room (hi-fi 4a/1a/1b, owner 2026-08-30) ──────────────
    Light-first: the route provider renders /governance/* on the research
    tokens; every value here is a token so the same screens stay legible when
    a fixture page mounts them under Carbon. Numbers are the hi-fi's. */
-.exec-gov { max-width: 1200px; margin: 0 auto; padding: 24px 20px 64px; display: flex; flex-direction: column; gap: 14px; }
+.exec-gov { max-width: 1200px; margin: 0 auto; padding: 24px 20px 120px; display: flex; flex-direction: column; gap: 14px; }
 .exec-gov-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 2px; }
 .exec-gov-h1 { margin: 0; font: 300 22px/1.3 var(--font-body); color: var(--ink); }
 .exec-gov-chip { font: 600 11px/16px var(--font-mono); padding: 1px 8px; }
@@ -1613,8 +1650,8 @@
 .exec-gov-metaline [data-tone="good"] { color: var(--good); }
 .exec-gov-metaline [data-tone="warn"] { color: var(--warn); }
 .exec-gov-metaline [data-tone="bad"] { color: var(--bad); font-weight: 600; }
-.exec-gov-kv { display: grid; grid-template-columns: minmax(150px, 40%) minmax(0, 1fr); gap: 6px 12px; padding: 14px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); overflow-wrap: anywhere; }
-.exec-gov-kv > .exec-gov-k { font: 400 10px/16px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+.exec-gov-kv { display: grid; grid-template-columns: minmax(72px, 40%) minmax(0, 1fr); gap: 6px 12px; padding: 14px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); overflow-wrap: anywhere; }
+.exec-gov-kv > .exec-gov-k { font: 400 10px/16px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); overflow-wrap: anywhere; }
 .exec-gov-kv > .exec-gov-v { color: var(--ink); }
 .exec-gov-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
 .exec-gov-grid2[data-ratio="1.15"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
@@ -5972,7 +6009,7 @@
 .exec-pw-source[data-tone="calendar"] b { color: var(--accent); }
 .exec-pw-age { color: var(--good); font-variant-numeric: tabular-nums; }
 .exec-pw-paused { color: var(--accent); }
-.exec-pw-primary { font: 600 11px/16px var(--font-mono); color: var(--on-accent); background: var(--accent-strong); border: 0; padding: 6px 14px; cursor: pointer; }
+.exec-pw-primary { font: 600 11px/16px var(--font-mono); color: var(--accent-contrast); background: var(--accent-strong); border: 0; padding: 6px 14px; cursor: pointer; }
 .exec-pw-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 .exec-pw-meta { margin-bottom: 14px; }
 .exec-pw-meta b[data-tone="warn"] { color: var(--warn); font-weight: 400; }

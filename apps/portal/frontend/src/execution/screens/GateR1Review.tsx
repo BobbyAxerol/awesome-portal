@@ -304,7 +304,9 @@ export function GateR1Review({
           <div className="exec-gate-decisionbody">
             <ConditionList conditions={conditions ?? []} emptyNote="No conditions attached yet." />
             {onAttachCondition && !isDecided ? (
-              <ConditionComposer
+              <details className="exec-gov-addcond">
+                <summary>+ add condition</summary>
+                <ConditionComposer
                 draft={draft}
                 onChange={setDraft}
                 onAttach={(condition) => {
@@ -314,6 +316,7 @@ export function GateR1Review({
                 disabled={conditionLocked}
                 disabledReason="You cannot attach a condition to this decision."
               />
+              </details>
             ) : null}
             <p className="exec-gov-meta">
               {releaseCandidate

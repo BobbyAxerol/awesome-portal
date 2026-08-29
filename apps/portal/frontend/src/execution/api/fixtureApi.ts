@@ -315,6 +315,14 @@ const EXIT_DETAIL: Record<string, unknown> = {
     locks: [],
   },
   recommendation: "Approve promotion with the carried capacity condition.",
+  // `governance.paper-exit.v1` publishes the plan as PREVIEW_ONLY (canonical
+  // fixture); the screen had been saying "not published" over a published field.
+  activation_plan: {
+    mode: "PREVIEW_ONLY",
+    target_stage: "SANDBOX_VALIDATION",
+    authority_semantics: "APPROVAL_CREATES_PROMOTION_GRANT_ONLY",
+    external_side_effect_requested: false,
+  },
   lineage: [
     { label: "artifact", value: "sha256:41bb7d…c4" },
     { label: "R1", value: "AP-118", href: "/governance/approvals/AP-118/r1" },

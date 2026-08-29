@@ -35,6 +35,13 @@ const FLAGS: Record<string, { dangerous: boolean; why: string }> = {
     dangerous: true,
     why: "assuming nothing reached the Trading System is the reassuring lie",
   },
+  // `governance.paper-exit.v1` activation_plan. PREVIEW_ONLY by contract; the
+  // reader keeps absent as false and the screen prints "none requested" — a
+  // plan that DID request one must say so, so the flag is a warning too.
+  external_side_effect_requested: {
+    dangerous: true,
+    why: "an exit-review plan that requested an external effect must never read as inert",
+  },
   runtime_activation_requested: { dangerous: true, why: "an activation may have been requested" },
   promotion_execution_requested: { dangerous: true, why: "a promotion may have executed" },
   deployment_resume_requested: { dangerous: true, why: "a resume may have been requested" },

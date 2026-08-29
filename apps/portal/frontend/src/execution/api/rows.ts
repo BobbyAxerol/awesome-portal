@@ -682,6 +682,16 @@ export interface PaperExitDetail {
   panels: readonly EvidencePanelSpec[];
   recommendation: string | null;
   /**
+   * `activation_plan` — published by `governance.paper-exit.v1`, PREVIEW_ONLY.
+   * `null` when the response really has none; the screen then says so.
+   */
+  activationPlan: {
+    mode: string;
+    targetStage: string;
+    authoritySemantics: string;
+    externalSideEffectRequested: boolean;
+  } | null;
+  /**
    * Optimistic-concurrency version, as the published row carries it.
    *
    * A **number**, not a string, and named `approval_version` — the first
@@ -743,6 +753,23 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     lineage,
     panels,
     recommendation: str(data.recommendation),
+    activationPlan: (() => {
+      const plan = obj(data.activation_plan);
+      if (!plan) return null;
+      const mode = str(plan.mode);
+      const target = str(plan.target_stage);
+      if (!mode || !target) {
+        gaps.push("activation_plan present but unreadable");
+        return null;
+      }
+      return {
+        mode,
+        targetStage: target,
+        authoritySemantics: str(plan.authority_semantics) ?? "not stated",
+        // Dangerous flag: absent must mean "may have been requested".
+        externalSideEffectRequested: plan.external_side_effect_requested !== false,
+      };
+    })(),
     // `review_version` — the name the published Paper Exit schema uses
     // (`execution-governance-paper-exit.v1`, $defs.Review). The approval
     // spelling is kept as a fallback and would otherwise have read null,

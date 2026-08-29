@@ -25,7 +25,6 @@ import type { ApprovalId, DeploymentId, EvidenceMark, PanelStatus, Sla } from ".
 import { ConditionList, type TypedCondition } from "../components/conditions";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { LifecycleRail, type RailStep } from "../components/lifecycle";
-import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { useState } from "react";
 import { paperSmoke, PAPER_SMOKE_WARNING } from "../paper.smoke";
@@ -146,7 +145,6 @@ export function PaperExitReview({
   policyId,
   lineage,
   rail: rail_,
-  activationPlanDark = true,
   conditions,
   quorumMet,
   quorumRequired,
@@ -154,6 +152,7 @@ export function PaperExitReview({
   sla,
   panels,
   activationPlan,
+  plan,
   recommendation,
   status = "ok",
   reason,
@@ -190,8 +189,6 @@ export function PaperExitReview({
    * promotion sits in a chain rather than as an isolated decision.
    */
   rail?: readonly RailStep[];
-  /** The activation plan is the screen's one inverted card (hi-fi 4b). */
-  activationPlanDark?: boolean;
   /** Typed conditions carried into or attached by this review (DS §4). */
   conditions?: readonly TypedCondition[];
   quorumMet: number;
@@ -201,6 +198,8 @@ export function PaperExitReview({
   /** The 2×2. Four panels by convention; the grid takes any number. */
   panels: readonly EvidencePanelSpec[];
   activationPlan?: ReactNode;
+  /** `governance.paper-exit.v1` activation_plan — PREVIEW_ONLY, structured. */
+  plan?: { mode: string; targetStage: string; authoritySemantics: string; externalSideEffectRequested: boolean } | null;
   /** Server's recommended next eligible action, not the client's guess. */
   recommendation?: string;
   status?: PanelStatus;
@@ -386,7 +385,7 @@ export function PaperExitReview({
     />
   );
   return (
-    <section className={smoke ? "exec-exit exec-px" : "exec-exit"} data-hifi-exact={smoke ? "paper-exit-review" : undefined} aria-label={`Paper exit review ${reviewId}`}>
+    <section className={smoke ? "exec-exit exec-px exec-gov" : "exec-exit exec-gov"} data-hifi-exact={smoke ? "paper-exit-review" : undefined} aria-label={`Paper exit review ${reviewId}`}>
       <ExecutionWorkspace layout="balanced" rail={contextRail}>
         {smoke ? (
           <>
@@ -495,19 +494,25 @@ export function PaperExitReview({
               ))}
             </div>
             <div className="exec-px-grid" data-cols="two">
-              {activationPlan ? (
-                activationPlanDark ? (
-                  <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel exec-px-panel exec-px-plan">
-                    <ExecutionSectionTitle>Sandbox activation plan — preview</ExecutionSectionTitle>
-                    {activationPlan}
-                    <p className="exec-px-plannote">{smoke.exit.planNote}</p>
-                  </ExecutionSurface>
-                ) : (
-                  <div className="exec-gate-panel exec-px-panel">
-                    <ExecutionSectionTitle>Sandbox activation plan — preview</ExecutionSectionTitle>
-                    {activationPlan}
-                  </div>
-                )
+              {plan || activationPlan ? (
+                <div className="exec-gov-inverse exec-gate-panel exec-px-panel exec-px-plan">
+                  <ExecutionSectionTitle>Sandbox activation plan — preview</ExecutionSectionTitle>
+                  {plan ? (
+                    <div className="exec-gov-kv" data-flush="true">
+                      <span className="exec-gov-k">mode</span>
+                      <span className="exec-gov-v">{plan.mode}</span>
+                      <span className="exec-gov-k">target stage</span>
+                      <span className="exec-gov-v">{plan.targetStage}</span>
+                      <span className="exec-gov-k">authority</span>
+                      <span className="exec-gov-v">{plan.authoritySemantics.replace(/_/g, " ").toLowerCase()}</span>
+                      <span className="exec-gov-k">external side effect</span>
+                      <span className="exec-gov-v">{plan.externalSideEffectRequested ? "REQUESTED" : "none requested"}</span>
+                    </div>
+                  ) : (
+                    activationPlan
+                  )}
+                  <p className="exec-px-plannote">{smoke.exit.planNote}</p>
+                </div>
               ) : (
                 <div className="exec-gate-panel exec-px-panel">
                   <ExecutionSectionTitle>Sandbox activation plan — preview</ExecutionSectionTitle>
@@ -534,6 +539,7 @@ export function PaperExitReview({
             </div>
           </>
         ) : null}
+        {smoke ? null : (
         <ExecutionTabs
           tabs={[
             { key: "evidence", label: "Evidence", count: panels.length },
@@ -544,14 +550,7 @@ export function PaperExitReview({
           onChange={(key) => setTab(key as ExitTab)}
           label="Exit review sections"
         >
-          {smoke ? (
-            <p className="exec-px-pointer">
-              {tab === "evidence" ? "The evidence panels are on the review above — they are not repeated here."
-                : tab === "plan" ? "The activation plan preview is on the review above."
-                : "Conditions and the recommendation are on the review above."}
-            </p>
-          ) : (
-            <>
+          <>
           {tab === "evidence" ? (
             <div className="exec-grid-auto">
               {panels.map((panel) => (
@@ -566,14 +565,23 @@ export function PaperExitReview({
             </div>
           ) : null}
           {tab === "plan" ? (
-            activationPlan ? (
-              activationPlanDark ? (
-                <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel">
-                  {activationPlan}
-                </ExecutionSurface>
-              ) : (
-                <div className="exec-gate-panel">{activationPlan}</div>
-              )
+            plan || activationPlan ? (
+              <div className="exec-gov-inverse exec-gate-panel">
+                {plan ? (
+                  <div className="exec-gov-kv">
+                    <span className="exec-gov-k">mode</span>
+                    <span className="exec-gov-v">{plan.mode}</span>
+                    <span className="exec-gov-k">target stage</span>
+                    <span className="exec-gov-v">{plan.targetStage}</span>
+                    <span className="exec-gov-k">authority</span>
+                    <span className="exec-gov-v">{plan.authoritySemantics.replace(/_/g, " ").toLowerCase()}</span>
+                    <span className="exec-gov-k">external side effect</span>
+                    <span className="exec-gov-v">{plan.externalSideEffectRequested ? "REQUESTED" : "none requested"}</span>
+                  </div>
+                ) : (
+                  activationPlan
+                )}
+              </div>
             ) : (
               <PanelState status="empty" reason="No activation plan was published for this review." />
             )
@@ -584,9 +592,9 @@ export function PaperExitReview({
               <ConditionList conditions={conditions ?? []} emptyNote="No conditions carried into this review." />
             </div>
           ) : null}
-            </>
-          )}
+          </>
         </ExecutionTabs>
+        )}
         {smoke ? <p className="exec-af-smoke">! {PAPER_SMOKE_WARNING}</p> : null}
         <ExecutionDecisionBar
           label={`Paper exit decision ${reviewId}`}
