@@ -27,6 +27,11 @@ use axum::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, SecondsFormat, Utc};
+use current_source_compat::{
+    AdapterKind, CapabilityBinding as CurrentCapabilityBinding, CurrentSourceMap, ExecutionProfile,
+    FactClassification, MappingError, ScreenBinding as CurrentScreenBinding,
+    SourceBinding as CurrentSourceBinding, CONTRACT_VERSION as CURRENT_SOURCE_CONTRACT_VERSION,
+};
 use edge_auth::{DelegatedClaims, DelegationVerifier, RequiredRead};
 use execution_contracts::{
     CanonicalId, CapabilitySnapshot, CapabilityState, ContractWarning, DeliveryProfile,
@@ -86,6 +91,7 @@ const ANALYTICS_SCREEN_SCHEMA_VERSION: &str = "execution.analytics.screen.v1";
 const PAPER_WORKBENCH_SHADOW_SCHEMA_VERSION: &str = "execution.paper-workbench.shadow-panel.v1";
 const PAPER_WORKBENCH_SCREEN_ID: &str = "EXECUTION_PAPER_WORKBENCH_SCREEN";
 const MANAGER_V2_RESOURCE: &str = "execution:manager-v2:read";
+const CURRENT_SOURCE_RESOURCE_PREFIX: &str = "execution:current-source:";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeGate {
@@ -137,6 +143,7 @@ struct AppState {
     shadow_query_freshness_policy: FreshnessPolicy,
     manager_v2_client: Option<ManagerV2Client>,
     manager_v2_profile_id: Option<String>,
+    current_source_map: Arc<CurrentSourceMap>,
 }
 
 #[derive(Debug)]
@@ -532,6 +539,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         3,
     )?;
     let (negotiator, manager_v2_client) = source_clients(&config)?;
+    let current_source_map = Arc::new(CurrentSourceMap::canonical()?);
     let initial_snapshot = if config.source_probes_enabled.is_enabled() {
         Some(negotiator.probe(config.probe_alpha_id.as_deref()).await)
     } else {
@@ -576,6 +584,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         shadow_query_freshness_policy: config.shadow_query_freshness_policy.clone(),
         manager_v2_client,
         manager_v2_profile_id: config.manager_v2_profile_id.clone(),
+        current_source_map,
     };
 
     spawn_background_tasks(
@@ -816,6 +825,14 @@ fn private_router(state: AppState) -> Router {
             "/internal/v2/manager/relations/:schema/:relation",
             get(manager_relation_records),
         )
+        .route(
+            "/internal/v1/current-source/screens/:screen_id",
+            get(current_source_screen),
+        )
+        .route(
+            "/internal/v1/current-source/screens/:screen_id/sources/:source_id/relations/:relation",
+            get(current_source_relation),
+        )
         .route("/internal/v1/realtime/stream", get(realtime_stream))
         .route(
             "/internal/v1/screens/gate-r2/:approval_id/capital-preview",
@@ -894,6 +911,388 @@ struct ManagerProblemBody {
 struct ManagerProblem {
     code: &'static str,
     message: &'static str,
+}
+
+#[derive(Debug, Serialize)]
+struct CurrentSourceScreenResponse<'a> {
+    schema_version: &'static str,
+    authority: &'static str,
+    environment: &'a str,
+    profile_id: &'a str,
+    profile_baseline: FactClassification,
+    screen: &'a CurrentScreenBinding,
+    capabilities: Vec<&'a CurrentCapabilityBinding>,
+    sources: Vec<&'a CurrentSourceBinding>,
+}
+
+#[derive(Debug, Serialize)]
+struct CurrentSourceRelationResponse<T: Serialize> {
+    schema_version: &'static str,
+    authority: &'static str,
+    environment: String,
+    profile_id: String,
+    screen_id: String,
+    source_id: String,
+    adapter: AdapterKind,
+    relation: String,
+    classification: FactClassification,
+    availability: &'static str,
+    source: T,
+}
+
+struct CurrentSourceRelationContext {
+    environment: String,
+    profile_id: String,
+    screen_id: String,
+    source_id: String,
+    adapter: AdapterKind,
+    relation: String,
+}
+
+#[derive(Debug, Serialize)]
+struct CurrentSourceProblemBody {
+    error: CurrentSourceProblem,
+}
+
+#[derive(Debug, Serialize)]
+struct CurrentSourceProblem {
+    code: &'static str,
+    message: &'static str,
+    classification: FactClassification,
+    availability: &'static str,
+    reason_code: Option<String>,
+}
+
+async fn current_source_screen(
+    State(state): State<AppState>,
+    AxumPath(screen_id): AxumPath<String>,
+    headers: HeaderMap,
+) -> Response {
+    let profile = match current_source_authorize(&state, &headers, &screen_id) {
+        Ok(profile) => profile,
+        Err(response) => return response,
+    };
+    let Ok(screen) = state.current_source_map.screen(&screen_id) else {
+        return current_source_problem(
+            StatusCode::NOT_FOUND,
+            "CURRENT_SOURCE_SCREEN_UNKNOWN",
+            "The requested screen is not part of the current-source contract.",
+            FactClassification::SourceDoesNotCurrentlyExist,
+            "UNAVAILABLE",
+            None,
+        );
+    };
+    let capabilities_by_id = state.current_source_map.capabilities_by_id();
+    let capabilities = screen
+        .read_capabilities
+        .iter()
+        .chain(screen.action_capabilities.iter())
+        .filter_map(|id| capabilities_by_id.get(id.as_str()).copied())
+        .collect::<Vec<_>>();
+    let source_ids = capabilities
+        .iter()
+        .flat_map(|capability| capability.source_bindings.iter())
+        .collect::<BTreeSet<_>>();
+    let sources = state
+        .current_source_map
+        .source_bindings
+        .iter()
+        .filter(|source| source_ids.contains(&source.id))
+        .collect::<Vec<_>>();
+    manager_json_response(
+        StatusCode::OK,
+        CurrentSourceScreenResponse {
+            schema_version: CURRENT_SOURCE_CONTRACT_VERSION,
+            authority: "PORTAL_EXECUTION_EDGE",
+            environment: &state.environment,
+            profile_id: &profile.manager_profile_id,
+            profile_baseline: profile.baseline,
+            screen,
+            capabilities,
+            sources,
+        },
+    )
+}
+
+async fn current_source_relation(
+    State(state): State<AppState>,
+    AxumPath((screen_id, source_id, relation)): AxumPath<(String, String, String)>,
+    Query(query): Query<ManagerPageQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let profile = match current_source_authorize(&state, &headers, &screen_id) {
+        Ok(profile) => profile,
+        Err(response) => return response,
+    };
+    let Ok(source) = state
+        .current_source_map
+        .screen_source(&screen_id, &source_id)
+    else {
+        return current_source_problem(
+            StatusCode::NOT_FOUND,
+            "CURRENT_SOURCE_BINDING_UNKNOWN",
+            "The source is not bound to the requested screen.",
+            FactClassification::SourceDoesNotCurrentlyExist,
+            "UNAVAILABLE",
+            None,
+        );
+    };
+    current_source_relation_from_manager(
+        &state, screen_id, source_id, relation, query, profile, source,
+    )
+    .await
+}
+
+async fn current_source_relation_from_manager(
+    state: &AppState,
+    screen_id: String,
+    source_id: String,
+    relation: String,
+    query: ManagerPageQuery,
+    profile: &current_source_compat::ProfileBinding,
+    source: &CurrentSourceBinding,
+) -> Response {
+    if source.adapter != AdapterKind::ManagerV2 {
+        return current_source_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "CURRENT_SOURCE_ADAPTER_NOT_ACTIVATED",
+            "The mapped source adapter is not activated in this Edge runtime.",
+            FactClassification::SupportedButNotActivated,
+            "UNAVAILABLE",
+            None,
+        );
+    }
+    let relation_id = format!("public.{relation}");
+    if !source.relations.contains(&relation_id) {
+        return current_source_problem(
+            StatusCode::NOT_FOUND,
+            "CURRENT_SOURCE_RELATION_UNKNOWN",
+            "The relation is not part of the selected screen source binding.",
+            FactClassification::SourceDoesNotCurrentlyExist,
+            "UNAVAILABLE",
+            None,
+        );
+    }
+    let Some(client) = state.manager_v2_client.as_ref() else {
+        return current_source_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "CURRENT_SOURCE_MANAGER_NOT_ACTIVATED",
+            "The Manager-v2 source is not activated for this profile.",
+            FactClassification::SupportedButNotActivated,
+            "UNAVAILABLE",
+            None,
+        );
+    };
+    let limit = match manager_page_limit(query.limit) {
+        Ok(limit) => limit,
+        Err(response) => return response,
+    };
+    let catalogue = match fetch_manager_catalogue(client).await {
+        Ok(catalogue) => catalogue,
+        Err(response) => return response,
+    };
+    if let Err(error) = state
+        .current_source_map
+        .validate_manager_source(source, &catalogue)
+    {
+        return current_source_mapping_error(&error);
+    }
+    let Some(catalogued_relation) = catalogue.relation("public", &relation) else {
+        return current_source_problem(
+            StatusCode::BAD_GATEWAY,
+            "CURRENT_SOURCE_CATALOGUE_DRIFT",
+            "The pinned relation is absent from the authenticated Manager catalogue.",
+            FactClassification::SupportedButNotActivated,
+            "UNAVAILABLE",
+            None,
+        );
+    };
+    let Ok(cursor) = query
+        .cursor
+        .map(|value| OpaqueCursor::from_relation_round_trip(value, catalogued_relation))
+        .transpose()
+    else {
+        return current_source_problem(
+            StatusCode::BAD_REQUEST,
+            "CURRENT_SOURCE_CURSOR_INVALID",
+            "The cursor is not valid for the selected relation and catalogue.",
+            FactClassification::Connected,
+            "UNAVAILABLE",
+            None,
+        );
+    };
+    let Ok(request) =
+        ManagerV2Request::relation_records(catalogued_relation, cursor.as_ref(), limit)
+    else {
+        return current_source_problem(
+            StatusCode::BAD_REQUEST,
+            "CURRENT_SOURCE_CURSOR_INVALID",
+            "The cursor is not valid for the selected relation and catalogue.",
+            FactClassification::Connected,
+            "UNAVAILABLE",
+            None,
+        );
+    };
+    let context = CurrentSourceRelationContext {
+        environment: state.environment.clone(),
+        profile_id: profile.manager_profile_id.clone(),
+        screen_id,
+        source_id,
+        adapter: source.adapter,
+        relation: relation_id,
+    };
+    current_source_manager_read_response(client.execute(&request).await, context)
+}
+
+fn current_source_manager_read_response(
+    read: Result<ManagerRead, ManagerV2ClientError>,
+    context: CurrentSourceRelationContext,
+) -> Response {
+    match read {
+        Ok(ManagerRead::Available(ManagerPayload::RelationRecords(envelope))) => {
+            manager_json_response(
+                StatusCode::OK,
+                CurrentSourceRelationResponse {
+                    schema_version: CURRENT_SOURCE_CONTRACT_VERSION,
+                    authority: "PORTAL_EXECUTION_EDGE",
+                    environment: context.environment,
+                    profile_id: context.profile_id,
+                    screen_id: context.screen_id,
+                    source_id: context.source_id,
+                    adapter: context.adapter,
+                    relation: context.relation,
+                    classification: FactClassification::Connected,
+                    availability: "AVAILABLE",
+                    source: envelope,
+                },
+            )
+        }
+        Ok(ManagerRead::Available(_)) => current_source_problem(
+            StatusCode::BAD_GATEWAY,
+            "CURRENT_SOURCE_PAYLOAD_MISMATCH",
+            "Manager returned a payload for a different operation.",
+            FactClassification::Connected,
+            "UNAVAILABLE",
+            None,
+        ),
+        Ok(ManagerRead::Unavailable(unavailable)) => current_source_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "CURRENT_SOURCE_UNAVAILABLE",
+            "The mapped current source is temporarily unavailable.",
+            FactClassification::Connected,
+            "UNAVAILABLE",
+            Some(unavailable.reason_code().to_owned()),
+        ),
+        Err(error) => current_source_client_error(&error),
+    }
+}
+
+fn current_source_authorize<'a>(
+    state: &'a AppState,
+    headers: &HeaderMap,
+    screen_id: &str,
+) -> Result<&'a current_source_compat::ProfileBinding, Response> {
+    let token = bearer(headers).ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
+    let resource = format!("{CURRENT_SOURCE_RESOURCE_PREFIX}{screen_id}:read");
+    let claims = state
+        .verifier
+        .verify_read(
+            token,
+            &RequiredRead {
+                environment: &state.environment,
+                resource: Some(&resource),
+            },
+        )
+        .map_err(|_| StatusCode::FORBIDDEN.into_response())?;
+    let profile = current_execution_profile(&state.environment).ok_or_else(|| {
+        current_source_problem(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "CURRENT_SOURCE_ENVIRONMENT_INVALID",
+            "The Edge environment cannot be mapped to an Execution profile.",
+            FactClassification::SourceDoesNotCurrentlyExist,
+            "UNAVAILABLE",
+            None,
+        )
+    })?;
+    let binding = state
+        .current_source_map
+        .profile(profile)
+        .map_err(|error| current_source_mapping_error(&error))?;
+    if claims.profile_id.as_deref() != Some(binding.manager_profile_id.as_str())
+        || state.manager_v2_profile_id.as_deref() != Some(binding.manager_profile_id.as_str())
+    {
+        return Err(StatusCode::FORBIDDEN.into_response());
+    }
+    Ok(binding)
+}
+
+fn current_execution_profile(environment: &str) -> Option<ExecutionProfile> {
+    match environment {
+        "paper" => Some(ExecutionProfile::Paper),
+        "sandbox" => Some(ExecutionProfile::Sandbox),
+        "live" => Some(ExecutionProfile::Live),
+        _ => None,
+    }
+}
+
+fn current_source_mapping_error(error: &MappingError) -> Response {
+    let code = match error {
+        MappingError::ManagerRelationMissing(_) => "CURRENT_SOURCE_CATALOGUE_DRIFT",
+        _ => "CURRENT_SOURCE_CONTRACT_REJECTED",
+    };
+    current_source_problem(
+        StatusCode::BAD_GATEWAY,
+        code,
+        "The current-source mapping does not match its authenticated source.",
+        FactClassification::SupportedButNotActivated,
+        "UNAVAILABLE",
+        None,
+    )
+}
+
+fn current_source_client_error(error: &ManagerV2ClientError) -> Response {
+    let (status, code) = match error {
+        ManagerV2ClientError::QueueSaturated
+        | ManagerV2ClientError::QueueClosed
+        | ManagerV2ClientError::RequestFailed => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "CURRENT_SOURCE_TRANSPORT_UNAVAILABLE",
+        ),
+        _ => (
+            StatusCode::BAD_GATEWAY,
+            "CURRENT_SOURCE_UPSTREAM_CONTRACT_REJECTED",
+        ),
+    };
+    current_source_problem(
+        status,
+        code,
+        "The current source did not satisfy the bounded transport contract.",
+        FactClassification::Connected,
+        "UNAVAILABLE",
+        None,
+    )
+}
+
+fn current_source_problem(
+    status: StatusCode,
+    code: &'static str,
+    message: &'static str,
+    classification: FactClassification,
+    availability: &'static str,
+    reason_code: Option<String>,
+) -> Response {
+    manager_json_response(
+        status,
+        CurrentSourceProblemBody {
+            error: CurrentSourceProblem {
+                code,
+                message,
+                classification,
+                availability,
+                reason_code,
+            },
+        },
+    )
 }
 
 async fn manager_catalogue(State(state): State<AppState>, headers: HeaderMap) -> Response {
@@ -2834,6 +3233,8 @@ enum ServiceError {
     Transport(#[from] ts_transport::TransportError),
     #[error(transparent)]
     ManagerTransport(#[from] ManagerV2ClientError),
+    #[error("current-source contract rejected: {0}")]
+    CurrentSource(#[from] MappingError),
     #[error(transparent)]
     ProjectionStore(#[from] projection_store_pg::StoreError),
     #[error(transparent)]
@@ -2983,6 +3384,7 @@ mod tests {
             },
             manager_v2_client: None,
             manager_v2_profile_id: Some("PAPER_BINANCE_USDM".to_owned()),
+            current_source_map: Arc::new(CurrentSourceMap::canonical().unwrap()),
         }
     }
 
@@ -3102,6 +3504,96 @@ mod tests {
             panic!("a profile-mismatched Manager assertion must be rejected");
         };
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[test]
+    fn current_source_gate_is_screen_and_profile_exact() {
+        let signer = delegation_test_signer();
+        let verifier = DelegationVerifier::from_jwks_json(
+            &signer.jwks,
+            "portal-control-api",
+            "portal-execution-edge-paper",
+            60,
+            3,
+        )
+        .unwrap();
+        let state = disabled_manager_state(verifier);
+        let now = Utc::now().timestamp();
+        let resource =
+            format!("{CURRENT_SOURCE_RESOURCE_PREFIX}EXECUTION_FULL_BLOTTER_SCREEN:read");
+        let token = signed_manager_claims(&signer, &manager_claims(now, &resource));
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
+
+        let profile =
+            current_source_authorize(&state, &headers, "EXECUTION_FULL_BLOTTER_SCREEN").unwrap();
+        assert_eq!(profile.manager_profile_id, "PAPER_BINANCE_USDM");
+        let Err(response) =
+            current_source_authorize(&state, &headers, "EXECUTION_ALPHA_360_SCREEN")
+        else {
+            panic!("one screen assertion must not authorize a different screen");
+        };
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn current_source_screen_is_honest_and_non_manager_adapter_stays_dark() {
+        let signer = delegation_test_signer();
+        let verifier = DelegationVerifier::from_jwks_json(
+            &signer.jwks,
+            "portal-control-api",
+            "portal-execution-edge-paper",
+            60,
+            3,
+        )
+        .unwrap();
+        let state = disabled_manager_state(verifier);
+        let screen_id = "EXECUTION_COMMAND_CENTER_SCREEN";
+        let resource = format!("{CURRENT_SOURCE_RESOURCE_PREFIX}{screen_id}:read");
+        let token =
+            signed_manager_claims(&signer, &manager_claims(Utc::now().timestamp(), &resource));
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
+
+        let response = current_source_screen(
+            State(state.clone()),
+            AxumPath(screen_id.to_owned()),
+            headers.clone(),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = to_bytes(response.into_body(), MAXIMUM_RESPONSE_BYTES)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["profile_id"], "PAPER_BINANCE_USDM");
+        assert_eq!(body["profile_baseline"], "CONNECTED");
+        assert!(body["capabilities"].as_array().unwrap().iter().any(|item| {
+            item["id"] == "command.apply" && item["classification"] == "SUPPORTED_BUT_NOT_ACTIVATED"
+        }));
+
+        let response = current_source_relation(
+            State(state),
+            AxumPath((
+                screen_id.to_owned(),
+                "portal.control".to_owned(),
+                "not-a-relation".to_owned(),
+            )),
+            Query(ManagerPageQuery {
+                limit: None,
+                cursor: None,
+            }),
+            headers,
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let body = to_bytes(response.into_body(), 4096).await.unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(
+            body["error"]["classification"],
+            "SUPPORTED_BUT_NOT_ACTIVATED"
+        );
+        assert_eq!(body["error"]["availability"], "UNAVAILABLE");
     }
 
     #[test]

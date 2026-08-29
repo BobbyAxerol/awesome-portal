@@ -283,6 +283,28 @@ impl CurrentSourceMap {
         Ok(())
     }
 
+    /// Proves only the relations required by one selected source binding. This
+    /// keeps one unrelated catalogue drift from disabling every N13B screen.
+    ///
+    /// # Errors
+    /// Returns [`MappingError`] for a non-Manager source or missing relation.
+    pub fn validate_manager_source(
+        &self,
+        binding: &SourceBinding,
+        catalogue: &ManagerCatalogue,
+    ) -> Result<(), MappingError> {
+        if binding.adapter != AdapterKind::ManagerV2 {
+            return Err(MappingError::UnsafeSourceBinding);
+        }
+        for relation in &binding.relations {
+            let (schema, name) = split_relation(relation)?;
+            if catalogue.relation(schema, name).is_none() {
+                return Err(MappingError::ManagerRelationMissing(relation.clone()));
+            }
+        }
+        Ok(())
+    }
+
     /// Resolves one fixed screen binding. Callers cannot provide a relation,
     /// source URL, SQL fragment or profile through this method.
     ///
@@ -293,6 +315,52 @@ impl CurrentSourceMap {
             .iter()
             .find(|screen| screen.screen_id == screen_id)
             .ok_or(MappingError::UnknownScreen)
+    }
+
+    /// Resolves a source only when the selected screen references at least one
+    /// capability bound to it.
+    ///
+    /// # Errors
+    /// Returns [`MappingError::UnknownReference`] if the source is not in the
+    /// selected screen contract.
+    pub fn screen_source(
+        &self,
+        screen_id: &str,
+        source_id: &str,
+    ) -> Result<&SourceBinding, MappingError> {
+        let screen = self.screen(screen_id)?;
+        let capabilities = self.capabilities_by_id();
+        let source_is_referenced = screen
+            .read_capabilities
+            .iter()
+            .chain(screen.action_capabilities.iter())
+            .filter_map(|capability| capabilities.get(capability.as_str()))
+            .any(|capability| {
+                capability
+                    .source_bindings
+                    .iter()
+                    .any(|source| source == source_id)
+            });
+        if !source_is_referenced {
+            return Err(MappingError::UnknownReference);
+        }
+        self.source_bindings
+            .iter()
+            .find(|source| source.id == source_id)
+            .ok_or(MappingError::UnknownReference)
+    }
+
+    /// Returns the exact environment/profile binding. Canary intentionally has
+    /// no separate source and resolves to the Live profile.
+    ///
+    /// # Errors
+    /// Returns [`MappingError::InvalidInventory`] if the canonical profile is
+    /// absent, which can only happen after mapping drift.
+    pub fn profile(&self, profile: ExecutionProfile) -> Result<&ProfileBinding, MappingError> {
+        self.profiles
+            .iter()
+            .find(|binding| binding.profile == profile)
+            .ok_or(MappingError::InvalidInventory)
     }
 
     #[must_use]

@@ -121,6 +121,16 @@ fn screen_resolution_cannot_be_used_as_a_generic_relation_api() {
         map.screen("public.orders"),
         Err(MappingError::UnknownScreen)
     );
+    assert_eq!(
+        map.screen_source("EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders")
+            .unwrap()
+            .relations,
+        ["public.orders"]
+    );
+    assert_eq!(
+        map.screen_source("EXECUTION_APPROVAL_INBOX_SCREEN", "manager.orders"),
+        Err(MappingError::UnknownReference)
+    );
 }
 
 #[test]

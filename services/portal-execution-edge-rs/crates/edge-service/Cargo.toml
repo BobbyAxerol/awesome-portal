@@ -11,6 +11,7 @@ analytics = { path = "../analytics" }
 axum.workspace = true
 axum-server.workspace = true
 chrono.workspace = true
+current-source-compat = { path = "../current-source-compat" }
 edge-auth = { path = "../edge-auth" }
 execution-contracts = { path = "../execution-contracts" }
 futures-util.workspace = true
