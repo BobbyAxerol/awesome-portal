@@ -1584,3 +1584,22 @@ Hi-fi R2 bản chat **mới hơn bản đĩa** (thêm Gate criteria + Stage elig
   data không bao giờ là UI constant. Mirror row trong file này.
 - Link chuẩn: inbox → R1/R2 (id cell + row), R2 → R1 (`open AP-101` +
   R1 reference tab), breadcrumb Governance/Approvals.
+
+### 8.32 Governance Light — owner đảo quyết định 24/08, ba màn theo hi-fi (2026-08-30)
+
+**Quyết định owner 2026-08-30 (Bobby, từ screenshot + hi-fi):** Governance
+(Inbox · R1 · R2 · exit reviews) là **phòng review sáng** đúng hi-fi — đảo
+§0.1(3) của handoff refactor 24/08 ("không có governance-light"). Codex lưu ý:
+mọi tài liệu còn nói "one Carbon workspace cho cả governance" cần đối chiếu
+mục này.
+
+Cách làm — theme là workspace mode, không phải skin cục bộ (giữ đúng bài học
+EL-V2-01): mode `governance-light` cho `/governance/*` (token research, ép
+trên preference; TopBar "Governance Light ▾" route-set); `ExecutionSurface`
+kind governance không stamp theme (inherit); ba màn bỏ workspace/rail/tabs →
+bố cục phẳng hi-fi (`.exec-gov-*`, `data-hifi-exact`); Inbox thêm
+`actor`/`policyVersion` vào port list (shape actor của workflow contract);
+Capital preview là inverse panel duy nhất (`--gov-inverse-line`); test cũ
+"never an inverted surface" (codex-era) viết lại theo hi-fi owner; typeRoles
+exemption thêm `gov|gate`; token mới `--warn-bg`(light)/`--gov-exit`. Tests
+1724 pass; baselines governance đổi toàn bộ có chủ ý ở gate kế.
