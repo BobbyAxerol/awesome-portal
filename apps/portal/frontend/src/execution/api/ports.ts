@@ -76,6 +76,9 @@ export interface InboxResult {
    * action item that is not one, so the two never share a query.
    */
   decided?: KeysetPage<DecidedRow> | null;
+  /** The workflow contract's actor object (hi-fi header: "you are Lan · roles"). */
+  actor?: { username: string; roles: readonly string[] } | null;
+  policyVersion?: string | null;
 }
 
 /** What apply returned. A 202 and nothing more (master plan §7.3). */

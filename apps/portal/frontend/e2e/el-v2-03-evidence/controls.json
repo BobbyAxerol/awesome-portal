@@ -431,61 +431,68 @@
   "route": "/governance/approvals/AP-352/r2",
   "index": 2,
   "tag": "BUTTON",
-  "text": "Readiness 1",
+  "text": "Gate criteria 5",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 3,
   "tag": "BUTTON",
-  "text": "Observation policy",
+  "text": "Readiness 1",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 4,
   "tag": "BUTTON",
-  "text": "R1 reference",
+  "text": "Observation policy",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 5,
   "tag": "BUTTON",
-  "text": "Conditions 0",
+  "text": "R1 reference",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 6,
   "tag": "BUTTON",
-  "text": "Deny",
+  "text": "Conditions 0",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 7,
   "tag": "BUTTON",
-  "text": "Approve",
+  "text": "Deny",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 8,
   "tag": "BUTTON",
+  "text": "Approve",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 9,
+  "tag": "BUTTON",
   "text": "Copy full artifact",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
-  "index": 9,
+  "index": 10,
   "tag": "A",
   "text": "AP-101",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
-  "index": 10,
+  "index": 11,
   "tag": "BUTTON",
   "text": "Copy full R1 evidence digest",
   "verdict": "skipped:hidden"
@@ -2719,201 +2726,5 @@
   "tag": "BUTTON",
   "text": "ops findingsR0 · readUNPUBLISHEDno HTTP route pu",
   "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 43,
-  "tag": "BUTTON",
-  "text": "ops redis-retentionR0 · readUNPUBLISHEDno HTTP r",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 44,
-  "tag": "BUTTON",
-  "text": "ops streamsR0 · readUNPUBLISHEDno HTTP route pub",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 45,
-  "tag": "BUTTON",
-  "text": "ops trace-orderR0 · readUNPUBLISHEDno HTTP route",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 46,
-  "tag": "BUTTON",
-  "text": "broker bindingsR0 · readAMBIGUOUSno HTTP route p",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 47,
-  "tag": "BUTTON",
-  "text": "broker exposureR0 · readOBSERVEDGET /v1/admin/br",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 48,
-  "tag": "BUTTON",
-  "text": "broker reconcile-open-ordersR2 · sandboxowner re",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 49,
-  "tag": "BUTTON",
-  "text": "broker reconcile-positionsR2 · sandboxowner revi",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 50,
-  "tag": "BUTTON",
-  "text": "broker stateR0 · readOBSERVEDGET /v1/admin/broke",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 51,
-  "tag": "BUTTON",
-  "text": "config applyR1 · paper mutationowner reviewAMBIG",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 52,
-  "tag": "BUTTON",
-  "text": "config planR0 · readAMBIGUOUSno HTTP route publi",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 53,
-  "tag": "BUTTON",
-  "text": "health <root>R0 · readOBSERVEDGET /v1/health",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 54,
-  "tag": "BUTTON",
-  "text": "performance accountR0 · readAMBIGUOUSno HTTP rou",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 55,
-  "tag": "BUTTON",
-  "text": "performance account-historyR0 · readOBSERVEDGET ",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 56,
-  "tag": "BUTTON",
-  "text": "performance dashboardR0 · readOBSERVEDGET /v1/ad",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 57,
-  "tag": "BUTTON",
-  "text": "performance instrumentR0 · readOBSERVEDGET /v1/a",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 58,
-  "tag": "BUTTON",
-  "text": "performance portfolioR0 · readAMBIGUOUSno HTTP r",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 59,
-  "tag": "BUTTON",
-  "text": "performance portfolio-historyR0 · readOBSERVEDGE",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 60,
-  "tag": "BUTTON",
-  "text": "redis alpha-authR0 · readDIRECT_ACCESS_PROHIBITE",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 61,
-  "tag": "BUTTON",
-  "text": "redis getR0 · readDIRECT_ACCESS_PROHIBITEDno HTT",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 62,
-  "tag": "BUTTON",
-  "text": "redis scanR0 · readDIRECT_ACCESS_PROHIBITEDno HT",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 63,
-  "tag": "BUTTON",
-  "text": "redis streamunclassifiedDIRECT_ACCESS_PROHIBITED",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 64,
-  "tag": "BUTTON",
-  "text": "redis trading-stateR0 · readDIRECT_ACCESS_PROHIB",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 65,
-  "tag": "BUTTON",
-  "text": "risk profileR0 · readAMBIGUOUSno HTTP route publ",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 66,
-  "tag": "BUTTON",
-  "text": "risk stateR1 · paper mutationowner reviewOBSERVE",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 67,
-  "tag": "BUTTON",
-  "text": "sizing decisionR0 · readAMBIGUOUSno HTTP route p",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 68,
-  "tag": "BUTTON",
-  "text": "sizing historyR0 · readAMBIGUOUSno HTTP route pu",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 69,
-  "tag": "BUTTON",
-  "text": "sizing summaryR0 · readOBSERVEDGET /v1/admin/siz",
-  "verdict": "changed"
- },
- {
-  "route": "/administration/actions",
-  "index": 70,
-  "tag": "BUTTON",
-  "text": "Copy full source commit",
-  "verdict": "skipped:hidden"
  }
 ]

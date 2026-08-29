@@ -32,7 +32,7 @@ import {
 } from "../execution/previewRegistry";
 import { setThemeOverride } from "../styles/themeWriter";
 
-export type PortalPresentationMode = "research-light" | "execution-carbon";
+export type PortalPresentationMode = "research-light" | "governance-light" | "execution-carbon";
 
 /**
  * Classify a pathname against the registry.
@@ -55,6 +55,11 @@ export function presentationModeFor(
   registry: PortalRegistryDocument | null,
   pathname: string,
 ): PortalPresentationMode {
+  // Owner decision 2026-08-30 (supersedes the 2026-08-24 "one Carbon
+  // workspace" note): Governance — Inbox, Gate R1/R2, exit reviews, waivers —
+  // is the light review room the hi-fi draws. The workspace still flips as a
+  // whole; only the address decides.
+  if (pathname === "/governance" || pathname.startsWith("/governance/")) return "governance-light";
   if (pathname === "/execution" || pathname.startsWith("/execution/")) return "execution-carbon";
   if (!registry) return "research-light";
   for (const screen of registry.screens) {

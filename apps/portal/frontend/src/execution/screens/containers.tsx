@@ -199,6 +199,8 @@ export function ApprovalInboxContainer({
       counts: InboxCounts | null;
       inertCount?: number | null;
       decided?: KeysetPage<DecidedRow> | null;
+      actor?: { username: string; roles: readonly string[] } | null;
+      policyVersion?: string | null;
     }>
   >(loading);
 
@@ -279,6 +281,9 @@ export function ApprovalInboxContainer({
       onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
       page={state.value?.page ?? EMPTY_PAGE}
       counts={state.value?.counts ?? null}
+      policyVersion={state.value?.policyVersion ?? undefined}
+      actor={state.value?.actor?.username}
+      actorRoles={state.value?.actor?.roles}
       inertCount={state.value?.inertCount ?? null}
       decided={state.value?.decided ?? null}
       filter={filter}

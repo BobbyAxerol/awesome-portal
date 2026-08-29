@@ -36,6 +36,9 @@
   --accent-2-soft: #f4ecdb;
   --good: #1e7b4f;
   --good-bg: #e3f1e9;
+  --warn-bg: #fcf4d6;
+  --gov-exit: #8a3ffc;
+  --gov-inverse-line: #393939;
   --bad: #b43a3a;
   --bad-bg: #f7e8e8;
   --ink-panel: #161e2a;
@@ -412,6 +415,8 @@
   --bad-bg-soft: #1f0507;
   --warn: #f1c21b;
   --warn-bg: #302608;
+  --gov-exit: #b99bff;
+  --gov-inverse-line: #393939;
 
   --role-is: #8d8d8d;
   --role-oos: #78a9ff;

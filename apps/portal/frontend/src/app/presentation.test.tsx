@@ -72,9 +72,9 @@ describe("presentationModeFor — the canonical classification", () => {
   it.each([
     ["/execution", "execution-carbon"],
     ["/execution/_fixtures", "execution-carbon"],
-    ["/governance/approvals", "execution-carbon"],
+    ["/governance/approvals", "governance-light"],
     // Parameterised screen routes must classify by pattern, not literal match.
-    ["/governance/approvals/AP-201/r1", "execution-carbon"],
+    ["/governance/approvals/AP-201/r1", "governance-light"],
     ["/deployments/live/dep_88/canary", "execution-carbon"],
     // A feature ROOT is an Execution address even when no screen row carries
     // that exact route.
@@ -92,7 +92,8 @@ describe("presentationModeFor — the canonical classification", () => {
     // by construction rather than by classification is the execution-owned
     // path prefix.
     expect(presentationModeFor(null, "/execution/_fixtures")).toBe("execution-carbon");
-    expect(presentationModeFor(null, "/governance/approvals")).toBe("research-light");
+    // /governance/* is light by construction too (owner, 2026-08-30).
+    expect(presentationModeFor(null, "/governance/approvals")).toBe("governance-light");
   });
 
   it("ignores delivery profile by construction", () => {
@@ -105,7 +106,7 @@ describe("presentationModeFor — the canonical classification", () => {
 
 describe("the workspace flips atomically at the route boundary", () => {
   it("applies Carbon to the root, and the selector says so, on an Execution route", async () => {
-    mount("/governance/approvals");
+    mount("/deployments/paper");
     await waitFor(() =>
       expect(document.documentElement.getAttribute("data-theme")).toBe("execution-carbon"),
     );
@@ -114,6 +115,13 @@ describe("the workspace flips atomically at the route boundary", () => {
     // The rejected state: canvas Carbon while the control claimed Research
     // Light. Neither half may reappear.
     expect(screen.queryByText("Research Light")).toBeNull();
+  });
+
+  it("keeps governance light — the review room — and the selector says so", async () => {
+    mount("/governance/approvals");
+    const selector = await screen.findByLabelText(/Theme \(Governance Light/);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("research");
+    expect((selector as HTMLSelectElement).disabled).toBe(true);
   });
 
   it("keeps Research routes on the stored preference, untouched", async () => {
@@ -131,13 +139,12 @@ describe("the workspace flips atomically at the route boundary", () => {
     await screen.findByLabelText("Theme");
     expect(document.documentElement.getAttribute("data-theme")).toBe("research");
 
-    // Into Execution via the sidebar the user actually clicks.
+    // Into Governance via the sidebar the user actually clicks: the room is
+    // light by route, the selector says so, and it is not the preference.
     const inbox = await screen.findAllByRole("link", { name: /Approval Inbox/ });
     fireEvent.click(inbox[0]);
-    await waitFor(() =>
-      expect(document.documentElement.getAttribute("data-theme")).toBe("execution-carbon"),
-    );
-    expect(screen.getByLabelText(/Theme \(Execution Carbon/)).toBeTruthy();
+    await waitFor(() => expect(screen.getByLabelText(/Theme \(Governance Light/)).toBeTruthy());
+    expect(document.documentElement.getAttribute("data-theme")).toBe("research");
 
     // Back out: the mode was route-derived, so leaving restores the stored
     // preference rather than leaving Carbon smeared over Research.
@@ -151,7 +158,7 @@ describe("the workspace flips atomically at the route boundary", () => {
   });
 
   it("does not let an Execution route overwrite the STORED preference", async () => {
-    mount("/governance/approvals");
+    mount("/deployments/paper");
     await waitFor(() =>
       expect(document.documentElement.getAttribute("data-theme")).toBe("execution-carbon"),
     );

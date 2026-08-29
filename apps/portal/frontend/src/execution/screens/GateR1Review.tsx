@@ -11,7 +11,7 @@
  * "Request changes" has no published verb and is therefore disabled with
  * its reason — BR-EX-36.
  */
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import type { ApprovalId, EvidenceMark, PanelStatus, Sla } from "../contracts";
 import {
   ConditionComposer,
@@ -23,20 +23,8 @@ import {
 import { ExecutionDecisionBar } from "../components/decisionBar";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { GOV_CHARTS } from "../governance.smoke";
-import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
+
 import { PanelState } from "../components/states";
-import { ExecutionSectionTitle } from "../components/typography";
-import {
-  ExecutionContextRail,
-  ExecutionDecisionStrip,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionTabs,
-  ExecutionWorkspace,
-  shortDigest,
-  type HeaderBadge,
-  type RailBlocker,
-} from "../components/workspace";
 
 export interface PassportEntry {
   label: string;
@@ -76,17 +64,7 @@ export const REQUEST_CHANGES_NOTE_REASON =
 export const REQUEST_CHANGES_DENIED_REASON =
   "Request changes — the server did not grant this verb for this actor.";
 
-const R1_TABS = ["Checklist", "Passport", "Evidence", "Limitations", "Conditions"] as const;
-type R1Tab = (typeof R1_TABS)[number];
 
-function asEvidenceRows(checklist: readonly ChecklistItem[]): EvidenceRow[] {
-  return checklist.map((item) => ({
-    label: item.label,
-    mark: item.outcome,
-    detail: item.suggestion ?? undefined,
-    evidence: item.evidence ? { label: item.evidence.label, href: item.evidence.href } : undefined,
-  }));
-}
 
 export function GateR1Review({
   approvalId,
@@ -119,7 +97,6 @@ export function GateR1Review({
   onDeny,
   onRequestCondition,
   onRequestChanges,
-  onCopyProvenance,
 }: {
   approvalId: ApprovalId;
   alphaLabel: string;
@@ -154,13 +131,13 @@ export function GateR1Review({
   onDeny?: () => void;
   onRequestCondition: () => void;
   onRequestChanges?: () => void;
-  onCopyProvenance: (full: string) => void;
+  /** Kept for the container; the hi-fi page has no provenance drawer. */
+  onCopyProvenance?: (full: string) => void;
 }) {
   const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
-  const [tab, setTab] = useState<R1Tab>("Checklist");
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
-      <section className="exec-gate" aria-label={`Gate R1 review ${approvalId}`}>
+      <section className="exec-gate exec-gov" aria-label={`Gate R1 review ${approvalId}`} data-hifi-exact="gate-r1-1a">
         <div className="exec-gate-kicker">GATE R1 · Research Evidence Approval</div>
         <PanelState status={status} reason={reason ?? "This review cannot be shown."} />
       </section>
@@ -199,31 +176,6 @@ export function GateR1Review({
   if (!serverAllowsApprove && !locked) reasons.push("Approve blocked — the server did not grant it for this actor.");
   if (!serverAllowsDeny && !denyLocks.length) reasons.push("Deny blocked — the server did not grant it for this actor.");
 
-  const badges: HeaderBadge[] = [
-    { label: "GATE R1", axis: "stage" },
-    { label: `PENDING ${quorumMet}/${quorumRequired}`, axis: "readiness", tone: quorumMet >= quorumRequired ? "good" : "mute" },
-    { label: selfApproval ? "SoD VIOLATION" : "SoD OK", axis: "other", tone: selfApproval ? "bad" : "good" },
-    ...(status === "stale" ? [{ label: "STALE", axis: "broker-sync", tone: "bad" } as HeaderBadge] : []),
-    ...(status === "partial" ? [{ label: "PARTIAL", axis: "broker-sync", tone: "warn" } as HeaderBadge] : []),
-  ];
-  const blockers: RailBlocker[] = [
-    ...checklist
-      .filter((c) => c.outcome !== "pass")
-      .map((c) => ({
-        label: c.label,
-        detail: c.suggestion ?? (c.outcome === "fail" ? "blocking finding" : c.outcome === "watch" ? "warning · non-blocking" : "insufficient evidence"),
-        severity: c.outcome === "fail" ? ("blocking" as const) : ("watch" as const),
-      })),
-    // Lock names only — the sentence lives once, in the decision bar.
-    ...effectiveLocks.map((lock) => ({ label: `lock · ${lock.replace(/_/g, " ")}`, detail: null, severity: "blocking" as const })),
-  ];
-  const provenanceItems = [
-    ...passport.map((entry) => {
-      const isDigest = entry.value.startsWith("sha256:");
-      return { label: entry.label, short: isDigest ? shortDigest(entry.value) : entry.value, full: isDigest ? entry.value : null };
-    }),
-    { label: "policy", short: policyVersion, full: null },
-  ];
   const verdict = decided
     ? decided.outcome.replace(/_/g, " ")
     : approveLocked && conditionLocked
@@ -235,224 +187,187 @@ export function GateR1Review({
   const sodLine = selfApproval
     ? `separation-of-duty VIOLATION — you created this artifact (${actor})`
     : `separation-of-duty OK — creator (${creator}) ≠ you (${actor})`;
-
-  const rail = (
-    <ExecutionContextRail
-      next={{
-        title: decided ? "Decided" : approveLocked && conditionLocked ? "Approve blocked" : "Ready to decide",
-        detail: (
-          <span className="exec-role-body" data-violation={selfApproval ? "true" : undefined}>
-            {sodLine}
-          </span>
-        ),
-      }}
-      blockers={blockers}
-      freshness={
-        <span className="exec-role-meta">
-          {sla ? <SlaCell sla={sla} /> : "SLA not published"} · policy {policyVersion}
-        </span>
-      }
-      provenance={<ExecutionProvenanceDrawer items={provenanceItems} onCopy={onCopyProvenance} />}
-    />
-  );
+  const slaRemaining =
+    sla && sla.budgetMinutes > 0 && sla.ageMinutes >= 0
+      ? Math.max(0, Math.round((sla.budgetMinutes - sla.ageMinutes) / 60))
+      : null;
 
   return (
-    <section className="exec-gate" aria-label={`Gate R1 review ${approvalId}`}>
-      <ExecutionWorkspace layout="balanced" rail={rail}>
-        <ExecutionPageHeader
-          title={
+    <section className="exec-gate exec-gov" aria-label={`Gate R1 review ${approvalId}`} data-hifi-exact="gate-r1-1a">
+      {/* Hi-fi 1a head: gate chip · question-title · pending chip · WF marker. */}
+      <div className="exec-gov-head">
+        <span className="exec-inbox-gate" data-gate="R1">GATE R1</span>
+        <h1 className="exec-gov-h1">Research Evidence Approval <span className="exec-gov-dim">—</span> {alphaLabel}</h1>
+        <span className="exec-gov-chip" data-fill={decided ? (decided.outcome === "DENIED" ? "bad" : "good") : "warn"}>
+          {decided ? decided.outcome.replace(/_/g, " ") : `PENDING ${quorumMet}/${quorumRequired}`}
+        </span>
+        {status === "stale" ? <span className="exec-gov-chip" data-fill="bad">STALE</span> : null}
+        {status === "partial" ? <span className="exec-gov-chip" data-fill="warn">PARTIAL</span> : null}
+        <span className="exec-gov-wf">WF 1a</span>
+      </div>
+      <div className="exec-gov-metaline">
+        <span>request {approvalId}</span>
+        {releaseCandidate ? <span>release candidate {releaseCandidate}</span> : null}
+        <span>policy {policyVersion}</span>
+        <span data-tone={selfApproval ? "bad" : "good"}>{sodLine}</span>
+        <span className="exec-gov-spacer" />
+        <span className="exec-gov-meta">
+          quant reviewer decision{slaRemaining !== null ? ` · SLA ${slaRemaining}h remaining` : sla ? "" : " · SLA not published"}
+        </span>
+      </div>
+      {selfApproval && !decided ? (
+        <div className="exec-gate-banner exec-gate-blocking" role="status">
+          <strong className="exec-gate-blocking-lead">Approve blocked — self-approval prohibited</strong>{" "}
+          <span>
+            Policy {policyVersion} requires the artifact creator to be excluded from its research approval. You may
+            comment and request changes; another Quant Reviewer must decide.
+          </span>
+        </div>
+      ) : null}
+      {status === "partial" ? (
+        <div className="exec-gate-banner" role="status">
+          {partialReason ?? "Part of this review could not be read. What is shown below is real; do not treat the absence of a finding as a pass."}
+        </div>
+      ) : null}
+      {status === "stale" ? (
+        <div className="exec-gate-banner" role="status">
+          {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
+        </div>
+      ) : null}
+      {decided ? (
+        <div className="exec-gate-banner exec-gate-decided" role="status">
+          {decided.outcome.replace(/_/g, " ")} by {decided.by} at {decided.at}. This gate is closed.
+        </div>
+      ) : null}
+      <div className="exec-gov-grid2" data-ratio="1.15">
+        <div className="exec-gov-panel">
+          <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Artifact passport — immutable</span></div>
+          <div className="exec-gov-kv">
+            {passport.map((entry) => (
+              <Fragment key={entry.label}>
+                <span className="exec-gov-k">{entry.label}</span>
+                <span className="exec-gov-v">
+                  {entry.value}
+                  {entry.note ? <span className="exec-gate-note"> {entry.note}</span> : null}{" "}
+                  {entry.verification ? (
+                    <span className="exec-gov-verified">{entry.verification}</span>
+                  ) : (
+                    <span className="exec-gate-unverified">not verified</span>
+                  )}
+                </span>
+              </Fragment>
+            ))}
+          </div>
+        </div>
+        <div className="exec-gov-panel">
+          <div className="exec-gov-panelhead">
+            <span className="exec-gov-paneltitle">Decision checklist</span>
+            {/* SMOKE until BR-EX-67 publishes the gate-policy reference. */}
+            <span className="exec-gate-policychip" title="SMOKE — the versioned gate policy reference ships with BR-EX-67">{GOV_CHARTS.r1Policy}</span>
+            <span className="exec-gov-spacer" />
+            <button type="button" className="exec-gov-reglink" disabled title="The policy registry route ships with BR-EX-67.">policy registry →</button>
+          </div>
+          <div className="exec-gate-checklines">
+            {checklist.map((item) => (
+              <span key={item.label} data-mark={item.outcome}>
+                <b>{item.outcome === "pass" ? "✓" : item.outcome === "watch" ? "!" : item.outcome === "fail" ? "✕" : "…"}</b> {item.label}
+                {item.suggestion ? <span className="exec-gate-note"> — {item.suggestion}</span> : null}
+              </span>
+            ))}
+            <span className="exec-gate-checkfoot">
+              blocking items: <b>{blocking}</b> · warnings: <b data-tone="warn">{warnings}</b>
+              {insufficient > 0 ? <> · insufficient: <b data-tone="warn">{insufficient}</b></> : null}
+              {warnings > 0 ? " → suggested condition below" : null}
+            </span>
+          </div>
+        </div>
+      </div>
+      {evidence ?? <R1EvidenceSmoke />}
+      <div className="exec-gov-grid2">
+        <div className="exec-gov-panel">
+          <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Known limitations &amp; proposed restrictions</span></div>
+          {limitations?.length ? (
+            <div className="exec-gate-checklines">
+              {limitations.map((row) => (
+                <span key={`${row.kind}:${row.label}`} data-kind={row.kind}>
+                  {row.kind === "warning" ? <b data-tone="warn">!</b> : <b>{row.kind}:</b>} {row.label} — {row.value}
+                  {row.expires ? <span className="exec-gate-note"> · expires {row.expires}</span> : null}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <PanelState status="empty" reason="No limitations, restrictions or waivers were published for this artifact. Absence is not a clean bill." />
+          )}
+        </div>
+        <div className="exec-gov-panel">
+          <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Decision — structured, immutable once submitted</span></div>
+          <div className="exec-gate-decisionbody">
+            <ConditionList conditions={conditions ?? []} emptyNote="No conditions attached yet." />
+            {onAttachCondition && !isDecided ? (
+              <ConditionComposer
+                draft={draft}
+                onChange={setDraft}
+                onAttach={(condition) => {
+                  onAttachCondition(condition);
+                  setDraft(EMPTY_DRAFT);
+                }}
+                disabled={conditionLocked}
+                disabledReason="You cannot attach a condition to this decision."
+              />
+            ) : null}
+            <p className="exec-gov-meta">
+              {releaseCandidate
+                ? `approving creates a research_approval_id binding ${releaseCandidate} exactly — any code/param change afterwards invalidates it`
+                : "approving creates a research_approval_id binding this candidate exactly — any code/param change afterwards invalidates it"}
+            </p>
+          </div>
+        </div>
+      </div>
+      <ExecutionDecisionBar
+        label={`Gate R1 decision ${approvalId}`}
+        verdict={verdict}
+        tone={verdictTone}
+        reasons={isDecided ? [] : reasons}
+        note={onNoteChange && !isDecided ? { value: note ?? "", onChange: onNoteChange, disabled: approveLocked && conditionLocked && denyLocked } : undefined}
+        footnote={<>your decision counts as 1 of {quorumRequired} required approvers · decision is recorded against policy {policyVersion} · conditions are typed objects with owner, deadline and expiry, never free text</>}
+        trail={trail}
+        actions={
+          isDecided ? null : (
             <>
-              {alphaLabel}
-              {releaseCandidate ? <span className="exec-gate-rc"> · {releaseCandidate}</span> : null}
+              <button
+                type="button"
+                className="exec-role-control exec-btn-ghost"
+                disabled={requestChangesLocked}
+                title={
+                  !serverAllowsRequestChanges || !onRequestChanges
+                    ? REQUEST_CHANGES_DENIED_REASON
+                    : !noteReady
+                      ? REQUEST_CHANGES_NOTE_REASON
+                      : undefined
+                }
+                onClick={onRequestChanges}
+              >
+                Request changes
+              </button>
+              <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
+                Deny
+              </button>
+              <button
+                type="button"
+                className="exec-role-control exec-btn-ghost"
+                disabled={conditionLocked || (conditions?.length ?? 0) === 0}
+                title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
+                onClick={onRequestCondition}
+              >
+                Approve with condition
+              </button>
+              <button type="button" className="exec-role-control exec-btn-apply" disabled={approveLocked} onClick={onApprove}>
+                Approve
+              </button>
             </>
-          }
-          id={approvalId}
-          badges={badges}
-          purpose="Is this artifact defensible enough to become a Release Candidate?"
-          secondary={sla ? <SlaCell sla={sla} /> : undefined}
-        />
-        {status === "partial" ? (
-          <div className="exec-gate-banner" role="status">
-            {partialReason ?? "Part of this review could not be read. What is shown below is real; do not treat the absence of a finding as a pass."}
-          </div>
-        ) : null}
-        {status === "stale" ? (
-          <div className="exec-gate-banner" role="status">
-            {reason ?? "This review is older than its freshness budget. Refresh before deciding."}
-          </div>
-        ) : null}
-        {decided ? (
-          <div className="exec-gate-banner exec-gate-decided" role="status">
-            {decided.outcome.replace(/_/g, " ")} by {decided.by} at {decided.at}. This gate is closed.
-          </div>
-        ) : null}
-        <ExecutionDecisionStrip
-          metrics={[
-            { label: "Blocking items", value: String(blocking), tone: blocking > 0 ? "bad" : "good" },
-            { label: "Warnings", value: String(warnings), tone: warnings > 0 ? "warn" : undefined },
-            { label: "Insufficient evidence", value: String(insufficient), tone: insufficient > 0 ? "warn" : undefined },
-            { label: "Quorum", value: `${quorumMet}/${quorumRequired}` },
-            { label: "Conditions", value: String(conditions?.length ?? 0) },
-          ]}
-        />
-        <ExecutionTabs
-          tabs={[
-            { key: "Checklist", label: "Checklist", count: checklist.length },
-            { key: "Passport", label: "Passport", count: passport.length },
-            { key: "Evidence", label: "Evidence" },
-            { key: "Limitations", label: "Limitations", count: limitations?.length ?? null },
-            { key: "Conditions", label: "Conditions", count: conditions?.length ?? 0 },
-          ]}
-          active={tab}
-          onChange={(key) => setTab(key as R1Tab)}
-          label="Gate R1 sections"
-        >
-          {tab === "Checklist" ? (
-            <div className="exec-gate-panel">
-              <div className="exec-gate-panelhead">
-                <ExecutionSectionTitle>Decision checklist — policy {policyVersion}</ExecutionSectionTitle>
-                {/* SMOKE until BR-EX-67 publishes the gate-policy reference. */}
-                <span className="exec-gate-policychip" title="SMOKE — the versioned gate policy reference ships with BR-EX-67">{GOV_CHARTS.r1Policy}</span>
-              </div>
-              <EvidencePanel rows={asEvidenceRows(checklist)} />
-            </div>
-          ) : null}
-          {tab === "Passport" ? (
-            <div className="exec-gate-panel">
-              <ExecutionSectionTitle>Artifact passport — immutable</ExecutionSectionTitle>
-              <div className="exec-scroll-x">
-                <table className="exec-360-sync exec-gate-passport-table">
-                  <thead>
-                    <tr>
-                      <th scope="col">field</th>
-                      <th scope="col">value</th>
-                      <th scope="col">verification</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {passport.map((entry) => (
-                      <tr key={entry.label}>
-                        <th scope="row">{entry.label}</th>
-                        <td className="exec-num">
-                          {entry.value}
-                          {entry.note ? <span className="exec-gate-note"> {entry.note}</span> : null}
-                        </td>
-                        <td>
-                          {entry.verification ? (
-                            <span className="exec-gate-verified">{entry.verification}</span>
-                          ) : (
-                            <span className="exec-gate-unverified">not verified</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : null}
-          {tab === "Evidence" ? (
-            <div className="exec-gate-panel">
-              <ExecutionSectionTitle>Evidence — IS / OOS / holdout equity · WFO stability</ExecutionSectionTitle>
-              {evidence ?? <R1EvidenceSmoke />}
-            </div>
-          ) : null}
-          {tab === "Limitations" ? (
-            <div className="exec-gate-panel">
-              <ExecutionSectionTitle>Selection &amp; known limitations</ExecutionSectionTitle>
-              {limitations?.length ? (
-                <div className="exec-scroll-x">
-                  <table className="exec-360-sync exec-limitations">
-                    <thead>
-                      <tr>
-                        <th scope="col">kind</th>
-                        <th scope="col">item</th>
-                        <th scope="col">statement</th>
-                        <th scope="col">expires</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {limitations.map((row) => (
-                        <tr key={`${row.kind}:${row.label}`} data-kind={row.kind}>
-                          <th scope="row">{row.kind}</th>
-                          <td>{row.label}</td>
-                          <td>{row.value}</td>
-                          <td className="exec-num">{row.expires ?? "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <PanelState status="empty" reason="No limitations, restrictions or waivers were published for this artifact. Absence is not a clean bill." />
-              )}
-            </div>
-          ) : null}
-          {tab === "Conditions" ? (
-            <div className="exec-gate-panel">
-              <ExecutionSectionTitle>Conditions</ExecutionSectionTitle>
-              <ConditionList conditions={conditions ?? []} emptyNote="No conditions attached yet." />
-              {onAttachCondition ? (
-                <ConditionComposer
-                  draft={draft}
-                  onChange={setDraft}
-                  onAttach={(condition) => {
-                    onAttachCondition(condition);
-                    setDraft(EMPTY_DRAFT);
-                  }}
-                  disabled={conditionLocked}
-                  disabledReason="You cannot attach a condition to this decision."
-                />
-              ) : null}
-            </div>
-          ) : null}
-        </ExecutionTabs>
-        <ExecutionDecisionBar
-          label={`Gate R1 decision ${approvalId}`}
-          verdict={verdict}
-          tone={verdictTone}
-          reasons={isDecided ? [] : reasons}
-          note={onNoteChange && !isDecided ? { value: note ?? "", onChange: onNoteChange, disabled: approveLocked && conditionLocked && denyLocked } : undefined}
-          footnote={<>decision is recorded against policy {policyVersion} · conditions are typed objects with owner, deadline and expiry, never free text</>}
-          trail={trail}
-          actions={
-            isDecided ? null : (
-              <>
-                <button
-                  type="button"
-                  className="exec-role-control exec-btn-ghost"
-                  disabled={requestChangesLocked}
-                  title={
-                    !serverAllowsRequestChanges || !onRequestChanges
-                      ? REQUEST_CHANGES_DENIED_REASON
-                      : !noteReady
-                        ? REQUEST_CHANGES_NOTE_REASON
-                        : undefined
-                  }
-                  onClick={onRequestChanges}
-                >
-                  Request changes
-                </button>
-                <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
-                  Deny
-                </button>
-                <button
-                  type="button"
-                  className="exec-role-control exec-btn-ghost"
-                  disabled={conditionLocked || (conditions?.length ?? 0) === 0}
-                  title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
-                  onClick={onRequestCondition}
-                >
-                  Approve with condition
-                </button>
-                <button type="button" className="exec-role-control exec-btn-apply" disabled={approveLocked} onClick={onApprove}>
-                  Approve
-                </button>
-              </>
-            )
-          }
-        />
-      </ExecutionWorkspace>
+          )
+        }
+      />
     </section>
   );
 }

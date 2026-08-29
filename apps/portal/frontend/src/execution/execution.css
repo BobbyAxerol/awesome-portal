@@ -1128,7 +1128,7 @@
 
 .exec-inbox-filter {
   font: var(--exec-font-control);
-  padding: 2px var(--space-2);
+  padding: 5px 12px;
   border: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--ink-soft);
@@ -1137,7 +1137,9 @@
 
 .exec-inbox-filter[data-active="true"] {
   border-color: var(--accent);
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--paper);
+  font-weight: 600;
 }
 
 .exec-inbox-sort {
@@ -1265,6 +1267,27 @@
   margin-top: var(--space-1);
 }
 
+.exec-gov-dim { color: var(--ink-faint); }
+.exec-gov-reglink { font: 400 10px/14px var(--font-mono); color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; }
+.exec-gov-reglink:disabled { color: var(--ink-faint); cursor: not-allowed; }
+.exec-gate-checklines { display: flex; flex-direction: column; gap: 7px; padding: 14px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); }
+.exec-gate-checklines [data-mark="pass"] b, .exec-gate-checklines [data-kind="lineage"] b { color: var(--good); }
+.exec-gate-checklines [data-mark="watch"] b, .exec-gate-checklines [data-kind="warning"] b, .exec-gate-checklines [data-mark="insufficient"] b { color: var(--warn); }
+.exec-gate-checklines [data-mark="watch"], .exec-gate-checklines [data-kind="warning"] { color: var(--warn); }
+.exec-gate-checklines [data-mark="fail"] b { color: var(--bad); }
+.exec-gate-checkfoot { margin-top: auto; border-top: 1px solid var(--line-soft); padding-top: 8px; color: var(--ink); }
+.exec-gate-checkfoot [data-tone="warn"] { color: var(--warn); }
+.exec-gate-decisionbody { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.exec-gate-fitbody { padding: 14px; display: flex; flex-direction: column; gap: 10px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); }
+.exec-gate-fitbody .exec-gov-kv, .exec-gov-kv[data-flush="true"] { padding: 0; }
+.exec-gate-obsbody { padding: 14px; }
+.exec-gov-kv .exec-gov-v[data-tone="good"] { color: var(--good); }
+/* The one deliberately inverse block: the EXECUTION-vocabulary capital
+   preview stays near-black inside the light review room (hi-fi 1b). */
+.exec-gov-inverse { border: 1px solid var(--ink); background: var(--ink); color: var(--paper); }
+.exec-gov-inverse .exec-gov-paneltitle { color: var(--paper-sunken); opacity: 0.8; }
+.exec-gov-inverse .exec-gov-panelhead { border-bottom-color: var(--gov-inverse-line); }
+.exec-gate-policychip[data-inverse="true"] { background: none; border-color: var(--gov-inverse-line); color: var(--paper); }
 /* Gate R1/R2 hi-fi additions: policy chips, criteria verdicts, stage chips,
    portfolio-fit bar, window-role legend. */
 .exec-gate-panelhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -1566,6 +1589,46 @@
 
 /* The hi-fi's footer strip. "visibility ≠ authority" is the sentence that
  * explains the dimmed rows; without it the dimming reads as a rendering bug. */
+
+/* ── Governance review room (hi-fi 4a/1a/1b, owner 2026-08-30) ──────────────
+   Light-first: the route provider renders /governance/* on the research
+   tokens; every value here is a token so the same screens stay legible when
+   a fixture page mounts them under Carbon. Numbers are the hi-fi's. */
+.exec-gov { max-width: 1200px; margin: 0 auto; padding: 24px 20px 64px; display: flex; flex-direction: column; gap: 14px; }
+.exec-gov-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 2px; }
+.exec-gov-h1 { margin: 0; font: 300 22px/1.3 var(--font-body); color: var(--ink); }
+.exec-gov-chip { font: 600 11px/16px var(--font-mono); padding: 1px 8px; }
+.exec-gov-chip[data-fill="warn"] { background: var(--warn-bg); color: var(--warn-strong, var(--warn)); }
+.exec-gov-chip[data-fill="bad"] { background: var(--bad-bg); color: var(--bad); }
+.exec-gov-chip[data-fill="good"] { background: var(--good-bg); color: var(--good); }
+.exec-gov-chip[data-pulse="true"] { animation: exec-inbox-pulse 1.8s infinite; }
+@media (prefers-reduced-motion: reduce) { .exec-gov-chip[data-pulse="true"] { animation: none; } }
+.exec-gov-wf { font: 400 9px/14px var(--font-mono); color: var(--ink-faint); border: 1px dashed var(--line-strong); padding: 1px 6px; }
+.exec-gov-spacer { flex: 1; }
+.exec-gov-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); }
+.exec-gov-panel { border: 1px solid var(--line); background: var(--paper-raised); }
+.exec-gov-panelhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+.exec-gov-paneltitle { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-gov-metaline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-gov-metaline [data-tone="good"] { color: var(--good); }
+.exec-gov-metaline [data-tone="warn"] { color: var(--warn); }
+.exec-gov-metaline [data-tone="bad"] { color: var(--bad); font-weight: 600; }
+.exec-gov-kv { display: grid; grid-template-columns: minmax(150px, 40%) minmax(0, 1fr); gap: 6px 12px; padding: 14px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); overflow-wrap: anywhere; }
+.exec-gov-kv > .exec-gov-k { font: 400 10px/16px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); }
+.exec-gov-kv > .exec-gov-v { color: var(--ink); }
+.exec-gov-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.exec-gov-grid2[data-ratio="1.15"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.exec-gov-grid2[data-ratio="1.5"] { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.exec-gov-grid2[data-ratio="1.35"] { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+@media (max-width: 1024px) { .exec-gov-grid2 { grid-template-columns: minmax(0, 1fr); } }
+.exec-gov-verified { color: var(--good); }
+.exec-gov-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.exec-gov-actions .exec-gov-count { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); }
+/* Gate chips in the inbox table (hi-fi: bordered, per-gate hue). */
+.exec-inbox-gate { font: 600 10px/14px var(--font-mono); padding: 1px 6px; border: 1px solid var(--accent); color: var(--accent); white-space: nowrap; }
+.exec-inbox-gate[data-gate="PAPER_EXIT"], .exec-inbox-gate[data-gate="SANDBOX_EXIT"] { border-color: var(--gov-exit); color: var(--gov-exit); }
+.exec-inbox-gate[data-gate="LIVE_GATE"] { border-width: 2px; border-color: var(--bad); color: var(--bad); font-weight: 700; }
+
 /* Hi-fi 4a: the OVERDUE badge and an overdue row's SLA bar pulse; the breach
    countdown is the strip's one emphatic number. */
 @keyframes exec-inbox-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
@@ -1580,6 +1643,7 @@
 .exec-inbox .exec-sla .exec-sla-bar { display: block; width: 110px; margin-top: 4px; }
 .exec-inbox-breach { color: var(--ink); font-variant-numeric: tabular-nums; }
 .exec-inbox-rownote { margin-left: auto; }
+.exec-inbox-needsyou { color: var(--accent); font-weight: 600; }
 .exec-inbox-decidedmeta { color: var(--ink-mute); font: 400 11px/16px var(--font-mono); }
 .exec-inbox-strip {
   font: var(--exec-font-meta);

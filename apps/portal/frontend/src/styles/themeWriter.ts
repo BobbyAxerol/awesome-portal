@@ -22,7 +22,14 @@ function apply(): void {
   if (typeof document === "undefined") return;
   document.documentElement.setAttribute(
     "data-theme",
-    override === "execution-carbon" ? "execution-carbon" : preference,
+    override === "execution-carbon"
+      ? "execution-carbon"
+      : override === "governance-light"
+        ? // The governance review room is light regardless of the stored
+          // Research/Operations preference (owner, 2026-08-30). It reuses the
+          // research tokens — one light palette, not a second one.
+          "research"
+        : preference,
   );
 }
 
@@ -33,7 +40,7 @@ export function setThemePreference(theme: string): void {
 
 /** `null` = no route override active (Research/Planning/auth). */
 export function setThemeOverride(mode: PortalPresentationMode | null): void {
-  override = mode === "execution-carbon" ? mode : null;
+  override = mode === "execution-carbon" || mode === "governance-light" ? mode : null;
   apply();
 }
 

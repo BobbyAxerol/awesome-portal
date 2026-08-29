@@ -169,7 +169,10 @@ describe("Carbon surface isolation", () => {
       </ExecutionSurface>,
     );
     const surface = container.querySelector(".exec-surface");
-    expect(surface?.getAttribute("data-theme")).toBe("operations-carbon");
+    // Owner decision 2026-08-30: governance inherits the workspace theme —
+    // light on /governance/* via the route provider — instead of stamping
+    // Carbon locally. No attribute is the inherit.
+    expect(surface?.getAttribute("data-theme")).toBeNull();
     // Governance is a page you read and decide on, not a console you scan.
     expect(surface?.getAttribute("data-density")).toBe("comfortable");
   });
@@ -185,9 +188,9 @@ describe("Carbon surface isolation", () => {
     const surfaces = [...container.querySelectorAll(".exec-surface")].map((s) =>
       s.getAttribute("data-theme"),
     );
-    // One Carbon for the whole loop (owner override §0.1); the surfaces
-    // differ by data-surface semantics, not by theme.
-    expect(surfaces).toEqual(["operations-carbon", "operations-carbon"]);
+    // Deployments stamps Carbon; a nested governance panel inherits it — one
+    // page, one theme, whichever page it is.
+    expect(surfaces).toEqual(["operations-carbon", null]);
   });
 });
 
@@ -1807,11 +1810,12 @@ describe("Approval Inbox", () => {
         filter="INBOX"
       />,
     );
-    // One row is loaded and five are pending. The header describes the queue.
-    const header = container.querySelector(".exec-inbox-counts");
+    // One row is loaded and five are pending. The header chips describe the
+    // queue; due-soon lives in the table strip (hi-fi 4a).
+    const header = container.querySelector(".exec-gov-head");
     expect(header?.textContent).toContain("5 PENDING");
-    expect(header?.textContent).toContain("1 overdue");
-    expect(header?.textContent).toContain("1 due < 8h");
+    expect(header?.textContent).toContain("1 OVERDUE");
+    expect(container.querySelector(".exec-inbox-strip")?.textContent).toContain("1 due soon");
   });
 
   it("says inbox zero rather than showing a blank table", () => {
@@ -1836,12 +1840,12 @@ describe("Approval Inbox", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByRole("table", { name: "Pending approvals" })).toBeTruthy();
-    // EL-V2-05: decided requests live on their own tab, never in the pending table.
-    expect(screen.queryByRole("table", { name: "Recently decided" })).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: /Recently decided/ }));
-    expect(screen.getByRole("table", { name: "Recently decided" })).toBeTruthy();
-    expect(screen.queryByRole("table", { name: "Pending approvals" })).toBeNull();
+    // Hi-fi 4a: both lists are on the page — but a decided request never sits
+    // in the pending table, where it would read as an action item.
+    const pending = screen.getByRole("table", { name: "Pending approvals" });
+    expect(within(pending).queryByText("APPROVED_WITH_CONDITION")).toBeNull();
+    const decidedTable = screen.getByRole("table", { name: "Recently decided" });
+    expect(within(decidedTable).getByText("APPROVED_WITH_CONDITION")).toBeTruthy();
   });
 
   it("names the policy and the actor's roles so a blocked Approve is explicable", () => {
@@ -1952,7 +1956,7 @@ describe("Gate R1 Review", () => {
     // from permitting the thing it exists to refuse.
     render(gate({ actor: "Minh" }));
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
-    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+    expect(screen.getAllByText(/self-approval prohibited/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/separation-of-duty VIOLATION/)).toBeTruthy();
   });
 
@@ -2002,7 +2006,7 @@ describe("Gate R1 Review", () => {
     render(gate({ actor: "Minh", locks: ["EXPIRED"] }));
     // EL-V2-05: one sentence per lock in the decision bar (first inline, the
     // rest behind "n more reasons") — every lock is still printed.
-    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+    expect(screen.getAllByText(/self-approval prohibited/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/This request expired/)).toBeTruthy();
   });
 
@@ -2010,14 +2014,14 @@ describe("Gate R1 Review", () => {
     // A warning counted as a blocker stops a legitimate approval; a blocker
     // counted as a warning waves a real one through.
     render(gate());
-    // EL-V2-05: the tally is the decision strip.
-    expect(screen.getByText("Blocking items").parentElement?.textContent).toContain("0");
-    expect(screen.getByText("Warnings").parentElement?.textContent).toContain("1");
+    // Hi-fi 1a: the tally is the checklist panel's own footer line.
+    const foot = document.querySelector(".exec-gate-checkfoot");
+    expect(foot?.textContent).toContain("blocking items: 0");
+    expect(foot?.textContent).toContain("warnings: 1");
   });
 
   it("states a passport claim nobody verified rather than leaving it blank", () => {
     render(gate());
-    fireEvent.click(screen.getByRole("tab", { name: /Passport/ }));
     expect(screen.getByText("not verified")).toBeTruthy();
     expect(screen.getByText("✓ verified")).toBeTruthy();
   });
@@ -2278,7 +2282,7 @@ describe("Gate R2 Review", () => {
 
   it("marks the preview as derived and not applied", () => {
     render(r2());
-    expect(screen.getByText("PLAN PREVIEW")).toBeTruthy();
+    expect(screen.getByText(/PLAN PREVIEW/)).toBeTruthy();
     expect(screen.getByText(/derived, not applied/)).toBeTruthy();
     expect(screen.getByText("DERIVED")).toBeTruthy();
   });
@@ -2295,7 +2299,6 @@ describe("Gate R2 Review", () => {
   it("says a config revision is missing rather than leaving it blank", () => {
     // A config without its revision cannot be audited after the fact.
     render(r2());
-    fireEvent.click(screen.getByRole("tab", { name: /Readiness/ }));
     expect(screen.getByText(/revision not stated/)).toBeTruthy();
   });
 
@@ -3033,7 +3036,7 @@ describe("containers — the port meets the screens", () => {
     expect(await screen.findByText("AP-352")).toBeTruthy();
     // Four rows are on screen and five are pending. The header describes the
     // queue, the rows describe the page, and both are the server's numbers.
-    expect(container.querySelector(".exec-inbox-counts")?.textContent).toContain("5 PENDING");
+    expect(container.querySelector(".exec-gov-head")?.textContent).toContain("5 PENDING");
     // Three rows in the INBOX view and five in the queue: the header describes
     // the queue, the view describes what is mine. The container asks for a full
     // page (100), so the view is not truncated here.
@@ -3207,7 +3210,7 @@ describe("server eligibility composes with the local floor", () => {
       }),
     );
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
-    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+    expect(screen.getAllByText(/self-approval prohibited/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("gates approve-with-condition on its own boolean", () => {
@@ -3328,7 +3331,7 @@ describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByText(/last 30 days/)).toBeTruthy();
+    expect(screen.getAllByText(/last 30 days/).length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -3509,19 +3512,17 @@ describe("Gate R2 — the R1 reference is openable", () => {
     // §3 names three fields. A chip carries the decision and drops the two a
     // reviewer needs to judge how much the R1 is still worth.
     render(r2({ r1Digest: "sha256:c81f…", r1Expiry: "2026-11-01", r1DecidedBy: "Minh" }));
-    // EL-V2-05: the reference is its own tab; the rail freshness line names the expiry too.
-    fireEvent.click(screen.getByRole("tab", { name: /R1 reference/ }));
-    expect(screen.getAllByText("R1 reference").length).toBeGreaterThanOrEqual(1);
-    // Digest and expiry also sit in the provenance drawer / rail — at least once each.
-    expect(screen.getAllByText("sha256:c81f…").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("2026-11-01").length).toBeGreaterThanOrEqual(1);
+    // Hi-fi 1b: the reference lives on the meta line — state chip, evidence
+    // digest and expiry, each present at least once.
+    expect(screen.getAllByText(/R1 APPROVED/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/sha256:c81f/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/2026-11-01/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("states a missing digest or expiry rather than leaving the field blank", () => {
     // An R1 whose evidence cannot be identified is an R1 nobody can re-check,
     // which is most of what a reference is for.
     const { container } = render(r2());
-    fireEvent.click(screen.getByRole("tab", { name: /R1 reference/ }));
     const unpublished = [...container.querySelectorAll(".exec-gate-unverified")].map(
       (n) => n.textContent,
     );
@@ -3765,7 +3766,6 @@ describe("typed conditions composer (§2 — conditions attach to the decision)"
   it("attaches a condition from Gate R1 and clears the draft", () => {
     const attached: unknown[] = [];
     const { container } = render(gate({ onAttachCondition: (c: unknown) => attached.push(c) }));
-    fireEvent.click(screen.getByRole("tab", { name: /Conditions/ }));
     const text = container.querySelector<HTMLInputElement>(".exec-composer-wide input")!;
     const owner = container.querySelectorAll<HTMLInputElement>(".exec-composer-field input")[1];
 
@@ -3781,7 +3781,6 @@ describe("typed conditions composer (§2 — conditions attach to the decision)"
 
   it("blocks Attach until the draft is valid", () => {
     render(gate({ onAttachCondition: () => {} }));
-    fireEvent.click(screen.getByRole("tab", { name: /Conditions/ }));
     expect(screen.getByRole("button", { name: "Attach condition" })).toHaveProperty("disabled", true);
     expect(screen.getByText(/a condition needs text/)).toBeTruthy();
   });
@@ -3790,7 +3789,6 @@ describe("typed conditions composer (§2 — conditions attach to the decision)"
     // A composer for a decision you cannot make is a form that wastes your
     // time, so it follows the condition control exactly.
     render(gate({ actor: "Minh", onAttachCondition: () => {} }));
-    fireEvent.click(screen.getByRole("tab", { name: /Conditions/ }));
     expect(screen.getByRole("button", { name: "Attach condition" })).toHaveProperty("disabled", true);
     expect(screen.getByText(/cannot attach a condition/)).toBeTruthy();
   });
@@ -4682,7 +4680,7 @@ describe("separation of duty compares people, not the absence of them", () => {
   it("still locks when the same person really is on both sides", () => {
     render(gate({ creatorId: "usr_stan", actorId: "usr_stan" }));
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
-    expect(screen.getByText(/self-approval prohibited/)).toBeTruthy();
+    expect(screen.getAllByText(/self-approval prohibited/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("does not lock two people who happen to share a display name", () => {
@@ -4858,7 +4856,7 @@ describe("echoes and counts say only what the server said", () => {
         counts={{ pending: 4, overdue: null, dueSoon: null }}
       />,
     );
-    expect(screen.getByText(/overdue not counted/)).toBeTruthy();
+    expect(screen.getAllByText(/overdue not counted/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("claims only a sort the server will actually run", () => {

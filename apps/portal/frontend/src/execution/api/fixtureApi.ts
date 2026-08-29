@@ -543,6 +543,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
             { rows: DECIDED_ROWS, total_count: DECIDED_ROWS.length, filtered_count: DECIDED_ROWS.length },
             (row) => readDecidedRow(row).row,
           ),
+          // The cast's reviewer, in the workflow contract's actor shape.
+          actor: { username: "Lan", roles: ["Quant Reviewer", "Ops Approver"] },
+          policyVersion: "approval.v3",
         },
         warnings: gaps,
       };
