@@ -37,6 +37,9 @@ export const OPERATIONS_QUEUE_FIXTURE = {
         "verification_result": "NOT_STARTED",
         "triage_state": "UNACKNOWLEDGED",
         "workflow_version": 1,
+        "assigned_to": null,
+        "assigned_at": null,
+        "incident_id": null,
         "acknowledged_at": null,
         "acknowledged_by_user_id": null,
         "resolved_at": null,
@@ -91,6 +94,12 @@ export const OPERATION_WORKFLOW_FIXTURE = {
     "verification_result": "NOT_STARTED",
     "triage_state": "RESOLVED",
     "workflow_version": 3,
+    "assigned_to": {
+      "user_id": "usr_fixture_admin",
+      "username": "bobby"
+    },
+    "assigned_at": "2026-08-23T09:01:00.000Z",
+    "incident_id": null,
     "acknowledged_at": "2026-08-23T09:01:00.000Z",
     "acknowledged_by_user_id": "usr_fixture_admin",
     "resolved_at": "2026-08-23T09:02:00.000Z",

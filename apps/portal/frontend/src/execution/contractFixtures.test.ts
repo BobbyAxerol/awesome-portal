@@ -1,7 +1,7 @@
 /**
  * C-PI04-06 — one contract-loading test per canonical fixture.
  *
- * Six endpoints, six documents in `packages/contracts/fixtures`. Before this,
+ * The canonical analytics documents in `packages/contracts/fixtures`. Before this,
  * three of them were never loaded by any frontend test: the readers were
  * exercised only against hand-written fixtures shaped like what we believed the
  * backend sent. That is a closed loop — it proves the reader agrees with our
@@ -31,7 +31,7 @@ const FIXTURES = join(__dirname, "../../../../../packages/contracts/fixtures");
 const load = (name: string) =>
   JSON.parse(readFileSync(join(FIXTURES, `execution-analytics.${name}.valid.json`), "utf8"));
 
-/** The six the handoff names, in its order. */
+/** The complete N07/N10 analytics fixture family, in domain order. */
 const CANONICAL = [
   "capital-preview",
   "order-funnel",
@@ -39,10 +39,17 @@ const CANONICAL = [
   "correlation",
   "capital-ledger",
   "binding-exposure",
+  "equity-projection",
+  "insight-line",
+  "insight-bar",
+  "insight-waterfall",
+  "insight-funnel",
+  "insight-histogram",
+  "insight-heatmap",
 ] as const;
 
 describe("the canonical set is the whole set", () => {
-  it("covers every analytics fixture on disk, so a seventh cannot appear unnoticed", () => {
+  it("covers every analytics fixture on disk, so a new contract cannot appear unnoticed", () => {
     const onDisk = readdirSync(FIXTURES)
       .filter((f) => f.startsWith("execution-analytics.") && f.endsWith(".valid.json"))
       .map((f) => f.replace("execution-analytics.", "").replace(".valid.json", ""));

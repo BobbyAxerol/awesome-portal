@@ -284,6 +284,21 @@ export const SANDBOX_CERTIFICATION_FIXTURE = {
     }
   ],
   "timeboxed_run_policy": null,
+  "smoke_plan": {
+    "plan_id": "smoke_fixture_1",
+    "qty": "0.010000000000000000",
+    "cap": "100.000000000000000000",
+    "currency": "USDT",
+    "timebox_minutes": 30,
+    "operator": {
+      "user_id": "usr_fixture_admin",
+      "username": "bobby"
+    },
+    "status": "PLANNED",
+    "approved_by": null,
+    "approved_at": null,
+    "source_side_effect_requested": false
+  },
   "findings": {
     "total_count": 0,
     "returned_count": 0,

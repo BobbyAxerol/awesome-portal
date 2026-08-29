@@ -7,9 +7,11 @@
  * arithmetic overflow inside the engine produced the same "backend
  * unavailable" panel, and only one of those is something a human can fix.
  *
- * The seven codes are read from the edge service itself
+ * The thirteen 422/503 codes are read from the edge service itself
  * (`edge-service/src/main.rs`, `analytics_error_contract`), not from prose:
- * six are 422 and correctable by changing the request, one is 503 and is not.
+ * twelve are 422 and correctable by changing the request, one is 503 and is
+ * not. The separate 413 response-size guard is handled by the HTTP envelope
+ * layer because it is a transport bound rather than a panel correction.
  *
  * One more reason this is urgent, which is not in codex's handoff: PRE-IAM-04
  * closed H-1 by making `DecimalString::parse` REJECT a decimal beyond the
@@ -26,6 +28,12 @@ export const ANALYTICS_CORRECTABLE = [
   "ANALYTICS_SCOPE_MISMATCH",
   "ANALYTICS_DUPLICATE_IDENTIFIER",
   "ANALYTICS_CORRELATION_INVALID",
+  "ANALYTICS_SERIES_RANGE_INVALID",
+  "ANALYTICS_SERIES_POINT_LIMIT",
+  "ANALYTICS_SERIES_GAP_UNEXPLAINED",
+  "ANALYTICS_APPROVED_BAND_LINEAGE_MISMATCH",
+  "ANALYTICS_TILE_KIND_MISMATCH",
+  "ANALYTICS_TILE_SAMPLE_STATE_INVALID",
 ] as const;
 
 export type AnalyticsCorrectableCode = (typeof ANALYTICS_CORRECTABLE)[number];
@@ -96,6 +104,30 @@ const CORRECTABLE: Record<AnalyticsCorrectableCode, { title: string; action: str
     title: "The correlation request could not be formed from the entities given.",
     action:
       "Check that every entity is in the portfolio and that no pair is an entity with itself, then ask again.",
+  },
+  ANALYTICS_SERIES_RANGE_INVALID: {
+    title: "The requested time range does not fit a supported analytics interval.",
+    action: "Choose a valid start and end time, then ask again.",
+  },
+  ANALYTICS_SERIES_POINT_LIMIT: {
+    title: "The requested series contains more points than one response may carry.",
+    action: "Shorten the time range or choose a coarser interval, then ask again.",
+  },
+  ANALYTICS_SERIES_GAP_UNEXPLAINED: {
+    title: "The series contains a gap that has no published gap evidence.",
+    action: "Reload the source window or choose a complete interval before asking again.",
+  },
+  ANALYTICS_APPROVED_BAND_LINEAGE_MISMATCH: {
+    title: "The comparison band does not belong to the approved research evidence.",
+    action: "Return to the approved evidence set and select its published band.",
+  },
+  ANALYTICS_TILE_KIND_MISMATCH: {
+    title: "This series cannot be rendered as the requested insight tile.",
+    action: "Choose a tile compatible with the published series kind.",
+  },
+  ANALYTICS_TILE_SAMPLE_STATE_INVALID: {
+    title: "The tile series and its sample-state evidence disagree.",
+    action: "Refresh the source samples before requesting this tile again.",
   },
 };
 

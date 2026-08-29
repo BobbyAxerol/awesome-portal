@@ -69,7 +69,13 @@ wait_postgres() {
   local container="$1"
   local database="$2"
   for _ in $(seq 1 45); do
-    if "${DOCKER[@]}" exec "${container}" pg_isready -U portal -d "${database}" >/dev/null 2>&1; then
+    # pg_isready only proves that the server is accepting connections. During
+    # first-time init it can become green before POSTGRES_DB has been created;
+    # during PITR it can also become green immediately before recovery promotes
+    # and terminates sessions. Require a real query against the target database
+    # so the next test statement cannot race either transition.
+    if [[ "$("${DOCKER[@]}" exec "${container}" psql -U portal -d "${database}" \
+      -Atqc 'SELECT 1' 2>/dev/null || true)" == "1" ]]; then
       return 0
     fi
     sleep 1

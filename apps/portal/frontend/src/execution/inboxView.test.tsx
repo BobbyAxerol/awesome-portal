@@ -186,11 +186,28 @@ describe("a governance write answers to its own gate", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("names the conflation rather than hiding it behind a command tier", async () => {
+  it("does not conflate a Portal governance write with the Paper command tier", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      calls.push(url);
+      return new Response(JSON.stringify({ operation_id: "op_1", status: "APPLIED_UNVERIFIED" }), {
+        status: 202,
+        headers: { "content-type": "application/json" },
+      });
+    });
     const closed = { ...OPEN, paperCommandsEnabled: false };
     const result = await createHttpApi({ policy: closed }).applyPlan("op_1", "tok", "ws");
+    expect(result.ok).toBe(true);
+    expect(calls).toEqual(["/api/v1/execution/operations/op_1/apply"]);
+  });
+
+  it("fails closed on the independent governance-write policy", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const closed = { ...OPEN, governanceWriteEnabled: false };
+    const result = await createHttpApi({ policy: closed }).applyPlan("op_1", "tok", "ws");
     expect(result.ok).toBe(false);
-    // The operator reads why, and the reason names the request that would end it.
-    if (!result.ok) expect(result.reason).toMatch(/BR-EX-31/);
+    if (!result.ok) expect(result.reason).toMatch(/Recording a decision is disabled/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

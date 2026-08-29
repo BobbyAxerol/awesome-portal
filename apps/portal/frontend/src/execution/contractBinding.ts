@@ -98,7 +98,10 @@ export type _CorrelationFields = Requires<
  * ------------------------------------------------------------------------ */
 
 export type _EligibilityFields = Requires<
-  Governance["schemas"]["Eligibility"],
+  // The bundled governance declaration contains two schemas named
+  // `Eligibility`: the unprefixed one belongs to the R1 approval workflow,
+  // while Paper Exit is emitted as `$defs-Eligibility`.
+  Governance["schemas"]["$defs-Eligibility"],
   // Five capabilities, not three. The two Paper Exit ones were the gap that
   // let extend and reject render as unconditionally safe.
   | "can_approve"
