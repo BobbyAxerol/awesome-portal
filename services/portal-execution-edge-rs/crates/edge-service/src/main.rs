@@ -38,6 +38,7 @@ use execution_contracts::{
     ExecutionReadCapability, FreshnessState, PanelState, SourceAuthority, SourceCompleteness,
 };
 use futures_util::stream;
+use intercell_gateway::current_acceptance::{CurrentAcceptanceError, CurrentGatewayAcceptance};
 use manager_v2_client::{
     ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError, ManagerV2ClientLimits,
 };
@@ -144,6 +145,7 @@ struct AppState {
     manager_v2_client: Option<ManagerV2Client>,
     manager_v2_profile_id: Option<String>,
     current_source_map: Arc<CurrentSourceMap>,
+    current_gateway_acceptance: Arc<CurrentGatewayAcceptance>,
 }
 
 #[derive(Debug)]
@@ -540,6 +542,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     )?;
     let (negotiator, manager_v2_client) = source_clients(&config)?;
     let current_source_map = Arc::new(CurrentSourceMap::canonical()?);
+    let current_gateway_acceptance = Arc::new(CurrentGatewayAcceptance::canonical()?);
     let initial_snapshot = if config.source_probes_enabled.is_enabled() {
         Some(negotiator.probe(config.probe_alpha_id.as_deref()).await)
     } else {
@@ -585,6 +588,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         manager_v2_client,
         manager_v2_profile_id: config.manager_v2_profile_id.clone(),
         current_source_map,
+        current_gateway_acceptance,
     };
 
     spawn_background_tasks(
@@ -1223,6 +1227,19 @@ fn current_source_authorize<'a>(
     {
         return Err(StatusCode::FORBIDDEN.into_response());
     }
+    state
+        .current_gateway_acceptance
+        .authorize_query(&state.environment, &binding.manager_profile_id, screen_id)
+        .map_err(|_| {
+            current_source_problem(
+                StatusCode::NOT_FOUND,
+                "CURRENT_SOURCE_QUERY_NOT_ACCEPTED",
+                "The requested screen is outside the accepted current Query release.",
+                FactClassification::SupportedButNotActivated,
+                "UNAVAILABLE",
+                Some("N15B_QUERY_CAPABILITY_NOT_ACCEPTED".to_owned()),
+            )
+        })?;
     Ok(binding)
 }
 
@@ -3235,6 +3252,8 @@ enum ServiceError {
     ManagerTransport(#[from] ManagerV2ClientError),
     #[error("current-source contract rejected: {0}")]
     CurrentSource(#[from] MappingError),
+    #[error("current inter-cell gateway acceptance rejected: {0}")]
+    CurrentGatewayAcceptance(#[from] CurrentAcceptanceError),
     #[error(transparent)]
     ProjectionStore(#[from] projection_store_pg::StoreError),
     #[error(transparent)]
@@ -3385,6 +3404,7 @@ mod tests {
             manager_v2_client: None,
             manager_v2_profile_id: Some("PAPER_BINANCE_USDM".to_owned()),
             current_source_map: Arc::new(CurrentSourceMap::canonical().unwrap()),
+            current_gateway_acceptance: Arc::new(CurrentGatewayAcceptance::canonical().unwrap()),
         }
     }
 
@@ -3519,25 +3539,31 @@ mod tests {
         .unwrap();
         let state = disabled_manager_state(verifier);
         let now = Utc::now().timestamp();
-        let resource =
-            format!("{CURRENT_SOURCE_RESOURCE_PREFIX}EXECUTION_FULL_BLOTTER_SCREEN:read");
+        let resource = format!("{CURRENT_SOURCE_RESOURCE_PREFIX}PAPER_TRADING_SCREEN:read");
         let token = signed_manager_claims(&signer, &manager_claims(now, &resource));
         let mut headers = HeaderMap::new();
         headers.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
 
-        let profile =
-            current_source_authorize(&state, &headers, "EXECUTION_FULL_BLOTTER_SCREEN").unwrap();
+        let profile = current_source_authorize(&state, &headers, "PAPER_TRADING_SCREEN").unwrap();
         assert_eq!(profile.manager_profile_id, "PAPER_BINANCE_USDM");
+        let unreleased_resource =
+            format!("{CURRENT_SOURCE_RESOURCE_PREFIX}EXECUTION_FULL_BLOTTER_SCREEN:read");
+        let unreleased_token =
+            signed_manager_claims(&signer, &manager_claims(now, &unreleased_resource));
+        headers.insert(
+            AUTHORIZATION,
+            format!("Bearer {unreleased_token}").parse().unwrap(),
+        );
         let Err(response) =
-            current_source_authorize(&state, &headers, "EXECUTION_ALPHA_360_SCREEN")
+            current_source_authorize(&state, &headers, "EXECUTION_FULL_BLOTTER_SCREEN")
         else {
-            panic!("one screen assertion must not authorize a different screen");
+            panic!("N15B must reject a mapped screen outside the accepted release");
         };
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
-    async fn current_source_screen_is_honest_and_non_manager_adapter_stays_dark() {
+    async fn n15b_current_source_screen_is_exact_and_unbound_source_stays_dark() {
         let signer = delegation_test_signer();
         let verifier = DelegationVerifier::from_jwks_json(
             &signer.jwks,
@@ -3548,7 +3574,7 @@ mod tests {
         )
         .unwrap();
         let state = disabled_manager_state(verifier);
-        let screen_id = "EXECUTION_COMMAND_CENTER_SCREEN";
+        let screen_id = "PAPER_TRADING_SCREEN";
         let resource = format!("{CURRENT_SOURCE_RESOURCE_PREFIX}{screen_id}:read");
         let token =
             signed_manager_claims(&signer, &manager_claims(Utc::now().timestamp(), &resource));
@@ -3568,9 +3594,20 @@ mod tests {
         let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(body["profile_id"], "PAPER_BINANCE_USDM");
         assert_eq!(body["profile_baseline"], "CONNECTED");
-        assert!(body["capabilities"].as_array().unwrap().iter().any(|item| {
-            item["id"] == "command.apply" && item["classification"] == "SUPPORTED_BUT_NOT_ACTIVATED"
-        }));
+        let capability_ids = body["capabilities"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|item| item["id"].as_str().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            capability_ids,
+            [
+                "deployments.positions",
+                "deployments.execution-quality",
+                "sessions.current",
+            ]
+        );
 
         let response = current_source_relation(
             State(state),
@@ -3586,12 +3623,12 @@ mod tests {
             headers,
         )
         .await;
-        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
         let body = to_bytes(response.into_body(), 4096).await.unwrap();
         let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(
             body["error"]["classification"],
-            "SUPPORTED_BUT_NOT_ACTIVATED"
+            "SOURCE_DOES_NOT_CURRENTLY_EXIST"
         );
         assert_eq!(body["error"]["availability"], "UNAVAILABLE");
     }

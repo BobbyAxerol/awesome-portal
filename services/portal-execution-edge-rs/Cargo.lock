@@ -520,6 +520,7 @@ dependencies = [
  "edge-auth",
  "execution-contracts",
  "futures-util",
+ "intercell-gateway",
  "jsonwebtoken",
  "manager-v2-client",
  "manager-v2-contract",
@@ -1065,7 +1066,9 @@ name = "intercell-gateway"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "current-source-compat",
  "hex",
+ "manager-v2-contract",
  "serde",
  "serde_json",
  "sha2",

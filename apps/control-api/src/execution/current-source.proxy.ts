@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { ClientHttp2Session, connect } from "node:http2";
 import { OnApplicationShutdown } from "@nestjs/common";
@@ -17,6 +18,18 @@ const SOURCE_ID = /^[a-z][a-z0-9.-]{1,127}$/;
 const RELATION = /^[a-z][a-z0-9_]{1,127}$/;
 const TYPED_UPSTREAM_CODE = /^CURRENT_SOURCE_[A-Z0-9_]{1,80}$/;
 const CANARY_SCREEN = "EXECUTION_CANARY_CONTROL_ROOM_SCREEN";
+
+export const N15B_CURRENT_QUERY_ACCEPTANCE = Object.freeze({
+  schemaVersion: "portal.execution.intercell-gateway-current.v1",
+  environment: "paper" as const,
+  profileId: "PAPER_BINANCE_USDM",
+  screenId: "PAPER_TRADING_SCREEN",
+  capabilityIds: Object.freeze([
+    "deployments.positions",
+    "deployments.execution-quality",
+    "sessions.current",
+  ]),
+});
 
 export interface CurrentSourcePrincipal {
   user: PortalUser;
@@ -151,6 +164,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     environment: CurrentSourceEnvironment,
     screenId: string,
   ): Promise<unknown> {
+    assertN15bCurrentQueryAccepted(environment, screenId);
     currentSourcePath(environment, screenId);
     return this.request(principal, environment, screenId, currentSourcePath(environment, screenId));
   }
@@ -163,6 +177,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     relation: string,
     query: CurrentSourcePageQuery,
   ): Promise<unknown> {
+    assertN15bCurrentQueryAccepted(environment, screenId);
     const path = currentSourcePath(environment, screenId, sourceId, relation, query);
     return this.request(principal, environment, screenId, path);
   }
@@ -213,6 +228,13 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         requested_environment: requestedEnvironment,
         source_environment: sourceEnvironment,
         profile_id: profile.profileId,
+        gateway: {
+          interface: "QUERY",
+          acceptance: "N15B_CURRENT_SOURCE_ACCEPTED",
+          request_id: randomUUID(),
+          transport: "H2_MTLS_DELEGATED_JWT",
+          retry_count: 0,
+        },
         ...(requestedEnvironment === "canary"
           ? { composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS" }
           : {}),
@@ -348,6 +370,24 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       session.once("close", () => {
         if (profile.session === session) profile.session = null;
       });
+    });
+  }
+}
+
+export function assertN15bCurrentQueryAccepted(
+  environment: CurrentSourceEnvironment,
+  screenId: string,
+): void {
+  if (
+    environment !== N15B_CURRENT_QUERY_ACCEPTANCE.environment ||
+    screenId !== N15B_CURRENT_QUERY_ACCEPTANCE.screenId
+  ) {
+    throw new CurrentSourceProxyError("N15B_QUERY_CAPABILITY_NOT_ACCEPTED", 404, {
+      classification: "SUPPORTED_BUT_NOT_ACTIVATED",
+      availability: "UNAVAILABLE",
+      reason_code: "N15B_QUERY_SCOPE_NOT_RELEASED",
+      requested_environment: environment,
+      requested_screen_id: screenId,
     });
   }
 }

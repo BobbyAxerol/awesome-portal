@@ -15,6 +15,7 @@ current-source-compat = { path = "../current-source-compat" }
 edge-auth = { path = "../edge-auth" }
 execution-contracts = { path = "../execution-contracts" }
 futures-util.workspace = true
+intercell-gateway = { path = "../intercell-gateway" }
 manager-v2-client = { path = "../manager-v2-client" }
 manager-v2-contract = { path = "../manager-v2-contract" }
 paper-source-ingestor = { path = "../paper-source-ingestor" }

@@ -130,6 +130,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/EventCorpus",
   "execution-intercell-gateway.artifact-corpus.valid.json":
     "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/ArtifactCorpus",
+  "execution-intercell-gateway.current-paper.accepted.json":
+    "https://schemas.primusspark.com/portal/execution-intercell-gateway-current.v1.schema.json",
   "execution-emergency-routing.source-dark.valid.json":
     "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/EmergencyProfile",
   "execution-emergency-routing.ui-corpus.valid.json":
@@ -329,6 +331,44 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(eventSchema!({ ...events.events[0], operation: "PATCH" })).toBe(false);
     expect(artifactSchema!(artifactWithoutDigest)).toBe(false);
     expect(artifactSchema!({ ...artifacts.cases[0].descriptor, access_policy: "PUBLIC" })).toBe(false);
+  });
+
+  it("accepts only the exact N15B current Paper Query capability slice", () => {
+    const acceptance = loadJson(
+      join(fixtureDir, "execution-intercell-gateway.current-paper.accepted.json"),
+    ) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-intercell-gateway-current.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    expect(validate!(acceptance)).toBe(true);
+    expect(acceptance).toMatchObject({
+      phase: "N15B",
+      profile: {
+        environment: "paper",
+        manager_profile_id: "PAPER_BINANCE_USDM",
+        screen_id: "PAPER_TRADING_SCREEN",
+      },
+      interfaces: [
+        { interface: "QUERY", state: "ACCEPTED_CURRENT_SOURCE" },
+        { interface: "COMMAND", state: "DEFERRED_N16B" },
+        { interface: "EVENT", state: "SOURCE_DOES_NOT_CURRENTLY_EXIST", enabled: false },
+        { interface: "ARTIFACT", state: "SOURCE_DOES_NOT_CURRENTLY_EXIST", enabled: false },
+      ],
+      runtime_authority: {
+        private_query_contract_accepted: true,
+        n15b_candidate_deployed: false,
+        product_bff_enabled: false,
+        registry_promoted: false,
+        sse_enabled: false,
+        command_enabled: false,
+        trading_system_changed: false,
+      },
+    });
+
+    const widened = structuredClone(acceptance) as Record<string, unknown>;
+    (widened.profile as Record<string, unknown>).screen_id = "EXECUTION_FULL_BLOTTER_SCREEN";
+    expect(validate!(widened)).toBe(false);
   });
 
   it("keeps N16A same-domain emergency routing source-dark and R4 forbidden", () => {

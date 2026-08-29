@@ -438,6 +438,10 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/src/lib.rs" \
   "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-intercell-gateway-current.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.current-paper.accepted.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/src/current_acceptance.rs" \
+  "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-emergency-routing.v1.schema.json" \
@@ -1118,6 +1122,10 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/intercell-gateway/Cargo.toml \
   services/portal-execution-edge-rs/crates/intercell-gateway/src/lib.rs \
   scripts/execution-n15a-gateway-test.sh \
+  packages/contracts/schemas/execution-intercell-gateway-current.v1.schema.json \
+  packages/contracts/fixtures/execution-intercell-gateway.current-paper.accepted.json \
+  services/portal-execution-edge-rs/crates/intercell-gateway/src/current_acceptance.rs \
+  scripts/execution-n15b-current-gateway-test.sh \
   upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md \
   packages/contracts/schemas/execution-emergency-routing.v1.schema.json \
@@ -1279,6 +1287,8 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.artifact-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-intercell-gateway-current.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.current-paper.accepted.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-emergency-routing.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.ui-corpus.valid.json" \
@@ -1318,6 +1328,7 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-release-channel.sh" \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/scripts/portal-current-source-release-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
@@ -1361,6 +1372,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n06-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
@@ -1453,6 +1465,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-d3-test.sh"
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
 "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
+"${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh"
 "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"

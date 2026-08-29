@@ -1,0 +1,112 @@
+{
+  "schema_version": "portal.execution.intercell-gateway-current.v1",
+  "phase": "N15B",
+  "profile": {
+    "environment": "paper",
+    "manager_profile_id": "PAPER_BINANCE_USDM",
+    "audience": "portal-execution-edge-paper",
+    "screen_id": "PAPER_TRADING_SCREEN"
+  },
+  "immutable_bindings": {
+    "n13b_current_source_map_sha256": "sha256:d269bcaa11a4985ab1121d15f0af4cf2f09dc49bfe8e2c60ab18d0b39bb2e3c9",
+    "n14b_release_profile_sha256": "sha256:dd26b413563930f899f2a82301d8eccd2aa1a94a550460c97d536ffcfa1965da",
+    "manager_publication_sha256": "sha256:2be9b46313e71f282891d88d0afca1eed2bf6c5df49f1fe8b610f6350d215da4",
+    "manager_qualification_sha256": "sha256:3c0d0a2126d9ca6b1d6614bbb2b1eb459accd622f39f46477eb3f27d95d7c5a8",
+    "d3_transport_report_sha256": "sha256:fcef4baa3a524fecf1e39e8f8eeb60f1ff5cc10507ffe0257effcc6884f0c9fd"
+  },
+  "capability_inventory": {
+    "total": 29,
+    "connected": 14,
+    "derived": 10,
+    "supported_not_activated": 4,
+    "absent": 1
+  },
+  "interfaces": [
+    {
+      "interface": "QUERY",
+      "state": "ACCEPTED_CURRENT_SOURCE",
+      "version": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "method": "GET",
+      "identity": "portal-execution-read",
+      "source_authority": "EXECUTION_CELL"
+    },
+    {
+      "interface": "COMMAND",
+      "state": "DEFERRED_N16B",
+      "identity": "portal-execution-command",
+      "reason": "COMMAND_REQUIRES_SEPARATE_IDENTITY_AND_N16B_ACCEPTANCE"
+    },
+    {
+      "interface": "EVENT",
+      "state": "SOURCE_DOES_NOT_CURRENTLY_EXIST",
+      "snapshot_delta_label": "PORTAL_PROJECTION_DELTA",
+      "enabled": false,
+      "reason": "NO_AUTHORITATIVE_INCREMENTAL_EVENT_SOURCE_PUBLISHED"
+    },
+    {
+      "interface": "ARTIFACT",
+      "state": "SOURCE_DOES_NOT_CURRENTLY_EXIST",
+      "enabled": false,
+      "reason": "NO_CURRENT_OWNER_ARTIFACT_REFERENCE_SOURCE"
+    }
+  ],
+  "query_boundary": {
+    "capability_ids": [
+      "deployments.positions",
+      "deployments.execution-quality",
+      "sessions.current"
+    ],
+    "source_binding_ids": [
+      "manager.deployments",
+      "manager.performance",
+      "manager.positions",
+      "manager.sessions"
+    ],
+    "edge_routes": [
+      "GET /internal/v1/current-source/screens/PAPER_TRADING_SCREEN",
+      "GET /internal/v1/current-source/screens/PAPER_TRADING_SCREEN/sources/{source_id}/relations/{relation}"
+    ],
+    "delegated_resource": "execution:current-source:PAPER_TRADING_SCREEN:read",
+    "delegated_scope": "execution.read",
+    "jwt_maximum_ttl_seconds": 60,
+    "maximum_page_rows": 200,
+    "maximum_source_response_bytes": 1048576,
+    "maximum_bff_response_bytes": 2097152,
+    "retry_after_dispatch": 0,
+    "redirects_allowed": false,
+    "raw_browser_token_forwarding": false
+  },
+  "evidence": {
+    "http2": true,
+    "tls13_mtls": true,
+    "jwt_negative_matrix": true,
+    "d3_latency_ceiling_ms": 2000,
+    "d3_observed_max_ms": "162.587",
+    "manager_p95_ms": "12.122",
+    "manager_observed_max_ms": "47.075",
+    "manager_maximum_observed_bytes": 130547,
+    "partition_loss_recovery": true,
+    "cursor_profile_isolation": true,
+    "schema_drift_rejected": true,
+    "rollback_reapply": true
+  },
+  "runtime_authority": {
+    "private_query_contract_accepted": true,
+    "n15b_candidate_deployed": false,
+    "product_bff_enabled": false,
+    "registry_promoted": false,
+    "sse_enabled": false,
+    "command_enabled": false,
+    "trading_system_changed": false
+  },
+  "rollback": {
+    "scope": "PAPER_QUERY_ONLY",
+    "steps": [
+      "DISABLE_CONTROL_API_PAPER_CURRENT_SOURCE",
+      "DISABLE_EDGE_MANAGER_V2_READ",
+      "RESTORE_PREVIOUS_N14B_DIGESTS",
+      "VERIFY_TYPED_UNAVAILABLE_AND_NO_SOURCE_CALL"
+    ],
+    "database_restore_required": false
+  }
+}

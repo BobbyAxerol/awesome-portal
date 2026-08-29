@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-intercell-gateway-current.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "profile",
+    "immutable_bindings",
+    "capability_inventory",
+    "interfaces",
+    "query_boundary",
+    "evidence",
+    "runtime_authority",
+    "rollback"
+  ],
+  "properties": {
+    "schema_version": { "const": "portal.execution.intercell-gateway-current.v1" },
+    "phase": { "const": "N15B" },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "manager_profile_id", "audience", "screen_id"],
+      "properties": {
+        "environment": { "const": "paper" },
+        "manager_profile_id": { "const": "PAPER_BINANCE_USDM" },
+        "audience": { "const": "portal-execution-edge-paper" },
+        "screen_id": { "const": "PAPER_TRADING_SCREEN" }
+      }
+    },
+    "immutable_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "n13b_current_source_map_sha256",
+        "n14b_release_profile_sha256",
+        "manager_publication_sha256",
+        "manager_qualification_sha256",
+        "d3_transport_report_sha256"
+      ],
+      "properties": {
+        "n13b_current_source_map_sha256": { "$ref": "#/$defs/Sha256" },
+        "n14b_release_profile_sha256": { "$ref": "#/$defs/Sha256" },
+        "manager_publication_sha256": { "$ref": "#/$defs/Sha256" },
+        "manager_qualification_sha256": { "$ref": "#/$defs/Sha256" },
+        "d3_transport_report_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "capability_inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "connected", "derived", "supported_not_activated", "absent"],
+      "properties": {
+        "total": { "const": 29 },
+        "connected": { "const": 14 },
+        "derived": { "const": 10 },
+        "supported_not_activated": { "const": 4 },
+        "absent": { "const": 1 }
+      }
+    },
+    "interfaces": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/QueryInterface" },
+        { "$ref": "#/$defs/CommandInterface" },
+        { "$ref": "#/$defs/EventInterface" },
+        { "$ref": "#/$defs/ArtifactInterface" }
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "query_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_ids",
+        "source_binding_ids",
+        "edge_routes",
+        "delegated_resource",
+        "delegated_scope",
+        "jwt_maximum_ttl_seconds",
+        "maximum_page_rows",
+        "maximum_source_response_bytes",
+        "maximum_bff_response_bytes",
+        "retry_after_dispatch",
+        "redirects_allowed",
+        "raw_browser_token_forwarding"
+      ],
+      "properties": {
+        "capability_ids": {
+          "const": ["deployments.positions", "deployments.execution-quality", "sessions.current"]
+        },
+        "source_binding_ids": {
+          "const": ["manager.deployments", "manager.performance", "manager.positions", "manager.sessions"]
+        },
+        "edge_routes": {
+          "const": [
+            "GET /internal/v1/current-source/screens/PAPER_TRADING_SCREEN",
+            "GET /internal/v1/current-source/screens/PAPER_TRADING_SCREEN/sources/{source_id}/relations/{relation}"
+          ]
+        },
+        "delegated_resource": { "const": "execution:current-source:PAPER_TRADING_SCREEN:read" },
+        "delegated_scope": { "const": "execution.read" },
+        "jwt_maximum_ttl_seconds": { "const": 60 },
+        "maximum_page_rows": { "const": 200 },
+        "maximum_source_response_bytes": { "const": 1048576 },
+        "maximum_bff_response_bytes": { "const": 2097152 },
+        "retry_after_dispatch": { "const": 0 },
+        "redirects_allowed": { "const": false },
+        "raw_browser_token_forwarding": { "const": false }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "http2",
+        "tls13_mtls",
+        "jwt_negative_matrix",
+        "d3_latency_ceiling_ms",
+        "d3_observed_max_ms",
+        "manager_p95_ms",
+        "manager_observed_max_ms",
+        "manager_maximum_observed_bytes",
+        "partition_loss_recovery",
+        "cursor_profile_isolation",
+        "schema_drift_rejected",
+        "rollback_reapply"
+      ],
+      "properties": {
+        "http2": { "const": true },
+        "tls13_mtls": { "const": true },
+        "jwt_negative_matrix": { "const": true },
+        "d3_latency_ceiling_ms": { "const": 2000 },
+        "d3_observed_max_ms": { "const": "162.587" },
+        "manager_p95_ms": { "const": "12.122" },
+        "manager_observed_max_ms": { "const": "47.075" },
+        "manager_maximum_observed_bytes": { "const": 130547 },
+        "partition_loss_recovery": { "const": true },
+        "cursor_profile_isolation": { "const": true },
+        "schema_drift_rejected": { "const": true },
+        "rollback_reapply": { "const": true }
+      }
+    },
+    "runtime_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "private_query_contract_accepted",
+        "n15b_candidate_deployed",
+        "product_bff_enabled",
+        "registry_promoted",
+        "sse_enabled",
+        "command_enabled",
+        "trading_system_changed"
+      ],
+      "properties": {
+        "private_query_contract_accepted": { "const": true },
+        "n15b_candidate_deployed": { "const": false },
+        "product_bff_enabled": { "const": false },
+        "registry_promoted": { "const": false },
+        "sse_enabled": { "const": false },
+        "command_enabled": { "const": false },
+        "trading_system_changed": { "const": false }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "steps", "database_restore_required"],
+      "properties": {
+        "scope": { "const": "PAPER_QUERY_ONLY" },
+        "steps": {
+          "const": [
+            "DISABLE_CONTROL_API_PAPER_CURRENT_SOURCE",
+            "DISABLE_EDGE_MANAGER_V2_READ",
+            "RESTORE_PREVIOUS_N14B_DIGESTS",
+            "VERIFY_TYPED_UNAVAILABLE_AND_NO_SOURCE_CALL"
+          ]
+        },
+        "database_restore_required": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "Sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "QueryInterface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "version", "method", "identity", "source_authority"],
+      "properties": {
+        "interface": { "const": "QUERY" },
+        "state": { "const": "ACCEPTED_CURRENT_SOURCE" },
+        "version": { "const": "trading-system.portal-execution.manager-v2.runtime.v1" },
+        "method": { "const": "GET" },
+        "identity": { "const": "portal-execution-read" },
+        "source_authority": { "const": "EXECUTION_CELL" }
+      }
+    },
+    "CommandInterface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "identity", "reason"],
+      "properties": {
+        "interface": { "const": "COMMAND" },
+        "state": { "const": "DEFERRED_N16B" },
+        "identity": { "const": "portal-execution-command" },
+        "reason": { "const": "COMMAND_REQUIRES_SEPARATE_IDENTITY_AND_N16B_ACCEPTANCE" }
+      }
+    },
+    "EventInterface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "snapshot_delta_label", "enabled", "reason"],
+      "properties": {
+        "interface": { "const": "EVENT" },
+        "state": { "const": "SOURCE_DOES_NOT_CURRENTLY_EXIST" },
+        "snapshot_delta_label": { "const": "PORTAL_PROJECTION_DELTA" },
+        "enabled": { "const": false },
+        "reason": { "const": "NO_AUTHORITATIVE_INCREMENTAL_EVENT_SOURCE_PUBLISHED" }
+      }
+    },
+    "ArtifactInterface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "enabled", "reason"],
+      "properties": {
+        "interface": { "const": "ARTIFACT" },
+        "state": { "const": "SOURCE_DOES_NOT_CURRENTLY_EXIST" },
+        "enabled": { "const": false },
+        "reason": { "const": "NO_CURRENT_OWNER_ARTIFACT_REFERENCE_SOURCE" }
+      }
+    }
+  }
+}

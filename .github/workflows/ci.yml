@@ -54,6 +54,9 @@ jobs:
       - name: Validate N15A source-dark gateway authority
         run: ./scripts/execution-n15a-gateway-test.sh
 
+      - name: Validate N15B current-capability gateway acceptance
+        run: ./scripts/execution-n15b-current-gateway-test.sh
+
       - name: Validate N16A source-dark emergency routing authority
         run: ./scripts/execution-n16a-emergency-routing-test.sh
 

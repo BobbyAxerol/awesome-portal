@@ -6,8 +6,10 @@ import {
   ExecutionDelegationService,
 } from "../src/execution/delegation";
 import {
+  assertN15bCurrentQueryAccepted,
   CurrentSourceBulkhead,
   CurrentSourceProxyError,
+  N15B_CURRENT_QUERY_ACCEPTANCE,
   currentSourcePath,
   currentSourceUpstreamError,
 } from "../src/execution/current-source.proxy";
@@ -181,5 +183,41 @@ describe("N13B current-source BFF boundary", () => {
     const release = await expiring.acquire();
     await expect(expiring.acquire()).rejects.toMatchObject({ code: "N13B_QUEUE_TIMEOUT" });
     release();
+  });
+});
+
+describe("N15B current-capability Query acceptance", () => {
+  it("accepts only the immutable Paper release screen", () => {
+    expect(() => assertN15bCurrentQueryAccepted("paper", "PAPER_TRADING_SCREEN")).not.toThrow();
+    expect(N15B_CURRENT_QUERY_ACCEPTANCE).toMatchObject({
+      environment: "paper",
+      profileId: "PAPER_BINANCE_USDM",
+      screenId: "PAPER_TRADING_SCREEN",
+      capabilityIds: [
+        "deployments.positions",
+        "deployments.execution-quality",
+        "sessions.current",
+      ],
+    });
+  });
+
+  it("fails closed before transport for every unaccepted profile or screen", () => {
+    for (const [environment, screenId] of [
+      ["paper", "EXECUTION_FULL_BLOTTER_SCREEN"],
+      ["sandbox", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN"],
+      ["canary", "EXECUTION_CANARY_CONTROL_ROOM_SCREEN"],
+      ["live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"],
+    ] as const) {
+      expect(() => assertN15bCurrentQueryAccepted(environment, screenId)).toThrowError(
+        expect.objectContaining({
+          code: "N15B_QUERY_CAPABILITY_NOT_ACCEPTED",
+          status: 404,
+          details: expect.objectContaining({
+            classification: "SUPPORTED_BUT_NOT_ACTIVATED",
+            availability: "UNAVAILABLE",
+          }),
+        }),
+      );
+    }
   });
 });
