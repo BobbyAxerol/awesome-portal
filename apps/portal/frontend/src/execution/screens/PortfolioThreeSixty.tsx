@@ -993,7 +993,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                 <footer className="exec-pf2-foot">{PF_CHARTS.ddOverlap.foot}</footer>
               </section>
             </div>
-            <p className="exec-af-smoke">! SMOKE DATA — the ρ timeline and drawdown overlap above are synthetic frames (BR-EX-34 publishes the series; the shapes are the reference); every other figure in this disclosure is the published contract. Delete when BR-EX-34/51 ship</p>
+            <p className="exec-af-smoke">! SMOKE DATA — the ρ timeline and drawdown overlap above are synthetic frames (BR-EX-65 publishes the series; the shapes are the reference); every other figure in this disclosure is the published contract. Delete when BR-EX-65/51 ship</p>
             {insight ? (
               <section className="exec-gate-panel">
                 <div className="exec-360-colmeta">

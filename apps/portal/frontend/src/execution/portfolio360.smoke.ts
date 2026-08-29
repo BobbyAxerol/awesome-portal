@@ -165,7 +165,7 @@ export const PF_SMOKE_TABS = {
 /* ---------------------------------------------------------------------------
  * Real-chart frames (owner 2026-08-28: "khai báo smoke data và vẽ chart y như
  * vậy cho thật"). The pixel-coordinate stand-ins above stay only until every
- * caller has moved; these frames are the reference fixtures for BR-EX-51/34 —
+ * caller has moved; these frames are the reference fixtures for BR-EX-51/65 —
  * numeric points, ISO dates, deterministic. Deleted with the parent rows.
  * ------------------------------------------------------------------------ */
 

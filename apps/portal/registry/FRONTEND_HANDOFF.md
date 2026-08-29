@@ -1404,3 +1404,27 @@ Pass sửa 3 điểm Bobby chỉ từ screenshot (commit `9709679`):
   cho plan endpoint.
 - Smoke mới: `PF_CHARTS` trong `portfolio360.smoke.ts` — xoá khi BR-EX-34/51
   giao. Tests: `analytics360.test.tsx` 13/13; full vitest 1706 pass.
+
+### 8.27 Backend request đang treo — BR-EX-65/66 (mở 2026-08-29, audit độ phủ)
+
+Soát lại sau pass Portfolio: hai lỗ hổng, đã file đủ vào plan (commit `35b3a73`
+bên portal-backend-plan), row mirror trong `BACKEND_PLAN_7_2_ROWS_2026-08-25.md`:
+
+- **BR-EX-65 — portfolio correlation-risk series** (§7.7): ρ-timeline
+  (threshold + breaches server-derived, config `PORTAL_CONTROL`) và
+  drawdown-overlap (episodes interval+depth, joint_windows ≥2 alphas,
+  regime_label tùy chọn `regime.v1`). Lý do phải có row riêng: §7.6.6(1) trót
+  gắn hai series này vào BR-EX-34, nhưng 34 đã **closed 2026-08-26** chỉ với
+  equity/drawdown/approved-band — scope mới không được reopen row đã đóng.
+  Smoke note trong `PortfolioThreeSixty.tsx` + `portfolio360.smoke.ts` đã trỏ
+  lại BR-EX-65.
+- **BR-EX-66 — portfolio actions** (§7.8): `rebalance` plan → apply → verify
+  (plan dry-run echo đúng KV grid của preview; apply idempotent theo
+  plan_digest, step-up + dual approval; verify PARTIAL không bao giờ xanh) và
+  `report-pack` generate/status với từng section pin theo digest lúc đọc
+  (`stale_at_generation` khi lệch). Đây là contract cho hai nút đã active;
+  `Apply`/`Generate` là điểm enable duy nhất. Row WRITE — activation gate
+  riêng, chờ Bobby duyệt.
+
+Register giờ là BR-EX-41…66, tất cả `RECEIVED`. Quyết định treo duy nhất vẫn là
+OHLC owner §7.5.5(1).
