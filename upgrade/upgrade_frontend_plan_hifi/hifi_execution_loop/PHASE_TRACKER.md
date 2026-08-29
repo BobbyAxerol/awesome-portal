@@ -2138,14 +2138,14 @@ nav trỏ 404.
 
 | Capability | Voice | Hiện có | Disp | Nấc | Ghi chú |
 |---|---|---|---|---|---|
-| Filter Mine(n)/All/Research·R1/Ops·R2/Exit/Live/Overdue | N | chip đủ (INBOX/ALL/R1/R2/Paper/Sandbox/Live/Exit/Overdue render — kiểm bằng before-shot); Mine disabled (BR-EX-32) | impl | C | sửa 2026-08-24: dòng đầu ghi 'chưa' là tôi nhớ sai — ảnh seam-inbox chứng minh ngược; server-side view coverage kiểm lại ở V2-05 |
+| Filter Mine(n)/All/Research·R1/Ops·R2/Exit/Live/Overdue | N | chip đủ; **Mine (3) live** — `counts.mine` đếm cả queue (2026-08-30); label "Ops · R2" theo chữ hi-fi | impl | C+I | fixture api trả `mine`; test `Mine (3)` |
 | Bảng: request·gate·subject·target·blockers·age/SLA·quorum | N | có đủ cột, blockers named | impl | C | |
-| SLA aging + OVERDUE nổi bật | N | rowEmphasis + border + **thanh SLA compact + số** | impl | C | V2-05 ✓ |
+| SLA aging + OVERDUE nổi bật | N | rowEmphasis + border + thanh SLA 3px **dưới** age (hi-fi anatomy) + **age tick giây + footer "next SLA breach in … (id)"** — motion-gated, suy từ age/budget server | impl | C+I | `approvalInbox.smoke.ts` (xoá khi BR-EX-30/35 stream); 2026-08-30 |
 | SoD: dòng không quyết được → dim, không ẩn | N | có (`inert`, dimmed + tooltip) | impl | C | |
 | Blocked-before-review (AP-360 audit replay failed) | N | có (blockers red) | impl | C | |
 | Row → gate review screen | N | onOpenRequest có; route thật ở preview | impl | C+R | context giữ — test V2-03 |
 | Inbox zero ≠ filtered empty | T | có, câu tách hai nghĩa | impl | C | |
-| Recently decided + full history → | N | tab Recently decided; *Full history* disabled + lý do | dis+BE | C | BR-EX-35 |
+| Recently decided + full history → | N | tab decided **trên `governance.approval-history.v1`**: cột outcome chip · decider · date (`DecidedRow`/`readDecidedRow`, nạp fixture canonical trong test); Full history = nút thật khi `has_more`, câu "full history loaded · N" khi trọn cửa sổ | impl | C+I | lý do disabled BR-EX-35 cũ đã stale — contract history đã giao; 2026-08-30 |
 | Footer: policy version + sort rule + visibility≠authority | T | có | impl | C | giữ đúng chữ — T hợp lệ (guide) |
 
 ### L2 · HiFi Gate R1 Review (WF 1a)
