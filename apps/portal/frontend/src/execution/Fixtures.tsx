@@ -30,7 +30,7 @@ import { RangeTooWideNotice, RetentionNotice } from "./components/retention";
 import { ZoomableChart, type ZoomRange } from "./components/zoom";
 import { SubscriptionWalk } from "./components/streamDemo";
 import { INITIAL_SUBSCRIPTION, type SubscriptionState } from "./subscription";
-import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
+import { ApprovalInbox, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
 import { ApprovalInboxContainer, GateR1ReviewContainer, GateR2ReviewContainer, AdminCatalogueContainer, CanaryControlRoomContainer, LiveFullOperationsContainer, SandboxCertificationContainer, IncidentDetailContainer, OperationsQueueContainer, AlphaInsightContainer, CapitalLedgerContainer, CorrelationContainer, ExposureHeadroomContainer, FullBlotterFunnelContainer, PaperExitReviewContainer } from "./screens/containers";
@@ -274,34 +274,11 @@ const WIRED_API = createFixtureApi();
 const UNWIRED_API = createFixtureApi({ unavailableEndpoints: ["listApprovals"] });
 const UNCERTAIN_API = createFixtureApi({ uncertain: true });
 
-/** Recently decided — where the hi-fi and the cast both put these two. */
-const DECIDED_FIXTURE_ROWS: ApprovalRow[] = [
-  {
-    id: "AP-259",
-    gate: "R2",
-    subject: "MM v1.1 → OKX sandbox",
-    target: "sandbox · OKX",
-    blockerCount: 0,
-    blockerSummary: "approved with conditions",
-    sla: { ageMinutes: 0, budgetMinutes: 24 * 60 },
-    quorumMet: 2,
-    quorumRequired: 2,
-    inert: null,
-    needsYou: false,
-  },
-  {
-    id: "PX-31",
-    gate: "PAPER_EXIT",
-    subject: "MM v1.1",
-    target: "→ sandbox",
-    blockerCount: 0,
-    blockerSummary: "approved",
-    sla: { ageMinutes: 0, budgetMinutes: 48 * 60 },
-    quorumMet: 1,
-    quorumRequired: 1,
-    inert: null,
-    needsYou: false,
-  },
+/** Recently decided — the hi-fi/cast trio, in `governance.approval-history.v1` shape. */
+const DECIDED_FIXTURE_ROWS: DecidedRow[] = [
+  { id: "AP-341", gate: "R1", subject: "Grid v2.2 · RC-49", outcome: "CHANGES_REQUESTED", decidedBy: "Minh", decidedAt: "2026-08-14T09:00:00Z", policyVersion: "approval.v3" },
+  { id: "AP-259", gate: "R2", subject: "MM v1.1 → OKX sandbox", outcome: "APPROVED_WITH_CONDITION", decidedBy: "Lan", decidedAt: "2026-07-18T14:30:00Z", policyVersion: "approval.v3" },
+  { id: "PX-31", gate: "PAPER_EXIT", subject: "MM v1.1", outcome: "APPROVED", decidedBy: "Lan", decidedAt: "2026-07-15T10:00:00Z", policyVersion: "approval.v3" },
 ];
 
 /* One instance of each unhappy state, so they can be read side by side. */
@@ -1163,7 +1140,7 @@ export default function ExecutionFixtures() {
                 actor="Lan"
                 actorRoles={["Quant Reviewer", "Ops Approver"]}
                 inertCount={2}
-                decided={{ rows: DECIDED_FIXTURE_ROWS, totalCount: 2 }}
+                decided={{ rows: DECIDED_FIXTURE_ROWS, totalCount: 3 }}
               />
             </Case>
             <Case caption="inbox zero — an empty queue is a result, not a failure">

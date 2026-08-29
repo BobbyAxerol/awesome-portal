@@ -100,7 +100,7 @@ import {
   type SubscriptionEvent,
   type SubscriptionState,
 } from "./subscription";
-import { ApprovalInbox, INBOX_FILTERS, reviewRouteFor, type ApprovalRow } from "./screens/ApprovalInbox";
+import { ApprovalInbox, INBOX_FILTERS, reviewRouteFor, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
 import { EXIT_OUTCOME, PaperExitReview } from "./screens/PaperExitReview";
@@ -1734,6 +1734,17 @@ describe("problems map to the states a human responds to differently", () => {
  * Phase 1 — Approval Inbox (UI states; integration waits on EX-BE-04a/05a)
  * ======================================================================== */
 
+const decidedRow = (over: Partial<DecidedRow> = {}): DecidedRow => ({
+  id: "AP-259" as DecidedRow["id"],
+  gate: "R2",
+  subject: "MM v1.1 → OKX sandbox",
+  outcome: "APPROVED_WITH_CONDITION",
+  decidedBy: "Lan",
+  decidedAt: "2026-07-18T14:30:00Z",
+  policyVersion: "approval.v3",
+  ...over,
+});
+
 const inboxRow = (over: Partial<ApprovalRow> = {}): ApprovalRow => ({
   id: "AP-352",
   gate: "R2",
@@ -1749,7 +1760,7 @@ const inboxRow = (over: Partial<ApprovalRow> = {}): ApprovalRow => ({
   ...over,
 });
 
-const inboxPage = (rows: ApprovalRow[]): KeysetPage<ApprovalRow> => ({
+const inboxPage = <T,>(rows: T[]): KeysetPage<T> => ({
   rows,
   totalCount: 5,
 });
@@ -1820,7 +1831,7 @@ describe("Approval Inbox", () => {
     render(
       <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
-        decided={inboxPage([inboxRow({ id: "AP-201", inert: null, needsYou: false })])}
+        decided={inboxPage([decidedRow({ id: "AP-201" as DecidedRow["id"] })])}
         counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
       />,
@@ -1860,7 +1871,7 @@ describe("Approval Inbox", () => {
     // matters — this one only guards the render).
     expect(INBOX_FILTERS.length).toBe(9);
     expect(screen.getByRole("button", { name: "Overdue" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Inbox" }).getAttribute("aria-pressed")).toBe("false");
+    expect(screen.getByRole("button", { name: /^Mine/ }).getAttribute("aria-pressed")).toBe("false");
   });
 
   it("states a cleared blocker rather than leaving the cell blank", () => {
@@ -1871,7 +1882,7 @@ describe("Approval Inbox", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByText("0 — observation gate met")).toBeTruthy();
+    expect(screen.getByText("0 → observation gate met")).toBeTruthy();
   });
 });
 
@@ -3309,7 +3320,7 @@ describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
     render(
       <ApprovalInbox onCopyProvenance={vi.fn()}
         page={inboxPage([inboxRow()])}
-        decided={inboxPage([inboxRow({ id: "AP-201" })])}
+        decided={inboxPage([decidedRow({ id: "AP-201" as DecidedRow["id"] })])}
         counts={{ pending: 1, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
       />,

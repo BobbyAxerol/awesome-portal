@@ -1550,6 +1550,21 @@
 
 /* The hi-fi's footer strip. "visibility ≠ authority" is the sentence that
  * explains the dimmed rows; without it the dimming reads as a rendering bug. */
+/* Hi-fi 4a: the OVERDUE badge and an overdue row's SLA bar pulse; the breach
+   countdown is the strip's one emphatic number. */
+@keyframes exec-inbox-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.exec-inbox .exec-masthead-badges .exec-chip[data-tone="bad"] { animation: exec-inbox-pulse 1.8s infinite; }
+.exec-inbox .exec-sla[data-overdue="true"] .exec-sla-fill { animation: exec-inbox-pulse 1.2s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .exec-inbox .exec-masthead-badges .exec-chip[data-tone="bad"],
+  .exec-inbox .exec-sla[data-overdue="true"] .exec-sla-fill { animation: none; }
+}
+/* Hi-fi 4a row anatomy: the age text on top, the 3px budget bar under it. */
+.exec-inbox .exec-sla { display: block; }
+.exec-inbox .exec-sla .exec-sla-bar { display: block; width: 110px; margin-top: 4px; }
+.exec-inbox-breach { color: var(--ink); font-variant-numeric: tabular-nums; }
+.exec-inbox-rownote { margin-left: auto; }
+.exec-inbox-decidedmeta { color: var(--ink-mute); font: 400 11px/16px var(--font-mono); }
 .exec-inbox-strip {
   font: var(--exec-font-meta);
   display: flex;

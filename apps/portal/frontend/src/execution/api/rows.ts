@@ -25,7 +25,7 @@
  */
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
 import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
-import type { ApprovalGate, ApprovalRow, InertReason } from "../screens/ApprovalInbox";
+import type { ApprovalGate, ApprovalRow, DecidedRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
 import type { CapitalPreview } from "../analytics";
 
@@ -141,6 +141,41 @@ export function readApprovalRow(raw: Record<string, unknown>): ApprovalRowRead {
       quorumRequired: int(raw.quorum_required),
       inert: inertParsed?.known ? inertParsed.value : null,
       needsYou: raw.needs_you === true,
+    },
+    gaps,
+  };
+}
+
+/**
+ * One row of `governance.approval-history.v1` — the decided list.
+ *
+ * A decided approval is not a pending one wearing a decision: its columns are
+ * outcome, decider and time, and its sort is `decided_at desc`. Reusing the
+ * pending row shape squeezed the outcome into `blocker_summary`, which is how
+ * "approved with conditions" ended up in a column titled blockers.
+ */
+const OUTCOMES = ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED"] as const;
+
+export function readDecidedRow(raw: Record<string, unknown>): { row: DecidedRow | null; gaps: readonly string[] } {
+  const gaps: string[] = [];
+  const id = readId(raw.approval_id) as ApprovalId | null;
+  const gateParsed = readEnum(raw.gate, GATES);
+  const outcomeParsed = readEnum(raw.outcome, OUTCOMES);
+  if (!id) return { row: null, gaps: ["approval_id"] };
+  if (!gateParsed?.known) return { row: null, gaps: [`gate="${gateParsed?.raw ?? "absent"}"`] };
+  if (!outcomeParsed?.known) return { row: null, gaps: [`outcome="${outcomeParsed?.raw ?? "absent"}"`] };
+  const by = obj(raw.decided_by);
+  const decidedAt = readTimestamp(raw.decided_at);
+  if (!decidedAt) gaps.push("decided_at");
+  return {
+    row: {
+      id,
+      gate: gateParsed.value,
+      subject: str(raw.subject) ?? id,
+      outcome: outcomeParsed.value,
+      decidedBy: (by && str(by.username)) ?? "decider not published",
+      decidedAt: decidedAt ?? "—",
+      policyVersion: str(raw.policy_version),
     },
     gaps,
   };

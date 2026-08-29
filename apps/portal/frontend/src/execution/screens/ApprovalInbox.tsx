@@ -28,6 +28,7 @@ import { SlaCell } from "../components/evidence";
 import { KeysetTable, type Column } from "../components/table";
 import { useState } from "react";
 import { PanelState } from "../components/states";
+import { preciseAge, useInboxTick } from "../approvalInbox.smoke";
 import {
   ExecutionContextRail,
   ExecutionDecisionStrip,
@@ -71,12 +72,33 @@ export interface ApprovalRow {
   needsYou: boolean;
 }
 
+/**
+ * One row of `governance.approval-history.v1` — the decided list.
+ *
+ * A decided approval is not a pending one wearing a decision: its columns are
+ * outcome, decider and time, and its sort is `decided_at desc`. Reusing the
+ * pending row shape squeezed the outcome into `blocker_summary`, which is how
+ * "approved with conditions" ended up in a column titled blockers.
+ */
+export interface DecidedRow {
+  id: ApprovalId;
+  gate: ApprovalGate;
+  subject: string;
+  outcome: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED";
+  decidedBy: string;
+  /** ISO timestamp, date part printed. */
+  decidedAt: string;
+  policyVersion: string | null;
+}
+
 export interface InboxCounts {
   /** Whole queue, from the server. */
   pending: number;
   /** `null` when unpublished. "0 overdue" is a claim the queue is clear. */
   overdue: number | null;
   dueSoon: number | null;
+  /** Rows the current actor can decide, counted over the whole queue — the hi-fi's "Mine (3)". */
+  mine?: number | null;
 }
 
 /**
@@ -135,10 +157,10 @@ export const INBOX_FILTERS = [
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 const FILTER_LABEL: Record<InboxFilter, string> = {
-  INBOX: "Inbox",
+  INBOX: "Mine",
   ALL: "All",
   R1: "Research · R1",
-  R2: "Capital · R2",
+  R2: "Ops · R2",
   PAPER: "Paper",
   SANDBOX: "Sandbox",
   LIVE_GATES: "Live gates",
@@ -212,13 +234,16 @@ function rowEmphasis(row: ApprovalRow): "overdue" | "inert" | undefined {
 }
 
 const COLUMNS: readonly Column<ApprovalRow>[] = [
-  { key: "id", header: "request", render: (r) => r.id },
-  { key: "gate", header: "gate", render: (r) => r.gate },
+  // A real anchor, not a click-only row: middle-click and copy-link work, and
+  // the row stays clickable around it.
+  { key: "id", header: "request", render: (r) => <a href={reviewRouteFor(r)} onClick={(e) => e.stopPropagation()}>{r.id}</a> },
+  { key: "gate", header: "gate", width: "6.5rem", render: (r) => r.gate },
   { key: "subject", header: "subject", truncate: true, title: (r) => r.subject, render: (r) => r.subject },
-  { key: "target", header: "target", render: (r) => r.target },
+  { key: "target", header: "target", width: "10rem", truncate: true, title: (r) => r.target, render: (r) => r.target },
   {
     key: "blockers",
     header: "blockers",
+    width: "12rem",
     truncate: true,
     title: (r) => r.blockerSummary ?? "none",
     // The count is the server's and the summary names the first one. "0 —
@@ -229,12 +254,45 @@ const COLUMNS: readonly Column<ApprovalRow>[] = [
         <span className="exec-inbox-nocount">blocker count not published</span>
       ) : (
         <span data-blocking={r.blockerCount > 0 ? "true" : undefined}>
-          {r.blockerCount} — {r.blockerSummary ?? "none"}
+          {r.blockerSummary ? `${r.blockerCount} → ${r.blockerSummary}` : String(r.blockerCount)}
         </span>
       ),
   },
-  { key: "sla", header: "age / SLA", render: (r) => <SlaCell sla={r.sla} /> },
-  { key: "quorum", header: "quorum", render: quorum },
+  { key: "sla", header: "age / SLA", width: "10.5rem", render: (r) => <SlaCell sla={r.sla} /> },
+  { key: "quorum", header: "quorum", width: "12rem", render: quorum },
+];
+
+/** COLUMNS with the live age (hi-fi 4a): same cells, the SLA one ticking. */
+function columnsWithTick(tick: number): readonly Column<ApprovalRow>[] {
+  return COLUMNS.map((c) =>
+    c.key === "sla"
+      ? { ...c, render: (r: ApprovalRow) => <SlaCell sla={r.sla} preciseAgeText={r.sla.ageMinutes >= 0 ? preciseAge(r.sla.ageMinutes, tick) : undefined} /> }
+      : c,
+  );
+}
+
+const OUTCOME_TONE: Record<DecidedRow["outcome"], "good" | "bad"> = {
+  APPROVED: "good",
+  APPROVED_WITH_CONDITION: "good",
+  DENIED: "bad",
+  CHANGES_REQUESTED: "bad",
+};
+
+/** The decided list's own columns — outcome, decider, time; never blockers/SLA. */
+const DECIDED_COLUMNS: readonly Column<DecidedRow>[] = [
+  { key: "id", header: "request", render: (r) => <a href={reviewRouteFor(r)} onClick={(e) => e.stopPropagation()}>{r.id}</a> },
+  { key: "what", header: "gate · subject", truncate: true, title: (r) => `${r.gate} · ${r.subject}`, render: (r) => `${r.gate} · ${r.subject}` },
+  { key: "outcome", header: "outcome", render: (r) => <StatusChip label={r.outcome} tone={OUTCOME_TONE[r.outcome]} /> },
+  {
+    key: "decided",
+    header: "decided",
+    render: (r) => (
+      <span className="exec-inbox-decidedmeta">
+        {r.decidedAt.slice(0, 10)} · {r.decidedBy}
+        {r.policyVersion ? ` · ${r.policyVersion}` : ""}
+      </span>
+    ),
+  },
 ];
 
 export function ApprovalInbox({
@@ -256,6 +314,7 @@ export function ApprovalInbox({
   onDismissCursorNotice,
   onLoadOlder,
   onLoadNewer,
+  onLoadOlderDecided,
   onCopyProvenance,
 }: {
   page: KeysetPage<ApprovalRow>;
@@ -270,21 +329,31 @@ export function ApprovalInbox({
   actorRoles?: readonly string[];
   /** Row → the review its gate owns. The gate travels with the id so the caller never guesses the route. */
   onOpenRequest?: (id: ApprovalId, gate: ApprovalGate) => void;
-  decided?: KeysetPage<ApprovalRow> | null;
+  decided?: KeysetPage<DecidedRow> | null;
   decidedWindow?: string;
   inertCount?: number | null;
   cursorNotice?: string | null;
   onDismissCursorNotice?: () => void;
   onLoadOlder?: () => void;
   onLoadNewer?: () => void;
+  /** Loads the older half of `governance.approval-history.v1` when its page says has_more. */
+  onLoadOlderDecided?: () => void;
   onCopyProvenance: (full: string) => void;
 }) {
   const [tab, setTab] = useState<"Pending" | "Recently decided">("Pending");
+  // SMOKE motion — ages and the breach countdown tick; 0 under fixtures/gates.
+  const tick = useInboxTick();
   const emptyInThisView =
     page.rows.length === 0 &&
     ((page.filteredCount ?? 0) === 0) &&
     (counts?.pending ?? 0) > 0;
   const needsYou = page.rows.filter((r) => r.needsYou && !r.inert);
+  // The next row to breach its SLA: smallest remaining budget among the
+  // not-yet-overdue. Derived from the server's own age/budget, never invented.
+  const nextBreach = page.rows
+    .filter((r) => !slaOverdue(r.sla) && r.sla.ageMinutes >= 0 && r.sla.budgetMinutes > 0)
+    .map((r) => ({ id: r.id, secondsLeft: Math.max(0, (r.sla.budgetMinutes - r.sla.ageMinutes) * 60 - tick) }))
+    .sort((a, b) => a.secondsLeft - b.secondsLeft)[0] ?? null;
   const first = needsYou[0] ?? null;
   const overdue = page.rows.filter((r) => slaOverdue(r.sla));
   const blockedRows = page.rows.filter((r) => r.inert === "BLOCKED");
@@ -393,12 +462,13 @@ export function ApprovalInbox({
               key={f}
               type="button"
               className="exec-inbox-filter"
+              data-filter={f}
               data-active={f === filter ? "true" : undefined}
               aria-pressed={f === filter}
               disabled={status === "loading" || status === "denied" || status === "unavailable"}
               onClick={() => onFilterChange?.(f)}
             >
-              {FILTER_LABEL[f]}
+              {f === "INBOX" && counts?.mine !== null && counts?.mine !== undefined ? `Mine (${counts.mine})` : FILTER_LABEL[f]}
             </button>
           ))}
         </div>
@@ -415,7 +485,7 @@ export function ApprovalInbox({
             <>
               <KeysetTable
                 label="Pending approvals"
-                columns={COLUMNS}
+                columns={columnsWithTick(tick)}
                 page={page}
                 rowKey={(r) => r.id}
                 rowEmphasis={rowEmphasis}
@@ -440,12 +510,20 @@ export function ApprovalInbox({
                 {counts ? (
                   <span>
                     {counts.overdue} overdue · {counts.dueSoon} due soon
+                    {nextBreach ? (
+                      <>
+                        {" · next SLA breach in "}
+                        <span className="exec-inbox-breach">{preciseAge(0, nextBreach.secondsLeft)}</span> ({nextBreach.id})
+                      </>
+                    ) : null}
                   </span>
                 ) : null}
+                <span>sort: overdue → due-soon → age</span>
                 {inertCount !== null ? (
                   <span title="Rows you cannot act on are still counted and still shown.">{inertCount} not yours</span>
                 ) : null}
                 <strong>visibility ≠ authority</strong>
+                <span className="exec-inbox-rownote">row → gate review screen</span>
               </div>
             </>
           ) : null}
@@ -454,7 +532,7 @@ export function ApprovalInbox({
               {decided ? (
                 <KeysetTable
                   label="Recently decided"
-                  columns={COLUMNS}
+                  columns={DECIDED_COLUMNS}
                   page={decided}
                   rowKey={(r) => r.id}
                   reason={`Nothing decided in this window (${decidedWindow}).`}
@@ -462,14 +540,16 @@ export function ApprovalInbox({
               ) : (
                 <PanelState status="empty" reason={`No decided list was published for ${decidedWindow}.`} />
               )}
-              <button
-                type="button"
-                className="exec-role-control exec-btn-ghost"
-                disabled
-                title="Full history — no paginated history endpoint is published (BR-EX-35)."
-              >
-                Full history →
-              </button>
+              {/* `governance.approval-history.v1` is a keyset page: when it says
+                  has_more the control loads it; when it says the window is whole,
+                  the screen states that instead of rendering a dead promise. */}
+              {decided?.hasMore ? (
+                <button type="button" className="exec-role-control exec-btn-ghost" onClick={onLoadOlderDecided} disabled={!onLoadOlderDecided}>
+                  Full history →
+                </button>
+              ) : decided ? (
+                <span className="exec-role-meta">full history loaded · {decided.rows.length} decisions in {decidedWindow}</span>
+              ) : null}
             </div>
           ) : null}
         </ExecutionTabs>

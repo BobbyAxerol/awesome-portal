@@ -76,7 +76,7 @@ type CapitalPreviewState =
   | { preview: CapitalPreview; envelope: AnalyticsEnvelope };
 import { stageRail } from "../components/lifecycle";
 import type { TypedCondition } from "../components/conditions";
-import { ApprovalInbox, type ApprovalRow, type InboxCounts, type InboxFilter, type ApprovalGate } from "./ApprovalInbox";
+import { ApprovalInbox, type ApprovalRow, type DecidedRow, type InboxCounts, type InboxFilter, type ApprovalGate } from "./ApprovalInbox";
 import { GateR1Review } from "./GateR1Review";
 import { GateR2Review } from "./GateR2Review";
 import { PaperExitReview, type ExitOutcome } from "./PaperExitReview";
@@ -198,7 +198,7 @@ export function ApprovalInboxContainer({
       page: KeysetPage<ApprovalRow>;
       counts: InboxCounts | null;
       inertCount?: number | null;
-      decided?: KeysetPage<ApprovalRow> | null;
+      decided?: KeysetPage<DecidedRow> | null;
     }>
   >(loading);
 

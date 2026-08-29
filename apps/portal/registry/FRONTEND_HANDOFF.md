@@ -1527,3 +1527,33 @@ Bobby: tile 8/10 của Insight Charts chưa có smoke khai báo; và mọi chart
 - Regression WCAG bắt được và sửa trong pass: `.exec-a3 .exec-role-meta` đè
   màu guard note trên Canary/Live (hai màn này cũng mang class `exec-a3`) →
   scoped bằng `:not(.exec-guard-note)`; audit 5 viewport xanh lại.
+
+### 8.30 Approval Inbox — pass hi-fi 4a trên nhánh continuation (2026-08-30)
+
+Màn đầu của đợt 18 màn mới (worktree `portal-uiux-next`). Theo owner override
+24/08 §0.1: một workspace Carbon — hi-fi "Governance Light" là floor chức năng,
+không phải pixel authority. Đã đủ minimum acceptance của §11.6:
+
+- **Recently decided chuyển sang `governance.approval-history.v1`**: type
+  `DecidedRow` + `readDecidedRow` (rows.ts), bảng decided có cột riêng
+  request · gate·subject · outcome chip · decided (date · người · policy) —
+  trước đó tái dùng cột pending và nhét outcome vào `blocker_summary`.
+  Fixture api reshape theo history schema + bổ sung AP-341 bị thiếu; test nạp
+  fixture canonical `execution-governance.approval-history.valid.json`.
+- **"Full history →" hết disabled-stale**: contract history là keyset page —
+  `has_more=true` → nút thật gọi `onLoadOlderDecided`; `has_more=false` → câu
+  "full history loaded · N decisions" thay vì nút chết. Lý do BR-EX-35 cũ đã
+  được contract này thay thế.
+- **Mine (N)**: `counts.mine` (đếm cả queue, server-side trong fixture api);
+  label filter INBOX = "Mine (3)", R2 = "Ops · R2" theo chữ hi-fi.
+- **Đồng hồ SLA**: `approvalInbox.smoke.ts` (`useInboxTick` — motion-gated
+  qua `smokeMotionAllowed`, đứng yên dưới fixtures/webdriver; deletion note
+  BR-EX-30/35 stream). Age chính xác `26h 00m 00s`, footer "next SLA breach
+  in … (AP-201)" đếm ngược — mọi số đều suy từ age/budget server publish.
+- **Row anatomy hi-fi**: SlaCell đổi DOM (text · flag · bar) — trong inbox bar
+  3px nằm dưới text (110px); OVERDUE badge + bar pulse (tắt theo
+  prefers-reduced-motion); blockers "N → summary"; id cell là <a> thật tới
+  route review theo gate; empty state "Inbox zero. Nothing waits on you…".
+- Tests 1718 pass; probe screenshot soi bằng mắt. R1/R2 là hai màn kế tiếp —
+  contract `governance.r1-review` đã publish mà frontend chưa đọc (phát hiện
+  của nghi thức §7.8), sẽ nạp ở slice R1.

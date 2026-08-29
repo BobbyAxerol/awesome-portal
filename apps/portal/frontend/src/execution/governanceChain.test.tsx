@@ -12,7 +12,9 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { GateR1Review, REQUEST_CHANGES_REASON } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
-import { ApprovalInbox, type ApprovalRow } from "./screens/ApprovalInbox";
+import { ApprovalInbox, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
+import { ApprovalInboxContainer } from "./screens/containers";
+import { readDecidedRow } from "./api/rows";
 import { GateR1ReviewContainer } from "./screens/containers";
 import { createFixtureApi } from "./api/fixtureApi";
 
@@ -178,6 +180,16 @@ describe("Approval Inbox rail and strip", () => {
     needsYou: true,
     ...over,
   });
+  const decided = (over: Partial<DecidedRow> = {}): DecidedRow => ({
+    id: "AP-259" as DecidedRow["id"],
+    gate: "R2",
+    subject: "MM v1.1 → OKX sandbox",
+    outcome: "APPROVED_WITH_CONDITION",
+    decidedBy: "Lan",
+    decidedAt: "2026-07-18T14:30:00Z",
+    policyVersion: "approval.v3",
+    ...over,
+  });
   it("puts the first request that needs you in the rail with an Open control", () => {
     const onOpen = vi.fn();
     render(
@@ -207,14 +219,51 @@ describe("Approval Inbox rail and strip", () => {
     const fill = container.querySelector(".exec-sla-fill") as HTMLElement;
     expect(fill.style.width).toBe("100%");
   });
-  it("offers full history only as a disabled control with its backend request named", () => {
-    render(
-      <ApprovalInbox onCopyProvenance={vi.fn()} page={{ rows: [row()], totalCount: 1 }} decided={{ rows: [], totalCount: 0 }} counts={{ pending: 1, overdue: 0, dueSoon: 0 }} filter="INBOX" />,
+  it("states a whole history window instead of a dead Full-history button; offers the control only when the page says has_more", () => {
+    // `governance.approval-history.v1` is a keyset page. A window with
+    // has_more=false IS the full history — say so; a button would be a promise.
+    const { unmount } = render(
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={{ rows: [row()], totalCount: 1 }} decided={{ rows: [decided()], totalCount: 1, hasMore: false }} counts={{ pending: 1, overdue: 0, dueSoon: 0 }} filter="INBOX" />,
     );
     fireEvent.click(screen.getByRole("tab", { name: /Recently decided/ }));
-    const history = screen.getByRole("button", { name: /Full history/ });
-    expect(history).toHaveProperty("disabled", true);
-    expect(history.getAttribute("title")).toContain("BR-EX-35");
+    expect(screen.queryByRole("button", { name: /Full history/ })).toBeNull();
+    expect(screen.getByText(/full history loaded · 1 decisions/)).toBeTruthy();
+    unmount();
+    const onOlder = vi.fn();
+    render(
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={{ rows: [row()], totalCount: 1 }} decided={{ rows: [decided()], totalCount: 4, hasMore: true }} counts={{ pending: 1, overdue: 0, dueSoon: 0 }} filter="INBOX" onLoadOlderDecided={onOlder} />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: /Recently decided/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Full history/ }));
+    expect(onOlder).toHaveBeenCalled();
+  });
+
+  it("draws the decided list in the approval-history shape: outcome chip, decider and date — never blockers", () => {
+    render(
+      <ApprovalInbox onCopyProvenance={vi.fn()} page={{ rows: [row()], totalCount: 1 }} decided={{ rows: [decided()], totalCount: 1 }} counts={{ pending: 1, overdue: 0, dueSoon: 0 }} filter="INBOX" />,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: /Recently decided/ }));
+    const table = screen.getByRole("table", { name: "Recently decided" });
+    expect(within(table).getByText("APPROVED_WITH_CONDITION")).toBeTruthy();
+    expect(within(table).getByText(/2026-07-18 · Lan/)).toBeTruthy();
+    expect(within(table).queryByText(/blockers/)).toBeNull();
+  });
+
+  it("loads the canonical approval-history fixture through the decided-row reader", () => {
+    const fixture = JSON.parse(
+      readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../../packages/contracts/fixtures/execution-governance.approval-history.valid.json"), "utf8"),
+    ) as { page: { rows: Record<string, unknown>[] } };
+    const read = fixture.page.rows.map((r) => readDecidedRow(r));
+    expect(read.every((r) => r.row !== null)).toBe(true);
+    expect(read[0].row!.outcome).toBe("CHANGES_REQUESTED");
+    expect(read[0].row!.decidedBy).toBe("bobby");
+  });
+
+  it("counts Mine over the whole queue and ticks toward the next SLA breach", async () => {
+    render(<ApprovalInboxContainer api={createFixtureApi()} />);
+    await screen.findByText("AP-352");
+    expect(screen.getByRole("button", { name: "Mine (3)" })).toBeTruthy();
+    expect(screen.getByText(/next SLA breach in/)).toBeTruthy();
   });
 });
 

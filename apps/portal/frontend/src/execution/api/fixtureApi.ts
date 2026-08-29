@@ -12,7 +12,7 @@
  * finished `ApprovalRow` objects would test nothing.
  */
 import { readKeysetPage } from "../adapter";
-import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
+import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail , readDecidedRow } from "./rows";
 import {
   readAnalyticsEnvelope,
   readBindingExposure,
@@ -143,33 +143,37 @@ const APPROVAL_ROWS: Record<string, unknown>[] = [
   },
 ];
 
-/** Recently decided — where the hi-fi and the cast both put these three. */
+/**
+ * Recently decided — `governance.approval-history.v1` rows (the canonical
+ * fixture `execution-governance.approval-history.valid.json` is the shape
+ * authority; these three are the hi-fi/cast entries in that shape). The old
+ * fixture reused the pending-row shape and parked the outcome inside
+ * `blocker_summary`; it also lost AP-341 entirely.
+ */
 const DECIDED_ROWS: Record<string, unknown>[] = [
   {
-    approval_id: "AP-259",
-    gate: "R2",
-    subject: "MM v1.1 → OKX sandbox",
-    target: "sandbox · OKX",
-    blocker_count: 0,
-    blocker_summary: "approved with conditions",
-    sla: { age_minutes: 0, budget_minutes: 1440 },
-    quorum_met: 2,
-    quorum_required: 2,
-    inert: null,
-    needs_you: false,
+    id: "dec_341", approval_id: "AP-341", gate: "R1", subject_id: "av_grid22",
+    subject: "Grid v2.2 · RC-49", outcome: "CHANGES_REQUESTED",
+    decided_by: { user_id: "usr_minh", username: "Minh" }, decided_at: "2026-08-14T09:00:00Z",
+    policy_version: "approval.v3",
+    evidence_digest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    approval_version: 2,
   },
   {
-    approval_id: "PX-31",
-    gate: "PAPER_EXIT",
-    subject: "MM v1.1",
-    target: "→ sandbox",
-    blocker_count: 0,
-    blocker_summary: "approved",
-    sla: { age_minutes: 0, budget_minutes: 2880 },
-    quorum_met: 1,
-    quorum_required: 1,
-    inert: null,
-    needs_you: false,
+    id: "dec_259", approval_id: "AP-259", gate: "R2", subject_id: "av_mm11",
+    subject: "MM v1.1 → OKX sandbox", outcome: "APPROVED_WITH_CONDITION",
+    decided_by: { user_id: "usr_lan", username: "Lan" }, decided_at: "2026-07-18T14:30:00Z",
+    policy_version: "approval.v3",
+    evidence_digest: "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    approval_version: 3,
+  },
+  {
+    id: "dec_px31", approval_id: "PX-31", gate: "PAPER_EXIT", subject_id: "av_mm11",
+    subject: "MM v1.1", outcome: "APPROVED",
+    decided_by: { user_id: "usr_lan", username: "Lan" }, decided_at: "2026-07-15T10:00:00Z",
+    policy_version: "approval.v3",
+    evidence_digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    approval_version: 2,
   },
 ];
 
@@ -522,7 +526,13 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         ok: true,
         value: {
           page,
-          counts: { pending: APPROVAL_ROWS.length, overdue: 1, dueSoon: 1 },
+          counts: {
+            pending: APPROVAL_ROWS.length,
+            overdue: 1,
+            dueSoon: 1,
+            // The hi-fi's "Mine (3)": counted over the whole queue, not the view.
+            mine: APPROVAL_ROWS.filter((r) => r.needs_you === true && r.inert == null).length,
+          },
           // Counted over the whole filter, not the page: that is what makes a
           // dropped separation-of-duty row visible.
           // Counted over the view, so a filter that drops separation-of-duty
@@ -530,7 +540,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
           inertCount: inView.filter((r) => r.inert !== null).length,
           decided: readKeysetPage(
             { rows: DECIDED_ROWS, total_count: DECIDED_ROWS.length, filtered_count: DECIDED_ROWS.length },
-            (row) => readApprovalRow(row).row,
+            (row) => readDecidedRow(row).row,
           ),
         },
         warnings: gaps,
