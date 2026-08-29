@@ -1296,6 +1296,79 @@ deep-dive → ADR → slice → evidence discipline documented above.
   [`N06`](./backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md),
   [`N07`](./backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md),
   [`N08`](./backend/EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md).
+- **EX-BE-02 Manager-v2 Paper read handoff (2026-08-28, complete / private
+  Paper route qualified / no product consumer):** the Portal worktree imports
+  the owner pack at
+  `services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1/` and
+  hash-locks every byte. A distinct `manager-paper-read` Source Proxy mode
+  renders only its separate six-location include: one internal mTLS token
+  issuer plus five exact Manager GET routes, TLS 1.3 on both hops and no
+  V1/API-key fallback. The static gate rejects hash/secret/route drift and
+  confirms the 24 N11-v1 entries remain unavailable; offline and image-backed
+  isolated gates passed. In the approved private window, exactly the two new
+  loopback Manager containers were started and only Source Proxy was recreated.
+  Real mTLS route, method/unknown/no-client denial, issuer/facade
+  loss/recovery and exact D2-dark rollback/reapply proof passed. Execution
+  Edge, projection PostgreSQL, D4/V1 config and all ingestion/query/SSE/
+  command flags remain unchanged/false. This is neither public, D4 activation,
+  HA, Sandbox, Canary, Live nor production-authoritative evidence; it also
+  did not add a Rust Manager client, projection or UI feature at the time of
+  route handoff. Detail:
+  [`EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md`](./backend/EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md).
+- **EX-BE-02 Manager-v2 backend consumer (2026-08-28, complete / backend only
+  / no runtime activation):** the additive sealed Rust contract/client pair is
+  now independent of V1 `ts-transport`, imports/hash-pins the owner DTO/runtime
+  overlay and can issue only the five qualified private Paper GET requests
+  through Source Proxy using workload mTLS. It enforces the runtime contract
+  header/revision, catalogue-bound relation/cursor/key handling, exact decimal
+  values, a 200-row/1-MiB envelope and typed unavailability. Isolated 11-test,
+  rustfmt, strict Clippy and offline D2 gates passed. It does not add an Edge service route,
+  browser/UI, cache/projection, PostgreSQL change, poller, Source Proxy/D4/V1
+  modification, command/Event/SSE/replay or runtime activation. Detail:
+  [`EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md`](./backend/EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md).
+- **EX-BE-02A Manager-v2 Edge read-through API (2026-08-28, backend complete /
+  Paper runtime activation prepared):** the existing private Rust Edge now
+  exposes four authenticated internal Paper catalogue/capability/projection/
+  relation-page reads through the sealed Manager-v2 client. They are protected
+  by private-server mTLS plus the exact delegated
+  `execution:manager-v2:read` resource and a default-off gate; no V1
+  admission/API key is passed to the Manager client. Responses preserve the
+  owner snapshot authority/as-of/freshness/trace with bounded pagination and
+  do not invent a global sequence. There is no browser/UI, cache/projection,
+  direct Trading DB, V1/D4/Source Proxy change, command/Event/SSE/replay or
+  runtime deployment. Rust 18+6+6 tests, rustfmt, strict Clippy and D2-dark
+  gates passed. The owner has now approved a separate narrow release and the
+  exact Control API resource/Compose overlay/local candidate are validated.
+  The owner installed the approved SGP operator identity; strict SSH verifies
+  the private host pin, and the existing D3 signer modulus/mTLS client match
+  the active Edge JWKS/CA. Both long-running SGP Control APIs stayed
+  feature-dark; a network-disabled one-shot candidate signer qualified four
+  Manager routes plus no-JWT/wrong-resource denials over HTTP/2, then was
+  removed. Exactly one AWS Edge was recreated for private Paper read-through;
+  Source Proxy, Manager, Trading System, V1/D4, projection, events, SSE and
+  commands remain unchanged/dark. Detail:
+  [`EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md`](./backend/EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md).
+- **EX-BE-02B Manager-v2 multi-profile read readiness (2026-08-28, implemented
+  / private read-ready / no Live trading traffic):** the historical Paper
+  Manager-v2 route remains compatible and active, while the same bounded
+  read-only surface is now exact-bound for
+  `PAPER_BINANCE_USDM`, `SANDBOX_BINANCE_USDM` and `LIVE_BINANCE_USDM`.
+  Trading System policy, certificate-bound issuer JWT, facade predicate,
+  response/cursor and Portal Rust decoder all require the same deployed
+  profile; the Control API assertion carries it only for the exact
+  `execution:manager-v2:read` resource. A new `manager-profile-read` Source
+  Proxy mode derives its six-location configuration from the byte-locked
+  Paper template and can change only the dedicated facade/issuer loopback
+  ports. It retains TLS 1.3 mTLS, the five GET routes, 200-row/1-MiB bounds,
+  catalogue validation and safe-field redaction; no direct DB/SQL, V1/D4,
+  command, broker, Redis, Event/replay, cache/projection or browser/UI route
+  was added. Private Sandbox and Live projects use isolated ports
+  `8123/8124` and `8223/8224`; their Compose inputs/rendering, profile
+  mismatch denials and isolated Nginx/Edge/PostgreSQL test path passed. A
+  read-only actual source check observed Sandbox data and zero canonical Live
+  rows, so Live is ready but truthfully empty until data exists. No active
+  service was restarted or automatically deployed. Detail:
+  [`EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md`](./backend/EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING

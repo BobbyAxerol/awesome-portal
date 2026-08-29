@@ -1,0 +1,131 @@
+{
+  "fixture_schema_version": "trading-system.portal-execution.manager-v2-fixtures.v1",
+  "contract_revision": "trading-system.portal-execution.manager-v2.v1",
+  "provenance": "SYNTHETIC_SOURCE_DARK_NO_DATABASE_ROW",
+  "purpose": "DTO compatibility examples only; these values are not a source result or runtime assertion.",
+  "runtime_assertions": {
+    "registered": false,
+    "portal_reachable": false,
+    "source_binding": false,
+    "command_scope": false,
+    "redis_scope": false,
+    "broker_scope": false,
+    "cli_execution_scope": false
+  },
+  "synthetic_catalogue_response": {
+    "contract_version": "trading-system.portal-execution.manager-v2.v1",
+    "authority": "EXECUTION_CELL",
+    "profile_id": "PAPER_BINANCE_USDM",
+    "catalogue_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "availability": "AVAILABLE",
+    "freshness": "UNKNOWN",
+    "completeness": "UNKNOWN",
+    "trace_id": "fixture-manager-catalogue",
+    "as_of": "2026-08-27T00:00:00Z",
+    "data": {
+      "catalogue_revision": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "relation_count": 1,
+      "relations": [
+        {
+          "id": {
+            "schema": "fixture",
+            "relation": "synthetic_relation"
+          },
+          "kind": "TABLE",
+          "safe_columns": [
+            {
+              "name": "id",
+              "ordinal": 1,
+              "data_type": "bigint",
+              "nullable": false
+            },
+            {
+              "name": "amount",
+              "ordinal": 2,
+              "data_type": "numeric",
+              "nullable": true
+            }
+          ],
+          "secret_cell_excluded_column_count": 0,
+          "key": {
+            "status": "PRIMARY_KEY",
+            "name": null,
+            "columns": [
+              "id"
+            ]
+          },
+          "profile_classification": "FIXED_PROFILE_CONTEXT",
+          "profile_columns": [],
+          "query_status": "PENDING_TS_OC_03D"
+        }
+      ]
+    }
+  },
+  "unavailable_responses": [
+    {
+      "operation_id": "managerCatalog",
+      "http_status": 503,
+      "body": {
+        "contract_version": "trading-system.portal-execution.manager-v2.v1",
+        "authority": "EXECUTION_CELL",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "catalogue_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "availability": "PENDING_TS_OC_03D",
+        "reason_code": "SOURCE_BINDING_DISABLED",
+        "trace_id": "fixture-manager-catalogue-unavailable"
+      }
+    },
+    {
+      "operation_id": "managerRelationRecords",
+      "http_status": 503,
+      "body": {
+        "contract_version": "trading-system.portal-execution.manager-v2.v1",
+        "authority": "EXECUTION_CELL",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "catalogue_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "availability": "PENDING_TS_OC_03D",
+        "reason_code": "SOURCE_BINDING_DISABLED",
+        "trace_id": "fixture-manager-records-unavailable"
+      }
+    },
+    {
+      "operation_id": "managerRelationRecord",
+      "http_status": 503,
+      "body": {
+        "contract_version": "trading-system.portal-execution.manager-v2.v1",
+        "authority": "EXECUTION_CELL",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "catalogue_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "availability": "PENDING_TS_OC_03D",
+        "reason_code": "SOURCE_BINDING_DISABLED",
+        "trace_id": "fixture-manager-record-unavailable"
+      }
+    },
+    {
+      "operation_id": "managerProjection",
+      "http_status": 503,
+      "body": {
+        "contract_version": "trading-system.portal-execution.manager-v2.v1",
+        "authority": "EXECUTION_CELL",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "catalogue_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "availability": "PENDING_TS_OC_03D",
+        "reason_code": "SOURCE_BINDING_DISABLED",
+        "trace_id": "fixture-manager-projection-unavailable"
+      }
+    },
+    {
+      "operation_id": "managerCapabilities",
+      "http_status": 503,
+      "body": {
+        "contract_version": "trading-system.portal-execution.manager-v2.v1",
+        "authority": "EXECUTION_CELL",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "catalogue_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "availability": "PENDING_TS_OC_03D",
+        "reason_code": "SOURCE_BINDING_DISABLED",
+        "trace_id": "fixture-manager-capabilities-unavailable"
+      }
+    }
+  ]
+}

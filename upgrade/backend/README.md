@@ -18,6 +18,40 @@ Chúng không thay thế phase hoặc exit gate trong
   source-dark, can continue immediately) and `B` (owner artifacts or real
   runtime required). A completion never implies B activation.
 
+- [EX-BE-02B — Manager-v2 Multi-profile Read Readiness](./EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md)
+  — **Implemented / private read-ready:** the sealed Manager-v2 backend path
+  is now deployment-bound for Paper, Sandbox and Live. Each profile requires
+  the same exact profile identifier in the Edge configuration, delegated
+  assertion, owner facade and Source Proxy upstream overlay; the Proxy can
+  alter only its dedicated loopback facade/issuer ports from the frozen
+  five-GET template. It remains a bounded catalogue read plane, not direct
+  DB/SQL, commands, broker/Event traffic or a browser/UI route. Historical
+  Paper remains active; Sandbox/Live profile deployments are prepared without
+  auto-starting them, and Live currently returns no canonical rows until
+  Trading System produces them.
+
+- [EX-BE-02A — Manager-v2 Edge Read-through API](./EX_BE_02A_MANAGER_V2_EDGE_READTHROUGH_API.md)
+  — **Backend complete / private Paper runtime qualified:** the existing
+  private Rust Edge has four resource-scoped Manager-v2 Paper read-through
+  routes. The approved SGP signer/mTLS identity qualified all four over HTTP/2
+  with exact no-JWT and wrong-resource denials; only one AWS Edge was replaced.
+  The one-shot signer candidate was removed afterward; Source Proxy, Trading
+  System and all V1/D4/command/event/SSE paths remain untouched and dark.
+
+- [EX-BE-02 — Manager-v2 Backend Consumer](./EX_BE_02_MANAGER_V2_BACKEND_CONSUMER.md)
+  — **Complete / backend only / no runtime activation:** separate sealed Rust
+  contract/client crates consume exactly the already-qualified five Manager-v2
+  Paper GET routes with workload mTLS. No Edge route, browser/UI, cache,
+  projection, database write, poller or runtime activation is in scope.
+
+- [EX-BE-02 — Manager-v2 Paper Read Route and Owner Handoff](./EX_BE_02_MANAGER_V2_PAPER_READ_HANDOFF.md)
+  — **Complete / private Paper route qualified / no product consumer:**
+  byte-locked owner contract/publication import, five exact Source Proxy
+  routes backed by mTLS and a short-lived certificate-bound JWT issuer, and
+  real private route/fault/rollback qualification are complete. It neither
+  modifies D4/V1 nor enables Edge ingestion/query/SSE/commands, a database
+  client, projection/UI consumer or Sandbox/Canary/Live authority.
+
 - [BAR-01 — Feature/Screen/Concern Registry & Command Center Summary Contract](./BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
   — contract backend cho U02/U03. **Backend contract complete (BE1–BE6):**
   registry + API, hai read-only summary adapter, deadline-aware aggregator,

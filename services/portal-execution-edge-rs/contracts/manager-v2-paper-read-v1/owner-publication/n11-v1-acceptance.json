@@ -1,0 +1,14 @@
+{
+  "schema_version": "trading-system.portal-execution.n11-owner-publication.v1",
+  "status": "OWNER_PUBLISHED_PARTIAL",
+  "source_capability_freeze_sha256": "sha256:33566921539e5327b7f3deae0e5dea7b98ff95e515c87bb7bbd67c052e6d5e1b",
+  "capability_count": 24,
+  "implemented_capability_count": 0,
+  "typed_unavailable_capability_count": 24,
+  "complete_24_route_claim": false,
+  "published_as": "EXACT_TYPED_UNAVAILABILITY",
+  "reason": "NO_EXACT_PORTAL_EXECUTION_V1_SURFACE_OR_DELEGATED_READ_AUTH",
+  "portal_runtime_activation": false,
+  "manager_v2_is_n11_v1": false,
+  "contains_schema_or_fixture_for_callable_v1_route": false
+}

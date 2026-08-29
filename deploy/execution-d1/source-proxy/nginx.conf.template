@@ -24,6 +24,7 @@ http {
     proxy_intercept_errors off;
     client_body_timeout 1s;
     client_max_body_size 1k;
+    limit_req_zone $binary_remote_addr zone=manager_v2_paper_read:1m rate=600r/m;
 
     server {
         listen __PORTAL_BRIDGE_GATEWAY_IP__:__SOURCE_PROXY_PRIVATE_PORT__ ssl;
@@ -48,6 +49,11 @@ http {
             access_log off;
             return 200 'ok\n';
         }
+
+        # The file is rendered only for a Manager read mode. Keeping it absent
+        # in D2/D3/D4 prevents Nginx from loading Manager credentials during
+        # legacy modes and leaves every Manager route unavailable there.
+        __MANAGER_READ_INCLUDE__
 
         # Public-at-source compatibility probes deliberately carry no API key.
         location = /v1/contracts {

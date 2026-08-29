@@ -1,0 +1,26 @@
+{
+  "schema_version": "trading-system.portal-execution.ts-oc-03f-publication-manifest.v1",
+  "status": "OWNER_PUBLISHED_PRIVATE_PAPER_ROUTE_QUALIFIED",
+  "n11_v1_complete": false,
+  "portal_product_consumer_implemented": false,
+  "files": {
+    "README.md": "sha256:2d90d9954a649e4b8f66c3037509178fe2624479c08f65ed6e25f694b8b646c5",
+    "manager-v2-private-paper-publication.json": "sha256:2be9b46313e71f282891d88d0afca1eed2bf6c5df49f1fe8b610f6350d215da4",
+    "n11-v1-acceptance.json": "sha256:161c8aa98ecd0042500c1460128d52df65a97f3b6bce2e96511597614f36d4a2",
+    "n11-v1-capability-freeze.json": "sha256:33566921539e5327b7f3deae0e5dea7b98ff95e515c87bb7bbd67c052e6d5e1b",
+    "n11-v1-fixture-index.json": "sha256:c3e2112ab7ae9c87c74731e4752fc5371494c72fdb4a1256e5e5d870d830090b",
+    "semantic-rulings-at-freeze.json": "sha256:52deefd2d2b13631c5ffac87af01c936c697e5ec339f91a05146f33c809e68b7"
+  },
+  "source_inputs": {
+    "n11_v1_contract_freeze_sha256": "sha256:33566921539e5327b7f3deae0e5dea7b98ff95e515c87bb7bbd67c052e6d5e1b",
+    "semantic_rulings_at_freeze_sha256": "sha256:52deefd2d2b13631c5ffac87af01c936c697e5ec339f91a05146f33c809e68b7",
+    "manager_v2_source_dark_manifest_sha256": "sha256:aa0b5d78b8dd70045e9028881b70a194658fdce8c3bee02cf02756051aaa3390",
+    "manager_v2_loopback_overlay_manifest_sha256": "sha256:281f2b73094e423bd888e3562e861cab07137f4878c43fd62d7ce43abb565c60"
+  },
+  "contains_business_rows": false,
+  "contains_credentials_or_private_keys": false,
+  "contains_dsn": false,
+  "contains_raw_sql": false,
+  "contains_private_runtime_evidence": false,
+  "manifest_self_digest": "NOT_INCLUDED_TO_AVOID_SELF_REFERENCE"
+}

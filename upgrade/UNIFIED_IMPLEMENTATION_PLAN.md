@@ -2058,3 +2058,34 @@ Ngoài §9 toàn cục, một phase Execution Loop còn phải:
 
 **Bản phản biện đầy đủ:** [`hifi_execution_loop/BACKEND_PLAN_REVIEW.md`](upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_PLAN_REVIEW.md)
 — 9 finding, 7 request mới (BR-EX-16…22), và một request bị phán quyết nhầm câu hỏi (BR-EX-05).
+
+### EX-BE-02B — Manager-v2 multi-profile read readiness (2026-08-28)
+
+**Status:** `IMPLEMENTED / PRIVATE_READ_READY / PAPER_ACTIVE_HISTORICAL / SANDBOX_LIVE_DEPLOYMENT_READY / NO_LIVE_TRADING_TRAFFIC`.
+The approved scope is the existing catalogue-bound Manager-v2 read path for
+`PAPER_BINANCE_USDM`, `SANDBOX_BINANCE_USDM`, and `LIVE_BINANCE_USDM`.
+Each deployed Edge/Source Proxy profile stays exact and environment-bound;
+there is no caller-selected profile, direct Trading DB/SQL path, browser route,
+cache/projection, Event/replay or command activation.  Canary remains a Live
+governance stage, not a fake fourth database mode.  The Paper runtime stays
+compatible and active.  Detailed scope, invariants, qualification and rollback
+are in [EX-BE-02B — Manager-v2 Multi-profile Read Readiness](./backend/EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md).
+
+Implementation now binds the exact profile in all three places that matter:
+the owner facade predicate/JWT/envelope/cursor, the Portal Edge deployment and
+assertion verifier, and the Source Proxy's dedicated loopback issuer/facade
+pair. `manager-profile-read` permits only a verified port substitution of the
+frozen five-GET route template; it cannot widen routes, admit V1/API-key
+fallback, expose direct Trading DB/SQL, or activate command/broker/Redis/event
+traffic. Sandbox and Live private launch inputs use isolated projects and
+ports (`8123/8124`, `8223/8224`) while historical Paper stays on `8023/8024`.
+The full source-to-Edge path has local/read-only evidence; Live currently has
+no observed canonical rows, so a Live read returns a truthful empty bounded
+result until that state exists. No production profile was auto-deployed or
+restarted by this implementation.
+
+**Final owner-policy coordination (2026-08-28):** the Trading System now also
+rejects a malformed private profile identifier before issuance, verification or
+source binding, using the same uppercase ASCII grammar as Edge and Control API.
+The focused owner Manager suite reran at 44/44 with scoped Ruff clean; this
+does not change Portal runtime configuration, routes or deployment state.

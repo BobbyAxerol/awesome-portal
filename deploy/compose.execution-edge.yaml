@@ -51,6 +51,11 @@ services:
       # D2 is application-dark and must not contact even public source routes.
       # D3 enables contract/health probes in a separately reviewed overlay.
       EDGE_SOURCE_PROBES_ENABLED: ${EDGE_SOURCE_PROBES_ENABLED:-false}
+      # Manager-v2 is a separate deployment-profile-bound read-through surface.
+      # It remains dark until a dedicated Portal release supplies the delegated
+      # resource claim and its exact profile binding.
+      EDGE_MANAGER_V2_READ_ENABLED: ${EDGE_MANAGER_V2_READ_ENABLED:-false}
+      EDGE_MANAGER_V2_PROFILE_ID: ${EDGE_MANAGER_V2_PROFILE_ID:-}
       EDGE_PROBE_ALPHA_ID: ${EDGE_PROBE_ALPHA_ID:-}
       EDGE_PROBE_INTERVAL_SECONDS: ${EDGE_PROBE_INTERVAL_SECONDS:-30}
       EDGE_CONNECT_TIMEOUT_MS: ${EDGE_CONNECT_TIMEOUT_MS:-2000}

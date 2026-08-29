@@ -1,0 +1,37 @@
+{
+  "schema_version": "portal.execution.manager-v2-paper-read.import-lock.v1",
+  "status": "PRIVATE_PAPER_ROUTE_QUALIFIED_NO_PRODUCT_CONSUMER",
+  "imported_on": "2026-08-28",
+  "contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "owner_publication_manifest_sha256": "sha256:cd304194bdefde4d9470467f03b30b02487341656eea9fdd0bd96c3b07ac4c22",
+  "files": {
+    "RUST_DTO_HANDOFF.md": "sha256:7d50c2a3cae1270d72fef9bdb25d07c34c794570bfd8c5d99d05efb79637117c",
+    "manager-v2-fixtures.json": "sha256:4f16f6049be19a0d8885e2f4755c19af3cf2bb5a25548726221dbed1d8a890f0",
+    "manager-v2.openapi.json": "sha256:41ab5d039493be4f4f606c49e3d62170e06a58edac163dcb3788773c17a5f06b",
+    "owner-publication/README.md": "sha256:2d90d9954a649e4b8f66c3037509178fe2624479c08f65ed6e25f694b8b646c5",
+    "owner-publication/manager-v2-private-paper-publication.json": "sha256:2be9b46313e71f282891d88d0afca1eed2bf6c5df49f1fe8b610f6350d215da4",
+    "owner-publication/n11-v1-acceptance.json": "sha256:161c8aa98ecd0042500c1460128d52df65a97f3b6bce2e96511597614f36d4a2",
+    "owner-publication/n11-v1-capability-freeze.json": "sha256:33566921539e5327b7f3deae0e5dea7b98ff95e515c87bb7bbd67c052e6d5e1b",
+    "owner-publication/n11-v1-fixture-index.json": "sha256:c3e2112ab7ae9c87c74731e4752fc5371494c72fdb4a1256e5e5d870d830090b",
+    "owner-publication/owner-publication.manifest.json": "sha256:cd304194bdefde4d9470467f03b30b02487341656eea9fdd0bd96c3b07ac4c22",
+    "owner-publication/semantic-rulings-at-freeze.json": "sha256:52deefd2d2b13631c5ffac87af01c936c697e5ec339f91a05146f33c809e68b7",
+    "owner-runtime-overlay/README.md": "sha256:bee10039d2bd5f90835f292eb7e46b83fe6ef55623c6f068dea401ac7df2078d",
+    "owner-runtime-overlay/manager-v2-runtime-qualification.json": "sha256:370282d26b8521c14d3ba6bd88a7baea542c04f2cda3303c787f4ab458495252",
+    "owner-runtime-overlay/manager-v2-runtime-qualification.manifest.json": "sha256:281f2b73094e423bd888e3562e861cab07137f4878c43fd62d7ce43abb565c60",
+    "owner-runtime-overlay/qualification-result.json": "sha256:3c0d0a2126d9ca6b1d6614bbb2b1eb459accd622f39f46477eb3f27d95d7c5a8",
+    "source-proxy-manager-v2-locations.conf.template": "sha256:805f839c989b339cfb6d17e8ec7ca43e3970bc3e90cbd19e0d301ac8b490233b"
+  },
+  "assertions": {
+    "private_same_host_route_qualified": true,
+    "portal_product_consumer_implemented": false,
+    "n11_v1_complete": false,
+    "public_or_production_authoritative": false,
+    "direct_database_access": false,
+    "d4_or_v1_widened": false,
+    "sandbox": false,
+    "canary": false,
+    "live": false,
+    "command": false,
+    "event_sse_replay": false
+  }
+}

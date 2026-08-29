@@ -2,7 +2,9 @@ import { readFile } from "node:fs/promises";
 import { importPKCS8, SignJWT, type KeyLike } from "jose";
 import type { Role } from "../domain";
 
-const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:command-center|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|account-broker-360|paper-workbench):[A-Za-z0-9._-]{1,128})$/;
+const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:(?:command-center|manager-v2:read)|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|account-broker-360|paper-workbench):[A-Za-z0-9._-]{1,128})$/;
+const MANAGER_V2_RESOURCE = "execution:manager-v2:read";
+const PROFILE_ID_PATTERN = /^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/;
 
 export interface ExecutionDelegationConfig {
   issuer: string;
@@ -11,6 +13,8 @@ export interface ExecutionDelegationConfig {
   privateKeyPem: string;
   ttlSeconds: number;
   environment: "paper" | "sandbox" | "live";
+  /** Required only when minting the exact Manager-v2 read resource. */
+  profileId?: string;
 }
 
 export interface ExecutionReadPrincipal {
@@ -52,6 +56,10 @@ export class ExecutionDelegationService {
 
   async issueReadAssertion(principal: ExecutionReadPrincipal): Promise<string> {
     validatePrincipal(principal);
+    const requestsManagerRead = principal.resources.includes(MANAGER_V2_RESOURCE);
+    if (requestsManagerRead && !this.config.profileId) {
+      throw new Error("Manager-v2 read assertions require an exact execution profile");
+    }
     const now = Math.floor(Date.now() / 1000);
     return new SignJWT({
       sid: principal.sessionId,
@@ -60,6 +68,7 @@ export class ExecutionDelegationService {
       scopes: ["execution.read"],
       resources: [...new Set(principal.resources)].sort(),
       environment: this.config.environment,
+      ...(requestsManagerRead ? { profile_id: this.config.profileId } : {}),
       auth_time: Math.floor(principal.authenticationTime.getTime() / 1000),
       amr: [...new Set(principal.authenticationMethods)].sort(),
     })
@@ -83,7 +92,10 @@ function validateConfig(config: ExecutionDelegationConfig): void {
     !Number.isInteger(config.ttlSeconds) ||
     config.ttlSeconds < 1 ||
     config.ttlSeconds > 60 ||
-    !["paper", "sandbox", "live"].includes(config.environment)
+    !["paper", "sandbox", "live"].includes(config.environment) ||
+    (config.profileId !== undefined &&
+      (!PROFILE_ID_PATTERN.test(config.profileId) ||
+        !config.profileId.startsWith(`${config.environment.toUpperCase()}_`)))
   ) {
     throw new Error("execution delegation configuration is outside the read-only boundary");
   }

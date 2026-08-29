@@ -4,7 +4,7 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --env-file PATH --mode template|offline|readiness|probe-offline|probe-readiness|source-readiness\n' "$0" >&2
+  printf 'Usage: %s --env-file PATH --mode template|offline|readiness|probe-offline|probe-readiness|source-readiness|manager-offline|manager-readiness|manager-active-offline|manager-active-readiness\n' "$0" >&2
   exit 2
 }
 
@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "${env_file}" && -f "${env_file}" ]] || usage
-[[ "${mode}" =~ ^(template|offline|readiness|probe-offline|probe-readiness|source-readiness)$ ]] || usage
+[[ "${mode}" =~ ^(template|offline|readiness|probe-offline|probe-readiness|source-readiness|manager-offline|manager-readiness|manager-active-offline|manager-active-readiness)$ ]] || usage
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 contract_lock="${root_dir}/services/portal-execution-edge-rs/contract-pack.lock.json"
 if [[ "${mode}" != template ]]; then
@@ -29,7 +29,7 @@ if [[ "${mode}" != template ]]; then
 fi
 
 declare -A values=()
-allowed_keys=' PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE PORTAL_PROJECTION_POSTGRES_IMAGE PORTAL_RUNTIME_GID EDGE_PRIVATE_BIND_IP EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP SOURCE_PROXY_PRIVATE_PORT SOURCE_PROXY_SOURCE_MODE PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT PROJECTION_DB_VOLUME_NAME PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER PROJECTION_DB_RUNTIME_USER EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST EDGE_SOURCE_PROBES_ENABLED EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE EDGE_PROBE_ALPHA_ID EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_SHADOW_QUERY_ENABLED EDGE_PAPER_WORKBENCH_SHADOW_ENABLED EDGE_COMMAND_RELAY_ENABLED '
+allowed_keys=' PORTAL_EXECUTION_EDGE_IMAGE PORTAL_SOURCE_PROXY_IMAGE PORTAL_PROJECTION_POSTGRES_IMAGE PORTAL_RUNTIME_GID EDGE_PRIVATE_BIND_IP EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP SOURCE_PROXY_PRIVATE_PORT SOURCE_PROXY_SOURCE_MODE SOURCE_PROXY_MANAGER_PROFILE_ID SOURCE_PROXY_MANAGER_FACADE_PORT SOURCE_PROXY_MANAGER_ISSUER_PORT PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT PROJECTION_DB_VOLUME_NAME PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER PROJECTION_DB_RUNTIME_USER EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST EDGE_SOURCE_PROBES_ENABLED EDGE_MANAGER_V2_READ_ENABLED EDGE_MANAGER_V2_PROFILE_ID EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE EDGE_PROBE_ALPHA_ID EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_SHADOW_QUERY_ENABLED EDGE_PAPER_WORKBENCH_SHADOW_ENABLED EDGE_COMMAND_RELAY_ENABLED '
 
 while IFS= read -r line || [[ -n "${line}" ]]; do
   [[ -z "${line}" || "${line}" == \#* ]] && continue
@@ -59,7 +59,7 @@ required=(
   PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER
   PROJECTION_DB_RUNTIME_USER
   EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST
-  EDGE_SOURCE_PROBES_ENABLED
+  EDGE_SOURCE_PROBES_ENABLED EDGE_MANAGER_V2_READ_ENABLED
   EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE
   EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED
   EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE
@@ -165,11 +165,76 @@ PY
   printf 'D2 preflight requires Edge to target the exact private Source Proxy origin.\n' >&2
   exit 1
 }
-[[ "${values[EDGE_ENVIRONMENT]}" == paper ]] || {
-  printf 'D2 preflight is locked to the first Paper scope.\n' >&2
-  exit 1
-}
+manager_source_enabled=false
+case "${values[SOURCE_PROXY_SOURCE_MODE]}" in
+  manager-paper-read|manager-profile-read) manager_source_enabled=true ;;
+esac
+manager_profile_enabled=false
+if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-profile-read ]] ||
+   [[ "${mode}" =~ ^manager-active- ]] ||
+   { [[ "${mode}" == template ]] &&
+     [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-paper-read ]] &&
+     [[ "${values[EDGE_MANAGER_V2_READ_ENABLED]}" == true ]]; }; then
+  manager_profile_enabled=true
+fi
+if [[ "${manager_profile_enabled}" == true ]]; then
+  [[ "${values[EDGE_ENVIRONMENT]}" =~ ^(paper|sandbox|live)$ ]] || {
+    printf 'Manager active-read preflight requires paper, sandbox, or live.\n' >&2
+    exit 1
+  }
+  profile_id="${values[EDGE_MANAGER_V2_PROFILE_ID]:-}"
+  [[ "${profile_id}" =~ ^(PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$ &&
+     "${profile_id}" == "${values[EDGE_ENVIRONMENT]^^}_"* ]] || {
+    printf 'Manager active-read preflight requires the exact environment-bound profile ID.\n' >&2
+    exit 1
+  }
+  if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-paper-read ]]; then
+    [[ "${profile_id}" == PAPER_BINANCE_USDM ]] || {
+      printf 'Historical manager-paper-read is bound only to PAPER_BINANCE_USDM.\n' >&2
+      exit 1
+    }
+  fi
+  if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-profile-read ]]; then
+    source_profile_id="${values[SOURCE_PROXY_MANAGER_PROFILE_ID]:-}"
+    [[ "${source_profile_id}" == "${profile_id}" ]] || {
+      printf 'Manager profile overlay must exactly match the Edge profile ID.\n' >&2
+      exit 1
+    }
+    for key in SOURCE_PROXY_MANAGER_FACADE_PORT SOURCE_PROXY_MANAGER_ISSUER_PORT; do
+      [[ "${values[${key}]:-}" =~ ^[0-9]{4,5}$ ]] || {
+        printf 'Manager profile overlay requires an unprivileged numeric upstream port.\n' >&2
+        exit 1
+      }
+      manager_upstream_port="${values[${key}]}"
+      (( manager_upstream_port >= 1024 && manager_upstream_port <= 65535 )) || {
+        printf 'Manager profile overlay upstream port is outside the unprivileged range.\n' >&2
+        exit 1
+      }
+    done
+    [[ "${values[SOURCE_PROXY_MANAGER_FACADE_PORT]}" != "${values[SOURCE_PROXY_MANAGER_ISSUER_PORT]}" ]] || {
+      printf 'Manager profile overlay requires distinct facade and issuer ports.\n' >&2
+      exit 1
+    }
+  fi
+else
+  [[ "${values[EDGE_ENVIRONMENT]}" == paper ]] || {
+    printf 'D2 preflight is locked to the first Paper scope.\n' >&2
+    exit 1
+  }
+fi
 case "${mode}" in
+  manager-offline|manager-readiness)
+    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-paper-read ]] || {
+      printf 'Historical Manager read readiness requires manager-paper-read mode.\n' >&2
+      exit 1
+    }
+    ;;
+  manager-active-offline|manager-active-readiness)
+    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(manager-paper-read|manager-profile-read)$ ]] || {
+      printf 'Manager active-read readiness requires a Manager source mode.\n' >&2
+      exit 1
+    }
+    ;;
   source-readiness)
     [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == paper-read ]] || {
       printf 'Source-read readiness requires paper-read mode.\n' >&2
@@ -189,7 +254,7 @@ case "${mode}" in
     }
     ;;
   template)
-    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(dark|contract-probe|paper-read)$ ]] || {
+    [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(dark|contract-probe|paper-read|manager-paper-read|manager-profile-read)$ ]] || {
       printf 'D2 template rejected the Source Proxy source mode.\n' >&2
       exit 1
     }
@@ -198,11 +263,16 @@ esac
 expected_source_probes=false
 if [[ "${mode}" =~ ^(probe-offline|probe-readiness|source-readiness)$ ]]; then
   expected_source_probes=true
-elif [[ "${mode}" == template && "${values[SOURCE_PROXY_SOURCE_MODE]}" != dark ]]; then
+elif [[ "${mode}" == template && "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(contract-probe|paper-read)$ ]]; then
   expected_source_probes=true
+fi
+expected_manager_v2_read=false
+if [[ "${manager_profile_enabled}" == true ]]; then
+  expected_manager_v2_read=true
 fi
 [[ "${values[EDGE_PROJECTION_INGESTION_ENABLED]}" == false &&
    "${values[EDGE_SOURCE_PROBES_ENABLED]}" == "${expected_source_probes}" &&
+   "${values[EDGE_MANAGER_V2_READ_ENABLED]}" == "${expected_manager_v2_read}" &&
    "${values[EDGE_REALTIME_SSE_ENABLED]}" == false &&
    "${values[EDGE_ANALYTICS_QUERY_ENABLED]}" == false &&
    "${values[EDGE_SHADOW_QUERY_ENABLED]}" == false &&
@@ -213,7 +283,7 @@ fi
   exit 1
 }
 case "${mode}" in
-  probe-offline|probe-readiness|offline|readiness)
+  manager-offline|manager-readiness|manager-active-offline|manager-active-readiness|probe-offline|probe-readiness|offline|readiness)
     [[ -z "${values[EDGE_PROBE_ALPHA_ID]:-}" ]] || {
       printf 'D2/D3 preflight forbids alpha-scoped source probes.\n' >&2
       exit 1
@@ -238,7 +308,7 @@ for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONF
     exit 1
   }
 done
-if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness)$ ]]; then
+if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness|manager-readiness|manager-active-readiness)$ ]]; then
   for key in EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE \
     PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT; do
     [[ "${values[${key}]}" == /srv/primus/portal/* ]] || {
@@ -311,6 +381,11 @@ if [[ "${mode}" != template ]]; then
     case "${file}" in *.crt) expected=644 ;; *) expected=640 ;; esac
     check_secret "${values[SOURCE_PROXY_SECRET_DIRECTORY]}/${file}" "${expected}"
   done
+  if [[ "${manager_source_enabled}" == true ]]; then
+    check_secret "${values[SOURCE_PROXY_SECRET_DIRECTORY]}/manager-v2-locations.conf" 640
+    check_secret "${values[SOURCE_PROXY_SECRET_DIRECTORY]}/manager-v2-client.pem" 640
+    check_secret "${values[SOURCE_PROXY_SECRET_DIRECTORY]}/manager-v2-ca.crt" 644
+  fi
   check_secret_group "${values[PROJECTION_DB_SECRET_DIRECTORY]}/projection-postgres.crt" \
     644 "${values[PROJECTION_DB_CONTAINER_GID]}"
   for file in projection-postgres.key postgres-bootstrap-password \
@@ -326,7 +401,7 @@ if [[ "${mode}" != template ]]; then
     exit 1
   }
   bash -n "${values[PROJECTION_DB_INIT_SCRIPT]}"
-  if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness)$ ]]; then
+  if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness|manager-readiness|manager-active-readiness)$ ]]; then
     [[ "$(stat -c '%u:%g:%a' "${values[PROJECTION_DB_INIT_SCRIPT]}")" == \
       "0:${values[PROJECTION_DB_CONTAINER_GID]}:550" ]] || {
       printf 'D2 readiness requires a root-owned immutable projection bootstrap script.\n' >&2
@@ -358,6 +433,13 @@ if [[ "${mode}" != template ]]; then
       printf 'D2 preflight rejected the Source Proxy client identity bundle.\n' >&2
       exit 1
     }
+  if [[ "${manager_source_enabled}" == true ]]; then
+    openssl x509 -in "${proxy_dir}/manager-v2-client.pem" -noout -checkend 86400 >/dev/null 2>&1 &&
+      openssl pkey -in "${proxy_dir}/manager-v2-client.pem" -noout >/dev/null 2>&1 || {
+        printf 'Manager read preflight rejected the Manager client identity bundle.\n' >&2
+        exit 1
+      }
+  fi
 
   matches_key() {
     local certificate="$1" private_key="$2" cert_digest key_digest
@@ -379,6 +461,12 @@ if [[ "${mode}" != template ]]; then
     printf 'D2 preflight rejected a mismatched Source Proxy client bundle.\n' >&2
     exit 1
   }
+  if [[ "${manager_source_enabled}" == true ]]; then
+    matches_key "${proxy_dir}/manager-v2-client.pem" "${proxy_dir}/manager-v2-client.pem" || {
+      printf 'Manager read preflight rejected a mismatched Manager client bundle.\n' >&2
+      exit 1
+    }
+  fi
   openssl verify -CAfile "${edge_dir}/source-proxy-ca.crt" \
     "${proxy_dir}/source-proxy-server.crt" >/dev/null 2>&1 || {
       printf 'D2 preflight rejected the Source Proxy server trust chain.\n' >&2
@@ -389,6 +477,18 @@ if [[ "${mode}" != template ]]; then
       printf 'D2 preflight rejected the Source Proxy client trust chain.\n' >&2
       exit 1
     }
+  if [[ "${manager_source_enabled}" == true ]]; then
+    openssl verify -CAfile "${proxy_dir}/manager-v2-ca.crt" \
+      "${proxy_dir}/manager-v2-client.pem" >/dev/null 2>&1 || {
+        printf 'Manager read preflight rejected the Manager client trust chain.\n' >&2
+        exit 1
+      }
+    openssl x509 -in "${proxy_dir}/manager-v2-client.pem" -noout -text 2>/dev/null |
+      grep -Fq 'TLS Web Client Authentication' || {
+        printf 'Manager read preflight requires a client-auth Manager leaf.\n' >&2
+        exit 1
+      }
+  fi
 
   projection_dir="${values[PROJECTION_DB_SECRET_DIRECTORY]}"
   openssl x509 -in "${projection_dir}/projection-postgres.crt" -noout \
@@ -453,16 +553,21 @@ validate(migration_url, owner_user, owner_password)
 validate(runtime_url, runtime_user, runtime_password)
 PY
 
+  key_files=(
+    "${edge_dir}/edge-server.key"
+    "${proxy_dir}/source-proxy-server.key"
+    "${edge_dir}/source-proxy-client.pem"
+  )
+  if [[ "${manager_source_enabled}" == true ]]; then
+    key_files+=("${proxy_dir}/manager-v2-client.pem")
+  fi
   key_fingerprints="$(
-    for private_key in \
-      "${edge_dir}/edge-server.key" \
-      "${proxy_dir}/source-proxy-server.key" \
-      "${edge_dir}/source-proxy-client.pem"; do
+    for private_key in "${key_files[@]}"; do
       openssl pkey -in "${private_key}" -pubout -outform DER 2>/dev/null |
         sha256sum | cut -d' ' -f1
     done
   )"
-  [[ "$(sort -u <<<"${key_fingerprints}" | wc -l)" -eq 3 ]] || {
+  [[ "$(sort -u <<<"${key_fingerprints}" | wc -l)" -eq "${#key_files[@]}" ]] || {
     printf 'D2 preflight rejected reused workload private key material.\n' >&2
     exit 1
   }
@@ -486,7 +591,7 @@ for key in keys:
 PY
 
   header_file="${proxy_dir}/trading-system-read-header.conf"
-  if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(dark|contract-probe)$ ]]; then
+  if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" =~ ^(dark|contract-probe|manager-paper-read|manager-profile-read)$ ]]; then
     if [[ "$(wc -l < "${header_file}")" -ne 1 ]] ||
         ! grep -Fxq 'proxy_set_header X-Portal-Source-Mode dark;' "${header_file}"; then
       printf 'D2/D3 preflight requires the exact non-credential dark marker.\n' >&2
@@ -497,13 +602,57 @@ PY
     printf 'Source-read readiness requires a dedicated Trading System read identity.\n' >&2
     exit 1
   fi
+  if [[ "${manager_source_enabled}" == true ]]; then
+    manager_locations_file="${proxy_dir}/manager-v2-locations.conf"
+    manager_locations_template="${root_dir}/deploy/execution-d1/source-proxy/manager-v2-locations.conf.template"
+    [[ "$(grep -Fxc '        include /run/secrets/manager-v2-locations.conf;' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 &&
+       "$(grep -Fc 'manager-v2-locations.conf' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 ]] || {
+      printf 'Manager read preflight requires the one exact Manager locations include.\n' >&2
+      exit 1
+    }
+    if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-paper-read ]]; then
+      cmp -s "${manager_locations_template}" "${manager_locations_file}" || {
+        printf 'Manager read preflight rejected Manager locations drift.\n' >&2
+        exit 1
+      }
+      manager_facade_port=8023
+      manager_issuer_port=8024
+    else
+      manager_facade_port="${values[SOURCE_PROXY_MANAGER_FACADE_PORT]}"
+      manager_issuer_port="${values[SOURCE_PROXY_MANAGER_ISSUER_PORT]}"
+      cmp -s <(
+        sed \
+          -e "s#127\\.0\\.0\\.1:8023#127.0.0.1:${manager_facade_port}#g" \
+          -e "s#127\\.0\\.0\\.1:8024/internal/issue#127.0.0.1:${manager_issuer_port}/internal/issue#g" \
+          "${manager_locations_template}"
+      ) "${manager_locations_file}" || {
+        printf 'Manager profile overlay may change only the dedicated upstream ports.\n' >&2
+        exit 1
+      }
+    fi
+    [[ "$(grep -Ec '^location ' "${manager_locations_file}")" -eq 6 &&
+       "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations_file}")" -eq 5 &&
+       "$(grep -Fxc "    proxy_pass https://127.0.0.1:${manager_facade_port};" "${manager_locations_file}")" -eq 5 &&
+       "$(grep -Fxc "    proxy_pass https://127.0.0.1:${manager_issuer_port}/internal/issue;" "${manager_locations_file}")" -eq 1 &&
+       "$(grep -Fxc '    proxy_ssl_protocols TLSv1.3;' "${manager_locations_file}")" -eq 6 ]] || {
+      printf 'Manager read preflight rejected the bounded mTLS route set.\n' >&2
+      exit 1
+    }
+    if grep -Eq 'X-API-Key|/v1/|proxy_pass[[:space:]]+http:' "${manager_locations_file}"; then
+      printf 'Manager read preflight rejected a legacy credential or upstream in Manager routes.\n' >&2
+      exit 1
+    fi
+  elif grep -Fq 'manager-v2-locations.conf' "${values[SOURCE_PROXY_CONFIG_FILE]}"; then
+    printf 'D2/D3/D4 preflight rejected a Manager include outside a Manager read mode.\n' >&2
+    exit 1
+  fi
   [[ "$(wc -c < "${edge_dir}/source-proxy-admission-token")" -ge 32 ]] || {
     printf 'D2 preflight rejected a short Source Proxy admission token.\n' >&2
     exit 1
   }
 fi
 
-if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness)$ ]]; then
+if [[ "${mode}" =~ ^(readiness|probe-readiness|source-readiness|manager-readiness|manager-active-readiness)$ ]]; then
   [[ "$(stat -c '%u' "${env_file}")" == 0 ]] || {
     printf 'Execution readiness requires a root-owned env file.\n' >&2
     exit 1

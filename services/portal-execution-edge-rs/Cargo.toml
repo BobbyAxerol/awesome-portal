@@ -18,6 +18,8 @@ members = [
   "crates/ts-contract-v1",
   "crates/ts-adapter-v1",
   "crates/ts-transport",
+  "crates/manager-v2-contract",
+  "crates/manager-v2-client",
   "crates/command-relay",
   "crates/external-read-adapter",
   "crates/intercell-gateway",

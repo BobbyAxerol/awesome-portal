@@ -92,6 +92,10 @@ const EnvSchema = z.object({
   COMMAND_CENTER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(128 * 1024),
   EXECUTION_EDGE_ORIGIN: ServiceOriginSchema.default("https://portal-execution-edge:8443"),
   EXECUTION_EDGE_ENVIRONMENT: z.enum(["paper", "sandbox", "live"]).default("paper"),
+  EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/).optional(),
+  ),
   EXECUTION_EDGE_PRIVATE_KEY_FILE: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).optional(),

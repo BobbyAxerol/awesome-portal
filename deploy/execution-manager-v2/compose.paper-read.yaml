@@ -1,0 +1,11 @@
+# EX-BE-02A historical Paper Manager-v2 activation overlay.
+#
+# Apply only after Source Proxy is already in its separately-qualified
+# `manager-paper-read` mode and a fresh Control API assertion is available.
+# It binds the historical frozen Paper profile exactly. All other Edge safety
+# flags remain inherited as false from compose.dark.yaml.
+services:
+  execution-edge:
+    environment:
+      EDGE_MANAGER_V2_READ_ENABLED: "true"
+      EDGE_MANAGER_V2_PROFILE_ID: "PAPER_BINANCE_USDM"
