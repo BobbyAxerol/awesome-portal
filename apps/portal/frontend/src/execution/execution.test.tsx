@@ -1913,6 +1913,7 @@ const ALLOWED = {
   canApprove: true,
   canApproveWithCondition: true,
   canDeny: true,
+  canRequestChanges: true,
   canExtendObservation: true,
   canReject: true,
   separationOfDuties: "OK" as const,
@@ -3161,8 +3162,9 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
       canApprove: false,
       canApproveWithCondition: false,
       canDeny: true,
-      // R1 publishes no Paper Exit capability, and an unpublished capability is
-      // withheld rather than assumed.
+      // Unpublished capabilities are withheld rather than assumed — the Paper
+      // Exit verbs and REQUEST_CHANGES alike.
+      canRequestChanges: false,
       canExtendObservation: false,
       canReject: false,
       separationOfDuties: null,
@@ -3175,6 +3177,7 @@ describe("EX-BE-05a field map — reconciled against what codex published", () =
       canApprove: false,
       canApproveWithCondition: false,
       canDeny: false,
+      canRequestChanges: false,
       canExtendObservation: false,
       canReject: false,
       separationOfDuties: null,
@@ -4496,6 +4499,7 @@ describe("permission is never inferred — deny by default", () => {
       canApprove: false,
       canApproveWithCondition: false,
       canDeny: true,
+      canRequestChanges: false,
       canExtendObservation: false,
       canReject: false,
       separationOfDuties: null,

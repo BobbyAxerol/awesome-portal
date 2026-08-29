@@ -394,7 +394,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
 
   const decide = useCallback(
     async (
-      verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
+      verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION" | "REQUEST_CHANGES",
       reason: string,
       extra?: { conditions?: readonly TypedCondition[] },
     ) => {
@@ -486,6 +486,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
         onApprove={() => void decide("APPROVE", note.trim() || "Evidence reviewed and accepted.")}
         onDeny={() => void decide("DENY", note.trim() || "Evidence rejected.")}
+        onRequestChanges={() => void decide("REQUEST_CHANGES", note.trim())}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
         onRequestCondition={() => {
@@ -740,7 +741,7 @@ export function GateR2ReviewContainer({
 
   const d = state.value;
   const run = (
-    verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
+    verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION" | "REQUEST_CHANGES",
     reason: string,
     attached?: readonly TypedCondition[],
   ) =>
@@ -805,6 +806,7 @@ export function GateR2ReviewContainer({
         reason={state.reason}
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
         onApprove={() => run("APPROVE", note.trim() || "Operational readiness accepted.")}
+        onRequestChanges={() => run("REQUEST_CHANGES", note.trim())}
         onDeny={() => run("DENY", note.trim() || "Operational readiness rejected.")}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}

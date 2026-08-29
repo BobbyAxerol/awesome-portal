@@ -33,7 +33,8 @@ import {
   type HeaderBadge,
   type RailBlocker,
 } from "../components/workspace";
-import { REQUEST_CHANGES_REASON } from "./GateR1Review";
+import { REQUEST_CHANGES_DENIED_REASON, REQUEST_CHANGES_NOTE_REASON } from "./GateR1Review";
+import { GOV_CHARTS } from "../governance.smoke";
 
 export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENIED" | "PENDING" | "MISSING";
 
@@ -91,7 +92,7 @@ const LOCK_REASON: Record<R2Lock, string> = {
   EXPIRED: "This request expired and must be resubmitted.",
   NOT_ELIGIBLE: "You do not hold a role that can decide this gate.",
 };
-const R2_TABS = ["Capital preview", "Readiness", "Observation policy", "R1 reference", "Conditions"] as const;
+const R2_TABS = ["Capital preview", "Gate criteria", "Readiness", "Observation policy", "R1 reference", "Conditions"] as const;
 type R2Tab = (typeof R2_TABS)[number];
 
 export function GateR2Review({
@@ -135,6 +136,7 @@ export function GateR2Review({
   onApprove,
   onDeny,
   onRequestCondition,
+  onRequestChanges,
   onCopyProvenance,
 }: {
   approvalId: ApprovalId;
@@ -159,7 +161,7 @@ export function GateR2Review({
   readiness: readonly ReadinessGroup[];
   capital: readonly CapitalDelta[];
   capitalEnvelope?: Envelope;
-  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
+  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean; canRequestChanges?: boolean };
   capitalReason?: string | null;
   capitalDecidable?: boolean;
   capitalBlockers?: readonly string[];
@@ -177,6 +179,7 @@ export function GateR2Review({
   onApprove?: () => void;
   onDeny?: () => void;
   onRequestCondition: () => void;
+  onRequestChanges?: () => void;
   onCopyProvenance: (full: string) => void;
 }) {
   const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
@@ -206,6 +209,9 @@ export function GateR2Review({
   const serverAllowsApprove = eligibility?.canApprove === true;
   const serverAllowsCondition = eligibility?.canApproveWithCondition === true;
   const serverAllowsDeny = eligibility?.canDeny === true;
+  const serverAllowsRequestChanges = eligibility?.canRequestChanges === true;
+  const noteReady = (note ?? "").trim().length >= 8;
+  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges;
   const locked = effectiveLocks.length > 0 || !serverAllowsApprove;
   const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition;
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
@@ -315,6 +321,7 @@ export function GateR2Review({
         <ExecutionTabs
           tabs={[
             { key: "Capital preview", label: "Capital preview", count: capital.length },
+            { key: "Gate criteria", label: "Gate criteria", count: GOV_CHARTS.r2Criteria.rows.length },
             { key: "Readiness", label: "Readiness", count: readiness.length },
             { key: "Observation policy", label: "Observation policy" },
             { key: "R1 reference", label: "R1 reference" },
@@ -382,8 +389,77 @@ export function GateR2Review({
               <PanelState status="unavailable" reason={capitalReason ?? "No capital preview was published for this request."} />
             )
           ) : null}
+          {tab === "Gate criteria" ? (
+            <div className="exec-gate-panel">
+              {/* SMOKE until BR-EX-67: criteria are POLICY DATA — thresholds from the
+                  versioned gate policy, verdicts computed server-side (hi-fi 1b note).
+                  The browser renders, never re-derives. */}
+              <div className="exec-gate-panelhead">
+                <ExecutionSectionTitle>Gate criteria — policy vs evidence</ExecutionSectionTitle>
+                <span className="exec-gate-policychip" title="SMOKE — the versioned gate policy reference ships with BR-EX-67">{GOV_CHARTS.r2Criteria.policy}</span>
+              </div>
+              <div className="exec-scroll-x">
+                <table className="exec-360-sync exec-gate-criteria">
+                  <thead>
+                    <tr>
+                      <th scope="col">criterion</th>
+                      <th scope="col" data-numeric="true">threshold</th>
+                      <th scope="col" data-numeric="true">run_5512</th>
+                      <th scope="col">verdict</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {GOV_CHARTS.r2Criteria.rows.map((row) => (
+                      <tr key={row.criterion} data-verdict={row.verdict}>
+                        <th scope="row">{row.criterion}</th>
+                        <td className="exec-num">{row.threshold}</td>
+                        <td className="exec-num">{row.observed}</td>
+                        <td>
+                          {row.verdict === "PASS" ? (
+                            <span className="exec-gate-verified">✓ PASS</span>
+                          ) : (
+                            <span className="exec-gate-waiverable">! WAIVERABLE {row.note ?? ""}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="exec-role-meta exec-gate-criteriafoot">{GOV_CHARTS.r2Criteria.foot} · evidence: {GOV_CHARTS.r2Criteria.evidence.map((e) => e.label).join(" · ")}</p>
+              <div className="exec-gate-stagechips" role="group" aria-label="Stage eligibility, derived from gate policies">
+                <span className="exec-role-meta">Stage eligibility (derived from gate policies)</span>
+                {GOV_CHARTS.r2Stages.map((c) => (
+                  <span key={c.stage} className="exec-gate-stagechip" data-state={c.state}>
+                    {c.stage} — {c.detail}
+                  </span>
+                ))}
+                <span className="exec-role-meta">each chip = that stage's gate policy, evaluated against today's evidence</span>
+              </div>
+              <p className="exec-af-smoke">! SMOKE DATA — criteria table and stage chips are synthetic frames; thresholds/verdicts are server policy data. Reference shape for BR-EX-67. Delete when BR-EX-67 ships</p>
+            </div>
+          ) : null}
           {tab === "Readiness" ? (
             <div className="exec-grid-2">
+              <div className="exec-gate-panel" data-smoke="true">
+                <ExecutionSectionTitle>Portfolio fit</ExecutionSectionTitle>
+                <div className="exec-gate-fitweight">
+                  <span>target capital weight</span>
+                  <b className="exec-num">{GOV_CHARTS.r2Fit.targetWeightPct.toFixed(1)}%</b>
+                </div>
+                <div className="exec-gate-fitbar" aria-hidden="true"><span style={{ width: `${Math.min(100, GOV_CHARTS.r2Fit.targetWeightPct * 4)}%` }} /></div>
+                <table className="exec-360-sync exec-gate-passport-table">
+                  <tbody>
+                    {GOV_CHARTS.r2Fit.rows.map((r) => (
+                      <tr key={r.k}>
+                        <th scope="row">{r.k}</th>
+                        <td className="exec-num" data-tone={"tone" in r ? r.tone : undefined}>{r.v}{"tail" in r && r.tail ? <span className="exec-gate-note">{r.tail}</span> : null}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="exec-af-smoke">! SMOKE DATA — {GOV_CHARTS.r2Fit.foot}. Reference shape for BR-EX-67. Delete when BR-EX-67 ships</p>
+              </div>
               {readiness.map((group) => (
                 <div className="exec-gate-panel" key={group.title}>
                   <ExecutionSectionTitle>{group.title}</ExecutionSectionTitle>
@@ -495,7 +571,19 @@ export function GateR2Review({
           trail={trail}
           actions={
             <>
-              <button type="button" className="exec-role-control exec-btn-ghost" disabled title={REQUEST_CHANGES_REASON}>
+              <button
+                type="button"
+                className="exec-role-control exec-btn-ghost"
+                disabled={requestChangesLocked}
+                title={
+                  !serverAllowsRequestChanges || !onRequestChanges
+                    ? REQUEST_CHANGES_DENIED_REASON
+                    : !noteReady
+                      ? REQUEST_CHANGES_NOTE_REASON
+                      : undefined
+                }
+                onClick={onRequestChanges}
+              >
                 Request changes
               </button>
               <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>

@@ -293,6 +293,8 @@ export interface ExecutionApi {
       | "APPROVE"
       | "DENY"
       | "APPROVE_WITH_CONDITION"
+      /** N09: typed request-changes verb — requires a reason like every decision. */
+      | "REQUEST_CHANGES"
       | "PROMOTE"
       | "EXTEND_OBSERVATION"
       | "REJECT";

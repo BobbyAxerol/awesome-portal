@@ -244,6 +244,8 @@ export interface Eligibility {
   canApprove: boolean;
   canApproveWithCondition: boolean;
   canDeny: boolean;
+  /** N09 delivered the REQUEST_CHANGES verb; absent still means no. */
+  canRequestChanges: boolean;
   /** Paper Exit only. Extend the observation window by the policy's fixed term. */
   canExtendObservation: boolean;
   /** Paper Exit only. Send the deployment back to PAPER_HELD. */
@@ -257,6 +259,7 @@ export const NO_ELIGIBILITY: Eligibility = {
   canApprove: false,
   canApproveWithCondition: false,
   canDeny: false,
+  canRequestChanges: false,
   canExtendObservation: false,
   canReject: false,
   separationOfDuties: null,
@@ -272,6 +275,7 @@ export function readEligibility(raw: unknown): Eligibility {
     canApprove: o.can_approve === true,
     canApproveWithCondition: o.can_approve_with_condition === true,
     canDeny: o.can_deny === true,
+    canRequestChanges: o.can_request_changes === true,
     canExtendObservation: o.can_extend_observation === true,
     canReject: o.can_reject === true,
     separationOfDuties: sod === "OK" || sod === "VIOLATION" ? sod : null,

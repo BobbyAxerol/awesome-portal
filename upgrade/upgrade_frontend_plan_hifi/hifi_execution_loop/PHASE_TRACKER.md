@@ -2155,11 +2155,11 @@ nav trỏ 404.
 | Artifact passport 8 dòng immutable | N | có (passport panel) | impl | C | digest rút gọn + copy → V2-02 provenance |
 | SoD OK **và** VIOLATION (self-approval blocked banner) | N | cả hai biến thể có fixture | impl | C | |
 | Decision checklist ✓/! + blocking count | N | có | impl | C | |
-| Evidence equity IS/OOS/holdout, window roles, no smoothing | C | trạng thái honest "not published" (không khung trống); cơ chế chart có (`EquityChart`) | dis+BE | C | BR-EX-34 §R1 — series chưa publish |
-| WFO stability per-fold + threshold + fold min | C | trạng thái honest cùng panel Evidence | dis+BE | C | BR-EX-34 §R1 |
+| Evidence equity IS/OOS/holdout, window roles, no smoothing | C | **chart thật từ smoke khai báo** (`R1EvidenceSmoke` — 3 role series, boundary, max DD rule-6, trục năm) | impl+BE | C+I | BR-EX-67 (2026-08-30) — BR-EX-34 đã closed không kèm series này |
+| WFO stability per-fold + threshold + fold min | C | **BarsChart 12 fold + threshold 1.0 + fold 6 highlight**, smoke khai báo | impl+BE | C+I | BR-EX-67; 2026-08-30 |
 | Known limitations & restrictions & waiver | T→D | **bảng 4 loại + expiry** (fixture); route product "not published" | impl+BE | C | BR-EX-37 |
 | Structured condition (typed, owner/expiry/blocking) | N | conditionWire 5 trường | impl | C | |
-| Request changes | N | **verb chưa có backend** | dis+BE | C | disabled + title trỏ BR-EX-36 |
+| Request changes | N | **verb thật** — N09 publish `can_request_changes` + `REQUEST_CHANGES`; enable khi server cấp + reason ≥8 ký tự | impl | C+I | 2026-08-30; lý do BR-EX-36 cũ gỡ |
 | Reject / Approve / Approve-with-conditions + quorum 1/2 | N | có, CSRF + immutable | impl | C | |
 | Evidence digest + decision immutable | N | có | impl | C | |
 
@@ -2174,7 +2174,10 @@ nav trỏ 404.
 | Capital change preview before/after mono | N | bảng delta + **1 chip PLAN PREVIEW + elevation** | impl | C | V2-05 ✓ — không còn inverted surface |
 | Observation policy + no auto-promote | T | có | impl | C | |
 | approve = grants authorization only | T | có đúng chữ | impl | C | T hợp lệ — đây là câu ngăn hiểu lầm nguy hiểm |
-| Request changes / conditions / quorum | N | như R1 | dis+BE / impl | C | |
+| Request changes / conditions / quorum | N | như R1 — verb thật 2026-08-30 | impl | C+I | |
+| **Gate criteria — policy vs evidence** (hi-fi owner 2026-08-30, mới vs corpus) | N | bảng 5 dòng + policy chip `gate_r2 rev 7` + footer 4·1·0 + evidence links — smoke khai báo | impl+BE | C+I | BR-EX-67; verdict server-side |
+| **Stage eligibility chips** (hi-fi owner 2026-08-30, mới) | N | PAPER eligible · SANDBOX/CANARY needs + câu giải thích — smoke | impl+BE | C+I | BR-EX-67 |
+| Portfolio fit đầy đủ (weight bar + 4 rows + note estimates) | N | panel trong Readiness — smoke khai báo | impl+BE | C+I | BR-EX-67 |
 
 ### L4 · HiFi Paper Exit Review (WF 4b)
 

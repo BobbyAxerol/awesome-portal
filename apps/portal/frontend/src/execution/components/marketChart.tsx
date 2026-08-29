@@ -167,7 +167,7 @@ export function LinesChart({
   bands?: readonly { from: string; to: string; label?: string; tone?: ChartTone }[];
   zeroLine?: { label: string };
   /** Dashed vertical markers — a stage boundary, a session cut. */
-  verticalLines?: readonly { t: string; label: string; tone: ChartTone }[];
+  verticalLines?: readonly { t: string; label: string; tone: ChartTone; position?: "insideEndTop" | "end" }[];
   /** A horizontal policy line — a correlation threshold, a limit. */
   thresholdLine?: { y: number; label: string; tone: ChartTone };
   annotation?: { t: string; v: number; label: string; tone: ChartTone };
@@ -229,7 +229,7 @@ export function LinesChart({
                   ...(verticalLines ?? []).map((v) => ({
                     xAxis: v.t,
                     lineStyle: { color: toneColor(v.tone), type: "dashed" as const },
-                    label: { formatter: v.label, color: toneColor(v.tone), position: "insideEndTop" as const },
+                    label: { formatter: v.label, color: toneColor(v.tone), position: v.position ?? ("insideEndTop" as const) },
                   })),
                   ...(thresholdLine
                     ? [{
@@ -266,6 +266,9 @@ export function LinesChart({
         const first = series[0]?.points[0]?.[0]; const last = series[0]?.points[series[0].points.length - 1]?.[0];
         const spanDays = first && last ? (Number(new Date(last)) - Number(new Date(first))) / 86_400_000 : 99;
         const d = new Date(v);
+        // A multi-year span labels years; MM-DD across seven years printed
+        // "01-01" twelve times and called it an axis.
+        if (spanDays > 400) return String(d.getUTCFullYear());
         return spanDays <= 5
           ? `${d.toISOString().slice(5, 10)} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
           : d.toISOString().slice(5, 10);
@@ -296,12 +299,18 @@ export function BarsChart({
   points,
   height = 160,
   yFormatter,
+  thresholdLine,
+  highlight,
   provenance,
   ariaLabel,
 }: {
   points: readonly (readonly [string, number])[];
   height?: number;
   yFormatter?: (v: number) => string;
+  /** A horizontal policy line — a fold threshold, a floor. */
+  thresholdLine?: { y: number; label: string; tone: ChartTone };
+  /** One bar called out — the worst fold, the breach. Label printed under it. */
+  highlight?: { index: number; label: string; tone: ChartTone };
   provenance: { authority: string; asOf: string; formula: string };
   ariaLabel: string;
 }) {
@@ -312,7 +321,7 @@ export function BarsChart({
       legend: { show: false },
       dataZoom: [],
       grid: { left: 8, right: 56, top: 12, bottom: 24, containLabel: true },
-      xAxis: { type: "category", data: points.map((p) => p[0]), axisLabel: { interval: Math.max(0, Math.ceil(points.length / 7) - 1) } },
+      xAxis: { type: "category", data: points.map((p) => p[0]), axisLabel: { interval: Math.max(0, Math.ceil(points.length / 6) - 1), hideOverlap: true, fontSize: 9 } },
       yAxis: { position: "right", ...(yFormatter ? { axisLabel: { formatter: (v: number) => yFormatter(v) } } : {}) },
       tooltip: {
         formatter: (params) => {
@@ -322,11 +331,37 @@ export function BarsChart({
       },
       series: [{
         type: "bar",
-        data: points.map((p) => ({ value: p[1], itemStyle: { color: withAlpha(p[1] >= 0 ? good : bad, 0.75) } })),
+        data: points.map((p, i) => {
+          const hl = highlight && highlight.index === i;
+          const base = hl ? toneColor(highlight.tone) : p[1] >= 0 ? good : bad;
+          return {
+            value: p[1],
+            itemStyle: hl
+              ? { color: withAlpha(base, 0.25), borderColor: base, borderWidth: 1.5 }
+              : { color: withAlpha(base, 0.75) },
+            ...(hl
+              ? { label: { show: true, position: "top" as const, color: base, fontSize: 10, fontFamily: "JetBrains Mono, monospace", formatter: () => highlight.label } }
+              : {}),
+          };
+        }),
         barWidth: "62%",
+        ...(thresholdLine
+          ? {
+              markLine: {
+                silent: true, symbol: "none",
+                lineStyle: { color: toneColor(thresholdLine.tone), type: "dashed" as const },
+                label: {
+                  color: toneColor(thresholdLine.tone), fontSize: 9, formatter: thresholdLine.label,
+                  position: "insideStartTop" as const,
+                  backgroundColor: chartTokens().paperRaised, padding: [1, 4],
+                },
+                data: [{ yAxis: thresholdLine.y }],
+              },
+            }
+          : {}),
       }],
     });
-  }, [points, yFormatter, provenance]);
+  }, [points, yFormatter, thresholdLine, highlight, provenance]);
   return (
     <figure className="exec-mc" role="img" aria-label={ariaLabel}>
       <EChart option={option} height={height} />

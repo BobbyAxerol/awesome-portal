@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { GateR1Review, REQUEST_CHANGES_REASON } from "./screens/GateR1Review";
+import { GateR1Review, REQUEST_CHANGES_NOTE_REASON } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
 import { ApprovalInbox, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
 import { ApprovalInboxContainer } from "./screens/containers";
@@ -98,9 +98,10 @@ describe.each(ROLES)("role matrix · %s", (role) => {
     if (!canApprove) expect(within(bar).getAllByText(/blocked|expired|did not grant|prohibited/i).length).toBeGreaterThan(0);
     if (role === "creator") expect(screen.getByText("SoD VIOLATION")).toBeTruthy();
     else expect(screen.getByText("SoD OK")).toBeTruthy();
-    // Request changes is disabled for every role: no verb is published.
+    // Request changes stays locked here: either the server has not granted the
+    // verb for this role, or no reason has been written yet — never silently.
     expect(screen.getByRole("button", { name: "Request changes" })).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "Request changes" }).getAttribute("title")).toBe(REQUEST_CHANGES_REASON);
+    expect(screen.getByRole("button", { name: "Request changes" }).getAttribute("title")).toMatch(/Request changes/);
   });
   it("Gate R2 follows the same matrix", () => {
     r2(r2Over(role));
@@ -108,7 +109,7 @@ describe.each(ROLES)("role matrix · %s", (role) => {
     const canDeny = role === "reviewer" || role === "creator";
     expect(approve()).toHaveProperty("disabled", !canApprove);
     expect(deny()).toHaveProperty("disabled", !canDeny);
-    expect(screen.getByRole("button", { name: "Request changes" }).getAttribute("title")).toContain("BR-EX-36");
+    expect(screen.getByRole("button", { name: "Request changes" }).getAttribute("title")).toMatch(/Request changes/);
   });
 });
 
@@ -148,11 +149,37 @@ describe("Gate R1 tabs carry what the canvas used to stack", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Limitations/ }));
     expect(screen.getByText(/No limitations, restrictions or waivers were published/)).toBeTruthy();
   });
-  it("says the research evidence series is not published rather than drawing an empty frame", () => {
-    const { container } = r1();
+  it("draws the evidence slot as declared smoke charts, labeled — never an unlabeled frame", () => {
+    r1();
     fireEvent.click(screen.getByRole("tab", { name: /Evidence/ }));
-    expect(screen.getByText(/not published for this approval — BR-EX-34/)).toBeTruthy();
-    expect(container.querySelector("canvas")).toBeNull();
+    expect(screen.getAllByText(/reference shape for BR-EX-67/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByLabelText("Equity across window roles")).toBeTruthy();
+  });
+});
+
+describe("Gate R2 — criteria, fit and stage eligibility (smoke frames)", () => {
+  it("renders the gate-criteria table with server-worded verdicts and the policy chip", () => {
+    r2({});
+    fireEvent.click(screen.getByRole("tab", { name: /Gate criteria/ }));
+    expect(screen.getByText("gate_r2 rev 7 · effective 2026-07-01 · declared by Risk admin")).toBeTruthy();
+    expect(screen.getAllByText("✓ PASS")).toHaveLength(4);
+    expect(screen.getByText(/! WAIVERABLE/)).toBeTruthy();
+    expect(screen.getByText(/4 PASS · 1 WAIVERABLE · 0 FAIL/)).toBeTruthy();
+  });
+  it("derives stage chips from gate policies and says so", () => {
+    r2({});
+    fireEvent.click(screen.getByRole("tab", { name: /Gate criteria/ }));
+    const chips = screen.getByRole("group", { name: /Stage eligibility/ });
+    expect(within(chips).getByText(/PAPER — eligible now/)).toBeTruthy();
+    expect(within(chips).getByText(/SANDBOX — needs obs/)).toBeTruthy();
+    expect(within(chips).getByText(/CANARY — needs sandbox cert/)).toBeTruthy();
+  });
+  it("opens Readiness with the portfolio-fit panel, labeled as research estimates", () => {
+    r2({});
+    fireEvent.click(screen.getByRole("tab", { name: /Readiness/ }));
+    expect(screen.getByText("target capital weight")).toBeTruthy();
+    expect(screen.getByText("8.0%")).toBeTruthy();
+    expect(screen.getByText(/Paper observation will replace them with measured values/)).toBeTruthy();
   });
 });
 
@@ -249,6 +276,28 @@ describe("Approval Inbox rail and strip", () => {
     expect(within(table).queryByText(/blockers/)).toBeNull();
   });
 
+  it("Request changes enables only when the server grants the verb and a reason is written", () => {
+    const onRequestChanges = vi.fn();
+    r1({ eligibility: { ...ALL, canRequestChanges: true }, note: "", onRequestChanges });
+    const btn = () => screen.getByRole("button", { name: "Request changes" });
+    expect(btn()).toHaveProperty("disabled", true);
+    expect(btn().getAttribute("title")).toBe(REQUEST_CHANGES_NOTE_REASON);
+    cleanup();
+    r1({ eligibility: { ...ALL, canRequestChanges: true }, note: "holdout coverage is too thin", onRequestChanges });
+    expect(btn()).toHaveProperty("disabled", false);
+    fireEvent.click(btn());
+    expect(onRequestChanges).toHaveBeenCalled();
+  });
+
+  it("draws the R1 evidence smoke charts with their SMOKE notes when no series is published", () => {
+    r1({});
+    fireEvent.click(screen.getByRole("tab", { name: /Evidence/ }));
+    expect(screen.getByLabelText("Equity across window roles")).toBeTruthy();
+    expect(screen.getByLabelText("WFO stability — Sharpe per fold")).toBeTruthy();
+    expect(screen.getAllByText(/SMOKE DATA/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/window roles fixed by claim clm_31/)).toBeTruthy();
+  });
+
   it("loads the canonical approval-history fixture through the decided-row reader", () => {
     const fixture = JSON.parse(
       readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../../../../packages/contracts/fixtures/execution-governance.approval-history.valid.json"), "utf8"),
@@ -281,6 +330,8 @@ describe("zero fabricated write path", () => {
     const verbs = new Set(src.match(/api\.(\w+)\(/g)?.map((m) => m.slice(4, -1)));
     const writes = [...verbs].filter((v) => /^(plan|apply|decide|request|approve|deny|post|put|delete)/i.test(v));
     expect(writes.sort()).toEqual(["applyPlan", "planDecision"]);
-    expect(src).not.toMatch(/REQUEST_CHANGES/);
+    // REQUEST_CHANGES is a published verb since N09 (governance-approval-workflow
+    // schema); containers may send it, and only through planDecision.
+    expect(src.match(/decide\("REQUEST_CHANGES"|run\("REQUEST_CHANGES"/g)?.length).toBe(2);
   });
 });

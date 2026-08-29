@@ -1557,3 +1557,30 @@ không phải pixel authority. Đã đủ minimum acceptance của §11.6:
 - Tests 1718 pass; probe screenshot soi bằng mắt. R1/R2 là hai màn kế tiếp —
   contract `governance.r1-review` đã publish mà frontend chưa đọc (phát hiện
   của nghi thức §7.8), sẽ nạp ở slice R1.
+
+### 8.31 Gate R1/R2 — pass hi-fi 1a/1b bản owner 2026-08-30 (2026-08-30)
+
+Hi-fi R2 bản chat **mới hơn bản đĩa** (thêm Gate criteria + Stage eligibility).
+Đã làm:
+
+- **R1 Evidence hết honest-state**: `R1EvidenceSmoke` — equity 3 window-role
+  (IS/OOS/holdout, boundary label ngang, annotation max DD đúng giá trị series
+  — rule 6, trục năm 2019–2026) + WFO 12 fold bars (threshold 1.0, fold 6
+  highlight). `LinesChart` thêm formatter năm cho span >400d + `position` cho
+  verticalLines; `BarsChart` thêm `thresholdLine`/`highlight`. Checklist mang
+  chip `gate_r1 rev 4` (smoke).
+- **R2 thêm tab Gate criteria** (bảng policy-vs-evidence 5 dòng, verdict
+  server-worded PASS/WAIVERABLE, footer 4·1·0, policy chip `gate_r2 rev 7`) +
+  **Stage eligibility chips** (PAPER eligible · SANDBOX/CANARY needs) +
+  **Portfolio fit panel** trong Readiness (weight bar 8.0%, corr est,
+  marginal risk, diversification, symbol overlap). Tất cả smoke có nhãn.
+- **Request changes hết disabled-stale**: N09 đã publish verb
+  (`can_request_changes` + `REQUEST_CHANGES` trong decision enum) — eligibility
+  reader/port/containers nối verb thật; nút enable khi server cấp + đã viết
+  reason (≥8 ký tự, sàn của schema); lý do BR-EX-36 cũ gỡ bỏ.
+- Data không publish → smoke `governance.smoke.ts` (deletion contract) và
+  **BR-EX-67** đã file (plan §7.2 + §7.9, commit `bef4a58`): additive fields
+  trên `governance.r1-review.v1`/`r2-review.v1`, verdict server-side, policy
+  data không bao giờ là UI constant. Mirror row trong file này.
+- Link chuẩn: inbox → R1/R2 (id cell + row), R2 → R1 (`open AP-101` +
+  R1 reference tab), breadcrumb Governance/Approvals.

@@ -21,6 +21,8 @@ import {
   type TypedCondition,
 } from "../components/conditions";
 import { ExecutionDecisionBar } from "../components/decisionBar";
+import { BarsChart, LinesChart } from "../components/marketChart";
+import { GOV_CHARTS } from "../governance.smoke";
 import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence";
 import { PanelState } from "../components/states";
 import { ExecutionSectionTitle } from "../components/typography";
@@ -68,8 +70,11 @@ const DENY_LOCK_REASON: Record<"EXPIRED" | "NOT_ELIGIBLE", string> = {
   EXPIRED: "Deny blocked — this request expired. There is nothing live to refuse.",
   NOT_ELIGIBLE: "Deny blocked — you do not hold a role that can decide this gate.",
 };
-export const REQUEST_CHANGES_REASON =
-  "Request changes — no decision verb is published for it (BR-EX-36).";
+/** The decision schema's floor: every verb, REQUEST_CHANGES included, needs a reason. */
+export const REQUEST_CHANGES_NOTE_REASON =
+  "Request changes needs a reason — write it in the reviewer note first (the decision schema requires one, min 8 characters).";
+export const REQUEST_CHANGES_DENIED_REASON =
+  "Request changes — the server did not grant this verb for this actor.";
 
 const R1_TABS = ["Checklist", "Passport", "Evidence", "Limitations", "Conditions"] as const;
 type R1Tab = (typeof R1_TABS)[number];
@@ -113,6 +118,7 @@ export function GateR1Review({
   onApprove,
   onDeny,
   onRequestCondition,
+  onRequestChanges,
   onCopyProvenance,
 }: {
   approvalId: ApprovalId;
@@ -130,7 +136,7 @@ export function GateR1Review({
   checklist: readonly ChecklistItem[];
   limitations?: readonly LimitationRow[] | null;
   locks?: readonly DecisionLock[];
-  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean };
+  eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean; canRequestChanges?: boolean };
   status?: PanelStatus;
   reason?: string;
   partialReason?: string;
@@ -147,6 +153,7 @@ export function GateR1Review({
   onApprove?: () => void;
   onDeny?: () => void;
   onRequestCondition: () => void;
+  onRequestChanges?: () => void;
   onCopyProvenance: (full: string) => void;
 }) {
   const [draft, setDraft] = useState<ConditionDraft>(EMPTY_DRAFT);
@@ -178,6 +185,9 @@ export function GateR1Review({
   const serverAllowsApprove = eligibility?.canApprove === true;
   const serverAllowsCondition = eligibility?.canApproveWithCondition === true;
   const serverAllowsDeny = eligibility?.canDeny === true;
+  const serverAllowsRequestChanges = eligibility?.canRequestChanges === true;
+  const noteReady = (note ?? "").trim().length >= 8;
+  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges;
   const approveLocked = locked || !serverAllowsApprove;
   const conditionLocked = locked || !serverAllowsCondition;
   const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
@@ -299,7 +309,11 @@ export function GateR1Review({
         >
           {tab === "Checklist" ? (
             <div className="exec-gate-panel">
-              <ExecutionSectionTitle>Decision checklist — policy {policyVersion}</ExecutionSectionTitle>
+              <div className="exec-gate-panelhead">
+                <ExecutionSectionTitle>Decision checklist — policy {policyVersion}</ExecutionSectionTitle>
+                {/* SMOKE until BR-EX-67 publishes the gate-policy reference. */}
+                <span className="exec-gate-policychip" title="SMOKE — the versioned gate policy reference ships with BR-EX-67">{GOV_CHARTS.r1Policy}</span>
+              </div>
               <EvidencePanel rows={asEvidenceRows(checklist)} />
             </div>
           ) : null}
@@ -340,12 +354,7 @@ export function GateR1Review({
           {tab === "Evidence" ? (
             <div className="exec-gate-panel">
               <ExecutionSectionTitle>Evidence — IS / OOS / holdout equity · WFO stability</ExecutionSectionTitle>
-              {evidence ?? (
-                <PanelState
-                  status="unavailable"
-                  reason="Research evidence series (IS/OOS/holdout equity, WFO folds) not published for this approval — BR-EX-34 §R1. The checklist marks above are the server's; the chart is not a precondition for them."
-                />
-              )}
+              {evidence ?? <R1EvidenceSmoke />}
             </div>
           ) : null}
           {tab === "Limitations" ? (
@@ -409,7 +418,19 @@ export function GateR1Review({
           actions={
             isDecided ? null : (
               <>
-                <button type="button" className="exec-role-control exec-btn-ghost" disabled title={REQUEST_CHANGES_REASON}>
+                <button
+                  type="button"
+                  className="exec-role-control exec-btn-ghost"
+                  disabled={requestChangesLocked}
+                  title={
+                    !serverAllowsRequestChanges || !onRequestChanges
+                      ? REQUEST_CHANGES_DENIED_REASON
+                      : !noteReady
+                        ? REQUEST_CHANGES_NOTE_REASON
+                        : undefined
+                  }
+                  onClick={onRequestChanges}
+                >
                   Request changes
                 </button>
                 <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
@@ -433,5 +454,44 @@ export function GateR1Review({
         />
       </ExecutionWorkspace>
     </section>
+  );
+}
+
+/**
+ * The hi-fi's two evidence charts, drawn from declared smoke until BR-EX-67
+ * publishes `evidence_series` on `governance.r1-review.v1`. The checklist
+ * marks above them are the server's; these frames are layout-true references.
+ */
+export function R1EvidenceSmoke() {
+  return (
+    <div className="exec-grid-2" data-ratio="1.5">
+      <section className="exec-chart-tile" aria-label="Equity across window roles">
+        <h3 className="exec-section-title">Equity across window roles</h3>
+        <p className="exec-gate-rolelegend" aria-hidden="true"><span data-tone="mute">— IS</span><span data-tone="accent">— Outer OOS</span><span data-tone="warn">— holdout</span></p>
+        <LinesChart
+          height={230}
+          series={GOV_CHARTS.r1Equity.series}
+          verticalLines={GOV_CHARTS.r1Equity.boundaries}
+          annotation={GOV_CHARTS.r1Equity.maxDd}
+          yFormatter={(v) => v.toFixed(1)}
+          provenance={{ authority: "RESEARCH", asOf: "run_5512", formula: "window roles fixed by claim clm_31" }}
+          ariaLabel="Equity across in-sample, outer out-of-sample and holdout windows"
+        />
+        <p className="exec-af-smoke">! SMOKE DATA — {GOV_CHARTS.r1Equity.foot} · reference shape for BR-EX-67 evidence_series. Delete when BR-EX-67 ships</p>
+      </section>
+      <section className="exec-chart-tile" aria-label="WFO stability — Sharpe per fold">
+        <h3 className="exec-section-title">WFO stability — Sharpe per fold</h3>
+        <BarsChart
+          height={230}
+          points={GOV_CHARTS.wfo.folds}
+          thresholdLine={{ y: GOV_CHARTS.wfo.threshold, label: `threshold ${GOV_CHARTS.wfo.threshold.toFixed(1)}`, tone: "mute" }}
+          highlight={{ index: GOV_CHARTS.wfo.worst.index, label: GOV_CHARTS.wfo.worst.label, tone: "warn" }}
+          yFormatter={(v) => v.toFixed(2)}
+          provenance={{ authority: "RESEARCH", asOf: "run_5512", formula: "wfo_stability.v1" }}
+          ariaLabel="Walk-forward Sharpe per fold against the stability threshold"
+        />
+        <p className="exec-af-smoke">! SMOKE DATA — {GOV_CHARTS.wfo.foot} · reference shape for BR-EX-67 evidence_series. Delete when BR-EX-67 ships</p>
+      </section>
+    </div>
   );
 }

@@ -198,6 +198,7 @@ const R1_DETAIL: Record<string, unknown> = {
     can_approve: true,
     can_approve_with_condition: true,
     can_deny: true,
+    can_request_changes: true,
     locks: [],
   },
   decisions: [],
@@ -260,7 +261,7 @@ const R2_DETAIL: Record<string, unknown> = {
     decided_by: "Minh",
     decided_at: "2026-07-30",
   },
-  eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true, locks: [] },
+  eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true, can_request_changes: true, locks: [] },
   grant_name: "paper_activation_authorization",
   readiness: [
     {

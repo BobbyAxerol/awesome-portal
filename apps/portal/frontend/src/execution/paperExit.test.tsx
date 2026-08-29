@@ -23,6 +23,7 @@ const ALL = {
   canApprove: true,
   canApproveWithCondition: true,
   canDeny: true,
+  canRequestChanges: true,
   canExtendObservation: true,
   canReject: true,
   separationOfDuties: "OK" as const,
