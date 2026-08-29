@@ -251,7 +251,7 @@
   "route": "/governance/approvals",
   "index": 0,
   "tag": "BUTTON",
-  "text": "Inbox",
+  "text": "Mine (3)",
   "verdict": "skipped:selected"
  },
  {
@@ -272,7 +272,7 @@
   "route": "/governance/approvals",
   "index": 3,
   "tag": "BUTTON",
-  "text": "Capital · R2",
+  "text": "Ops · R2",
   "verdict": "changed"
  },
  {
@@ -321,12 +321,36 @@
   "route": "/governance/approvals",
   "index": 10,
   "tag": "BUTTON",
-  "text": "Recently decided · last 30 days 2",
+  "text": "Recently decided · last 30 days 3",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
   "index": 11,
+  "tag": "A",
+  "text": "AP-352",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-352/r2"
+ },
+ {
+  "route": "/governance/approvals",
+  "index": 12,
+  "tag": "A",
+  "text": "AP-201",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-201/r1"
+ },
+ {
+  "route": "/governance/approvals",
+  "index": 13,
+  "tag": "A",
+  "text": "EX-771",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/EX-771"
+ },
+ {
+  "route": "/governance/approvals",
+  "index": 14,
   "tag": "BUTTON",
   "text": "Open AP-352",
   "verdict": "navigated",
