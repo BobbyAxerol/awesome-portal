@@ -2676,7 +2676,7 @@ N12 is a separately gated machine annex of the same official owner campaign.
 | seven capability states | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | shared profile/status component pending | `FIXTURE / DARK` | independent PROJECTION/QUERY/SSE/R1/R2/R3/R4 versions and kill switches |
 | immutable plan/evidence repository | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | audit/details disclosure pending | `INACTIVE` | structural signature/hash/revision validation; owner accepted/trusted false |
 | plan/apply/verify API | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | seven-state reader/actions pending | `ROLLBACK_ONLY` | session/workspace/RBAC/CSRF/idempotency/OCC/audit/outbox |
-| owner-backed promotion | `N13B_PENDING_OWNER` | keep unavailable/blocked labels | `INACTIVE` | master owner return + N06 real Paper evidence absent |
+| current-source staged activation | `N13B_REBASELINED_READY_FOR_OWNER_APPROVAL` | keep fixtures honest until each screen source passes | `INACTIVE` | starts with capability-to-source map; no global owner-return blocker |
 
 Backend report:
 [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](../../backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
@@ -2692,25 +2692,26 @@ The only document Bobby should send is
 [`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](../../backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
 It consolidates N02/N03/N06/N11/N12, N15 Event/Artifact rulings and the N13–N17
 operational evidence ladder. Older D4/Claude request files are audit-only;
-component contract directories are machine annexes. Current inspection found
-no further known Trading System feature request after this campaign. Claude
-continues to consume typed unavailable/partial states and must not infer that a
-master request activates a source, screen or command.
+component contract directories are machine annexes. From the 2026-08-29
+rebaseline this campaign is a preferred capability/evidence catalogue, not a
+global Portal blocker. Claude continues to consume typed unavailable/partial
+states and must not infer that a master request activates a source, screen or
+command.
 
 ### N13–N17 A/B execution split
 
 | Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
 |---|---|---|---|
-| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING` |
-| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | after N13B target selection, bind accepted Trading System source/gateway commit/image/config/contracts and run joint release/rollback/forward-fix with exact dual-owner approval | `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
-| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | bind accepted owner bytes and prove real mTLS/JWT routes plus WAN/fault/compatibility/SLO evidence independently | `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING` |
-| N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | accepted N12 R3 protective route, N15B, dedicated command identity and real observed acknowledgement | `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
-| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | bind exact accepted profile and run bounded joint production SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING` |
+| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_REBASELINED_READY_FOR_OWNER_APPROVAL` |
+| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | bind N13B's exact current source/adapter/profile set and run profile-scoped release/rollback/forward-fix | `N14A_COMPLETE_SOURCE_DARK / N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET` |
+| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | accept each current interface/capability independently; absent Event/Artifact does not block unrelated Query | `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP` |
+| N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | map semantically equivalent current primitives under dedicated command identity and prove plan/apply/verify/reconciliation | `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET` |
+| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted capability set and run bounded SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET` |
 
 Rule: Claude and Portal backend may implement/test every A lane without waiting
-for Trading System. No B lane may start from template/candidate/fixture bytes,
-and no A-lane status may remove an unavailable label or enable a source,
-Query/SSE profile or command.
+for Trading System. A B lane uses only bounded authenticated current sources,
+never template/candidate/fixture bytes presented as real. No A-lane status may
+remove an unavailable label or enable a source, Query/SSE profile or command.
 
 ### N14A backend — Portal release authority, source-dark (2026-08-26)
 
@@ -2726,9 +2727,10 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
 
-All A-lane work is complete through N17A. N14B remains parked until the master
-owner return and N13B exact target profile; it must bind owner bytes and run the
-joint release rehearsal, not reinterpret source-dark evidence.
+All A-lane work is complete through N17A. N14B follows N13B's first accepted
+current source/profile set; it must bind exact current source plus Portal
+adapter revisions and run the release rehearsal, not reinterpret source-dark
+evidence.
 
 ### N15A backend — Source-dark four-interface gateway (2026-08-26)
 
@@ -2745,10 +2747,10 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md).
 
-N15B remains parked until accepted exact bytes from the
-single master Trading System owner pack; it then binds each interface and runs
-real mTLS/JWT, WAN/fault/compatibility/rollback/SLO acceptance without treating
-one passing interface as global authority.
+N15B follows N13B's capability-to-source map and N14B candidate. It binds each
+currently available interface independently and runs real mTLS/JWT,
+WAN/fault/compatibility/rollback/SLO acceptance without treating one passing or
+missing interface as global authority.
 
 ### N16A backend — Source-dark routing and emergency policy (2026-08-27)
 
@@ -2769,9 +2771,10 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md`](./CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md).
 
-N16B remains parked until accepted N12 R3 owner bytes, dedicated command
-identity, N15B and an owner change window exist. All A-lane work is complete
-through N17A.
+N16B follows N15B's supported-command classification and still requires a
+dedicated command identity plus owner change window. Existing primitives may be
+adapted only when their semantics and target scope match. All A-lane work is
+complete through N17A.
 
 ### N17A backend — Source-dark production/DR preparation (2026-08-27)
 
@@ -2795,6 +2798,17 @@ Claude handoff:
 [`CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md`](./CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md).
 
 Status is `N17A_COMPLETE_SOURCE_DARK /
-N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING / PRODUCTION_INACTIVE`. No Portal-owned
-A phase remains. When the single master owner return is accepted, resume at
-N13B and proceed in order through N17B.
+N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
+Portal-owned A phase remains. After Bobby approves the 2026-08-29 rebaseline,
+resume at N13B and proceed in order through N17B using current bounded sources.
+
+### N13B–N17B source-as-is rebaseline (2026-08-29)
+
+This tracker follows §3.5 and N13B–N17B of the canonical unified backend plan.
+Manager-v2, current Gateway APIs, current market/data services, Portal control
+facts and versioned Portal derivations may satisfy stable Portal output
+contracts. Each UI field/action is `CONNECTED`,
+`DERIVED_FROM_EXISTING_SOURCE`, `SUPPORTED_BUT_NOT_ACTIVATED` or
+`SOURCE_DOES_NOT_CURRENTLY_EXIST`. Read/command identities and production/Live
+risk approvals remain separate. This update changes planning/status only; no
+runtime, route, source, profile, credential or command was activated.

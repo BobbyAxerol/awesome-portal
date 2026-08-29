@@ -1434,7 +1434,7 @@ activation or the phase):**
   per-capability rollback. Immutable owner references remain structurally valid
   but unaccepted/untrusted. Database constraints keep effective profile
   `fixture`, source/runtime false and kill switches engaged; N13A can apply only
-  a rollback to fixture. Owner import and real promotion remain N13B. See
+  a rollback to fixture. Current-source mapping and real promotion remain N13B. See
   [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
 
 - **N14A Portal release authority (2026-08-26):** an exact six-service
@@ -1448,7 +1448,7 @@ activation or the phase):**
   `portal`, port 8080 and isolated state. Seventeen security/release tests,
   actionlint and a real three-volume PostgreSQL backup/restore/forward-fix
   rehearsal pass. Status is `N14A_COMPLETE_SOURCE_DARK /
-  N14B_OWNER_RELEASE_EVIDENCE_PENDING`; no source/Query/SSE/command flag,
+  N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET`; no source/Query/SSE/command flag,
   AWS-HK or Trading System route changed. See
   [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
@@ -1459,7 +1459,7 @@ activation or the phase):**
   replay/gap/epoch rules, Artifact metadata/reference validation and local
   partition/replay/expiry/schema/source-loss doubles. Component OpenAPI has no
   paths/servers and tests prove `network_attempts=0`. Status is
-  `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+  `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP /
   PRODUCTION_INACTIVE`; no origin, credential, source or runtime changed. See
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
@@ -1472,7 +1472,7 @@ activation or the phase):**
   unmounted Nginx template has no forwarding directive. N12 R3 publication,
   dedicated command identity and every PLAN/APPLY/VERIFY flag remain false;
   R4 resume/scale is structurally forbidden and `network_attempts=0`. Status is
-  `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
+  `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET /
   PRODUCTION_INACTIVE`. See
   [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
 
@@ -1486,9 +1486,22 @@ activation or the phase):**
   deterministic projection rebuild, rotation/compromise, rollback and eight
   complete fault scenarios with external `network_attempts=0`. Production SLO,
   error budget, RPO/RTO and cost remain unclaimed. Status is
-  `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING /
+  `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET /
   PRODUCTION_INACTIVE`. See
   [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
+
+- **N13B–N17B source-as-is rebaseline (2026-08-29):** the master owner return
+  is now a preferred capability/evidence catalogue rather than a global Portal
+  blocker. B phases adapt bounded Manager-v2 relations/projections, current
+  Gateway read/command primitives, current market/data services and
+  Portal-owned control/derivation sources into stable N11/N12/BR screen
+  contracts. Capabilities qualify independently; missing Event/Artifact or
+  ideal one-for-one endpoints cannot block unrelated Query screens. Read and
+  command identities, mutation approval, stable release and Live risk gates
+  remain independent and fail closed. This is a documentation/status decision;
+  no runtime/source/profile/route/credential/command changed. The operative
+  phase detail is §3.5 and N13B–N17B of
+  [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
