@@ -1,0 +1,41 @@
+{
+  "schema_version": "portal.current-source-release-profile.v1",
+  "phase": "N14B",
+  "profile": "PAPER",
+  "environment": "paper",
+  "manager_profile_id": "PAPER_BINANCE_USDM",
+  "delegation_audience": "portal-execution-edge-paper",
+  "screen_ids": [
+    "PAPER_TRADING_SCREEN"
+  ],
+  "capability_ids": [
+    "deployments.positions",
+    "deployments.execution-quality",
+    "sessions.current"
+  ],
+  "source_binding_ids": [
+    "manager.deployments",
+    "manager.performance",
+    "manager.positions",
+    "manager.sessions"
+  ],
+  "candidate_flags": {
+    "control_api_current_source_paper": true,
+    "control_api_current_source_sandbox": false,
+    "control_api_current_source_live": false,
+    "edge_manager_v2_read": true,
+    "edge_source_probes": false,
+    "edge_projection_ingestion": false,
+    "edge_realtime_sse": false,
+    "edge_analytics_query": false,
+    "edge_shadow_query": false,
+    "edge_command_relay": false
+  },
+  "phase_authorization": {
+    "decision": "BOBBY_APPROVED_N14B_IMPLEMENTATION",
+    "scope": "PAPER_CURRENT_SOURCE_RELEASE_COMPATIBILITY",
+    "runtime_deploy_authorized": false,
+    "registry_promotion_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

@@ -103,6 +103,7 @@ required_actions = {
     "Install keyless image signer": "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6",
     "Upload execution D2 publication evidence": "actions/upload-artifact@v7",
     "Upload execution D3 publication evidence": "actions/upload-artifact@v7",
+    "Upload N14B current-source compatibility adjunct": "actions/upload-artifact@v7",
 }
 for name, action in required_actions.items():
     if by_name.get(name, {}).get("uses") != action:
@@ -142,6 +143,16 @@ if d3_verify.count("cosign verify") != 1:
 for boundary in ("--certificate-identity", "--certificate-oidc-issuer", "SOURCE_COMMIT", "SHA256SUMS"):
     if boundary not in d3_verify:
         raise SystemExit(f"D3 publication evidence is missing {boundary}.")
+
+n14_release = by_name.get("Verify all release images and generate N14A candidate", {}).get("run", "")
+for boundary in (
+    "scripts/portal-current-source-release.py generate",
+    "--n14a-pack-dir release/n14a-candidate",
+    "--output-dir release/n14b-current-source",
+    "scripts/portal-current-source-release.py verify",
+):
+    if boundary not in n14_release:
+        raise SystemExit(f"N14B current-source publication binding is missing {boundary}.")
 
 dispatch = document.get("on", document.get(True, {}))
 dispatch = dispatch.get("workflow_dispatch") if isinstance(dispatch, dict) else None

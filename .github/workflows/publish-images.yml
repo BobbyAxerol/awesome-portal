@@ -628,12 +628,28 @@ jobs:
           python3 scripts/portal-release-authority.py verify \
             --mode candidate --pack-dir release/n14a-candidate
 
+          python3 scripts/portal-current-source-release.py generate \
+            --n14a-pack-dir release/n14a-candidate \
+            --output-dir release/n14b-current-source
+          python3 scripts/portal-current-source-release.py verify \
+            --n14a-pack-dir release/n14a-candidate \
+            --pack-dir release/n14b-current-source
+
       - name: Upload N14A source-dark release candidate
         if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.scope == 'all')
         uses: actions/upload-artifact@v7
         with:
           name: portal-release-candidate-${{ github.sha }}
           path: release/n14a-candidate
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload N14B current-source compatibility adjunct
+        if: github.ref == 'refs/heads/main' && (github.event_name != 'workflow_dispatch' || inputs.scope == 'all')
+        uses: actions/upload-artifact@v7
+        with:
+          name: portal-current-source-compatibility-${{ github.sha }}
+          path: release/n14b-current-source
           if-no-files-found: error
           retention-days: 30
 

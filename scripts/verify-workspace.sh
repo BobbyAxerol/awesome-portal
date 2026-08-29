@@ -419,6 +419,12 @@ for required in \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md" \
+  "${ROOT_DIR}/deploy/manifests/current-source-paper-release-profile.v1.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-current-source-release-compatibility.v1.schema.json" \
+  "${ROOT_DIR}/deploy/runbooks/portal-n14b-current-source-release-and-rollback.md" \
+  "${ROOT_DIR}/scripts/portal-current-source-release.py" \
+  "${ROOT_DIR}/scripts/test_portal_current_source_release.py" \
+  "${ROOT_DIR}/scripts/portal-current-source-release-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-intercell-gateway.v1.schema.json" \
@@ -474,6 +480,8 @@ for required in \
   "${ROOT_DIR}/deploy/manifests/release-manifest.template.json" \
   "${ROOT_DIR}/deploy/manifests/release-candidate-evidence.template.json" \
   "${ROOT_DIR}/deploy/manifests/release-owner-decision.template.json" \
+  "${ROOT_DIR}/deploy/manifests/current-source-paper-release-profile.v1.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-current-source-release-compatibility.v1.schema.json" \
   "${ROOT_DIR}/deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md" \
   "${ROOT_DIR}/scripts/portal-release-authority.py" \
   "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
@@ -1154,6 +1162,12 @@ for tracked_source in \
   scripts/portal-release-authority.py \
   scripts/test_portal_release_authority.py \
   scripts/portal-release-authority-test.sh \
+  deploy/manifests/current-source-paper-release-profile.v1.json \
+  deploy/manifests/portal-current-source-release-compatibility.v1.schema.json \
+  deploy/runbooks/portal-n14b-current-source-release-and-rollback.md \
+  scripts/portal-current-source-release.py \
+  scripts/test_portal_current_source_release.py \
+  scripts/portal-current-source-release-test.sh \
   apps/control-api/src/auth/auth.service.ts \
   apps/control-api/src/auth/auth.controller.ts \
   apps/control-api/src/auth/argon.ts \
@@ -1299,6 +1313,7 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-migration-history.sh" \
   "${ROOT_DIR}/scripts/verify-release-channel.sh" \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
+  "${ROOT_DIR}/scripts/portal-current-source-release-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
@@ -1375,6 +1390,8 @@ python3 -m py_compile \
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/portal-release-authority.py" \
   "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/portal-current-source-release.py" \
+  "${ROOT_DIR}/scripts/test_portal_current_source_release.py" \
   "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
   "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
@@ -1393,6 +1410,7 @@ python3 "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" --mode
 python3 "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
 python3 "${ROOT_DIR}/scripts/portal-release-authority.py" verify --mode template
 python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
+python3 "${ROOT_DIR}/scripts/test_portal_current_source_release.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"

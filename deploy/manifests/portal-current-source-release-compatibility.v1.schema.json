@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-current-source-release-compatibility.v1.schema.json",
+  "title": "Portal immutable current-source release compatibility adjunct",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "phase", "decision", "portal_source_commit",
+    "n14a_release_manifest", "source_map", "profile_definition",
+    "adapter_files", "image_bindings", "source_pins", "profile",
+    "candidate_flags", "authority", "rollback"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.current-source-release-compatibility.v1"},
+    "phase": {"const": "N14B"},
+    "decision": {"const": "N14B_COMPATIBLE_NOT_ACTIVATED"},
+    "portal_source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "n14a_release_manifest": {"$ref": "#/$defs/fileDigest"},
+    "source_map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "sha256", "contract_version"],
+      "properties": {
+        "file": {"const": "services/portal-execution-edge-rs/contracts/current-source-v1/capability-source-map.json"},
+        "sha256": {"$ref": "#/$defs/digest"},
+        "contract_version": {"const": "portal.execution.current-source-map.v1"}
+      }
+    },
+    "profile_definition": {"$ref": "#/$defs/fileDigest"},
+    "adapter_files": {
+      "type": "array", "minItems": 10, "uniqueItems": true,
+      "items": {"$ref": "#/$defs/fileDigest"}
+    },
+    "image_bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["control-api", "execution-edge", "source-proxy"],
+      "properties": {
+        "control-api": {"$ref": "#/$defs/image"},
+        "execution-edge": {"$ref": "#/$defs/image"},
+        "source-proxy": {"$ref": "#/$defs/image"}
+      }
+    },
+    "source_pins": {"type": "object"},
+    "profile": {"type": "object"},
+    "candidate_flags": {"type": "object"},
+    "authority": {"type": "object"},
+    "rollback": {"type": "object"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "fileDigest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["file", "sha256"],
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "image": {
+      "type": "object", "additionalProperties": false,
+      "required": ["image", "digest"],
+      "properties": {
+        "image": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]*@sha256:[0-9a-f]{64}$"},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}
