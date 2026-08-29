@@ -353,8 +353,8 @@ test.describe("EL-V2-04 · Paper reference slice", () => {
     if (await cta.isEnabled()) {
       await cta.click();
       await expect(page).toHaveURL(/\/governance\/exit-reviews\/EX-771/);
-      await page.getByRole("tab", { name: /Conditions/ }).click();
-      await expect(page.getByText(/Conditions & recommendation/)).toBeVisible();
+      // Hi-fi 4b: conditions sit on the page, not behind a tab.
+      await expect(page.getByText(/Conditions & recommendation/i).first()).toBeVisible();
       await page.goBack();
       await expect(page).toHaveURL(/\/deployments\/paper\/dep_94\?tab=Evidence/);
     } else {

@@ -363,7 +363,7 @@
   "index": 0,
   "tag": "INPUT",
   "text": "",
-  "verdict": "changed"
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/governance/approvals/AP-201/r1",
@@ -392,7 +392,7 @@
   "index": 1,
   "tag": "INPUT",
   "text": "",
-  "verdict": "changed"
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
@@ -523,40 +523,19 @@
   "route": "/governance/exit-reviews/EX-771",
   "index": 14,
   "tag": "BUTTON",
-  "text": "Evidence 4",
-  "verdict": "skipped:selected"
- },
- {
-  "route": "/governance/exit-reviews/EX-771",
-  "index": 15,
-  "tag": "BUTTON",
-  "text": "Activation plan",
-  "verdict": "changed"
- },
- {
-  "route": "/governance/exit-reviews/EX-771",
-  "index": 16,
-  "tag": "BUTTON",
-  "text": "Conditions 0",
-  "verdict": "changed"
- },
- {
-  "route": "/governance/exit-reviews/EX-771",
-  "index": 17,
-  "tag": "BUTTON",
   "text": "Approve promotion",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 18,
+  "index": 15,
   "tag": "BUTTON",
   "text": "Extend observation +14d",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 19,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Reject — back to Paper HELD",
   "verdict": "changed"
