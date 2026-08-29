@@ -36,8 +36,15 @@ describe("Alpha 360 — no blank frames", () => {
       const hasState = tile.querySelector(".exec-state") !== null || tile.querySelector(".exec-chart-unavailable-body") !== null;
       expect(hasChart || hasState, tile.getAttribute("aria-label") ?? "tile").toBe(true);
     }
-    expect(container.querySelectorAll('[data-state="insufficient_data"]').length).toBe(2);
-    expect(container.querySelectorAll('[data-state="unavailable"]').length).toBe(1);
+    // Tile 5 keeps its honest state; tiles 8 and 10 draw declared smoke frames.
+    expect(container.querySelectorAll('[data-state="insufficient_data"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-state="unavailable"]').length).toBe(0);
+    const density = screen.getByLabelText("8 · Execution density day × hour");
+    expect(density.querySelector("[data-echart]")).toBeTruthy();
+    expect(within(density as HTMLElement).getByText(/SMOKE DATA/)).toBeTruthy();
+    const drift = screen.getByLabelText("10 · Paper vs Live drift");
+    expect(drift.querySelector("[data-echart]")).toBeTruthy();
+    expect(within(drift as HTMLElement).getByText(/SMOKE DATA/)).toBeTruthy();
   });
   it("draws one contribution chart per currency and never mixes FX", () => {
     render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360()} />);

@@ -532,3 +532,63 @@ export function EpisodesChart({
     </figure>
   );
 }
+
+/**
+ * Day × hour activity heatmap — fills per bucket. Cells are [hourIdx, dayIdx,
+ * count]; a null count is an explicit hole (no data ≠ zero fills) and renders
+ * as a gap, never as the zero color.
+ */
+export function DensityHeatmap({
+  days,
+  hours,
+  cells,
+  height = 220,
+  provenance,
+  ariaLabel,
+}: {
+  days: readonly string[];
+  hours: readonly string[];
+  cells: readonly (readonly [number, number, number | null])[];
+  height?: number;
+  provenance: { authority: string; asOf: string; formula: string };
+  ariaLabel: string;
+}) {
+  const option = useMemo<EChartsOption>(() => {
+    const t = chartTokens();
+    const accent = toneColor("accent");
+    const max = cells.reduce((m, c) => (c[2] !== null && c[2] > m ? c[2] : m), 1);
+    return baseOption({
+      legend: { show: false },
+      dataZoom: [],
+      grid: { left: 8, right: 12, top: 8, bottom: 24, containLabel: true },
+      xAxis: { type: "category", data: [...hours], axisLabel: { interval: 3 }, splitLine: { show: false } },
+      yAxis: { type: "category", data: [...days], splitLine: { show: false } },
+      visualMap: {
+        show: false,
+        min: 0,
+        max,
+        inRange: { color: [withAlpha(accent, 0.08), withAlpha(accent, 0.45), accent] },
+      },
+      tooltip: {
+        trigger: "item",
+        formatter: (p) => {
+          const d = p as unknown as { data: [number, number, number | null] };
+          const [h, dy, v] = d.data;
+          return `${days[dy]} ${hours[h]}:00 UTC · ${v === null ? "no data" : `${v} fills`}<br/>${provenanceLines(provenance)}`;
+        },
+      },
+      series: [{
+        type: "heatmap",
+        data: cells.filter((c) => c[2] !== null).map((c) => [c[0], c[1], c[2]]),
+        label: { show: false },
+        itemStyle: { borderColor: t.paperSunken, borderWidth: 1 },
+        emphasis: { itemStyle: { borderColor: t.ink, borderWidth: 1 } },
+      }],
+    });
+  }, [days, hours, cells, provenance]);
+  return (
+    <figure className="exec-mc" role="img" aria-label={ariaLabel}>
+      <EChart option={option} height={height} />
+    </figure>
+  );
+}

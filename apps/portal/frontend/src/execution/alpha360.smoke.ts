@@ -134,3 +134,51 @@ export function alphaStageEquity(): { name: string; tone: "accent" | "warn" | "g
     { name: "Canary", tone: "good", points: walk(21, 11, 0.0014) },
   ];
 }
+
+/**
+ * SMOKE — declared data frames for insight tiles 8 and 10 (Bobby, 2026-08-29:
+ * a tile must never draw undeclared data — when the real series lands it must
+ * be unmistakable which pixels were synthetic). Reference shapes for the
+ * BR-EX-40 typed tile series (`heatmap`, `line`); delete with this file when
+ * BR-EX-40/34 ship.
+ */
+export const TILE_CHARTS = {
+  /** 8 · Execution density day × hour — fills per UTC hour bucket, 7×24. */
+  density: {
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    hours: Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0")),
+    cells: (() => {
+      const out: [number, number, number | null][] = [];
+      for (let d = 0; d < 7; d += 1) {
+        for (let h = 0; h < 24; h += 1) {
+          // Venue quiet window 04–06 UTC is an explicit hole, not zero fills.
+          if (h >= 4 && h < 6) { out.push([h, d, null]); continue; }
+          const base = 6 + 10 * Math.exp(-((h - 14) ** 2) / 18) + (d >= 5 ? -3 : 0);
+          out.push([h, d, Math.max(0, Math.round(base + noise(d * 24 + h, 5) * 3))]);
+        }
+      }
+      return out;
+    })(),
+    foot: "fills per 1h bucket · UTC · 04–06 shown as a hole (no data), never zero",
+  },
+  /** 10 · Paper vs Live drift — same artifact digest, normalized at window start. */
+  drift: {
+    series: (() => {
+      const day = (i: number) => new Date(Date.UTC(2026, 6, 24 + i)).toISOString().slice(0, 10);
+      const walk = (seed: number, drift: number) => {
+        let v = 1;
+        const pts: [string, number][] = [];
+        for (let i = 0; i < 30; i += 1) {
+          pts.push([day(i), Number(v.toFixed(4))]);
+          v *= 1 + drift + noise(i, seed) * 0.004;
+        }
+        return pts;
+      };
+      return [
+        { name: "Paper", tone: "accent" as const, points: walk(13, 0.0012) },
+        { name: "Live", tone: "warn" as const, points: walk(17, 0.0009) },
+      ];
+    })(),
+    foot: "normalized 1.0 at window start · joined by artifact digest · gap paper−live is the drift",
+  },
+};

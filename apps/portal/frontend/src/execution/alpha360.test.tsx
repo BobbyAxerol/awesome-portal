@@ -130,7 +130,7 @@ describe("Alpha 360° — figures that are not known say so", () => {
     expect(okTiles).toHaveLength(9);
     expect(container.querySelectorAll(".exec-equity")).toHaveLength(9);
     expect(screen.getAllByText("Evidence fixture — not a published projection.")).toHaveLength(9);
-    expect(screen.getAllByText(/SMOKE DATA/)).toHaveLength(9);
+    expect(screen.getAllByText(/SMOKE DATA/)).toHaveLength(11);
     // The honest states are untouched by the smoke switch.
     expect(screen.getByText(/DERIBIT has 12 fills in this window/)).toBeTruthy();
   });

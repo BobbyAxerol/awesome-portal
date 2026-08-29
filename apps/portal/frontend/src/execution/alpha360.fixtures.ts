@@ -120,11 +120,15 @@ const HONEST_TILES: InsightTile[] = TILE_TITLES.map((title, i) => ({
  */
 export function withSmokeSeries(tiles: readonly InsightTile[], enabled: boolean): InsightTile[] {
   if (!enabled) return [...tiles];
-  return tiles.map((tile) =>
-    tile.state === "ok" && !tile.series
-      ? { ...tile, series: smokeSeriesFor(tile.index, tile.title), envelope: smokeEnvelope(tile.envelope) }
-      : tile,
-  );
+  return tiles.map((tile) => {
+    if (tile.state === "ok" && !tile.series)
+      return { ...tile, series: smokeSeriesFor(tile.index, tile.title), envelope: smokeEnvelope(tile.envelope) };
+    // Tiles 8 and 10 draw declared smoke frames (TILE_CHARTS) in place of
+    // their honest states — flagged here so the single switch governs them.
+    if (tile.index === 8) return { ...tile, smokeChart: "density" as const };
+    if (tile.index === 10) return { ...tile, smokeChart: "drift" as const };
+    return tile;
+  });
 }
 
 export const TILES: InsightTile[] = withSmokeSeries(HONEST_TILES, ALPHA_INSIGHT_SMOKE);

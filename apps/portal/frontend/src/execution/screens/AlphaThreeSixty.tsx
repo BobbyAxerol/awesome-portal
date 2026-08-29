@@ -40,10 +40,10 @@ import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { TradeReplay } from "../components/TradeReplay";
-import { alphaStageEquity, useAlphaClock } from "../alpha360.smoke";
+import { TILE_CHARTS, alphaStageEquity, useAlphaClock } from "../alpha360.smoke";
 import { EnvelopeCaption, EquityChart, type EquitySeries } from "../components/EquityChart";
 import { ContributionChart } from "../components/ContributionChart";
-import { LinesChart } from "../components/marketChart";
+import { DensityHeatmap, LinesChart } from "../components/marketChart";
 import { ExecutionWorkspace, shortDigest } from "../components/workspace";
 
 /**
@@ -137,6 +137,8 @@ export interface InsightTile {
   body?: ReactNode;
   /** series when the contract publishes one; absent = honest state */
   series?: EquitySeries | null;
+  /** Declared smoke chart standing in for this tile (set only by the smoke switch). */
+  smokeChart?: "density" | "drift";
 }
 
 export interface AlphaThreeSixtyProps {
@@ -670,7 +672,37 @@ function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
   return (
     <div className="exec-alpha-tiles" data-scope-panel="tiles">
       {tiles.map((tile) =>
-        tile.state === "ok" ? (
+        tile.smokeChart === "density" ? (
+          /* Declared smoke in the unavailable slot: the kline shard publishes
+             nothing (the honest reason), so the frame draws TILE_CHARTS.density
+             and says so — undeclared pixels are how real data gets mistrusted. */
+          <section key={tile.index} className="exec-chart-tile" aria-label={`${tile.index} · ${tile.title}`} data-state="ok">
+            <div className="exec-chart-head"><h3 className="exec-section-title">{tile.index} · {tile.title}</h3></div>
+            <DensityHeatmap
+              height={200}
+              days={TILE_CHARTS.density.days}
+              hours={TILE_CHARTS.density.hours}
+              cells={TILE_CHARTS.density.cells}
+              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "execution.v1 (BR-EX-40 heatmap)" }}
+              ariaLabel="Execution density by day and hour, fills per bucket"
+            />
+            <p className="exec-af-smoke">! SMOKE DATA — {TILE_CHARTS.density.foot} · reference shape for the BR-EX-40 heatmap tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
+            <EnvelopeCaption envelope={tile.envelope} compact />
+          </section>
+        ) : tile.smokeChart === "drift" ? (
+          <section key={tile.index} className="exec-chart-tile" aria-label={`${tile.index} · ${tile.title}`} data-state="ok">
+            <div className="exec-chart-head"><h3 className="exec-section-title">{tile.index} · {tile.title}</h3></div>
+            <LinesChart
+              height={200}
+              series={TILE_CHARTS.drift.series}
+              yFormatter={(v) => v.toFixed(3)}
+              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "paper.v1 (BR-EX-40 line pair)" }}
+              ariaLabel="Paper versus live equity on the same artifact digest, normalized at window start"
+            />
+            <p className="exec-af-smoke">! SMOKE DATA — {TILE_CHARTS.drift.foot} · reference shape for the BR-EX-40 line-pair tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
+            <EnvelopeCaption envelope={tile.envelope} compact />
+          </section>
+        ) : tile.state === "ok" ? (
           <EquityChart
             key={tile.index}
             title={`${tile.index} · ${tile.title}`}
