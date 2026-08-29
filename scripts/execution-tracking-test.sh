@@ -63,11 +63,11 @@ do
     fi
 done
 for token in \
-    "N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING" \
-    "N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
-    "N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING" \
-    "N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING" \
-    "N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING"
+    "N13A_COMPLETE_SOURCE_DARK / N13B_REBASELINED_READY_FOR_OWNER_APPROVAL" \
+    "N14A_COMPLETE_SOURCE_DARK / N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET" \
+    "N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP" \
+    "N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET" \
+    "N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
         echo "execution unified plan lost A/B split: ${token}" >&2
@@ -78,6 +78,25 @@ do
         exit 1
     fi
 done
+
+for token in \
+    "Source-as-is compatibility decision" \
+    "CONNECTED" \
+    "DERIVED_FROM_EXISTING_SOURCE" \
+    "SUPPORTED_BUT_NOT_ACTIVATED" \
+    "SOURCE_DOES_NOT_CURRENTLY_EXIST" \
+    "Read and command identities stay separate"
+do
+    if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
+        echo "execution unified plan lost source-as-is invariant: ${token}" >&2
+        exit 1
+    fi
+done
+
+if grep -Fq "Keep N13B–N17B parked until" "${EXECUTION_UNIFIED_PLAN}"; then
+    echo "execution unified plan restored the superseded global owner blocker" >&2
+    exit 1
+fi
 
 for token in \
     "N14A_COMPLETE_SOURCE_DARK" \

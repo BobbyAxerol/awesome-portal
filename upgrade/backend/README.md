@@ -1070,10 +1070,9 @@ durable run/attempt events. Detailed evidence:
   rollback and restart states are canonical contracts for Claude.
 - Database constraints force effective profile `fixture`, source/runtime false,
   owner import false and kill switches engaged. N13A can apply only a rollback
-  to fixture; every promotion is blocked pending the owner master return and
-  N06 real Paper evidence.
+  to fixture; real promotion remains a separately approved N13B operation.
 - Status is `PORTAL_FOUNDATION_COMPLETE / SOURCE_DARK /
-  N13B_OWNER_RETURN_PENDING`. No AWS-HK/Trading System call, registry profile,
+  N13B_REBASELINED_READY_FOR_OWNER_APPROVAL`. No AWS-HK/Trading System call, registry profile,
   network, secret or runtime flag changed. Detail:
   [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
 
@@ -1095,8 +1094,8 @@ durable run/attempt events. Detailed evidence:
 - Evidence is 17/17 release/security tests, actionlint, Compose rendering and a
   real dev/stable/restore PostgreSQL backup/restore/forward-fix rehearsal.
 - Status is `N14A_COMPLETE_SOURCE_DARK /
-  N14B_OWNER_RELEASE_EVIDENCE_PENDING / PRODUCTION_INACTIVE`. N14B must later
-  bind accepted Trading System owner bytes and the N13B target profile; no
+  N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET / PRODUCTION_INACTIVE`. N14B must
+  bind the exact current source/adapter/profile revisions selected by N13B; no
   AWS-HK/source/Query/SSE/command authority changed. Detail:
   [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
@@ -1116,9 +1115,10 @@ durable run/attempt events. Detailed evidence:
 - OpenAPI is component-only with no path/server. The local double records
   `network_attempts=0`; no AWS-HK/Trading System call, listener, credential,
   migration or runtime flag was introduced.
-- Status is `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
-  PRODUCTION_INACTIVE`. N15B later binds the accepted master owner pack and
-  proves all four real interfaces independently. Detail:
+- Status is `N15A_COMPLETE_SOURCE_DARK /
+  N15B_REBASELINED_WAITING_N13B_SOURCE_MAP / PRODUCTION_INACTIVE`. N15B accepts
+  each current interface/capability independently; an absent Event or Artifact
+  publication does not block unrelated Query capability. Detail:
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
 ## Backend state — 2026-08-27 (N16A source-dark emergency routing)
@@ -1132,9 +1132,10 @@ durable run/attempt events. Detailed evidence:
   PLAN/APPLY/VERIFY are false. R4 resume/scale is structurally forbidden.
 - OpenAPI has no paths/servers; the Nginx template has no forwarding directive.
   No Cloudflare/DNS/tunnel/AWS/source/runtime changed and `network_attempts=0`.
-- Status is `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
-  PRODUCTION_INACTIVE`. N16B later binds accepted N12 R3/N15B owner authority
-  and proves observed acknowledgement/reconciliation under a change window.
+- Status is `N16A_COMPLETE_SOURCE_DARK /
+  N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET / PRODUCTION_INACTIVE`. N16B
+  maps only semantically equivalent current command primitives under a separate
+  command identity and proves acknowledgement/reconciliation in a change window.
   Detail:
   [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
 
@@ -1152,7 +1153,22 @@ durable run/attempt events. Detailed evidence:
   logical restore, deterministic projection rebuild, identity rotation/
   compromise, release rollback and eight digest-sealed fault scenarios.
 - Status is `N17A_COMPLETE_SOURCE_DARK /
-  N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING / PRODUCTION_INACTIVE`. No
+  N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
   stable/dev/AWS-HK/Trading System resource changed and every source/command/
   production flag remains false. Detail:
   [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
+
+## Backend decision — 2026-08-29 (N13B–N17B source-as-is rebaseline)
+
+- The canonical unified plan now treats the master owner return as a preferred
+  capability/evidence catalogue, not a global blocker.
+- Manager-v2, current Gateway APIs, current market/data services,
+  Portal-owned control facts and versioned Portal derivations are valid bounded
+  sources behind Rust compatibility adapters and TypeScript narrow APIs.
+- N11 remains the Portal output contract. N13B starts with a machine-readable
+  capability-to-source map and qualifies Paper/Sandbox/Live reads independently;
+  Canary is Portal governance joined to Live facts.
+- Read and command identities remain separate. Mutation, broker authority,
+  production publication and Live risk still require exact independent gates.
+- This decision changes documentation/status only. No runtime, source, profile,
+  route, credential, command or stable deployment changed.

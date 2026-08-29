@@ -251,20 +251,24 @@ N00 tracking/request reconciliation
  |
  +--> N09 control-plane/product gaps (parallel, SGP/offline)
  +--> N10 series/tile analytics contracts (parallel, source-dark)
- +--> N11 external read adapter prep (only after TS contracts publish)
+ +--> N11 external read adapters (published routes or current-source compatibility mappings)
  +--> N12 command relay prep (independent gate; never unlocked by reads)
 
 Portal/source-dark lane (may continue while Trading System works):
 N13A -> N14A -> N15A -> N16A -> N17A
 
-Owner/live lane (requires the master owner return and the matching A exit gate):
+Source-as-is B lane (requires the matching A exit gate and authority only for
+the real boundary being touched):
 N13B -> N14B -> N15B -> N16B -> N17B
 ```
 
 An `A` lane is Portal-owned, source-dark and safe to implement with contracts,
-fixtures, isolated PostgreSQL and offline transport doubles. A `B` lane imports
-owner-published bytes or touches a real inter-cell/runtime boundary. Completing
+fixtures, isolated PostgreSQL and offline transport doubles. A `B` lane binds
+real current sources or touches a real inter-cell/runtime boundary. Completing
 an A lane never implies that its B lane, source, screen or command is active.
+The B lane proceeds capability by capability against the best currently
+published source; it does not wait for a future ideal Trading System contract
+when a bounded, authenticated current source can satisfy the Portal contract.
 
 ### 3.2 What may run now without IAM/network/source activation
 
@@ -275,23 +279,39 @@ an A lane never implies that its B lane, source, screen or command is active.
 - Adapter skeletons for an already published contract, without source credentials or calls.
 - tests for failure, unavailable, gap, retention, replay, restore and rollback.
 
-### 3.3 What must wait for external authority
+### 3.3 What still requires external authority
 
-- N03 Trading System source implementation.
-- N06 live source qualification window.
-- N11 adapters for routes that have not been published.
-- N12 real command relay.
-- any `fixture -> shadow -> paper -> sandbox -> live_canary -> live_full` promotion.
+- runtime credentials, PKI/JWT material and a bounded change window for the
+  exact AWS-HK profile being activated;
+- every Trading System mutation, broker action or risk-increasing command;
+- any source field/capability that genuinely does not exist in the current
+  Manager-v2, Gateway, market/data service or Portal-owned control plane;
+- stable/production publication and Live risk activation, including the exact
+  rollback and final owner decision.
 
-### 3.4 Single official Trading System owner request
+Portal implementation, current-source adapters, read-only Paper/Sandbox/Live
+qualification and per-screen shadow wiring do **not** wait for a global Trading
+System upgrade. A missing ideal N11/N12 route is not itself a blocker when an
+existing bounded source or command primitive has equivalent semantics. The
+adapter must record the mapping and must not invent broader semantics.
+
+### 3.4 Single official Trading System owner request and compatibility catalogue
 
 All known external dependencies are now consolidated in
 [`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](./backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
-It is the only active document to send to the Trading System owner and covers
+It remains the only consolidated document sent to the Trading System owner and covers
 N02/N03 source publication, N06 operational evidence, N11 reads, N12 commands,
 N15 Event/Artifact authority and the N13–N17 promotion/release/emergency/DR
 evidence ladder. Component request directories are machine annexes, not
 separate owner asks. Older D4 and Claude request prose is audit-only.
+
+From the 2026-08-29 rebaseline onward, this owner campaign is a capability and
+evidence catalogue, not a global prerequisite for Portal delivery. Returned
+contracts are preferred when present. Otherwise Portal uses the current
+Manager-v2 relations/projections, current Gateway APIs, current market/data
+services and Portal-owned derivations behind versioned compatibility adapters.
+Future owner publications replace an adapter revision; they do not require a
+Portal screen-contract rewrite.
 
 Current inspection found no additional known Trading System feature request
 after this master campaign. N13–N17 use the same contracts with independently
@@ -312,9 +332,55 @@ hash-verified archive
 The legacy D4 v1 full-snapshot poller was stopped cleanly because it had no
 connected client while refreshing every 500 ms. The canonical Rust Edge,
 Source Proxy and projection PostgreSQL remain healthy and source-dark; all
-seven proxy guard locations still return 503. The owner now implements within
-the single campaign worktree. No older root-level packet or D4 v1 runtime is an
-active instruction/source dependency, and no B-lane activation is implied.
+seven proxy guard locations still return 503. The owner implemented within the
+single campaign worktree. No older root-level packet or D4 v1 runtime is an
+active instruction/source dependency. Real activation still requires the exact
+capability gate below, but an incomplete future-facing owner contract no longer
+parks unrelated current capabilities.
+
+### 3.5 Source-as-is compatibility decision — 2026-08-29
+
+This decision supersedes the former **global** `MASTER_OWNER_RETURN_PENDING`
+interpretation for N13B–N17B. Git history retains the earlier contract-first
+baseline; this section and the rebaselined B phases below are the operative
+plan.
+
+**Current source classes**
+
+1. `MANAGER_V2`: bounded read-only relations/projections for Paper, Sandbox and
+   Live, protected by mTLS and delegated JWT.
+2. `GATEWAY_CURRENT`: existing bounded Trading System read and command
+   primitives for orders, fills, positions, account/portfolio state,
+   reconciliation, halt/resume/reduce/cancel/emergency-close and supported
+   rebalance operations.
+3. `MARKET_DATA_CURRENT`: current realtime market service plus Historical/QDL
+   sources for chart history where their authority is explicit.
+4. `PORTAL_CONTROL`: approval, certification, lifecycle, promotion, audit and
+   operator workflow owned by TypeScript/PostgreSQL in SGP.
+5. `PORTAL_DERIVED`: deterministic server-side analytics computed from one or
+   more current sources with `formula_version`, provenance, freshness and
+   completeness.
+
+N11 schemas remain stable Portal-facing output contracts; they are not required
+to be one-for-one upstream HTTP endpoints. Rust adapters translate current
+source revisions into those contracts, and TypeScript exposes narrow
+screen-oriented APIs. Canary is a Portal governance stage joined to Live-profile
+read facts; Portal must not invent a Trading System `mode=canary`.
+
+Every screen field and action must resolve to exactly one delivery state:
+
+- `CONNECTED` — served directly from a bounded current source;
+- `DERIVED_FROM_EXISTING_SOURCE` — computed server-side with declared formula
+  and provenance;
+- `SUPPORTED_BUT_NOT_ACTIVATED` — source/primitive exists but the exact runtime
+  or command gate is still closed;
+- `SOURCE_DOES_NOT_CURRENTLY_EXIST` — honestly unavailable, never replaced by a
+  fake zero, fixture presented as real, dead button or indefinite `SOON` state.
+
+Read and command identities stay separate. A read-profile success never grants
+mutation authority. Unsupported command target scopes are hidden or returned
+as typed unavailable; Portal does not broaden the semantics of an existing
+primitive.
 
 ---
 
@@ -888,11 +954,13 @@ disabled and never equate HTTP 202 with success.
 ### N13 — Staged product activation
 
 **Mapping:** product phases 4–18; delivery profile ladder.  
-**Status:** `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING`.  
+**Status:** `N13A_COMPLETE_SOURCE_DARK / N13B_REBASELINED_READY_FOR_OWNER_APPROVAL`.  
 **Priority:** P1 after foundations.
 
-N13 requires accepted owner bytes and environment-specific evidence from the
-master campaign; it does not require another Trading System feature request.
+N13 activates only capabilities mapped to current bounded sources. It does not
+require another Trading System feature request or a globally complete owner
+return. Real credentials, runtime changes and mutations remain independently
+gated.
 
 #### N13A — Source-dark staged activation foundation
 
@@ -922,35 +990,55 @@ fixture rollback are implemented. Database constraints keep effective profile
 `fixture`, source/runtime false and kill switches engaged. See
 [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
 
-#### N13B — Owner-backed staged activation
+#### N13B — Current-source staged activation
 
-**Blocked until:** accepted master owner return, N06 Paper evidence and N13A.
+**Ready when:** Bobby approves this rebaselined phase; N13A is already complete.
+The phase starts read-only and requires only the exact credentials/change window
+for the profile being qualified. Commands do not inherit read approval.
 
-- import exact accepted owner bytes and immutable identities;
-- run candidate/acceptance verification and real Paper shadow parity;
-- promote one read-only Paper capability at a time;
-- qualify Paper protective commands, then Sandbox, Live Canary protective,
-  Live Canary risk-increasing and finally Live Full;
-- collect per-step load/fault/auth/audit/restore/rollback evidence;
-- roll back only the failed capability/profile.
+**Goal:** serve the maximum honest Portal experience supported by the current
+Trading System without waiting for future ideal endpoints, while preserving a
+versioned adapter boundary for later upgrades.
+
+- freeze a machine-readable capability-to-source matrix covering every current
+  Execution screen field and action;
+- pin the exact current Trading System commit/service revision, Manager-v2
+  catalogue/profile revision and Portal adapter revision used by each mapping;
+- implement versioned Rust adapters for `MANAGER_V2`, `GATEWAY_CURRENT` and
+  `MARKET_DATA_CURRENT`; keep upstream shapes outside Portal-facing contracts;
+- implement TypeScript narrow screen APIs over the Rust adapters,
+  `PORTAL_CONTROL` and `PORTAL_DERIVED` producers;
+- qualify Paper, Sandbox and Live read profiles independently; represent Canary
+  as Portal promotion/governance joined with Live-profile facts;
+- migrate each screen from fixture to shadow/current source independently and
+  update its registry `data_mode` only after that screen's gate passes;
+- preserve explicit freshness, completeness, provenance and typed
+  unavailable/denied/stale/partial states;
+- collect per-capability load, fault, auth, audit, restart and rollback
+  evidence; roll back only the failed mapping/profile.
 
 **Order**
 
-1. one read-only Paper screen: `fixture -> shadow`;
-2. Paper read profile after shadow/soak/owner acceptance;
-3. Paper protective command subset;
-4. Sandbox certification and bounded smoke;
-5. Canary protective subset with small capital envelope;
-6. Canary scale/risk-increasing subset after separate evidence;
-7. Live Full only after dual approval and rollback rehearsal.
+1. publish the capability-to-source matrix and prove cursor/profile isolation;
+2. Paper read: Manager-v2 plus current orders/fills/positions/performance and
+   market/history sources;
+3. Sandbox read: Manager-v2 plus current reconciliation/account/order facts;
+4. Live read: Manager-v2 plus current positions/orders/fills/broker-sync facts;
+5. Canary read: Portal governance/promotion state joined to Live read facts;
+6. screen-by-screen fixture retirement and honest unavailable cleanup;
+7. only then qualify current protective/risk commands as separate capability
+   slices under N16B.
 
 Each screen and capability promotes independently. There is no global green switch.
 
 **Exit gate per step**
 
-Contract compatibility, auth, source freshness/completeness, load, fault, security, audit, restore,
-rollback, UI honest states and owner approval. A failed gate rolls back only the affected profile/
-capability and preserves operator visibility.
+Source mapping, contract compatibility, auth, profile-bound cursor behavior,
+freshness/completeness, load, fault, security, audit, restart/restore, rollback
+and UI honest states pass for the exact capability. No screen contains a fake
+zero, smoke fixture presented as real, indefinite `SOON` label or enabled dead
+action. A failed gate rolls back only the affected profile/capability and
+preserves operator visibility.
 
 **Claude parallel lane:** run the seven-state, role, breakpoint, accessibility, interaction and visual
 acceptance matrix for the exact promoted screen/profile.
@@ -958,11 +1046,12 @@ acceptance matrix for the exact promoted screen/profile.
 ### N14 — Deployment and release authority
 
 **Mapping:** BAR-17.  
-**Status:** `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING`.  
+**Status:** `N14A_COMPLETE_SOURCE_DARK / N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET`.  
 **Priority:** P2 before formal release.
 
-Trading System contributes immutable compatibility/evidence under the master
-campaign. N14 does not open a new endpoint request.
+N14 releases the exact current capability set accepted by N13B. An existing
+Trading System service/image may be pinned as-is; N14 does not require a new
+owner image or endpoint merely to satisfy an idealized release shape.
 
 #### N14A — Portal release authority, source-dark
 
@@ -987,36 +1076,43 @@ System traffic. The production keyless candidate is emitted only from a
 successful protected-main CI commit. See
 [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
-#### N14B — Joint immutable release compatibility
+#### N14B — Immutable current-source release compatibility
 
-**Blocked until:** accepted owner contracts/images and N13B target profile.
+**Ready after:** N13B accepts at least one exact read capability/profile set.
 
-- bind exact Trading System source/gateway commit, image, config and contract
-  digests into the release compatibility matrix;
-- execute joint preflight, deploy, rollback and forward-fix rehearsal;
-- record owner release approval for the exact environment/capability set.
+- bind the exact current Trading System commit/service revision, deployed image
+  where available, Manager/Gateway/market contract revision, Portal adapter
+  revision and profile config into the release compatibility matrix;
+- package one digest-pinned Portal Edge image with independent Paper, Sandbox
+  and Live profile configuration; do not fork business code per environment;
+- prove SGP dev/stable database, image, route and secret isolation;
+- execute profile-scoped preflight, deploy, rollback and forward-fix rehearsal;
+- record Portal owner approval for the exact environment/capability set and
+  Trading System owner approval only where its runtime/config is changed.
 
-**Combined N14 exit gate:** deploy/rollback rehearsal on isolated state,
-signature verification and owner release approval.
+**Combined N14 exit gate:** compatibility manifest, signature/SBOM evidence,
+isolated-state deploy/rollback/forward-fix rehearsal and exact required owner
+decision pass. No unavailable future upstream feature is added to the release
+set.
 
-**Exact next action for N14B:** after N13B selects one accepted target profile,
-import the owner-published source/gateway commit, image, config and contract
-digests into a new compatibility revision; then run joint preflight,
-deploy/rollback/forward-fix and obtain exact Portal + Trading System owner
-approval. N14A templates/candidates cannot satisfy this gate.
+**Exact next action for N14B:** consume N13B's accepted source map and profile,
+render a new compatibility revision from the current deployed sources plus the
+new Portal adapter, then run the profile-scoped release rehearsal. N14A
+templates/candidates alone cannot satisfy this gate.
 
 ### N15 — Formal inter-cell gateway authority
 
 **Mapping:** BAR-18.  
-**Status:** `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING`.  
+**Status:** `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP`.  
 **Priority:** P2.
 
 **Goal**
 
-Formalize four independent interfaces: Query, Command, Event and Artifact. D1–D4 provide the read
-foundation; commands, production events and artifact exchange require their own contracts/gates.
-All four owner-side publications are already requested by the master campaign:
-N11 Query, N12 Command, N02/N03 Event coverage and the master Artifact ruling.
+Formalize four independent interfaces: Query, Command, Event and Artifact.
+D1–D4 and Manager-v2 provide the read foundation. Each interface is accepted
+independently against current capability; absence of Event or Artifact
+publication does not block an unrelated Query screen. Commands remain on their
+own identity and gate.
 
 #### N15A — Source-dark four-interface gateway contract
 
@@ -1042,28 +1138,46 @@ components and no paths/servers; tests prove `network_attempts=0`, no source
 call and no activation. See
 [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
-#### N15B — Real inter-cell gateway acceptance
+#### N15B — Current-capability inter-cell gateway acceptance
 
-**Blocked until:** accepted N02/N03/N11/N12/N15 owner artifacts and N15A.
+**Ready after:** N13B publishes the exact source map and N14B pins the candidate
+release. No global four-interface owner publication is required.
 
-- wire exact mTLS/JWT identities and owner-published route locations;
-- prove Query, Command, Event and Artifact compatibility independently;
-- run WAN partition, replay, duplicate, out-of-order, expiry, schema-drift,
-  source-loss and rollback tests;
-- publish end-to-end trace/correlation and measured SLO evidence.
+- `Query`: bind Manager-v2 relations/projections and existing Gateway/market
+  reads through bounded Rust adapters into N11 Portal output contracts;
+- `Command`: expose only current primitives with equivalent semantics and exact
+  supported target scope; keep a separate command identity and N16B gate;
+- `Event`: use a published incremental stream when available; otherwise a
+  bounded snapshot-diff feed may be exposed only as
+  `PORTAL_PROJECTION_DELTA`, never mislabeled as an authoritative Trading
+  System event;
+- `Artifact`: accept digest/schema/size-bound references only where a current
+  owner source exists; otherwise return typed unavailable without blocking
+  Query/Command/Event;
+- negotiate and record compatibility per capability/source revision;
+- run WAN partition, retry/no-retry, cursor-profile crossing, replay,
+  duplicate, out-of-order, expiry, schema-drift, source-loss and rollback tests
+  applicable to each accepted interface;
+- publish end-to-end trace/correlation and measured SLO evidence without
+  exposing generic host, PostgreSQL, Redis, CLI or broker authority.
 
-**Exit gate:** version/compatibility negotiation, identities, SLOs, observability, failure semantics,
-rollback and owner matrix exist for all four without generic host/DB/Redis access.
+**Exit gate per interface/capability:** version negotiation, identity,
+bounds, SLO, observability, failure semantics and rollback pass for that exact
+mapping. The overall phase closes when every Portal-required capability is
+classified in one of the four delivery states from §3.5; it does not pretend
+all four upstream interfaces exist.
 
 ### N16 — Same-domain routing and emergency operations
 
 **Mapping:** BAR-19.  
-**Status:** `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING`.  
+**Status:** `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET`.  
 **Priority:** P2.
 
-The Trading System dependency is the existing N12 R3 protective contract plus
-N11 operational facts. Same-domain routing and break-glass ceremony remain
-Portal/Cloudflare work; no hidden second command request is allowed.
+The Trading System dependency is the current supported command primitive set
+plus current operational facts. N12 remains the Portal command/output
+contract; a one-for-one N12 upstream route is preferred but not mandatory when
+an existing primitive has equivalent, narrower semantics. Same-domain routing
+and break-glass ceremony remain Portal/Cloudflare work.
 
 #### N16A — Source-dark routing and emergency policy
 
@@ -1078,29 +1192,41 @@ Portal/Cloudflare work; no hidden second command request is allowed.
 **N16A exit gate:** routing/auth/audit/fixture/failover tests pass against local
 doubles; no public route or Trading System command becomes active.
 
-#### N16B — Real protective-path acceptance
+#### N16B — Current-primitive protective-path acceptance
 
-**Blocked until:** accepted N12 R3 routes, dedicated command identity, N15B and
-an owner change window.
+**Ready after:** N15B classifies the supported command set and a dedicated
+command identity plus owner change window exist. Read identities are forbidden.
 
+- map `halt`, `resume`, `reduce`, bounded cancel-open-orders,
+  emergency-close and supported portfolio rebalance/scale operations to current
+  Trading System primitives;
+- constrain every N12 target type to semantics actually supported by the
+  primitive; hide or return typed unavailable for unsupported target scopes;
+- implement plan → apply → verify, idempotency, terminal reconciliation and
+  partial-failure reporting around multi-step current primitives;
 - exercise same-domain emergency read/protective flow while Research is
   degraded or unavailable;
 - prove observed Trading System acknowledgement and terminal reconciliation;
 - verify stronger access policy, no browser-visible internal hostname/token,
-  immutable audit and rollback;
-- confirm R4 resume/scale cannot inherit the emergency path.
+  immutable audit and capability-scoped rollback;
+- confirm resume/scale/risk-increasing operations cannot inherit the
+  protective break-glass path or approval.
 
-**Combined N16 exit gate:** no emergency path bypasses Trading System authority
-or audit; public/auth/source loss is visibly degraded and recoverable.
+**Combined N16 exit gate:** every enabled command has exact source primitive,
+target scope, authorization, idempotency and reconciliation evidence; no
+emergency path bypasses Trading System authority or audit; public/auth/source
+loss is visibly degraded and recoverable. Unsupported commands remain absent
+or explicitly unavailable, never enabled dead buttons.
 
 ### N17 — Production activation, SLO, DR and owner operations
 
 **Mapping:** BAR-20 + product phase 18.  
-**Status:** `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING`.  
+**Status:** `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET`.  
 **Priority:** final.
 
-Trading System participates in measured SLO, rollback, rotation and game-day
-evidence requested by the master campaign. No new feature route is expected.
+N17 accepts the exact capability set delivered by N13B–N16B, including honest
+unavailable classifications. It does not wait for absent future features, but
+it never promotes an unqualified read or command.
 
 #### N17A — Source-dark production/DR preparation
 
@@ -1114,20 +1240,30 @@ evidence requested by the master campaign. No new feature route is expected.
 **N17A exit gate:** offline/isolated restore, rollback, rotation dry-run and
 evidence validation pass without production activation.
 
-#### N17B — Joint production acceptance
+#### N17B — Exact-set production acceptance
 
-**Blocked until:** N13B–N16B accepted for the exact profile and owner window.
+**Ready after:** N13B–N16B produce an exact read/command/interface capability
+set, release manifest and required owner window.
 
-- activate the approved production capability set only;
-- measure SLO/error budgets and capacity under real bounded traffic;
-- run joint backup/restore, WAN partition, auth/source loss, command
-  containment and rollback game day;
-- record RPO/RTO, rotation and owner/SRE evidence;
-- require Bobby's final exact release sign-off.
+- activate only the approved `CONNECTED`, `DERIVED_FROM_EXISTING_SOURCE` and
+  explicitly approved `SUPPORTED_BUT_NOT_ACTIVATED -> CONNECTED` transitions;
+- keep `SOURCE_DOES_NOT_CURRENTLY_EXIST` honest and non-actionable without
+  failing unrelated product acceptance;
+- measure SLO/error budgets, resource capacity, retention and cost under real
+  bounded traffic for Paper, Sandbox and Live read profiles independently;
+- run backup/restore, WAN partition, auth/source loss, cursor/epoch recovery,
+  command containment and capability-scoped rollback game day;
+- prove a future Trading System contract revision can switch adapters behind
+  unchanged Portal contracts and roll back to the pinned current adapter;
+- record RPO/RTO, rotation, compatibility and owner/SRE evidence;
+- require Bobby's final sign-off for the exact production capability set,
+  especially every Live mutation.
 
-**Combined N17 exit gate:** Bobby signs the exact production acceptance record
-after successful restore, rollback, source-loss, auth-loss and
-command-containment rehearsals.
+**Combined N17 exit gate:** all current Trading System capabilities required by
+the accepted Portal release are served or honestly classified; there are no
+fake-real fixtures, dead actions or unbounded source paths. Bobby signs the
+exact production acceptance record after successful restore, rollback,
+source-loss, auth-loss and command-containment rehearsals.
 
 ---
 
@@ -2130,14 +2266,26 @@ command commit.
 
 All Portal-owned A lanes N13A–N17A are complete:
 
-1. Keep N13B–N17B parked until the single master Trading System owner return is
-   accepted for one exact profile.
-2. Resume in order from **N13B**, never by jumping directly to a later B phase
-   or relabelling source-dark evidence as production acceptance.
+1. Bobby reviews and approves the 2026-08-29 source-as-is rebaseline.
+2. Start **N13B** by publishing the machine-readable capability-to-source map
+   and pinning the current Manager-v2/Gateway/market revisions.
+3. Qualify Paper, Sandbox and Live reads independently; build Canary from
+   Portal governance joined to Live facts. Retire fixtures screen by screen.
+4. Run **N14B** for the first accepted profile/capability set and produce the
+   immutable current-source release manifest.
+5. Run **N15B** per interface/capability. Do not hold Query behind an absent
+   Event/Artifact publication and do not mislabel snapshot deltas as owner
+   events.
+6. Run **N16B** only for current commands whose semantics and target scope can
+   be proved; retain the separate command identity and approval gates.
+7. Run **N17B** against the exact accepted set and obtain Bobby's final Live
+   mutation/release decision.
 
 The exact A result and matching B next action are recorded in every completed
 phase report and the shared `PHASE_TRACKER.md`; completing A never changes a
-source/profile/command flag.
+source/profile/command flag. The B phases still execute in order, but each
+phase accepts current capability independently instead of waiting for a global
+future contract.
 
 ---
 
@@ -2174,6 +2322,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-08-29 | Rebaselined N13B–N17B from global contract-first blocking to source-as-is, capability-by-capability compatibility | documentation/decision only; N13A–N17A evidence preserved; Manager-v2/current Gateway/current market and Portal derivations become valid bounded sources behind versioned adapters; read/command identities and production gates remain separate; no runtime/profile/source/command change |
 | 2026-08-25 | Initial unified plan: current D1–D4 truth, N00–N17, H/A/BR-EX-01…40 and future Claude intake | documentation only; no runtime/profile/source/command change |
 | 2026-08-25 | Claude: §7.2 BR-EX-41…59 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |
 | 2026-08-26 | N09 BR-EX-30/31/32/33/35/36/37/38 closed | Portal contracts/repository/API/codegen complete; registry write policy false; production/source/command inactive |
