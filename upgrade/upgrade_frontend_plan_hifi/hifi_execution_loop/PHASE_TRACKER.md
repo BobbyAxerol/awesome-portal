@@ -2677,7 +2677,7 @@ N12 is a separately gated machine annex of the same official owner campaign.
 | seven capability states | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | shared profile/status component pending | `FIXTURE / DARK` | independent PROJECTION/QUERY/SSE/R1/R2/R3/R4 versions and kill switches |
 | immutable plan/evidence repository | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | audit/details disclosure pending | `INACTIVE` | structural signature/hash/revision validation; owner accepted/trusted false |
 | plan/apply/verify API | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | seven-state reader/actions pending | `ROLLBACK_ONLY` | session/workspace/RBAC/CSRF/idempotency/OCC/audit/outbox |
-| current-source staged activation | `N13B_REBASELINED_READY_FOR_OWNER_APPROVAL` | keep fixtures honest until each screen source passes | `INACTIVE` | starts with capability-to-source map; no global owner-return blocker |
+| current-source staged activation | `N13B_PORTAL_IMPLEMENTATION_ACCEPTED` | typed client/eight honest states may proceed | `PROFILE_FLAGS_OFF_PENDING_N14B` | 4 profiles / 16 sources / 29 capabilities / 20 screens; owner/runtime evidence pinned |
 
 Backend report:
 [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](../../backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
@@ -2703,8 +2703,8 @@ command.
 
 | Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
 |---|---|---|---|
-| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_REBASELINED_READY_FOR_OWNER_APPROVAL` |
-| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | bind N13B's exact current source/adapter/profile set and run profile-scoped release/rollback/forward-fix | `N14A_COMPLETE_SOURCE_DARK / N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET` |
+| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B` |
+| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | bind N13B's exact current source/adapter/profile set and run profile-scoped release/rollback/forward-fix | `N14A_COMPLETE_SOURCE_DARK / N14B_READY_FOR_CURRENT_SOURCE_CANDIDATE` |
 | N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | accept each current interface/capability independently; absent Event/Artifact does not block unrelated Query | `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP` |
 | N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | map semantically equivalent current primitives under dedicated command identity and prove plan/apply/verify/reconciliation | `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET` |
 | N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted capability set and run bounded SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET` |
@@ -2800,8 +2800,10 @@ Claude handoff:
 
 Status is `N17A_COMPLETE_SOURCE_DARK /
 N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
-Portal-owned A phase remains. After Bobby approves the 2026-08-29 rebaseline,
-resume at N13B and proceed in order through N17B using current bounded sources.
+Portal-owned A phase remains. Bobby approved the 2026-08-29 rebaseline and
+N13B's Portal implementation/current-source set is accepted. Resume at N14B
+with the exact bounded Paper candidate; keep every runtime profile flag dark
+until its release gate passes.
 
 ### N13B–N17B source-as-is rebaseline (2026-08-29)
 
@@ -2813,3 +2815,18 @@ contracts. Each UI field/action is `CONNECTED`,
 `SOURCE_DOES_NOT_CURRENTLY_EXIST`. Read/command identities and production/Live
 risk approvals remain separate. This update changes planning/status only; no
 runtime, route, source, profile, credential or command was activated.
+
+### N13B backend — current-source staged activation (2026-08-29)
+
+| Slice | Backend result | Runtime truth | Frontend parallel lane |
+| --- | --- | --- | --- |
+| compatibility map | `ACCEPTED` | 4 profiles / 16 sources / 29 capabilities / 20 screens pinned | consume classifications, not upstream shapes |
+| Rust Edge read boundary | `ACCEPTED` | GET-only, exact screen/source/relation, profile/cursor/catalogue bound | no direct Edge/browser call |
+| TypeScript current-source BFF | `ACCEPTED` | Paper/Sandbox/Live flags independently false; Canary uses Live | add typed same-origin client and honest states |
+| owner evidence | `ACCEPTED_CURRENT_SOURCE` | Paper real loopback qualified; Sandbox rows observed; Live empty | render empty Live without fixture rows |
+| deployment/registry | `N14B_PENDING` | no runtime profile or registry data mode changed | keep current fixture/none mode until screen gate |
+
+Backend report:
+[`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](../../backend/EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N13B_CURRENT_SOURCE_HANDOFF.md`](./CODEX_TO_CLAUDE_N13B_CURRENT_SOURCE_HANDOFF.md).

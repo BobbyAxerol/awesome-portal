@@ -577,6 +577,12 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/execution/current-source.proxy.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-current-source.spec.ts" \
   "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/current-source-v1/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/current-source-v1/capability-source-map.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/current-source-compat/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/current-source-compat/src/lib.rs" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13B_CURRENT_SOURCE_HANDOFF.md" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.service.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/argon.ts" \

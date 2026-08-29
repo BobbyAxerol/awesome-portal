@@ -1594,6 +1594,17 @@ activation or the phase):**
   no runtime/source/profile/route/credential/command changed. The operative
   phase detail is §3.5 and N13B–N17B of
   [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+- **N13B current-source implementation accepted (2026-08-29):** a
+  machine-readable Rust compatibility map now binds 20 Execution screens to
+  exact current Manager-v2/Gateway/market/Portal sources and one of four honest
+  delivery classifications. Rust Edge reads are exact screen/source/relation,
+  profile/cursor bound and GET-only. TypeScript exposes a same-origin BFF with
+  independent Paper/Sandbox/Live mTLS/JWT identities; Canary joins Portal
+  governance to Live facts. Owner publication and real Paper runtime
+  qualification manifests are digest-pinned. No profile runtime, command or
+  registry data mode is active; N14B owns the immutable profile candidate and
+  first screen promotion. See
+  [`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

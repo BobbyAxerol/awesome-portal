@@ -954,7 +954,7 @@ disabled and never equate HTTP 202 with success.
 ### N13 — Staged product activation
 
 **Mapping:** product phases 4–18; delivery profile ladder.  
-**Status:** `N13A_COMPLETE_SOURCE_DARK / N13B_REBASELINED_READY_FOR_OWNER_APPROVAL`.  
+**Status:** `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B`.  
 **Priority:** P1 after foundations.
 
 N13 activates only capabilities mapped to current bounded sources. It does not
@@ -1043,10 +1043,21 @@ preserves operator visibility.
 **Claude parallel lane:** run the seven-state, role, breakpoint, accessibility, interaction and visual
 acceptance matrix for the exact promoted screen/profile.
 
+**Completed 2026-08-29:** N13B now pins the current Trading System/Manager
+source set in a machine-readable Rust contract (4 profiles, 16 sources, 29
+capabilities, 20 screens), exposes exact screen/source/relation reads through
+the private Edge, and provides a session-bound TypeScript BFF with independent
+Paper/Sandbox/Live flags. Canary is a bounded Live-profile join, not a source
+mode. Owner publication and real Paper runtime qualification manifests are
+digest-bound; Sandbox source rows and an honestly empty Live source were
+already proven by the imported Manager-v2 evidence. No runtime flag or registry
+`data_mode` changed. Detail:
+[`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).
+
 ### N14 — Deployment and release authority
 
 **Mapping:** BAR-17.  
-**Status:** `N14A_COMPLETE_SOURCE_DARK / N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET`.  
+**Status:** `N14A_COMPLETE_SOURCE_DARK / N14B_READY_FOR_CURRENT_SOURCE_CANDIDATE`.  
 **Priority:** P2 before formal release.
 
 N14 releases the exact current capability set accepted by N13B. An existing
@@ -2266,19 +2277,18 @@ command commit.
 
 All Portal-owned A lanes N13A–N17A are complete:
 
-1. Bobby reviews and approves the 2026-08-29 source-as-is rebaseline.
-2. Start **N13B** by publishing the machine-readable capability-to-source map
-   and pinning the current Manager-v2/Gateway/market revisions.
-3. Qualify Paper, Sandbox and Live reads independently; build Canary from
-   Portal governance joined to Live facts. Retire fixtures screen by screen.
-4. Run **N14B** for the first accepted profile/capability set and produce the
+1. N13B source-as-is boundary is accepted; retain its runtime/profile flags
+   dark until release authority completes.
+2. Run **N14B** for the first accepted Paper profile/capability set and produce the
    immutable current-source release manifest.
-5. Run **N15B** per interface/capability. Do not hold Query behind an absent
+3. Qualify and promote Paper screens independently, then Sandbox and Live;
+   build Canary from Portal governance joined to Live facts.
+4. Run **N15B** per interface/capability. Do not hold Query behind an absent
    Event/Artifact publication and do not mislabel snapshot deltas as owner
    events.
-6. Run **N16B** only for current commands whose semantics and target scope can
+5. Run **N16B** only for current commands whose semantics and target scope can
    be proved; retain the separate command identity and approval gates.
-7. Run **N17B** against the exact accepted set and obtain Bobby's final Live
+6. Run **N17B** against the exact accepted set and obtain Bobby's final Live
    mutation/release decision.
 
 The exact A result and matching B next action are recorded in every completed
@@ -2323,6 +2333,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Date | Change | Evidence/status effect |
 |---|---|---|
 | 2026-08-29 | Rebaselined N13B–N17B from global contract-first blocking to source-as-is, capability-by-capability compatibility | documentation/decision only; N13A–N17A evidence preserved; Manager-v2/current Gateway/current market and Portal derivations become valid bounded sources behind versioned adapters; read/command identities and production gates remain separate; no runtime/profile/source/command change |
+| 2026-08-29 | Accepted N13B Portal current-source implementation and exact source set | 4 profiles / 16 sources / 29 capabilities / 20 screens; owner publication and real Paper Manager qualification manifests pinned; Rust exact read boundary plus TypeScript multi-profile BFF added; all runtime/profile/command flags and registry data modes remain unchanged pending N14B |
 | 2026-08-25 | Initial unified plan: current D1–D4 truth, N00–N17, H/A/BR-EX-01…40 and future Claude intake | documentation only; no runtime/profile/source/command change |
 | 2026-08-25 | Claude: §7.2 BR-EX-41…59 appended (`RECEIVED`) — hi-fi V2 Command Center 5a / Incident 4d / stage workbenches; schema appendix in `hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md` | documentation only; no runtime/profile/source/command change; codex triages per §7.1 |
 | 2026-08-26 | N09 BR-EX-30/31/32/33/35/36/37/38 closed | Portal contracts/repository/API/codegen complete; registry write policy false; production/source/command inactive |

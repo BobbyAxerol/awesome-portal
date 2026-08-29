@@ -1172,3 +1172,22 @@ durable run/attempt events. Detailed evidence:
   production publication and Live risk still require exact independent gates.
 - This decision changes documentation/status only. No runtime, source, profile,
   route, credential, command or stable deployment changed.
+
+## Backend state — 2026-08-29 (N13B current-source staged activation)
+
+- The canonical current-source map pins 4 profile interpretations, 16 fixed
+  sources, 29 capabilities and 20 screens to the current Manager-v2/Gateway/
+  market/Portal boundary.
+- Rust validates the map and serves exact GET-only screen/source/relation reads
+  with environment/profile/JWT/cursor/catalogue isolation. TypeScript provides
+  the same-origin session BFF with independent Paper/Sandbox/Live configuration;
+  Canary is a Portal-governance join over Live.
+- Owner publication and real Paper runtime qualification manifests are
+  digest-pinned. Sandbox source reachability with rows and Live source
+  reachability with an empty result are retained as honest current evidence.
+- Commands, Gateway market-latest and Historical/QDL adapters remain inactive;
+  venue calendar remains honestly absent. Runtime profile flags and registry
+  data modes remain unchanged until N14B.
+- Status is `N13B_PORTAL_IMPLEMENTATION_ACCEPTED /
+  CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK_PENDING_N14B`. Detail:
+  [`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](./EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).
