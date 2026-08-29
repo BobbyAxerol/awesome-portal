@@ -10,6 +10,7 @@
  * Phase 0 renders the frame and the caption only. ECharts arrives at Phase 18
  * and must keep this caption verbatim.
  */
+import { utcStamp } from "../time";
 import type { ChartEnvelope } from "../contracts";
 import type { ReactNode } from "react";
 
@@ -23,7 +24,7 @@ import type { ReactNode } from "react";
 export function envelopeCaption(envelope: ChartEnvelope): string {
   const parts: string[] = [envelope.window, envelope.interval];
   if (envelope.currency) parts.push(envelope.currency);
-  parts.push(`as_of ${envelope.asOf}`);
+  parts.push(`as_of ${utcStamp(envelope.asOf)}`);
   parts.push(envelope.authority);
   if (envelope.formulaVersion) parts.push(envelope.formulaVersion);
 

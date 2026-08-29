@@ -1659,3 +1659,25 @@ project `chromium-preview`.
   là nói dối); `EX-nn` trong SMOKE note (là số BR-EX, không phải exit
   review); option trong select; masthead tự trỏ mình; caption chart; id có
   anchor tường minh ngay cạnh (vd AP-360 "review →" ở Alpha Fleet).
+
+### 8.35 Hiển thị thời gian: datetime64[ms], neo UTC+0 (owner 2026-08-30)
+
+Owner: ISO thô `as_of 2026-08-22T12:00:20Z` không đọc nổi; đổi mọi instant
+nhìn thấy sang dạng datetime64[ms] và **không map về +7** — nhiều venue
+(crypto UTC, Vietnam ICT) nên lấy một mốc chuẩn UTC+0, người đọc tự map theo
+venue của mình.
+
+- `src/execution/time.ts` — `utcStamp()`: `2026-08-22T12:00:20Z` →
+  `2026-08-22 12:00:20.000 UTC`; giữ ms thật nếu data có; instant **không có
+  offset** (đồng hồ phiên VN) render không gắn nhãn zone — data không khai
+  zone thì UI không bịa; chuỗi không phải ISO (clock ngắn `10:42:10Z`,
+  date-only) pass through nguyên vẹn.
+- Áp tại 6 render site dùng chung: `AuthorityBadge` (badges.tsx — mọi
+  authority meta line), `envelopeCaption` (chart.tsx — caption mọi chart),
+  Command Center as_of, Incident audit/annotation timeline, R2 capital
+  preview as_of, Paper Workbench provenance + "as of" note.
+- Gate mới `e2e/_probe-iso.spec.ts`: crawl 27 route, assert **0** raw ISO
+  nhìn thấy (trước fix: 27 chỗ / 8 route). Clock-only (`clockOf`,
+  `paperClock`) giữ nguyên — chúng đã đọc được và là chữ của hi-fi masthead.
+- Không đổi contract: format hoá chỉ ở render edge, giá trị ISO trong
+  fixture/contract giữ nguyên byte.

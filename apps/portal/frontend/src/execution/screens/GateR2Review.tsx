@@ -8,6 +8,7 @@
  * plan/apply — that sentence stays in the bar because it prevents a dangerous
  * misreading.
  */
+import { utcStamp } from "../time";
 import { Fragment, useState, type ReactNode } from "react";
 import type { ApprovalId, Envelope, PanelStatus, Sla } from "../contracts";
 import { AuthorityBadge, StatusChip } from "../components/badges";
@@ -255,7 +256,7 @@ export function GateR2Review({
         <span className="exec-gov-meta">
           PENDING {quorumMet}/{quorumRequired}
           {slaRemaining !== null ? ` · SLA ${slaRemaining}h remaining` : ""}
-          {capitalEnvelope?.asOf ? ` · preview as_of ${capitalEnvelope.asOf}` : ""}
+          {capitalEnvelope?.asOf ? ` · preview as_of ${utcStamp(capitalEnvelope.asOf)}` : ""}
         </span>
       </div>
       {blockedReason ? (
@@ -368,7 +369,7 @@ export function GateR2Review({
               <span className="exec-gov-paneltitle">Capital change preview — execution vocabulary</span>
               <span className="exec-gov-spacer" />
               <span className="exec-gate-policychip" data-inverse="true">
-                <b>EXECUTION</b> · PLAN PREVIEW{capitalEnvelope?.asOf ? ` · as_of ${capitalEnvelope.asOf}` : ""} · derived, not applied
+                <b>EXECUTION</b> · PLAN PREVIEW{capitalEnvelope?.asOf ? ` · as_of ${utcStamp(capitalEnvelope.asOf)}` : ""} · derived, not applied
               </span>
               {capitalEnvelope ? <AuthorityBadge envelope={capitalEnvelope} /> : null}
             </div>

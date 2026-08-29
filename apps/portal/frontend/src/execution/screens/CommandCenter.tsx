@@ -7,6 +7,7 @@
  * applied here. BUSY and QUIET are two real states: QUIET is "nothing needs
  * you" with the read timestamp, not an empty page.
  */
+import { utcStamp } from "../time";
 import {
   countLabel,
   streamGate,
@@ -399,7 +400,7 @@ export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: Comm
             {streamBadge ? <span className="exec-cc-state" data-tone={streamBadge.tone}>{streamBadge.label}</span> : null}
             <span className="exec-cc-spacer" />
             {smoke ? <span className="exec-cc-beat" aria-hidden="true"><span className="exec-cc-beatfill" /></span> : null}
-            <span className="exec-cc-asof" data-smoke-clock={smoke ? "true" : undefined}>as_of {asOf ?? "not published"} · every row links to its owning screen</span>
+            <span className="exec-cc-asof" data-smoke-clock={smoke ? "true" : undefined}>as_of {asOf ? utcStamp(asOf) : "not published"} · every row links to its owning screen</span>
           </header>
           {streamLine}
           {snapshot.warnings.length > 0 ? (

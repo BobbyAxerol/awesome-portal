@@ -8,6 +8,7 @@
  * is in (Environment). A single "health" badge would be smaller and would
  * destroy the distinction (spec §5.2, guide §6).
  */
+import { utcStamp } from "../time";
 import type {
   Authority,
   BrokerSync,
@@ -66,15 +67,15 @@ export function AuthorityBadge({ envelope }: { envelope: Envelope }) {
   // read time as Trading System authority, so a missing as_of says so instead
   // of quietly borrowing readAt — otherwise a fast read of a two-hour-old row
   // renders as two seconds fresh.
-  const parts: string[] = [envelope.asOf ?? "as_of not published"];
+  const parts: string[] = [envelope.asOf ? utcStamp(envelope.asOf) : "as_of not published"];
   if (age) parts.push(`age ${age}`);
   if (envelope.digest) parts.push(envelope.digest.slice(0, 19) + "…");
   if (envelope.formulaVersion) parts.push(envelope.formulaVersion);
 
   const title = [
     `Authority: ${envelope.authority}`,
-    envelope.asOf ? `as_of ${envelope.asOf} (when the data was true)` : "as_of not published",
-    envelope.readAt ? `read ${envelope.readAt} (connector read time, not authority)` : null,
+    envelope.asOf ? `as_of ${utcStamp(envelope.asOf)} (when the data was true)` : "as_of not published",
+    envelope.readAt ? `read ${utcStamp(envelope.readAt)} (connector read time, not authority)` : null,
     envelope.digest ? `digest ${envelope.digest}` : null,
   ]
     .filter(Boolean)

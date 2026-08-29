@@ -20,6 +20,7 @@
  *      disabling them. A button somebody may never press is a question they
  *      will keep asking.
  */
+import { utcStamp } from "../time";
 import { Fragment, useState, type ReactNode } from "react";
 import { clockOf, corrSeries, paperCandles, paperSmoke, paperVariant, researchBand, untilVnOpen, usePaperTick, vnSessions, PAPER_SMOKE_WARNING } from "../paper.smoke";
 import { CandlesChart, LinesChart } from "../components/marketChart";
@@ -375,7 +376,7 @@ export function PaperWorkbench({
       blockers={blockers}
       freshness={
         <span className="exec-role-meta">
-          {envelope.authority} · as_of {envelope.asOf ?? "—"} ·{" "}
+          {envelope.authority} · as_of {utcStamp(envelope.asOf)} ·{" "}
           {closed ? "PAUSED (venue calendar)" : envelope.freshness}
         </span>
       }
@@ -523,7 +524,7 @@ export function PaperWorkbench({
         {stale ? (
           <div className="exec-paper-stale exec-role-body" role="status">
             <strong>Projection stale.</strong> Values are the last good ones
-            {envelope.asOf ? ` as of ${envelope.asOf}` : null} — no continuity is assumed across
+            {envelope.asOf ? ` as of ${utcStamp(envelope.asOf)}` : null} — no continuity is assumed across
             the gap.
             <details>
               <summary>Where authority sits while stale</summary>
