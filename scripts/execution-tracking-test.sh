@@ -25,6 +25,8 @@ OWNER_MASTER_REQUEST="${ROOT_DIR}/upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTIO
 EXECUTION_UNIFIED_PLAN="${ROOT_DIR}/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
 N14A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md"
 N14A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md"
+N14B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md"
+N14B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14B_CURRENT_SOURCE_RELEASE_HANDOFF.md"
 N15A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md"
 N15A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md"
 N16A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md"
@@ -37,6 +39,8 @@ for required_file in \
     "${EXECUTION_UNIFIED_PLAN}" \
     "${N14A_REPORT}" \
     "${N14A_HANDOFF}" \
+    "${N14B_REPORT}" \
+    "${N14B_HANDOFF}" \
     "${N15A_REPORT}" \
     "${N15A_HANDOFF}" \
     "${N16A_REPORT}" \
@@ -64,8 +68,8 @@ do
 done
 for token in \
     "N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B" \
-    "N14A_COMPLETE_SOURCE_DARK / N14B_READY_FOR_CURRENT_SOURCE_CANDIDATE" \
-    "N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP" \
+    "N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED" \
+    "N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE" \
     "N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET" \
     "N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET"
 do
@@ -101,7 +105,7 @@ fi
 for token in \
     "N14A_COMPLETE_SOURCE_DARK" \
     "PRODUCTION_INACTIVE" \
-    "N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
+    "N14B_COMPATIBILITY_ADJUNCT_ACCEPTED_SEPARATELY" \
     "image@sha256"
 do
     if ! grep -Fq "${token}" "${N14A_REPORT}"; then
@@ -122,6 +126,35 @@ do
 done
 if ! grep -Fq "N14A backend — Portal release authority" "${TRACKER}"; then
     echo "shared tracker lost N14A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N14B_PORTAL_COMPATIBILITY_ACCEPTED" \
+    "PAPER_CANDIDATE_PINNED" \
+    "PROFILE_RUNTIME_NOT_ACTIVATED" \
+    "PAPER_BINANCE_USDM" \
+    "runtime_deployed=false" \
+    "N15B is next"
+do
+    if ! grep -Fq "${token}" "${N14B_REPORT}"; then
+        echo "N14B report lost immutable compatibility invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "PAPER_COMPATIBILITY_ACCEPTED" \
+    "RUNTIME_NOT_ACTIVATED" \
+    "Do not render commit/image/source hashes" \
+    "Do not enable actions"
+do
+    if ! grep -Fq "${token}" "${N14B_HANDOFF}"; then
+        echo "N14B Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N14B backend — immutable current-source release compatibility" "${TRACKER}"; then
+    echo "shared tracker lost N14B closeout section" >&2
     exit 1
 fi
 

@@ -1093,9 +1093,8 @@ durable run/attempt events. Detailed evidence:
   decision authorizes only source-dark Portal deployment.
 - Evidence is 17/17 release/security tests, actionlint, Compose rendering and a
   real dev/stable/restore PostgreSQL backup/restore/forward-fix rehearsal.
-- Status is `N14A_COMPLETE_SOURCE_DARK /
-  N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET / PRODUCTION_INACTIVE`. N14B must
-  bind the exact current source/adapter/profile revisions selected by N13B; no
+- Status is `N14A_COMPLETE_SOURCE_DARK / PRODUCTION_INACTIVE`. N14B separately
+  binds the exact current source/adapter/profile revisions selected by N13B; no
   AWS-HK/source/Query/SSE/command authority changed. Detail:
   [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
@@ -1116,7 +1115,7 @@ durable run/attempt events. Detailed evidence:
   `network_attempts=0`; no AWS-HK/Trading System call, listener, credential,
   migration or runtime flag was introduced.
 - Status is `N15A_COMPLETE_SOURCE_DARK /
-  N15B_REBASELINED_WAITING_N13B_SOURCE_MAP / PRODUCTION_INACTIVE`. N15B accepts
+  N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE / PRODUCTION_INACTIVE`. N15B accepts
   each current interface/capability independently; an absent Event or Artifact
   publication does not block unrelated Query capability. Detail:
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
@@ -1191,3 +1190,19 @@ durable run/attempt events. Detailed evidence:
 - Status is `N13B_PORTAL_IMPLEMENTATION_ACCEPTED /
   CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK_PENDING_N14B`. Detail:
   [`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](./EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).
+
+## Backend state — 2026-08-29 (N14B immutable current-source compatibility)
+
+- A separate immutable compatibility adjunct consumes and re-verifies the
+  signed N14A candidate; N14A bytes are never edited or relabelled.
+- The first bounded Paper target binds the N13B map/qualification/profile,
+  thirteen adapter/config digests, exact Control API/Execution Edge/Source
+  Proxy image digests and rollback/previous-adjunct chain.
+- Eleven unit/negative tests, real candidate/rollback Compose renders,
+  publication tests, actionlint and the full Portal gate pass.
+- This accepts compatibility only. Runtime deployment, registry promotion,
+  source/Query/SSE/command activation, Trading System release and database copy
+  remain false.
+- Status is `N14B_PORTAL_COMPATIBILITY_ACCEPTED /
+  PROFILE_RUNTIME_NOT_ACTIVATED`; N15B current Query acceptance is next. Detail:
+  [`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).

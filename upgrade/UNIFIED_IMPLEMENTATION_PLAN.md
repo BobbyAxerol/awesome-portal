@@ -1953,6 +1953,16 @@ không phải 17 màn.
 > owner source/gateway bytes after N13B target selection. Detail:
 > [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
+> **Backend checkpoint 2026-08-29 — N14B current-source compatibility:**
+> status is `N14B_PORTAL_COMPATIBILITY_ACCEPTED /
+> PROFILE_RUNTIME_NOT_ACTIVATED`. A separate adjunct re-verifies the signed
+> N14A candidate and binds the exact N13B Paper source/profile/qualification,
+> Portal adapter/config bytes, three immutable service images and rollback
+> chain. Candidate/rollback Compose renders and all negative/full gates pass.
+> This is not runtime, registry, Query/SSE/command or Trading System release
+> authority. N15B current Query acceptance is next. Detail:
+> [`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).
+
 > **Backend checkpoint 2026-08-26 — N15A source-dark four-interface gateway:**
 > status is `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
 > PRODUCTION_INACTIVE`. Query, Command, Event and Artifact negotiate/fail/roll

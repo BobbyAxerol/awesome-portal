@@ -1539,8 +1539,7 @@ activation or the phase):**
   18081, distinct volumes and digest-only service images; dev remains project
   `portal`, port 8080 and isolated state. Seventeen security/release tests,
   actionlint and a real three-volume PostgreSQL backup/restore/forward-fix
-  rehearsal pass. Status is `N14A_COMPLETE_SOURCE_DARK /
-  N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET`; no source/Query/SSE/command flag,
+  rehearsal pass. N14A status is `N14A_COMPLETE_SOURCE_DARK`; no source/Query/SSE/command flag,
   AWS-HK or Trading System route changed. See
   [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
 
@@ -1551,7 +1550,7 @@ activation or the phase):**
   replay/gap/epoch rules, Artifact metadata/reference validation and local
   partition/replay/expiry/schema/source-loss doubles. Component OpenAPI has no
   paths/servers and tests prove `network_attempts=0`. Status is
-  `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP /
+  `N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE /
   PRODUCTION_INACTIVE`; no origin, credential, source or runtime changed. See
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
@@ -1605,6 +1604,17 @@ activation or the phase):**
   registry data mode is active; N14B owns the immutable profile candidate and
   first screen promotion. See
   [`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).
+- **N14B immutable current-source compatibility accepted (2026-08-29):** a
+  separate adjunct re-verifies the complete signed N14A candidate and binds
+  the first Paper target to the N13B source map, qualification pins, exact
+  profile, thirteen adapter/config digests, three immutable service-image
+  digests and rollback/previous-adjunct chain. Candidate and rollback Compose
+  renders, negative tests, publication gates and the full Portal gate pass.
+  The compatibility decision is not a deployment or activation decision:
+  runtime, registry, source, Query, SSE, command and Trading System release
+  authority remain false. Status is `N14B_PORTAL_COMPATIBILITY_ACCEPTED /
+  PROFILE_RUNTIME_NOT_ACTIVATED`; N15B current Query acceptance is next. See
+  [`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

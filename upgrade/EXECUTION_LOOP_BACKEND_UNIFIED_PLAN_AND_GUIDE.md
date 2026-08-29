@@ -1057,7 +1057,7 @@ already proven by the imported Manager-v2 evidence. No runtime flag or registry
 ### N14 — Deployment and release authority
 
 **Mapping:** BAR-17.  
-**Status:** `N14A_COMPLETE_SOURCE_DARK / N14B_READY_FOR_CURRENT_SOURCE_CANDIDATE`.  
+**Status:** `N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED`.  
 **Priority:** P2 before formal release.
 
 N14 releases the exact current capability set accepted by N13B. An existing
@@ -1106,15 +1106,22 @@ isolated-state deploy/rollback/forward-fix rehearsal and exact required owner
 decision pass. No unavailable future upstream feature is added to the release
 set.
 
-**Exact next action for N14B:** consume N13B's accepted source map and profile,
-render a new compatibility revision from the current deployed sources plus the
-new Portal adapter, then run the profile-scoped release rehearsal. N14A
-templates/candidates alone cannot satisfy this gate.
+**Completed 2026-08-29:** N14B consumes and re-verifies the exact signed N14A
+candidate, then emits a separate immutable compatibility adjunct for the first
+bounded Paper target (`PAPER_BINANCE_USDM` / `PAPER_TRADING_SCREEN`). The
+adjunct binds the N13B map, qualification pins, profile configuration, thirteen
+adapter/config files, exact Control API/Edge/Source Proxy image digests,
+rollback runbook and previous-adjunct chain. Eleven unit/negative tests, real
+Docker Compose candidate/rollback renders, publication tests, actionlint and
+the full Portal gate pass. This is compatibility/release evidence only:
+deployment, registry promotion, source/Query/SSE/command activation, Trading
+System release and database copy all remain false. Detail:
+[`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).
 
 ### N15 — Formal inter-cell gateway authority
 
 **Mapping:** BAR-18.  
-**Status:** `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP`.  
+**Status:** `N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE`.  
 **Priority:** P2.
 
 **Goal**
@@ -2277,15 +2284,15 @@ command commit.
 
 All Portal-owned A lanes N13A–N17A are complete:
 
-1. N13B source-as-is boundary is accepted; retain its runtime/profile flags
-   dark until release authority completes.
-2. Run **N14B** for the first accepted Paper profile/capability set and produce the
-   immutable current-source release manifest.
+1. N13B source-as-is boundary and the N14B immutable Paper compatibility
+   candidate are accepted; retain runtime/profile flags dark until the
+   applicable interface and screen activation gates pass.
+2. Run **N15B** first for the bounded current Query interface/capabilities.
+   Event/Artifact absence must not block qualified Query reads.
 3. Qualify and promote Paper screens independently, then Sandbox and Live;
    build Canary from Portal governance joined to Live facts.
-4. Run **N15B** per interface/capability. Do not hold Query behind an absent
-   Event/Artifact publication and do not mislabel snapshot deltas as owner
-   events.
+4. Extend **N15B** per additional interface/capability. Do not mislabel
+   snapshot deltas as owner events.
 5. Run **N16B** only for current commands whose semantics and target scope can
    be proved; retain the separate command identity and approval gates.
 6. Run **N17B** against the exact accepted set and obtain Bobby's final Live
@@ -2332,6 +2339,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-08-29 | Accepted N14B immutable current-source release compatibility for the first bounded Paper target | exact signed N14A candidate plus N13B source/qualification/profile pins, adapter/config digests, three immutable service image digests and rollback/forward-fix chain are bound in a separate adjunct; all runtime/profile/registry/source/Query/SSE/command/Trading-System-release flags remain false; N15B Query acceptance is next |
 | 2026-08-29 | Rebaselined N13B–N17B from global contract-first blocking to source-as-is, capability-by-capability compatibility | documentation/decision only; N13A–N17A evidence preserved; Manager-v2/current Gateway/current market and Portal derivations become valid bounded sources behind versioned adapters; read/command identities and production gates remain separate; no runtime/profile/source/command change |
 | 2026-08-29 | Accepted N13B Portal current-source implementation and exact source set | 4 profiles / 16 sources / 29 capabilities / 20 screens; owner publication and real Paper Manager qualification manifests pinned; Rust exact read boundary plus TypeScript multi-profile BFF added; all runtime/profile/command flags and registry data modes remain unchanged pending N14B |
 | 2026-08-25 | Initial unified plan: current D1–D4 truth, N00–N17, H/A/BR-EX-01…40 and future Claude intake | documentation only; no runtime/profile/source/command change |

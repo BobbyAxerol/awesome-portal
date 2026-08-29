@@ -1,7 +1,7 @@
 # N14A — Portal release authority, source-dark
 
 Status: `N14A_COMPLETE_SOURCE_DARK / RELEASE_CANDIDATE_AUTOMATION_READY /
-PRODUCTION_INACTIVE / N14B_OWNER_RELEASE_EVIDENCE_PENDING`
+PRODUCTION_INACTIVE / N14B_COMPATIBILITY_ADJUNCT_ACCEPTED_SEPARATELY`
 
 Date: 2026-08-26  
 Owner: Portal backend  
@@ -107,13 +107,14 @@ relabelled as a production candidate.
 | N16 | not started; next after N15A is source-dark routing/emergency policy | after N15B and accepted R3 protective routes, prove real acknowledgement/reconciliation during a bounded owner window; R4 never inherits the path |
 | N17 | not started; source-dark SLO/DR/rotation preparation follows N16A | only after N13B–N16B, run bounded production SLO/DR/game-day evidence and obtain Bobby's final exact sign-off; this maps to product phase 18 |
 
-## N14B admission
+## N14B admission — superseded 2026-08-29
 
-N14B remains blocked. Its inputs are the accepted master Trading System owner
-return, an N13B target profile and exact immutable owner evidence. It must not
-edit the N14A candidate in place or treat a Portal owner decision as Trading
-System approval.
+N14B is now accepted as a separate current-source compatibility adjunct for
+the exact bounded Paper target selected by N13B. It re-verifies the complete
+N14A candidate and does not edit or relabel N14A evidence. Its Portal decision
+still does not authorize deployment, source/Query/SSE/command activation or a
+Trading System release. See
+[`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).
 
 Canonical runbook:
 [`portal-n14a-source-dark-release-and-rollback.md`](../../deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md).
-

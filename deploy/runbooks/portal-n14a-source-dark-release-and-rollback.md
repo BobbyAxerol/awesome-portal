@@ -51,7 +51,9 @@ never deploys a Trading System release.
 
 ## N14B boundary
 
-N14B starts only after the Trading System master owner return and a target
-profile accepted by N13B exist. It binds those exact owner contract/image/config
-digests and runs a joint compatibility rehearsal. N14A evidence cannot be
-relabelled as N14B evidence and cannot authorize source or command traffic.
+N14B consumes a target profile accepted by N13B and binds the exact current
+source/map/qualification/profile plus Portal adapter/config/image digests in a
+separate compatibility adjunct. A new Trading System release is required only
+when its runtime/config is changed. N14A evidence cannot be relabelled as N14B
+evidence; neither N14A nor N14B compatibility evidence authorizes deployment,
+source/Query/SSE/command traffic or a Trading System release.

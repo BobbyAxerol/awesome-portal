@@ -2704,8 +2704,8 @@ command.
 | Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
 |---|---|---|---|
 | N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B` |
-| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | bind N13B's exact current source/adapter/profile set and run profile-scoped release/rollback/forward-fix | `N14A_COMPLETE_SOURCE_DARK / N14B_READY_FOR_CURRENT_SOURCE_CANDIDATE` |
-| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | accept each current interface/capability independently; absent Event/Artifact does not block unrelated Query | `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP` |
+| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | exact Paper source/profile/adapter/image/rollback compatibility adjunct accepted; runtime remains dark | `N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED` |
+| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | accept each current interface/capability independently; absent Event/Artifact does not block unrelated Query | `N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE` |
 | N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | map semantically equivalent current primitives under dedicated command identity and prove plan/apply/verify/reconciliation | `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET` |
 | N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted capability set and run bounded SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET` |
 
@@ -2728,10 +2728,24 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
 
-All A-lane work is complete through N17A. N14B follows N13B's first accepted
-current source/profile set; it must bind exact current source plus Portal
-adapter revisions and run the release rehearsal, not reinterpret source-dark
-evidence.
+All A-lane work is complete through N17A. N14B now binds N13B's first accepted
+Paper source/profile set to exact Portal adapter/config/image/rollback bytes in
+a separate adjunct. It does not reinterpret source-dark evidence or activate a
+runtime. N15B bounded current Query acceptance is next.
+
+### N14B backend — immutable current-source release compatibility (2026-08-29)
+
+| Slice | Backend result | Runtime truth | Frontend parallel lane |
+| --- | --- | --- | --- |
+| immutable chain | `ACCEPTED` | complete signed N14A candidate plus N13B map/qualification/profile and thirteen adapter/config digests pinned | no hashes in primary UI |
+| Paper target | `ACCEPTED` | `PAPER_BINANCE_USDM`, `PAPER_TRADING_SCREEN`, positions/execution-quality/sessions only | prepare bounded Paper honest states |
+| images/rollback | `ACCEPTED` | exact Control API/Edge/Source Proxy digests and previous-adjunct chain; candidate/rollback Compose renders pass | no environment inference from Paper |
+| authority | `COMPATIBILITY_ONLY` | deployment, registry, source/Query/SSE/command and Trading System release all false | keep actions and current-source delivery gate disabled |
+
+Backend report:
+[`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](../../backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N14B_CURRENT_SOURCE_RELEASE_HANDOFF.md`](./CODEX_TO_CLAUDE_N14B_CURRENT_SOURCE_RELEASE_HANDOFF.md).
 
 ### N15A backend — Source-dark four-interface gateway (2026-08-26)
 
@@ -2801,9 +2815,10 @@ Claude handoff:
 Status is `N17A_COMPLETE_SOURCE_DARK /
 N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
 Portal-owned A phase remains. Bobby approved the 2026-08-29 rebaseline and
-N13B's Portal implementation/current-source set is accepted. Resume at N14B
-with the exact bounded Paper candidate; keep every runtime profile flag dark
-until its release gate passes.
+N13B's Portal implementation/current-source set and N14B's immutable bounded
+Paper compatibility candidate are accepted. Resume at N15B current Query
+acceptance; keep every runtime profile flag dark until its interface and screen
+activation gates pass.
 
 ### N13B–N17B source-as-is rebaseline (2026-08-29)
 
@@ -2824,7 +2839,7 @@ runtime, route, source, profile, credential or command was activated.
 | Rust Edge read boundary | `ACCEPTED` | GET-only, exact screen/source/relation, profile/cursor/catalogue bound | no direct Edge/browser call |
 | TypeScript current-source BFF | `ACCEPTED` | Paper/Sandbox/Live flags independently false; Canary uses Live | add typed same-origin client and honest states |
 | owner evidence | `ACCEPTED_CURRENT_SOURCE` | Paper real loopback qualified; Sandbox rows observed; Live empty | render empty Live without fixture rows |
-| deployment/registry | `N14B_PENDING` | no runtime profile or registry data mode changed | keep current fixture/none mode until screen gate |
+| deployment/registry | `N14B_COMPATIBILITY_ACCEPTED` | immutable Paper candidate pinned; no runtime profile or registry data mode changed | keep current fixture/none mode until screen gate |
 
 Backend report:
 [`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](../../backend/EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).  
