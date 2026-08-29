@@ -186,46 +186,47 @@ describe("the R2 reader against the published R2 contract", () => {
   const approvalKeys = () => Object.keys(schema.$defs.approval.properties);
   const dataKeys = () => Object.keys(schema.$defs.review_data.properties);
 
-  it("reads the fields the contract does publish", () => {
+  it("publishes the complete Portal-owned R1 lineage and eligibility contract", () => {
     // Spot-check the ones the screen cannot render without.
     for (const key of ["approval_id", "approval_version", "portfolio_id", "currency", "creator"]) {
       expect(approvalKeys(), key).toContain(key);
     }
-    expect(dataKeys().sort()).toEqual(["actor", "approval"]);
-  });
-
-  /**
-   * Seven names `readGateR2Detail` reads that the published R2 document does
-   * not carry, and that appear nowhere in the contract pack or the Control API
-   * either. They were written from the hi-fi before the schema existed, so they
-   * resolve to null against the real endpoint — the R1 lineage chip, the grant
-   * name, the approver role and the evidence passport would all be blank on a
-   * live Gate R2 and nothing would say why.
-   *
-   * This test asserts they are STILL absent. It is a standing record of a
-   * backend gap (BR-EX-30), not an accepted defect: the day codex publishes
-   * any of them it goes red, and the reader can stop guessing.
-   */
-  it("records the seven names the contract does not publish (BR-EX-30)", () => {
-    const published = new Set([...approvalKeys(), ...dataKeys()]);
-    for (const absent of [
+    for (const key of [
+      "actor",
+      "approval",
       "r1_reference",
       "r1_state",
       "r1_id",
+      "grant_id",
       "grant_name",
       "approver_role",
-      "evidence_manifest",
       "plan_author",
+      "evidence_manifest",
+      "eligibility",
     ]) {
-      expect(published.has(absent), `${absent} is published now — update the reader`).toBe(false);
+      expect(dataKeys(), key).toContain(key);
     }
+  });
+
+  it("reads the canonical R2 fixture without guessing missing lineage", () => {
+    const fixture = JSON.parse(
+      readFileSync(join(FIXTURES, "execution-governance.r2-review.valid.json"), "utf8"),
+    );
+    const detail = readGateR2Detail(fixture)!;
+    expect(detail.r1LineagePublished).toBe(true);
+    expect(detail.r1Id).toBe("AP-R1-DETAIL");
+    expect(detail.r1State).toBe("APPROVED");
+    expect(detail.r1Digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(detail.grantName).toBe("paper_activation_authorization");
+    expect(detail.planAuthor).toBe("stan");
+    expect(detail.locks).toEqual([]);
   });
 });
 
-describe("an unpublished R1 lineage does not read as an absent one", () => {
+describe("fail-closed compatibility for a pre-N09 R2 response", () => {
   it("blocks approve either way, but says which of the two it is", () => {
-    // The published R2 document carries neither key (BR-EX-30), so this is the
-    // sentence a live Gate R2 would show today.
+    // Old responses may carry neither key. They remain readable, but cannot be
+    // mistaken for the canonical N09 response or used to approve.
     const unpublished = readGateR2Detail({
       data: { approval: { approval_id: "AP-352", approval_version: 3 } },
     })!;

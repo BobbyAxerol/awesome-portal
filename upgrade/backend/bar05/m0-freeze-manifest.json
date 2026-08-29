@@ -6,7 +6,7 @@
   },
   "file_digests": {
     "compose": "sha256:bcbd2e089a6f68dfaf4f3cdbb55ca7a0b48257e71baaff69768c50026aaa442d",
-    "compose_production": "sha256:b9017c0f25bf53f0fbb2d4c1a544c700075aa3880f3088afd637fb53ce5ecc5e",
+    "compose_production": "sha256:00978748ea10cd13d9289d133cefbc6f6bf37cc50566dea6d482ee612ae94915",
     "constraints_portal": "sha256:a16dcc4c1a3ded5c03a742ce38f351f8d13e738255518a6629da42ad65b900b2",
     "control_api_migrations": "sha256:7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
     "control_api_package": "sha256:1334b64e840001dc8c1bcf4fd0934d4b5cf365c957b9a754c48e75ad672e9f96",
@@ -19,8 +19,8 @@
     "links_sidecar": "sha256:5fe5ea3ffa4c12bf78dc396bf1371d34bbcf6f47b099e12918d0a9957be0a1a6",
     "nginx_portal_conf": "sha256:a53c1e990d887fdf19e5f05fb28b320b2000dce820bf1bedaf5f26214e7b9c0f",
     "openapi_planning_snapshot": "sha256:5c03e4311582f3ae5beb07d5d3f588b78ea9a1689f78712c062a25182bd5a9cf",
-    "openapi_portal": "sha256:3db643491b32f2aaf0a8490dcb5d457529185b0c35daab420a5e4fe295bcb2ee",
-    "openapi_portal_snapshot": "sha256:3db643491b32f2aaf0a8490dcb5d457529185b0c35daab420a5e4fe295bcb2ee",
+    "openapi_portal": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
+    "openapi_portal_snapshot": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
     "planning_frontend_lock": "sha256:8d98e59a964741e0842fcd19d18179270d5e6c4934439ca8c2230b364f711f14",
     "planning_frontend_package": "sha256:2e53ca88ebbfeb25c2551ab29a2c45ef67c9b776595058b07e81d6caf5f59253",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
@@ -30,10 +30,10 @@
     "portal_frontend_package": "sha256:f775f56e473152a75144c294fca8e735a60d6a77dd773254695c1032fb51fc1e",
     "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
     "protected_kernel_main": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-    "registry_source": "sha256:530ae0d6cd9c0cf0dabac52c2a01df031a76b285d4ea7f95528b0ce62550bf6c",
+    "registry_source": "sha256:7c233db639e6c7716baf5f70e4aac420ca89c974a4d17a02b5662e3579905c2f",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "aa0e5ba43462edf804692d2109d69b5b59614e68",
+  "frozen_at_commit": "7eda9d9dfdbb46b0969c6087eda81457ff097158",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
@@ -46,7 +46,7 @@
     "historical_market_data_reader": "primus-historical-market-data==0.1.0rc3",
     "quantbt_engine": "quantbt-engine==1.0.8"
   },
-  "registry_source_digest": "sha256:a332702af4ab673b3889f20243417a58dda42189932b3f63c0b25a0bb1e9f2d4",
+  "registry_source_digest": "sha256:c70916a77e8f0373ebeac2f6758ddff4a994b6669cfe68d9d5433599a3a7fe59",
   "rollback": {
     "last_known_good_images": [
       "local/portal-portal-api:dev",

@@ -34,6 +34,15 @@ Kế hoạch chi tiết từng phase: các khối **Claude supplement** trong ch
 | — | Codex D4 Paper-read qualification | `D4_PAPER_READ_SHADOW_ACCEPTED / BUILDING_ONLY / D2_DARK_RESTORED / BUSINESS_READER_STILL_DARK` — signed-main fresh window đã pass baseline/replay/freshness/loss-recovery/restart/load/restore; D4 evidence retained, D2 dark restored | Claude may prepare/test Lane B against sanitized contracts, but **must not select live source** until EX-BE-08a + explicit registry delivery-profile promotion; current reader stays fixture/honest unavailable | `EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md`, `EX_BE_02_LIVE_D4_ACCEPTANCE_EVIDENCE.json` |
 | EL-V2-10 | Density · copy budget · Insight polish (Bobby thêm 2026-08-25) | **F1–F9 sửa xong 2026-08-25, chờ Bobby duyệt hình ảnh** | audit md có số trước/sau ✓ · smoke 9 tile chart + nhãn SMOKE ✓ · `EquityChart` warnings + gap→tooltip + `compact` ✓ · tile grid cố định/level ✓ · `Hint` gấp 9 note cơ chế, 7 `purpose` rút ✓ · baseline re-record 1 lần (26 png, chỉ Execution) ✓ · **NỢ: xoá `alpha360.smoke.ts` khi BR-EX-34 giao** · BR-EX-40 treo | `AUDIT_DENSITY_AND_INSIGHT_2026-08-25.md`, `alpha360.smoke.ts`, `alpha360.fixtures.ts` (`withSmokeSeries`), `alpha360.test.tsx` (2 case smoke), `EquityChart.tsx` (`EnvelopeWarnings`), baseline `el-v2-08-alpha-tiles.png` re-record |
 | — | Codex D4 Source Facade runtime audit | `D4_SOURCE_RUNTIME_AUDITED / LOOPBACK_ONLY / PROXY_DISABLED` — facade `127.0.0.1:8011`, 4 GET allowlist (`/v1/orders,fills,positions,events`), contract `d4.paper-read.v1`; bounded retention/resource profile đã được ghi nhận, không mở traffic Portal | Frontend vẫn giữ Lane B inactive; chỉ chuyển reader sau EX-BE-08a và registry delivery-profile promotion riêng | `D4_PORTAL_SOURCE_HANDOFF.md`, `EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md` |
+| — | Codex N01 D4 dormant closeout | `OFFLINE_IMPLEMENTATION_ACCEPTED / LIVE_CLOSEOUT_EVIDENCE_PENDING / D4_READER_DARK` — exact-label host guard đóng khi missed-start/qualifier-finished/revoked/expired, restore D2 dark không pull image; chưa mở owner window hay source traffic mới | Claude tiếp tục fixture/typed unavailable, không chọn Lane B; live reader chỉ sau zero-idle evidence + N02–N08 + promotion riêng | `EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md` |
+| — | Codex N02 incremental source contract | `PORTAL_REQUEST_VERIFIER_COMPLETE / MASTER_OWNER_REQUEST_READY / OWNER_PUBLICATION_PENDING / RUNTIME_V1_LOCKED` — request-only v2 verifier remains valid; N02 is a machine annex of the single N02–N17 owner campaign | Claude dùng typed gap/resync/retention/completeness fixtures, giữ Lane B fixture/unavailable; không chọn live reader trước owner acceptance + N03/N04 | `TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`, `EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`, `CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md` |
+| — | Codex N03 owner implementation gate | `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / MASTER_OWNER_REQUEST_READY / OWNER_IMPLEMENTATION_PENDING / RUNTIME_V1_DORMANT` — source owner receives N03 together with N02/N11/N12/N15, not through a phase-local request | Claude chỉ tiếp tục fixture/parity typed states; không chọn Lane B trước N02+N03 owner acceptance và N04 Rust consumer | `TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`, `EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`, `CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md` |
+| — | Codex N04 lease-aware Rust shared consumer | `SOURCE_DARK_CORE_COMPLETE / POSTGRESQL_FENCING_COMPLETE / N02_N03_WIRE_INTEGRATION_PENDING / LIVE_SOURCE_OFF` — singleton demand-aware core, bounded retry/circuit, typed redacted snapshot, DB-time lease + monotonic fence, atomic facts/DELETE/cursor; offline/fresh-PG/restart/restore green | Claude consume exact redacted snapshots, render Dormant/Idle/Commit/Backoff/Circuit/Rebuild distinctly; no hashes/tokens/per-screen polling/Lane B | `EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md`, `CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md` |
+| — | Codex N05 retention, recovery and cleanup | `SOURCE_DARK_CORE_COMPLETE / LIVE_POLICY_INACTIVE` — immutable lifecycle policy/checkpoint, five-state retention, new-epoch recovery and rollback-window/lease-gated cleanup; fresh-PG/restart/restore green | Claude consumes typed retention/recovery states only; no client-side retention guess or cleanup control | `EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md` |
+| — | Codex N06 real-source qualification | `PORTAL_QUALIFICATION_AUTHORITY_COMPLETE / OWNER_PAPER_FAST_PROFILE_APPROVED / REAL_SOURCE_BYTES_PENDING / SOURCE_DARK` — exact N02/N03/image/schema binding, parity and 12 drills; 30m/≤30s Paper-fast and separate 24h/≤300s extended profiles; neither acceptance can activate registry/runtime | Claude may use sanitized template/state fixtures; never label synthetic or candidate evidence as source active | `EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md`, `CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md` |
+| — | Codex N07 Paper Workbench shadow APIs | `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_SHADOW_PROMOTION_APPROVED / REAL_SOURCE_EVIDENCE_PENDING / RUNTIME_FAIL_CLOSED` — manifest-bound atomic epoch activation; deployment-scoped Rust orders/positions Query; exact counts/aggregates, signed keyset, freshness/retention; TS session+mTLS/H2+JWT BFF; all flags false until real source evidence | Claude wires only generated `orders`/`positions` adapter + honest states/parity; registry stays fixture until runtime admission; canonical `operator`/`values` filter echo is now read correctly | `EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md`, `CODEX_TO_CLAUDE_N07_SHADOW_SCREEN_APIS_HANDOFF.md` |
+| — | Codex N08 SSE real-source activation | `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_PROMOTION_APPROVED / RUNTIME_FAIL_CLOSED / REAL_SOURCE_EVIDENCE_PENDING` — accepted manifest binds N06+active N07 epoch; exact snapshot-before-stream, mTLS/H2/JWT BFF, 100-client/slow-consumer and terminal close; flags false until source v2 evidence | Claude fetches canonical realtime snapshot before one EventSource, keeps typed gaps/source-loss/auth expiry, no custom infinite retry and no registry flip while fixture | `EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md`, `CODEX_TO_CLAUDE_N08_SSE_ACTIVATION_HANDOFF.md` |
+| — | Codex N09 Portal governance/workflow gaps | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` — BR-EX-30/31/32/33/35/36/37/38 canonical across fresh PG, repository/API, OpenAPI, fixtures and generated TS; registry revision 5 policy 2 remains false | Claude consumes exact lineage/history/REQUEST_CHANGES/Mine/incident/limitations/smoke-plan contracts; no inferred grant, browser recount or write enablement | `EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md`, `CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md` |
 
 
 > **The shared board for the Execution Loop.** Claude (frontend) and codex
@@ -77,17 +86,17 @@ These qualify what is complete; they do not mean frontend `DONE`.
 
 | # | Screen (WF) | FE | BE | Needs | Evidence |
 |---|---|---|---|---|---|
-| 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 4 · 17 fixture profiles · fail-closed policy tests · generated OpenAPI/TS contract |
+| 0 | Shell & shared components | **DONE** | `CONTRACT_COMPLETE` | — EX-BE-00R4 + N09 policy revision delivered | FE: 42 tests · build · visual baseline **drifted, see §9**; BE: registry rev 5 / policy rev 2 · independent governance-write flag false · fail-closed tests · generated OpenAPI/TS contract |
 | 1 | Approval Inbox (4a) | `WIP` (screen + adapter complete; awaiting data) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** canonical `view`, CSRF transport and reviewed registry activation; backend SGP gate is green | 117/117 fresh-PG; 182k Inbox; public-gateway Inbox/R1 smoke; registry remains fixture |
-| 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** canonical plan/apply/poll routes + CSRF + distinct Portal-governance-write policy | immutable evidence + SoD/concurrency/audit implemented; public-gateway decision:audit:outbox = 1:1:1 |
-| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source activation/evidence + EX-BE-05a decision integration; generated `portfolio_id`/`currency` already consumed | EX-BE-07b active-epoch capital-preview repository/API delivered; flags/profile remain fixture/off |
-| 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `FOUNDATION_COMPLETE` | screen API + source integration; M7 evidence | EX-BE-04b adaptive six-rung/exact series + cold contract delivered; production source remains inactive |
+| 2 | Gate R1 Review (1a) | `WIP` (adapter built, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** consume N09 limitations/REQUEST_CHANGES/history and gate writes on exact false policy | immutable evidence + SoD/concurrency/audit + typed limitations/history delivered; policy remains false |
+| 3 | Gate R2 Review (1b) | `WIP` (screen + adapter, on the port) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Claude:** consume N09 R1 lineage/grant/role/author/evidence and fail-closed legacy state | immutable lineage and integrity/expiry eligibility locks plus EX-BE-07b capital preview delivered; flags/profile remain fixture/off |
+| 4 | Paper Workbench (1c) | **screen built** (fixtures, scale-refined) | `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_PROMOTION_APPROVED / PRODUCTION_INACTIVE` | Claude consumes N07 orders/positions adapter; only real N06 source evidence remains | N07 deployment-scoped orders/positions API, manifest-bound ACTIVE authority, exact counts/aggregates and typed states delivered; canonical filter echo fixed; registry fixture/flags off |
 | 5 | Paper Exit Review (4b) | **screen closed on Lane A** (5 capability, 3 outcome, CSRF) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | PRE-IAM-02 đã map xong (`5b39e34`); còn real Paper source activation | PRE-IAM-02 fresh PG 129/129 + contract 20/20 + SGP runtime green; closeout linked below |
 | 6 | Admin Action Drawer (1i) | **screen built** (64 lệnh canonical, nhóm theo server, 403 denied) | `FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | đã tiêu thụ catalogue revision 2 (`6da8a43`); còn relay capability + Lane B | EX-BE-05b/F0: ADMIN-scoped conservative catalogue, immutable hash-only blocked plan/no outbox, bounded retry + real concurrent replay/conflict, denied apply, Rust replay/conflict/UNCERTAIN and 149 TS + 95 Rust tests; all command flags false |
-| 7 | Operations Queue (4e) | **screen built** (3 trạng thái tách, keyset, ack≠resolve) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F1a Lane A; source routes remain external | SGP exact-count 182k bidirectional keyset + ack→resolve/idempotency/audit delivered; fixture/unavailable source retained |
+| 7 | Operations Queue (4e) | **screen built** (3 trạng thái tách, keyset, ack≠resolve) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes explicit `assigned_to=me`, assignee and nullable incident link; source routes remain external | SGP exact-count 182k bidirectional keyset + atomic acknowledge self-assignment + incident link + idempotency/audit delivered |
 | 8 | Incident Detail (4d) | **screen built** (rail forward-only, 4 panel unavailable, không Resume) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F1b Lane A; real source contracts remain external | SGP Portal workflow/evidence/correlation delivered; 159/159 fresh-PG + 44/44 contracts; four source panels fixture/unavailable; no auto-resume/outbox |
-| 9 | Command Center (5a) | **screen built** (4 panel, 5 state, fixtures) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | dark snapshot + 5 state đã tiêu thụ (`ee3576c`); còn BR-EX-28 §8.1 `streams`/`alpha-activity`, real source + SSE parity | PRE-IAM-03 bounded snapshot: fresh PG 139/139, contracts 26/26, 20k exact-observed corpus; EX-BE-06 SSE remains dark |
-| 10 | Sandbox Certification (1d) | **screen built** (7 step server-ordered, triptych, fail-closed) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F2 Lane A; real source still needs D2→D4 + TS sandbox capability | F2 7-step source-dark workflow/evidence/SoD + blocked promotion plan; 163/163 fresh-PG, 45/45 contracts, 11-migration restore; no outbox/activation |
+| 9 | Command Center (5a) | **screen built** (4 panel, 5 state, fixtures) | `PORTAL_IMPLEMENTATION_COMPLETE / OWNER_PROMOTION_APPROVED / PRODUCTION_INACTIVE` | consume N08 realtime snapshot + one EventSource; BR-EX-28 §8.1 `streams`/`alpha-activity` content still separate; real source evidence remains | PRE-IAM-03 dark snapshot plus N08 manifest-gated realtime snapshot/SSE, terminal close, 100-client and slow-consumer evidence; flags remain off |
+| 10 | Sandbox Certification (1d) | **screen built** (7 step server-ordered, triptych, fail-closed) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes N09 bounded smoke-plan evidence; real source still needs a later TS sandbox capability | F2 workflow plus immutable exact-decimal/timebox smoke plan; source-side-effect false, no command outbox/activation |
 | 11 | Canary Control Room (1e) | **screen built** (guard chữ+shield, bất đối xứng, action absent) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F3 Lane A; real source still needs D2→D4 + rollback evidence + owner live-canary gate | versioned immutable DRAFT envelope + source-dark read model + protective/scale asymmetry; no outbox/command activation |
 | 12 | Live Full Operations (1f) | **screen built** (broker suppressed ở reader, gap null chặn R4) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | Claude consumes F4 Lane A; real source/live authority still needs D2→D4 + EX-BE-08 | F4 Canary-predecessor source-dark API, broker-value suppression and gap→R4 policy delivered; no SSE/outbox/command activation |
 | 13 | Paper Workbench VNM (4h) | **screen built** (variant of phase 4, fixtures) | `INTEGRATION_PENDING` | source/screen API integration; venue/ATO/ATC decision | EX-BE-04b adaptive query + EX-BE-03 PAUSED semantics delivered; timezone decision remains |
@@ -503,6 +512,23 @@ remained empty. This still unlocks no frontend live profile. Claude keeps
 fixture/dark consumers until D4 produces an owner-approved Paper `BUILDING`
 epoch and a later activation decision changes delivery policy. Evidence:
 [`EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md`](../../backend/EX_BE_02_LIVE_D3_TRANSPORT_ACCEPTANCE.md).
+
+N06–N08 Paper shadow owner decisions are now explicit. Bobby approved the
+bounded N06 `PAPER_FAST_ACCEPTANCE` profile plus N07 and N08 promotion on
+2026-08-26; codex must not reopen those owner gates under another label. N06
+keeps all twelve parity/fault/load/restore/rollback drills and changes only the
+observation profile to 30 minutes with samples at most 30 seconds apart; the
+24-hour profile remains separate extended confidence. N08 now requires an
+accepted Rust manifest tied to the exact N06 report, still-active N07 epoch and
+manifest, image/contract digests and nine gate hashes. Snapshot and stream are
+same-origin through the reusable mTLS/H2/JWT BFF, and frontend generic/expired
+session errors close EventSource to prevent infinite facade retry. The only
+remaining activation dependency is external owner-published
+`d4.paper-read.v2` source evidence; fixture/synthetic evidence stays
+fail-closed. Claude consumes the snapshot-first contract in
+[`CODEX_TO_CLAUDE_N08_SSE_ACTIVATION_HANDOFF.md`](./CODEX_TO_CLAUDE_N08_SSE_ACTIVATION_HANDOFF.md).
+Backend evidence:
+[`EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md`](../../backend/EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md).
 
 ### 6.2 BR-EX decisions
 
@@ -2593,3 +2619,182 @@ preview" trong `docs/release-and-deployment.md`. Chỉ `portal-web` được reb
 được merge, hostname này phải được rebuild lại từ worktree `dev` (quy trình §"Canonical development").
 Route để duyệt: `/governance/approvals`, `/governance/approvals/AP-201/r1`, `/deployments/paper/dep_94`,
 `/deployments/live/dep_live`, `/deployments/alphas/av_2041`, `/deployments/blotter`, `/execution/_fixtures`.
+
+### N10 backend — series and insight analytics contracts (2026-08-26)
+
+| Phase | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| N10 / BR-EX-34 | `CONTRACT_COMPLETE` | `READY_FOR_READER_INTEGRATION` | `INACTIVE` | exact-decimal equity/drawdown/band, adaptive ≤5,000 buckets, explicit gaps, immutable lineage |
+| N10 / BR-EX-40 | `CONTRACT_COMPLETE` | `READY_FOR_READER_INTEGRATION` | `INACTIVE` | six semantic tile kinds, twelve-tile catalogue, ≤5,000 items / ≤2 MiB |
+| N10 / BR-EX-39 | `CONTRACT_COMPLETE` | `SSE_MAPPER_INTEGRATION_PENDING` | `INACTIVE` | ten typed envelopes; canonical string `execution.event.v1` |
+
+Canonical backend report:
+[`EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md`](../../../backend/EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N10_SERIES_INSIGHT_HANDOFF.md`](./CODEX_TO_CLAUDE_N10_SERIES_INSIGHT_HANDOFF.md).
+The OpenAPI routes are contract-only and unmounted; registry/source flags remain false. Claude may
+integrate the generated readers and canonical fixtures now, but must preserve freshness,
+partiality, explicit gaps and exact-decimal strings and must not label fixture data as live.
+
+### N11 backend — published external read capability gate (2026-08-26)
+
+| Slice | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| 24-capability owner request | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | availability consumer pending | `INACTIVE` | exact GET/auth/row/byte catalogue + semantic rulings |
+| owner publication verifier | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | n/a | `INACTIVE` | actual schema/fixture bytes + manifest/evidence fail-closed |
+| Rust external read adapter | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | typed state mapper pending | `INACTIVE` | strict scope/query/header/envelope + typed outcomes |
+| owner publication/source parity | `PENDING_OWNER` | panels remain unavailable | `INACTIVE` | no accepted owner pack yet |
+
+Backend report:
+[`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](../../backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md`](./CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md).
+This checkpoint does not authorize any Trading System call or remove any fixture/unavailable label.
+N11 is a machine annex of the single official owner campaign, not a separate
+handoff.
+
+### N12 backend — live command publication/relay gate (2026-08-26)
+
+| Slice | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| nine-capability owner request | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | canonical catalogue consumer pending | `INACTIVE` | exact R1/R2/R3/R4 scope/auth/route/bounds |
+| owner publication verifier | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | n/a | `INACTIVE` | actual schema/request/accepted/terminal bytes + manifest |
+| Rust command authorization/journal | `PORTAL_GATE_COMPLETE / PRODUCTION_INACTIVE` | terminal state mapper pending | `INACTIVE` | independent flags/kill switch, 202 nonterminal, restart-safe UNCERTAIN locks |
+| owner command publication/activation | `PENDING_OWNER` | controls remain unavailable | `INACTIVE` | no accepted owner pack or command identity yet |
+
+Backend report:
+[`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](../../backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md).
+Read/query/SSE health never enables a command; every existing runtime command flag remains false.
+N12 is a separately gated machine annex of the same official owner campaign.
+
+### N13A backend — source-dark staged activation foundation (2026-08-26)
+
+| Slice | BE | FE | Runtime/source | Evidence |
+|---|---|---|---|---|
+| seven capability states | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | shared profile/status component pending | `FIXTURE / DARK` | independent PROJECTION/QUERY/SSE/R1/R2/R3/R4 versions and kill switches |
+| immutable plan/evidence repository | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | audit/details disclosure pending | `INACTIVE` | structural signature/hash/revision validation; owner accepted/trusted false |
+| plan/apply/verify API | `PORTAL_FOUNDATION_COMPLETE / PRODUCTION_INACTIVE` | seven-state reader/actions pending | `ROLLBACK_ONLY` | session/workspace/RBAC/CSRF/idempotency/OCC/audit/outbox |
+| owner-backed promotion | `N13B_PENDING_OWNER` | keep unavailable/blocked labels | `INACTIVE` | master owner return + N06 real Paper evidence absent |
+
+Backend report:
+[`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](../../backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md`](./CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md).
+The canonical states are fixture, denied, incompatible, stale, partial,
+rollback and restart. Every action remains visually/runtime disabled except an
+authenticated ADMIN fixture rollback workflow; HTTP 202 is not terminal.
+
+### Official Trading System owner campaign (2026-08-26)
+
+The only document Bobby should send is
+[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](../../backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
+It consolidates N02/N03/N06/N11/N12, N15 Event/Artifact rulings and the N13–N17
+operational evidence ladder. Older D4/Claude request files are audit-only;
+component contract directories are machine annexes. Current inspection found
+no further known Trading System feature request after this campaign. Claude
+continues to consume typed unavailable/partial states and must not infer that a
+master request activates a source, screen or command.
+
+### N13–N17 A/B execution split
+
+| Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
+|---|---|---|---|
+| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | import owner bytes, Paper shadow/qualification and staged promotion | `N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING` |
+| N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | after N13B target selection, bind accepted Trading System source/gateway commit/image/config/contracts and run joint release/rollback/forward-fix with exact dual-owner approval | `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING` |
+| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | bind accepted owner bytes and prove real mTLS/JWT routes plus WAN/fault/compatibility/SLO evidence independently | `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING` |
+| N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | accepted N12 R3 protective route, N15B, dedicated command identity and real observed acknowledgement | `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING` |
+| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | bind exact accepted profile and run bounded joint production SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING` |
+
+Rule: Claude and Portal backend may implement/test every A lane without waiting
+for Trading System. No B lane may start from template/candidate/fixture bytes,
+and no A-lane status may remove an unavailable label or enable a source,
+Query/SSE profile or command.
+
+### N14A backend — Portal release authority, source-dark (2026-08-26)
+
+Codex completed the Portal-owned release lane: all six images are digest-bound,
+the protected-main publisher records verified signature/SBOM/provenance/Trivy
+evidence, stable consumes per-service digest references, production acceptance
+is bound to an exact manifest and owner decision, and an isolated Docker
+PostgreSQL rehearsal proves dev/stable/restore separation. Every execution
+flag remains false; no AWS-HK/Trading System request occurred.
+
+Backend report:
+[`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](../../backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
+
+All A-lane work is complete through N17A. N14B remains parked until the master
+owner return and N13B exact target profile; it must bind owner bytes and run the
+joint release rehearsal, not reinterpret source-dark evidence.
+
+### N15A backend — Source-dark four-interface gateway (2026-08-26)
+
+Codex completed one pure, source-dark authority for the independent Query,
+Command, Event and Artifact interfaces. It includes closed version ranges and
+rollback selection, separate read/command identities, bounded TLS1.3/HTTP2
+transport blueprints, Event replay/gap/epoch rules, Artifact
+digest/schema/size/access/expiry rules and local fault doubles. The component
+OpenAPI has no routes or servers; no credential, origin, migration, source call
+or runtime changed, and the local transport records `network_attempts=0`.
+
+Backend report:
+[`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](../../backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md).
+
+N15B remains parked until accepted exact bytes from the
+single master Trading System owner pack; it then binds each interface and runs
+real mTLS/JWT, WAN/fault/compatibility/rollback/SLO acceptance without treating
+one passing interface as global authority.
+
+### N16A backend — Source-dark routing and emergency policy (2026-08-27)
+
+Codex completed the Portal-owned same-domain/emergency authority against local
+doubles. The exact public origin/path, server-side origin isolation, five-minute
+session, WebAuthn step-up, break-glass reason/expiry/actor/approvals, immutable
+hash-chain audit and typed Research/Cloudflare/execution-origin/rollback states
+are canonical. The component OpenAPI has no route/server; the unmounted Nginx
+template has no forwarding directive and fails closed with typed 503.
+
+N12 R3 remains unpublished and every control/PLAN/APPLY/VERIFY flag is false.
+R4 resume/scale is structurally forbidden. No Cloudflare, DNS, tunnel, Nginx
+production include, AWS-HK, origin, credential or Trading System call changed;
+`network_attempts=0`.
+
+Backend report:
+[`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](../../backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md`](./CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md).
+
+N16B remains parked until accepted N12 R3 owner bytes, dedicated command
+identity, N15B and an owner change window exist. All A-lane work is complete
+through N17A.
+
+### N17A backend — Source-dark production/DR preparation (2026-08-27)
+
+Codex completed the Portal-owned production-readiness lane without binding a
+runtime. Canonical contracts distinguish provisional latency budgets from
+measured production SLOs and leave error budget, monthly cost, RPO and RTO null
+and owner-gated. Pure Rust validates recovery, five separate identity rotation
+families, capacity/retention limits and digest-sealed isolated evidence.
+
+The unmounted Prometheus/Grafana, capacity, rotation, owner and game-day
+blueprints contain no datasource/origin/secret. A real internal-only Docker
+rehearsal proves PostgreSQL WAL PITR to an exact LSN, encrypted logical backup
+restore, deterministic projection rebuild, rotation/compromise containment,
+release rollback and all eight declared fault scenarios. Cleanup removes only
+exact N17A test resources. No stable/dev/AWS-HK/Trading System resource or
+traffic changed; production/source/command flags remain false.
+
+Backend report:
+[`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](../../backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
+Claude handoff:
+[`CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md`](./CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md).
+
+Status is `N17A_COMPLETE_SOURCE_DARK /
+N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING / PRODUCTION_INACTIVE`. No Portal-owned
+A phase remains. When the single master owner return is accepted, resume at
+N13B and proceed in order through N17B.

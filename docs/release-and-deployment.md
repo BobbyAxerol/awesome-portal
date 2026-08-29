@@ -38,9 +38,15 @@ published compatibility contract.
    `./scripts/portal smoke`.
 3. Open a Portal pull request into `dev`. Root CI validates tracked monorepo
    source directly, including the composed stack.
-4. Promote reviewed, stable `dev` to `main`. The image-publish workflow builds
-   immutable `sha-<parent-commit>` images for Portal API, Portal web and Roadmap
-   API from that exact commit. A `v*` tag additionally receives a release tag.
+4. Promote reviewed, stable `dev` to `main`. Publication waits for successful
+   Portal CI on that same commit, then builds six immutable images: Portal API,
+   Portal web, Control API, Roadmap API, Rust Execution Edge and Source Proxy.
+   Every image receives SBOM/SLSA provenance, Trivy evidence and a keyless
+   signature. A `v*` tag additionally receives a release tag.
+5. Review the uploaded `portal-release-candidate-<commit>` artifact and its
+   manifest SHA-256. It binds all six image digests, migration chain,
+   compatibility/profile matrix and rollback contract. A CRITICAL finding
+   blocks publication; HIGH findings require explicit owner acceptance.
 
 Pull requests also reject deletion or modification of migrations already
 present in their base branch. Manual image publication and production deploys
@@ -63,7 +69,8 @@ change.
 1. Install Docker Engine and the Docker Compose plugin.
 2. Create `/srv/portal`, then copy `deploy/compose.production.yaml` and create
    `/srv/portal/.env.production` from `deploy/.env.production.example`.
-3. Set a lowercase `PORTAL_IMAGE_PREFIX`, an immutable image tag, canonical
+3. Set a lowercase `PORTAL_IMAGE_PREFIX`, an immutable image tag, all four SGP
+   `PORTAL_*_IMAGE=image@sha256` references from the accepted manifest, canonical
    `PORTAL_HISTORICAL_DATA_DIR=/srv/primus/historical-market-data/storage` and
    the numeric `PORTAL_HMD_READER_GID`. The mount is read-only and only serves
    backtest/research; it does not provide realtime or paper-trading state.
@@ -116,13 +123,27 @@ Image publishing additionally requires repository/environment secret
 SHA-256 before building and fails if the wheel is absent or different. Do not
 store the wheel, Historical Market Data source or storage in Portal Git.
 
+Dispatch additionally requires the immutable image tag, the image-publication
+run ID, the exact reviewed `sha256:<manifest>` and explicit acceptance of the
+bound vulnerability evidence. The protected environment reviewer therefore
+approves bytes, not a branch name. Deployment downloads only the exact
+candidate, validates it, creates a hash-bound `ACCEPT_SOURCE_DARK` decision,
+keyless-signs and verifies both manifest and decision, and selects all stable
+service bytes by digest. That decision cannot enable Projection, Query, SSE,
+commands or accept a Trading System release.
+
 The host must already contain `.env.production` and be authenticated to pull
-the registry. The workflow transfers only the non-secret Compose definition.
+the registry. The workflow transfers the non-secret Compose definition and
+signed release pack.
 Before pulling or migrating it writes a timestamped, mode-`0700` backup under
 `<deployment_path>/backups/`: a PostgreSQL custom-format dump and, when the
 Roadmap service is running, an SQLite online backup. It records SHA-256 checks,
 runs the Compose migration/bootstrap gates, waits for health, probes each API
-and atomically records `deployed-release.env` with branch, commit, image tag and
-deployment time. Configure environment-protection reviewers before enabling
+and atomically records `deployed-release.env` with branch, commit, exact image
+digests, manifest/decision digests and deployment time. Configure
+environment-protection reviewers before enabling
 real production use, retain backups according to the operational policy and
 regularly prove restore in an isolated database.
+
+N14A's source-dark release and rollback authority is documented in
+[`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](../upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).

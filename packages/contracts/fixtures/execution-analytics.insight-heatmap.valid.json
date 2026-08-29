@@ -1,0 +1,10 @@
+{
+  "schema_version": "execution.analytics.insight-series.v1", "runtime_active": false, "source_side_effect_requested": false,
+  "subject_id": "alpha_1", "panel_state": "ok", "returned_tiles": 1, "total_series_items": 2,
+  "tiles": [{
+    "tile_id": "execution-density", "title": "Execution density day x hour", "tile_kind": "heatmap", "formula_version": "execution_density.v1",
+    "authority": "DERIVED", "freshness": "OK", "completeness": "COMPLETE", "as_of": "2026-08-26T10:00:00Z",
+    "minimum_samples": 30, "observed_samples": 80, "state": "READY",
+    "series": { "kind": "heatmap", "points": [{ "x": "MON", "y": "09", "value": "21", "sample_count": 21 }, { "x": "MON", "y": "10", "value": "19", "sample_count": 19 }] }
+  }]
+}

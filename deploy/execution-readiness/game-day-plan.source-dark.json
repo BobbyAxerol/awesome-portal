@@ -1,0 +1,24 @@
+{
+  "schema_version": "portal.execution.game-day-plan.v1",
+  "plan_id": "n17a-isolated-quarterly",
+  "source_dark": true,
+  "production_active": false,
+  "frequency_days": 90,
+  "network_mode": "ISOLATED_DOCKER_NETWORK_ONLY",
+  "abort_on_network_attempt": true,
+  "abort_on_source_request": true,
+  "abort_on_command_dispatch": true,
+  "scenarios": [
+    "NETWORK_PARTITION",
+    "AUTH_LOSS",
+    "SOURCE_LOSS",
+    "COMMAND_CONTAINMENT",
+    "CONTROL_DATABASE_PITR",
+    "PROJECTION_REBUILD",
+    "RELEASE_ROLLBACK",
+    "CREDENTIAL_COMPROMISE"
+  ],
+  "production_slo_claimed": false,
+  "production_rpo_rto_claimed": false,
+  "n17b_owner_window_required": true
+}

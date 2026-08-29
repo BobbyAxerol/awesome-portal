@@ -45,6 +45,18 @@ jobs:
       - name: Test Control API
         run: ./scripts/control-api-test.sh
 
+      - name: Rehearse N14A source-dark release authority
+        run: ./scripts/portal-release-authority-test.sh
+
+      - name: Validate N15A source-dark gateway authority
+        run: ./scripts/execution-n15a-gateway-test.sh
+
+      - name: Validate N16A source-dark emergency routing authority
+        run: ./scripts/execution-n16a-emergency-routing-test.sh
+
+      - name: Rehearse N17A source-dark production and DR readiness
+        run: ./scripts/execution-n17a-production-dr-test.sh
+
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 
@@ -92,6 +104,10 @@ jobs:
         working-directory: apps/portal/frontend
         run: |
           npm ci
+          # Portal compiles the embedded Planning feature from source. A clean
+          # runner therefore needs Planning's dependency graph before tsc/vite,
+          # even though its own test/build step runs immediately afterward.
+          npm ci --prefix ../../../features/roadmap-task-board/frontend
           npm audit --package-lock-only --audit-level=moderate
           npm test
           npm run build
@@ -99,7 +115,6 @@ jobs:
       - name: Test and build Roadmap & Task Board
         working-directory: features/roadmap-task-board/frontend
         run: |
-          npm ci
           npm audit --package-lock-only --audit-level=moderate
           npm test
           npm run build

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { AuthSession, PortalUser } from "../domain";
@@ -73,6 +73,28 @@ export class ExecutionAnalyticsController {
     return this.invoke(() => this.proxy.bindingExposure(principal(request), id));
   }
 
+  @Get("/deployments/paper/:deploymentId/projection/:panel")
+  paperWorkbenchPanel(
+    @Req() request: AnalyticsRequest,
+    @Param("deploymentId") deploymentId: string,
+    @Param("panel") rawPanel: string,
+    @Query() rawQuery: unknown,
+  ) {
+    const panel = ShadowPanelSchema.safeParse(rawPanel);
+    const query = ShadowPanelQuerySchema.safeParse(rawQuery);
+    if (!panel.success || !query.success) {
+      throw new AnalyticsProxyError("N07_QUERY_INVALID", 400);
+    }
+    return this.invoke(() =>
+      this.proxy.paperWorkbenchPanel(
+        principal(request),
+        deploymentId,
+        panel.data,
+        shadowQueryBody(query.data),
+      ),
+    );
+  }
+
   private async invoke(operation: () => Promise<unknown>): Promise<unknown> {
     try {
       return await operation();
@@ -88,6 +110,51 @@ const CapitalPreviewRequestSchema = z.object({
   requested_amount: z.string().regex(/^(?:0|[1-9][0-9]*)(?:\.[0-9]{1,28})?$/).max(96),
   currency: z.string().regex(/^[A-Z0-9]{2,12}$/),
 }).strict();
+
+const ShadowPanelSchema = z.enum(["orders", "positions"]);
+const ShadowPanelQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(250).default(100),
+  status: z.string().trim().min(1).max(512).optional(),
+  currency: z.string().trim().min(1).max(256).optional(),
+  instrument_id: z.string().trim().min(1).max(256).optional(),
+  sort: z.enum(["as_of", "projection_sequence", "status", "currency"]).default("as_of"),
+  direction: z.enum(["asc", "desc"]).default("desc"),
+  after: z.string().min(1).max(4096).optional(),
+  before: z.string().min(1).max(4096).optional(),
+}).strict().refine((value) => !(value.after && value.before));
+
+type ShadowPanelQuery = z.infer<typeof ShadowPanelQuerySchema>;
+
+export function shadowQueryBody(query: ShadowPanelQuery) {
+  const filters: Array<{ field: string; operator: string; values: string[] }> = [];
+  const list = (value: string, maximum: number): string[] => {
+    const values = value.split(",").map((item) => item.trim());
+    if (
+      values.length === 0 ||
+      values.length > maximum ||
+      values.some((item) => item.length === 0 || item.length > 256)
+    ) {
+      throw new AnalyticsProxyError("N07_QUERY_INVALID", 400);
+    }
+    return values;
+  };
+  if (query.status) {
+    filters.push({ field: "status", operator: "in", values: list(query.status, 20) });
+  }
+  if (query.currency) {
+    filters.push({ field: "currency", operator: "in", values: list(query.currency, 12) });
+  }
+  if (query.instrument_id) {
+    filters.push({ field: "instrument_id", operator: "contains", values: [query.instrument_id] });
+  }
+  return {
+    limit: query.limit,
+    filters,
+    sorts: [{ field: query.sort, direction: query.direction }],
+    after: query.after,
+    before: query.before,
+  };
+}
 
 /** Prevents a client-controlled body from escaping the approval's immutable R2 scope. */
 export function bindCapitalPreviewRequest(

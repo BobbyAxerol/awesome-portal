@@ -21,6 +21,7 @@ for required in \
   "${ROOT_DIR}/compose.yaml" \
   "${ROOT_DIR}/deploy/compose.production.yaml" \
   "${ROOT_DIR}/deploy/.env.production.example" \
+  "${ROOT_DIR}/deploy/.env.development.example" \
   "${ROOT_DIR}/constraints/portal.txt" \
   "${ROOT_DIR}/vendor/hmd-reader/README.md" \
   "${ROOT_DIR}/.gitignore" \
@@ -111,9 +112,13 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/keyset-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-governance-approval-workflow.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-analytics-series.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-event-envelope.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-staged-activation.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/problem.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/command.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/event.valid.json" \
@@ -126,9 +131,19 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r2-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.r1-review.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.approval-history.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.equity-projection.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-line.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-histogram.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-funnel.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-waterfall.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-heatmap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-bar.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-events.corpus.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-plan.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-operation.valid.json" \
@@ -137,15 +152,22 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-operation-workflow.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-detail.open.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-staged-activation.capabilities.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-staged-activation.plan-blocked.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-staged-activation.states.valid.json" \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-analytics-series.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-governance.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-realtime.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-operations.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-staged-activation.d.ts" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-analytics-series.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-staged-activation.openapi.json" \
   "${ROOT_DIR}/packages/contracts/tooling/generate-execution-command-catalog.mjs" \
   "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
   "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
@@ -213,6 +235,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000007_execution-operations-f0-hardening.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000008_execution-operations-queue.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000009_execution-incidents.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000012_execution-n09-governance-workflow.sql" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \
@@ -260,6 +283,9 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/rust-toolchain.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/execution-contracts/src/events.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/series.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/tiles.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-auth/src/lib.rs" \
@@ -277,6 +303,11 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/shared_consumer.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/src/tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/fixtures/redacted-snapshots.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs" \
@@ -288,6 +319,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0008_shared_consumer_lease.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/build.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs" \
@@ -305,6 +337,7 @@ for required in \
   "${ROOT_DIR}/deploy/images/execution-edge.Dockerfile" \
   "${ROOT_DIR}/deploy/images/source-proxy.Dockerfile" \
   "${ROOT_DIR}/deploy/compose.execution-edge.yaml" \
+  "${ROOT_DIR}/deploy/compose.execution-shadow-query.yaml" \
   "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   "${ROOT_DIR}/scripts/execution-edge-test.sh" \
   "${ROOT_DIR}/scripts/execution-offline-hardening-test.sh" \
@@ -329,8 +362,122 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d3-test.sh" \
   "${ROOT_DIR}/scripts/execution-d4-authorization.py" \
   "${ROOT_DIR}/scripts/test_execution_d4_authorization.py" \
+  "${ROOT_DIR}/scripts/execution-d4-dormant-closeout.py" \
+  "${ROOT_DIR}/scripts/test_execution_d4_dormant_closeout.py" \
+  "${ROOT_DIR}/scripts/execution-n02-contract-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n02_contract_verify.py" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/owner-pack.manifest.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/compatibility-fixtures.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/error-corpus.example.json" \
+  "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/owner-implementation.manifest.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/implementation-profile.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/source-metrics.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/query-plan-evidence.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/acceptance-results.example.json" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_07_N10_SERIES_AND_INSIGHT_ANALYTICS_CONTRACTS.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N10_SERIES_INSIGHT_HANDOFF.md" \
+  "${ROOT_DIR}/scripts/execution-n11-external-read-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/external-read-adapter/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/external-read-adapter/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/capability-catalogue.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/capability-catalogue.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/semantic-rulings.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/golden-corpus-index.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/acceptance-results.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/owner-publication.manifest.example.json" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md" \
+  "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/terminal-corpus-index.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/acceptance-results.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/owner-publication.manifest.example.json" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000013_execution-staged-activation.sql" \
+  "${ROOT_DIR}/apps/control-api/src/activation/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/activation.repository.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/activation.service.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/activation.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/test/staged-activation.spec.ts" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-intercell-gateway.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.artifact-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-intercell-gateway.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-intercell-gateway.d.ts" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/src/lib.rs" \
+  "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-emergency-routing.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.ui-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-emergency-routing.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-emergency-routing.d.ts" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/emergency-routing/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/emergency-routing/src/lib.rs" \
+  "${ROOT_DIR}/deploy/execution-emergency/README.md" \
+  "${ROOT_DIR}/deploy/execution-emergency/origin-isolation.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-emergency/nginx.same-origin.source-dark.conf.template" \
+  "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-production-readiness.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-production-readiness.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-production-readiness.d.ts" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/production-readiness/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/production-readiness/src/lib.rs" \
+  "${ROOT_DIR}/deploy/execution-readiness/README.md" \
+  "${ROOT_DIR}/deploy/execution-readiness/slo-alerts.source-dark.yml" \
+  "${ROOT_DIR}/deploy/execution-readiness/grafana-dashboard.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/capacity-retention-cost.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/rotation-inventory.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/owner-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/game-day-plan.source-dark.json" \
+  "${ROOT_DIR}/deploy/runbooks/portal-n17a-source-dark-production-dr.md" \
+  "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
+  "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py" \
+  "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
+  "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-compatibility-matrix.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/compatibility-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-manifest.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-candidate-evidence.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-owner-decision.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/release-manifest.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-candidate-evidence.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-owner-decision.template.json" \
+  "${ROOT_DIR}/deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md" \
+  "${ROOT_DIR}/scripts/portal-release-authority.py" \
+  "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
   "${ROOT_DIR}/deploy/execution-d1/owner-input.env.example" \
@@ -356,6 +503,9 @@ for required in \
   "${ROOT_DIR}/deploy/execution-d4/owner-input.env.example" \
   "${ROOT_DIR}/deploy/execution-d4/qualification-runtime.env.example" \
   "${ROOT_DIR}/deploy/execution-d4/storage-input.env.example" \
+  "${ROOT_DIR}/deploy/execution-d4/dormant-closeout.env.example" \
+  "${ROOT_DIR}/deploy/execution-d4/source-idle-evidence.json.example" \
+  "${ROOT_DIR}/deploy/execution-d4/systemd/portal-execution-d4-window-guard.service.example" \
   "${ROOT_DIR}/deploy/execution-d4/compose.encrypted-storage.yaml" \
   "${ROOT_DIR}/deploy/execution-d4/compose.paper-read-shadow.yaml" \
   "${ROOT_DIR}/deploy/execution-d4/source-proxy/nginx.conf.template" \
@@ -375,6 +525,27 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N07_SHADOW_SCREEN_APIS_HANDOFF.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/real_source.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/real_source_tests.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/bin/n06_verify.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/fixtures/n06-real-source-qualification.template.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/shadow_screen.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0010_shadow_screen_activation.sql" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-verify.sh" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md" \
@@ -538,13 +709,21 @@ for tracked_source in \
   packages/contracts/schemas/execution-governance-r2-review.v1.schema.json \
   packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json \
   packages/contracts/schemas/execution-realtime-event.v1.schema.json \
+  packages/contracts/schemas/execution-analytics-series.v1.schema.json \
+  packages/contracts/schemas/execution-event-envelope.v1.schema.json \
   packages/contracts/schemas/execution-operations.v1.schema.json \
+  packages/contracts/schemas/execution-staged-activation.v1.schema.json \
   packages/contracts/fixtures/problem.valid.json \
   packages/contracts/fixtures/command.valid.json \
   packages/contracts/fixtures/event.valid.json \
   packages/contracts/fixtures/keyset-page.valid.json \
   packages/contracts/fixtures/execution-analytics.capital-preview.valid.json \
   packages/contracts/fixtures/execution-analytics.order-funnel.valid.json \
+  packages/contracts/fixtures/execution-staged-activation.capabilities.valid.json \
+  packages/contracts/fixtures/execution-staged-activation.plan-blocked.valid.json \
+  packages/contracts/fixtures/execution-staged-activation.states.valid.json \
+  packages/contracts/openapi/execution-staged-activation.openapi.json \
+  packages/contracts/generated/execution-staged-activation.d.ts \
   packages/contracts/fixtures/execution-analytics.insight-batch.valid.json \
   packages/contracts/fixtures/execution-analytics.correlation.valid.json \
   packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json \
@@ -554,6 +733,14 @@ for tracked_source in \
   packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json \
   packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json \
   packages/contracts/fixtures/execution-realtime.projection-gap.valid.json \
+  packages/contracts/fixtures/execution-analytics.equity-projection.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-line.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-histogram.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-funnel.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-waterfall.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-heatmap.valid.json \
+  packages/contracts/fixtures/execution-analytics.insight-bar.valid.json \
+  packages/contracts/fixtures/execution-events.corpus.valid.json \
   packages/contracts/fixtures/execution-command-catalog.valid.json \
   packages/contracts/fixtures/execution-command-plan.valid.json \
   packages/contracts/fixtures/execution-command-operation.valid.json \
@@ -564,10 +751,12 @@ for tracked_source in \
   packages/contracts/fixtures/execution-incident-workflow.resolved.valid.json \
   packages/contracts/generated/portal-api.d.ts \
   packages/contracts/generated/execution-analytics.d.ts \
+  packages/contracts/generated/execution-analytics-series.d.ts \
   packages/contracts/generated/execution-governance.d.ts \
   packages/contracts/generated/execution-realtime.d.ts \
   packages/contracts/generated/execution-operations.d.ts \
   packages/contracts/openapi/execution-analytics.openapi.json \
+  packages/contracts/openapi/execution-analytics-series.openapi.json \
   packages/contracts/openapi/execution-governance.openapi.json \
   packages/contracts/openapi/execution-realtime.openapi.json \
   packages/contracts/openapi/execution-operations.openapi.json \
@@ -680,9 +869,31 @@ for tracked_source in \
   upgrade/backend/EX_BE_05A_GOVERNANCE_EVIDENCE_APPROVAL.md \
   services/portal-execution-edge-rs/Cargo.toml \
   services/portal-execution-edge-rs/Cargo.lock \
+  services/portal-execution-edge-rs/crates/external-read-adapter/Cargo.toml \
+  services/portal-execution-edge-rs/crates/external-read-adapter/src/lib.rs \
+  services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/README.md \
+  services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/capability-catalogue.schema.json \
+  services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/capability-catalogue.example.json \
+  services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/semantic-rulings.example.json \
+  services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/golden-corpus-index.example.json \
+  services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/acceptance-results.example.json \
+  services/portal-execution-edge-rs/contracts/n11-external-read-v1-request/owner-publication.manifest.example.json \
+  scripts/execution-n11-external-read-verify.py \
+  scripts/test_execution_n11_external_read_verify.py \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/README.md \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.schema.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/command-capability-catalogue.example.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/terminal-corpus-index.example.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/acceptance-results.example.json \
+  services/portal-execution-edge-rs/contracts/n12-command-relay-v1-request/owner-publication.manifest.example.json \
+  scripts/execution-n12-command-publication-verify.py \
+  scripts/test_execution_n12_command_publication_verify.py \
   services/portal-execution-edge-rs/rust-toolchain.toml \
   services/portal-execution-edge-rs/contract-pack.lock.json \
   services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs \
+  services/portal-execution-edge-rs/crates/execution-contracts/src/events.rs \
+  services/portal-execution-edge-rs/crates/analytics/src/series.rs \
+  services/portal-execution-edge-rs/crates/analytics/src/tiles.rs \
   services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs \
   services/portal-execution-edge-rs/crates/command-relay/Cargo.toml \
@@ -697,6 +908,11 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/d4_writer.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs \
   services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/src/shared_consumer.rs \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/Cargo.toml \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/src/lib.rs \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/src/tests.rs \
+  services/portal-execution-edge-rs/crates/shared-consumer-core/fixtures/redacted-snapshots.json \
   services/portal-execution-edge-rs/crates/paper-shadow-mapper/Cargo.toml \
   services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/lib.rs \
   services/portal-execution-edge-rs/crates/paper-shadow-mapper/src/tests.rs \
@@ -708,6 +924,7 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0005_projection_event_entity.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0008_shared_consumer_lease.sql \
   services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml \
   services/portal-execution-edge-rs/crates/paper-source-contract/build.rs \
   services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs \
@@ -745,6 +962,24 @@ for tracked_source in \
   scripts/execution-d3-test.sh \
   scripts/execution-d4-authorization.py \
   scripts/test_execution_d4_authorization.py \
+  scripts/execution-d4-dormant-closeout.py \
+  scripts/test_execution_d4_dormant_closeout.py \
+  scripts/execution-n02-contract-verify.py \
+  scripts/test_execution_n02_contract_verify.py \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/README.md \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/owner-pack.manifest.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.schema.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/compatibility-fixtures.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/error-corpus.example.json \
+  scripts/execution-n03-implementation-verify.py \
+  scripts/test_execution_n03_implementation_verify.py \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/README.md \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/owner-implementation.manifest.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/implementation-profile.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/source-metrics.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/query-plan-evidence.example.json \
+  services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/acceptance-results.example.json \
   scripts/execution-image-publication-test.sh \
   scripts/execution-tracking-test.sh \
   .github/workflows/publish-images.yml \
@@ -772,6 +1007,9 @@ for tracked_source in \
   deploy/execution-d4/owner-input.env.example \
   deploy/execution-d4/qualification-runtime.env.example \
   deploy/execution-d4/storage-input.env.example \
+  deploy/execution-d4/dormant-closeout.env.example \
+  deploy/execution-d4/source-idle-evidence.json.example \
+  deploy/execution-d4/systemd/portal-execution-d4-window-guard.service.example \
   deploy/execution-d4/compose.encrypted-storage.yaml \
   deploy/execution-d4/compose.paper-read-shadow.yaml \
   deploy/execution-d4/source-proxy/nginx.conf.template \
@@ -791,6 +1029,27 @@ for tracked_source in \
   upgrade/backend/EX_BE_02_LIVE_D4_MAPPER_CORE_HARDENING.md \
   upgrade/backend/EX_BE_02_LIVE_D4_ENCRYPTED_STORAGE_BOUNDARY.md \
   upgrade/backend/EX_BE_02_LIVE_D4_OWNER_ACTION_PACKET.md \
+  upgrade/backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md \
+  upgrade/backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N02_INCREMENTAL_SOURCE_CONTRACT_HANDOFF.md \
+  upgrade/backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N03_OWNER_IMPLEMENTATION_HANDOFF.md \
+  upgrade/backend/EX_BE_03_N04_LEASE_AWARE_RUST_SHARED_CONSUMER.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N04_LEASE_AWARE_CONSUMER_HANDOFF.md \
+  upgrade/backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md \
+  upgrade/backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N06_REAL_SOURCE_QUALIFICATION_HANDOFF.md \
+  upgrade/backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N07_SHADOW_SCREEN_APIS_HANDOFF.md \
+  services/portal-execution-edge-rs/crates/source-qualification/src/real_source.rs \
+  services/portal-execution-edge-rs/crates/source-qualification/src/real_source_tests.rs \
+  services/portal-execution-edge-rs/crates/source-qualification/src/bin/n06_verify.rs \
+  services/portal-execution-edge-rs/crates/source-qualification/fixtures/n06-real-source-qualification.template.json \
+  services/portal-execution-edge-rs/crates/source-qualification/src/shadow_screen.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0010_shadow_screen_activation.sql \
+  packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json \
+  scripts/execution-n06-qualification-verify.sh \
+  scripts/execution-n06-qualification-test.sh \
   upgrade/backend/EX_BE_02_LIVE_D1_OFFLINE_PREPARATION.md \
   upgrade/backend/EX_BE_02_LIVE_D1_EXECUTION_EVIDENCE.md \
   upgrade/backend/EX_BE_02_LIVE_IAM_VERIFICATION_AND_D1_REVALIDATION.md \
@@ -816,6 +1075,75 @@ for tracked_source in \
   apps/control-api/src/execution/analytics.controller.ts \
   apps/control-api/src/execution/analytics.proxy.ts \
   apps/control-api/test/execution-analytics.spec.ts \
+  apps/control-api/migrations/1723680000013_execution-staged-activation.sql \
+  apps/control-api/src/activation/contracts.ts \
+  apps/control-api/src/activation/activation.repository.ts \
+  apps/control-api/src/activation/activation.service.ts \
+  apps/control-api/src/activation/activation.controller.ts \
+  apps/control-api/test/staged-activation.spec.ts \
+  upgrade/backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md \
+  upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md \
+  upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md \
+  packages/contracts/schemas/execution-intercell-gateway.v1.schema.json \
+  packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json \
+  packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json \
+  packages/contracts/fixtures/execution-intercell-gateway.artifact-corpus.valid.json \
+  packages/contracts/openapi/execution-intercell-gateway.openapi.json \
+  packages/contracts/generated/execution-intercell-gateway.d.ts \
+  services/portal-execution-edge-rs/crates/intercell-gateway/Cargo.toml \
+  services/portal-execution-edge-rs/crates/intercell-gateway/src/lib.rs \
+  scripts/execution-n15a-gateway-test.sh \
+  upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md \
+  packages/contracts/schemas/execution-emergency-routing.v1.schema.json \
+  packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json \
+  packages/contracts/fixtures/execution-emergency-routing.ui-corpus.valid.json \
+  packages/contracts/openapi/execution-emergency-routing.openapi.json \
+  packages/contracts/generated/execution-emergency-routing.d.ts \
+  services/portal-execution-edge-rs/crates/emergency-routing/Cargo.toml \
+  services/portal-execution-edge-rs/crates/emergency-routing/src/lib.rs \
+  deploy/execution-emergency/README.md \
+  deploy/execution-emergency/origin-isolation.source-dark.json \
+  deploy/execution-emergency/nginx.same-origin.source-dark.conf.template \
+  scripts/execution-n16a-emergency-routing-test.sh \
+  upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md \
+  packages/contracts/schemas/execution-production-readiness.v1.schema.json \
+  packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json \
+  packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json \
+  packages/contracts/openapi/execution-production-readiness.openapi.json \
+  packages/contracts/generated/execution-production-readiness.d.ts \
+  services/portal-execution-edge-rs/crates/production-readiness/Cargo.toml \
+  services/portal-execution-edge-rs/crates/production-readiness/src/lib.rs \
+  deploy/execution-readiness/README.md \
+  deploy/execution-readiness/slo-alerts.source-dark.yml \
+  deploy/execution-readiness/grafana-dashboard.source-dark.json \
+  deploy/execution-readiness/capacity-retention-cost.source-dark.json \
+  deploy/execution-readiness/rotation-inventory.source-dark.json \
+  deploy/execution-readiness/owner-matrix.source-dark.json \
+  deploy/execution-readiness/game-day-plan.source-dark.json \
+  deploy/runbooks/portal-n17a-source-dark-production-dr.md \
+  scripts/execution-n17a-readiness.py \
+  scripts/test_execution_n17a_readiness.py \
+  scripts/execution-n17a-production-dr-test.sh \
+  deploy/.env.development.example \
+  deploy/manifests/deployment-profile.v1.schema.json \
+  deploy/manifests/deployment-profiles.source-dark.json \
+  deploy/manifests/portal-release-compatibility-matrix.v1.schema.json \
+  deploy/manifests/compatibility-matrix.source-dark.json \
+  deploy/manifests/portal-release-manifest.v1.schema.json \
+  deploy/manifests/portal-release-candidate-evidence.v1.schema.json \
+  deploy/manifests/portal-release-owner-decision.v1.schema.json \
+  deploy/manifests/release-manifest.template.json \
+  deploy/manifests/release-candidate-evidence.template.json \
+  deploy/manifests/release-owner-decision.template.json \
+  deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md \
+  scripts/portal-release-authority.py \
+  scripts/test_portal_release_authority.py \
+  scripts/portal-release-authority-test.sh \
   apps/control-api/src/auth/auth.service.ts \
   apps/control-api/src/auth/auth.controller.ts \
   apps/control-api/src/auth/argon.ts \
@@ -864,6 +1192,27 @@ command -v python3 >/dev/null 2>&1 || {
 
 for json_contract in \
   "${ROOT_DIR}/apps/portal/registry/registry.json" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-compatibility-matrix.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/compatibility-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-manifest.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-candidate-evidence.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/portal-release-owner-decision.v1.schema.json" \
+  "${ROOT_DIR}/deploy/manifests/release-manifest.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-candidate-evidence.template.json" \
+  "${ROOT_DIR}/deploy/manifests/release-owner-decision.template.json" \
+  "${ROOT_DIR}/deploy/execution-d4/source-idle-evidence.json.example" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/owner-pack.manifest.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/incremental-contract.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/compatibility-fixtures.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-request/error-corpus.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/owner-implementation.manifest.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/implementation-profile.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/source-metrics.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/query-plan-evidence.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/d4-paper-read-v2-implementation-request/acceptance-results.example.json" \
   "${ROOT_DIR}/apps/portal/registry/links.v1.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry-source.v1.schema.json" \
   "${ROOT_DIR}/apps/portal/registry/schemas/portal-registry.v1.schema.json" \
@@ -877,6 +1226,17 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.correlation.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.capital-ledger.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-analytics-series.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-event-envelope.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.equity-projection.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-line.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-histogram.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-funnel.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-waterfall.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-heatmap.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-analytics.insight-bar.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-events.corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-analytics-series.openapi.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-projection-page.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-projection-page.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-r2-review.v1.schema.json" \
@@ -887,6 +1247,13 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-intercell-gateway.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.artifact-corpus.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-emergency-routing.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-emergency-routing.ui-corpus.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-catalog.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-plan.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-command-operation.valid.json" \
@@ -899,6 +1266,16 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-intercell-gateway.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-emergency-routing.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-production-readiness.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/grafana-dashboard.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/capacity-retention-cost.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/rotation-inventory.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/owner-matrix.source-dark.json" \
+  "${ROOT_DIR}/deploy/execution-readiness/game-day-plan.source-dark.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contract-pack.lock.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/planning-api.openapi.json" \
   "${ROOT_DIR}/upgrade/backend/bar02/snapshots/run-request.schema.json" \
@@ -911,6 +1288,10 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-workspace.sh" \
   "${ROOT_DIR}/scripts/verify-migration-history.sh" \
   "${ROOT_DIR}/scripts/verify-release-channel.sh" \
+  "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
+  "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
   "${ROOT_DIR}/scripts/stage-hmd-reader-wheel.sh" \
@@ -947,7 +1328,12 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh" \
   "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh" \
   "${ROOT_DIR}/scripts/test-execution-d4-storage.sh" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-verify.sh" \
+  "${ROOT_DIR}/scripts/execution-n06-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -965,15 +1351,42 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-d2-isolation.py" \
   "${ROOT_DIR}/scripts/test_execution_d2_isolation.py" \
   "${ROOT_DIR}/scripts/execution-d4-authorization.py" \
-  "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
+  "${ROOT_DIR}/scripts/test_execution_d4_authorization.py" \
+  "${ROOT_DIR}/scripts/execution-d4-dormant-closeout.py" \
+  "${ROOT_DIR}/scripts/test_execution_d4_dormant_closeout.py" \
+  "${ROOT_DIR}/scripts/execution-n02-contract-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n02_contract_verify.py" \
+  "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py" \
+  "${ROOT_DIR}/scripts/execution-n11-external-read-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py" \
+  "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" \
+  "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
+python3 -m py_compile \
+  "${ROOT_DIR}/scripts/portal-release-authority.py" \
+  "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
+  "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_isolation.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d4_authorization.py"
+python3 "${ROOT_DIR}/scripts/test_execution_d4_dormant_closeout.py"
+python3 "${ROOT_DIR}/scripts/execution-n02-contract-verify.py" --mode template
+python3 "${ROOT_DIR}/scripts/test_execution_n02_contract_verify.py"
+python3 "${ROOT_DIR}/scripts/execution-n03-implementation-verify.py" --mode template
+python3 "${ROOT_DIR}/scripts/test_execution_n03_implementation_verify.py"
+python3 "${ROOT_DIR}/scripts/execution-n11-external-read-verify.py" --mode template
+python3 "${ROOT_DIR}/scripts/test_execution_n11_external_read_verify.py"
+python3 "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" --mode template
+python3 "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
+python3 "${ROOT_DIR}/scripts/portal-release-authority.py" verify --mode template
+python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"
+"${ROOT_DIR}/scripts/execution-n06-qualification-test.sh"
 
 while IFS= read -r tracked_path; do
   case "${tracked_path}" in
@@ -991,9 +1404,19 @@ docker compose --project-directory "${ROOT_DIR}" \
 docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet
+EXECUTION_EDGE_ORIGIN=https://10.70.0.2:8443 \
+EXECUTION_EDGE_DELEGATION_AUDIENCE=portal-execution-edge-paper \
+CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY=/srv/primus/control-api/execution-edge-secrets \
+docker compose --project-directory "${ROOT_DIR}" \
+  --env-file "${ROOT_DIR}/deploy/.env.production.example" \
+  -f "${ROOT_DIR}/deploy/compose.production.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-shadow-query.yaml" config --quiet
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
 "${ROOT_DIR}/scripts/execution-d2-test.sh"
 "${ROOT_DIR}/scripts/execution-d3-test.sh"
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
+"${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
+"${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh"
+"${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

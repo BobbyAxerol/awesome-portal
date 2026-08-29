@@ -1,4 +1,11 @@
-# Xin chủ Trading System — bốn thứ Portal đang thiếu
+# Historical Trading System request — four frontend gaps
+
+Status: `SUPERSEDED_BY_OFFICIAL_MASTER_REQUEST / AUDIT_ONLY`
+
+> Do not send this file to the Trading System owner. Its four requests are
+> included in the N11 machine annex under the single official request:
+> `upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`.
+> This file is retained only to preserve Claude's original UI rationale.
 
 **Ngày:** 2026-08-22 · **Người xin:** Portal frontend (Claude), qua Bobby
 **Đã duyệt:** Bobby, 2026-08-22 · **Backend Portal (codex) đã xác nhận** cả bốn

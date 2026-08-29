@@ -1,0 +1,111 @@
+{
+  "schema_version": "portal.execution.intercell-gateway.v1",
+  "profile_id": "n15a-source-dark",
+  "source_dark": true,
+  "runtime_active": false,
+  "source_call_authorized": false,
+  "identity_policy": {
+    "read_identity_class": "portal-execution-read",
+    "command_identity_class": "portal-execution-command",
+    "identities_distinct": true,
+    "delegated_resource_policy": "EXACT_RESOURCE_ONLY",
+    "raw_browser_token_forwarding": false,
+    "wildcard_scope_allowed": false
+  },
+  "interfaces": [
+    {
+      "interface": "QUERY",
+      "versions": { "minimum": { "major": 1, "minor": 0 }, "maximum": { "major": 1, "minor": 1 } },
+      "preferred": { "major": 1, "minor": 1 },
+      "rollback": { "major": 1, "minor": 0 },
+      "publication_state": "FIXTURE_ONLY",
+      "contract_digest": "sha256:b12141ce3d82aeadcbc8c835f8c740a8c86cbe73c6a7402633d600fb99780241"
+    },
+    {
+      "interface": "COMMAND",
+      "versions": { "minimum": { "major": 1, "minor": 0 }, "maximum": { "major": 1, "minor": 0 } },
+      "preferred": { "major": 1, "minor": 0 },
+      "rollback": { "major": 1, "minor": 0 },
+      "publication_state": "FIXTURE_ONLY",
+      "contract_digest": "sha256:fcbe3b1594a22a9e324229832272e12fd530b00e044eddc4804367c755125b9f"
+    },
+    {
+      "interface": "EVENT",
+      "versions": { "minimum": { "major": 1, "minor": 0 }, "maximum": { "major": 1, "minor": 1 } },
+      "preferred": { "major": 1, "minor": 1 },
+      "rollback": { "major": 1, "minor": 0 },
+      "publication_state": "FIXTURE_ONLY",
+      "contract_digest": "sha256:a9fc28842f65f05555fd46901b482ff799c70034cb8e1adebca2fcb5ed1507b9"
+    },
+    {
+      "interface": "ARTIFACT",
+      "versions": { "minimum": { "major": 1, "minor": 0 }, "maximum": { "major": 1, "minor": 0 } },
+      "preferred": { "major": 1, "minor": 0 },
+      "rollback": { "major": 1, "minor": 0 },
+      "publication_state": "FIXTURE_ONLY",
+      "contract_digest": "sha256:d1a6b3cea530a718bc36de6cc78dbe22cfe305fca5f1eca1890306c518471db6"
+    }
+  ],
+  "transports": [
+    {
+      "interface": "QUERY",
+      "method": "GET",
+      "connect_timeout_ms": 2000,
+      "request_timeout_ms": 5000,
+      "queue_timeout_ms": 250,
+      "maximum_concurrency": 4,
+      "maximum_response_bytes": 8388608,
+      "retry_before_dispatch": 2,
+      "retry_after_dispatch": 0,
+      "redirects_allowed": false,
+      "http2_required": true,
+      "tls13_required": true,
+      "redacted_observability_fields": ["interface", "outcome", "latency_ms", "response_bytes", "retry_count"]
+    },
+    {
+      "interface": "COMMAND",
+      "method": "POST",
+      "connect_timeout_ms": 2000,
+      "request_timeout_ms": 5000,
+      "queue_timeout_ms": 250,
+      "maximum_concurrency": 2,
+      "maximum_response_bytes": 1048576,
+      "retry_before_dispatch": 0,
+      "retry_after_dispatch": 0,
+      "redirects_allowed": false,
+      "http2_required": true,
+      "tls13_required": true,
+      "redacted_observability_fields": ["interface", "outcome", "latency_ms", "response_bytes", "retry_count"]
+    },
+    {
+      "interface": "EVENT",
+      "method": "STREAM",
+      "connect_timeout_ms": 2000,
+      "request_timeout_ms": 30000,
+      "queue_timeout_ms": 250,
+      "maximum_concurrency": 2,
+      "maximum_response_bytes": 1048576,
+      "retry_before_dispatch": 2,
+      "retry_after_dispatch": 0,
+      "redirects_allowed": false,
+      "http2_required": true,
+      "tls13_required": true,
+      "redacted_observability_fields": ["interface", "outcome", "latency_ms", "response_bytes", "retry_count"]
+    },
+    {
+      "interface": "ARTIFACT",
+      "method": "REFERENCE",
+      "connect_timeout_ms": 2000,
+      "request_timeout_ms": 5000,
+      "queue_timeout_ms": 250,
+      "maximum_concurrency": 2,
+      "maximum_response_bytes": 262144,
+      "retry_before_dispatch": 2,
+      "retry_after_dispatch": 0,
+      "redirects_allowed": false,
+      "http2_required": true,
+      "tls13_required": true,
+      "redacted_observability_fields": ["interface", "outcome", "latency_ms", "response_bytes", "retry_count"]
+    }
+  ]
+}

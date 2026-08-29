@@ -20,6 +20,8 @@ services:
       EDGE_REALTIME_SSE_ENABLED: "false"
       EDGE_ANALYTICS_QUERY_ENABLED: "false"
       EDGE_ANALYTICS_SOURCE_PROFILE: fixture
+      EDGE_SHADOW_QUERY_ENABLED: "false"
+      EDGE_PAPER_WORKBENCH_SHADOW_ENABLED: "false"
       EDGE_COMMAND_RELAY_ENABLED: "false"
     deploy:
       resources:

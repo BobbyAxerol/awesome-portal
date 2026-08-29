@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json",
+  "title": "Execution source-dark staged activation v1",
+  "oneOf": [
+    { "$ref": "#/$defs/CapabilitiesResponse" },
+    { "$ref": "#/$defs/PlanResponse" },
+    { "$ref": "#/$defs/UiStateCorpus" }
+  ],
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,511}$" },
+    "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "CapabilityKey": { "enum": ["PROJECTION", "QUERY", "SSE", "COMMAND_R1", "COMMAND_R2", "COMMAND_R3", "COMMAND_R4"] },
+    "DeliveryProfile": { "enum": ["fixture", "shadow", "paper", "sandbox", "live_canary", "live_full"] },
+    "Actor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["user_id", "username", "roles"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 191 },
+        "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "enum": ["ADMIN", "USER"] } }
+      }
+    },
+    "Capability": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "capability_key", "effective_profile", "desired_profile", "capability_version",
+        "source_enabled", "runtime_enabled", "kill_switch_engaged", "last_plan_id", "updated_at"
+      ],
+      "properties": {
+        "capability_key": { "$ref": "#/$defs/CapabilityKey" },
+        "effective_profile": { "const": "fixture" },
+        "desired_profile": { "const": "fixture" },
+        "capability_version": { "type": "integer", "minimum": 1 },
+        "source_enabled": { "const": false },
+        "runtime_enabled": { "const": false },
+        "kill_switch_engaged": { "const": true },
+        "last_plan_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "updated_at": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] }
+      }
+    },
+    "CapabilitiesResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "schema_version", "record_authority", "delivery_profile", "source_integration_state",
+        "runtime_activation_requested", "source_side_effect_requested", "owner_artifact_imported",
+        "read_at", "actor", "capabilities"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.staged-activation-capabilities.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "const": "fixture" },
+        "source_integration_state": { "const": "DARK" },
+        "runtime_activation_requested": { "const": false },
+        "source_side_effect_requested": { "const": false },
+        "owner_artifact_imported": { "const": false },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "actor": { "$ref": "#/$defs/Actor" },
+        "capabilities": {
+          "type": "array", "minItems": 7, "maxItems": 7,
+          "items": { "$ref": "#/$defs/Capability" }
+        }
+      }
+    },
+    "Plan": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "plan_id", "capability_key", "action", "from_profile", "target_profile",
+        "expected_capability_version", "plan_version", "status", "blocker_codes",
+        "evidence_set_hash", "compatibility_set_hash", "reason", "expires_at",
+        "applied_at", "verified_at", "resulting_capability_version", "created_at"
+      ],
+      "properties": {
+        "plan_id": { "$ref": "#/$defs/Identifier" },
+        "capability_key": { "$ref": "#/$defs/CapabilityKey" },
+        "action": { "enum": ["PROMOTE", "ROLLBACK"] },
+        "from_profile": { "$ref": "#/$defs/DeliveryProfile" },
+        "target_profile": { "$ref": "#/$defs/DeliveryProfile" },
+        "expected_capability_version": { "type": "integer", "minimum": 1 },
+        "plan_version": { "type": "integer", "minimum": 1 },
+        "status": { "enum": ["READY", "BLOCKED", "DENIED", "APPLIED", "VERIFIED", "EXPIRED"] },
+        "blocker_codes": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 191 } },
+        "evidence_set_hash": { "$ref": "#/$defs/Hash" },
+        "compatibility_set_hash": { "$ref": "#/$defs/Hash" },
+        "reason": { "type": "string", "minLength": 8, "maxLength": 2000 },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "applied_at": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "verified_at": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "resulting_capability_version": { "oneOf": [{ "type": "integer", "minimum": 1 }, { "type": "null" }] },
+        "created_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "EvidenceReference": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "ordinal", "kind", "reference_id", "artifact_digest", "schema_version",
+        "signer_fingerprint", "detached_signature_present", "compatibility_revision",
+        "expires_at", "structure_valid", "owner_accepted", "trusted_for_activation"
+      ],
+      "properties": {
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "kind": { "enum": ["CONTRACT", "IMAGE", "SCHEMA", "QUALIFICATION", "ROLLBACK"] },
+        "reference_id": { "$ref": "#/$defs/Identifier" },
+        "artifact_digest": { "$ref": "#/$defs/Hash" },
+        "schema_version": { "type": "string", "minLength": 1, "maxLength": 191 },
+        "signer_fingerprint": { "$ref": "#/$defs/Hash" },
+        "detached_signature_present": { "const": true },
+        "compatibility_revision": { "type": "string", "minLength": 1, "maxLength": 191 },
+        "expires_at": { "$ref": "#/$defs/Timestamp" },
+        "structure_valid": { "const": true },
+        "owner_accepted": { "const": false },
+        "trusted_for_activation": { "const": false }
+      }
+    },
+    "Requirement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ordinal", "kind", "component", "exact_revision", "expected_digest"],
+      "properties": {
+        "ordinal": { "type": "integer", "minimum": 0 },
+        "kind": { "enum": ["CONTRACT", "IMAGE", "SCHEMA", "CAPABILITY"] },
+        "component": { "type": "string", "minLength": 1, "maxLength": 191 },
+        "exact_revision": { "type": "string", "minLength": 1, "maxLength": 191 },
+        "expected_digest": { "$ref": "#/$defs/Hash" }
+      }
+    },
+    "PlanResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "schema_version", "record_authority", "delivery_profile", "source_integration_state",
+        "source_side_effect_requested", "runtime_activation_requested", "owner_artifact_imported",
+        "replayed", "read_at", "actor", "plan", "capability", "evidence_refs",
+        "compatibility_requirements"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.staged-activation-plan.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "delivery_profile": { "const": "fixture" },
+        "source_integration_state": { "const": "DARK" },
+        "source_side_effect_requested": { "const": false },
+        "runtime_activation_requested": { "const": false },
+        "owner_artifact_imported": { "const": false },
+        "replayed": { "type": "boolean" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "actor": { "$ref": "#/$defs/Actor" },
+        "plan": { "$ref": "#/$defs/Plan" },
+        "capability": { "$ref": "#/$defs/Capability" },
+        "evidence_refs": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/EvidenceReference" } },
+        "compatibility_requirements": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/Requirement" } }
+      }
+    },
+    "UiState": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "plan_status", "blocker_codes", "ui_mode", "action_enabled", "operator_message"],
+      "properties": {
+        "state": { "enum": ["fixture", "denied", "incompatible", "stale", "partial", "rollback", "restart"] },
+        "plan_status": { "oneOf": [{ "enum": ["READY", "BLOCKED", "DENIED", "VERIFIED"] }, { "type": "null" }] },
+        "blocker_codes": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "ui_mode": { "enum": ["SOURCE_DARK", "BLOCKED", "ROLLBACK_VERIFIED"] },
+        "action_enabled": { "const": false },
+        "operator_message": { "type": "string", "minLength": 8, "maxLength": 240 }
+      }
+    },
+    "UiStateCorpus": {
+      "type": "array", "minItems": 7, "maxItems": 7,
+      "items": { "$ref": "#/$defs/UiState" }
+    }
+  }
+}

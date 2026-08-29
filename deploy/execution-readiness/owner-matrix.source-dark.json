@@ -1,0 +1,23 @@
+{
+  "schema_version": "portal.execution.owner-matrix.v1",
+  "source_dark": true,
+  "production_active": false,
+  "final_release_authority": "BOBBY",
+  "responsibilities": [
+    { "area": "PORTAL_CONTROL_DATABASE", "responsible": "PORTAL_SRE", "accountable": "BOBBY", "trading_system_authority": false },
+    { "area": "PORTAL_PROJECTION_AND_REBUILD", "responsible": "PORTAL_BACKEND", "accountable": "BOBBY", "trading_system_authority": false },
+    { "area": "PORTAL_RELEASE_AND_ROLLBACK", "responsible": "PORTAL_BACKEND", "accountable": "BOBBY", "trading_system_authority": false },
+    { "area": "SOURCE_CONTRACT_AND_COMMAND_TERMINAL_TRUTH", "responsible": "TRADING_SYSTEM_OWNER", "accountable": "TRADING_SYSTEM_OWNER", "trading_system_authority": true },
+    { "area": "CROSS_CELL_IDENTITY_ROTATION", "responsible": "PORTAL_SRE_AND_TRADING_SYSTEM_OWNER", "accountable": "BOBBY", "trading_system_authority": true },
+    { "area": "INCIDENT_COMMAND_CONTAINMENT", "responsible": "PORTAL_OPERATOR", "accountable": "BOBBY", "trading_system_authority": true },
+    { "area": "N17B_PRODUCTION_ACCEPTANCE", "responsible": "PORTAL_SRE_AND_TRADING_SYSTEM_OWNER", "accountable": "BOBBY", "trading_system_authority": true }
+  ],
+  "rollback_order": [
+    "ENGAGE_CAPABILITY_KILL_SWITCH",
+    "PRESERVE_IN_FLIGHT_VISIBILITY",
+    "SELECT_PRIOR_SIGNED_PORTAL_MANIFEST",
+    "RESTORE_OR_REBUILD_IN_ISOLATION",
+    "VERIFY_AUDIT_AND_TERMINAL_STATE",
+    "OWNER_DECIDES_REENABLEMENT"
+  ]
+}

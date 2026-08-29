@@ -27,6 +27,7 @@ const OPERATION_COLUMNS = [
   "operation_id", "workspace_id", "operation_kind", "command_key", "environment",
   "target_type", "target_id", "risk_tier", "severity", "source_authority",
   "source_status", "verification_result", "triage_state", "workflow_version",
+  "assigned_to_user_id", "assigned_to_username", "assigned_at", "incident_id",
   "acknowledged_at", "acknowledged_by_user_id", "resolved_at", "resolved_by_user_id",
   "resolution_reason", "resolution_evidence_hash", "created_at", "updated_at",
 ] as const;
@@ -49,6 +50,12 @@ function publicOperation(record: OperationQueueRecord) {
     verification_result: record.verificationResult,
     triage_state: record.triageState,
     workflow_version: record.workflowVersion,
+    assigned_to: record.assignedToUserId === null ? null : {
+      user_id: record.assignedToUserId,
+      username: record.assignedToUsername,
+    },
+    assigned_at: iso(record.assignedAt),
+    incident_id: record.incidentId,
     acknowledged_at: iso(record.acknowledgedAt),
     acknowledged_by_user_id: record.acknowledgedByUserId,
     resolved_at: iso(record.resolvedAt),
@@ -62,7 +69,7 @@ function publicOperation(record: OperationQueueRecord) {
 
 const operationQueueResource: PostgresListResource<OperationQueueRow, ReturnType<typeof publicOperation>> = {
   resourceId: "execution.operations-queue",
-  table: "execution_operation_queue_items",
+  table: "execution_operation_queue_read",
   selectColumns: OPERATION_COLUMNS,
   workspaceColumn: "workspace_id",
   idSortField: "operation_id",
@@ -89,6 +96,7 @@ const operationQueueResource: PostgresListResource<OperationQueueRow, ReturnType
     },
     target_type: { column: "target_type", kind: "text", operators: ["eq"] },
     command_key: { column: "command_key", kind: "text", operators: ["eq"] },
+    assigned_to_user_id: { column: "assigned_to_user_id", kind: "text", operators: ["eq"] },
   },
   sorts: {
     created_at: { column: "created_at", kind: "timestamp" },
@@ -100,7 +108,7 @@ const operationQueueResource: PostgresListResource<OperationQueueRow, ReturnType
   mapRow: (row) => publicOperation(operationQueueRecord(row)),
 };
 
-function listQuery(query: OperationQueueQuery): RawKeysetQuery {
+function listQuery(query: OperationQueueQuery, actorUserId: string): RawKeysetQuery {
   const filters: RawFilterInput[] = [];
   for (const field of [
     "triage_state", "environment", "source_status", "verification_result",
@@ -108,6 +116,9 @@ function listQuery(query: OperationQueueQuery): RawKeysetQuery {
   ] as const) {
     const value = query[field];
     if (value !== undefined) filters.push({ field, op: "eq", value });
+  }
+  if (query.assigned_to === "me") {
+    filters.push({ field: "assigned_to_user_id", op: "eq", value: actorUserId });
   }
   return {
     after: query.after,
@@ -140,7 +151,7 @@ export class OperationsWorkflowService {
     const page = await this.query.list(
       operationQueueResource,
       { actorId: user.userId, workspaceId, role: user.role },
-      listQuery(query),
+      listQuery(query, user.userId),
     );
     return {
       schema_version: "execution.operations-queue.v1",

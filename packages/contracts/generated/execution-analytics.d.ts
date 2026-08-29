@@ -100,6 +100,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/deployments/paper/{deploymentId}/projection/{panel}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description N07 narrow, deployment-scoped shadow projection. Registry promotion remains a separate owner action. */
+        get: operations["executionPaperWorkbenchShadowPanel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -118,6 +135,8 @@ export interface components {
         PanelState: "loading" | "ok" | "empty" | "partial" | "stale" | "denied" | "unavailable" | "insufficient_data" | "terminal";
         /** @enum {string} */
         SourceAuthority: "RESEARCH" | "EXECUTION" | "BROKER" | "DERIVED";
+        /** @enum {string} */
+        SourceCompleteness: "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
         /** @enum {string} */
         DeliveryProfile: "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
         Warning: {
@@ -374,19 +393,37 @@ export interface components {
             invalid_numeric_count: number;
         };
         ProjectionAppliedFilter: {
-            field: string;
             /** @enum {string} */
-            op: "eq" | "in" | "contains" | "gte" | "lte";
-            value: string;
+            field: "status" | "currency" | "instrument_id" | "account_id" | "portfolio_id" | "strategy_id" | "deployment_id" | "source_authority" | "as_of";
+            /** @enum {string} */
+            operator: "eq" | "in" | "contains" | "gte" | "lte";
+            values: string[];
         };
         ProjectionAppliedSort: {
             field: string;
             /** @enum {string} */
             direction: "asc" | "desc";
         };
-        /** @description Published component for a future approved narrow projection screen endpoint; it is not a generic query route. */
+        ProjectionQueryRow: {
+            entity_id: components["schemas"]["Identifier"];
+            projection_sequence: number;
+            source_authority: components["schemas"]["SourceAuthority"];
+            source_completeness: components["schemas"]["SourceCompleteness"];
+            poll_interval_ms: number | null;
+            as_of: components["schemas"]["DateTime"];
+            source_read_at: components["schemas"]["DateTime"];
+            projected_at: components["schemas"]["DateTime"];
+            adapter_version: string;
+            capability_snapshot_id: string;
+            payload: Record<string, never>;
+        };
+        /** @description Narrow projection component. Deployment scope is injected by Rust and bound into the signed cursor. */
         ProjectionKeysetPage: {
-            rows: unknown[];
+            /** @constant */
+            schema_version: "execution.query.v1";
+            /** Format: uuid */
+            epoch_id: string;
+            rows: components["schemas"]["ProjectionQueryRow"][];
             total_count: number;
             filtered_count: number;
             next_cursor: string | null;
@@ -397,6 +434,34 @@ export interface components {
             applied_sort: components["schemas"]["ProjectionAppliedSort"][];
             aggregates_by_currency: components["schemas"]["ProjectionCurrencyAggregate"][];
             retention: components["schemas"]["ProjectionPageRetention"];
+        };
+        PaperWorkbenchShadowPanelResponse: {
+            /** @constant */
+            schema_version: "execution.paper-workbench.shadow-panel.v1";
+            /** @constant */
+            screen_id: "EXECUTION_PAPER_WORKBENCH_SCREEN";
+            /** @constant */
+            delivery_profile: "shadow";
+            deployment_id: components["schemas"]["Identifier"];
+            /** @enum {string} */
+            panel: "orders" | "positions";
+            panel_state: components["schemas"]["PanelState"];
+            /** @constant */
+            authority: "PORTAL_PROJECTION";
+            upstream_authorities: components["schemas"]["SourceAuthority"][];
+            source_completeness: components["schemas"]["SourceCompleteness"];
+            poll_interval_ms: number | null;
+            freshness_state: components["schemas"]["FreshnessState"];
+            freshness_policy_version: string;
+            age_seconds: number | null;
+            lag_ms: number | null;
+            read_at: components["schemas"]["DateTime"];
+            /** Format: uuid */
+            epoch_id: string;
+            activation_manifest_digest: string;
+            capability_snapshot_id: string;
+            warnings: components["schemas"]["Warning"][];
+            page: components["schemas"]["ProjectionKeysetPage"];
         };
     };
     responses: {
@@ -416,6 +481,8 @@ export interface components {
         AlphaId: components["schemas"]["Identifier"];
         PortfolioId: components["schemas"]["Identifier"];
         BindingId: components["schemas"]["Identifier"];
+        DeploymentId: components["schemas"]["Identifier"];
+        ShadowPanel: "orders" | "positions";
     };
     requestBodies: never;
     headers: never;
@@ -564,6 +631,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BindingExposureResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionPaperWorkbenchShadowPanel: {
+        parameters: {
+            query?: {
+                limit?: number;
+                status?: string;
+                currency?: string;
+                instrument_id?: string;
+                sort?: "as_of" | "projection_sequence" | "status" | "currency";
+                direction?: "asc" | "desc";
+                after?: string;
+                before?: string;
+            };
+            header?: never;
+            path: {
+                deploymentId: components["parameters"]["DeploymentId"];
+                panel: components["parameters"]["ShadowPanel"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paper Workbench shadow panel */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperWorkbenchShadowPanelResponse"];
                 };
             };
             default: components["responses"]["Problem"];

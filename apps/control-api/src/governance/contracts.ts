@@ -10,11 +10,17 @@ export const APPROVAL_STATUSES = [
   "APPROVED",
   "APPROVED_WITH_CONDITION",
   "DENIED",
+  "CHANGES_REQUESTED",
   "EXPIRED",
 ] as const;
 export const APPROVAL_ENVIRONMENTS = ["RESEARCH", "PAPER", "SANDBOX", "LIVE"] as const;
 export const SLA_STATES = ["ON_TRACK", "DUE_SOON", "OVERDUE", "EXPIRED"] as const;
-export const R1_DECISIONS = ["APPROVE", "APPROVE_WITH_CONDITION", "DENY"] as const;
+export const R1_DECISIONS = [
+  "APPROVE",
+  "APPROVE_WITH_CONDITION",
+  "DENY",
+  "REQUEST_CHANGES",
+] as const;
 export const PAPER_EXIT_DECISIONS = ["PROMOTE", "EXTEND_OBSERVATION", "REJECT"] as const;
 
 export type ApprovalGate = (typeof APPROVAL_GATES)[number];
@@ -23,6 +29,60 @@ export type ApprovalEnvironment = (typeof APPROVAL_ENVIRONMENTS)[number];
 export type SlaState = (typeof SLA_STATES)[number];
 export type R1Decision = (typeof R1_DECISIONS)[number];
 export type PaperExitDecision = (typeof PAPER_EXIT_DECISIONS)[number];
+
+export interface ApprovalHistoryRow extends QueryResultRow {
+  history_id: string;
+  workspace_id: string;
+  approval_id: string;
+  gate: ApprovalGate;
+  subject_id: string;
+  subject: string;
+  outcome: Exclude<ApprovalStatus, "PENDING" | "EXPIRED">;
+  decided_by_user_id: string;
+  decided_by_username: string;
+  decided_at: Date;
+  policy_version: string;
+  evidence_digest: string;
+  approval_version_after: number;
+}
+
+export function approvalHistoryResource(): PostgresListResource<ApprovalHistoryRow, Record<string, unknown>> {
+  return {
+    resourceId: "governance.approval-history",
+    table: "governance_approval_history",
+    selectColumns: [
+      "history_id", "workspace_id", "approval_id", "gate", "subject_id", "subject",
+      "outcome", "decided_by_user_id", "decided_by_username", "decided_at",
+      "policy_version", "evidence_digest", "approval_version_after",
+    ],
+    workspaceColumn: "workspace_id",
+    idSortField: "history_id",
+    filters: {
+      gate: { column: "gate", kind: "enum", operators: ["eq"], enumValues: APPROVAL_GATES },
+      subject: { column: "subject", kind: "text", operators: ["contains"], maxLength: 160 },
+    },
+    sorts: {
+      decided_at: { column: "decided_at", kind: "timestamp" },
+      history_id: { column: "history_id", kind: "text" },
+    },
+    defaultSort: [{ field: "decided_at", direction: "desc" }],
+    allowedRoles: ["ADMIN", "USER"],
+    statementTimeoutMs: 2_000,
+    mapRow: (row) => ({
+      id: row.history_id,
+      approval_id: row.approval_id,
+      gate: row.gate,
+      subject_id: row.subject_id,
+      subject: row.subject,
+      outcome: row.outcome,
+      decided_by: { user_id: row.decided_by_user_id, username: row.decided_by_username },
+      decided_at: row.decided_at.toISOString(),
+      policy_version: row.policy_version,
+      evidence_digest: row.evidence_digest,
+      approval_version: row.approval_version_after,
+    }),
+  };
+}
 
 export interface GovernanceRequestState {
   portalUser: PortalUser;
@@ -277,21 +337,24 @@ export const DecisionPlanRequestSchema = z
       });
     }
     if (
-      input.payload.decision === "APPROVE_WITH_CONDITION" &&
+      ["APPROVE_WITH_CONDITION", "REQUEST_CHANGES"].includes(input.payload.decision) &&
       conditions.length === 0 &&
       legacy === null
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["payload", "conditions"],
-        message: "approve-with-condition requires typed conditions",
+        message: "this decision requires typed conditions",
       });
     }
-    if (input.payload.decision !== "APPROVE_WITH_CONDITION" && (conditions.length > 0 || legacy !== null)) {
+    if (
+      !["APPROVE_WITH_CONDITION", "REQUEST_CHANGES"].includes(input.payload.decision) &&
+      (conditions.length > 0 || legacy !== null)
+    ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["payload", "conditions"],
-        message: "conditions are only valid for approve-with-condition",
+        message: "conditions are only valid for approve-with-condition or request-changes",
       });
     }
     if (
@@ -431,6 +494,19 @@ export function approvalListQuery(raw: Record<string, unknown>): RawKeysetQuery 
   if (raw.evidence_complete !== undefined) {
     filters.push({ field: "evidence_complete", op: "eq", value: raw.evidence_complete });
   }
+  return {
+    after: raw.after,
+    before: raw.before,
+    limit: raw.limit,
+    sort: raw.sort,
+    filters,
+  };
+}
+
+export function approvalHistoryQuery(raw: Record<string, unknown>): RawKeysetQuery {
+  const filters: RawFilterInput[] = [];
+  if (raw.gate !== undefined) filters.push({ field: "gate", op: "eq", value: raw.gate });
+  if (raw.subject !== undefined) filters.push({ field: "subject", op: "contains", value: raw.subject });
   return {
     after: raw.after,
     before: raw.before,

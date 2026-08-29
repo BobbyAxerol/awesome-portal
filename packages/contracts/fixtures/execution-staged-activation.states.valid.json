@@ -1,0 +1,9 @@
+[
+  { "state": "fixture", "plan_status": null, "blocker_codes": [], "ui_mode": "SOURCE_DARK", "action_enabled": false, "operator_message": "No owner source is selected; all capabilities remain on fixture." },
+  { "state": "denied", "plan_status": "DENIED", "blocker_codes": ["ILLEGAL_PROFILE_TRANSITION"], "ui_mode": "BLOCKED", "action_enabled": false, "operator_message": "The requested delivery-profile transition is not legal." },
+  { "state": "incompatible", "plan_status": "BLOCKED", "blocker_codes": ["CONTRACT_INCOMPATIBLE"], "ui_mode": "BLOCKED", "action_enabled": false, "operator_message": "Published references do not match the exact compatibility requirement." },
+  { "state": "stale", "plan_status": "BLOCKED", "blocker_codes": ["EVIDENCE_STALE"], "ui_mode": "BLOCKED", "action_enabled": false, "operator_message": "At least one evidence reference expired and must be republished." },
+  { "state": "partial", "plan_status": "BLOCKED", "blocker_codes": ["EVIDENCE_PARTIAL"], "ui_mode": "BLOCKED", "action_enabled": false, "operator_message": "The immutable evidence set is incomplete for promotion." },
+  { "state": "rollback", "plan_status": "READY", "blocker_codes": [], "ui_mode": "SOURCE_DARK", "action_enabled": false, "operator_message": "A bounded rollback to fixture is ready for an administrator." },
+  { "state": "restart", "plan_status": "VERIFIED", "blocker_codes": [], "ui_mode": "ROLLBACK_VERIFIED", "action_enabled": false, "operator_message": "Persisted rollback state was recovered and verified after restart." }
+]

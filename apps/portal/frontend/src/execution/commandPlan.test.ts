@@ -39,6 +39,7 @@ const OPEN: DeliveryPolicy = {
   queryEnabled: true,
   projectionIngestionEnabled: true,
   sseEnabled: true,
+  governanceWriteEnabled: true,
   paperCommandsEnabled: true,
   sandboxCommandsEnabled: true,
   liveProtectiveCommandsEnabled: true,

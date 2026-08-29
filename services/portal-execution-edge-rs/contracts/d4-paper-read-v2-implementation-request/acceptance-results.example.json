@@ -1,0 +1,21 @@
+{
+  "schema_version": "portal.execution.d4.incremental-implementation-acceptance.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "synthetic_non_business_data": true,
+  "cases": [
+    {"name": "dedicated_identity_positive", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "missing_wrong_revoked_identity_denied", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "get_only_fixed_scope", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "lease_expiry_zero_source_selects", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "baseline_watermark_counts", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "ordered_incremental_upsert", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "delete_tombstone", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "duplicate_replay_idempotent", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "cursor_ahead_expired_gap_fail_closed", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "new_building_epoch_resync", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "restart_recovery", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "source_loss_recovery", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "rate_memory_queue_backpressure_bounds", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name": "rollback_to_dormant_v1_compatible_state", "passed": false, "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+  ]
+}

@@ -6,6 +6,8 @@ mod exposure;
 mod funnel;
 mod insight;
 mod ledger;
+mod series;
+mod tiles;
 mod types;
 
 pub use capital::{
@@ -31,6 +33,17 @@ pub use insight::{
 pub use ledger::{
     build_capital_ledger, CapitalLedgerBucket, CapitalLedgerEntry, CapitalLedgerFact,
     CapitalLedgerInput, CapitalLedgerResult, CapitalLedgerWindow, LedgerDirection, MovementType,
+};
+pub use series::{
+    build_equity_projection, ApprovedBand, ApprovedBandPoint, EquityPoint, EquityProjection,
+    EquityProjectionInput, EquityProjectionResponse, RetentionSummary, SeriesGap, SeriesGapReason,
+    MAX_ANALYTICS_RESPONSE_BYTES, MAX_SERIES_POINTS,
+};
+pub use tiles::{
+    alpha_360_tile_catalogue, build_insight_tile_batch, BarPoint, FunnelStageSeries, HeatmapCell,
+    HistogramBin, InsightSeries, InsightTile, InsightTileBatch, InsightTileInput, InsightTileState,
+    LinePoint, TileDefinition, TileKind, WaterfallInputStep, WaterfallStep, MAX_HEATMAP_CELLS,
+    MAX_INSIGHT_SERIES_ITEMS, MAX_INSIGHT_TILES,
 };
 pub use types::{
     AnalyticsError, CurrencyCode, DerivedAnalytics, FactQuality, PopulationCompleteness,

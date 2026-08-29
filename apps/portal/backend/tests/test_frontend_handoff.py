@@ -109,9 +109,9 @@ def test_registry_fixture_is_the_public_document_with_computed_digest() -> None:
     )
 
 
-def test_registry_fixture_exposes_revision_4_delivery_contract() -> None:
+def test_registry_fixture_exposes_revision_5_delivery_contract() -> None:
     document = _fixture("registry.public.json")
-    assert document["revision"] == 4
+    assert document["revision"] == 5
     execution_screens = [
         screen
         for screen in document["screens"]
@@ -122,7 +122,8 @@ def test_registry_fixture_exposes_revision_4_delivery_contract() -> None:
         assert screen["contract_revision"] == 2
         assert screen["delivery_profile"] == "fixture"
         policy = screen["delivery_policy"]
-        assert policy["policy_revision"] == 1
+        assert policy["policy_revision"] == 2
+        assert policy["governance_write_enabled"] is False
         assert not any(
             value for key, value in policy.items() if key.endswith("_enabled")
         )

@@ -1,0 +1,53 @@
+{
+  "schema_version": "portal.execution.d4.incremental-implementation-profile.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "status": "REQUEST_EXAMPLE_NOT_OWNER_PUBLISHED",
+  "implementation_kind": "DEMAND_DRIVEN_INCREMENTAL_FACADE",
+  "scope": {
+    "scope_id": "PAPER_BINANCE_USDM",
+    "mode": "paper",
+    "venue": "BINANCE",
+    "caller_selectable": false
+  },
+  "transport": {
+    "host_publication": "LOOPBACK_ONLY",
+    "source_proxy_mtls_only": true,
+    "identity_mandatory": true,
+    "methods": ["GET"],
+    "routes": ["/v2/events"]
+  },
+  "source_access": {
+    "dedicated_read_identity": true,
+    "default_transaction_read_only": true,
+    "portal_receives_database_credential": false,
+    "portal_receives_redis_or_cli_authority": false
+  },
+  "lease_and_demand": {
+    "consumer_lease_required": true,
+    "no_background_scan_without_active_lease": true,
+    "source_selects_after_lease_expiry": 0,
+    "lease_attributed_metrics": true
+  },
+  "query_behavior": {
+    "ordinary_delta_request_full_scan": false,
+    "baseline_only_on_new_epoch_or_resync": true,
+    "deletes_use_tombstones": true,
+    "cursor_advance_after_durable_page_ack": true
+  },
+  "bounds": {
+    "maximum_page_rows": 1000,
+    "maximum_response_bytes": 8388608,
+    "maximum_requests_per_minute": 120,
+    "maximum_in_flight_requests": 2,
+    "maximum_queue_depth": 64,
+    "maximum_rss_bytes": 536870912,
+    "maximum_source_rows_scanned_per_returned_row": 10
+  },
+  "runtime": {
+    "non_root": true,
+    "read_only_root_filesystem": true,
+    "capabilities_dropped": true,
+    "automatic_restart_outside_owner_window": false,
+    "bounded_logs": true
+  }
+}

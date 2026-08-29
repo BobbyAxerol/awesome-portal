@@ -1,0 +1,147 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Primus Portal Inter-Cell Gateway Contract",
+    "version": "1.0.0",
+    "description": "N15A source-dark component contract. It intentionally publishes no runtime path or server location."
+  },
+  "servers": [],
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GatewayInterface": {
+        "type": "string",
+        "enum": ["QUERY", "COMMAND", "EVENT", "ARTIFACT"]
+      },
+      "ContractVersion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["major", "minor"],
+        "properties": {
+          "major": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "minor": { "type": "integer", "minimum": 0, "maximum": 65535 }
+        }
+      },
+      "VersionRange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["minimum", "maximum"],
+        "properties": {
+          "minimum": { "$ref": "#/components/schemas/ContractVersion" },
+          "maximum": { "$ref": "#/components/schemas/ContractVersion" }
+        }
+      },
+      "InterfaceOffer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["interface", "versions", "preferred", "rollback", "publication_state", "contract_digest"],
+        "properties": {
+          "interface": { "$ref": "#/components/schemas/GatewayInterface" },
+          "versions": { "$ref": "#/components/schemas/VersionRange" },
+          "preferred": { "$ref": "#/components/schemas/ContractVersion" },
+          "rollback": { "$ref": "#/components/schemas/ContractVersion" },
+          "publication_state": { "type": "string", "enum": ["FIXTURE_ONLY", "OWNER_PUBLISHED", "UNAVAILABLE"] },
+          "contract_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+        }
+      },
+      "IdentityPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["read_identity_class", "command_identity_class", "identities_distinct", "delegated_resource_policy", "raw_browser_token_forwarding", "wildcard_scope_allowed"],
+        "properties": {
+          "read_identity_class": { "type": "string" },
+          "command_identity_class": { "type": "string" },
+          "identities_distinct": { "type": "boolean" },
+          "delegated_resource_policy": { "type": "string", "enum": ["EXACT_RESOURCE_ONLY"] },
+          "raw_browser_token_forwarding": { "type": "boolean" },
+          "wildcard_scope_allowed": { "type": "boolean" }
+        }
+      },
+      "TransportPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["interface", "method", "connect_timeout_ms", "request_timeout_ms", "queue_timeout_ms", "maximum_concurrency", "maximum_response_bytes", "retry_before_dispatch", "retry_after_dispatch", "redirects_allowed", "http2_required", "tls13_required", "redacted_observability_fields"],
+        "properties": {
+          "interface": { "$ref": "#/components/schemas/GatewayInterface" },
+          "method": { "type": "string", "enum": ["GET", "POST", "STREAM", "REFERENCE"] },
+          "connect_timeout_ms": { "type": "integer" },
+          "request_timeout_ms": { "type": "integer" },
+          "queue_timeout_ms": { "type": "integer" },
+          "maximum_concurrency": { "type": "integer" },
+          "maximum_response_bytes": { "type": "integer" },
+          "retry_before_dispatch": { "type": "integer" },
+          "retry_after_dispatch": { "type": "integer" },
+          "redirects_allowed": { "type": "boolean" },
+          "http2_required": { "type": "boolean" },
+          "tls13_required": { "type": "boolean" },
+          "redacted_observability_fields": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "GatewayProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "profile_id", "source_dark", "runtime_active", "source_call_authorized", "identity_policy", "interfaces", "transports"],
+        "properties": {
+          "schema_version": { "type": "string", "enum": ["portal.execution.intercell-gateway.v1"] },
+          "profile_id": { "type": "string" },
+          "source_dark": { "type": "boolean" },
+          "runtime_active": { "type": "boolean" },
+          "source_call_authorized": { "type": "boolean" },
+          "identity_policy": { "$ref": "#/components/schemas/IdentityPolicy" },
+          "interfaces": { "type": "array", "items": { "$ref": "#/components/schemas/InterfaceOffer" }, "minItems": 4, "maxItems": 4 },
+          "transports": { "type": "array", "items": { "$ref": "#/components/schemas/TransportPolicy" }, "minItems": 4, "maxItems": 4 }
+        }
+      },
+      "InterfaceNegotiation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["interface", "state", "selected", "rollback", "activation_allowed", "reason"],
+        "properties": {
+          "interface": { "$ref": "#/components/schemas/GatewayInterface" },
+          "state": { "type": "string", "enum": ["FIXTURE_COMPATIBLE", "OWNER_COMPATIBLE", "UNAVAILABLE", "INCOMPATIBLE"] },
+          "selected": { "oneOf": [{ "$ref": "#/components/schemas/ContractVersion" }, { "type": "null" }] },
+          "rollback": { "oneOf": [{ "$ref": "#/components/schemas/ContractVersion" }, { "type": "null" }] },
+          "activation_allowed": { "type": "boolean" },
+          "reason": { "type": "string" }
+        }
+      },
+      "GatewayEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["event_id", "schema_version", "epoch", "source_sequence", "cursor", "operation", "entity_kind", "entity_id", "payload_sha256", "occurred_at"],
+        "properties": {
+          "event_id": { "type": "string" },
+          "schema_version": { "type": "string" },
+          "epoch": { "type": "string" },
+          "source_sequence": { "type": "integer" },
+          "cursor": { "type": "string" },
+          "operation": { "type": "string", "enum": ["UPSERT", "DELETE"] },
+          "entity_kind": { "type": "string" },
+          "entity_id": { "type": "string" },
+          "payload_sha256": { "type": "string" },
+          "occurred_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ArtifactDescriptor": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "kind", "sha256", "size_bytes", "media_type", "schema_version", "source_authority", "created_at", "retention_class", "access_policy", "signed_read_url_expiry"],
+        "properties": {
+          "artifact_id": { "type": "string" },
+          "kind": { "type": "string" },
+          "sha256": { "type": "string" },
+          "size_bytes": { "type": "integer" },
+          "media_type": { "type": "string" },
+          "schema_version": { "type": "string" },
+          "source_authority": { "type": "string", "enum": ["RESEARCH_CELL", "EXECUTION_CELL"] },
+          "created_at": { "type": "string", "format": "date-time" },
+          "retention_class": { "type": "string", "enum": ["RELEASE", "EVIDENCE", "EPHEMERAL"] },
+          "access_policy": { "type": "string", "enum": ["WORKLOAD_SCOPED_READ", "REFERENCE_ONLY"] },
+          "signed_read_url_expiry": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    }
+  },
+  "x-runtime-mounted": false,
+  "x-source-dark": true
+}

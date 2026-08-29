@@ -57,6 +57,7 @@
         "query_enabled",
         "projection_ingestion_enabled",
         "sse_enabled",
+        "governance_write_enabled",
         "paper_commands_enabled",
         "sandbox_commands_enabled",
         "live_protective_commands_enabled",
@@ -74,6 +75,9 @@
           "type": "boolean"
         },
         "sse_enabled": {
+          "type": "boolean"
+        },
+        "governance_write_enabled": {
           "type": "boolean"
         },
         "paper_commands_enabled": {

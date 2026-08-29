@@ -1,9 +1,9 @@
 /**
- * Delivery-profile reconciliation — registry revision 4 consumption.
+ * Delivery-profile reconciliation — registry revision 5 consumption.
  *
  * Master plan §12.3 gives this module one rule and it is a safety rule:
  *
- *   "Registry revision 4 is the authority for the active profile and policy of
+ *   "Registry revision 5 is the authority for the active profile and policy of
  *    every commissioned screen. Every backend envelope echoes `delivery_profile`;
  *    a composed screen may return a **stricter** profile on an individual panel.
  *    A registry/envelope mismatch is fail-closed and makes the affected panel
@@ -17,11 +17,9 @@
  * production authority the registry never granted it, and the only safe response
  * is to render nothing and say why.
  *
- * The registry field does not exist yet — `registry.json` is at revision 3 and
- * EX-BE-00R4 is the slice that adds it. Everything here therefore treats the
- * registry profile as optional and degrades to a stated gap rather than to a
- * guess. When rev 4 lands, the only change needed is that the field starts
- * arriving.
+ * Revision 5 adds an independent Portal-governance write flag. Missing or
+ * malformed policy remains no authority; compatibility never becomes an
+ * implicit grant.
  */
 import type { DeliveryProfile, PanelStatus, RiskTier } from "./contracts";
 
@@ -158,7 +156,7 @@ export function screenDeliveryProfile(screen: unknown): DeliveryProfile | null {
 }
 
 /* ---------------------------------------------------------------------------
- * Delivery policy — the seven flags (registry revision 4, master plan §12.3)
+ * Delivery policy — independent data, governance and command flags.
  * ------------------------------------------------------------------------ */
 
 /**
@@ -169,7 +167,7 @@ export function screenDeliveryProfile(screen: unknown): DeliveryProfile | null {
  * and Live risk-increasing commands. Disabling one does not require disabling
  * unrelated Research services."
  *
- * Seven independent booleans rather than one enabled/disabled, for the same
+ * Eight independent booleans rather than one enabled/disabled, for the same
  * reason authority and freshness are separate fields: a screen can legitimately
  * be reading live data while every command on it is switched off, and a single
  * flag makes that state unrepresentable.
@@ -179,6 +177,7 @@ export interface DeliveryPolicy {
   queryEnabled: boolean;
   projectionIngestionEnabled: boolean;
   sseEnabled: boolean;
+  governanceWriteEnabled: boolean;
   paperCommandsEnabled: boolean;
   sandboxCommandsEnabled: boolean;
   liveProtectiveCommandsEnabled: boolean;
@@ -202,6 +201,7 @@ export function screenDeliveryPolicy(screen: unknown): DeliveryPolicy | null {
     queryEnabled: bool(p, "query_enabled"),
     projectionIngestionEnabled: bool(p, "projection_ingestion_enabled"),
     sseEnabled: bool(p, "sse_enabled"),
+    governanceWriteEnabled: bool(p, "governance_write_enabled"),
     paperCommandsEnabled: bool(p, "paper_commands_enabled"),
     sandboxCommandsEnabled: bool(p, "sandbox_commands_enabled"),
     liveProtectiveCommandsEnabled: bool(p, "live_protective_commands_enabled"),
@@ -263,31 +263,16 @@ export function commandBlockedReason(
  * Whether a Portal GOVERNANCE WRITE is permitted — approving, denying,
  * extending, rejecting.
  *
- * This is not the same permission as running a command in the Trading System,
- * and the registry does not yet publish a flag for it. `delivery_policy` has
- * seven booleans and none of them is `governance_write_enabled`, so this falls
- * back to `paper_commands_enabled` — the most permissive command tier — and is
- * wrong in both directions while it does:
- *
- *   * a workspace with paper commands OFF cannot record an approval, though
- *     approving grants authority and executes nothing;
- *   * a workspace with paper commands ON can decide a LIVE gate, because the
- *     tier being decided has no bearing on the flag consulted.
- *
- * Deliberately one function rather than `commandBlockedReason(policy, "R1")`
- * repeated at each call site. The conflation is real and has to live somewhere
- * nameable, so that the day BR-EX-31 lands it is one edit and not a search.
+ * This is deliberately not derived from any Trading System command flag.
+ * The API still enforces session, CSRF, RBAC, SoD and optimistic concurrency;
+ * this commissioning flag only decides whether the UI may offer the write.
  */
 export function governanceWriteBlocked(policy: DeliveryPolicy | null): string | null {
   if (!policy) {
     return "This screen has no published delivery policy, so no decision can be recorded on it.";
   }
-  if (policy.paperCommandsEnabled) return null;
-  return (
-    "Recording a decision is disabled for this screen by delivery policy revision " +
-    `${policy.policyRevision}. (The Portal has no governance-write flag of its own yet, so this ` +
-    "follows the paper-command flag — see BR-EX-31.)"
-  );
+  if (policy.governanceWriteEnabled) return null;
+  return `Recording a decision is disabled for this screen by delivery policy revision ${policy.policyRevision}.`;
 }
 
 /* ---------------------------------------------------------------------------

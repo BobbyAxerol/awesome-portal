@@ -248,6 +248,7 @@
         "operation_id", "operation_kind", "command_key", "environment", "target",
         "risk_tier", "severity", "source_authority", "source_status",
         "verification_result", "triage_state", "workflow_version",
+        "assigned_to", "assigned_at", "incident_id",
         "acknowledged_at", "acknowledged_by_user_id", "resolved_at",
         "resolved_by_user_id", "resolution_reason", "resolution_evidence_hash",
         "created_at", "updated_at"
@@ -273,6 +274,22 @@
         "verification_result": { "enum": ["NOT_STARTED", "PENDING", "SUCCEEDED", "FAILED", "PARTIAL", "UNCERTAIN", "DENIED", "EXPIRED"] },
         "triage_state": { "enum": ["UNACKNOWLEDGED", "ACKNOWLEDGED", "RESOLVED"] },
         "workflow_version": { "type": "integer", "minimum": 1 },
+        "assigned_to": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["user_id", "username"],
+              "properties": {
+                "user_id": { "$ref": "#/$defs/Identifier" },
+                "username": { "type": "string", "minLength": 1, "maxLength": 128 }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "assigned_at": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+        "incident_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
         "acknowledged_at": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
         "acknowledged_by_user_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
         "resolved_at": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },

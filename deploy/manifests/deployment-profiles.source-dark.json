@@ -1,0 +1,41 @@
+{
+  "schema_version": "portal.deployment-profiles.v1",
+  "profiles": [
+    {
+      "profile_id": "research_sgp_stable",
+      "cell": "SGP_RESEARCH",
+      "source_branch": "main",
+      "compose_file": "deploy/compose.production.yaml",
+      "project_name": "portal-stable",
+      "loopback_port": 18081,
+      "public_origin": "https://portal.primusspark.com",
+      "database_namespace": "portal-stable_portal-postgres-data",
+      "mutable_volumes": [
+        "portal-stable_portal-artifacts",
+        "portal-stable_portal-postgres-data",
+        "portal-stable_roadmap-task-board-data"
+      ],
+      "services": ["portal-api", "portal-web", "control-api", "roadmap-task-board-api"],
+      "execution_source_enabled": false,
+      "query_enabled": false,
+      "sse_enabled": false,
+      "command_enabled": false
+    },
+    {
+      "profile_id": "execution_aws_hk_dark",
+      "cell": "AWS_HK_EXECUTION",
+      "source_branch": "IMAGE_ONLY",
+      "compose_file": "deploy/compose.execution-edge.yaml",
+      "project_name": "portal-execution-edge",
+      "loopback_port": null,
+      "public_origin": null,
+      "database_namespace": "portal-execution-projection-d4",
+      "mutable_volumes": ["portal-execution-projection-d4"],
+      "services": ["execution-edge", "source-proxy"],
+      "execution_source_enabled": false,
+      "query_enabled": false,
+      "sse_enabled": false,
+      "command_enabled": false
+    }
+  ]
+}

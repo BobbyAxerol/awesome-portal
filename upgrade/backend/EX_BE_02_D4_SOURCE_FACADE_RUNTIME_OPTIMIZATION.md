@@ -179,23 +179,53 @@ Required bounds:
 
 ### D4-OPT-00 — Dormant closeout discipline
 
-- Add the container to the D4 window closeout checklist.
-- Prove no source DB session remains after closeout.
-- Alert if the facade runs without a valid consumer lease.
+Status: `OFFLINE_IMPLEMENTATION_ACCEPTED / LIVE_CLOSEOUT_EVIDENCE_PENDING`.
+
+- The exact container and Compose identity are now part of an executable D4
+  closeout allowlist.
+- A host-side guard enforces start deadline, qualifier completion,
+  authorization revocation and owner-window expiry.
+- Closeout restores the accepted D2 dark Source Proxy without pulling an image
+  and records redacted evidence.
+- Verification requires a sanitized Trading System owner observation proving
+  zero source sessions, SELECT delta and byte delta.
+- Audit returns `D4_DORMANT_VIOLATION` if the facade or D4 Portal reader is
+  running outside the owner window.
+
+Implementation and evidence contract:
+[`EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md`](./EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md).
+No live owner window was opened by this implementation, so the production idle
+observation remains pending.
 
 ### D4-OPT-01 — Contract revision
+
+Status: `PORTAL_REQUEST_VERIFIER_COMPLETE / OWNER_PACK_PENDING`.
 
 - Trading System owner publishes incremental cursor/watermark, gap, tombstone
   or reconciliation semantics and precise retention floor.
 - Portal imports the revised machine-readable contract by digest.
 - Revision remains additive or ships through an explicit compatibility mapper.
 
+Portal's request schema, exact publication envelope, fail-closed verifier and
+15-case synthetic corpus are complete. The current reader remains locked to v1
+until the owner returns a byte-identical accepted pack. Evidence and owner workflow:
+[`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
+
 ### D4-OPT-02 — Source implementation
+
+Status: `PORTAL_ACCEPTANCE_HARNESS_COMPLETE / N02_OWNER_PACK_PENDING /
+OWNER_IMPLEMENTATION_PENDING`.
 
 - Trading System owner implements the incremental/demand-driven facade or
   publishes an existing suitable outbox.
 - Add owner-approved source indexes only after query-plan evidence.
 - Preserve loopback-only binding, dedicated read identity and exact scope.
+
+Portal now has an exact owner evidence envelope and verifier for immutable
+commit/image, zero-idle-source behavior, no ordinary-delta full scan, query-plan
+bounds and the full recovery corpus. No source implementation was synthesized in
+Portal. Detail:
+[`EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`](./EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md).
 
 ### D4-OPT-03 — Rust Edge consumption
 
@@ -235,12 +265,12 @@ The steady-state facade is not accepted until evidence proves:
 
 For the next setup window:
 
-- Trading System owner owns `D4-OPT-00` through the source-side part of
-  `D4-OPT-02`.
+- Portal owns the D4-OPT-00 guard/closeout controller; Trading System owner owns
+  the source-side zero-session/zero-traffic observation and D4-OPT-01 through
+  the source-side part of D4-OPT-02.
 - Codex owns the Portal contract import, Rust Edge changes, retention gates and
   backend evidence.
 - Claude may consume sanitized fixtures and typed unavailable/gap states only;
   this backlog does not unlock a real frontend source.
 - Bobby approves every source window, service lifecycle change and delivery-
   profile promotion.
-

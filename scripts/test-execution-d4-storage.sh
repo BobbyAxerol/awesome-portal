@@ -109,6 +109,8 @@ for expected in (
     "o: bind",
     "type: none",
     'EDGE_ANALYTICS_QUERY_ENABLED: "false"',
+    'EDGE_SHADOW_QUERY_ENABLED: "false"',
+    'EDGE_PAPER_WORKBENCH_SHADOW_ENABLED: "false"',
     'EDGE_PROJECTION_INGESTION_ENABLED: "false"',
     'EDGE_REALTIME_SSE_ENABLED: "false"',
     'EDGE_COMMAND_RELAY_ENABLED: "false"',

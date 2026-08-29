@@ -1,8 +1,25 @@
 {
+  "schema_version": "execution.query.v1",
+  "epoch_id": "01993a4e-08c0-7f31-8ab3-0b2c90000001",
   "rows": [
     {
-      "order_id": "ord_01K32QRJ4F5XB5M56TNANW0G9J",
-      "status": "PARTIALLY_FILLED"
+      "entity_id": "ord_01K32QRJ4F5XB5M56TNANW0G9J",
+      "projection_sequence": 401,
+      "source_authority": "EXECUTION",
+      "source_completeness": "POLL_BOUNDED",
+      "poll_interval_ms": 1000,
+      "as_of": "2026-08-26T08:00:00Z",
+      "source_read_at": "2026-08-26T08:00:00.100Z",
+      "projected_at": "2026-08-26T08:00:00.120Z",
+      "adapter_version": "paper-source-ingestor.d4.v1",
+      "capability_snapshot_id": "cap-n07-shadow-1",
+      "payload": {
+        "deployment_id": "dep_74",
+        "status": "PARTIALLY_FILLED",
+        "currency": "USDT",
+        "quantity": "1.250000000000000001",
+        "notional": "84375.0000000000000675"
+      }
     }
   ],
   "total_count": 182000,
@@ -12,17 +29,11 @@
   "has_more": true,
   "has_previous": false,
   "applied_filters": [
-    {
-      "field": "status",
-      "op": "eq",
-      "value": "PARTIALLY_FILLED"
-    }
+    { "field": "status", "operator": "eq", "values": ["PARTIALLY_FILLED"] },
+    { "field": "deployment_id", "operator": "eq", "values": ["dep_74"] }
   ],
   "applied_sort": [
-    {
-      "field": "as_of",
-      "direction": "desc"
-    }
+    { "field": "as_of", "direction": "desc" }
   ],
   "aggregates_by_currency": [
     {

@@ -261,7 +261,25 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     return { manifestHash, evidenceHashes: [HASH_A, HASH_B] };
   }
 
-  async function seedR2CapitalScope(approvalId: string, targetWorkspaceId = workspaceId) {
+  async function seedR2CapitalScope(
+    approvalId: string,
+    targetWorkspaceId = workspaceId,
+    withLineage = true,
+  ) {
+    const r1ApprovalId = `${approvalId}-R1`;
+    let r1ManifestHash: string | null = null;
+    if (withLineage && targetWorkspaceId === workspaceId) {
+      const r1 = await seedApproval({ approvalId: r1ApprovalId });
+      r1ManifestHash = r1.manifestHash;
+      await ctx.pool.query(
+        `UPDATE governance_approval_requests
+            SET status = 'APPROVED', quorum_met = 1, approval_version = 2,
+                decision_actor_ids = ARRAY[$2], decided_at = now(),
+                decided_by_user_id = $2, updated_at = now()
+          WHERE approval_id = $1`,
+        [r1ApprovalId, lan.userId],
+      );
+    }
     await ctx.pool.query(
       `INSERT INTO governance_approval_requests
          (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
@@ -281,6 +299,16 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
        VALUES ($1, $2, 'PF_R2_1', 'USDT')`,
       [approvalId, targetWorkspaceId],
     );
+    if (r1ManifestHash !== null) {
+      await ctx.pool.query(
+        `INSERT INTO governance_r2_lineage
+           (r2_approval_id, workspace_id, r1_approval_id, grant_id, grant_name,
+            approver_role, plan_author_user_id, plan_author_username)
+         VALUES ($1, $2, $3, $4, 'paper_activation_authorization',
+                 'ADMIN', $5, $6)`,
+        [approvalId, targetWorkspaceId, r1ApprovalId, `${approvalId}-grant`, stan.userId, stan.username],
+      );
+    }
   }
 
   function planPayload(approvalId: string, evidenceHashes: string[], overrides: Record<string, unknown> = {}) {
@@ -370,10 +398,21 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     expect(second.statusCode).toBe(200);
     expect(second.json().page.prev_cursor).toMatch(/^kc1\./);
     expect(second.json().page.rows[0].id).not.toBe(body.page.rows[0].id);
-  }, 30_000);
+  // This is a correctness/scale corpus, not a 30-second latency SLO. Clean or
+  // shared CI hosts can spend most of the original budget inserting 182k real
+  // PostgreSQL rows; endpoint latency is benchmarked separately with EXPLAIN.
+  }, 60_000);
 
   it("returns immutable R1 evidence and honest unavailable linked panels", async () => {
     const seeded = await seedApproval({ approvalId: "AP-DETAIL" });
+    await ctx.pool.query(
+      `INSERT INTO governance_approval_known_limitations
+         (limitation_id, approval_id, ordinal, kind, label, statement, expires_at)
+       VALUES ('limit-ap-detail-1', 'AP-DETAIL', 0, 'RESTRICTION',
+               'Capacity envelope',
+               'Paper notional must remain inside the reviewed capacity envelope.',
+               now() + interval '30 days')`,
+    );
     const response = await inject(
       bobby,
       `/api/v1/execution/governance/approvals/AP-DETAIL/r1?workspace_id=${workspaceId}`,
@@ -383,10 +422,130 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     expect(body.data.approval.evidence_set_hash).toBe(seeded.manifestHash);
     expect(body.data.evidence_manifest.entries).toHaveLength(2);
     expect(body.data.checklist.map((item: { outcome: string }) => item.outcome)).toEqual(["pass", "watch"]);
+    expect(body.data.known_limitations).toMatchObject([{
+      limitation_id: "limit-ap-detail-1",
+      kind: "restriction",
+      label: "Capacity envelope",
+    }]);
     expect(body.data.eligibility).toMatchObject({ can_approve: true, separation_of_duties: "OK" });
     expect(body.data.linked_panels).toHaveLength(2);
     expect(body.data.linked_panels.every((panel: { panel_state: string }) => panel.panel_state === "unavailable")).toBe(true);
     expect(JSON.stringify(body)).not.toContain("EXECUTION_CELL");
+    await expect(ctx.pool.query(
+      `UPDATE governance_approval_known_limitations
+          SET statement = 'Forbidden rewrite.'
+        WHERE limitation_id = 'limit-ap-detail-1'`,
+    )).rejects.toThrow(/append-only/i);
+  });
+
+  it("closes REQUEST_CHANGES as one immutable attempt and exposes keyset approval history", async () => {
+    const changes = await seedApproval({
+      approvalId: "AP-REQUEST-CHANGES",
+      blocker: true,
+      evidenceComplete: false,
+    });
+    const missingRemediation = await plan(
+      bobby,
+      planPayload("AP-REQUEST-CHANGES", changes.evidenceHashes, {
+        request_key: "r1:AP-REQUEST-CHANGES:invalid",
+        payload: {
+          decision: "REQUEST_CHANGES",
+          reason: "The current package needs a concrete remediation before another review.",
+          evidence_hashes: changes.evidenceHashes,
+        },
+      }),
+    );
+    expect(missingRemediation.statusCode).toBe(400);
+    expect(missingRemediation.json().error.code).toBe("INVALID_DECISION_PLAN");
+
+    const remediation = [{
+      text: "Publish a complete capacity report and start a new immutable approval attempt.",
+      owner: "research-team",
+      deadline: "2026-09-15",
+      expires_at: "2026-09-30",
+      blocking: true,
+    }];
+    const planned = await plan(
+      bobby,
+      planPayload("AP-REQUEST-CHANGES", changes.evidenceHashes, {
+        request_key: "r1:AP-REQUEST-CHANGES:valid",
+        payload: {
+          decision: "REQUEST_CHANGES",
+          reason: "The incomplete package must return to research with bounded remediation.",
+          conditions: remediation,
+          evidence_hashes: changes.evidenceHashes,
+        },
+      }),
+    );
+    expect(planned.statusCode).toBe(201);
+    expect(planned.json().blockers).toEqual([]);
+    expect((await apply(bobby, planned.json().operation_id, planned.json().apply_token)).statusCode)
+      .toBe(202);
+
+    const state = await ctx.pool.query<{
+      status: string;
+      decision: string;
+      conditions: unknown[];
+      requests: string;
+      supersedes_approval_id: string | null;
+    }>(
+      `SELECT request.status, request.supersedes_approval_id,
+              decision.decision, decision.conditions,
+              (SELECT count(*) FROM governance_approval_requests
+                WHERE subject_id = request.subject_id)::text AS requests
+         FROM governance_approval_requests request
+         JOIN governance_approval_decisions decision USING (approval_id)
+        WHERE request.approval_id = 'AP-REQUEST-CHANGES'`,
+    );
+    expect(state.rows[0]).toMatchObject({
+      status: "CHANGES_REQUESTED",
+      decision: "REQUEST_CHANGES",
+      conditions: remediation,
+      requests: "1",
+      supersedes_approval_id: null,
+    });
+
+    const deniedSeed = await seedApproval({ approvalId: "AP-HISTORY-DENIED" });
+    const deniedPlan = await plan(
+      lan,
+      planPayload("AP-HISTORY-DENIED", deniedSeed.evidenceHashes, {
+        request_key: "r1:AP-HISTORY-DENIED:deny",
+        payload: {
+          decision: "DENY",
+          reason: "Independent review rejected this immutable approval attempt.",
+          evidence_hashes: deniedSeed.evidenceHashes,
+        },
+      }),
+    );
+    expect((await apply(lan, deniedPlan.json().operation_id, deniedPlan.json().apply_token)).statusCode)
+      .toBe(202);
+
+    const first = await inject(
+      stan,
+      `/api/v1/execution/governance/approvals/history?workspace_id=${workspaceId}&gate=R1&subject=RSI&limit=1`,
+    );
+    expect(first.statusCode).toBe(200);
+    expect(first.json()).toMatchObject({
+      schema_version: "governance.approval-history.v1",
+      record_authority: "PORTAL",
+      page: { total_count: 2, filtered_count: 2, rows: [expect.any(Object)] },
+    });
+    expect(first.json().page.next_cursor).toMatch(/^kc1\./);
+    const second = await inject(
+      stan,
+      `/api/v1/execution/governance/approvals/history?workspace_id=${workspaceId}&gate=R1&subject=RSI&limit=1&after=${encodeURIComponent(first.json().page.next_cursor)}`,
+    );
+    expect(second.statusCode).toBe(200);
+    expect(second.json().page.prev_cursor).toMatch(/^kc1\./);
+    expect(new Set([
+      first.json().page.rows[0].outcome,
+      second.json().page.rows[0].outcome,
+    ])).toEqual(new Set(["CHANGES_REQUESTED", "DENIED"]));
+    expect((await ctx.pool.query(
+      `SELECT count(*)::text AS count FROM outbox_messages
+        WHERE aggregate_id IN ('AP-REQUEST-CHANGES', 'AP-HISTORY-DENIED')
+          AND event_type = 'governance.r1_decision.applied'`,
+    )).rows[0].count).toBe("2");
   });
 
   it("removes expired requests from Inbox while preserving them as explicit records", async () => {
@@ -503,6 +662,20 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
           portfolio_id: "PF_R2_1",
           currency: "USDT",
         },
+        r1_reference: {
+          approval_id: "AP-R2-DETAIL-R1",
+          state: "APPROVED",
+          digest: expect.stringMatching(/^sha256:[0-9a-f]{64}$/),
+          decided_by: "lan",
+        },
+        r1_state: "APPROVED",
+        r1_id: "AP-R2-DETAIL-R1",
+        grant_id: "AP-R2-DETAIL-grant",
+        grant_name: "paper_activation_authorization",
+        approver_role: "ADMIN",
+        plan_author: "stan",
+        evidence_manifest: { complete: true, entries: expect.any(Array) },
+        eligibility: { can_approve: true, locks: [] },
       },
     });
 
@@ -512,6 +685,37 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
       portfolio_id: "PF_R2_1",
       currency: "USDT",
     });
+
+    const storedR1Hash = response.json().data.r1_reference.digest;
+    await ctx.pool.query(
+      `UPDATE governance_approval_requests
+          SET evidence_set_hash = $1
+        WHERE approval_id = 'AP-R2-DETAIL-R1'`,
+      [`sha256:${"c".repeat(64)}`],
+    );
+    const tampered = await inject(bobby, path);
+    expect(tampered.statusCode).toBe(409);
+    expect(tampered.json().error.code).toBe("R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED");
+    await ctx.pool.query(
+      `UPDATE governance_approval_requests
+          SET evidence_set_hash = $1,
+              sla_due_at = now() - interval '2 minutes',
+              expires_at = now() - interval '1 minute'
+        WHERE approval_id = 'AP-R2-DETAIL-R1'`,
+      [storedR1Hash],
+    );
+    const r1Expired = await inject(bobby, path);
+    expect(r1Expired.statusCode).toBe(200);
+    expect(r1Expired.json().data.eligibility).toMatchObject({
+      can_approve: false,
+      locks: expect.arrayContaining(["R1_EXPIRED"]),
+    });
+    await ctx.pool.query(
+      `UPDATE governance_approval_requests
+          SET sla_due_at = now() + interval '24 hours',
+              expires_at = now() + interval '48 hours'
+        WHERE approval_id = 'AP-R2-DETAIL-R1'`,
+    );
 
     const lanWorkspaces = await inject(lan, "/api/workspaces");
     const otherWorkspace = lanWorkspaces
@@ -536,6 +740,25 @@ describe("EX-BE-05a governance/evidence/approval repository and API", () => {
     const expired = await inject(bobby, path);
     expect(expired.statusCode).toBe(404);
     expect(expired.json().error.code).toBe("APPROVAL_NOT_FOUND");
+  });
+
+  it("publishes an explicit fail-closed R2 state when no R1 lineage was captured", async () => {
+    await seedR2CapitalScope("AP-R2-NO-LINEAGE", workspaceId, false);
+    const response = await inject(
+      bobby,
+      `/api/v1/execution/governance/approvals/AP-R2-NO-LINEAGE/r2?workspace_id=${workspaceId}`,
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data).toMatchObject({
+      r1_reference: null,
+      r1_state: "MISSING",
+      r1_id: null,
+      evidence_manifest: null,
+      eligibility: {
+        can_approve: false,
+        locks: expect.arrayContaining(["R1_LINEAGE_UNPUBLISHED"]),
+      },
+    });
   });
 
   it("binds R2 capital preview to ADMIN and an immutable approval scope", async () => {

@@ -313,9 +313,16 @@ function readFilters(raw: unknown): readonly FilterEcho[] {
         // actually filtered by; inventing `eq` and `""` for a filter we could
         // not read produced a line that says the server filtered on an empty
         // string — which it never did, and which reads as a real constraint.
-        op: typeof o.op === "string" ? o.op : null,
+        op:
+          typeof o.operator === "string"
+            ? o.operator
+            : typeof o.op === "string"
+              ? o.op
+              : null,
         value:
-          typeof o.value === "string"
+          Array.isArray(o.values)
+            ? o.values.filter((v): v is string => typeof v === "string").join(", ")
+            : typeof o.value === "string"
             ? o.value
             : Array.isArray(o.value)
               ? o.value.filter((v): v is string => typeof v === "string").join(", ")

@@ -1,0 +1,10 @@
+{
+  "schema_version": "execution.analytics.insight-series.v1", "runtime_active": false, "source_side_effect_requested": false,
+  "subject_id": "alpha_1", "panel_state": "ok", "returned_tiles": 1, "total_series_items": 2,
+  "tiles": [{
+    "tile_id": "venue-contribution", "title": "Venue contribution", "tile_kind": "bar", "formula_version": "venue_contribution.v1",
+    "authority": "DERIVED", "freshness": "OK", "completeness": "COMPLETE", "as_of": "2026-08-26T10:00:00Z",
+    "minimum_samples": 30, "observed_samples": 80, "state": "READY",
+    "series": { "kind": "bar", "points": [{ "label": "BINANCE", "value": "10.250000000000000001", "currency": "USDT" }, { "label": "DERIBIT", "value": "2.75", "currency": "USDT" }] }
+  }]
+}

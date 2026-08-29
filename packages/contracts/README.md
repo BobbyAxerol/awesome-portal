@@ -8,18 +8,32 @@ committed TypeScript types generated from the Portal OpenAPI in `generated/`.
 
 Execution analytics has its own narrow, source-backed screen contract at
 `openapi/execution-analytics.openapi.json`, generated as
-`generated/execution-analytics.d.ts`. It covers exactly the six EX-BE-07b
-same-origin routes; it is not a generic analytics/query API. Its envelopes keep
+`generated/execution-analytics.d.ts`. It covers the six EX-BE-07b analytics
+routes plus the N07 deployment-scoped Paper Workbench shadow panel route; it is
+not a generic analytics/query API. Its envelopes keep
 epoch, source snapshot, capability identity, delivery profile, projection
 sequence, freshness policy and string decimals explicit.
+
+N10 adds a deliberately source-dark series authority at
+`openapi/execution-analytics-series.openapi.json`, generated as
+`generated/execution-analytics-series.d.ts`. It defines an adaptive
+equity/drawdown/approved-band response and semantic line, histogram, funnel,
+waterfall, heatmap and bar tiles. V1 hard-codes `runtime_active=false`; it does
+not mount a route, read Trading System data or retire frontend smoke data.
+Approved bands are joined only by immutable run ID plus artifact digest, gaps
+remain explicit, and a response is bounded to 5,000 items / 2 MiB. The same
+pack fixes Execution mapper events to the string schema version
+`execution.event.v1` and provides one typed, secret-free fixture per event type.
 
 Execution governance and realtime use separate narrow contracts:
 `openapi/execution-governance.openapi.json` / `generated/execution-governance.d.ts`
 for the Portal-owned active R2 binding plus the source-safe Paper Exit
 read/plan/apply/poll boundary, and
 `openapi/execution-realtime.openapi.json` / `generated/execution-realtime.d.ts`
-for the same-origin SSE boundary. The analytics projection-page component is a
-typed future screen shape, not authorization to expose a generic query route.
+for the same-origin SSE boundary. The projection-page component is now bound to
+the commissioned Paper Workbench `orders|positions` route. Rust injects the
+deployment filter and signs cursor scope; the component does not authorize a
+generic query route or registry/profile promotion.
 
 PRE-IAM-03 publishes the dark Command Center snapshot separately at
 `openapi/execution-command-center.openapi.json`. Its five canonical fixtures
@@ -72,6 +86,34 @@ continuity, rollback and realtime are explicitly unavailable. The broker panel
 is suppressed and cannot carry data; `BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4`
 is machine-checked while both R3 and R4 actions remain invisible/disabled.
 
+N13A adds `execution-staged-activation.openapi.json` and the strict
+`execution-staged-activation.v1.schema.json` control-plane contract. It exposes
+seven independent Portal capabilities plus plan/apply/verify state, while the
+schema hard-codes the effective profile to `fixture`, source/runtime flags to
+`false`, the kill switch to `true`, and owner references to untrusted. The
+seven-state UI corpus (`fixture`, `denied`, `incompatible`, `stale`, `partial`,
+`rollback`, `restart`) is the canonical Claude handoff; none of those fixtures
+grants source, Query, SSE or command authority.
+
+N15A adds the source-dark four-interface gateway authority at
+`execution-intercell-gateway.openapi.json`, generated as
+`generated/execution-intercell-gateway.d.ts`. Query, Command, Event and
+Artifact negotiate independently and retain their own version/rollback state.
+The profile binds the N11 Query, N12 Command, N02 Event and N15 Artifact schema
+digests, separates read and command workload identities, requires exact-resource
+delegation, TLS 1.3/HTTP2 and bounded no-redirect transports, and permits no
+post-dispatch retry. The OpenAPI has no paths or servers. Event and Artifact
+corpora cover replay/gap/epoch/tombstone and digest/schema/size/expiry/access
+rejections without publishing a source location, credential or artifact body.
+
+N16A adds the component-only same-domain emergency-routing authority at
+`schemas/execution-emergency-routing.v1.schema.json`. Its profile and failure
+corpus keep `/ops/emergency/*` source-dark, expose command-independent typed
+health/degraded states, define the short-session/WebAuthn/break-glass ceremony
+and keep N12 R3 unpublished plus R4 resume/scale structurally forbidden. The
+matching OpenAPI has no path or server; generated types are safe for Claude to
+consume without implying a public route or command authority.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -112,8 +154,12 @@ packages/contracts/
     execution-governance-r2-review.v1.schema.json
     execution-governance-paper-exit.v1.schema.json
     execution-realtime-event.v1.schema.json
+    execution-analytics-series.v1.schema.json
+    execution-event-envelope.v1.schema.json
     execution-command-center-snapshot.v1.schema.json
     execution-operations.v1.schema.json
+    execution-staged-activation.v1.schema.json
+    execution-intercell-gateway.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
@@ -125,6 +171,9 @@ packages/contracts/
     execution-analytics.correlation.valid.json
     execution-analytics.capital-ledger.valid.json
     execution-analytics.binding-exposure.valid.json
+    execution-analytics.equity-projection.valid.json
+    execution-analytics.insight-{line,histogram,funnel,waterfall,heatmap,bar}.valid.json
+    execution-events.corpus.valid.json
     execution-projection-page.valid.json
     execution-governance.r2-review.valid.json
     execution-governance.paper-exit-review.valid.json
@@ -132,19 +181,30 @@ packages/contracts/
     execution-realtime.projection-gap.valid.json
     execution-command-center.{busy,empty,partial,stale,unavailable}.valid.json
     execution-command-{catalog,plan,operation,relay-denied}.valid.json
+    execution-staged-activation.{capabilities,plan-blocked,states}.valid.json
+    execution-intercell-gateway.{source-dark,event-corpus,artifact-corpus}.valid.json
+    execution-emergency-routing.{source-dark,ui-corpus}.valid.json
   openapi/
     execution-analytics.openapi.json
+    execution-analytics-series.openapi.json
     execution-governance.openapi.json
     execution-realtime.openapi.json
     execution-command-center.openapi.json
     execution-operations.openapi.json
+    execution-staged-activation.openapi.json
+    execution-intercell-gateway.openapi.json
+    execution-emergency-routing.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
+    execution-analytics-series.d.ts
     execution-governance.d.ts
     execution-realtime.d.ts
     execution-command-center.d.ts
     execution-operations.d.ts
+    execution-staged-activation.d.ts
+    execution-intercell-gateway.d.ts
+    execution-emergency-routing.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

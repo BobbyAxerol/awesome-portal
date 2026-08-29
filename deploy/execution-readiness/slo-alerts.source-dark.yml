@@ -1,0 +1,58 @@
+# N17A template only. Not loaded by Prometheus; no datasource or runtime route is bound.
+groups:
+  - name: portal-execution-source-dark-safety
+    interval: 30s
+    rules:
+      - alert: PortalExecutionUnexpectedProductionAuthority
+        expr: portal_execution_production_active != 0 or portal_execution_source_call_authorized != 0 or portal_execution_command_authorized != 0
+        for: 0s
+        labels:
+          severity: critical
+          phase: N17A_SOURCE_DARK
+        annotations:
+          summary: Source-dark Portal execution authority widened unexpectedly
+          runbook: portal-n17a-source-dark-production-dr
+      - alert: PortalExecutionEvidenceCollectorMissing
+        expr: time() - portal_execution_offline_evidence_last_success_seconds > 7776000
+        for: 15m
+        labels:
+          severity: warning
+          phase: N17A_SOURCE_DARK
+        annotations:
+          summary: Quarterly isolated readiness rehearsal is overdue
+          runbook: portal-n17a-source-dark-production-dr
+  - name: portal-execution-future-production-signals
+    interval: 30s
+    rules:
+      - record: portal_execution:query_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum by (le, query_class) (rate(portal_execution_query_duration_seconds_bucket[5m])))
+      - record: portal_execution:sse_drops:rate5m
+        expr: sum(rate(portal_execution_sse_dropped_events_total[5m]))
+      - record: portal_execution:projection_gap:count
+        expr: sum(portal_execution_projection_gap_open)
+      - record: portal_execution:command_uncertain:count
+        expr: sum(portal_execution_command_uncertain_open)
+      - alert: PortalExecutionProjectionGap
+        expr: portal_execution:projection_gap:count > 0
+        for: 2m
+        labels:
+          severity: critical
+          activation_required: N17B
+        annotations:
+          summary: Projection continuity gap requires containment and resnapshot
+      - alert: PortalExecutionCommandUncertain
+        expr: portal_execution:command_uncertain:count > 0
+        for: 0s
+        labels:
+          severity: critical
+          activation_required: N17B
+        annotations:
+          summary: Command outcome is uncertain; automatic retry remains forbidden
+      - alert: PortalExecutionCertificateExpiring
+        expr: portal_execution_identity_expiry_seconds - time() < 604800
+        for: 15m
+        labels:
+          severity: warning
+          activation_required: N17B
+        annotations:
+          summary: A workload identity expires within seven days

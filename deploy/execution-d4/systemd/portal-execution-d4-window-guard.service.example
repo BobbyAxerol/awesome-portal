@@ -1,0 +1,29 @@
+[Unit]
+Description=Primus Portal D4 finite owner-window guard
+Documentation=/srv/primus/portal/current/deploy/runbooks/execution-d4-paper-shadow-and-rollback.md
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+WorkingDirectory=/srv/primus/portal/current
+ExecStart=/srv/primus/portal/current/scripts/execution-d4-dormant-closeout.py --config /srv/primus/portal/execution-d4/dormant-closeout.env --mode guard
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/srv/primus/portal/execution-d4/closeout
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+
+[Install]
+# Intentionally no WantedBy. Start this unit explicitly for one approved D4
+# owner window; do not enable it as a permanent service.

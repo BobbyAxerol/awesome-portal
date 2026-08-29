@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/execution/command-center/realtime-snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns the exact accepted projection cursor before opening the stream. It is available only while the N08 activation manifest and active N07 projection authority still match. */
+        get: operations["executionCommandCenterRealtimeSnapshot"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/command-center/stream": {
         parameters: {
             query?: never;
@@ -29,6 +46,24 @@ export interface components {
         /** Format: date-time */
         DateTime: string;
         NullableDateTime: components["schemas"]["DateTime"] | null;
+        RealtimeSnapshot: {
+            /** @constant */
+            schema_version: "execution.realtime-snapshot.v1";
+            /** @constant */
+            delivery_profile: "shadow";
+            workspace_id: string;
+            /** @constant */
+            environment: "paper";
+            /** Format: uuid */
+            projection_epoch: string;
+            projection_sequence: number;
+            cursor: components["schemas"]["ProjectionCursor"];
+            /** @constant */
+            stream_available: true;
+            resnapshot_not_before: null;
+            capability_snapshot_id: string;
+            activation_manifest_digest: string;
+        };
         Problem: {
             error: {
                 code: string;
@@ -78,6 +113,27 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionCommandCenterRealtimeSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scope-bound realtime snapshot identity. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealtimeSnapshot"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     executionCommandCenterStream: {
         parameters: {
             query?: {

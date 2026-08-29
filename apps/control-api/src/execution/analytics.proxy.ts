@@ -6,6 +6,7 @@ import { AuthSession, PortalUser } from "../domain";
 import { ExecutionDelegationService } from "./delegation";
 
 const IDENTIFIER = /^[A-Za-z0-9._-]{1,128}$/;
+const TYPED_UPSTREAM_CODE = /^(?:N07|ANALYTICS)_[A-Z0-9_]{1,80}$/;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 export interface AnalyticsPrincipal {
@@ -19,7 +20,8 @@ type Screen =
   | "blotter"
   | "alpha-360"
   | "portfolio-360"
-  | "account-broker-360";
+  | "account-broker-360"
+  | "paper-workbench";
 
 export function analyticsResource(screen: Screen, id: string): string {
   if (!IDENTIFIER.test(id)) throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
@@ -99,7 +101,10 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   }
 
   static async create(config: ControlApiConfig): Promise<ExecutionAnalyticsProxy> {
-    if (config.FEATURE_EXECUTION_ANALYTICS_QUERY !== "true") {
+    if (
+      config.FEATURE_EXECUTION_ANALYTICS_QUERY !== "true" &&
+      config.FEATURE_EXECUTION_SHADOW_QUERY !== "true"
+    ) {
       return new ExecutionAnalyticsProxy(config, null, null);
     }
     const [delegation, ca, cert, key] = await Promise.all([
@@ -119,6 +124,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   }
 
   capitalPreview(principal: AnalyticsPrincipal, approvalId: string, body: unknown): Promise<unknown> {
+    this.requireAnalytics();
     return this.request(
       principal,
       "POST",
@@ -129,6 +135,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   }
 
   orderFunnel(principal: AnalyticsPrincipal, orderId: string): Promise<unknown> {
+    this.requireAnalytics();
     return this.request(
       principal,
       "GET",
@@ -138,6 +145,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   }
 
   insightPreviews(principal: AnalyticsPrincipal, alphaId: string, body: unknown): Promise<unknown> {
+    this.requireAnalytics();
     return this.request(
       principal,
       "POST",
@@ -148,6 +156,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   }
 
   portfolioCorrelation(principal: AnalyticsPrincipal, portfolioId: string): Promise<unknown> {
+    this.requireAnalytics();
     return this.request(
       principal,
       "GET",
@@ -157,6 +166,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   }
 
   capitalLedger(principal: AnalyticsPrincipal, portfolioId: string): Promise<unknown> {
+    this.requireAnalytics();
     return this.request(
       principal,
       "GET",
@@ -166,12 +176,40 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
   }
 
   bindingExposure(principal: AnalyticsPrincipal, bindingId: string): Promise<unknown> {
+    this.requireAnalytics();
     return this.request(
       principal,
       "GET",
       `/internal/v1/screens/account-broker-360/${segment(bindingId)}/exposure`,
       analyticsResource("account-broker-360", bindingId),
     );
+  }
+
+  paperWorkbenchPanel(
+    principal: AnalyticsPrincipal,
+    deploymentId: string,
+    panel: "orders" | "positions",
+    body: unknown,
+  ): Promise<unknown> {
+    if (
+      this.config.FEATURE_EXECUTION_SHADOW_QUERY !== "true" ||
+      this.config.FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW !== "true"
+    ) {
+      throw new AnalyticsProxyError("N07_SHADOW_SCREEN_DISABLED", 404);
+    }
+    return this.request(
+      principal,
+      "POST",
+      `/internal/v1/screens/paper-workbench/${segment(deploymentId)}/${panel}/query`,
+      analyticsResource("paper-workbench", deploymentId),
+      body,
+    );
+  }
+
+  private requireAnalytics(): void {
+    if (this.config.FEATURE_EXECUTION_ANALYTICS_QUERY !== "true") {
+      throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
+    }
   }
 
   close(): void {
@@ -274,7 +312,11 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       });
       stream.once("end", () => {
         if (status < 200 || status >= 300) {
-          settle(new AnalyticsProxyError("ANALYTICS_UPSTREAM_REJECTED", status));
+          settle(new AnalyticsProxyError(
+            typedUpstreamProblemCode(Buffer.concat(chunks), responseIsJson, status) ??
+              "ANALYTICS_UPSTREAM_REJECTED",
+            status,
+          ));
           return;
         }
         if (!responseIsJson) {
@@ -343,6 +385,33 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
         if (this.session === session) this.session = null;
       });
     });
+  }
+}
+
+/** Preserves only the bounded Rust error code/status contract; no upstream detail is leaked. */
+export function typedUpstreamProblemCode(
+  body: Buffer,
+  responseIsJson: boolean,
+  status: number,
+): string | null {
+  if (!responseIsJson || body.byteLength === 0) return null;
+  try {
+    const value = JSON.parse(body.toString("utf8")) as unknown;
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      !("code" in value) ||
+      !("status" in value)
+    ) return null;
+    const code = (value as { code: unknown }).code;
+    const declaredStatus = (value as { status: unknown }).status;
+    return typeof code === "string" &&
+      TYPED_UPSTREAM_CODE.test(code) &&
+      declaredStatus === status
+      ? code
+      : null;
+  } catch {
+    return null;
   }
 }
 

@@ -1,0 +1,24 @@
+{
+  "schema_version": "portal.execution.capacity-retention-cost.v1",
+  "source_dark": true,
+  "production_active": false,
+  "capacity": {
+    "six_month_order_fill_rows": 182000,
+    "initial_concurrent_sse_clients": 100,
+    "source_burst_events_per_minute": 140,
+    "maximum_chart_points": 5000,
+    "maximum_correlation_assets": 150
+  },
+  "retention": {
+    "backup_policy": "DAILY_7_WEEKLY_4",
+    "daily_copies": 7,
+    "weekly_copies": 4,
+    "destructive_purge_requires_restore_verified_checksum": true,
+    "authoritative_audit_deletion_automated": false
+  },
+  "cost": {
+    "monthly_budget_usd": null,
+    "owner_approval_required": true,
+    "production_resource_creation_allowed": false
+  }
+}

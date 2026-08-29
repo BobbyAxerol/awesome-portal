@@ -1,0 +1,21 @@
+{
+  "schema_version": "trading-system.portal-command-acceptance-results.v1",
+  "request_revision": "portal.execution.command-publication-request.v1",
+  "synthetic_example": true,
+  "cases": [
+    {"name":"exact_routes_and_bounded_transport","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"mtls_and_one_operation_jwt_positive","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"identity_scope_audience_expiry_negative_matrix","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"risk_step_up_sod_and_dual_approval_matrix","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"request_key_duplicate_and_payload_conflict","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"accepted_202_is_nonterminal","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"terminal_status_and_receipt_corpus","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"timeout_disconnect_unknown_become_uncertain","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"uncertain_same_target_policy","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"restart_replay_and_reconciliation","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"broker_source_loss_and_recovery","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"independent_command_kill_switch","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"no_database_redis_cli_or_broker_authority","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+    {"name":"rollback_revokes_command_identity_only","passed":false,"evidence_sha256":"sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+  ]
+}

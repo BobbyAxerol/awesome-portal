@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json",
+  "$ref": "#/$defs/EmergencyProfile",
+  "$defs": {
+    "RoutePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "public_origin", "path_prefix", "normal_profile", "emergency_profile",
+        "browser_mode", "origin_resolution", "same_origin_only",
+        "redirects_allowed", "cors_allowed", "public_route_active",
+        "execution_origin_bound", "browser_internal_origin_visible",
+        "browser_delegated_token_visible"
+      ],
+      "properties": {
+        "public_origin": { "const": "https://portal.primusspark.com" },
+        "path_prefix": { "const": "/ops/emergency/" },
+        "normal_profile": { "const": "research_sgp_stable" },
+        "emergency_profile": { "const": "execution_ops" },
+        "browser_mode": { "const": "SAME_ORIGIN_ONLY" },
+        "origin_resolution": { "const": "SERVER_SIDE_ONLY" },
+        "same_origin_only": { "const": true },
+        "redirects_allowed": { "const": false },
+        "cors_allowed": { "const": false },
+        "public_route_active": { "const": false },
+        "execution_origin_bound": { "const": false },
+        "browser_internal_origin_visible": { "const": false },
+        "browser_delegated_token_visible": { "const": false }
+      }
+    },
+    "EmergencySecurityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "same_portal_session", "allowed_roles", "step_up_method",
+        "maximum_session_seconds", "maximum_step_up_age_seconds",
+        "maximum_break_glass_seconds", "minimum_distinct_approvals",
+        "minimum_reason_characters", "maximum_reason_characters",
+        "confirmation_literal", "immutable_audit_mode",
+        "command_independent_health", "raw_browser_token_forwarding"
+      ],
+      "properties": {
+        "same_portal_session": { "const": true },
+        "allowed_roles": {
+          "type": "array",
+          "prefixItems": [{ "const": "OPERATOR" }, { "const": "ADMIN" }],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "step_up_method": { "const": "PHISHING_RESISTANT_WEBAUTHN" },
+        "maximum_session_seconds": { "type": "integer", "minimum": 60, "maximum": 300 },
+        "maximum_step_up_age_seconds": { "type": "integer", "minimum": 30, "maximum": 90 },
+        "maximum_break_glass_seconds": { "type": "integer", "minimum": 60, "maximum": 300 },
+        "minimum_distinct_approvals": { "type": "integer", "minimum": 2, "maximum": 4 },
+        "minimum_reason_characters": { "type": "integer", "minimum": 20, "maximum": 100 },
+        "maximum_reason_characters": { "type": "integer", "minimum": 100, "maximum": 500 },
+        "confirmation_literal": { "const": "BREAK-GLASS" },
+        "immutable_audit_mode": { "const": "SHA256_HASH_CHAIN" },
+        "command_independent_health": { "const": true },
+        "raw_browser_token_forwarding": { "const": false }
+      }
+    },
+    "CommandBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protective_capabilities", "forbidden_risk_increasing_capabilities",
+        "n12_r3_catalogue_published", "dedicated_command_identity_bound",
+        "control_visible", "plan_allowed", "apply_allowed", "verify_allowed"
+      ],
+      "properties": {
+        "protective_capabilities": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "LIVE_HALT" },
+            { "const": "LIVE_REDUCE" },
+            { "const": "LIVE_EMERGENCY_CLOSE" }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "forbidden_risk_increasing_capabilities": {
+          "type": "array",
+          "prefixItems": [{ "const": "LIVE_RESUME" }, { "const": "LIVE_SCALE" }],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "n12_r3_catalogue_published": { "const": false },
+        "dedicated_command_identity_bound": { "const": false },
+        "control_visible": { "const": false },
+        "plan_allowed": { "const": false },
+        "apply_allowed": { "const": false },
+        "verify_allowed": { "const": false }
+      }
+    },
+    "EmergencyProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "profile_id", "source_dark", "runtime_active",
+        "network_authorized", "source_call_authorized", "route", "security", "command"
+      ],
+      "properties": {
+        "schema_version": { "const": "portal.execution.emergency-routing.v1" },
+        "profile_id": { "const": "n16a-source-dark" },
+        "source_dark": { "const": true },
+        "runtime_active": { "const": false },
+        "network_authorized": { "const": false },
+        "source_call_authorized": { "const": false },
+        "route": { "$ref": "#/$defs/RoutePolicy" },
+        "security": { "$ref": "#/$defs/EmergencySecurityPolicy" },
+        "command": { "$ref": "#/$defs/CommandBoundary" }
+      }
+    },
+    "RouteDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "scenario", "research", "cloudflare", "execution_origin",
+        "ui_state", "reason", "route_target", "candidate_profile",
+        "health_available", "control_visible", "source_request_sent", "network_attempts"
+      ],
+      "properties": {
+        "schema_version": { "const": "portal.execution.emergency-route-decision.v1" },
+        "scenario": { "enum": ["NORMAL_RESEARCH", "RESEARCH_LOSS", "CLOUDFLARE_LOSS", "EXECUTION_ORIGIN_LOSS", "ROLLBACK"] },
+        "research": { "enum": ["AVAILABLE", "DEGRADED", "UNAVAILABLE"] },
+        "cloudflare": { "enum": ["AVAILABLE", "DEGRADED", "UNAVAILABLE"] },
+        "execution_origin": { "enum": ["AVAILABLE", "DEGRADED", "UNAVAILABLE"] },
+        "ui_state": { "enum": ["SOURCE_DARK", "UNAVAILABLE", "DEGRADED", "ROLLBACK"] },
+        "reason": { "enum": ["SOURCE_DARK", "RESEARCH_UNAVAILABLE", "CLOUDFLARE_UNAVAILABLE", "EXECUTION_ORIGIN_UNAVAILABLE", "N12_R3_CATALOGUE_UNPUBLISHED", "ROLLBACK_ENGAGED"] },
+        "route_target": { "const": "NONE" },
+        "candidate_profile": { "type": ["string", "null"], "enum": ["execution_ops", null] },
+        "health_available": { "const": true },
+        "control_visible": { "const": false },
+        "source_request_sent": { "const": false },
+        "network_attempts": { "const": 0 }
+      }
+    },
+    "CommandDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "operation_id", "decision", "reason", "risk_tier", "plan_allowed", "apply_allowed", "verify_allowed", "source_request_sent"],
+      "properties": {
+        "schema_version": { "const": "portal.execution.emergency-command-decision.v1" },
+        "operation_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "decision": { "const": "DENIED" },
+        "reason": { "enum": ["N12_R3_CATALOGUE_UNPUBLISHED", "SOURCE_DARK", "RISK_INCREASING_FORBIDDEN", "ROLE_DENIED", "SESSION_NOT_YET_VALID", "SESSION_EXPIRED", "SESSION_TOO_LONG", "STEP_UP_REQUIRED", "STEP_UP_EXPIRED", "ACTOR_MISMATCH", "INVALID_SCOPE", "INVALID_REASON", "CONFIRMATION_MISMATCH", "INVALID_EXPIRY", "DISTINCT_APPROVAL_REQUIRED"] },
+        "risk_tier": { "enum": ["R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING"] },
+        "plan_allowed": { "const": false },
+        "apply_allowed": { "const": false },
+        "verify_allowed": { "const": false },
+        "source_request_sent": { "const": false }
+      }
+    },
+    "AuditRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence", "occurred_at_epoch_seconds", "event", "actor_id",
+        "operation_id", "reason_code", "previous_hash", "record_hash"
+      ],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 1 },
+        "occurred_at_epoch_seconds": { "type": "integer", "minimum": 1 },
+        "event": { "enum": ["CEREMONY_VALIDATED", "COMMAND_DENIED", "SESSION_EXPIRED", "DEPENDENCY_DEGRADED", "ROLLBACK_ENGAGED"] },
+        "actor_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "operation_id": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "reason_code": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "previous_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "record_hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "UiStateCorpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "source_dark", "routes", "commands"],
+      "properties": {
+        "schema_version": { "const": "portal.execution.emergency-ui-corpus.v1" },
+        "source_dark": { "const": true },
+        "routes": { "type": "array", "items": { "$ref": "#/$defs/RouteDecision" }, "minItems": 5, "maxItems": 5 },
+        "commands": { "type": "array", "items": { "$ref": "#/$defs/CommandDecision" }, "minItems": 2, "maxItems": 8 }
+      }
+    }
+  }
+}

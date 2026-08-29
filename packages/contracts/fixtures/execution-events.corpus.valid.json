@@ -1,0 +1,62 @@
+[
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 1,
+    "entity_kind": "order", "entity_id": "ord_1", "source_authority": "EXECUTION", "source_cursor": null, "source_sequence": 1, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:00Z", "source_read_at": "2026-08-26T10:00:00.010Z", "projected_at": "2026-08-26T10:00:00.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "order.updated", "payload": { "order_id": "ord_1", "status": "WORKING", "quantity": "1.000000000000000001", "price": "60000.5", "currency": "USDT" }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 2,
+    "entity_kind": "fill", "entity_id": "fill_1", "source_authority": "EXECUTION", "source_cursor": null, "source_sequence": 2, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:01Z", "source_read_at": "2026-08-26T10:00:01.010Z", "projected_at": "2026-08-26T10:00:01.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "fill.recorded", "payload": { "fill_id": "fill_1", "order_id": "ord_1", "quantity": "1", "price": "60000.5", "fee": "0.10", "currency": "USDT", "liquidity": "TAKER" }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 3,
+    "entity_kind": "position", "entity_id": "pos_1", "source_authority": "EXECUTION", "source_cursor": null, "source_sequence": 3, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:02Z", "source_read_at": "2026-08-26T10:00:02.010Z", "projected_at": "2026-08-26T10:00:02.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "position.updated", "payload": { "position_id": "pos_1", "instrument_id": "BTCUSDT", "quantity": "1", "mark_price": "60001", "unrealized_pnl": "0.5", "currency": "USDT" }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 4,
+    "entity_kind": "event", "entity_id": "evt_1", "source_authority": "EXECUTION", "source_cursor": null, "source_sequence": 4, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:03Z", "source_read_at": "2026-08-26T10:00:03.010Z", "projected_at": "2026-08-26T10:00:03.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "source_event.observed", "payload": { "source_event_id": "evt_1", "source_event_type": "ORDER_ACK", "occurred_at": "2026-08-26T10:00:03Z" }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 5,
+    "entity_kind": "runtime", "entity_id": "runtime_1", "source_authority": "EXECUTION", "source_cursor": null, "source_sequence": 5, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:04Z", "source_read_at": "2026-08-26T10:00:04.010Z", "projected_at": "2026-08-26T10:00:04.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "runtime.updated", "payload": { "runtime_id": "runtime_1", "state": "READY", "reason": null }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 6,
+    "entity_kind": "account", "entity_id": "acct_1", "source_authority": "EXECUTION", "source_cursor": null, "source_sequence": 6, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:05Z", "source_read_at": "2026-08-26T10:00:05.010Z", "projected_at": "2026-08-26T10:00:05.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "account.updated", "payload": { "account_id": "acct_1", "currency": "USDT", "equity": "1000.000000000000000001", "available": "900" }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 7,
+    "entity_kind": "broker_binding", "entity_id": "binding_1", "source_authority": "BROKER", "source_cursor": null, "source_sequence": 7, "source_completeness": "POLL_BOUNDED",
+    "as_of": "2026-08-26T10:00:06Z", "source_read_at": "2026-08-26T10:00:06.010Z", "projected_at": "2026-08-26T10:00:06.020Z", "freshness": "AGING", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "broker_binding.updated", "payload": { "binding_id": "binding_1", "state": "SYNCING", "sync_age_seconds": 2 }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 8,
+    "entity_kind": "reconciliation", "entity_id": "finding_1", "source_authority": "BROKER", "source_cursor": null, "source_sequence": 8, "source_completeness": "POLL_BOUNDED",
+    "as_of": "2026-08-26T10:00:07Z", "source_read_at": "2026-08-26T10:00:07.010Z", "projected_at": "2026-08-26T10:00:07.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "reconciliation.updated", "payload": { "finding_id": "finding_1", "severity": "WARNING", "state": "OPEN", "difference": "0.01", "currency": "USDT" }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 9,
+    "entity_kind": "performance", "entity_id": "dep_88", "source_authority": "DERIVED", "source_cursor": null, "source_sequence": 9, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:08Z", "source_read_at": "2026-08-26T10:00:08.010Z", "projected_at": "2026-08-26T10:00:08.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "performance.updated", "payload": { "deployment_id": "dep_88", "currency": "USDT", "equity": "100.25", "drawdown": "-0.0025" }
+  },
+  {
+    "schema_version": "execution.event.v1", "workspace_id": "fixture-workspace", "environment": "paper", "projection_epoch": "018f47a4-b9d1-7a16-a4cd-3f75cf4d6200", "projection_sequence": 10,
+    "entity_kind": "operation", "entity_id": "op_1", "source_authority": "DERIVED", "source_cursor": null, "source_sequence": 10, "source_completeness": "EVENT_SOURCED",
+    "as_of": "2026-08-26T10:00:09Z", "source_read_at": "2026-08-26T10:00:09.010Z", "projected_at": "2026-08-26T10:00:09.020Z", "freshness": "OK", "freshness_policy_version": "execution.paper.v1", "source_discontinuity": false,
+    "event_type": "operation.updated", "payload": { "operation_id": "op_1", "state": "PLANNED", "incident_id": null }
+  }
+]

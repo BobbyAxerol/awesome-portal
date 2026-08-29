@@ -1,0 +1,23 @@
+{
+  "schema_version": "trading-system.portal-read-golden-corpus-index.v1",
+  "request_revision": "portal.execution.external-read-request.v1",
+  "synthetic_non_business_data": true,
+  "contains_secret_or_credential": false,
+  "required_capability_ids": [
+    "orders.list", "orders.trace", "orders.legs", "orders.fills",
+    "deployments.positions", "deployments.execution-quality", "deployments.contribution",
+    "bindings.snapshot", "bindings.exposure-verdict", "portfolios.correlation-samples",
+    "venues.calendar", "market.ticks", "market.candles", "accounts.current",
+    "sessions.current", "reconciliation.current", "ops.command-journal", "ops.findings",
+    "ops.alerts", "ops.dead-letters", "ops.trace-order", "ops.streams",
+    "ops.alpha-activity", "ops.redis-retention"
+  ],
+  "required_negative_cases": [
+    "missing_identity", "wrong_identity", "revoked_identity", "expired_delegated_jwt",
+    "wrong_workspace", "wrong_environment", "wrong_resource", "unsupported_contract_revision",
+    "response_schema_digest_mismatch", "numeric_exact_decimal", "cursor_context_mismatch",
+    "cursor_expired", "response_over_limit", "partial_population", "stale_source",
+    "source_unavailable", "source_loss_recovery", "redirect_denied", "secret_shaped_field"
+  ],
+  "files": {}
+}

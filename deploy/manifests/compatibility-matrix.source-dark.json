@@ -1,0 +1,35 @@
+{
+  "schema_version": "portal.release-compatibility-matrix.v1",
+  "delivery_profile": "source-dark",
+  "portal_contracts": {
+    "staged_activation": "execution.staged-activation-plan.v1",
+    "execution_query": "execution.projection-page.v1",
+    "execution_realtime": "execution.realtime-event.v1",
+    "execution_governance": "execution.governance.v1",
+    "execution_operations": "execution.operations.v1"
+  },
+  "services": [
+    {"service_id": "portal-api", "cell": "SGP_RESEARCH", "required": true},
+    {"service_id": "portal-web", "cell": "SGP_RESEARCH", "required": true},
+    {"service_id": "control-api", "cell": "SGP_RESEARCH", "required": true},
+    {"service_id": "roadmap-task-board-api", "cell": "SGP_RESEARCH", "required": true},
+    {"service_id": "execution-edge", "cell": "AWS_HK_EXECUTION", "required": true},
+    {"service_id": "source-proxy", "cell": "AWS_HK_EXECUTION", "required": true}
+  ],
+  "trading_system": {
+    "owner_campaign_revision": "portal.execution.trading-system-owner-request.v2",
+    "owner_return_status": "PENDING_N14B",
+    "source_contract": "UNBOUND",
+    "source_image_digest": "UNBOUND",
+    "gateway_image_digest": "UNBOUND"
+  },
+  "activation": {
+    "projection": false,
+    "query": false,
+    "sse": false,
+    "command_r1": false,
+    "command_r2": false,
+    "command_r3": false,
+    "command_r4": false
+  }
+}

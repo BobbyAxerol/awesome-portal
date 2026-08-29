@@ -85,6 +85,8 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_EDGE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_REALTIME_SSE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_ANALYTICS_QUERY: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_SHADOW_QUERY: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_RELAY: z.enum(["true", "false"]).default("false"),
   COMMAND_CENTER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(128 * 1024),
@@ -228,7 +230,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (
     config.FEATURE_EXECUTION_REALTIME_SSE === "true" ||
-    config.FEATURE_EXECUTION_ANALYTICS_QUERY === "true"
+    config.FEATURE_EXECUTION_ANALYTICS_QUERY === "true" ||
+    config.FEATURE_EXECUTION_SHADOW_QUERY === "true"
   ) {
     if (config.FEATURE_EXECUTION_EDGE !== "true") {
       throw new Error("execution edge delivery requires FEATURE_EXECUTION_EDGE=true");
@@ -244,6 +247,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (new URL(config.EXECUTION_EDGE_ORIGIN).protocol !== "https:") {
       throw new Error("execution edge origin must use HTTPS");
     }
+  }
+  if (
+    config.FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW === "true" &&
+    config.FEATURE_EXECUTION_SHADOW_QUERY !== "true"
+  ) {
+    throw new Error(
+      "FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW=true requires FEATURE_EXECUTION_SHADOW_QUERY=true",
+    );
+  }
+  if (
+    config.FEATURE_EXECUTION_REALTIME_SSE === "true" &&
+    (config.FEATURE_EXECUTION_SHADOW_QUERY !== "true" ||
+      config.FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW !== "true")
+  ) {
+    throw new Error(
+      "FEATURE_EXECUTION_REALTIME_SSE=true requires FEATURE_EXECUTION_SHADOW_QUERY=true and FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW=true",
+    );
   }
   return config;
 }

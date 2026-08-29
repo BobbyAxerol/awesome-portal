@@ -1,0 +1,12 @@
+{
+  "schema_version": "trading-system.portal-command-terminal-corpus-index.v1",
+  "request_revision": "portal.execution.command-publication-request.v1",
+  "synthetic_non_business_data": true,
+  "contains_secret_or_credential": false,
+  "accepted_is_nonterminal": true,
+  "terminal_statuses": ["SUCCEEDED","FAILED","DENIED","PARTIAL"],
+  "uncertain_requires_reconciliation": true,
+  "required_capability_ids": ["paper.halt","paper.cancel-open-orders","sandbox.halt","sandbox.cancel-open-orders","live.halt","live.reduce","live.emergency-close","live.resume","live.scale"],
+  "required_negative_cases": ["missing_mtls","wrong_command_identity","read_identity_used_for_command","expired_delegated_jwt","wrong_audience","wrong_operation_id","wrong_payload_hash","wrong_workspace","wrong_environment","wrong_target","stale_expected_version","missing_step_up","same_actor_dual_approval","request_key_payload_conflict","duplicate_delivery","accepted_202_nonterminal","timeout_uncertain","disconnect_uncertain","unknown_status_uncertain","restart_replay","same_target_r4_blocked_by_uncertain","unsafe_protective_blocked_by_uncertain","broker_or_source_loss","redirect_denied","request_over_limit","response_over_limit","command_kill_switch","rollback_command_identity_revoked"],
+  "files": {}
+}

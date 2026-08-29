@@ -38,6 +38,17 @@
             "account_id": { "$ref": "#/$defs/Identifier" },
             "external_account_ref": { "$ref": "#/$defs/Identifier" }
           }
+        },
+        "smoke_plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["qty", "cap", "currency", "timebox_minutes"],
+          "properties": {
+            "qty": { "type": "string", "pattern": "^(?:0|[1-9][0-9]{0,19})(?:\\.[0-9]{1,18})?$" },
+            "cap": { "type": "string", "pattern": "^(?:0|[1-9][0-9]{0,19})(?:\\.[0-9]{1,18})?$" },
+            "currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },
+            "timebox_minutes": { "type": "integer", "minimum": 5, "maximum": 240 }
+          }
         }
       }
     },
@@ -283,6 +294,45 @@
         "created_at": { "$ref": "#/$defs/Timestamp" }
       }
     },
+    "SmokePlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan_id", "qty", "cap", "currency", "timebox_minutes", "operator",
+        "status", "approved_by", "approved_at", "source_side_effect_requested"
+      ],
+      "properties": {
+        "plan_id": { "$ref": "#/$defs/Identifier" },
+        "qty": { "type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+)?$" },
+        "cap": { "type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+)?$" },
+        "currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },
+        "timebox_minutes": { "type": "integer", "minimum": 5, "maximum": 240 },
+        "operator": {
+          "type": "object", "additionalProperties": false,
+          "required": ["user_id", "username"],
+          "properties": {
+            "user_id": { "$ref": "#/$defs/Identifier" },
+            "username": { "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        },
+        "status": { "enum": ["PLANNED", "APPROVED", "REJECTED"] },
+        "approved_by": {
+          "oneOf": [
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["user_id", "username"],
+              "properties": {
+                "user_id": { "$ref": "#/$defs/Identifier" },
+                "username": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 }
+              }
+            },
+            { "type": "null" }
+          ]
+        },
+        "approved_at": { "$ref": "#/$defs/NullableTimestamp" },
+        "source_side_effect_requested": { "const": false }
+      }
+    },
     "CertificationResponse": {
       "type": "object",
       "additionalProperties": false,
@@ -291,6 +341,7 @@
         "source_side_effect_requested", "runtime_activation_requested", "promotion_execution_requested",
         "replayed", "read_at", "actor", "certification", "lineage", "progress", "steps",
         "source_panels", "timeboxed_run_policy", "findings", "timeline", "promotion_plans"
+        , "smoke_plan"
       ],
       "properties": {
         "schema_version": { "const": "governance.sandbox-certification.v1" },
@@ -309,6 +360,7 @@
         "steps": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/$defs/Step" } },
         "source_panels": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/SourcePanel" } },
         "timeboxed_run_policy": { "type": "null" },
+        "smoke_plan": { "oneOf": [{ "$ref": "#/$defs/SmokePlan" }, { "type": "null" }] },
         "findings": { "$ref": "#/$defs/FindingCollection" },
         "timeline": { "$ref": "#/$defs/Timeline" },
         "promotion_plans": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/PromotionPlanSummary" } }

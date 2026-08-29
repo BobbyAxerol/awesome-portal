@@ -1,5 +1,15 @@
 #![forbid(unsafe_code)]
 
+mod events;
+
+pub use events::{
+    AccountUpdatedPayload, BrokerBindingUpdatedPayload, ExecutionEvent, ExecutionEventEnvelope,
+    ExecutionEventEnvelopeInput, ExecutionEventType, FillRecordedPayload, OperationUpdatedPayload,
+    OrderUpdatedPayload, PerformanceUpdatedPayload, PositionUpdatedPayload,
+    ReconciliationUpdatedPayload, RuntimeUpdatedPayload, SourceEventObservedPayload,
+    EXECUTION_EVENT_SCHEMA_VERSION,
+};
+
 use std::{collections::BTreeMap, fmt};
 
 use chrono::{DateTime, Utc};
@@ -42,7 +52,7 @@ impl<'de> Deserialize<'de> for CanonicalId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum SourceAuthority {
     Research,
@@ -360,6 +370,8 @@ pub enum ContractError {
     InvalidIdentifier,
     #[error("invalid exact decimal string: {0}")]
     InvalidDecimal(String),
+    #[error("execution event envelope schema or discriminator is invalid")]
+    InvalidEventEnvelope,
 }
 
 #[cfg(test)]

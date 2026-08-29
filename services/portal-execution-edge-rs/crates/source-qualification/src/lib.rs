@@ -1,5 +1,9 @@
 #![forbid(unsafe_code)]
 
+pub mod real_source;
+pub mod realtime_activation;
+pub mod shadow_screen;
+
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::CanonicalId;
 use projection_core::{
@@ -366,3 +370,6 @@ impl QualificationError {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod real_source_tests;

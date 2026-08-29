@@ -21,6 +21,15 @@ EX-BE-01 locked its contracts. EX-BE-02 adds the deployable, read-only boundary:
 - `edge-service` exposes one mTLS-only compatibility endpoint on the AWS HK
   private address and loopback-only liveness/readiness probes. Projection
   database readiness is independently gated and disabled by default.
+- `intercell-gateway` owns the N15A pure, source-dark Query/Command/Event/
+  Artifact negotiation, identity/transport policy, Event continuity, Artifact
+  reference validation and local fault doubles. It has no HTTP client,
+  listener, origin or credential dependency.
+- `emergency-routing` owns the N16A pure, source-dark same-domain route policy,
+  short emergency session and phishing-resistant step-up ceremony, structural
+  R3/R4 split, immutable audit hash chain and local Research/Cloudflare/origin/
+  rollback drills. It cannot mount `/ops/emergency/*`, bind an origin or send a
+  source command.
 
 The workspace has no Trading System database/Redis client, broker code or
 Trading System command method. Its SQLx driver can access only the separately

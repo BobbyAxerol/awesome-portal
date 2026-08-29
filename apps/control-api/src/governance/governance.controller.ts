@@ -31,6 +31,7 @@ import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
 import {
   ApplyOperationRequestSchema,
+  approvalHistoryQuery,
   approvalListQuery,
   DecisionPlanRequestSchema,
   PaperExitApplyOperationRequestSchema,
@@ -140,6 +141,15 @@ export class GovernanceController {
   ) {
     const workspaceId = await this.workspace(request, query.workspace_id);
     return this.governance.list(request.portalUser, workspaceId, approvalListQuery(query));
+  }
+
+  @Get("/governance/approvals/history")
+  async approvalHistory(
+    @Req() request: GovernanceRequest,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const workspaceId = await this.workspace(request, query.workspace_id);
+    return this.governance.history(request.portalUser, workspaceId, approvalHistoryQuery(query));
   }
 
   @Get("/governance/approvals/:approval_id/r1")

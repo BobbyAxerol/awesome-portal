@@ -19,12 +19,14 @@ paper-source-runner = { path = "../paper-source-runner" }
 paper-source-transport = { path = "../paper-source-transport" }
 projection-core = { path = "../projection-core" }
 projection-store-pg = { path = "../projection-store-pg" }
+query-api = { path = "../query-api" }
 realtime-sse = { path = "../realtime-sse" }
 reqwest.workspace = true
 rustls.workspace = true
 rustls-pemfile.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+source-qualification = { path = "../source-qualification" }
 thiserror.workspace = true
 tokio.workspace = true
 tower.workspace = true

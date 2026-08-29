@@ -1255,6 +1255,47 @@ deep-dive → ADR → slice → evidence discipline documented above.
   backpressure and 24-hour soak before read-profile promotion. No Trading
   System edit or runtime change is authorized by this finding. Detail:
   [`EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md`](./backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md).
+- **EX-BE-02 / N01 D4 dormant closeout (2026-08-25):** offline lifecycle
+  implementation is accepted. A host-side exact-label guard enforces the
+  finite owner window, closes on qualifier completion/missed start/revocation/
+  expiry, stops only the dedicated D4 path and restores the accepted D2 dark
+  Source Proxy without pulling an image. Production acceptance still requires
+  one future owner-window drill and sanitized proof of zero source sessions,
+  SELECT delta and byte delta. Registry remains `fixture`; all reader,
+  analytics, SSE, command and activation authority stays dark. Detail:
+  [`EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md`](./backend/EX_BE_02_D4_DORMANT_CLOSEOUT_DISCIPLINE.md).
+- **EX-BE-02 / N02 incremental source contract (2026-08-25):** Portal's
+  request-only v2 schema, exact owner publication envelope and fail-closed
+  verifier are complete with 15 synthetic semantic/security cases. Read-only
+  discovery found no Trading-System-owned v2 publication, so runtime remains
+  locked to `d4.paper-read.v1`, Lane B remains dark and the external owner gate
+  is still pending. Detail:
+  [`EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md`](./backend/EX_BE_02_N02_INCREMENTAL_SOURCE_CONTRACT_REVISION.md).
+- **EX-BE-02 / N03 owner incremental implementation gate (2026-08-25):**
+  Portal's acceptance boundary now chains an immutable Trading-System-owned
+  commit/image and five sanitized evidence files to accepted N02 bytes. Fifteen
+  verifier tests lock zero idle source activity, no delta full scan, fixed
+  scope/read identity, query/resource bounds and recovery. The owner has not
+  published N02/N03, so runtime stays v1/dormant and N04 remains blocked. Detail:
+  [`EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md`](./backend/EX_BE_02_N03_TRADING_SYSTEM_INCREMENTAL_SOURCE_IMPLEMENTATION.md).
+- **EX-BE-03 / N04–N07 plus EX-BE-06 / N08 Portal continuation
+  (2026-08-26):** the lease-fenced shared consumer, retention/recovery policy,
+  real-source evidence authority and first deployment-scoped Paper Workbench
+  APIs are complete on the Portal side. N06 now distinguishes a full-safety
+  30-minute Paper-fast profile from separate extended 24-hour confidence.
+  Bobby approved the Paper-fast, N07 shadow and N08 SSE promotions; those owner
+  decisions must not be requested again. N08 adds an exact accepted manifest
+  bound to N06, the still-active N07 epoch/manifest, immutable images/contracts
+  and nine evidence hashes; it exposes an exact snapshot-before-stream path
+  through the reusable mTLS/H2/JWT BFF and closes EventSource on terminal or
+  generic errors. Status is `PORTAL_IMPLEMENTATION_COMPLETE /
+  OWNER_PROMOTION_APPROVED / RUNTIME_FAIL_CLOSED /
+  REAL_SOURCE_EVIDENCE_PENDING`: source-owner `d4.paper-read.v2` bytes remain
+  the one external dependency, all runtime/registry flags stay false and no
+  Trading System state was changed. Detail:
+  [`N06`](./backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md),
+  [`N07`](./backend/EX_BE_03_N07_PROJECTION_QUERY_ANALYTICS_SHADOW.md),
+  [`N08`](./backend/EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md).
 - **Execution backend hardening H1–H3 (2026-08-22):** SSE ownership now follows
   the downstream response and session lease; the Rust poller retries startup,
   fails readiness closed and keeps one cursor per ACTIVE epoch so BUILDING
@@ -1375,6 +1416,86 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 **Remaining backend work — phase-scoped (NOT open requests; wait for owner
 activation or the phase):**
+
+- **N11 external read boundary (2026-08-26):** Portal's consolidated
+  24-capability request, byte-bound owner verifier and source-dark Rust
+  compatibility gate are complete. Source adapters remain production-inactive
+  until an accepted Trading System owner pack supplies exact schemas, fixtures,
+  semantic rulings and evidence. No direct DB/Redis/CLI/broker substitute is
+  allowed. See
+  [`EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md`](./backend/EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md).
+
+- **N12 command boundary (2026-08-26):** Portal's consolidated nine-capability
+  owner request, byte-bound publication verifier and Rust pre-dispatch/journal
+  gate are complete. Command identity is distinct from read identity; Paper,
+  Sandbox, R3, R4 and the command kill switch remain independent. HTTP 202 is
+  non-terminal and `UNCERTAIN` survives restart, blocks same-target R4 and
+  permits only owner-proven monotonic/idempotent protection. Owner publication
+  and every runtime command flag remain pending/false. See
+  [`EX_BE_05B_N12_LIVE_COMMAND_RELAY.md`](./backend/EX_BE_05B_N12_LIVE_COMMAND_RELAY.md).
+
+- **N13A staged activation foundation (2026-08-26):** TypeScript and isolated
+  Portal PostgreSQL now implement seven independent source-dark capabilities,
+  the legal delivery-profile graph and authenticated plan/apply/verify with
+  RBAC, CSRF, idempotency, optimistic versions, atomic audit/outbox and bounded
+  per-capability rollback. Immutable owner references remain structurally valid
+  but unaccepted/untrusted. Database constraints keep effective profile
+  `fixture`, source/runtime false and kill switches engaged; N13A can apply only
+  a rollback to fixture. Owner import and real promotion remain N13B. See
+  [`EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md`](./backend/EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md).
+
+- **N14A Portal release authority (2026-08-26):** an exact six-service
+  `image@sha256` manifest now binds the protected-main Portal commit,
+  source-dark compatibility/profile matrix, migration chain, candidate
+  evidence and rollback runbook. BuildKit SBOM/SLSA, Trivy and keyless Cosign
+  evidence cover all six images; production requires the exact candidate run,
+  reviewed manifest digest, vulnerability acceptance and a separately signed
+  `ACCEPT_SOURCE_DARK` decision. Stable SGP uses project `portal-stable`, port
+  18081, distinct volumes and digest-only service images; dev remains project
+  `portal`, port 8080 and isolated state. Seventeen security/release tests,
+  actionlint and a real three-volume PostgreSQL backup/restore/forward-fix
+  rehearsal pass. Status is `N14A_COMPLETE_SOURCE_DARK /
+  N14B_OWNER_RELEASE_EVIDENCE_PENDING`; no source/Query/SSE/command flag,
+  AWS-HK or Trading System route changed. See
+  [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+
+- **N15A source-dark four-interface gateway (2026-08-26):** Query, Command,
+  Event and Artifact now have independent semantic version/rollback authority,
+  distinct read/command workload identities, exact-resource delegated
+  assertions and bounded TLS1.3/HTTP2 transport blueprints. Rust owns Event
+  replay/gap/epoch rules, Artifact metadata/reference validation and local
+  partition/replay/expiry/schema/source-loss doubles. Component OpenAPI has no
+  paths/servers and tests prove `network_attempts=0`. Status is
+  `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+  PRODUCTION_INACTIVE`; no origin, credential, source or runtime changed. See
+  [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+
+- **N16A source-dark same-domain emergency routing (2026-08-27):** the exact
+  Portal origin and `/ops/emergency/*` prefix, server-side-only origin
+  isolation, five-minute session, phishing-resistant step-up, break-glass
+  ceremony, command-independent health, typed dependency/failover states and
+  immutable SHA-256 audit chain are now pure Rust/contracts/templates tested
+  against local doubles. The component OpenAPI has no paths/servers and the
+  unmounted Nginx template has no forwarding directive. N12 R3 publication,
+  dedicated command identity and every PLAN/APPLY/VERIFY flag remain false;
+  R4 resume/scale is structurally forbidden and `network_attempts=0`. Status is
+  `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
+  PRODUCTION_INACTIVE`. See
+  [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
+
+- **N17A source-dark production/DR preparation (2026-08-27):** canonical
+  contracts and pure Rust now own provisional SLO/error-budget semantics,
+  control/projection/object recovery, five distinct identity rotation families,
+  capacity/retention/cost gates and digest-sealed isolated game-day evidence.
+  Prometheus/Grafana and operations files are unmounted and have no datasource,
+  origin or secret. The operational harness passed actual internal-only WAL
+  PITR to a selected LSN, ephemeral encrypted logical backup restore,
+  deterministic projection rebuild, rotation/compromise, rollback and eight
+  complete fault scenarios with external `network_attempts=0`. Production SLO,
+  error budget, RPO/RTO and cost remain unclaimed. Status is
+  `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING /
+  PRODUCTION_INACTIVE`. See
+  [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

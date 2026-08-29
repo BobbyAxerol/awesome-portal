@@ -1,0 +1,127 @@
+{
+  "schema_version": "portal.execution.d4.incremental-source.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "previous_revision": "d4.paper-read.v1",
+  "status": "REQUEST_EXAMPLE_NOT_OWNER_PUBLISHED",
+  "scope": {
+    "scope_id": "PAPER_BINANCE_USDM",
+    "mode": "paper",
+    "venue": "BINANCE",
+    "caller_selectable": false
+  },
+  "compatibility": {
+    "change_kind": "ADDITIVE_WITH_EXPLICIT_ADAPTER",
+    "v1_snapshot_baseline_supported": true,
+    "unknown_revision_fails_closed": true,
+    "unknown_enum_fails_closed": true
+  },
+  "transport": {
+    "public_listener": false,
+    "source_proxy_mtls_only": true,
+    "identity_mandatory": true,
+    "methods": ["GET"],
+    "routes": {
+      "snapshot_begin": "/v2/events",
+      "delta_page": "/v2/events",
+      "lease_renewal": "/v2/events"
+    }
+  },
+  "consumer_lease": {
+    "required": true,
+    "issued_by": "SNAPSHOT_BEGIN_RESPONSE",
+    "opaque_token": true,
+    "ttl_seconds": 30,
+    "maximum_active_per_identity": 1,
+    "renewal_is_get_only": true,
+    "expired_lease_error": "LEASE_EXPIRED",
+    "source_selects_after_expiry": 0
+  },
+  "snapshot": {
+    "watermark_required": true,
+    "resource_counts_required": ["orders", "fills", "positions"],
+    "one_baseline_per_epoch_or_resync": true,
+    "maximum_rows": 100000,
+    "maximum_aggregate_bytes": 67108864
+  },
+  "cursor": {
+    "opaque": true,
+    "epoch_bound": true,
+    "strict_total_order": true,
+    "monotonic_sequence": true,
+    "same_cursor_same_ordered_page": true,
+    "duplicates_are_idempotent_by_event_id": true,
+    "advance_only_after_atomic_projection_commit": true,
+    "ahead_error": "CURSOR_AHEAD",
+    "expired_error": "CURSOR_EXPIRED",
+    "gap_error": "GAP_DETECTED"
+  },
+  "delta": {
+    "operations": ["UPSERT", "DELETE"],
+    "delete_requires_tombstone": true,
+    "full_record_upsert": true,
+    "event_id_required": true,
+    "entity_version_required": true,
+    "observed_at_required": true
+  },
+  "retention": {
+    "minimum_recovery_window_seconds": 86400,
+    "floor_published_on_every_page": true,
+    "earliest_recoverable_cursor_published": true,
+    "maximum_events": 100000,
+    "maximum_bytes": 268435456,
+    "maximum_age_seconds": 172800
+  },
+  "resync": {
+    "trigger_errors": ["CURSOR_EXPIRED", "GAP_DETECTED"],
+    "target": "NEW_BUILDING_EPOCH",
+    "descriptor_counts_required": ["orders", "fills", "positions"],
+    "silent_skip_forbidden": true
+  },
+  "entities": [
+    {
+      "entity": "orders",
+      "source_completeness": "EVENT_SOURCED",
+      "poll_interval_ms": null,
+      "ordering_key": ["updated_at", "account_id", "client_order_id"],
+      "delete_semantics": "TOMBSTONE"
+    },
+    {
+      "entity": "fills",
+      "source_completeness": "POLL_BOUNDED",
+      "poll_interval_ms": 1000,
+      "ordering_key": ["trade_time", "fill_id"],
+      "delete_semantics": "IMMUTABLE_NO_DELETE"
+    },
+    {
+      "entity": "positions",
+      "source_completeness": "POLL_BOUNDED",
+      "poll_interval_ms": 1000,
+      "ordering_key": ["updated_at", "account_id", "position_id"],
+      "delete_semantics": "TOMBSTONE"
+    }
+  ],
+  "limits": {
+    "default_page_rows": 250,
+    "maximum_page_rows": 1000,
+    "maximum_response_bytes": 8388608,
+    "maximum_requests_per_minute": 120,
+    "maximum_in_flight_requests": 2,
+    "maximum_unchanged_poll_requests": 5
+  },
+  "freshness": {
+    "as_of_is_source_observation_time": true,
+    "poll_bounded_claims_only_observed_states": true,
+    "future_timestamp_fails_unknown": true,
+    "source_loss_stops_cursor_advance": true
+  },
+  "authority": {
+    "database": false,
+    "redis": false,
+    "cli": false,
+    "broker": false,
+    "command": false,
+    "mutation": false,
+    "live": false,
+    "canary": false
+  }
+}

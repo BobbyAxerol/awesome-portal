@@ -40,6 +40,8 @@ trap cleanup EXIT
     diff -q /tmp/portal-api.d.ts generated/portal-api.d.ts
     npx openapi-typescript openapi/execution-analytics.openapi.json -o /tmp/execution-analytics.d.ts
     diff -q /tmp/execution-analytics.d.ts generated/execution-analytics.d.ts
+    npx openapi-typescript openapi/execution-analytics-series.openapi.json -o /tmp/execution-analytics-series.d.ts
+    diff -q /tmp/execution-analytics-series.d.ts generated/execution-analytics-series.d.ts
     npx openapi-typescript openapi/execution-governance.openapi.json -o /tmp/execution-governance.d.ts
     diff -q /tmp/execution-governance.d.ts generated/execution-governance.d.ts
     npx openapi-typescript openapi/execution-realtime.openapi.json -o /tmp/execution-realtime.d.ts
@@ -52,5 +54,13 @@ trap cleanup EXIT
     diff -q /tmp/execution-canary.d.ts generated/execution-canary.d.ts
     npx openapi-typescript openapi/execution-live-full.openapi.json -o /tmp/execution-live-full.d.ts
     diff -q /tmp/execution-live-full.d.ts generated/execution-live-full.d.ts
+    npx openapi-typescript openapi/execution-staged-activation.openapi.json -o /tmp/execution-staged-activation.d.ts
+    diff -q /tmp/execution-staged-activation.d.ts generated/execution-staged-activation.d.ts
+    npx openapi-typescript openapi/execution-intercell-gateway.openapi.json -o /tmp/execution-intercell-gateway.d.ts
+    diff -q /tmp/execution-intercell-gateway.d.ts generated/execution-intercell-gateway.d.ts
+    npx openapi-typescript openapi/execution-emergency-routing.openapi.json -o /tmp/execution-emergency-routing.d.ts
+    diff -q /tmp/execution-emergency-routing.d.ts generated/execution-emergency-routing.d.ts
+    npx openapi-typescript openapi/execution-production-readiness.openapi.json -o /tmp/execution-production-readiness.d.ts
+    diff -q /tmp/execution-production-readiness.d.ts generated/execution-production-readiness.d.ts
   '
 printf 'Contracts workspace tests passed.\n'

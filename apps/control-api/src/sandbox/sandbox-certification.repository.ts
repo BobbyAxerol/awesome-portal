@@ -95,6 +95,23 @@ export interface SandboxPromotionPlanRow extends Record<string, unknown> {
   created_at: Date;
 }
 
+export interface SandboxSmokePlanRow extends Record<string, unknown> {
+  plan_id: string;
+  qty: string;
+  cap: string;
+  currency: string;
+  timebox_minutes: number;
+  operator_user_id: string;
+  operator_username: string;
+  status: "PLANNED" | "APPROVED" | "REJECTED";
+  approved_by_user_id: string | null;
+  approved_by_username: string | null;
+  approved_at: Date | null;
+  source_side_effect_requested: false;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface SandboxCertificationDetail {
   certification: SandboxCertificationRow;
   evidence: SandboxStepEvidenceRow[];
@@ -103,6 +120,7 @@ export interface SandboxCertificationDetail {
   events: SandboxEventRow[];
   eventsTotal: number;
   promotionPlans: SandboxPromotionPlanRow[];
+  smokePlan: SandboxSmokePlanRow | null;
 }
 
 interface BaseWrite {
@@ -121,6 +139,14 @@ export interface CreateSandboxCertificationWrite extends BaseWrite {
   promotionGrantId: string;
   accountId: string;
   externalAccountRef: string;
+  actorUsername: string;
+  smokePlan: {
+    planId: string;
+    qty: string;
+    cap: string;
+    currency: string;
+    timeboxMinutes: number;
+  } | null;
 }
 
 export interface TransitionSandboxCertificationWrite extends BaseWrite {
@@ -230,6 +256,23 @@ export class SandboxCertificationRepository {
           input.actorUserId, input.evidenceSetHash, input.reason ?? null],
       );
       const versionAfter = updated.rows[0].workflow_version;
+      if (input.action === "APPROVE") {
+        await client.query(
+          `UPDATE governance_sandbox_smoke_plans
+           SET status = 'APPROVED', approved_by_user_id = $3,
+               approved_by_username = (SELECT username FROM portal_users WHERE user_id = $3),
+               approved_at = $4, updated_at = $4
+           WHERE workspace_id = $1 AND certification_id = $2 AND status = 'PLANNED'`,
+          [input.workspaceId, input.certificationId, input.actorUserId, now],
+        );
+      } else if (input.action === "DENY") {
+        await client.query(
+          `UPDATE governance_sandbox_smoke_plans
+           SET status = 'REJECTED', updated_at = $3
+           WHERE workspace_id = $1 AND certification_id = $2 AND status = 'PLANNED'`,
+          [input.workspaceId, input.certificationId, now],
+        );
+      }
       await this.writeEventAndAudit(client, input, input.action, locked.workflow_version, versionAfter, {
         evidence_set_hash: input.evidenceSetHash,
         resulting_state: nextState,
@@ -329,6 +372,19 @@ export class SandboxCertificationRepository {
           source.r1_approval_id, source.r2_approval_id, source.policy_version,
           input.actorUserId],
       );
+    if (input.smokePlan !== null) {
+      await client.query(
+        `INSERT INTO governance_sandbox_smoke_plans
+           (plan_id, certification_id, workspace_id, qty, cap, currency,
+            timebox_minutes, operator_user_id, operator_username)
+         VALUES ($1, $2, $3, $4::numeric, $5::numeric, $6, $7, $8, $9)`,
+        [
+          input.smokePlan.planId, input.certificationId, input.workspaceId,
+          input.smokePlan.qty, input.smokePlan.cap, input.smokePlan.currency,
+          input.smokePlan.timeboxMinutes, input.actorUserId, input.actorUsername,
+        ],
+      );
+    }
     await this.writeEventAndAudit(client, input, "CREATE", 0, 1, {
       deployment_id: input.deploymentId,
       promotion_grant_id: input.promotionGrantId,
@@ -460,6 +516,15 @@ export class SandboxCertificationRepository {
        ORDER BY created_at DESC, plan_id DESC LIMIT 20`,
       [workspaceId, certificationId],
     );
+    const smokePlan = await queryable.query<SandboxSmokePlanRow>(
+      `SELECT plan_id, qty::text, cap::text, currency, timebox_minutes,
+              operator_user_id, operator_username, status, approved_by_user_id,
+              approved_by_username, approved_at, source_side_effect_requested,
+              created_at, updated_at
+       FROM governance_sandbox_smoke_plans
+       WHERE workspace_id = $1 AND certification_id = $2`,
+      [workspaceId, certificationId],
+    );
     return {
       certification: certification.rows[0],
       evidence: evidence.rows,
@@ -468,6 +533,7 @@ export class SandboxCertificationRepository {
       events: events.rows,
       eventsTotal: Number(eventCount.rows[0].count),
       promotionPlans: plans.rows,
+      smokePlan: smokePlan.rows[0] ?? null,
     };
   }
 

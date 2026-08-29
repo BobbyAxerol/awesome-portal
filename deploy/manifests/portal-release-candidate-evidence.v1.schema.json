@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-release-candidate-evidence.v1.schema.json",
+  "title": "Portal release candidate evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "source_commit", "synthetic", "images", "quality_gates",
+    "source_traffic_observed", "trading_system_contacted", "stable_state_mutated"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.release-candidate-evidence.v1"},
+    "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "synthetic": {"type": "boolean"},
+    "images": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["service_id", "image_digest", "signature", "sbom", "provenance", "vulnerability"],
+        "properties": {
+          "service_id": {"enum": ["portal-api", "portal-web", "control-api", "roadmap-task-board-api", "execution-edge", "source-proxy"]},
+          "image_digest": {"$ref": "#/$defs/digest"},
+          "signature": {"$ref": "#/$defs/verifiedFile"},
+          "sbom": {"$ref": "#/$defs/verifiedFile"},
+          "provenance": {"$ref": "#/$defs/verifiedFile"},
+          "vulnerability": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["scanner", "file", "sha256", "critical", "high", "disposition"],
+            "properties": {
+              "scanner": {"const": "trivy"},
+              "file": {"type": "string"},
+              "sha256": {"$ref": "#/$defs/digest"},
+              "critical": {"type": "integer", "const": 0},
+              "high": {"type": "integer", "minimum": 0},
+              "disposition": {"enum": ["PENDING", "NO_FINDINGS", "OWNER_REVIEW_REQUIRED"]}
+            }
+          }
+        }
+      }
+    },
+    "quality_gates": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "passed", "evidence_sha256"],
+        "properties": {
+          "gate": {"enum": ["contracts", "control_api", "research_backend", "planning_backend", "frontend", "migration_restore", "channel_isolation", "rollback_forward_fix"]},
+          "passed": {"type": "boolean"},
+          "evidence_sha256": {"$ref": "#/$defs/digest"}
+        }
+      }
+    },
+    "source_traffic_observed": {"const": false},
+    "trading_system_contacted": {"const": false},
+    "stable_state_mutated": {"const": false}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "verifiedFile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verified", "file", "sha256"],
+      "properties": {
+        "verified": {"type": "boolean"},
+        "file": {"type": "string"},
+        "sha256": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

@@ -72,6 +72,37 @@ python3 scripts/execution-d4-authorization.py \
   --mode readiness
 ```
 
+Create a private mode-0600 lifecycle config from
+`deploy/execution-d4/dormant-closeout.env.example`. Its
+`D2_ACCEPTED_RUNTIME_ENV_FILE` must point to the already accepted D2 dark
+runtime, not the D4 source-read env. Validate it before touching runtime:
+
+```bash
+python3 scripts/execution-d4-dormant-closeout.py \
+  --config /PRIVATE/PATH/execution-d4-dormant-closeout.env \
+  --mode audit
+```
+
+An out-of-window `D4_DORMANT_VIOLATION` is a stop gate. Install the reviewed
+systemd template outside Git, but do not enable it. Start it asynchronously for
+this owner window and confirm it is active **before** the source owner starts
+the dedicated facade:
+
+```bash
+sudo install -d -o root -g root -m 0700 \
+  /srv/primus/portal/execution-d4/closeout
+sudo install -o root -g root -m 0644 \
+  deploy/execution-d4/systemd/portal-execution-d4-window-guard.service.example \
+  /etc/systemd/system/portal-execution-d4-window-guard.service
+sudo systemctl daemon-reload
+sudo systemctl start --no-block portal-execution-d4-window-guard.service
+sudo systemctl is-active portal-execution-d4-window-guard.service
+```
+
+Do not continue if the guard is not active. The guard closes on a missed start
+deadline, qualifier completion, authorization revocation or owner-window
+expiry.
+
 The validator must pass inside the approved <=2-hour window. Passing changes no
 runtime state.
 
@@ -206,7 +237,33 @@ hygiene failure:
 5. verify Trading System public health and all pre-existing services; and
 6. record redacted failure/rollback evidence.
 
-Never roll back by editing Trading System data, Redis state or broker state.
+Use the same narrow closeout controller for both normal completion and abort:
+
+```bash
+sudo ./scripts/execution-d4-dormant-closeout.py \
+  --config /PRIVATE/PATH/execution-d4-dormant-closeout.env \
+  --mode closeout \
+  --reason operator-abort
+```
+
+It stops the qualifier, recreates only Portal Source Proxy from the accepted D2
+dark runtime and stops the exact dedicated facade after Compose-label
+verification. It does not run `compose down`, pull an image, remove a volume or
+touch another Trading System service.
+
+After the owner-observation interval, the Trading System owner writes the
+sanitized, exact-schema mode-0600 evidence based on
+`deploy/execution-d4/source-idle-evidence.json.example`. Finish with:
+
+```bash
+./scripts/execution-d4-dormant-closeout.py \
+  --config /PRIVATE/PATH/execution-d4-dormant-closeout.env \
+  --mode verify
+```
+
+Acceptance requires `D4_DORMANT_VERIFIED`, a healthy D2 dark Source Proxy and
+zero source sessions, SELECT delta and byte delta. Never roll back by editing
+Trading System data, Redis state or broker state.
 
 ## 6. Separate activation decision
 

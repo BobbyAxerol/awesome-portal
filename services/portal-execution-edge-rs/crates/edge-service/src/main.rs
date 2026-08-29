@@ -3,7 +3,7 @@
 mod d4_command;
 
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     convert::Infallible,
     env, fs,
     io::BufReader,
@@ -29,7 +29,8 @@ use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, SecondsFormat, Utc};
 use edge_auth::{DelegatedClaims, DelegationVerifier, RequiredRead};
 use execution_contracts::{
-    CanonicalId, CapabilitySnapshot, CapabilityState, DeliveryProfile, ExecutionReadCapability,
+    CanonicalId, CapabilitySnapshot, CapabilityState, ContractWarning, DeliveryProfile,
+    ExecutionReadCapability, FreshnessState, PanelState, SourceAuthority, SourceCompleteness,
 };
 use futures_util::stream;
 use projection_core::{
@@ -39,6 +40,10 @@ use projection_core::{
 use projection_store_pg::{
     AnalyticsReadRequirement, AnalyticsSourceRead, PgProjectionStore, RealtimeJournalRecord,
     RealtimeScopeAvailability, StoreError,
+};
+use query_api::{
+    CursorCodec, EntityQueryRequest, FilterField, FilterOperator, ProjectionQueryPage, QueryError,
+    QueryFilter, QuerySort,
 };
 use realtime_sse::{
     GapEnvelope, GapReason, RealtimeEnvelope, RealtimeFreshness, RealtimeHub, RealtimeSubscription,
@@ -50,6 +55,12 @@ use rustls::{
     RootCertStore, ServerConfig,
 };
 use serde::{Deserialize, Serialize};
+use source_qualification::{
+    realtime_activation::{
+        accept_realtime_activation, AcceptedRealtimeActivation, RealtimeActivationEvidence,
+    },
+    shadow_screen::PAPER_WORKBENCH_SCREEN_ID as N07_PAPER_WORKBENCH_SCREEN_ID,
+};
 use thiserror::Error;
 use tokio::{
     io::{AsyncReadExt as _, AsyncWriteExt as _},
@@ -61,9 +72,12 @@ use tracing_subscriber::EnvFilter;
 use ts_transport::{
     BoundedSourceClient, CapabilityNegotiator, SourceTransportConfig, TransportLimits,
 };
+use uuid::Uuid;
 
 const MAX_SECRET_FILE_BYTES: u64 = 1024 * 1024;
 const ANALYTICS_SCREEN_SCHEMA_VERSION: &str = "execution.analytics.screen.v1";
+const PAPER_WORKBENCH_SHADOW_SCHEMA_VERSION: &str = "execution.paper-workbench.shadow-panel.v1";
+const PAPER_WORKBENCH_SCREEN_ID: &str = "EXECUTION_PAPER_WORKBENCH_SCREEN";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeGate {
@@ -101,6 +115,7 @@ struct AppState {
     realtime_poller_ready: Arc<RwLock<bool>>,
     projection_store: Option<PgProjectionStore>,
     realtime_hub: Option<RealtimeHub>,
+    realtime_activation: Option<AcceptedRealtimeActivation>,
     realtime_replay_limit: usize,
     realtime_heartbeat: Duration,
     realtime_epoch_jitter: Duration,
@@ -108,6 +123,10 @@ struct AppState {
     realtime_venue_session: VenueSessionState,
     analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
+    shadow_query_enabled: RuntimeGate,
+    paper_workbench_shadow_enabled: RuntimeGate,
+    query_cursor_codec: Option<CursorCodec>,
+    shadow_query_freshness_policy: FreshnessPolicy,
 }
 
 #[derive(Debug)]
@@ -134,6 +153,7 @@ struct EdgeConfig {
     projection_ingestion_enabled: RuntimeGate,
     projection_database_url_file: Option<PathBuf>,
     realtime_sse_enabled: RuntimeGate,
+    realtime_activation_manifest_file: Option<PathBuf>,
     realtime_queue_capacity: usize,
     realtime_replay_limit: usize,
     realtime_poll_interval: Duration,
@@ -144,6 +164,28 @@ struct EdgeConfig {
     realtime_venue_session: VenueSessionState,
     analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
+    shadow_query_enabled: RuntimeGate,
+    paper_workbench_shadow_enabled: RuntimeGate,
+    query_cursor_keys_file: Option<PathBuf>,
+    query_cursor_active_key_id: String,
+    query_cursor_ttl: Duration,
+    shadow_query_freshness_policy: FreshnessPolicy,
+}
+
+struct RuntimeFeatureConfig {
+    source_probes_enabled: RuntimeGate,
+    projection_ingestion_enabled: RuntimeGate,
+    projection_database_url_file: Option<PathBuf>,
+    realtime_sse_enabled: RuntimeGate,
+    realtime_activation_manifest_file: Option<PathBuf>,
+    analytics_query_enabled: RuntimeGate,
+    analytics_source_profile: DeliveryProfile,
+    shadow_query_enabled: RuntimeGate,
+    paper_workbench_shadow_enabled: RuntimeGate,
+    query_cursor_keys_file: Option<PathBuf>,
+    query_cursor_active_key_id: String,
+    query_cursor_ttl: Duration,
+    shadow_query_freshness_policy: FreshnessPolicy,
 }
 
 impl EdgeConfig {
@@ -151,7 +193,8 @@ impl EdgeConfig {
         RuntimeGate::from(
             self.projection_ingestion_enabled.is_enabled()
                 || self.realtime_sse_enabled.is_enabled()
-                || self.analytics_query_enabled.is_enabled(),
+                || self.analytics_query_enabled.is_enabled()
+                || self.shadow_query_enabled.is_enabled(),
         )
     }
 
@@ -171,29 +214,9 @@ impl EdgeConfig {
             return Err(ConfigError::Invalid("EDGE_HEALTH_BIND_ADDRESS"));
         }
         let probe_interval_seconds = bounded_usize("EDGE_PROBE_INTERVAL_SECONDS", 30, 5, 300)?;
-        let source_probes_enabled =
-            RuntimeGate::from(strict_boolean("EDGE_SOURCE_PROBES_ENABLED", false)?);
-        let projection_ingestion_enabled =
-            RuntimeGate::from(strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?);
-        let realtime_sse_enabled =
-            RuntimeGate::from(strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?);
-        let analytics_query_enabled =
-            RuntimeGate::from(strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?);
-        if strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)? {
-            return Err(ConfigError::Invalid("EDGE_COMMAND_RELAY_ENABLED"));
-        }
-        let analytics_source_profile =
-            delivery_profile(&value_or("EDGE_ANALYTICS_SOURCE_PROFILE", "fixture"))?;
+        let runtime = runtime_features_from_environment()?;
         let (realtime_freshness_policy, realtime_venue_session) =
             realtime_freshness_from_environment()?;
-        let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
-        if (projection_ingestion_enabled.is_enabled()
-            || realtime_sse_enabled.is_enabled()
-            || analytics_query_enabled.is_enabled())
-            && projection_database_url_file.is_none()
-        {
-            return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
-        }
         Ok(Self {
             bind_address,
             health_bind_address,
@@ -215,13 +238,14 @@ impl EdgeConfig {
             source_client_identity_file: optional_path("EDGE_SOURCE_CLIENT_IDENTITY_FILE"),
             source_api_key_file: optional_path("EDGE_SOURCE_API_KEY_FILE"),
             source_gateway_digest: required("EDGE_SOURCE_GATEWAY_DIGEST")?,
-            source_probes_enabled,
+            source_probes_enabled: runtime.source_probes_enabled,
             probe_alpha_id: optional("EDGE_PROBE_ALPHA_ID"),
             probe_interval: Duration::from_secs(probe_interval_seconds as u64),
             transport_limits: transport_limits_from_environment()?,
-            projection_ingestion_enabled,
-            projection_database_url_file,
-            realtime_sse_enabled,
+            projection_ingestion_enabled: runtime.projection_ingestion_enabled,
+            projection_database_url_file: runtime.projection_database_url_file,
+            realtime_sse_enabled: runtime.realtime_sse_enabled,
+            realtime_activation_manifest_file: runtime.realtime_activation_manifest_file,
             realtime_queue_capacity: bounded_usize("EDGE_REALTIME_QUEUE_CAPACITY", 256, 8, 4096)?,
             realtime_replay_limit: bounded_usize("EDGE_REALTIME_REPLAY_LIMIT", 1024, 1, 2048)?,
             realtime_poll_interval: Duration::from_millis(bounded_usize(
@@ -245,10 +269,130 @@ impl EdgeConfig {
             )? as u64),
             realtime_freshness_policy,
             realtime_venue_session,
-            analytics_query_enabled,
-            analytics_source_profile,
+            analytics_query_enabled: runtime.analytics_query_enabled,
+            analytics_source_profile: runtime.analytics_source_profile,
+            shadow_query_enabled: runtime.shadow_query_enabled,
+            paper_workbench_shadow_enabled: runtime.paper_workbench_shadow_enabled,
+            query_cursor_keys_file: runtime.query_cursor_keys_file,
+            query_cursor_active_key_id: runtime.query_cursor_active_key_id,
+            query_cursor_ttl: runtime.query_cursor_ttl,
+            shadow_query_freshness_policy: runtime.shadow_query_freshness_policy,
         })
     }
+}
+
+fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigError> {
+    let source_probes_enabled =
+        RuntimeGate::from(strict_boolean("EDGE_SOURCE_PROBES_ENABLED", false)?);
+    let projection_ingestion_enabled =
+        RuntimeGate::from(strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?);
+    let realtime_sse_enabled =
+        RuntimeGate::from(strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?);
+    let realtime_activation_manifest_file = optional_path("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE");
+    let analytics_query_enabled =
+        RuntimeGate::from(strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?);
+    let shadow_query_enabled =
+        RuntimeGate::from(strict_boolean("EDGE_SHADOW_QUERY_ENABLED", false)?);
+    let paper_workbench_shadow_enabled = RuntimeGate::from(strict_boolean(
+        "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED",
+        false,
+    )?);
+    if paper_workbench_shadow_enabled.is_enabled() && !shadow_query_enabled.is_enabled() {
+        return Err(ConfigError::Invalid("EDGE_PAPER_WORKBENCH_SHADOW_ENABLED"));
+    }
+    validate_realtime_runtime_dependencies(
+        realtime_sse_enabled,
+        projection_ingestion_enabled,
+        shadow_query_enabled,
+        paper_workbench_shadow_enabled,
+    )?;
+    if strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)? {
+        return Err(ConfigError::Invalid("EDGE_COMMAND_RELAY_ENABLED"));
+    }
+    let projection_database_url_file = optional_path("EDGE_PROJECTION_DATABASE_URL_FILE");
+    if (projection_ingestion_enabled.is_enabled()
+        || realtime_sse_enabled.is_enabled()
+        || analytics_query_enabled.is_enabled()
+        || shadow_query_enabled.is_enabled())
+        && projection_database_url_file.is_none()
+    {
+        return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
+    }
+    if realtime_sse_enabled.is_enabled() && realtime_activation_manifest_file.is_none() {
+        return Err(ConfigError::Missing(
+            "EDGE_REALTIME_ACTIVATION_MANIFEST_FILE",
+        ));
+    }
+    let query_cursor_keys_file = optional_path("EDGE_QUERY_CURSOR_KEYS_FILE");
+    if shadow_query_enabled.is_enabled() && query_cursor_keys_file.is_none() {
+        return Err(ConfigError::Missing("EDGE_QUERY_CURSOR_KEYS_FILE"));
+    }
+    let shadow_query_freshness_policy = FreshnessPolicy {
+        policy_version: value_or(
+            "EDGE_SHADOW_QUERY_FRESHNESS_POLICY_VERSION",
+            "paper.shadow-query.v1",
+        ),
+        warning_after_ms: bounded_i64(
+            "EDGE_SHADOW_QUERY_FRESHNESS_WARNING_AFTER_MS",
+            5_000,
+            0,
+            86_400_000,
+        )?,
+        stale_after_ms: bounded_i64(
+            "EDGE_SHADOW_QUERY_FRESHNESS_STALE_AFTER_MS",
+            30_000,
+            1,
+            86_400_000,
+        )?,
+        maximum_future_skew_ms: bounded_i64(
+            "EDGE_SHADOW_QUERY_MAXIMUM_FUTURE_SKEW_MS",
+            2_000,
+            0,
+            60_000,
+        )?,
+    };
+    shadow_query_freshness_policy
+        .validate()
+        .map_err(|_| ConfigError::Invalid("EDGE_SHADOW_QUERY_FRESHNESS_POLICY"))?;
+    Ok(RuntimeFeatureConfig {
+        source_probes_enabled,
+        projection_ingestion_enabled,
+        projection_database_url_file,
+        realtime_sse_enabled,
+        realtime_activation_manifest_file,
+        analytics_query_enabled,
+        analytics_source_profile: delivery_profile(&value_or(
+            "EDGE_ANALYTICS_SOURCE_PROFILE",
+            "fixture",
+        ))?,
+        shadow_query_enabled,
+        paper_workbench_shadow_enabled,
+        query_cursor_keys_file,
+        query_cursor_active_key_id: value_or("EDGE_QUERY_CURSOR_ACTIVE_KEY_ID", "shadow-q1"),
+        query_cursor_ttl: Duration::from_secs(bounded_usize(
+            "EDGE_QUERY_CURSOR_TTL_SECONDS",
+            300,
+            30,
+            3_600,
+        )? as u64),
+        shadow_query_freshness_policy,
+    })
+}
+
+fn validate_realtime_runtime_dependencies(
+    realtime_sse_enabled: RuntimeGate,
+    projection_ingestion_enabled: RuntimeGate,
+    shadow_query_enabled: RuntimeGate,
+    paper_workbench_shadow_enabled: RuntimeGate,
+) -> Result<(), ConfigError> {
+    if realtime_sse_enabled.is_enabled()
+        && (!projection_ingestion_enabled.is_enabled()
+            || !shadow_query_enabled.is_enabled()
+            || !paper_workbench_shadow_enabled.is_enabled())
+    {
+        return Err(ConfigError::Invalid("EDGE_REALTIME_SSE_ENABLED"));
+    }
+    Ok(())
 }
 
 fn realtime_freshness_from_environment() -> Result<(FreshnessPolicy, VenueSessionState), ConfigError>
@@ -341,18 +485,9 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     let private_key = read_file(&config.tls_private_key_file)?;
     let client_ca = read_file(&config.tls_client_ca_file)?;
     let jwks = read_text(&config.delegation_jwks_file)?;
-    let source_ca = read_file(&config.source_ca_file)?;
-    let source_identity = config
-        .source_client_identity_file
-        .as_deref()
-        .map(read_file)
-        .transpose()?;
-    let source_api_key = config
-        .source_api_key_file
-        .as_deref()
-        .map(read_text)
-        .transpose()?;
     let projection_store = connect_projection_store(&config).await?;
+    let query_cursor_codec = query_cursor_codec(&config)?;
+    let realtime_activation = load_realtime_activation(&config)?;
 
     let verifier = DelegationVerifier::from_jwks_json(
         &jwks,
@@ -361,15 +496,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         config.delegation_maximum_ttl_seconds,
         3,
     )?;
-    let source_client = BoundedSourceClient::new(SourceTransportConfig {
-        source_origin: &config.source_origin,
-        root_ca_pem: &source_ca,
-        client_identity_pem: source_identity.as_deref(),
-        source_api_key: source_api_key.as_deref().map(str::trim),
-        observed_gateway_digest: &config.source_gateway_digest,
-        limits: config.transport_limits.clone(),
-    })?;
-    let negotiator = CapabilityNegotiator::new(source_client);
+    let negotiator = source_negotiator(&config)?;
     let initial_snapshot = if config.source_probes_enabled.is_enabled() {
         Some(negotiator.probe(config.probe_alpha_id.as_deref()).await)
     } else {
@@ -400,6 +527,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         realtime_poller_ready: Arc::clone(&realtime_poller_ready),
         projection_store: projection_store.clone(),
         realtime_hub: realtime_hub.clone(),
+        realtime_activation,
         realtime_replay_limit: config.realtime_replay_limit,
         realtime_heartbeat: config.realtime_heartbeat,
         realtime_epoch_jitter: config.realtime_epoch_jitter,
@@ -407,6 +535,10 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         realtime_venue_session: config.realtime_venue_session,
         analytics_query_enabled: config.analytics_query_enabled,
         analytics_source_profile: config.analytics_source_profile,
+        shadow_query_enabled: config.shadow_query_enabled,
+        paper_workbench_shadow_enabled: config.paper_workbench_shadow_enabled,
+        query_cursor_codec,
+        shadow_query_freshness_policy: config.shadow_query_freshness_policy.clone(),
     };
 
     spawn_background_tasks(
@@ -442,12 +574,36 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     }
 }
 
+fn source_negotiator(config: &EdgeConfig) -> Result<CapabilityNegotiator, ServiceError> {
+    let source_ca = read_file(&config.source_ca_file)?;
+    let source_identity = config
+        .source_client_identity_file
+        .as_deref()
+        .map(read_file)
+        .transpose()?;
+    let source_api_key = config
+        .source_api_key_file
+        .as_deref()
+        .map(read_text)
+        .transpose()?;
+    let source_client = BoundedSourceClient::new(SourceTransportConfig {
+        source_origin: &config.source_origin,
+        root_ca_pem: &source_ca,
+        client_identity_pem: source_identity.as_deref(),
+        source_api_key: source_api_key.as_deref().map(str::trim),
+        observed_gateway_digest: &config.source_gateway_digest,
+        limits: config.transport_limits.clone(),
+    })?;
+    Ok(CapabilityNegotiator::new(source_client))
+}
+
 async fn connect_projection_store(
     config: &EdgeConfig,
 ) -> Result<Option<PgProjectionStore>, ServiceError> {
     if !config.projection_ingestion_enabled.is_enabled()
         && !config.realtime_sse_enabled.is_enabled()
         && !config.analytics_query_enabled.is_enabled()
+        && !config.shadow_query_enabled.is_enabled()
     {
         return Ok(None);
     }
@@ -459,6 +615,50 @@ async fn connect_projection_store(
     let store = PgProjectionStore::connect(database_url.trim()).await?;
     store.ping().await?;
     Ok(Some(store))
+}
+
+fn query_cursor_codec(config: &EdgeConfig) -> Result<Option<CursorCodec>, ServiceError> {
+    if !config.shadow_query_enabled.is_enabled() {
+        return Ok(None);
+    }
+    let path = config
+        .query_cursor_keys_file
+        .as_deref()
+        .ok_or(ConfigError::Missing("EDGE_QUERY_CURSOR_KEYS_FILE"))?;
+    let raw = read_text(path)?;
+    let serialized: BTreeMap<String, String> = serde_json::from_str(&raw)
+        .map_err(|_| ConfigError::Invalid("EDGE_QUERY_CURSOR_KEYS_FILE"))?;
+    let keys = serialized
+        .into_iter()
+        .map(|(key_id, secret)| (key_id, secret.into_bytes()))
+        .collect();
+    CursorCodec::new(
+        config.query_cursor_active_key_id.clone(),
+        keys,
+        config.query_cursor_ttl,
+    )
+    .map(Some)
+    .map_err(ServiceError::Query)
+}
+
+fn load_realtime_activation(
+    config: &EdgeConfig,
+) -> Result<Option<AcceptedRealtimeActivation>, ServiceError> {
+    if !config.realtime_sse_enabled.is_enabled() {
+        return Ok(None);
+    }
+    let path = config
+        .realtime_activation_manifest_file
+        .as_deref()
+        .ok_or(ConfigError::Missing(
+            "EDGE_REALTIME_ACTIVATION_MANIFEST_FILE",
+        ))?;
+    let raw = read_text(path)?;
+    let evidence: RealtimeActivationEvidence = serde_json::from_str(&raw)
+        .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE"))?;
+    accept_realtime_activation(evidence)
+        .map(Some)
+        .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE").into())
 }
 
 fn spawn_background_tasks(
@@ -509,6 +709,7 @@ fn spawn_background_tasks(
 fn private_router(state: AppState) -> Router {
     Router::new()
         .route("/internal/v1/compatibility", get(compatibility))
+        .route("/internal/v1/realtime/snapshot", get(realtime_snapshot))
         .route("/internal/v1/realtime/stream", get(realtime_stream))
         .route(
             "/internal/v1/screens/gate-r2/:approval_id/capital-preview",
@@ -533,6 +734,10 @@ fn private_router(state: AppState) -> Router {
         .route(
             "/internal/v1/screens/account-broker-360/:binding_id/exposure",
             get(binding_exposure),
+        )
+        .route(
+            "/internal/v1/screens/paper-workbench/:deployment_id/:panel/query",
+            post(paper_workbench_shadow_query),
         )
         .with_state(state)
 }
@@ -902,6 +1107,43 @@ fn analytics_error_contract(error: &AnalyticsError) -> (StatusCode, &'static str
             "ANALYTICS_CORRELATION_INVALID",
             "Correlation input violates the published analytics contract.",
         ),
+        AnalyticsError::InvalidSeriesRange => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_SERIES_RANGE_INVALID",
+            "Analytics series range cannot be represented by the canonical interval ladder.",
+        ),
+        AnalyticsError::SeriesPointLimit { .. } => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_SERIES_POINT_LIMIT",
+            "Analytics series exceeds the published point limit.",
+        ),
+        AnalyticsError::InvalidSeriesOrdering { .. }
+        | AnalyticsError::InvalidSeriesBucket
+        | AnalyticsError::UnexplainedSeriesGap => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_SERIES_GAP_UNEXPLAINED",
+            "Analytics series ordering, bucket alignment or gap evidence is invalid.",
+        ),
+        AnalyticsError::ApprovedBandLineageMismatch | AnalyticsError::InvalidApprovedBand => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_APPROVED_BAND_LINEAGE_MISMATCH",
+            "Approved research band lineage or bounds are invalid.",
+        ),
+        AnalyticsError::InvalidTileSeries(_) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_TILE_KIND_MISMATCH",
+            "Insight series does not satisfy its semantic tile kind.",
+        ),
+        AnalyticsError::InvalidTileSampleState => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_TILE_SAMPLE_STATE_INVALID",
+            "Insight series and sample state are inconsistent.",
+        ),
+        AnalyticsError::ResponseSizeLimit { .. } => (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "ANALYTICS_RESPONSE_SIZE_LIMIT",
+            "Analytics response exceeds the published size limit.",
+        ),
     }
 }
 
@@ -916,6 +1158,355 @@ fn analytics_store_error(error: &StoreError) -> Response {
         | StoreError::ActiveEpochNotFound
         | StoreError::EpochNotFound => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ShadowPanelQueryRequest {
+    limit: u16,
+    filters: Vec<QueryFilter>,
+    sorts: Vec<QuerySort>,
+    after: Option<String>,
+    before: Option<String>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ScopedShadowQuery {
+    request: EntityQueryRequest,
+    required_filters: Vec<QueryFilter>,
+}
+
+impl ShadowPanelQueryRequest {
+    fn into_scoped_query(
+        self,
+        deployment_id: &CanonicalId,
+    ) -> Result<ScopedShadowQuery, StatusCode> {
+        if self
+            .filters
+            .iter()
+            .any(|filter| filter.field == FilterField::DeploymentId)
+        {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+        Ok(ScopedShadowQuery {
+            request: EntityQueryRequest {
+                limit: self.limit,
+                filters: self.filters,
+                sorts: self.sorts,
+                after: self.after,
+                before: self.before,
+            },
+            required_filters: vec![QueryFilter {
+                field: FilterField::DeploymentId,
+                operator: FilterOperator::Eq,
+                values: vec![deployment_id.as_str().to_owned()],
+            }],
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ShadowPanel {
+    Orders,
+    Positions,
+}
+
+impl ShadowPanel {
+    fn parse(value: &str) -> Result<Self, StatusCode> {
+        match value {
+            "orders" => Ok(Self::Orders),
+            "positions" => Ok(Self::Positions),
+            _ => Err(StatusCode::NOT_FOUND),
+        }
+    }
+
+    const fn entity_kind(self) -> projection_core::ProjectionEntityKind {
+        match self {
+            Self::Orders => projection_core::ProjectionEntityKind::Order,
+            Self::Positions => projection_core::ProjectionEntityKind::Position,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PaperWorkbenchShadowEnvelope {
+    schema_version: &'static str,
+    screen_id: &'static str,
+    delivery_profile: DeliveryProfile,
+    deployment_id: String,
+    panel: ShadowPanel,
+    panel_state: PanelState,
+    authority: &'static str,
+    upstream_authorities: BTreeSet<SourceAuthority>,
+    source_completeness: SourceCompleteness,
+    poll_interval_ms: Option<i64>,
+    freshness_state: FreshnessState,
+    freshness_policy_version: String,
+    age_seconds: Option<i64>,
+    lag_ms: Option<i64>,
+    read_at: DateTime<Utc>,
+    epoch_id: Uuid,
+    activation_manifest_digest: String,
+    capability_snapshot_id: String,
+    warnings: Vec<ContractWarning>,
+    page: ProjectionQueryPage,
+}
+
+async fn paper_workbench_shadow_query(
+    State(state): State<AppState>,
+    AxumPath((raw_deployment_id, raw_panel)): AxumPath<(String, String)>,
+    headers: HeaderMap,
+    Json(body): Json<ShadowPanelQueryRequest>,
+) -> Response {
+    if !state.shadow_query_enabled.is_enabled()
+        || !state.paper_workbench_shadow_enabled.is_enabled()
+        || state.environment != "paper"
+    {
+        return shadow_problem(StatusCode::NOT_FOUND, "N07_SHADOW_SCREEN_DISABLED");
+    }
+    let deployment_id = match screen_identifier(raw_deployment_id) {
+        Ok(value) => value,
+        Err(status) => return shadow_problem(status, "N07_DEPLOYMENT_ID_INVALID"),
+    };
+    let panel = match ShadowPanel::parse(&raw_panel) {
+        Ok(value) => value,
+        Err(status) => return shadow_problem(status, "N07_PANEL_NOT_COMMISSIONED"),
+    };
+    let Some(token) = bearer(&headers) else {
+        return shadow_problem(StatusCode::UNAUTHORIZED, "N07_AUTH_REQUIRED");
+    };
+    let resource = format!(
+        "execution:screen:paper-workbench:{}",
+        deployment_id.as_str()
+    );
+    let Ok(claims) = state.verifier.verify_read(
+        token,
+        &RequiredRead {
+            environment: &state.environment,
+            resource: Some(&resource),
+        },
+    ) else {
+        return shadow_problem(StatusCode::FORBIDDEN, "N07_AUTH_SCOPE_DENIED");
+    };
+    let Ok(workspace_id) = CanonicalId::parse(claims.workspace_id) else {
+        return shadow_problem(StatusCode::FORBIDDEN, "N07_WORKSPACE_INVALID");
+    };
+    let Ok(scope) = ProjectionScope::new(workspace_id, state.environment.clone()) else {
+        return shadow_problem(StatusCode::FORBIDDEN, "N07_SCOPE_INVALID");
+    };
+    let Some(store) = state.projection_store.as_ref() else {
+        return shadow_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N07_PROJECTION_UNAVAILABLE",
+        );
+    };
+    let Some(codec) = state.query_cursor_codec.as_ref() else {
+        return shadow_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N07_CURSOR_AUTHORITY_UNAVAILABLE",
+        );
+    };
+    let authority = match store
+        .active_shadow_screen_authority(&scope, PAPER_WORKBENCH_SCREEN_ID)
+        .await
+    {
+        Ok(value) => value,
+        Err(error) => return shadow_store_error(&error),
+    };
+    let query = match body.into_scoped_query(&deployment_id) {
+        Ok(value) => value,
+        Err(status) => return shadow_problem(status, "N07_QUERY_SCOPE_INVALID"),
+    };
+    let read_at = Utc::now();
+    let page = match store
+        .query_entities_scoped(
+            &scope,
+            panel.entity_kind(),
+            &query.request,
+            &query.required_filters,
+            codec,
+            read_at,
+        )
+        .await
+    {
+        Ok(value) if value.epoch_id == authority.epoch_id => value,
+        Ok(_) => {
+            return shadow_problem(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "N07_EPOCH_CHANGED_RESNAPSHOT",
+            )
+        }
+        Err(error) => return shadow_store_error(&error),
+    };
+    match build_shadow_envelope(
+        &deployment_id,
+        panel,
+        authority,
+        page,
+        read_at,
+        &state.shadow_query_freshness_policy,
+    ) {
+        Ok(value) => Json(value).into_response(),
+        Err(_) => shadow_problem(StatusCode::INTERNAL_SERVER_ERROR, "N07_FRESHNESS_INVALID"),
+    }
+}
+
+fn build_shadow_envelope(
+    deployment_id: &CanonicalId,
+    panel: ShadowPanel,
+    authority: projection_store_pg::ShadowScreenAuthority,
+    page: ProjectionQueryPage,
+    read_at: DateTime<Utc>,
+    policy: &FreshnessPolicy,
+) -> Result<PaperWorkbenchShadowEnvelope, projection_core::ProjectionError> {
+    let as_of = page.rows.iter().map(|row| row.as_of).max();
+    let source_read_at = page.rows.iter().map(|row| row.source_read_at).max();
+    let projected_at = page.rows.iter().map(|row| row.projected_at).max();
+    let upstream_authorities = page
+        .rows
+        .iter()
+        .map(|row| row.source_authority)
+        .collect::<BTreeSet<_>>();
+    let source_completeness = if page.rows.is_empty() {
+        SourceCompleteness::Unknown
+    } else if page
+        .rows
+        .iter()
+        .all(|row| row.source_completeness == SourceCompleteness::EventSourced)
+    {
+        SourceCompleteness::EventSourced
+    } else if page
+        .rows
+        .iter()
+        .any(|row| row.source_completeness == SourceCompleteness::PollBounded)
+    {
+        SourceCompleteness::PollBounded
+    } else {
+        SourceCompleteness::Unknown
+    };
+    let poll_interval_ms = page
+        .rows
+        .iter()
+        .filter_map(|row| row.poll_interval_ms)
+        .max();
+    let freshness = evaluate_freshness(
+        policy,
+        &FreshnessInput {
+            as_of,
+            read_at,
+            source_received_at: source_read_at,
+            projected_at,
+            venue_session: VenueSessionState::Unknown,
+        },
+    )?;
+    let mut warnings = freshness.warnings;
+    if page.rows.is_empty() {
+        warnings.push(shadow_warning(
+            "EMPTY_SHADOW_PANEL",
+            "No accepted projection rows match this deployment and panel query.",
+        ));
+    }
+    if source_completeness == SourceCompleteness::PollBounded {
+        warnings.push(shadow_warning(
+            "POLL_BOUNDED_SOURCE",
+            "The panel is a bounded poll projection, not an event-complete ledger.",
+        ));
+    }
+    if page.retention.policy_version == "UNCONFIGURED" {
+        warnings.push(shadow_warning(
+            "RETENTION_UNCONFIGURED",
+            "Retention authority is not published for this entity page.",
+        ));
+    }
+    let panel_state = if page.rows.is_empty() {
+        PanelState::Empty
+    } else if freshness.state == FreshnessState::Stale {
+        PanelState::Stale
+    } else if source_completeness != SourceCompleteness::EventSourced {
+        PanelState::Partial
+    } else {
+        PanelState::Ok
+    };
+    Ok(PaperWorkbenchShadowEnvelope {
+        schema_version: PAPER_WORKBENCH_SHADOW_SCHEMA_VERSION,
+        screen_id: PAPER_WORKBENCH_SCREEN_ID,
+        delivery_profile: DeliveryProfile::Shadow,
+        deployment_id: deployment_id.as_str().to_owned(),
+        panel,
+        panel_state,
+        authority: "PORTAL_PROJECTION",
+        upstream_authorities,
+        source_completeness,
+        poll_interval_ms,
+        freshness_state: freshness.state,
+        freshness_policy_version: freshness.policy_version,
+        age_seconds: freshness.age_seconds,
+        lag_ms: freshness.lag_ms,
+        read_at,
+        epoch_id: authority.epoch_id,
+        activation_manifest_digest: authority.manifest_digest,
+        capability_snapshot_id: authority.capability_snapshot_id,
+        warnings,
+        page,
+    })
+}
+
+fn shadow_warning(code: &str, message: &str) -> ContractWarning {
+    ContractWarning {
+        code: code.to_owned(),
+        message: message.to_owned(),
+    }
+}
+
+#[derive(Serialize)]
+struct ShadowProblem {
+    code: &'static str,
+    status: u16,
+}
+
+fn shadow_problem(status: StatusCode, code: &'static str) -> Response {
+    (
+        status,
+        Json(ShadowProblem {
+            code,
+            status: status.as_u16(),
+        }),
+    )
+        .into_response()
+}
+
+fn shadow_store_error(error: &StoreError) -> Response {
+    match error {
+        StoreError::ShadowScreenNotActivated
+        | StoreError::ActiveEpochNotFound
+        | StoreError::EpochNotFound => shadow_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N07_SHADOW_EPOCH_UNAVAILABLE",
+        ),
+        StoreError::ShadowActivationEvidenceInvalid => shadow_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N07_ACTIVATION_EVIDENCE_INVALID",
+        ),
+        StoreError::Query(query_error) => match query_error {
+            QueryError::CursorExpired | QueryError::CursorContextMismatch => {
+                shadow_problem(StatusCode::CONFLICT, "N07_CURSOR_RESNAPSHOT_REQUIRED")
+            }
+            QueryError::InvalidCursor
+            | QueryError::AmbiguousCursor
+            | QueryError::InvalidPageLimit
+            | QueryError::QueryTooComplex
+            | QueryError::FilterNotAllowed
+            | QueryError::InvalidFilter
+            | QueryError::SortNotAllowed
+            | QueryError::InvalidQuery => {
+                shadow_problem(StatusCode::BAD_REQUEST, "N07_QUERY_INVALID")
+            }
+            _ => shadow_problem(StatusCode::SERVICE_UNAVAILABLE, "N07_QUERY_UNAVAILABLE"),
+        },
+        _ => shadow_problem(StatusCode::INTERNAL_SERVER_ERROR, "N07_QUERY_FAILED"),
     }
 }
 
@@ -938,12 +1529,9 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         Ok(request) => request,
         Err(status) => return status.into_response(),
     };
-    let availability = match store.realtime_scope_availability(&request.scope).await {
+    let availability = match realtime_authority(&state, store, &request.scope).await {
         Ok(availability) => availability,
-        Err(projection_store_pg::StoreError::ActiveEpochNotFound) => {
-            return StatusCode::SERVICE_UNAVAILABLE.into_response();
-        }
-        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        Err(status) => return status.into_response(),
     };
     let mut subscription = hub.subscribe(
         request.claims.workspace_id.clone(),
@@ -999,6 +1587,102 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
     response
 }
 
+#[derive(Serialize)]
+struct RealtimeSnapshot {
+    schema_version: &'static str,
+    delivery_profile: &'static str,
+    workspace_id: String,
+    environment: String,
+    projection_epoch: Uuid,
+    projection_sequence: u64,
+    cursor: String,
+    stream_available: bool,
+    resnapshot_not_before: Option<DateTime<Utc>>,
+    capability_snapshot_id: String,
+    activation_manifest_digest: String,
+}
+
+async fn realtime_snapshot(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let Some(store) = &state.projection_store else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let (claims, scope) = match authorize_realtime_scope(&state, &headers) {
+        Ok(authority) => authority,
+        Err(status) => return status.into_response(),
+    };
+    let availability = match realtime_authority(&state, store, &scope).await {
+        Ok(availability) => availability,
+        Err(status) => return status.into_response(),
+    };
+    let Some(activation) = &state.realtime_activation else {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    };
+    let cursor = ProjectionCursor {
+        epoch_id: availability.active.epoch.epoch_id,
+        sequence: availability.active.latest_available_sequence,
+    };
+    Json(RealtimeSnapshot {
+        schema_version: "execution.realtime-snapshot.v1",
+        delivery_profile: "shadow",
+        workspace_id: claims.workspace_id,
+        environment: state.environment.clone(),
+        projection_epoch: cursor.epoch_id,
+        projection_sequence: cursor.sequence,
+        cursor: cursor.to_string(),
+        stream_available: true,
+        resnapshot_not_before: None,
+        capability_snapshot_id: activation
+            .evidence()
+            .compatibility
+            .capability_snapshot_id
+            .clone(),
+        activation_manifest_digest: activation.manifest_digest().to_owned(),
+    })
+    .into_response()
+}
+
+async fn realtime_authority(
+    state: &AppState,
+    store: &PgProjectionStore,
+    scope: &ProjectionScope,
+) -> Result<RealtimeScopeAvailability, StatusCode> {
+    let activation = state
+        .realtime_activation
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let evidence = activation.evidence();
+    if evidence.scope != *scope || evidence.scope.environment != state.environment {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    let shadow = store
+        .active_shadow_screen_authority(scope, N07_PAPER_WORKBENCH_SCREEN_ID)
+        .await
+        .map_err(|error| match error {
+            StoreError::ShadowScreenNotActivated
+            | StoreError::ShadowActivationEvidenceInvalid
+            | StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        })?;
+    if shadow.epoch_id != evidence.active_epoch_id
+        || shadow.manifest_digest != evidence.n07_activation_manifest_digest
+        || shadow.capability_snapshot_id != evidence.compatibility.capability_snapshot_id
+    {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+    let availability =
+        store
+            .realtime_scope_availability(scope)
+            .await
+            .map_err(|error| match error {
+                StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            })?;
+    if availability.active.epoch.epoch_id != evidence.active_epoch_id {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+    Ok(availability)
+}
+
 struct RealtimeRequest {
     claims: DelegatedClaims,
     assertion_expires_at: DateTime<Utc>,
@@ -1018,6 +1702,23 @@ fn authorize_realtime_request(
     state: &AppState,
     headers: &HeaderMap,
 ) -> Result<RealtimeRequest, StatusCode> {
+    let (claims, scope) = authorize_realtime_scope(state, headers)?;
+    let assertion_expires_at = assertion_expires_at(&claims)?;
+    let cursor = requested_cursor(headers)
+        .map_err(|()| StatusCode::BAD_REQUEST)?
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    Ok(RealtimeRequest {
+        claims,
+        assertion_expires_at,
+        cursor,
+        scope,
+    })
+}
+
+fn authorize_realtime_scope(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<(DelegatedClaims, ProjectionScope), StatusCode> {
     let token = bearer(headers).ok_or(StatusCode::UNAUTHORIZED)?;
     let claims = state
         .verifier
@@ -1029,20 +1730,11 @@ fn authorize_realtime_request(
             },
         )
         .map_err(|_| StatusCode::FORBIDDEN)?;
-    let assertion_expires_at = assertion_expires_at(&claims)?;
-    let cursor = requested_cursor(headers)
-        .map_err(|()| StatusCode::BAD_REQUEST)?
-        .ok_or(StatusCode::BAD_REQUEST)?;
     let workspace_id =
         CanonicalId::parse(claims.workspace_id.clone()).map_err(|_| StatusCode::FORBIDDEN)?;
     let scope = ProjectionScope::new(workspace_id, state.environment.clone())
         .map_err(|_| StatusCode::FORBIDDEN)?;
-    Ok(RealtimeRequest {
-        claims,
-        assertion_expires_at,
-        cursor,
-        scope,
-    })
+    Ok((claims, scope))
 }
 
 fn assertion_expires_at(claims: &DelegatedClaims) -> Result<DateTime<Utc>, StatusCode> {
@@ -1719,6 +2411,8 @@ enum ServiceError {
     D4Command(#[from] d4_command::D4CommandError),
     #[error(transparent)]
     Realtime(#[from] realtime_sse::RealtimeError),
+    #[error(transparent)]
+    Query(#[from] query_api::QueryError),
     #[error("TLS material is invalid")]
     InvalidTlsMaterial,
     #[error("secret file violates size/type constraints")]
@@ -1738,6 +2432,10 @@ mod tests {
     use analytics::{
         BindingExposureResult, CapitalLedgerResult, CapitalPreview, CorrelationResult,
         InsightBatch, OrderFunnel,
+    };
+    use query_api::{
+        ProjectionPageRetention, QuerySort, RetentionAvailability, SortDirection, SortField,
+        QUERY_SCHEMA_VERSION,
     };
     use rcgen::{BasicConstraints, CertificateParams, ExtendedKeyUsagePurpose, IsCa, KeyPair};
     use rustls::pki_types::{CertificateDer, UnixTime};
@@ -1774,6 +2472,33 @@ mod tests {
         assert!(address.ip().is_loopback());
         let public: SocketAddr = "0.0.0.0:9100".parse().unwrap();
         assert!(!public.ip().is_loopback());
+    }
+
+    #[test]
+    fn realtime_runtime_requires_ingestion_query_and_screen_authority() {
+        assert!(matches!(
+            validate_realtime_runtime_dependencies(
+                RuntimeGate::Enabled,
+                RuntimeGate::Disabled,
+                RuntimeGate::Enabled,
+                RuntimeGate::Enabled,
+            ),
+            Err(ConfigError::Invalid("EDGE_REALTIME_SSE_ENABLED"))
+        ));
+        assert!(validate_realtime_runtime_dependencies(
+            RuntimeGate::Enabled,
+            RuntimeGate::Enabled,
+            RuntimeGate::Enabled,
+            RuntimeGate::Enabled,
+        )
+        .is_ok());
+        assert!(validate_realtime_runtime_dependencies(
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
+        )
+        .is_ok());
     }
 
     #[test]
@@ -1887,6 +2612,114 @@ mod tests {
         parse::<BindingExposureResult>(include_str!(
             "../../../../../packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json"
         ));
+    }
+
+    #[test]
+    fn paper_workbench_shadow_fixture_deserializes_through_rust_serde() {
+        let envelope = serde_json::from_str::<PaperWorkbenchShadowEnvelope>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json"
+        ))
+        .unwrap();
+        assert_eq!(envelope.panel, ShadowPanel::Orders);
+        assert_eq!(envelope.deployment_id, "dep_74");
+        assert_eq!(envelope.authority, "PORTAL_PROJECTION");
+        assert_eq!(envelope.page.total_count, 91_000);
+        assert_eq!(envelope.page.filtered_count, 45_500);
+    }
+
+    #[test]
+    fn paper_workbench_query_scope_is_server_injected_and_not_client_replaceable() {
+        let deployment = CanonicalId::parse("dep_74").unwrap();
+        let request = ShadowPanelQueryRequest {
+            limit: 100,
+            filters: vec![QueryFilter {
+                field: FilterField::Status,
+                operator: FilterOperator::Eq,
+                values: vec!["OPEN".to_owned()],
+            }],
+            sorts: vec![QuerySort {
+                field: SortField::AsOf,
+                direction: SortDirection::Desc,
+            }],
+            after: None,
+            before: None,
+        };
+        let scoped = request.into_scoped_query(&deployment).unwrap();
+        assert_eq!(scoped.request.filters.len(), 1);
+        assert_eq!(scoped.required_filters.len(), 1);
+        assert_eq!(scoped.required_filters[0].field, FilterField::DeploymentId);
+        assert_eq!(scoped.required_filters[0].values, ["dep_74"]);
+
+        let injected = ShadowPanelQueryRequest {
+            limit: 100,
+            filters: vec![QueryFilter {
+                field: FilterField::DeploymentId,
+                operator: FilterOperator::Eq,
+                values: vec!["dep_other".to_owned()],
+            }],
+            sorts: scoped.request.sorts,
+            after: None,
+            before: None,
+        };
+        assert_eq!(
+            injected.into_scoped_query(&deployment),
+            Err(StatusCode::BAD_REQUEST)
+        );
+    }
+
+    #[test]
+    fn empty_shadow_panel_is_honest_and_carries_activation_authority() {
+        let epoch_id = Uuid::now_v7();
+        let envelope = build_shadow_envelope(
+            &CanonicalId::parse("dep_74").unwrap(),
+            ShadowPanel::Orders,
+            projection_store_pg::ShadowScreenAuthority {
+                epoch_id,
+                screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
+                manifest_digest: format!("sha256:{}", "a".repeat(64)),
+                capability_snapshot_id: "cap-n07".to_owned(),
+            },
+            ProjectionQueryPage {
+                schema_version: QUERY_SCHEMA_VERSION.to_owned(),
+                epoch_id,
+                total_count: 0,
+                filtered_count: 0,
+                rows: Vec::new(),
+                next_cursor: None,
+                prev_cursor: None,
+                has_more: false,
+                has_previous: false,
+                applied_filters: Vec::new(),
+                applied_sort: vec![QuerySort {
+                    field: SortField::AsOf,
+                    direction: SortDirection::Desc,
+                }],
+                aggregates_by_currency: Vec::new(),
+                retention: ProjectionPageRetention {
+                    availability: RetentionAvailability::Unknown,
+                    policy_version: "UNCONFIGURED".to_owned(),
+                },
+            },
+            Utc::now(),
+            &FreshnessPolicy {
+                policy_version: "paper.shadow-query.v1".to_owned(),
+                warning_after_ms: 5_000,
+                stale_after_ms: 30_000,
+                maximum_future_skew_ms: 2_000,
+            },
+        )
+        .unwrap();
+        assert_eq!(envelope.panel_state, PanelState::Empty);
+        assert_eq!(envelope.freshness_state, FreshnessState::Unknown);
+        assert_eq!(envelope.source_completeness, SourceCompleteness::Unknown);
+        assert!(envelope
+            .warnings
+            .iter()
+            .any(|warning| warning.code == "EMPTY_SHADOW_PANEL"));
+        assert!(envelope
+            .warnings
+            .iter()
+            .any(|warning| warning.code == "RETENTION_UNCONFIGURED"));
     }
 
     #[test]

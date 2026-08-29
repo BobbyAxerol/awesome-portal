@@ -19,15 +19,190 @@ F3_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F3_CANARY_CONTROL_ROOM.md"
 F3_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F3_HANDOFF.md"
 F4_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05B_F4_LIVE_FULL_OPERATIONS.md"
 F4_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_EX_BE_05B_F4_HANDOFF.md"
+N09_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md"
+N09_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md"
+OWNER_MASTER_REQUEST="${ROOT_DIR}/upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md"
+EXECUTION_UNIFIED_PLAN="${ROOT_DIR}/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
+N14A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md"
+N14A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md"
+N15A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md"
+N15A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md"
+N16A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md"
+N16A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md"
+N17A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md"
+N17A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md"
 
-python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" <<'PY'
+for required_file in \
+    "${OWNER_MASTER_REQUEST}" \
+    "${EXECUTION_UNIFIED_PLAN}" \
+    "${N14A_REPORT}" \
+    "${N14A_HANDOFF}" \
+    "${N15A_REPORT}" \
+    "${N15A_HANDOFF}" \
+    "${N16A_REPORT}" \
+    "${N16A_HANDOFF}" \
+    "${N17A_REPORT}" \
+    "${N17A_HANDOFF}"
+do
+    if [[ ! -f "${required_file}" ]]; then
+        echo "execution owner/phase plan is missing: ${required_file}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "OFFICIAL_SINGLE_OWNER_REQUEST" \
+    "d4-paper-read-v2-request" \
+    "n11-external-read-v1-request" \
+    "n12-command-relay-v1-request" \
+    "N01–N17 dependency audit" \
+    "no additional Trading System feature request"
+do
+    if ! grep -Fq "${token}" "${OWNER_MASTER_REQUEST}"; then
+        echo "official Trading System master request lost invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N13A_COMPLETE_SOURCE_DARK / N13B_MASTER_OWNER_RETURN_PENDING" \
+    "N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
+    "N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING" \
+    "N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING" \
+    "N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING"
+do
+    if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
+        echo "execution unified plan lost A/B split: ${token}" >&2
+        exit 1
+    fi
+    if ! grep -Fq "${token}" "${TRACKER}"; then
+        echo "shared tracker lost A/B split: ${token}" >&2
+        exit 1
+    fi
+done
+
+for token in \
+    "N14A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "N14B_OWNER_RELEASE_EVIDENCE_PENDING" \
+    "image@sha256"
+do
+    if ! grep -Fq "${token}" "${N14A_REPORT}"; then
+        echo "N14A report lost source-dark release invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N14A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "do not expose release hashes" \
+    "N14B"
+do
+    if ! grep -Fq "${token}" "${N14A_HANDOFF}"; then
+        echo "N14A Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N14A backend — Portal release authority" "${TRACKER}"; then
+    echo "shared tracker lost N14A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N15A_COMPLETE_SOURCE_DARK" \
+    "N15B_OWNER_PUBLICATION_PENDING" \
+    "Query" \
+    "Command" \
+    "Event" \
+    "Artifact" \
+    "network_attempts=0"
+do
+    if ! grep -Fq "${token}" "${N15A_REPORT}"; then
+        echo "N15A report lost source-dark gateway invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N15A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "N15B" \
+    "generated/execution-intercell-gateway.d.ts"
+do
+    if ! grep -Fq "${token}" "${N15A_HANDOFF}"; then
+        echo "N15A Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N15A backend — Source-dark four-interface gateway" "${TRACKER}"; then
+    echo "shared tracker lost N15A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N16A_COMPLETE_SOURCE_DARK" \
+    "N16B_R3_OWNER_ACCEPTANCE_PENDING" \
+    "PRODUCTION_INACTIVE" \
+    "network_attempts=0" \
+    "R4"
+do
+    if ! grep -Fq "${token}" "${N16A_REPORT}"; then
+        echo "N16A report lost source-dark emergency invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N16A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "N16B" \
+    "generated/execution-emergency-routing.d.ts" \
+    "Do **not** render a break-glass control"
+do
+    if ! grep -Fq "${token}" "${N16A_HANDOFF}"; then
+        echo "N16A Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N16A backend — Source-dark routing and emergency policy" "${TRACKER}"; then
+    echo "shared tracker lost N16A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N17A_COMPLETE_SOURCE_DARK" \
+    "N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING" \
+    "PRODUCTION_INACTIVE" \
+    "WAL PITR" \
+    "encrypted logical" \
+    "Network attempts outside the isolated Docker network: \`0\`"
+do
+    if ! grep -Fq "${token}" "${N17A_REPORT}"; then
+        echo "N17A report lost source-dark production/DR invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N17A_COMPLETE_SOURCE_DARK" \
+    "PRODUCTION_INACTIVE" \
+    "N17B" \
+    "generated/execution-production-readiness.d.ts" \
+    "no production-ready badge"
+do
+    if ! grep -Fq "${token}" "${N17A_HANDOFF}"; then
+        echo "N17A Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N17A backend — Source-dark production/DR preparation" "${TRACKER}"; then
+    echo "shared tracker lost N17A closeout section" >&2
+    exit 1
+fi
+
+python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" "${N09_REPORT}" "${N09_HANDOFF}" <<'PY'
 from pathlib import Path
 import json
 import re
 import sys
 
-master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision, f4_report, f4_handoff = [Path(p) for p in sys.argv[1:]]
-for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision, f4_report, f4_handoff):
+master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision, f4_report, f4_handoff, n09_report, n09_handoff = [Path(p) for p in sys.argv[1:]]
+for path in (master, tracker, roadmap, ledger, backend, architecture, handoff, catalog_path, admission_history, unified, f2_report, f2_handoff, f3_report, f3_handoff, iam_revision, f4_report, f4_handoff, n09_report, n09_handoff):
     if not path.is_file():
         raise SystemExit(f"tracking file missing: {path}")
 
@@ -48,6 +223,61 @@ f3h = f3_handoff.read_text()
 iamr = iam_revision.read_text()
 f4 = f4_report.read_text()
 f4h = f4_handoff.read_text()
+n09 = n09_report.read_text()
+n09h = n09_handoff.read_text()
+n11_report = backend.parent / "EX_BE_01_N11_EXTERNAL_READ_CAPABILITIES_AND_ADAPTERS.md"
+n11_handoff = tracker.parent / "CODEX_TO_CLAUDE_N11_EXTERNAL_READ_HANDOFF.md"
+n12_report = backend.parent / "EX_BE_05B_N12_LIVE_COMMAND_RELAY.md"
+n12_handoff = tracker.parent / "CODEX_TO_CLAUDE_N12_COMMAND_RELAY_HANDOFF.md"
+n13a_report = backend.parent / "EX_BE_08_N13A_SOURCE_DARK_STAGED_ACTIVATION.md"
+n13a_handoff = tracker.parent / "CODEX_TO_CLAUDE_N13A_STAGED_ACTIVATION_HANDOFF.md"
+for path in (n11_report, n11_handoff, n12_report, n12_handoff, n13a_report, n13a_handoff):
+    if not path.is_file():
+        raise SystemExit(f"N11/N12 tracking file missing: {path}")
+n11 = n11_report.read_text()
+n11h = n11_handoff.read_text()
+n12 = n12_report.read_text()
+n12h = n12_handoff.read_text()
+n13a = n13a_report.read_text()
+n13ah = n13a_handoff.read_text()
+
+for label, text in (("N09 report", n09), ("N09 Claude handoff", n09h)):
+    for token in (
+        "INTEGRATION_COMPLETE / PRODUCTION_INACTIVE",
+        "governance_write_enabled",
+        "REQUEST_CHANGES",
+        "assigned_to=me",
+        "smoke plan",
+    ):
+        if token not in text:
+            raise SystemExit(f"{label} lost N09 invariant {token}")
+if "Codex N09 Portal governance/workflow gaps" not in t:
+    raise SystemExit("tracker lost N09 shared-board row")
+if "EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_GAPS.md" not in b:
+    raise SystemExit("backend README lost N09 closeout index")
+for label, text in (("N11 report", n11), ("N11 Claude handoff", n11h)):
+    for token in (
+        "OWNER_PUBLICATION_PENDING",
+        "PRODUCTION_INACTIVE",
+    ):
+        if token not in text:
+            raise SystemExit(f"{label} lost N11 boundary {token}")
+if "Rust compatibility adapter" not in n11 or "availability" not in n11h:
+    raise SystemExit("N11 tracking files lost adapter/consumer boundary")
+for label, text in (("N12 report", n12), ("N12 Claude handoff", n12h)):
+    for token in ("OWNER_PUBLICATION_PENDING", "PRODUCTION_INACTIVE", "UNCERTAIN"):
+        if token not in text:
+            raise SystemExit(f"{label} lost N12 boundary {token}")
+if "202" not in n12 or "202" not in n12h or "command kill switch" not in n12:
+    raise SystemExit("N12 tracking files lost terminal/kill-switch semantics")
+if "N12 backend — live command publication/relay gate" not in t:
+    raise SystemExit("tracker lost N12 shared-board section")
+for label, text in (("N13A report", n13a), ("N13A Claude handoff", n13ah)):
+    for token in ("SOURCE_DARK", "N13B", "fixture", "false"):
+        if token not in text:
+            raise SystemExit(f"{label} lost N13A boundary {token}")
+if "N13A backend — source-dark staged activation foundation" not in t:
+    raise SystemExit("tracker lost N13A shared-board section")
 
 qualified = "`INTEGRATION_COMPLETE / PRODUCTION_INACTIVE`"
 for phase in (3, 14, 15, 16, 17):
@@ -76,7 +306,11 @@ for action in (
     "ops/trace-order", "ops/streams", "ops/alpha-activity", "ops/redis-retention",
 ):
     row = next((line for line in l.splitlines() if f"`{action}`" in line), None)
-    if row is None or "EXTERNAL_CONTRACT_PENDING" not in row:
+    if (
+        row is None
+        or "PORTAL_ADAPTER_GATE_COMPLETE" not in row
+        or "OWNER_PUBLICATION_PENDING" not in row
+    ):
         raise SystemExit(f"request ledger lost unreachable Trading System action {action}")
 
 if "Generic `redis/get` and `redis/scan` are explicitly **REJECTED" not in l:
@@ -373,7 +607,12 @@ for label, text in (
         raise SystemExit(f"{label} lost the F3 command-inactive visibility boundary")
 for request in ("BR-EX-28 canonical command catalogue", "BR-EX-29 typed `conditions[]`"):
     row = next((line for line in l.splitlines() if request in line), None)
-    if row is None or "`FOUNDATION_COMPLETE / PRODUCTION_INACTIVE`" not in row:
+    expected = (
+        ("PORTAL_COMMAND_GATE_COMPLETE", "MASTER_OWNER_REQUEST_READY", "OWNER_PUBLICATION_PENDING", "PRODUCTION_INACTIVE")
+        if request.startswith("BR-EX-28")
+        else ("FOUNDATION_COMPLETE", "PRODUCTION_INACTIVE")
+    )
+    if row is None or any(token not in row for token in expected):
         raise SystemExit(f"request ledger lost the accepted F0 status: {request}")
 
 entries = c.get("entries", [])

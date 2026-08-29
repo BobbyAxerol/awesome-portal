@@ -1940,6 +1940,55 @@ không phải 17 màn.
 > một owner window mới; chưa phải D4 hoặc source activation. Chi tiết:
 > [`EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md`](./backend/EX_BE_02_LIVE_D2_DARK_EXECUTION_EVIDENCE.md).
 
+> **Backend checkpoint 2026-08-26 — N14A Portal release authority:** status is
+> `N14A_COMPLETE_SOURCE_DARK / N14B_OWNER_RELEASE_EVIDENCE_PENDING /
+> PRODUCTION_INACTIVE`. A protected-main commit now produces one exact
+> six-image digest manifest with SBOM/SLSA, Trivy and signature evidence;
+> stable SGP consumes per-service digests and owns state distinct from dev.
+> Production requires the reviewed manifest hash, vulnerability acceptance and
+> a signed owner decision bound to the exact candidate. Seventeen release/
+> security tests, actionlint and a real three-volume PostgreSQL dev/stable/
+> restore + forward-fix rehearsal pass. No AWS-HK/Trading System traffic or
+> Projection/Query/SSE/command activation occurred. N14B later binds exact
+> owner source/gateway bytes after N13B target selection. Detail:
+> [`EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md`](./backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md).
+
+> **Backend checkpoint 2026-08-26 — N15A source-dark four-interface gateway:**
+> status is `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+> PRODUCTION_INACTIVE`. Query, Command, Event and Artifact negotiate/fail/roll
+> back independently, use separate read/command identities and bounded
+> TLS1.3/HTTP2 policies, and have pure Event continuity plus Artifact reference
+> validation. Component OpenAPI has no path/server and local fault evidence
+> proves `network_attempts=0`; no AWS-HK/Trading System source, credential or
+> runtime changed. N15B later imports exact accepted owner bytes and performs
+> real per-interface mTLS/JWT/WAN/fault/SLO acceptance. Detail:
+> [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+
+> **Backend checkpoint 2026-08-27 — N16A source-dark emergency routing:**
+> status is `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
+> PRODUCTION_INACTIVE`. One same-origin `/ops/emergency/*` component contract,
+> server-side origin isolation, five-minute session/WebAuthn ceremony,
+> command-independent typed health, immutable audit and local Research/
+> Cloudflare/execution-origin/rollback drills are complete. OpenAPI has no
+> path/server, the unmounted Nginx blueprint has no forwarding directive,
+> N12 R3 remains unpublished and R4 resume/scale is structurally forbidden.
+> No public route, Cloudflare/DNS/tunnel, AWS-HK/source/runtime changed and
+> `network_attempts=0`. N16B later requires accepted N12 R3, dedicated command
+> identity, N15B and an owner window. Detail:
+> [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
+
+> **Backend checkpoint 2026-08-27 — N17A source-dark production/DR:** status is
+> `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING /
+> PRODUCTION_INACTIVE`. Pure Rust/contracts distinguish provisional budgets
+> from measured production SLO/error budgets and keep production RPO/RTO/cost
+> null. Unmounted observability, recovery, rotation, owner and game-day
+> blueprints are complete. An internal-only Docker rehearsal passed WAL PITR
+> to an exact LSN, ephemeral encrypted logical restore, deterministic
+> projection rebuild, identity rotation/compromise, rollback and all eight
+> fault scenarios. No runtime/source/command/AWS-HK/Trading System change was
+> made. Detail:
+> [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.

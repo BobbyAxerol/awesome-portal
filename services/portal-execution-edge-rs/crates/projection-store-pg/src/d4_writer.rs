@@ -9,9 +9,11 @@ use projection_core::{
 };
 use serde::Serialize;
 use sha2::{Digest as _, Sha256};
+use shared_consumer_core::ConsumerLeaseProof;
 use sqlx::{Postgres, Row, Transaction};
 use uuid::Uuid;
 
+use super::shared_consumer::validate_shared_consumer_lease_tx;
 use super::{
     i64_from_u64, required_u64, row_to_entity, EpochWriteAuthority, PgProjectionStore,
     StoreApplyOutcome, StoreError,
@@ -399,6 +401,35 @@ impl PgProjectionStore {
         &self,
         input: &D4EventPageCommitInput,
     ) -> Result<D4CommitOutcome, StoreError> {
+        self.commit_d4_event_page_guarded(input, None).await
+    }
+
+    /// Atomically applies one event page only while the exact N04 singleton
+    /// consumer fencing proof remains active in `PostgreSQL`.
+    ///
+    /// The lease row is locked in the same transaction as projected facts and
+    /// cursor advancement. A stale worker therefore cannot commit after lease
+    /// replacement, even if it received a source page before losing ownership.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::SharedConsumerLeaseLost`] before any projection
+    /// mutation when the proof is absent, expired or fenced out. All existing
+    /// D4 page validation and rebuild rules still apply.
+    pub async fn commit_lease_fenced_d4_event_page(
+        &self,
+        input: &D4EventPageCommitInput,
+        proof: ConsumerLeaseProof,
+    ) -> Result<D4CommitOutcome, StoreError> {
+        self.commit_d4_event_page_guarded(input, Some(proof)).await
+    }
+
+    #[allow(clippy::too_many_lines)]
+    async fn commit_d4_event_page_guarded(
+        &self,
+        input: &D4EventPageCommitInput,
+        lease: Option<ConsumerLeaseProof>,
+    ) -> Result<D4CommitOutcome, StoreError> {
         validate_paper_scope(&input.scope)?;
         validate_event_page(input)?;
         let page_digest = event_page_digest(input)?;
@@ -411,6 +442,15 @@ impl PgProjectionStore {
                 EpochWriteAuthority::BuildingOnly,
             )
             .await?;
+        if let Some(proof) = lease {
+            validate_shared_consumer_lease_tx(
+                &mut transaction,
+                &input.scope,
+                input.epoch_id,
+                proof,
+            )
+            .await?;
+        }
         let checkpoint = sqlx::query(
             "SELECT * FROM portal_projection.d4_source_checkpoints
              WHERE epoch_id = $1 FOR UPDATE",

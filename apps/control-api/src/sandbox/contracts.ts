@@ -13,6 +13,40 @@ const SafeReasonSchema = z
     "SENSITIVE_OPERATOR_TEXT_FORBIDDEN",
   );
 
+const ExactPositiveDecimalSchema = z
+  .string()
+  .regex(/^(?:0|[1-9]\d{0,19})(?:\.\d{1,18})?$/)
+  .refine((value) => !/^0(?:\.0+)?$/.test(value), "decimal must be positive");
+
+function decimalParts(value: string): [string, string] {
+  const [whole, fraction = ""] = value.split(".");
+  return [whole.replace(/^0+(?=\d)/, ""), fraction.replace(/0+$/, "")];
+}
+
+function decimalLessThan(left: string, right: string): boolean {
+  const [leftWhole, leftFraction] = decimalParts(left);
+  const [rightWhole, rightFraction] = decimalParts(right);
+  if (leftWhole.length !== rightWhole.length) return leftWhole.length < rightWhole.length;
+  if (leftWhole !== rightWhole) return leftWhole < rightWhole;
+  const width = Math.max(leftFraction.length, rightFraction.length);
+  return leftFraction.padEnd(width, "0") < rightFraction.padEnd(width, "0");
+}
+
+const SandboxSmokePlanInputSchema = z.object({
+  qty: ExactPositiveDecimalSchema,
+  cap: ExactPositiveDecimalSchema,
+  currency: z.string().regex(/^[A-Z0-9]{2,12}$/),
+  timebox_minutes: z.number().int().min(5).max(240),
+}).strict().superRefine((plan, context) => {
+  if (decimalLessThan(plan.cap, plan.qty)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cap"],
+      message: "smoke-plan cap must be greater than or equal to qty",
+    });
+  }
+});
+
 export const SandboxCertificationCreateRequestSchema = z.object({
   schema_version: z.literal("governance.sandbox-certification-create-request.v1"),
   workspace_id: z.string().min(3).max(96),
@@ -23,6 +57,7 @@ export const SandboxCertificationCreateRequestSchema = z.object({
     account_id: IdentifierSchema,
     external_account_ref: IdentifierSchema,
   }).strict(),
+  smoke_plan: SandboxSmokePlanInputSchema.optional(),
 }).strict();
 
 export const SandboxCertificationSubmitRequestSchema = z.object({

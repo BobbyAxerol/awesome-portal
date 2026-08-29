@@ -5,6 +5,8 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "schema_version",
+    "epoch_id",
     "rows",
     "total_count",
     "filtered_count",
@@ -18,31 +20,46 @@
     "retention"
   ],
   "properties": {
+    "schema_version": { "const": "execution.query.v1" },
+    "epoch_id": { "type": "string", "format": "uuid" },
     "rows": {
       "type": "array",
       "maxItems": 250,
-      "items": {}
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entity_id",
+          "projection_sequence",
+          "source_authority",
+          "source_completeness",
+          "poll_interval_ms",
+          "as_of",
+          "source_read_at",
+          "projected_at",
+          "adapter_version",
+          "capability_snapshot_id",
+          "payload"
+        ],
+        "properties": {
+          "entity_id": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+          "projection_sequence": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+          "source_authority": { "enum": ["RESEARCH", "EXECUTION", "BROKER", "DERIVED"] },
+          "source_completeness": { "enum": ["EVENT_SOURCED", "POLL_BOUNDED", "UNKNOWN"] },
+          "poll_interval_ms": { "type": ["integer", "null"], "minimum": 1 },
+          "as_of": { "type": "string", "format": "date-time" },
+          "source_read_at": { "type": "string", "format": "date-time" },
+          "projected_at": { "type": "string", "format": "date-time" },
+          "adapter_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "capability_snapshot_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "payload": { "type": "object" }
+        }
+      }
     },
-    "total_count": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 9007199254740991
-    },
-    "filtered_count": {
-      "type": "integer",
-      "minimum": 0,
-      "maximum": 9007199254740991
-    },
-    "next_cursor": {
-      "type": ["string", "null"],
-      "minLength": 1,
-      "maxLength": 4096
-    },
-    "prev_cursor": {
-      "type": ["string", "null"],
-      "minLength": 1,
-      "maxLength": 4096
-    },
+    "total_count": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "filtered_count": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "next_cursor": { "type": ["string", "null"], "minLength": 1, "maxLength": 4096 },
+    "prev_cursor": { "type": ["string", "null"], "minLength": 1, "maxLength": 4096 },
     "has_more": { "type": "boolean" },
     "has_previous": { "type": "boolean" },
     "applied_filters": {
@@ -51,11 +68,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["field", "op", "value"],
+        "required": ["field", "operator", "values"],
         "properties": {
-          "field": { "type": "string", "minLength": 1, "maxLength": 64 },
-          "op": { "enum": ["eq", "in", "contains", "gte", "lte"] },
-          "value": { "type": "string", "maxLength": 4096 }
+          "field": { "enum": ["status", "currency", "instrument_id", "account_id", "portfolio_id", "strategy_id", "deployment_id", "source_authority", "as_of"] },
+          "operator": { "enum": ["eq", "in", "contains", "gte", "lte"] },
+          "values": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "maxLength": 256 } }
         }
       }
     },
@@ -68,7 +85,7 @@
         "additionalProperties": false,
         "required": ["field", "direction"],
         "properties": {
-          "field": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "field": { "enum": ["as_of", "projection_sequence", "status", "currency"] },
           "direction": { "enum": ["asc", "desc"] }
         }
       }
@@ -78,15 +95,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "currency",
-          "row_count",
-          "quantity_count",
-          "quantity",
-          "notional_count",
-          "notional",
-          "invalid_numeric_count"
-        ],
+        "required": ["currency", "row_count", "quantity_count", "quantity", "notional_count", "notional", "invalid_numeric_count"],
         "properties": {
           "currency": { "type": ["string", "null"], "pattern": "^[A-Z0-9]{2,12}$" },
           "row_count": { "type": "integer", "minimum": 0 },
@@ -103,9 +112,7 @@
       "additionalProperties": false,
       "required": ["availability", "policy_version"],
       "properties": {
-        "availability": {
-          "enum": ["HOT", "PARTIAL_HOT", "COLD_REQUESTABLE", "PURGED", "UNKNOWN"]
-        },
+        "availability": { "enum": ["HOT", "PARTIAL_HOT", "COLD_REQUESTABLE", "PURGED", "UNKNOWN"] },
         "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 }
       }
     }

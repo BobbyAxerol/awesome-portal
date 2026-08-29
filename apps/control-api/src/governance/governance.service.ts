@@ -13,6 +13,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { TypedCondition } from "../operations/contracts";
 import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
+  approvalHistoryResource,
   approvalInboxResource,
   R1Decision,
 } from "./contracts";
@@ -180,6 +181,22 @@ export class GovernanceService {
     };
   }
 
+  async history(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    const page = await this.query.list(
+      approvalHistoryResource(),
+      { actorId: user.userId, workspaceId, role: user.role },
+      raw,
+    );
+    return {
+      schema_version: "governance.approval-history.v1",
+      record_authority: "PORTAL",
+      delivery_profile: "fixture",
+      read_at: new Date().toISOString(),
+      actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      page,
+    };
+  }
+
   async detail(user: PortalUser, workspaceId: string, approvalId: string) {
     const snapshot = await this.repository.detail(workspaceId, approvalId);
     if (!snapshot || snapshot.approval.gate !== "R1") {
@@ -216,9 +233,18 @@ export class GovernanceService {
           can_approve: approval.status === "PENDING" && locks.length === 0,
           can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
           can_deny: approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided,
+          can_request_changes:
+            approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided && !self,
           locks,
           separation_of_duties: self ? "VIOLATION" : "OK",
         },
+        known_limitations: snapshot.knownLimitations.map((item) => ({
+          limitation_id: item.limitationId,
+          kind: item.kind.toLowerCase(),
+          label: item.label,
+          statement: item.statement,
+          expires_at: item.expiresAt?.toISOString() ?? null,
+        })),
         evidence_manifest: {
           manifest_hash: approval.evidenceSetHash,
           complete: approval.evidenceComplete,
@@ -259,7 +285,13 @@ export class GovernanceService {
           decision_id: item.decisionId,
           operation_id: item.operationId,
           actor: { user_id: item.actorUserId, username: item.actorUsername },
-          outcome: item.decision === "APPROVE" ? "APPROVED" : item.decision === "DENY" ? "DENIED" : "APPROVED_WITH_CONDITION",
+          outcome: item.decision === "APPROVE"
+            ? "APPROVED"
+            : item.decision === "DENY"
+              ? "DENIED"
+              : item.decision === "REQUEST_CHANGES"
+                ? "CHANGES_REQUESTED"
+                : "APPROVED_WITH_CONDITION",
           reason: item.reason,
           conditions: item.conditions,
           condition: item.conditions[0]?.text ?? null,
@@ -286,7 +318,37 @@ export class GovernanceService {
     if (!detail) {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
     }
-    const { approval, scope } = detail;
+    const { approval, scope, lineage, evidence } = detail;
+    if (lineage && computeEvidenceManifestHash(evidence) !== lineage.r1EvidenceSetHash) {
+      throw new GovernanceError(
+        "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED",
+        "Referenced R1 evidence manifest integrity check failed.",
+        409,
+      );
+    }
+    const self = approval.requesterUserId === user.userId || approval.artifactCreatorUserId === user.userId;
+    const alreadyDecided = approval.decisionActorIds.includes(user.userId);
+    const expired = approval.expiresAt <= new Date();
+    const locks = [
+      ...(self ? ["SELF_APPROVAL"] : []),
+      ...(expired ? ["EXPIRED"] : []),
+      ...(user.role !== "ADMIN" || alreadyDecided ? ["NOT_ELIGIBLE"] : []),
+      ...(lineage === null ? ["R1_LINEAGE_UNPUBLISHED"] : []),
+      ...(lineage !== null && !["APPROVED", "APPROVED_WITH_CONDITION"].includes(lineage.r1Status)
+        ? ["R1_NOT_APPROVED"]
+        : []),
+      ...(lineage !== null && lineage.r1ExpiresAt <= new Date() ? ["R1_EXPIRED"] : []),
+      ...(lineage !== null && !lineage.r1EvidenceComplete ? ["R1_EVIDENCE_INCOMPLETE"] : []),
+    ];
+    const r1Reference = lineage === null ? null : {
+      approval_id: lineage.r1ApprovalId,
+      state: lineage.r1Status,
+      href: `/governance/approvals/${lineage.r1ApprovalId}/r1`,
+      expiry: lineage.r1ExpiresAt.toISOString(),
+      digest: lineage.r1EvidenceSetHash,
+      decided_by: lineage.r1DecidedByUsername,
+      decided_at: lineage.r1DecidedAt?.toISOString() ?? null,
+    };
     return {
       schema_version: "governance.r2-review.v1",
       record_authority: "PORTAL",
@@ -299,6 +361,36 @@ export class GovernanceService {
           currency: scope.currency,
         },
         actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+        r1_reference: r1Reference,
+        r1_state: lineage?.r1Status ?? "MISSING",
+        r1_id: lineage?.r1ApprovalId ?? null,
+        grant_id: lineage?.grantId ?? null,
+        grant_name: lineage?.grantName ?? null,
+        approver_role: lineage?.approverRole ?? null,
+        plan_author: lineage?.planAuthorUsername ?? null,
+        evidence_manifest: lineage === null ? null : {
+          manifest_hash: lineage.r1EvidenceSetHash,
+          complete: lineage.r1EvidenceComplete,
+          entries: evidence.map((item) => ({
+            evidence_id: item.evidenceId,
+            ordinal: item.ordinal,
+            kind: item.kind,
+            label: item.label,
+            sha256: item.sha256,
+            schema_version: item.schemaVersion,
+            source_authority: item.sourceAuthority,
+            captured_at: item.capturedAt.toISOString(),
+          })),
+        },
+        eligibility: {
+          can_approve: approval.status === "PENDING" && locks.length === 0,
+          can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
+          can_deny: approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided,
+          can_request_changes:
+            approval.status === "PENDING" && !expired && user.role === "ADMIN" && !alreadyDecided && !self,
+          locks,
+          separation_of_duties: self ? "VIOLATION" : "OK",
+        },
       },
     };
   }
@@ -359,6 +451,8 @@ export class GovernanceService {
       if (approval.requesterUserId === user.userId || approval.artifactCreatorUserId === user.userId) {
         blockerCodes.push("SELF_APPROVAL_PROHIBITED");
       }
+    }
+    if (input.decision === "APPROVE" || input.decision === "APPROVE_WITH_CONDITION") {
       if (!approval.evidenceComplete) blockerCodes.push("EVIDENCE_INCOMPLETE");
       if (approval.blockerCount > 0 || snapshot.findings.some((item) => item.blocking || item.outcome === "FAIL")) {
         blockerCodes.push("BLOCKING_FINDINGS");

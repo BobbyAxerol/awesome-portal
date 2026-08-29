@@ -116,6 +116,7 @@ class DeliveryPolicyDefinition(RegistryModel):
     query_enabled: bool
     projection_ingestion_enabled: bool
     sse_enabled: bool
+    governance_write_enabled: bool
     paper_commands_enabled: bool
     sandbox_commands_enabled: bool
     live_protective_commands_enabled: bool

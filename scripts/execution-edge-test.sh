@@ -77,7 +77,7 @@ fi
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m \
   --tmpfs /cargo:rw,exec,mode=1777,size=512m \
-  --tmpfs /target:rw,exec,mode=1777,size=3072m \
+  --tmpfs /target:rw,exec,mode=1777,size=4096m \
   -e HOME=/tmp \
   -e CARGO_HOME=/cargo \
   -e CARGO_TARGET_DIR=/target \
@@ -88,11 +88,26 @@ fi
     cargo fmt --all -- --check
     cargo test --locked --all-targets
     cargo clippy --locked --all-targets -- -D warnings
+    n06_template_report="$(cargo run --locked -q -p source-qualification --bin n06_verify -- \
+      --mode template \
+      --evidence crates/source-qualification/fixtures/n06-real-source-qualification.template.json)"
+    printf "%s\n" "${n06_template_report}" >/tmp/n06-template-report.json
+    grep -Fq "\"decision\":\"TEMPLATE_VALID\"" /tmp/n06-template-report.json || {
+      printf "N06 template CLI did not return TEMPLATE_VALID.\n" >&2
+      printf "%s\n" "${n06_template_report}" >&2
+      exit 1
+    }
+    grep -Fq "\"activation_authorized\":false" /tmp/n06-template-report.json || {
+      printf "N06 template CLI widened activation authority.\n" >&2
+      exit 1
+    }
   '
+
+printf 'Rust workspace and N06 template CLI gates passed; starting PostgreSQL restore drill.\n'
 
 # Credential-free restore drill: prove the migrated projection schema and all
 # rows left by the replay/query suite survive a custom-format backup/restore.
-PROJECTION_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM _sqlx_migrations), ':', (SELECT count(*) FROM portal_projection.epochs), ':', (SELECT count(*) FROM portal_projection.event_journal), ':', (SELECT count(*) FROM portal_projection.analytics_source_snapshots), ':', (SELECT count(*) FROM portal_projection.analytics_source_facts), ':', (SELECT count(*) FROM portal_projection.d4_source_checkpoints), ':', (SELECT count(*) FROM portal_projection.d4_source_failures));"
+PROJECTION_SIGNATURE_SQL="SELECT concat((SELECT count(*) FROM _sqlx_migrations), ':', (SELECT count(*) FROM portal_projection.epochs), ':', (SELECT count(*) FROM portal_projection.event_journal), ':', (SELECT count(*) FROM portal_projection.analytics_source_snapshots), ':', (SELECT count(*) FROM portal_projection.analytics_source_facts), ':', (SELECT count(*) FROM portal_projection.d4_source_checkpoints), ':', (SELECT count(*) FROM portal_projection.d4_source_failures), ':', (SELECT count(*) FROM portal_projection.shared_consumer_leases), ':', (SELECT count(*) FROM portal_projection.retention_lifecycle_policy_snapshots), ':', (SELECT count(*) FROM portal_projection.retention_recovery_checkpoints), ':', (SELECT count(*) FROM portal_projection.retention_cleanup_runs), ':', (SELECT count(*) FROM portal_projection.shadow_screen_activations));"
 source_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_projection_test -Atc "${PROJECTION_SIGNATURE_SQL}")"
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_projection_test \
   --format=custom --file=/tmp/portal_projection_test.dump
@@ -106,4 +121,6 @@ restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d porta
   exit 1
 }
 
-printf 'Execution edge contracts, auth, transport, bounded load, projection replay/query, source-backed analytics, adapter rollback and PostgreSQL restore gates passed.\n'
+printf 'PostgreSQL projection restore signature matched.\n'
+
+printf 'Execution edge contracts, auth, transport, bounded load, projection replay/query, retention/recovery/cleanup, N06 qualification, N07 manifest-bound shadow screen, source-backed analytics, adapter rollback and PostgreSQL restore gates passed.\n'

@@ -1,0 +1,31 @@
+{
+  "id": null,
+  "uid": "portal-execution-n17a-source-dark",
+  "title": "Portal Execution — Source-dark Readiness",
+  "tags": ["portal", "execution", "n17a", "source-dark", "unmounted"],
+  "timezone": "utc",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": false,
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "DS_PROMETHEUS",
+        "type": "constant",
+        "query": "NOT_BOUND_N17A",
+        "hide": 2
+      }
+    ]
+  },
+  "panels": [
+    { "id": 1, "type": "stat", "title": "Authority must remain dark", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "targets": [{ "refId": "A", "expr": "portal_execution_production_active + portal_execution_source_call_authorized + portal_execution_command_authorized" }], "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 } },
+    { "id": 2, "type": "timeseries", "title": "Query p50 / p95 / p99", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "targets": [{ "refId": "A", "expr": "portal_execution:query_duration_seconds:p95" }], "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 } },
+    { "id": 3, "type": "timeseries", "title": "Projection lag, gaps and divergence", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "targets": [{ "refId": "A", "expr": "portal_execution_projection_lag_seconds" }, { "refId": "B", "expr": "portal_execution:projection_gap:count" }], "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 } },
+    { "id": 4, "type": "timeseries", "title": "SSE clients, queue and drops", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "targets": [{ "refId": "A", "expr": "portal_execution_sse_clients" }, { "refId": "B", "expr": "portal_execution_sse_queue_depth" }, { "refId": "C", "expr": "portal_execution:sse_drops:rate5m" }], "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 } },
+    { "id": 5, "type": "timeseries", "title": "Command stage, age and uncertain", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "targets": [{ "refId": "A", "expr": "portal_execution_command_stage_age_seconds" }, { "refId": "B", "expr": "portal_execution:command_uncertain:count" }], "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 } },
+    { "id": 6, "type": "timeseries", "title": "Audit / outbox / DB pool", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "targets": [{ "refId": "A", "expr": "portal_execution_audit_lag_seconds" }, { "refId": "B", "expr": "portal_execution_outbox_lag_seconds" }, { "refId": "C", "expr": "portal_execution_db_pool_in_use" }], "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 } },
+    { "id": 7, "type": "table", "title": "Backup, restore, rebuild and rotation evidence", "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }, "targets": [{ "refId": "A", "expr": "portal_execution_readiness_evidence_state" }], "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 } }
+  ]
+}

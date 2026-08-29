@@ -7,6 +7,19 @@ on:
         description: Immutable image tag to deploy (for example sha-<parent-commit>)
         required: true
         type: string
+      publication_run_id:
+        description: GitHub Actions run containing portal-release-candidate-<commit>
+        required: true
+        type: string
+      release_manifest_sha256:
+        description: Exact sha256:<64 hex> shown by the reviewed candidate artifact
+        required: true
+        type: string
+      accept_vulnerability_evidence:
+        description: Owner accepts the exact Trivy evidence bound by the manifest
+        required: true
+        default: false
+        type: boolean
       deployment_path:
         description: Absolute path of the prepared Portal directory on the host
         required: true
@@ -14,7 +27,9 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
+  id-token: write
 
 concurrency:
   group: portal-production
@@ -33,6 +48,9 @@ jobs:
       DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
       DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
       IMAGE_TAG: ${{ inputs.image_tag }}
+      PUBLICATION_RUN_ID: ${{ inputs.publication_run_id }}
+      EXPECTED_RELEASE_MANIFEST_SHA256: ${{ inputs.release_manifest_sha256 }}
+      ACCEPT_VULNERABILITY_EVIDENCE: ${{ inputs.accept_vulnerability_evidence }}
       DEPLOY_PATH: ${{ inputs.deployment_path }}
 
     steps:
@@ -63,6 +81,18 @@ jobs:
             echo 'Production image tag must be sha-<40 lowercase hexadecimal commit>.' >&2
             exit 1
           fi
+          if ! [[ "${PUBLICATION_RUN_ID}" =~ ^[0-9]+$ ]]; then
+            echo 'publication_run_id must be numeric.' >&2
+            exit 1
+          fi
+          if ! [[ "${EXPECTED_RELEASE_MANIFEST_SHA256}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo 'release_manifest_sha256 must be sha256:<64 lowercase hexadecimal>.' >&2
+            exit 1
+          fi
+          if [[ "${ACCEPT_VULNERABILITY_EVIDENCE}" != "true" ]]; then
+            echo 'Production owner must explicitly accept the exact vulnerability evidence.' >&2
+            exit 1
+          fi
           if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
             echo 'Deployment path must be an absolute safe path.' >&2
             exit 1
@@ -78,6 +108,85 @@ jobs:
           }
           printf 'SOURCE_COMMIT=%s\n' "${source_commit}" >> "${GITHUB_ENV}"
 
+      - name: Download exact N14A release candidate
+        uses: actions/download-artifact@v7
+        with:
+          pattern: portal-release-candidate-*
+          path: release-pack
+          merge-multiple: true
+          run-id: ${{ inputs.publication_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Install keyless release signer
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Accept and verify the exact source-dark release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${PUBLICATION_RUN_ID}" \
+            > release-pack/publication-workflow-run.json
+          jq -e '
+            .head_sha == env.SOURCE_COMMIT
+            and .head_branch == "main"
+            and .path == ".github/workflows/publish-images.yml"
+            and .conclusion == "success"
+          ' release-pack/publication-workflow-run.json >/dev/null || {
+            echo 'Candidate artifact did not come from the successful protected-main publication workflow.' >&2
+            exit 1
+          }
+          python3 scripts/portal-release-authority.py verify \
+            --mode candidate --pack-dir release-pack
+          actual_manifest_sha256="sha256:$(sha256sum release-pack/release-manifest.json | cut -d' ' -f1)"
+          [[ "${actual_manifest_sha256}" == "${EXPECTED_RELEASE_MANIFEST_SHA256}" ]] || {
+            printf 'Reviewed manifest digest mismatch: expected=%s actual=%s\n' \
+              "${EXPECTED_RELEASE_MANIFEST_SHA256}" "${actual_manifest_sha256}" >&2
+            exit 1
+          }
+          [[ "$(jq -r .source_commit release-pack/release-manifest.json)" == "${SOURCE_COMMIT}" ]] || {
+            echo 'Release manifest source commit does not match image_tag.' >&2
+            exit 1
+          }
+          python3 scripts/portal-release-authority.py decision \
+            --pack-dir release-pack \
+            --output release-pack/release-owner-decision.json \
+            --decided-by "github:${GITHUB_ACTOR}" \
+            --rationale "Production environment owner accepted the exact source-dark Portal release candidate and vulnerability evidence."
+          cosign sign-blob --yes \
+            --bundle release-pack/release-manifest.bundle.json \
+            release-pack/release-manifest.json
+          cosign sign-blob --yes \
+            --bundle release-pack/release-owner-decision.bundle.json \
+            release-pack/release-owner-decision.json
+          certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/deploy.yml@refs/heads/main"
+          issuer="https://token.actions.githubusercontent.com"
+          python3 scripts/portal-release-authority.py verify \
+            --mode acceptance \
+            --pack-dir release-pack \
+            --decision release-pack/release-owner-decision.json \
+            --signature-kind cosign \
+            --manifest-signature release-pack/release-manifest.bundle.json \
+            --decision-signature release-pack/release-owner-decision.bundle.json \
+            --certificate-identity "${certificate_identity}" \
+            --certificate-issuer "${issuer}"
+
+          image_for() {
+            jq -er --arg service "$1" \
+              '.services[] | select(.service_id == $service) | .image' \
+              release-pack/release-manifest.json
+          }
+          {
+            printf 'PORTAL_API_IMAGE=%s\n' "$(image_for portal-api)"
+            printf 'PORTAL_WEB_IMAGE=%s\n' "$(image_for portal-web)"
+            printf 'PORTAL_CONTROL_API_IMAGE=%s\n' "$(image_for control-api)"
+            printf 'PORTAL_ROADMAP_API_IMAGE=%s\n' "$(image_for roadmap-task-board-api)"
+            printf 'N14_RELEASE_MANIFEST_SHA256=%s\n' "${actual_manifest_sha256}"
+            printf 'N14_RELEASE_DECISION_SHA256=sha256:%s\n' \
+              "$(sha256sum release-pack/release-owner-decision.json | cut -d' ' -f1)"
+          } >> "${GITHUB_ENV}"
+
       - name: Configure pinned SSH access
         run: |
           install -d -m 0700 ~/.ssh
@@ -88,14 +197,17 @@ jobs:
 
       - name: Transfer production Compose definition
         run: |
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" "install -d -m 0750 '${DEPLOY_PATH}/deploy'"
+          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "install -d -m 0750 '${DEPLOY_PATH}/deploy' '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}'"
           scp -P "${DEPLOY_PORT}" deploy/compose.production.yaml \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/deploy/compose.production.yaml.next"
+          scp -P "${DEPLOY_PORT}" -r release-pack/. \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/"
 
       - name: Back up, migrate and start immutable images
         run: |
           ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' bash -s" <<'REMOTE'
+            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' PORTAL_API_IMAGE='${PORTAL_API_IMAGE}' PORTAL_WEB_IMAGE='${PORTAL_WEB_IMAGE}' PORTAL_CONTROL_API_IMAGE='${PORTAL_CONTROL_API_IMAGE}' PORTAL_ROADMAP_API_IMAGE='${PORTAL_ROADMAP_API_IMAGE}' N14_RELEASE_MANIFEST_SHA256='${N14_RELEASE_MANIFEST_SHA256}' N14_RELEASE_DECISION_SHA256='${N14_RELEASE_DECISION_SHA256}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
           test -f .env.production
@@ -105,7 +217,12 @@ jobs:
           test -f "${next_compose}"
 
           compose_next() {
-            PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+            PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
+            PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
+            PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
+            PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
+            PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
+            docker compose \
               --env-file .env.production \
               -f "${next_compose}" "$@"
           }
@@ -116,7 +233,12 @@ jobs:
           backup_dir="${DEPLOY_PATH}/backups/${timestamp}-${IMAGE_TAG}"
           if [[ -f "${active_compose}" ]]; then
             compose_active() {
-              PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+              PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
+              PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
+              PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
+              PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
+              PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
+              docker compose \
                 --env-file .env.production \
                 -f "${active_compose}" "$@"
             }
@@ -158,7 +280,12 @@ jobs:
           mv "${next_compose}" "${active_compose}"
 
           compose() {
-            PORTAL_IMAGE_TAG="${IMAGE_TAG}" docker compose \
+            PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
+            PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
+            PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
+            PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
+            PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
+            docker compose \
               --env-file .env.production \
               -f "${active_compose}" "$@"
           }
@@ -177,6 +304,12 @@ jobs:
             printf 'SOURCE_BRANCH=main\n'
             printf 'SOURCE_COMMIT=%s\n' "${SOURCE_COMMIT}"
             printf 'IMAGE_TAG=%s\n' "${IMAGE_TAG}"
+            printf 'PORTAL_API_IMAGE=%s\n' "${PORTAL_API_IMAGE}"
+            printf 'PORTAL_WEB_IMAGE=%s\n' "${PORTAL_WEB_IMAGE}"
+            printf 'PORTAL_CONTROL_API_IMAGE=%s\n' "${PORTAL_CONTROL_API_IMAGE}"
+            printf 'PORTAL_ROADMAP_API_IMAGE=%s\n' "${PORTAL_ROADMAP_API_IMAGE}"
+            printf 'RELEASE_MANIFEST_SHA256=%s\n' "${N14_RELEASE_MANIFEST_SHA256}"
+            printf 'RELEASE_DECISION_SHA256=%s\n' "${N14_RELEASE_DECISION_SHA256}"
             printf 'DEPLOYED_AT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > "${marker_next}"
           mv "${marker_next}" "${DEPLOY_PATH}/deployed-release.env"

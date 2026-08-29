@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json",
+  "$ref": "#/$defs/EquityProjectionResponse",
+  "$defs": {
+    "Identifier": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$" },
+    "Decimal": { "type": "string", "pattern": "^[+-]?[0-9]+([.][0-9]+)?$" },
+    "Currency": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "NullableDateTime": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+    "Freshness": { "type": "string", "enum": ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"] },
+    "Completeness": { "type": "string", "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+    "PanelState": { "type": "string", "enum": ["loading", "ok", "empty", "partial", "stale", "denied", "unavailable", "insufficient_data", "terminal"] },
+    "Authority": { "type": "string", "enum": ["RESEARCH", "EXECUTION", "BROKER", "DERIVED"] },
+    "Warning": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": { "code": { "type": "string", "minLength": 1, "maxLength": 128 }, "message": { "type": "string", "minLength": 1, "maxLength": 512 } }
+    },
+    "SeriesGap": {
+      "type": "object", "additionalProperties": false,
+      "required": ["from", "to", "reason"],
+      "properties": {
+        "from": { "$ref": "#/$defs/DateTime" }, "to": { "$ref": "#/$defs/DateTime" },
+        "reason": { "type": "string", "enum": ["SOURCE_GAP", "RETENTION", "SESSION_CLOSED", "PROJECTION_DISCONTINUITY"] }
+      }
+    },
+    "EquityPoint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bucket_start", "equity", "drawdown"],
+      "properties": {
+        "bucket_start": { "$ref": "#/$defs/DateTime" },
+        "equity": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] },
+        "drawdown": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] }
+      }
+    },
+    "ApprovedBandPoint": {
+      "type": "object", "additionalProperties": false,
+      "required": ["bucket_start", "lower", "upper"],
+      "properties": { "bucket_start": { "$ref": "#/$defs/DateTime" }, "lower": { "$ref": "#/$defs/Decimal" }, "upper": { "$ref": "#/$defs/Decimal" } }
+    },
+    "ApprovedBand": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_id", "artifact_digest", "points"],
+      "properties": {
+        "run_id": { "$ref": "#/$defs/Identifier" },
+        "artifact_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "points": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/ApprovedBandPoint" } }
+      }
+    },
+    "Retention": {
+      "type": "object", "additionalProperties": false,
+      "required": ["availability", "policy_version"],
+      "properties": {
+        "availability": { "type": "string", "enum": ["HOT", "PARTIAL_HOT", "COLD_REQUESTABLE", "PURGED", "UNKNOWN"] },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "EquityProjectionData": {
+      "type": "object", "additionalProperties": false,
+      "required": ["deployment_id", "currency", "requested_from", "requested_to", "interval", "interval_seconds", "expected_buckets", "returned_buckets", "source_rows", "coverage", "joined_run_id", "artifact_digest", "points", "approved_band", "gaps", "retention"],
+      "properties": {
+        "deployment_id": { "$ref": "#/$defs/Identifier" }, "currency": { "$ref": "#/$defs/Currency" },
+        "requested_from": { "$ref": "#/$defs/DateTime" }, "requested_to": { "$ref": "#/$defs/DateTime" },
+        "interval": { "type": "string", "enum": ["1m", "5m", "15m", "1h", "4h", "1d"] },
+        "interval_seconds": { "type": "integer", "enum": [60, 300, 900, 3600, 14400, 86400] },
+        "expected_buckets": { "type": "integer", "minimum": 1, "maximum": 5000 },
+        "returned_buckets": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "source_rows": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "coverage": { "$ref": "#/$defs/Decimal" },
+        "joined_run_id": { "$ref": "#/$defs/Identifier" },
+        "artifact_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "points": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/EquityPoint" } },
+        "approved_band": { "oneOf": [{ "$ref": "#/$defs/ApprovedBand" }, { "type": "null" }] },
+        "gaps": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/SeriesGap" } },
+        "retention": { "$ref": "#/$defs/Retention" }
+      }
+    },
+    "EquityProjectionAnalytics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "formula_version", "source_authority", "input_freshness_floor", "panel_state", "input_completeness", "input_as_of", "warnings", "data"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "execution.analytics.v1" },
+        "formula_version": { "type": "string", "const": "equity_projection.v1" },
+        "source_authority": { "type": "string", "const": "DERIVED" },
+        "input_freshness_floor": { "$ref": "#/$defs/Freshness" }, "panel_state": { "$ref": "#/$defs/PanelState" },
+        "input_completeness": { "$ref": "#/$defs/Completeness" }, "input_as_of": { "$ref": "#/$defs/NullableDateTime" },
+        "warnings": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/Warning" } },
+        "data": { "$ref": "#/$defs/EquityProjectionData" }
+      }
+    },
+    "EquityProjectionResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "runtime_active", "source_side_effect_requested", "analytics"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "execution.analytics.equity-projection.v1" },
+        "runtime_active": { "type": "boolean", "const": false },
+        "source_side_effect_requested": { "type": "boolean", "const": false },
+        "analytics": { "$ref": "#/$defs/EquityProjectionAnalytics" }
+      }
+    },
+    "LinePoint": {
+      "type": "object", "additionalProperties": false, "required": ["bucket_start", "value"],
+      "properties": { "bucket_start": { "$ref": "#/$defs/DateTime" }, "value": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] } }
+    },
+    "HistogramBin": {
+      "type": "object", "additionalProperties": false, "required": ["lower", "upper", "count"],
+      "properties": { "lower": { "$ref": "#/$defs/Decimal" }, "upper": { "$ref": "#/$defs/Decimal" }, "count": { "type": "integer", "minimum": 0 } }
+    },
+    "FunnelStage": {
+      "type": "object", "additionalProperties": false, "required": ["stage", "count", "conversion"],
+      "properties": { "stage": { "type": "string", "minLength": 1, "maxLength": 64 }, "count": { "type": "integer", "minimum": 0 }, "conversion": { "$ref": "#/$defs/Decimal" } }
+    },
+    "WaterfallStep": {
+      "type": "object", "additionalProperties": false, "required": ["label", "start", "delta", "end"],
+      "properties": { "label": { "type": "string", "minLength": 1, "maxLength": 128 }, "start": { "$ref": "#/$defs/Decimal" }, "delta": { "$ref": "#/$defs/Decimal" }, "end": { "$ref": "#/$defs/Decimal" } }
+    },
+    "HeatmapCell": {
+      "type": "object", "additionalProperties": false, "required": ["x", "y", "value", "sample_count"],
+      "properties": { "x": { "type": "string", "minLength": 1, "maxLength": 64 }, "y": { "type": "string", "minLength": 1, "maxLength": 64 }, "value": { "$ref": "#/$defs/Decimal" }, "sample_count": { "type": "integer", "minimum": 0 } }
+    },
+    "BarPoint": {
+      "type": "object", "additionalProperties": false, "required": ["label", "value", "currency"],
+      "properties": { "label": { "type": "string", "minLength": 1, "maxLength": 128 }, "value": { "$ref": "#/$defs/Decimal" }, "currency": { "oneOf": [{ "$ref": "#/$defs/Currency" }, { "type": "null" }] } }
+    },
+    "LineSeries": { "type": "object", "additionalProperties": false, "required": ["kind", "points"], "properties": { "kind": { "type": "string", "const": "line" }, "points": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/LinePoint" } } } },
+    "HistogramSeries": { "type": "object", "additionalProperties": false, "required": ["kind", "points"], "properties": { "kind": { "type": "string", "const": "histogram" }, "points": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/HistogramBin" } } } },
+    "FunnelSeries": { "type": "object", "additionalProperties": false, "required": ["kind", "points"], "properties": { "kind": { "type": "string", "const": "funnel" }, "points": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/FunnelStage" } } } },
+    "WaterfallSeries": { "type": "object", "additionalProperties": false, "required": ["kind", "points"], "properties": { "kind": { "type": "string", "const": "waterfall" }, "points": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/WaterfallStep" } } } },
+    "HeatmapSeries": { "type": "object", "additionalProperties": false, "required": ["kind", "points"], "properties": { "kind": { "type": "string", "const": "heatmap" }, "points": { "type": "array", "maxItems": 4096, "items": { "$ref": "#/$defs/HeatmapCell" } } } },
+    "BarSeries": { "type": "object", "additionalProperties": false, "required": ["kind", "points"], "properties": { "kind": { "type": "string", "const": "bar" }, "points": { "type": "array", "maxItems": 500, "items": { "$ref": "#/$defs/BarPoint" } } } },
+    "InsightSeries": { "oneOf": [{ "$ref": "#/$defs/LineSeries" }, { "$ref": "#/$defs/HistogramSeries" }, { "$ref": "#/$defs/FunnelSeries" }, { "$ref": "#/$defs/WaterfallSeries" }, { "$ref": "#/$defs/HeatmapSeries" }, { "$ref": "#/$defs/BarSeries" }] },
+    "InsightTile": {
+      "type": "object", "additionalProperties": false,
+      "required": ["tile_id", "title", "tile_kind", "formula_version", "authority", "freshness", "completeness", "as_of", "minimum_samples", "observed_samples", "state", "series"],
+      "properties": {
+        "tile_id": { "$ref": "#/$defs/Identifier" }, "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "tile_kind": { "type": "string", "enum": ["line", "histogram", "funnel", "waterfall", "heatmap", "bar"] },
+        "formula_version": { "type": "string", "minLength": 1, "maxLength": 128 }, "authority": { "$ref": "#/$defs/Authority" },
+        "freshness": { "$ref": "#/$defs/Freshness" }, "completeness": { "$ref": "#/$defs/Completeness" }, "as_of": { "$ref": "#/$defs/NullableDateTime" },
+        "minimum_samples": { "type": "integer", "minimum": 0 }, "observed_samples": { "type": "integer", "minimum": 0 },
+        "state": { "type": "string", "enum": ["READY", "INSUFFICIENT_DATA", "UNAVAILABLE"] },
+        "series": { "oneOf": [{ "$ref": "#/$defs/InsightSeries" }, { "type": "null" }] }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "const": "READY" } }, "required": ["state"] }, "then": { "properties": { "series": { "$ref": "#/$defs/InsightSeries" } } }, "else": { "properties": { "series": { "type": "null" } } } },
+        { "if": { "properties": { "tile_kind": { "const": "line" } }, "required": ["tile_kind"] }, "then": { "properties": { "series": { "oneOf": [{ "$ref": "#/$defs/LineSeries" }, { "type": "null" }] } } } },
+        { "if": { "properties": { "tile_kind": { "const": "histogram" } }, "required": ["tile_kind"] }, "then": { "properties": { "series": { "oneOf": [{ "$ref": "#/$defs/HistogramSeries" }, { "type": "null" }] } } } },
+        { "if": { "properties": { "tile_kind": { "const": "funnel" } }, "required": ["tile_kind"] }, "then": { "properties": { "series": { "oneOf": [{ "$ref": "#/$defs/FunnelSeries" }, { "type": "null" }] } } } },
+        { "if": { "properties": { "tile_kind": { "const": "waterfall" } }, "required": ["tile_kind"] }, "then": { "properties": { "series": { "oneOf": [{ "$ref": "#/$defs/WaterfallSeries" }, { "type": "null" }] } } } },
+        { "if": { "properties": { "tile_kind": { "const": "heatmap" } }, "required": ["tile_kind"] }, "then": { "properties": { "series": { "oneOf": [{ "$ref": "#/$defs/HeatmapSeries" }, { "type": "null" }] } } } },
+        { "if": { "properties": { "tile_kind": { "const": "bar" } }, "required": ["tile_kind"] }, "then": { "properties": { "series": { "oneOf": [{ "$ref": "#/$defs/BarSeries" }, { "type": "null" }] } } } }
+      ]
+    },
+    "InsightTileBatch": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "runtime_active", "source_side_effect_requested", "subject_id", "panel_state", "returned_tiles", "total_series_items", "tiles"],
+      "properties": {
+        "schema_version": { "type": "string", "const": "execution.analytics.insight-series.v1" },
+        "runtime_active": { "type": "boolean", "const": false }, "source_side_effect_requested": { "type": "boolean", "const": false },
+        "subject_id": { "$ref": "#/$defs/Identifier" }, "panel_state": { "$ref": "#/$defs/PanelState" },
+        "returned_tiles": { "type": "integer", "minimum": 0, "maximum": 12 }, "total_series_items": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "tiles": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/InsightTile" } }
+      }
+    }
+  }
+}

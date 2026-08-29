@@ -32,6 +32,7 @@ DELIVERY_POLICY_FLAGS = (
     "query_enabled",
     "projection_ingestion_enabled",
     "sse_enabled",
+    "governance_write_enabled",
     *DELIVERY_COMMAND_FLAGS,
 )
 

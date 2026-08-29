@@ -34,6 +34,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "execution-contracts",
+ "query-api",
  "rust_decimal",
  "serde",
  "serde_json",
@@ -513,6 +514,7 @@ dependencies = [
  "paper-source-transport",
  "projection-core",
  "projection-store-pg",
+ "query-api",
  "rcgen",
  "realtime-sse",
  "reqwest",
@@ -521,6 +523,7 @@ dependencies = [
  "rustls-pemfile",
  "serde",
  "serde_json",
+ "source-qualification",
  "thiserror",
  "time",
  "tokio",
@@ -538,6 +541,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "252afb9ae5eaa683babdc6a068b3f5726eb19e05070c731f9b2a23a7c3e8ed34"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "emergency-routing"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
 ]
 
 [[package]]
@@ -585,6 +599,17 @@ dependencies = [
  "rust_decimal",
  "serde",
  "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "external-read-adapter"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "sha2",
  "thiserror",
 ]
 
@@ -1019,6 +1044,18 @@ checksum = "d466e9454f08e4a911e14806c24e16fba1b4c121d1ea474396f396069cf949d9"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+]
+
+[[package]]
+name = "intercell-gateway"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
 ]
 
 [[package]]
@@ -1465,6 +1502,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "production-readiness"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
 name = "projection-core"
 version = "0.1.0"
 dependencies = [
@@ -1491,6 +1538,8 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "shared-consumer-core",
+ "source-qualification",
  "sqlx",
  "thiserror",
  "tokio",
@@ -2048,6 +2097,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shared-consumer-core"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "projection-core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]

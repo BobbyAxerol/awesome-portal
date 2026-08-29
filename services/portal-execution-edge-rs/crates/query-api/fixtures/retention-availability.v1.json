@@ -1,0 +1,42 @@
+[
+  {
+    "availability": "HOT",
+    "requested_from": "2026-08-24T00:00:00Z",
+    "requested_to": "2026-08-25T00:00:00Z",
+    "hot_from": "2026-08-20T00:00:00Z",
+    "policy_version": "paper-retention-v1",
+    "access_request_path": null
+  },
+  {
+    "availability": "PARTIAL_HOT",
+    "requested_from": "2026-08-18T00:00:00Z",
+    "requested_to": "2026-08-24T00:00:00Z",
+    "hot_from": "2026-08-20T00:00:00Z",
+    "policy_version": "paper-retention-v1",
+    "access_request_path": null
+  },
+  {
+    "availability": "COLD_REQUESTABLE",
+    "requested_from": "2026-07-01T00:00:00Z",
+    "requested_to": "2026-08-19T23:59:59Z",
+    "hot_from": "2026-08-20T00:00:00Z",
+    "policy_version": "paper-retention-v1",
+    "access_request_path": "/admin/data-access-requests"
+  },
+  {
+    "availability": "PURGED",
+    "requested_from": "2025-01-01T00:00:00Z",
+    "requested_to": "2025-02-01T00:00:00Z",
+    "hot_from": "2026-08-20T00:00:00Z",
+    "policy_version": "paper-retention-v1",
+    "access_request_path": null
+  },
+  {
+    "availability": "UNKNOWN",
+    "requested_from": "2026-02-01T00:00:00Z",
+    "requested_to": "2026-03-01T00:00:00Z",
+    "hot_from": "2026-08-20T00:00:00Z",
+    "policy_version": "UNCONFIGURED",
+    "access_request_path": null
+  }
+]

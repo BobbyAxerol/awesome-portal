@@ -1,0 +1,31 @@
+{
+  "schema_version": "portal.execution.d4.incremental-owner-pack.v1",
+  "contract_revision": "d4.paper-read.v2",
+  "previous_revision": "d4.paper-read.v1",
+  "compatibility_revision": "d4.paper-read.v1-to-v2",
+  "published_at_utc": "2026-01-01T00:00:00Z",
+  "source_contract_commit": "0000000000000000000000000000000000000000",
+  "owner_id": "trading-system-owner",
+  "owner_accepted": false,
+  "owner_acceptance_evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "capability_contract_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "files": {
+    "incremental-contract.json": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "compatibility-fixtures.json": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "error-corpus.json": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "authority": {
+    "contract_only": true,
+    "source_implementation": false,
+    "source_traffic": false,
+    "portal_activation": false,
+    "database": false,
+    "redis": false,
+    "cli": false,
+    "broker": false,
+    "command": false,
+    "mutation": false,
+    "live": false,
+    "canary": false
+  }
+}

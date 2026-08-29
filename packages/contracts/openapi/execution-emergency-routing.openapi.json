@@ -1,0 +1,142 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Primus Portal Source-Dark Emergency Routing Contract",
+    "version": "1.0.0",
+    "description": "N16A component-only routing, unavailable/degraded and emergency ceremony contract. No public route, internal origin or command is mounted."
+  },
+  "servers": [],
+  "paths": {},
+  "components": {
+    "schemas": {
+      "EmergencyUiState": { "type": "string", "enum": ["SOURCE_DARK", "UNAVAILABLE", "DEGRADED", "ROLLBACK"] },
+      "EmergencyRoutingReason": { "type": "string", "enum": ["SOURCE_DARK", "RESEARCH_UNAVAILABLE", "CLOUDFLARE_UNAVAILABLE", "EXECUTION_ORIGIN_UNAVAILABLE", "N12_R3_CATALOGUE_UNPUBLISHED", "ROLLBACK_ENGAGED"] },
+      "EmergencyDenialReason": { "type": "string", "enum": ["N12_R3_CATALOGUE_UNPUBLISHED", "SOURCE_DARK", "RISK_INCREASING_FORBIDDEN", "ROLE_DENIED", "SESSION_NOT_YET_VALID", "SESSION_EXPIRED", "SESSION_TOO_LONG", "STEP_UP_REQUIRED", "STEP_UP_EXPIRED", "ACTOR_MISMATCH", "INVALID_SCOPE", "INVALID_REASON", "CONFIRMATION_MISMATCH", "INVALID_EXPIRY", "DISTINCT_APPROVAL_REQUIRED"] },
+      "RoutePolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["public_origin", "path_prefix", "normal_profile", "emergency_profile", "browser_mode", "origin_resolution", "same_origin_only", "redirects_allowed", "cors_allowed", "public_route_active", "execution_origin_bound", "browser_internal_origin_visible", "browser_delegated_token_visible"],
+        "properties": {
+          "public_origin": { "type": "string" },
+          "path_prefix": { "type": "string" },
+          "normal_profile": { "type": "string" },
+          "emergency_profile": { "type": "string" },
+          "browser_mode": { "type": "string", "enum": ["SAME_ORIGIN_ONLY"] },
+          "origin_resolution": { "type": "string", "enum": ["SERVER_SIDE_ONLY"] },
+          "same_origin_only": { "type": "boolean" },
+          "redirects_allowed": { "type": "boolean" },
+          "cors_allowed": { "type": "boolean" },
+          "public_route_active": { "type": "boolean" },
+          "execution_origin_bound": { "type": "boolean" },
+          "browser_internal_origin_visible": { "type": "boolean" },
+          "browser_delegated_token_visible": { "type": "boolean" }
+        }
+      },
+      "EmergencySecurityPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["same_portal_session", "allowed_roles", "step_up_method", "maximum_session_seconds", "maximum_step_up_age_seconds", "maximum_break_glass_seconds", "minimum_distinct_approvals", "minimum_reason_characters", "maximum_reason_characters", "confirmation_literal", "immutable_audit_mode", "command_independent_health", "raw_browser_token_forwarding"],
+        "properties": {
+          "same_portal_session": { "type": "boolean" },
+          "allowed_roles": { "type": "array", "items": { "type": "string", "enum": ["OPERATOR", "ADMIN"] } },
+          "step_up_method": { "type": "string", "enum": ["PHISHING_RESISTANT_WEBAUTHN"] },
+          "maximum_session_seconds": { "type": "integer" },
+          "maximum_step_up_age_seconds": { "type": "integer" },
+          "maximum_break_glass_seconds": { "type": "integer" },
+          "minimum_distinct_approvals": { "type": "integer" },
+          "minimum_reason_characters": { "type": "integer" },
+          "maximum_reason_characters": { "type": "integer" },
+          "confirmation_literal": { "type": "string", "enum": ["BREAK-GLASS"] },
+          "immutable_audit_mode": { "type": "string", "enum": ["SHA256_HASH_CHAIN"] },
+          "command_independent_health": { "type": "boolean" },
+          "raw_browser_token_forwarding": { "type": "boolean" }
+        }
+      },
+      "CommandBoundary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["protective_capabilities", "forbidden_risk_increasing_capabilities", "n12_r3_catalogue_published", "dedicated_command_identity_bound", "control_visible", "plan_allowed", "apply_allowed", "verify_allowed"],
+        "properties": {
+          "protective_capabilities": { "type": "array", "items": { "type": "string", "enum": ["LIVE_HALT", "LIVE_REDUCE", "LIVE_EMERGENCY_CLOSE"] } },
+          "forbidden_risk_increasing_capabilities": { "type": "array", "items": { "type": "string", "enum": ["LIVE_RESUME", "LIVE_SCALE"] } },
+          "n12_r3_catalogue_published": { "type": "boolean" },
+          "dedicated_command_identity_bound": { "type": "boolean" },
+          "control_visible": { "type": "boolean" },
+          "plan_allowed": { "type": "boolean" },
+          "apply_allowed": { "type": "boolean" },
+          "verify_allowed": { "type": "boolean" }
+        }
+      },
+      "EmergencyProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "profile_id", "source_dark", "runtime_active", "network_authorized", "source_call_authorized", "route", "security", "command"],
+        "properties": {
+          "schema_version": { "type": "string", "enum": ["portal.execution.emergency-routing.v1"] },
+          "profile_id": { "type": "string" },
+          "source_dark": { "type": "boolean" },
+          "runtime_active": { "type": "boolean" },
+          "network_authorized": { "type": "boolean" },
+          "source_call_authorized": { "type": "boolean" },
+          "route": { "$ref": "#/components/schemas/RoutePolicy" },
+          "security": { "$ref": "#/components/schemas/EmergencySecurityPolicy" },
+          "command": { "$ref": "#/components/schemas/CommandBoundary" }
+        }
+      },
+      "RouteDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "scenario", "research", "cloudflare", "execution_origin", "ui_state", "reason", "route_target", "candidate_profile", "health_available", "control_visible", "source_request_sent", "network_attempts"],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "scenario": { "type": "string", "enum": ["NORMAL_RESEARCH", "RESEARCH_LOSS", "CLOUDFLARE_LOSS", "EXECUTION_ORIGIN_LOSS", "ROLLBACK"] },
+          "research": { "type": "string", "enum": ["AVAILABLE", "DEGRADED", "UNAVAILABLE"] },
+          "cloudflare": { "type": "string", "enum": ["AVAILABLE", "DEGRADED", "UNAVAILABLE"] },
+          "execution_origin": { "type": "string", "enum": ["AVAILABLE", "DEGRADED", "UNAVAILABLE"] },
+          "ui_state": { "$ref": "#/components/schemas/EmergencyUiState" },
+          "reason": { "$ref": "#/components/schemas/EmergencyRoutingReason" },
+          "route_target": { "type": "string", "enum": ["NONE"] },
+          "candidate_profile": { "type": ["string", "null"] },
+          "health_available": { "type": "boolean" },
+          "control_visible": { "type": "boolean" },
+          "source_request_sent": { "type": "boolean" },
+          "network_attempts": { "type": "integer" }
+        }
+      },
+      "CommandDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["schema_version", "operation_id", "decision", "reason", "risk_tier", "plan_allowed", "apply_allowed", "verify_allowed", "source_request_sent"],
+        "properties": {
+          "schema_version": { "type": "string" },
+          "operation_id": { "type": "string" },
+          "decision": { "type": "string", "enum": ["DENIED"] },
+          "reason": { "$ref": "#/components/schemas/EmergencyDenialReason" },
+          "risk_tier": { "type": "string", "enum": ["R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING"] },
+          "plan_allowed": { "type": "boolean" },
+          "apply_allowed": { "type": "boolean" },
+          "verify_allowed": { "type": "boolean" },
+          "source_request_sent": { "type": "boolean" }
+        }
+      },
+      "AuditRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "occurred_at_epoch_seconds", "event", "actor_id", "operation_id", "reason_code", "previous_hash", "record_hash"],
+        "properties": {
+          "sequence": { "type": "integer" },
+          "occurred_at_epoch_seconds": { "type": "integer" },
+          "event": { "type": "string", "enum": ["CEREMONY_VALIDATED", "COMMAND_DENIED", "SESSION_EXPIRED", "DEPENDENCY_DEGRADED", "ROLLBACK_ENGAGED"] },
+          "actor_id": { "type": "string" },
+          "operation_id": { "type": "string" },
+          "reason_code": { "type": "string" },
+          "previous_hash": { "type": "string" },
+          "record_hash": { "type": "string" }
+        }
+      }
+    }
+  },
+  "x-runtime-mounted": false,
+  "x-source-dark": true,
+  "x-public-route-active": false
+}

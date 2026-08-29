@@ -1,0 +1,10 @@
+{
+  "schema_version": "execution.analytics.insight-series.v1", "runtime_active": false, "source_side_effect_requested": false,
+  "subject_id": "alpha_1", "panel_state": "ok", "returned_tiles": 1, "total_series_items": 4,
+  "tiles": [{
+    "tile_id": "order-funnel", "title": "Order funnel", "tile_kind": "funnel", "formula_version": "order_funnel.v1",
+    "authority": "DERIVED", "freshness": "OK", "completeness": "COMPLETE", "as_of": "2026-08-26T10:00:00Z",
+    "minimum_samples": 30, "observed_samples": 100, "state": "READY",
+    "series": { "kind": "funnel", "points": [{ "stage": "submitted", "count": 100, "conversion": "1" }, { "stage": "source_ack", "count": 99, "conversion": "0.99" }, { "stage": "broker_ack", "count": 97, "conversion": "0.9797979797979797979797979798" }, { "stage": "filled", "count": 90, "conversion": "0.9278350515463917525773195876" }] }
+  }]
+}

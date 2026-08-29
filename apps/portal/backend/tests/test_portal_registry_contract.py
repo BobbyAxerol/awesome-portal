@@ -23,7 +23,7 @@ SCHEMA_PATHS = {
     "summary": SCHEMA_ROOT / "portal-summary.v1.schema.json",
 }
 
-EXECUTION_LOOP_REVISION_4_ROUTES = {
+EXECUTION_LOOP_REVISION_5_ROUTES = {
     "EXECUTION_COMMAND_CENTER_SCREEN": "/execution",
     "EXECUTION_OPERATIONS_QUEUE_SCREEN": "/execution/operations",
     "EXECUTION_INCIDENT_DETAIL_SCREEN": "/execution/operations/incidents/:incidentId",
@@ -46,6 +46,7 @@ DELIVERY_POLICY_FLAGS = {
     "query_enabled",
     "projection_ingestion_enabled",
     "sse_enabled",
+    "governance_write_enabled",
     "paper_commands_enabled",
     "sandbox_commands_enabled",
     "live_protective_commands_enabled",
@@ -336,9 +337,9 @@ def test_canonical_registry_source_and_public_document_validate() -> None:
     _assert_valid("public", public_document)
 
 
-def test_revision_4_commissions_execution_routes_with_fail_closed_fixture_policy() -> None:
+def test_revision_5_commissions_execution_routes_with_fail_closed_fixture_policy() -> None:
     source = _load_json(SOURCE_PATH)
-    assert source["revision"] == 4
+    assert source["revision"] == 5
     assert [group["id"] for group in source["feature_groups"][:4]] == [
         "command",
         "governance",
@@ -349,16 +350,16 @@ def test_revision_4_commissions_execution_routes_with_fail_closed_fixture_policy
     screens = {screen["screen_id"]: screen for screen in source["screens"]}
     assert {
         screen_id: screens[screen_id]["route"]
-        for screen_id in EXECUTION_LOOP_REVISION_4_ROUTES
-    } == EXECUTION_LOOP_REVISION_4_ROUTES
+        for screen_id in EXECUTION_LOOP_REVISION_5_ROUTES
+    } == EXECUTION_LOOP_REVISION_5_ROUTES
 
-    for screen_id in EXECUTION_LOOP_REVISION_4_ROUTES:
+    for screen_id in EXECUTION_LOOP_REVISION_5_ROUTES:
         screen = screens[screen_id]
         assert screen["contract_revision"] == 2
         assert screen["maturity"] == "COMMISSIONED"
         assert screen["data_mode"] == "NONE"
         assert screen["delivery_profile"] == "fixture"
-        assert screen["delivery_policy"]["policy_revision"] == 1
+        assert screen["delivery_policy"]["policy_revision"] == 2
         assert DELIVERY_POLICY_FLAGS <= screen["delivery_policy"].keys()
         assert not any(
             screen["delivery_policy"][flag] for flag in DELIVERY_POLICY_FLAGS

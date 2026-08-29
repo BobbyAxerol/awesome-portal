@@ -1333,6 +1333,10 @@
         "additionalProperties": false,
         "description": "Commissioning flags, never a substitute for runtime authorization.",
         "properties": {
+          "governance_write_enabled": {
+            "title": "Governance Write Enabled",
+            "type": "boolean"
+          },
           "live_protective_commands_enabled": {
             "title": "Live Protective Commands Enabled",
             "type": "boolean"
@@ -1372,6 +1376,7 @@
           "query_enabled",
           "projection_ingestion_enabled",
           "sse_enabled",
+          "governance_write_enabled",
           "paper_commands_enabled",
           "sandbox_commands_enabled",
           "live_protective_commands_enabled",

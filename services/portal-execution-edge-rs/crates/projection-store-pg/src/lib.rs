@@ -10,6 +10,9 @@ use projection_core::{
     ProjectionObservation, ProjectionOperation, ProjectionReducer, ProjectionScope, ReplayRecord,
     SnapshotCompleteness, SourceSequenceSemantics,
 };
+use source_qualification::shadow_screen::{
+    accept_shadow_activation, AcceptedShadowActivation, ShadowActivationEvidence,
+};
 use sqlx::{postgres::PgPoolOptions, PgPool, Postgres, Row, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
@@ -18,6 +21,8 @@ mod analytics_repository;
 mod d4_writer;
 mod query;
 mod realtime;
+mod retention;
+mod shared_consumer;
 
 pub use analytics_repository::{
     analytics_facts_digest, AnalyticsFactDigestInput, AnalyticsReadRequirement, AnalyticsSourceRead,
@@ -32,6 +37,12 @@ pub use realtime::{
     RealtimeActiveEpochWatermark, RealtimeEpochAvailability, RealtimeJournalPage,
     RealtimeJournalRecord, RealtimeScopeAvailability,
 };
+pub use retention::{
+    evaluate_storage_pressure, recovery_directive, retention_policy_digest, CleanupOutcome,
+    CleanupPlan, RecoveryCause, RecoveryCheckpointEvidence, RecoveryDirective,
+    RetentionLifecyclePolicySnapshot, StorageBudgetObservation, StoragePressure,
+};
+pub use shared_consumer::SharedConsumerLeaseAcquireOutcome;
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
 
@@ -70,6 +81,14 @@ pub struct ActivatedEpoch {
     pub retained_previous_epoch_id: Option<Uuid>,
     pub overlap_until: DateTime<Utc>,
     pub state_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ShadowScreenAuthority {
+    pub epoch_id: Uuid,
+    pub screen_id: String,
+    pub manifest_digest: String,
+    pub capability_snapshot_id: String,
 }
 
 #[derive(Clone)]
@@ -591,7 +610,8 @@ impl PgProjectionStore {
     ///
     /// Rejects parity drift, unresolved dead letters/gaps, invalid status or a
     /// database failure. The swap is one transaction.
-    pub async fn activate_epoch(
+    #[cfg(test)]
+    async fn activate_epoch(
         &self,
         scope: &ProjectionScope,
         candidate_epoch_id: Uuid,
@@ -695,6 +715,200 @@ impl PgProjectionStore {
             retained_previous_epoch_id: previous,
             overlap_until,
             state_digest: actual_state_digest,
+        })
+    }
+
+    /// Atomically records an accepted N07 compatibility manifest and promotes
+    /// its parity-matched Paper BUILDING epoch to ACTIVE. Registry and runtime
+    /// flags remain separate owner-controlled changes.
+    ///
+    /// # Errors
+    ///
+    /// Rejects evidence/epoch compatibility drift, parity mismatch, unresolved
+    /// blockers, duplicate activation evidence or a database failure.
+    #[allow(clippy::too_many_lines)]
+    pub async fn activate_shadow_epoch(
+        &self,
+        accepted: &AcceptedShadowActivation,
+        activated_at: DateTime<Utc>,
+        overlap: Duration,
+    ) -> Result<ActivatedEpoch, StoreError> {
+        let evidence = accepted.evidence();
+        let overlap = TimeDelta::from_std(overlap).map_err(|_| StoreError::InvalidOverlap)?;
+        let mut transaction = self.pool.begin().await?;
+        let candidate = sqlx::query(
+            "SELECT workspace_id, environment, status, adapter_version,
+                    source_gateway_digest, capability_snapshot_id
+             FROM portal_projection.epochs WHERE epoch_id = $1 FOR UPDATE",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .fetch_optional(&mut *transaction)
+        .await?
+        .ok_or(StoreError::EpochNotFound)?;
+        if candidate.try_get::<String, _>("workspace_id")? != evidence.scope.workspace_id.as_str()
+            || candidate.try_get::<String, _>("environment")? != evidence.scope.environment
+        {
+            return Err(StoreError::ScopeMismatch);
+        }
+        if candidate.try_get::<String, _>("status")? != "BUILDING" {
+            return Err(StoreError::EpochNotBuilding);
+        }
+        if candidate.try_get::<String, _>("adapter_version")?
+            != evidence.compatibility.adapter_version
+            || candidate.try_get::<String, _>("source_gateway_digest")?
+                != evidence.compatibility.source_gateway_digest
+            || candidate.try_get::<String, _>("capability_snapshot_id")?
+                != evidence.compatibility.capability_snapshot_id
+        {
+            return Err(StoreError::ShadowCompatibilityMismatch);
+        }
+        let blockers: i64 = sqlx::query_scalar(
+            "SELECT
+               (SELECT count(*) FROM portal_projection.dead_letters
+                WHERE epoch_id = $1 AND status IN ('OPEN', 'REPLAYING'))
+               +
+               (SELECT count(*) FROM portal_projection.gaps
+                WHERE epoch_id = $1 AND resolved_at IS NULL)",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        if blockers != 0 {
+            return Err(StoreError::EpochHasUnresolvedBlockers);
+        }
+        let rows = sqlx::query(
+            "SELECT * FROM portal_projection.entities
+             WHERE epoch_id = $1 ORDER BY entity_kind, entity_id",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .fetch_all(&mut *transaction)
+        .await?;
+        let entities = rows
+            .iter()
+            .map(row_to_entity)
+            .collect::<Result<Vec<_>, _>>()?;
+        let actual_state_digest = semantic_state_digest(&entities)?;
+        if evidence.expected_state_digest != actual_state_digest {
+            sqlx::query(
+                "UPDATE portal_projection.epochs
+                 SET expected_state_digest = $2, actual_state_digest = $3
+                 WHERE epoch_id = $1",
+            )
+            .bind(evidence.candidate_epoch_id)
+            .bind(&evidence.expected_state_digest)
+            .bind(&actual_state_digest)
+            .execute(&mut *transaction)
+            .await?;
+            transaction.commit().await?;
+            return Err(StoreError::ParityMismatch);
+        }
+        let previous = sqlx::query_scalar::<_, Uuid>(
+            "SELECT epoch_id FROM portal_projection.epochs
+             WHERE workspace_id = $1 AND environment = $2 AND status = 'ACTIVE'
+             FOR UPDATE",
+        )
+        .bind(evidence.scope.workspace_id.as_str())
+        .bind(&evidence.scope.environment)
+        .fetch_optional(&mut *transaction)
+        .await?;
+        let overlap_until = activated_at + overlap;
+        if let Some(previous_epoch_id) = previous {
+            sqlx::query(
+                "UPDATE portal_projection.epochs
+                 SET status = 'RETAINED', overlap_until = $2
+                 WHERE epoch_id = $1",
+            )
+            .bind(previous_epoch_id)
+            .bind(overlap_until)
+            .execute(&mut *transaction)
+            .await?;
+        }
+        let owner_approved_at = evidence
+            .owner_approval
+            .approved_at
+            .ok_or(StoreError::ShadowOwnerApprovalMissing)?;
+        sqlx::query(
+            "INSERT INTO portal_projection.shadow_screen_activations
+             (activation_id,epoch_id,workspace_id,environment,screen_id,
+              delivery_profile,manifest_digest,manifest,owner_id,
+              owner_approved_at,activated_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(evidence.candidate_epoch_id)
+        .bind(evidence.scope.workspace_id.as_str())
+        .bind(&evidence.scope.environment)
+        .bind(&evidence.screen_id)
+        .bind(&evidence.delivery_profile)
+        .bind(accepted.manifest_digest())
+        .bind(serde_json::to_value(evidence).map_err(|_| StoreError::Serialization)?)
+        .bind(&evidence.owner_approval.owner_id)
+        .bind(owner_approved_at)
+        .bind(activated_at)
+        .execute(&mut *transaction)
+        .await?;
+        sqlx::query(
+            "UPDATE portal_projection.epochs
+             SET status = 'ACTIVE', activated_at = $2,
+                 expected_state_digest = $3, actual_state_digest = $3
+             WHERE epoch_id = $1",
+        )
+        .bind(evidence.candidate_epoch_id)
+        .bind(activated_at)
+        .bind(&actual_state_digest)
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(ActivatedEpoch {
+            active_epoch_id: evidence.candidate_epoch_id,
+            retained_previous_epoch_id: previous,
+            overlap_until,
+            state_digest: actual_state_digest,
+        })
+    }
+
+    /// Resolves an ACTIVE epoch only when it was commissioned by an immutable,
+    /// still-valid N07 shadow-screen manifest.
+    ///
+    /// # Errors
+    ///
+    /// Fails closed for absent/tampered activation evidence or scope drift.
+    pub async fn active_shadow_screen_authority(
+        &self,
+        scope: &ProjectionScope,
+        screen_id: &str,
+    ) -> Result<ShadowScreenAuthority, StoreError> {
+        let row = sqlx::query(
+            "SELECT e.epoch_id, e.capability_snapshot_id, a.screen_id,
+                    a.manifest_digest, a.manifest
+             FROM portal_projection.epochs e
+             JOIN portal_projection.shadow_screen_activations a ON a.epoch_id=e.epoch_id
+             WHERE e.workspace_id=$1 AND e.environment=$2 AND e.status='ACTIVE'
+               AND a.screen_id=$3 AND a.delivery_profile='shadow'",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .bind(screen_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(StoreError::ShadowScreenNotActivated)?;
+        let epoch_id: Uuid = row.try_get("epoch_id")?;
+        let manifest_digest: String = row.try_get("manifest_digest")?;
+        let manifest: ShadowActivationEvidence =
+            serde_json::from_value(row.try_get("manifest")?)
+                .map_err(|_| StoreError::ShadowActivationEvidenceInvalid)?;
+        let accepted = accept_shadow_activation(manifest)
+            .map_err(|_| StoreError::ShadowActivationEvidenceInvalid)?;
+        if accepted.manifest_digest() != manifest_digest
+            || accepted.evidence().candidate_epoch_id != epoch_id
+        {
+            return Err(StoreError::ShadowActivationEvidenceInvalid);
+        }
+        Ok(ShadowScreenAuthority {
+            epoch_id,
+            screen_id: row.try_get("screen_id")?,
+            manifest_digest,
+            capability_snapshot_id: row.try_get("capability_snapshot_id")?,
         })
     }
 
@@ -1194,6 +1408,14 @@ pub enum StoreError {
     ParityMismatch,
     #[error("projection epoch overlap is invalid")]
     InvalidOverlap,
+    #[error("N07 shadow compatibility manifest does not match the BUILDING epoch")]
+    ShadowCompatibilityMismatch,
+    #[error("N07 shadow activation owner approval timestamp is missing")]
+    ShadowOwnerApprovalMissing,
+    #[error("N07 shadow screen is not commissioned for the active epoch")]
+    ShadowScreenNotActivated,
+    #[error("N07 shadow activation evidence is invalid or tampered")]
+    ShadowActivationEvidenceInvalid,
     #[error("persisted projection cursor is internally inconsistent")]
     PersistedCursorInvariant,
     #[error("persisted projection vocabulary is unsupported")]
@@ -1262,6 +1484,32 @@ pub enum StoreError {
     D4PaperScopeRequired,
     #[error("D4 BUILDING epoch identity collides with different durable state")]
     D4EpochIdentityCollision,
+    #[error("shared consumer lease request is invalid")]
+    InvalidSharedConsumerLease,
+    #[error("another shared consumer owns the active scope lease")]
+    SharedConsumerLeaseBusy,
+    #[error("shared consumer lease is absent, expired or fenced out")]
+    SharedConsumerLeaseLost,
+    #[error("retention lifecycle policy is invalid")]
+    InvalidRetentionLifecyclePolicy,
+    #[error("retention lifecycle policy version was reused with different content")]
+    RetentionPolicyVersionCollision,
+    #[error("recovery checkpoint evidence is invalid")]
+    InvalidRecoveryCheckpoint,
+    #[error("recovery checkpoint does not cover the full durable epoch")]
+    RecoveryCheckpointCoverageMismatch,
+    #[error("projection epoch is not retained or retired recovery material")]
+    EpochNotRecoverable,
+    #[error("retained projection epoch cannot be retired yet")]
+    EpochNotRetireable,
+    #[error("retired epoch cleanup is missing policy or recovery evidence")]
+    CleanupEvidenceMissing,
+    #[error("retired epoch cleanup run does not exist")]
+    CleanupRunNotFound,
+    #[error("retired epoch cleanup has not passed its rollback gate")]
+    CleanupNotReady,
+    #[error("retired epoch cleanup is blocked by a live consumer lease")]
+    CleanupLeaseStillActive,
 }
 
 #[cfg(test)]
@@ -1274,6 +1522,18 @@ mod tests {
         RetentionAvailability, RetentionPolicy, SeriesIntent,
     };
     use sha2::{Digest as _, Sha256};
+    use shared_consumer_core::{ConsumerLeaseProof, LeaseOwnerDigest};
+    use source_qualification::{
+        real_source::{
+            RealSourceDecision, RealSourceQualificationReport, REAL_SOURCE_EVIDENCE_SCHEMA_VERSION,
+        },
+        shadow_screen::{
+            accept_shadow_activation, ShadowActivationEvidence, ShadowCompatibilityManifest,
+            ShadowGateEvidence, ShadowOwnerApproval, ShadowRuntimeIntent,
+            PAPER_WORKBENCH_PRIVATE_ROUTE, PAPER_WORKBENCH_PUBLIC_ROUTE, PAPER_WORKBENCH_SCREEN_ID,
+            SHADOW_ACTIVATION_SCHEMA_VERSION,
+        },
+    };
 
     use super::*;
 
@@ -1297,6 +1557,86 @@ mod tests {
             source_gateway_digest: "sha256:test-gateway".to_owned(),
             capability_snapshot_id: "cap_pg_test".to_owned(),
         }
+    }
+
+    fn digest(value: char) -> String {
+        format!("sha256:{}", value.to_string().repeat(64))
+    }
+
+    fn n07_scope() -> ProjectionScope {
+        ProjectionScope::new(
+            CanonicalId::parse("workspace_paper_binance_usdm").unwrap(),
+            "paper",
+        )
+        .unwrap()
+    }
+
+    fn accepted_n07(
+        epoch_id: Uuid,
+        state_digest: String,
+        metadata: &EpochMetadata,
+    ) -> source_qualification::shadow_screen::AcceptedShadowActivation {
+        let evidence = ShadowActivationEvidence {
+            schema_version: SHADOW_ACTIVATION_SCHEMA_VERSION.to_owned(),
+            screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
+            public_route: PAPER_WORKBENCH_PUBLIC_ROUTE.to_owned(),
+            private_route: PAPER_WORKBENCH_PRIVATE_ROUTE.to_owned(),
+            delivery_profile: "shadow".to_owned(),
+            scope: n07_scope(),
+            candidate_epoch_id: epoch_id,
+            expected_state_digest: state_digest.clone(),
+            projected_state_digest: state_digest.clone(),
+            replay_state_digest: state_digest,
+            compatibility: ShadowCompatibilityManifest {
+                source_contract_revision: "d4.paper-read.v2".to_owned(),
+                adapter_version: metadata.adapter_version.clone(),
+                source_gateway_digest: metadata.source_gateway_digest.clone(),
+                capability_snapshot_id: metadata.capability_snapshot_id.clone(),
+                projection_schema_digest: digest('c'),
+                query_contract_digest: digest('d'),
+                edge_image_digest: digest('e'),
+                control_api_image_digest: digest('f'),
+            },
+            runtime_intent: ShadowRuntimeIntent {
+                projection_enabled: true,
+                query_enabled: true,
+                screen_enabled: true,
+                realtime_enabled: false,
+                command_enabled: false,
+            },
+            gate_evidence: ShadowGateEvidence {
+                fixture_parity_sha256: digest('1'),
+                source_loss_sha256: digest('2'),
+                auth_matrix_sha256: digest('3'),
+                load_test_sha256: digest('4'),
+                rollback_sha256: digest('5'),
+                visual_honest_state_sha256: digest('6'),
+            },
+            n06_report: RealSourceQualificationReport {
+                schema_version: REAL_SOURCE_EVIDENCE_SCHEMA_VERSION.to_owned(),
+                run_id: Uuid::now_v7(),
+                owner_window_id: "window-n06".to_owned(),
+                contract_revision: "d4.paper-read.v2".to_owned(),
+                source_scope_id: "PAPER_BINANCE_USDM".to_owned(),
+                building_epoch_id: epoch_id,
+                evidence_digest: digest('7'),
+                qualification_profile:
+                    source_qualification::real_source::QualificationProfile::PaperFastAcceptance,
+                decision: RealSourceDecision::EvidenceAccepted,
+                soak_seconds: 86_400,
+                source_mutations: 0,
+                divergence_count: 0,
+                activation_authorized: false,
+                registry_profile_changed: false,
+            },
+            owner_approval: ShadowOwnerApproval {
+                owner_id: "bobby".to_owned(),
+                approved: true,
+                approved_at: Some(at(1)),
+                evidence_sha256: digest('8'),
+            },
+        };
+        accept_shadow_activation(evidence).unwrap()
     }
 
     fn d4_metadata() -> EpochMetadata {
@@ -1419,7 +1759,8 @@ mod tests {
     async fn reset(store: &PgProjectionStore, database_url: &str) {
         assert!(database_url.contains("/portal_projection_test"));
         sqlx::query(
-            "TRUNCATE portal_projection.retention_policy_snapshots,
+            "TRUNCATE portal_projection.retention_lifecycle_policy_snapshots,
+                      portal_projection.retention_policy_snapshots,
                       portal_projection.freshness_policy_snapshots,
                       portal_projection.epochs CASCADE",
         )
@@ -1483,6 +1824,233 @@ mod tests {
                 .prepare_d4_building_epoch(&non_paper, Uuid::now_v7(), &metadata, at(0),)
                 .await,
             Err(StoreError::D4PaperScopeRequired)
+        ));
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)]
+    async fn n04_shared_consumer_lease_fences_stale_writers_and_survives_restart() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = scope();
+        let epoch_id = store
+            .create_building_epoch(&scope, &d4_metadata(), Utc::now())
+            .await
+            .unwrap();
+        let snapshot_raw = "opaque-n04-snapshot";
+        let initial_cursor = "opaque-n04-cursor-0";
+        let now = Utc::now();
+        let snapshot_lease = D4SnapshotLeaseInput {
+            scope: scope.clone(),
+            epoch_id,
+            snapshot: d4_sensitive(snapshot_raw),
+            initial_event_cursor: d4_sensitive(initial_cursor),
+            snapshot_digest: d4_token_digest(snapshot_raw),
+            snapshot_created_at: now - TimeDelta::seconds(2),
+            snapshot_expires_at: now + TimeDelta::minutes(5),
+            snapshot_accepted_at: now - TimeDelta::seconds(1),
+            expected_counts: D4ResourceCounts {
+                orders: 1,
+                fills: 1,
+                positions: 1,
+            },
+        };
+        store
+            .persist_d4_snapshot_lease(&snapshot_lease)
+            .await
+            .unwrap();
+        store
+            .commit_d4_baseline(&D4BaselineCommitInput {
+                scope: scope.clone(),
+                epoch_id,
+                snapshot_digest: snapshot_lease.snapshot_digest.clone(),
+                observations: vec![
+                    d4_baseline_write(
+                        "n04_base_order",
+                        "order_n04_1",
+                        ProjectionEntityKind::Order,
+                        1,
+                    ),
+                    d4_baseline_write("n04_base_fill", "fill_n04_1", ProjectionEntityKind::Fill, 1),
+                    d4_baseline_write(
+                        "n04_base_position",
+                        "position_n04_1",
+                        ProjectionEntityKind::Position,
+                        1,
+                    ),
+                ],
+                source_read_at: now,
+                committed_at: now,
+            })
+            .await
+            .unwrap();
+
+        let owner = LeaseOwnerDigest::parse(format!("sha256:{}", "1".repeat(64))).unwrap();
+        let other_owner = LeaseOwnerDigest::parse(format!("sha256:{}", "2".repeat(64))).unwrap();
+        let lease_id = Uuid::now_v7();
+        let acquired = store
+            .acquire_shared_consumer_lease(
+                &scope,
+                epoch_id,
+                lease_id,
+                &owner,
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap();
+        let SharedConsumerLeaseAcquireOutcome::Acquired(first_grant) = acquired else {
+            panic!("first acquisition must create a lease");
+        };
+        assert_eq!(first_grant.fencing_token, 1);
+
+        let restarted = PgProjectionStore::connect(&database_url).await.unwrap();
+        assert!(matches!(
+            restarted
+                .acquire_shared_consumer_lease(
+                    &scope,
+                    epoch_id,
+                    lease_id,
+                    &owner,
+                    Duration::from_secs(30),
+                )
+                .await
+                .unwrap(),
+            SharedConsumerLeaseAcquireOutcome::AlreadyHeld(grant)
+                if grant.proof() == first_grant.proof()
+        ));
+        assert!(matches!(
+            store
+                .acquire_shared_consumer_lease(
+                    &scope,
+                    epoch_id,
+                    Uuid::now_v7(),
+                    &other_owner,
+                    Duration::from_secs(30),
+                )
+                .await,
+            Err(StoreError::SharedConsumerLeaseBusy)
+        ));
+
+        let first_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive(initial_cursor),
+            next_cursor: d4_sensitive("opaque-n04-cursor-1"),
+            observations: vec![d4_event_write(
+                "n04_event_1",
+                "order_n04_1",
+                ProjectionEntityKind::Order,
+                1,
+                ProjectionOperation::Upsert,
+                2,
+            )],
+            first_source_sequence: Some(1),
+            last_source_sequence: Some(1),
+            source_head_sequence: 1,
+            caught_up: true,
+            source_read_at: now,
+            committed_at: now,
+        };
+        assert_eq!(
+            restarted
+                .commit_lease_fenced_d4_event_page(&first_page, first_grant.proof())
+                .await
+                .unwrap(),
+            D4CommitOutcome::Written
+        );
+
+        restarted
+            .release_shared_consumer_lease(&scope, epoch_id, first_grant.proof(), &owner)
+            .await
+            .unwrap();
+        let second_page = D4EventPageCommitInput {
+            scope: scope.clone(),
+            epoch_id,
+            previous_cursor: d4_sensitive("opaque-n04-cursor-1"),
+            next_cursor: d4_sensitive("opaque-n04-cursor-2"),
+            observations: vec![d4_event_write(
+                "n04_event_2",
+                "position_n04_1",
+                ProjectionEntityKind::Position,
+                2,
+                ProjectionOperation::Delete,
+                3,
+            )],
+            first_source_sequence: Some(2),
+            last_source_sequence: Some(2),
+            source_head_sequence: 2,
+            caught_up: true,
+            source_read_at: now,
+            committed_at: now,
+        };
+        assert!(matches!(
+            restarted
+                .commit_lease_fenced_d4_event_page(&second_page, first_grant.proof())
+                .await,
+            Err(StoreError::SharedConsumerLeaseLost)
+        ));
+        assert_eq!(
+            restarted
+                .load_d4_resume_state(&scope, epoch_id)
+                .await
+                .unwrap()
+                .event_cursor
+                .as_str(),
+            "opaque-n04-cursor-1"
+        );
+
+        let second_lease_id = Uuid::now_v7();
+        let SharedConsumerLeaseAcquireOutcome::Acquired(second_grant) = restarted
+            .acquire_shared_consumer_lease(
+                &scope,
+                epoch_id,
+                second_lease_id,
+                &other_owner,
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap()
+        else {
+            panic!("released lease must be replaceable");
+        };
+        assert_eq!(second_grant.fencing_token, 2);
+        let renewed = restarted
+            .renew_shared_consumer_lease(
+                &scope,
+                epoch_id,
+                second_grant.proof(),
+                &other_owner,
+                Duration::from_secs(30),
+            )
+            .await
+            .unwrap();
+        assert_eq!(renewed.proof(), second_grant.proof());
+        assert_eq!(
+            restarted
+                .commit_lease_fenced_d4_event_page(&second_page, renewed.proof())
+                .await
+                .unwrap(),
+            D4CommitOutcome::Written
+        );
+        assert!(matches!(
+            restarted
+                .release_shared_consumer_lease(
+                    &scope,
+                    epoch_id,
+                    ConsumerLeaseProof {
+                        lease_id: first_grant.lease_id,
+                        fencing_token: first_grant.fencing_token,
+                    },
+                    &owner,
+                )
+                .await,
+            Err(StoreError::SharedConsumerLeaseLost)
         ));
     }
 
@@ -1980,6 +2548,70 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn n07_shadow_cutover_is_manifest_bound_atomic_and_auditable() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = n07_scope();
+        let metadata = EpochMetadata {
+            adapter_version: "paper-source-ingestor.d4.v1".to_owned(),
+            source_gateway_digest: digest('b'),
+            capability_snapshot_id: "cap-n07".to_owned(),
+        };
+        let epoch_id = store
+            .create_building_epoch(&scope, &metadata, at(0))
+            .await
+            .unwrap();
+        let state_digest = semantic_state_digest(&[]).unwrap();
+        let accepted = accepted_n07(epoch_id, state_digest.clone(), &metadata);
+        let activated = store
+            .activate_shadow_epoch(&accepted, at(2), Duration::from_secs(60))
+            .await
+            .unwrap();
+        assert_eq!(activated.active_epoch_id, epoch_id);
+        assert_eq!(activated.state_digest, state_digest);
+        assert_eq!(activated.retained_previous_epoch_id, None);
+
+        let stored: (String, String, serde_json::Value) = sqlx::query_as(
+            "SELECT screen_id, manifest_digest, manifest
+             FROM portal_projection.shadow_screen_activations WHERE epoch_id=$1",
+        )
+        .bind(epoch_id)
+        .fetch_one(&store.pool)
+        .await
+        .unwrap();
+        assert_eq!(stored.0, PAPER_WORKBENCH_SCREEN_ID);
+        assert_eq!(stored.1, accepted.manifest_digest());
+        assert_eq!(stored.2["delivery_profile"], "shadow");
+        assert_eq!(stored.2["runtime_intent"]["realtime_enabled"], false);
+        assert_eq!(stored.2["runtime_intent"]["command_enabled"], false);
+        let authority = store
+            .active_shadow_screen_authority(&scope, PAPER_WORKBENCH_SCREEN_ID)
+            .await
+            .unwrap();
+        assert_eq!(authority.epoch_id, epoch_id);
+        assert_eq!(authority.manifest_digest, accepted.manifest_digest());
+        assert!(matches!(
+            store
+                .active_shadow_screen_authority(&scope, "OTHER_SCREEN")
+                .await,
+            Err(StoreError::ShadowScreenNotActivated)
+        ));
+
+        assert!(matches!(
+            store
+                .activate_shadow_epoch(&accepted, at(3), Duration::from_secs(60))
+                .await,
+            Err(StoreError::EpochNotBuilding)
+        ));
+    }
+
+    #[tokio::test]
     async fn realtime_resume_pages_are_exact_bounded_and_scope_aware() {
         let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
             return;
@@ -2148,6 +2780,7 @@ mod tests {
                       'status', CASE WHEN g % 2 = 0 THEN 'OPEN' ELSE 'FILLED' END,
                       'currency', CASE WHEN g % 3 = 0 THEN 'USD' ELSE 'VND' END,
                       'instrument_id', 'BTC-PERP',
+                      'deployment_id', CASE WHEN g % 2 = 0 THEN 'dep_74' ELSE 'dep_other' END,
                       'quantity', '0.100000000000000001',
                       'notional', g::text || '.000000000000000001')
              FROM generate_series(1,182000) AS g",
@@ -2189,7 +2822,7 @@ mod tests {
               capability_snapshot_id,payload_digest,payload)
              VALUES ($1,'ORDER','order_newer',182001,'EXECUTION',$2,$2,$2,'UNKNOWN',
                      'ts-adapter-v1','cap_scale','sha256:newer',
-                     '{\"status\":\"OPEN\",\"currency\":\"USD\",\"quantity\":\"0.1\",\"notional\":\"1.1\"}')",
+                     '{\"status\":\"OPEN\",\"currency\":\"USD\",\"deployment_id\":\"dep_74\",\"quantity\":\"0.1\",\"notional\":\"1.1\"}')",
         )
         .bind(epoch_id)
         .bind(at(300_000))
@@ -2292,6 +2925,30 @@ mod tests {
             .aggregates_by_currency
             .iter()
             .any(|aggregate| aggregate.currency.as_deref() == Some("VND")));
+
+        let deployment_scoped = store
+            .query_entities_scoped(
+                &scope,
+                ProjectionEntityKind::Order,
+                &EntityQueryRequest::default(),
+                &[QueryFilter {
+                    field: FilterField::DeploymentId,
+                    operator: FilterOperator::Eq,
+                    values: vec!["dep_74".to_owned()],
+                }],
+                &codec,
+                now,
+            )
+            .await
+            .unwrap();
+        assert_eq!(deployment_scoped.total_count, 91_000);
+        assert_eq!(deployment_scoped.filtered_count, 91_000);
+        assert!(deployment_scoped.rows.iter().all(|row| {
+            row.payload
+                .get("deployment_id")
+                .and_then(serde_json::Value::as_str)
+                == Some("dep_74")
+        }));
 
         store
             .record_retention_policy(
@@ -2903,6 +3560,245 @@ mod tests {
                 .load_correlation_source(&scope, &portfolio, &requirement)
                 .await,
             Err(StoreError::AnalyticsSourceIntegrityMismatch)
+        ));
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one drill proves the complete guarded lifecycle
+    async fn n05_retention_recovery_cleanup_is_evidenced_atomic_and_rollback_bounded() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+        let scope = scope();
+
+        let retired_epoch = store
+            .create_building_epoch(&scope, &metadata(), at(0))
+            .await
+            .unwrap();
+        let archived_observation = observation("evt_n05_1", 1, 1, "FILLED");
+        store
+            .apply_observation(
+                &scope,
+                retired_epoch,
+                "orders:n05",
+                &archived_observation,
+                at(2),
+            )
+            .await
+            .unwrap();
+        let retired_entity = store
+            .load_entity(retired_epoch, &archived_observation.entity)
+            .await
+            .unwrap()
+            .unwrap();
+        let retired_digest = semantic_state_digest(&[retired_entity]).unwrap();
+        store
+            .activate_epoch(
+                &scope,
+                retired_epoch,
+                &retired_digest,
+                at(3),
+                Duration::from_secs(10),
+            )
+            .await
+            .unwrap();
+
+        let active_epoch = store
+            .create_building_epoch(&scope, &metadata(), at(4))
+            .await
+            .unwrap();
+        let empty_digest = semantic_state_digest(&[]).unwrap();
+        store
+            .activate_epoch(
+                &scope,
+                active_epoch,
+                &empty_digest,
+                at(20),
+                Duration::from_secs(10),
+            )
+            .await
+            .unwrap();
+        assert!(matches!(
+            store
+                .retire_retained_epoch(&scope, retired_epoch, at(29))
+                .await,
+            Err(StoreError::EpochNotRetireable)
+        ));
+        assert!(matches!(
+            store
+                .retire_retained_epoch(&scope, retired_epoch, at(100_000_000))
+                .await,
+            Err(StoreError::EpochNotRetireable)
+        ));
+        store
+            .retire_retained_epoch(&scope, retired_epoch, at(30))
+            .await
+            .unwrap();
+        assert_eq!(
+            store.load_epoch_status(retired_epoch).await.unwrap(),
+            ProjectionEpochStatus::Retired
+        );
+        assert_eq!(
+            store.load_epoch_status(active_epoch).await.unwrap(),
+            ProjectionEpochStatus::Active
+        );
+
+        let mut policy = RetentionLifecyclePolicySnapshot {
+            policy_id: Uuid::now_v7(),
+            policy_version: "n05-paper-v1".to_owned(),
+            policy_digest: String::new(),
+            hot_window: Duration::from_secs(30),
+            rollback_window: Duration::from_secs(60),
+            storage_budget_bytes: 10 * 1024 * 1024 * 1024,
+            soft_limit_percent: 70,
+            hard_limit_percent: 85,
+            max_journal_rows: 1_000_000,
+            created_at: at(31),
+        };
+        policy.policy_digest = retention_policy_digest(&scope, &policy);
+        store
+            .record_retention_lifecycle_policy(&scope, &policy)
+            .await
+            .unwrap();
+
+        let archived_journal = store.load_replay_records(retired_epoch).await.unwrap();
+        assert_eq!(archived_journal.len(), 1);
+        let archive_replay =
+            projection_core::replay(scope.clone(), retired_epoch, archived_journal.clone())
+                .unwrap();
+        assert_eq!(archive_replay.state_digest, retired_digest);
+        let checkpoint = RecoveryCheckpointEvidence {
+            checkpoint_id: Uuid::now_v7(),
+            epoch_id: retired_epoch,
+            through_journal_ordinal: archived_journal[0].journal_ordinal,
+            through_projection_sequence: 1,
+            state_digest: retired_digest.clone(),
+            archive_digest: format!("sha256:{}", "b".repeat(64)),
+            encryption_key_digest: format!("sha256:{}", "c".repeat(64)),
+            archive_verified_at: at(32),
+            restore_verified_at: at(33),
+            created_at: at(34),
+        };
+        store.record_recovery_checkpoint(&checkpoint).await.unwrap();
+        assert!(sqlx::query(
+            "UPDATE portal_projection.retention_recovery_checkpoints
+             SET archive_digest=$2 WHERE checkpoint_id=$1",
+        )
+        .bind(checkpoint.checkpoint_id)
+        .bind(format!("sha256:{}", "d".repeat(64)))
+        .execute(&store.pool)
+        .await
+        .is_err());
+        assert!(
+            sqlx::query("DELETE FROM portal_projection.event_journal WHERE epoch_id=$1",)
+                .bind(retired_epoch)
+                .execute(&store.pool)
+                .await
+                .is_err()
+        );
+
+        let plan = store
+            .plan_retired_epoch_cleanup(
+                &scope,
+                retired_epoch,
+                policy.policy_id,
+                checkpoint.checkpoint_id,
+                at(35),
+            )
+            .await
+            .unwrap();
+        assert_eq!(plan.cleanup_not_before, at(90));
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(100_000_000))
+                .await,
+            Err(StoreError::CleanupNotReady)
+        ));
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(89))
+                .await,
+            Err(StoreError::CleanupNotReady)
+        ));
+        sqlx::query(
+            "INSERT INTO portal_projection.shared_consumer_leases
+             (workspace_id, environment, source_scope_id, epoch_id, lease_id,
+              owner_digest, fencing_token, acquired_at, renewed_at, expires_at, updated_at)
+             VALUES ($1,'paper','PAPER_BINANCE_USDM',$2,$3,$4,1,$5,$5,$6,$5)",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(retired_epoch)
+        .bind(Uuid::now_v7())
+        .bind(format!("sha256:{}", "e".repeat(64)))
+        .bind(at(80))
+        .bind(at(100))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(90))
+                .await,
+            Err(StoreError::CleanupLeaseStillActive)
+        ));
+        sqlx::query("DELETE FROM portal_projection.shared_consumer_leases WHERE epoch_id=$1")
+            .bind(retired_epoch)
+            .execute(&store.pool)
+            .await
+            .unwrap();
+        let outcome = store
+            .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(90))
+            .await
+            .unwrap();
+        assert!(outcome.rows_removed >= 4);
+        assert!(outcome.result_digest.starts_with("sha256:"));
+        assert!(store
+            .load_entity(retired_epoch, &archived_observation.entity)
+            .await
+            .unwrap()
+            .is_none());
+        assert!(store
+            .load_replay_records(retired_epoch)
+            .await
+            .unwrap()
+            .is_empty());
+        assert_eq!(
+            projection_core::replay(scope, retired_epoch, archived_journal)
+                .unwrap()
+                .state_digest,
+            retired_digest
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM portal_projection.retention_recovery_checkpoints
+                 WHERE epoch_id=$1",
+            )
+            .bind(retired_epoch)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap(),
+            1
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT status FROM portal_projection.retention_cleanup_runs
+                 WHERE cleanup_run_id=$1",
+            )
+            .bind(plan.cleanup_run_id)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap(),
+            "COMPLETED"
+        );
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(91))
+                .await,
+            Err(StoreError::CleanupNotReady)
         ));
     }
 }

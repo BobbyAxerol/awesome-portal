@@ -193,6 +193,7 @@ export const OperationQueueQuerySchema = z
     severity: z.enum(["INFO", "WARNING", "ERROR", "CRITICAL"]).optional(),
     target_type: ExecutionTargetTypeSchema.optional(),
     command_key: z.string().regex(/^[a-z0-9-]+\/(?:[a-z0-9-]+|<root>)$/).optional(),
+    assigned_to: z.literal("me").optional(),
     sort: z.enum(["created_at:asc", "created_at:desc"]).default("created_at:desc"),
   })
   .strict()

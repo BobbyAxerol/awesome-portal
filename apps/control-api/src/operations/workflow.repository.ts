@@ -18,6 +18,10 @@ export interface OperationQueueRecord {
   verificationResult: string;
   triageState: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
   workflowVersion: number;
+  assignedToUserId: string | null;
+  assignedToUsername: string | null;
+  assignedAt: Date | null;
+  incidentId: string | null;
   acknowledgedAt: Date | null;
   acknowledgedByUserId: string | null;
   resolvedAt: Date | null;
@@ -43,6 +47,10 @@ export interface OperationQueueRow extends Record<string, unknown> {
   verification_result: string;
   triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
   workflow_version: number;
+  assigned_to_user_id: string | null;
+  assigned_to_username: string | null;
+  assigned_at: Date | null;
+  incident_id: string | null;
   acknowledged_at: Date | null;
   acknowledged_by_user_id: string | null;
   resolved_at: Date | null;
@@ -69,6 +77,10 @@ export function operationQueueRecord(row: OperationQueueRow): OperationQueueReco
     verificationResult: row.verification_result,
     triageState: row.triage_state,
     workflowVersion: row.workflow_version,
+    assignedToUserId: row.assigned_to_user_id,
+    assignedToUsername: row.assigned_to_username,
+    assignedAt: row.assigned_at,
+    incidentId: row.incident_id,
     acknowledgedAt: row.acknowledged_at,
     acknowledgedByUserId: row.acknowledged_by_user_id,
     resolvedAt: row.resolved_at,
@@ -97,7 +109,7 @@ export class OperationsWorkflowRepository {
 
   async find(workspaceId: string, operationId: string): Promise<OperationQueueRecord | null> {
     const result = await this.pool.query<OperationQueueRow>(
-      `SELECT * FROM execution_operation_queue_items
+      `SELECT * FROM execution_operation_queue_read
        WHERE workspace_id = $1 AND operation_id = $2`,
       [workspaceId, operationId],
     );
@@ -197,8 +209,16 @@ export class OperationsWorkflowRepository {
             `UPDATE execution_operation_queue_items SET
                triage_state = 'ACKNOWLEDGED', workflow_version = $3,
                acknowledged_at = now(), acknowledged_by_user_id = $4,
+               assigned_to_user_id = COALESCE(assigned_to_user_id, $4),
+               assigned_at = COALESCE(assigned_at, now()),
                updated_at = now()
-             WHERE workspace_id = $1 AND operation_id = $2 RETURNING *`,
+             WHERE workspace_id = $1 AND operation_id = $2 RETURNING *,
+               (SELECT username FROM portal_users WHERE user_id = COALESCE(
+                 execution_operation_queue_items.assigned_to_user_id, $4
+               )) AS assigned_to_username,
+               (SELECT link.incident_id FROM execution_incident_operation_links link
+                WHERE link.workspace_id = $1 AND link.operation_id = $2
+                ORDER BY link.created_at DESC, link.incident_id DESC LIMIT 1) AS incident_id`,
             [input.workspaceId, input.operationId, versionAfter, input.actorUserId],
           )
         : await client.query<OperationQueueRow>(
@@ -207,7 +227,12 @@ export class OperationsWorkflowRepository {
                resolved_at = now(), resolved_by_user_id = $4,
                resolution_reason = $5, resolution_evidence_hash = $6,
                updated_at = now()
-             WHERE workspace_id = $1 AND operation_id = $2 RETURNING *`,
+             WHERE workspace_id = $1 AND operation_id = $2 RETURNING *,
+               (SELECT username FROM portal_users WHERE user_id = execution_operation_queue_items.assigned_to_user_id)
+                 AS assigned_to_username,
+               (SELECT link.incident_id FROM execution_incident_operation_links link
+                WHERE link.workspace_id = $1 AND link.operation_id = $2
+                ORDER BY link.created_at DESC, link.incident_id DESC LIMIT 1) AS incident_id`,
             [
               input.workspaceId, input.operationId, versionAfter, input.actorUserId,
               reason, evidenceHash,
@@ -259,8 +284,16 @@ export class OperationsWorkflowRepository {
     operationId: string,
   ): Promise<OperationQueueRecord> {
     const result = await client.query<OperationQueueRow>(
-      `SELECT * FROM execution_operation_queue_items
-       WHERE workspace_id = $1 AND operation_id = $2 FOR UPDATE`,
+      `SELECT queue.*,
+              (SELECT username FROM portal_users WHERE user_id = queue.assigned_to_user_id)
+                AS assigned_to_username,
+              (SELECT link.incident_id FROM execution_incident_operation_links link
+               WHERE link.workspace_id = queue.workspace_id
+                 AND link.operation_id = queue.operation_id
+               ORDER BY link.created_at DESC, link.incident_id DESC LIMIT 1) AS incident_id
+       FROM execution_operation_queue_items queue
+       WHERE queue.workspace_id = $1 AND queue.operation_id = $2
+       FOR UPDATE OF queue`,
       [workspaceId, operationId],
     );
     if (!result.rows[0]) {

@@ -1,0 +1,40 @@
+{
+  "schema_version": "trading-system.portal-read-semantic-rulings.v1",
+  "request_revision": "portal.execution.external-read-request.v1",
+  "owner_accepted": false,
+  "order_status_buckets": {
+    "ruling": "OWNER_REVIEW_REQUIRED",
+    "buckets": {
+      "FILLED": ["FILLED"],
+      "PARTIAL": ["PARTIALLY_FILLED"],
+      "REJECTED": ["REJECTED", "DENIED"],
+      "OPEN": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "PENDING_UPDATE", "PENDING_CANCEL", "TRIGGERED"]
+    },
+    "all_only": ["CANCELED", "EXPIRED"]
+  },
+  "order_funnel": {
+    "ruling": "FOUR_STAGE_ONLY_UNTIL_SOURCE_FACTS_EXIST",
+    "stages": ["SUBMIT", "SOURCE_ACK", "BROKER_ACK", "FILL"],
+    "signal_intent_require_identity_timestamp_order_binding_completeness": true
+  },
+  "binding_exposure": {
+    "ruling": "FULL_POPULATION_SERVER_VERDICT",
+    "verdicts": ["OK", "EXCEEDED", "UNKNOWN"],
+    "missing_or_stale_is_unknown": true,
+    "per_currency_no_fx_inference": true
+  },
+  "packed_correlation": {
+    "ruling": "OWNER_CHOICE_REQUIRED",
+    "allowed_diagonal_semantics": ["SELF_PAIR_SAMPLE_COUNT", "NULLABLE_DIAGONAL"],
+    "selected_diagonal_semantics": null,
+    "sample_counts_parallel_to_values": true
+  },
+  "vnm_calendar": {
+    "ruling": "OWNER_PUBLICATION_REQUIRED",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "order_types_verbatim": ["LO", "ATO", "ATC", "MP"],
+    "required_session_kinds": ["ATO", "CONTINUOUS_AM", "LUNCH_BREAK", "CONTINUOUS_PM", "ATC", "CLOSED"],
+    "lot_size_and_tick_rules_versioned": true,
+    "settlement_policy_versioned": true
+  }
+}

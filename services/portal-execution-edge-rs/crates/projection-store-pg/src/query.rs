@@ -60,6 +60,29 @@ impl PgProjectionStore {
         cursor_codec: &CursorCodec,
         now: DateTime<Utc>,
     ) -> Result<ProjectionQueryPage, StoreError> {
+        self.query_entities_scoped(scope, kind, request, &[], cursor_codec, now)
+            .await
+    }
+
+    /// Executes a query whose population is first restricted by immutable,
+    /// server-supplied filters. Counts and aggregates cannot disclose rows
+    /// outside that population, while the signed cursor remains bound to both
+    /// the server and client filters.
+    ///
+    /// # Errors
+    ///
+    /// Rejects invalid/unsupported scope filters, non-allowlisted client
+    /// queries, cursor drift and database/precision failures.
+    #[allow(clippy::too_many_lines)]
+    pub async fn query_entities_scoped(
+        &self,
+        scope: &ProjectionScope,
+        kind: ProjectionEntityKind,
+        request: &EntityQueryRequest,
+        required_filters: &[QueryFilter],
+        cursor_codec: &CursorCodec,
+        now: DateTime<Utc>,
+    ) -> Result<ProjectionQueryPage, StoreError> {
         let mut transaction = self.pool.begin().await?;
         sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
             .execute(&mut *transaction)
@@ -78,21 +101,29 @@ impl PgProjectionStore {
             resource: &resource,
             query_fingerprint: "",
         };
-        let validated = request.validate(
+        let mut scoped_request = request.clone();
+        scoped_request
+            .filters
+            .splice(0..0, required_filters.iter().cloned());
+        let validated = scoped_request.validate(
             &QueryAllowlist::projection_entities(),
             cursor_codec,
             &unbound_context,
             now,
         )?;
 
-        let total_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM portal_projection.entities
-             WHERE epoch_id = $1 AND entity_kind = $2",
-        )
-        .bind(epoch_id)
-        .bind(kind.as_str())
-        .fetch_one(&mut *transaction)
-        .await?;
+        let mut total_query = QueryBuilder::<Postgres>::new(
+            "SELECT COUNT(*) FROM portal_projection.entities WHERE epoch_id = ",
+        );
+        total_query
+            .push_bind(epoch_id)
+            .push(" AND entity_kind = ")
+            .push_bind(kind.as_str());
+        push_filters(&mut total_query, required_filters)?;
+        let total_count: i64 = total_query
+            .build_query_scalar()
+            .fetch_one(&mut *transaction)
+            .await?;
 
         let mut count_query = QueryBuilder::<Postgres>::new(
             "SELECT COUNT(*) FROM portal_projection.entities WHERE epoch_id = ",
@@ -113,6 +144,7 @@ impl PgProjectionStore {
         let mut page_query = QueryBuilder::<Postgres>::new(
             "SELECT entity_id, projection_sequence, source_authority, \
              COALESCE(as_of, source_read_at) AS effective_as_of, source_read_at, projected_at, \
+             source_completeness, poll_interval_ms, \
              adapter_version, capability_snapshot_id, payload \
              FROM portal_projection.entities WHERE epoch_id = ",
         );
@@ -505,6 +537,7 @@ fn filter_expression(field: FilterField) -> &'static str {
         FilterField::AccountId => "COALESCE(payload->>'account_id','')",
         FilterField::PortfolioId => "COALESCE(payload->>'portfolio_id','')",
         FilterField::StrategyId => "COALESCE(payload->>'strategy_id','')",
+        FilterField::DeploymentId => "COALESCE(payload->>'deployment_id','')",
         FilterField::SourceAuthority => "source_authority",
         FilterField::AsOf => "COALESCE(as_of, source_read_at)",
     }
@@ -680,6 +713,10 @@ fn row_from_pg(row: &sqlx::postgres::PgRow) -> Result<ProjectionQueryRow, StoreE
         entity_id: row.try_get("entity_id")?,
         projection_sequence: required_u64(row.try_get("projection_sequence")?)?,
         source_authority: parse_authority(&row.try_get::<String, _>("source_authority")?)?,
+        source_completeness: super::parse_completeness(
+            &row.try_get::<String, _>("source_completeness")?,
+        )?,
+        poll_interval_ms: row.try_get("poll_interval_ms")?,
         as_of: row.try_get("effective_as_of")?,
         source_read_at: row.try_get("source_read_at")?,
         projected_at: row.try_get("projected_at")?,

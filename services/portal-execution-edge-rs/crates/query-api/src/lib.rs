@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use chrono::{DateTime, TimeDelta, Utc};
-use execution_contracts::{DecimalString, SourceAuthority};
+use execution_contracts::{DecimalString, SourceAuthority, SourceCompleteness};
 use hmac::{Hmac, Mac as _};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -202,6 +202,7 @@ pub enum FilterField {
     AccountId,
     PortfolioId,
     StrategyId,
+    DeploymentId,
     SourceAuthority,
     AsOf,
 }
@@ -300,8 +301,8 @@ impl QueryAllowlist {
     #[must_use]
     pub fn projection_entities() -> Self {
         use FilterField::{
-            AccountId, AsOf, Currency, InstrumentId, PortfolioId, SourceAuthority, Status,
-            StrategyId,
+            AccountId, AsOf, Currency, DeploymentId, InstrumentId, PortfolioId, SourceAuthority,
+            Status, StrategyId,
         };
         use FilterOperator::{Contains, Eq, Gte, In, Lte};
         Self {
@@ -312,6 +313,7 @@ impl QueryAllowlist {
                 (AccountId, BTreeSet::from([Eq, In])),
                 (PortfolioId, BTreeSet::from([Eq, In])),
                 (StrategyId, BTreeSet::from([Eq, In])),
+                (DeploymentId, BTreeSet::from([Eq])),
                 (SourceAuthority, BTreeSet::from([Eq, In])),
                 (AsOf, BTreeSet::from([Gte, Lte])),
             ]),
@@ -456,6 +458,8 @@ pub struct ProjectionQueryRow {
     pub entity_id: String,
     pub projection_sequence: u64,
     pub source_authority: SourceAuthority,
+    pub source_completeness: SourceCompleteness,
+    pub poll_interval_ms: Option<i64>,
     pub as_of: DateTime<Utc>,
     pub source_read_at: DateTime<Utc>,
     pub projected_at: DateTime<Utc>,
@@ -857,6 +861,33 @@ mod tests {
             policy.evaluate(at(0), at(10)).unwrap().availability,
             RetentionAvailability::Purged
         );
+    }
+
+    #[test]
+    fn canonical_retention_fixture_exposes_all_five_non_empty_states() {
+        let decisions: Vec<RetentionDecision> = serde_json::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/retention-availability.v1.json"
+        )))
+        .unwrap();
+        assert_eq!(
+            decisions
+                .iter()
+                .map(|decision| decision.availability)
+                .collect::<Vec<_>>(),
+            vec![
+                RetentionAvailability::Hot,
+                RetentionAvailability::PartialHot,
+                RetentionAvailability::ColdRequestable,
+                RetentionAvailability::Purged,
+                RetentionAvailability::Unknown,
+            ]
+        );
+        assert!(decisions[2].access_request_path.is_some());
+        assert!(decisions
+            .iter()
+            .enumerate()
+            .all(|(index, decision)| index == 2 || decision.access_request_path.is_none()));
     }
 
     #[test]

@@ -1,0 +1,48 @@
+{
+  "schema_version": "portal.execution.emergency-routing.v1",
+  "profile_id": "n16a-source-dark",
+  "source_dark": true,
+  "runtime_active": false,
+  "network_authorized": false,
+  "source_call_authorized": false,
+  "route": {
+    "public_origin": "https://portal.primusspark.com",
+    "path_prefix": "/ops/emergency/",
+    "normal_profile": "research_sgp_stable",
+    "emergency_profile": "execution_ops",
+    "browser_mode": "SAME_ORIGIN_ONLY",
+    "origin_resolution": "SERVER_SIDE_ONLY",
+    "same_origin_only": true,
+    "redirects_allowed": false,
+    "cors_allowed": false,
+    "public_route_active": false,
+    "execution_origin_bound": false,
+    "browser_internal_origin_visible": false,
+    "browser_delegated_token_visible": false
+  },
+  "security": {
+    "same_portal_session": true,
+    "allowed_roles": ["OPERATOR", "ADMIN"],
+    "step_up_method": "PHISHING_RESISTANT_WEBAUTHN",
+    "maximum_session_seconds": 300,
+    "maximum_step_up_age_seconds": 90,
+    "maximum_break_glass_seconds": 300,
+    "minimum_distinct_approvals": 2,
+    "minimum_reason_characters": 20,
+    "maximum_reason_characters": 500,
+    "confirmation_literal": "BREAK-GLASS",
+    "immutable_audit_mode": "SHA256_HASH_CHAIN",
+    "command_independent_health": true,
+    "raw_browser_token_forwarding": false
+  },
+  "command": {
+    "protective_capabilities": ["LIVE_HALT", "LIVE_REDUCE", "LIVE_EMERGENCY_CLOSE"],
+    "forbidden_risk_increasing_capabilities": ["LIVE_RESUME", "LIVE_SCALE"],
+    "n12_r3_catalogue_published": false,
+    "dedicated_command_identity_bound": false,
+    "control_visible": false,
+    "plan_allowed": false,
+    "apply_allowed": false,
+    "verify_allowed": false
+  }
+}

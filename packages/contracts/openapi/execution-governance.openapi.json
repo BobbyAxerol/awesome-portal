@@ -2,12 +2,59 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.2.0",
-    "description": "Same-origin, session-guarded Portal governance boundaries for R2, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
+    "version": "1.3.0",
+    "description": "Same-origin, session-guarded Portal governance boundaries for R1/R2 review, immutable approval history, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
   "paths": {
+    "/api/v1/execution/governance/approvals/{approval_id}/r1": {
+      "get": {
+        "operationId": "executionGovernanceR1Review",
+        "description": "Returns one workspace-bound Portal R1 review, its immutable evidence manifest, known limitations, eligibility and decision history.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ApprovalId" },
+          { "$ref": "#/components/parameters/WorkspaceId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal-owned R1 review",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/R1ReviewResponse" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/governance/approvals/history": {
+      "get": {
+        "operationId": "executionGovernanceApprovalHistory",
+        "description": "Returns immutable terminal approval attempts with bounded bidirectional keyset pagination. REQUEST_CHANGES appears as CHANGES_REQUESTED and never rewrites the governed gate.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
+          { "name": "gate", "in": "query", "schema": { "enum": ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] } },
+          { "name": "subject", "in": "query", "schema": { "type": "string", "maxLength": 160 } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "maxLength": 256 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal-owned immutable approval history",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/ApprovalHistoryResponse" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
     "/api/v1/execution/governance/approvals/{approval_id}/r2": {
       "get": {
         "operationId": "executionGovernanceR2Review",
@@ -52,13 +99,18 @@
     },
     "/api/v1/execution/commands/plans": {
       "post": {
-        "operationId": "planPaperExitDecision",
-        "description": "Plans a Portal Paper Exit decision. This shared route also supports separately-versioned governance command families; this operation documents the Paper Exit discriminator.",
+        "operationId": "planGovernanceDecision",
+        "description": "Plans a Portal-local R1 or Paper Exit decision. REQUEST_CHANGES closes only the current immutable approval attempt; it does not deny the governed gate or create a replacement request.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlanRequest" }
+              "schema": {
+                "oneOf": [
+                  { "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/R1DecisionPlanRequest" },
+                  { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlanRequest" }
+                ]
+              }
             }
           }
         },
@@ -372,22 +424,7 @@
         }
       },
       "R2ReviewResponse": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "schema_version",
-          "record_authority",
-          "delivery_profile",
-          "read_at",
-          "data"
-        ],
-        "properties": {
-          "schema_version": { "type": "string", "const": "governance.r2-review.v1" },
-          "record_authority": { "type": "string", "const": "PORTAL" },
-          "delivery_profile": { "type": "string", "const": "fixture" },
-          "read_at": { "$ref": "#/components/schemas/DateTime" },
-          "data": { "$ref": "#/components/schemas/R2ReviewData" }
-        }
+        "$ref": "../schemas/execution-governance-r2-review.v1.schema.json"
       },
       "Problem": {
         "type": "object",

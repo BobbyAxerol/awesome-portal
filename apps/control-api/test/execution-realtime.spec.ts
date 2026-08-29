@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { EventEmitter } from "node:events";
 import { loadConfig } from "../src/config";
 import { bindRealtimeLifecycle } from "../src/execution/realtime.controller";
-import { resolveResumeCursor } from "../src/execution/realtime.proxy";
+import { parseRealtimeSnapshot, resolveResumeCursor } from "../src/execution/realtime.proxy";
 
 const CURSOR = "018f0df0-9568-7cc2-babc-76a14ab55d2a:1842";
 
@@ -29,6 +29,8 @@ describe("EX-BE-06 same-origin realtime boundary", () => {
       AUTH_MODE: "dev",
       FEATURE_EXECUTION_EDGE: "true",
       FEATURE_EXECUTION_REALTIME_SSE: "true",
+      FEATURE_EXECUTION_SHADOW_QUERY: "true",
+      FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: "true",
       EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/delegation.key",
       EXECUTION_EDGE_CA_FILE: "/run/secrets/ca.crt",
       EXECUTION_EDGE_CLIENT_CERT_FILE: "/run/secrets/client.crt",
@@ -40,6 +42,37 @@ describe("EX-BE-06 same-origin realtime boundary", () => {
       .toThrow(/mTLS requires/);
     expect(loadConfig({ ...base, EXECUTION_EDGE_ORIGIN: "https://edge.internal:8443" })
       .FEATURE_EXECUTION_REALTIME_SSE).toBe("true");
+  });
+
+  it("accepts only an exact scope-bound realtime snapshot", () => {
+    const value = {
+      schema_version: "execution.realtime-snapshot.v1",
+      delivery_profile: "shadow",
+      workspace_id: "workspace_paper_binance_usdm",
+      environment: "paper",
+      projection_epoch: "018f0df0-9568-7cc2-babc-76a14ab55d2a",
+      projection_sequence: 1842,
+      cursor: CURSOR,
+      stream_available: true,
+      resnapshot_not_before: null,
+      capability_snapshot_id: "cap-n08",
+      activation_manifest_digest: `sha256:${"a".repeat(64)}`,
+    };
+    expect(parseRealtimeSnapshot(
+      Buffer.from(JSON.stringify(value)),
+      "workspace_paper_binance_usdm",
+      "paper",
+    )).toEqual(value);
+    expect(() => parseRealtimeSnapshot(
+      Buffer.from(JSON.stringify({ ...value, workspace_id: "other" })),
+      "workspace_paper_binance_usdm",
+      "paper",
+    )).toThrow("REALTIME_SNAPSHOT_INVALID");
+    expect(() => parseRealtimeSnapshot(
+      Buffer.from(JSON.stringify({ ...value, command_enabled: true })),
+      "workspace_paper_binance_usdm",
+      "paper",
+    )).toThrow("REALTIME_SNAPSHOT_INVALID");
   });
 
   it("cancels the private stream when the downstream response closes", async () => {

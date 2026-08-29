@@ -52,6 +52,8 @@ interface CapitalPreviewApprovalScopeRow {
 export interface R2ApprovalDetailRecord {
   approval: ApprovalRecord;
   scope: CapitalPreviewApprovalScope;
+  lineage: R2LineageRecord | null;
+  evidence: EvidenceRecord[];
 }
 
 interface ApprovalRow {
@@ -89,6 +91,51 @@ interface ApprovalRow {
 interface R2ApprovalDetailRow extends ApprovalRow {
   portfolio_id: string;
   currency: string;
+  r1_approval_id: string | null;
+  grant_id: string | null;
+  grant_name: string | null;
+  approver_role: "ADMIN" | null;
+  plan_author_user_id: string | null;
+  plan_author_username: string | null;
+  r1_status: string | null;
+  r1_decided_at: Date | null;
+  r1_decided_by_username: string | null;
+  r1_expires_at: Date | null;
+  r1_evidence_set_hash: string | null;
+  r1_evidence_complete: boolean | null;
+}
+
+export interface R2LineageRecord {
+  r1ApprovalId: string;
+  r1Status: string;
+  r1DecidedAt: Date | null;
+  r1DecidedByUsername: string | null;
+  r1ExpiresAt: Date;
+  r1EvidenceSetHash: string;
+  r1EvidenceComplete: boolean;
+  grantId: string;
+  grantName: string;
+  approverRole: "ADMIN";
+  planAuthorUserId: string;
+  planAuthorUsername: string;
+}
+
+export interface KnownLimitationRecord {
+  limitationId: string;
+  ordinal: number;
+  kind: "LINEAGE" | "WARNING" | "RESTRICTION" | "WAIVER";
+  label: string;
+  statement: string;
+  expiresAt: Date | null;
+}
+
+interface KnownLimitationRow {
+  limitation_id: string;
+  ordinal: number;
+  kind: KnownLimitationRecord["kind"];
+  label: string;
+  statement: string;
+  expires_at: Date | null;
 }
 
 export interface EvidenceRecord {
@@ -424,12 +471,27 @@ export class GovernanceRepository {
     try {
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       const result = await client.query<R2ApprovalDetailRow>(
-        `SELECT request.*, scope.portfolio_id, scope.currency
+        `SELECT request.*, scope.portfolio_id, scope.currency,
+                lineage.r1_approval_id, lineage.grant_id, lineage.grant_name,
+                lineage.approver_role, lineage.plan_author_user_id,
+                lineage.plan_author_username, r1.status AS r1_status,
+                r1.decided_at AS r1_decided_at,
+                r1.expires_at AS r1_expires_at,
+                r1.evidence_set_hash AS r1_evidence_set_hash,
+                r1.evidence_complete AS r1_evidence_complete,
+                r1_decider.username AS r1_decided_by_username
            FROM governance_approval_requests request
            JOIN governance_approval_analytics_scopes scope
              ON scope.approval_id = request.approval_id
             AND scope.workspace_id = request.workspace_id
             AND scope.gate = request.gate
+           LEFT JOIN governance_r2_lineage lineage
+             ON lineage.r2_approval_id = request.approval_id
+            AND lineage.workspace_id = request.workspace_id
+           LEFT JOIN governance_approval_requests r1
+             ON r1.approval_id = lineage.r1_approval_id
+            AND r1.workspace_id = lineage.workspace_id
+           LEFT JOIN portal_users r1_decider ON r1_decider.user_id = r1.decided_by_user_id
           WHERE request.workspace_id = $1
             AND request.approval_id = $2
             AND request.gate = 'R2'
@@ -437,8 +499,15 @@ export class GovernanceRepository {
             AND request.expires_at > now()`,
         [workspaceId, approvalId],
       );
-      await client.query("COMMIT");
       const row = result.rows[0];
+      const evidenceRows = row?.r1_approval_id
+        ? await client.query<EvidenceRow>(
+            `SELECT * FROM governance_approval_evidence
+             WHERE approval_id = $1 ORDER BY ordinal`,
+            [row.r1_approval_id],
+          )
+        : { rows: [] as EvidenceRow[] };
+      await client.query("COMMIT");
       return row
         ? {
             approval: approval(row),
@@ -448,6 +517,26 @@ export class GovernanceRepository {
               portfolioId: row.portfolio_id,
               currency: row.currency,
             },
+            lineage: row.r1_approval_id && row.grant_id && row.grant_name &&
+              row.approver_role && row.plan_author_user_id && row.plan_author_username &&
+              row.r1_status && row.r1_expires_at && row.r1_evidence_set_hash &&
+              row.r1_evidence_complete !== null
+              ? {
+                  r1ApprovalId: row.r1_approval_id,
+                  r1Status: row.r1_status,
+                  r1DecidedAt: row.r1_decided_at,
+                  r1DecidedByUsername: row.r1_decided_by_username,
+                  r1ExpiresAt: row.r1_expires_at,
+                  r1EvidenceSetHash: row.r1_evidence_set_hash,
+                  r1EvidenceComplete: row.r1_evidence_complete,
+                  grantId: row.grant_id,
+                  grantName: row.grant_name,
+                  approverRole: row.approver_role,
+                  planAuthorUserId: row.plan_author_user_id,
+                  planAuthorUsername: row.plan_author_username,
+                }
+              : null,
+            evidence: evidenceRows.rows.map(evidence),
           }
         : null;
     } catch (error) {
@@ -463,6 +552,7 @@ export class GovernanceRepository {
     evidence: EvidenceRecord[];
     findings: FindingRecord[];
     decisions: DecisionRecord[];
+    knownLimitations: KnownLimitationRecord[];
   } | null> {
     const client = await this.pool.connect();
     try {
@@ -487,12 +577,26 @@ export class GovernanceRepository {
         `SELECT * FROM governance_approval_decisions WHERE approval_id = $1 ORDER BY decided_at, decision_id`,
         [approvalId],
       );
+      const limitationRows = await client.query<KnownLimitationRow>(
+        `SELECT limitation_id, ordinal, kind, label, statement, expires_at
+         FROM governance_approval_known_limitations
+         WHERE approval_id = $1 ORDER BY ordinal, limitation_id`,
+        [approvalId],
+      );
       await client.query("COMMIT");
       return {
         approval: approval(request.rows[0]),
         evidence: evidenceRows.rows.map(evidence),
         findings: findingRows.rows.map(finding),
         decisions: decisionRows.rows.map(decision),
+        knownLimitations: limitationRows.rows.map((row) => ({
+          limitationId: row.limitation_id,
+          ordinal: row.ordinal,
+          kind: row.kind,
+          label: row.label,
+          statement: row.statement,
+          expiresAt: row.expires_at,
+        })),
       };
     } catch (error) {
       await client.query("ROLLBACK").catch(() => undefined);
@@ -686,10 +790,12 @@ export class GovernanceRepository {
         throw Object.assign(new Error("evidence changed"), { governanceCode: "EVIDENCE_SET_CHANGED", status: 409 });
       }
       const versionAfter = request.approval_version + 1;
-      const nextQuorum = planRow.decision === "DENY" ? request.quorum_met : request.quorum_met + 1;
-      const terminal = planRow.decision === "DENY" || nextQuorum >= request.quorum_required;
+      const nonQuorumDecision = planRow.decision === "DENY" || planRow.decision === "REQUEST_CHANGES";
+      const nextQuorum = nonQuorumDecision ? request.quorum_met : request.quorum_met + 1;
+      const terminal = nonQuorumDecision || nextQuorum >= request.quorum_required;
       let nextStatus = "PENDING";
       if (planRow.decision === "DENY") nextStatus = "DENIED";
+      else if (planRow.decision === "REQUEST_CHANGES") nextStatus = "CHANGES_REQUESTED";
       else if (terminal) {
         const conditional = planRow.decision === "APPROVE_WITH_CONDITION" || (
           await client.query(

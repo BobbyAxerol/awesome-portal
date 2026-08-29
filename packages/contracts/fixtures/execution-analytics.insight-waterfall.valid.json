@@ -1,0 +1,10 @@
+{
+  "schema_version": "execution.analytics.insight-series.v1", "runtime_active": false, "source_side_effect_requested": false,
+  "subject_id": "alpha_1", "panel_state": "ok", "returned_tiles": 1, "total_series_items": 3,
+  "tiles": [{
+    "tile_id": "cost-drag", "title": "Cost drag waterfall", "tile_kind": "waterfall", "formula_version": "cost_drag.v1",
+    "authority": "DERIVED", "freshness": "OK", "completeness": "COMPLETE", "as_of": "2026-08-26T10:00:00Z",
+    "minimum_samples": 30, "observed_samples": 80, "state": "READY",
+    "series": { "kind": "waterfall", "points": [{ "label": "gross", "start": "0", "delta": "12.000000000000000001", "end": "12.000000000000000001" }, { "label": "fees", "start": "12.000000000000000001", "delta": "-0.500000000000000001", "end": "11.5" }, { "label": "slippage", "start": "11.5", "delta": "-0.25", "end": "11.25" }] }
+  }]
+}

@@ -1,9 +1,14 @@
 # EX-BE-06 — Multiplexed SSE, Resume, Gap Recovery and Backpressure
 
-Status: `FOUNDATION_COMPLETE / SOURCE_AND_ACTIVATION_EVIDENCE_PENDING`  
+Status: `FOUNDATION_COMPLETE / EXTENDED_BY_N08_PORTAL_IMPLEMENTATION_COMPLETE /
+OWNER_PROMOTION_APPROVED / RUNTIME_FAIL_CLOSED`  
 Date: 2026-08-21  
 Authority: Portal delivery edge only. Trading System was not changed and remains
 the execution/risk/accounting authority.
+
+Current activation authority, snapshot contract and evidence profile are in
+[`EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md`](./EX_BE_06_N08_SSE_REAL_SOURCE_ACTIVATION.md).
+This file retains the original EX-BE-06 transport foundation.
 
 ## 1. Delivered boundary
 
@@ -113,9 +118,10 @@ subscription reducer:
 2. map typed data events to `DELTA` without parsing decimals as numbers;
 3. on `projection.gap`, keep the last-good view visibly aging, clear the resume
    cursor and resnapshot no earlier than `resnapshot_not_before`;
-4. on `auth.expiring`/disconnect, show reconnecting and let same-origin retry;
-   `expires_at` is the short delegated assertion deadline, not a Portal-session
-   timer;
+4. on `auth.expiring` or generic disconnect, close EventSource; only a bounded
+   application flow that has revalidated the Portal session and fetched a new
+   snapshot may open another source. `expires_at` is the short delegated
+   assertion deadline, not a Portal-session timer;
 5. add fixture tests for slow consumer, history eviction, source discontinuity,
    epoch jitter and heartbeat-without-cursor-advance;
 6. keep the registry profile `fixture` and do not mark the endpoint live.

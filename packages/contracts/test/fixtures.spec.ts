@@ -60,6 +60,7 @@ const analyticsFixtureSchemas: Record<string, string> = {
   "execution-analytics.correlation.valid.json": "CorrelationResponse",
   "execution-analytics.capital-ledger.valid.json": "CapitalLedgerResponse",
   "execution-analytics.binding-exposure.valid.json": "BindingExposureResponse",
+  "execution-paper-workbench.orders-shadow.valid.json": "PaperWorkbenchShadowPanelResponse",
 };
 
 const schemaIds: Record<string, string> = {
@@ -79,6 +80,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
   "execution-governance.r2-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
+  "execution-governance.r1-review.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json#/$defs/R1ReviewResponse",
+  "execution-governance.approval-history.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json#/$defs/ApprovalHistoryResponse",
   "execution-governance.paper-exit-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse",
   "execution-command-center.busy.valid.json":
@@ -113,6 +118,40 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom",
   "execution-live-full-operations.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations",
+  "execution-staged-activation.capabilities.valid.json":
+    "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/CapabilitiesResponse",
+  "execution-staged-activation.plan-blocked.valid.json":
+    "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/PlanResponse",
+  "execution-staged-activation.states.valid.json":
+    "https://schemas.primusspark.com/portal/execution-staged-activation.v1.schema.json#/$defs/UiStateCorpus",
+  "execution-intercell-gateway.source-dark.valid.json":
+    "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/GatewayProfile",
+  "execution-intercell-gateway.event-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/EventCorpus",
+  "execution-intercell-gateway.artifact-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/ArtifactCorpus",
+  "execution-emergency-routing.source-dark.valid.json":
+    "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/EmergencyProfile",
+  "execution-emergency-routing.ui-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/UiStateCorpus",
+  "execution-production-readiness.source-dark.valid.json":
+    "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/ReadinessProfile",
+  "execution-production-readiness.game-day-corpus.valid.json":
+    "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/GameDayCorpus",
+  "execution-analytics.equity-projection.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
+  "execution-analytics.insight-line.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-histogram.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-funnel.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-waterfall.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-heatmap.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+  "execution-analytics.insight-bar.valid.json":
+    "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
 };
 
 const liveFullFixture = loadJson(
@@ -191,6 +230,303 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(validate!({ ...liveFullFixture, realtime_active: true })).toBe(false);
   });
 
+  it("keeps every N13A capability source-dark and every UI corpus action disabled", () => {
+    const capabilities = loadJson(
+      join(fixtureDir, "execution-staged-activation.capabilities.valid.json"),
+    ) as { capabilities: Array<Record<string, unknown>> };
+    const states = loadJson(
+      join(fixtureDir, "execution-staged-activation.states.valid.json"),
+    ) as Array<Record<string, unknown>>;
+    expect(capabilities.capabilities).toHaveLength(7);
+    expect(capabilities.capabilities.every((item) =>
+      item.effective_profile === "fixture" && item.source_enabled === false &&
+      item.runtime_enabled === false && item.kill_switch_engaged === true)).toBe(true);
+    expect(states.map((item) => item.state)).toEqual([
+      "fixture", "denied", "incompatible", "stale", "partial", "rollback", "restart",
+    ]);
+    expect(states.every((item) => item.action_enabled === false)).toBe(true);
+  });
+
+  it("keeps N15A four-interface authority source-dark, separate and bounded", () => {
+    const profile = loadJson(
+      join(fixtureDir, "execution-intercell-gateway.source-dark.valid.json"),
+    ) as {
+      source_dark: boolean;
+      runtime_active: boolean;
+      source_call_authorized: boolean;
+      identity_policy: Record<string, unknown>;
+      interfaces: Array<{ interface: string; publication_state: string }>;
+      transports: Array<Record<string, unknown> & { interface: string }>;
+    };
+    expect(profile).toMatchObject({
+      source_dark: true,
+      runtime_active: false,
+      source_call_authorized: false,
+    });
+    expect(profile.interfaces.map((item) => item.interface)).toEqual([
+      "QUERY", "COMMAND", "EVENT", "ARTIFACT",
+    ]);
+    expect(profile.interfaces.every((item) => item.publication_state === "FIXTURE_ONLY")).toBe(true);
+    expect(profile.identity_policy).toMatchObject({
+      identities_distinct: true,
+      delegated_resource_policy: "EXACT_RESOURCE_ONLY",
+      raw_browser_token_forwarding: false,
+      wildcard_scope_allowed: false,
+    });
+    expect(profile.transports.every((item) =>
+      item.redirects_allowed === false && item.http2_required === true &&
+      item.tls13_required === true && item.retry_after_dispatch === 0)).toBe(true);
+    expect(profile.transports.find((item) => item.interface === "COMMAND"))
+      .toMatchObject({ retry_before_dispatch: 0, method: "POST" });
+
+    const schema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/GatewayProfile",
+    );
+    expect(schema!({ ...profile, runtime_active: true })).toBe(false);
+    expect(schema!({ ...profile, source_call_authorized: true })).toBe(false);
+    expect(schema!({
+      ...profile,
+      identity_policy: { ...profile.identity_policy, wildcard_scope_allowed: true },
+    })).toBe(false);
+  });
+
+  it("publishes N15A component codegen without mounting a runtime route", () => {
+    const openapi = loadJson(
+      join(ROOT, "openapi", "execution-intercell-gateway.openapi.json"),
+    ) as { paths: Record<string, unknown>; servers: unknown[]; "x-runtime-mounted": boolean };
+    expect(openapi.paths).toEqual({});
+    expect(openapi.servers).toEqual([]);
+    expect(openapi["x-runtime-mounted"]).toBe(false);
+    const generated = readFileSync(
+      join(ROOT, "generated", "execution-intercell-gateway.d.ts"),
+      "utf8",
+    );
+    for (const token of [
+      "GatewayInterface",
+      "GatewayProfile",
+      "InterfaceNegotiation",
+      "GatewayEvent",
+      "ArtifactDescriptor",
+    ]) expect(generated).toContain(token);
+  });
+
+  it("rejects incomplete N15A events and artifact descriptors", () => {
+    const events = loadJson(
+      join(fixtureDir, "execution-intercell-gateway.event-corpus.valid.json"),
+    ) as { events: Array<Record<string, unknown>> };
+    const artifacts = loadJson(
+      join(fixtureDir, "execution-intercell-gateway.artifact-corpus.valid.json"),
+    ) as { cases: Array<{ descriptor: Record<string, unknown> }> };
+    const eventSchema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/GatewayEvent",
+    );
+    const artifactSchema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/ArtifactDescriptor",
+    );
+    const { cursor: _cursor, ...eventWithoutCursor } = events.events[0];
+    const { sha256: _digest, ...artifactWithoutDigest } = artifacts.cases[0].descriptor;
+    expect(eventSchema!(eventWithoutCursor)).toBe(false);
+    expect(eventSchema!({ ...events.events[0], operation: "PATCH" })).toBe(false);
+    expect(artifactSchema!(artifactWithoutDigest)).toBe(false);
+    expect(artifactSchema!({ ...artifacts.cases[0].descriptor, access_policy: "PUBLIC" })).toBe(false);
+  });
+
+  it("keeps N16A same-domain emergency routing source-dark and R4 forbidden", () => {
+    const profile = loadJson(
+      join(fixtureDir, "execution-emergency-routing.source-dark.valid.json"),
+    ) as {
+      runtime_active: boolean;
+      network_authorized: boolean;
+      source_call_authorized: boolean;
+      route: Record<string, unknown>;
+      command: Record<string, unknown> & {
+        protective_capabilities: string[];
+        forbidden_risk_increasing_capabilities: string[];
+      };
+    };
+    expect(profile).toMatchObject({
+      runtime_active: false,
+      network_authorized: false,
+      source_call_authorized: false,
+    });
+    expect(profile.route).toMatchObject({
+      public_origin: "https://portal.primusspark.com",
+      path_prefix: "/ops/emergency/",
+      browser_mode: "SAME_ORIGIN_ONLY",
+      origin_resolution: "SERVER_SIDE_ONLY",
+      public_route_active: false,
+      execution_origin_bound: false,
+      browser_internal_origin_visible: false,
+      browser_delegated_token_visible: false,
+    });
+    expect(profile.command.protective_capabilities).toEqual([
+      "LIVE_HALT", "LIVE_REDUCE", "LIVE_EMERGENCY_CLOSE",
+    ]);
+    expect(profile.command.forbidden_risk_increasing_capabilities).toEqual([
+      "LIVE_RESUME", "LIVE_SCALE",
+    ]);
+    expect(profile.command).toMatchObject({
+      n12_r3_catalogue_published: false,
+      dedicated_command_identity_bound: false,
+      control_visible: false,
+      plan_allowed: false,
+      apply_allowed: false,
+      verify_allowed: false,
+    });
+
+    const schema = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/EmergencyProfile",
+    );
+    expect(schema!({ ...profile, runtime_active: true })).toBe(false);
+    expect(schema!({
+      ...profile,
+      route: { ...profile.route, public_route_active: true },
+    })).toBe(false);
+    expect(schema!({
+      ...profile,
+      command: { ...profile.command, n12_r3_catalogue_published: true },
+    })).toBe(false);
+  });
+
+  it("publishes N16A typed failure corpus without a route or source request", () => {
+    const corpus = loadJson(
+      join(fixtureDir, "execution-emergency-routing.ui-corpus.valid.json"),
+    ) as {
+      routes: Array<Record<string, unknown>>;
+      commands: Array<Record<string, unknown>>;
+    };
+    expect(corpus.routes.map((route) => route.scenario)).toEqual([
+      "NORMAL_RESEARCH", "RESEARCH_LOSS", "CLOUDFLARE_LOSS",
+      "EXECUTION_ORIGIN_LOSS", "ROLLBACK",
+    ]);
+    expect(corpus.routes.every((route) =>
+      route.route_target === "NONE" && route.control_visible === false &&
+      route.source_request_sent === false && route.network_attempts === 0)).toBe(true);
+    expect(corpus.commands.every((command) =>
+      command.decision === "DENIED" && command.plan_allowed === false &&
+      command.apply_allowed === false && command.verify_allowed === false &&
+      command.source_request_sent === false)).toBe(true);
+    expect(corpus.commands.find((command) => command.risk_tier === "R4_LIVE_RISK_INCREASING"))
+      .toMatchObject({ reason: "RISK_INCREASING_FORBIDDEN" });
+
+    const openapi = loadJson(
+      join(ROOT, "openapi", "execution-emergency-routing.openapi.json"),
+    ) as {
+      paths: Record<string, unknown>;
+      servers: unknown[];
+      "x-runtime-mounted": boolean;
+      "x-public-route-active": boolean;
+    };
+    expect(openapi.paths).toEqual({});
+    expect(openapi.servers).toEqual([]);
+    expect(openapi["x-runtime-mounted"]).toBe(false);
+    expect(openapi["x-public-route-active"]).toBe(false);
+  });
+
+  it("keeps N17A readiness budgets provisional, source-dark and owner-gated", () => {
+    const profile = loadJson(
+      join(fixtureDir, "execution-production-readiness.source-dark.valid.json"),
+    ) as {
+      production_active: boolean;
+      network_authorized: boolean;
+      source_call_authorized: boolean;
+      command_authorized: boolean;
+      production_slo_claimed: boolean;
+      budgets: Array<Record<string, unknown>>;
+      error_budget: Record<string, unknown>;
+      recovery: Array<Record<string, unknown>>;
+      rotations: Array<Record<string, unknown>>;
+      capacity: Record<string, unknown>;
+    };
+    expect(profile).toMatchObject({
+      production_active: false,
+      network_authorized: false,
+      source_call_authorized: false,
+      command_authorized: false,
+      production_slo_claimed: false,
+    });
+    expect(profile.budgets).toHaveLength(7);
+    expect(profile.budgets.every((budget) =>
+      budget.authority === "PROVISIONAL_QUALIFICATION_ONLY" &&
+      budget.production_slo_claimed === false)).toBe(true);
+    expect(profile.error_budget).toMatchObject({
+      mode: "NOT_MEASURED",
+      availability_target_basis_points: null,
+      production_window_open: false,
+      burn_alert_active: false,
+    });
+    expect(profile.recovery).toHaveLength(3);
+    expect(profile.recovery.every((item) =>
+      item.production_rpo_seconds === null && item.production_rto_seconds === null &&
+      item.owner_approval_required === true)).toBe(true);
+    expect(profile.rotations).toHaveLength(5);
+    expect(profile.rotations.every((item) =>
+      item.runtime_identity_bound === false && item.secret_material_present === false)).toBe(true);
+    expect(profile.capacity).toMatchObject({
+      six_month_order_fill_rows: 182000,
+      initial_concurrent_sse_clients: 100,
+      maximum_chart_points: 5000,
+      maximum_correlation_assets: 150,
+      monthly_cost_budget_usd: null,
+      cost_owner_approval_required: true,
+    });
+
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/ReadinessProfile",
+    );
+    expect(validate!({ ...profile, production_active: true })).toBe(false);
+    expect(validate!({ ...profile, production_slo_claimed: true })).toBe(false);
+    expect(validate!({
+      ...profile,
+      error_budget: { ...profile.error_budget, availability_target_basis_points: 9990 },
+    })).toBe(false);
+  });
+
+  it("keeps every N17A game-day case isolated and non-authoritative", () => {
+    const corpus = loadJson(
+      join(fixtureDir, "execution-production-readiness.game-day-corpus.valid.json"),
+    ) as {
+      fixture_only: boolean;
+      production_active: boolean;
+      cases: Array<Record<string, unknown>>;
+    };
+    expect(corpus.fixture_only).toBe(true);
+    expect(corpus.production_active).toBe(false);
+    expect(corpus.cases.map((item) => item.scenario)).toEqual([
+      "NETWORK_PARTITION", "AUTH_LOSS", "SOURCE_LOSS", "COMMAND_CONTAINMENT",
+      "CONTROL_DATABASE_PITR", "PROJECTION_REBUILD", "RELEASE_ROLLBACK",
+      "CREDENTIAL_COMPROMISE",
+    ]);
+    expect(corpus.cases.every((item) =>
+      item.isolated === true && item.expected_outcome === "PASS" &&
+      item.expected_source_request_sent === false &&
+      item.expected_command_dispatched === false &&
+      item.expected_network_attempts === 0)).toBe(true);
+
+    const openapi = loadJson(
+      join(ROOT, "openapi", "execution-production-readiness.openapi.json"),
+    ) as {
+      paths: Record<string, unknown>;
+      servers: unknown[];
+      "x-runtime-mounted": boolean;
+      "x-production-active": boolean;
+      "x-production-slo-claimed": boolean;
+    };
+    expect(openapi.paths).toEqual({});
+    expect(openapi.servers).toEqual([]);
+    expect(openapi["x-runtime-mounted"]).toBe(false);
+    expect(openapi["x-production-active"]).toBe(false);
+    expect(openapi["x-production-slo-claimed"]).toBe(false);
+    const generated = readFileSync(
+      join(ROOT, "generated", "execution-production-readiness.d.ts"),
+      "utf8",
+    );
+    for (const token of [
+      "ReadinessProfile", "ProvisionalBudget", "RecoveryPolicy",
+      "RotationPolicy", "GameDayCase", "QualificationResult",
+    ]) expect(generated).toContain(token);
+  });
+
   it("rejects malformed event envelopes", () => {
     const event = loadJson(join(fixtureDir, "event.valid.json")) as Record<string, unknown>;
     const validate = ajv.getSchema(
@@ -201,6 +537,49 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(
       validate!({ ...event, occurred_at: "2026-08-15T12:00:00" }),
     ).toBe(false);
+  });
+
+  it("publishes one typed Execution envelope sample per mapper event type", () => {
+    const corpus = loadJson(join(fixtureDir, "execution-events.corpus.valid.json")) as Array<Record<string, unknown>>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-event-envelope.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    expect(corpus).toHaveLength(10);
+    expect(new Set(corpus.map((event) => event.event_type)).size).toBe(10);
+    for (const event of corpus) {
+      if (!validate!(event)) throw new Error(JSON.stringify(validate!.errors, null, 2));
+      expect(event.schema_version).toBe("execution.event.v1");
+      expect(typeof event.schema_version).toBe("string");
+    }
+    expect(validate!({ ...corpus[0], schema_version: 1 })).toBe(false);
+    expect(validate!({ ...corpus[0], entity_kind: "position" })).toBe(false);
+    expect(validate!({ ...corpus[0], payload: { ...(corpus[0].payload as object), quantity: 1 } })).toBe(false);
+  });
+
+  it("keeps N10 series contracts source-dark and tile kinds semantic", () => {
+    const equity = loadJson(join(fixtureDir, "execution-analytics.equity-projection.valid.json")) as {
+      runtime_active: boolean;
+      source_side_effect_requested: boolean;
+      analytics: { data: { points: Array<{ equity: string | null }>; gaps: unknown[] } };
+    };
+    expect(equity.runtime_active).toBe(false);
+    expect(equity.source_side_effect_requested).toBe(false);
+    expect(equity.analytics.data.points.some((point) => point.equity === null)).toBe(true);
+    expect(equity.analytics.data.gaps.length).toBeGreaterThan(0);
+
+    const line = loadJson(join(fixtureDir, "execution-analytics.insight-line.valid.json")) as {
+      tiles: Array<Record<string, unknown>>;
+    };
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/InsightTileBatch",
+    );
+    expect(validate).toBeDefined();
+    expect(validate!({
+      ...line,
+      tiles: [{ ...line.tiles[0], tile_kind: "bar" }],
+    })).toBe(false);
+    expect(validate!({ ...line, runtime_active: true })).toBe(false);
   });
 
   it("rejects incomplete or offset-shaped keyset pages", () => {

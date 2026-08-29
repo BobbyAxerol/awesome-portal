@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json",
+  "$ref": "#/$defs/ReadinessProfile",
+  "$defs": {
+    "SloClass": {
+      "enum": [
+        "CURRENT_STATE_SAME_CELL", "CROSS_CELL_BFF", "CACHED_CHART",
+        "UNCACHED_MEDIUM_CHART", "FIRST_EVENT", "CORRELATION_FRESHNESS",
+        "COMMAND_PLAN_ACKNOWLEDGEMENT"
+      ]
+    },
+    "ProvisionalBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "maximum_p95_milliseconds", "authority", "production_slo_claimed"],
+      "properties": {
+        "class": { "$ref": "#/$defs/SloClass" },
+        "maximum_p95_milliseconds": { "type": "integer", "minimum": 1, "maximum": 300000 },
+        "authority": { "const": "PROVISIONAL_QUALIFICATION_ONLY" },
+        "production_slo_claimed": { "const": false }
+      }
+    },
+    "ErrorBudgetPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "availability_target_basis_points", "production_window_open", "burn_alert_active"],
+      "properties": {
+        "mode": { "const": "NOT_MEASURED" },
+        "availability_target_basis_points": { "type": "null" },
+        "production_window_open": { "const": false },
+        "burn_alert_active": { "const": false }
+      }
+    },
+    "RecoveryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component", "method", "encrypted_at_rest_required",
+        "restore_verification_required", "production_rpo_seconds",
+        "production_rto_seconds", "owner_approval_required"
+      ],
+      "properties": {
+        "component": { "enum": ["PORTAL_CONTROL_DATABASE", "PROJECTION_DATABASE", "OBJECT_EVIDENCE"] },
+        "method": { "enum": ["ENCRYPTED_PITR_RESTORE", "DETERMINISTIC_REBUILD", "HASH_VERIFIED_RESTORE"] },
+        "encrypted_at_rest_required": { "const": true },
+        "restore_verification_required": { "const": true },
+        "production_rpo_seconds": { "type": "null" },
+        "production_rto_seconds": { "type": "null" },
+        "owner_approval_required": { "const": true }
+      }
+    },
+    "RotationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identity", "overlap_seconds", "revoke_old_after_verify",
+        "compromise_disables_commands_first", "runtime_identity_bound",
+        "secret_material_present"
+      ],
+      "properties": {
+        "identity": { "enum": ["MTLS_READ", "MTLS_COMMAND", "DELEGATED_JWT_SIGNER", "PORTAL_SESSION_SIGNER", "PROJECTION_DATABASE"] },
+        "overlap_seconds": { "type": "integer", "minimum": 60, "maximum": 3600 },
+        "revoke_old_after_verify": { "const": true },
+        "compromise_disables_commands_first": { "const": true },
+        "runtime_identity_bound": { "const": false },
+        "secret_material_present": { "const": false }
+      }
+    },
+    "CapacityBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "six_month_order_fill_rows", "initial_concurrent_sse_clients",
+        "source_burst_events_per_minute", "maximum_chart_points",
+        "maximum_correlation_assets", "backup_daily_copies",
+        "backup_weekly_copies", "monthly_cost_budget_usd",
+        "cost_owner_approval_required"
+      ],
+      "properties": {
+        "six_month_order_fill_rows": { "type": "integer", "minimum": 182000 },
+        "initial_concurrent_sse_clients": { "type": "integer", "minimum": 100 },
+        "source_burst_events_per_minute": { "type": "integer", "minimum": 140 },
+        "maximum_chart_points": { "const": 5000 },
+        "maximum_correlation_assets": { "const": 150 },
+        "backup_daily_copies": { "type": "integer", "minimum": 7 },
+        "backup_weekly_copies": { "type": "integer", "minimum": 4 },
+        "monthly_cost_budget_usd": { "type": "null" },
+        "cost_owner_approval_required": { "const": true }
+      }
+    },
+    "ReadinessProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "profile_id", "source_dark", "production_active",
+        "network_authorized", "source_call_authorized", "command_authorized",
+        "production_slo_claimed", "game_day_frequency_days", "budgets",
+        "error_budget", "recovery", "rotations", "capacity"
+      ],
+      "properties": {
+        "schema_version": { "const": "portal.execution.production-readiness.v1" },
+        "profile_id": { "const": "n17a-source-dark" },
+        "source_dark": { "const": true },
+        "production_active": { "const": false },
+        "network_authorized": { "const": false },
+        "source_call_authorized": { "const": false },
+        "command_authorized": { "const": false },
+        "production_slo_claimed": { "const": false },
+        "game_day_frequency_days": { "type": "integer", "minimum": 1, "maximum": 90 },
+        "budgets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ProvisionalBudget" },
+          "minItems": 7,
+          "maxItems": 7
+        },
+        "error_budget": { "$ref": "#/$defs/ErrorBudgetPolicy" },
+        "recovery": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RecoveryPolicy" },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "rotations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RotationPolicy" },
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "capacity": { "$ref": "#/$defs/CapacityBudget" }
+      }
+    },
+    "GameDayCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario", "fixture_only", "isolated", "expected_outcome",
+        "expected_source_request_sent", "expected_command_dispatched",
+        "expected_network_attempts", "abort_condition"
+      ],
+      "properties": {
+        "scenario": { "enum": [
+          "NETWORK_PARTITION", "AUTH_LOSS", "SOURCE_LOSS", "COMMAND_CONTAINMENT",
+          "CONTROL_DATABASE_PITR", "PROJECTION_REBUILD", "RELEASE_ROLLBACK",
+          "CREDENTIAL_COMPROMISE"
+        ] },
+        "fixture_only": { "const": true },
+        "isolated": { "const": true },
+        "expected_outcome": { "const": "PASS" },
+        "expected_source_request_sent": { "const": false },
+        "expected_command_dispatched": { "const": false },
+        "expected_network_attempts": { "const": 0 },
+        "abort_condition": { "type": "string", "minLength": 1, "maxLength": 240 }
+      }
+    },
+    "GameDayCorpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "source_dark", "production_active", "fixture_only", "cases"],
+      "properties": {
+        "schema_version": { "const": "portal.execution.production-readiness-game-day.v1" },
+        "source_dark": { "const": true },
+        "production_active": { "const": false },
+        "fixture_only": { "const": true },
+        "cases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GameDayCase" },
+          "minItems": 8,
+          "maxItems": 8
+        }
+      }
+    },
+    "DrillResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario", "outcome", "isolated", "source_request_sent",
+        "command_dispatched", "network_attempts", "evidence_digest"
+      ],
+      "properties": {
+        "scenario": { "enum": [
+          "NETWORK_PARTITION", "AUTH_LOSS", "SOURCE_LOSS", "COMMAND_CONTAINMENT",
+          "CONTROL_DATABASE_PITR", "PROJECTION_REBUILD", "RELEASE_ROLLBACK",
+          "CREDENTIAL_COMPROMISE"
+        ] },
+        "outcome": { "const": "PASSED" },
+        "isolated": { "const": true },
+        "source_request_sent": { "const": false },
+        "command_dispatched": { "const": false },
+        "network_attempts": { "const": 0 },
+        "evidence_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "ReadinessEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "evidence_class", "source_dark", "production_active",
+        "production_slo_claimed", "production_rpo_rto_claimed",
+        "generated_at_epoch_seconds", "drills", "manifest_digest"
+      ],
+      "properties": {
+        "schema_version": { "const": "portal.execution.production-readiness-evidence.v1" },
+        "evidence_class": { "const": "OFFLINE_ISOLATED_QUALIFICATION" },
+        "source_dark": { "const": true },
+        "production_active": { "const": false },
+        "production_slo_claimed": { "const": false },
+        "production_rpo_rto_claimed": { "const": false },
+        "generated_at_epoch_seconds": { "type": "integer", "minimum": 1 },
+        "drills": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/DrillResult" },
+          "minItems": 8,
+          "maxItems": 8
+        },
+        "manifest_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" }
+      }
+    },
+    "QualificationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "decision", "observed_p95_milliseconds", "maximum_p95_milliseconds", "production_slo_claimed"],
+      "properties": {
+        "class": { "$ref": "#/$defs/SloClass" },
+        "decision": { "enum": ["PASS", "FAIL", "NOT_MEASURED"] },
+        "observed_p95_milliseconds": { "type": ["integer", "null"], "minimum": 0 },
+        "maximum_p95_milliseconds": { "type": "integer", "minimum": 1 },
+        "production_slo_claimed": { "const": false }
+      }
+    }
+  }
+}

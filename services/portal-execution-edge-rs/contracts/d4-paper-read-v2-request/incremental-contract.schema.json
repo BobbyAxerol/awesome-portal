@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/contracts/portal/execution/d4/incremental-source.v1.schema.json",
+  "title": "Portal N02 owner-published incremental source contract",
+  "type": "object",
+  "required": [
+    "schema_version", "contract_revision", "previous_revision", "status", "scope",
+    "compatibility", "transport", "consumer_lease", "snapshot", "cursor", "delta",
+    "retention", "resync", "entities", "limits", "freshness", "authority"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.execution.d4.incremental-source.v1"},
+    "contract_revision": {"const": "d4.paper-read.v2"},
+    "previous_revision": {"const": "d4.paper-read.v1"},
+    "status": {"enum": ["REQUEST_EXAMPLE_NOT_OWNER_PUBLISHED", "OWNER_DRAFT", "OWNER_PUBLISHED"]},
+    "scope": {"type": "object"},
+    "compatibility": {"type": "object"},
+    "transport": {"type": "object"},
+    "consumer_lease": {"type": "object"},
+    "snapshot": {"type": "object"},
+    "cursor": {"type": "object"},
+    "delta": {"type": "object"},
+    "retention": {"type": "object"},
+    "resync": {"type": "object"},
+    "entities": {"type": "array", "minItems": 3, "maxItems": 3},
+    "limits": {"type": "object"},
+    "freshness": {"type": "object"},
+    "authority": {"type": "object"}
+  },
+  "additionalProperties": false
+}

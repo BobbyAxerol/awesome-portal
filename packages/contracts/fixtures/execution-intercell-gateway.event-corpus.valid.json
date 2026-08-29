@@ -1,0 +1,54 @@
+{
+  "schema_version": "portal.execution.intercell-event-corpus.v1",
+  "source_dark": true,
+  "events": [
+    {
+      "event_id": "evt-41",
+      "schema_version": "d4.paper-read.event.v2",
+      "epoch": "epoch-7",
+      "source_sequence": 41,
+      "cursor": "opaque-cursor-41",
+      "operation": "UPSERT",
+      "entity_kind": "order",
+      "entity_id": "ord-fixture-41",
+      "payload_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "occurred_at": "2026-05-04T16:00:00Z"
+    },
+    {
+      "event_id": "evt-43",
+      "schema_version": "d4.paper-read.event.v2",
+      "epoch": "epoch-7",
+      "source_sequence": 43,
+      "cursor": "opaque-cursor-43",
+      "operation": "UPSERT",
+      "entity_kind": "position",
+      "entity_id": "pos-fixture-43",
+      "payload_sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "occurred_at": "2026-05-04T16:00:02Z"
+    },
+    {
+      "event_id": "evt-39-late",
+      "schema_version": "d4.paper-read.event.v2",
+      "epoch": "epoch-7",
+      "source_sequence": 39,
+      "cursor": "opaque-cursor-39",
+      "operation": "DELETE",
+      "entity_kind": "order",
+      "entity_id": "ord-fixture-39",
+      "payload_sha256": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "occurred_at": "2026-05-04T15:59:58Z"
+    },
+    {
+      "event_id": "evt-epoch-8",
+      "schema_version": "d4.paper-read.event.v2",
+      "epoch": "epoch-8",
+      "source_sequence": 1,
+      "cursor": "opaque-cursor-epoch-8-1",
+      "operation": "UPSERT",
+      "entity_kind": "session",
+      "entity_id": "ses-fixture-1",
+      "payload_sha256": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "occurred_at": "2026-05-04T16:00:03Z"
+    }
+  ]
+}
