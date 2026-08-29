@@ -1447,3 +1447,32 @@ OHLC owner §7.5.5(1).
   các màn 360 khác).
 - Guard `MONEY_ARITHMETIC` bắt chữ "stage-equity" trong JSX text (dấu `-`
   trước `equity`) — đổi chữ, không đổi gate.
+
+### 8.29 Sweep "chart thật + smoke khai báo" toàn Execution Loop (2026-08-29)
+
+Bobby: tile 8/10 của Insight Charts chưa có smoke khai báo; và mọi chart còn
+"chỉ vẽ" phải thành chart thật với data smoke khai báo. Kết quả sweep:
+
+- **Tile 8** (Execution density day × hour, trước là `unavailable` text):
+  `DensityHeatmap` mới (heatmap 7×24, quiet window 04–06 là hole tường minh —
+  không phải 0 fills) từ `TILE_CHARTS.density`. **Tile 10** (Paper vs Live
+  drift, trước `insufficient_data` text): line pair từ `TILE_CHARTS.drift`.
+  Cả hai giữ lý do honest trong SMOKE note + envelope caption; switch duy nhất
+  `ALPHA_INSIGHT_SMOKE` chi phối qua flag trong `withSmokeSeries`. Reference
+  shape cho tile kind `heatmap`/`line` của BR-EX-40.
+- **PfEraChart / PfMarketCorr / cross-portfolio spark** bỏ SVG pixel:
+  `PF_CHARTS.era` (nav/bench daily 3 window + era bands from/to),
+  `PF_CHARTS.market` (ρ daily, threshold, breach band, annotation "now" đúng
+  giá trị series — rule 6), `PF_CHARTS.crossSparks`. `LinesChart` thêm `bands`
+  (markArea per-band tone+label).
+- **SparkLine** mới trong `marketChart` (line chart 20–36px, timestamps thật,
+  aria-hidden) thay 6 SVG polyline: AlphaFleet, LiveOverview, PaperOverview,
+  OperationsQueue (throughput là counts thật/hourly), IncidentDetail,
+  cross-portfolio. Mỗi smoke module có helper data-series riêng (giá trị lên =
+  lên, không phải pixel-y) — hết coordinate smoke, khớp BR-EX-64 rule 1.
+- **TradeReplay giữ SVG có chủ ý**: đã là chart data-driven tương tác
+  (candles + bracket legs + glyph theo giá từ `alphaReplay.smoke`, pan/wheel);
+  ECharts không tái tạo rẻ được tương tác này. Không phải mô phỏng tĩnh.
+- Regression WCAG bắt được và sửa trong pass: `.exec-a3 .exec-role-meta` đè
+  màu guard note trên Canary/Live (hai màn này cũng mang class `exec-a3`) →
+  scoped bằng `:not(.exec-guard-note)`; audit 5 viewport xanh lại.
