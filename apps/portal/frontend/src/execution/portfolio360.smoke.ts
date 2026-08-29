@@ -217,6 +217,87 @@ export const PF_CHARTS = {
     joint: { from: "2026-08-12", to: "2026-08-14", label: "Aug 12–14 · joint drawdown · regime: high-vol panic (BTC −6.2%)" },
     foot: "30d timeline · episode = peak-to-recovery · overlap shading = ≥2 alphas in drawdown",
   },
+  /** Equity vs benchmark by window, segmented by config revision — data, not pixels. */
+  era: (() => {
+    const det = (i: number, seed: number) => {
+      const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+      return (x - Math.floor(x)) - 0.5;
+    };
+    const mk = (days: number, seed: number, drift: number, benchDrift: number) => {
+      const day = (i: number) => new Date(Date.UTC(2026, 7, 22) - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10);
+      let nav = 1, bench = 1;
+      const navPts: [string, number][] = [], benchPts: [string, number][] = [];
+      for (let i = 0; i < days; i += 1) {
+        navPts.push([day(i), Number(nav.toFixed(4))]);
+        benchPts.push([day(i), Number(bench.toFixed(4))]);
+        nav *= 1 + drift + det(i, seed) * 0.008;
+        bench *= 1 + benchDrift + det(i, seed + 31) * 0.004;
+      }
+      return { navPts, benchPts };
+    };
+    const w30 = mk(30, 5, 0.0021, 0.0007);
+    const w90 = mk(90, 9, 0.0014, 0.0006);
+    const all = mk(140, 13, 0.0011, 0.0005);
+    return {
+      windows: [
+        { key: "30d" as const, label: "30d", nav: w30.navPts, bench: w30.benchPts,
+          eras: [
+            { from: "2026-07-24", to: "2026-07-27", tone: "warn" as const, label: "rev 12" },
+            { from: "2026-07-27", to: "2026-08-13", tone: "paper" as const, label: "rev 13 · Grid paper 60k (08-01)" },
+            { from: "2026-08-13", to: "2026-08-22", tone: "bad" as const, label: "rev 14 · canary +5k (08-13)" },
+          ] },
+        { key: "90d" as const, label: "90d", nav: w90.navPts, bench: w90.benchPts,
+          eras: [
+            { from: "2026-05-25", to: "2026-07-12", tone: "accent" as const, label: "rev 10 · Carry +50k (07-12)" },
+            { from: "2026-07-12", to: "2026-08-01", tone: "good" as const, label: "rev 11 · MM added (07-20) · rev 12 risk (07-28)" },
+            { from: "2026-08-01", to: "2026-08-13", tone: "paper" as const, label: "rev 13 · Grid paper 60k (08-01)" },
+            { from: "2026-08-13", to: "2026-08-22", tone: "bad" as const, label: "rev 14 · canary" },
+          ] },
+        { key: "all" as const, label: "All — since inception 2026-04", nav: all.navPts, bench: all.benchPts,
+          eras: [
+            { from: "2026-04-05", to: "2026-06-30", tone: "mute" as const, label: "rev 1–9 · build-up incl. RSI retired (rev 9, 06-30)" },
+            { from: "2026-06-30", to: "2026-07-12", tone: "accent" as const, label: "rev 10" },
+            { from: "2026-07-12", to: "2026-08-01", tone: "good" as const, label: "rev 11–12" },
+            { from: "2026-08-01", to: "2026-08-13", tone: "paper" as const, label: "rev 13" },
+            { from: "2026-08-13", to: "2026-08-22", tone: "bad" as const, label: "rev 14" },
+          ] },
+      ],
+      foot: "era shading = config revision in force — performance is attributable to a configuration, not just to time · solid PF-CRYPTO · dashed benchmark",
+    };
+  })(),
+  /** ρ(NAV, Crypto Core v3) daily — the market-correlation panel's frame. */
+  market: (() => {
+    const day = (i: number) => new Date(Date.UTC(2026, 6, 24 + i)).toISOString().slice(0, 10);
+    const det = (i: number) => {
+      const x = Math.sin(i * 12.9898 + 21 * 78.233) * 43758.5453;
+      return (x - Math.floor(x)) - 0.5;
+    };
+    const pts: [string, number][] = [];
+    for (let i = 0; i < 30; i += 1) {
+      let v = 0.34 + det(i) * 0.06;
+      if (i >= 19 && i <= 21) v = 0.61 + det(i) * 0.02;   // crossed Aug 12–14
+      else if (i > 21) v = 0.5 - (i - 21) * 0.012 + det(i) * 0.03;
+      if (i === 29) v = 0.44;                              // "now" — annotation equals the series (rule 6)
+      pts.push([day(i), Number(v.toFixed(2))]);
+    }
+    return {
+      threshold: 0.6,
+      points: pts,
+      breach: { from: "2026-08-12", to: "2026-08-14", label: "crossed Aug 12–14" },
+      now: { t: day(29), v: 0.44, label: "now 0.44" },
+      foot: "0.60 beta-proxy threshold · tail.v1 · corr.v1 · 720 samples",
+    };
+  })(),
+  /** 30d shape per cross-portfolio row — weekly closes, data not pixels. */
+  crossSparks: (() => {
+    const day = (i: number) => new Date(Date.UTC(2026, 6, 24 + i * 4)).toISOString().slice(0, 10);
+    const mk = (seed: number, drift: number): [string, number][] =>
+      Array.from({ length: 8 }, (_, i) => {
+        const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+        return [day(i), Number((1 + drift * i + ((x - Math.floor(x)) - 0.5) * 0.01).toFixed(3))];
+      });
+    return { "PF-CRYPTO": mk(3, 0.004), "PF-MAIN": mk(7, 0.001), "PF-MAIN·VND": mk(11, 0.0015) };
+  })(),
 };
 
 export function pfSmoke() {

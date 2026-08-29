@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import { PF_SMOKE_TABS as T, pfSmoke, usePfTick, PF_CHARTS } from "../portfolio360.smoke";
-import { EpisodesChart, InfluenceGraph } from "./marketChart";
+import { EpisodesChart, InfluenceGraph, LinesChart, SparkLine } from "./marketChart";
 
 const fmt0 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 const fmt2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -35,29 +35,31 @@ export function PfEraChart() {
   const smoke = pfSmoke();
   const [win, setWin] = useState<"30d" | "90d" | "all">("90d");
   if (!smoke) return null;
-  const w = smoke.windows.find((x) => x.key === win)!;
+  const w = PF_CHARTS.era.windows.find((x) => x.key === win)!;
   return (
     <section className="exec-pf2-panel" aria-label="Equity vs benchmark">
       <header className="exec-pf2-head">
         <span className="exec-pf2-title">Equity vs benchmark — segmented by config revision</span>
         <span className="exec-pf2-spacer" />
         <span role="group" aria-label="Window" className="exec-pf2-wins">
-          {smoke.windows.map((x) => <button key={x.key} type="button" className="exec-pf2-chip" data-active={win === x.key ? "true" : undefined} aria-pressed={win === x.key} onClick={() => setWin(x.key)}>{x.key === "all" ? "All" : x.key}</button>)}
+          {PF_CHARTS.era.windows.map((x) => <button key={x.key} type="button" className="exec-pf2-chip" data-active={win === x.key ? "true" : undefined} aria-pressed={win === x.key} onClick={() => setWin(x.key)}>{x.key === "all" ? "All" : x.key}</button>)}
         </span>
         <span className="exec-pf2-note">1d buckets · TWR</span>
       </header>
       <div className="exec-pf2-plot">
-        <svg viewBox="0 0 1120 170" preserveAspectRatio="none" className="exec-pf2-svg" role="img" aria-label={`PF-CRYPTO vs benchmark, ${w.label}`}>
-          {w.eras.map((e) => <rect key={e.label} x={e.x0} y="0" width={e.x1 - e.x0} height="150" className="exec-pf2-era" data-tone={e.tone} />)}
-          {w.cuts.map((c) => <line key={c} x1={c} y1="0" x2={c} y2="150" stroke="var(--line-strong)" strokeDasharray="3,3" />)}
-          <polyline points={w.nav} fill="none" stroke="var(--good)" strokeWidth="1.8" vectorEffect="non-scaling-stroke" />
-          <polyline points={w.bench} fill="none" stroke="var(--ink-faint)" strokeWidth="1.2" strokeDasharray="4,3" vectorEffect="non-scaling-stroke" />
-        </svg>
-        <div className="exec-pf2-eralabels">
-          {w.eras.map((e) => <span key={e.label} style={{ left: `${(e.x0 / 1120) * 100}%` }}>{e.label}</span>)}
-        </div>
+        <LinesChart
+          height={210}
+          series={[
+            { name: "PF-CRYPTO", tone: "good", width: 2, points: w.nav },
+            { name: "Crypto Core v3", tone: "mute", dashed: true, width: 1.2, points: w.bench },
+          ]}
+          bands={w.eras}
+          yFormatter={(v) => v.toFixed(2)}
+          provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "twr.v1 · revision eras from the config ledger" }}
+          ariaLabel={`PF-CRYPTO vs benchmark, ${w.label}, segmented by configuration revision`}
+        />
       </div>
-      <footer className="exec-pf2-foot">era shading = config revision in force — performance is attributable to a configuration, not just to time · solid PF-CRYPTO · dashed benchmark · window {w.label}</footer>
+      <footer className="exec-pf2-foot">{PF_CHARTS.era.foot} · window {w.label}</footer>
     </section>
   );
 }
@@ -81,7 +83,7 @@ export function PfCrossPortfolio({ portfolioId }: { portfolioId: string }) {
                 <td data-numeric="true" className="exec-pf2-dim">{r.dd}</td>
                 <td data-numeric="true">{r.alphas}</td>
                 <td data-numeric="true" data-tone={r.liveTone}>{r.live}</td>
-                <td><svg viewBox="0 0 80 20" preserveAspectRatio="none" className="exec-pf2-spark" aria-hidden="true"><polyline points={r.spark} fill="none" stroke="var(--good)" strokeWidth="1.4" /></svg></td>
+                <td><SparkLine points={PF_CHARTS.crossSparks[r.sleeve ? "PF-MAIN·VND" : (r.id as "PF-CRYPTO" | "PF-MAIN")] ?? PF_CHARTS.crossSparks["PF-MAIN"]} /></td>
               </tr>
             ))}
             <tr><td className="exec-pf2-dim">cross-portfolio corr</td><td colSpan={6} className="exec-pf2-corr">{smoke.crossCorr.text} <b>{smoke.crossCorr.value}</b> · {smoke.crossCorr.tail} · <span className="exec-pf2-dim">{smoke.crossCorr.note}</span></td></tr>
@@ -195,17 +197,20 @@ export function PfCorrMatrix() {
 export function PfMarketCorr() {
   if (!pfSmoke()) return null;
   const m = T.market;
+  const c = PF_CHARTS.market;
   return (
     <Panel title={m.title} note={m.sub}>
       <div className="exec-pf2-plotpad">
-        <svg viewBox="0 0 640 200" className="exec-pf2-svgauto" role="img" aria-label={m.sub} style={{ fontFamily: "var(--font-mono)" }}>
-          <line x1="0" y1={m.thresholdY} x2="640" y2={m.thresholdY} stroke="var(--warn)" strokeWidth="1" strokeDasharray="4 4" />
-          <text x="4" y={m.thresholdY - 5} fontSize="9" fill="var(--warn)">{m.thresholdLabel}</text>
-          <rect x={m.band.x} y="16" width={m.band.w} height="168" fill="var(--warn)" opacity="0.07" />
-          <polyline points={m.line} fill="none" stroke="var(--accent)" strokeWidth="2" />
-          <text x={m.band.x + 2} y="180" fontSize="9" fill="var(--warn)">{m.band.label}</text>
-          <text x={m.now.x} y={m.now.y} fontSize="9" fill="var(--accent)">{m.now.label}</text>
-        </svg>
+        <LinesChart
+          height={190}
+          series={[{ name: m.sub, tone: "accent", width: 2, points: c.points }]}
+          thresholdLine={{ y: c.threshold, label: `${c.threshold.toFixed(2)} beta-proxy threshold`, tone: "warn" }}
+          bands={[{ from: c.breach.from, to: c.breach.to, label: c.breach.label, tone: "warn" }]}
+          annotation={{ t: c.now.t, v: c.now.v, label: c.now.label, tone: "accent" }}
+          yFormatter={(v) => v.toFixed(2)}
+          provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "corr.v1 · tail.v1" }}
+          ariaLabel={`${m.sub} daily over 30 days against the ${c.threshold} threshold`}
+        />
       </div>
       <div className="exec-pf2-facts">{m.facts.map((f) => <span key={f.k}>{f.k} <b data-tone={f.tone}>{f.v}</b>{f.tail}</span>)}<span className="exec-pf2-dim">{m.meta}</span></div>
     </Panel>

@@ -150,6 +150,7 @@ export function LinesChart({
   series,
   band,
   closedWindows,
+  bands,
   zeroLine,
   verticalLines,
   thresholdLine,
@@ -162,6 +163,8 @@ export function LinesChart({
   series: readonly LineSeries[];
   band?: { points: readonly (readonly [string, number, number])[]; tone?: ChartTone };
   closedWindows?: readonly { from: string; to: string; label?: string }[];
+  /** Tinted x-ranges — config-revision eras, breach windows. Label drawn inside the band. */
+  bands?: readonly { from: string; to: string; label?: string; tone?: ChartTone }[];
   zeroLine?: { label: string };
   /** Dashed vertical markers — a stage boundary, a session cut. */
   verticalLines?: readonly { t: string; label: string; tone: ChartTone }[];
@@ -196,13 +199,22 @@ export function LinesChart({
         lineStyle: { color, width: s.width ?? 1.8, type: s.dashed ? "dashed" : "solid" },
         itemStyle: { color },
         data: s.points.map((p) => [p[0], p[1]]),
-        ...(i === 0 && closedWindows?.length
+        ...(i === 0 && (closedWindows?.length || bands?.length)
           ? {
               markArea: {
                 silent: true,
                 itemStyle: { color: withAlpha(t.inkFaint, 0.1) },
                 label: { color: t.inkFaint, fontSize: 9, position: "insideTop" },
-                data: closedWindows.map((w) => [{ xAxis: w.from, name: w.label ?? "" }, { xAxis: w.to }]),
+                data: [
+                  ...(closedWindows ?? []).map((w) => [{ xAxis: w.from, name: w.label ?? "" }, { xAxis: w.to }]),
+                  ...(bands ?? []).map((b) => {
+                    const c = toneColor(b.tone ?? "accent");
+                    return [
+                      { xAxis: b.from, name: b.label ?? "", itemStyle: { color: withAlpha(c, 0.08) }, label: { color: c } },
+                      { xAxis: b.to },
+                    ];
+                  }),
+                ] as object[],
               },
             }
           : {}),
@@ -271,7 +283,7 @@ export function LinesChart({
       },
       series: out,
     });
-  }, [series, band, closedWindows, zeroLine, verticalLines, thresholdLine, annotation, yFormatter, provenance]);
+  }, [series, band, closedWindows, bands, zeroLine, verticalLines, thresholdLine, annotation, yFormatter, provenance]);
   return (
     <figure className="exec-mc" role="img" aria-label={ariaLabel}>
       <EChart option={option} height={height} />
@@ -590,5 +602,44 @@ export function DensityHeatmap({
     <figure className="exec-mc" role="img" aria-label={ariaLabel}>
       <EChart option={option} height={height} />
     </figure>
+  );
+}
+
+/**
+ * Table-cell sparkline — a real chart at 20px: data points with timestamps,
+ * one line, no chrome. Decoration for the row's numbers, so it is
+ * aria-hidden; the numbers beside it are the accessible reading.
+ */
+export function SparkLine({
+  points,
+  tone = "good",
+  height = 20,
+}: {
+  points: readonly (readonly [string, number | null])[];
+  tone?: ChartTone;
+  height?: number;
+}) {
+  const option = useMemo<EChartsOption>(() => {
+    const color = toneColor(tone);
+    return {
+      animation: false,
+      backgroundColor: "transparent",
+      grid: { left: 1, right: 1, top: 2, bottom: 2 },
+      xAxis: { type: "time", show: false },
+      yAxis: { type: "value", show: false, scale: true },
+      tooltip: { show: false },
+      series: [{
+        type: "line",
+        silent: true,
+        symbol: "none",
+        lineStyle: { color, width: 1.4 },
+        data: points.map((p) => [p[0], p[1]]),
+      }],
+    };
+  }, [points, tone]);
+  return (
+    <span className="exec-mc-spark" aria-hidden="true">
+      <EChart option={option} height={height} />
+    </span>
   );
 }

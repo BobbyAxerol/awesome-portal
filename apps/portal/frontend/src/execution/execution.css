@@ -5306,7 +5306,8 @@
 .exec-a3 .exec-chart-tile, .exec-a3 .exec-chart-unavailable { border: 1px solid var(--line); background: var(--paper-raised); }
 /* Alpha 360 reads at the same density as the other 360s: chart captions and
    honest-state bodies are mono meta, not 12–13px sans (Bobby, 2026-08-29). */
-.exec-a3 .exec-role-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-role-meta:not(.exec-guard-note) { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-a3 .exec-guard-note { font: 400 10px/14px var(--font-mono); }
 .exec-a3 .exec-chart-unavailable-body { font: 400 11px/16px var(--font-mono); }
 .exec-a3-stagelegend { display: flex; gap: 14px; margin: 2px 0 0; font: 400 10px/14px var(--font-mono); }
 .exec-a3-stagelegend [data-tone="accent"] { color: var(--accent); }
@@ -5998,6 +5999,7 @@
 .exec-pw .exec-ws { row-gap: 0; }
 .exec-pw-chartplot { padding: 6px 8px 0; display: block; }
 .exec-mc { margin: 0; width: 100%; min-width: 0; }
+.exec-mc-spark { display: inline-block; width: 84px; vertical-align: middle; }
 .exec-pw-ordersfoot { margin: 8px 0 0; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
 
 /* ── Paper fact grids — the hi-fi's own grammar, measured from
