@@ -17,30 +17,59 @@ export interface ContributionRow {
   note?: string | null;
 }
 
-export function contributionOption(rows: readonly ContributionRow[], currency: string): EChartsOption {
+export interface ContributionProvenance {
+  authority: string;
+  asOf: string;
+  formula: string;
+}
+
+export function contributionOption(
+  rows: readonly ContributionRow[],
+  currency: string,
+  provenance?: ContributionProvenance,
+): EChartsOption {
   const tokens = chartTokens(activeTheme());
   const mine = rows.filter((r) => r.currency === currency);
+  const provLine = provenance
+    ? `<br/><span style="color:${tokens.inkFaint}">${provenance.authority} · as_of ${provenance.asOf} · ${provenance.formula}</span>`
+    : "";
   return baseOption({
     animation: false,
-    grid: { left: 64, right: 16, top: 12, bottom: 28 },
-    tooltip: { trigger: "axis", formatter: (p: unknown) => { const list = Array.isArray(p) ? p : [p]; const first = list[0] as { name?: string }; const row = mine.find((r) => r.venue === first?.name); return `${first?.name}: ${row?.value ?? "not published"} ${currency}${row?.note ? ` ${row.note}` : ""}`; } },
+    // No zoom on a two-bar categorical chart, and a value axis that includes
+    // zero: a bar rising from a scaled floor reads as a fraction of itself.
+    dataZoom: [],
+    grid: { left: 64, right: 16, top: 20, bottom: 24 },
+    tooltip: { trigger: "axis", formatter: (p: unknown) => { const list = Array.isArray(p) ? p : [p]; const first = list[0] as { name?: string }; const row = mine.find((r) => r.venue === first?.name); return `${first?.name}: ${row?.value ?? "not published"} ${currency}${row?.note ? ` ${row.note}` : ""}${provLine}`; } },
     xAxis: { type: "category", data: mine.map((r) => r.venue) },
-    yAxis: { type: "value", scale: true, axisLabel: { formatter: (v: number) => String(v) } },
+    yAxis: { type: "value", axisLabel: { formatter: (v: number) => String(v) } },
     series: [
       {
         type: "bar",
+        barMaxWidth: 48,
         data: mine.map((r) => {
           const n = r.value === null ? null : Number(r.value.replace(/,/g, ""));
           return n === null || !Number.isFinite(n) ? null : { value: n, itemStyle: { color: n < 0 ? tokens.bad : tokens.good } };
         }),
-        label: { show: true, position: "top", formatter: (p: { dataIndex: number }) => mine[p.dataIndex]?.value ?? "" },
+        label: {
+          show: true,
+          position: "top",
+          color: tokens.ink,
+          fontSize: 10,
+          fontFamily: "JetBrains Mono, monospace",
+          textBorderWidth: 0,
+          formatter: (p: { dataIndex: number }) => mine[p.dataIndex]?.value ?? "",
+        },
       },
     ],
   });
 }
 
-export function ContributionChart({ rows }: { rows: readonly ContributionRow[] }) {
+export function ContributionChart({ rows, provenance }: { rows: readonly ContributionRow[]; provenance?: ContributionProvenance }) {
   const currencies = useMemo(() => Array.from(new Set(rows.map((r) => r.currency))), [rows]);
+  // One option object per currency for the life of `rows`: a fresh object on
+  // every parent render re-ran setOption(notMerge) on a page with dozens of
+  // charts, and a repaint racing a screenshot is a nondeterministic pixel.
+  const options = useMemo(() => new Map(currencies.map((ccy) => [ccy, contributionOption(rows, ccy, provenance)])), [rows, currencies, provenance]);
   const uid = useId();
   if (rows.length === 0) return null;
   return (
@@ -48,7 +77,7 @@ export function ContributionChart({ rows }: { rows: readonly ContributionRow[] }
       {currencies.map((ccy) => (
         <figure key={ccy} className="exec-chart-tile exec-contrib-chart" aria-label={`Contribution by venue · ${ccy}`}>
           <h3 className="exec-section-title">Contribution by venue · {ccy}</h3>
-          <EChart id={`${uid}-contrib-${ccy}`} option={contributionOption(rows, ccy)} height={160} />
+          <EChart id={`${uid}-contrib-${ccy}`} option={options.get(ccy)!} height={160} />
           <figcaption className="exec-role-meta">
             {rows.filter((r) => r.currency === ccy && r.value === null).length
               ? `not published: ${rows.filter((r) => r.currency === ccy && r.value === null).map((r) => r.venue).join(", ")} · `

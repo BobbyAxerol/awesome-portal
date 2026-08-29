@@ -93,3 +93,16 @@ Nguyên nhân gốc tìm được bằng cách "duyệt web" headless (harness c
 
 Tài liệu: `DESIGN_GRAMMAR_V3.md`; override ghi ở đầu `PHASE_TRACKER.md` và trong EL-V2-10 của handoff.
 Harness chụp: `e2e/_probe-shots.spec.ts` (không commit — khớp `testMatch _probe*` nên sẽ chạy trong gate).
+
+## 7. Vòng 4 — stage workbenches lên chart (Bobby: "toàn chữ hardcode")
+
+Đối chiếu hi-fi 1c/1d/1e/1f với mã: hi-fi có **Live vs Paper vs Backtest** (multi-line, phân biệt bằng
+kiểu nét), **envelope consumed** (capital/drawdown/orders/day so với cap), **ACK latency p50/p95**,
+**slippage/reject/broker freshness**, **positions table** (uPnL, leverage, ack), **contribution 30d**
+(Live), **order-type matrix** (Sandbox). Mã chỉ có `EquityChart series=null` + `SourceTile` "unavailable".
+
+Đã dựng: `components/visuals.tsx` (`StageLinesChart`, `CapGauges`, `HistogramChart`, `SparkTile`,
+`DailyBarsChart`, `PositionsTable`, `OrderTypeMatrix`) + `stage.smoke.ts` (cờ `STAGE_SMOKE`, mọi
+visual in cảnh báo SMOKE, hợp đồng xoá đầu file) + prop `visuals` trên 4 màn (không có = honest state).
+Sandbox: stepper 7 bước gọn (lý do gấp "why"), rail gom 7 mã `SANDBOX_STEP_*` thành một blocker;
+`ExecutionContextRail` dedupe blocker trùng mã. Spec cho codex: **BR-EX-41** (7 mục).

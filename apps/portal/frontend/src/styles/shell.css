@@ -2288,3 +2288,50 @@
   color: var(--ink-soft);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
+
+
+/* --- Execution Carbon shell (hi-fi 5a, owner 2026-08-25) ---------------
+   The chrome around an Execution screen follows the same grammar as the
+   screen: 228px sidebar on the sunken paper, mono 10px group labels, a
+   3px accent bar on the active item, mono chips in the topbar. Scoped to the
+   route-set theme so Research/Planning chrome is untouched. */
+:root[data-theme="execution-carbon"] .portal-sidebar { padding: 14px 0; width: 228px; background: var(--paper-sunken); border-right: 1px solid var(--line); }
+:root[data-theme="execution-carbon"] .portal-navgroup + .portal-navgroup { margin-top: 18px; }
+:root[data-theme="execution-carbon"] .portal-navgroup-label { font: 400 10px/14px var(--font-mono); letter-spacing: 0.1em; color: var(--ink-faint); padding: 0 16px 6px; }
+:root[data-theme="execution-carbon"] .portal-navitem { padding: 6px 16px 6px 13px; border-radius: 0; border-left: 3px solid transparent; font: 400 13px/18px var(--font-body); color: var(--ink-soft); min-height: 0; gap: 8px; }
+:root[data-theme="execution-carbon"] .portal-navitem:hover { background: var(--paper-raised); color: var(--ink); }
+:root[data-theme="execution-carbon"] .portal-navitem-active { background: var(--surface-2); color: var(--ink); font-weight: 500; border-left-color: var(--accent); }
+:root[data-theme="execution-carbon"] .portal-navitem .badge-maturity-preview { display: none; }
+:root[data-theme="execution-carbon"] .portal-navitem .badge-maturity { font: 400 9px/12px var(--font-mono); padding: 0 4px; }
+:root[data-theme="execution-carbon"] [data-collapsed="true"].portal-sidebar { width: auto; }
+:root[data-theme="execution-carbon"] .portal-topbar { gap: 10px; padding: 0 16px; }
+:root[data-theme="execution-carbon"] .portal-brand { font: 600 12px/16px var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase; }
+:root[data-theme="execution-carbon"] .portal-workspace { font: 400 10px/14px var(--font-mono); padding: 2px 8px; border-radius: 0; }
+:root[data-theme="execution-carbon"] .portal-breadcrumbs { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+:root[data-theme="execution-carbon"] .portal-pref select, :root[data-theme="execution-carbon"] .portal-search-btn { font: 400 10px/14px var(--font-mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 0; padding: 3px 8px; color: var(--ink-soft); }
+/* Hi-fi 5a chrome: text-only nav (no icons, no maturity badges), a topbar of
+   brand · workspace · breadcrumb · theme controls — nothing else. */
+:root[data-theme="execution-carbon"] .portal-navitem svg { display: none; }
+:root[data-theme="execution-carbon"] .portal-navitem .badge-maturity { display: none; }
+:root[data-theme="execution-carbon"] .portal-navitem { padding-left: 16px; }
+:root[data-theme="execution-carbon"] .portal-navitem-active { padding-left: 13px; }
+:root[data-theme="execution-carbon"] .portal-topbar .portal-icon-btn:not(.lg\:hidden),
+:root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn,
+:root[data-theme="execution-carbon"] .portal-topbar .portal-pref-check { display: none; }
+:root[data-theme="execution-carbon"] .portal-breadcrumbs { flex: 1; }
+@media (min-width: 1024px) { :root[data-theme="execution-carbon"] .portal-topbar .portal-icon-btn { display: none; } }
+:root[data-theme="execution-carbon"] .portal-topbar .badge-env { display: inline-block; font: 700 10px/14px var(--font-mono); letter-spacing: 0.08em; border-width: 2px; border-style: solid; border-radius: 0; padding: 1px 7px; }
+/* Hi-fi 4e chrome: the alerts chip and the sidebar count badge (carbon only). */
+:root[data-theme="execution-carbon"] .portal-alerts-chip { font: 600 11px/16px var(--font-mono); color: var(--bad); border: 1px solid var(--bad); background: var(--paper-raised); padding: 4px 10px; text-decoration: none; white-space: nowrap; }
+:root[data-theme="execution-carbon"] .portal-navbadge { font: 600 9px/14px var(--font-mono); padding: 0 5px; margin-left: auto; color: var(--paper); background: var(--warn); }
+:root[data-theme="execution-carbon"] .portal-navbadge[data-tone="bad"] { background: var(--bad); color: var(--ink); }
+.portal-alerts-chip { display: none; }
+.portal-navbadge { display: none; }
+:root[data-theme="execution-carbon"] .portal-alerts-chip, :root[data-theme="execution-carbon"] .portal-navbadge { display: inline-block; }
+
+/* Live mark chip (presentation chrome `price`) — Carbon only, hi-fi Live overview. */
+:root[data-theme="execution-carbon"] .portal-price-chip { display: inline-flex; align-items: center; gap: 6px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--surface-2); padding: 3px 10px; font-variant-numeric: tabular-nums; }
+:root[data-theme="execution-carbon"] .portal-price-chip [data-tone="good"] { color: var(--good); }
+:root[data-theme="execution-carbon"] .portal-price-chip [data-tone="bad"] { color: var(--bad); }
+.portal-price-chip { display: none; }
+:root[data-theme="execution-carbon"] .portal-price-chip { display: inline-flex; }

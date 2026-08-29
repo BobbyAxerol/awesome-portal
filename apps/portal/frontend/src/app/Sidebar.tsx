@@ -16,6 +16,7 @@ import {
 import type { PortalRegistryDocument } from "../portal/contracts";
 import { sidebarGroups, type NavOptions } from "../portal/navigation";
 import { iconFor } from "./icons";
+import { usePresentationChrome } from "./presentation";
 
 export function Sidebar({
   registry,
@@ -30,6 +31,7 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const groups = sidebarGroups(registry, options);
+  const badge = usePresentationChrome()?.chrome.navBadge ?? null;
 
   return (
     <nav className="portal-sidebar" aria-label="Primary navigation" data-collapsed={collapsed}>
@@ -69,6 +71,9 @@ export function Sidebar({
                     ) : (
                       <>
                         <span className="portal-navitem-label">{feature.label}</span>
+                        {badge && badge.route === feature.canonical_route && badge.count > 0 ? (
+                          <span className="portal-navbadge" data-tone={badge.tone}>{badge.count}</span>
+                        ) : null}
                         {previewMounted ? (
                           <span className="badge-maturity badge-maturity-preview">PREVIEW</span>
                         ) : (

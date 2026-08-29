@@ -11,19 +11,21 @@
 import { useState, type ReactNode } from "react";
 import { Hint } from "../components/hint";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { LinesChart } from "../components/marketChart";
+import { canarySmoke, canaryStageSeries, clockZ, exitIn, fmtPlus, useCanaryTick } from "../canary.smoke";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
+import { CapGauges, HistogramChart, PositionsTable, SparkTile, StageLinesChart } from "../components/visuals";
+import type { StageVisuals } from "../stage.smoke";
 import { SourceTile, StageGuardBand } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
 import {
   ExecutionContextRail,
   ExecutionDecisionStrip,
-  ExecutionPageHeader,
   ExecutionProvenanceDrawer,
   ExecutionTabs,
   ExecutionWorkspace,
   shortDigest,
-  type HeaderBadge,
   type RailBlocker,
 } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
@@ -54,22 +56,50 @@ export function ActionGroup({ policy, title, brokerStale }: { policy: CanaryActi
 const TABS = ["Envelope", "Positions & orders", "Reconciliation", "Guard rule"] as const;
 type Tab = (typeof TABS)[number];
 
+
+/** Live vs paper vs backtest on one digest, with the canary start marked. */
+function StageLines() {
+  const st = canaryStageSeries();
+  return (
+    <LinesChart
+      height={230}
+      series={[
+        { name: "backtest", tone: "mute", dashed: true, width: 1.2, points: st.backtest },
+        { name: "paper", tone: "paper", dashed: true, width: 1.5, points: st.paper },
+        { name: "live", tone: "accent", width: 2.4, points: st.live },
+      ]}
+      verticalLines={[{ t: st.canaryStart, label: "canary start · Aug 13", tone: "bad" }]}
+      yFormatter={(v) => v.toFixed(3)}
+      provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "equity_projection.v1 · joined by sha256:41bb7d…c4" }}
+      ariaLabel="Normalized equity: live, paper, backtest"
+    />
+  );
+}
+
 export function CanaryControlRoomScreen({
   room,
   status = "ok",
   reason,
   brokerStale = false,
   onCopyProvenance,
+  visuals,
   children,
 }: {
   room: CanaryControlRoom | null;
   status?: PanelStatus;
   reason?: string;
   brokerStale?: boolean;
+  /** Stage visuals (smoke until BR-EX-41). Absent = honest states only. */
+  visuals?: StageVisuals;
   onCopyProvenance?: (full: string) => void;
   children?: ReactNode;
 }) {
   const [tab, setTab] = useState<Tab>("Envelope");
+  const smoke = canarySmoke();
+  const { now, j } = useCanaryTick();
+  const secs = now.getTime() / 1000;
+  const wsAge = `${(0.4 + (secs % 4.6)).toFixed(1)}s`;
+  const left = exitIn(now);
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-canary">
@@ -90,12 +120,6 @@ export function CanaryControlRoomScreen({
   const broker = byId.get("broker") ?? null;
   // Readiness degrades on a stale broker snapshot; an unreadable panel is its own badge.
   const degraded = brokerStale;
-  const badges: HeaderBadge[] = [
-    { label: "LIVE · CANARY", axis: "stage", tone: "bad" },
-    { label: room.runtimeState ?? "runtime not stated", axis: "runtime", tone: room.runtimeState === "ACTIVE" ? "good" : "mute" },
-    { label: degraded ? "READINESS DEGRADED" : "GUARDED", axis: "readiness", tone: degraded ? "bad" : "warn" },
-    { label: `broker ${brokerStale ? "STALE" : (broker?.freshness ?? "not stated")}`, axis: "broker-sync", tone: brokerStale ? "bad" : broker?.panelState === "ok" ? "good" : "warn" },
-  ];
   const blockers: RailBlocker[] = [
     ...room.lifecycleBlockers.map((c) => ({ label: c, detail: "lifecycle", severity: "blocking" as const })),
     ...(room.envelope?.blockerCodes ?? []).map((c) => ({ label: c, detail: "canary envelope", severity: "blocking" as const })),
@@ -146,25 +170,140 @@ export function CanaryControlRoomScreen({
     />
   );
   return (
-    <ExecutionSurface kind="deployments" className="exec-canary">
+    <ExecutionSurface kind="deployments" className="exec-canary exec-a3 exec-ac exec-lf exec-cn" data-hifi-exact="canary-control-room">
       <StageGuardBand stage="LIVE · CANARY" note="real capital at risk when active · every action needs step-up auth and dual approval" />
       <ExecutionWorkspace layout="balanced" rail={rail}>
         <div className="exec-canary-head">
-          <ExecutionPageHeader
-            title={room.deploymentId ?? "deployment not stated"}
-            id={`${room.portfolioId ?? "portfolio not stated"} · ${room.venue ?? "venue not stated"}`}
-            badges={badges}
-            purpose="Promote, hold, reduce or roll back? Real capital, guarded envelope."
-            secondary={
-              <span className="exec-role-meta">
-                stage {room.declaredStage ?? "not stated"} · runtime {room.runtimeState ?? "not stated"} · envelope day {room.dayIndex ?? "not stated"} / {room.durationDays ?? "not stated"}
-              </span>
-            }
-          />
+          {/* Hi-fi 1e: double red frame with the shield; chips keep the contract's
+              runtime + readiness axes; the smoke adds the words the contract
+              does not carry yet (alpha · portfolio · venue, trial day, exit review). */}
+          <header className="exec-masthead exec-ac-masthead exec-360-guard" data-live="true" aria-label="LIVE · CANARY — real capital at risk when active · every action needs step-up auth and dual approval">
+            <svg viewBox="0 0 16 18" className="exec-ac-shield" aria-hidden="true"><path d="M8 1 L15 4 V9 C15 13.5 12 16.5 8 17.5 C4 16.5 1 13.5 1 9 V4 Z" fill="var(--bad-bg)" stroke="var(--bad)" strokeWidth="1.5" /></svg>
+            <span className="exec-ac-live">LIVE · CANARY</span>
+            <div className="exec-ac-h1" role="heading" aria-level={1}>{smoke?.title ?? (room.deploymentId ?? "deployment not stated")} <span className="exec-a3-id">· {smoke?.sub ?? `${room.portfolioId ?? "portfolio not stated"} · ${room.venue ?? "venue not stated"}`}</span></div>
+            <span className="exec-ac-sync" data-tone={room.runtimeState === "ACTIVE" ? "good" : "warn"}>● {room.runtimeState ?? "runtime not stated"}</span>
+            {degraded ? <span className="exec-cn-degraded">READINESS DEGRADED</span> : <span className="exec-cn-guarded">GUARDED</span>}
+            <span className="exec-a3-wf">WF 1e</span>
+            <span className="exec-a3-spacer" />
+            <span className="exec-ac-facts exec-cn-facts">trial · envelope day <b>{room.dayIndex ?? "not stated"} / {room.durationDays ?? "not stated"}</b> · exit review in <b data-tone="warn">{left}</b> · real capital at risk</span>
+          </header>
+          {smoke ? (
+            <>
+              <div className="exec-lf-meta">
+                {smoke.meta.map((m) => <span key={m.k}>{m.k} <a href={m.href}>{m.v}</a></span>)}
+                <span className="exec-af-mute">{smoke.metaTail}</span>
+              </div>
+              {degraded ? (
+                <div className="exec-cn-stale" role="status"><b>Broker sync stale — readiness DEGRADED</b><br />Last broker snapshot 38s old vs BINANCE live policy 5s. Scale requests are blocked; protective actions remain available. Runtime stays ACTIVE — staleness affects what we can SEE, not what the guardrails enforce locally.</div>
+              ) : null}
+              <div className="exec-lf-life">
+                {smoke.lifecycle.map((l) => <span key={l.k}><span data-tone="good">{l.k} ✓ <a href={l.href}>{l.v}</a></span> <span className="exec-lf-arrow">→</span></span>)}
+                <span className="exec-lf-now">{smoke.lifecycleNow}</span>
+                <span className="exec-lf-arrow">→</span><span>{smoke.lifecycleNext}</span>
+                <span className="exec-af-spacer" />
+                <span>lifecycle · ✓ links its decision · ● current stage</span>
+              </div>
+              <div className="exec-pf2-kpis" data-cols="5">
+                <div className="exec-pf2-kpi"><div className="exec-pf2-kpilabel">Canary capital · USDT</div><div className="exec-pf2-kpival">{smoke.kpis.capital}</div></div>
+                <div className="exec-pf2-kpi"><div className="exec-pf2-kpilabel">Net PnL (9d) · marks live</div><div className="exec-pf2-kpival" data-tone="good">{fmtPlus(smoke.kpis.pnlBase + j * 0.4)}</div></div>
+                <div className="exec-pf2-kpi"><div className="exec-pf2-kpilabel">Drawdown</div><div className="exec-pf2-kpival" data-tone="bad">{smoke.kpis.dd}</div></div>
+                <div className="exec-pf2-kpi"><div className="exec-pf2-kpilabel">Risk envelope used</div><div className="exec-pf2-kpival">{smoke.kpis.envelope}</div></div>
+                <div className="exec-pf2-kpi"><div className="exec-pf2-kpilabel">Broker freshness</div><div className="exec-pf2-kpival" data-tone={degraded ? "warn" : "good"}>{degraded ? "38s STALE" : wsAge}</div></div>
+              </div>
+              <div className="exec-pf2-grid" data-ratio="1.55">
+                <section className="exec-pf2-panel" aria-label="Live vs Paper vs Backtest (hi-fi)">
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">Live vs Paper vs Backtest — same artifact digest</span><span className="exec-pf2-spacer" /><span className="exec-cn-legend">live —— · paper – – · backtest ····</span></header>
+                  <div className="exec-pf2-plotpad exec-pw-chartplot">
+                    {/* A real chart, not a stand-in: three stages joined by the
+                        artifact digest, differentiated by line style — never by
+                        colour alone — with the canary start marked in time. */}
+                    <StageLines />
+                  </div>
+                  <footer className="exec-pf2-foot">{smoke.chart.foot}</footer>
+                </section>
+                <section className="exec-pf2-panel" aria-label="Canary envelope (hi-fi)">
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">Canary envelope · {smoke.envelope.id}</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">breach ⇒ auto-halt</span></header>
+                  <div className="exec-pf2-bars">
+                    {smoke.envelope.rows.map((r) => <div key={r.k}><div className="exec-pf2-barrow"><span>{r.k}</span><span className="exec-pf2-barval" data-tone={r.tone}>{r.v}</span></div><div className="exec-pf2-bar"><div className="exec-pf2-barfill" data-tone={r.tone ?? "accent"} style={{ width: `${r.pct}%` }} /></div></div>)}
+                    <p className="exec-pf2-note">{smoke.envelope.note}</p>
+                  </div>
+                </section>
+              </div>
+              <div className="exec-pf2-grid" data-ratio="1.55">
+                <section className="exec-pf2-panel" aria-label="Live positions & open orders (hi-fi)">
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">Live positions &amp; open orders</span><span className="exec-pf2-spacer" /><span className="exec-a3-source"><b>BROKER</b> · as_of {clockZ(now)}</span></header>
+                  <div className="exec-scroll-x"><table className="exec-pf2-table"><thead><tr><th>symbol</th><th>side</th><th data-numeric="true">qty</th><th data-numeric="true">entry</th><th data-numeric="true">uPnL</th><th data-numeric="true">ack latency</th></tr></thead>
+                    <tbody><tr><td>{smoke.position.symbol}</td><td data-tone="good">{smoke.position.side}</td><td data-numeric="true">{smoke.position.qty}</td><td data-numeric="true">{smoke.position.entry}</td><td data-numeric="true" data-tone="good">{fmtPlus(smoke.position.upnlBase + j * 0.3)}</td><td data-numeric="true" className="exec-pf2-dim">{smoke.position.ack}</td></tr></tbody></table></div>
+                  <footer className="exec-pf2-foot exec-lf-facts"><span>{smoke.positionsFoot}</span><span className="exec-pf2-spacer" /><a href="/deployments/blotter">full blotter →</a></footer>
+                </section>
+                <section className="exec-pf2-panel" aria-label="Incidents · reconciliation (hi-fi)">
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">Incidents · reconciliation</span></header>
+                  <div className="exec-lf-kv">{smoke.incidents.flatMap((r) => [<span key={r.k} className="exec-bd-k">{r.k}</span>, <span key={r.k + "v"} data-tone={r.k === "scale blockers" && degraded ? "warn" : r.tone}>{r.k === "scale blockers" && degraded ? "broker sync STALE — scale blocked" : r.v}{r.link ? <a href={r.link.href}>{r.link.label}</a> : null}</span>])}</div>
+                </section>
+              </div>
+              <section className="exec-pf2-panel" aria-label="Trial timeline (hi-fi)">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">Trial timeline — 14-day verdict, not a runtime monitor</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">runtime monitoring lives in <a href="/deployments/live">Live board</a> · this room decides</span></header>
+                <div className="exec-cn-timeline" role="img" aria-label={`Trial day ${smoke.timeline.today} of ${smoke.timeline.days}`}>
+                  {Array.from({ length: smoke.timeline.days }, (_, i) => i + 1).map((d) => {
+                    const cp = (smoke.timeline.checkpoints as Record<number, string>)[d];
+                    const kind = d === smoke.timeline.today ? "today" : d === smoke.timeline.days ? "exit" : cp ? "check" : d > smoke.timeline.today ? "future" : d === 1 ? "first" : "past";
+                    return <div key={d} className="exec-cn-day" data-kind={kind}>{kind === "first" ? "d1" : kind === "check" ? `d${d} ✓` : kind === "today" ? `d${d} ●` : kind === "exit" ? `d${d} ⚑` : ""}</div>;
+                  })}
+                </div>
+                <div className="exec-cn-tlnotes">
+                  {smoke.timeline.notes.map((n) => <span key={n.link.label}>{n.t}<a href={n.link.href}>{n.link.label}</a>{n.tail}</span>)}
+                  <span data-tone="ink">d{smoke.timeline.today} today · exit review d{smoke.timeline.days} in <b data-tone="warn">{left}</b></span>
+                  <span className="exec-af-spacer" /><span>{smoke.timeline.foot}</span>
+                </div>
+              </section>
+              <div className="exec-pf2-grid" data-ratio="1">
+                <section className="exec-pf2-panel" aria-label="Exit readiness (hi-fi)">
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">Exit readiness — gates {smoke.gates.done}/{smoke.gates.total}</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">server-enforced · mirror only</span></header>
+                  <div className="exec-cn-gates">{smoke.gates.rows.map((g) => <span key={g.t} data-ok={g.ok ? "true" : "false"}>{g.ok ? "✓" : "✗"} {g.t.includes("{exitIn}") ? <>{g.t.split("{exitIn}")[0]}<b data-tone="warn">{left}</b>{g.t.split("{exitIn}")[1]}</> : g.t}{g.link ? <a href={g.link.href}>{g.link.label}</a> : null}</span>)}</div>
+                  <div className="exec-cn-cta"><span>{smoke.gates.cta}</span></div>
+                </section>
+                <section className="exec-pf2-panel" aria-label="Portfolio marginal contribution (hi-fi)">
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">Portfolio marginal contribution</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">PF-CRYPTO · 30d · marginal.v1</span></header>
+                  <div className="exec-cn-marginal"><div className="exec-lf-kv">{smoke.marginal.flatMap((m) => [<span key={m.k} className="exec-bd-k">{m.k}</span>, <span key={m.k + "v"} data-tone={m.tone}>{m.href ? <a href={m.href}>{m.v}</a> : m.v}{m.tail ? <span className="exec-pf2-dim">{m.tail}</span> : null}</span>])}</div><p className="exec-pf2-note">{smoke.marginalNote}</p></div>
+                </section>
+              </div>
+              <section className="exec-pf2-panel" aria-label="Promotion decision (hi-fi)">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">Promotion decision — Canary Exit Review</span></header>
+                <div className="exec-cn-decision">
+                  <div className="exec-cn-decisionbtns" role="list" aria-label="Decision options (published with BR-EX-59; every option is plan → apply → verify with dual approval)">{smoke.decision.buttons.map((b) => <span key={b} role="listitem" className="exec-cn-option" data-tone={b === "Rollback" ? "bad" : undefined}>{b}</span>)}</div>
+                  <div className="exec-cn-decisiontext">{smoke.decision.text}<a href={smoke.decision.packLink.href}>{smoke.decision.packLink.label}</a><br />{smoke.decision.rule}<b>{smoke.decision.ruleB}</b></div>
+                </div>
+              </section>
+              <div className="exec-cn-actionbar">
+                <span>{policy?.protective?.visible ? "Protective action · Request scale — issued from the Guard rail (plan → apply → verify)" : "mutation actions hidden — Operator Admin scope required"}</span>
+                <span className="exec-af-spacer" /><span>{smoke.actionsFoot}</span>
+              </div>
+              <p className="exec-af-smoke">! {smoke.warning}</p>
+            </>
+          ) : null}
         </div>
+        <details className="exec-pf2-contract exec-lf-contractstrip" open>
+          <summary>published KPIs · canary-control-room.v1 contract — the strip above is smoke until BR-EX-59</summary>
         <ExecutionDecisionStrip
-          metrics={room.kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, unit: kpi.unit, note: kpi.value === null ? null : kpi.envelope.authority }))}
+          metrics={room.kpis.map((kpi) => {
+            const sm = kpi.value === null ? visuals?.kpis[kpi.key] : undefined;
+            return { label: kpi.label, value: sm?.value ?? kpi.value, unit: sm ? (sm.unit || null) : kpi.unit, note: sm ? "smoke" : kpi.value === null ? null : kpi.envelope.authority };
+          })}
         />
+        </details>
+        {visuals ? (
+          <details className="exec-pf2-contract exec-lf-telemetry">
+            <summary>stage telemetry · smoke until BR-EX-41 (stage lines, envelope gauges, ACK latency, sparklines)</summary>
+            <div className="exec-visual-grid">
+              <StageLinesChart title={visuals.equity.label} lines={visuals.equity.lines} envelope={visuals.envelope} warning={visuals.warning} />
+              <CapGauges title="Canary envelope · consumed" items={visuals.caps} warning={visuals.warning} />
+            </div>
+            <div className="exec-visual-row">
+              <HistogramChart hist={visuals.latency} warning={visuals.warning} />
+              {visuals.sparks.map((s) => <SparkTile key={s.label} spark={s} warning={visuals.warning} />)}
+            </div>
+          </details>
+        ) : (
         <EquityChart
           title="Live vs Paper vs Backtest"
           envelope={{ window: "30d", interval: "1h", currency: room.envelope?.currency ?? null, asOf: room.series?.asOf ?? "", authority: (room.series?.authority ?? "EXECUTION") as never, formulaVersion: null, sourceRows: null, returnedRows: null, coverage: null }}
@@ -175,6 +314,7 @@ export function CanaryControlRoomScreen({
               : `Series ${room.series?.panelState ?? "not published"} in this profile — nothing to draw (BR-EX-34).`
           }
         />
+        )}
         <ExecutionTabs
           tabs={[
             { key: "Envelope", label: "Envelope" },
@@ -225,10 +365,13 @@ export function CanaryControlRoomScreen({
             )
           ) : null}
           {tab === "Positions & orders" ? (
+            <div className="exec-fixtures-stack">
+            {visuals ? <PositionsTable rows={visuals.positions} caption="Live positions & open orders · BROKER" warning={visuals.warning} /> : null}
             <div className="exec-source-grid">
               <SourceTile title="Positions" envelope={room.positions} />
               <SourceTile title="Blotter" envelope={room.blotter} />
               <SourceTile title="Series" envelope={room.series} />
+            </div>
             </div>
           ) : null}
           {tab === "Reconciliation" ? (

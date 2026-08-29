@@ -7,7 +7,13 @@
  * fixture response whose source-side-effect flag is false.
  */
 import { useEffect, useMemo, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { AlphaFleet } from "./screens/AlphaFleet";
+import { AccountsBindings } from "./screens/AccountsBindings";
+import { BindingDetail } from "./screens/BindingDetail";
+import { LiveOverview } from "./screens/LiveOverview";
+import { SandboxOverview } from "./screens/SandboxOverview";
+import { PaperOverview } from "./screens/PaperOverview";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -116,6 +122,7 @@ function PreviewFrame({ screenId, profile, children }: { screenId: string; profi
 
 export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: string; profile?: string | null }) {
   const params = useParams();
+  const [search] = useSearchParams();
   const navigate = useNavigate();
   const api = useMemo(() => createFixtureApi(), []);
   const commandCenter = useMemo(() => readCommandCenter(CC_FIXTURES.busy), []);
@@ -131,21 +138,23 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
   // name would be a second feature model.
   const entity = useMemo(() => {
     switch (screenId) {
-      case "EXECUTION_PAPER_WORKBENCH_SCREEN": return "Carry v3.2";
+      case "EXECUTION_PAPER_WORKBENCH_SCREEN": return params.deploymentId ? "Carry v3.2" : null;
       case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": return "VnMomo v0.9";
-      case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return "MM v1.1";
-      case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return "Grid v2.1";
-      case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return "Grid v2.1";
-      case "EXECUTION_ALPHA_360_SCREEN": return "Grid v2.1";
-      case "EXECUTION_PORTFOLIO_360_SCREEN": return "PF-CRYPTO";
-      case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return "acct-live-grid-v21";
+      case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": return params.deploymentId ? `${params.deploymentId} · certification` : null;
+      // Live Full and Canary share an alpha; the crumb names the deployment and the room.
+      case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": return `${deploymentId} · canary`;
+      case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return params.deploymentId ? `${params.deploymentId} · live full` : null;
+      // List routes (no id) carry no entity; a 360 names the entity it resolved.
+      case "EXECUTION_ALPHA_360_SCREEN": return params.alphaId ? (params.alphaId === "av_2041" ? "Grid v2.1" : params.alphaId) : null;
+      case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? "PF-CRYPTO";
+      case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return params.accountId ?? search.get("binding") ?? null;
       case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       case "EXECUTION_GATE_R2_REVIEW_SCREEN": return approvalId;
       case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": return reviewId;
       case "EXECUTION_INCIDENT_DETAIL_SCREEN": return incidentId;
       default: return null;
     }
-  }, [screenId, approvalId, reviewId, incidentId]);
+  }, [screenId, approvalId, reviewId, incidentId, params.alphaId, params.accountId, params.portfolioId, params.deploymentId, search]);
   useEffect(() => {
     setEntityLabel(entity);
     // A stale "Carry v3.2" over the Blotter would be the breadcrumb lying
@@ -181,28 +190,46 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <PaperWorkbenchPreview deploymentId={deploymentId} variant="vnm" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
-      content = <PaperWorkbenchPreview deploymentId={deploymentId} />;
+      // Feature canonical route (/deployments/paper) = the paper list, entry
+      // of WF 1c; /:deploymentId opens that deployment's workbench. The
+      // sidebar must never land an operator inside one alpha unasked.
+      content = params.deploymentId ? <PaperWorkbenchPreview deploymentId={deploymentId} /> : <PaperOverview />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
-      content = <SandboxCertificationContainer api={api} deploymentId={deploymentId} />;
+      // Feature canonical route (/deployments/sandbox) = the sandbox overview,
+      // entry screen of WF 1d; /:deploymentId opens that certification.
+      content = params.deploymentId
+        ? <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
+        : <SandboxOverview />;
       break;
     case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
       content = <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />;
       break;
     case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
-      content = <LiveFullOperationsContainer api={api} deploymentId={deploymentId} />;
+      // Feature canonical route (/deployments/live) = the live overview, entry
+      // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
+      content = params.deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverview />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
-      content = <FullBlotterPreview initialFilter="FILLED" />;
+      content = <FullBlotterPreview initialFilter="ALL" />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
-      content = <AlphaThreeSixtyPreview alphaId={params.alphaId ?? "av_2041"} />;
+      // The feature's canonical route (/deployments/alphas, no alphaId) is the
+      // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
+      content = params.alphaId ? <AlphaThreeSixtyPreview alphaId={params.alphaId} /> : <AlphaFleet />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
       content = <PortfolioThreeSixtyPreview portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
       break;
     case "EXECUTION_ACCOUNT_BROKER_360_SCREEN":
-      content = <AccountBroker360Preview accountId={params.accountId ?? "acct-live-grid-v21"} />;
+      // Feature canonical route (/deployments/accounts) = the bindings list,
+      // entry screen of WF 1g; ?binding= opens a binding; /:accountId opens
+      // the account's 360.
+      content = params.accountId
+        ? <AccountBroker360Preview accountId={params.accountId} />
+        : search.get("binding")
+          ? <BindingDetail bindingId={search.get("binding")!} />
+          : <AccountsBindings />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = <AdminCatalogueContainer api={api} />;

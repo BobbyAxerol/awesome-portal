@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { smokeMotionAllowed } from "./smokeMotion";
 /**
  * SMOKE DATA — Alpha 360° insight tiles. TEMPORARY. DELETE WHEN BR-EX-34 SHIPS.
  *
@@ -89,3 +91,94 @@ export function smokeEnvelope(base: ChartEnvelope): ChartEnvelope {
     warnings: [...(base.warnings ?? []), SMOKE_WARNING],
   };
 }
+
+
+/** Hi-fi masthead: `age 1.4s` ticking from `as_of`. Smoke-only; off → freshness word. */
+export function useAlphaClock(asOf: string | null | undefined): string | null {
+  const [t, set] = useState(0);
+  useEffect(() => {
+    if (!ALPHA_INSIGHT_SMOKE || !asOf) return;
+    if (!smokeMotionAllowed()) return;
+    const id = window.setInterval(() => set((n) => n + 1), 100);
+    return () => window.clearInterval(id);
+  }, [asOf]);
+  if (!ALPHA_INSIGHT_SMOKE || !asOf) return null;
+  return `${(1.4 + (t % 46) / 10).toFixed(1)}s`;
+}
+
+/**
+ * SMOKE — Equity by stage for the Overview overlay (BR-EX-41 `stage-equity`).
+ * Three normalized lines (1.0 at stage entry), 30 daily points to 2026-08-22:
+ * paper runs the whole window, sandbox enters at day 8, canary at day 21 —
+ * the staged reality the deployment map above already states. Reference
+ * fixture for the shape BR-EX-41 publishes; delete with this file.
+ */
+export function alphaStageEquity(): { name: string; tone: "accent" | "warn" | "good"; points: [string, number][] }[] {
+  const day = (i: number) => new Date(Date.UTC(2026, 6, 24 + i)).toISOString().slice(0, 10);
+  const det = (i: number, seed: number) => {
+    const x = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const walk = (from: number, seed: number, drift: number): [string, number][] => {
+    let v = 1;
+    const out: [string, number][] = [];
+    for (let i = from; i < 30; i += 1) {
+      out.push([day(i), Number(v.toFixed(4))]);
+      v *= 1 + drift + (det(i, seed) - 0.5) * 0.006;
+    }
+    return out;
+  };
+  return [
+    { name: "Paper", tone: "accent", points: walk(0, 3, 0.0011) },
+    { name: "Sandbox", tone: "warn", points: walk(8, 7, 0.0008) },
+    { name: "Canary", tone: "good", points: walk(21, 11, 0.0014) },
+  ];
+}
+
+/**
+ * SMOKE — declared data frames for insight tiles 8 and 10 (Bobby, 2026-08-29:
+ * a tile must never draw undeclared data — when the real series lands it must
+ * be unmistakable which pixels were synthetic). Reference shapes for the
+ * BR-EX-40 typed tile series (`heatmap`, `line`); delete with this file when
+ * BR-EX-40/34 ship.
+ */
+export const TILE_CHARTS = {
+  /** 8 · Execution density day × hour — fills per UTC hour bucket, 7×24. */
+  density: {
+    days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    hours: Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0")),
+    cells: (() => {
+      const out: [number, number, number | null][] = [];
+      for (let d = 0; d < 7; d += 1) {
+        for (let h = 0; h < 24; h += 1) {
+          // Venue quiet window 04–06 UTC is an explicit hole, not zero fills.
+          if (h >= 4 && h < 6) { out.push([h, d, null]); continue; }
+          const base = 6 + 10 * Math.exp(-((h - 14) ** 2) / 18) + (d >= 5 ? -3 : 0);
+          out.push([h, d, Math.max(0, Math.round(base + noise(d * 24 + h, 5) * 3))]);
+        }
+      }
+      return out;
+    })(),
+    foot: "fills per 1h bucket · UTC · 04–06 shown as a hole (no data), never zero",
+  },
+  /** 10 · Paper vs Live drift — same artifact digest, normalized at window start. */
+  drift: {
+    series: (() => {
+      const day = (i: number) => new Date(Date.UTC(2026, 6, 24 + i)).toISOString().slice(0, 10);
+      const walk = (seed: number, drift: number) => {
+        let v = 1;
+        const pts: [string, number][] = [];
+        for (let i = 0; i < 30; i += 1) {
+          pts.push([day(i), Number(v.toFixed(4))]);
+          v *= 1 + drift + noise(i, seed) * 0.004;
+        }
+        return pts;
+      };
+      return [
+        { name: "Paper", tone: "accent" as const, points: walk(13, 0.0012) },
+        { name: "Live", tone: "warn" as const, points: walk(17, 0.0009) },
+      ];
+    })(),
+    foot: "normalized 1.0 at window start · joined by artifact digest · gap paper−live is the drift",
+  },
+};

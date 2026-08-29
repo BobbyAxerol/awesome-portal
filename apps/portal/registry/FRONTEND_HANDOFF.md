@@ -1166,3 +1166,364 @@ return `<Screen>Data = Omit<Props, handlers>`; behaviour comes from
 `src/execution/previewControllers.tsx` on product routes and from
 `testHandlers.ts` spies in tests. Capability is never inferred from handler
 presence (`AccountBroker360.operatorAdmin` decides visibility alone).
+
+### 8.20 Sandbox: a new entry screen, and one route that had none (2026-08-28)
+
+Recorded per §7.3 — this is a screen the plan did not list.
+
+`/deployments/sandbox` is the canonical route of the `SANDBOX_TRADING` feature,
+and it had no screen: entering it opened the certification workbench for
+whichever deployment the fixture happened to carry. So the question the
+workflow starts with — *what is in certification, and what is holding it* — had
+no page. `SandboxOverview` now answers it (hi-fi "Sandbox Overview (entry for
+WF 1d)"), and `/deployments/sandbox/:deploymentId` keeps the workbench, the
+same split Live and Alpha Fleet already use.
+
+Three decisions worth keeping:
+
+1. **The hi-fi's demo toggle is not a toggle.** The hi-fi drives its
+   `reconFinding: NONE | CRITICAL` state from a prop. Here it is the difference
+   between two real deployments — `dep_77` (clean, 5/7) and `dep_91` (CRITICAL
+   finding, 3/7) — so both states are reachable by switching deployment and
+   neither is a mode the data cannot produce. The workbench therefore takes the
+   route's `deploymentId`: the fixture publishes one document, so without it the
+   switcher would always land back on the same page.
+2. **Two claims stay the contract's.** The masthead renders `runtime not stated`
+   rather than the hi-fi's `HALTED`, and the readiness verdict comes from the
+   same gate the rail reads. The switcher also stopped repeating a runtime word
+   for its peer. Everything else in the hi-fi body is smoke and says so.
+3. **A blocked action is not a disabled button.** `Open smoke window` and
+   `Request Sandbox Exit Review` are rendered as controls only when the server
+   would accept them; when blocked they are text naming the blocker. The three
+   available actions each open their plan, and Apply is disabled with the reason
+   — the `sandbox.*` command routes land with BR-EX-61.
+
+Backend requests: **BR-EX-60** (`sandbox-overview.v1`, new) and **BR-EX-61**
+(`sandbox-certification.v1.1`, additive + four command routes), filed in §7.2 of
+the unified plan with field-level detail in appendix O of
+`upgrade_frontend_plan_hifi/hifi_execution_loop/BACKEND_REQUEST_HIFI_V2_2026-08-25.md`.
+Smoke module `src/execution/sandbox.smoke.ts` carries the deletion contract.
+
+Open for codex (appendix O.5): the registry screen `SANDBOX_TRADING_SCREEN` is
+still `data_mode: NONE`; `POST_ONLY`/`REDUCE_ONLY` are order flags, not order
+types, so the "executed types" list needs a normalisation rule; the `stalled`
+threshold; testnet venue naming (`OKX_TESTNET` vs `OKX` + `testnet:true`); and
+where the smoke plan `sp_*` lives.
+
+### 8.21 Backend request đang treo — BR-EX-60 / BR-EX-61 (mở 2026-08-28)
+
+Theo CLAUDE.md §5. Intake chính thức là §7.2 của
+`portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+(commit `5950da5`); dưới đây là bản rút gọn để soát lại mỗi đầu slice (§7.6).
+
+| Request | Trạng thái | Thứ đang chặn |
+|---|---|---|
+| BR-EX-60 `sandbox-overview.v1` | `RECEIVED` — chờ codex trả `CONTRACT_PLANNED` | màn `/deployments/sandbox` đang chạy hoàn toàn bằng smoke |
+| BR-EX-61 `sandbox-certification.v1.1` + 4 route `sandbox.*` | `RECEIVED` | thân hi-fi của workbench là smoke; 4 action mới có plan, chưa có apply |
+
+```text
+Backend request (@codex) — BR-EX-60
+- Endpoint/field cần: GET /api/v1/execution/sandbox/overview → sandbox-overview.v1
+  (summary · kpis{in_certification, halted{by_finding,by_operator}, open_findings,
+  test_fund_equity{enters_portfolio_nav:false}, broker_sync{age,policy,state}} ·
+  rows[]{deployment, alpha, venue·account, portfolio→target+approval,
+  certification{passed,total,current_step,steps[7]}, runtime_state|null, halt_reason,
+  in_stage_days, stalled, next_step{action_key,enabled,blocker_codes}, lineage, note} ·
+  order_journal{rows[], order_types[], reject_reasons[]} · connectivity · recently_certified[])
+- Lý do UI: /deployments/sandbox là canonical route của feature SANDBOX_TRADING và
+  chưa có màn nào. Câu hỏi mở đầu workflow chứng nhận — "cái gì đang trong
+  certification, cái gì đang chặn nó" — hiện không có chỗ nào trả lời.
+- Ảnh hưởng hiện tại: vào route đó mở thẳng workbench của deployment mà fixture
+  tình cờ mang theo. Màn mới đang đọc src/execution/sandbox.smoke.ts.
+- Đề xuất schema: phụ lục O.2 (response mẫu + map cột thật + 6 quy tắc) và A.60
+  (bảng field/type/null/authority) trong BACKEND_REQUEST_HIFI_V2_2026-08-25.md.
+- Codex phải chốt (không đoán): O.5.1 registry data_mode · O.5.2 chuẩn hoá
+  POST_ONLY/REDUCE_ONLY (là cờ, không phải order_type) · O.5.3 ngưỡng stalled ·
+  O.5.4 tên venue testnet.
+```
+
+```text
+Backend request (@codex) — BR-EX-61
+- Endpoint/field cần: sandbox-certification.v1 → v1.1 (additive: identity ·
+  broker_freshness · reconciliation_view{internal,broker,difference} ·
+  findings_rows[] · order_type_certification · execution_quality · smoke_plan ·
+  cleanup · actions[] · peers[]) + 3 route lệnh:
+  POST …/sandbox/{id}/plan {action_key} → plan.v1
+  POST …/sandbox/{id}/apply {plan_id, idempotency_key} → operation.v1
+  GET  …/operations/{operation_id} → verify
+- Lý do UI: v1 công bố steps/findings/panels/plans/timeline nhưng không công bố
+  thứ mà workbench dùng để quyết: diff nội bộ↔broker có thẩm quyền, các loại
+  lệnh alpha dùng trong production mà chưa từng thực thi, chất lượng thực thi
+  kèm INSUFFICIENT_DATA, smoke plan bounded, checklist cleanup, và bốn action
+  kèm blocker của chúng.
+- Ảnh hưởng hiện tại: thân hi-fi đọc smoke; ba action mở được plan nhưng Apply
+  disabled vì chưa có route. Hai claim vẫn là của contract và không bịa:
+  runtime_state null render "runtime not stated", verdict lấy từ gate.
+- Đề xuất schema: phụ lục O.3 (response mẫu + map cột thật + 6 quy tắc), O.3.3
+  (routes + typed error), A.61 (bảng field), D (5 dòng error mới).
+- Codex phải chốt (không đoán): O.5.5 smoke plan sp_* nằm ở bảng nào (ảnh hưởng
+  cả Admin Action Drawer).
+```
+
+**Bất biến frontend sẽ không tự phá, dù backend trả gì:** test funds không vào
+NAV portfolio; certification đứng im không tự hết hạn; `INSUFFICIENT_DATA`
+không bao giờ thành 0; `PARTIAL` không bao giờ xanh; và một action server sẽ từ
+chối thì **không render thành nút disabled** — nó thành chữ nêu đúng blocker.
+
+### 8.22 Paper: the hi-fi was mostly already published (2026-08-28)
+
+Recorded per §7.3, because the finding matters more than the change.
+
+Sandbox needed two new contracts. Paper needed almost nothing: `paper-workbench.v1`
+already publishes the KPIs, lineage, lifecycle rail, observation gate and its
+unmet criteria, drift vs the approved run, runtime health, accounting, portfolio
+contribution and all four journals. Rebuilding the three screens to hi-fi WF 1c /
+4h / 4b was therefore a *layout* pass, not a data pass — the smoke module is a
+quarter the size of Sandbox's and holds only drawings plus the switcher.
+
+Four decisions taken while doing it:
+
+1. **The variant is chosen by the venue's calendar, not by the deployment id.**
+   The id on the route is whatever the operator typed; a session-aware venue is
+   a fact of the contract. Keying on the id had the VN screen render the crypto
+   hi-fi whenever the preview route used a different identifier.
+2. **The switcher chip for the deployment being read prints the contract's own
+   progress.** A chip saying 12/30 above a rail saying 30/30 is the page
+   arguing with itself, and the reader has no way to tell which half is stale.
+3. **Panels moved onto the page keep one copy.** Runtime health, accounting,
+   drift and contribution left their tabs for the workbench body; the tabs now
+   name where they went. Two copies of a figure is two things to keep in
+   agreement.
+4. **Full coverage may sit beside an unmet gate.** The exit review's masthead
+   shows `30 / 30 days` next to `GATE UNMET` on purpose — the policy knows
+   things the coverage numbers do not show, and the verdict stays the server's.
+
+Backend requests: **BR-EX-62** (`paper-workbench.v1.1` + `paper-list.v1`) and
+**BR-EX-63** (`paper-exit-review.v1.1`), specified in full in §7.5 of the
+unified plan. Smoke module `src/execution/paper.smoke.ts` carries the deletion
+contract.
+
+### 8.23 Paper link map — verified by probe, not by reading (2026-08-28)
+
+Owner asked how the three Paper screens reach each other and the rest of the
+loop. A probe (`e2e/_probe-paper-links.spec.ts`, scratch harness, not a gate)
+walks every `href` on all three routes, opens each one, and fails if any lands
+on the registry's not-found. Result: **0 dead**, after four anchors from an
+earlier phase (`#ap-322`, `#ap-338`, `#pf-vn`, `#acct-vn`) were replaced with
+real routes.
+
+**Between the three**
+
+| From | Control | To |
+|---|---|---|
+| Paper Workbench `dep_74` | switcher chip · VnMomo | `/deployments/paper/dep_102/vn-market` |
+| Paper Workbench (either) | switcher chip · Grid `dep_94`, gate met | `/governance/exit-reviews/EX-771` — a met gate's next stop is its review, not its workbench |
+| Paper Workbench (either) | `Request Paper Exit Review` | `/governance/exit-reviews/EX-771?from=<the workbench and its tab>` |
+| Paper Exit Review | evidence rows | back to `/deployments/paper/dep_94`, `…#sessions`, `/deployments/blotter?deployment=dep_94`, `/execution/operations?deployment=dep_94` |
+
+**Out of Paper, into the loop**
+
+| Control | To |
+|---|---|
+| lineage `R1` / `R2` | `/governance/approvals/AP-101/r1`, `/AP-207/r2` (VN: AP-322 / AP-338) |
+| lineage `artifact` | `/deployments/alphas/av_2088?tab=Audit` (VN: `av_2110`) |
+| lineage `portfolio` | `/deployments/portfolios/PF-MAIN` (VN: `PF-VN`) |
+| lineage `account` | `/deployments/accounts/paper-binance-carry-v32` (VN: `paper-dnse-vnmomo`) |
+| lineage `venue` | `/deployments/accounts` |
+| `Alpha 360° — all deployments` | `/deployments/alphas` — the fleet, deliberately: a per-alpha 360 resolves one cast document in the preview, so a deep link opens a page titled with a different alpha |
+| `View approvals` | `/governance/approvals` |
+| journals footer `full blotter →` | `/deployments/blotter` |
+| exit review `run_5498` | `/research/quantbt/runs/run_5498` |
+
+**Not linked, on purpose:** the lifecycle rail's SANDBOX / CANARY / LIVE steps
+carry no href while they are pending. A stage a deployment has not reached has
+no decision to link to, and a link that opens someone else's deployment is worse
+than no link.
+
+### 8.23 Paper — the link map, and what the hi-fi asks for that no contract publishes (2026-08-28)
+
+Owner asked twice how the three Paper screens reach each other and the rest of
+the loop, so it is written down rather than answered in chat. Every row below
+was walked by a probe (`e2e/_probe-paper-links.spec.ts`) that opens each link
+and checks it does not land on the registry's not-found: **0 dead**.
+
+**Between the three**
+
+| From | Control | To |
+|---|---|---|
+| Workbench `dep_74` | switcher chip `VnMomo v0.9 · dep_102` | VN workbench |
+| Workbench `dep_74` | switcher chip `Grid v2.1 · dep_94 — 30/30 GATE MET → EX-771` | Paper Exit Review — a met gate goes to its review, not to another workbench |
+| Workbench (either) | `Request Paper Exit Review` | `EX-771?from=<the workbench and its tab>` |
+| VN workbench | switcher chip `Carry v3.2 · dep_74` | crypto workbench |
+| Exit Review | `dep_94` / `sessions` in Observation coverage | back to the workbench, at its Sessions tab |
+
+The switcher chip for the deployment being read prints the **contract's** own
+progress, not the smoke tail, so it can never contradict the rail four lines
+below it.
+
+**Out to the rest of the loop**
+
+| Control | Goes to | Why there |
+|---|---|---|
+| `Alpha 360° — all deployments →` | **Alpha Fleet** | see below — this is a deliberate departure from the hi-fi |
+| lineage `R1` / `R2` | Gate R1 / R2 Review | the decisions this deployment rests on |
+| lineage `portfolio` | Portfolio 360 (`PF-MAIN` / `PF-VN`) | where its capital sits |
+| lineage `account` | Account/Broker 360 | the account it trades through |
+| lineage `venue` | Accounts & Bindings | the binding behind that account |
+| lineage `artifact` | Alpha 360 · Audit tab | the digest everything is joined by |
+| journal footer `full blotter →` | Full Blotter | the order journal at portfolio scale |
+| Exit Review `run_5498` | QuantBT run | the approved evidence drift is measured against |
+| Exit Review `operations` | Operations Queue, scoped to the deployment | |
+| Exit Review activation plan | Sandbox — the next stage the promotion opens | |
+
+**One deliberate departure.** `Alpha 360°` points at the **fleet**, not at
+`/deployments/alphas/<id>`. A per-alpha 360 resolves one cast document in the
+preview, so the deep link opened a page titled with a *different* alpha — from
+Carry v3.2 the reader landed on Grid v2.1. The fleet answers "all deployments"
+correctly for every alpha and stops being a compromise the day BR-EX-49 ships.
+
+**What the hi-fi shows that no contract publishes.** The hi-fi masthead carries
+`● ACTIVE` — the deployment's runtime state — beside `✓ READY`, which is its
+readiness. `paper-workbench.v1` publishes readiness and freshness but **not
+runtime**, so the chip is absent rather than invented: a screen that printed
+ACTIVE from a readiness field would say a stopped deployment is running. Added
+to BR-EX-62 (§7.5.1) as `runtime_state`.
+
+### 8.24 Paper entry: the owner's hi-fi arrived, the stopgap list retired (2026-08-28)
+
+§8.22 recorded a minimal list at `/deployments/paper` because no hi-fi existed
+for the route. It does now — "Paper Overview (entry for WF 1c/4h)" — and the
+screen is that overview, measured from the file before building (KPI cells
+8/12 with mono-16 values, funnel bars 7px, the runway's 185/320/148/92/104/128
+grid, 18px day cells). Two hues the hi-fi mutes on purpose became tokens
+(`--good-dim`, `--bad-dim`) because thirty day-cells with full-strength borders
+read as noise and the token gate rightly refuses hues declared outside the
+token file. BR-EX-62 was amended the same day: `paper-list.v1` grows into
+`paper-overview.v1` (§7.5.1 of the unified plan).
+
+### 8.25 Backend request đang treo — BR-EX-64 (mở 2026-08-28)
+
+Theo CLAUDE.md §5. Intake chính thức: §7.2 + §7.6 của
+`portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`
+(commit `896df0f`).
+
+```text
+Backend request (@codex) — BR-EX-64
+- Endpoint/field cần: không có endpoint mới — một schema fragment dùng chung
+  `chart-series.rules.v1`, $ref bởi mọi series được vẽ (41/50/56/57/59/62):
+  điểm số + timestamp ISO UTC (không bao giờ toạ độ đã scale) · tiền là decimal
+  string · venue đóng cửa = gap tường minh, không nội suy · tổng in cạnh series
+  = đúng tổng series · marker nào cũng mang journal id của nó · annotation bằng
+  đúng giá trị series tại bucket của nó · cap + downsample giữ extrema và khai
+  báo method · tooltip provenance (authority · as_of · formula_version) bắt
+  buộc · overlay đa stage chung một join_digest · một chủ sở hữu duy nhất cho
+  OHLC.
+- Lý do UI: pass chart thật 2026-08-28 thay toàn bộ SVG mô phỏng trên
+  Paper/Canary/Live bằng ECharts (marketChart.tsx) — các rule trên đang được
+  viết lặp ở từng phụ lục và lệch dần; UI đã va từng cái: bar smoke phải
+  *scale* mới khớp tổng in dưới nó, annotation DD ghi Aug 12 nhưng ngồi Jul 25
+  cho tới khi data mang đúng đáy.
+- Ảnh hưởng hiện tại: BR-EX-41/50/56/57/59/62 đã proven-renderable end-to-end;
+  generator trong paper.smoke.ts / canary.smoke.ts là fixture tham chiếu.
+- Đề xuất schema: §7.6 đầy đủ (10 rule, DoR §7.6.3, 6 test §7.6.4, amendment
+  additive cho 57/59/62 ở §7.6.2).
+- Codex phải chốt (leo thang): §7.5.5(1) — OHLC thuộc data-layer snapshot ds_*
+  hay Trading System market route; HAI màn đang chặn trên quyết định này
+  (Paper overlay 62 + Trade Replay 50).
+```
+
+### 8.26 Portfolio 360 — real charts trong contract slots + nút active (2026-08-28)
+
+Pass sửa 3 điểm Bobby chỉ từ screenshot (commit `9709679`):
+
+- **Influence map contract** (`InfluenceMap`, Structure tab): bỏ SVG 320×240 bị
+  kéo giãn toàn khung ("phóng to quá") — giờ vẽ bằng `InfluenceGraph`
+  (ECharts graph, layout tĩnh, khung 260px): node = alpha (bán kính = exposure
+  share đã publish), edge = |ρ| ≥ threshold từ đúng packed matrix. Không xin
+  series mới — chỉ đọc contract đã có.
+- **Hai khung "not published"** trong disclosure corr.v1 thay bằng chart thật
+  có nhãn smoke: ρ-timeline (`PF_CHARTS.rho`, threshold line 0.6 + annotation
+  breach 08-12→14) và drawdown-overlap (`EpisodesChart` từ
+  `PF_CHARTS.ddOverlap`, episode = interval + depth, joint window có regime
+  label, INSUFFICIENT_DATA là state tường minh). Deletion note tại chỗ; đây là
+  fixture tham chiếu cho BR-EX-34 — đã ghi backend plan **§7.6.6** (commit
+  `7b6f353` bên portal-backend-plan).
+- **`Rebalance plan ▾` / `Report pack`** hết disabled: mở plan-preview panel
+  (grammar `exec-sbc-plan` của Sandbox); `Apply`/`Generate` bên trong là điểm
+  enable duy nhất khi BR-EX-51 giao route plan → apply → verify. KV grid của
+  preview (operation · targets · writes · governance) là field list đề xuất
+  cho plan endpoint.
+- Smoke mới: `PF_CHARTS` trong `portfolio360.smoke.ts` — xoá khi BR-EX-34/51
+  giao. Tests: `analytics360.test.tsx` 13/13; full vitest 1706 pass.
+
+### 8.27 Backend request đang treo — BR-EX-65/66 (mở 2026-08-29, audit độ phủ)
+
+Soát lại sau pass Portfolio: hai lỗ hổng, đã file đủ vào plan (commit `35b3a73`
+bên portal-backend-plan), row mirror trong `BACKEND_PLAN_7_2_ROWS_2026-08-25.md`:
+
+- **BR-EX-65 — portfolio correlation-risk series** (§7.7): ρ-timeline
+  (threshold + breaches server-derived, config `PORTAL_CONTROL`) và
+  drawdown-overlap (episodes interval+depth, joint_windows ≥2 alphas,
+  regime_label tùy chọn `regime.v1`). Lý do phải có row riêng: §7.6.6(1) trót
+  gắn hai series này vào BR-EX-34, nhưng 34 đã **closed 2026-08-26** chỉ với
+  equity/drawdown/approved-band — scope mới không được reopen row đã đóng.
+  Smoke note trong `PortfolioThreeSixty.tsx` + `portfolio360.smoke.ts` đã trỏ
+  lại BR-EX-65.
+- **BR-EX-66 — portfolio actions** (§7.8): `rebalance` plan → apply → verify
+  (plan dry-run echo đúng KV grid của preview; apply idempotent theo
+  plan_digest, step-up + dual approval; verify PARTIAL không bao giờ xanh) và
+  `report-pack` generate/status với từng section pin theo digest lúc đọc
+  (`stale_at_generation` khi lệch). Đây là contract cho hai nút đã active;
+  `Apply`/`Generate` là điểm enable duy nhất. Row WRITE — activation gate
+  riêng, chờ Bobby duyệt.
+
+Register giờ là BR-EX-41…66, tất cả `RECEIVED`. Quyết định treo duy nhất vẫn là
+OHLC owner §7.5.5(1).
+
+### 8.28 Alpha 360 — contribution chart sửa lỗi, equity-by-stage thành chart thật (2026-08-29)
+
+- `ContributionChart` (shared): bỏ dataZoom slider thừa, trục giá trị về gốc 0
+  (trước đó `scale:true` làm bar USDC vẽ từ 900 — đọc như một phần của chính
+  nó), `barMaxWidth:48`, label mono 10px không viền, tooltip mang provenance
+  (authority · as_of · formula) theo §12 tooltip contract — formula
+  `contribution.v1 (BR-EX-41)`.
+- Khung "Equity series not published" trên Overview thay bằng chart thật:
+  `alphaStageEquity()` trong `alpha360.smoke.ts` — 3 line paper/sandbox/canary
+  chuẩn hoá 1.0 tại stage entry, 30d, sandbox vào ngày 8, canary ngày 21 khớp
+  deployment map; DOM legend theo tone; SMOKE note "Delete when BR-EX-41/34
+  ship". Đây là reference shape cho series `stage-equity` của BR-EX-41 (đã
+  file, không cần request mới). Path honest-state giữ nguyên khi `equity` null.
+- Typography đồng bộ: trong `.exec-a3`, `exec-role-meta` về 10px mono và
+  `exec-chart-unavailable-body` về 11px mono (trước là 12–13px sans, to hơn
+  các màn 360 khác).
+- Guard `MONEY_ARITHMETIC` bắt chữ "stage-equity" trong JSX text (dấu `-`
+  trước `equity`) — đổi chữ, không đổi gate.
+
+### 8.29 Sweep "chart thật + smoke khai báo" toàn Execution Loop (2026-08-29)
+
+Bobby: tile 8/10 của Insight Charts chưa có smoke khai báo; và mọi chart còn
+"chỉ vẽ" phải thành chart thật với data smoke khai báo. Kết quả sweep:
+
+- **Tile 8** (Execution density day × hour, trước là `unavailable` text):
+  `DensityHeatmap` mới (heatmap 7×24, quiet window 04–06 là hole tường minh —
+  không phải 0 fills) từ `TILE_CHARTS.density`. **Tile 10** (Paper vs Live
+  drift, trước `insufficient_data` text): line pair từ `TILE_CHARTS.drift`.
+  Cả hai giữ lý do honest trong SMOKE note + envelope caption; switch duy nhất
+  `ALPHA_INSIGHT_SMOKE` chi phối qua flag trong `withSmokeSeries`. Reference
+  shape cho tile kind `heatmap`/`line` của BR-EX-40.
+- **PfEraChart / PfMarketCorr / cross-portfolio spark** bỏ SVG pixel:
+  `PF_CHARTS.era` (nav/bench daily 3 window + era bands from/to),
+  `PF_CHARTS.market` (ρ daily, threshold, breach band, annotation "now" đúng
+  giá trị series — rule 6), `PF_CHARTS.crossSparks`. `LinesChart` thêm `bands`
+  (markArea per-band tone+label).
+- **SparkLine** mới trong `marketChart` (line chart 20–36px, timestamps thật,
+  aria-hidden) thay 6 SVG polyline: AlphaFleet, LiveOverview, PaperOverview,
+  OperationsQueue (throughput là counts thật/hourly), IncidentDetail,
+  cross-portfolio. Mỗi smoke module có helper data-series riêng (giá trị lên =
+  lên, không phải pixel-y) — hết coordinate smoke, khớp BR-EX-64 rule 1.
+- **TradeReplay giữ SVG có chủ ý**: đã là chart data-driven tương tác
+  (candles + bracket legs + glyph theo giá từ `alphaReplay.smoke`, pan/wheel);
+  ECharts không tái tạo rẻ được tương tác này. Không phải mô phỏng tĩnh.
+- Regression WCAG bắt được và sửa trong pass: `.exec-a3 .exec-role-meta` đè
+  màu guard note trên Canary/Live (hai màn này cũng mang class `exec-a3`) →
+  scoped bằng `:not(.exec-guard-note)`; audit 5 viewport xanh lại.

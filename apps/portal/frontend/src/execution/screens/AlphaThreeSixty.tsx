@@ -39,16 +39,12 @@ import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { TradeReplay } from "../components/TradeReplay";
+import { TILE_CHARTS, alphaStageEquity, useAlphaClock } from "../alpha360.smoke";
 import { EnvelopeCaption, EquityChart, type EquitySeries } from "../components/EquityChart";
 import { ContributionChart } from "../components/ContributionChart";
-import {
-  ExecutionContextRail,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionWorkspace,
-  shortDigest,
-  type HeaderBadge,
-} from "../components/workspace";
+import { DensityHeatmap, LinesChart } from "../components/marketChart";
+import { ExecutionWorkspace, shortDigest } from "../components/workspace";
 
 /**
  * Row budgets for the bounded panels.
@@ -65,6 +61,7 @@ const SESSION_BUDGET = 20;
 export const ALPHA_TABS = [
   "Overview",
   "Insight Charts",
+  "Trade Replay",
   "Positions",
   "Orders & Fills",
   "Risk",
@@ -140,9 +137,13 @@ export interface InsightTile {
   body?: ReactNode;
   /** series when the contract publishes one; absent = honest state */
   series?: EquitySeries | null;
+  /** Declared smoke chart standing in for this tile (set only by the smoke switch). */
+  smokeChart?: "density" | "drift";
 }
 
 export interface AlphaThreeSixtyProps {
+  /** Research gate status chip (hi-fi: RESEARCH_APPROVED). Not published yet — defaults to the hi-fi value only when smoke is on. */
+  researchStatus?: string | null;
   alphaId: string;
   alphaName: string;
   artifactDigest: string;
@@ -279,13 +280,14 @@ function ScopeBar({
   const set = (patch: Partial<AlphaScope>) => onScopeChange({ ...scope, ...patch });
   return (
     <div className="exec-alpha-scope">
-      <span className="exec-tile-title">Scope</span>
+      <span className="exec-a3-scopelabel">Scope</span>
       <Select label="Portfolio" value={scope.portfolio} options={portfolioOptions} onChange={(v) => set({ portfolio: v })} />
       <Select label="Mode" value={scope.mode} options={modeOptions} onChange={(v) => set({ mode: v })} />
       {/* Registry-driven. A hardcoded venue list is a release every time the
           desk adds an exchange. */}
       <Select label="Venue" value={scope.venue} options={venueOptions} onChange={(v) => set({ venue: v })} />
       <Select label="Window" value={scope.window} options={windowOptions} onChange={(v) => set({ window: v })} />
+      <span className="exec-a3-scopenote">every panel below obeys this scope · venue list from registry, never hardcoded</span>
     </div>
   );
 }
@@ -436,64 +438,29 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
   // tabs point at the FIRST screen's panel. The fixtures surface renders five
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
+  const researchStatus = props.researchStatus ?? "RESEARCH_APPROVED";
+  const clock = useAlphaClock(envelope.asOf);
+  const stagesNow = Array.from(new Set(deployments.map((d) => d.stage)));
 
-  const absentKpis = kpis.filter((k) => k.value === null);
-  const alphaRail = (
-    <ExecutionContextRail
-      next={{
-        title: `Scope · ${scope.portfolio} · ${scope.mode} · ${scope.venue} · ${scope.window}`,
-        detail: (
-          <span className="exec-role-body">
-            {deployments.length} deployment{deployments.length === 1 ? "" : "s"} in scope · {contributions.length} venue contribution{contributions.length === 1 ? "" : "s"}. Change the scope bar and every panel follows.
-          </span>
-        ),
-        action: deployments[0] ? (
-          <button type="button" className="exec-role-control exec-btn-apply" onClick={() => onOpenDeployment(deployments[0])}>
-            Open first deployment in scope
-          </button>
-        ) : undefined,
-      }}
-      blockers={[
-        ...absentKpis.map((k) => ({ label: `${k.label} not published`, detail: null, severity: "watch" as const })),
-        ...tiles.filter((t) => t.state !== "ok").map((t) => ({ label: `${t.index} · ${t.title} ${t.state === "insufficient_data" ? "INSUFFICIENT_DATA" : "UNAVAILABLE"}`, detail: null, severity: "watch" as const })),
-      ]}
-      freshness={<span className="exec-role-meta">{envelope.authority} · as_of {envelope.asOf ?? "not stated"} · {envelope.freshness}</span>}
-      provenance={
-        <ExecutionProvenanceDrawer
-          items={[
-            { label: "artifact", short: artifactDigest.length > 20 ? shortDigest(artifactDigest) : artifactDigest, full: artifactDigest },
-            ...(r1Id ? [{ label: "R1", short: r1Id, full: null }] : []),
-            ...(r2Id ? [{ label: "R2", short: r2Id, full: null }] : []),
-            { label: "owner", short: owner, full: null },
-          ]}
-          onCopy={(full) => void navigator.clipboard?.writeText(full)}
-        />
-      }
-    />
-  );
   return (
-    <ExecutionSurface kind="deployments" className="exec-alpha">
-      <ExecutionWorkspace layout="balanced" rail={alphaRail}>
-      <ExecutionPageHeader
-        title={alphaName}
-        id={alphaId}
-        badges={[
-          { label: `${venues.length} venue${venues.length === 1 ? "" : "s"}`, axis: "other" },
-          { label: `${envelope.authority} · ${envelope.freshness}`, axis: "broker-sync", tone: envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn" },
-          ...(status === "partial" ? [{ label: "PARTIAL", axis: "readiness", tone: "warn" } as HeaderBadge] : []),
-        ]}
-        purpose="Deployments across venue × mode × stage."
-        secondary={
-          <>
-            <span className="exec-role-meta">owner {owner}</span>
-            {passportHref ? (
-              <a className="exec-evidence-link" href={passportHref}>
-                Artifact passport →
-              </a>
-            ) : null}
-          </>
-        }
-      />
+    <ExecutionSurface kind="deployments" className="exec-alpha exec-a3" data-hifi-exact="alpha-360">
+      <ExecutionWorkspace layout="dense">
+      <header className="exec-a3-masthead">
+        <span className="exec-a3-kind">ALPHA</span>
+        <h1 className="exec-a3-h1">{alphaName} <span className="exec-a3-id">· {alphaId}</span></h1>
+        {researchStatus ? <span className="exec-a3-status">{researchStatus}</span> : null}
+        <span className="exec-a3-wf">WF 2a·2b</span>
+        <span className="exec-a3-spacer" />
+        <span className="exec-a3-source"><b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span></span>
+        {passportHref ? <a className="exec-a3-btn" href={passportHref}>Artifact passport →</a> : null}
+      </header>
+      <div className="exec-a3-meta">
+        <span>artifact <a href={passportHref ?? `/deployments/alphas/${alphaId}?tab=Audit`} title={artifactDigest}>{artifactDigest.length > 20 ? shortDigest(artifactDigest) : artifactDigest}</a></span>
+        <span>owner {owner}</span>
+        {r1Id ? <span>R1 <a href={`/governance/approvals/${r1Id}/r1`}>{r1Id}</a></span> : null}
+        {r2Id ? <span>R2 <a href={`/governance/approvals/${r2Id}/r2`}>{r2Id}</a></span> : null}
+        <span>current stages: {stagesNow.length ? stagesNow.map((st, i) => <span key={st}>{i ? " · " : ""}<b data-stage={st}>{st}</b></span>) : <span className="exec-a3-mute">none in scope</span>}</span>
+      </div>
 
       <ScopeBar {...props} />
 
@@ -508,7 +475,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
             role="tab"
             id={`${uid}-tab-${option.replace(/\W+/g, "-")}`}
             aria-controls={`${uid}-tabpanel`}
-            className="exec-inbox-filter"
+            className="exec-a3-tab"
             data-active={tab === option ? "true" : undefined}
             aria-selected={tab === option}
             onClick={() => onTabChange(option)}
@@ -551,7 +518,24 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 not. */}
             <div className="exec-grid-2" data-ratio="1.35">
               {equity ? (
-                <div data-scope-panel="equity"><EquityChart title={`Equity by stage · ${scope.venue} · ${scope.window}`} envelope={equity.envelope} series={equity.series ?? null} /></div>
+                <div data-scope-panel="equity">
+                  {equity.series ? (
+                    <EquityChart title={`Equity by stage · ${scope.venue} · ${scope.window}`} envelope={equity.envelope} series={equity.series} />
+                  ) : (
+                    <section className="exec-chart-tile" aria-label={`Equity by stage · ${scope.venue} · ${scope.window}`}>
+                      <h3 className="exec-section-title">Equity by stage · {scope.venue} · {scope.window}</h3>
+                      <p className="exec-a3-stagelegend" aria-hidden="true"><span data-tone="accent">— paper</span><span data-tone="warn">— sandbox</span><span data-tone="good">— canary</span></p>
+                      <LinesChart
+                        height={200}
+                        series={alphaStageEquity()}
+                        yFormatter={(v) => v.toFixed(3)}
+                        provenance={{ authority: "DERIVED", asOf: equity.envelope.asOf ?? "—", formula: equity.envelope.formulaVersion ?? "equity_projection.v1" }}
+                        ariaLabel={`Equity by stage, normalized at stage entry — ${scope.venue}, ${scope.window}`}
+                      />
+                      <p className="exec-af-smoke">! SMOKE DATA — normalized 1.0 at stage entry · series joined by artifact digest · reference shape for the BR-EX-41 stage equity series. Delete when BR-EX-41/34 ship</p>
+                    </section>
+                  )}
+                </div>
               ) : (
                 <PanelState
                   status="unavailable"
@@ -559,7 +543,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 />
               )}
               <div data-scope-panel="contribution">
-                <ContributionChart rows={contributions} />
+                <ContributionChart rows={contributions} provenance={{ authority: "DERIVED", asOf: envelope.asOf ?? "—", formula: "contribution.v1 (BR-EX-41)" }} />
                 <Contribution rows={contributions} />
               </div>
             </div>
@@ -568,6 +552,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         ) : null}
 
         {tab === "Insight Charts" ? <Tiles tiles={tiles} /> : null}
+        {tab === "Trade Replay" ? <TradeReplay /> : null}
         {tab === "Positions" ? <Positions {...props} /> : null}
         {tab === "Orders & Fills" ? <Orders {...props} /> : null}
         {tab === "Risk" ? <Risk rows={props.risk ?? []} /> : null}
@@ -687,7 +672,37 @@ function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
   return (
     <div className="exec-alpha-tiles" data-scope-panel="tiles">
       {tiles.map((tile) =>
-        tile.state === "ok" ? (
+        tile.smokeChart === "density" ? (
+          /* Declared smoke in the unavailable slot: the kline shard publishes
+             nothing (the honest reason), so the frame draws TILE_CHARTS.density
+             and says so — undeclared pixels are how real data gets mistrusted. */
+          <section key={tile.index} className="exec-chart-tile" aria-label={`${tile.index} · ${tile.title}`} data-state="ok">
+            <div className="exec-chart-head"><h3 className="exec-section-title">{tile.index} · {tile.title}</h3></div>
+            <DensityHeatmap
+              height={200}
+              days={TILE_CHARTS.density.days}
+              hours={TILE_CHARTS.density.hours}
+              cells={TILE_CHARTS.density.cells}
+              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "execution.v1 (BR-EX-40 heatmap)" }}
+              ariaLabel="Execution density by day and hour, fills per bucket"
+            />
+            <p className="exec-af-smoke">! SMOKE DATA — {TILE_CHARTS.density.foot} · reference shape for the BR-EX-40 heatmap tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
+            <EnvelopeCaption envelope={tile.envelope} compact />
+          </section>
+        ) : tile.smokeChart === "drift" ? (
+          <section key={tile.index} className="exec-chart-tile" aria-label={`${tile.index} · ${tile.title}`} data-state="ok">
+            <div className="exec-chart-head"><h3 className="exec-section-title">{tile.index} · {tile.title}</h3></div>
+            <LinesChart
+              height={200}
+              series={TILE_CHARTS.drift.series}
+              yFormatter={(v) => v.toFixed(3)}
+              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "paper.v1 (BR-EX-40 line pair)" }}
+              ariaLabel="Paper versus live equity on the same artifact digest, normalized at window start"
+            />
+            <p className="exec-af-smoke">! SMOKE DATA — {TILE_CHARTS.drift.foot} · reference shape for the BR-EX-40 line-pair tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
+            <EnvelopeCaption envelope={tile.envelope} compact />
+          </section>
+        ) : tile.state === "ok" ? (
           <EquityChart
             key={tile.index}
             title={`${tile.index} · ${tile.title}`}

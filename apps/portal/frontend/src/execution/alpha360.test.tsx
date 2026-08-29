@@ -27,12 +27,12 @@ import { alphaHandlers } from "./testHandlers";
 afterEach(cleanup);
 
 describe("Alpha 360° — one scope, obeyed by every tab", () => {
-  it("offers all nine tabs", () => {
+  it("offers all ten tabs", () => {
     render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360()} />);
     for (const tab of ALPHA_TABS) {
       expect(screen.getByRole("tab", { name: tab })).toBeTruthy();
     }
-    expect(ALPHA_TABS).toHaveLength(9);
+    expect(ALPHA_TABS).toHaveLength(10);
   });
 
   it("reports a scope change once, rather than each tab holding its own", () => {
@@ -130,7 +130,7 @@ describe("Alpha 360° — figures that are not known say so", () => {
     expect(okTiles).toHaveLength(9);
     expect(container.querySelectorAll(".exec-equity")).toHaveLength(9);
     expect(screen.getAllByText("Evidence fixture — not a published projection.")).toHaveLength(9);
-    expect(screen.getAllByText(/SMOKE DATA/)).toHaveLength(9);
+    expect(screen.getAllByText(/SMOKE DATA/)).toHaveLength(11);
     // The honest states are untouched by the smoke switch.
     expect(screen.getByText(/DERIBIT has 12 fills in this window/)).toBeTruthy();
   });

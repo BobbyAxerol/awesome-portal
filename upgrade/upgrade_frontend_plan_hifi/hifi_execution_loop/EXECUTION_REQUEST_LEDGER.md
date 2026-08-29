@@ -175,3 +175,18 @@ delivery profiles remain `fixture`.
    never Trading System implementations.
 9. D1–D4 remain owner/change-window gated and are not implied by
    F0/F1a/F1b/F2/F3.
+
+## 3. Hi-fi V2 requests — Claude → Codex (2026-08-25)
+
+Intake chính thức: bảng §7.2 của backend plan (`portal-backend-plan/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`) — hàng BR-EX-41…46, `RECEIVED` 2026-08-25. Phụ lục schema: [`BACKEND_REQUEST_HIFI_V2_2026-08-25.md`](BACKEND_REQUEST_HIFI_V2_2026-08-25.md). Mỗi hàng gắn với một file smoke sẽ xoá khi giao.
+
+| Request | Owner | Màn | Smoke xoá khi giao | Status |
+|---|---|---|---|---|
+| BR-EX-42 pinned stage/status/figure | Codex | Command Center | `commandCenter.smoke.ts` (`CC_PIN_EXTRA`) | `REQUESTED 2026-08-25` |
+| BR-EX-45 promotion pipeline | Codex | Command Center | `commandCenter.smoke.ts` (`CC_PIPELINE`) | `REQUESTED 2026-08-25` |
+| BR-EX-46 incident v2 (market band, facts, gates) | Codex | Incident Detail | `incident.smoke.ts` | `REQUESTED 2026-08-25` |
+| BR-EX-41 stage telemetry ×7 | Codex | Paper/Sandbox/Canary/Live | `stage.smoke.ts` | `REQUESTED 2026-08-25` |
+| BR-EX-43 alerts summary + market/alerts SSE | Codex | shell + Incident + CC | `CC_SMOKE_MOTION` | `REQUESTED 2026-08-25` |
+| BR-EX-44 fleet cell sub/tone/href | Codex | Command Center | `commandCenter.smoke.ts` (`CC_FLEET_EXTRA`) | `REQUESTED 2026-08-25` |
+| BR-EX-34/40 tile series + tile kind | Codex | Alpha 360 | `alpha360.smoke.ts` | `REQUESTED 2026-08-24/25` |
+

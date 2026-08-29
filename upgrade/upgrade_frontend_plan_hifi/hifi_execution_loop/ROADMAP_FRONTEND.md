@@ -305,6 +305,11 @@ scale. Một lệnh gọi trước đây thành công (với số bị làm trò
 | ~~BR-EX-29~~ | ~~`conditions[]` thay cho một chuỗi~~ | ✅ **giao rồi**, đã tiêu thụ `6da8a43` |
 | **BR-EX-30** | **R2 response thiếu 7 trường màn R2 đang đọc** — lineage R1, grant, vai trò, passport | 🔴 mới 2026-08-22 |
 | **BR-EX-31** | **`delivery_policy` chưa có cờ ghi governance của Portal** — duyệt đang mượn cờ lệnh paper | 🟠 mới 2026-08-22 |
+| **BR-EX-42 · 45** | **Command Center 5a**: pinned stage/status/figure · promotion pipeline — màn đầu Bobby duyệt, đang smoke | 🔴 mới 2026-08-25 · chi tiết `BACKEND_REQUEST_HIFI_V2_2026-08-25.md` |
+| **BR-EX-46** | **Incident Detail 4d**: market band, evidence facts, gate rows, resolve budget | 🔴 mới 2026-08-25 |
+| BR-EX-41 | stage telemetry ×7 (Paper/Sandbox/Canary/Live) | 🟠 mới 2026-08-25 |
+| BR-EX-43 · 44 | alerts summary + SSE market/alerts · fleet sub-notes | 🟡 mới 2026-08-25 |
+| BR-EX-40 | tile kind cho Alpha 360 Insight | 🟡 mới 2026-08-25 |
 
 BR-EX-24…29 **không** bị PRE-IAM-04 đóng; chúng chờ contract của chính chúng.
 Codex xác nhận trong §10 bước 3 rằng BR-EX-28 và BR-EX-29 nằm trong EX-BE-05b/F0.

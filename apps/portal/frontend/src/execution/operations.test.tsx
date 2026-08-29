@@ -240,7 +240,8 @@ describe("#5 — a replayed mutation does not duplicate", () => {
 describe("#6 — source status stays independent of triage", () => {
   it("renders three separate cells", () => {
     const { container } = render(<OperationsQueueScreen onOpen={() => undefined} queue={queue()} now={NOW} />);
-    const row = container.querySelector("tbody tr")!;
+    // Published rows keep their own row class; smoke rows (hi-fi 4e) sit above them.
+    const row = container.querySelector("tbody tr.exec-oq-contract")!;
     expect(within(row as HTMLElement).getByText("BLOCKED")).toBeTruthy();
     expect(within(row as HTMLElement).getByText("NOT_STARTED")).toBeTruthy();
     expect(within(row as HTMLElement).getByText("unacknowledged")).toBeTruthy();

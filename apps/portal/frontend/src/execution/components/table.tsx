@@ -72,6 +72,12 @@ export interface Column<T> {
 }
 
 export interface KeysetTableProps<T> {
+  /**
+   * Rows rendered ahead of the page's rows, inside the same <tbody> and the
+   * same column grid (hi-fi 4c smoke rows while BR-EX-48 is open). They are
+   * not part of `page` and never count toward its totals.
+   */
+  leadingRows?: ReactNode;
   /** Accessible name — every table on this surface says what it lists. */
   label: string;
   columns: readonly Column<T>[];
@@ -133,6 +139,7 @@ export function KeysetTable<T>({
   notice,
   neverVirtualize = false,
   overflowNotice,
+  leadingRows,
 }: KeysetTableProps<T>) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -233,6 +240,7 @@ export function KeysetTable<T>({
               </tr>
             ) : null}
 
+            {start === 0 ? leadingRows : null}
             {rows.slice(start, end).map((row) => {
               const key = rowKey(row);
               return (

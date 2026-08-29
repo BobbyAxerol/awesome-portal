@@ -11,21 +11,15 @@
  */
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { BarsChart } from "../components/marketChart";
+import { liveSmoke } from "../live.smoke";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
+import { CapGauges, DailyBarsChart, HistogramChart, PositionsTable, SparkTile } from "../components/visuals";
+import type { StageVisuals } from "../stage.smoke";
 import { SourceTile, StageGuardBand } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
-import {
-  ExecutionContextRail,
-  ExecutionDecisionStrip,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionTabs,
-  ExecutionWorkspace,
-  shortDigest,
-  type HeaderBadge,
-  type RailBlocker,
-} from "../components/workspace";
+import { ExecutionContextRail, ExecutionDecisionStrip, ExecutionProvenanceDrawer, ExecutionTabs, ExecutionWorkspace, shortDigest, type RailBlocker } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
 import { liveGuardRules, type LiveActionPolicy, type LiveFullOperations } from "../liveFull";
 
@@ -59,11 +53,14 @@ export function LiveFullOperationsScreen({
   status = "ok",
   reason,
   onCopyProvenance,
+  visuals,
   children,
 }: {
   live: LiveFullOperations | null;
   status?: PanelStatus;
   reason?: string;
+  /** Stage visuals (smoke until BR-EX-41). Absent = honest states only. */
+  visuals?: StageVisuals;
   onCopyProvenance?: (full: string) => void;
   children?: ReactNode;
 }) {
@@ -83,17 +80,12 @@ export function LiveFullOperationsScreen({
     );
   }
   const rules = liveGuardRules(live);
+  const smoke = liveSmoke();
   const policy = live.commandPolicy;
   const gap = live.projectionContinuity?.gapDetected ?? null;
   const consistency = live.brokerConsistency;
   const mismatch = consistency !== null && consistency.brokerValuesVisible === false;
   const brokerPanel = live.panels.broker;
-  const badges: HeaderBadge[] = [
-    { label: "LIVE · FULL", axis: "stage", tone: "bad" },
-    { label: live.runtimeState ?? "runtime not stated", axis: "runtime", tone: live.runtimeState === "ACTIVE" ? "good" : "mute" },
-    { label: mismatch ? "MISMATCH" : gap ? "GAP" : "READY", axis: "readiness", tone: mismatch || gap ? "bad" : "good" },
-    { label: `broker ${consistency?.state ?? "consistency not stated"}`, axis: "broker-sync", tone: mismatch ? "bad" : consistency?.state ? "good" : "warn" },
-  ];
   const blockers: RailBlocker[] = [
     ...live.lifecycleBlockers.map((c) => ({ label: c, detail: "lifecycle", severity: "blocking" as const })),
     ...(consistency?.blockerCodes ?? []).map((c) => ({ label: c, detail: "broker consistency", severity: "blocking" as const })),
@@ -132,21 +124,65 @@ export function LiveFullOperationsScreen({
     />
   );
   return (
-    <ExecutionSurface kind="deployments" className="exec-live">
+    <ExecutionSurface kind="deployments" className="exec-live exec-a3 exec-ac exec-lf" data-hifi-exact="live-full">
+      {/* The shared guard band stays for the stage anatomy (sr-only here): the
+          hi-fi 1f masthead frame is the visible guard on this screen. */}
       <StageGuardBand stage="LIVE · FULL" note="full production capital when active · every action needs step-up auth and dual approval" />
       <ExecutionWorkspace layout="balanced" rail={rail}>
         <div className="exec-live-head">
-          <ExecutionPageHeader
-            title={live.deploymentId ?? "deployment not stated"}
-            id={`${live.portfolioId ?? "portfolio not stated"} · ${live.venue ?? "venue not stated"}`}
-            badges={badges}
-            purpose="Portfolio risk → broker truth → exposure → incidents → contribution."
-            secondary={<span className="exec-role-meta">stage {live.declaredStage ?? "not stated"} · activated {live.activatedAt ?? "not stated"}</span>}
-          />
+          {/* Hi-fi 1f: the live masthead wears the 3px red frame with the shield.
+              The badges keep the contract's four axes; the smoke adds the
+              alpha/portfolio/venue words the contract does not carry yet. */}
+          <header className="exec-masthead exec-ac-masthead exec-360-guard" data-live="true" aria-label="LIVE — full production capital when active · every action needs step-up auth and dual approval">
+            <svg viewBox="0 0 16 18" className="exec-ac-shield" aria-hidden="true"><path d="M8 1 L15 4 V9 C15 13.5 12 16.5 8 17.5 C4 16.5 1 13.5 1 9 V4 Z" fill="var(--bad-bg)" stroke="var(--bad)" strokeWidth="1.5" /></svg>
+            <span className="exec-ac-live">LIVE</span>
+            <div className="exec-ac-h1" role="heading" aria-level={1}>{smoke?.full.title ?? (live.deploymentId ?? "deployment not stated")} <span className="exec-a3-id">· {smoke?.full.sub ?? `${live.portfolioId ?? "portfolio not stated"} · ${live.venue ?? "venue not stated"}`}</span></div>
+            <span className="exec-ac-sync" data-tone={live.runtimeState === "ACTIVE" ? "good" : "warn"}>● {live.runtimeState ?? "runtime not stated"}</span>
+            <span className="exec-ac-sync" data-tone={mismatch || gap ? "bad" : "good"}><span aria-hidden="true">{mismatch || gap ? "✗" : "✓"}</span> <span>{mismatch ? "MISMATCH" : gap ? "GAP" : "READY"}</span></span>
+            <span className="exec-a3-wf">WF 1f</span>
+            <span className="exec-a3-spacer" />
+            <span className="exec-ac-facts">stage <b>{live.declaredStage ?? "not stated"}</b> · {smoke?.full.facts.tail ?? `activated ${live.activatedAt ?? "not stated"}`}</span>
+          </header>
+          {smoke ? (
+            <>
+              <div className="exec-lf-meta">
+                {smoke.full.meta.map((m) => <span key={m.k}>{m.k} <a href={m.k === "deployment" ? `/deployments/live/${live.deploymentId ?? m.v}` : m.href}>{m.k === "deployment" ? (live.deploymentId ?? m.v) : m.v}</a></span>)}
+                <span className="exec-af-mute">{smoke.full.metaNote}</span>
+              </div>
+              <div className="exec-lf-life">
+                {smoke.full.lifecycle.map((l) => <span key={l.k}><span data-tone="good">{l.k} ✓ <a href={l.href}>{l.v}</a></span> <span className="exec-lf-arrow">→</span></span>)}
+                <span className="exec-lf-now">{smoke.full.lifecycleNow}</span>
+                <span className="exec-af-spacer" />
+                <span>lifecycle · ✓ links its decision · ● current stage</span>
+              </div>
+              <div className="exec-pf2-kpis" data-cols="5">
+                {smoke.full.kpis.map((k) => <div key={k.label} className="exec-pf2-kpi"><div className="exec-pf2-kpilabel">{k.label}</div><div className="exec-pf2-kpival" data-tone={k.tone}>{k.value}{k.sub ? <> <span className="exec-pf2-kpisubval" data-tone={k.subTone}>{k.sub}</span></> : null}</div></div>)}
+              </div>
+            </>
+          ) : null}
         </div>
+        <details className="exec-pf2-contract exec-lf-contractstrip" open>
+          <summary>published KPIs · live-full.v1 contract — the strip above is smoke until BR-EX-57</summary>
         <ExecutionDecisionStrip
-          metrics={live.kpis.map((kpi) => ({ label: kpi.label, value: kpi.value, unit: kpi.unit, note: kpi.value === null ? (kpi.suppressed ? "suppressed" : null) : kpi.authority }))}
+          metrics={live.kpis.map((kpi) => {
+            const sm = kpi.value === null && !kpi.suppressed ? visuals?.kpis[kpi.key] : undefined;
+            return { label: kpi.label, value: sm?.value ?? kpi.value, unit: sm ? (sm.unit || null) : kpi.unit, note: sm ? "smoke" : kpi.value === null ? (kpi.suppressed ? "suppressed" : null) : kpi.authority };
+          })}
         />
+        </details>
+        {visuals ? (
+          <details className="exec-pf2-contract exec-lf-telemetry">
+            <summary>stage telemetry · smoke until BR-EX-41 (contribution bars, envelope gauges, ACK latency, sparklines)</summary>
+            <div className="exec-visual-grid">
+              {visuals.contribution ? <DailyBarsChart title="Contribution & edge evidence · 30d" bars={visuals.contribution} unit="USDT" height={240} warning={visuals.warning} /> : null}
+              <CapGauges title="Risk envelope · consumed" items={visuals.caps} warning={visuals.warning} />
+            </div>
+            <div className="exec-visual-row">
+              <HistogramChart hist={visuals.latency} warning={visuals.warning} />
+              {visuals.sparks.map((s) => <SparkTile key={s.label} spark={s} warning={visuals.warning} />)}
+            </div>
+          </details>
+        ) : null}
         {mismatch ? (
           <section className="exec-mismatch-slot" role="alert" aria-label="Broker mismatch">
             <ExecutionSectionTitle>MISMATCH — broker truth replaces presentation</ExecutionSectionTitle>
@@ -167,7 +203,7 @@ export function LiveFullOperationsScreen({
               ) : null}
             </p>
           </section>
-        ) : (
+        ) : visuals ? null : (
           <EquityChart
             title="Contribution / edge evidence — 30d contribution vs portfolio"
             envelope={{ window: "30d", interval: "1d", currency: null, asOf: brokerPanel?.envelope.asOf ?? "", authority: "ANALYTICS" as never, formulaVersion: null, sourceRows: null, returnedRows: null, coverage: null }}
@@ -175,6 +211,65 @@ export function LiveFullOperationsScreen({
             unavailableReason="Contribution series not published for this profile — BR-EX-34. Research lineage stays in the provenance drawer; it does not occupy live safety space."
           />
         )}
+        {smoke ? (
+          <>
+            <div className="exec-pf2-grid" data-ratio="1">
+              <section className="exec-pf2-panel" aria-label="Broker & reconciliation truth (hi-fi)">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">Broker &amp; reconciliation truth</span><span className="exec-pf2-spacer" /><span className="exec-a3-source"><b>BROKER</b> · as_of {smoke.full.broker.asOf}</span></header>
+                <div className="exec-lf-kv">{smoke.full.broker.rows.map((r) => <span key={r.k} className="exec-bd-k" data-k={r.k}>{r.k}</span>).flatMap((k, i) => { const r = smoke.full.broker.rows[i]; return [k, <span key={r.k + "v"} data-tone={r.tone}>{r.v}{r.link ? <a href={r.link.href}>{r.link.label}</a> : null}</span>]; })}</div>
+                <footer className="exec-pf2-foot">{smoke.full.broker.foot}</footer>
+              </section>
+              <section className="exec-pf2-panel" aria-label="Open exposure & orders (hi-fi)">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">Open exposure &amp; orders</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">{smoke.full.exposure.meta}</span></header>
+                <div className="exec-scroll-x"><table className="exec-pf2-table"><thead><tr><th>symbol</th><th>side</th><th data-numeric="true">qty</th><th data-numeric="true">uPnL</th><th data-numeric="true">leverage</th></tr></thead>
+                  <tbody>{smoke.full.exposure.rows.map((r) => <tr key={r.s}><td>{r.s}</td><td data-tone={r.side === "LONG" ? "good" : "bad"}>{r.side}</td><td data-numeric="true">{r.qty}</td><td data-numeric="true" data-tone={r.upnl.startsWith("−") ? "bad" : "good"}>{r.upnl}</td><td data-numeric="true">{r.lev}</td></tr>)}</tbody></table></div>
+                <footer className="exec-pf2-foot exec-lf-facts"><span>{smoke.full.exposure.foot}</span><span className="exec-pf2-spacer" /><a href="/deployments/blotter">full blotter →</a></footer>
+              </section>
+            </div>
+            <div className="exec-pf2-grid" data-ratio="1">
+              <section className="exec-pf2-panel" aria-label="Incidents & protective actions (hi-fi)">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">Incidents &amp; protective actions</span></header>
+                <div className="exec-lf-kv">
+                  <span className="exec-bd-k">active incidents</span><span data-tone={mismatch ? "bad" : "good"}>{mismatch ? "1 — reconciliation mismatch" : smoke.full.incidents.active}</span>
+                  <span className="exec-bd-k">protective ladder</span><span>{smoke.full.incidents.ladder.a}<a href={smoke.full.incidents.ladder.link.href}>{smoke.full.incidents.ladder.link.label}</a>{smoke.full.incidents.ladder.b}</span>
+                  <span className="exec-bd-k">last operation</span><span>{smoke.full.incidents.last.a}<span data-tone="good">{smoke.full.incidents.last.verdict}</span>{smoke.full.incidents.last.b}</span>
+                </div>
+                <div className="exec-lf-actions">
+                  <button type="button" className="exec-lf-halt" disabled={!policy?.protective?.enabled} title={policy?.protective?.enabled ? "plan → apply → verify" : "production command authority is inactive for this profile"}>Halt ▾</button>
+                  <button type="button" className="exec-lf-danger" disabled={!policy?.protective?.enabled} title={policy?.protective?.enabled ? "plan → apply → verify" : "production command authority is inactive for this profile"}>Reduce ▾</button>
+                  <button type="button" className="exec-lf-danger" disabled={!policy?.protective?.enabled} title={policy?.protective?.enabled ? "plan → apply → verify" : "production command authority is inactive for this profile"}>Emergency close ▾</button>
+                </div>
+                <footer className="exec-pf2-foot">{smoke.full.incidents.foot}</footer>
+              </section>
+              <section className="exec-pf2-panel" aria-label="Contribution & edge evidence (hi-fi)">
+                <header className="exec-pf2-head"><span className="exec-pf2-title">Contribution &amp; edge evidence · 30d</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">{smoke.full.contribution.meta}</span></header>
+                <div className="exec-lf-bars exec-pw-chartplot">
+                  <div className="exec-pf2-note exec-lf-bartitle">{smoke.full.contribution.title}</div>
+                  {/* Real bars on a real scale: each bar hovers to its date and
+                      exact figure, and the series is scaled so it sums to the
+                      30d total printed under it — a chart that disagrees with
+                      its own caption is worse than no chart. */}
+                  <BarsChart
+                    height={170}
+                    points={(() => {
+                      const bars = smoke.full.contribution.bars;
+                      const scale = 3102.44 / bars.reduce((a, b) => a + b, 0);
+                      return bars.map((v, i) => {
+                        const day = new Date(Date.UTC(2026, 7, 22) - (bars.length - 1 - i) * 86_400_000);
+                        return [day.toISOString().slice(5, 10), Math.round(v * scale * 100) / 100] as const;
+                      });
+                    })()}
+                    yFormatter={(v) => v.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                    provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "contrib.v1 · net of fees" }}
+                    ariaLabel="Daily PnL contribution, 30 days"
+                  />
+                </div>
+                <div className="exec-lf-facts"><span>30d contribution <b data-tone="good">{smoke.full.contribution.total}</b></span><span>cost drag {smoke.full.contribution.drag}</span><span className="exec-pf2-dim">detailed edge decomposition → <a href={`/deployments/portfolios/${live.portfolioId ?? "PF-CRYPTO"}`}>Portfolio 360°</a> · research evidence → <a href="/deployments/alphas/av_2041?tab=Audit">Artifact Passport</a> (drill-down)</span></div>
+              </section>
+            </div>
+            <p className="exec-af-smoke">! {smoke.warning}</p>
+          </>
+        ) : null}
         <ExecutionTabs
           tabs={[
             { key: "Exposure & orders", label: "Exposure & orders" },
@@ -187,10 +282,13 @@ export function LiveFullOperationsScreen({
           label="Live sections"
         >
           {tab === "Exposure & orders" ? (
+            <div className="exec-fixtures-stack">
+            {visuals ? <PositionsTable rows={visuals.positions} caption="Open exposure & orders · BROKER" warning={visuals.warning} /> : null}
             <div className="exec-source-grid exec-live-panels">
               {(["internal", "broker", "difference"] as const).map((id) => (
                 <SourceTile key={id} title={id === "internal" ? "Internal" : id === "broker" ? "Broker" : "Difference"} envelope={live.panels[id]?.envelope} suppressed={live.panels[id]?.suppressed} warnings={live.panels[id]?.warningCodes} />
               ))}
+            </div>
             </div>
           ) : null}
           {tab === "Continuity" ? (

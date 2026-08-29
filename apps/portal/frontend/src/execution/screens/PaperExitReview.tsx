@@ -28,6 +28,7 @@ import { LifecycleRail, type RailStep } from "../components/lifecycle";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { useState } from "react";
+import { paperSmoke, PAPER_SMOKE_WARNING } from "../paper.smoke";
 import { ExecutionDecisionBar } from "../components/decisionBar";
 import { ExecutionSectionTitle } from "../components/typography";
 import {
@@ -215,6 +216,9 @@ export function PaperExitReview({
   trail?: ReactNode;
 }) {
   const [tab, setTab] = useState<ExitTab>("evidence");
+  const [note, setNote] = useState("");
+  const [copied, setCopied] = useState(false);
+  const smoke = paperSmoke();
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
       <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
@@ -367,7 +371,7 @@ export function PaperExitReview({
         </span>
       }
       provenance={
-        lineage?.length ? (
+        lineage?.length && !smoke ? (
           <ExecutionProvenanceDrawer
             items={lineage.map((l) => ({
               label: l.label,
@@ -382,15 +386,72 @@ export function PaperExitReview({
     />
   );
   return (
-    <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
+    <section className={smoke ? "exec-exit exec-px" : "exec-exit"} data-hifi-exact={smoke ? "paper-exit-review" : undefined} aria-label={`Paper exit review ${reviewId}`}>
       <ExecutionWorkspace layout="balanced" rail={contextRail}>
-        <ExecutionPageHeader
-          title={subject}
-          id={reviewId}
-          badges={badges}
-          purpose={gateSummary ?? undefined}
-          secondary={policyId ? <span className="exec-role-meta">observation policy {policyId}</span> : undefined}
-        />
+        {smoke ? (
+          <>
+            {/* The hi-fi asks the decision in the title: EX-771 — Grid v2.1 ·
+                dep_94 · DERIBIT → promote to SANDBOX_VALIDATION? */}
+            <header className="exec-masthead exec-px-masthead">
+              <span className="exec-px-kind">PAPER_EXIT</span>
+              <div className="exec-px-h1" role="heading" aria-level={1}>
+                {reviewId} <span className="exec-px-dim">—</span> {subject}{" "}
+                <span className="exec-px-dim">→ promote to</span> {promoteTo}?
+              </div>
+              <span className="exec-px-gate" data-tone={gateMet ? "good" : "warn"}>{gateMet ? "GATE MET" : "GATE UNMET"}</span>
+              {status === "stale" ? <span className="exec-px-gate" data-tone="bad">STALE</span> : null}
+              {status === "partial" ? <span className="exec-px-gate" data-tone="warn">PARTIAL</span> : null}
+              <span className="exec-px-wf">WF 4b</span>
+              {/* Full coverage can sit beside an unmet gate: the policy knows
+                  things these numbers do not show, so they stay on the
+                  masthead and never become the verdict. */}
+              {gateSummary ? <span className="exec-px-summary">{gateSummary}</span> : null}
+            </header>
+            <div className="exec-px-meta">
+              {lineage?.map((l, i) => {
+                const digest = l.value.startsWith("sha256:");
+                const shown = digest ? shortDigest(l.value) : l.value;
+                const firstDigest = digest && lineage.findIndex((e) => e.value.startsWith("sha256:")) === i;
+                return (
+                  <span key={l.label}>
+                    {l.label} {l.href ? <a href={l.href}>{shown}</a> : <b>{shown}</b>}
+                    {/* The full digest is never printed — head-6/tail-2 on
+                        screen, the whole thing on the clipboard. */}
+                    {firstDigest ? (
+                      // A control that leaves no trace reads as broken. The
+                      // clipboard is the effect; the label is the receipt.
+                      <button
+                        type="button"
+                        className="exec-px-copy"
+                        data-copied={copied ? "true" : undefined}
+                        onClick={() => { onCopyProvenance(l.value); setCopied(true); }}
+                      >
+                        {copied ? "Copied · full digest" : "Copy"}
+                      </button>
+                    ) : null}
+                  </span>
+                );
+              })}
+              {/* Only when the lineage did not already say it — the hi-fi prints
+                  the policy once, and so does the contract. */}
+              {policyId && !lineage?.some((l) => l.value === policyId) ? <span>observation policy <b>{policyId}</b></span> : null}
+              <span className="exec-px-spacer" />
+              <span className="exec-px-quorum">
+                quorum {quorumMet}/{quorumRequired}
+                {approverRole ? ` · needs you (${approverRole})` : ""}
+                {sla ? <> · SLA <SlaCell sla={sla} /> remaining</> : null}
+              </span>
+            </div>
+          </>
+        ) : (
+          <ExecutionPageHeader
+            title={subject}
+            id={reviewId}
+            badges={badges}
+            purpose={gateSummary ?? undefined}
+            secondary={policyId ? <span className="exec-role-meta">observation policy {policyId}</span> : undefined}
+          />
+        )}
         {status === "partial" ? (
           <div className="exec-gate-banner" role="status">
             {partialReason ?? "Part of this evidence could not be read. Absence of a finding is not a pass."}
@@ -420,6 +481,59 @@ export function PaperExitReview({
             {carried.length} carried {carried.length === 1 ? "question follows" : "questions follow"} into {carried[0].carriesTo} — promotion does not resolve {carried.length === 1 ? "it" : "them"}.
           </p>
         ) : null}
+        {smoke ? (
+          <>
+            <div className="exec-px-grid" data-cols="auto">
+              {panels.map((panel) => (
+                <div className="exec-gate-panel exec-px-panel" key={panel.title}>
+                  <ExecutionSectionTitle>
+                    {panel.title}
+                    {panel.source ? <span className="exec-gate-rc"> · {panel.source}</span> : null}
+                  </ExecutionSectionTitle>
+                  <Findings panel={panel} />
+                </div>
+              ))}
+            </div>
+            <div className="exec-px-grid" data-cols="two">
+              {activationPlan ? (
+                activationPlanDark ? (
+                  <ExecutionSurface kind="deployments" className="exec-inverted exec-gate-panel exec-px-panel exec-px-plan">
+                    <ExecutionSectionTitle>Sandbox activation plan — preview</ExecutionSectionTitle>
+                    {activationPlan}
+                    <p className="exec-px-plannote">{smoke.exit.planNote}</p>
+                  </ExecutionSurface>
+                ) : (
+                  <div className="exec-gate-panel exec-px-panel">
+                    <ExecutionSectionTitle>Sandbox activation plan — preview</ExecutionSectionTitle>
+                    {activationPlan}
+                  </div>
+                )
+              ) : (
+                <div className="exec-gate-panel exec-px-panel">
+                  <ExecutionSectionTitle>Sandbox activation plan — preview</ExecutionSectionTitle>
+                  <PanelState status="empty" reason="No activation plan was published for this review." />
+                </div>
+              )}
+              <div className="exec-gate-panel exec-px-panel">
+                <ExecutionSectionTitle>Conditions &amp; recommendation</ExecutionSectionTitle>
+                <ConditionList conditions={conditions ?? []} emptyNote="No conditions carried into this review." />
+                {recommendation ? (
+                  <p className="exec-px-recommend"><b>Recommended next action:</b> {recommendation}</p>
+                ) : null}
+                <label className="exec-px-note">
+                  <span className="exec-px-notelabel">Reviewer note</span>
+                  <textarea
+                    className="exec-px-notebox"
+                    value={note}
+                    rows={2}
+                    placeholder="Recorded with the decision — it is not sent on its own."
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                </label>
+              </div>
+            </div>
+          </>
+        ) : null}
         <ExecutionTabs
           tabs={[
             { key: "evidence", label: "Evidence", count: panels.length },
@@ -430,6 +544,14 @@ export function PaperExitReview({
           onChange={(key) => setTab(key as ExitTab)}
           label="Exit review sections"
         >
+          {smoke ? (
+            <p className="exec-px-pointer">
+              {tab === "evidence" ? "The evidence panels are on the review above — they are not repeated here."
+                : tab === "plan" ? "The activation plan preview is on the review above."
+                : "Conditions and the recommendation are on the review above."}
+            </p>
+          ) : (
+            <>
           {tab === "evidence" ? (
             <div className="exec-grid-auto">
               {panels.map((panel) => (
@@ -462,7 +584,10 @@ export function PaperExitReview({
               <ConditionList conditions={conditions ?? []} emptyNote="No conditions carried into this review." />
             </div>
           ) : null}
+            </>
+          )}
         </ExecutionTabs>
+        {smoke ? <p className="exec-af-smoke">! {PAPER_SMOKE_WARNING}</p> : null}
         <ExecutionDecisionBar
           label={`Paper exit decision ${reviewId}`}
           verdict={decided ? EXIT_OUTCOME[decided.outcome].label : promoteBlocked && extendBlocked && rejectBlocked ? "BLOCKED" : promoteBlocked ? "PROMOTE BLOCKED" : "READY"}

@@ -79,8 +79,10 @@ describe("local UI interactions mirror into the URL", () => {
   });
   it("Paper: a hand-edited tab that does not exist falls back instead of selecting nothing", () => {
     mount(<PaperWorkbenchPreview deploymentId="dep_94" />, "/deployments/paper/dep_94?tab=Nope");
-    // EL-V2-04: Overview is the first tab (§10.1), so it is the fallback.
-    expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe("true");
+    // The fallback is the tab the screen opens on — Orders, since the hi-fi
+    // ends the workbench on the order journal and Overview now only signposts
+    // panels that moved onto the page itself.
+    expect(screen.getByRole("tab", { name: "Orders" }).getAttribute("aria-selected")).toBe("true");
   });
   it("Alpha: changing the venue scope narrows the deployments table", () => {
     mount(<AlphaThreeSixtyPreview alphaId="av_2041" />, "/deployments/alphas/av_2041");
@@ -145,7 +147,7 @@ describe("canonical navigation carries context", () => {
     expect(screen.getByTestId("loc").textContent).toBe("/deployments/live/dep_88/canary");
   });
   it("Portfolio: an account cell opens Account 360°", () => {
-    mount(<PortfolioThreeSixtyPreview portfolioId="PF-CRYPTO" />, "/deployments/portfolios/PF-CRYPTO");
+    mount(<PortfolioThreeSixtyPreview portfolioId="PF-CRYPTO" />, "/deployments/portfolios/PF-CRYPTO?tab=Structure+%26+Correlation");
     fireEvent.click(screen.getAllByRole("button", { name: "acct-canary-grid" })[0]);
     expect(screen.getByTestId("loc").textContent).toBe("/deployments/accounts/acct-canary-grid");
   });

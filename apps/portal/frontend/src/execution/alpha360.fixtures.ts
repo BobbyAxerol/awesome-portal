@@ -120,11 +120,15 @@ const HONEST_TILES: InsightTile[] = TILE_TITLES.map((title, i) => ({
  */
 export function withSmokeSeries(tiles: readonly InsightTile[], enabled: boolean): InsightTile[] {
   if (!enabled) return [...tiles];
-  return tiles.map((tile) =>
-    tile.state === "ok" && !tile.series
-      ? { ...tile, series: smokeSeriesFor(tile.index, tile.title), envelope: smokeEnvelope(tile.envelope) }
-      : tile,
-  );
+  return tiles.map((tile) => {
+    if (tile.state === "ok" && !tile.series)
+      return { ...tile, series: smokeSeriesFor(tile.index, tile.title), envelope: smokeEnvelope(tile.envelope) };
+    // Tiles 8 and 10 draw declared smoke frames (TILE_CHARTS) in place of
+    // their honest states — flagged here so the single switch governs them.
+    if (tile.index === 8) return { ...tile, smokeChart: "density" as const };
+    if (tile.index === 10) return { ...tile, smokeChart: "drift" as const };
+    return tile;
+  });
 }
 
 export const TILES: InsightTile[] = withSmokeSeries(HONEST_TILES, ALPHA_INSIGHT_SMOKE);
@@ -164,7 +168,7 @@ export function alpha360(over: Partial<AlphaThreeSixtyData> = {}): AlphaThreeSix
     owner: "Stan",
     r1Id: "AP-118",
     r2Id: "AP-152",
-    passportHref: "#passport",
+    passportHref: "/deployments/alphas/av_2041?tab=Audit",
     envelope: { authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" },
     venueOptions: ["All", "BINANCE", "OKX", "DERIBIT", "VN MARKET"],
     portfolioOptions: ["PF-CRYPTO", "PF-MAIN"],

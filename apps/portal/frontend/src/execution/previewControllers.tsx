@@ -45,6 +45,7 @@ import { AGGREGATES_BY_CURRENCY_RAW } from "./blotter.fixtures";
 import { readAggregatesByCurrency } from "./blotterAggregates";
 import type { BlotterFilter } from "./contracts";
 import { PaperWorkbench, WORKBENCH_TABS, type WorkbenchTab } from "./screens/PaperWorkbench";
+import { STAGE_SMOKE, primaryEquity, stageVisuals } from "./stage.smoke";
 import { PORTFOLIO_TABS, PortfolioThreeSixty, type PortfolioTab } from "./screens/PortfolioThreeSixty";
 
 /* -------------------------------------------------------------------------
@@ -161,12 +162,20 @@ export function PaperWorkbenchPreview({
   initial?: Partial<PaperWorkbenchData>;
 }) {
   const navigate = useNavigate();
-  const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Overview");
+  // The hi-fi ends the workbench on the order journal, and so does the page:
+  // Overview now points at panels that moved up, so landing on it shows a
+  // signpost where the reader expected the day's orders.
+  const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const { record, view } = useSimulationLedger();
-  const base = useMemo(
-    () => (variant === "vnm" ? vnmWorkbench({ deploymentId, ...initial }) : paperWorkbench({ ...GATE_MET, deploymentId, ...initial })),
-    [variant, deploymentId, initial],
-  );
+  const base = useMemo(() => {
+    const data = variant === "vnm" ? vnmWorkbench({ deploymentId, ...initial }) : paperWorkbench({ ...GATE_MET, deploymentId, ...initial });
+    // SMOKE (stage.smoke.ts): a published series always wins; smoke fills only an absent one.
+    if (STAGE_SMOKE && data.equity && !data.equity.series) {
+      const v = stageVisuals("paper");
+      return { ...data, equity: { ...data.equity, series: primaryEquity(v), envelope: { ...data.equity.envelope, warnings: [...(data.equity.envelope.warnings ?? []), v.warning] } }, visuals: v };
+    }
+    return data;
+  }, [variant, deploymentId, initial]);
   return (
     <>
       <PaperWorkbench

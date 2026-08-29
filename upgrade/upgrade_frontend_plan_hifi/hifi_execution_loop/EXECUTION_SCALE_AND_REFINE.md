@@ -1007,3 +1007,220 @@ bật chip, không phải hỏng.
 - **Ảnh hưởng:** 9/12 tile Alpha 360 đang là smoke; Portfolio 360 2 chart line; chưa màn nào
   hiển thị sai số liệu (smoke có nhãn), nhưng review hình ảnh chưa thể ký cho tile khác line.
 
+### BR-EX-41 — stage telemetry cho Paper/Sandbox/Canary/Live (2026-08-25, EL-V2-10) — **spec cho codex**
+
+Bobby duyệt 2026-08-25: các màn stage phải có chart + chỉ số trực quan (hi-fi 1c/1d/1e/1f). Frontend
+đã dựng đủ component và đang chạy bằng **smoke data có nhãn** (`apps/portal/frontend/src/execution/stage.smoke.ts`,
+cờ `STAGE_SMOKE`). Gói này định nghĩa contract để thay smoke bằng dữ liệu thật; mỗi mục ghi rõ
+component nào tiêu thụ.
+
+| # | Cần | Shape (đề xuất — codex quyết) | Component |
+|---|---|---|---|
+| 41.1 | **Equity by stage** — cùng artifact digest, chuẩn hoá 100 | `GET /deployments/{id}/stage-equity?window=30d&bucket=1h` → `execution-analytics.stage-equity.v1`: `lines[{stage: paper\|sandbox\|live\|backtest, points[{bucket_start, value}]}]`, envelope §16.2, `joined_by: artifact_digest` | `StageLinesChart` (Canary/Live/Paper) |
+| 41.2 | **Envelope consumption** | `GET /deployments/{id}/envelope-consumption` → `caps[{key, label, used, cap, unit, kind: cap\|target, as_of}]` — `kind=target` (30/30 days) không phải breach | `CapGauges` |
+| 41.3 | **Execution quality** | `GET /deployments/{id}/execution-quality?window=30d` → `ack_latency{buckets[{from_ms,to_ms,count}], p50, p95}`, `fill_latency_p50[]`, `slippage_bp[{day, value}]`, `reject_rate[{day,value}]`, `ceilings{slippage_bp, reject_rate}` | `HistogramChart`, `SparkTile` |
+| 41.4 | **Positions snapshot** (BROKER authority) | `GET /deployments/{id}/positions` → `rows[{symbol, side, qty, entry, upnl, leverage, ack_latency_p50_ms}]` decimal string, `as_of`, `digest` | `PositionsTable` |
+| 41.5 | **Daily contribution** (Live) | `GET /deployments/{id}/contribution?window=30d` → `bars[{day, value, currency}]`, `formula_version contrib.v1` | `DailyBarsChart` |
+| 41.6 | **Order-type certification** (Sandbox) | trong `sandbox-certification.v1`: `order_types[{type, state: certified\|pending\|untested, note}]` | `OrderTypeMatrix` |
+| 41.7 | **KPI null-fill** | các KPI đang `null` ở fixture (capital_consumed, gross_notional, daily_pnl, open_orders, broker_equity) publish giá trị thật; `suppressed` giữ nguyên ngữ nghĩa | `ExecutionDecisionStrip` |
+
+- **Lý do UI:** không có 41.x, 4 màn stage là 100% chữ "not published"; owner không duyệt được.
+- **Invariant:** frontend không tính gì — mọi số đến dưới dạng chuỗi/decimal; gauge chỉ vẽ tỉ lệ;
+  histogram nhận bucket sẵn; downsample/coverage nằm trong envelope caption.
+- **Xoá smoke:** khi 41.1–41.7 có fixture canonical trong `packages/contracts/fixtures` → xoá
+  `stage.smoke.ts` theo hợp đồng ghi ở đầu file (một commit).
+
+### BR-EX-42 — Pinned watchlist: stage + status + figure theo hi-fi 5a (2026-08-25, Command Center) — **spec cho codex**
+
+- **Endpoint/field cần:** trong `command-center.v1` panel `pinned.items[]` thêm
+  `stage` (`PAPER | SANDBOX | LIVE_CANARY | LIVE_FULL`), `status` (`READY | HALTED | BLOCKED | DEGRADED`),
+  `figure` (chuỗi đã format, ví dụ `"+112"`, `"12/30d"`, `"cert 5/7"`) và `figure_tone` (`good | warn | bad | mute`),
+  `venue`, `deployment_id`. Giữ nguyên `label`, `target_label`, `target_authority`, `target_freshness`.
+- **Lý do UI:** hi-fi 5a hàng pinned = *chip stage* (CANARY viền đôi đỏ / PAPER tím / SANDBOX vàng) ·
+  `Grid v2.1 · BINANCE · dep_88` · *figure* (+112 xanh) · *chip status* (READY/HALTED). Model hiện chỉ có
+  `label`/`target_label` nên hàng đang in "Carry v3.2 · Carry v3.2 EXECUTION fresh" — trùng và không có stage.
+- **Ảnh hưởng:** `/execution` Pinned — panel render nhưng thiếu 3 cột hi-fi; frontend **không** tự suy
+  stage từ id (rule §3.5). Frontend đã có chip/tone sẵn; giao là hiện.
+- **Đề xuất fixture:** `packages/contracts/fixtures/execution-command-center.pinned.valid.json` với 3 dòng
+  đúng hi-fi (dep_88 CANARY READY +112 · dep_74 PAPER READY 12/30d · dep_77 SANDBOX HALTED cert 5/7).
+
+### BR-EX-43 — Alerts summary cho topbar `⚑ Alerts · n critical` (2026-08-25, Command Center) — **spec cho codex**
+
+- **Endpoint/field cần:** `GET /api/v1/execution/alerts/summary` → `{critical, high, as_of, href}` (đếm
+  alert đang mở theo severity, `href` tới Operations Queue/Alerts), ETag + `no-cache, must-revalidate`
+  như registry; hoặc thêm `alerts_summary` vào `command-center.v1` root.
+- **Lý do UI:** hi-fi 5a topbar có chip đỏ `⚑ Alerts · 1 critical` (viền `#fa4d56`, mono 11/600) khi có
+  critical; chip là **shell** (hiện trên mọi route Execution), nên cần một nguồn độc lập với màn đang mở.
+- **Ảnh hưởng:** chưa có endpoint → shell không render chip (không bịa số). Poll 30s hoặc SSE `alerts.summary`
+  nếu realtime bật.
+
+### BR-EX-44 — Fleet health cells: chú thích phụ + link stage (2026-08-25) — **spec cho codex**
+
+- **Cần:** `fleet.cells[]` thêm `sub` (chuỗi phụ, ví dụ `"d9/14"`, `"1 HALTED"`), `sub_tone`, `tone` cho
+  giá trị chính (`bad` khi Live có deployment DEGRADED), `href` tới danh sách stage.
+- **Lý do UI:** hi-fi 5a cell `CANARY 1 d9/14`, `SANDBOX 2 1 HALTED`, `LIVE 2` màu đỏ; cells là link.
+
+### BR-EX-45 — Promotion pipeline: funnel + ma trận alpha × stage (2026-08-25, Command Center hi-fi 5a) — **spec cho codex**
+
+- **Endpoint/field cần:** `GET /api/v1/execution/promotion-pipeline?window=90d` (hoặc panel `pipeline` trong
+  `command-center.v1`) →
+  `stages[{key: PAPER|SANDBOX|CANARY|LIVE, entered, in_stage_now, halted, conversion{num,den}, notes[]}]`,
+  `rows[{alpha_version_id, alpha_label, cells{PAPER|SANDBOX|CANARY|LIVE: {kind: done|current|none, decision_id
+  ("PX-22"/"SX-14"/"CX-08"), progress_label ("30/30 gate met"/"d9/14"/"cert 5/7"), venue, paused, href}}}]`,
+  envelope `{authority: EXECUTION, as_of, window, source: registry}`.
+- **Lý do UI:** hi-fi 5a panel "Promotion pipeline — alpha versions, all modes": funnel 4 cột (số vào stage,
+  tỉ lệ chuyển, thanh, ghi chú "in stage now") + ma trận một hàng = một alpha version, ô = deployment ở
+  stage đó (✓ = link quyết định exit, ● = đang ở stage). Frontend đã dựng (`PromotionPipeline`) và đang
+  chạy bằng smoke `commandCenter.smoke.ts`.
+- **Invariant:** funnel đếm **version**, không đếm deployment (một version trên 2 venue vẫn là 1) —
+  server tính, frontend chỉ vẽ tỉ lệ.
+- **Xoá smoke:** khi BR-EX-42/44/45 có fixture canonical → xoá `commandCenter.smoke.ts` theo hợp đồng đầu file.
+
+### BR-EX-46 — Incident Detail v2 (hi-fi WF 4d): market band, evidence facts, resolve budget, gate rows (2026-08-25) — **spec cho codex**
+
+- **Cần trong `incident-detail.v1` (hoặc panel phụ):**
+  - `subject` (chuỗi "position MISMATCH · acct-live-grid-v21 · BINANCE"), `opened_at`, `owner`, `origin` (`alert|manual`), `sla_ack{minutes, met}`;
+  - `resolve_budget{seconds, started_at}` → frontend vẽ đồng hồ "open for" và thanh budget;
+  - `market{symbol, last_price, prev_price, spark[48], unreconciled{qty, unit}}` — stream (SSE `market.tick`, BR-EX-43) hoặc poll 1.4s; Δ re-price = qty × last_price tính **server-side** hoặc ghi rõ là dẫn xuất hiển thị;
+  - `evidence_facts[{label: finding|sync_snapshots|blast_radius|probable_cause, text, link{label,href}, emphasis}]`;
+  - `operations_taken[{at, operation_id, command, status: VERIFIED|AWAITING_APPLY, note, href}]`, `apply_plan{label, href}`;
+  - `resolution_gates[{key, state: done|open|waiting, text, link}]` — bản "lời" của `resolution_gate.blocker_codes`, server-enforced;
+  - `timeline_lines[{at, text}]`, `waiting_line`, `resolved{resolved_in, resolved_at, timeline_tail, footer_note}`.
+- **Lý do UI:** hi-fi 4d là màn "sửa trong lúc thị trường chạy": dải Market live, Evidence 4 dòng, Operations taken có chip trạng thái, 5 gate bằng lời, Timeline. Contract hiện chỉ có state/gate code/hash/op id → màn toàn "not stated". Frontend đã dựng và chạy bằng smoke `incident.smoke.ts` (cờ `INCIDENT_SMOKE`), motion đúng hi-fi (clock 1s, price 1.4s).
+- **Invariant:** giá và Δ không tính ở browser trừ khi contract ghi `derived_display`; gate list chỉ là gương của server.
+- **Xoá smoke:** khi 46 có fixture canonical → xoá `incident.smoke.ts` theo hợp đồng đầu file.
+
+### BR-EX-47 — Operations Queue v2 (hi-fi WF 4e): priority, phase, detail, next step, KPI strip, throughput, countdowns, alerts rail (2026-08-25) — **spec cho codex**
+
+- **Cần trong `operations-queue.v1` (list) — mỗi row thêm:** `priority` (`P1|P2|P3`, **server tính** = severity × age × blast radius),
+  `phases[{phase: plan|apply|verify, mark: done|active|pending|failed}]`, `state_chip{label, tone: warn|accent|good|mute, pulse}`
+  (`"PARTIAL 1/2"`, `"AWAITING_APPLY"`, `"RUNNING · 2/3"`), `age_seconds`, `age_tone`, `next_step{label, href|null}`
+  (`"plan residue re-apply →"`, `"review in incident inc_44 →"`, `"watch — 202 ≠ success"`), `detail_parts[{text, tone, href, live: escalate|plan_expiry|null}]`,
+  `sub_intents{done, total, progress_pct}`, `escalate_at` (ISO, PARTIAL >15m auto-escalates), `plan_expires_at` (ISO), `incident_id` (BR-EX-33).
+- **Root:** `kpis[{key: partial|awaiting_apply|running|verified_24h, value:int, sub, tone}]`, `throughput_verified_per_hour[24]`,
+  `source{authority: EXECUTION, journal: "command journal", live: bool, as_of}`, `attention_count`.
+- **Alerts rail:** `GET /api/v1/execution/alerts?limit=20` → `[{level: CRITICAL|WARN|INFO, age_seconds, title, meta, href, object{type: finding|sync|operation|condition, id}, escalate_at?}]`
+  — alert = state change of a typed object, never free text; badge đếm CRITICAL (BR-EX-43 summary).
+- **Lý do UI:** hi-fi 4e là bảng triage một liếc: pri chip, phase trail, chip trạng thái (PARTIAL nhấp nháy), dòng chi tiết với đếm ngược, KPI strip, throughput sparkline, rail alert 4 thẻ. Contract hiện chỉ có 3 state thô + page.
+- **Ảnh hưởng hiện tại:** `/execution/operations` chạy `operationsQueue.smoke.ts` (`QUEUE_SMOKE`), hàng contract thật (`op_fixture_queue_1`) in mờ dưới hàng smoke; motion: age +1s, escalate/plan-expiry đếm ngược, sub-intent bar loop 66→96%.
+- **Invariant:** priority/escalation là **server rule**; frontend chỉ vẽ; "Mine" vẫn disabled tới khi có actor filter (BR-EX-32).
+- **Fixture:** `execution-operations-queue.attention.valid.json` (3 hàng hi-fi + 3 done) và `execution-alerts.valid.json` (4 thẻ).
+- **Xoá smoke:** khi 47 + 43 giao → xoá `operationsQueue.smoke.ts` theo hợp đồng đầu file.
+
+### BR-EX-48 — Full Blotter v2 (hi-fi WF 4c): order detail, conditionals, brackets/OCO, fills + lineage, live price (2026-08-25) — **spec cho codex**
+
+- **Cần trong `blotter-orders.v1` mỗi row:** `client_order_id`, `tif` (`GTC|IOC|FOK|DAY`), `flags[]` (`REDUCE-ONLY|POST-ONLY|BUY|SELL`),
+  `order_type` mở rộng (`STOP_MKT|STOP_MARKET|TAKE_PROFIT|TRAILING_STOP_MKT|BRACKET`), `trigger_price`, `trigger_source` (`mark|last|index`),
+  `oco_with` (order id), `bracket_group_id`, `risk_grant_id`, `avg_price`, `slippage_bp` (string, signed), `fee{amount,currency,liquidity: maker|taker}`,
+  `fill_count`, `age_seconds`, `detail` (một dòng do server soạn: "armed server-side at venue · …", "rejected pre-venue by risk gate rg_2188 — max position notional").
+- **Bracket group:** `GET /orders/{bracket_group_id}/legs` → `legs[{role: ENTRY|TP|SL|TRAILING, order_id, client_order_id, order_type, flags, price|trigger, qty_filled, qty_total, avg_price, status, activation_policy, callback_pct?}]`.
+- **Fills + lineage:** `GET /orders/{id}/fills` → `fills[{fill_id, at(ms), liquidity, trade_id, price, qty, fee{amount,currency}, status: SETTLED|PENDING}]`, `lineage{signal_id, signal_at, intent_id, sizing, risk_grant{id, checks[]}, venue_ack_at, hops[{from,to,ms}]}` — đây là BR-EX-25 (5 hop) chốt.
+- **Live:** `market.tick` (BR-EX-43) cho pill giá + `last_fill_at` trong envelope; WORKING/conditional rows re-price khoảng cách tới trigger từ tick (server gửi `trigger_price`, frontend hiển thị `last_price − trigger_price` **ghi rõ derived_display**).
+- **Chips:** `counts{working, conditional, brackets, filled, partial, rejected}` server-side; filter enum thêm `CONDITIONAL|BRACKETS|WORKING` (alias OPEN).
+- **Lý do UI:** hi-fi 4c là blotter đối soát được: id, cờ, trigger, nhóm OCO, fill từng lệnh với lineage/latency; contract hiện chỉ có type/side/qty/price/status/fee.
+- **Ảnh hưởng hiện tại:** `/deployments/blotter` hiển thị 5 hàng smoke (`blotter.smoke.ts`) trên đầu bảng, hàng contract thật giữ nguyên bên dưới (keyset, virtualized, M7 totals). Motion: giá 1.3s, "last fill Ns ago", "−1,138 to trigger" nhấp nháy, slice bar TP leg loop.
+- **Invariant:** số luôn chuỗi decimal đúng precision; không tổng hợp chéo tiền tệ (USDC ≠ USDT); rejected là hàng hạng nhất.
+- **Fixture:** `execution-blotter-orders.hifi.valid.json` (5 hàng + legs + fills). **Xoá smoke:** khi 48 (+24/25/43) giao.
+
+### BR-EX-49 — Alpha Fleet list (hi-fi "Alpha Fleet (list)", entry screen WF 2a) (2026-08-25) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/fleet?stage=all|live|canary|sandbox|paper|research&venue&owner` → `fleet-list.v1`:
+  `summary{alphas, deployments, live}`, `kpis{live_exposure{value,ccy,physical,account}, fleet_pnl_session{value,ccy,live:true}, deployments{total, by_stage{live,canary,sandbox,paper}}, attention{mismatch,halted,gate_overdue}, portfolios[{id,href}]}`,
+  `counts{all,live,canary,sandbox,paper,research}`, `rows[{alpha_id, name, version, artifact_digest, research_status, owner, portfolios[], stage_presence[{stage, label, strong, dashed}], alloc{value,ccy}, net_pnl_30d{value,ccy,note}, max_dd_30d, equity_30d[10..30] (sparkline), health{text,tone,link}, note, deployments[{deployment_id, venue, mode, stage, stage_note, alloc, pnl{value,ccy}, dd, account_id, portfolio, health{text,tone,link}, sync_age_seconds}]}]`.
+- **Sort server-side:** live exposure desc, then furthest stage; research rows (no deployment) sau cùng, `dim:true`; BLOCKED giữ hiển thị.
+- **Live:** `fleet_pnl_session` + canary `sync_age_seconds` từ tick (BR-EX-43); `as_of` mỗi giây từ envelope.
+- **Lý do UI:** feature `EXECUTION_ALPHA_FLEET` là COMMISSIONED/`NONE`; hi-fi là màn vào của WF 2a (row → Alpha 360, deployment row → workbench, account → Account 360).
+- **Ảnh hưởng hiện tại:** `/deployments/alphas` chạy `alphaFleet.smoke.ts` (6 alpha / 8 deployment hi-fi). Motion: as_of clock, pnl jitter 1.4s, sync age, VN MARKET session theo lịch ICT.
+- **Invariant:** PnL theo tiền tệ (USDT/USDC/VND) không FX-mix; số string decimal; research row không có số → `—` với lý do.
+- **Fixture:** `execution-fleet-list.valid.json`. **Xoá smoke:** khi 49 giao.
+
+### BR-EX-50 — Alpha 360 · Trade Replay (candles + fill markers + bracket legs + trade log) (2026-08-25) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/deployments/{id}/replay?symbol&interval=1h&window=120` → `replay.v1`:
+  `candles[{t, o, h, l, c}]` (string decimal, venue OHLC, last bucket live), `markers[{t, index, kind: ENTRY_FILL|EXIT_FILL_TP|EXIT_FILL_SL|EXIT_PARTIAL|BRACKET_ARMED|REJECT, price, order_id, fill_id, bracket_group_id}]`,
+  `round_trips[{entry_index, entry_price, exit_index, exit_price, pnl{value,ccy}, kind: TP|SL}]`, `legs[{role: TP|SL|TRAILING, order_id, trigger_price, order_type, flags, filled, total, activation_policy}]`,
+  `mark{price, at}` (tick BR-EX-43), `job{id, table: execution_replay_jobs, status}`, `log[{t(ms), event: FILL|SUBMIT|ACK|REJECT|TRIGGER, order_id, fill_id, leg, type, side, qty, price_or_trigger, fee{amount,liquidity}, note}]` (keyset ≤200).
+- **Pickers:** `deployments[]` và `symbols[]` cho deployment trong scope alpha.
+- **Lý do UI:** hi-fi tab "Trade Replay" — đọc leg so với thiết kế (entry POST-ONLY tại grid line, STOP dưới, TP trên); marker ↔ trade log chung id.
+- **Ảnh hưởng hiện tại:** `components/TradeReplay.tsx` vẽ SVG từ `alphaReplay.smoke.ts` (120 nến seed 7 như hi-fi, 3 round trip, bracket br_0092, reject); zoom/pan/wheel/drag/Fit; mark tick 1.4s.
+- **Invariant:** marker time = fill event ts (UTC); candle không downsample dưới 1h; replay job id hiện trong footer.
+- **Fixture:** `execution-replay.dep_88.valid.json`. **Xoá smoke:** khi 50 (+43) giao.
+
+### BR-EX-51 — Portfolio 360 v2 (hi-fi WF 3a): live NAV strip, revision-segmented equity, cross-portfolio, configuration log, what-if, overlap (2026-08-25) — **spec cho codex**
+
+- **Cần trong `portfolio-360.v1` → v1.1 (additive):** `status` (`ACTIVE|PAUSED|CLOSED`), `facts{alphas, accounts, base_ccy}`,
+  `strip{nav{value,ccy,as_of,live}, today{value}, allocated{value,max,free}, exposure{gross, accounts, venues}, return_30d{value, benchmark_value, alpha}, max_dd_30d{value, limit, headroom_pt}, attention{mismatch, incident_id, note}}`,
+  `equity_segmented{windows:[{key:30d|90d|all, label, nav[{t,v}], benchmark[{t,v}], eras[{rev, from, to, label, tone}]}]}` (1d TWR),
+  `cross_portfolio[{portfolio_id, sleeve?, nav{value,ccy}, ret_30d, max_dd, alphas, live_exposure, spark[7..30]}]` + `cross_corr{pair, rho, window, note}`,
+  `config_log[{rev, current, retired, date, change: CANARY_JOIN|ALLOC_UP|ALLOC_DOWN|RISK_PROFILE|ALPHA_ADDED|ALPHA_REMOVED, detail, account_id, operation_id, approval_id, actor, since_rev_pnl{value,ccy}}]`,
+  Structure: `structure_kpis{equity, net_pnl_30d, drawdown, gross_exposure, net_exposure, allocated, max}`, `what_if[{scenario, estimate_text, headline, formula:"marginal.v1"}]`, `symbol_overlap[{symbol, alphas[], same_direction_notional, tone}]`, `links{ledger, incidents_open, recon_findings, approvals[]}`.
+- **Actions:** `report_pack` (export) và `rebalance_plan` (plan → apply → verify) — cần route + RBAC step-up; hiện disabled với lý do.
+- **Lý do UI:** hi-fi Overview 3a là "NAV live + hiệu năng theo cấu hình + so sánh sổ + lịch sử cấu hình"; contract hiện chỉ có KPI tĩnh + holdings + correlation.
+- **Ảnh hưởng hiện tại:** `/deployments/portfolios/PF-CRYPTO` chạy `portfolio360.smoke.ts`; KPI contract giữ trong `<details>`; holdings chuyển sang tab Structure (đúng hi-fi). Motion: clock 1s, NAV/today/exposure jitter 1.4s, attention pulse.
+- **Invariant:** per-currency; era = revision đang hiệu lực; mỗi rev ↔ 1 operation_id + approval; VND sleeve liệt kê, không cộng.
+- **Bổ sung 2026-08-26 (phụ lục I.7):** Structure (matrix ★BM + insufficient, market corr + tail ρ, leadership 3 list + insight, influence map, drawdown overlap), Capital Ledger v1.1 (type/before/after/approval), Approvals, Incidents (open count server), Audit keyset.
+- **Fixture:** `execution-portfolio-360.PF-CRYPTO.v1_1.valid.json`. **Xoá smoke:** khi 51 giao.
+
+### BR-EX-52 — Accounts & Bindings list (hi-fi, entry screen WF 1g) (2026-08-26) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/bindings?filter=all|live|testnet|paper|issues` → `bindings-list.v1`: `summary{bindings, venues, virtual_accounts}`, `kpis{physical_equity{value,ccy,binding_id,live}, virtual_allocated{value, headroom, invariant_ok}, credentials{valid, expiring[{alias,days}], otp}, findings{mismatch, incident_id, account_id}, sync_health{ok, total, na_reason}}`, `counts{all,live,testnet,paper,issues}`,
+  `rows[{binding_id, venue, env: MAINNET|TESTNET|PAPER_FEED, purpose_note, credential{alias, state: VALID|EXPIRING|OTP_FLOW|REVOKED, days_to_expiry?, scopes[], withdraw:bool, rotate_href?}, physical_equity{value,ccy}|{kind: TEST_FUNDS|SIMULATED}, virtual{sum, ccy, headroom}, accounts:int, sync{kind: ws|rest|md_feed|calendar, age_seconds, policy_seconds, snapshot_minutes?, state}, health{text, tone, link?}, note, virtual_accounts[{account_id, stage, alpha, deployment_id, portfolio, equity, alloc, sync{state}, health{text,tone}}]}]`.
+- **Nguồn:** `broker_bindings` (MISSING trong DB guide → `venue_accounts` + `venue_credentials`), `accounts` (virtual, by `external_account_ref`), `strategy_deployments`, `account_balances`/`margin_balances`, `broker_account_sync_snapshots`, `venue_rate_limits`, `venues.trading_sessions`, `reconciliation_findings`, PORTAL incidents.
+- **Invariant:** Σ virtual ≤ physical ở allocation time (server enforce); test funds không vào NAV; paper không có recon; VND/USDC không FX-mix.
+- **Ảnh hưởng hiện tại:** `/deployments/accounts` chạy `accounts.smoke.ts` (5 binding, 8 virtual). Motion: clock, physical equity jitter, ws/rest age, EXPIRING pulse, VN session.
+- **Fixture:** `execution-bindings-list.valid.json`. **Xoá smoke:** khi 52 giao.
+
+### BR-EX-53 — Binding Detail (hi-fi "Binding Detail — binance_main_01") (2026-08-26) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/bindings/{binding_id}` → `binding-detail.v1`: `binding{id, venue, env, settle_ccy, open_findings}`, `capital{physical, virtual_sum, headroom, segments[{account_id, label, allocated}]}`,
+  `credential{alias, state, scopes[], withdraw_granted:false, scope_verified_at, secret{fingerprint, vaulted:true}, ip_allowlist{count, last_drift_check_at, state}, rotation{created_at, rotated_at, operation_id, next_due_at, policy_days}, rate_budget{used_per_min, limit_per_min, order_budget_pct}}`,
+  `sync_stream[{t, state: OK|SNAPSHOT|MISMATCH|STALE, digest, note, finding_id?, incident_id?}]` (≤50, SSE `binding.snapshot` khi N08), `virtual_accounts[{account_id, stage, alpha, deployment_id, portfolio, allocated, equity, exposure, recon{state, finding_id|incident_id}}]`, `audit[{t, text, operation_id, approval_id?, actor, step_up}]`.
+- **Action:** `POST /bindings/{id}/rotate-credential` → plan → apply → verify qua Admin Action Drawer (step-up, dual-key window).
+- **Nguồn:** `venue_credentials` (alias/state/scopes/fingerprint — **secret không bao giờ qua API**), `venue_rate_limits`, `broker_account_sync_snapshots` (digest = content hash), `accounts` ⋈ `strategy_deployments` ⋈ `portfolio_allocations`, `reconciliation_findings`, `audit_log` (binding-scoped), `operator_operations`.
+- **Fixture:** `execution-binding-detail.binance_main_01.valid.json`. **Xoá smoke:** khi 53 giao.
+
+### BR-EX-54 — Account/Broker 360 v2 (hi-fi WF 1g) (2026-08-26) — **spec cho codex**
+
+- **Cần trong `account-broker-360.v1` → v1.1 (additive):** `masthead{env: LIVE|…, sync{state, age_seconds}, headroom_state: OK|EXCEEDED, facts: "live · BINANCE · MARGIN / CROSS · settle USDT · account rev 14"}`, `internal{positions, open_orders, equity, cash_free, locked_reserved, as_of}`, `broker{positions, open_orders, balance, digest, age_seconds, source: REST|WS}`, `difference{rows[{key, verdict: MATCH|DELTA, delta, severity: INFO|WARN|CRITICAL, note}], formula:"diff.v1", action_href}`, `binding{external_account_ref, credential{alias,state}, position_mode, linked[{account_id, alpha, virtual_exposure, stage, current}], aggregate{virtual, physical, headroom, verdict}}`, `sync_history[{t, source, status: OK|STALE, age_seconds?, digest}]`, `findings{open, last_dry_run{verdict, at, id}, resolved_30d, history_href}`; actions `sync_now`, `dry_run_reconcile` (đã có simulate).
+- **Ảnh hưởng hiện tại:** màn đã có contract; restyle theo grammar hi-fi 1g (khung LIVE đỏ, 3 panel mono, binding table, sync history, findings + 2 nút). Smoke chỉ cho `facts` masthead nếu thiếu.
+- **Fixture:** cập nhật `execution-account-broker-360.*.valid.json`.
+
+### BR-EX-55 — Entity display names for breadcrumbs / mastheads (cross-screen) (2026-08-26) — **spec cho codex**
+
+- **Vấn đề:** breadcrumb và masthead cần tên người vận hành dùng (`av_2041 → "Grid v2.1"`, `PF-CRYPTO`, `acct-live-grid-v21`, `binance_main_01`, `dep_88 → "Grid v2.1 · BINANCE canary"`, `inc_44`, `AP-352`, `EX-771`). Frontend hiện map cứng `av_2041 → Grid v2.1` (fixture cast) — mọi id khác chỉ in id. Lỗi vừa sửa (route list mang đuôi entity của fixture) là hệ quả của việc thiếu resolver: entity phải đến từ route + server, không từ screenId.
+- **Cần:** `GET /api/v1/execution/entities?ids=av_2041,dep_88,acct-live-grid-v21,binance_main_01,PF-CRYPTO,inc_44,AP-352,EX-771` → `entity-names.v1`: `[{id, kind: alpha|deployment|account|binding|portfolio|incident|approval|exit_review, label, sub?, href, env?: LIVE|MAINNET|TESTNET|PAPER}]`; batch ≤50 id, ETag; 404 từng id → `{id, kind: null, label: null}` (frontend in id thô, không bịa).
+- **Áp dụng cho các màn đã làm:** Alpha 360 (h1 + crumb), Portfolio 360 (h1 hiện dùng `portfolioId`), Account 360 (crumb + `alpha · dep · portfolio` links), Binding Detail (title venue/env/settle), Incident (subject), Gate R1/R2/Exit review (approval subject), Command Center/Queue/Blotter (mọi link id → label khi hover/title).
+- **Nguồn:** `strategies`/`alphas` (name, version), `strategy_deployments` (+venue/stage), `accounts`, `venue_accounts`, `portfolios`, PORTAL incidents/approvals/exit reviews.
+- **Invariant:** label chỉ là hiển thị; id vẫn là khoá trong URL và mọi liên kết; không có label → id.
+- **Fixture:** `execution-entity-names.valid.json`. Không có smoke riêng; map cứng `av_2041` trong `ExecutionPreviewRoute.tsx` xoá khi 55 giao.
+
+### BR-EX-56 — Live Overview (hi-fi "Live Overview (entry)", WF 1f/1e) (2026-08-26) — **spec cho codex**
+
+- **Cần:** `GET /api/v1/execution/live?filter=all|full|canary|issues&venue` → `live-overview.v1`: `summary{deployments, full, canary, venues_today}`, `kpis{live_capital{value, full, canary_envelope, ccy}, session_pnl{value, live:true}, gross_exposure{value, pct_of_capital}, fail_closed{n, of, deployment_id, incident_id}, protective_ladder{state: ARMED|DEGRADED, steps[]}, broker_sync{kind, age_seconds, binding_id, policy_seconds}}`, `counts{all,full,canary,issues}`, `venues[{venue, live:bool}]`,
+  `rows[{deployment_id, alpha, stage: LIVE_FULL|LIVE_CANARY, canary{day,total}?, since, gate_id, venue, account_id, portfolio, alloc, exposure, session_pnl{value, live}, dd, pulse_60m[24], health{state: READY|FAIL_CLOSED|DEGRADED, incident_id?}, note, note_links[]}]`, `tape[{t, deployment_id, event: FILL|QUOTE_REFRESH|MISMATCH, text, tone}]` (≤20, SSE `live.tape`).
+- **Nguồn:** `strategy_deployments` (stage LIVE_*) ⋈ `accounts`/`portfolio_allocations` ⋈ `positions_v2` (exposure) ⋈ `execution_sessions` (session pnl) ⋈ `fills` (tape) ⋈ `broker_account_sync_snapshots` ⋈ `reconciliation_findings`/PORTAL incidents (fail-closed) ⋈ approvals/conditions (notes).
+- **Motion:** BTCUSDT tick (BR-EX-43) → session pnl/exposure/pulse; ws age; incident age.
+- **Ảnh hưởng:** `/deployments/live` chạy `live.smoke.ts` (4 hàng). **Fixture:** `execution-live-overview.valid.json`. **Xoá smoke:** khi 56 giao.
+
+### BR-EX-57 — Live Full Operations v1.1 (hi-fi WF 1f) (2026-08-26) — **spec cho codex**
+
+- **Cần thêm (additive) trong `live-full.v1`:** `masthead{alpha, portfolio, venue, active:bool, readiness: READY|BLOCKED, stage, promoted_from, promoted_at}`, `meta{artifact_digest, canary_exit_id, live_approval_id, portfolio_id, deployment_id, account_id, venue}`, `lifecycle[{stage: R1|R2|PAPER|SANDBOX|CANARY, decision_id, href}]` + `current{stage, since}`,
+  `kpis{capital{value,ccy}, gross_exposure, net_exposure, risk_envelope_used_pct, daily_loss{value, limit}, broker_freshness_seconds}`, `broker_truth{sync{state, age_seconds, digest}, last_recon{verdict, at, id}, positions_match{n, of}, open_orders_match{n, of}, balance_delta{value,ccy}, mismatch?{symbol, local, broker, delta, detected_at}}`,
+  `open_exposure{positions[{symbol, side, qty, upnl, leverage}], open_orders{count, type, pending_exposure}, reservations}`, `incidents{active[], ladder{steps[], rollback_plan{id, tested_at}}, last_operation{id, kind, verdict, at}}`, `contribution_30d{bars[{day, value}], total, cost_drag, formula:"contrib.v1"}`.
+- **Actions** (đã có policy trong v1: halt/reduce/emergency close) — giữ, thêm `step_up_required:true`.
+- **Ảnh hưởng:** `LiveFullOperationsScreen` restyle theo 1f; phần thiếu lấy từ `live.smoke.ts.full`. **Fixture:** cập nhật `execution-live-full.*.valid.json`.
+
+### BR-EX-58 — Blocker catalog for the stage-workbench Guard rail (2026-08-26) — **spec cho codex**
+
+- `GET /api/v1/execution/blockers/catalog` → `blocker-catalog.v1` (code → label, severity, owner, resolves_via, doc_href, rank) + `blockers[{code, since, source, ref}]` trong các contract stage thay `blockerCodes[]`. Chi tiết: phụ lục L.7. **Fixture:** `execution-blocker-catalog.valid.json`.
+
+### BR-EX-59 — Canary Control Room v1.1 (hi-fi WF 1e) (2026-08-26) — **spec cho codex**
+
+- **Cần thêm (additive) trong `canary-control-room.v1`:** `masthead{alpha, portfolio, venue, active, readiness: GUARDED|DEGRADED, trial{day,total}, exit_review_at, real_capital:true}`, `meta{artifact_digest, r1_id, r2_id, sandbox_exit_id, canary_approval_id, portfolio_id, deployment_id, account_id, venue, envelope_rev}`, `lifecycle[]` + `current{stage:"CANARY", day, total}`,
+  `kpis{canary_capital, net_pnl_trial{value, live}, drawdown, risk_envelope_used_pct, broker_freshness_seconds|STALE}`, `stage_lines{backtest[], paper[], live[], canary_start_at, join_digest, formula:"equity_projection.v1"}` (normalized 1h), `envelope{approval_id, rows[{key: capital|max_drawdown|orders_today|observation_duration, used, cap, pct, at_cap}], limits{max_order, max_position, daily_loss_pct, rate_per_min}, breach_policy:"auto_halt"}`,
+  `positions[{symbol, side, qty, entry, upnl, ack_p50_ms}]`, `orders_today{open, fills, rejects}`, `incidents{critical_open, last_recon{verdict, at, id}, partial_operations, scale_blockers[]}`,
+  `trial_timeline{days, today, checkpoints[{day, review_id, verdict}], exit_day}`, `exit_readiness{done, total, gates[{key: min_duration|drift|envelope|reconciliation|incidents, ok, text, ref?}], request_exit_review{enabled, unlock_rule}}`, `marginal{corr_portfolio{value, samples, window}, corr_benchmark, concentration_if_scaled{factor, top1_pct}, grade, formula:"marginal.v1"}`, `decision{options: [HOLD, REDUCE, ROLLBACK, REQUEST_SCALE], evidence_pack_href}`.
+- **Motion:** exit-review countdown từ `exit_review_at`; pnl/uPnL per tick; ws age; timeline hôm nay nhấp nháy.
+- **Nguồn:** `strategy_deployments`, `portfolio_allocations`, `risk_grants`/`risk_profiles` (envelope caps), `account_equity_snapshots` (pnl/dd), `performance_snapshots` + paper twin (dep_94) + backtest run (`alpha_ledger`) cho 3 đường, `positions_v2`, `orders`/`fills` (orders today, ack latency từ `domain_events`), `reconciliation_findings`, `operator_operations` (partial), PORTAL approvals/conditions (AP-311 day/total, checkpoints cr_*), PORTAL exit reviews.
+- **Ảnh hưởng:** `CanaryControlRoomScreen` restyle 1e; thiếu lấy từ `canary.smoke.ts`. **Fixture:** cập nhật `execution-canary-control-room.*.valid.json`. **Xoá smoke:** khi 59 giao.
+

@@ -24,23 +24,17 @@
  * for, and codex's stop gates require it stay visibly unavailable rather than
  * be hidden or filled with something else.
  */
-import type { ReactNode } from "react";
-import { Hint } from "../components/hint";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { ExecutionSurface } from "../ExecutionSurface";
+import { SparkLine } from "../components/marketChart";
 import { PanelState } from "../components/states";
 import { formatAge } from "../components/badges";
+import { ExecutionWorkspace } from "../components/workspace";
+import { usePresentationChrome } from "../../app/presentation";
 import type { PanelStatus } from "../contracts";
 import type { OperationsQueue, QueueRow, TriageState } from "../operations";
-import {
-  ExecutionContextRail,
-  ExecutionDecisionStrip,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionWorkspace,
-  type HeaderBadge,
-  type RailBlocker,
-} from "../components/workspace";
+import { fmtAge, queueSmoke, throughputSeries, useQueueTick, type DetailPart, type QueueSmokeRow } from "../operationsQueue.smoke";
 
 /** The hi-fi's three chips. Applied server-side; they never filter loaded rows. */
 export const QUEUE_FILTERS = ["NEEDS_ATTENTION", "MINE", "ALL_24H"] as const;
@@ -96,35 +90,76 @@ function ageFrom(createdAt: string | null, now: Date): string {
   return Number.isNaN(ms) ? "age not stated" : (formatAge(Math.floor(ms / 1000)) ?? "—");
 }
 
-function QueueTableRow({
-  row,
-  now,
-  onOpen,
-  selected = false,
-}: {
-  row: QueueRow;
-  now: Date;
-  onOpen: (row: QueueRow) => void;
-  selected?: boolean;
-}) {
+function PhaseTrail({ phases }: { phases: QueueSmokeRow["phases"] }) {
+  const glyph = { done: "✓", active: "◐", pending: "—", failed: "◐" } as const;
   return (
-    <tr data-attention={needsAttention(row) ? "true" : undefined} data-selected={selected ? "true" : undefined} aria-selected={selected || undefined}>
-      <th scope="row">
-        <button type="button" className="exec-linkbtn" onClick={() => onOpen(row)}>
-          {row.operationId}
-        </button>
-      </th>
-      <td>{row.commandKey || "—"}</td>
-      <td>
-        {row.target.id ?? "—"}
-        {row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}
-      </td>
-      {/* Three separate cells. Merging them is the defect this screen guards. */}
-      <td data-col="source">{row.sourceStatus ?? "not stated"}</td>
-      <td data-col="verify">{row.verificationResult ?? "not stated"}</td>
-      <td data-col="triage">{row.triageState ? TRIAGE_LABEL[row.triageState] : "not stated"}</td>
-      <td className="exec-num">{ageFrom(row.createdAt, now)}</td>
-      <td>{row.acknowledgedBy ?? row.resolvedBy ?? "—"}</td>
+    <span className="exec-oq-phases">
+      {" · "}
+      {phases.map((p, i) => (
+        <span key={p.phase}>
+          {i > 0 ? " → " : ""}
+          <span data-mark={p.mark}>{p.phase} {glyph[p.mark]}</span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function DetailLine({ parts, escalate, planExpiry }: { parts: DetailPart[]; escalate: number; planExpiry: string }) {
+  return (
+    <>
+      {parts.map((p, i) => (
+        <span key={i} data-tone={p.tone}>
+          {i > 0 ? " · " : ""}
+          {p.href ? <a href={p.href}>{p.text}</a> : p.text}
+          {p.live === "escalate" ? <> {fmtAge(escalate)}</> : null}
+          {p.live === "planExpiry" ? <> <span data-tone="warn">{planExpiry}</span></> : null}
+        </span>
+      ))}
+    </>
+  );
+}
+
+/** Hi-fi 4e row: pri · operation · command·phase · target · state · age · next step, then a detail sub-row. */
+function SmokeRow({ item, elapsed, sub, onOpen, selected }: { item: QueueSmokeRow; elapsed: number; sub: number; onOpen: (row: QueueRow) => void; selected: boolean }) {
+  const age = item.ageSeconds + elapsed;
+  const escalate = Math.max(0, (item.escalateIn ?? 0) - elapsed);
+  const planExpiry = `${Math.max(0, 60 - (elapsed % 60))}s`;
+  return (
+    <>
+      <tr className="exec-oq-row" data-edge={item.edge} data-attention={item.edge === "warn" ? "true" : undefined} data-selected={selected ? "true" : undefined} aria-selected={selected || undefined} data-done={item.done ? "true" : undefined}>
+        <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri={item.priority}>{item.priority}</span></td>
+        <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(item.row)}>{item.row.operationId}</button></th>
+        <td className="exec-oq-cmd">{item.row.commandKey}<PhaseTrail phases={item.phases} /></td>
+        <td className="exec-oq-target">{item.row.target.id}</td>
+        <td><span className="exec-oq-state" data-tone={item.stateChip.tone} data-pulse={item.stateChip.pulse ? "true" : undefined}>{item.stateChip.label}{item.progress ? "" : ""}</span></td>
+        <td className="exec-oq-age" data-tone={item.ageTone}>{fmtAge(age)}</td>
+        <td className="exec-oq-next" data-muted={item.next.muted ? "true" : undefined}>{item.next.href ? <a href={item.next.href}>{item.next.label}</a> : item.next.label}</td>
+      </tr>
+      {item.detail.length > 0 || item.progress ? (
+        <tr className="exec-oq-detail" data-edge={item.edge}>
+          <td colSpan={7}>
+            {item.progress ? (
+              <span className="exec-oq-bar" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={sub} aria-label={`sub-intents ${item.progress.label}`}><span className="exec-oq-barfill" style={{ width: `${sub}%` }} /></span>
+            ) : null}
+            <DetailLine parts={item.detail} escalate={escalate} planExpiry={planExpiry} />
+          </td>
+        </tr>
+      ) : null}
+    </>
+  );
+}
+
+function ContractRow({ row, now, onOpen, selected }: { row: QueueRow; now: Date; onOpen: (row: QueueRow) => void; selected: boolean }) {
+  return (
+    <tr className="exec-oq-row exec-oq-contract" data-attention={needsAttention(row) ? "true" : undefined} data-selected={selected ? "true" : undefined} aria-selected={selected || undefined}>
+      <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri="—">—</span></td>
+      <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(row)}>{row.operationId}</button></th>
+      <td className="exec-oq-cmd">{row.commandKey || "—"}</td>
+      <td className="exec-oq-target">{row.target.id ?? "—"}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
+      <td className="exec-oq-three"><span className="exec-oq-state" data-tone="mute" data-col="source">{row.sourceStatus ?? "not stated"}</span> <span className="exec-oq-dim">verify <span data-col="verify">{row.verificationResult ?? "not stated"}</span></span> <span className="exec-oq-dim" data-col="triage">{row.triageState ? TRIAGE_LABEL[row.triageState] : "not stated"}</span></td>
+      <td className="exec-oq-age" data-tone="mute">{ageFrom(row.createdAt, now)}</td>
+      <td className="exec-oq-next" data-muted="true">{row.acknowledgedBy ?? row.resolvedBy ?? "—"}</td>
     </tr>
   );
 }
@@ -159,152 +194,163 @@ export function OperationsQueueScreen({
   selectedId?: string | null;
   children?: ReactNode;
 }) {
+  const smoke = queueSmoke();
+  const { elapsed, sub } = useQueueTick();
+  const [railOpen, setRailOpen] = useState(true);
+  const chrome = usePresentationChrome();
   const page = queue?.page;
   const rows = page?.rows ?? [];
   const attentionRows = rows.filter(needsAttention);
-  const attention = attentionRows.length;
-  const partial = rows.filter((r) => r.verificationResult === "PARTIAL").length;
-  const unacked = rows.filter((r) => r.triageState === "UNACKNOWLEDGED").length;
-  const badges: HeaderBadge[] = [
-    ...(attention > 0 ? [{ label: `${attention} NEED ATTENTION`, axis: "readiness", tone: "bad" } as HeaderBadge] : [{ label: "NOTHING STUCK", axis: "readiness", tone: "good" } as HeaderBadge]),
-    { label: queue?.sourceIntegrationState ?? "SOURCE NOT STATED", axis: "broker-sync", tone: queue?.sourceIntegrationState === "UNAVAILABLE" ? "warn" : queue?.sourceIntegrationState ? "good" : "mute" },
-  ];
-  const blockers: RailBlocker[] = attentionRows.map((r) => ({
-    label: `${r.operationId} ${r.verificationResult ?? r.sourceStatus ?? ""}`.trim(),
-    detail: `${r.commandKey || "—"} · ${r.target.id ?? "—"} · ${ageFrom(r.createdAt, now)}`,
-    severity: r.verificationResult === "PARTIAL" || r.sourceStatus === "FAILED" ? ("blocking" as const) : ("watch" as const),
-  }));
+  const attention = smoke ? smoke.attentionCount : attentionRows.length;
+  const critical = smoke?.criticalCount ?? 0;
+  const smokeRows = smoke ? (filter === "NEEDS_ATTENTION" ? smoke.rows.filter((r) => !r.done) : smoke.rows) : [];
+  // Chrome: the topbar chip and the sidebar badge, owned by this screen while mounted.
+  useEffect(() => {
+    if (!chrome) return;
+    chrome.setChrome({ alerts: critical > 0 ? { critical, href: "/execution/operations", onToggle: () => setRailOpen((v) => !v) } : null, navBadge: attention > 0 ? { route: "/execution/operations", count: attention, tone: "warn" } : null });
+    return () => chrome.setChrome({});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [critical, attention]);
+  const escalate1251 = Math.max(0, 900 - (360 + elapsed));
   const rail = (
-    <ExecutionContextRail
-      next={{
-        title: selectedId ? `Triage · ${selectedId}` : "Select an operation",
-        detail: triage ?? (
-          <span className="exec-role-body">Pick a row to acknowledge or resolve it.</span>
-        ),
-      }}
-      blockers={blockers}
-      freshness={
-        <span className="exec-role-meta">
-          read {queue?.readAt ?? "not stated"} · sort {page?.appliedSort.map((s) => `${s.field}:${s.direction}`).join(" · ") || "not stated"} · a PARTIAL older than 15m escalates automatically
-        </span>
-      }
-      alerts={
-        <div aria-label="Alerts" className="exec-queue-rail">
-          {alertRail ?? (
-            <PanelState
-              status="unavailable"
-              reason="The Trading System publishes no alerts route, so this rail has no source. It is shown empty rather than removed, because an absent rail reads as 'no alerts'."
-            />
-          )}
-          <Hint className="exec-queue-note">alert = state change of a typed object (finding · sync · operation · condition), never free text · badge counts CRITICAL only · ack ≠ resolve</Hint>
-        </div>
-      }
-      provenance={
-        <ExecutionProvenanceDrawer
-          items={[
-            { label: "profile", short: queue?.deliveryProfile ?? "not stated", full: null },
-            { label: "source", short: queue?.sourceIntegrationState ?? "not stated", full: null },
-          ]}
-          onCopy={(full) => void navigator.clipboard?.writeText(full)}
-        />
-      }
-    />
+    <aside className={`exec-context-rail exec-oq-rail${railOpen ? "" : " exec-oq-rail-closed"}`} aria-label="Alerts">
+      <header className="exec-oq-railhead">
+        <span className="exec-oq-railtitle">ALERTS</span>
+        <span className="exec-oq-railmeta">badge counts CRITICAL only</span>
+        <span className="exec-oq-spacer" />
+        <button type="button" className="exec-oq-railclose" aria-label={railOpen ? "Close alerts" : "Open alerts"} onClick={() => setRailOpen((v) => !v)}>{railOpen ? "×" : "⚑"}</button>
+      </header>
+      {railOpen ? (
+        <>
+          <section className="exec-oq-triage" aria-label="Triage">
+            <div className="exec-oq-triagehead">{selectedId ? `Triage · ${selectedId}` : "Select an operation"}</div>
+            {triage ?? <p className="exec-oq-dim">Pick a row to acknowledge or resolve it.</p>}
+          </section>
+          <div className="exec-oq-cards">
+            {smoke
+              ? smoke.alerts.map((a) => (
+                  <a key={a.title} className="exec-oq-card" data-level={a.level} href={a.href}>
+                    <div className="exec-oq-cardlevel" data-pulse={a.pulse ? "true" : undefined}>{a.level} · {typeof a.ageSeconds === "number" ? fmtAge(a.ageSeconds + elapsed) : a.ageSeconds}</div>
+                    <div className="exec-oq-cardtitle">{a.title}</div>
+                    <div className="exec-oq-cardmeta">{a.meta}{a.live === "escalate" ? ` ${fmtAge(escalate1251)}` : ""}</div>
+                  </a>
+                ))
+              : alertRail ?? (
+                  <PanelState status="unavailable" reason="The Trading System publishes no alerts route, so this rail has no source. It is shown empty rather than removed, because an absent rail reads as 'no alerts'." />
+                )}
+            {attentionRows.map((r) => (
+              <a key={r.operationId} className="exec-oq-card" data-level="WARN" href="#" onClick={(e) => { e.preventDefault(); onOpen(r); }}>
+                <div className="exec-oq-cardlevel">WARN · {ageFrom(r.createdAt, now)}</div>
+                <div className="exec-oq-cardtitle">{r.operationId} {r.verificationResult ?? r.sourceStatus ?? ""}</div>
+                <div className="exec-oq-cardmeta">{r.commandKey || "—"} · {r.target.id ?? "—"}</div>
+              </a>
+            ))}
+          </div>
+          <footer className="exec-oq-railfoot">
+            alert = state change of a typed object (finding · sync · operation · condition), never free text · click lands on the owning screen · ack ≠ resolve
+            {smoke ? <span className="exec-oq-railsmoke"> · the Trading System publishes no alerts route — cards above are smoke (BR-EX-43)</span> : null}
+          </footer>
+        </>
+      ) : null}
+    </aside>
   );
   return (
-    <ExecutionSurface kind="deployments" className="exec-queue">
-      <ExecutionWorkspace layout="balanced" rail={rail}>
-        <div className="exec-queue-head">
-          <ExecutionPageHeader
-            title="Operations Queue"
-            badges={badges}
-            purpose="What is running, what is stuck — one row per operation."
-            secondary={
-              queue ? (
-                <span className="exec-queue-sub exec-role-meta">
-                  {page?.filteredCount ?? "—"} in this view · {page?.totalCount ?? "—"} total · source {queue.sourceIntegrationState ?? "not stated"} · profile {queue.deliveryProfile ?? "not stated"}
-                </span>
-              ) : undefined
-            }
-          />
-        </div>
-        <ExecutionDecisionStrip
-          metrics={[
-            { label: "In this view", value: page?.filteredCount === null || page?.filteredCount === undefined ? null : String(page.filteredCount) },
-            { label: "Total", value: page?.totalCount === null || page?.totalCount === undefined ? null : String(page.totalCount) },
-            { label: "Need attention", value: String(attention), tone: attention ? "bad" : "good" },
-            { label: "PARTIAL", value: String(partial), tone: partial ? "warn" : undefined },
-            { label: "Unacknowledged", value: String(unacked), tone: unacked ? "warn" : undefined },
-          ]}
-        />
-        {onFilterChange ? (
-          <div className="exec-queue-filters" role="group" aria-label="Filter the queue">
-            {QUEUE_FILTERS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className="exec-inbox-filter"
-                data-queue-filter={option}
-                aria-pressed={option === filter}
-                disabled={UNSUPPORTED_FILTERS[option] !== null}
-                title={UNSUPPORTED_FILTERS[option] ?? undefined}
-                onClick={() => onFilterChange(option)}
-              >
-                {FILTER_LABEL[option]}
-                {option === "NEEDS_ATTENTION" && attention > 0 ? ` (${attention})` : null}
-              </button>
-            ))}
-            {Object.entries(UNSUPPORTED_FILTERS)
-              .filter(([, r]) => r !== null)
-              .map(([option, r]) => (
-                <p className="exec-disabled-reason" key={option}>
-                  {FILTER_LABEL[option as QueueFilter]}: {r}
-                </p>
-              ))}
-          </div>
-        ) : null}
-        <div className="exec-queue-body">
-          <div className="exec-queue-main">
-            {status !== "ok" && status !== "partial" ? (
-              <PanelState status={status} reason={reason} />
-            ) : !page || page.rows.length === 0 ? (
-              <PanelState status="empty" reason="No operations match this view. The queue is empty, which is different from a queue that could not be read." />
+    <ExecutionSurface kind="deployments" className="exec-queue exec-oq" data-hifi-exact="operations-queue-4e">
+      <ExecutionWorkspace layout="dense">
+        <div className="exec-oq-layout" data-rail={railOpen ? "open" : "closed"}>
+          <div className="exec-oq-page">
+            <header className="exec-oq-masthead">
+              <h1 className="exec-oq-h1">Operations Queue</h1>
+              {attention > 0 ? <span className="exec-oq-chip" data-tone="warn">{attention} NEED ATTENTION</span> : <span className="exec-oq-chip" data-tone="good">NOTHING STUCK</span>}
+              <span className="exec-oq-spacer" />
+              <span className="exec-oq-live"><span className="exec-oq-livedot" aria-hidden="true" /><b>{queue?.sourceIntegrationState === "UNAVAILABLE" || !smoke ? (queue?.sourceIntegrationState ?? "SOURCE NOT STATED") : "EXECUTION"}</b> · command journal · {smoke ? "live" : (queue?.deliveryProfile ?? "profile not stated")}</span>
+            </header>
+            {queue ? (
+              <p className="exec-oq-sub">
+                {page?.filteredCount ?? "—"} in this view · {page?.totalCount ?? "—"} total · source {queue.sourceIntegrationState ?? "not stated"} · profile {queue.deliveryProfile ?? "not stated"}
+              </p>
+            ) : null}
+            {smoke ? (
+              <div className="exec-oq-kpis" aria-label="Queue KPIs">
+                {smoke.kpis.map((k) => (
+                  <div className="exec-oq-kpi" key={k.key} data-tint={k.tint ? "true" : undefined}>
+                    <div className="exec-oq-kpilabel" data-tone={k.tone}>{k.label}</div>
+                    <div className="exec-oq-kpivalue" data-tone={k.tone} data-pulse={k.pulse ? "true" : undefined}>{k.value}</div>
+                    <div className="exec-oq-kpisub">{k.sub}</div>
+                  </div>
+                ))}
+                <div className="exec-oq-kpi exec-oq-kpiwide">
+                  <div className="exec-oq-kpilabel" data-tone="mute">Throughput — verified/h · 24h</div>
+                  <SparkLine points={throughputSeries(smoke.throughput)} tone="good" height={26} width="100%" />
+                </div>
+              </div>
             ) : (
-              <>
-                <div className="exec-scroll-x">
-                  <table className="exec-queue-table">
-                    <caption className="exec-role-meta">sort: PARTIAL · FAILED → RUNNING → done</caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">operation</th>
-                        <th scope="col">command</th>
-                        <th scope="col">target</th>
-                        <th scope="col">source</th>
-                        <th scope="col">verify</th>
-                        <th scope="col">triage</th>
-                        <th scope="col">age</th>
-                        <th scope="col">actor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {page.rows.map((row) => (
-                        <QueueTableRow key={row.operationId} row={row} now={now} onOpen={onOpen} selected={row.operationId === selectedId} />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="exec-queue-nav">
-                  <button type="button" className="exec-btn-ghost" disabled={!page.hasPrevious || !onLoadPrevious} onClick={onLoadPrevious}>
-                    ▲ newer
-                  </button>
-                  <button type="button" className="exec-btn-ghost" disabled={!page.hasMore || !onLoadNext} onClick={onLoadNext}>
-                    ▼ older
-                  </button>
-                </div>
-              </>
+              <div className="exec-oq-kpis" aria-label="Queue KPIs">
+                {[
+                  ["In this view", page?.filteredCount], ["Total", page?.totalCount], ["Need attention", attention], ["PARTIAL", rows.filter((r) => r.verificationResult === "PARTIAL").length],
+                ].map(([label, v]) => (
+                  <div className="exec-oq-kpi" key={String(label)}><div className="exec-oq-kpilabel" data-tone="mute">{String(label)}</div><div className="exec-oq-kpivalue" data-tone="ink">{v === null || v === undefined ? "—" : String(v)}</div></div>
+                ))}
+              </div>
             )}
+            {onFilterChange ? (
+              <div className="exec-oq-filters" role="group" aria-label="Filter the queue">
+                {QUEUE_FILTERS.map((option) => (
+                  <button key={option} type="button" className="exec-oq-filter" data-queue-filter={option} aria-pressed={option === filter} disabled={UNSUPPORTED_FILTERS[option] !== null} title={UNSUPPORTED_FILTERS[option] ?? undefined} onClick={() => onFilterChange(option)}>
+                    {FILTER_LABEL[option]}
+                    {option === "NEEDS_ATTENTION" && attention > 0 ? ` (${attention})` : null}
+                  </button>
+                ))}
+                <span className="exec-oq-filternote">priority = severity × age × blast radius — computed, never assigned by hand</span>
+                {Object.entries(UNSUPPORTED_FILTERS).filter(([, r]) => r !== null).map(([option, r]) => (
+                  <span className="exec-oq-filternote exec-oq-filterreason" key={option}>{FILTER_LABEL[option as QueueFilter]}: {r}</span>
+                ))}
+              </div>
+            ) : null}
+            <div className="exec-oq-panel">
+              {status !== "ok" && status !== "partial" ? (
+                <PanelState status={status} reason={reason} />
+              ) : (
+                <>
+                  <div className="exec-scroll-x">
+                    <table className="exec-queue-table exec-oq-table">
+                      <thead>
+                        <tr>
+                          <th scope="col">pri</th>
+                          <th scope="col">operation</th>
+                          <th scope="col">command · phase</th>
+                          <th scope="col">target</th>
+                          <th scope="col">state</th>
+                          <th scope="col" className="exec-oq-right">age</th>
+                          <th scope="col">next step</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {smokeRows.map((item) => <SmokeRow key={item.row.operationId} item={item} elapsed={elapsed} sub={sub} onOpen={onOpen} selected={item.row.operationId === selectedId} />)}
+                        {rows.map((row) => <ContractRow key={row.operationId} row={row} now={now} onOpen={onOpen} selected={row.operationId === selectedId} />)}
+                        {rows.length === 0 ? (
+                          <tr className="exec-oq-emptyrow"><td colSpan={7}>{smokeRows.length > 0 ? "published rows: none — " : ""}No operations match this view. The queue is empty, which is different from a queue that could not be read.</td></tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                  <footer className="exec-oq-foot">
+                    <span>one row = one operation_id from plan → apply → verify · nothing ages silently — PARTIAL &gt;15m auto-escalates</span>
+                    <span className="exec-oq-spacer" />
+                    <span>every row links its audit evidence</span>
+                    <span className="exec-oq-nav">
+                      <button type="button" className="exec-oq-filter" disabled={!page?.hasPrevious || !onLoadPrevious} onClick={onLoadPrevious}>▲ newer</button>
+                      <button type="button" className="exec-oq-filter" disabled={!page?.hasMore || !onLoadNext} onClick={onLoadNext}>▼ older</button>
+                    </span>
+                  </footer>
+                </>
+              )}
+            </div>
+            {smoke ? <p className="exec-oq-smoke">! {smoke.warning}</p> : null}
+            {children}
           </div>
+          {rail}
         </div>
-        {children}
       </ExecutionWorkspace>
     </ExecutionSurface>
   );

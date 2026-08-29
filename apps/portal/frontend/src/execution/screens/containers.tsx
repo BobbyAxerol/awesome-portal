@@ -49,6 +49,7 @@ import { IncidentDetailScreen } from "./IncidentDetail";
 import { SandboxCertificationScreen } from "./SandboxCertification";
 import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
+import { STAGE_SMOKE, stageVisuals } from "../stage.smoke";
 import { CommandCenterScreen } from "./CommandCenter";
 import { useCommandCentreStream } from "../commandCenterStream";
 import type { CommandCenter } from "../commandCenter";
@@ -1226,7 +1227,9 @@ export function IncidentDetailContainer({
   );
   return (
     <IncidentDetailScreen
-      incident={state.value}
+      // The route names the incident; the fixture's own id (inc_fixture_44)
+      // is a fixture fact. The breadcrumb and the masthead must agree.
+      incident={{ ...(state.value as NonNullable<typeof state.value>), incidentId }}
       status={state.status}
       reason={state.reason}
     onOpenOperation={(operationId) => navigateIncident(`/administration/actions?operation=${encodeURIComponent(operationId)}`)}
@@ -1252,8 +1255,10 @@ export function SandboxCertificationContainer({
   return (
     <SandboxCertificationScreen
       certification={state.value}
+      deploymentId={deploymentId}
       status={state.status}
       reason={state.reason}
+      visuals={STAGE_SMOKE ? stageVisuals("sandbox") : undefined}
     />
   );
 }
@@ -1278,6 +1283,7 @@ export function CanaryControlRoomContainer({
       status={state.status}
       reason={state.reason}
       brokerStale={brokerStale}
+      visuals={STAGE_SMOKE ? stageVisuals("canary") : undefined}
     />
   );
 }
@@ -1294,7 +1300,7 @@ export function LiveFullOperationsContainer({
     [api, deploymentId],
   );
   return (
-    <LiveFullOperationsScreen live={state.value} status={state.status} reason={state.reason} />
+    <LiveFullOperationsScreen live={state.value} status={state.status} reason={state.reason} visuals={STAGE_SMOKE ? stageVisuals("live") : undefined} />
   );
 }
 

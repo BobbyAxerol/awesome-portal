@@ -3,7 +3,7 @@
   "route": "/execution",
   "index": 0,
   "tag": "BUTTON",
-  "text": "1INCIDENTBroker sync divergedPaper Binance USDMO",
+  "text": "1INCIDENTBroker sync diverged — Paper Binance US",
   "verdict": "navigated",
   "detail": "/execution/operations/incidents/inc_44"
  },
@@ -11,7 +11,7 @@
   "route": "/execution",
   "index": 1,
   "tag": "BUTTON",
-  "text": "2OPERATIONProtective action partialdep_88 · 2/3 ",
+  "text": "2OPERATIONProtective action partial — dep_88 · 2",
   "verdict": "navigated",
   "detail": "/execution/operations/op_1251"
  },
@@ -19,7 +19,7 @@
   "route": "/execution",
   "index": 2,
   "tag": "BUTTON",
-  "text": "3APPROVALCarry v3.2R2 · capital reviewDUE_SOONRe",
+  "text": "3APPROVALCarry v3.2 — R2 · capital reviewDUE SOO",
   "verdict": "navigated",
   "detail": "/governance/approvals/AP-352/r2"
  },
@@ -27,13 +27,45 @@
   "route": "/execution",
   "index": 3,
   "tag": "A",
+  "text": "Grid v2.1",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041"
+ },
+ {
+  "route": "/execution",
+  "index": 4,
+  "tag": "A",
+  "text": "Carry v3.2",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/execution",
+  "index": 5,
+  "tag": "A",
+  "text": "MM v1.1",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/execution",
+  "index": 6,
+  "tag": "A",
+  "text": "VnMomo v0.9",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/execution",
+  "index": 7,
+  "tag": "A",
   "text": "R1 review · Momentum v4",
   "verdict": "navigated",
   "detail": "/governance/approvals/AP-201/r1"
  },
  {
   "route": "/execution",
-  "index": 4,
+  "index": 8,
   "tag": "A",
   "text": "Capital condition expires",
   "verdict": "navigated",
@@ -41,25 +73,17 @@
  },
  {
   "route": "/execution",
-  "index": 5,
+  "index": 9,
   "tag": "A",
   "text": "Last verified protective action",
   "verdict": "navigated",
   "detail": "/execution/operations/op_1249"
  },
  {
-  "route": "/execution",
-  "index": 6,
-  "tag": "BUTTON",
-  "text": "Investigate",
-  "verdict": "navigated",
-  "detail": "/execution/operations/incidents/inc_44"
- },
- {
   "route": "/execution/operations",
   "index": 0,
   "tag": "BUTTON",
-  "text": "Needs attention",
+  "text": "Needs attention (2)",
   "verdict": "skipped:selected"
  },
  {
@@ -73,37 +97,155 @@
   "route": "/execution/operations",
   "index": 2,
   "tag": "BUTTON",
+  "text": "op_1251",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 3,
+  "tag": "A",
+  "text": "plan residue re-apply →",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1251"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "op_1253",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 5,
+  "tag": "A",
+  "text": "review in incident inc_44 →",
+  "verdict": "navigated",
+  "detail": "/execution/operations/incidents/inc_44"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 6,
+  "tag": "A",
+  "text": "cmd_9f12",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 7,
+  "tag": "BUTTON",
+  "text": "op_1255",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 8,
+  "tag": "BUTTON",
   "text": "op_fixture_queue_1",
   "verdict": "changed"
  },
  {
+  "route": "/execution/operations",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Close alerts",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 10,
+  "tag": "A",
+  "text": "CRITICAL · 02:00Position MISMATCH — acct-live-gr",
+  "verdict": "navigated",
+  "detail": "/execution/operations/incidents/inc_44"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 11,
+  "tag": "A",
+  "text": "WARN · 4mBroker sync STALE — dep_91 · OKXage 88s",
+  "verdict": "navigated",
+  "detail": "/deployments/sandbox/dep_77"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 12,
+  "tag": "A",
+  "text": "WARN · 06:00op_1251 PARTIAL unresolvedemergency-",
+  "verdict": "changed"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 13,
+  "tag": "A",
+  "text": "INFO · 1dCondition expiring in 7d — capacity cap",
+  "verdict": "navigated",
+  "detail": "/governance/approvals"
+ },
+ {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 0,
-  "tag": "BUTTON",
-  "text": "Evidence 0",
-  "verdict": "skipped:selected"
+  "tag": "A",
+  "text": "rf_2101",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter"
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 1,
-  "tag": "BUTTON",
-  "text": "Timeline 2",
-  "verdict": "changed"
+  "tag": "A",
+  "text": "dep_88",
+  "verdict": "navigated",
+  "detail": "/deployments/live/dep_live"
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 2,
-  "tag": "BUTTON",
-  "text": "Operations 1",
-  "verdict": "changed"
+  "tag": "A",
+  "text": "op_1252",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1252"
  },
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 3,
+  "tag": "A",
+  "text": "op_1253",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 4,
+  "tag": "A",
+  "text": "Open apply plan — reconcile from broker ▸",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 5,
   "tag": "BUTTON",
-  "text": "op_fixture_1253 → Action Drawer",
+  "text": "op_fixture_1253",
   "verdict": "navigated",
   "detail": "/administration/actions?operation=op_fixture_1253"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 6,
+  "tag": "A",
+  "text": "op_1252",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1252"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 7,
+  "tag": "A",
+  "text": "apply plan ▸",
+  "verdict": "navigated",
+  "detail": "/administration/actions?operation=op_1253"
  },
  {
   "route": "/governance/approvals",
@@ -327,6 +469,13 @@
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 0,
+  "tag": "BUTTON",
+  "text": "Copy",
+  "verdict": "changed"
+ },
+ {
+  "route": "/governance/exit-reviews/EX-771",
+  "index": 1,
   "tag": "A",
   "text": "AP-118",
   "verdict": "navigated",
@@ -334,7 +483,7 @@
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 1,
+  "index": 2,
   "tag": "A",
   "text": "AP-152",
   "verdict": "navigated",
@@ -342,24 +491,19 @@
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 2,
-  "tag": "BUTTON",
-  "text": "Evidence 4",
-  "verdict": "skipped:selected"
- },
- {
-  "route": "/governance/exit-reviews/EX-771",
   "index": 3,
-  "tag": "BUTTON",
-  "text": "Activation plan",
-  "verdict": "changed"
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-118/r1"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 4,
-  "tag": "BUTTON",
-  "text": "Conditions 0",
-  "verdict": "changed"
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-152/r2"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
@@ -437,78 +581,210 @@
   "route": "/governance/exit-reviews/EX-771",
   "index": 14,
   "tag": "BUTTON",
-  "text": "Approve promotion",
-  "verdict": "changed"
+  "text": "Evidence 4",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 15,
   "tag": "BUTTON",
-  "text": "Extend observation +14d",
+  "text": "Activation plan",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 16,
   "tag": "BUTTON",
-  "text": "Reject — back to Paper HELD",
+  "text": "Conditions 0",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 17,
   "tag": "BUTTON",
-  "text": "Copy full artifact",
-  "verdict": "skipped:hidden"
+  "text": "Approve promotion",
+  "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 18,
-  "tag": "A",
-  "text": "AP-118",
-  "verdict": "skipped:hidden"
+  "tag": "BUTTON",
+  "text": "Extend observation +14d",
+  "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 19,
-  "tag": "A",
-  "text": "AP-152",
-  "verdict": "skipped:hidden"
+  "tag": "BUTTON",
+  "text": "Reject — back to Paper HELD",
+  "verdict": "changed"
  },
  {
   "route": "/deployments/paper/dep_94",
   "index": 0,
-  "tag": "BUTTON",
-  "text": "Request Paper Exit Review",
+  "tag": "A",
+  "text": "Carry v3.2 · dep_74 · BINANCE — 12/30",
   "verdict": "navigated",
-  "detail": "/governance/exit-reviews/EX-771?from=%2Fdeployments%2Fpaper%2Fdep_94%3Ftab%3DOverview"
+  "detail": "/deployments/paper/dep_74"
  },
  {
   "route": "/deployments/paper/dep_94",
   "index": 1,
   "tag": "A",
-  "text": "AP-101",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94#ap-101"
+  "text": "Grid v2.1 · dep_94 · DERIBIT — 30/30 days · 312/",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_94",
   "index": 2,
   "tag": "A",
-  "text": "AP-207",
+  "text": "VnMomo v0.9 · dep_102 · VN MARKET — 6/30",
   "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94#ap-207"
+  "detail": "/deployments/paper/dep_102/vn-market"
  },
  {
   "route": "/deployments/paper/dep_94",
   "index": 3,
-  "tag": "BUTTON",
-  "text": "Overview",
-  "verdict": "skipped:selected"
+  "tag": "A",
+  "text": "Carry v3.2",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
  },
  {
   "route": "/deployments/paper/dep_94",
   "index": 4,
+  "tag": "A",
+  "text": "Alpha 360° — all deployments →",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 5,
+  "tag": "A",
+  "text": "View approvals",
+  "verdict": "navigated",
+  "detail": "/governance/approvals"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Report",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 7,
+  "tag": "A",
+  "text": "sha256:9f3c1a…e2",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2088?tab=Audit"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 8,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-101/r1"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 9,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-207/r2"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 10,
+  "tag": "A",
+  "text": "PF-MAIN",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-MAIN"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 11,
+  "tag": "A",
+  "text": "dep_74",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_74"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 12,
+  "tag": "A",
+  "text": "paper-binance-carry-v32",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/paper-binance-carry-v32"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 13,
+  "tag": "A",
+  "text": "BINANCE · rev 14",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 14,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-101/r1"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 15,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-207/r2"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 16,
+  "tag": "BUTTON",
+  "text": "Request Paper Exit Review",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/EX-771?from=%2Fdeployments%2Fpaper%2Fdep_94%3Ftab%3DOrders"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 17,
+  "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 18,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 19,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 20,
+  "tag": "BUTTON",
+  "text": "Overview",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Overview"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 21,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -516,15 +792,14 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 5,
+  "index": 22,
   "tag": "BUTTON",
   "text": "Orders",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_94?tab=Orders"
+  "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 6,
+  "index": 23,
   "tag": "BUTTON",
   "text": "Fills",
   "verdict": "navigated",
@@ -532,7 +807,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 7,
+  "index": 24,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
@@ -540,7 +815,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 8,
+  "index": 25,
   "tag": "BUTTON",
   "text": "Accounting",
   "verdict": "navigated",
@@ -548,7 +823,7 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 9,
+  "index": 26,
   "tag": "BUTTON",
   "text": "Evidence",
   "verdict": "navigated",
@@ -556,65 +831,227 @@
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 10,
+  "index": 27,
+  "tag": "A",
+  "text": "full blotter →",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 28,
+  "tag": "A",
+  "text": "sha256:9f3c1a…e2",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 29,
   "tag": "BUTTON",
   "text": "Copy full artifact",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 11,
+  "index": 30,
   "tag": "A",
   "text": "AP-101",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 12,
+  "index": 31,
   "tag": "A",
   "text": "AP-207",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 13,
+  "index": 32,
   "tag": "A",
   "text": "PF-MAIN",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_94",
-  "index": 14,
+  "index": 33,
+  "tag": "A",
+  "text": "dep_74",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 34,
   "tag": "A",
   "text": "paper-binance-carry-v32",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 35,
+  "tag": "A",
+  "text": "BINANCE · rev 14",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
   "index": 0,
   "tag": "A",
-  "text": "AP-322",
+  "text": "Carry v3.2 · dep_74 · BINANCE — 12/30",
   "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market#ap-322"
+  "detail": "/deployments/paper/dep_74"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
   "index": 1,
   "tag": "A",
-  "text": "AP-338",
+  "text": "Grid v2.1 · dep_94 · DERIBIT — 30/30 GATE MET → ",
   "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market#ap-338"
+  "detail": "/governance/exit-reviews/EX-771"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
   "index": 2,
-  "tag": "BUTTON",
-  "text": "Overview",
-  "verdict": "skipped:selected"
+  "tag": "A",
+  "text": "VnMomo v0.9 · dep_102 · VN MARKET — 6/30",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_102/vn-market"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
   "index": 3,
+  "tag": "A",
+  "text": "VnMomo v0.9",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 4,
+  "tag": "A",
+  "text": "Alpha 360° — all deployments →",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 5,
+  "tag": "A",
+  "text": "View approvals",
+  "verdict": "navigated",
+  "detail": "/governance/approvals"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Report",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 7,
+  "tag": "A",
+  "text": "sha256:c44f10…9e",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2110?tab=Audit"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 8,
+  "tag": "A",
+  "text": "AP-322",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-322/r1"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 9,
+  "tag": "A",
+  "text": "AP-338",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-338/r2"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 10,
+  "tag": "A",
+  "text": "PF-VN",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-VN"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 11,
+  "tag": "A",
+  "text": "dep_102",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_102/vn-market"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 12,
+  "tag": "A",
+  "text": "paper-dnse-vnmomo",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/paper-dnse-vnmomo"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 13,
+  "tag": "A",
+  "text": "VN MARKET · DNSE",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 14,
+  "tag": "A",
+  "text": "AP-322",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-322/r1"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 15,
+  "tag": "A",
+  "text": "AP-338",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-338/r2"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 16,
+  "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 17,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 18,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 19,
+  "tag": "BUTTON",
+  "text": "Overview",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Overview"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 20,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -622,15 +1059,14 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 4,
+  "index": 21,
   "tag": "BUTTON",
   "text": "Orders",
-  "verdict": "navigated",
-  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Orders"
+  "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 5,
+  "index": 22,
   "tag": "BUTTON",
   "text": "Fills",
   "verdict": "navigated",
@@ -638,7 +1074,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 6,
+  "index": 23,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
@@ -646,7 +1082,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 7,
+  "index": 24,
   "tag": "BUTTON",
   "text": "Accounting",
   "verdict": "navigated",
@@ -654,7 +1090,7 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 8,
+  "index": 25,
   "tag": "BUTTON",
   "text": "Evidence",
   "verdict": "navigated",
@@ -662,98 +1098,250 @@
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 9,
+  "index": 26,
+  "tag": "A",
+  "text": "full blotter →",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 27,
+  "tag": "A",
+  "text": "sha256:c44f10…9e",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 28,
   "tag": "BUTTON",
   "text": "Copy full artifact",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 10,
+  "index": 29,
   "tag": "A",
   "text": "AP-322",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 11,
+  "index": 30,
   "tag": "A",
   "text": "AP-338",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 12,
+  "index": 31,
   "tag": "A",
   "text": "PF-VN",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 13,
+  "index": 32,
+  "tag": "A",
+  "text": "dep_102",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 33,
   "tag": "A",
   "text": "paper-dnse-vnmomo",
   "verdict": "skipped:hidden"
  },
  {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 34,
+  "tag": "A",
+  "text": "VN MARKET · DNSE",
+  "verdict": "skipped:hidden"
+ },
+ {
   "route": "/deployments/sandbox/dep_77",
   "index": 0,
+  "tag": "A",
+  "text": "← Sandbox overview",
+  "verdict": "navigated",
+  "detail": "/deployments/sandbox"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 1,
+  "tag": "A",
+  "text": "Carry v3.2 · dep_77 · OKX TESTNET — cert 5/7",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 2,
+  "tag": "A",
+  "text": "Grid v2.1 · dep_91 · OKX TESTNET — ⛔ finding ope",
+  "verdict": "navigated",
+  "detail": "/deployments/sandbox/dep_91"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 3,
+  "tag": "A",
+  "text": "sha256:7c2e91…b8",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2103?tab=Audit"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 4,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-101/r1"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 5,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-207/r2"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 6,
+  "tag": "A",
+  "text": "PX-29",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-29"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 7,
+  "tag": "A",
+  "text": "PF-CRYPTO",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 8,
+  "tag": "A",
+  "text": "dep_77",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 9,
+  "tag": "A",
+  "text": "acct-sbx-carry-okx",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-sbx-carry-okx"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 10,
+  "tag": "A",
+  "text": "AP-101",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-101/r1"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 11,
+  "tag": "A",
+  "text": "AP-207",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-207/r2"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 12,
+  "tag": "A",
+  "text": "PX-29",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-29"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 13,
+  "tag": "BUTTON",
+  "text": "Sync broker",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 14,
+  "tag": "BUTTON",
+  "text": "Dry-run reconcile",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 15,
+  "tag": "BUTTON",
+  "text": "Open smoke window ⌄",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/sandbox/dep_77",
+  "index": 16,
   "tag": "BUTTON",
   "text": "Reconciliation 0",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 1,
+  "index": 17,
   "tag": "BUTTON",
   "text": "Steps 7",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 2,
+  "index": 18,
   "tag": "BUTTON",
   "text": "Promotion plans 0",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 3,
+  "index": 19,
   "tag": "BUTTON",
   "text": "Timeline 1",
   "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 4,
+  "index": 20,
   "tag": "BUTTON",
   "text": "Copy full ARTIFACT",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 5,
+  "index": 21,
   "tag": "A",
   "text": "AP-101",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 6,
+  "index": 22,
   "tag": "A",
   "text": "AP-207",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 7,
+  "index": 23,
   "tag": "A",
   "text": "PX-29",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/sandbox/dep_77",
-  "index": 8,
+  "index": 24,
   "tag": "BUTTON",
   "text": "Copy full evidence set",
   "verdict": "skipped:hidden"
@@ -761,62 +1349,230 @@
  {
   "route": "/deployments/live/dep_88/canary",
   "index": 0,
+  "tag": "A",
+  "text": "sha256:41bb7d…c4",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Audit"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 1,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-118/r1"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 2,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-152/r2"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 3,
+  "tag": "A",
+  "text": "SX-14",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/SX-14"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 4,
+  "tag": "A",
+  "text": "AP-311",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-311/r2"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 5,
+  "tag": "A",
+  "text": "PF-CRYPTO",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 6,
+  "tag": "A",
+  "text": "dep_88",
+  "verdict": "navigated",
+  "detail": "/deployments/live/dep_88"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 7,
+  "tag": "A",
+  "text": "acct-canary-grid",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-canary-grid"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 8,
+  "tag": "A",
+  "text": "BINANCE",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 9,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-118/r1"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 10,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-152/r2"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 11,
+  "tag": "A",
+  "text": "PX-22",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-22"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 12,
+  "tag": "A",
+  "text": "SX-14",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/SX-14"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 13,
+  "tag": "A",
+  "text": "full blotter →",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 14,
+  "tag": "A",
+  "text": "rec_881",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-canary-grid"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 15,
+  "tag": "A",
+  "text": "Live board",
+  "verdict": "navigated",
+  "detail": "/deployments/live"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 16,
+  "tag": "A",
+  "text": "cr_301",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/cr_301"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 17,
+  "tag": "A",
+  "text": "cr_307",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/cr_307"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 18,
+  "tag": "A",
+  "text": "rec_881",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-canary-grid"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 19,
+  "tag": "A",
+  "text": "top-1 would reach 74% — see Portfolio 360°",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 20,
+  "tag": "A",
+  "text": "preview pack →",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/EX-771"
+ },
+ {
+  "route": "/deployments/live/dep_88/canary",
+  "index": 21,
   "tag": "BUTTON",
   "text": "Envelope",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 1,
+  "index": 22,
   "tag": "BUTTON",
   "text": "Positions & orders",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 2,
+  "index": 23,
   "tag": "BUTTON",
   "text": "Reconciliation",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 3,
+  "index": 24,
   "tag": "BUTTON",
   "text": "Guard rule",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 4,
+  "index": 25,
   "tag": "BUTTON",
   "text": "Copy full ARTIFACT",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 5,
+  "index": 26,
   "tag": "A",
   "text": "AP-118",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 6,
+  "index": 27,
   "tag": "A",
   "text": "AP-152",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 7,
+  "index": 28,
   "tag": "A",
   "text": "SX-14",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_88/canary",
-  "index": 8,
+  "index": 29,
   "tag": "BUTTON",
   "text": "Copy full evidence set",
   "verdict": "skipped:hidden"
@@ -824,62 +1580,198 @@
  {
   "route": "/deployments/live/dep_live",
   "index": 0,
+  "tag": "A",
+  "text": "sha256:41bb7d…c4",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Audit"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 1,
+  "tag": "A",
+  "text": "CX-08",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/CX-08"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 2,
+  "tag": "A",
+  "text": "AP-330",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-330/r2"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 3,
+  "tag": "A",
+  "text": "PF-CRYPTO",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 4,
+  "tag": "A",
+  "text": "dep_88",
+  "verdict": "navigated",
+  "detail": "/deployments/live/dep_88"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 5,
+  "tag": "A",
+  "text": "acct-live-grid-v21",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-live-grid-v21"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 6,
+  "tag": "A",
+  "text": "BINANCE",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 7,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-118/r1"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 8,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-152/r2"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 9,
+  "tag": "A",
+  "text": "PX-22",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/PX-22"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 10,
+  "tag": "A",
+  "text": "SX-14",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/SX-14"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 11,
+  "tag": "A",
+  "text": "CX-08",
+  "verdict": "navigated",
+  "detail": "/governance/exit-reviews/CX-08"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 12,
+  "tag": "A",
+  "text": "rec_902",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-live-grid-v21"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 13,
+  "tag": "A",
+  "text": "full blotter →",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 14,
+  "tag": "A",
+  "text": "rb_31",
+  "verdict": "navigated",
+  "detail": "/execution/operations?operation=rb_31"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 15,
+  "tag": "A",
+  "text": "Portfolio 360°",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/pf_crypto"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 16,
+  "tag": "A",
+  "text": "Artifact Passport",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Audit"
+ },
+ {
+  "route": "/deployments/live/dep_live",
+  "index": 17,
   "tag": "BUTTON",
   "text": "Exposure & orders",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 1,
+  "index": 18,
   "tag": "BUTTON",
   "text": "Continuity",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 2,
+  "index": 19,
   "tag": "BUTTON",
   "text": "Predecessor envelope",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 3,
+  "index": 20,
   "tag": "BUTTON",
   "text": "Guard rules",
   "verdict": "changed"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 4,
+  "index": 21,
   "tag": "BUTTON",
   "text": "Copy full ARTIFACT",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 5,
+  "index": 22,
   "tag": "A",
   "text": "AP-118",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 6,
+  "index": 23,
   "tag": "A",
   "text": "AP-152",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 7,
+  "index": 24,
   "tag": "A",
   "text": "scert_fixture",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/live/dep_live",
-  "index": 8,
+  "index": 25,
   "tag": "A",
   "text": "cenv_01K3D8R64WYH5M8MQM5H96J7BF",
   "verdict": "skipped:hidden"
@@ -887,41 +1779,37 @@
  {
   "route": "/deployments/blotter",
   "index": 0,
-  "tag": "BUTTON",
-  "text": "All",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=ALL"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 1,
-  "tag": "BUTTON",
-  "text": "Filled",
-  "verdict": "skipped:selected"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 2,
-  "tag": "BUTTON",
-  "text": "Partial",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=PARTIAL"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 3,
-  "tag": "BUTTON",
-  "text": "Rejected",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=REJECTED"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
   "index": 4,
-  "tag": "BUTTON",
-  "text": "Open",
-  "verdict": "navigated",
-  "detail": "/deployments/blotter?filter=OPEN"
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/blotter",
@@ -961,43 +1849,147 @@
  {
   "route": "/deployments/blotter",
   "index": 10,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 11,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 12,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 13,
-  "tag": "INPUT",
-  "text": "",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/blotter",
-  "index": 14,
   "tag": "BUTTON",
   "text": "Export loaded rows",
   "verdict": "changed"
  },
  {
   "route": "/deployments/blotter",
+  "index": 11,
+  "tag": "BUTTON",
+  "text": "All",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 12,
+  "tag": "BUTTON",
+  "text": "Working (3)",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=OPEN"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 13,
+  "tag": "BUTTON",
+  "text": "Conditional (2)",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 14,
+  "tag": "BUTTON",
+  "text": "Brackets (1)",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
   "index": 15,
   "tag": "BUTTON",
+  "text": "Filled",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=FILLED"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 16,
+  "tag": "BUTTON",
+  "text": "Partial",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=PARTIAL"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 17,
+  "tag": "BUTTON",
+  "text": "Rejected",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=REJECTED"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 18,
+  "tag": "BUTTON",
   "text": "Reset the cross-filter chart selection · Aug 12 ",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 19,
+  "tag": "A",
+  "text": "ord_8841",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8841"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 20,
+  "tag": "A",
+  "text": "ord_8843",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8843"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 21,
+  "tag": "A",
+  "text": "br_0092",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=br_0092"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 22,
+  "tag": "A",
+  "text": "ord_8832.E",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8832.E"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 23,
+  "tag": "A",
+  "text": "ord_8832.TP",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8832.TP"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 24,
+  "tag": "A",
+  "text": "ord_8832.SL",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8832.SL"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 25,
+  "tag": "A",
+  "text": "ord_8820",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8820"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 26,
+  "tag": "A",
+  "text": "ord_8817",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8817"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 27,
+  "tag": "A",
+  "text": "ord_8815",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?order=ord_8815"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 28,
+  "tag": "BUTTON",
+  "text": "▼ load older",
   "verdict": "changed"
  },
  {
@@ -1006,25 +1998,49 @@
   "tag": "A",
   "text": "Artifact passport →",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/av_2041#passport"
+  "detail": "/deployments/alphas/av_2041?tab=Audit"
  },
  {
   "route": "/deployments/alphas/av_2041",
   "index": 1,
+  "tag": "A",
+  "text": "sha256:41bb7d…c4",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Audit"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 2,
+  "tag": "A",
+  "text": "AP-118",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-118/r1"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 3,
+  "tag": "A",
+  "text": "AP-152",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/AP-152/r2"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 4,
   "tag": "SELECT",
   "text": "PF-CRYPTOPF-MAIN",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 2,
+  "index": 5,
   "tag": "SELECT",
   "text": "Allpapersandboxlive",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 3,
+  "index": 6,
   "tag": "SELECT",
   "text": "AllBINANCEOKXDERIBITVN MARKET",
   "verdict": "navigated",
@@ -1032,21 +2048,21 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 4,
+  "index": 7,
   "tag": "SELECT",
   "text": "24h7d30d90d",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 5,
+  "index": 8,
   "tag": "BUTTON",
   "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 6,
+  "index": 9,
   "tag": "BUTTON",
   "text": "Insight Charts",
   "verdict": "navigated",
@@ -1054,7 +2070,15 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 7,
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Trade Replay",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Trade+Replay"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 11,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -1062,7 +2086,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 8,
+  "index": 12,
   "tag": "BUTTON",
   "text": "Orders & Fills",
   "verdict": "navigated",
@@ -1070,7 +2094,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 9,
+  "index": 13,
   "tag": "BUTTON",
   "text": "Risk",
   "verdict": "navigated",
@@ -1078,7 +2102,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 10,
+  "index": 14,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
@@ -1086,7 +2110,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 11,
+  "index": 15,
   "tag": "BUTTON",
   "text": "Accounting",
   "verdict": "navigated",
@@ -1094,7 +2118,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 12,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Reconciliation",
   "verdict": "navigated",
@@ -1102,7 +2126,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 13,
+  "index": 17,
   "tag": "BUTTON",
   "text": "Audit",
   "verdict": "navigated",
@@ -1110,7 +2134,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 14,
+  "index": 18,
   "tag": "BUTTON",
   "text": "dep_88",
   "verdict": "navigated",
@@ -1118,7 +2142,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 15,
+  "index": 19,
   "tag": "BUTTON",
   "text": "acct-canary-grid",
   "verdict": "navigated",
@@ -1126,7 +2150,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 16,
+  "index": 20,
   "tag": "BUTTON",
   "text": "dep_91",
   "verdict": "navigated",
@@ -1134,7 +2158,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 17,
+  "index": 21,
   "tag": "BUTTON",
   "text": "acct-sbx-grid-okx",
   "verdict": "navigated",
@@ -1142,7 +2166,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 18,
+  "index": 22,
   "tag": "BUTTON",
   "text": "dep_94",
   "verdict": "navigated",
@@ -1150,37 +2174,36 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 19,
+  "index": 23,
   "tag": "BUTTON",
   "text": "acct-paper-grid-drb",
   "verdict": "navigated",
   "detail": "/deployments/accounts/acct-paper-grid-drb"
  },
  {
-  "route": "/deployments/alphas/av_2041",
-  "index": 20,
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 0,
   "tag": "BUTTON",
-  "text": "Open first deployment in scope",
-  "verdict": "navigated",
-  "detail": "/deployments/live/dep_88/canary"
- },
- {
-  "route": "/deployments/alphas/av_2041",
-  "index": 21,
-  "tag": "BUTTON",
-  "text": "Copy full artifact",
-  "verdict": "skipped:hidden"
+  "text": "Report pack",
+  "verdict": "changed"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 0,
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Rebalance plan ▾",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 2,
   "tag": "BUTTON",
   "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 1,
+  "index": 3,
   "tag": "BUTTON",
   "text": "Structure & Correlation",
   "verdict": "navigated",
@@ -1188,7 +2211,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 2,
+  "index": 4,
   "tag": "BUTTON",
   "text": "Capital Ledger",
   "verdict": "navigated",
@@ -1196,7 +2219,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 3,
+  "index": 5,
   "tag": "BUTTON",
   "text": "Approvals",
   "verdict": "navigated",
@@ -1204,7 +2227,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 4,
+  "index": 6,
   "tag": "BUTTON",
   "text": "Incidents",
   "verdict": "navigated",
@@ -1212,7 +2235,7 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 5,
+  "index": 7,
   "tag": "BUTTON",
   "text": "Audit",
   "verdict": "navigated",
@@ -1220,116 +2243,157 @@
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 6,
-  "tag": "BUTTON",
-  "text": "Grid v2.1",
+  "index": 8,
+  "tag": "A",
+  "text": "inc_44",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/Grid%20v2.1"
+  "detail": "/execution/operations/incidents/inc_44"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 7,
+  "index": 9,
   "tag": "BUTTON",
+  "text": "30d",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "90d",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 11,
+  "tag": "BUTTON",
+  "text": "All",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 12,
+  "tag": "A",
+  "text": "PF-MAIN",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-MAIN"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 13,
+  "tag": "A",
   "text": "acct-canary-grid",
   "verdict": "navigated",
   "detail": "/deployments/accounts/acct-canary-grid"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 8,
-  "tag": "BUTTON",
-  "text": "Grid v2.1",
+  "index": 14,
+  "tag": "A",
+  "text": "op_1201",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/Grid%20v2.1"
+  "detail": "/execution/operations?operation=op_1201"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 9,
-  "tag": "BUTTON",
+  "index": 15,
+  "tag": "A",
   "text": "acct-paper-grid-drb",
   "verdict": "navigated",
   "detail": "/deployments/accounts/acct-paper-grid-drb"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 10,
-  "tag": "BUTTON",
-  "text": "Carry v3.2",
+  "index": 16,
+  "tag": "A",
+  "text": "op_1240",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/Carry%20v3.2"
+  "detail": "/execution/operations?operation=op_1240"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 11,
-  "tag": "BUTTON",
+  "index": 17,
+  "tag": "A",
+  "text": "op_1222",
+  "verdict": "navigated",
+  "detail": "/execution/operations?operation=op_1222"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 18,
+  "tag": "A",
+  "text": "acct-sbx-mm-okx",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct-sbx-mm-okx"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 19,
+  "tag": "A",
+  "text": "op_1187",
+  "verdict": "navigated",
+  "detail": "/execution/operations?operation=op_1187"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 20,
+  "tag": "A",
   "text": "paper-binance-carry-v32",
   "verdict": "navigated",
   "detail": "/deployments/accounts/paper-binance-carry-v32"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 12,
-  "tag": "BUTTON",
-  "text": "MM v1.1",
+  "index": 21,
+  "tag": "A",
+  "text": "op_1102",
   "verdict": "navigated",
-  "detail": "/deployments/alphas/MM%20v1.1"
+  "detail": "/execution/operations?operation=op_1102"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
-  "index": 13,
-  "tag": "BUTTON",
-  "text": "acct-canary-mm-v11",
+  "index": 22,
+  "tag": "A",
+  "text": "op_1044",
   "verdict": "navigated",
-  "detail": "/deployments/accounts/acct-canary-mm-v11"
+  "detail": "/execution/operations?operation=op_1044"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 0,
+  "tag": "A",
+  "text": "dep_live",
+  "verdict": "navigated",
+  "detail": "/deployments/live/dep_live"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 1,
+  "tag": "A",
+  "text": "PF-CRYPTO",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 2,
   "tag": "BUTTON",
   "text": "dry-run reconcile →",
   "verdict": "changed"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 1,
-  "tag": "BUTTON",
-  "text": "Binding & linked 3",
-  "verdict": "skipped:selected"
- },
- {
-  "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 2,
-  "tag": "BUTTON",
-  "text": "Sync history 3",
-  "verdict": "changed"
- },
- {
-  "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 3,
-  "tag": "BUTTON",
-  "text": "Findings 0",
-  "verdict": "changed"
- },
- {
-  "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 4,
   "tag": "BUTTON",
   "text": "Sync now",
   "verdict": "changed"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 5,
+  "index": 4,
   "tag": "BUTTON",
   "text": "Dry-run reconcile",
   "verdict": "changed"
- },
- {
-  "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 6,
-  "tag": "BUTTON",
-  "text": "Copy full broker digest",
-  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",

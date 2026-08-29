@@ -243,11 +243,9 @@ export function EquityChart({
       <div className="exec-chart-head">
         <h3 className="exec-section-title">{title}</h3>
         <div className="exec-chart-tools" role="group" aria-label="Chart view">
-          {tile ? null : (
-            <button type="button" className="exec-btn-ghost" onClick={() => setZoomEpoch((n) => n + 1)}>
-              Reset zoom
-            </button>
-          )}
+          {/* Zoom resets on double-click (announced in the plot's label); a
+              standing "Reset zoom" button was an enabled no-op until the
+              reader had zoomed, which the EL-V2-03 sweep rightly rejects. */}
           <button type="button" className="exec-btn-ghost" aria-pressed={table} onClick={() => setTable((v) => !v)}>
             {table ? "Chart" : "Table"}
           </button>

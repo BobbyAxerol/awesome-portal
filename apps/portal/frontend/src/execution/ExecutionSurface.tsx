@@ -46,13 +46,17 @@ export function ExecutionSurface({
   kind,
   children,
   className,
+  ...rest
 }: {
   kind: ExecutionSurfaceKind;
   children: ReactNode;
   className?: string;
+  /** e.g. `data-hifi-exact="command-center-5a"` — a screen measured against its hi-fi, not §5.2. */
+  [dataAttr: `data-${string}`]: string | undefined;
 }) {
   return (
     <div
+      {...rest}
       data-theme={THEME[kind]}
       data-density={DENSITY[kind]}
       data-surface={kind}

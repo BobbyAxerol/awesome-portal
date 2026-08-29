@@ -168,6 +168,7 @@ export function ExecutionTabs({
   onChange,
   urlKey,
   label = "Sections",
+  trailing,
   children,
 }: {
   tabs: ExecutionTab[];
@@ -180,6 +181,12 @@ export function ExecutionTabs({
    */
   urlKey?: string;
   label?: string;
+  /**
+   * Rendered at the right end of the strip — the hi-fi puts the journal's
+   * caveat ("cursor pagination · virtualized · exact values") inside the tab
+   * row, not under the table it describes.
+   */
+  trailing?: ReactNode;
   /** The panel content for the active tab. */
   children: ReactNode;
 }) {
@@ -246,6 +253,7 @@ export function ExecutionTabs({
             </button>
           );
         })}
+      {trailing ? <span className="exec-tabs-trailing">{trailing}</span> : null}
       </div>
       <div className="exec-tabs-panel" role="tabpanel" id={`${uid}-panel`} aria-labelledby={`${uid}-tab-${active}`}>
         {children}
@@ -282,6 +290,18 @@ export function ExecutionContextRail({
   /** The provenance disclosure (see ExecutionProvenanceDrawer). */
   provenance?: ReactNode;
 }) {
+  // The same code arriving from two sources (lifecycle + envelope) is one
+  // blocker with two provenances, not two blockers — the rail names it once.
+  const merged = new Map<string, RailBlocker>();
+  for (const b of blockers) {
+    const prev = merged.get(b.label);
+    if (!prev) merged.set(b.label, { ...b });
+    else {
+      const details = [prev.detail, b.detail].filter((d): d is string => Boolean(d));
+      merged.set(b.label, { label: b.label, severity: prev.severity === "blocking" || b.severity === "blocking" ? "blocking" : "watch", detail: [...new Set(details)].join(" · ") || null });
+    }
+  }
+  const named = [...merged.values()];
   return (
     <div className="exec-context-rail">
       <section className="exec-rail-section" data-section="next">
@@ -291,11 +311,11 @@ export function ExecutionContextRail({
       </section>
       <section className="exec-rail-section" data-section="blockers">
         <h3 className="exec-role-th">Blockers &amp; conditions</h3>
-        {blockers.length === 0 ? (
+        {named.length === 0 ? (
           <p className="exec-role-body exec-rail-none">None named.</p>
         ) : (
           <ul className="exec-rail-blockers">
-            {blockers.map((b) => (
+            {named.map((b) => (
               <li key={b.label} data-severity={b.severity}>
                 <span className="exec-role-meta exec-rail-severity">{b.severity === "blocking" ? "BLOCKING" : "WATCH"}</span>
                 <span className="exec-role-body">{b.label}</span>
