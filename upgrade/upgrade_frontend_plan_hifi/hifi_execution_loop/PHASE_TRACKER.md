@@ -2705,7 +2705,7 @@ command.
 |---|---|---|---|
 | N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B` |
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | exact Paper source/profile/adapter/image/rollback compatibility adjunct accepted; runtime remains dark | `N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED` |
-| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | accept each current interface/capability independently; absent Event/Artifact does not block unrelated Query | `N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE` |
+| N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | exact current Paper Query accepted; Command deferred N16B; Event/Artifact typed absent | `N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK` |
 | N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | map semantically equivalent current primitives under dedicated command identity and prove plan/apply/verify/reconciliation | `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET` |
 | N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted capability set and run bounded SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET` |
 
@@ -2728,10 +2728,11 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md).
 
-All A-lane work is complete through N17A. N14B now binds N13B's first accepted
+All A-lane work is complete through N17A. N14B binds N13B's first accepted
 Paper source/profile set to exact Portal adapter/config/image/rollback bytes in
-a separate adjunct. It does not reinterpret source-dark evidence or activate a
-runtime. N15B bounded current Query acceptance is next.
+a separate adjunct. N15B has now accepted the bounded private Query contract
+without activating product runtime. N16B current-primitive protective-path
+acceptance is next.
 
 ### N14B backend — immutable current-source release compatibility (2026-08-29)
 
@@ -2762,10 +2763,23 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md).
 
-N15B follows N13B's capability-to-source map and N14B candidate. It binds each
-currently available interface independently and runs real mTLS/JWT,
-WAN/fault/compatibility/rollback/SLO acceptance without treating one passing or
-missing interface as global authority.
+### N15B backend — current-capability inter-cell gateway acceptance (2026-08-29)
+
+| Slice | Backend result | Runtime truth | Frontend parallel lane |
+| --- | --- | --- | --- |
+| Query | `ACCEPTED_CURRENT_SOURCE` | Paper Overview only; three read capabilities, four Manager sources, bounded GET | consume typed Paper shape behind reviewed delivery gate |
+| Command | `DEFERRED_N16B` | separate command identity; no command flag or dispatch | no active/dead command control |
+| Event | `SOURCE_DOES_NOT_CURRENTLY_EXIST` | no owner stream; Portal delta label reserved and inactive | do not label projection delta as owner realtime |
+| Artifact | `SOURCE_DOES_NOT_CURRENTLY_EXIST` | no accepted owner reference source | render independent typed unavailable only where needed |
+| authority | `CONTRACT_ACCEPTED / PRODUCT_RUNTIME_DARK` | candidate deploy, BFF/profile, registry, SSE and TS change false | diagnostics only; no hashes/IDs in main UI |
+
+Backend report:
+[`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](../../backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md).
+
+N16B follows with current-primitive protective-path acceptance. Query health
+or the N15B read identity cannot enable Command.
 
 ### N16A backend — Source-dark routing and emergency policy (2026-08-27)
 
@@ -2786,7 +2800,7 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md`](./CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md).
 
-N16B follows N15B's supported-command classification and still requires a
+N16B follows N15B's separate Command deferral and still requires a
 dedicated command identity plus owner change window. Existing primitives may be
 adapted only when their semantics and target scope match. All A-lane work is
 complete through N17A.
@@ -2815,10 +2829,11 @@ Claude handoff:
 Status is `N17A_COMPLETE_SOURCE_DARK /
 N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
 Portal-owned A phase remains. Bobby approved the 2026-08-29 rebaseline and
-N13B's Portal implementation/current-source set and N14B's immutable bounded
-Paper compatibility candidate are accepted. Resume at N15B current Query
-acceptance; keep every runtime profile flag dark until its interface and screen
-activation gates pass.
+N13B's Portal implementation/current-source set, N14B's immutable bounded
+Paper compatibility candidate and N15B's private Paper Query contract are
+accepted. Resume at N16B current-primitive protective-path acceptance; keep
+every runtime profile flag dark until its interface and screen activation gates
+pass.
 
 ### N13B–N17B source-as-is rebaseline (2026-08-29)
 

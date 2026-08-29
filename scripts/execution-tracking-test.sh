@@ -29,6 +29,8 @@ N14B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_
 N14B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14B_CURRENT_SOURCE_RELEASE_HANDOFF.md"
 N15A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md"
 N15A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md"
+N15B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md"
+N15B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md"
 N16A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md"
 N16A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md"
 N17A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md"
@@ -43,6 +45,8 @@ for required_file in \
     "${N14B_HANDOFF}" \
     "${N15A_REPORT}" \
     "${N15A_HANDOFF}" \
+    "${N15B_REPORT}" \
+    "${N15B_HANDOFF}" \
     "${N16A_REPORT}" \
     "${N16A_HANDOFF}" \
     "${N17A_REPORT}" \
@@ -69,7 +73,7 @@ done
 for token in \
     "N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B" \
     "N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED" \
-    "N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE" \
+    "N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK" \
     "N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET" \
     "N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET"
 do
@@ -160,7 +164,7 @@ fi
 
 for token in \
     "N15A_COMPLETE_SOURCE_DARK" \
-    "N15B_OWNER_PUBLICATION_PENDING" \
+    "SUPERSEDED_BY_N15B_CURRENT_ACCEPTANCE" \
     "Query" \
     "Command" \
     "Event" \
@@ -185,6 +189,35 @@ do
 done
 if ! grep -Fq "N15A backend — Source-dark four-interface gateway" "${TRACKER}"; then
     echo "shared tracker lost N15A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N15B_CURRENT_QUERY_ACCEPTED" \
+    "PAPER_BINANCE_USDM" \
+    "PAPER_TRADING_SCREEN" \
+    "COMMAND_DEFERRED_N16B" \
+    "EVENT_ARTIFACT_TYPED_UNAVAILABLE" \
+    "PRODUCT_RUNTIME_DARK"
+do
+    if ! grep -Fq "${token}" "${N15B_REPORT}"; then
+        echo "N15B report lost current-capability acceptance invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "QUERY_ACCEPTED_FOR_PAPER_OVERVIEW_ONLY" \
+    "DEFERRED_N16B" \
+    "SOURCE_DOES_NOT_CURRENTLY_EXIST" \
+    "N15B_QUERY_CAPABILITY_NOT_ACCEPTED"
+do
+    if ! grep -Fq "${token}" "${N15B_HANDOFF}"; then
+        echo "N15B Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N15B backend — current-capability inter-cell gateway acceptance" "${TRACKER}"; then
+    echo "shared tracker lost N15B closeout section" >&2
     exit 1
 fi
 

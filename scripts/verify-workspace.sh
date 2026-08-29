@@ -429,6 +429,8 @@ for required in \
   "${ROOT_DIR}/scripts/portal-current-source-release-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-intercell-gateway.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json" \
@@ -1113,6 +1115,8 @@ for tracked_source in \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14B_CURRENT_SOURCE_RELEASE_HANDOFF.md \
   upgrade/backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15A_FOUR_INTERFACE_GATEWAY_HANDOFF.md \
+  upgrade/backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md \
   packages/contracts/schemas/execution-intercell-gateway.v1.schema.json \
   packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json \
   packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json \

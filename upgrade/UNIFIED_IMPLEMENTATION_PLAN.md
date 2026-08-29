@@ -1960,19 +1960,30 @@ không phải 17 màn.
 > Portal adapter/config bytes, three immutable service images and rollback
 > chain. Candidate/rollback Compose renders and all negative/full gates pass.
 > This is not runtime, registry, Query/SSE/command or Trading System release
-> authority. N15B current Query acceptance is next. Detail:
+> authority. N15B later consumed the bounded candidate. Detail:
 > [`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).
 
 > **Backend checkpoint 2026-08-26 — N15A source-dark four-interface gateway:**
-> status is `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+> status is `N15A_COMPLETE_SOURCE_DARK / SUPERSEDED_BY_N15B_CURRENT_ACCEPTANCE /
 > PRODUCTION_INACTIVE`. Query, Command, Event and Artifact negotiate/fail/roll
 > back independently, use separate read/command identities and bounded
 > TLS1.3/HTTP2 policies, and have pure Event continuity plus Artifact reference
 > validation. Component OpenAPI has no path/server and local fault evidence
 > proves `network_attempts=0`; no AWS-HK/Trading System source, credential or
-> runtime changed. N15B later imports exact accepted owner bytes and performs
-> real per-interface mTLS/JWT/WAN/fault/SLO acceptance. Detail:
+> runtime changed. N15B later accepted only the current bounded Paper Query
+> path and kept the other interfaces independent. Detail:
 > [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
+
+> **Backend checkpoint 2026-08-29 — N15B current-capability inter-cell
+> gateway:** status is `N15B_CURRENT_QUERY_ACCEPTED /
+> PRODUCT_RUNTIME_DARK`. Rust Edge and TypeScript BFF accept only
+> `paper / PAPER_BINANCE_USDM / PAPER_TRADING_SCREEN` and its three current
+> read capabilities, before transport. Command is deferred to N16B under a
+> separate identity; Event and Artifact remain typed absent. Immutable D3 and
+> Manager qualification evidence, scope/bounds/drift/rollback and full
+> workspace tests pass. Candidate deployment, product BFF/profile, registry,
+> SSE, Command and Trading System change remain false. Detail:
+> [`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).
 
 > **Backend checkpoint 2026-08-27 — N16A source-dark emergency routing:**
 > status is `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /

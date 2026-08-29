@@ -18,6 +18,12 @@ Chúng không thay thế phase hoặc exit gate trong
   source-dark, can continue immediately) and `B` (owner artifacts or real
   runtime required). A completion never implies B activation.
 
+- [N15B — Current-capability inter-cell gateway acceptance](./EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md)
+  — **Query contract accepted / product runtime dark:** exact Paper profile,
+  screen, capabilities, source relations, bounds and immutable D3/Manager
+  evidence are enforced before transport in Rust Edge and TypeScript BFF.
+  Command remains N16B-only; Event and Artifact are typed absent.
+
 - [EX-BE-02B — Manager-v2 Multi-profile Read Readiness](./EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md)
   — **Implemented / private read-ready:** the sealed Manager-v2 backend path
   is now deployment-bound for Paper, Sandbox and Live. Each profile requires
@@ -1115,7 +1121,7 @@ durable run/attempt events. Detailed evidence:
   `network_attempts=0`; no AWS-HK/Trading System call, listener, credential,
   migration or runtime flag was introduced.
 - Status is `N15A_COMPLETE_SOURCE_DARK /
-  N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE / PRODUCTION_INACTIVE`. N15B accepts
+  SUPERSEDED_BY_N15B_CURRENT_ACCEPTANCE / PRODUCTION_INACTIVE`. N15B accepts
   each current interface/capability independently; an absent Event or Artifact
   publication does not block unrelated Query capability. Detail:
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
@@ -1204,5 +1210,23 @@ durable run/attempt events. Detailed evidence:
   source/Query/SSE/command activation, Trading System release and database copy
   remain false.
 - Status is `N14B_PORTAL_COMPATIBILITY_ACCEPTED /
-  PROFILE_RUNTIME_NOT_ACTIVATED`; N15B current Query acceptance is next. Detail:
+  PROFILE_RUNTIME_NOT_ACTIVATED`; N15B consumes this candidate. Detail:
   [`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).
+
+## Backend state — 2026-08-29 (N15B current-capability gateway acceptance)
+
+- Query is accepted only for `paper / PAPER_BINANCE_USDM /
+  PAPER_TRADING_SCREEN` and positions, execution-quality and current-session
+  capabilities over the current Manager-v2 source.
+- Rust Edge and TypeScript BFF enforce the same exact scope before transport;
+  valid credentials for another screen/profile remain typed unavailable.
+- The contract pins N13B/N14B plus real unchanged D3/Manager evidence and
+  retains bounded H2/TLS1.3/mTLS/JWT, page/byte, no-redirect and no-retry
+  policy.
+- Command is `DEFERRED_N16B`; Event and Artifact are
+  `SOURCE_DOES_NOT_CURRENTLY_EXIST`. Portal deltas cannot claim owner Event
+  authority.
+- Candidate deployment, BFF/profile flag, registry promotion, SSE, command and
+  Trading System change all remain false. Status is
+  `N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK`. Detail:
+  [`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).

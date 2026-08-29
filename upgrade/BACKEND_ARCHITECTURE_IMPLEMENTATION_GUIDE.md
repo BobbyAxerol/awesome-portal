@@ -1550,7 +1550,7 @@ activation or the phase):**
   replay/gap/epoch rules, Artifact metadata/reference validation and local
   partition/replay/expiry/schema/source-loss doubles. Component OpenAPI has no
   paths/servers and tests prove `network_attempts=0`. Status is
-  `N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE /
+  `N15A_COMPLETE_SOURCE_DARK / SUPERSEDED_BY_N15B_CURRENT_ACCEPTANCE /
   PRODUCTION_INACTIVE`; no origin, credential, source or runtime changed. See
   [`EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md`](./backend/EX_BE_18_N15A_SOURCE_DARK_FOUR_INTERFACE_GATEWAY.md).
 
@@ -1613,8 +1613,18 @@ activation or the phase):**
   The compatibility decision is not a deployment or activation decision:
   runtime, registry, source, Query, SSE, command and Trading System release
   authority remain false. Status is `N14B_PORTAL_COMPATIBILITY_ACCEPTED /
-  PROFILE_RUNTIME_NOT_ACTIVATED`; N15B current Query acceptance is next. See
+  PROFILE_RUNTIME_NOT_ACTIVATED`; its bounded candidate is consumed by N15B. See
   [`EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md`](./backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md).
+- **N15B current-capability inter-cell gateway accepted (2026-08-29):** the
+  exact Paper Query slice is now a strict digest-bound contract enforced in
+  both Rust Edge and TypeScript BFF before transport. Only
+  `PAPER_TRADING_SCREEN` and its positions/execution-quality/sessions reads are
+  accepted. Command is separately deferred to N16B; Event and Artifact are
+  typed absent and cannot be inferred from Query health. Existing immutable D3
+  and Manager runtime evidence is revalidated, while candidate deployment,
+  product BFF, registry, SSE, command and Trading System change remain false.
+  Status is `N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK`; see
+  [`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

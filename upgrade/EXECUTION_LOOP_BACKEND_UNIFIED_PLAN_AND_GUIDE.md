@@ -1121,7 +1121,7 @@ System release and database copy all remain false. Detail:
 ### N15 — Formal inter-cell gateway authority
 
 **Mapping:** BAR-18.  
-**Status:** `N15A_COMPLETE_SOURCE_DARK / N15B_READY_FOR_CURRENT_QUERY_ACCEPTANCE`.  
+**Status:** `N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK`.  
 **Priority:** P2.
 
 **Goal**
@@ -1185,6 +1185,19 @@ mapping. The overall phase closes when every Portal-required capability is
 classified in one of the four delivery states from §3.5; it does not pretend
 all four upstream interfaces exist.
 
+**Completed 2026-08-29:** N15B independently classifies all four interfaces
+against the current source. Query is accepted only for the immutable
+`paper / PAPER_BINANCE_USDM / PAPER_TRADING_SCREEN` target and its three read
+capabilities; Rust Edge and the TypeScript BFF both reject every other mapped
+screen/profile before transport. Command is deferred to N16B under a separate
+identity. Event and Artifact are honestly `SOURCE_DOES_NOT_CURRENTLY_EXIST`;
+Portal snapshot deltas may never be relabelled as owner events. The contract
+binds unchanged N13B/N14B, Manager qualification and D3 transport evidence;
+focused Rust, TypeScript, schema, auth/scope/drift/rollback and full workspace
+gates pass. Candidate deployment, product flag, registry promotion, SSE,
+Command and Trading System change remain false. Detail:
+[`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).
+
 ### N16 — Same-domain routing and emergency operations
 
 **Mapping:** BAR-19.  
@@ -1212,7 +1225,7 @@ doubles; no public route or Trading System command becomes active.
 
 #### N16B — Current-primitive protective-path acceptance
 
-**Ready after:** N15B classifies the supported command set and a dedicated
+**Ready after:** N15B has classified Command as separately deferred and a dedicated
 command identity plus owner change window exist. Read identities are forbidden.
 
 - map `halt`, `resume`, `reduce`, bounded cancel-open-orders,
@@ -2339,6 +2352,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-08-29 | Accepted N15B current-capability inter-cell gateway for the bounded Paper Query slice | Rust Edge and TypeScript BFF enforce the exact Paper screen/profile before transport; Command is deferred N16B, Event/Artifact typed absent, immutable D3/Manager evidence revalidated; product/runtime/registry/SSE/command/Trading-System-change flags remain false |
 | 2026-08-29 | Accepted N14B immutable current-source release compatibility for the first bounded Paper target | exact signed N14A candidate plus N13B source/qualification/profile pins, adapter/config digests, three immutable service image digests and rollback/forward-fix chain are bound in a separate adjunct; all runtime/profile/registry/source/Query/SSE/command/Trading-System-release flags remain false; N15B Query acceptance is next |
 | 2026-08-29 | Rebaselined N13B–N17B from global contract-first blocking to source-as-is, capability-by-capability compatibility | documentation/decision only; N13A–N17A evidence preserved; Manager-v2/current Gateway/current market and Portal derivations become valid bounded sources behind versioned adapters; read/command identities and production gates remain separate; no runtime/profile/source/command change |
 | 2026-08-29 | Accepted N13B Portal current-source implementation and exact source set | 4 profiles / 16 sources / 29 capabilities / 20 screens; owner publication and real Paper Manager qualification manifests pinned; Rust exact read boundary plus TypeScript multi-profile BFF added; all runtime/profile/command flags and registry data modes remain unchanged pending N14B |

@@ -1,6 +1,6 @@
 # N15A — Source-dark four-interface gateway contract
 
-Status: `N15A_COMPLETE_SOURCE_DARK / N15B_OWNER_PUBLICATION_PENDING /
+Status: `N15A_COMPLETE_SOURCE_DARK / SUPERSEDED_BY_N15B_CURRENT_ACCEPTANCE /
 PRODUCTION_INACTIVE`
 
 Date: 2026-08-26  
@@ -130,9 +130,10 @@ lower compatible contract version; it never enables transport.
 |---|---|---|
 | N15 | four independent versioned authorities, identity/transport policy, Event continuity, Artifact reference policy and local fault doubles complete | after the single master owner pack is accepted, bind the exact owner commit/image/config/schema/route/auth publication for each interface; run real mTLS/JWT positive/negative, WAN partition, replay/duplicate/out-of-order/expiry/schema/source-loss/rollback and SLO trace tests independently; keep activation as a later explicit decision |
 
-N15B remains parked at `N15B_OWNER_PUBLICATION_PENDING`. Template or candidate
-bytes cannot satisfy it, and one passing interface cannot promote the other
-three.
+N15B later closed through source-as-is acceptance rather than a global owner
+publication. Query is accepted only for the bounded Paper target; Command is
+deferred and Event/Artifact remain typed unavailable. See
+[`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).
 
-The next Portal-owned phase is **N16A — source-dark same-domain routing and
-emergency policy**, exercised only against local doubles.
+The next backend phase is **N16B — current-primitive protective-path
+acceptance**.
