@@ -1329,6 +1329,8 @@ Append rows here. Do not create another active request file.
 | BR-EX-62 | 2026-08-28 | Paper Workbench `/deployments/paper/:id` and its VN variant `…/vn-market` (WF 1c · 4h) | The contract publishes the figures but not the drawing: no equity band against the approved run, no candle overlay with order/fill markers, no rolling-correlation series, no venue session shading, and no way to reach the other deployments in paper without already being on one | Additive on `paper-workbench.v1` → v1.1: `peers[]`, `equity_band` (backtest + paper + ±1σ band, joined by artifact digest, with the drawdown annotation), `order_markers` (venue OHLC + BUY/SELL/FILL markers each carrying its order/fill id), `correlation_series` (`corr.v1` vs portfolio and benchmark), `session_shading` (venue closed windows and the frozen-at instant), `report{available,reason}`; plus new `GET /api/v1/execution/paper` → `paper-list.v1` | DERIVED (`equity_projection.v1`, `corr.v1`) · TRADING_SYSTEM (candles, orders, fills) · PORTAL_PROJECTION (peers, gate) · venue calendar | read-only · medium: a backtest joined to a paper series by anything but the artifact digest is the exact failure this panel exists to expose | ≤20 deployments in paper; band and correlation ≤720 pts; candles 120–500; markers ≤500/window; freshness = the projection's own `as_of`, paused against the venue calendar | existing `paper-workbench.v1`; `venues.trading_sessions`; BR-EX-41 stage telemetry; same OHLC question as BR-EX-50 | a missing branch renders the honest state the screen already has; no series ⇒ the panel says so and the KPI strip stands alone; a closed window is published, never inferred from missing points | fixtures `execution-paper-list.valid.json`, `execution-paper-workbench.dep_74.v1_1.valid.json`, `…dep_102.v1_1.valid.json`; tests §7.5.4 (1)–(5); frontend `paper.test`, `vnm.test`, `paperMatrix.test` re-run unchanged | Codex | N09 (projection) · N10 (derivations) · N11 (candles/journal) | `RECEIVED` | `PaperWorkbench` — smoke `paper.smoke.ts` (workbench half) deleted on delivery | none until approved | hi-fi "Paper Workbench (WF 1c)" + "Paper Workbench VNM (WF 4h)"; **full spec §7.5.1**, decisions §7.5.5 |
 | BR-EX-63 | 2026-08-28 | Paper Exit Review `/governance/exit-reviews/:id` (WF 4b) | The review shows the evidence but not the pack it was read from, and offers no reviewer note — so the sentence a reviewer wants recorded beside their decision has nowhere to go | Additive on `paper-exit-review.v1` → v1.1: `evidence_pack{pack_id,digest,href,built_at}` and `reviewer_note{supported,max_length,recorded_with_decision,value}` | PORTAL_CONTROL | read + the existing decision write · medium: a note the reviewer believes was saved and was not is worse than no field | 1 review/screen; note ≤2,000 chars | existing contract | note unsupported ⇒ the field is not rendered rather than rendered and dropped; the digest a review decided against never changes when the pack is rebuilt | fixture update; tests §7.5.4 (6)(7); frontend `paperExit.test` re-run unchanged | Codex | N09 | `RECEIVED` | `PaperExitReview` — smoke `paper.smoke.ts` (exit half) deleted on delivery | none | hi-fi "Paper Exit Review (WF 4b)"; **full spec §7.5.2**, decisions §7.5.5 |
 | BR-EX-64 | 2026-08-28 | Cross-screen — every charted series (Paper 62 · Replay 50 · Live 56/57 · Canary 59 · stage telemetry 41) | The chart rules were being written once per appendix and drifting: pre-scaled coordinates instead of points, totals that disagree with their bars, markers with no journal id, annotations floating off their day, lines interpolated through closed venues | One shared schema fragment `chart-series.rules.v1` ($ref-ed by every charted series): numeric points + ISO UTC timestamps; exact-decimal money; explicit gaps for closed venues; printed totals equal exact sums; every marker carries its journal id; annotations equal the series value at their bucket; caps + extrema-preserving downsample declared; tooltip provenance (authority · as_of · formula_version) required; multi-stage overlays share one `join_digest`; one owner for OHLC | rules bind each series' own authority (PORTAL_PROJECTION / TRADING_SYSTEM / BROKER / DERIVED) | read-only · medium: these are the honesty rules — a chart that disagrees with its caption is worse than no chart | no new endpoints; caps per BR-EX-41 | BR-EX-41/50/56/57/59/62; decision §7.5.5(1) (OHLC owner) escalated — two screens block on it | a series failing a rule fails schema validation, never gets repaired by the portal | fixture linter over every charted `execution-*` fixture; sum/annotation/marker-id/digest/gap checks per §7.6.4; frontend renders each canonical fixture through `marketChart` | Codex | N10 (schema fragment) · N09/N11 (producers) | `RECEIVED` | `components/marketChart.tsx` (CandlesChart · LinesChart · BarsChart) — smoke generators in `paper.smoke.ts`/`canary.smoke.ts` are the reference fixtures, deleted with their parent rows | none | **full spec §7.6**; amendments to 57/59/62 in §7.6.2 |
+| BR-EX-65 | 2026-08-29 | Portfolio 360 `/deployments/portfolios/{id}` — Structure & Correlation, corr.v1 disclosure | The published correlation contract is a point-in-time matrix: the operator cannot see *when* correlation rose or whether alphas draw down together — the two questions the matrix exists to answer; both frames ship as labeled smoke since 2026-08-28 | Two read series under `chart-series.rules.v1` (§7.6.1): `rho-timeline` — rolling ρ(portfolio NAV, benchmark NAV), window/interval server-chosen (30d/1d today), points `[t, rho]`, server publishes `threshold` (0.6 today, config — never client-hardcoded) and `breaches[]` (from/to/peak) for sustained ρ > threshold (the breach raises the attention finding — the browser draws, never detects); `drawdown-overlap` — per-alpha episodes as intervals `{from,to,depth_pct}` (peak-to-recovery, exact decimal), never a resampled line, per-alpha `INSUFFICIENT_DATA` with days observed, `joint_windows[]` (≥2 alphas in drawdown, server-derived) each optionally carrying `regime_label` under its own `regime.v1` formula — label absent = absent, never inferred | DERIVED (`corr.v1` over NAV snapshots · `drawdown_overlap.v1` · optional `regime.v1`) · threshold `PORTAL_CONTROL` config | read-only · medium: a mis-derived joint window claims a diversification failure that did not happen — episode boundaries are server truth, the browser never intersects intervals | ρ ≤400 pts/window; episodes ≤40 per alpha·window; alphas ≤20; joint windows ≤10; freshness = as_of of the NAV snapshot join | NAV series from BR-EX-34's engines (closed N10 — **this row is new scope: 34 shipped equity/drawdown/approved-band only and is not reopened**); benchmark id from BR-EX-51; rules fragment BR-EX-64 | series absent → the panel returns to its honest "not published" state (the pre-2026-08-28 code path is kept); partial coverage → per-alpha INSUFFICIENT_DATA rows, never dropped | fixtures `execution-portfolio-360.rho-timeline.valid.json` / `.drawdown-overlap.valid.json`; rule-6 equality on breach peaks; from ≤ to and depth < 0 per episode; every joint window ⊆ union of member episodes; frontend renders both through `marketChart` (`LinesChart` thresholdLine · `EpisodesChart`) | Codex | N10 (derivations) · N09 (projection route) | `RECEIVED` | `PortfolioThreeSixty` corr.v1 disclosure + structure panels — smoke `PF_CHARTS.rho`/`PF_CHARTS.ddOverlap` in `portfolio360.smoke.ts` are the reference fixtures, deleted on delivery | none until approved | corrects §7.6.6(1) — these series live here, not in closed BR-EX-34; full spec §7.7; BR-EX-51/64 |
+| BR-EX-66 | 2026-08-29 | Portfolio 360 header — `Rebalance plan ▾` · `Report pack` | Allocation changes go through the Admin Action Drawer with no portfolio-scoped plan preview, and report assembly is manual; since 2026-08-28 both header controls are live and open plan previews whose Apply/Generate buttons are disabled awaiting exactly this route | `rebalance-plan`: POST plan (dry-run — echoes the preview's KV grid: operation · targets per alpha alloc from→to as exact decimals · writes = capital-ledger entries only, positions move only by the deployments' own orders · governance = ADMIN step-up + dual approval; returns plan_id + digest + TTL) · POST apply (plan_id + step-up token → operation_id in the ops queue; PARTIAL never renders green) · GET verify (operation_id → per-entry applied/failed + post-state digest). `report-pack`: POST generate (window + section list: live strip/KPIs · equity vs benchmark by era · matrix + influence · drawdown overlap · ledger window · approvals — each section pinned to the digest it was read at) → artifact id; GET status/download | rebalance `PORTAL_CONTROL` command (ledger writes, approvals); report assembly `PORTAL_PROJECTION` read-only over published contracts | WRITE (rebalance) · high: a mis-applied plan moves real capital allocation — step-up, dual approval and verify are the row, not decoration; report-pack read-only · low | plan ≤20 target lines; report ≤8 sections, artifact ≤20MB; TTL/step-up per command catalogue revision 2 (handoff §8.8) | BR-EX-51 (`portfolio-360.v1.1` fields echoed in the plan); command catalogue rev 2; approvals BR-EX-30/35; what-if `marginal.v1` — targets seeded from it stay labeled estimates | plan expired → typed 409, re-plan; apply without step-up → typed 403; verify PARTIAL → chip + per-entry list, never green; report section failure → typed error naming the section | plan/apply/verify state-machine tests incl. expiry and dual-approval negatives; apply idempotent by plan digest; report digest-pinning test (section digest ≠ live digest → marked stale-at-generation); frontend button coverage exists in `analytics360.test` | Codex | N12 (commands) · N09 | `RECEIVED` | the two header controls + preview panels in `PortfolioThreeSixty` (commit 9709679) — `Apply`/`Generate` are the single enable points | **command — activation gated on Bobby approval + operational evidence, separately from every read row** | BR-EX-51 ("actions later" resolves here); full spec §7.8 |
 | _next: BR-EX-60_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
@@ -1962,7 +1964,9 @@ additive — no retype:
    `PF_CHARTS.ddOverlap` (per-alpha drawdown episodes `{from,to,depthPct}` + a joint window
    with its regime label, `INSUFFICIENT_DATA` as an explicit row state) in
    `portfolio360.smoke.ts` are the reference fixtures for the ρ-timeline and drawdown-overlap
-   series. When BR-EX-34 publishes them, the shapes must match: episodes are intervals with a
+   series. **Correction 2026-08-29:** BR-EX-34 closed on 2026-08-26 with equity/drawdown/
+   approved-band only — these two series are new scope and now live in **BR-EX-65** (§7.7),
+   which does not reopen 34. When BR-EX-65 publishes them, the shapes must match: episodes are intervals with a
    depth, never a resampled line; the joint window is server-derived (≥2 alphas in drawdown),
    never recomputed in the browser; both carry `chart-series.rules.v1` (§7.6.1) — the
    threshold/annotation obey rule 6, the timeline obeys rules 1/7/8.
@@ -1976,6 +1980,93 @@ additive — no retype:
    (radius = exposure share) and edges (|ρ| ≥ threshold) from the packed correlation matrix
    already published — no new series requested; `PF_CHARTS.influence` on the Structure
    overview panel is presentation smoke and deletes with BR-EX-51.
+
+
+### 7.7 BR-EX-65 — portfolio correlation-risk series (filed 2026-08-29)
+
+The corr.v1 disclosure ships two smoke frames (2026-08-28) whose shapes are the request. Both
+series `$ref` `chart-series.rules.v1` (§7.6.1) in full.
+
+**`rho-timeline`** — `GET /api/v1/portal/portfolios/{id}/rho-timeline?window=30d`
+
+```jsonc
+{
+  "envelope": { "authority": "DERIVED", "as_of": "...", "formula_version": "corr.v1" },
+  "benchmark_id": "bm_204",          // the id portfolio-360 already names
+  "window": { "from": "...", "to": "...", "interval": "1d" },  // server-chosen
+  "threshold": "0.6",                 // PORTAL_CONTROL config — the portal never hardcodes it
+  "points": [["2026-07-24T00:00:00Z", "0.31"], ...],   // ≤400, rule 1/7/8
+  "breaches": [{ "from": "...", "to": "...", "peak": "0.63" }]  // sustained ρ > threshold;
+  // the breach is what raises the attention finding — server detects, browser draws (rule 6:
+  // each breach peak equals the series value at its bucket)
+}
+```
+
+**`drawdown-overlap`** — `GET /api/v1/portal/portfolios/{id}/drawdown-overlap?window=30d`
+
+```jsonc
+{
+  "envelope": { "authority": "DERIVED", "as_of": "...", "formula_version": "drawdown_overlap.v1" },
+  "window": { "from": "...", "to": "..." },
+  "alphas": [
+    { "id": "av_...", "label": "Grid", "state": "OK",
+      "episodes": [{ "from": "...", "to": "...", "depth_pct": "-2.1" }] },   // peak-to-recovery
+    { "id": "av_...", "label": "MM", "state": "INSUFFICIENT_DATA", "days_observed": 9,
+      "episodes": [] }                                                        // a state, not a zero
+  ],
+  "joint_windows": [{ "from": "...", "to": "...",
+    "regime_label": { "text": "high-vol panic (BTC -6.2%)", "formula_version": "regime.v1" } }]
+  // joint = ≥2 alphas in drawdown, server-derived; regime_label optional — absent means absent
+}
+```
+
+Episodes are intervals with a depth — never a resampled line. The browser never intersects
+intervals to find joint windows and never classifies regimes.
+
+**DoR (§5.1):** schema + the two canonical fixtures (`execution-portfolio-360.rho-timeline.valid.json`,
+`.drawdown-overlap.valid.json`) + error/unavailable examples before any route work.
+
+**Required tests:** rule-6 equality for every breach peak; `from ≤ to`, `depth_pct < 0` per
+episode; every joint window ⊆ the union of its members' episodes; threshold change in config
+reflected in payload without portal redeploy; fixture linter of §7.6.4 over both fixtures.
+
+**Frontend retires on delivery:** `PF_CHARTS.rho` and `PF_CHARTS.ddOverlap` in
+`portfolio360.smoke.ts`; the corr.v1 disclosure's SMOKE caption; re-record
+`el-v2-08-portfolio-*`. The honest "not published" code path stays for the absent-series case.
+
+### 7.8 BR-EX-66 — portfolio actions: rebalance plan → apply → verify · report pack (filed 2026-08-29)
+
+The two header controls are live since commit `9709679`; their previews are the contract sketch,
+and `Apply`/`Generate` inside them are the only two places this row enables.
+
+**Rebalance** — the state machine BR-EX-51 deferred as "actions later":
+
+| Step | Route | Semantics |
+|---|---|---|
+| plan | `POST /api/v1/portal/portfolios/{id}/rebalance/plan` | Dry-run. Echoes the preview's KV grid — `operation`, `targets[]` (per-alpha `alloc_from`/`alloc_to`, exact decimals; seeded from `marginal.v1` estimates and labeled so), `writes` (capital-ledger entries only — positions move only by the deployments' own orders), `governance` (ADMIN step-up · dual approval). Returns `plan_id`, `plan_digest`, `expires_at`. No state changes. |
+| apply | `POST .../rebalance/apply` | `plan_id` + step-up token → `operation_id` in the operations queue, dual approval attached. Idempotent by `plan_digest`. Expired plan → typed 409 (re-plan); missing step-up → typed 403. |
+| verify | `GET .../rebalance/verify/{operation_id}` | Per-entry applied/failed + post-state digest. `PARTIAL` renders as a chip with the per-entry list — never green. |
+
+**Report pack** — `POST /api/v1/portal/portfolios/{id}/report-pack` (window + section list: live
+strip/KPIs · equity vs benchmark by era · matrix + influence map · drawdown overlap · ledger
+window · approvals) → `artifact_id`; `GET .../report-pack/{artifact_id}` for status/download.
+Every section is pinned to the digest it was read at; a section whose digest no longer matches
+live is marked `stale_at_generation`, never silently refreshed. Read-only assembly over
+published contracts — no new derivation.
+
+**DoR:** command-catalogue entries (revision 2 grammar, handoff §8.8) + schema + fixtures for
+plan/apply/verify and generate/status, including the 409/403/PARTIAL negatives, before route work.
+
+**Required tests:** full state-machine walk incl. expiry and dual-approval negatives; apply
+idempotency by digest; PARTIAL propagation to verify; report digest-pinning
+(`stale_at_generation` on drift); artifact size cap.
+
+**Frontend retires on delivery:** the `disabled` + BR-EX-51-reason on `Apply`/`Generate`;
+nothing else — the previews become the real plan echo.
+
+**Activation:** command row — activation is gated on Bobby approval and operational evidence,
+separately from every read row. Until then the routes may exist dark; the portal keeps the
+buttons preview-only.
 
 ---
 
@@ -2095,3 +2186,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-28 | Claude: §7.2 BR-EX-62/63 appended (`RECEIVED`) and specified in full in §7.5 — Paper Workbench v1.1 + `paper-list.v1`, Paper Exit Review v1.1 | documentation only; no runtime/profile/source/command change; the Paper contract already carries most of its hi-fi, so these two rows are deliberately small; four decisions in §7.5.5 are codex's to confirm | · amended same day for the delivered Paper Overview hi-fi (`paper-overview.v1` supersedes the bare `paper-list.v1`, §7.5.1)
 | 2026-08-28 | Claude: §7.2 BR-EX-64 appended (`RECEIVED`) and specified in §7.6 — the chart series contract, written after the real-chart pass replaced every SVG stand-in on Paper/Canary/Live; §7.6.2 carries additive amendments to BR-EX-57/59/62 and escalates the OHLC-owner decision (§7.5.5(1)) now blocking two screens | documentation only; no runtime/profile/source/command change |
 | 2026-08-28 | Claude: §7.6.6 appended — Portfolio 360 pass names `PF_CHARTS.rho`/`PF_CHARTS.ddOverlap` as reference fixtures for BR-EX-34's ρ-timeline and drawdown-overlap series, and records the now-active Rebalance plan / Report pack controls as BR-EX-51's enable points | documentation only; no runtime/profile/source/command change |
+| 2026-08-29 | Claude: §7.2 BR-EX-65/66 appended (`RECEIVED`) + specs §7.7/§7.8 — the ρ-timeline and drawdown-overlap series get their own row (correcting §7.6.6(1), which had attached them to BR-EX-34, closed 2026-08-26 without them), and the now-live Rebalance plan / Report pack controls get their command row (plan → apply → verify · digest-pinned report pack) | documentation only; no runtime/profile/source/command change |
