@@ -1986,7 +1986,8 @@ không phải 17 màn.
 > [`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).
 
 > **Backend checkpoint 2026-08-27 — N16A source-dark emergency routing:**
-> status is `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
+> status is `N16A_COMPLETE_SOURCE_DARK /
+> SUPERSEDED_BY_N16B_CURRENT_PRIMITIVE_ACCEPTANCE /
 > PRODUCTION_INACTIVE`. One same-origin `/ops/emergency/*` component contract,
 > server-side origin isolation, five-minute session/WebAuthn ceremony,
 > command-independent typed health, immutable audit and local Research/
@@ -1994,13 +1995,24 @@ không phải 17 màn.
 > path/server, the unmounted Nginx blueprint has no forwarding directive,
 > N12 R3 remains unpublished and R4 resume/scale is structurally forbidden.
 > No public route, Cloudflare/DNS/tunnel, AWS-HK/source/runtime changed and
-> `network_attempts=0`. N16B later requires accepted N12 R3, dedicated command
-> identity, N15B and an owner window. Detail:
+> `network_attempts=0`. N16B subsequently consumed this boundary without
+> mounting it. Detail:
 > [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
 
+> **Backend checkpoint 2026-08-29 — N16B current protective primitive:**
+> status is `N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED /
+> LIVE_EMERGENCY_CLOSE_ONLY / PRODUCT_RUNTIME_DARK`. Source-as-is inspection
+> accepts only `live.emergency-close` for `LIVE_FULL / ACCOUNT / BINANCE /
+> USD_M`; the other eight N12 commands are explicitly inactive or absent.
+> Rust owns the exact command transport gate and TypeScript returns a sanitized,
+> immutable blocked plan. Read identity, widened target, R4 inheritance,
+> automatic retry after dispatch and premature runtime activation all fail
+> closed. No public route, source call or Live mutation occurred. Detail:
+> [`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).
+
 > **Backend checkpoint 2026-08-27 — N17A source-dark production/DR:** status is
-> `N17A_COMPLETE_SOURCE_DARK / N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING /
-> PRODUCTION_INACTIVE`. Pure Rust/contracts distinguish provisional budgets
+> `N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE /
+> LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW`. Pure Rust/contracts distinguish provisional budgets
 > from measured production SLO/error budgets and keep production RPO/RTO/cost
 > null. Unmounted observability, recovery, rotation, owner and game-day
 > blueprints are complete. An internal-only Docker rehearsal passed WAL PITR

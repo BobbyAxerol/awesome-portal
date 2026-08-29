@@ -2706,8 +2706,8 @@ command.
 | N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B` |
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | exact Paper source/profile/adapter/image/rollback compatibility adjunct accepted; runtime remains dark | `N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED` |
 | N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | exact current Paper Query accepted; Command deferred N16B; Event/Artifact typed absent | `N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK` |
-| N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | map semantically equivalent current primitives under dedicated command identity and prove plan/apply/verify/reconciliation | `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET` |
-| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted capability set and run bounded SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET` |
+| N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | one exact current primitive accepted: `live.emergency-close` for `LIVE_FULL / ACCOUNT`; eight other N12 commands typed inactive/absent; source/public/runtime mutation remains dark | `N16A_COMPLETE_SOURCE_DARK / N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK` |
+| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted read set; Live emergency mutation separately requires exact Account/window/abort owner/Bobby sign-off and observed acknowledgement/verification | `N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE / LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW` |
 
 Rule: Claude and Portal backend may implement/test every A lane without waiting
 for Trading System. A B lane uses only bounded authenticated current sources,
@@ -2778,8 +2778,8 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md`](./CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md).
 
-N16B follows with current-primitive protective-path acceptance. Query health
-or the N15B read identity cannot enable Command.
+N16B has accepted the exact current protective primitive without activating
+it. Query health or the N15B read identity cannot enable Command.
 
 ### N16A backend — Source-dark routing and emergency policy (2026-08-27)
 
@@ -2800,10 +2800,29 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md`](./CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md).
 
-N16B follows N15B's separate Command deferral and still requires a
-dedicated command identity plus owner change window. Existing primitives may be
-adapted only when their semantics and target scope match. All A-lane work is
-complete through N17A.
+N16B consumes N15B's separate Command deferral. Existing primitives may be
+adapted only when their semantics and target scope match; compatibility may be
+accepted source-dark, while a real mutation still requires a dedicated runtime
+identity and owner change window. All A-lane work is complete through N17A.
+
+### N16B backend — current-primitive protective-path acceptance (2026-08-29)
+
+| Slice | Backend result | Runtime truth | Frontend parallel lane |
+| --- | --- | --- | --- |
+| exact primitive | `ACCEPTED_CURRENT_PRIMITIVE` | only `live.emergency-close`; source `LIVE_FULL`, Portal `LIVE`, target `ACCOUNT`, `BINANCE / USD_M` | show concise compatible/inactive diagnostics only |
+| lifecycle | `PLAN/APPLY/STATUS/VERIFY_MAPPED` | Portal idempotency; no automatic retry after dispatch; acknowledgement is non-terminal | prepare persistent `PARTIAL`/`UNCERTAIN`, no blind retry |
+| authority | `DEDICATED_COMMAND_IDENTITY_REQUIRED` | mTLS + one-op JWT ≤60s + WebAuthn + two distinct approvers; read identity denied | never infer Command readiness from Query health |
+| other commands | `5 SUPPORTED_BUT_NOT_ACTIVATED / 3 SOURCE_ABSENT` | no cancel/reduce equivalent; R4 resume/scale cannot inherit break-glass | omit or render typed unavailable; no dead enabled controls |
+| runtime | `COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK` | public route, transport, source call and Live mutation false | do not wire mutation or fixture-success path |
+
+Backend report:
+[`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](../../backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md`](./CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md).
+
+N17B is next. Read slices may qualify independently. The Live emergency path
+cannot make its first source call until the exact Account, bounded change
+window, abort/rollback owner and Bobby mutation sign-off are recorded.
 
 ### N17A backend — Source-dark production/DR preparation (2026-08-27)
 
@@ -2827,13 +2846,15 @@ Claude handoff:
 [`CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md`](./CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md).
 
 Status is `N17A_COMPLETE_SOURCE_DARK /
-N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
+N17B_READY_FOR_EXACT_SET_ACCEPTANCE /
+LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW`. No
 Portal-owned A phase remains. Bobby approved the 2026-08-29 rebaseline and
 N13B's Portal implementation/current-source set, N14B's immutable bounded
 Paper compatibility candidate and N15B's private Paper Query contract are
-accepted. Resume at N16B current-primitive protective-path acceptance; keep
-every runtime profile flag dark until its interface and screen activation gates
-pass.
+accepted. N16B now accepts one exact current protective primitive while keeping
+runtime dark. Resume at N17B exact-set production acceptance; keep each runtime
+profile and Live mutation flag dark until its independent activation gate
+passes.
 
 ### N13B–N17B source-as-is rebaseline (2026-08-29)
 

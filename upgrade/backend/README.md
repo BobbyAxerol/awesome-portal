@@ -22,7 +22,14 @@ Chúng không thay thế phase hoặc exit gate trong
   — **Query contract accepted / product runtime dark:** exact Paper profile,
   screen, capabilities, source relations, bounds and immutable D3/Manager
   evidence are enforced before transport in Rust Edge and TypeScript BFF.
-  Command remains N16B-only; Event and Artifact are typed absent.
+  Command remains independently governed by N16B; Event and Artifact are typed
+  absent.
+
+- [N16B — Current-primitive protective-path acceptance](./EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md)
+  — **compatibility accepted / runtime dark:** only the current
+  `live.emergency-close` plan/apply/status/verify chain is accepted, restricted
+  to `LIVE_FULL / ACCOUNT / BINANCE / USD_M`. Rust and TypeScript reject target,
+  identity, R4 and runtime widening; no source call or Live mutation occurred.
 
 - [EX-BE-02B — Manager-v2 Multi-profile Read Readiness](./EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md)
   — **Implemented / private read-ready:** the sealed Manager-v2 backend path
@@ -1138,9 +1145,10 @@ durable run/attempt events. Detailed evidence:
 - OpenAPI has no paths/servers; the Nginx template has no forwarding directive.
   No Cloudflare/DNS/tunnel/AWS/source/runtime changed and `network_attempts=0`.
 - Status is `N16A_COMPLETE_SOURCE_DARK /
-  N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET / PRODUCTION_INACTIVE`. N16B
-  maps only semantically equivalent current command primitives under a separate
-  command identity and proves acknowledgement/reconciliation in a change window.
+  SUPERSEDED_BY_N16B_CURRENT_PRIMITIVE_ACCEPTANCE / PRODUCTION_INACTIVE`. N16B
+  consumes only semantically equivalent current command primitives under a
+  separate command identity; actual acknowledgement/reconciliation remains an
+  exact-window N17B action.
   Detail:
   [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
 
@@ -1158,7 +1166,8 @@ durable run/attempt events. Detailed evidence:
   logical restore, deterministic projection rebuild, identity rotation/
   compromise, release rollback and eight digest-sealed fault scenarios.
 - Status is `N17A_COMPLETE_SOURCE_DARK /
-  N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
+  N17B_READY_FOR_EXACT_SET_ACCEPTANCE /
+  LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW`. No
   stable/dev/AWS-HK/Trading System resource changed and every source/command/
   production flag remains false. Detail:
   [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
@@ -1230,3 +1239,21 @@ durable run/attempt events. Detailed evidence:
   Trading System change all remain false. Status is
   `N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK`. Detail:
   [`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).
+
+## Backend state — 2026-08-29 (N16B current protective primitive)
+
+- Current-source evidence proves one complete command lifecycle:
+  `live.emergency-close` plan, apply, operation status and verify.
+- Compatibility is exact to `LIVE_FULL / ACCOUNT / BINANCE / USD_M`, the
+  dedicated `portal-execution-command` identity, mTLS, one-operation JWT,
+  WebAuthn and two distinct approvers.
+- Rust revalidates the source evidence digests and owns the pre-transport gate.
+  TypeScript exposes sanitized catalogue metadata and an immutable blocked
+  plan; it emits no outbox record and exposes no internal source detail.
+- Five of the remaining commands are supported-but-inactive; three are absent.
+  Reconciliation is not cancellation, and R4 resume/scale cannot inherit R3.
+- Public route, command transport, source call and Live mutation remain false.
+  Status is `N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED /
+  PRODUCT_RUNTIME_DARK`; N17B owns the exact Account/window activation and real
+  acknowledgement/verification evidence. Detail:
+  [`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).

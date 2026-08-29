@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-protective-path-current.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "phase", "status", "source", "immutable_bindings", "identity_boundary", "accepted_mapping", "capability_classification", "terminal_reconciliation", "runtime_authority", "rollback"],
+  "properties": {
+    "schema_version": { "const": "portal.execution.protective-path-current.v1" },
+    "phase": { "const": "N16B" },
+    "status": { "const": "CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED" },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["authority", "source_commit", "gateway_image", "gateway_digest", "runtime_profile"],
+      "properties": {
+        "authority": { "const": "TRADING_SYSTEM_CURRENT" },
+        "source_commit": { "pattern": "^[0-9a-f]{40}$", "type": "string" },
+        "gateway_image": { "minLength": 1, "type": "string" },
+        "gateway_digest": { "$ref": "#/$defs/Sha256" },
+        "runtime_profile": { "const": "LIVE_BINANCE_USDM_HALTED" }
+      }
+    },
+    "immutable_bindings": {
+      "type": "object", "additionalProperties": false,
+      "required": ["command_catalog_sha256", "openapi_sha256", "request_contracts_sha256", "response_shapes_sha256", "n15b_acceptance_sha256", "n16a_profile_sha256"],
+      "properties": {
+        "command_catalog_sha256": { "$ref": "#/$defs/Sha256" },
+        "openapi_sha256": { "$ref": "#/$defs/Sha256" },
+        "request_contracts_sha256": { "$ref": "#/$defs/Sha256" },
+        "response_shapes_sha256": { "$ref": "#/$defs/Sha256" },
+        "n15b_acceptance_sha256": { "$ref": "#/$defs/Sha256" },
+        "n16a_profile_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "identity_boundary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["edge_identity", "read_identity_forbidden", "authentication", "delegated_scope", "delegated_resource", "jwt_maximum_ttl_seconds", "source_credential_server_side_only", "browser_internal_hostname_visible", "browser_source_credential_visible"],
+      "properties": {
+        "edge_identity": { "const": "portal-execution-command" },
+        "read_identity_forbidden": { "const": true },
+        "authentication": { "const": "MTLS_AND_ONE_OPERATION_DELEGATED_JWT" },
+        "delegated_scope": { "const": "execution.command.live.protective" },
+        "delegated_resource": { "const": "execution:command:LIVE_FULL:ACCOUNT:{account_id}:live.emergency-close" },
+        "jwt_maximum_ttl_seconds": { "const": 60 },
+        "source_credential_server_side_only": { "const": true },
+        "browser_internal_hostname_visible": { "const": false },
+        "browser_source_credential_visible": { "const": false }
+      }
+    },
+    "accepted_mapping": { "$ref": "#/$defs/AcceptedMapping" },
+    "capability_classification": {
+      "type": "array", "minItems": 9, "maxItems": 9,
+      "prefixItems": [
+        { "$ref": "#/$defs/PaperHalt" }, { "$ref": "#/$defs/PaperCancel" },
+        { "$ref": "#/$defs/SandboxHalt" }, { "$ref": "#/$defs/SandboxCancel" },
+        { "$ref": "#/$defs/LiveHalt" }, { "$ref": "#/$defs/LiveReduce" },
+        { "$ref": "#/$defs/LiveEmergencyClose" }, { "$ref": "#/$defs/LiveResume" },
+        { "$ref": "#/$defs/LiveScale" }
+      ],
+      "items": false
+    },
+    "terminal_reconciliation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_states", "terminal_states", "http_200_is_terminal", "operation_id_required", "verify_required", "partial_is_failure_visible", "ambiguous_becomes_uncertain", "retry_while_uncertain"],
+      "properties": {
+        "source_states": { "const": ["PLANNED", "INTENTS_QUEUED", "PARTIAL", "VERIFIED", "FAILED"] },
+        "terminal_states": { "const": ["VERIFIED", "FAILED", "PARTIAL"] },
+        "http_200_is_terminal": { "const": false }, "operation_id_required": { "const": true },
+        "verify_required": { "const": true }, "partial_is_failure_visible": { "const": true },
+        "ambiguous_becomes_uncertain": { "const": true }, "retry_while_uncertain": { "const": false }
+      }
+    },
+    "runtime_authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["compatibility_contract_accepted", "command_transport_enabled", "source_call_authorized", "public_route_enabled", "live_mutation_authorized", "trading_system_changed", "runtime_probe_executed"],
+      "properties": {
+        "compatibility_contract_accepted": { "const": true }, "command_transport_enabled": { "const": false },
+        "source_call_authorized": { "const": false }, "public_route_enabled": { "const": false },
+        "live_mutation_authorized": { "const": false }, "trading_system_changed": { "const": false },
+        "runtime_probe_executed": { "const": false }
+      }
+    },
+    "rollback": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scope", "steps", "database_restore_required"],
+      "properties": {
+        "scope": { "const": "N16B_CURRENT_PROTECTIVE_COMPATIBILITY_ONLY" },
+        "steps": { "const": ["DISABLE_LIVE_PROTECTIVE_COMMAND_FLAG", "REVOKE_COMMAND_DELEGATION_ISSUER", "RESTORE_PREVIOUS_EDGE_RELEASE_DIGEST", "VERIFY_COMMANDS_TYPED_UNAVAILABLE_AND_NO_SOURCE_CALL"] },
+        "database_restore_required": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "Sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "Classification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability_id", "state", "reason_code"],
+      "properties": {
+        "capability_id": { "type": "string" },
+        "state": { "enum": ["ACCEPTED_CURRENT_PRIMITIVE", "SUPPORTED_BUT_NOT_ACTIVATED", "SOURCE_DOES_NOT_CURRENTLY_EXIST"] },
+        "reason_code": { "pattern": "^[A-Z0-9_]+$", "type": "string" }
+      }
+    },
+    "PaperHalt": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "paper.halt" }, "state": { "const": "SUPPORTED_BUT_NOT_ACTIVATED" }, "reason_code": { "const": "CURRENT_STATE_ROUTE_LACKS_PLAN_VERIFY_AND_TARGET_VERSION" } } }] },
+    "PaperCancel": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "paper.cancel-open-orders" }, "state": { "const": "SOURCE_DOES_NOT_CURRENTLY_EXIST" }, "reason_code": { "const": "RECONCILE_OPEN_ORDERS_IS_NOT_CANCEL_OPEN_ORDERS" } } }] },
+    "SandboxHalt": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "sandbox.halt" }, "state": { "const": "SUPPORTED_BUT_NOT_ACTIVATED" }, "reason_code": { "const": "CURRENT_STATE_ROUTE_LACKS_PLAN_VERIFY_AND_TARGET_VERSION" } } }] },
+    "SandboxCancel": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "sandbox.cancel-open-orders" }, "state": { "const": "SOURCE_DOES_NOT_CURRENTLY_EXIST" }, "reason_code": { "const": "RECONCILE_OPEN_ORDERS_IS_NOT_CANCEL_OPEN_ORDERS" } } }] },
+    "LiveHalt": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "live.halt" }, "state": { "const": "SUPPORTED_BUT_NOT_ACTIVATED" }, "reason_code": { "const": "CURRENT_TRADING_STATE_ROUTE_LACKS_PLAN_VERIFY_AND_TARGET_VERSION" } } }] },
+    "LiveReduce": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "live.reduce" }, "state": { "const": "SOURCE_DOES_NOT_CURRENTLY_EXIST" }, "reason_code": { "const": "NO_EXACT_BOUNDED_REDUCE_PRIMITIVE" } } }] },
+    "LiveEmergencyClose": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "live.emergency-close" }, "state": { "const": "ACCEPTED_CURRENT_PRIMITIVE" }, "reason_code": { "const": "EXACT_PLAN_APPLY_OPERATION_VERIFY_CHAIN_CONFIRMED" } } }] },
+    "LiveResume": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "live.resume" }, "state": { "const": "SUPPORTED_BUT_NOT_ACTIVATED" }, "reason_code": { "const": "R4_CANNOT_INHERIT_PROTECTIVE_BREAK_GLASS" } } }] },
+    "LiveScale": { "allOf": [{ "$ref": "#/$defs/Classification" }, { "type": "object", "properties": { "capability_id": { "const": "live.scale" }, "state": { "const": "SUPPORTED_BUT_NOT_ACTIVATED" }, "reason_code": { "const": "R4_CANNOT_INHERIT_PROTECTIVE_BREAK_GLASS" } } }] },
+    "AcceptedMapping": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability_id", "catalog_key", "environment", "risk_tier", "effect", "target_types", "mode", "venue", "product", "plan", "apply", "operation", "verify", "maximum_request_bytes", "maximum_response_bytes", "source_idempotent", "portal_idempotency_required", "automatic_retry_after_dispatch", "requires_webauthn", "distinct_approver_count"],
+      "properties": {
+        "capability_id": { "const": "live.emergency-close" }, "catalog_key": { "const": "ops/emergency-close" },
+        "environment": { "const": "LIVE_FULL" }, "risk_tier": { "const": "R3_LIVE_PROTECTIVE" }, "effect": { "const": "PROTECTIVE" },
+        "target_types": { "const": ["ACCOUNT"] }, "mode": { "const": "live" }, "venue": { "const": "BINANCE" }, "product": { "const": "USD_M" },
+        "plan": { "const": "GET /v1/admin/ops/emergency-close/plan" }, "apply": { "const": "POST /v1/admin/ops/emergency-close" },
+        "operation": { "const": "GET /v1/admin/ops/emergency-close/{operation_id}" }, "verify": { "const": "POST /v1/admin/ops/emergency-close/{operation_id}/verify" },
+        "maximum_request_bytes": { "const": 16384 }, "maximum_response_bytes": { "const": 262144 },
+        "source_idempotent": { "const": false }, "portal_idempotency_required": { "const": true },
+        "automatic_retry_after_dispatch": { "const": false }, "requires_webauthn": { "const": true }, "distinct_approver_count": { "const": 2 }
+      }
+    }
+  }
+}

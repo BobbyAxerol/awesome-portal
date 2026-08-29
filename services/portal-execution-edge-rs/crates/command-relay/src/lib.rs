@@ -6,6 +6,8 @@
 //! The journal preserves `202` as non-terminal and makes ambiguous outcomes
 //! fail closed across replay and restart.
 
+pub mod current_primitive;
+
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};

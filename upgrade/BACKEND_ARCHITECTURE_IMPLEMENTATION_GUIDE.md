@@ -1563,7 +1563,8 @@ activation or the phase):**
   unmounted Nginx template has no forwarding directive. N12 R3 publication,
   dedicated command identity and every PLAN/APPLY/VERIFY flag remain false;
   R4 resume/scale is structurally forbidden and `network_attempts=0`. Status is
-  `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET /
+  `N16A_COMPLETE_SOURCE_DARK /
+  SUPERSEDED_BY_N16B_CURRENT_PRIMITIVE_ACCEPTANCE /
   PRODUCTION_INACTIVE`. See
   [`EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md`](./backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md).
 
@@ -1577,8 +1578,8 @@ activation or the phase):**
   deterministic projection rebuild, rotation/compromise, rollback and eight
   complete fault scenarios with external `network_attempts=0`. Production SLO,
   error budget, RPO/RTO and cost remain unclaimed. Status is
-  `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET /
-  PRODUCTION_INACTIVE`. See
+  `N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE /
+  LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW`. See
   [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
 
 - **N13B–N17B source-as-is rebaseline (2026-08-29):** the master owner return
@@ -1625,6 +1626,18 @@ activation or the phase):**
   product BFF, registry, SSE, command and Trading System change remain false.
   Status is `N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK`; see
   [`EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md`](./backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md).
+- **N16B current-primitive protective-path compatibility accepted
+  (2026-08-29):** source-as-is inspection proves one complete current command
+  lifecycle, `live.emergency-close`, and accepts it only for
+  `LIVE_FULL / ACCOUNT / BINANCE / USD_M`. A strict digest-bound contract,
+  Rust command authority and TypeScript BFF reject read identities, widened
+  targets, malformed intents, R4 inheritance and premature runtime activation.
+  Five other commands are supported-but-inactive and three are source-absent.
+  The public route, command transport, source call and Live mutation remain
+  false; real acknowledgement/verification requires the exact N17B Account and
+  owner window. Status is
+  `N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK`; see
+  [`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

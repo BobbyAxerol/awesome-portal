@@ -1201,7 +1201,7 @@ Command and Trading System change remain false. Detail:
 ### N16 — Same-domain routing and emergency operations
 
 **Mapping:** BAR-19.  
-**Status:** `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET`.  
+**Status:** `N16A_COMPLETE_SOURCE_DARK / N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK`.  
 **Priority:** P2.
 
 The Trading System dependency is the current supported command primitive set
@@ -1225,8 +1225,10 @@ doubles; no public route or Trading System command becomes active.
 
 #### N16B — Current-primitive protective-path acceptance
 
-**Ready after:** N15B has classified Command as separately deferred and a dedicated
-command identity plus owner change window exist. Read identities are forbidden.
+**Ready after:** N15B has classified Command separately and the current primitive
+inventory is evidence-bound. A dedicated command identity is mandatory; read
+identities are forbidden. Compatibility acceptance may remain source-dark, while
+an owner change window is mandatory before any real mutation in N17B.
 
 - map `halt`, `resume`, `reduce`, bounded cancel-open-orders,
   emergency-close and supported portfolio rebalance/scale operations to current
@@ -1249,10 +1251,23 @@ emergency path bypasses Trading System authority or audit; public/auth/source
 loss is visibly degraded and recoverable. Unsupported commands remain absent
 or explicitly unavailable, never enabled dead buttons.
 
+**Completed 2026-08-29:** the current source has one complete protective
+lifecycle: `live.emergency-close` through plan, apply, operation status and
+verify. N16B accepts only `LIVE_FULL / ACCOUNT / BINANCE / USD_M` behind the
+dedicated `portal-execution-command` identity, WebAuthn, two distinct approvals,
+a 60-second one-operation assertion and a no-retry-after-dispatch journal. The
+other eight N12 commands are classified honestly as supported-but-inactive or
+source-absent; `resume` and `scale` cannot inherit R3. Rust is the transport
+authority and TypeScript exposes only a sanitized, blocked BFF plan. Every
+runtime/source/public-route/Live-mutation flag remains false, so observed source
+acknowledgement and terminal verification are N17B activation evidence rather
+than fabricated N16B evidence. Detail:
+[`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).
+
 ### N17 — Production activation, SLO, DR and owner operations
 
 **Mapping:** BAR-20 + product phase 18.  
-**Status:** `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET`.  
+**Status:** `N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE / LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW`.  
 **Priority:** final.
 
 N17 accepts the exact capability set delivered by N13B–N16B, including honest
@@ -1273,8 +1288,10 @@ evidence validation pass without production activation.
 
 #### N17B — Exact-set production acceptance
 
-**Ready after:** N13B–N16B produce an exact read/command/interface capability
-set, release manifest and required owner window.
+**Ready after:** N13B–N16B produce the exact read/command/interface capability
+set and immutable release manifest. Read profiles may qualify independently;
+the accepted Live emergency primitive additionally requires an exact Account,
+bounded owner window, abort/rollback owner and Bobby's final mutation sign-off.
 
 - activate only the approved `CONNECTED`, `DERIVED_FROM_EXISTING_SOURCE` and
   explicitly approved `SUPPORTED_BUT_NOT_ACTIVATED -> CONNECTED` transitions;
@@ -2352,6 +2369,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-08-29 | Accepted N16B current-primitive protective-path compatibility | exactly one current primitive, `live.emergency-close`, is accepted for `LIVE_FULL / ACCOUNT / BINANCE / USD_M`; Rust and TypeScript reject identity, target, payload, R4 and runtime widening; the other eight N12 commands are typed inactive/absent; public route, transport, source call and Live mutation remain false pending N17B exact owner window |
 | 2026-08-29 | Accepted N15B current-capability inter-cell gateway for the bounded Paper Query slice | Rust Edge and TypeScript BFF enforce the exact Paper screen/profile before transport; Command is deferred N16B, Event/Artifact typed absent, immutable D3/Manager evidence revalidated; product/runtime/registry/SSE/command/Trading-System-change flags remain false |
 | 2026-08-29 | Accepted N14B immutable current-source release compatibility for the first bounded Paper target | exact signed N14A candidate plus N13B source/qualification/profile pins, adapter/config digests, three immutable service image digests and rollback/forward-fix chain are bound in a separate adjunct; all runtime/profile/registry/source/Query/SSE/command/Trading-System-release flags remain false; N15B Query acceptance is next |
 | 2026-08-29 | Rebaselined N13B–N17B from global contract-first blocking to source-as-is, capability-by-capability compatibility | documentation/decision only; N13A–N17A evidence preserved; Manager-v2/current Gateway/current market and Portal derivations become valid bounded sources behind versioned adapters; read/command identities and production gates remain separate; no runtime/profile/source/command change |

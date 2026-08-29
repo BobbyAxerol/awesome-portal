@@ -1,7 +1,7 @@
 # N16A — Source-dark routing and emergency policy
 
-Status: `N16A_COMPLETE_SOURCE_DARK / N16B_R3_OWNER_ACCEPTANCE_PENDING /
-PRODUCTION_INACTIVE`
+Status: `N16A_COMPLETE_SOURCE_DARK /
+SUPERSEDED_BY_N16B_CURRENT_PRIMITIVE_ACCEPTANCE / PRODUCTION_INACTIVE`
 
 Date: 2026-08-27  
 Owner: Portal backend  
@@ -136,8 +136,10 @@ is not a production include and cannot be promoted by flipping a value.
 
 | Phase | Lane A result | Exact Lane B next action |
 |---|---|---|
-| N16 | same-origin profile, origin isolation, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local loss/rollback drills complete | after N12 R3 owner publication, dedicated command identity, N15B and an owner window are accepted, bind the real server-side execution origin; test stronger Access policy, Research-loss R3 PLAN→APPLY→VERIFY, observed acknowledgement/terminal reconciliation, immutable operational audit, Cloudflare/origin/source loss and rollback; prove browser sees no internal host/token and R4 remains unreachable |
+| N16 | same-origin profile, origin isolation, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local loss/rollback drills complete | N16B accepted the exact current `live.emergency-close` compatibility chain source-dark; N17B must bind the real origin only for an exact Account/window, observe acknowledgement/terminal reconciliation and retain R4 isolation |
 
-N16B remains parked at `N16B_R3_OWNER_ACCEPTANCE_PENDING`. The next Portal-
-owned phase is **N17A — offline SLO/DR/rotation/evidence and isolated game-day
-rehearsal**.
+N16B is now complete at
+`N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK`; see
+[`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).
+N17A is also complete source-dark. The next backend phase is **N17B — exact-set
+production acceptance**.

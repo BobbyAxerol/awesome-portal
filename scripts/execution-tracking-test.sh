@@ -33,6 +33,8 @@ N15B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_18_N15B_CURRENT_CAPABILITY_INTERC
 N15B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N15B_CURRENT_GATEWAY_HANDOFF.md"
 N16A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md"
 N16A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md"
+N16B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md"
+N16B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md"
 N17A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md"
 N17A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md"
 
@@ -49,6 +51,8 @@ for required_file in \
     "${N15B_HANDOFF}" \
     "${N16A_REPORT}" \
     "${N16A_HANDOFF}" \
+    "${N16B_REPORT}" \
+    "${N16B_HANDOFF}" \
     "${N17A_REPORT}" \
     "${N17A_HANDOFF}"
 do
@@ -74,8 +78,8 @@ for token in \
     "N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B" \
     "N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED" \
     "N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK" \
-    "N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET" \
-    "N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET"
+    "N16A_COMPLETE_SOURCE_DARK / N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK" \
+    "N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE / LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
         echo "execution unified plan lost A/B split: ${token}" >&2
@@ -223,7 +227,7 @@ fi
 
 for token in \
     "N16A_COMPLETE_SOURCE_DARK" \
-    "N16B_R3_OWNER_ACCEPTANCE_PENDING" \
+    "SUPERSEDED_BY_N16B_CURRENT_PRIMITIVE_ACCEPTANCE" \
     "PRODUCTION_INACTIVE" \
     "network_attempts=0" \
     "R4"
@@ -247,6 +251,34 @@ do
 done
 if ! grep -Fq "N16A backend — Source-dark routing and emergency policy" "${TRACKER}"; then
     echo "shared tracker lost N16A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED" \
+    "LIVE_EMERGENCY_CLOSE_ONLY" \
+    "PRODUCT_RUNTIME_DARK" \
+    "live.emergency-close" \
+    "source_mutations=0"
+do
+    if ! grep -Fq "${token}" "${N16B_REPORT}"; then
+        echo "N16B report lost current protective invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "COMPATIBILITY_ACCEPTED / RUNTIME_DARK" \
+    "ACCEPTED_CURRENT_PRIMITIVE" \
+    "N16B_RUNTIME_ACTIVATION_PENDING" \
+    "blind retry"
+do
+    if ! grep -Fq "${token}" "${N16B_HANDOFF}"; then
+        echo "N16B Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N16B backend — current-primitive protective-path acceptance" "${TRACKER}"; then
+    echo "shared tracker lost N16B closeout section" >&2
     exit 1
 fi
 

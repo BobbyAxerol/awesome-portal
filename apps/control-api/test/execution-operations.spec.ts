@@ -266,6 +266,102 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     )).statusCode).toBe(404);
   });
 
+  it("classifies only the exact N16B current emergency-close primitive and keeps it dark", async () => {
+    const catalogue = await inject(
+      bobby,
+      `/api/v1/execution/commands/catalog?workspace_id=${workspaceId}&environment=LIVE`,
+    );
+    expect(catalogue.statusCode).toBe(200);
+    const emergency = catalogue.json().entries.find(
+      (entry: { key: string }) => entry.key === "ops/emergency-close",
+    );
+    expect(emergency).toMatchObject({
+      source_route_state: "CURRENT_PRIMITIVE_CONFIRMED",
+      blocked_reason: "N16B_RUNTIME_ACTIVATION_PENDING",
+      current_primitive_state: "ACCEPTED_CURRENT_PRIMITIVE",
+      current_capability_id: "live.emergency-close",
+      accepted_environments: ["LIVE"],
+      accepted_target_types: ["ACCOUNT"],
+      portal_reachable: false,
+      runtime_active: false,
+    });
+
+    const planned = await mutation(
+      bobby,
+      "/api/v1/execution/commands/plans",
+      payload({
+        request_key: "ops:emergency-close:account-1",
+        command_key: "ops/emergency-close",
+        environment: "LIVE",
+        target: { type: "ACCOUNT", id: "live-account-1" },
+        payload: {
+          confirmation: "CLOSE LIVE ACCOUNT",
+          mode: "live",
+          product: "USD_M",
+          reason: "Operator requested protective containment",
+          venue: "BINANCE",
+        },
+      }),
+    );
+    expect(planned.statusCode).toBe(201);
+    expect(planned.json()).toMatchObject({
+      status: "BLOCKED",
+      blockers: expect.arrayContaining([
+        "COMMAND_RELAY_DISABLED",
+        "N16B_RUNTIME_ACTIVATION_PENDING",
+        "OWNER_REVIEW_REQUIRED",
+      ]),
+      current_primitive: {
+        id: "live.emergency-close",
+        source_environment: "LIVE_FULL",
+        target_types: ["ACCOUNT"],
+        runtime_active: false,
+        source_side_effect_requested: false,
+      },
+      source_side_effect_requested: false,
+    });
+    expect((await ctx.pool.query("SELECT 1 FROM outbox_messages")).rowCount).toBe(0);
+  });
+
+  it("returns typed N16B blockers for widened target or malformed source intent", async () => {
+    const baseEmergency = {
+      command_key: "ops/emergency-close",
+      environment: "LIVE",
+      payload: {
+        confirmation: "CLOSE LIVE ACCOUNT",
+        mode: "live",
+        product: "USD_M",
+        reason: "Operator requested protective containment",
+        venue: "BINANCE",
+      },
+    };
+    const widened = await mutation(
+      bobby,
+      "/api/v1/execution/commands/plans",
+      payload({
+        ...baseEmergency,
+        request_key: "ops:emergency-close:portfolio",
+        target: { type: "PORTFOLIO", id: "portfolio-1" },
+      }),
+    );
+    expect(widened.statusCode).toBe(201);
+    expect(widened.json().blockers).toContain("N16B_TARGET_SCOPE_UNSUPPORTED");
+
+    const malformed = await mutation(
+      bobby,
+      "/api/v1/execution/commands/plans",
+      payload({
+        ...baseEmergency,
+        request_key: "ops:emergency-close:malformed",
+        target: { type: "ACCOUNT", id: "live-account-1" },
+        payload: { ...baseEmergency.payload, mode: "paper" },
+      }),
+    );
+    expect(malformed.statusCode).toBe(201);
+    expect(malformed.json().blockers).toContain("N16B_CURRENT_PRIMITIVE_PLAN_INVALID");
+    expect((await ctx.pool.query("SELECT 1 FROM outbox_messages")).rowCount).toBe(0);
+  });
+
   it("creates only an immutable BLOCKED plan and never creates an outbox message", async () => {
     const response = await mutation(bobby, "/api/v1/execution/commands/plans", payload());
     expect(response.statusCode).toBe(201);

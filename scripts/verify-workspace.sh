@@ -444,6 +444,9 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.current-paper.accepted.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/intercell-gateway/src/current_acceptance.rs" \
   "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-emergency-routing.v1.schema.json" \
@@ -1130,6 +1133,13 @@ for tracked_source in \
   packages/contracts/fixtures/execution-intercell-gateway.current-paper.accepted.json \
   services/portal-execution-edge-rs/crates/intercell-gateway/src/current_acceptance.rs \
   scripts/execution-n15b-current-gateway-test.sh \
+  packages/contracts/schemas/execution-protective-path-current.v1.schema.json \
+  packages/contracts/fixtures/execution-protective-path.current-emergency-close.accepted.json \
+  services/portal-execution-edge-rs/crates/command-relay/src/current_primitive.rs \
+  apps/control-api/src/operations/current-protective.acceptance.ts \
+  scripts/execution-n16b-current-protective-test.sh \
+  upgrade/backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md \
   upgrade/backend/EX_BE_19_N16A_SOURCE_DARK_ROUTING_AND_EMERGENCY_POLICY.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16A_EMERGENCY_ROUTING_HANDOFF.md \
   packages/contracts/schemas/execution-emergency-routing.v1.schema.json \
@@ -1333,6 +1343,7 @@ bash -n \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/scripts/portal-current-source-release-test.sh" \
   "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
@@ -1377,6 +1388,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-image-publication-test.sh" \
   "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh" \
   "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
@@ -1470,6 +1482,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
 "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh"
+"${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh"
 "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh"
 "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"

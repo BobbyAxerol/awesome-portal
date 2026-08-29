@@ -13,6 +13,10 @@ import {
   ExecutionCommandPlanRecord,
   ExecutionOperationsRepository,
 } from "./operations.repository";
+import {
+  classifyN16bProtectivePlan,
+  n16bCatalogueEntry,
+} from "./current-protective.acceptance";
 
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -28,6 +32,15 @@ function digest(value: unknown): string {
 }
 
 function response(plan: ExecutionCommandPlanRecord, replayed: boolean) {
+  const currentPrimitive = plan.commandKey === "ops/emergency-close"
+    ? {
+        id: "live.emergency-close",
+        source_environment: "LIVE_FULL",
+        target_types: ["ACCOUNT"],
+        runtime_active: false,
+        source_side_effect_requested: false,
+      }
+    : null;
   return {
     schema_version: "execution.command-plan.v1",
     operation_id: plan.operationId,
@@ -45,6 +58,7 @@ function response(plan: ExecutionCommandPlanRecord, replayed: boolean) {
     relay_capability: "DISABLED",
     source_side_effect_requested: false,
     payload_storage_policy: "HASH_ONLY_NO_RAW",
+    current_primitive: currentPrimitive,
     replayed,
   };
 }
@@ -63,9 +77,10 @@ export class ExecutionOperationsService {
     if (user.role !== "ADMIN") {
       throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
     }
-    const entries = scope.risk_tier === undefined
+    const selectedEntries = scope.risk_tier === undefined
       ? [...EXECUTION_COMMAND_CATALOG.entries]
       : EXECUTION_COMMAND_CATALOG.entries.filter((entry) => entry.risk_tier === scope.risk_tier);
+    const entries = selectedEntries.map((entry) => n16bCatalogueEntry(entry));
     return {
       ...EXECUTION_COMMAND_CATALOG,
       scope: {
@@ -133,9 +148,13 @@ export class ExecutionOperationsService {
       payload: input.payload,
       conditions: input.conditions,
     });
+    const n16b = classifyN16bProtectivePlan(input);
+    const entryBlockedReason = n16b.state === "NOT_N16B_CAPABILITY"
+      ? entry.blocked_reason
+      : n16b.blocker!;
     const blockers = [...new Set([
       "COMMAND_RELAY_DISABLED",
-      entry.blocked_reason,
+      entryBlockedReason,
       ...(entry.owner_review_required ? ["OWNER_REVIEW_REQUIRED"] : []),
     ])].sort();
     const planDigest = digest({

@@ -365,6 +365,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
 ]
 
@@ -516,6 +517,7 @@ dependencies = [
  "axum-server",
  "base64",
  "chrono",
+ "command-relay",
  "current-source-compat",
  "edge-auth",
  "execution-contracts",

@@ -27,6 +27,7 @@ use axum::{
 };
 use axum_server::tls_rustls::RustlsConfig;
 use chrono::{DateTime, SecondsFormat, Utc};
+use command_relay::current_primitive::{CurrentProtectiveAcceptance, CurrentProtectiveError};
 use current_source_compat::{
     AdapterKind, CapabilityBinding as CurrentCapabilityBinding, CurrentSourceMap, ExecutionProfile,
     FactClassification, MappingError, ScreenBinding as CurrentScreenBinding,
@@ -543,6 +544,10 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     let (negotiator, manager_v2_client) = source_clients(&config)?;
     let current_source_map = Arc::new(CurrentSourceMap::canonical()?);
     let current_gateway_acceptance = Arc::new(CurrentGatewayAcceptance::canonical()?);
+    // N16B is compatibility-only. Loading the immutable contract at startup
+    // catches source-pack drift, while EDGE_COMMAND_RELAY_ENABLED remains
+    // unconditionally rejected by runtime configuration until N17B.
+    let _current_protective_acceptance = CurrentProtectiveAcceptance::canonical()?;
     let initial_snapshot = if config.source_probes_enabled.is_enabled() {
         Some(negotiator.probe(config.probe_alpha_id.as_deref()).await)
     } else {
@@ -3254,6 +3259,8 @@ enum ServiceError {
     CurrentSource(#[from] MappingError),
     #[error("current inter-cell gateway acceptance rejected: {0}")]
     CurrentGatewayAcceptance(#[from] CurrentAcceptanceError),
+    #[error("current protective-path acceptance rejected: {0}")]
+    CurrentProtectiveAcceptance(#[from] CurrentProtectiveError),
     #[error(transparent)]
     ProjectionStore(#[from] projection_store_pg::StoreError),
     #[error(transparent)]

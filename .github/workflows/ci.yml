@@ -56,6 +56,8 @@ jobs:
 
       - name: Validate N15B current-capability gateway acceptance
         run: ./scripts/execution-n15b-current-gateway-test.sh
+      - name: Validate N16B current protective-path acceptance
+        run: ./scripts/execution-n16b-current-protective-test.sh
 
       - name: Validate N16A source-dark emergency routing authority
         run: ./scripts/execution-n16a-emergency-routing-test.sh

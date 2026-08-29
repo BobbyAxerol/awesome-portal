@@ -121,9 +121,9 @@ Rollback is profile-scoped and needs no database restore:
 
 ## Next phase
 
-The next backend phase is **N16B — current-primitive protective-path
-acceptance**. It must classify each present Trading System command primitive,
-bind a separate command identity, and prove plan → apply → verify,
-idempotency, acknowledgement, terminal reconciliation and containment. No
-read identity or Query acceptance may enable a command.
-
+**N16B — current-primitive protective-path acceptance** is now complete at the
+compatibility boundary. It classified all nine N12 commands and accepted only
+the exact `live.emergency-close` lifecycle while leaving runtime dark; see
+[`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).
+The next backend phase is **N17B — exact-set production acceptance**. No read
+identity or Query acceptance may enable a command.

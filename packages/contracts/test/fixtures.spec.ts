@@ -132,6 +132,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-intercell-gateway.v1.schema.json#/$defs/ArtifactCorpus",
   "execution-intercell-gateway.current-paper.accepted.json":
     "https://schemas.primusspark.com/portal/execution-intercell-gateway-current.v1.schema.json",
+  "execution-protective-path.current-emergency-close.accepted.json":
+    "https://schemas.primusspark.com/portal/execution-protective-path-current.v1.schema.json",
   "execution-emergency-routing.source-dark.valid.json":
     "https://schemas.primusspark.com/portal/execution-emergency-routing.v1.schema.json#/$defs/EmergencyProfile",
   "execution-emergency-routing.ui-corpus.valid.json":
@@ -426,6 +428,51 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
       ...profile,
       command: { ...profile.command, n12_r3_catalogue_published: true },
     })).toBe(false);
+  });
+
+  it("accepts only the exact N16B current emergency-close compatibility slice", () => {
+    const acceptance = loadJson(
+      join(fixtureDir, "execution-protective-path.current-emergency-close.accepted.json"),
+    ) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-protective-path-current.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    expect(validate!(acceptance)).toBe(true);
+    expect(acceptance).toMatchObject({
+      phase: "N16B",
+      status: "CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED",
+      accepted_mapping: {
+        capability_id: "live.emergency-close",
+        environment: "LIVE_FULL",
+        target_types: ["ACCOUNT"],
+        source_idempotent: false,
+        automatic_retry_after_dispatch: false,
+      },
+      runtime_authority: {
+        compatibility_contract_accepted: true,
+        command_transport_enabled: false,
+        source_call_authorized: false,
+        public_route_enabled: false,
+        live_mutation_authorized: false,
+        runtime_probe_executed: false,
+      },
+    });
+
+    const widenedTarget = structuredClone(acceptance) as Record<string, unknown>;
+    (widenedTarget.accepted_mapping as Record<string, unknown>).target_types = [
+      "ACCOUNT", "PORTFOLIO",
+    ];
+    expect(validate!(widenedTarget)).toBe(false);
+
+    const activated = structuredClone(acceptance) as Record<string, unknown>;
+    (activated.runtime_authority as Record<string, unknown>).command_transport_enabled = true;
+    expect(validate!(activated)).toBe(false);
+
+    const r4Inherited = structuredClone(acceptance) as Record<string, unknown>;
+    const classifications = r4Inherited.capability_classification as Array<Record<string, unknown>>;
+    classifications[7].state = "ACCEPTED_CURRENT_PRIMITIVE";
+    expect(validate!(r4Inherited)).toBe(false);
   });
 
   it("publishes N16A typed failure corpus without a route or source request", () => {
