@@ -4,12 +4,16 @@ import { loadConfig } from "../src/config";
 import {
   currentSourceResource,
   ExecutionDelegationService,
+  MANAGER_V2_READ_RESOURCE,
 } from "../src/execution/delegation";
 import {
   assertN15bCurrentQueryAccepted,
   CurrentSourceBulkhead,
   CurrentSourceProxyError,
+  CurrentSourceRateLimiter,
   N15B_CURRENT_QUERY_ACCEPTANCE,
+  N17B_CURRENT_EXACT_QUERY_ACCEPTANCE,
+  currentManagerV2Path,
   currentSourcePath,
   currentSourceUpstreamError,
 } from "../src/execution/current-source.proxy";
@@ -46,6 +50,12 @@ describe("N13B current-source BFF boundary", () => {
     expect(paper.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER).toBe("true");
     expect(paper.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX).toBe("false");
     expect(paper.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE).toBe("false");
+    expect(paper.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND).toBe(15);
+    expect(paper.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS).toBe(1_000);
+    expect(() => loadConfig({
+      ...base,
+      EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND: "16",
+    })).toThrow();
   });
 
   it("fails closed on missing, non-TLS or drifted profile pins", () => {
@@ -184,6 +194,38 @@ describe("N13B current-source BFF boundary", () => {
     await expect(expiring.acquire()).rejects.toMatchObject({ code: "N13B_QUEUE_TIMEOUT" });
     release();
   });
+
+  it("paces the shared current source below the published 20 r/s boundary", async () => {
+    let currentTime = 0;
+    const waits: number[] = [];
+    const limiter = new CurrentSourceRateLimiter(
+      15,
+      1_000,
+      () => currentTime,
+      async (milliseconds) => {
+        waits.push(milliseconds);
+        currentTime += milliseconds;
+      },
+    );
+    await limiter.acquire();
+    await limiter.acquire();
+    await limiter.acquire();
+    expect(waits).toEqual([67, 67]);
+
+    const saturated = new CurrentSourceRateLimiter(
+      15,
+      100,
+      () => 0,
+      async () => undefined,
+    );
+    await saturated.acquire();
+    await saturated.acquire();
+    await expect(saturated.acquire()).rejects.toMatchObject({
+      code: "N17B_RATE_LIMIT_QUEUE_TIMEOUT",
+      status: 503,
+      details: expect.objectContaining({ retryable: false }),
+    });
+  });
 });
 
 describe("N15B current-capability Query acceptance", () => {
@@ -219,5 +261,64 @@ describe("N15B current-capability Query acceptance", () => {
         }),
       );
     }
+  });
+});
+
+describe("N17B exact current-set production acceptance", () => {
+  it("maps the accepted Paper BFF routes onto current Manager-v2 without route widening", () => {
+    expect(N17B_CURRENT_EXACT_QUERY_ACCEPTANCE).toMatchObject({
+      decision: "N17B_EXACT_CURRENT_SET_ACCEPTED",
+      lineageDecision: "N15B_CURRENT_SOURCE_ACCEPTED",
+      environment: "paper",
+      profileId: "PAPER_BINANCE_USDM",
+      delegatedResource: MANAGER_V2_READ_RESOURCE,
+      sourceMaximumRequestsPerSecond: 20,
+    });
+    expect(currentManagerV2Path("PAPER_TRADING_SCREEN")).toBe(
+      "/internal/v2/manager/capabilities",
+    );
+    expect(currentManagerV2Path(
+      "PAPER_TRADING_SCREEN",
+      "manager.positions",
+      "positions_v2",
+      { limit: 50, cursor: "opaque+/=" },
+    )).toBe(
+      "/internal/v2/manager/relations/public/positions_v2?limit=50&cursor=opaque%2B%2F%3D",
+    );
+    expect(() => currentManagerV2Path(
+      "PAPER_TRADING_SCREEN",
+      "manager.positions",
+      "orders",
+    )).toThrowError(expect.objectContaining({ code: "N17B_BINDING_NOT_ACCEPTED" }));
+    expect(() => currentManagerV2Path("EXECUTION_FULL_BLOTTER_SCREEN"))
+      .toThrowError(expect.objectContaining({ code: "N17B_QUERY_CAPABILITY_NOT_ACCEPTED" }));
+  });
+
+  it("maps current Manager-v2 failures to bounded Portal errors without blind retry", () => {
+    const limited = currentSourceUpstreamError(Buffer.from(JSON.stringify({
+      error: { code: "MANAGER_V2_RATE_LIMITED", message: "upstream detail" },
+    })), true, 429);
+    expect(limited).toMatchObject({
+      code: "N17B_SOURCE_RATE_LIMITED",
+      status: 503,
+      details: {
+        availability: "DEGRADED",
+        reason_code: "MANAGER_V2_RATE_LIMITED",
+        retryable: false,
+      },
+    });
+    expect(limited.message).toBe("N17B_SOURCE_RATE_LIMITED");
+
+    const unavailable = currentSourceUpstreamError(Buffer.from(JSON.stringify({
+      error: { code: "MANAGER_V2_RELATION_NOT_CATALOGUED", relation: "secret" },
+    })), true, 404);
+    expect(unavailable).toMatchObject({
+      code: "N17B_SOURCE_RELATION_UNAVAILABLE",
+      status: 404,
+      details: expect.objectContaining({
+        reason_code: "MANAGER_V2_RELATION_NOT_CATALOGUED",
+        retryable: false,
+      }),
+    });
   });
 });

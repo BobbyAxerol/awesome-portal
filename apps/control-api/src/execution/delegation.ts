@@ -3,7 +3,7 @@ import { importPKCS8, SignJWT, type KeyLike } from "jose";
 import type { Role } from "../domain";
 
 const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:(?:command-center|manager-v2:read)|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|account-broker-360|paper-workbench):[A-Za-z0-9._-]{1,128})$/;
-const MANAGER_V2_RESOURCE = "execution:manager-v2:read";
+export const MANAGER_V2_READ_RESOURCE = "execution:manager-v2:read";
 const PROFILE_ID_PATTERN = /^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/;
 const CURRENT_SOURCE_RESOURCE_PATTERN =
   /^execution:current-source:([A-Z][A-Z0-9_]{2,95}):read$/;
@@ -94,7 +94,7 @@ export class ExecutionDelegationService {
     validatePrincipal(principal);
     const requestsProfileBoundRead = principal.resources.some(
       (resource) =>
-        resource === MANAGER_V2_RESOURCE || CURRENT_SOURCE_RESOURCE_PATTERN.test(resource),
+        resource === MANAGER_V2_READ_RESOURCE || CURRENT_SOURCE_RESOURCE_PATTERN.test(resource),
     );
     if (requestsProfileBoundRead && !this.config.profileId) {
       throw new Error("profile-bound read assertions require an exact execution profile");

@@ -2022,6 +2022,18 @@ không phải 17 màn.
 > made. Detail:
 > [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
 
+> **Backend checkpoint 2026-08-29 — N17B exact current set:** status is
+> `N17B_EXACT_CURRENT_SET_ACCEPTED / PAPER_PRIVATE_QUERY_QUALIFIED /
+> SIGNED_PRODUCT_IMAGE_NOT_PUBLISHED / LIVE_MUTATION_INACTIVE`. The Portal BFF
+> now adapts only the accepted Paper screen and seven allowlisted Manager-v2
+> relations, mints only the current read resource and hard-caps admission at
+> 15 r/s below the source's 20 r/s limit. The real private route passed 25/25
+> paced reads plus 401/403/405 negatives with zero emitted business rows,
+> source mutations or command dispatches. Rust/JSON/CI pin the exact source,
+> images and N13B–N17A evidence. Stable/public runtime, Sandbox/Live reads and
+> all mutation flags remain false. Detail:
+> [`EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md`](./backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md).
+
 ## 12.4 Thứ tự slice của frontend
 
 Lane A chạy trước; mỗi slice đóng độc lập và không slice nào chờ codex.

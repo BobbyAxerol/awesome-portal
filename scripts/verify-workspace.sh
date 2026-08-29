@@ -462,6 +462,8 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17B_EXACT_SET_HANDOFF.md" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-production-readiness.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json" \
@@ -480,6 +482,10 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
   "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-production-acceptance-current.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-production-acceptance.current-paper.accepted.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/production-readiness/src/current_acceptance.rs" \
+  "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
   "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
@@ -1155,6 +1161,8 @@ for tracked_source in \
   scripts/execution-n16a-emergency-routing-test.sh \
   upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md \
+  upgrade/backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17B_EXACT_SET_HANDOFF.md \
   packages/contracts/schemas/execution-production-readiness.v1.schema.json \
   packages/contracts/fixtures/execution-production-readiness.source-dark.valid.json \
   packages/contracts/fixtures/execution-production-readiness.game-day-corpus.valid.json \
@@ -1173,6 +1181,10 @@ for tracked_source in \
   scripts/execution-n17a-readiness.py \
   scripts/test_execution_n17a_readiness.py \
   scripts/execution-n17a-production-dr-test.sh \
+  packages/contracts/schemas/execution-production-acceptance-current.v1.schema.json \
+  packages/contracts/fixtures/execution-production-acceptance.current-paper.accepted.json \
+  services/portal-execution-edge-rs/crates/production-readiness/src/current_acceptance.rs \
+  scripts/execution-n17b-current-acceptance-test.sh \
   deploy/.env.development.example \
   deploy/manifests/deployment-profile.v1.schema.json \
   deploy/manifests/deployment-profiles.source-dark.json \
@@ -1346,6 +1358,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/scripts/smoke-stack.sh" \
   "${ROOT_DIR}/scripts/control-api-provision-keyrings.sh" \
@@ -1391,6 +1404,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1485,5 +1499,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh"
 "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh"
 "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
+"${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

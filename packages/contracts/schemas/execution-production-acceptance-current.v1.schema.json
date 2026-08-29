@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-production-acceptance-current.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "decision",
+    "profile",
+    "immutable_bindings",
+    "delivery",
+    "transport_evidence",
+    "recovery",
+    "runtime_authority",
+    "rollback"
+  ],
+  "properties": {
+    "schema_version": { "const": "portal.execution.production-acceptance-current.v1" },
+    "phase": { "const": "N17B" },
+    "decision": { "const": "N17B_EXACT_CURRENT_SET_ACCEPTED" },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "manager_profile_id", "screen_id", "source_contract"],
+      "properties": {
+        "environment": { "const": "paper" },
+        "manager_profile_id": { "const": "PAPER_BINANCE_USDM" },
+        "screen_id": { "const": "PAPER_TRADING_SCREEN" },
+        "source_contract": { "const": "trading-system.portal-execution.manager-v2.runtime.v1" }
+      }
+    },
+    "immutable_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "n13b_source_map_sha256",
+        "n14b_release_profile_sha256",
+        "n15b_gateway_acceptance_sha256",
+        "n16b_protective_acceptance_sha256",
+        "n17a_readiness_profile_sha256",
+        "manager_publication_sha256",
+        "manager_qualification_sha256",
+        "edge_image_sha256",
+        "source_proxy_image_sha256"
+      ],
+      "properties": {
+        "n13b_source_map_sha256": { "$ref": "#/$defs/Sha256" },
+        "n14b_release_profile_sha256": { "$ref": "#/$defs/Sha256" },
+        "n15b_gateway_acceptance_sha256": { "$ref": "#/$defs/Sha256" },
+        "n16b_protective_acceptance_sha256": { "$ref": "#/$defs/Sha256" },
+        "n17a_readiness_profile_sha256": { "$ref": "#/$defs/Sha256" },
+        "manager_publication_sha256": { "$ref": "#/$defs/Sha256" },
+        "manager_qualification_sha256": { "$ref": "#/$defs/Sha256" },
+        "edge_image_sha256": { "$ref": "#/$defs/Sha256" },
+        "source_proxy_image_sha256": { "$ref": "#/$defs/Sha256" }
+      }
+    },
+    "delivery": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/QueryDelivery" },
+        { "$ref": "#/$defs/CommandDelivery" },
+        { "$ref": "#/$defs/EventDelivery" },
+        { "$ref": "#/$defs/ArtifactDelivery" }
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "transport_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "private_route",
+        "http2",
+        "tls13_mtls",
+        "delegated_jwt",
+        "source_limit_requests_per_second",
+        "portal_limit_requests_per_second",
+        "qualification_pacing_requests_per_second",
+        "requests",
+        "successful_requests",
+        "observed_p95_ms",
+        "observed_max_ms",
+        "maximum_response_bytes",
+        "negative_statuses",
+        "business_rows_emitted",
+        "source_mutations",
+        "command_dispatches"
+      ],
+      "properties": {
+        "private_route": { "const": "10.70.0.1/30_TO_10.70.0.2/30" },
+        "http2": { "const": true },
+        "tls13_mtls": { "const": true },
+        "delegated_jwt": { "const": true },
+        "source_limit_requests_per_second": { "const": 20 },
+        "portal_limit_requests_per_second": { "type": "integer", "minimum": 1, "maximum": 15 },
+        "qualification_pacing_requests_per_second": { "type": "integer", "minimum": 1, "maximum": 15 },
+        "requests": { "type": "integer", "minimum": 25 },
+        "successful_requests": { "type": "integer", "minimum": 25 },
+        "observed_p95_ms": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{3}$" },
+        "observed_max_ms": { "type": "string", "pattern": "^[0-9]+\\.[0-9]{3}$" },
+        "maximum_response_bytes": { "type": "integer", "minimum": 1, "maximum": 2097152 },
+        "negative_statuses": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["missing_jwt", "wrong_resource", "wrong_method"],
+          "properties": {
+            "missing_jwt": { "const": 401 },
+            "wrong_resource": { "const": 403 },
+            "wrong_method": { "const": 405 }
+          }
+        },
+        "business_rows_emitted": { "const": 0 },
+        "source_mutations": { "const": 0 },
+        "command_dispatches": { "const": 0 }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "n17a_game_day_reused",
+        "stateless_query_adapter",
+        "persistent_source_data_created",
+        "database_restore_required",
+        "paper_query_rpo_seconds",
+        "rollback_target_seconds",
+        "rollback_rehearsed",
+        "identity_rotation_runbook_verified"
+      ],
+      "properties": {
+        "n17a_game_day_reused": { "const": true },
+        "stateless_query_adapter": { "const": true },
+        "persistent_source_data_created": { "const": false },
+        "database_restore_required": { "const": false },
+        "paper_query_rpo_seconds": { "const": 0 },
+        "rollback_target_seconds": { "type": "integer", "minimum": 1, "maximum": 300 },
+        "rollback_rehearsed": { "const": true },
+        "identity_rotation_runbook_verified": { "const": true }
+      }
+    },
+    "runtime_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_phase_approval",
+        "exact_set_contract_accepted",
+        "paper_private_path_qualified",
+        "portal_adapter_implemented",
+        "signed_product_image_published",
+        "product_bff_enabled",
+        "public_stable_changed",
+        "sandbox_read_enabled",
+        "live_read_enabled",
+        "live_command_enabled",
+        "live_mutation_authorized",
+        "trading_system_changed"
+      ],
+      "properties": {
+        "owner_phase_approval": { "const": true },
+        "exact_set_contract_accepted": { "const": true },
+        "paper_private_path_qualified": { "const": true },
+        "portal_adapter_implemented": { "const": true },
+        "signed_product_image_published": { "const": false },
+        "product_bff_enabled": { "const": false },
+        "public_stable_changed": { "const": false },
+        "sandbox_read_enabled": { "const": false },
+        "live_read_enabled": { "const": false },
+        "live_command_enabled": { "const": false },
+        "live_mutation_authorized": { "const": false },
+        "trading_system_changed": { "const": false }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "steps", "automatic_retry_after_dispatch"],
+      "properties": {
+        "scope": { "const": "PAPER_QUERY_ADAPTER_ONLY" },
+        "steps": {
+          "const": [
+            "DISABLE_CONTROL_API_PAPER_CURRENT_SOURCE",
+            "RESTORE_SCREEN_NATIVE_ADAPTER_DARK_STATE",
+            "CLOSE_MANAGER_V2_H2_SESSION",
+            "VERIFY_TYPED_UNAVAILABLE_AND_ZERO_SOURCE_MUTATION"
+          ]
+        },
+        "automatic_retry_after_dispatch": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "Sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "QueryDelivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "capability_ids", "source_binding_ids", "upstream_routes"],
+      "properties": {
+        "interface": { "const": "QUERY" },
+        "state": { "const": "CONNECTED_PRIVATE_ACCEPTED" },
+        "capability_ids": {
+          "const": ["deployments.positions", "deployments.execution-quality", "sessions.current"]
+        },
+        "source_binding_ids": {
+          "const": ["manager.deployments", "manager.performance", "manager.positions", "manager.sessions"]
+        },
+        "upstream_routes": {
+          "const": [
+            "GET /internal/v2/manager/capabilities",
+            "GET /internal/v2/manager/relations/public/{relation}"
+          ]
+        }
+      }
+    },
+    "CommandDelivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "capability_ids", "reason"],
+      "properties": {
+        "interface": { "const": "COMMAND" },
+        "state": { "const": "COMPATIBILITY_ACCEPTED_RUNTIME_INACTIVE" },
+        "capability_ids": { "const": ["live.emergency-close"] },
+        "reason": { "const": "EXACT_LIVE_ACCOUNT_WINDOW_NOT_OPEN" }
+      }
+    },
+    "EventDelivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "reason"],
+      "properties": {
+        "interface": { "const": "EVENT" },
+        "state": { "const": "SOURCE_DOES_NOT_CURRENTLY_EXIST" },
+        "reason": { "const": "NO_AUTHORITATIVE_INCREMENTAL_EVENT_SOURCE_PUBLISHED" }
+      }
+    },
+    "ArtifactDelivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "state", "reason"],
+      "properties": {
+        "interface": { "const": "ARTIFACT" },
+        "state": { "const": "SOURCE_DOES_NOT_CURRENTLY_EXIST" },
+        "reason": { "const": "NO_CURRENT_OWNER_ARTIFACT_REFERENCE_SOURCE" }
+      }
+    }
+  }
+}

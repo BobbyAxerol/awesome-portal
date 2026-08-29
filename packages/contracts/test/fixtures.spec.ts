@@ -142,6 +142,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/ReadinessProfile",
   "execution-production-readiness.game-day-corpus.valid.json":
     "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/GameDayCorpus",
+  "execution-production-acceptance.current-paper.accepted.json":
+    "https://schemas.primusspark.com/portal/execution-production-acceptance-current.v1.schema.json",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":

@@ -7,6 +7,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod current_acceptance;
+
 use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};

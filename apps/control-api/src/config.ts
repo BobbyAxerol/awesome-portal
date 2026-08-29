@@ -161,6 +161,10 @@ const EnvSchema = z.object({
   EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY: z.coerce.number().int().min(1).max(512).default(64),
   EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_QUEUE: z.coerce.number().int().min(0).max(2_048).default(128),
   EXECUTION_EDGE_CURRENT_SOURCE_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(10).max(5_000).default(250),
+  // The current Manager-v2 source proxy is bounded at 20 r/s. N17B keeps a
+  // safety margin and intentionally permits no burst above 15 r/s.
+  EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND: z.coerce.number().int().min(1).max(15).default(15),
+  EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS: z.coerce.number().int().min(10).max(5_000).default(1_000),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 

@@ -6,8 +6,8 @@ import { ControlApiConfig } from "../config";
 import { AuthSession, PortalUser } from "../domain";
 import {
   CURRENT_SOURCE_SCREEN_IDS,
-  currentSourceResource,
   ExecutionDelegationService,
+  MANAGER_V2_READ_RESOURCE,
 } from "./delegation";
 
 export const CURRENT_SOURCE_ENVIRONMENTS = ["paper", "sandbox", "live", "canary"] as const;
@@ -17,7 +17,19 @@ const CURRENT_SOURCE_SCREENS = new Set<string>(CURRENT_SOURCE_SCREEN_IDS);
 const SOURCE_ID = /^[a-z][a-z0-9.-]{1,127}$/;
 const RELATION = /^[a-z][a-z0-9_]{1,127}$/;
 const TYPED_UPSTREAM_CODE = /^CURRENT_SOURCE_[A-Z0-9_]{1,80}$/;
+const TYPED_MANAGER_CODE = /^MANAGER_V2_[A-Z0-9_]{1,80}$/;
 const CANARY_SCREEN = "EXECUTION_CANARY_CONTROL_ROOM_SCREEN";
+
+const N17B_PAPER_RELATIONS = Object.freeze({
+  "manager.deployments": Object.freeze(["strategy_deployments"]),
+  "manager.performance": Object.freeze([
+    "performance_snapshots",
+    "account_equity_snapshots",
+    "portfolio_equity_snapshots",
+  ]),
+  "manager.positions": Object.freeze(["positions_v2"]),
+  "manager.sessions": Object.freeze(["execution_sessions"]),
+} as const);
 
 export const N15B_CURRENT_QUERY_ACCEPTANCE = Object.freeze({
   schemaVersion: "portal.execution.intercell-gateway-current.v1",
@@ -29,6 +41,21 @@ export const N15B_CURRENT_QUERY_ACCEPTANCE = Object.freeze({
     "deployments.execution-quality",
     "sessions.current",
   ]),
+});
+
+export const N17B_CURRENT_EXACT_QUERY_ACCEPTANCE = Object.freeze({
+  schemaVersion: "portal.execution.production-acceptance-current.v1",
+  decision: "N17B_EXACT_CURRENT_SET_ACCEPTED",
+  lineageDecision: "N15B_CURRENT_SOURCE_ACCEPTED",
+  environment: "paper" as const,
+  profileId: "PAPER_BINANCE_USDM",
+  screenId: "PAPER_TRADING_SCREEN",
+  sourceContract: "trading-system.portal-execution.manager-v2.runtime.v1",
+  adapter: "MANAGER_V2_CURRENT_AS_IS",
+  delegatedResource: MANAGER_V2_READ_RESOURCE,
+  sourceBindingIds: Object.freeze(Object.keys(N17B_PAPER_RELATIONS).sort()),
+  capabilityIds: N15B_CURRENT_QUERY_ACCEPTANCE.capabilityIds,
+  sourceMaximumRequestsPerSecond: 20,
 });
 
 export interface CurrentSourcePrincipal {
@@ -105,6 +132,55 @@ export class CurrentSourceBulkhead {
   }
 }
 
+type MillisecondClock = () => number;
+type Delay = (milliseconds: number) => Promise<void>;
+
+/**
+ * Burst-free process-local pacer for the current Manager-v2 read identity.
+ *
+ * The AWS-HK Source Proxy publishes a 20 r/s boundary. N17B deliberately
+ * admits at most 15 r/s and rejects excess bounded work instead of retrying or
+ * translating source rate-limit pressure into an unbounded queue.
+ */
+export class CurrentSourceRateLimiter {
+  private nextPermitAt = 0;
+  private readonly intervalMs: number;
+
+  constructor(
+    maximumRequestsPerSecond: number,
+    private readonly maximumWaitMs: number,
+    private readonly now: MillisecondClock = Date.now,
+    private readonly delay: Delay = (milliseconds) =>
+      new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  ) {
+    if (
+      !Number.isInteger(maximumRequestsPerSecond) ||
+      maximumRequestsPerSecond < 1 ||
+      maximumRequestsPerSecond > 15 ||
+      !Number.isInteger(maximumWaitMs) ||
+      maximumWaitMs < 1
+    ) {
+      throw new Error("N17B rate-limit configuration is outside the accepted boundary");
+    }
+    this.intervalMs = Math.ceil(1_000 / maximumRequestsPerSecond);
+  }
+
+  async acquire(): Promise<void> {
+    const now = this.now();
+    const scheduledAt = Math.max(now, this.nextPermitAt);
+    const waitMs = scheduledAt - now;
+    if (waitMs > this.maximumWaitMs) {
+      throw new CurrentSourceProxyError("N17B_RATE_LIMIT_QUEUE_TIMEOUT", 503, {
+        availability: "DEGRADED",
+        reason_code: "PORTAL_SOURCE_PACING_BUDGET_EXHAUSTED",
+        retryable: false,
+      });
+    }
+    this.nextPermitAt = scheduledAt + this.intervalMs;
+    if (waitMs > 0) await this.delay(waitMs);
+  }
+}
+
 /**
  * Same-origin BFF for exact N13B screen reads. It owns delegated identity and
  * mTLS; browser callers can never choose an Edge origin, profile, audience or
@@ -112,6 +188,7 @@ export class CurrentSourceBulkhead {
  */
 export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   private readonly bulkhead: CurrentSourceBulkhead;
+  private readonly rateLimiter: CurrentSourceRateLimiter;
 
   private constructor(
     private readonly config: ControlApiConfig,
@@ -122,6 +199,10 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY,
       config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_QUEUE,
       config.EXECUTION_EDGE_CURRENT_SOURCE_QUEUE_TIMEOUT_MS,
+    );
+    this.rateLimiter = new CurrentSourceRateLimiter(
+      config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND,
+      config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS,
     );
   }
 
@@ -165,8 +246,12 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     screenId: string,
   ): Promise<unknown> {
     assertN15bCurrentQueryAccepted(environment, screenId);
-    currentSourcePath(environment, screenId);
-    return this.request(principal, environment, screenId, currentSourcePath(environment, screenId));
+    return this.request(
+      principal,
+      environment,
+      screenId,
+      currentManagerV2Path(screenId),
+    );
   }
 
   relation(
@@ -178,7 +263,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     query: CurrentSourcePageQuery,
   ): Promise<unknown> {
     assertN15bCurrentQueryAccepted(environment, screenId);
-    const path = currentSourcePath(environment, screenId, sourceId, relation, query);
+    const path = currentManagerV2Path(screenId, sourceId, relation, query);
     return this.request(principal, environment, screenId, path);
   }
 
@@ -211,28 +296,38 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     }
     const release = await this.bulkhead.acquire();
     try {
+      await this.rateLimiter.acquire();
       const assertion = await profile.delegation.issueReadAssertion({
         principalId: principal.user.userId,
         sessionId: principal.session.sessionId,
         workspaceId: principal.workspaceId,
         roles: [principal.user.role],
-        resources: [currentSourceResource(screenId)],
+        resources: [MANAGER_V2_READ_RESOURCE],
         authenticationTime: principal.session.authenticationTime,
         authenticationMethods: ["portal_session"],
       });
       const session = await this.getSession(profile);
       const source = await this.sendRequest(session, assertion, path);
       return {
-        schema_version: "portal.execution.current-source-bff.v1",
+        schema_version: "portal.execution.current-source-bff.v2",
         authority: "PORTAL_CONTROL_API",
         requested_environment: requestedEnvironment,
         source_environment: sourceEnvironment,
         profile_id: profile.profileId,
         gateway: {
           interface: "QUERY",
-          acceptance: "N15B_CURRENT_SOURCE_ACCEPTED",
+          acceptance: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.decision,
+          adapter: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.adapter,
+          source_contract: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.sourceContract,
+          screen_id: screenId,
+          capability_ids: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.capabilityIds,
+          source_binding_ids: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.sourceBindingIds,
           request_id: randomUUID(),
           transport: "H2_MTLS_DELEGATED_JWT",
+          source_maximum_requests_per_second:
+            N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.sourceMaximumRequestsPerSecond,
+          portal_maximum_requests_per_second:
+            this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND,
           retry_count: 0,
         },
         ...(requestedEnvironment === "canary"
@@ -430,6 +525,56 @@ export function currentSourcePath(
   return `${base}/sources/${encodeURIComponent(sourceId)}/relations/${encodeURIComponent(relation)}${suffix}`;
 }
 
+/**
+ * Maps the exact accepted Paper screen to routes already published by the
+ * current Manager-v2 runtime. Source IDs are Portal-owned aliases and are
+ * never forwarded as arbitrary upstream route fragments.
+ */
+export function currentManagerV2Path(
+  screenId: string,
+  sourceId?: string,
+  relation?: string,
+  query: CurrentSourcePageQuery = {},
+): string {
+  if (screenId !== N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.screenId) {
+    throw new CurrentSourceProxyError("N17B_QUERY_CAPABILITY_NOT_ACCEPTED", 404);
+  }
+  if (sourceId === undefined && relation === undefined) {
+    return "/internal/v2/manager/capabilities";
+  }
+  if (
+    sourceId === undefined ||
+    relation === undefined ||
+    !SOURCE_ID.test(sourceId) ||
+    !RELATION.test(relation)
+  ) {
+    throw new CurrentSourceProxyError("N17B_BINDING_INVALID", 400);
+  }
+  const acceptedRelations = N17B_PAPER_RELATIONS[
+    sourceId as keyof typeof N17B_PAPER_RELATIONS
+  ];
+  if (!acceptedRelations || !(acceptedRelations as readonly string[]).includes(relation)) {
+    throw new CurrentSourceProxyError("N17B_BINDING_NOT_ACCEPTED", 404, {
+      classification: "SUPPORTED_BUT_NOT_ACTIVATED",
+      availability: "UNAVAILABLE",
+      reason_code: "RELATION_OUTSIDE_EXACT_PAPER_SET",
+    });
+  }
+  if (
+    (query.limit !== undefined &&
+      (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 200)) ||
+    (query.cursor !== undefined &&
+      (query.cursor.length < 1 || Buffer.byteLength(query.cursor, "utf8") > 4096))
+  ) {
+    throw new CurrentSourceProxyError("N17B_PAGE_INVALID", 400);
+  }
+  const parameters = new URLSearchParams();
+  if (query.limit !== undefined) parameters.set("limit", String(query.limit));
+  if (query.cursor !== undefined) parameters.set("cursor", query.cursor);
+  const suffix = parameters.size > 0 ? `?${parameters.toString()}` : "";
+  return `/internal/v2/manager/relations/public/${encodeURIComponent(relation)}${suffix}`;
+}
+
 export function currentSourceUpstreamError(
   body: Buffer,
   responseIsJson: boolean,
@@ -458,6 +603,21 @@ export function currentSourceUpstreamError(
                 : {}),
             });
           }
+          if (typeof value.code === "string" && TYPED_MANAGER_CODE.test(value.code)) {
+            return new CurrentSourceProxyError(
+              upstreamStatus === 429
+                ? "N17B_SOURCE_RATE_LIMITED"
+                : upstreamStatus === 404
+                  ? "N17B_SOURCE_RELATION_UNAVAILABLE"
+                  : "N17B_SOURCE_REJECTED",
+              upstreamStatus === 429 ? 503 : safeStatus,
+              {
+                availability: upstreamStatus === 429 ? "DEGRADED" : "UNAVAILABLE",
+                reason_code: value.code,
+                retryable: false,
+              },
+            );
+          }
         }
       }
     } catch {
@@ -467,8 +627,10 @@ export function currentSourceUpstreamError(
   return new CurrentSourceProxyError(
     upstreamStatus === 401 || upstreamStatus === 403
       ? "N13B_DELEGATED_IDENTITY_REJECTED"
+      : upstreamStatus === 429
+        ? "N17B_SOURCE_RATE_LIMITED"
       : "N13B_UPSTREAM_REJECTED",
-    safeStatus,
+    upstreamStatus === 429 ? 503 : safeStatus,
   );
 }
 

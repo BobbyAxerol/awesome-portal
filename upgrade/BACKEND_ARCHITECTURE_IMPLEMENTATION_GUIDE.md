@@ -1639,6 +1639,21 @@ activation or the phase):**
   `N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK`; see
   [`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).
 
+- **N17B exact current-set production acceptance (2026-08-29):** the Portal
+  Control API now adapts the exact Paper screen contract to the current
+  Manager-v2 capabilities/relation routes instead of requiring unpublished
+  screen-native Edge routes. The server-only adapter enforces four source
+  aliases/seven relations, the exact Manager read resource and a burst-free
+  15 r/s ceiling below the observed Source Proxy 20 r/s boundary. The real
+  private route passed 25/25 paced reads with HTTP/2, TLS 1.3 mTLS and delegated
+  JWT plus 401/403/405 negative checks. A strict JSON/Rust/CI record binds all
+  N13B–N17A evidence and rollback. Status is
+  `N17B_EXACT_CURRENT_SET_ACCEPTED / PAPER_PRIVATE_QUERY_QUALIFIED /
+  SIGNED_PRODUCT_IMAGE_NOT_PUBLISHED / LIVE_MUTATION_INACTIVE`; no public
+  runtime, Sandbox/Live read, command transport or Trading System change was
+  made. See
+  [`EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md`](./backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

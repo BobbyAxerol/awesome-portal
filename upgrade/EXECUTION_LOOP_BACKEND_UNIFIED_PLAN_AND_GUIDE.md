@@ -1267,7 +1267,7 @@ than fabricated N16B evidence. Detail:
 ### N17 — Production activation, SLO, DR and owner operations
 
 **Mapping:** BAR-20 + product phase 18.  
-**Status:** `N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE / LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW`.  
+**Status:** `N17A_COMPLETE_SOURCE_DARK / N17B_EXACT_CURRENT_SET_ACCEPTED / PAPER_PRIVATE_QUERY_QUALIFIED / LIVE_MUTATION_INACTIVE`.  
 **Priority:** final.
 
 N17 accepts the exact capability set delivered by N13B–N16B, including honest
@@ -1312,6 +1312,17 @@ the accepted Portal release are served or honestly classified; there are no
 fake-real fixtures, dead actions or unbounded source paths. Bobby signs the
 exact production acceptance record after successful restore, rollback,
 source-loss, auth-loss and command-containment rehearsals.
+
+**Closeout 2026-08-29:** N17B accepts the exact current Paper Query set through
+a Portal-owned adapter to the already-published Manager-v2 routes. A burst-free
+Portal pacer caps admission at 15 r/s below the source's observed 20 r/s
+boundary. The real private route passed 25/25 paced reads plus 401/403/405
+negative authentication/method checks. N17A recovery evidence is retained;
+the adapter is stateless, creates no projection data and rolls back by the
+Paper feature flag/session close. The signed product image is not yet
+published, stable is unchanged, and every Sandbox/Live/Command mutation flag
+remains false. Detail:
+[`EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md`](./backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md).
 
 ---
 
@@ -2370,6 +2381,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Date | Change | Evidence/status effect |
 |---|---|---|
 | 2026-08-29 | Accepted N16B current-primitive protective-path compatibility | exactly one current primitive, `live.emergency-close`, is accepted for `LIVE_FULL / ACCOUNT / BINANCE / USD_M`; Rust and TypeScript reject identity, target, payload, R4 and runtime widening; the other eight N12 commands are typed inactive/absent; public route, transport, source call and Live mutation remain false pending N17B exact owner window |
+| 2026-08-29 | Accepted N17B exact current set | Portal adapts the exact Paper screen to current Manager-v2 routes, hard-caps source admission at 15 r/s, and records 25/25 paced private reads plus 401/403/405 negatives; N17A recovery/rollback is retained; signed product image, public BFF, Sandbox/Live reads and Live mutation remain inactive |
 | 2026-08-29 | Accepted N15B current-capability inter-cell gateway for the bounded Paper Query slice | Rust Edge and TypeScript BFF enforce the exact Paper screen/profile before transport; Command is deferred N16B, Event/Artifact typed absent, immutable D3/Manager evidence revalidated; product/runtime/registry/SSE/command/Trading-System-change flags remain false |
 | 2026-08-29 | Accepted N14B immutable current-source release compatibility for the first bounded Paper target | exact signed N14A candidate plus N13B source/qualification/profile pins, adapter/config digests, three immutable service image digests and rollback/forward-fix chain are bound in a separate adjunct; all runtime/profile/registry/source/Query/SSE/command/Trading-System-release flags remain false; N15B Query acceptance is next |
 | 2026-08-29 | Rebaselined N13B–N17B from global contract-first blocking to source-as-is, capability-by-capability compatibility | documentation/decision only; N13A–N17A evidence preserved; Manager-v2/current Gateway/current market and Portal derivations become valid bounded sources behind versioned adapters; read/command identities and production gates remain separate; no runtime/profile/source/command change |

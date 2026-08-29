@@ -37,6 +37,8 @@ N16B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECT
 N16B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md"
 N17A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md"
 N17A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md"
+N17B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md"
+N17B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17B_EXACT_SET_HANDOFF.md"
 
 for required_file in \
     "${OWNER_MASTER_REQUEST}" \
@@ -54,7 +56,9 @@ for required_file in \
     "${N16B_REPORT}" \
     "${N16B_HANDOFF}" \
     "${N17A_REPORT}" \
-    "${N17A_HANDOFF}"
+    "${N17A_HANDOFF}" \
+    "${N17B_REPORT}" \
+    "${N17B_HANDOFF}"
 do
     if [[ ! -f "${required_file}" ]]; then
         echo "execution owner/phase plan is missing: ${required_file}" >&2
@@ -79,7 +83,7 @@ for token in \
     "N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED" \
     "N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK" \
     "N16A_COMPLETE_SOURCE_DARK / N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK" \
-    "N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE / LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW"
+    "N17A_COMPLETE_SOURCE_DARK / N17B_EXACT_CURRENT_SET_ACCEPTED / PAPER_PRIVATE_QUERY_QUALIFIED / LIVE_MUTATION_INACTIVE"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
         echo "execution unified plan lost A/B split: ${token}" >&2
@@ -309,6 +313,36 @@ do
 done
 if ! grep -Fq "N17A backend — Source-dark production/DR preparation" "${TRACKER}"; then
     echo "shared tracker lost N17A closeout section" >&2
+    exit 1
+fi
+
+for token in \
+    "N17B_EXACT_CURRENT_SET_ACCEPTED" \
+    "PAPER_PRIVATE_QUERY_QUALIFIED" \
+    "25/25" \
+    "15 r/s" \
+    "SIGNED_PRODUCT_IMAGE_NOT_PUBLISHED" \
+    "LIVE_MUTATION_INACTIVE"
+do
+    if ! grep -Fq "${token}" "${N17B_REPORT}"; then
+        echo "N17B report lost exact-set invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N17B_EXACT_CURRENT_SET_ACCEPTED" \
+    "PAPER_PRIVATE_QUERY_QUALIFIED" \
+    "N17B_RATE_LIMIT_QUEUE_TIMEOUT" \
+    "no timer-based" \
+    "no enabled action"
+do
+    if ! grep -Fq "${token}" "${N17B_HANDOFF}"; then
+        echo "N17B Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N17B backend — Exact current-set production acceptance" "${TRACKER}"; then
+    echo "shared tracker lost N17B closeout section" >&2
     exit 1
 fi
 

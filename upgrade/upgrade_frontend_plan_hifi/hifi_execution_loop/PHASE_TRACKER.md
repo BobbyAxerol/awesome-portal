@@ -2707,7 +2707,7 @@ command.
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | exact Paper source/profile/adapter/image/rollback compatibility adjunct accepted; runtime remains dark | `N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED` |
 | N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | exact current Paper Query accepted; Command deferred N16B; Event/Artifact typed absent | `N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK` |
 | N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | one exact current primitive accepted: `live.emergency-close` for `LIVE_FULL / ACCOUNT`; eight other N12 commands typed inactive/absent; source/public/runtime mutation remains dark | `N16A_COMPLETE_SOURCE_DARK / N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK` |
-| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted read set; Live emergency mutation separately requires exact Account/window/abort owner/Bobby sign-off and observed acknowledgement/verification | `N17A_COMPLETE_SOURCE_DARK / N17B_READY_FOR_EXACT_SET_ACCEPTANCE / LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW` |
+| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | exact Paper Query accepted and private path qualified against current Manager-v2; Live emergency compatibility stays runtime-inactive without a separate exact Account/window | `N17A_COMPLETE_SOURCE_DARK / N17B_EXACT_CURRENT_SET_ACCEPTED / PAPER_PRIVATE_QUERY_QUALIFIED / LIVE_MUTATION_INACTIVE` |
 
 Rule: Claude and Portal backend may implement/test every A lane without waiting
 for Trading System. A B lane uses only bounded authenticated current sources,
@@ -2846,15 +2846,36 @@ Claude handoff:
 [`CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md`](./CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md).
 
 Status is `N17A_COMPLETE_SOURCE_DARK /
-N17B_READY_FOR_EXACT_SET_ACCEPTANCE /
-LIVE_MUTATION_WAITING_EXACT_OWNER_WINDOW`. No
+N17B_EXACT_CURRENT_SET_ACCEPTED /
+PAPER_PRIVATE_QUERY_QUALIFIED / LIVE_MUTATION_INACTIVE`. No
 Portal-owned A phase remains. Bobby approved the 2026-08-29 rebaseline and
 N13B's Portal implementation/current-source set, N14B's immutable bounded
 Paper compatibility candidate and N15B's private Paper Query contract are
 accepted. N16B now accepts one exact current protective primitive while keeping
-runtime dark. Resume at N17B exact-set production acceptance; keep each runtime
-profile and Live mutation flag dark until its independent activation gate
-passes.
+runtime dark. N17B has now closed the exact current set; keep each product
+runtime profile and Live mutation flag dark until its independent deployment
+or mutation gate passes.
+
+### N17B backend — Exact current-set production acceptance (2026-08-29)
+
+| Slice | Backend result | Runtime truth | Frontend parallel lane |
+| --- | --- | --- | --- |
+| Paper Query | `CONNECTED_PRIVATE_ACCEPTED` | 25/25 paced private reads over H2/TLS 1.3 mTLS/delegated JWT | consume BFF v2 only after dev runtime flag is enabled |
+| source adaptation | `MANAGER_V2_CURRENT_AS_IS` | exact screen plus four source aliases/seven relations; no arbitrary Edge path | never call Edge or display infrastructure identifiers |
+| admission | `PORTAL_MAX_15_RPS` | below Source Proxy 20 r/s; typed overload; zero blind retry | one user retry only, no timer loop |
+| recovery | `N17A_REUSED / STATELESS_ADAPTER` | no projection persistence; feature/session rollback, zero source mutation | retain unavailable state during rollback |
+| Command/Event/Artifact | `INACTIVE / ABSENT / ABSENT` | Live mutation false; Event/Artifact source absent | no enabled action, fake stream or fake artifact |
+| product runtime | `SIGNED_IMAGE_NOT_PUBLISHED` | stable/public BFF and Sandbox/Live read flags false | accepted backend is not yet deployed product data |
+
+Backend report:
+[`EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md`](../../backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N17B_EXACT_SET_HANDOFF.md`](./CODEX_TO_CLAUDE_N17B_EXACT_SET_HANDOFF.md).
+
+N13–N17 source-as-is backend contract work is closed. The next action is the
+normal signed dev image publication/activation lane after merge; Live mutation
+remains an independently scoped future owner action, not an unfinished N17B
+task.
 
 ### N13B–N17B source-as-is rebaseline (2026-08-29)
 

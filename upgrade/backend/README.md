@@ -31,6 +31,14 @@ Chúng không thay thế phase hoặc exit gate trong
   to `LIVE_FULL / ACCOUNT / BINANCE / USD_M`. Rust and TypeScript reject target,
   identity, R4 and runtime widening; no source call or Live mutation occurred.
 
+- [N17B — Exact-set production acceptance](./EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md)
+  — **exact current set accepted / private Paper Query qualified:** the Portal
+  BFF adapts only the accepted Paper screen/source relations to current
+  Manager-v2, uses a burst-free 15 r/s ceiling below the source's 20 r/s
+  boundary and passed 25/25 real private reads plus 401/403/405 negatives.
+  Rust/JSON/CI pin the immutable source and recovery evidence. Signed product
+  image, public BFF, Sandbox/Live reads and Live mutation remain inactive.
+
 - [EX-BE-02B — Manager-v2 Multi-profile Read Readiness](./EX_BE_02B_MANAGER_V2_MULTI_PROFILE_READ.md)
   — **Implemented / private read-ready:** the sealed Manager-v2 backend path
   is now deployment-bound for Paper, Sandbox and Live. Each profile requires

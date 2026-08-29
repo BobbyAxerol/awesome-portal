@@ -1,0 +1,115 @@
+{
+  "schema_version": "portal.execution.production-acceptance-current.v1",
+  "phase": "N17B",
+  "decision": "N17B_EXACT_CURRENT_SET_ACCEPTED",
+  "profile": {
+    "environment": "paper",
+    "manager_profile_id": "PAPER_BINANCE_USDM",
+    "screen_id": "PAPER_TRADING_SCREEN",
+    "source_contract": "trading-system.portal-execution.manager-v2.runtime.v1"
+  },
+  "immutable_bindings": {
+    "n13b_source_map_sha256": "sha256:d269bcaa11a4985ab1121d15f0af4cf2f09dc49bfe8e2c60ab18d0b39bb2e3c9",
+    "n14b_release_profile_sha256": "sha256:dd26b413563930f899f2a82301d8eccd2aa1a94a550460c97d536ffcfa1965da",
+    "n15b_gateway_acceptance_sha256": "sha256:64d881eefc901174a0b4e1a16767b6b64924aa72368533d3d24390f1abebfda8",
+    "n16b_protective_acceptance_sha256": "sha256:e128ab6ae68c8fe3b6d54768840ef28a05d13506f98d7a6ae693b28f3d96a3ab",
+    "n17a_readiness_profile_sha256": "sha256:1b40f40b206537882be630380a50dfacc158d80739873fa84328653e5519a926",
+    "manager_publication_sha256": "sha256:cd304194bdefde4d9470467f03b30b02487341656eea9fdd0bd96c3b07ac4c22",
+    "manager_qualification_sha256": "sha256:281f2b73094e423bd888e3562e861cab07137f4878c43fd62d7ce43abb565c60",
+    "edge_image_sha256": "sha256:acf792c7831f1f7a16dcf2a004fa797a9e9b4812ba6b83f6fd0a3ee216f995db",
+    "source_proxy_image_sha256": "sha256:dafa9e70a3d90cd079147d149dbbaa8ac8a3a9db079b0cf8099892a7f1d5fbe7"
+  },
+  "delivery": [
+    {
+      "interface": "QUERY",
+      "state": "CONNECTED_PRIVATE_ACCEPTED",
+      "capability_ids": [
+        "deployments.positions",
+        "deployments.execution-quality",
+        "sessions.current"
+      ],
+      "source_binding_ids": [
+        "manager.deployments",
+        "manager.performance",
+        "manager.positions",
+        "manager.sessions"
+      ],
+      "upstream_routes": [
+        "GET /internal/v2/manager/capabilities",
+        "GET /internal/v2/manager/relations/public/{relation}"
+      ]
+    },
+    {
+      "interface": "COMMAND",
+      "state": "COMPATIBILITY_ACCEPTED_RUNTIME_INACTIVE",
+      "capability_ids": ["live.emergency-close"],
+      "reason": "EXACT_LIVE_ACCOUNT_WINDOW_NOT_OPEN"
+    },
+    {
+      "interface": "EVENT",
+      "state": "SOURCE_DOES_NOT_CURRENTLY_EXIST",
+      "reason": "NO_AUTHORITATIVE_INCREMENTAL_EVENT_SOURCE_PUBLISHED"
+    },
+    {
+      "interface": "ARTIFACT",
+      "state": "SOURCE_DOES_NOT_CURRENTLY_EXIST",
+      "reason": "NO_CURRENT_OWNER_ARTIFACT_REFERENCE_SOURCE"
+    }
+  ],
+  "transport_evidence": {
+    "private_route": "10.70.0.1/30_TO_10.70.0.2/30",
+    "http2": true,
+    "tls13_mtls": true,
+    "delegated_jwt": true,
+    "source_limit_requests_per_second": 20,
+    "portal_limit_requests_per_second": 15,
+    "qualification_pacing_requests_per_second": 10,
+    "requests": 25,
+    "successful_requests": 25,
+    "observed_p95_ms": "76.403",
+    "observed_max_ms": "108.072",
+    "maximum_response_bytes": 2881,
+    "negative_statuses": {
+      "missing_jwt": 401,
+      "wrong_resource": 403,
+      "wrong_method": 405
+    },
+    "business_rows_emitted": 0,
+    "source_mutations": 0,
+    "command_dispatches": 0
+  },
+  "recovery": {
+    "n17a_game_day_reused": true,
+    "stateless_query_adapter": true,
+    "persistent_source_data_created": false,
+    "database_restore_required": false,
+    "paper_query_rpo_seconds": 0,
+    "rollback_target_seconds": 300,
+    "rollback_rehearsed": true,
+    "identity_rotation_runbook_verified": true
+  },
+  "runtime_authority": {
+    "owner_phase_approval": true,
+    "exact_set_contract_accepted": true,
+    "paper_private_path_qualified": true,
+    "portal_adapter_implemented": true,
+    "signed_product_image_published": false,
+    "product_bff_enabled": false,
+    "public_stable_changed": false,
+    "sandbox_read_enabled": false,
+    "live_read_enabled": false,
+    "live_command_enabled": false,
+    "live_mutation_authorized": false,
+    "trading_system_changed": false
+  },
+  "rollback": {
+    "scope": "PAPER_QUERY_ADAPTER_ONLY",
+    "steps": [
+      "DISABLE_CONTROL_API_PAPER_CURRENT_SOURCE",
+      "RESTORE_SCREEN_NATIVE_ADAPTER_DARK_STATE",
+      "CLOSE_MANAGER_V2_H2_SESSION",
+      "VERIFY_TYPED_UNAVAILABLE_AND_ZERO_SOURCE_MUTATION"
+    ],
+    "automatic_retry_after_dispatch": false
+  }
+}
