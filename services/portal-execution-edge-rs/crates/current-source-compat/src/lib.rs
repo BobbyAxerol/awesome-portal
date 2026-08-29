@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use manager_v2_contract::ManagerCatalogue;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 pub const CONTRACT_VERSION: &str = "portal.execution.current-source-map.v1";
@@ -14,6 +15,14 @@ pub const PHASE: &str = "N13B";
 pub const CANONICAL_MAP_JSON: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../contracts/current-source-v1/capability-source-map.json"
+));
+const OWNER_PUBLICATION_MANIFEST: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../contracts/manager-v2-paper-read-v1/owner-publication/owner-publication.manifest.json"
+));
+const RUNTIME_QUALIFICATION_MANIFEST: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../contracts/manager-v2-paper-read-v1/owner-runtime-overlay/manager-v2-runtime-qualification.manifest.json"
 ));
 
 const REQUIRED_SCREENS: [&str; 20] = [
@@ -81,6 +90,8 @@ pub struct SourcePins {
     pub portal_adapter_base_commit: String,
     pub manager_runtime_contract: String,
     pub manager_source_dark_contract: String,
+    pub manager_owner_publication_manifest_sha256: String,
+    pub manager_runtime_qualification_manifest_sha256: String,
     pub manager_catalogue_sha256: String,
     pub manager_source_proxy_image_sha256: String,
     pub manager_paper_image_sha256: String,
@@ -181,11 +192,17 @@ impl CurrentSourceMap {
             || !is_git_sha(&self.pins.trading_system_commit)
             || !is_git_sha(&self.pins.portal_adapter_base_commit)
             || !is_sha256(&self.pins.manager_catalogue_sha256)
+            || !is_sha256(&self.pins.manager_owner_publication_manifest_sha256)
+            || !is_sha256(&self.pins.manager_runtime_qualification_manifest_sha256)
             || !is_sha256(&self.pins.manager_source_proxy_image_sha256)
             || !is_sha256(&self.pins.manager_paper_image_sha256)
             || self.pins.manager_runtime_contract != manager_v2_contract::RUNTIME_CONTRACT_REVISION
             || self.pins.manager_source_dark_contract
                 != manager_v2_contract::SOURCE_DARK_CONTRACT_REVISION
+            || self.pins.manager_owner_publication_manifest_sha256
+                != sha256(OWNER_PUBLICATION_MANIFEST.as_bytes())
+            || self.pins.manager_runtime_qualification_manifest_sha256
+                != sha256(RUNTIME_QUALIFICATION_MANIFEST.as_bytes())
         {
             return Err(MappingError::InvalidIdentity);
         }
@@ -434,6 +451,10 @@ fn is_sha256(value: &str) -> bool {
                 .bytes()
                 .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     })
+}
+
+fn sha256(value: &[u8]) -> String {
+    format!("sha256:{:x}", Sha256::digest(value))
 }
 
 fn unique_by<T, K: Ord + Copy>(

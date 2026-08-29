@@ -445,6 +445,7 @@ dependencies = [
  "manager-v2-contract",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
 ]
 

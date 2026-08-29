@@ -10,6 +10,12 @@ fixed sources, and keeps Paper, Sandbox, Live and Canary independent. Canary
 uses Portal governance joined to Live facts; there is no Trading System
 `canary` source profile.
 
+The pins include both the owner publication manifest and the real Manager-v2
+runtime qualification manifest. The latter proves the Paper loopback
+mTLS/JWT/bounds/fault gate; it does not claim a Portal route is already active.
+Sandbox and Live remain profile-specific activation decisions, and an empty
+Live result is not replaced with fixture rows.
+
 The Rust `current-source-compat` crate validates this file before it can be
 used. Manager relation references must also validate against the authenticated
 runtime catalogue. Unknown screens, profiles, relations, capabilities and
