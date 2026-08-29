@@ -51,6 +51,7 @@ import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
 import { STAGE_SMOKE, stageVisuals } from "../stage.smoke";
 import { CommandCenterScreen } from "./CommandCenter";
+import { canonicalHref } from "../links";
 import { useCommandCentreStream } from "../commandCenterStream";
 import type { CommandCenter } from "../commandCenter";
 import type { SseFactory } from "../sse";
@@ -1347,5 +1348,5 @@ export function CommandCenterLive({
   const navigate = useNavigate();
   // Every ranked row links to its owning screen (HiFi 5a). The href is the
   // server's; a row without one renders disabled inside the screen.
-  return <CommandCenterScreen snapshot={snapshot} live={live} onOpen={(item) => item.href && navigate(item.href)} />;
+  return <CommandCenterScreen snapshot={snapshot} live={live} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
 }

@@ -127,7 +127,19 @@ export function IncidentDetailScreen({
           <header className="exec-inc2-masthead">
             <span className="exec-inc2-kind">INCIDENT</span>
             <h1 className="exec-inc2-h1">
-              {incident.incidentId} <span className="exec-inc2-subject">— {smoke?.subject ?? incident.title}</span>
+              {incident.incidentId}{" "}
+              <span className="exec-inc2-subject">
+                —{" "}
+                {smoke?.subjectLink && smoke.subject.includes(smoke.subjectLink.label) ? (
+                  <>
+                    {smoke.subject.split(smoke.subjectLink.label)[0]}
+                    <a href={smoke.subjectLink.href}>{smoke.subjectLink.label}</a>
+                    {smoke.subject.split(smoke.subjectLink.label)[1]}
+                  </>
+                ) : (
+                  smoke?.subject ?? incident.title
+                )}
+              </span>
             </h1>
             {resolved ? (
               <span className="exec-inc2-state" data-tone="good">RESOLVED</span>

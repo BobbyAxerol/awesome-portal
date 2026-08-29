@@ -269,7 +269,7 @@ function SandboxRows({ r, onOpen }: { r: SbRow; onOpen: () => void }) {
         <td className="exec-af-dim">{r.venue} · <a href={r.accountHref} onClick={(e) => e.stopPropagation()}>{r.account}</a></td>
         <td className="exec-af-dim">
           <a href={r.portfolioHref} onClick={(e) => e.stopPropagation()}>{r.portfolio}</a>
-          {r.target ? <> → {r.target} <span className="exec-af-sub" data-tone="warn">{r.targetNote}</span></> : null}
+          {r.target ? <> → {r.target} <span className="exec-af-sub" data-tone="warn">{r.targetNoteHref && r.targetNote ? <a href={r.targetNoteHref}>{r.targetNote}</a> : r.targetNote}</span></> : null}
         </td>
         <td><StepBar row={r} /> <span className="exec-af-dim">{r.progress}</span></td>
         <td><span className="exec-sb-status" data-tone={r.status.tone}>{r.status.label}</span></td>

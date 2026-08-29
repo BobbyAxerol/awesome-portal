@@ -25,6 +25,7 @@ import type { SubscriptionState } from "../subscription";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { smokeMotionAllowed } from "../smokeMotion";
+import { canonicalHref } from "../links";
 import { advanceAsOf, ccSmoke, jitter, useSmokeTick, type MatrixCell, type Pipeline, type StageKey } from "../commandCenter.smoke";
 
 const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
@@ -222,7 +223,7 @@ export function PinnedWatchlist({ panel }: { panel: PinnedPanel }) {
               {smoke?.pins[pin.label] ? <span className="exec-cc-stagechip" data-stage={smoke.pins[pin.label].stage}>{smoke.pins[pin.label].stage === "CANARY" ? "⛨ " : ""}{smoke.pins[pin.label].stage}</span> : null}
               <span className="exec-cc-pinlabel">
                 {pin.label}
-                {smoke?.pins[pin.label] ? <span className="exec-cc-pinmeta"> · {smoke.pins[pin.label].venue} · {smoke.pins[pin.label].deploymentId}</span> : null}
+                {smoke?.pins[pin.label] ? <span className="exec-cc-pinmeta"> · {smoke.pins[pin.label].venue} · {smoke.pins[pin.label].deploymentHref ? <a href={smoke.pins[pin.label].deploymentHref}>{smoke.pins[pin.label].deploymentId}</a> : smoke.pins[pin.label].deploymentId}</span> : null}
               </span>
               <span className="exec-cc-spacer" />
               {pin.targetAvailable ? (
@@ -261,7 +262,7 @@ export function Today({ panel }: { panel: TodayPanel }) {
           {panel.items.map((item) => (
             <li key={item.id}>
               <span className="exec-cc-todaykind">{item.kind ?? "—"}</span>
-              <a href={item.href ?? undefined}>{item.label}</a>
+              <a href={canonicalHref(item.href) ?? undefined}>{item.label}</a>
             </li>
           ))}
         </ul>
@@ -297,9 +298,9 @@ function MatrixCellView({ cell }: { cell: MatrixCell }) {
   if (cell.kind === "done") {
     return (
       <span className="exec-cc-mx-done">
-        <span className="exec-cc-mx-check">✓ {cell.label}</span>
+        <span className="exec-cc-mx-check">✓ {cell.href ? <a href={cell.href}>{cell.label}</a> : cell.label}</span>
         {cell.ref ? <span className="exec-cc-mx-chip">● {cell.ref}</span> : null}
-        {cell.venue ? <span className="exec-cc-mx-venue"> {cell.venue}</span> : null}
+        {cell.venue ? <span className="exec-cc-mx-venue"> {cell.venueHref ? <a href={cell.venueHref}>{cell.venue}</a> : cell.venue}</span> : null}
         {cell.paused ? <span className="exec-cc-mx-paused" title="paused"> ⏸</span> : null}
       </span>
     );

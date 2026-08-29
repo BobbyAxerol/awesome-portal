@@ -156,7 +156,7 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
     <>
       <tr className="exec-af-row" data-dim={row.dim ? "true" : undefined} onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
         <td className="exec-af-mark">{expandable ? (isOpen ? "▾" : "▸") : ""}</td>
-        <td><A href={row.href} bold>{row.alpha}</A><div className="exec-af-sub">{row.id} · {row.digest}{row.status ? ` · ${row.status}` : ""}</div></td>
+        <td><A href={row.href} bold>{row.alpha}</A><div className="exec-af-sub"><A href={row.href}>{row.id}</A> · {row.digest}{row.status ? ` · ${row.status}` : ""}</div></td>
         <td className="exec-af-dim">{row.owner}{row.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{row.portfolios.map((p, i) => <span key={p.label}>{i ? " → " : ""}<A href={p.href}>{p.label}</A></span>)}</div> : null}</td>
         <td><span className="exec-af-stages">{row.stages.map((c) => <Chip key={c.label} chip={c} />)}</span></td>
         <td data-numeric="true">{row.alloc ?? <span className="exec-af-mute">—</span>}{row.allocCcy ? <> <span data-tone="warn">{row.allocCcy}</span></> : null}</td>
@@ -178,7 +178,7 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
             <td />
             <td>└ <a href={d.href}>{d.id}</a></td>
             <td className="exec-af-mute">{d.venueMode}</td>
-            <td><Chip chip={d.chip} /> <span className="exec-af-mute" data-tone={d.chipNoteTone}>{d.chipNote}</span></td>
+            <td><Chip chip={d.chip} /> <span className="exec-af-mute" data-tone={d.chipNoteTone}><Note text={d.chipNote} links={d.chipNoteLinks} /></span></td>
             <td data-numeric="true">{d.alloc}</td>
             <td data-numeric="true">{p ? <span data-tone="good">{p}{d.pnlCcy ? <> <span data-tone="warn">{d.pnlCcy}</span></> : null}</span> : <span className="exec-af-mute">—</span>}</td>
             <td data-numeric="true" className="exec-af-dim">{d.dd ?? <span className="exec-af-mute">—</span>}</td>

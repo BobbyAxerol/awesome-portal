@@ -37,7 +37,7 @@ export interface SbRow {
   alpha: string; dep: string; href: string;
   venue: string; account: string; accountHref: string;
   portfolio: string; portfolioHref: string;
-  target: string | null; targetNote: string | null;
+  target: string | null; targetNote: string | null; targetNoteHref?: string | null;
   segments: SbSeg[]; progress: string;
   status: { label: string; tone: "warn" | "bad" };
   inStage: string; stalled?: boolean;
@@ -62,7 +62,7 @@ export const SANDBOX_SMOKE_DATA = {
       alpha: "Carry v3.2", dep: "dep_77", href: "/deployments/sandbox/dep_77",
       venue: "OKX TESTNET", account: "acct-sbx-carry-okx", accountHref: "/deployments/accounts/acct-sbx-carry-okx",
       portfolio: "PF-CRYPTO", portfolioHref: "/deployments/portfolios/PF-CRYPTO",
-      target: "PF-MAIN", targetNote: "AP-352 pending",
+      target: "PF-MAIN", targetNote: "AP-352 pending", targetNoteHref: "/governance/approvals/AP-352/r2",
       segments: ["ok", "ok", "ok", "ok", "warn", "todo", "todo"], progress: "5/7 · smoke",
       status: { label: "⛔ HALTED · operator", tone: "warn" },
       inStage: "9d",
@@ -147,7 +147,7 @@ export function sandboxSmoke() {
  * ------------------------------------------------------------------------ */
 
 export interface CertStep { n: number; label: string; state: string; tone: SbTone; pending?: boolean }
-export interface CertKV { k: string; v: string; tone?: SbTone }
+export interface CertKV { k: string; v: string; tone?: SbTone; href?: string }
 export interface CertFinding {
   status: string; statusTone: "bad" | "warn" | "good";
   severity: string; severityTone: SbTone;
@@ -199,7 +199,8 @@ export const CERT_SMOKE_DATA: Record<string, CertSmoke> = {
       { k: "R1", v: "AP-101", href: "/governance/approvals/AP-101/r1" },
       { k: "R2", v: "AP-207", href: "/governance/approvals/AP-207/r2" },
       { k: "paper exit", v: "PX-29", href: "/governance/exit-reviews/PX-29" },
-      { k: "portfolio", v: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO", tail: " → target PF-MAIN (R2 AP-352 pending)" },
+      { k: "portfolio", v: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO", tail: " → target PF-MAIN" },
+      { k: "gate", v: "R2 AP-352 pending", href: "/governance/approvals/AP-352/r2" },
       { k: "deployment", v: "dep_77", href: "/deployments/sandbox/dep_77" },
       { k: "account", v: "acct-sbx-carry-okx", href: "/deployments/accounts/acct-sbx-carry-okx", tail: " ↔ external_account_ref okx_main_01" },
       { k: "credential", v: "OKX-01 VALID", tone: "good" },
@@ -243,7 +244,8 @@ export const CERT_SMOKE_DATA: Record<string, CertSmoke> = {
         { k: "quantity", v: "0.0010 BTC-USDT-SWAP" },
         { k: "capital cap", v: "50.00 USDT" },
         { k: "timebox", v: "30 min · auto-halt on expiry" },
-        { k: "operator", v: "Stan · approved by AP-207 scope" },
+        { k: "operator", v: "Stan" },
+        { k: "approval", v: "AP-207 · sandbox scope", href: "/governance/approvals/AP-207/r2" },
       ],
     },
     cleanup: {

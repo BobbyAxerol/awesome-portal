@@ -99,7 +99,7 @@ function LiveRows({ r, j, sp, incAge }: { r: LiveRow; j: number; sp: number[]; i
   return (
     <>
       <tr className="exec-af-row exec-lv-row" data-hot={r.hot ? "true" : undefined}>
-        <td className="exec-lv-edge"><a href={r.alphaHref}><b>{r.alpha}</b></a> · {r.dep}<div className="exec-af-sub">{r.sub}</div></td>
+        <td className="exec-lv-edge"><a href={r.alphaHref}><b>{r.alpha}</b></a> · {r.dep}<div className="exec-af-sub"><Note text={r.sub} links={r.subLinks} /></div></td>
         <td><span className="exec-ab-chip" data-tone="bad" data-strong="true" data-shield={r.stage.canary ? "true" : undefined}>{r.stage.label}</span></td>
         <td className="exec-af-dim">{r.venue} · <a href={r.accountHref}>{r.account}</a> · <a href={`/deployments/portfolios/${r.portfolio}`}>{r.portfolio}</a></td>
         <td data-numeric="true">{r.alloc}</td>

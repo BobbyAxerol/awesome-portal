@@ -1626,3 +1626,36 @@ exemption thêm `gov|gate`; token mới `--warn-bg`(light)/`--gov-exit`. Tests
   tabs "pointer" thừa; root mang `.exec-gov` để ăn polish.
 - Journey R2→R1 đổi theo metaline chip link (tab R1 reference đã bỏ).
   Tests 1724 pass.
+
+### 8.34 Link sweep toàn màn + `canonicalHref` adapter (2026-08-30)
+
+Owner yêu cầu: "rà soát lại tất cả các màn chỗ nào đang còn không link tới
+nhau thì fix nốt". Cách rà: crawler `e2e/_probe-links-all.spec.ts` đi 27
+route, gom mọi `a[href^=/]` rồi ghé từng đích — đích nào registry trả "No
+feature in the current registry claims this route" là dead link; đồng thời
+liệt kê entity id trần (AP-/EX-/PX-/dep_/av_/acct-/inc_/PF-) không nằm trong
+anchor/button. Crawler giờ là **gate thật** (assert dead = 0) chạy trong
+project `chromium-preview`.
+
+- **Kết quả**: DEAD LINKS 0/27 route. Id trần đã nối trên mọi màn: Command
+  Center (pipeline ✓, venue, pin deployment), Live Overview (sub → R2), Alpha
+  Fleet (id row, PF-MAIN, note/chipNote → deployment/approval), Sandbox
+  (target note, cert KV AP-207/AP-352, lineage), Portfolio 360
+  (`workbenchRouteFor` holdings), Canary (envelope AP-311, twin dep_94, gates
+  tail), Operations Queue (target acct → Account 360), Incident (subject
+  acct), Accounts/Bindings (whoLinks, note inc_44).
+- **`src/execution/links.ts` — `canonicalHref()`**: hai fixture đã publish
+  mang route sai mà frontend không được sửa (drift test khoá byte-equality
+  với `packages/contracts/fixtures`):
+  1. `commandCenter.fixtures.ts` — `/execution/operations/op_1249`; route
+     thật là dạng query `/execution/operations?operation=op_1249`.
+  2. `certification.fixtures.ts` — `/deployments/paper/exit/PX-29`; route
+     thật là `/governance/exit-reviews/PX-29`.
+  Adapter map hai dạng này tại render edge (CommandCenter anchor + onOpen
+  navigate, SandboxCertification lineage). **@codex request**: sửa hai route
+  này tại nguồn fixture; khi fixture đúng, adapter thành no-op và sẽ xoá.
+- **Bỏ qua có chủ ý** (ghi để lần audit sau không tưởng là sót): chip
+  deployment trong Blotter (stage không suy được từ row contract — link bịa
+  là nói dối); `EX-nn` trong SMOKE note (là số BR-EX, không phải exit
+  review); option trong select; masthead tự trỏ mình; caption chart; id có
+  anchor tường minh ngay cạnh (vd AP-360 "review →" ở Alpha Fleet).

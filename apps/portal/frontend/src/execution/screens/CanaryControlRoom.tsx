@@ -222,7 +222,7 @@ export function CanaryControlRoomScreen({
                   <footer className="exec-pf2-foot">{smoke.chart.foot}</footer>
                 </section>
                 <section className="exec-pf2-panel" aria-label="Canary envelope (hi-fi)">
-                  <header className="exec-pf2-head"><span className="exec-pf2-title">Canary envelope · {smoke.envelope.id}</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">breach ⇒ auto-halt</span></header>
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">Canary envelope · <a href={`/governance/approvals/${smoke.envelope.id}/r2`}>{smoke.envelope.id}</a></span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">breach ⇒ auto-halt</span></header>
                   <div className="exec-pf2-bars">
                     {smoke.envelope.rows.map((r) => <div key={r.k}><div className="exec-pf2-barrow"><span>{r.k}</span><span className="exec-pf2-barval" data-tone={r.tone}>{r.v}</span></div><div className="exec-pf2-bar"><div className="exec-pf2-barfill" data-tone={r.tone ?? "accent"} style={{ width: `${r.pct}%` }} /></div></div>)}
                     <p className="exec-pf2-note">{smoke.envelope.note}</p>
@@ -259,7 +259,7 @@ export function CanaryControlRoomScreen({
               <div className="exec-pf2-grid" data-ratio="1">
                 <section className="exec-pf2-panel" aria-label="Exit readiness (hi-fi)">
                   <header className="exec-pf2-head"><span className="exec-pf2-title">Exit readiness — gates {smoke.gates.done}/{smoke.gates.total}</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">server-enforced · mirror only</span></header>
-                  <div className="exec-cn-gates">{smoke.gates.rows.map((g) => <span key={g.t} data-ok={g.ok ? "true" : "false"}>{g.ok ? "✓" : "✗"} {g.t.includes("{exitIn}") ? <>{g.t.split("{exitIn}")[0]}<b data-tone="warn">{left}</b>{g.t.split("{exitIn}")[1]}</> : g.t}{g.link ? <a href={g.link.href}>{g.link.label}</a> : null}</span>)}</div>
+                  <div className="exec-cn-gates">{smoke.gates.rows.map((g) => <span key={g.t} data-ok={g.ok ? "true" : "false"}>{g.ok ? "✓" : "✗"} {g.t.includes("{exitIn}") ? <>{g.t.split("{exitIn}")[0]}<b data-tone="warn">{left}</b>{g.t.split("{exitIn}")[1]}</> : g.t}{g.link ? <a href={g.link.href}>{g.link.label}</a> : null}{g.tail ?? null}</span>)}</div>
                   <div className="exec-cn-cta"><span>{smoke.gates.cta}</span></div>
                 </section>
                 <section className="exec-pf2-panel" aria-label="Portfolio marginal contribution (hi-fi)">
