@@ -10,6 +10,11 @@ const ROUTES: [string, string][] = [
 ];
 
 test("paper link map", async ({ page }) => {
+  // This diagnostic intentionally visits every internal link on three dense
+  // screens. It normally completes in about a minute in isolation, but shares
+  // four browser workers in the full visual suite; keep its bound explicit so
+  // host load cannot turn a clean link map into a false timeout.
+  test.setTimeout(180_000);
   await freezeClock(page); await usePreferences(page, "operations"); await stubPortalApi(page, "healthy");
   await page.setViewportSize({ width: 1440, height: 900 });
   const out: string[] = [];

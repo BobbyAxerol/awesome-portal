@@ -480,7 +480,14 @@ test.describe("EL-V2-06 · stage workbenches", () => {
 
     test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
       await open(page, route);
-      await expect(page).toHaveScreenshot(`el-v2-06-${name}.png`, { fullPage: true, animations: "disabled" });
+      await expect(page).toHaveScreenshot(`el-v2-06-${name}.png`, {
+        fullPage: true,
+        animations: "disabled",
+        // Canary carries the heaviest stage canvas. It is pixel-stable in
+        // isolation but can need another capture cycle under the full visual
+        // suite's four-worker load; do not weaken its diff threshold.
+        ...(name === "canary-dep_88" ? { timeout: 15_000 } : {}),
+      });
     });
   }
 
@@ -565,10 +572,17 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
 
   test("Alpha 360: changing the venue scope changes every scoped panel", async ({ page }) => {
     await open(page, "/deployments/alphas/av_2041");
-    const before = await page.locator("[data-scope-panel]").evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
+    const panels = page.locator("[data-scope-panel]");
+    await expect.poll(() => panels.count()).toBeGreaterThanOrEqual(4);
+    const before = await panels.evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
     await page.getByLabel(/Venue/).selectOption("BINANCE");
     await expect(page).toHaveURL(/venue=BINANCE/);
-    const after = await page.locator("[data-scope-panel]").evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
+    // The query string is committed before React finishes the route-state
+    // render. Wait for a scoped fact instead of reading the transient empty
+    // remount between those two events.
+    await expect(page.getByText(/not published for scope BINANCE/).first()).toBeVisible();
+    await expect.poll(() => panels.count()).toBe(before.length);
+    const after = await panels.evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
     expect(after.length).toBe(before.length);
     const changed = after.filter((a, i) => a[1] !== before[i][1]).length;
     expect(changed).toBe(after.length);
