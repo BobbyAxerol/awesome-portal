@@ -25,7 +25,10 @@ services:
         soft: 1024
         hard: 4096
     ports:
-      - "${EDGE_PRIVATE_BIND_IP:?set the WireGuard address}:8443:8443"
+      # Run profile-isolated Compose projects on distinct private host ports
+      # (recommended: Paper 8443, Sandbox 8444, Live 8445). Container traffic
+      # remains fixed on 8443 and no port binds a public interface.
+      - "${EDGE_PRIVATE_BIND_IP:?set the WireGuard address}:${EDGE_PRIVATE_PORT:-8443}:8443"
     volumes:
       - type: bind
         source: ${EDGE_SECRET_DIRECTORY:?set the root-only edge secret directory}

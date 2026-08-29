@@ -576,6 +576,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/execution/current-source.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution/current-source.proxy.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-current-source.spec.ts" \
+  "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.service.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/auth.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/auth/argon.ts" \
@@ -1414,6 +1415,11 @@ docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.production.example" \
   -f "${ROOT_DIR}/deploy/compose.production.yaml" \
   -f "${ROOT_DIR}/deploy/compose.execution-shadow-query.yaml" config --quiet
+CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY=/srv/primus/control-api/execution-edge-secrets \
+docker compose --project-directory "${ROOT_DIR}" \
+  --env-file "${ROOT_DIR}/deploy/.env.production.example" \
+  -f "${ROOT_DIR}/deploy/compose.production.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" config --quiet
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
 "${ROOT_DIR}/scripts/execution-d2-test.sh"
 "${ROOT_DIR}/scripts/execution-d3-test.sh"
