@@ -6379,7 +6379,7 @@
 .exec-cli-groupname { font: 400 10px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-mute); padding-bottom: 5px; border-bottom: 1px solid var(--line); margin: 0 0 4px; }
 .exec-cli-row { display: block; width: 100%; text-align: left; padding: 7px 10px; border: 1px solid var(--line-soft); border-left: 3px solid transparent; background: var(--paper); margin-bottom: 3px; cursor: pointer; color: inherit; }
 .exec-cli-row[data-selected] { border-left-color: var(--accent); background: var(--paper-raised); }
-.exec-cli-rowhead { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.exec-cli-rowhead { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
 .exec-cli-rowtitle { font: 400 12px/1.5 var(--font-sans); color: var(--ink); }
 .exec-cli-tag { font: 600 9px/1.6 var(--font-mono); letter-spacing: 0.06em; padding: 0 5px; }
 .exec-cli-tag[data-size="lg"] { font: 600 10px/1.6 var(--font-mono); padding: 1px 7px; }
