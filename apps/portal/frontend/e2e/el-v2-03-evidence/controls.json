@@ -314,69 +314,85 @@
  {
   "route": "/governance/approvals",
   "index": 0,
+  "tag": "A",
+  "text": "New request ▸",
+  "verdict": "navigated",
+  "detail": "/governance/approvals/new"
+ },
+ {
+  "route": "/governance/approvals",
+  "index": 1,
+  "tag": "A",
+  "text": "Waivers & conditions →",
+  "verdict": "navigated",
+  "detail": "/governance/waivers"
+ },
+ {
+  "route": "/governance/approvals",
+  "index": 2,
   "tag": "BUTTON",
   "text": "Mine (3)",
   "verdict": "skipped:selected"
  },
  {
   "route": "/governance/approvals",
-  "index": 1,
+  "index": 3,
   "tag": "BUTTON",
   "text": "All",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 2,
+  "index": 4,
   "tag": "BUTTON",
   "text": "Research · R1",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 3,
+  "index": 5,
   "tag": "BUTTON",
   "text": "Ops · R2",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 4,
+  "index": 6,
   "tag": "BUTTON",
   "text": "Paper",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 5,
+  "index": 7,
   "tag": "BUTTON",
   "text": "Sandbox",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 6,
+  "index": 8,
   "tag": "BUTTON",
   "text": "Live gates",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 7,
+  "index": 9,
   "tag": "BUTTON",
   "text": "Exit reviews",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 8,
+  "index": 10,
   "tag": "BUTTON",
   "text": "Overdue",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals",
-  "index": 9,
+  "index": 11,
   "tag": "A",
   "text": "AP-352",
   "verdict": "navigated",
@@ -384,7 +400,7 @@
  },
  {
   "route": "/governance/approvals",
-  "index": 10,
+  "index": 12,
   "tag": "A",
   "text": "AP-201",
   "verdict": "navigated",
@@ -392,7 +408,7 @@
  },
  {
   "route": "/governance/approvals",
-  "index": 11,
+  "index": 13,
   "tag": "A",
   "text": "EX-771",
   "verdict": "navigated",
@@ -400,7 +416,7 @@
  },
  {
   "route": "/governance/approvals",
-  "index": 12,
+  "index": 14,
   "tag": "A",
   "text": "AP-341",
   "verdict": "navigated",
@@ -408,7 +424,7 @@
  },
  {
   "route": "/governance/approvals",
-  "index": 13,
+  "index": 15,
   "tag": "A",
   "text": "AP-259",
   "verdict": "navigated",
@@ -416,7 +432,7 @@
  },
  {
   "route": "/governance/approvals",
-  "index": 14,
+  "index": 16,
   "tag": "A",
   "text": "PX-31",
   "verdict": "navigated",
@@ -454,20 +470,28 @@
  {
   "route": "/governance/approvals/AP-352/r2",
   "index": 1,
+  "tag": "A",
+  "text": "open conditions fleet-wide →",
+  "verdict": "navigated",
+  "detail": "/governance/waivers"
+ },
+ {
+  "route": "/governance/approvals/AP-352/r2",
+  "index": 2,
   "tag": "INPUT",
   "text": "",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
-  "index": 2,
+  "index": 3,
   "tag": "BUTTON",
   "text": "Deny",
   "verdict": "changed"
  },
  {
   "route": "/governance/approvals/AP-352/r2",
-  "index": 3,
+  "index": 4,
   "tag": "BUTTON",
   "text": "Approve",
   "verdict": "changed"
@@ -586,20 +610,28 @@
  {
   "route": "/governance/exit-reviews/EX-771",
   "index": 14,
+  "tag": "A",
+  "text": "fleet-wide →",
+  "verdict": "navigated",
+  "detail": "/governance/waivers"
+ },
+ {
+  "route": "/governance/exit-reviews/EX-771",
+  "index": 15,
   "tag": "BUTTON",
   "text": "Approve promotion",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 15,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Extend observation +14d",
   "verdict": "changed"
  },
  {
   "route": "/governance/exit-reviews/EX-771",
-  "index": 16,
+  "index": 17,
   "tag": "BUTTON",
   "text": "Reject — back to Paper HELD",
   "verdict": "changed"
@@ -1377,7 +1409,7 @@
   "tag": "A",
   "text": "AP-311",
   "verdict": "navigated",
-  "detail": "/governance/approvals/AP-311/r2"
+  "detail": "/governance/approvals/AP-311/live"
  },
  {
   "route": "/deployments/live/dep_88/canary",
