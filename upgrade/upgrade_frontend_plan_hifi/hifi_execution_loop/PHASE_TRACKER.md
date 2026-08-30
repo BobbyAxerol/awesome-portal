@@ -105,7 +105,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source owner/Codex activation parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
 | 16 | Portfolio 360° (1h→3a) | **screen built** (3 representations, fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner:** publish packed `sample_counts`; Claude labels per-cell floor unavailable | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
 | 17 | Account/Broker 360° (1g) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner:** publish authoritative aggregate exposure verdict; Claude keeps unavailable, never sums | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
-| 18 | Hardening | `BLOCKED` | `OPERATIONAL_EVIDENCE_PENDING` | live EX-BE-08 cross-cell/load/soak/DR; offline foundation delivered | BE: 81-test sealed-corpus/replay qualification gate; production SLO/restore/rollback evidence remains; master plan §§13–14 |
+| 18 | Hardening | `PAPER_PRIVATE_QUERY_QUALIFIED / PRODUCTION_INACTIVE` | `OPERATIONAL_EVIDENCE_PENDING` | publish the signed dev image, activate one resource-scoped Paper screen, then collect product-path load/fault/soak/SLO evidence; Sandbox/Live/Command remain separate | N17B private path: 25/25 paced H2/mTLS/JWT reads + 401/403/405 negatives; N17A restore/rollback evidence retained; debt closeout linked below |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
 tested (§4). What is blocked is wiring it to a real command endpoint — the
@@ -2703,7 +2703,7 @@ command.
 
 | Phase | Lane A — Portal continues now | Lane B — external/live gate | Current status |
 |---|---|---|---|
-| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B` |
+| N13 | delivery-profile state machine, repositories/APIs, evidence validation, rollback fixtures | map every screen field/action to current Manager-v2/Gateway/market/Portal source; qualify Paper/Sandbox/Live reads independently; Canary joins Portal governance to Live facts | `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK` |
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | exact Paper source/profile/adapter/image/rollback compatibility adjunct accepted; runtime remains dark | `N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED` |
 | N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | exact current Paper Query accepted; Command deferred N16B; Event/Artifact typed absent | `N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK` |
 | N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | one exact current primitive accepted: `live.emergency-close` for `LIVE_FULL / ACCOUNT`; eight other N12 commands typed inactive/absent; source/public/runtime mutation remains dark | `N16A_COMPLETE_SOURCE_DARK / N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK` |
@@ -2820,9 +2820,10 @@ Backend report:
 Claude handoff:
 [`CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md`](./CODEX_TO_CLAUDE_N16B_CURRENT_PROTECTIVE_HANDOFF.md).
 
-N17B is next. Read slices may qualify independently. The Live emergency path
-cannot make its first source call until the exact Account, bounded change
-window, abort/rollback owner and Bobby mutation sign-off are recorded.
+N17B has closed the exact current Paper read set. The Live emergency path
+remains independently inactive and cannot make its first source call until the
+exact Account, bounded change window, abort/rollback owner and Bobby mutation
+sign-off are recorded.
 
 ### N17A backend — Source-dark production/DR preparation (2026-08-27)
 
@@ -2902,3 +2903,20 @@ Backend report:
 [`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](../../backend/EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).  
 Claude handoff:
 [`CODEX_TO_CLAUDE_N13B_CURRENT_SOURCE_HANDOFF.md`](./CODEX_TO_CLAUDE_N13B_CURRENT_SOURCE_HANDOFF.md).
+
+### N13B–N17B Debt Closeout (2026-08-30)
+
+| Boundary | Backend truth | Frontend/merge rule |
+| --- | --- | --- |
+| merge | `MERGE_READY / NO_OPEN_MERGE_BLOCKER` | merge reviewed backend into `dev`; never `main`/stable from this decision |
+| product data | `TRANSPORT_ACCEPTED / PRODUCT_RUNTIME_INACTIVE` | no accepted Paper current-source payload until the resource/workspace-scoped API and signed dev activation gate pass |
+| scaling | `ONE_SOURCE_CONSUMING_REPLICA_BOUNDED` | do not scale source-consuming Control API replicas until Edge-global/per-profile admission is implemented |
+| realtime/artifact | `SOURCE_DOES_NOT_CURRENTLY_EXIST` | no fake owner event, fake stream or fake artifact |
+| profiles/commands | `PAPER_PRIVATE_QUERY_QUALIFIED / SANDBOX_LIVE_COMMAND_INACTIVE` | keep each unavailable action hidden or typed unavailable; reads never enable commands |
+| Claude intake | `BR-EX-67 RECEIVED / NEXT BR-EX-68` | R1/R2 policy verdicts stay server-owned; smoke retires only after contract delivery |
+
+Canonical register:
+[`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](../../backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
+It owns residual IDs, severity, containment and target gates. N01–N08/N11/N12
+remain the ideal/future-capability lane and do not reopen the exact N17B Paper
+acceptance.

@@ -145,3 +145,22 @@ remains open. The next delivery action is normal branch integration: review and
 merge this commit into `dev`, publish the signed dev Control API image, then
 open a separate Paper-only dev activation window. Live mutation remains a
 future independently scoped owner action; it is not a hidden N17B blocker.
+
+## 10. Debt closeout
+
+The post-acceptance review found no open merge blocker and did not reopen
+N17B. Residual work is now classified, owned and fail-closed in
+[`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./EX_BE_N13_N17_DEBT_CLOSEOUT.md):
+
+- resource/workspace-scoped product payload and multi-replica admission are
+  activation blockers, not accepted N17B behavior;
+- canonical source compatibility moves back behind the Rust Edge boundary
+  before the exact current slice is widened;
+- signed dev publication and post-deploy product soak remain separate from the
+  already-passed private transport probe;
+- missing Event/Artifact, market/calendar and wider command capabilities stay
+  typed future-contract limitations;
+- BR-EX-41…67 is the next product delivery backlog, not hidden N17B debt.
+
+No item in the register authorizes `main`/stable release, profile promotion,
+SSE, Sandbox/Live read or command mutation.

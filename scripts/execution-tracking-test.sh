@@ -39,6 +39,7 @@ N17A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR
 N17A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md"
 N17B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md"
 N17B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17B_EXACT_SET_HANDOFF.md"
+DEBT_CLOSEOUT="${ROOT_DIR}/upgrade/backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 
 for required_file in \
     "${OWNER_MASTER_REQUEST}" \
@@ -58,7 +59,8 @@ for required_file in \
     "${N17A_REPORT}" \
     "${N17A_HANDOFF}" \
     "${N17B_REPORT}" \
-    "${N17B_HANDOFF}"
+    "${N17B_HANDOFF}" \
+    "${DEBT_CLOSEOUT}"
 do
     if [[ ! -f "${required_file}" ]]; then
         echo "execution owner/phase plan is missing: ${required_file}" >&2
@@ -79,7 +81,7 @@ do
     fi
 done
 for token in \
-    "N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B" \
+    "N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK" \
     "N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED" \
     "N15A_COMPLETE_SOURCE_DARK / N15B_CURRENT_QUERY_ACCEPTED / PRODUCT_RUNTIME_DARK" \
     "N16A_COMPLETE_SOURCE_DARK / N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED / PRODUCT_RUNTIME_DARK" \
@@ -345,6 +347,32 @@ if ! grep -Fq "N17B backend — Exact current-set production acceptance" "${TRAC
     echo "shared tracker lost N17B closeout section" >&2
     exit 1
 fi
+
+for token in \
+    "MERGE_READY / PRODUCT_RUNTIME_INACTIVE" \
+    "No \`MERGE_BLOCKER\` remains open" \
+    "TD-EX-01" \
+    "TD-EX-02" \
+    "TD-EX-03" \
+    "TD-EX-06" \
+    "TD-FC-01" \
+    "BR-EX-41…67"
+do
+    if ! grep -Fq "${token}" "${DEBT_CLOSEOUT}"; then
+        echo "N13B-N17B debt closeout lost invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "BR-EX-67" \
+    "_next: BR-EX-68_" \
+    "EX_BE_N13_N17_DEBT_CLOSEOUT.md"
+do
+    if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
+        echo "execution unified plan lost debt/request reconciliation: ${token}" >&2
+        exit 1
+    fi
+done
 
 python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" "${N09_REPORT}" "${N09_HANDOFF}" <<'PY'
 from pathlib import Path

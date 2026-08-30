@@ -14,9 +14,15 @@ Chúng không thay thế phase hoặc exit gate trong
   evidence ladder. Older D4, Claude, N11 and N12 request prose is audit or a
   machine annex and must not be sent separately.
 - [Execution Loop backend unified plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
-  now splits every remaining N13–N17 phase into `A` (Portal-owned,
-  source-dark, can continue immediately) and `B` (owner artifacts or real
-  runtime required). A completion never implies B activation.
+  records the completed N13–N17 `A` (Portal-owned/source-dark) and `B`
+  (current-source acceptance) lanes. Phase acceptance never implies product
+  activation.
+
+- [N13B–N17B Debt Closeout](./EX_BE_N13_N17_DEBT_CLOSEOUT.md)
+  — **merge-ready / product runtime inactive:** no open merge blocker; every
+  residual item is classified as activation blocker, future contract or
+  delivery backlog with owner, containment and target gate. This is the single
+  active debt register for the closed source-as-is campaign.
 
 - [N15B — Current-capability inter-cell gateway acceptance](./EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md)
   — **Query contract accepted / product runtime dark:** exact Paper profile,
@@ -1211,7 +1217,8 @@ durable run/attempt events. Detailed evidence:
   venue calendar remains honestly absent. Runtime profile flags and registry
   data modes remain unchanged until N14B.
 - Status is `N13B_PORTAL_IMPLEMENTATION_ACCEPTED /
-  CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK_PENDING_N14B`. Detail:
+  CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK`. N14B–N17B are accepted;
+  the remaining dark state is an intentional product-activation boundary. Detail:
   [`EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md`](./EX_BE_08_N13B_CURRENT_SOURCE_STAGED_ACTIVATION.md).
 
 ## Backend state — 2026-08-29 (N14B immutable current-source compatibility)
@@ -1262,6 +1269,21 @@ durable run/attempt events. Detailed evidence:
   Reconciliation is not cancellation, and R4 resume/scale cannot inherit R3.
 - Public route, command transport, source call and Live mutation remain false.
   Status is `N16B_CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED /
-  PRODUCT_RUNTIME_DARK`; N17B owns the exact Account/window activation and real
-  acknowledgement/verification evidence. Detail:
+  PRODUCT_RUNTIME_DARK`. N17B closed the exact Paper read set; a real Live
+  command still requires its own Account/window/identity/approval and terminal
+  verification gate. Detail:
   [`EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md`](./EX_BE_19_N16B_CURRENT_PRIMITIVE_PROTECTIVE_PATH_ACCEPTANCE.md).
+
+## Backend state — 2026-08-30 (N17B acceptance and debt closeout)
+
+- N17B remains `N17B_EXACT_CURRENT_SET_ACCEPTED /
+  PAPER_PRIVATE_QUERY_QUALIFIED / SIGNED_PRODUCT_IMAGE_NOT_PUBLISHED /
+  LIVE_MUTATION_INACTIVE`.
+- The branch has no open merge blocker. Resource-scoped product payload,
+  multi-replica quota, canonical Rust compatibility ownership, signed dev
+  publication and post-deploy product soak are explicit activation gates.
+- Missing Event/Artifact, inactive market/calendar adapters and wider commands
+  are future-contract limitations and remain typed unavailable.
+- BR-EX-67 is canonical; the next request identifier is BR-EX-68.
+- Full register:
+  [`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./EX_BE_N13_N17_DEBT_CLOSEOUT.md).

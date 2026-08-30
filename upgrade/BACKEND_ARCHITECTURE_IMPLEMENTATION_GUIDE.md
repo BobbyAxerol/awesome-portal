@@ -1654,6 +1654,16 @@ activation or the phase):**
   made. See
   [`EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md`](./backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md).
 
+- **N13B–N17B debt closeout (2026-08-30):** the accepted private Paper
+  compatibility path has no open merge blocker, but product runtime remains
+  inactive. The canonical debt register separates resource/workspace-scoped
+  screen payloads, multi-replica admission, canonical Rust compatibility
+  ownership, signed dev publication and post-deploy soak as activation gates;
+  missing Event/Artifact, market/calendar and wider command capabilities are
+  future-contract limitations. BR-EX-41…67 remains the next delivery backlog,
+  not hidden N17B work. See
+  [`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

@@ -3,7 +3,7 @@
 > **Backend owner:** Codex  
 > **Frontend owner:** Claude  
 > **Product/release owner:** Bobby  
-> **Baseline:** `dev` at `bacbcee`, 2026-08-25  
+> **Baseline:** `dev` at `06c658f`; N13B–N17B phase head `7f67068`, 2026-08-30  
 > **Document status:** `COORDINATION_AUTHORITY_ACTIVE / IMPLEMENTATION_NOT_AUTHORIZED_BY_THIS_FILE`  
 > **Scope:** Portal Execution Loop backend, Paper read integration, Trading System compatibility,
 > activation, hardening and every current/future Claude backend request.
@@ -196,6 +196,10 @@ typed unavailable states and sanitized parity artifacts only.
 | EX-BE-08a | `OFFLINE_FOUNDATION_COMPLETE / LIVE_EVIDENCE_PENDING` | real-source parity, fault/load/soak/restore/rollback |
 | PRE-IAM-01…06 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | no reopening; later phases consume their contracts/evidence |
 
+The N02–N08/N11 rows above preserve the ideal v2/full-capability lane. They are
+not global blockers for the N17B exact current Paper adapter accepted on
+2026-08-29. The debt and activation boundary for that accepted slice is §3.6.
+
 ### 2.4 Product-screen backend state
 
 | Product phase | Screen | Backend state | Primary remaining dependency |
@@ -218,7 +222,7 @@ typed unavailable states and sanitized parity artifacts only.
 | 15 | Alpha 360 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-34/40, source parity/no-N+1 evidence |
 | 16 | Portfolio 360 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-27/34/40, 150×150 source/load evidence |
 | 17 | Account/Broker 360 | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | BR-EX-26, full-population source evidence |
-| 18 | Hardening | `OPERATIONAL_EVIDENCE_PENDING` | chosen target subset active through soak/restore/rollback |
+| 18 | Hardening | `PAPER_PRIVATE_QUERY_QUALIFIED / PRODUCTION_INACTIVE / OPERATIONAL_EVIDENCE_PENDING` | signed dev product image, resource-scoped screen activation and post-deploy load/fault/soak/SLO evidence |
 
 `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` is not a synonym for product complete. It says the
 Portal-owned route/repository/contract exists and is intentionally not reading production authority.
@@ -381,6 +385,27 @@ Read and command identities stay separate. A read-profile success never grants
 mutation authority. Unsupported command target scopes are hidden or returned
 as typed unavailable; Portal does not broaden the semantics of an existing
 primitive.
+
+### 3.6 N13B–N17B debt closeout — 2026-08-30
+
+N17B closes the exact current Paper compatibility/transport set; it does not
+claim a product-visible screen, a signed dev deployment, an ACTIVE projection,
+authoritative owner events or a Live command. The residual work is classified
+in the single canonical register
+[`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
+
+There is no open `MERGE_BLOCKER`. Resource/workspace-scoped screen payloads,
+multi-replica admission, canonical Rust compatibility ownership, signed dev
+publication, projection-backed analytics, profile activation and post-deploy
+soak are explicit `ACTIVATION_BLOCKER` items. Missing Event/Artifact, market,
+calendar and command capabilities remain typed `FUTURE_CONTRACT` limitations.
+BR-EX-41…67 is a delivery backlog for the next backend campaign, not hidden
+N17B debt.
+
+N01–N08 and N11/N12 retain their ideal-contract and full-capability value, but
+their missing future owner bytes do not reopen or globally block the accepted
+N17B Paper current-source set. A later owner revision replaces a versioned
+adapter behind stable Portal output contracts.
 
 ---
 
@@ -954,7 +979,7 @@ disabled and never equate HTTP 202 with success.
 ### N13 — Staged product activation
 
 **Mapping:** product phases 4–18; delivery profile ladder.  
-**Status:** `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / PROFILE_RUNTIME_DARK_PENDING_N14B`.  
+**Status:** `N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK`.  
 **Priority:** P1 after foundations.
 
 N13 activates only capabilities mapped to current bounded sources. It does not
@@ -1323,6 +1348,9 @@ Paper feature flag/session close. The signed product image is not yet
 published, stable is unchanged, and every Sandbox/Live/Command mutation flag
 remains false. Detail:
 [`EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md`](./backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md).
+The merge/activation/future-contract boundary is closed in
+[`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md);
+no open item in that register silently reopens N17B.
 
 ---
 
@@ -1526,7 +1554,8 @@ Append rows here. Do not create another active request file.
 | BR-EX-64 | 2026-08-28 | Cross-screen — every charted series (Paper 62 · Replay 50 · Live 56/57 · Canary 59 · stage telemetry 41) | The chart rules were being written once per appendix and drifting: pre-scaled coordinates instead of points, totals that disagree with their bars, markers with no journal id, annotations floating off their day, lines interpolated through closed venues | One shared schema fragment `chart-series.rules.v1` ($ref-ed by every charted series): numeric points + ISO UTC timestamps; exact-decimal money; explicit gaps for closed venues; printed totals equal exact sums; every marker carries its journal id; annotations equal the series value at their bucket; caps + extrema-preserving downsample declared; tooltip provenance (authority · as_of · formula_version) required; multi-stage overlays share one `join_digest`; one owner for OHLC | rules bind each series' own authority (PORTAL_PROJECTION / TRADING_SYSTEM / BROKER / DERIVED) | read-only · medium: these are the honesty rules — a chart that disagrees with its caption is worse than no chart | no new endpoints; caps per BR-EX-41 | BR-EX-41/50/56/57/59/62; decision §7.5.5(1) (OHLC owner) escalated — two screens block on it | a series failing a rule fails schema validation, never gets repaired by the portal | fixture linter over every charted `execution-*` fixture; sum/annotation/marker-id/digest/gap checks per §7.6.4; frontend renders each canonical fixture through `marketChart` | Codex | N10 (schema fragment) · N09/N11 (producers) | `RECEIVED` | `components/marketChart.tsx` (CandlesChart · LinesChart · BarsChart) — smoke generators in `paper.smoke.ts`/`canary.smoke.ts` are the reference fixtures, deleted with their parent rows | none | **full spec §7.6**; amendments to 57/59/62 in §7.6.2 |
 | BR-EX-65 | 2026-08-29 | Portfolio 360 `/deployments/portfolios/{id}` — Structure & Correlation, corr.v1 disclosure | The published correlation contract is a point-in-time matrix: the operator cannot see *when* correlation rose or whether alphas draw down together — the two questions the matrix exists to answer; both frames ship as labeled smoke since 2026-08-28 | Two read series under `chart-series.rules.v1` (§7.6.1): `rho-timeline` — rolling ρ(portfolio NAV, benchmark NAV), window/interval server-chosen (30d/1d today), points `[t, rho]`, server publishes `threshold` (0.6 today, config — never client-hardcoded) and `breaches[]` (from/to/peak) for sustained ρ > threshold (the breach raises the attention finding — the browser draws, never detects); `drawdown-overlap` — per-alpha episodes as intervals `{from,to,depth_pct}` (peak-to-recovery, exact decimal), never a resampled line, per-alpha `INSUFFICIENT_DATA` with days observed, `joint_windows[]` (≥2 alphas in drawdown, server-derived) each optionally carrying `regime_label` under its own `regime.v1` formula — label absent = absent, never inferred | DERIVED (`corr.v1` over NAV snapshots · `drawdown_overlap.v1` · optional `regime.v1`) · threshold `PORTAL_CONTROL` config | read-only · medium: a mis-derived joint window claims a diversification failure that did not happen — episode boundaries are server truth, the browser never intersects intervals | ρ ≤400 pts/window; episodes ≤40 per alpha·window; alphas ≤20; joint windows ≤10; freshness = as_of of the NAV snapshot join | NAV series from BR-EX-34's engines (closed N10 — **this row is new scope: 34 shipped equity/drawdown/approved-band only and is not reopened**); benchmark id from BR-EX-51; rules fragment BR-EX-64 | series absent → the panel returns to its honest "not published" state (the pre-2026-08-28 code path is kept); partial coverage → per-alpha INSUFFICIENT_DATA rows, never dropped | fixtures `execution-portfolio-360.rho-timeline.valid.json` / `.drawdown-overlap.valid.json`; rule-6 equality on breach peaks; from ≤ to and depth < 0 per episode; every joint window ⊆ union of member episodes; frontend renders both through `marketChart` (`LinesChart` thresholdLine · `EpisodesChart`) | Codex | N10 (derivations) · N09 (projection route) | `RECEIVED` | `PortfolioThreeSixty` corr.v1 disclosure + structure panels — smoke `PF_CHARTS.rho`/`PF_CHARTS.ddOverlap` in `portfolio360.smoke.ts` are the reference fixtures, deleted on delivery | none until approved | corrects §7.6.6(1) — these series live here, not in closed BR-EX-34; full spec §7.7; BR-EX-51/64 |
 | BR-EX-66 | 2026-08-29 | Portfolio 360 header — `Rebalance plan ▾` · `Report pack` | Allocation changes go through the Admin Action Drawer with no portfolio-scoped plan preview, and report assembly is manual; since 2026-08-28 both header controls are live and open plan previews whose Apply/Generate buttons are disabled awaiting exactly this route | `rebalance-plan`: POST plan (dry-run — echoes the preview's KV grid: operation · targets per alpha alloc from→to as exact decimals · writes = capital-ledger entries only, positions move only by the deployments' own orders · governance = ADMIN step-up + dual approval; returns plan_id + digest + TTL) · POST apply (plan_id + step-up token → operation_id in the ops queue; PARTIAL never renders green) · GET verify (operation_id → per-entry applied/failed + post-state digest). `report-pack`: POST generate (window + section list: live strip/KPIs · equity vs benchmark by era · matrix + influence · drawdown overlap · ledger window · approvals — each section pinned to the digest it was read at) → artifact id; GET status/download | rebalance `PORTAL_CONTROL` command (ledger writes, approvals); report assembly `PORTAL_PROJECTION` read-only over published contracts | WRITE (rebalance) · high: a mis-applied plan moves real capital allocation — step-up, dual approval and verify are the row, not decoration; report-pack read-only · low | plan ≤20 target lines; report ≤8 sections, artifact ≤20MB; TTL/step-up per command catalogue revision 2 (handoff §8.8) | BR-EX-51 (`portfolio-360.v1.1` fields echoed in the plan); command catalogue rev 2; approvals BR-EX-30/35; what-if `marginal.v1` — targets seeded from it stay labeled estimates | plan expired → typed 409, re-plan; apply without step-up → typed 403; verify PARTIAL → chip + per-entry list, never green; report section failure → typed error naming the section | plan/apply/verify state-machine tests incl. expiry and dual-approval negatives; apply idempotent by plan digest; report digest-pinning test (section digest ≠ live digest → marked stale-at-generation); frontend button coverage exists in `analytics360.test` | Codex | N12 (commands) · N09 | `RECEIVED` | the two header controls + preview panels in `PortfolioThreeSixty` (commit 9709679) — `Apply`/`Generate` are the single enable points | **command — activation gated on Bobby approval + operational evidence, separately from every read row** | BR-EX-51 ("actions later" resolves here); full spec §7.8 |
-| _next: BR-EX-60_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+| BR-EX-67 | 2026-08-30 | Gate R1 `/governance/approvals/{id}/r1` · Gate R2 `/governance/approvals/{id}/r2` | The reviewer decides against panels the contracts do not publish: R1's evidence charts (equity across window roles, WFO Sharpe per fold) and R2's portfolio fit, gate-criteria verdicts and stage-eligibility chips ship as labeled smoke since 2026-08-30 — and the hi-fi's own backend note says criteria are POLICY DATA, never UI constants | Additive fields: `governance.r1-review.v1` gains `evidence_series` (window-role equity — per-role point arrays IS/OOS/holdout with role boundaries fixed by the methodology claim, plus `wfo_folds[]` with per-fold Sharpe, threshold, median/min/dispersion — all under `chart-series.rules.v1`) and `gate_policy_ref` (`gate_r1` rev + effective date + registry link); `governance.r2-review.v1` gains `portfolio_fit` (target weight, corr estimate + window + formula, marginal risk, diversification benefit, symbol overlap — labeled research estimates), `gate_criteria[]` (criterion · threshold from the versioned `gate_r2` policy rev · observed from the evidence run · **server-computed verdict** PASS/WAIVERABLE/FAIL · note) and `stage_eligibility[]` (stage · eligible/needs · detail — each derived from that stage's gate policy against today's evidence) | evidence series `RESEARCH` (run digest); thresholds/verdicts/eligibility `PORTAL_CONTROL` policy records (admin-declared, versioned — a rev change re-evaluates open requests); fit estimates `DERIVED` (`corr.v1`, `marginal.v1`) | read-only · medium: a browser-derived verdict would let a stale policy rev approve capital — verdicts are computed server-side only | R1 series ≤400 pts/role · folds ≤64; R2 criteria ≤20 · stages ≤6; freshness = evidence run as_of + policy rev effective date | `governance.r1-review.v1`/`r2-review.v1` (N09, delivered) · `chart-series.rules.v1` (BR-EX-64) · gate policy registry (new, PORTAL_CONTROL) | fields absent → panels return to honest not-published states (pre-2026-08-30 code paths kept); a criterion whose policy rev no longer matches the open request → verdict STALE_POLICY, never silently re-evaluated client-side | schema + canonical fixtures (`execution-governance.r1-review` gains evidence_series variant; `.r2-review` gains criteria/fit/stages variant); rule-6 check on the max-DD annotation; verdict-recompute negative (client hash of policy rev must match); frontend `governanceChain.test` renders both | Codex | N09 (payload) · N10 (series rules) | `RECEIVED` | `GateR1Review` evidence slot + checklist policy chip · `GateR2Review` Gate criteria tab + Portfolio fit + stage chips — smoke `governance.smoke.ts` deleted on delivery | none until approved | hi-fi 1a/1b owner copies 2026-08-30 (Gate criteria + Stage eligibility are new vs the disk corpus); full spec §7.9 |
+| _next: BR-EX-68_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
 
@@ -2263,6 +2292,80 @@ nothing else — the previews become the real plan echo.
 separately from every read row. Until then the routes may exist dark; the portal keeps the
 buttons preview-only.
 
+### 7.9 BR-EX-67 — governance review evidence and policy-verdict data (filed 2026-08-30)
+
+The owner's 2026-08-30 hi-fi copies of Gate R1/R2 add panels the disk corpus did not have:
+R2's **Gate criteria — policy vs evidence** table and **Stage eligibility** chips. R1's evidence
+charts also stop being honest-state frames. All ship as labeled smoke in
+`governance.smoke.ts`; the shapes there are this row's reference until backend delivery.
+
+**R1 — `governance.r1-review.v1` additive fields**
+
+```jsonc
+{
+  "gate_policy_ref": { "policy_id": "gate_r1", "rev": 4, "effective": "2026-06-15" },
+  "evidence_series": {
+    "run_id": "run_5512",
+    "roles": [
+      { "role": "IS", "points": [["2019-01-01", "1.0000"]] },
+      { "role": "OOS", "points": [] },
+      { "role": "HOLDOUT", "points": [] }
+    ],
+    "boundaries": [
+      { "role": "OOS", "at": "2022-05-01" },
+      { "role": "HOLDOUT", "at": "2024-09-01" }
+    ],
+    "max_drawdown": { "at": "2023-05-01", "value": "1.3810", "pct": "-11.4" },
+    "wfo": {
+      "threshold": "1.0", "median": "1.34", "min": "0.71", "dispersion": "PASS",
+      "folds": [{ "fold": 1, "sharpe": "1.28" }]
+    }
+  }
+}
+```
+
+Every series obeys `chart-series.rules.v1`. Window roles come from the methodology claim,
+gaps remain gaps, and the max-drawdown annotation must equal the point at its bucket.
+
+**R2 — `governance.r2-review.v1` additive fields**
+
+```jsonc
+{
+  "portfolio_fit": {
+    "target_weight_pct": "8.0",
+    "corr_estimate": { "value": "0.18", "window": "90d backtest", "formula_version": "corr.v1" },
+    "expected_marginal_risk_pct": "+5.2",
+    "diversification_benefit": "+0.07",
+    "symbol_overlap": "NONE_WITH_LIVE"
+  },
+  "gate_criteria": {
+    "policy": { "policy_id": "gate_r2", "rev": 7, "effective": "2026-07-01", "declared_by": "Risk admin" },
+    "rows": [
+      { "criterion": "Sharpe (net, 1y)", "threshold": ">= 1.20", "observed": "1.74", "verdict": "PASS" }
+    ],
+    "summary": { "pass": 4, "waiverable": 1, "fail": 0 },
+    "evidence": ["run_5512", "ep_4409"]
+  },
+  "stage_eligibility": [
+    { "stage": "PAPER", "state": "ELIGIBLE", "detail": "this approval" },
+    { "stage": "SANDBOX", "state": "NEEDS", "detail": "obs 30d/300 trades + slippage >= 30 fills" },
+    { "stage": "CANARY", "state": "NEEDS", "detail": "sandbox cert 7/7 · dual approval" }
+  ]
+}
+```
+
+Thresholds, verdicts and eligibility are versioned `PORTAL_CONTROL` policy data. The server
+computes them; the browser only renders them. A criterion evaluated against a superseded policy
+revision is `STALE_POLICY`, never a silently recomputed PASS. Portfolio-fit values remain labeled
+research estimates until replaced by Paper observation.
+
+**DoR:** amended schemas, canonical fixture variants and typed absent/error examples before route
+work. Required tests cover chart rule 6, role boundaries, policy-revision mismatch, server verdict
+recomputation and unchanged honest not-published behavior.
+
+**Frontend retires on delivery:** `governance.smoke.ts`, the SMOKE notes on both screens and the
+R1/R2 smoke baselines. The honest not-published path remains for absent additive fields.
+
 ---
 
 ## 8. Test and evidence matrix
@@ -2323,27 +2426,27 @@ command commit.
 
 ## 11. Recommended next sequence
 
-All Portal-owned A lanes N13A–N17A are complete:
+N13A–N17A and the exact current-source N13B–N17B campaign are closed. Continue
+without reopening those phase labels:
 
-1. N13B source-as-is boundary and the N14B immutable Paper compatibility
-   candidate are accepted; retain runtime/profile flags dark until the
-   applicable interface and screen activation gates pass.
-2. Run **N15B** first for the bounded current Query interface/capabilities.
-   Event/Artifact absence must not block qualified Query reads.
-3. Qualify and promote Paper screens independently, then Sandbox and Live;
-   build Canary from Portal governance joined to Live facts.
-4. Extend **N15B** per additional interface/capability. Do not mislabel
-   snapshot deltas as owner events.
-5. Run **N16B** only for current commands whose semantics and target scope can
-   be proved; retain the separate command identity and approval gates.
-6. Run **N17B** against the exact accepted set and obtain Bobby's final Live
-   mutation/release decision.
+1. review and merge the N13B–N17B branch into `dev`; do not promote
+   `main`/stable;
+2. integrate Claude's UI branch against the updated `dev` and resolve the
+   shared tracker deliberately;
+3. start a new backend campaign from updated `dev`, beginning with the
+   canonical workspace/resource-scoped Paper screen API (`TD-EX-01`);
+4. move current-source compatibility ownership to the canonical Rust Edge
+   route and enforce an Edge-global/per-profile source quota before any
+   multi-replica rollout (`TD-EX-02`/`TD-EX-03`);
+5. publish a signed dev image and activate one Paper screen/profile in a
+   bounded dev window, leaving stable, Sandbox, Live and Command dark;
+6. run product-path auth/load/fault/rollback/soak evidence and claim an SLO
+   only from that deployed result;
+7. deliver BR-EX-41…67 in deduplicated screen slices, then widen reads Paper →
+   Sandbox → Live; keep Event/Artifact and every command independently gated.
 
-The exact A result and matching B next action are recorded in every completed
-phase report and the shared `PHASE_TRACKER.md`; completing A never changes a
-source/profile/command flag. The B phases still execute in order, but each
-phase accepts current capability independently instead of waiting for a global
-future contract.
+The exact open gates, owners and containment are authoritative in
+[`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
 
 ---
 
@@ -2380,6 +2483,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-08-30 | N13B–N17B Debt Closeout and BR-EX-67 canonical intake | no open merge blocker; stale N13/phase-18/next-phase wording reconciled; activation debt and future-contract limitations receive IDs, owners and exact gates; BR-EX-67 R1/R2 evidence/policy-verdict scope is canonical and the next request is BR-EX-68; no runtime/profile/source/command change |
 | 2026-08-29 | Accepted N16B current-primitive protective-path compatibility | exactly one current primitive, `live.emergency-close`, is accepted for `LIVE_FULL / ACCOUNT / BINANCE / USD_M`; Rust and TypeScript reject identity, target, payload, R4 and runtime widening; the other eight N12 commands are typed inactive/absent; public route, transport, source call and Live mutation remain false pending N17B exact owner window |
 | 2026-08-29 | Accepted N17B exact current set | Portal adapts the exact Paper screen to current Manager-v2 routes, hard-caps source admission at 15 r/s, and records 25/25 paced private reads plus 401/403/405 negatives; N17A recovery/rollback is retained; signed product image, public BFF, Sandbox/Live reads and Live mutation remain inactive |
 | 2026-08-29 | Accepted N15B current-capability inter-cell gateway for the bounded Paper Query slice | Rust Edge and TypeScript BFF enforce the exact Paper screen/profile before transport; Command is deferred N16B, Event/Artifact typed absent, immutable D3/Manager evidence revalidated; product/runtime/registry/SSE/command/Trading-System-change flags remain false |
@@ -2399,3 +2503,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-28 | Claude: §7.2 BR-EX-64 appended (`RECEIVED`) and specified in §7.6 — the chart series contract, written after the real-chart pass replaced every SVG stand-in on Paper/Canary/Live; §7.6.2 carries additive amendments to BR-EX-57/59/62 and escalates the OHLC-owner decision (§7.5.5(1)) now blocking two screens | documentation only; no runtime/profile/source/command change |
 | 2026-08-28 | Claude: §7.6.6 appended — Portfolio 360 pass names `PF_CHARTS.rho`/`PF_CHARTS.ddOverlap` as reference fixtures for BR-EX-34's ρ-timeline and drawdown-overlap series, and records the now-active Rebalance plan / Report pack controls as BR-EX-51's enable points | documentation only; no runtime/profile/source/command change |
 | 2026-08-29 | Claude: §7.2 BR-EX-65/66 appended (`RECEIVED`) + specs §7.7/§7.8 — the ρ-timeline and drawdown-overlap series get their own row (correcting §7.6.6(1), which had attached them to BR-EX-34, closed 2026-08-26 without them), and the now-live Rebalance plan / Report pack controls get their command row (plan → apply → verify · digest-pinned report pack) | documentation only; no runtime/profile/source/command change |
+| 2026-08-30 | Claude: §7.2 BR-EX-67 appended (`RECEIVED`) + spec §7.9 — R1/R2 evidence series, portfolio-fit estimates, versioned gate-policy criteria/verdicts and stage eligibility are specified as server-owned additive fields | documentation only; no runtime/profile/source/command change |
