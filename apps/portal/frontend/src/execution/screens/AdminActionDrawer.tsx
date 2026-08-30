@@ -835,6 +835,7 @@ export function AdminActionDrawerScreen({
   outcome = "VERIFIED",
   initialCommand = "alloc",
   operationRef = null,
+  actionRef = null,
   children,
 }: {
   catalogue: CommandCatalogue | null;
@@ -851,6 +852,8 @@ export function AdminActionDrawerScreen({
   initialCommand?: string | null;
   /** `?operation=` deep link from Operations Queue / Incident Detail. */
   operationRef?: string | null;
+  /** `?action=…&binding=…` deep link from Accounts & Bindings / Binding Detail. */
+  actionRef?: { action: string; binding: string | null } | null;
   children?: ReactNode;
 }) {
   const [cliSelected, setCliSelected] = useState<string | null>(initialCommand);
@@ -888,6 +891,17 @@ export function AdminActionDrawerScreen({
               {catalogue?.capabilityReason ? ` (${catalogue.capabilityReason})` : null}. The flow
               below is a declared demo of WF 1i — every published action is listed further down so
               you know it exists, and none of them can be run from here.
+            </p>
+          ) : null}
+          {actionRef ? (
+            <p className="exec-cli-opref" role="note">
+              action <code>{actionRef.action}</code>
+              {actionRef.binding ? <> for binding <code>{actionRef.binding}</code></> : null} arrived
+              from an accounts link — neither the WF 1i catalog nor catalogue rev 2 carries a
+              credential-rotation command yet (BR-EX-68 open decision 6) ·{" "}
+              <a href={actionRef.binding ? `/deployments/accounts?binding=${encodeURIComponent(actionRef.binding)}` : "/deployments/accounts"}>
+                back to Accounts &amp; Bindings →
+              </a>
             </p>
           ) : null}
           {operationRef ? (

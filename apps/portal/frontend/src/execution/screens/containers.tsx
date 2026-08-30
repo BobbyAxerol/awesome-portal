@@ -1068,6 +1068,7 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
       outcome={outcome}
       initialCommand={cmd ?? "alloc"}
       operationRef={search.get("operation")}
+      actionRef={search.get("action") ? { action: search.get("action")!, binding: search.get("binding") } : null}
     />
   );
 }

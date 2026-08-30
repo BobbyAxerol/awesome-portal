@@ -311,6 +311,18 @@ describe("the container wires demo states as addresses", () => {
     expect(screen.getByText(/actor Stan · Viewer/)).toBeTruthy();
   });
 
+  it("?action=rotate_credential is answered honestly with a link back to Accounts", async () => {
+    render(
+      <MemoryRouter initialEntries={["/administration/actions?action=rotate_credential&binding=deribit_main_01"]}>
+        <AdminCatalogueContainer api={createFixtureApi()} />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText(/credential-rotation command yet/)).toBeTruthy();
+    expect(
+      document.querySelector('a[href="/deployments/accounts?binding=deribit_main_01"]'),
+    ).toBeTruthy();
+  });
+
   it("?operation= is answered honestly with a link back to the Operations Queue", async () => {
     render(
       <MemoryRouter initialEntries={["/administration/actions?operation=op_1251"]}>

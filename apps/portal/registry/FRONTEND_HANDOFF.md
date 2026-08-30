@@ -1721,3 +1721,28 @@ lệnh, và stop gate của codex cấm vẽ nút cho lệnh không chạy đư�
   Lưu ý vận hành: file unified plan đang được mở trong editor với buffer cũ và
   đã 2 lần auto-save đè mất phần BR-EX-68 — nội dung an toàn trong git
   (`8b76f34`, commit spec mới nhất); reload file trước khi sửa tay.
+
+#### 8.36.1 Luồng vào/ra của Admin Action Drawer (rà 2026-08-30, theo code)
+
+**Vào drawer** (mọi đường đều verify trong crawler-gate):
+| Từ màn | Trigger | Đích |
+|---|---|---|
+| Sidebar (registry) | nhóm ADMINISTRATION | `/administration/actions` |
+| Operations Queue 4e | `plan residue re-apply →` (op PARTIAL) · chip plan `cmd_9f12` · `audit →` (op VERIFIED) | `?operation=op_…` |
+| Incident Detail 4d | `Open apply plan ▸` · op id trong checklist · mọi op id ở panel "Operations taken" | `?operation=op_…` |
+| Command Center 5a → Incident → op | journey chuỗi 3 màn (e2e §8.2) | `?operation=op_…` |
+| Paper Workbench 1c | nút `Admin actions ⌄` (masthead) + nút ghost ở khối mutation | drawer root |
+| Accounts & Bindings 4f | `rotate credential ▸` (credential EXPIRING) | `?action=rotate_credential&binding=…` |
+| Binding Detail | footer `Rotate credential ▸` | `?action=rotate_credential&binding=…` |
+| (prose, không link) | AccountBroker360 note · Portfolio 360 rebalance-preview note · Incident ops footer | nhắc "plan → apply → verify ở Action Drawer" |
+
+**Ra khỏi drawer**: op_1251 → Operations Queue (`?operation=`) · AP-207 → Gate R2 review ·
+dep_74 → Paper Workbench · `open reconciliation →` → Operations Queue · banner `?operation=`/
+`?action=` → link ngược về Ops Queue / Accounts.
+
+**Gap tìm thấy khi rà (đã fix cùng ngày)**: hai link `?action=rotate_credential` bị drawer mới
+bỏ qua lặng lẽ — giờ trả lời bằng banner honest ("chưa có lệnh rotate credential trong cả hai
+catalog · BR-EX-68 open decision 6") + link ngược Accounts; test container mới (51 pass cả hai
+suite admin). Lệnh rotation thiếu ở CẢ hi-fi lẫn catalogue rev 2 → ghi vào spec BR-EX-68 §11(6)
+cho codex quyết.
+
