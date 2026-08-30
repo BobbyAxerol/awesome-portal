@@ -1681,3 +1681,37 @@ venue của mình.
   `paperClock`) giữ nguyên — chúng đã đọc được và là chữ của hi-fi masthead.
 - Không đổi contract: format hoá chỉ ở render edge, giá trị ISO trong
   fixture/contract giữ nguyên byte.
+
+### 8.36 Admin Action Drawer — WF 1i CLI catalog trên nền F0 (2026-08-30)
+
+Owner giao hi-fi WF 1i: drawer CLI đầy đủ tương tác. Nhưng F0 (EX-BE-05b,
+catalogue rev 2) publish `relay DISABLED` + `portal_reachable:false` cho cả 64
+lệnh, và stop gate của codex cấm vẽ nút cho lệnh không chạy được. Cách giải —
+**hai sự thật cùng màn, không cái nào che cái nào**:
+
+- **Composition = WF 1i** (flat, không rail): catalog 6 nhóm tác vụ × 24 lệnh
+  (`adminCli.smoke.ts` — SMOKE khai báo, deletion contract → **BR-EX-68**),
+  drawer 490px sticky: params bốc từ registry, read chạy transcript (stream
+  gated `smokeMotionAllowed`), PLAN → preflight server-demo → two-man-rule
+  key (OPERATOR) → APPLY (step-up, DANGER cần gõ confirm word) → VERIFY
+  timeline (202 ≠ success, VERIFIED/PARTIAL, PARTIAL không bao giờ xanh).
+  Demo states là địa chỉ: `?cmd=`, `?role=ADMIN|VIEWER`, `?outcome=PARTIAL`.
+- **Sự thật F0 giữ nguyên chỗ đứng**: câu "command relay is disabled
+  (EX_BE_05B_F0_CONTRACT_ONLY)" vẫn đứng đầu màn; toàn bộ 64 entry render đủ
+  trong `<details>` "Full published catalogue" với đúng EntryRow/EntryDetail
+  cũ — **không nút nào** cho published entry (invariant test giữ nguyên,
+  adminDrawer.test 22/22). Mỗi lệnh WF 1i in dòng join: `published as
+  <key> · not reachable`, hoặc nói thật "not in published catalogue rev 2"
+  (`health`, `alloc` — 2 lệnh hi-fi chưa có key; nêu trong §7.10 backend).
+- **SMOKE note tại điểm tương tác** — mọi transcript/preflight/verify là
+  declared fixture; không dòng nào claim đã chạm cell.
+- Link sang màn khác: AP-207 → R2 review, dep_74 → Paper workbench, op_1251 →
+  Operations Queue (`?operation=`), open reconciliation → operations;
+  `?operation=` đến từ Ops Queue/Incident được trả lời thật ("no operation
+  lookup yet · BR-EX-68") + link ngược.
+- Tests mới `adminCli.test.tsx` 28 case phủ đủ mọi sub-state hi-fi (6 nhóm,
+  read/watch, params, alloc impact, emergency flatten + confirm, generic
+  preview, preflight WARN, grant 3 role, VERIFIED/PARTIAL, blocked, denied).
+- **@codex**: BR-EX-68 filed (§7.2 + §7.10, mirror rows file). Đây là chỗ cần
+  xác nhận sớm hướng (1) additive fields trên `command-catalog` hay (2)
+  `command-tasks.v1` song song — FE đọc được cả hai.

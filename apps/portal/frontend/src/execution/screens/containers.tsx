@@ -14,7 +14,7 @@
  * it never becomes a thrown error the shell has to guess about.
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   OPERATION_STATUSES,
@@ -38,6 +38,7 @@ import type { CapitalPreviewInput, ExecutionApi, InsightBatchInput, Result } fro
 import type { CapitalLedger, InsightBatch } from "../analytics";
 import { OrderFunnelStrip } from "./FullBlotter";
 import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
+import type { CliOutcome, CliRole } from "../adminCli.smoke";
 import { HeadroomBanner } from "./AccountBroker360";
 import { CorrelationPanel } from "./PortfolioThreeSixty";
 import {
@@ -1033,6 +1034,16 @@ export function CapitalLedgerContainer({
 export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
   const [selected, setSelected] = useState<CatalogEntry | null>(null);
   const [tier, setTier] = useState<TierFilter>("ALL");
+  // WF 1i demo states are addresses, not chrome: `?role=VIEWER`,
+  // `?outcome=PARTIAL` and `?cmd=emergency` deep-link a reviewable state the
+  // way the hi-fi's prop editor did, without inventing a toggle the real
+  // screen will not have. `?operation=` arrives from Operations Queue /
+  // Incident Detail and is answered honestly (no lookup exists yet).
+  const [search] = useSearchParams();
+  const roleParam = search.get("role");
+  const role: CliRole = roleParam === "ADMIN" || roleParam === "VIEWER" ? roleParam : "OPERATOR";
+  const outcome: CliOutcome = search.get("outcome") === "PARTIAL" ? "PARTIAL" : "VERIFIED";
+  const cmd = search.get("cmd");
   // `ALL` sends no filter at all rather than a sentinel the server would have
   // to know about. The chip is the client's word; the query is the contract's.
   const state = useAnalyticsRead(
@@ -1053,6 +1064,10 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
         setSelected(null);
         setTier(next);
       }}
+      role={role}
+      outcome={outcome}
+      initialCommand={cmd ?? "alloc"}
+      operationRef={search.get("operation")}
     />
   );
 }

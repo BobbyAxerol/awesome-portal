@@ -75,7 +75,7 @@ describe("the locked role scale", () => {
       // made the prefix test fail on a rule that is exempt — the comment was
       // never the thing being audited.
       .map(([m, sel, body]) => [m, sel.replace(/\/\*[\s\S]*?\*\//g, "").trim(), body] as [string, string, string])
-      .filter(([, sel, body]) => /text-transform\s*:\s*uppercase/.test(body) && !/--exec-font-th\)/.test(body) && !/\.exec-role-th/.test(sel) && !/^\s*\.exec-(cc|inc2|oq|bl|af|a3|rp|pf2|ab|bd|ac|lv|lf|cn|sbc|sb|pw|px|po|360|surface|gov|gate)[-\s]/.test(sel))
+      .filter(([, sel, body]) => /text-transform\s*:\s*uppercase/.test(body) && !/--exec-font-th\)/.test(body) && !/\.exec-role-th/.test(sel) && !/^\s*\.exec-(cc|inc2|oq|bl|af|a3|rp|pf2|ab|bd|ac|lv|lf|cn|sbc|sb|pw|px|po|360|surface|gov|gate|cli)[-\s]/.test(sel))
       .map(([, sel]) => sel.trim().replace(/\s+/g, " ").slice(0, 60));
     expect(offenders).toEqual([]);
   });

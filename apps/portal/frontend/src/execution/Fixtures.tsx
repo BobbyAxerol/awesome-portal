@@ -1831,11 +1831,19 @@ export default function ExecutionFixtures() {
         <Group
           id="admin-action-drawer-1i"
           title="Admin Action Drawer (1i)"
-          note="Sixty-four canonical actions, grouped by the server. Revision 2 marks the relay DISABLED and every entry unreachable, so the screen lists what exists and says why each is out of reach — it offers nothing to press."
+          note="WF 1i CLI catalog: twenty-four task-grouped commands with a PLAN → APPLY (step-up) → VERIFY demo drawer, declared SMOKE until BR-EX-68. The published F0 truth stays on screen: catalogue rev 2, sixty-four entries, relay DISABLED, none reachable."
           surface="deployments"
         >
-          <Case caption="the catalogue as published — every action visible, every one explained">
+          <Case caption="the WF 1i catalog with the allocation drawer (hi-fi default) — SMOKE demo over the published, disabled catalogue">
             <AdminCatalogueContainer api={WIRED_API} />
+          </Case>
+          <Case caption="a Viewer picks a mutation — role banner, catalog stays visible, reads stay available">
+            <AdminActionDrawerScreen
+              catalogue={null}
+              selected={null}
+              onSelect={() => {}}
+              role="VIEWER"
+            />
           </Case>
           <Case caption="a non-Admin actor — denied, and the catalogue does not leak through the message">
             <AdminActionDrawerScreen

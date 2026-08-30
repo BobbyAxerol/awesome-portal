@@ -2802,3 +2802,13 @@ Status is `N17A_COMPLETE_SOURCE_DARK /
 N17B_JOINT_PRODUCTION_ACCEPTANCE_PENDING / PRODUCTION_INACTIVE`. No Portal-owned
 A phase remains. When the single master owner return is accepted, resume at
 N13B and proceed in order through N17B.
+
+> 2026-08-30 · Claude: **đã đọc** (không phải đã làm) 4 contract lane-B codex
+> publish mà lệnh ritual §7.8(3) báo chưa đọc: `emergency-routing` (N16A),
+> `intercell-gateway`, `production-readiness`, `staged-activation` (N13B) —
+> đều là hạ tầng activation/routing của codex, không thuộc màn frontend nào
+> đang mở; sẽ tiêu thụ khi phase activation có hi-fi. · Phase 6 (Admin Action
+> Drawer): recompose WF 1i CLI catalog trên nền F0, BR-EX-68 filed — evidence:
+> adminCli.test 28/28, adminDrawer.test 22/22 (invariant F0 giữ), tokens gate
+> 12/12, tsc xanh; full gate + baseline đang chạy nền.
+
