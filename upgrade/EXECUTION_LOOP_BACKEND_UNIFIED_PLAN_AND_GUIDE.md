@@ -2430,6 +2430,31 @@ visibility ≠ authority — and reads remain available).
 **Retire on delivery:** `adminCli.smoke.ts`, the SMOKE cases in `adminCli.test.tsx`, the
 "declared demo" copy in the drawer, and the `?role=/?outcome=` demo addresses.
 
+### 7.11 BR-EX-69/70/71 — the owner-commissioned governance additions (filed 2026-08-30)
+
+Three screens closing the gaps ROADMAP_FRONTEND §H.2 named, shipped 2026-08-30 as declared
+demos on `governance.smoke.ts` (`NEW_REQUEST` · `LIVE_GATE` · `WAIVER_ROWS`) — those frames are
+the reference shapes. Frontend acceptance: `governanceAdditions.test.tsx` (9 cases).
+
+**7.11.1 — BR-EX-69, loop entry.** `POST /approvals` creates the R1 request the Inbox reviews.
+Pick lists are the EXISTING registries; the request pins the run's artifact digest at submit and
+records the requester for separation-of-duty. Duplicate (alpha, run) open request → typed 409.
+
+**7.11.2 — BR-EX-70, live-gate payload.** The review room's backbone (eligibility, quorum, SLA,
+optimistic version, decide verbs) already runs on `governance.r2-review.v1` — unchanged. This row
+adds the canary evidence: twin-drift series (`chart-series.rules.v1`), canary KPIs, `gate_live`
+criteria with SERVER-computed verdicts (BR-EX-67's rule), and the capital step. Frontend routes
+`LIVE_GATE` inbox rows to `/governance/approvals/{id}/live` since 2026-08-30.
+
+**7.11.3 — BR-EX-71, conditions register.** One keyset list over every condition any decision
+created, with server-side state transitions (EXPIRING → LAPSED feeds the Command Center
+attention stream). LAPSED is a blocking finding; nothing lapses silently.
+
+**Registry rows** for the three routes are requested in HOTFIX_REQUEST_2026-08-30 §2 (frontend
+claims the paths via its preview mechanism until then).
+
+---
+
 ## 8. Test and evidence matrix
 
 | Change class | Minimum gate |
