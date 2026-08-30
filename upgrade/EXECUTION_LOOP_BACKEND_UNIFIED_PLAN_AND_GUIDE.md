@@ -2274,6 +2274,11 @@ re-record the r1/r2 baselines; honest not-published paths stay for the absent ca
 
 ### 7.10 BR-EX-68 — Admin Action Drawer WF 1i: operator-task catalog + command relay flow (filed 2026-08-30)
 
+> **Detailed spec (2026-08-30): `upgrade/BR_EX_68_ADMIN_ACTION_DRAWER_SPEC.md`** — six
+> contracts A–F with schemas, error semantics, staged delivery F1–F4 and the five open
+> decisions. This section stays as the filed summary; the file above is the authority for
+> implementation detail.
+
 The owner's WF 1i hi-fi (2026-08-30) specifies the drawer the relay will one day serve. The
 frontend ships the full interaction as a DECLARED DEMO on `adminCli.smoke.ts` — that file is this
 row's reference for every shape below — while the published F0 truth (rev 2, 64 entries, relay
@@ -2461,3 +2466,4 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | 2026-08-29 | Claude: §7.2 BR-EX-65/66 appended (`RECEIVED`) + specs §7.7/§7.8 — the ρ-timeline and drawdown-overlap series get their own row (correcting §7.6.6(1), which had attached them to BR-EX-34, closed 2026-08-26 without them), and the now-live Rebalance plan / Report pack controls get their command row (plan → apply → verify · digest-pinned report pack) | documentation only; no runtime/profile/source/command change |
 | 2026-08-30 | Claude: §7.2 BR-EX-67 appended (`RECEIVED`) + spec §7.9 — the owner's new R1/R2 hi-fi copies add gate-criteria and stage-eligibility panels; evidence charts, fit, criteria and stage chips ship as labeled smoke and the additive fields are specified on `governance.r1-review.v1`/`r2-review.v1` (verdicts server-side, policy data never UI constants) | documentation only; no runtime/profile/source/command change |
 | 2026-08-30 | Claude: §7.2 BR-EX-68 appended (`RECEIVED`) + spec §7.10 — the owner's WF 1i Admin Action Drawer hi-fi; the full CLI-catalog interaction (task groups, params, read transcripts, plan/preflight/apply/verify, two-man-rule key) ships as a declared demo over the DISABLED rev-2 catalogue, and the endpoints that make it real are specified | documentation only; no runtime/profile/source/command change |
+| 2026-08-30 | Claude: BR-EX-68 detailed spec written to `upgrade/BR_EX_68_ADMIN_ACTION_DRAWER_SPEC.md` (six contracts A–F: task catalog · R0 run · plan/preflight · apply/step-up/confirm-word · verify timeline · two-man-rule keys; staged delivery F1–F4 with per-stage enable points; five open decisions) — §7.10 stays as the filed summary and points there | documentation only; no runtime/profile/source/command change |
