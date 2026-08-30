@@ -2706,12 +2706,35 @@ command.
 | N14 | exact six-image digest manifest, CI-bound signatures/SBOM/SLSA/Trivy, dev/stable isolation, owner decision and restore/forward-fix rehearsal complete | bind N13B's exact current source/adapter/profile set and run profile-scoped release/rollback/forward-fix | `N14A_COMPLETE_SOURCE_DARK / N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET` |
 | N15 | independent Query/Command/Event/Artifact contracts, rollback negotiation, identity/transport policy, Event/Artifact semantics and local fault doubles complete | accept each current interface/capability independently; absent Event/Artifact does not block unrelated Query | `N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP` |
 | N16 | same-domain/origin-isolation templates, short-session/WebAuthn ceremony, typed health/failure states, immutable audit, R3/R4 split and local origin-loss/rollback drills complete | map semantically equivalent current primitives under dedicated command identity and prove plan/apply/verify/reconciliation | `N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET` |
-| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | qualify the exact accepted capability set and run bounded SLO/DR/rotation/containment evidence with Bobby final sign-off | `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET` |
+| N17 | provisional SLO/error-budget contract, unmounted observability, recovery/rotation/capacity/owner tooling, actual isolated WAL PITR + encrypted restore + projection rebuild + rollback/compromise game day complete | first exact Paper Query set accepted: four aliases/six relations, 15 r/s Portal pacer, 25/25 private reads plus 401/403/405 negatives; wider product scope moves to N18–N29 | `N17A_COMPLETE_SOURCE_DARK / N17B_ACCEPTED_CURRENT_PAPER_SET` |
 
 Rule: Claude and Portal backend may implement/test every A lane without waiting
 for Trading System. A B lane uses only bounded authenticated current sources,
 never template/candidate/fixture bytes presented as real. No A-lane status may
 remove an unavailable label or enable a source, Query/SSE profile or command.
+
+### N18–N29 Manager Surface Expansion campaign (planned 2026-08-30)
+
+The canonical scope, rules and exit gates live in
+[`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+Bobby has approved the campaign direction but starts each phase by naming it.
+Claude may continue against stable fixtures; smoke removal follows the matching
+backend gate.
+
+| Phase | Backend output | Claude parallel/consumer lane | Status |
+|---|---|---|---|
+| N18 | complete 96-relation/read/command/BR-EX-41–71 census | verify screen/request coverage and duplicate-free mapping | `PLANNED / NAMED_APPROVAL_PENDING` |
+| N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `PLANNED / N18_DEPENDENT` |
+| N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states and retire smoke per slice | `PLANNED / N19_DEPENDENT` |
+| N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `PLANNED / N20_DEPENDENT` |
+| N22 | full current Paper read activation | retire only matching Paper smoke blocks | `PLANNED / N21_DEPENDENT` |
+| N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_DEPENDENT` |
+| N24 | durable Portal projection | consume projection freshness/gap/rebuild states | `PLANNED / N23_DEPENDENT` |
+| N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `PLANNED / N24_DEPENDENT` |
+| N26 | projection-backed authenticated SSE | close terminal streams; no infinite reconnect loop | `PLANNED / N25_DEPENDENT` |
+| N27 | typed Admin Action Drawer command plane | enable controls only at authoritative terminal parity | `PLANNED / N20_N21_DEPENDENT` |
+| N28 | one owner packet for proved genuine gaps only | retain typed unavailable until verified return | `PLANNED / CENSUS_EVIDENCE_DEPENDENT` |
+| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `PLANNED / N18_N28_DEPENDENT` |
 
 ### N14A backend — Portal release authority, source-dark (2026-08-26)
 
@@ -2798,9 +2821,9 @@ Claude handoff:
 [`CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md`](./CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md).
 
 Status is `N17A_COMPLETE_SOURCE_DARK /
-N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
-Portal-owned A phase remains. After Bobby approves the 2026-08-29 rebaseline,
-resume at N13B and proceed in order through N17B using current bounded sources.
+N17B_ACCEPTED_CURRENT_PAPER_SET / PRODUCT_EXPANSION_PLANNED`. The first bounded
+Paper current-source set is accepted; N18–N29 now expands the known Manager,
+screen, projection, realtime and command surface one named phase at a time.
 
 ### N13B–N17B source-as-is rebaseline (2026-08-29)
 

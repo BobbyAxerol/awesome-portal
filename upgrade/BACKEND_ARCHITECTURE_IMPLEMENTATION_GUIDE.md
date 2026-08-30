@@ -1485,9 +1485,10 @@ activation or the phase):**
   PITR to a selected LSN, ephemeral encrypted logical backup restore,
   deterministic projection rebuild, rotation/compromise, rollback and eight
   complete fault scenarios with external `network_attempts=0`. Production SLO,
-  error budget, RPO/RTO and cost remain unclaimed. Status is
-  `N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET /
-  PRODUCTION_INACTIVE`. See
+  error budget, RPO/RTO and cost remain unclaimed. N17A remains
+  `N17A_COMPLETE_SOURCE_DARK`; the first current Paper Query set is now
+  `N17B_ACCEPTED_CURRENT_PAPER_SET` and wider product work is planned in
+  N18–N29. See
   [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
 
 - **N13B–N17B source-as-is rebaseline (2026-08-29):** the master owner return
@@ -1502,6 +1503,18 @@ activation or the phase):**
   no runtime/source/profile/route/credential/command changed. The operative
   phase detail is §3.5 and N13B–N17B of
   [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+- **Manager Surface Expansion campaign planned (2026-08-30):** N18–N29 is the
+  finite follow-on campaign for maximum semantically valid current Trading
+  System coverage across Paper, Sandbox and Live. N18 freezes all 96 Manager
+  relations, published reads/commands and Claude BR-EX-41–71 before code;
+  N19–N27 deliver the versioned Rust compatibility plane, TypeScript screen
+  BFF, shared scale controls, full profile reads, durable projection,
+  analytics/SSE and typed Admin Action Drawer. N28 alone consolidates genuinely
+  absent owner semantics; N29 closes product/release evidence without unnamed
+  debt. The direction is approved, but each phase begins only when Bobby names
+  it. This tracking update changes no runtime, source, profile, route,
+  credential, command or stable deployment.
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

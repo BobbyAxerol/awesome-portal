@@ -67,7 +67,7 @@ for token in \
     "N14A_COMPLETE_SOURCE_DARK / N14B_REBASELINED_WAITING_N13B_ACCEPTED_SET" \
     "N15A_COMPLETE_SOURCE_DARK / N15B_REBASELINED_WAITING_N13B_SOURCE_MAP" \
     "N16A_COMPLETE_SOURCE_DARK / N16B_REBASELINED_WAITING_SUPPORTED_COMMAND_SET" \
-    "N17A_COMPLETE_SOURCE_DARK / N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET"
+    "N17A_COMPLETE_SOURCE_DARK / N17B_ACCEPTED_CURRENT_PAPER_SET"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
         echo "execution unified plan lost A/B split: ${token}" >&2
@@ -75,6 +75,27 @@ do
     fi
     if ! grep -Fq "${token}" "${TRACKER}"; then
         echo "shared tracker lost A/B split: ${token}" >&2
+        exit 1
+    fi
+done
+
+for token in \
+    "N18–N29 — Manager Surface Expansion campaign" \
+    "N18 — Capability and data coverage census" \
+    "N19 — Rust Manager-v2 compatibility authority" \
+    "N20 — Canonical screen BFF contracts" \
+    "N21 — Shared admission, cache and freshness" \
+    "N22 — Full Paper read activation" \
+    "N23 — Sandbox and Live read profiles" \
+    "N24 — Durable Portal projection" \
+    "N25 — Query and analytics plane" \
+    "N26 — Realtime SSE activation" \
+    "N27 — Admin Action Drawer command plane" \
+    "N28 — Genuine missing-capability adapters and owner packet" \
+    "N29 — Product acceptance and release closeout"
+do
+    if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
+        echo "execution unified plan lost Manager Surface Expansion phase: ${token}" >&2
         exit 1
     fi
 done

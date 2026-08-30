@@ -17,6 +17,14 @@ Chúng không thay thế phase hoặc exit gate trong
   now splits every remaining N13–N17 phase into `A` (Portal-owned,
   source-dark, can continue immediately) and `B` (owner artifacts or real
   runtime required). A completion never implies B activation.
+- [Manager Surface Expansion N18–N29](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+  is the next finite campaign. It freezes the full 96-relation/read/command/
+  BR-EX-41–71 scope before implementation, consumes current Trading System
+  capabilities source-as-is through a versioned Rust boundary, then closes
+  TypeScript screen APIs, scale, Paper/Sandbox/Live reads, projection,
+  analytics, SSE and Admin Action Drawer. N28 is the single consolidation
+  point for genuinely absent owner semantics; N29 forbids unnamed known debt.
+  Bobby starts each phase explicitly; this plan entry has no runtime effect.
 
 - [BAR-01 — Feature/Screen/Concern Registry & Command Center Summary Contract](./BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md)
   — contract backend cho U02/U03. **Backend contract complete (BE1–BE6):**
@@ -1047,10 +1055,10 @@ durable run/attempt events. Detailed evidence:
 - A real internal-only Docker drill proves WAL PITR to an exact LSN, encrypted
   logical restore, deterministic projection rebuild, identity rotation/
   compromise, release rollback and eight digest-sealed fault scenarios.
-- Status is `N17A_COMPLETE_SOURCE_DARK /
-  N17B_REBASELINED_WAITING_EXACT_ACCEPTED_SET / PRODUCTION_INACTIVE`. No
-  stable/dev/AWS-HK/Trading System resource changed and every source/command/
-  production flag remains false. Detail:
+- Historical N17A status was `N17A_COMPLETE_SOURCE_DARK`; the first current
+  Paper Query set is now `N17B_ACCEPTED_CURRENT_PAPER_SET` and wider product
+  work is planned in N18–N29. N17A itself changed no stable/dev/AWS-HK/Trading
+  System resource and left every source/command/production flag false. Detail:
   [`EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md`](./EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR_PREPARATION.md).
 
 ## Backend decision — 2026-08-29 (N13B–N17B source-as-is rebaseline)

@@ -69,7 +69,8 @@ wait_postgres() {
   local container="$1"
   local database="$2"
   for _ in $(seq 1 45); do
-    if "${DOCKER[@]}" exec "${container}" pg_isready -U portal -d "${database}" >/dev/null 2>&1; then
+    if "${DOCKER[@]}" exec "${container}" \
+      psql -U portal -d "${database}" -Atq -c 'SELECT 1' >/dev/null 2>&1; then
       return 0
     fi
     sleep 1
