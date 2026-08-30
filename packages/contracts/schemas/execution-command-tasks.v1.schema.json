@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-command-tasks.v1.schema.json",
+  "title": "Portal execution operator task catalogue v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "catalogue_revision", "source_catalogue_revision", "relay_state", "task_groups", "total_tasks", "classification_counts", "bounds", "tasks", "scope"],
+  "properties": {
+    "schema_version": { "const": "execution.command-tasks.v1" },
+    "catalogue_revision": { "const": 3 },
+    "source_catalogue_revision": { "const": 2 },
+    "relay_state": { "const": "DISABLED" },
+    "task_groups": {
+      "const": ["READ_INSPECT", "PORTFOLIO_CAPITAL", "DEPLOYMENT_RISK", "ACCOUNT", "BROKER_SYNC_RECONCILIATION", "EMERGENCY_DESTRUCTIVE"]
+    },
+    "total_tasks": { "const": 24 },
+    "classification_counts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["CONNECTED", "SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"],
+      "properties": {
+        "CONNECTED": { "type": "integer", "minimum": 0 },
+        "SUPPORTED_BUT_INACTIVE": { "type": "integer", "minimum": 0 },
+        "SEMANTICALLY_INCOMPATIBLE": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "bounds": {
+      "type": "object", "additionalProperties": false,
+      "required": ["catalogue", "params_per_task", "transcript_lines", "preflight_rows", "verify_rows"],
+      "properties": {
+        "catalogue": { "const": 64 }, "params_per_task": { "const": 8 },
+        "transcript_lines": { "const": 200 }, "preflight_rows": { "const": 10 },
+        "verify_rows": { "const": 20 }
+      }
+    },
+    "tasks": {
+      "type": "array", "minItems": 24, "maxItems": 24,
+      "items": { "$ref": "#/$defs/Task" }
+    },
+    "scope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["workspace_id", "actor_user_id", "actor_role"],
+      "properties": {
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "actor_user_id": { "$ref": "#/$defs/Identifier" },
+        "actor_role": { "const": "ADMIN" }
+      }
+    }
+  },
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
+    "NullableCatalogKey": { "type": ["string", "null"], "pattern": "^[a-z0-9-]+/(?:[a-z0-9-]+|<root>)$" },
+    "Param": {
+      "type": "object", "additionalProperties": false,
+      "required": ["key", "source_registry", "constraint", "required", "default"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+        "source_registry": { "enum": ["portfolios", "accounts", "alphas", "deployments", "bindings", "venues", "modes", "symbols", "artifacts", "server_bounds"] },
+        "constraint": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "required": { "type": "boolean" },
+        "default": { "type": "null" }
+      }
+    },
+    "Authority": {
+      "type": "object", "additionalProperties": false,
+      "required": ["required_role", "risk_tier", "step_up_required", "two_man_rule", "plan_required", "apply_required", "verify_required", "runtime_active"],
+      "properties": {
+        "required_role": { "const": "ADMIN" },
+        "risk_tier": { "enum": ["R0_READ", "R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING", "UNCLASSIFIED", "BLOCKED"] },
+        "step_up_required": { "type": "boolean" }, "two_man_rule": { "type": "boolean" },
+        "plan_required": { "type": "boolean" }, "apply_required": { "type": "boolean" },
+        "verify_required": { "type": "boolean" }, "runtime_active": { "type": "boolean" }
+      }
+    },
+    "SourceRoute": {
+      "type": ["object", "null"],
+      "required": ["method", "path"], "additionalProperties": false,
+      "properties": { "method": { "type": "string" }, "path": { "type": "string", "pattern": "^/v1/admin/" } }
+    },
+    "OperatorParams": {
+      "type": "object",
+      "maxProperties": 8,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,63}$" },
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string", "maxLength": 2000 },
+          { "type": "number" },
+          { "type": "boolean" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "RunRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "params"],
+      "properties": {
+        "schema_version": { "const": "execution.command-run-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "$ref": "#/$defs/Identifier" },
+        "params": { "$ref": "#/$defs/OperatorParams" }
+      }
+    },
+    "PlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "environment", "target", "expected_target_version", "params", "conditions"],
+      "properties": {
+        "schema_version": { "const": "execution.command-task-plan-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "$ref": "#/$defs/Identifier" },
+        "environment": { "enum": ["PAPER", "SANDBOX", "LIVE"] },
+        "target": {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "id"],
+          "properties": {
+            "type": { "enum": ["ACCOUNT", "BROKER_BINDING", "DEPLOYMENT", "ORDER", "PORTFOLIO", "SYSTEM"] },
+            "id": { "$ref": "#/$defs/Identifier" }
+          }
+        },
+        "expected_target_version": { "type": "integer", "minimum": 1 },
+        "params": { "$ref": "#/$defs/OperatorParams" },
+        "conditions": { "type": "array", "maxItems": 16, "items": { "type": "object" } }
+      }
+    },
+    "Task": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_id", "key", "task_group", "task_title", "tag", "mode", "catalog_key", "scope", "cli_forms", "meta", "params", "typed_confirm_word", "authority", "unlisted_reason", "state", "reason_code", "source_route", "source_request_sent"],
+      "properties": {
+        "task_id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+        "key": { "$ref": "#/$defs/NullableCatalogKey" },
+        "task_group": { "enum": ["READ_INSPECT", "PORTFOLIO_CAPITAL", "DEPLOYMENT_RISK", "ACCOUNT", "BROKER_SYNC_RECONCILIATION", "EMERGENCY_DESTRUCTIVE"] },
+        "task_title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "tag": { "enum": ["READ", "MUTATION", "DANGER", "BLOCKED"] },
+        "mode": { "enum": ["READ", "MUTATION", "DANGER", "BLOCKED"] },
+        "catalog_key": { "$ref": "#/$defs/NullableCatalogKey" },
+        "scope": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "cli_forms": { "type": "array", "maxItems": 4, "items": { "type": "string", "maxLength": 1000 } },
+        "meta": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "params": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/Param" } },
+        "typed_confirm_word": { "type": ["string", "null"], "maxLength": 64 },
+        "authority": { "$ref": "#/$defs/Authority" },
+        "unlisted_reason": { "type": ["string", "null"], "maxLength": 120 },
+        "state": { "enum": ["CONNECTED", "SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"] },
+        "reason_code": { "type": "string", "pattern": "^[A-Z0-9_]{3,120}$" },
+        "source_route": { "$ref": "#/$defs/SourceRoute" },
+        "source_request_sent": { "const": false }
+      }
+    }
+  }
+}

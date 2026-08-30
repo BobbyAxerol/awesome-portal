@@ -1,0 +1,17 @@
+{
+  "schema_version": "execution.manager-realtime-snapshot.v2",
+  "delivery_profile": "current_projection",
+  "workspace_id": "workspace_execution_manager",
+  "environment": "live",
+  "profile_id": "LIVE_BINANCE_USDM",
+  "projection_epoch": "018f0df0-9568-7cc2-babc-76a14ab55d2a",
+  "projection_sequence": 1,
+  "cursor": "018f0df0-9568-7cc2-babc-76a14ab55d2a:1",
+  "stream_available": true,
+  "data_state": "EMPTY_VALID",
+  "fact_count": 0,
+  "source_read_at": "2026-08-30T10:42:01Z",
+  "projection_state_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "resnapshot_not_before": null,
+  "activation_manifest_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+}

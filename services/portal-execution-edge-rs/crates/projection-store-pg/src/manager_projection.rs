@@ -90,6 +90,7 @@ pub struct ManagerCycleCommitInput {
     pub feed_count: usize,
     pub record_count: usize,
     pub source_read_at: DateTime<Utc>,
+    pub poll_interval_ms: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -660,6 +661,13 @@ impl PgProjectionStore {
         validate_cycle_input(scope, input)?;
         let mut transaction = self.pool.begin().await?;
         validate_lease_tx(&mut transaction, scope, epoch_id, proof).await?;
+        self.lock_epoch_tx(
+            &mut transaction,
+            scope,
+            epoch_id,
+            EpochWriteAuthority::BuildingOrActive,
+        )
+        .await?;
         if let Some(row) = sqlx::query(
             "SELECT source_input_digest,state_digest
              FROM portal_projection.manager_projection_cycles
@@ -709,11 +717,23 @@ impl PgProjectionStore {
         }
         let entities = load_entities_tx(&mut transaction, epoch_id).await?;
         let state_digest = semantic_state_digest(&entities)?;
+        let realtime_sequence: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(MAX(realtime_sequence),0)+1
+               FROM portal_projection.manager_projection_cycles
+              WHERE epoch_id=$1",
+        )
+        .bind(epoch_id)
+        .fetch_one(&mut *transaction)
+        .await?;
+        let realtime_observation =
+            serde_json::to_value(manager_cycle_observation(input, &state_digest)?)
+                .map_err(|_| StoreError::Serialization)?;
         sqlx::query(
             "INSERT INTO portal_projection.manager_projection_cycles
              (epoch_id,cycle_id,profile_id,catalogue_digest,source_input_digest,feed_count,
-              snapshot_count,record_count,source_read_at,committed_at,state_digest)
-             VALUES ($1,$2,$3,$4,$5,$6,8,$7,$8,$9,$10)",
+              snapshot_count,record_count,source_read_at,committed_at,state_digest,
+              realtime_sequence,realtime_observation)
+             VALUES ($1,$2,$3,$4,$5,$6,8,$7,$8,$9,$10,$11,$12)",
         )
         .bind(epoch_id)
         .bind(input.cycle_id.as_str())
@@ -725,6 +745,8 @@ impl PgProjectionStore {
         .bind(input.source_read_at)
         .bind(committed_at)
         .bind(&state_digest)
+        .bind(realtime_sequence)
+        .bind(realtime_observation)
         .execute(&mut *transaction)
         .await?;
         transaction.commit().await?;
@@ -993,10 +1015,52 @@ fn validate_cycle_input(
         || !valid_digest(&input.source_input_digest)
         || input.feed_count != 13
         || input.record_count > 80_000
+        || !(250..=60_000).contains(&input.poll_interval_ms)
     {
         return Err(StoreError::InvalidManagerProjectionCycle);
     }
     Ok(())
+}
+
+fn manager_cycle_observation(
+    input: &ManagerCycleCommitInput,
+    state_digest: &str,
+) -> Result<ProjectionObservation, StoreError> {
+    let ingestion_digest = canonical_digest(&(
+        input.cycle_id.as_str(),
+        input.profile_id.as_str(),
+        input.catalogue_digest.as_str(),
+        input.source_input_digest.as_str(),
+    ))?;
+    Ok(ProjectionObservation {
+        ingestion_id: CanonicalId::parse(format!(
+            "n26-cycle-{}",
+            &ingestion_digest.trim_start_matches("sha256:")[..32]
+        ))?,
+        entity: ProjectionEntityKey {
+            kind: ProjectionEntityKind::Runtime,
+            entity_id: CanonicalId::parse("manager-projection-cycle")?,
+        },
+        source_authority: SourceAuthority::Execution,
+        as_of: Some(input.source_read_at),
+        source_read_at: input.source_read_at,
+        source_cursor: None,
+        source_sequence: None,
+        source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+        operation: ProjectionOperation::Upsert,
+        source_completeness: SourceCompleteness::PollBounded,
+        poll_interval_ms: Some(input.poll_interval_ms),
+        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v2".to_owned(),
+        capability_snapshot_id: input.catalogue_digest.clone(),
+        payload: serde_json::json!({
+            "delta_kind": "PORTAL_PROJECTION_DELTA",
+            "profile_id": input.profile_id,
+            "cycle_id": input.cycle_id.as_str(),
+            "state_digest": state_digest,
+            "fact_count": input.record_count,
+            "source_input_digest": input.source_input_digest,
+        }),
+    })
 }
 
 fn tombstone_observation(

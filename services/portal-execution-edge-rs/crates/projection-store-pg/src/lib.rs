@@ -46,8 +46,8 @@ pub use manager_query_analytics::{
 };
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
-    RealtimeActiveEpochWatermark, RealtimeEpochAvailability, RealtimeJournalPage,
-    RealtimeJournalRecord, RealtimeScopeAvailability,
+    ManagerRealtimeAuthority, RealtimeActiveEpochWatermark, RealtimeEpochAvailability,
+    RealtimeJournalPage, RealtimeJournalRecord, RealtimeScopeAvailability,
 };
 pub use retention::{
     evaluate_storage_pressure, recovery_directive, retention_policy_digest, CleanupOutcome,
@@ -4269,6 +4269,7 @@ mod tests {
                 feed_count: 13,
                 record_count: 13,
                 source_read_at: at(200),
+                poll_interval_ms: 2_000,
             };
             let first_cycle = store
                 .commit_manager_projection_cycle(
@@ -4292,6 +4293,20 @@ mod tests {
                 .unwrap();
             assert!(repeated.already_durable);
             assert_eq!(repeated.state_digest, first_cycle.state_digest);
+            let realtime = store
+                .load_manager_realtime_records(epoch_id, 0, 10)
+                .await
+                .unwrap();
+            assert_eq!(realtime.records.len(), 1);
+            assert_eq!(realtime.records[0].projection_sequence, 1);
+            assert_eq!(
+                realtime.records[0].observation.payload["delta_kind"],
+                "PORTAL_PROJECTION_DELTA"
+            );
+            assert_eq!(
+                realtime.records[0].observation.payload["profile_id"],
+                profile_id
+            );
             let activated = store
                 .activate_manager_projection_epoch(
                     &scope,
@@ -4303,6 +4318,19 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(activated.active_epoch_id, epoch_id);
+            let authority = store
+                .active_manager_realtime_authority(&scope)
+                .await
+                .unwrap();
+            assert_eq!(authority.epoch_id, epoch_id);
+            assert_eq!(authority.latest_sequence, 1);
+            assert_eq!(authority.profile_id, profile_id);
+            let availability = store
+                .manager_realtime_scope_availability(&scope)
+                .await
+                .unwrap();
+            assert_eq!(availability.active.latest_available_sequence, 1);
+            assert_eq!(availability.active.earliest_available_sequence, 1);
 
             store
                 .release_manager_projection_lease(&scope, epoch_id, first_lease.proof())

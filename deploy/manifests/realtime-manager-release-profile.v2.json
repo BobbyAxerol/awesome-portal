@@ -1,0 +1,60 @@
+{
+  "schema_version": "portal.execution.realtime-manager-release-profile.v2",
+  "phase": "N26",
+  "snapshot_contract": "execution.manager-realtime-snapshot.v2",
+  "event_contract": "execution.realtime.v1",
+  "delivery_profile": "current_projection",
+  "projection_schema": "portal.execution.manager-projection.v2",
+  "projection_adapter": "portal.execution.manager-projection.manager-v2.runtime.v2",
+  "profiles": {
+    "paper": "PAPER_BINANCE_USDM",
+    "sandbox": "SANDBOX_BINANCE_USDM",
+    "live": "LIVE_BINANCE_USDM"
+  },
+  "resources": {
+    "delegated_jwt": "execution:manager-realtime",
+    "snapshot": "/api/v1/execution/command-center/realtime-snapshot",
+    "stream": "/api/v1/execution/command-center/stream"
+  },
+  "bounds": {
+    "journal_batch": 512,
+    "replay_limit": 1024,
+    "subscriber_queue": 256,
+    "heartbeat_seconds": 15,
+    "poll_interval_ms": 100,
+    "maximum_projection_facts": 80000
+  },
+  "terminal_events": ["auth.expired", "projection.gap"],
+  "resnapshot_reasons": [
+    "history_evicted",
+    "replay_window_exceeded",
+    "slow_consumer",
+    "epoch_changed",
+    "source_discontinuity",
+    "projection_sequence_gap",
+    "cursor_ahead"
+  ],
+  "candidate_flags": {
+    "manager_projection_worker": true,
+    "edge_analytics_query": true,
+    "edge_realtime_sse": true,
+    "control_api_execution_analytics_query": true,
+    "control_api_execution_realtime_sse": true,
+    "edge_command_relay": false,
+    "control_api_command_relay": false
+  },
+  "activation_order": ["paper", "sandbox", "live"],
+  "rollback": {
+    "disable_realtime_only": true,
+    "query_remains_available": true,
+    "projection_epoch_remains_active": true,
+    "source_or_trading_system_mutation": false
+  },
+  "phase_authorization": {
+    "decision": "BOBBY_APPROVED_N26_REALTIME_SSE",
+    "implementation_authorized": true,
+    "signed_dev_deployment_authorized": false,
+    "stable_runtime_change_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

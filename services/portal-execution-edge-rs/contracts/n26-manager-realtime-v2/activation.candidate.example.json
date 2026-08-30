@@ -1,0 +1,54 @@
+{
+  "schema_version": "execution.manager-realtime-activation.v2",
+  "delivery_profile": "current_projection",
+  "resource": "execution:manager-realtime",
+  "profiles": [
+    {
+      "environment": "paper",
+      "profile_id": "PAPER_BINANCE_USDM",
+      "audience": "portal-execution-edge-paper",
+      "catalogue_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "enabled": true
+    },
+    {
+      "environment": "sandbox",
+      "profile_id": "SANDBOX_BINANCE_USDM",
+      "audience": "portal-execution-edge-sandbox",
+      "catalogue_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "enabled": true
+    },
+    {
+      "environment": "live",
+      "profile_id": "LIVE_BINANCE_USDM",
+      "audience": "portal-execution-edge-live",
+      "catalogue_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "enabled": true
+    }
+  ],
+  "compatibility": {
+    "projection_schema_version": "portal.execution.manager-projection.v2",
+    "projection_adapter_version": "portal.execution.manager-projection.manager-v2.runtime.v2",
+    "realtime_contract_revision": "execution.realtime.v2",
+    "edge_image_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "control_api_image_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "snapshot_contract_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "gate_evidence": {
+    "h2_mtls_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "auth_expiry_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "resume_gap_epoch_sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "multi_replica_fanout_sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "slow_consumer_sha256": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "source_loss_recovery_sha256": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+    "terminal_client_sha256": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    "load_sha256": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+    "rollback_sha256": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+  },
+  "authority_set": "PROJECTION_QUERY_REALTIME_COMMANDS_DISABLED",
+  "owner_approval": {
+    "owner_id": "REPLACE_WITH_OWNER_ID",
+    "approved": false,
+    "approved_at": null,
+    "evidence_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  }
+}

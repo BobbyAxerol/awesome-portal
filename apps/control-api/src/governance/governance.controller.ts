@@ -23,6 +23,8 @@ import {
   ExecutionCommandApplyRequestSchema,
   ExecutionCommandCatalogueQuerySchema,
   ExecutionCommandPlanRequestSchema,
+  OperatorTaskPlanRequestSchema,
+  OperatorTaskRunRequestSchema,
   OperationAcknowledgeRequestSchema,
   OperationQueueQuerySchema,
   OperationResolveRequestSchema,
@@ -132,6 +134,56 @@ export class GovernanceController {
       ...parsed.data,
       workspace_id: workspaceId,
     });
+  }
+
+  @Get("/commands/tasks")
+  async commandTasks(
+    @Req() request: GovernanceRequest,
+    @Query("workspace_id") rawWorkspaceId?: unknown,
+  ) {
+    const workspaceId = await this.workspace(request, rawWorkspaceId);
+    return this.operations.taskCatalogue(request.portalUser, workspaceId);
+  }
+
+  @Post("/commands/tasks/:task_id/run")
+  async runCommandTask(
+    @Req() request: GovernanceRequest,
+    @Param("task_id") taskId: string,
+    @Body() body: unknown,
+  ) {
+    this.assertMutationSecurity(request);
+    const parsed = OperatorTaskRunRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_COMMAND_RUN_REQUEST", "Invalid command run request.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.operations.runTask(
+      request.portalUser,
+      taskId,
+      { ...parsed.data, workspace_id: workspaceId },
+      this.requestId(request),
+    );
+  }
+
+  @Post("/commands/tasks/:task_id/plan")
+  @HttpCode(201)
+  async planCommandTask(
+    @Req() request: GovernanceRequest,
+    @Param("task_id") taskId: string,
+    @Body() body: unknown,
+  ) {
+    this.assertMutationSecurity(request);
+    const parsed = OperatorTaskPlanRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_COMMAND_TASK_PLAN", "Invalid command task plan.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.operations.planTask(
+      request.portalUser,
+      taskId,
+      { ...parsed.data, workspace_id: workspaceId },
+      this.requestId(request),
+    );
   }
 
   @Get("/governance/approvals")

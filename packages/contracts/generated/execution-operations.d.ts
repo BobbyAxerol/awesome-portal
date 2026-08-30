@@ -21,6 +21,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/commands/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ADMIN-only exact 24-task Drawer catalogue. Every task and all 64 owner catalogue entries are classified; the current source command transport remains disabled. */
+        get: operations["executionOperatorTaskCatalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/commands/tasks/{task_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Runs only a typed R0 task after session/workspace/ADMIN checks. Until an exact source transport is active, rejects before dispatch and stores a hash-only audit record. */
+        post: operations["runExecutionOperatorReadTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/commands/tasks/{task_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates the existing immutable hash-only governed plan after enforcing the task parameter allowlist and bounded reason. Source apply remains disabled. */
+        post: operations["planExecutionOperatorMutationTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/commands/plans": {
         parameters: {
             query?: never;
@@ -323,6 +374,11 @@ export interface components {
             /** @enum {unknown} */
             blocked_reason: "COMMAND_RELAY_DISABLED" | "SOURCE_ROUTE_MAPPING_AMBIGUOUS" | "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" | "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED" | "GENERIC_REDIS_ACCESS_PROHIBITED" | "DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED";
             source_reference: string;
+            classification?: {
+                /** @enum {unknown} */
+                state: "CONNECTED" | "SUPPORTED_BUT_INACTIVE" | "SEMANTICALLY_INCOMPATIBLE";
+                reason_code: string;
+            };
         };
         CommandCatalogue: {
             /** @constant */
@@ -349,6 +405,235 @@ export interface components {
             total_entries: 64;
             returned_entries: number;
             entries: components["schemas"]["CommandCatalogueEntry"][];
+        };
+        OperatorParams: {
+            [key: string]: string | number | boolean | null;
+        };
+        NullableCatalogKey: string | null;
+        Param: {
+            key: string;
+            /** @enum {unknown} */
+            source_registry: "portfolios" | "accounts" | "alphas" | "deployments" | "bindings" | "venues" | "modes" | "symbols" | "artifacts" | "server_bounds";
+            constraint: string;
+            required: boolean;
+            default: null;
+        };
+        Authority: {
+            /** @constant */
+            required_role: "ADMIN";
+            /** @enum {unknown} */
+            risk_tier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+            step_up_required: boolean;
+            two_man_rule: boolean;
+            plan_required: boolean;
+            apply_required: boolean;
+            verify_required: boolean;
+            runtime_active: boolean;
+        };
+        SourceRoute: {
+            method: string;
+            path: string;
+        } | null;
+        Task: {
+            task_id: string;
+            key: components["schemas"]["NullableCatalogKey"];
+            /** @enum {unknown} */
+            task_group: "READ_INSPECT" | "PORTFOLIO_CAPITAL" | "DEPLOYMENT_RISK" | "ACCOUNT" | "BROKER_SYNC_RECONCILIATION" | "EMERGENCY_DESTRUCTIVE";
+            task_title: string;
+            /** @enum {unknown} */
+            tag: "READ" | "MUTATION" | "DANGER" | "BLOCKED";
+            /** @enum {unknown} */
+            mode: "READ" | "MUTATION" | "DANGER" | "BLOCKED";
+            catalog_key: components["schemas"]["NullableCatalogKey"];
+            scope: string;
+            cli_forms: string[];
+            meta: string;
+            params: components["schemas"]["Param"][];
+            typed_confirm_word: string | null;
+            authority: components["schemas"]["Authority"];
+            unlisted_reason: string | null;
+            /** @enum {unknown} */
+            state: "CONNECTED" | "SUPPORTED_BUT_INACTIVE" | "SEMANTICALLY_INCOMPATIBLE";
+            reason_code: string;
+            source_route: components["schemas"]["SourceRoute"];
+            /** @constant */
+            source_request_sent: false;
+        };
+        /** Portal execution operator task catalogue v1 */
+        "execution-command-tasks.v1.schema": {
+            /** @constant */
+            schema_version: "execution.command-tasks.v1";
+            /** @constant */
+            catalogue_revision: 3;
+            /** @constant */
+            source_catalogue_revision: 2;
+            /** @constant */
+            relay_state: "DISABLED";
+            /** @constant */
+            task_groups: [
+                "READ_INSPECT",
+                "PORTFOLIO_CAPITAL",
+                "DEPLOYMENT_RISK",
+                "ACCOUNT",
+                "BROKER_SYNC_RECONCILIATION",
+                "EMERGENCY_DESTRUCTIVE"
+            ];
+            /** @constant */
+            total_tasks: 24;
+            classification_counts: {
+                CONNECTED: number;
+                SUPPORTED_BUT_INACTIVE: number;
+                SEMANTICALLY_INCOMPATIBLE: number;
+            };
+            bounds: {
+                /** @constant */
+                catalogue: 64;
+                /** @constant */
+                params_per_task: 8;
+                /** @constant */
+                transcript_lines: 200;
+                /** @constant */
+                preflight_rows: 10;
+                /** @constant */
+                verify_rows: 20;
+            };
+            tasks: components["schemas"]["Task"][];
+            scope: {
+                workspace_id: components["schemas"]["Identifier"];
+                actor_user_id: components["schemas"]["Identifier"];
+                /** @constant */
+                actor_role: "ADMIN";
+            };
+            $defs: {
+                Identifier: string;
+                NullableCatalogKey: string | null;
+                Param: {
+                    key: string;
+                    /** @enum {unknown} */
+                    source_registry: "portfolios" | "accounts" | "alphas" | "deployments" | "bindings" | "venues" | "modes" | "symbols" | "artifacts" | "server_bounds";
+                    constraint: string;
+                    required: boolean;
+                    default: null;
+                };
+                Authority: {
+                    /** @constant */
+                    required_role: "ADMIN";
+                    /** @enum {unknown} */
+                    risk_tier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+                    step_up_required: boolean;
+                    two_man_rule: boolean;
+                    plan_required: boolean;
+                    apply_required: boolean;
+                    verify_required: boolean;
+                    runtime_active: boolean;
+                };
+                SourceRoute: {
+                    method: string;
+                    path: string;
+                } | null;
+                OperatorParams: {
+                    [key: string]: string | number | boolean | null;
+                };
+                RunRequest: {
+                    /** @constant */
+                    schema_version: "execution.command-run-request.v1";
+                    workspace_id: string;
+                    request_key: components["schemas"]["Identifier"];
+                    params: components["schemas"]["OperatorParams"];
+                };
+                PlanRequest: {
+                    /** @constant */
+                    schema_version: "execution.command-task-plan-request.v1";
+                    workspace_id: string;
+                    request_key: components["schemas"]["Identifier"];
+                    /** @enum {unknown} */
+                    environment: "PAPER" | "SANDBOX" | "LIVE";
+                    target: {
+                        /** @enum {unknown} */
+                        type: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                        id: components["schemas"]["Identifier"];
+                    };
+                    expected_target_version: number;
+                    params: components["schemas"]["OperatorParams"];
+                    conditions: Record<string, never>[];
+                };
+                Task: {
+                    task_id: string;
+                    key: components["schemas"]["NullableCatalogKey"];
+                    /** @enum {unknown} */
+                    task_group: "READ_INSPECT" | "PORTFOLIO_CAPITAL" | "DEPLOYMENT_RISK" | "ACCOUNT" | "BROKER_SYNC_RECONCILIATION" | "EMERGENCY_DESTRUCTIVE";
+                    task_title: string;
+                    /** @enum {unknown} */
+                    tag: "READ" | "MUTATION" | "DANGER" | "BLOCKED";
+                    /** @enum {unknown} */
+                    mode: "READ" | "MUTATION" | "DANGER" | "BLOCKED";
+                    catalog_key: components["schemas"]["NullableCatalogKey"];
+                    scope: string;
+                    cli_forms: string[];
+                    meta: string;
+                    params: components["schemas"]["Param"][];
+                    typed_confirm_word: string | null;
+                    authority: components["schemas"]["Authority"];
+                    unlisted_reason: string | null;
+                    /** @enum {unknown} */
+                    state: "CONNECTED" | "SUPPORTED_BUT_INACTIVE" | "SEMANTICALLY_INCOMPATIBLE";
+                    reason_code: string;
+                    source_route: components["schemas"]["SourceRoute"];
+                    /** @constant */
+                    source_request_sent: false;
+                };
+            };
+        };
+        RunRequest: {
+            /** @constant */
+            schema_version: "execution.command-run-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            params: components["schemas"]["OperatorParams"];
+        };
+        PlanRequest: {
+            /** @constant */
+            schema_version: "execution.command-task-plan-request.v1";
+            workspace_id: string;
+            request_key: components["schemas"]["Identifier"];
+            /** @enum {unknown} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            target: {
+                /** @enum {unknown} */
+                type: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
+                id: components["schemas"]["Identifier"];
+            };
+            expected_target_version: number;
+            params: components["schemas"]["OperatorParams"];
+            conditions: Record<string, never>[];
+        };
+        /** Format: date-time */
+        DateTime: string;
+        ExecutionCommandPlan: {
+            /** @constant */
+            schema_version: "execution.command-plan.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            command_type: "EXECUTION_COMMAND";
+            /** @constant */
+            command_version: 1;
+            command_key: string;
+            risk_tier: components["schemas"]["RiskTier"];
+            payload_hash: components["schemas"]["Hash"];
+            plan_digest: components["schemas"]["Hash"];
+            /** @constant */
+            status: "BLOCKED";
+            blockers: string[];
+            warnings: string[];
+            apply_token: null;
+            expires_at: components["schemas"]["DateTime"];
+            /** @constant */
+            payload_storage_policy: "HASH_ONLY_NO_RAW";
+            /** @constant */
+            relay_capability: "DISABLED";
+            /** @constant */
+            source_side_effect_requested: false;
+            replayed: boolean;
         };
         /** Format: date */
         Date: string;
@@ -379,34 +664,6 @@ export interface components {
             expected_target_version: number;
             payload: Record<string, never>;
             conditions: components["schemas"]["TypedCondition"][];
-        };
-        /** Format: date-time */
-        DateTime: string;
-        ExecutionCommandPlan: {
-            /** @constant */
-            schema_version: "execution.command-plan.v1";
-            operation_id: components["schemas"]["Identifier"];
-            /** @constant */
-            command_type: "EXECUTION_COMMAND";
-            /** @constant */
-            command_version: 1;
-            command_key: string;
-            risk_tier: components["schemas"]["RiskTier"];
-            payload_hash: components["schemas"]["Hash"];
-            plan_digest: components["schemas"]["Hash"];
-            /** @constant */
-            status: "BLOCKED";
-            blockers: string[];
-            warnings: string[];
-            apply_token: null;
-            expires_at: components["schemas"]["DateTime"];
-            /** @constant */
-            payload_storage_policy: "HASH_ONLY_NO_RAW";
-            /** @constant */
-            relay_capability: "DISABLED";
-            /** @constant */
-            source_side_effect_requested: false;
-            replayed: boolean;
         };
         OperationQueueItem: {
             operation_id: components["schemas"]["Identifier"];
@@ -849,6 +1106,99 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    executionOperatorTaskCatalogue: {
+        parameters: {
+            query?: {
+                workspace_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Typed task catalogue with current connection state and bounded forms */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["execution-command-tasks.v1.schema"];
+                };
+            };
+            /** @description ADMIN_ROLE_REQUIRED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description WORKSPACE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    runExecutionOperatorReadTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunRequest"];
+            };
+        };
+        responses: {
+            /** @description SUPPORTED_BUT_INACTIVE; source_request_sent=false */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description SEMANTICALLY_INCOMPATIBLE; source_request_sent=false */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    planExecutionOperatorMutationTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description Blocked hash-only plan with no source dispatch */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionCommandPlan"];
+                };
             };
         };
     };

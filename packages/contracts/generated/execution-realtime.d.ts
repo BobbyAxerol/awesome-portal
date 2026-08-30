@@ -46,7 +46,8 @@ export interface components {
         /** Format: date-time */
         DateTime: string;
         NullableDateTime: components["schemas"]["DateTime"] | null;
-        RealtimeSnapshot: {
+        RealtimeSnapshot: components["schemas"]["LegacyRealtimeSnapshot"] | components["schemas"]["ManagerRealtimeSnapshot"];
+        LegacyRealtimeSnapshot: {
             /** @constant */
             schema_version: "execution.realtime-snapshot.v1";
             /** @constant */
@@ -64,6 +65,29 @@ export interface components {
             capability_snapshot_id: string;
             activation_manifest_digest: string;
         };
+        ManagerRealtimeSnapshot: {
+            /** @constant */
+            schema_version: "execution.manager-realtime-snapshot.v2";
+            /** @constant */
+            delivery_profile: "current_projection";
+            workspace_id: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            profile_id: string;
+            /** Format: uuid */
+            projection_epoch: string;
+            projection_sequence: number;
+            cursor: components["schemas"]["ProjectionCursor"];
+            /** @constant */
+            stream_available: true;
+            /** @enum {string} */
+            data_state: "AVAILABLE" | "EMPTY_VALID";
+            fact_count: number;
+            source_read_at: components["schemas"]["DateTime"];
+            projection_state_digest: string;
+            resnapshot_not_before: null;
+            activation_manifest_digest: string;
+        };
         Problem: {
             error: {
                 code: string;
@@ -79,11 +103,25 @@ export interface components {
             reconnect_required: true;
             expires_at: components["schemas"]["DateTime"];
         };
+        AuthExpiredEvent: {
+            /** @constant */
+            event_type: "auth.expired";
+            /** @constant */
+            schema_version: "execution.realtime.v1";
+            /** @constant */
+            terminal: true;
+            /** @constant */
+            reconnect_required: false;
+        };
         ProjectionGapEvent: {
             /** @constant */
             event_type: "projection.gap";
             /** @constant */
             schema_version: "execution.realtime.v1";
+            /** @constant */
+            terminal: true;
+            /** @constant */
+            reconnect_required: false;
             /** @enum {string} */
             reason: "history_evicted" | "replay_window_exceeded" | "slow_consumer" | "epoch_changed" | "source_discontinuity" | "projection_sequence_gap" | "cursor_ahead";
             last_good_cursor: components["schemas"]["ProjectionCursor"] | null;

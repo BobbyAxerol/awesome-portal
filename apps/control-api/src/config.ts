@@ -89,6 +89,9 @@ const EnvSchema = z.object({
   PORTAL_SSE_CONNECT_TIMEOUT_MS: z.coerce.number().int().min(250).max(10_000).default(3_000),
   FEATURE_EXECUTION_EDGE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_REALTIME_SSE: z.enum(["true", "false"]).default("false"),
+  EXECUTION_REALTIME_AUTHORITY_MODE: z
+    .enum(["legacy_shadow", "manager_projection"])
+    .default("legacy_shadow"),
   FEATURE_EXECUTION_ANALYTICS_QUERY: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_SHADOW_QUERY: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: z.enum(["true", "false"]).default("false"),
@@ -372,12 +375,33 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (
     config.FEATURE_EXECUTION_REALTIME_SSE === "true" &&
+    config.EXECUTION_REALTIME_AUTHORITY_MODE === "legacy_shadow" &&
     (config.FEATURE_EXECUTION_SHADOW_QUERY !== "true" ||
       config.FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW !== "true")
   ) {
     throw new Error(
       "FEATURE_EXECUTION_REALTIME_SSE=true requires FEATURE_EXECUTION_SHADOW_QUERY=true and FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW=true",
     );
+  }
+  if (
+    config.FEATURE_EXECUTION_REALTIME_SSE === "true" &&
+    config.EXECUTION_REALTIME_AUTHORITY_MODE === "manager_projection" &&
+    (config.FEATURE_EXECUTION_ANALYTICS_QUERY !== "true" ||
+      config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID === undefined)
+  ) {
+    throw new Error(
+      "manager-projection realtime requires analytics Query and a Manager-v2 profile binding",
+    );
+  }
+  if (
+    config.FEATURE_EXECUTION_REALTIME_SSE === "true" &&
+    config.EXECUTION_REALTIME_AUTHORITY_MODE === "manager_projection" &&
+    config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID !== undefined &&
+    !config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID.startsWith(
+      `${config.EXECUTION_EDGE_ENVIRONMENT.toUpperCase()}_`,
+    )
+  ) {
+    throw new Error("manager-projection realtime profile must match the edge environment");
   }
   return config;
 }

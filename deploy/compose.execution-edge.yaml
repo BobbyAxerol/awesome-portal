@@ -91,6 +91,9 @@ services:
       # EX-BE-06 is independently activated only after projection source,
       # SGP↔AWS HTTP/2 and 100-client evidence are accepted.
       EDGE_REALTIME_SSE_ENABLED: ${EDGE_REALTIME_SSE_ENABLED:-false}
+      # legacy_shadow preserves N08; manager_projection consumes only the
+      # durable N24/N25 Portal journal and never starts an ingestion worker.
+      EDGE_REALTIME_AUTHORITY_MODE: ${EDGE_REALTIME_AUTHORITY_MODE:-legacy_shadow}
       EDGE_REALTIME_ACTIVATION_MANIFEST_FILE: ${EDGE_REALTIME_ACTIVATION_MANIFEST_FILE:-/run/secrets/realtime-activation.json}
       EDGE_REALTIME_QUEUE_CAPACITY: ${EDGE_REALTIME_QUEUE_CAPACITY:-256}
       EDGE_REALTIME_REPLAY_LIMIT: ${EDGE_REALTIME_REPLAY_LIMIT:-1024}

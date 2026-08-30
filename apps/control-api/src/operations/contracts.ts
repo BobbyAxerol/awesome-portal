@@ -42,6 +42,9 @@ function payloadPolicyIssue(payload: Record<string, unknown>): string | null {
       return "PAYLOAD_LIMIT_EXCEEDED";
     }
     if (typeof value === "string") {
+      if (containsCredentialLikeAssignment(value)) {
+        return "SENSITIVE_PAYLOAD_VALUE_FORBIDDEN";
+      }
       return Buffer.byteLength(value, "utf8") <= PAYLOAD_MAX_STRING_UTF8_BYTES
         ? null
         : "PAYLOAD_LIMIT_EXCEEDED";
@@ -140,6 +143,40 @@ export const ExecutionCommandCatalogueQuerySchema = z
   });
 
 export type ExecutionCommandCatalogueQuery = z.infer<typeof ExecutionCommandCatalogueQuerySchema>;
+
+const OperatorTaskParamsSchema = z
+  .record(z.string().regex(/^[a-z][a-z0-9_]{0,63}$/), z.union([
+    z.string().max(2000), z.number().finite(), z.boolean(), z.null(),
+  ]))
+  .superRefine((params, context) => {
+    if (Object.keys(params).length > 8) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "TASK_PARAM_LIMIT_EXCEEDED" });
+    }
+    const issue = payloadPolicyIssue(params);
+    if (issue) context.addIssue({ code: z.ZodIssueCode.custom, message: issue });
+  });
+
+export const OperatorTaskRunRequestSchema = z.object({
+  schema_version: z.literal("execution.command-run-request.v1"),
+  workspace_id: z.string().min(3).max(96),
+  request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/),
+  params: OperatorTaskParamsSchema,
+}).strict();
+
+export type OperatorTaskRunRequest = z.infer<typeof OperatorTaskRunRequestSchema>;
+
+export const OperatorTaskPlanRequestSchema = z.object({
+  schema_version: z.literal("execution.command-task-plan-request.v1"),
+  workspace_id: z.string().min(3).max(96),
+  request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/),
+  environment: ExecutionEnvironmentSchema,
+  target: z.object({ type: ExecutionTargetTypeSchema, id: IdentifierSchema }).strict(),
+  expected_target_version: z.number().int().positive(),
+  params: OperatorTaskParamsSchema,
+  conditions: z.array(TypedConditionSchema).max(16).default([]),
+}).strict();
+
+export type OperatorTaskPlanRequest = z.infer<typeof OperatorTaskPlanRequestSchema>;
 
 export const ExecutionCommandPlanRequestSchema = z
   .object({

@@ -29,6 +29,59 @@
         }
       }
     },
+    "/api/v1/execution/commands/tasks": {
+      "get": {
+        "operationId": "executionOperatorTaskCatalogue",
+        "description": "ADMIN-only exact 24-task Drawer catalogue. Every task and all 64 owner catalogue entries are classified; the current source command transport remains disabled.",
+        "parameters": [
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Typed task catalogue with current connection state and bounded forms",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-command-tasks.v1.schema.json" } } }
+          },
+          "403": { "description": "ADMIN_ROLE_REQUIRED" },
+          "404": { "description": "WORKSPACE_NOT_FOUND" }
+        }
+      }
+    },
+    "/api/v1/execution/commands/tasks/{task_id}/run": {
+      "post": {
+        "operationId": "runExecutionOperatorReadTask",
+        "description": "Runs only a typed R0 task after session/workspace/ADMIN checks. Until an exact source transport is active, rejects before dispatch and stores a hash-only audit record.",
+        "parameters": [
+          { "name": "task_id", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-command-tasks.v1.schema.json#/$defs/RunRequest" } } }
+        },
+        "responses": {
+          "409": { "description": "SUPPORTED_BUT_INACTIVE; source_request_sent=false" },
+          "422": { "description": "SEMANTICALLY_INCOMPATIBLE; source_request_sent=false" }
+        }
+      }
+    },
+    "/api/v1/execution/commands/tasks/{task_id}/plan": {
+      "post": {
+        "operationId": "planExecutionOperatorMutationTask",
+        "description": "Creates the existing immutable hash-only governed plan after enforcing the task parameter allowlist and bounded reason. Source apply remains disabled.",
+        "parameters": [
+          { "name": "task_id", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-command-tasks.v1.schema.json#/$defs/PlanRequest" } } }
+        },
+        "responses": {
+          "201": {
+            "description": "Blocked hash-only plan with no source dispatch",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan" } } }
+          }
+        }
+      }
+    },
     "/api/v1/execution/commands/plans": {
       "post": {
         "operationId": "planExecutionCommandF0",

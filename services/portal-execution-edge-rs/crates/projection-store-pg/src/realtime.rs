@@ -63,7 +63,162 @@ pub struct RealtimeJournalPage {
     pub has_more: bool,
 }
 
+/// Runtime lineage for the latest complete Manager-v2 cycle in one ACTIVE
+/// epoch.  N26 compares this row with its immutable release manifest before
+/// exposing either a snapshot cursor or a stream.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ManagerRealtimeAuthority {
+    pub epoch_id: Uuid,
+    pub latest_sequence: u64,
+    pub profile_id: String,
+    pub catalogue_digest: String,
+    pub state_digest: String,
+    pub source_read_at: DateTime<Utc>,
+    pub fact_count: u64,
+}
+
 impl PgProjectionStore {
+    /// Loads the latest complete N24 cycle for the ACTIVE epoch in a scope.
+    ///
+    /// # Errors
+    ///
+    /// Returns `ActiveEpochNotFound` when no durable Manager cycle can back a
+    /// realtime snapshot.  This makes an empty-but-valid Live profile distinct
+    /// from an uninitialised projection: the former has a complete zero-fact
+    /// cycle, the latter has no cycle at all.
+    pub async fn active_manager_realtime_authority(
+        &self,
+        scope: &ProjectionScope,
+    ) -> Result<ManagerRealtimeAuthority, StoreError> {
+        let row = sqlx::query(
+            "SELECT e.epoch_id,c.realtime_sequence,c.profile_id,c.catalogue_digest,
+                    c.state_digest,c.source_read_at,c.record_count
+               FROM portal_projection.epochs e
+               JOIN LATERAL (
+                 SELECT realtime_sequence,profile_id,catalogue_digest,state_digest,
+                        source_read_at,record_count
+                  FROM portal_projection.manager_projection_cycles
+                  WHERE epoch_id=e.epoch_id AND realtime_sequence IS NOT NULL
+                  ORDER BY realtime_sequence DESC LIMIT 1
+               ) c ON true
+              WHERE e.workspace_id=$1 AND e.environment=$2 AND e.status='ACTIVE'",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(StoreError::ActiveEpochNotFound)?;
+        Ok(ManagerRealtimeAuthority {
+            epoch_id: row.try_get("epoch_id")?,
+            latest_sequence: required_u64(row.try_get("realtime_sequence")?)?,
+            profile_id: row.try_get("profile_id")?,
+            catalogue_digest: row.try_get("catalogue_digest")?,
+            state_digest: row.try_get("state_digest")?,
+            source_read_at: row.try_get("source_read_at")?,
+            fact_count: required_u64(row.try_get("record_count")?)?,
+        })
+    }
+
+    /// Returns manager-cycle cursor bounds for ACTIVE and retained epochs.
+    /// Per-snapshot projection journal rows are intentionally excluded because
+    /// they may exist before a complete cycle is sealed.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] when `PostgreSQL` cannot be queried or the scope
+    /// has no ACTIVE epoch with at least one N26 cycle journal record.
+    pub async fn manager_realtime_scope_availability(
+        &self,
+        scope: &ProjectionScope,
+    ) -> Result<RealtimeScopeAvailability, StoreError> {
+        let rows = sqlx::query(
+            "SELECT e.epoch_id,e.status,e.created_at,e.activated_at,e.overlap_until,
+                    e.actual_state_digest,
+                    MAX(c.realtime_sequence) AS next_projection_sequence,
+                    MIN(c.realtime_sequence) AS earliest_available_sequence
+               FROM portal_projection.epochs e
+               JOIN portal_projection.manager_projection_cycles c
+                 ON c.epoch_id=e.epoch_id AND c.realtime_sequence IS NOT NULL
+              WHERE e.workspace_id=$1 AND e.environment=$2
+                AND e.status IN ('ACTIVE','RETAINED')
+              GROUP BY e.epoch_id,e.status,e.created_at,e.activated_at,
+                       e.overlap_until,e.actual_state_digest
+              ORDER BY CASE e.status WHEN 'ACTIVE' THEN 0 ELSE 1 END,
+                       e.activated_at DESC NULLS LAST
+              LIMIT 2",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .fetch_all(&self.pool)
+        .await?;
+        scope_availability_from_rows(rows)
+    }
+
+    /// Lists ACTIVE Manager epochs at their complete-cycle high-water marks.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] for database or numeric failures.
+    pub async fn active_manager_realtime_epoch_watermarks(
+        &self,
+    ) -> Result<Vec<RealtimeActiveEpochWatermark>, StoreError> {
+        let rows = sqlx::query(
+            "SELECT e.workspace_id,e.environment,e.epoch_id,
+                    MAX(c.realtime_sequence) AS latest_sequence
+               FROM portal_projection.epochs e
+               JOIN portal_projection.manager_projection_cycles c
+                 ON c.epoch_id=e.epoch_id AND c.realtime_sequence IS NOT NULL
+              WHERE e.status='ACTIVE'
+              GROUP BY e.workspace_id,e.environment,e.epoch_id
+              ORDER BY e.workspace_id,e.environment,e.epoch_id",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        rows.into_iter()
+            .map(|row| {
+                Ok(RealtimeActiveEpochWatermark {
+                    workspace_id: row.try_get("workspace_id")?,
+                    environment: row.try_get("environment")?,
+                    epoch_id: row.try_get("epoch_id")?,
+                    latest_sequence: required_u64(row.try_get("latest_sequence")?)?,
+                })
+            })
+            .collect()
+    }
+
+    /// Loads complete-cycle Manager realtime records after one N26 cursor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError`] for invalid bounds, malformed persisted evidence
+    /// or database failures.
+    pub async fn load_manager_realtime_records(
+        &self,
+        epoch_id: Uuid,
+        after_sequence: u64,
+        limit: usize,
+    ) -> Result<RealtimeJournalPage, StoreError> {
+        validate_limit(limit)?;
+        let rows = sqlx::query(
+            "SELECT c.realtime_sequence AS journal_ordinal,e.workspace_id,e.environment,
+                    c.epoch_id,c.realtime_sequence AS projection_sequence,
+                    c.committed_at AS projected_at,'APPLIED'::text AS outcome,
+                    c.realtime_observation AS observation
+               FROM portal_projection.manager_projection_cycles c
+               JOIN portal_projection.epochs e ON e.epoch_id=c.epoch_id
+              WHERE c.epoch_id=$1 AND c.realtime_sequence>$2
+                AND c.realtime_observation IS NOT NULL
+              ORDER BY c.realtime_sequence
+              LIMIT $3",
+        )
+        .bind(epoch_id)
+        .bind(i64::try_from(after_sequence).map_err(|_| StoreError::NumericOverflow)?)
+        .bind(i64::try_from(limit + 1).map_err(|_| StoreError::NumericOverflow)?)
+        .fetch_all(&self.pool)
+        .await?;
+        page_from_rows(rows, limit)
+    }
+
     /// Lists exactly one ACTIVE epoch per scope with its committed sequence.
     /// BUILDING and retained epochs are intentionally absent from live fan-out.
     ///
@@ -129,23 +284,7 @@ impl PgProjectionStore {
         .fetch_all(&self.pool)
         .await?;
 
-        let mut active = None;
-        let mut retained_previous = None;
-        for row in rows {
-            let status: String = row.try_get("status")?;
-            let availability = row_to_availability(&row, &status)?;
-            match status.as_str() {
-                "ACTIVE" => active = Some(availability),
-                "RETAINED" if retained_previous.is_none() => {
-                    retained_previous = Some(availability);
-                }
-                _ => {}
-            }
-        }
-        Ok(RealtimeScopeAvailability {
-            active: active.ok_or(StoreError::ActiveEpochNotFound)?,
-            retained_previous,
-        })
+        scope_availability_from_rows(rows)
     }
 
     /// Loads a bounded replay page strictly after a Portal projection cursor.
@@ -283,5 +422,25 @@ fn row_to_availability(
         },
         earliest_available_sequence: required_u64(row.try_get("earliest_available_sequence")?)?,
         latest_available_sequence: required_u64(row.try_get("next_projection_sequence")?)?,
+    })
+}
+
+fn scope_availability_from_rows(
+    rows: Vec<sqlx::postgres::PgRow>,
+) -> Result<RealtimeScopeAvailability, StoreError> {
+    let mut active = None;
+    let mut retained_previous = None;
+    for row in rows {
+        let status: String = row.try_get("status")?;
+        let availability = row_to_availability(&row, &status)?;
+        match status.as_str() {
+            "ACTIVE" => active = Some(availability),
+            "RETAINED" if retained_previous.is_none() => retained_previous = Some(availability),
+            _ => {}
+        }
+    }
+    Ok(RealtimeScopeAvailability {
+        active: active.ok_or(StoreError::ActiveEpochNotFound)?,
+        retained_previous,
     })
 }

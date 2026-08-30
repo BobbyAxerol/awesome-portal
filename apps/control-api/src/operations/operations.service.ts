@@ -8,6 +8,8 @@ import { EXECUTION_COMMAND_CATALOG } from "./catalog.generated";
 import {
   ExecutionCommandCatalogueQuery,
   ExecutionCommandPlanRequest,
+  OperatorTaskPlanRequest,
+  OperatorTaskRunRequest,
 } from "./contracts";
 import {
   ExecutionCommandPlanRecord,
@@ -17,6 +19,12 @@ import {
   classifyN16bProtectivePlan,
   n16bCatalogueEntry,
 } from "./current-protective.acceptance";
+import {
+  operatorTask,
+  operatorTaskCatalogue,
+  catalogueEntryClassification,
+  taskClassification,
+} from "./operator-tasks";
 
 function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -80,7 +88,10 @@ export class ExecutionOperationsService {
     const selectedEntries = scope.risk_tier === undefined
       ? [...EXECUTION_COMMAND_CATALOG.entries]
       : EXECUTION_COMMAND_CATALOG.entries.filter((entry) => entry.risk_tier === scope.risk_tier);
-    const entries = selectedEntries.map((entry) => n16bCatalogueEntry(entry));
+    const entries = selectedEntries.map((entry) => {
+      const accepted = n16bCatalogueEntry(entry);
+      return { ...accepted, classification: catalogueEntryClassification(accepted) };
+    });
     return {
       ...EXECUTION_COMMAND_CATALOG,
       scope: {
@@ -92,7 +103,9 @@ export class ExecutionOperationsService {
           ? null
           : { type: scope.target_type, id: scope.target_id! },
         requested_risk_tier: scope.risk_tier ?? null,
-        capability_state: "DISABLED" as const,
+        capability_state: entries.some((entry) => entry.classification.state === "CONNECTED")
+          ? ("PARTIAL" as const)
+          : ("DISABLED" as const),
         freshness_state: "UNAVAILABLE" as const,
         policy_revision: "execution.command-catalogue.f0.v2" as const,
       },
@@ -100,6 +113,98 @@ export class ExecutionOperationsService {
       returned_entries: entries.length,
       entries,
     };
+  }
+
+  taskCatalogue(user: PortalUser, workspaceId: string) {
+    if (user.role !== "ADMIN") {
+      throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
+    }
+    return {
+      ...operatorTaskCatalogue(),
+      scope: {
+        workspace_id: workspaceId,
+        actor_user_id: user.userId,
+        actor_role: user.role,
+      },
+    };
+  }
+
+  async runTask(
+    user: PortalUser,
+    taskId: string,
+    input: OperatorTaskRunRequest,
+    requestId: string,
+  ): Promise<never> {
+    if (user.role !== "ADMIN") {
+      throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
+    }
+    const task = this.validatedTask(taskId, input.params);
+    if (task.mode !== "READ") {
+      throw new GovernanceError("COMMAND_RUN_READ_ONLY", "Run is available only for R0 tasks.", 409);
+    }
+    const classification = taskClassification(task);
+    await this.audit.record({
+      eventId: newUlid("audit"),
+      eventType: "execution.command.run_rejected",
+      actorUserId: user.userId,
+      workspaceId: input.workspace_id,
+      requestId,
+      idempotencyKey: input.request_key,
+      aggregateType: "execution_command_task",
+      aggregateId: task.taskId,
+      aggregateVersion: 1,
+      result: "DENIED",
+      reasonCode: classification.reason_code,
+      metadata: {
+        classification: classification.state,
+        source_request_sent: false,
+        transcript_lines: 0,
+        params_digest: digest(input.params),
+      },
+    });
+    throw new GovernanceError(
+      classification.reason_code,
+      "The published read operation is not active through the Portal command transport.",
+      classification.state === "SEMANTICALLY_INCOMPATIBLE" ? 422 : 409,
+      { task_id: task.taskId, classification: classification.state, source_request_sent: false },
+    );
+  }
+
+  async planTask(
+    user: PortalUser,
+    taskId: string,
+    input: OperatorTaskPlanRequest,
+    requestId: string,
+  ) {
+    if (user.role !== "ADMIN") {
+      throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
+    }
+    const task = this.validatedTask(taskId, input.params);
+    if (task.mode === "READ" || task.mode === "BLOCKED" || task.catalogKey === null) {
+      const classification = taskClassification(task);
+      throw new GovernanceError(
+        classification.reason_code,
+        "This task has no governed mutation plan path.",
+        422,
+        { task_id: task.taskId, classification: classification.state },
+      );
+    }
+    if (typeof input.params.reason !== "string" || input.params.reason.trim().length < 8) {
+      throw new GovernanceError("COMMAND_REASON_REQUIRED", "A bounded operator reason is required.", 400);
+    }
+    return this.plan(user, {
+      schema_version: "execution.command-plan-request.v1",
+      workspace_id: input.workspace_id,
+      request_key: input.request_key,
+      command_type: "EXECUTION_COMMAND",
+      command_version: 1,
+      command_key: task.catalogKey,
+      environment: input.environment,
+      target: input.target,
+      expected_target_version: input.expected_target_version,
+      payload: input.params,
+      conditions: input.conditions,
+    }, requestId);
   }
 
   async plan(user: PortalUser, input: ExecutionCommandPlanRequest, requestId: string) {
@@ -256,5 +361,19 @@ export class ExecutionOperationsService {
       created_at: plan.createdAt.toISOString(),
       updated_at: plan.updatedAt.toISOString(),
     };
+  }
+
+  private validatedTask(taskId: string, params: Record<string, unknown>) {
+    const task = operatorTask(taskId);
+    if (!task) throw new GovernanceError("UNKNOWN_OPERATOR_TASK", "Unknown operator task.", 404);
+    const supplied = Object.keys(params);
+    if (supplied.some((key) => !task.parameterKeys.includes(key))) {
+      throw new GovernanceError(
+        "COMMAND_PARAM_NOT_DECLARED",
+        "A parameter is outside the task's typed allowlist.",
+        400,
+      );
+    }
+    return task;
   }
 }

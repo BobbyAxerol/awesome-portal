@@ -81,6 +81,10 @@ use source_qualification::{
     realtime_activation::{
         accept_realtime_activation, AcceptedRealtimeActivation, RealtimeActivationEvidence,
     },
+    realtime_manager_activation::{
+        accept_manager_realtime_activation, AcceptedManagerRealtimeActivation,
+        ManagerRealtimeActivationEvidence, MANAGER_REALTIME_RESOURCE,
+    },
     shadow_screen::PAPER_WORKBENCH_SCREEN_ID as N07_PAPER_WORKBENCH_SCREEN_ID,
 };
 use thiserror::Error;
@@ -108,6 +112,18 @@ const QUERY_ANALYTICS_SCHEMA_VERSION: &str = "execution.query-analytics-envelope
 enum RuntimeGate {
     Disabled,
     Enabled,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RealtimeAuthorityMode {
+    LegacyShadow,
+    ManagerProjection,
+}
+
+#[derive(Clone)]
+enum AcceptedRealtimeAuthority {
+    Legacy(Box<AcceptedRealtimeActivation>),
+    Manager(Box<AcceptedManagerRealtimeActivation>),
 }
 
 impl RuntimeGate {
@@ -140,7 +156,7 @@ struct AppState {
     realtime_poller_ready: Arc<RwLock<bool>>,
     projection_store: Option<PgProjectionStore>,
     realtime_hub: Option<RealtimeHub>,
-    realtime_activation: Option<AcceptedRealtimeActivation>,
+    realtime_activation: Option<AcceptedRealtimeAuthority>,
     realtime_replay_limit: usize,
     realtime_heartbeat: Duration,
     realtime_epoch_jitter: Duration,
@@ -202,6 +218,7 @@ struct EdgeConfig {
     projection_ingestion_enabled: RuntimeGate,
     projection_database_url_file: Option<PathBuf>,
     realtime_sse_enabled: RuntimeGate,
+    realtime_authority_mode: RealtimeAuthorityMode,
     realtime_activation_manifest_file: Option<PathBuf>,
     realtime_queue_capacity: usize,
     realtime_replay_limit: usize,
@@ -226,6 +243,7 @@ struct RuntimeFeatureConfig {
     projection_ingestion_enabled: RuntimeGate,
     projection_database_url_file: Option<PathBuf>,
     realtime_sse_enabled: RuntimeGate,
+    realtime_authority_mode: RealtimeAuthorityMode,
     realtime_activation_manifest_file: Option<PathBuf>,
     analytics_query_enabled: RuntimeGate,
     analytics_source_profile: DeliveryProfile,
@@ -276,6 +294,15 @@ impl EdgeConfig {
         if manager_projection_enabled.is_enabled() && !manager_v2_read_enabled.is_enabled() {
             return Err(ConfigError::Invalid("EDGE_MANAGER_PROJECTION_ENABLED"));
         }
+        validate_realtime_runtime_dependencies(
+            runtime.realtime_sse_enabled,
+            runtime.realtime_authority_mode,
+            runtime.projection_ingestion_enabled,
+            manager_v2_read_enabled,
+            runtime.analytics_query_enabled,
+            runtime.shadow_query_enabled,
+            runtime.paper_workbench_shadow_enabled,
+        )?;
         let manager_projection_rebuild_authorized = RuntimeGate::from(strict_boolean(
             "EDGE_MANAGER_PROJECTION_REBUILD_AUTHORIZED",
             false,
@@ -401,6 +428,7 @@ impl EdgeConfig {
             projection_ingestion_enabled: runtime.projection_ingestion_enabled,
             projection_database_url_file: runtime.projection_database_url_file,
             realtime_sse_enabled: runtime.realtime_sse_enabled,
+            realtime_authority_mode: runtime.realtime_authority_mode,
             realtime_activation_manifest_file: runtime.realtime_activation_manifest_file,
             realtime_queue_capacity: bounded_usize("EDGE_REALTIME_QUEUE_CAPACITY", 256, 8, 4096)?,
             realtime_replay_limit: bounded_usize("EDGE_REALTIME_REPLAY_LIMIT", 1024, 1, 2048)?,
@@ -444,6 +472,12 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
         RuntimeGate::from(strict_boolean("EDGE_PROJECTION_INGESTION_ENABLED", false)?);
     let realtime_sse_enabled =
         RuntimeGate::from(strict_boolean("EDGE_REALTIME_SSE_ENABLED", false)?);
+    let realtime_authority_mode =
+        match value_or("EDGE_REALTIME_AUTHORITY_MODE", "legacy_shadow").as_str() {
+            "legacy_shadow" => RealtimeAuthorityMode::LegacyShadow,
+            "manager_projection" => RealtimeAuthorityMode::ManagerProjection,
+            _ => return Err(ConfigError::Invalid("EDGE_REALTIME_AUTHORITY_MODE")),
+        };
     let realtime_activation_manifest_file = optional_path("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE");
     let analytics_query_enabled =
         RuntimeGate::from(strict_boolean("EDGE_ANALYTICS_QUERY_ENABLED", false)?);
@@ -456,12 +490,6 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
     if paper_workbench_shadow_enabled.is_enabled() && !shadow_query_enabled.is_enabled() {
         return Err(ConfigError::Invalid("EDGE_PAPER_WORKBENCH_SHADOW_ENABLED"));
     }
-    validate_realtime_runtime_dependencies(
-        realtime_sse_enabled,
-        projection_ingestion_enabled,
-        shadow_query_enabled,
-        paper_workbench_shadow_enabled,
-    )?;
     if strict_boolean("EDGE_COMMAND_RELAY_ENABLED", false)? {
         return Err(ConfigError::Invalid("EDGE_COMMAND_RELAY_ENABLED"));
     }
@@ -515,6 +543,7 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
         projection_ingestion_enabled,
         projection_database_url_file,
         realtime_sse_enabled,
+        realtime_authority_mode,
         realtime_activation_manifest_file,
         analytics_query_enabled,
         analytics_source_profile: delivery_profile(&value_or(
@@ -537,16 +566,27 @@ fn runtime_features_from_environment() -> Result<RuntimeFeatureConfig, ConfigErr
 
 fn validate_realtime_runtime_dependencies(
     realtime_sse_enabled: RuntimeGate,
+    authority_mode: RealtimeAuthorityMode,
     projection_ingestion_enabled: RuntimeGate,
+    manager_v2_read_enabled: RuntimeGate,
+    analytics_query_enabled: RuntimeGate,
     shadow_query_enabled: RuntimeGate,
     paper_workbench_shadow_enabled: RuntimeGate,
 ) -> Result<(), ConfigError> {
-    if realtime_sse_enabled.is_enabled()
-        && (!projection_ingestion_enabled.is_enabled()
-            || !shadow_query_enabled.is_enabled()
-            || !paper_workbench_shadow_enabled.is_enabled())
-    {
-        return Err(ConfigError::Invalid("EDGE_REALTIME_SSE_ENABLED"));
+    if realtime_sse_enabled.is_enabled() {
+        let dependencies_ready = match authority_mode {
+            RealtimeAuthorityMode::LegacyShadow => {
+                projection_ingestion_enabled.is_enabled()
+                    && shadow_query_enabled.is_enabled()
+                    && paper_workbench_shadow_enabled.is_enabled()
+            }
+            RealtimeAuthorityMode::ManagerProjection => {
+                manager_v2_read_enabled.is_enabled() && analytics_query_enabled.is_enabled()
+            }
+        };
+        if !dependencies_ready {
+            return Err(ConfigError::Invalid("EDGE_REALTIME_SSE_ENABLED"));
+        }
     }
     Ok(())
 }
@@ -912,7 +952,7 @@ fn query_cursor_codec(config: &EdgeConfig) -> Result<Option<CursorCodec>, Servic
 
 fn load_realtime_activation(
     config: &EdgeConfig,
-) -> Result<Option<AcceptedRealtimeActivation>, ServiceError> {
+) -> Result<Option<AcceptedRealtimeAuthority>, ServiceError> {
     if !config.realtime_sse_enabled.is_enabled() {
         return Ok(None);
     }
@@ -923,11 +963,31 @@ fn load_realtime_activation(
             "EDGE_REALTIME_ACTIVATION_MANIFEST_FILE",
         ))?;
     let raw = read_text(path)?;
-    let evidence: RealtimeActivationEvidence = serde_json::from_str(&raw)
-        .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE"))?;
-    accept_realtime_activation(evidence)
-        .map(Some)
-        .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE").into())
+    match config.realtime_authority_mode {
+        RealtimeAuthorityMode::LegacyShadow => {
+            let evidence: RealtimeActivationEvidence = serde_json::from_str(&raw)
+                .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE"))?;
+            accept_realtime_activation(evidence)
+                .map(Box::new)
+                .map(AcceptedRealtimeAuthority::Legacy)
+                .map(Some)
+                .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE").into())
+        }
+        RealtimeAuthorityMode::ManagerProjection => {
+            let evidence: ManagerRealtimeActivationEvidence = serde_json::from_str(&raw)
+                .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE"))?;
+            let accepted = accept_manager_realtime_activation(evidence)
+                .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE"))?;
+            let profile_id = config
+                .manager_v2_profile_id
+                .as_deref()
+                .ok_or(ConfigError::Missing("EDGE_MANAGER_V2_PROFILE_ID"))?;
+            accepted
+                .profile(&config.environment, profile_id)
+                .map_err(|_| ConfigError::Invalid("EDGE_REALTIME_ACTIVATION_MANIFEST_FILE"))?;
+            Ok(Some(AcceptedRealtimeAuthority::Manager(Box::new(accepted))))
+        }
+    }
 }
 
 fn spawn_background_tasks(
@@ -963,15 +1023,16 @@ fn spawn_background_tasks(
         });
     }
     if let (Some(store), Some(hub)) = (projection_store, realtime_hub) {
-        tokio::spawn(realtime_journal_poller(
+        tokio::spawn(realtime_journal_poller(RealtimeJournalPoller {
             store,
             hub,
-            config.realtime_poll_interval,
-            config.realtime_poll_batch,
-            config.realtime_freshness_policy.clone(),
-            config.realtime_venue_session,
-            realtime_poller_ready,
-        ));
+            authority_mode: config.realtime_authority_mode,
+            poll_interval: config.realtime_poll_interval,
+            poll_batch: config.realtime_poll_batch,
+            freshness_policy: config.realtime_freshness_policy.clone(),
+            venue_session: config.realtime_venue_session,
+            ready: realtime_poller_ready,
+        }));
     }
 }
 
@@ -3107,10 +3168,11 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         Ok(request) => request,
         Err(status) => return status.into_response(),
     };
-    let availability = match realtime_authority(&state, store, &request.scope).await {
-        Ok(availability) => availability,
+    let authority = match realtime_authority(&state, store, &request.scope).await {
+        Ok(authority) => authority,
         Err(status) => return status.into_response(),
     };
+    let availability = &authority.availability;
     let mut subscription = hub.subscribe(
         request.claims.workspace_id.clone(),
         state.environment.clone(),
@@ -3120,7 +3182,7 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
     );
     let (initial, terminal_after_initial) = match prepare_resume(
         store,
-        &availability,
+        availability,
         &request,
         &mut subscription,
         RealtimeResumePolicy {
@@ -3180,6 +3242,25 @@ struct RealtimeSnapshot {
     activation_manifest_digest: String,
 }
 
+#[derive(Serialize)]
+struct ManagerRealtimeSnapshot {
+    schema_version: &'static str,
+    delivery_profile: &'static str,
+    workspace_id: String,
+    environment: String,
+    profile_id: String,
+    projection_epoch: Uuid,
+    projection_sequence: u64,
+    cursor: String,
+    stream_available: bool,
+    data_state: &'static str,
+    fact_count: u64,
+    source_read_at: DateTime<Utc>,
+    projection_state_digest: String,
+    resnapshot_not_before: Option<DateTime<Utc>>,
+    activation_manifest_digest: String,
+}
+
 async fn realtime_snapshot(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let Some(store) = &state.projection_store else {
         return StatusCode::NOT_FOUND.into_response();
@@ -3188,77 +3269,163 @@ async fn realtime_snapshot(State(state): State<AppState>, headers: HeaderMap) ->
         Ok(authority) => authority,
         Err(status) => return status.into_response(),
     };
-    let availability = match realtime_authority(&state, store, &scope).await {
-        Ok(availability) => availability,
+    let authority = match realtime_authority(&state, store, &scope).await {
+        Ok(authority) => authority,
         Err(status) => return status.into_response(),
     };
-    let Some(activation) = &state.realtime_activation else {
-        return StatusCode::SERVICE_UNAVAILABLE.into_response();
-    };
     let cursor = ProjectionCursor {
-        epoch_id: availability.active.epoch.epoch_id,
-        sequence: availability.active.latest_available_sequence,
+        epoch_id: authority.availability.active.epoch.epoch_id,
+        sequence: authority.availability.active.latest_available_sequence,
     };
-    Json(RealtimeSnapshot {
-        schema_version: "execution.realtime-snapshot.v1",
-        delivery_profile: "shadow",
-        workspace_id: claims.workspace_id,
-        environment: state.environment.clone(),
-        projection_epoch: cursor.epoch_id,
-        projection_sequence: cursor.sequence,
-        cursor: cursor.to_string(),
-        stream_available: true,
-        resnapshot_not_before: None,
-        capability_snapshot_id: activation
-            .evidence()
-            .compatibility
-            .capability_snapshot_id
-            .clone(),
-        activation_manifest_digest: activation.manifest_digest().to_owned(),
-    })
-    .into_response()
+    match authority.lineage {
+        RealtimeAuthorityLineage::Legacy {
+            capability_snapshot_id,
+            activation_manifest_digest,
+        } => Json(RealtimeSnapshot {
+            schema_version: "execution.realtime-snapshot.v1",
+            delivery_profile: "shadow",
+            workspace_id: claims.workspace_id,
+            environment: state.environment.clone(),
+            projection_epoch: cursor.epoch_id,
+            projection_sequence: cursor.sequence,
+            cursor: cursor.to_string(),
+            stream_available: true,
+            resnapshot_not_before: None,
+            capability_snapshot_id,
+            activation_manifest_digest,
+        })
+        .into_response(),
+        RealtimeAuthorityLineage::Manager {
+            profile_id,
+            fact_count,
+            source_read_at,
+            projection_state_digest,
+            activation_manifest_digest,
+        } => Json(ManagerRealtimeSnapshot {
+            schema_version: "execution.manager-realtime-snapshot.v2",
+            delivery_profile: "current_projection",
+            workspace_id: claims.workspace_id,
+            environment: state.environment.clone(),
+            profile_id,
+            projection_epoch: cursor.epoch_id,
+            projection_sequence: cursor.sequence,
+            cursor: cursor.to_string(),
+            stream_available: true,
+            data_state: if fact_count == 0 {
+                "EMPTY_VALID"
+            } else {
+                "AVAILABLE"
+            },
+            fact_count,
+            source_read_at,
+            projection_state_digest,
+            resnapshot_not_before: None,
+            activation_manifest_digest,
+        })
+        .into_response(),
+    }
+}
+
+struct RealtimeAuthorityDecision {
+    availability: RealtimeScopeAvailability,
+    lineage: RealtimeAuthorityLineage,
+}
+
+enum RealtimeAuthorityLineage {
+    Legacy {
+        capability_snapshot_id: String,
+        activation_manifest_digest: String,
+    },
+    Manager {
+        profile_id: String,
+        fact_count: u64,
+        source_read_at: DateTime<Utc>,
+        projection_state_digest: String,
+        activation_manifest_digest: String,
+    },
 }
 
 async fn realtime_authority(
     state: &AppState,
     store: &PgProjectionStore,
     scope: &ProjectionScope,
-) -> Result<RealtimeScopeAvailability, StatusCode> {
+) -> Result<RealtimeAuthorityDecision, StatusCode> {
     let activation = state
         .realtime_activation
         .as_ref()
         .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
-    let evidence = activation.evidence();
-    if evidence.scope != *scope || evidence.scope.environment != state.environment {
-        return Err(StatusCode::FORBIDDEN);
+    let availability = match activation {
+        AcceptedRealtimeAuthority::Legacy(_) => store.realtime_scope_availability(scope).await,
+        AcceptedRealtimeAuthority::Manager(_) => {
+            store.manager_realtime_scope_availability(scope).await
+        }
     }
-    let shadow = store
-        .active_shadow_screen_authority(scope, N07_PAPER_WORKBENCH_SCREEN_ID)
-        .await
-        .map_err(|error| match error {
-            StoreError::ShadowScreenNotActivated
-            | StoreError::ShadowActivationEvidenceInvalid
-            | StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
-            _ => StatusCode::INTERNAL_SERVER_ERROR,
-        })?;
-    if shadow.epoch_id != evidence.active_epoch_id
-        || shadow.manifest_digest != evidence.n07_activation_manifest_digest
-        || shadow.capability_snapshot_id != evidence.compatibility.capability_snapshot_id
-    {
-        return Err(StatusCode::SERVICE_UNAVAILABLE);
-    }
-    let availability =
-        store
-            .realtime_scope_availability(scope)
-            .await
-            .map_err(|error| match error {
-                StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
-                _ => StatusCode::INTERNAL_SERVER_ERROR,
-            })?;
-    if availability.active.epoch.epoch_id != evidence.active_epoch_id {
-        return Err(StatusCode::SERVICE_UNAVAILABLE);
-    }
-    Ok(availability)
+    .map_err(|error| match error {
+        StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+    let lineage = match activation {
+        AcceptedRealtimeAuthority::Legacy(activation) => {
+            let evidence = activation.evidence();
+            if evidence.scope != *scope || evidence.scope.environment != state.environment {
+                return Err(StatusCode::FORBIDDEN);
+            }
+            let shadow = store
+                .active_shadow_screen_authority(scope, N07_PAPER_WORKBENCH_SCREEN_ID)
+                .await
+                .map_err(|error| match error {
+                    StoreError::ShadowScreenNotActivated
+                    | StoreError::ShadowActivationEvidenceInvalid
+                    | StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
+                    _ => StatusCode::INTERNAL_SERVER_ERROR,
+                })?;
+            if shadow.epoch_id != evidence.active_epoch_id
+                || shadow.manifest_digest != evidence.n07_activation_manifest_digest
+                || shadow.capability_snapshot_id != evidence.compatibility.capability_snapshot_id
+                || availability.active.epoch.epoch_id != evidence.active_epoch_id
+            {
+                return Err(StatusCode::SERVICE_UNAVAILABLE);
+            }
+            RealtimeAuthorityLineage::Legacy {
+                capability_snapshot_id: evidence.compatibility.capability_snapshot_id.clone(),
+                activation_manifest_digest: activation.manifest_digest().to_owned(),
+            }
+        }
+        AcceptedRealtimeAuthority::Manager(activation) => {
+            let profile_id = state
+                .manager_v2_profile_id
+                .as_deref()
+                .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+            let profile = activation
+                .profile(&state.environment, profile_id)
+                .map_err(|_| StatusCode::FORBIDDEN)?;
+            let manager = store
+                .active_manager_realtime_authority(scope)
+                .await
+                .map_err(|error| match error {
+                    StoreError::ActiveEpochNotFound => StatusCode::SERVICE_UNAVAILABLE,
+                    _ => StatusCode::INTERNAL_SERVER_ERROR,
+                })?;
+            if manager.epoch_id != availability.active.epoch.epoch_id
+                || manager.latest_sequence != availability.active.latest_available_sequence
+                || manager.profile_id != profile.profile_id
+                || manager.catalogue_digest != profile.catalogue_digest
+            {
+                return Err(StatusCode::SERVICE_UNAVAILABLE);
+            }
+            RealtimeAuthorityLineage::Manager {
+                profile_id: manager.profile_id,
+                fact_count: manager.fact_count,
+                source_read_at: manager.source_read_at,
+                projection_state_digest: manager.state_digest,
+                activation_manifest_digest: activation.manifest_digest().to_owned(),
+            }
+        }
+    };
+    Ok(RealtimeAuthorityDecision {
+        availability,
+        lineage,
+    })
 }
 
 struct RealtimeRequest {
@@ -3298,13 +3465,18 @@ fn authorize_realtime_scope(
     headers: &HeaderMap,
 ) -> Result<(DelegatedClaims, ProjectionScope), StatusCode> {
     let token = bearer(headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let resource = match state.realtime_activation.as_ref() {
+        Some(AcceptedRealtimeAuthority::Legacy(_)) => COMMAND_CENTER_RESOURCE,
+        Some(AcceptedRealtimeAuthority::Manager(_)) => MANAGER_REALTIME_RESOURCE,
+        None => return Err(StatusCode::SERVICE_UNAVAILABLE),
+    };
     let claims = state
         .verifier
         .verify_read(
             token,
             &RequiredRead {
                 environment: &state.environment,
-                resource: Some(COMMAND_CENTER_RESOURCE),
+                resource: Some(resource),
             },
         )
         .map_err(|_| StatusCode::FORBIDDEN)?;
@@ -3530,7 +3702,7 @@ fn projection_event(envelope: &RealtimeEnvelope) -> Event {
 }
 
 fn gap_event(gap: &GapEnvelope) -> Event {
-    json_event("projection.gap", gap, None).retry(Duration::from_secs(1))
+    json_event("projection.gap", gap, None)
 }
 
 fn json_event<T: Serialize>(event_type: &str, payload: &T, id: Option<String>) -> Event {
@@ -3575,15 +3747,28 @@ fn record_to_envelope(
     Ok(envelope)
 }
 
-async fn realtime_journal_poller(
+struct RealtimeJournalPoller {
     store: PgProjectionStore,
     hub: RealtimeHub,
+    authority_mode: RealtimeAuthorityMode,
     poll_interval: Duration,
     poll_batch: usize,
     freshness_policy: FreshnessPolicy,
     venue_session: VenueSessionState,
-    poller_ready: Arc<RwLock<bool>>,
-) {
+    ready: Arc<RwLock<bool>>,
+}
+
+async fn realtime_journal_poller(poller: RealtimeJournalPoller) {
+    let RealtimeJournalPoller {
+        store,
+        hub,
+        authority_mode,
+        poll_interval,
+        poll_batch,
+        freshness_policy,
+        venue_session,
+        ready,
+    } = poller;
     let mut interval = tokio::time::interval(poll_interval);
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
@@ -3592,17 +3777,17 @@ async fn realtime_journal_poller(
     // explicit per-client cursor concern rather than a process-start fan-out.
     let mut cursors = loop {
         interval.tick().await;
-        match store.active_realtime_epoch_watermarks().await {
+        match active_realtime_watermarks(&store, authority_mode).await {
             Ok(active) => {
                 let cursors = active
                     .into_iter()
                     .map(|epoch| (epoch.epoch_id, epoch.latest_sequence))
                     .collect();
-                *poller_ready.write().await = true;
+                *ready.write().await = true;
                 break cursors;
             }
             Err(error) => {
-                *poller_ready.write().await = false;
+                *ready.write().await = false;
                 warn!(error = %error, "realtime journal poller startup retry");
             }
         }
@@ -3613,6 +3798,7 @@ async fn realtime_journal_poller(
         match poll_active_realtime_epochs(
             &store,
             &hub,
+            authority_mode,
             &mut cursors,
             poll_batch,
             &freshness_policy,
@@ -3620,9 +3806,9 @@ async fn realtime_journal_poller(
         )
         .await
         {
-            Ok(()) => *poller_ready.write().await = true,
+            Ok(()) => *ready.write().await = true,
             Err(error) => {
-                *poller_ready.write().await = false;
+                *ready.write().await = false;
                 warn!(error = %error, "realtime journal poll failed without discarding epoch cursors");
             }
         }
@@ -3632,12 +3818,13 @@ async fn realtime_journal_poller(
 async fn poll_active_realtime_epochs(
     store: &PgProjectionStore,
     hub: &RealtimeHub,
+    authority_mode: RealtimeAuthorityMode,
     cursors: &mut HashMap<uuid::Uuid, u64>,
     poll_batch: usize,
     freshness_policy: &FreshnessPolicy,
     venue_session: VenueSessionState,
 ) -> Result<(), StoreError> {
-    let active = store.active_realtime_epoch_watermarks().await?;
+    let active = active_realtime_watermarks(store, authority_mode).await?;
     let active_ids: HashSet<_> = active.iter().map(|epoch| epoch.epoch_id).collect();
     for epoch in active {
         let Some(mut after) = cursors.get(&epoch.epoch_id).copied() else {
@@ -3645,12 +3832,12 @@ async fn poll_active_realtime_epochs(
             // terminate old subscriptions with an epoch_changed gap. Skip the
             // rebuild backlog and continue from the activation high-water.
             if epoch.latest_sequence > 0 {
-                if let Some(record) = store
-                    .load_realtime_records(epoch.epoch_id, 0, 1)
-                    .await?
-                    .records
-                    .into_iter()
-                    .next()
+                if let Some(record) =
+                    load_realtime_records(store, authority_mode, epoch.epoch_id, 0, 1)
+                        .await?
+                        .records
+                        .into_iter()
+                        .next()
                 {
                     hub.publish(record_to_envelope(
                         record,
@@ -3665,9 +3852,9 @@ async fn poll_active_realtime_epochs(
         };
 
         loop {
-            let page = store
-                .load_realtime_records(epoch.epoch_id, after, poll_batch)
-                .await?;
+            let page =
+                load_realtime_records(store, authority_mode, epoch.epoch_id, after, poll_batch)
+                    .await?;
             for record in page.records {
                 let sequence = record.projection_sequence;
                 hub.publish(record_to_envelope(
@@ -3686,6 +3873,37 @@ async fn poll_active_realtime_epochs(
     }
     cursors.retain(|epoch_id, _| active_ids.contains(epoch_id));
     Ok(())
+}
+
+async fn active_realtime_watermarks(
+    store: &PgProjectionStore,
+    authority_mode: RealtimeAuthorityMode,
+) -> Result<Vec<projection_store_pg::RealtimeActiveEpochWatermark>, StoreError> {
+    match authority_mode {
+        RealtimeAuthorityMode::LegacyShadow => store.active_realtime_epoch_watermarks().await,
+        RealtimeAuthorityMode::ManagerProjection => {
+            store.active_manager_realtime_epoch_watermarks().await
+        }
+    }
+}
+
+async fn load_realtime_records(
+    store: &PgProjectionStore,
+    authority_mode: RealtimeAuthorityMode,
+    epoch_id: Uuid,
+    after: u64,
+    limit: usize,
+) -> Result<projection_store_pg::RealtimeJournalPage, StoreError> {
+    match authority_mode {
+        RealtimeAuthorityMode::LegacyShadow => {
+            store.load_realtime_records(epoch_id, after, limit).await
+        }
+        RealtimeAuthorityMode::ManagerProjection => {
+            store
+                .load_manager_realtime_records(epoch_id, after, limit)
+                .await
+        }
+    }
 }
 
 async fn livez() -> impl IntoResponse {
@@ -4197,10 +4415,13 @@ mod tests {
     }
 
     #[test]
-    fn realtime_runtime_requires_ingestion_query_and_screen_authority() {
+    fn realtime_runtime_requires_the_selected_projection_authority() {
         assert!(matches!(
             validate_realtime_runtime_dependencies(
                 RuntimeGate::Enabled,
+                RealtimeAuthorityMode::LegacyShadow,
+                RuntimeGate::Disabled,
+                RuntimeGate::Disabled,
                 RuntimeGate::Disabled,
                 RuntimeGate::Enabled,
                 RuntimeGate::Enabled,
@@ -4209,12 +4430,28 @@ mod tests {
         ));
         assert!(validate_realtime_runtime_dependencies(
             RuntimeGate::Enabled,
+            RealtimeAuthorityMode::LegacyShadow,
             RuntimeGate::Enabled,
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
             RuntimeGate::Enabled,
             RuntimeGate::Enabled,
         )
         .is_ok());
         assert!(validate_realtime_runtime_dependencies(
+            RuntimeGate::Enabled,
+            RealtimeAuthorityMode::ManagerProjection,
+            RuntimeGate::Disabled,
+            RuntimeGate::Enabled,
+            RuntimeGate::Enabled,
+            RuntimeGate::Disabled,
+            RuntimeGate::Disabled,
+        )
+        .is_ok());
+        assert!(validate_realtime_runtime_dependencies(
+            RuntimeGate::Disabled,
+            RealtimeAuthorityMode::ManagerProjection,
+            RuntimeGate::Disabled,
             RuntimeGate::Disabled,
             RuntimeGate::Disabled,
             RuntimeGate::Disabled,

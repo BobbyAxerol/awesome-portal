@@ -106,7 +106,7 @@ export class ExecutionRealtimeController {
 
 /** Owns the downstream response, upstream stream and lease-monitor lifecycle. */
 export function bindRealtimeLifecycle(
-  response: EventEmitter,
+  response: EventEmitter & { write?(chunk: string): boolean; end?(): void },
   upstream: EventEmitter & { close(code?: number): void },
   activeLease: () => Promise<boolean>,
   monitorIntervalMs = 5_000,
@@ -124,12 +124,26 @@ export function bindRealtimeLifecycle(
     upstream.close(constants.NGHTTP2_CANCEL);
     stop();
   };
+  const expireDownstream = () => {
+    if (stopped) return;
+    response.write?.(
+      `event: auth.expired\ndata: ${JSON.stringify({
+        event_type: "auth.expired",
+        schema_version: "execution.realtime.v1",
+        terminal: true,
+        reconnect_required: false,
+      })}\n\n`,
+    );
+    upstream.close(constants.NGHTTP2_CANCEL);
+    response.end?.();
+    stop();
+  };
   const sessionMonitor = setInterval(() => {
     void activeLease()
       .then((active) => {
-        if (!active) cancelUpstream();
+        if (!active) expireDownstream();
       })
-      .catch(cancelUpstream);
+      .catch(expireDownstream);
   }, monitorIntervalMs);
   sessionMonitor.unref();
   response.once("close", cancelUpstream);

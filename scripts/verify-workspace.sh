@@ -553,6 +553,27 @@ for required in \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N25_QUERY_ANALYTICS_HANDOFF.md" \
   "${ROOT_DIR}/deploy/manifests/query-analytics-release-profile.v1.json" \
   "${ROOT_DIR}/deploy/runbooks/execution-n25-query-analytics-release-and-rollback.md" \
+  "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md" \
+  "${ROOT_DIR}/deploy/manifests/realtime-manager-release-profile.v2.json" \
+  "${ROOT_DIR}/deploy/manifests/operator-command-plane-release-profile.v1.json" \
+  "${ROOT_DIR}/deploy/runbooks/execution-n26-manager-realtime-release-and-rollback.md" \
+  "${ROOT_DIR}/deploy/runbooks/execution-n27-admin-action-drawer-release-and-rollback.md" \
+  "${ROOT_DIR}/deploy/compose.execution-manager-realtime.yaml" \
+  "${ROOT_DIR}/deploy/execution-manager-v2/compose.realtime.yaml" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-manager-realtime.v2.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-command-tasks.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-manager-realtime.live-empty.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expired.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-tasks.valid.json" \
+  "${ROOT_DIR}/apps/control-api/src/operations/operator-tasks.ts" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/source-qualification/src/realtime_manager_activation.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0014_manager_realtime_cycle_journal.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256" \
   "${ROOT_DIR}/deploy/manifests/sandbox-live-read-release-profile.v1.json" \
   "${ROOT_DIR}/deploy/runbooks/portal-n23-sandbox-live-read-release-and-rollback.md" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-profile-read.v1.schema.json" \
@@ -1340,7 +1361,28 @@ for tracked_source in \
   upgrade/backend/bar02/snapshots/manifest.json \
   features/roadmap-task-board/backend/requirements-dev.txt \
   features/roadmap-task-board/backend/tests/test_summary_contract.py \
-  features/roadmap-task-board/frontend/package-lock.json; do
+  features/roadmap-task-board/frontend/package-lock.json \
+  scripts/execution-n26-n27-test.sh \
+  upgrade/backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md \
+  upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md \
+  deploy/manifests/realtime-manager-release-profile.v2.json \
+  deploy/manifests/operator-command-plane-release-profile.v1.json \
+  deploy/runbooks/execution-n26-manager-realtime-release-and-rollback.md \
+  deploy/runbooks/execution-n27-admin-action-drawer-release-and-rollback.md \
+  deploy/compose.execution-manager-realtime.yaml \
+  deploy/execution-manager-v2/compose.realtime.yaml \
+  packages/contracts/schemas/execution-manager-realtime.v2.schema.json \
+  packages/contracts/schemas/execution-command-tasks.v1.schema.json \
+  packages/contracts/fixtures/execution-manager-realtime.live-empty.valid.json \
+  packages/contracts/fixtures/execution-realtime.auth-expired.valid.json \
+  packages/contracts/fixtures/execution-command-tasks.valid.json \
+  apps/control-api/src/operations/operator-tasks.ts \
+  services/portal-execution-edge-rs/crates/source-qualification/src/realtime_manager_activation.rs \
+  services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0014_manager_realtime_cycle_journal.sql \
+  services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/README.md \
+  services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json \
+  services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256; do
   git -C "${ROOT_DIR}" ls-files --error-unmatch "${tracked_source}" >/dev/null || {
     printf 'Portal source is present but not tracked by the parent Git: %s\n' "${tracked_source}" >&2
     exit 1
@@ -1407,8 +1449,16 @@ for json_contract in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-governance.paper-exit-review.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expiring.valid.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-manager-realtime.v2.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-manager-realtime.live-empty.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.auth-expired.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-realtime.projection-gap.valid.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-command-tasks.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-command-tasks.valid.json" \
+  "${ROOT_DIR}/deploy/manifests/realtime-manager-release-profile.v2.json" \
+  "${ROOT_DIR}/deploy/manifests/operator-command-plane-release-profile.v1.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-intercell-gateway.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.source-dark.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-intercell-gateway.event-corpus.valid.json" \
@@ -1511,6 +1561,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh" \
   "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh" \
   "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1616,5 +1667,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh"
 "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh"
 "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh"
+"${ROOT_DIR}/scripts/execution-n26-n27-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

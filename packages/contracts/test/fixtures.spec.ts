@@ -76,6 +76,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-projection-page.v1.schema.json",
   "execution-realtime.auth-expiring.valid.json":
     "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
+  "execution-realtime.auth-expired.valid.json":
+    "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
+  "execution-manager-realtime.live-empty.valid.json":
+    "https://schemas.primusspark.com/portal/execution-manager-realtime.v2.schema.json",
   "execution-realtime.projection-gap.valid.json":
     "https://schemas.primusspark.com/portal/execution-realtime-event.v1.schema.json",
   "execution-governance.r2-review.valid.json":
@@ -98,6 +102,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
   "execution-command-catalog.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/CommandCatalogue",
+  "execution-command-tasks.valid.json":
+    "https://schemas.primusspark.com/portal/execution-command-tasks.v1.schema.json",
   "execution-command-plan.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan",
   "execution-command-operation.valid.json":

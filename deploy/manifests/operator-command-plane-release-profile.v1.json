@@ -1,0 +1,49 @@
+{
+  "schema_version": "portal.execution.operator-command-plane-release-profile.v1",
+  "phase": "N27",
+  "task_contract": "execution.command-tasks.v1",
+  "source_catalogue_contract": "execution.command-catalog.v1",
+  "source_catalogue_revision": 2,
+  "task_catalogue_revision": 3,
+  "task_count": 24,
+  "task_group_count": 6,
+  "source_action_count": 64,
+  "task_classification": {
+    "CONNECTED": 0,
+    "SUPPORTED_BUT_INACTIVE": 14,
+    "SEMANTICALLY_INCOMPATIBLE": 10
+  },
+  "bounds": {
+    "parameters_per_task": 8,
+    "transcript_lines": 200,
+    "preflight_rows": 10,
+    "verify_rows": 20,
+    "plan_ttl_seconds": 300
+  },
+  "authority": {
+    "required_role": "ADMIN",
+    "step_up_for_mutations": true,
+    "payload_storage": "HASH_ONLY_NO_RAW",
+    "source_retry_after_ambiguous_dispatch": false,
+    "arbitrary_shell_sql_url_payload": false
+  },
+  "candidate_flags": {
+    "task_catalogue": true,
+    "portal_blocked_plans": true,
+    "source_command_transport": false,
+    "edge_command_relay": false,
+    "control_api_command_relay": false
+  },
+  "rollback": {
+    "disable_drawer_task_routes": true,
+    "read_query_realtime_unchanged": true,
+    "source_side_effect_possible": false
+  },
+  "phase_authorization": {
+    "decision": "BOBBY_APPROVED_N27_ADMIN_ACTION_DRAWER",
+    "implementation_authorized": true,
+    "source_command_activation_authorized": false,
+    "stable_runtime_change_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

@@ -2735,8 +2735,8 @@ backend gate.
 | N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED` |
 | N24 | durable Portal projection | keep N23 contracts; consume projection states only after N25 BFF contract | `COMPLETE / RECOVERY_QUALIFIED / TD-EX-05_CLOSED / N25_READY` |
 | N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `COMPLETE / SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING / N26_READY` |
-| N26 | projection-backed authenticated SSE | close terminal streams; no infinite reconnect loop | `PLANNED / N25_DEPENDENT` |
-| N27 | typed Admin Action Drawer command plane | enable controls only at authoritative terminal parity | `PLANNED / N20_N21_DEPENDENT` |
+| N26 | projection-backed authenticated SSE | consume manager snapshot; call `EventSource.close()` on terminal auth/gap; resnapshot before reconnect | `COMPLETE / RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
+| N27 | typed Admin Action Drawer command plane | render 24 server tasks; 14 inactive + 10 incompatible; enable only future authoritative `CONNECTED` tasks | `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK` |
 | N28 | one owner packet for proved genuine gaps only | retain typed unavailable until verified return | `PLANNED / CENSUS_EVIDENCE_DEPENDENT` |
 | N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `PLANNED / N18_N28_DEPENDENT` |
 
@@ -3065,3 +3065,30 @@ that reach canonical dev parity. `ready`, `empty`, `stale`, `partial` and
 `unavailable` are server truth. N25 exact-query/analytics and N28
 candles/calendar must remain local typed unavailable branches; no client-side
 join, fake row, source hash or automatic retry loop is allowed.
+
+### N26 backend — projection-backed authenticated SSE (2026-08-30)
+
+N26 is `COMPLETE / IMPLEMENTATION_AND_RELEASE_QUALIFIED /
+SIGNED_DEV_DEPLOYMENT_PENDING`. One complete projection cycle produces one
+shared cursor only after all feeds seal atomically; partial cycles never reach
+the stream. Paper, Sandbox and Live are profile-bound, and valid empty Live
+emits only `EMPTY_VALID` snapshot plus heartbeat truth.
+
+Claude must call `EventSource.close()` on terminal `auth.expired` and terminal
+`projection.gap`. A gap requires a fresh snapshot before a new EventSource;
+native EventSource retry is not allowed to reopen a terminal loop. Detail:
+[`CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md`](./CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md).
+
+### N27 backend — typed Admin Action Drawer (2026-08-30)
+
+N27 is `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK /
+N28_READY`. The server catalogue contains exactly 24 tasks in six groups and
+classifies the complete owner catalogue as 0 connected, 14 compatible but
+inactive and 10 semantically incompatible. No current Drawer action may be
+shown as executable; mutation planning remains a hash-only blocked workflow
+with zero source dispatch.
+
+Claude must render this server catalogue instead of retaining a separate
+hard-coded list. Inactive/incompatible tasks stay explanatory disabled;
+blocked plan, HTTP 202, `PARTIAL` and `UNCERTAIN` are never success. Detail:
+[`CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md`](./CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md).

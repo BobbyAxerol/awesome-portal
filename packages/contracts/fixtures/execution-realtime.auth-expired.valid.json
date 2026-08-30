@@ -1,0 +1,6 @@
+{
+  "event_type": "auth.expired",
+  "schema_version": "execution.realtime.v1",
+  "terminal": true,
+  "reconnect_required": false
+}

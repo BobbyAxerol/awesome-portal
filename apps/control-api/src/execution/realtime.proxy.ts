@@ -13,6 +13,7 @@ import { ExecutionDelegationService } from "./delegation";
 const CURSOR_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9]+$/i;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const COMMAND_CENTER_RESOURCE = "execution:command-center";
+const MANAGER_REALTIME_RESOURCE = "execution:manager-realtime";
 const REALTIME_SNAPSHOT_MAX_BYTES = 64 * 1024;
 
 export interface RealtimePrincipal {
@@ -32,7 +33,7 @@ export interface RealtimeUpstream {
   contentType: string;
 }
 
-export interface RealtimeSnapshotResponse {
+export interface LegacyRealtimeSnapshotResponse {
   schema_version: "execution.realtime-snapshot.v1";
   delivery_profile: "shadow";
   workspace_id: string;
@@ -45,6 +46,28 @@ export interface RealtimeSnapshotResponse {
   capability_snapshot_id: string;
   activation_manifest_digest: string;
 }
+
+export interface ManagerRealtimeSnapshotResponse {
+  schema_version: "execution.manager-realtime-snapshot.v2";
+  delivery_profile: "current_projection";
+  workspace_id: string;
+  environment: string;
+  profile_id: string;
+  projection_epoch: string;
+  projection_sequence: number;
+  cursor: string;
+  stream_available: true;
+  data_state: "AVAILABLE" | "EMPTY_VALID";
+  fact_count: number;
+  source_read_at: string;
+  projection_state_digest: string;
+  resnapshot_not_before: null;
+  activation_manifest_digest: string;
+}
+
+export type RealtimeSnapshotResponse =
+  | LegacyRealtimeSnapshotResponse
+  | ManagerRealtimeSnapshotResponse;
 
 /**
  * Selects the resume cursor for a same-origin EventSource stream.
@@ -121,7 +144,7 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
         sessionId: request.session.sessionId,
         workspaceId: request.workspaceId,
         roles: [request.user.role],
-        resources: [COMMAND_CENTER_RESOURCE],
+        resources: [this.realtimeResource()],
         authenticationTime: request.session.authenticationTime,
         authenticationMethods: ["portal_session"],
       });
@@ -174,7 +197,7 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
       sessionId: request.session.sessionId,
       workspaceId: request.workspaceId,
       roles: [request.user.role],
-      resources: [COMMAND_CENTER_RESOURCE],
+      resources: [this.realtimeResource()],
       authenticationTime: request.session.authenticationTime,
       authenticationMethods: ["portal_session"],
     });
@@ -190,7 +213,14 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
       stream,
       this.config.EXECUTION_EDGE_CONNECT_TIMEOUT_MS,
     );
-    return parseRealtimeSnapshot(body, request.workspaceId, this.config.EXECUTION_EDGE_ENVIRONMENT);
+    return parseRealtimeSnapshot(
+      body,
+      request.workspaceId,
+      this.config.EXECUTION_EDGE_ENVIRONMENT,
+      this.config.EXECUTION_REALTIME_AUTHORITY_MODE === "manager_projection"
+        ? this.config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID
+        : undefined,
+    );
   }
 
   close(): void {
@@ -271,6 +301,12 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
     stream.once("close", release);
     stream.once("aborted", release);
   }
+
+  private realtimeResource(): string {
+    return this.config.EXECUTION_REALTIME_AUTHORITY_MODE === "manager_projection"
+      ? MANAGER_REALTIME_RESOURCE
+      : COMMAND_CENTER_RESOURCE;
+  }
 }
 
 function readBoundedSnapshot(stream: ClientHttp2Stream, timeoutMs: number): Promise<Buffer> {
@@ -319,6 +355,7 @@ export function parseRealtimeSnapshot(
   body: Buffer,
   expectedWorkspaceId: string,
   expectedEnvironment: string,
+  expectedProfileId?: string,
 ): RealtimeSnapshotResponse {
   let value: unknown;
   try {
@@ -330,6 +367,14 @@ export function parseRealtimeSnapshot(
     throw new RealtimeProxyError("REALTIME_SNAPSHOT_INVALID", 502);
   }
   const snapshot = value as Record<string, unknown>;
+  if (snapshot.schema_version === "execution.manager-realtime-snapshot.v2") {
+    return parseManagerRealtimeSnapshot(
+      snapshot,
+      expectedWorkspaceId,
+      expectedEnvironment,
+      expectedProfileId,
+    );
+  }
   const exactKeys = [
     "schema_version", "delivery_profile", "workspace_id", "environment",
     "projection_epoch", "projection_sequence", "cursor", "stream_available",
@@ -357,6 +402,51 @@ export function parseRealtimeSnapshot(
     throw new RealtimeProxyError("REALTIME_SNAPSHOT_INVALID", 502);
   }
   return snapshot as unknown as RealtimeSnapshotResponse;
+}
+
+function parseManagerRealtimeSnapshot(
+  snapshot: Record<string, unknown>,
+  expectedWorkspaceId: string,
+  expectedEnvironment: string,
+  expectedProfileId: string | undefined,
+): ManagerRealtimeSnapshotResponse {
+  const exactKeys = [
+    "schema_version", "delivery_profile", "workspace_id", "environment", "profile_id",
+    "projection_epoch", "projection_sequence", "cursor", "stream_available", "data_state",
+    "fact_count", "source_read_at", "projection_state_digest", "resnapshot_not_before",
+    "activation_manifest_digest",
+  ];
+  const profilePrefix = `${expectedEnvironment.toUpperCase()}_`;
+  if (Object.keys(snapshot).sort().join("|") !== [...exactKeys].sort().join("|")
+    || snapshot.delivery_profile !== "current_projection"
+    || snapshot.workspace_id !== expectedWorkspaceId
+    || snapshot.environment !== expectedEnvironment
+    || typeof snapshot.profile_id !== "string"
+    || !snapshot.profile_id.startsWith(profilePrefix)
+    || (expectedProfileId !== undefined && snapshot.profile_id !== expectedProfileId)
+    || typeof snapshot.projection_epoch !== "string"
+    || typeof snapshot.projection_sequence !== "number"
+    || !Number.isSafeInteger(snapshot.projection_sequence)
+    || snapshot.projection_sequence < 0
+    || typeof snapshot.cursor !== "string"
+    || !CURSOR_PATTERN.test(snapshot.cursor)
+    || snapshot.cursor !== `${snapshot.projection_epoch}:${snapshot.projection_sequence}`
+    || snapshot.stream_available !== true
+    || !["AVAILABLE", "EMPTY_VALID"].includes(String(snapshot.data_state))
+    || typeof snapshot.fact_count !== "number"
+    || !Number.isSafeInteger(snapshot.fact_count)
+    || snapshot.fact_count < 0
+    || (snapshot.fact_count === 0) !== (snapshot.data_state === "EMPTY_VALID")
+    || typeof snapshot.source_read_at !== "string"
+    || Number.isNaN(Date.parse(snapshot.source_read_at))
+    || typeof snapshot.projection_state_digest !== "string"
+    || !DIGEST_PATTERN.test(snapshot.projection_state_digest)
+    || snapshot.resnapshot_not_before !== null
+    || typeof snapshot.activation_manifest_digest !== "string"
+    || !DIGEST_PATTERN.test(snapshot.activation_manifest_digest)) {
+    throw new RealtimeProxyError("REALTIME_SNAPSHOT_INVALID", 502);
+  }
+  return snapshot as unknown as ManagerRealtimeSnapshotResponse;
 }
 
 export class RealtimeProxyError extends Error {

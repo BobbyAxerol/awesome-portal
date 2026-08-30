@@ -1354,7 +1354,7 @@ no open item in that register silently reopens N17B.
 
 ### N18–N29 — Manager Surface Expansion campaign
 
-**Status:** `N18_COMPLETE / N19_COMPLETE_SOURCE_DARK / N20_COMPLETE_SOURCE_DARK / N21_READY_NOT_STARTED / NO_RUNTIME_EFFECT`.  
+**Status:** `N18_N27_IMPLEMENTATION_COMPLETE / SIGNED_DEV_DEPLOYMENT_PENDING / N28_READY / NO_RUNTIME_EFFECT`.  
 **Scope:** all current Manager-v2 relations, current external read and command
 catalogues, BR-EX-41 onward, and the Paper/Sandbox/Live internal Portal.  
 **Non-goal:** changing Trading System execution authority, bypassing its
@@ -1708,6 +1708,19 @@ for Paper, Sandbox and Live.
 empty Live profile emits authenticated snapshot/heartbeat truth only; terminal
 errors cannot retry forever.
 
+**Closeout (2026-08-30):** `COMPLETE /
+IMPLEMENTATION_AND_RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING /
+N27_READY`. Migration `0014` assigns one contiguous cursor only when a complete
+Manager cycle seals, so partial per-feed writes never leak as realtime deltas.
+Rust Edge serves exact Paper/Sandbox/Live profile snapshots and resumes from a
+shared PostgreSQL complete-cycle journal with bounded local fan-out. Empty
+Live emits `EMPTY_VALID` plus heartbeats. Session expiry and projection gaps
+are terminal and require browser `EventSource.close()`; slow consumers cannot
+grow memory without bound. Realtime rollback is independent from projection
+and Query. No source, command, dev/stable runtime or Trading System state
+changed. Evidence and operations:
+[`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
+
 #### N27 — Admin Action Drawer command plane
 
 **Goal:** make every semantically compatible published Trading System Admin
@@ -1737,6 +1750,18 @@ uncertain/restart/idempotency/negative auth, audit and containment tests.
 **N27 exit gate:** every published operation is classified and every enabled
 control has authoritative terminal verification; no dead Admin Drawer control
 or unbounded command path remains.
+
+**Closeout (2026-08-30):** `COMPLETE / CURRENT_SOURCE_CLASSIFIED /
+SOURCE_COMMAND_DARK / N28_READY`. The ADMIN/session/workspace-scoped API now
+publishes exactly 24 typed tasks in six groups and classifies all 64 owner
+catalogue entries. Current truth is 0 `CONNECTED`, 14
+`SUPPORTED_BUT_INACTIVE` and 10 `SEMANTICALLY_INCOMPATIBLE`; the accepted N16B
+emergency-close primitive is compatible but remains command-identity-dark and
+two-person/step-up protected. Run and plan paths enforce bounded primitive
+parameters, payload safety, idempotency/conflict, actor/reason and hash-only
+audit/plan persistence; no outbox message or source side effect occurs. Thus
+there is no dead enabled control and no fabricated command success. Evidence:
+[`EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md`](./backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md).
 
 #### N28 — Genuine missing-capability adapters and owner packet
 

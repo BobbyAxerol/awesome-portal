@@ -266,6 +266,172 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     )).statusCode).toBe(404);
   });
 
+  it("publishes the exact N27 operator-task overlay and classifies every source action", async () => {
+    expect((await rawInject("/api/v1/execution/commands/tasks")).statusCode).toBe(401);
+    const denied = await inject(user, `/api/v1/execution/commands/tasks?workspace_id=${workspaceId}`);
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("ADMIN_ROLE_REQUIRED");
+
+    const response = await inject(
+      bobby,
+      `/api/v1/execution/commands/tasks?workspace_id=${workspaceId}`,
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      schema_version: "execution.command-tasks.v1",
+      catalogue_revision: 3,
+      source_catalogue_revision: 2,
+      relay_state: "DISABLED",
+      total_tasks: 24,
+      classification_counts: {
+        CONNECTED: 0,
+        SUPPORTED_BUT_INACTIVE: 14,
+        SEMANTICALLY_INCOMPATIBLE: 10,
+      },
+      scope: {
+        workspace_id: workspaceId,
+        actor_user_id: bobby.userId,
+        actor_role: "ADMIN",
+      },
+    });
+    expect(response.json().task_groups).toEqual([
+      "READ_INSPECT", "PORTFOLIO_CAPITAL", "DEPLOYMENT_RISK", "ACCOUNT",
+      "BROKER_SYNC_RECONCILIATION", "EMERGENCY_DESTRUCTIVE",
+    ]);
+    expect(response.json().tasks).toHaveLength(24);
+    expect(response.json().tasks.map((task: { task_id: string }) => task.task_id)).toEqual([
+      "health", "inspect", "capital", "performance", "sizing", "broker-read",
+      "redis-inspect", "portfolio-create", "portfolio-state", "allocation-change",
+      "config-plan", "deployment-state", "trading-state", "risk-profile",
+      "alpha-register", "account-policy", "account-seed-paper", "account-sync",
+      "reconcile-positions", "reconcile-open-orders", "broker-reconcile",
+      "emergency-close", "testnet-hard-reset", "lab-reset",
+    ]);
+    expect(response.json().tasks.every(
+      (task: { params: unknown[]; authority: { runtime_active: boolean }; source_request_sent: boolean }) =>
+        task.params.length <= 8 && !task.authority.runtime_active && !task.source_request_sent,
+    )).toBe(true);
+    expect(response.json().tasks.find((task: { task_id: string }) => task.task_id === "health"))
+      .toMatchObject({
+        key: null,
+        state: "SUPPORTED_BUT_INACTIVE",
+        unlisted_reason: "CATALOG_ENTRY_NOT_PUBLISHED",
+      });
+    expect(response.json().tasks.find(
+      (task: { task_id: string }) => task.task_id === "redis-inspect",
+    )).toMatchObject({
+      state: "SEMANTICALLY_INCOMPATIBLE",
+      reason_code: "DIRECT_REDIS_ACCESS_FORBIDDEN",
+    });
+    expect(response.json().tasks.find(
+      (task: { task_id: string }) => task.task_id === "emergency-close",
+    )).toMatchObject({
+      state: "SUPPORTED_BUT_INACTIVE",
+      reason_code: "N16B_COMPATIBLE_COMMAND_IDENTITY_NOT_ACTIVATED",
+      authority: { two_man_rule: true, runtime_active: false },
+      source_request_sent: false,
+    });
+
+    const catalogue = await inject(
+      bobby,
+      `/api/v1/execution/commands/catalog?workspace_id=${workspaceId}`,
+    );
+    expect(catalogue.statusCode).toBe(200);
+    expect(catalogue.json().entries).toHaveLength(64);
+    expect(catalogue.json().entries.every(
+      (entry: { classification: { state: string } }) =>
+        ["CONNECTED", "SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"]
+          .includes(entry.classification.state),
+    )).toBe(true);
+    expect(catalogue.json().entries.some(
+      (entry: { classification: { state: string } }) => entry.classification.state === "CONNECTED",
+    )).toBe(false);
+  });
+
+  it("keeps N27 read and mutation tasks fail-closed with typed audit and hash-only plans", async () => {
+    const read = await mutation(
+      bobby,
+      "/api/v1/execution/commands/tasks/health/run",
+      {
+        schema_version: "execution.command-run-request.v1",
+        workspace_id: workspaceId,
+        request_key: "n27:health:1",
+        params: { mode: "all" },
+      },
+    );
+    expect(read.statusCode).toBe(409);
+    expect(read.json()).toMatchObject({
+      error: { code: "TYPED_SOURCE_OPERATION_NOT_PUBLISHED" },
+      details: {
+        task_id: "health",
+        classification: "SUPPORTED_BUT_INACTIVE",
+        source_request_sent: false,
+      },
+    });
+
+    const unknownParam = await mutation(
+      bobby,
+      "/api/v1/execution/commands/tasks/portfolio-state/plan",
+      {
+        schema_version: "execution.command-task-plan-request.v1",
+        workspace_id: workspaceId,
+        request_key: "n27:portfolio:bad",
+        environment: "PAPER",
+        target: { type: "PORTFOLIO", id: "PF-MAIN" },
+        expected_target_version: 1,
+        params: { portfolio_id: "PF-MAIN", state: "HALTED", reason: "operator stop", shell: "rm" },
+        conditions: [],
+      },
+    );
+    expect(unknownParam.statusCode).toBe(400);
+    expect(unknownParam.json().error.code).toBe("COMMAND_PARAM_NOT_DECLARED");
+
+    const sensitiveValue = await mutation(
+      bobby,
+      "/api/v1/execution/commands/tasks/portfolio-state/plan",
+      {
+        schema_version: "execution.command-task-plan-request.v1",
+        workspace_id: workspaceId,
+        request_key: "n27:portfolio:sensitive",
+        environment: "PAPER",
+        target: { type: "PORTFOLIO", id: "PF-MAIN" },
+        expected_target_version: 1,
+        params: { portfolio_id: "PF-MAIN", state: "HALTED", reason: "token=must-not-persist" },
+        conditions: [],
+      },
+    );
+    expect(sensitiveValue.statusCode).toBe(400);
+    expect(sensitiveValue.json().error.code).toBe("INVALID_COMMAND_TASK_PLAN");
+
+    const planned = await mutation(
+      bobby,
+      "/api/v1/execution/commands/tasks/portfolio-state/plan",
+      {
+        schema_version: "execution.command-task-plan-request.v1",
+        workspace_id: workspaceId,
+        request_key: "n27:portfolio:1",
+        environment: "PAPER",
+        target: { type: "PORTFOLIO", id: "PF-MAIN" },
+        expected_target_version: 1,
+        params: { portfolio_id: "PF-MAIN", state: "HALTED", reason: "operator stop" },
+        conditions: [],
+      },
+    );
+    expect(planned.statusCode).toBe(201);
+    expect(planned.json()).toMatchObject({
+      command_key: "portfolio/state",
+      status: "BLOCKED",
+      relay_capability: "DISABLED",
+      source_side_effect_requested: false,
+      payload_storage_policy: "HASH_ONLY_NO_RAW",
+    });
+    expect((await ctx.pool.query("SELECT 1 FROM outbox_messages")).rowCount).toBe(0);
+    expect((await ctx.pool.query(
+      "SELECT 1 FROM product_audit_events WHERE event_type='execution.command.run_rejected' " +
+      "AND reason_code='TYPED_SOURCE_OPERATION_NOT_PUBLISHED'",
+    )).rowCount).toBe(1);
+  });
+
   it("classifies only the exact N16B current emergency-close primitive and keeps it dark", async () => {
     const catalogue = await inject(
       bobby,

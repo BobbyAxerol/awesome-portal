@@ -177,6 +177,7 @@ async fn run_once_mode(
                 feed_count: cycle.feed_count,
                 record_count: cycle.record_count,
                 source_read_at: cycle.source_read_at,
+                poll_interval_ms: cycle.poll_interval_ms,
             },
             Utc::now(),
         )

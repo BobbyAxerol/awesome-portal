@@ -1420,3 +1420,38 @@ durable run/attempt events. Detailed evidence:
   flag changed. `TD-EX-05` is closed; N25 is next.
 - Detail:
   [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](./EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
+
+## Backend state — 2026-08-30 (N25 query and analytics)
+
+- N25 is `COMPLETE / SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED /
+  SIGNED_DEV_DEPLOYMENT_PENDING / N26_READY`.
+- One ACTIVE N24 subject snapshot drives exact Rust aggregates, adaptive
+  series, insights and four authenticated BFF routes without browser financial
+  recomputation or N+1 source fan-out.
+- Detail:
+  [`EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md`](./EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md).
+
+## Backend state — 2026-08-30 (N26 realtime SSE)
+
+- N26 is `COMPLETE / IMPLEMENTATION_AND_RELEASE_QUALIFIED /
+  SIGNED_DEV_DEPLOYMENT_PENDING`.
+- A separate complete-cycle PostgreSQL journal prevents partial projection
+  cycles from becoming deltas; profile-bound Edge replicas share resume truth
+  and use bounded local fan-out.
+- Empty Live stays empty; session expiry and projection gaps are terminal;
+  realtime has an independent one-flag rollback from Query/projection.
+- Detail:
+  [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
+
+## Backend state — 2026-08-30 (N27 Admin Action Drawer)
+
+- N27 is `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK /
+  N28_READY`.
+- The ADMIN/session/workspace-scoped catalogue publishes 24 typed tasks in six
+  groups and classifies all 64 source actions: 0 connected, 14 compatible but
+  inactive and 10 semantically incompatible.
+- Runs reject before source dispatch; mutation plans are bounded, idempotent
+  and hash-only. Command relay, outbox dispatch and source side effects remain
+  disabled.
+- Detail:
+  [`EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md`](./EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md).

@@ -67,7 +67,16 @@
             "DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED"
           ]
         },
-        "source_reference": { "type": "string", "minLength": 1, "maxLength": 256 }
+        "source_reference": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "classification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "reason_code"],
+          "properties": {
+            "state": { "enum": ["CONNECTED", "SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"] },
+            "reason_code": { "type": "string", "pattern": "^[A-Z0-9_]{3,120}$" }
+          }
+        }
       }
     },
     "CommandCatalogueScope": {

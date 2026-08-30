@@ -123,6 +123,8 @@ pub enum GapReason {
 pub struct GapEnvelope {
     pub event_type: &'static str,
     pub schema_version: &'static str,
+    pub terminal: bool,
+    pub reconnect_required: bool,
     pub reason: GapReason,
     pub last_good_cursor: Option<String>,
     pub active_epoch_id: Option<Uuid>,
@@ -138,6 +140,8 @@ impl GapEnvelope {
         Self {
             event_type: "projection.gap",
             schema_version: REALTIME_SCHEMA_VERSION,
+            terminal: true,
+            reconnect_required: false,
             reason,
             last_good_cursor: last_good_cursor.map(|cursor| cursor.to_string()),
             active_epoch_id: None,
@@ -434,6 +438,8 @@ mod tests {
             panic!("expected a slow-consumer gap");
         };
         assert_eq!(gap.reason, GapReason::SlowConsumer);
+        assert!(gap.terminal);
+        assert!(!gap.reconnect_required);
         assert!(gap.missed_events.is_some_and(|missed| missed > 0));
         assert_eq!(subscriber.next().await, SubscriptionDelivery::Closed);
         assert_eq!(hub.metrics().slow_consumer_gaps, 1);

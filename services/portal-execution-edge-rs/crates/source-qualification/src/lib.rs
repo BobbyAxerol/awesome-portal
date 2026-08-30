@@ -2,6 +2,7 @@
 
 pub mod real_source;
 pub mod realtime_activation;
+pub mod realtime_manager_activation;
 pub mod shadow_screen;
 
 use chrono::{DateTime, TimeDelta, Utc};
