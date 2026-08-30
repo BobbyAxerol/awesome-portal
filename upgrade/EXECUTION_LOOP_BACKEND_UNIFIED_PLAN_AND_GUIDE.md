@@ -2370,6 +2370,11 @@ R1/R2 smoke baselines. The honest not-published path remains for absent additive
 
 ### 7.10 BR-EX-68 — Admin Action Drawer WF 1i: operator-task catalog + command relay flow (filed 2026-08-30)
 
+> **Detailed spec (2026-08-30): `upgrade/BR_EX_68_ADMIN_ACTION_DRAWER_SPEC.md`** — six
+> contracts A–F with schemas, error semantics, staged delivery F1–F4 and the five open
+> decisions. This section stays as the filed summary; the file above is the authority for
+> implementation detail.
+
 The owner's WF 1i hi-fi (2026-08-30) specifies the drawer the relay will one day serve. The
 frontend ships the full interaction as a DECLARED DEMO on `adminCli.smoke.ts` — that file is this
 row's reference for every shape below — while the published F0 truth (rev 2, 64 entries, relay
