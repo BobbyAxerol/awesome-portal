@@ -6517,3 +6517,58 @@
 .exec-gate-wvtable td[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
 .exec-gate-wvtable td[data-tone="bad"] { color: var(--bad); }
 .exec-gov-v[data-tone="good"] { color: var(--good); }
+
+/* ── Waivers register polish (owner 2026-08-30: "sáng tạo, kỹ, động hơn").
+   Runway lanes on one shared 0→45d axis, per-row state rail, expandable
+   "what closes it" detail, live countdown on EXPIRING. Motion respects
+   prefers-reduced-motion; the tick itself is gated in JS. */
+.exec-wv-runway { display: flex; flex-direction: column; gap: 7px; }
+.exec-wv-lane { display: grid; grid-template-columns: minmax(110px, 14%) minmax(120px, 1fr) minmax(96px, auto) minmax(0, 46%); gap: 10px; align-items: center; }
+.exec-wv-lanewho { font: var(--exec-font-meta); color: var(--ink-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exec-wv-lanetrack { position: relative; height: 6px; background: var(--surface-3, var(--line-soft)); border: 1px solid var(--line); overflow: visible; }
+.exec-wv-lanefill { position: absolute; inset: 0 auto 0 0; background: var(--line-strong); opacity: 0.55; transition: width 600ms ease; }
+.exec-wv-lanefill[data-tone="warn"] { background: var(--warn); opacity: 0.8; }
+.exec-wv-lanefill[data-tone="good"] { background: var(--good); opacity: 0.5; }
+.exec-wv-lanedot { position: absolute; top: 50%; width: 8px; height: 8px; transform: translate(-50%, -50%); background: var(--ink-mute); border: 1px solid var(--paper); }
+.exec-wv-lanedot[data-tone="warn"] { background: var(--warn); }
+.exec-wv-lanedot[data-tone="good"] { background: var(--good); }
+.exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanedot { background: var(--bad); animation: exec-inbox-pulse 1.4s infinite; }
+.exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanefill { background: var(--bad); opacity: 0.75; }
+.exec-wv-lanedue { font: var(--exec-font-num, 500 12px/1.4 var(--font-mono)); font-variant-numeric: tabular-nums; color: var(--ink-soft); text-align: right; white-space: nowrap; }
+.exec-wv-lanedue[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-wv-lanedue[data-live] { color: var(--bad); }
+.exec-wv-lanetext { font: var(--exec-font-meta); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.exec-wv-debtrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 2px 0; }
+.exec-wv-debtchip { font: var(--exec-font-meta); color: var(--ink-soft); border: 1px solid var(--line-strong); padding: 2px 9px; text-decoration: none; background: var(--paper); }
+.exec-wv-debtchip b { color: var(--ink); font-weight: 600; margin-left: 4px; }
+.exec-wv-debtchip:hover { border-color: var(--accent); color: var(--accent); }
+.exec-wv-row { border-left: 3px solid transparent; }
+.exec-wv-row[data-state="OPEN"] { border-left-color: var(--warn); }
+.exec-wv-row[data-state="EXPIRING"] { border-left-color: var(--bad); }
+.exec-wv-row[data-state="WAIVED"], .exec-wv-row[data-state="SATISFIED"] { border-left-color: var(--good); }
+.exec-wv-row:hover th, .exec-wv-row:hover td { background: var(--paper-raised); }
+.exec-wv-row[data-expanded] th, .exec-wv-row[data-expanded] td { background: var(--paper-raised); }
+.exec-wv-rowbtn { display: flex; align-items: baseline; gap: 7px; width: 100%; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+.exec-wv-carret { color: var(--ink-faint); flex: none; }
+.exec-wv-row[data-expanded] .exec-wv-carret { color: var(--accent); }
+.exec-wv-detailrow td { border-left: 3px solid var(--line-strong); background: var(--paper-sunken); }
+.exec-wv-detail { display: grid; grid-template-columns: minmax(96px, 12%) minmax(0, 1fr); gap: 4px 14px; padding: 8px 6px; }
+.exec-wv-detailk { font: var(--exec-font-th, 600 10px/1.6 var(--font-mono)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-wv-detailv { font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-wv-due { display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+.exec-wv-duenum { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.exec-wv-duenum[data-live] { color: var(--bad); }
+.exec-wv-duebar { width: 64px; }
+.exec-wv-duefill { display: block; height: 100%; background: var(--good); transition: width 600ms ease; }
+.exec-wv-duefill[data-tone="warn"] { background: var(--warn); }
+.exec-wv-duefill[data-tone="bad"] { background: var(--bad); }
+.exec-wv-duechip { font: var(--exec-font-meta); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 1px 7px; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .exec-wv-lanefill, .exec-wv-duefill { transition: none; }
+  .exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanedot { animation: none; }
+}
+@media (max-width: 900px) {
+  .exec-wv-lane { grid-template-columns: minmax(90px, 30%) 1fr minmax(90px, auto); }
+  .exec-wv-lanetext { grid-column: 1 / -1; }
+}
+.exec-px-panel .exec-gov-headlink { margin-left: auto; font: var(--exec-font-meta); text-transform: none; letter-spacing: 0; }

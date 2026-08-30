@@ -92,17 +92,36 @@ describe("waivers & conditions — the fleet-wide register", () => {
   it("filters narrow the demo rows and the foot says how many are shown", () => {
     render(<WaiversRegisterScreen />);
     fireEvent.click(screen.getByRole("button", { name: "EXPIRING" }));
-    const shown = document.querySelectorAll(".exec-gate-wvtable tbody tr");
+    const shown = document.querySelectorAll(".exec-gate-wvtable tbody tr.exec-wv-row");
     expect(shown.length).toBe(WAIVER_ROWS.filter((r) => r.state === "EXPIRING").length);
     expect(screen.getByText(new RegExp(`${shown.length} of ${WAIVER_ROWS.length} shown`))).toBeTruthy();
   });
 
-  it("an empty filter result is a stated fact, not a blank", () => {
+  it("a row expands to say what CLOSES it — an obligation without a closing path is a trap", () => {
     render(<WaiversRegisterScreen />);
-    fireEvent.click(screen.getByRole("button", { name: "WAIVED" }));
-    // One WAIVED row exists; SATISFIED leaves one too — assert the empty copy
-    // via a state that has rows removed after filtering twice.
-    fireEvent.click(screen.getByRole("button", { name: "EXPIRING" }));
-    expect(document.querySelectorAll(".exec-gate-wvtable tbody tr").length).toBeGreaterThan(0);
+    // cn_103 starts expanded (the most urgent row leads); collapse and expand another.
+    expect(screen.getByText(/closes by the live-gate decision on AP-311/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Capacity at target weight/ }));
+    expect(screen.getByText(/closes by an R2 amendment recording capacity/)).toBeTruthy();
+    expect(screen.getAllByText(/closing is a decision on that surface/).length).toBe(1);
+  });
+
+  it("the runway puts every clocked obligation on one shared axis, honest about the event-bound", () => {
+    render(<WaiversRegisterScreen />);
+    const lanes = document.querySelectorAll(".exec-wv-lane");
+    const clocked = WAIVER_ROWS.filter((r) => r.dueDays !== null && (r.state === "OPEN" || r.state === "EXPIRING"));
+    expect(lanes.length).toBe(clocked.length);
+    expect(screen.getByText(/event-bound, not\s+clocked/)).toBeTruthy();
+    // Motion is off in jsdom-with-webdriver? Not set here — the tick hook is
+    // gated by smokeMotionAllowed; either way the countdown text is a real
+    // remainder, tabular and non-empty.
+    expect(screen.getAllByText(/\d+d \d{2}:\d{2}:\d{2}/).length).toBeGreaterThan(0);
+  });
+
+  it("the strip answers 'how much and how urgent' before the table", () => {
+    render(<WaiversRegisterScreen />);
+    expect(screen.getByText("Open + expiring")).toBeTruthy();
+    expect(screen.getByText("Next to lapse")).toBeTruthy();
+    expect(screen.getByText(/where the debt sits/)).toBeTruthy();
   });
 });
