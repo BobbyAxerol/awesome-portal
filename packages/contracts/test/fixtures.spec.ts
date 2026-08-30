@@ -164,6 +164,12 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
   "execution-full-blotter.partial.valid.json":
     "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-sandbox-overview.ready.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
+  "execution-live-overview.empty.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
+  "execution-canary-live-facts.empty.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":
@@ -280,6 +286,92 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     ]) {
       expect(generated).toContain(`\"${state}\"`);
     }
+  });
+
+  it("keeps N23 Sandbox, Live and Canary profiles exact and truth-preserving", () => {
+    const sandbox = loadJson(
+      join(fixtureDir, "execution-sandbox-overview.ready.valid.json"),
+    ) as Record<string, unknown>;
+    const live = loadJson(
+      join(fixtureDir, "execution-live-overview.empty.valid.json"),
+    ) as Record<string, unknown> & { data: Record<string, unknown[]> };
+    const canary = loadJson(
+      join(fixtureDir, "execution-canary-live-facts.empty.valid.json"),
+    ) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
+    );
+    expect(sandbox).toMatchObject({
+      delivery_profile: "SANDBOX_BINANCE_USDM",
+      requested_environment: "sandbox",
+      source_environment: "sandbox",
+      state: "ready",
+    });
+    expect(live).toMatchObject({
+      delivery_profile: "LIVE_BINANCE_USDM",
+      requested_environment: "live",
+      source_environment: "live",
+      state: "empty",
+      completeness: "COMPLETE",
+    });
+    expect(Object.values(live.data).every((rows) => rows.length === 0)).toBe(true);
+    expect(canary).toMatchObject({
+      requested_environment: "canary",
+      source_environment: "live",
+      composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
+    });
+    expect(validate!({ ...live, delivery_profile: "SANDBOX_BINANCE_USDM" })).toBe(false);
+    expect(validate!({ ...canary, source_environment: "sandbox" })).toBe(false);
+  });
+
+  it("keeps the N23 Live gate read-only over the existing R2 backbone", () => {
+    const backbone = loadJson(
+      join(fixtureDir, "execution-governance.r2-review.valid.json"),
+    );
+    const currentSource = loadJson(
+      join(fixtureDir, "execution-canary-live-facts.empty.valid.json"),
+    );
+    const liveGate = {
+      schema_version: "governance.live-review.v1",
+      record_authority: "PORTAL_CONTROL",
+      source_authority: "TRADING_SYSTEM",
+      delivery_profile: "LIVE_BINANCE_USDM",
+      read_at: "2026-08-30T12:00:01Z",
+      actor: { user_id: "usr_bobby", username: "bobby", roles: ["ADMIN"] },
+      approval_id: "AP-R2-DETAIL",
+      canary_ref: {
+        deployment_id: "deployment-paper-1",
+        composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
+      },
+      governance_backbone: backbone,
+      current_source: currentSource,
+      derived_branches: [
+        { capability_id: "live-gate.kpis", state: "UNAVAILABLE", reason_code: "N25_LIVE_GATE_DERIVATIONS_NOT_ACTIVE" },
+        { capability_id: "live-gate.drift-series", state: "UNAVAILABLE", reason_code: "N25_LIVE_GATE_DERIVATIONS_NOT_ACTIVE" },
+        { capability_id: "live-gate.criteria", state: "UNAVAILABLE", reason_code: "N24_GATE_POLICY_REGISTRY_NOT_ACTIVE" },
+        { capability_id: "live-gate.capital-step", state: "UNAVAILABLE", reason_code: "N24_CAPITAL_LEDGER_NOT_ACTIVE" },
+      ],
+      source_side_effect_requested: false,
+      production_command_active: false,
+    };
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/governance-live-review.v1.schema.json",
+    );
+    expect(validate!(liveGate)).toBe(true);
+    expect(validate!({ ...liveGate, production_command_active: true })).toBe(false);
+  });
+
+  it("keeps generated N23 paths profile-specific and non-mutating", () => {
+    const generated = readFileSync(
+      join(ROOT, "generated", "execution-profile-read.d.ts"),
+      "utf8",
+    );
+    for (const operation of [
+      "executionSandboxOverviewV1",
+      "executionLiveOverviewV1",
+      "executionGateLiveReviewV1",
+    ]) expect(generated).toContain(operation);
+    expect(generated).not.toMatch(/post:|put:|patch:|delete:/);
   });
 
   it("keeps Live Full broker values suppressed and all runtime authorities inactive", () => {

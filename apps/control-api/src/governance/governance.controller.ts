@@ -14,7 +14,7 @@ import { FastifyRequest } from "fastify";
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
 import { ControlApiConfig } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { newUlid } from "../id";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -43,7 +43,7 @@ import { PaperExitService } from "./paper-exit.service";
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
-  portalSession: { sessionId: string; csrfSecretHash: string };
+  portalSession: AuthSession & { csrfSecretHash: string };
 }
 
 @UseGuards(SessionGuard)
@@ -170,6 +170,21 @@ export class GovernanceController {
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
     return this.governance.r2Detail(request.portalUser, workspaceId, approvalId);
+  }
+
+  @Get("/governance/approvals/:approval_id/live")
+  async live(
+    @Req() request: GovernanceRequest,
+    @Param("approval_id") approvalId: string,
+    @Query("workspace_id") rawWorkspaceId?: unknown,
+  ) {
+    const workspaceId = await this.workspace(request, rawWorkspaceId);
+    return this.governance.liveDetail(
+      request.portalUser,
+      request.portalSession,
+      workspaceId,
+      approvalId,
+    );
   }
 
   @Get("/governance/exit-reviews/:review_id")

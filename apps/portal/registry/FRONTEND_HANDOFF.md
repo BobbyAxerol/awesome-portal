@@ -1818,3 +1818,14 @@ remain typed dormant bindings. Frontend must not consume raw Manager envelopes o
 relation names; keep approved seven-state fixtures until N20 delivers each
 narrow workspace/resource-scoped screen contract. Full handoff:
 [`CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md`](../../../upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md).
+
+### 8.41 Backend N23 Sandbox/Live profile handoff (2026-08-30)
+
+N23 is `COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED`. Sandbox Overview,
+Sandbox Certification, Live Overview, Canary, Live Full and Live Gate now have
+session/workspace-scoped source compositions. Live zero rows are a truthful
+`empty`, while source loss remains `partial/unavailable`. Canary is Portal
+governance over Live-profile facts and must not be rendered as a separate
+Trading System mode. Keep market ticks and N24/N25 derived branches typed
+unavailable. Full routes/state guidance:
+[`CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md`](../../../upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md).

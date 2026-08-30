@@ -53,6 +53,8 @@ import { ScreenBffController } from "./screen-bff/screen-bff.controller";
 import { ScreenBffService } from "./screen-bff/screen-bff.service";
 import { PaperReadController } from "./paper-read/paper-read.controller";
 import { PaperReadService } from "./paper-read/paper-read.service";
+import { ProfileReadController } from "./profile-read/profile-read.controller";
+import { ProfileReadService } from "./profile-read/profile-read.service";
 
 @Module({})
 export class AppModule {
@@ -77,6 +79,7 @@ export class AppModule {
         ActivationController,
         ScreenBffController,
         PaperReadController,
+        ProfileReadController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -126,6 +129,7 @@ export class AppModule {
         ActivationService,
         ScreenBffService,
         PaperReadService,
+        ProfileReadService,
         ExecutionSharedReadRepository,
         {
           provide: ExecutionRealtimeProxy,

@@ -1,0 +1,32 @@
+{
+  "schema_version": "execution.canary-live-facts.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "LIVE_BINANCE_USDM",
+  "requested_environment": "canary",
+  "source_environment": "live",
+  "composition": "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
+  "workspace_id": "ws_primary",
+  "resource": { "kind": "DEPLOYMENT", "id": "dep_live_1" },
+  "read_at": "2026-08-30T12:00:01Z",
+  "as_of": "2026-08-30T12:00:00Z",
+  "state": "empty",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "capabilities": [
+    { "capability_id": "source.deployments", "state": "EMPTY", "relations": ["strategy_deployments"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.positions", "state": "EMPTY", "relations": ["positions_v2"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.reconciliation", "state": "EMPTY", "relations": ["reconciliation_findings"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.accounts", "state": "EMPTY", "relations": ["accounts"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.account_balances", "state": "EMPTY", "relations": ["account_balances"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.margin_balances", "state": "EMPTY", "relations": ["margin_balances"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.account_sync", "state": "EMPTY", "relations": ["account_sync_effective"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.broker_sync", "state": "EMPTY", "relations": ["broker_account_sync_effective"], "reason_code": null, "retryable": false }
+  ],
+  "data": {
+    "deployments": [], "positions": [], "reconciliation": [], "accounts": [],
+    "account_balances": [], "margin_balances": [], "account_sync": [], "broker_sync": []
+  },
+  "unavailable_branches": []
+}

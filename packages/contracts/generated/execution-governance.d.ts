@@ -924,6 +924,68 @@ export interface components {
             username: string;
             roles: ("ADMIN" | "USER")[];
         };
+        "execution-profile-read.v1.schema_$defs-Identifier": string;
+        Capability: {
+            capability_id: string;
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+            relations: string[];
+            reason_code: string | null;
+            /** @constant */
+            retryable: false;
+        };
+        Scalar: string | number | boolean | null | (string | number | boolean | null)[];
+        ManagerRecord: {
+            [key: string]: components["schemas"]["Scalar"];
+        };
+        UnavailableBranch: {
+            capability_id: string;
+            /** @constant */
+            state: "UNAVAILABLE";
+            reason_code: string;
+            /** @constant */
+            retryable: false;
+        };
+        ProfileRead: {
+            /** @enum {unknown} */
+            schema_version: "execution.sandbox-overview.v1" | "execution.sandbox-current-source.v1" | "execution.live-overview.v1" | "execution.live-current-source.v1" | "execution.canary-live-facts.v1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "TRADING_SYSTEM";
+            /** @enum {unknown} */
+            delivery_profile: "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+            /** @enum {unknown} */
+            requested_environment: "sandbox" | "live" | "canary";
+            /** @enum {unknown} */
+            source_environment: "sandbox" | "live";
+            /** @enum {unknown} */
+            composition: "DIRECT_PROFILE_READ" | "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS";
+            workspace_id: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+            resource: {
+                /** @enum {unknown} */
+                kind: "WORKSPACE" | "DEPLOYMENT";
+                id: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+            };
+            read_at: components["schemas"]["Timestamp"];
+            as_of: components["schemas"]["Timestamp"] | null;
+            /** @enum {unknown} */
+            state: "ready" | "empty" | "stale" | "partial" | "unavailable";
+            /** @enum {unknown} */
+            freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+            /** @enum {unknown} */
+            completeness: "COMPLETE" | "PARTIAL";
+            actor: {
+                user_id: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+                username: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+                roles: ("ADMIN" | "USER")[];
+            };
+            capabilities: components["schemas"]["Capability"][];
+            data: {
+                [key: string]: components["schemas"]["ManagerRecord"][];
+            };
+            unavailable_branches: components["schemas"]["UnavailableBranch"][];
+        } & (unknown & unknown & unknown);
         NullableIdentifier: components["schemas"]["$defs-Identifier"] | null;
         NullableHash: components["schemas"]["Hash"] | null;
         CertificationRecord: {
@@ -1094,9 +1156,9 @@ export interface components {
             /** @constant */
             record_authority: "PORTAL";
             /** @enum {unknown} */
-            delivery_profile: "fixture" | "shadow";
+            delivery_profile: "fixture" | "shadow" | "SANDBOX_BINANCE_USDM";
             /** @enum {unknown} */
-            source_integration_state: "UNAVAILABLE" | "SHADOW";
+            source_integration_state: "UNAVAILABLE" | "SHADOW" | "SOURCE_BACKED";
             /** @constant */
             source_side_effect_requested: false;
             /** @constant */
@@ -1106,6 +1168,7 @@ export interface components {
             replayed: boolean;
             read_at: components["schemas"]["Timestamp"];
             actor: components["schemas"]["execution-sandbox-certification.v1.schema_$defs-Actor"];
+            current_source?: components["schemas"]["ProfileRead"];
             certification: components["schemas"]["CertificationRecord"];
             lineage: components["schemas"]["LineageItem"][];
             progress: components["schemas"]["Progress"];

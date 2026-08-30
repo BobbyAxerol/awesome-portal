@@ -1,8 +1,9 @@
 import { createHash } from "crypto";
 import { Inject, Injectable } from "@nestjs/common";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
+import { ProfileReadService } from "../profile-read/profile-read.service";
 import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.service";
 import { CanaryEnvelopeCreateRequest } from "./contracts";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "./canary.repository";
@@ -37,11 +38,23 @@ function compareDecimal(left: string, right: string): number {
 
 @Injectable()
 export class CanaryService {
-  constructor(@Inject(CanaryRepository) private readonly repository: CanaryRepository) {}
+  constructor(
+    @Inject(CanaryRepository) private readonly repository: CanaryRepository,
+    @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+  ) {}
 
-  async detail(user: PortalUser, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
     const envelope = await this.repository.latestByDeployment(workspaceId, deploymentId);
-    return this.publicDetail(user, envelope, await this.repository.lineageFor(envelope), false);
+    const [lineage, currentSource] = await Promise.all([
+      this.repository.lineageFor(envelope),
+      this.profileReads.snapshot(
+        { user, session, workspaceId },
+        "canary",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        deploymentId,
+      ),
+    ]);
+    return this.publicDetail(user, envelope, lineage, false, currentSource);
   }
 
   async create(user: PortalUser, input: CanaryEnvelopeCreateRequest, requestId: string) {
@@ -119,9 +132,11 @@ export class CanaryService {
     envelope: CanaryEnvelopeRow,
     lineage: CanaryLineage,
     replayed: boolean,
+    currentSource?: Record<string, unknown>,
   ) {
     const certification = lineage.certification.certification;
     const readAt = new Date().toISOString();
+    const sourceConnected = currentSource !== undefined && currentSource.state !== "unavailable";
     const unavailablePanel = (panelId: string, authority: "EXECUTION" | "BROKER" | "DERIVED") => ({
       panel_id: panelId,
       source_authority: authority,
@@ -156,8 +171,8 @@ export class CanaryService {
     return {
       schema_version: "execution.canary-control-room.v1",
       record_authority: "PORTAL",
-      delivery_profile: envelope.delivery_profile,
-      source_integration_state: envelope.source_integration_state,
+      delivery_profile: sourceConnected ? "LIVE_BINANCE_USDM" : envelope.delivery_profile,
+      source_integration_state: sourceConnected ? "SOURCE_BACKED" : envelope.source_integration_state,
       source_side_effect_requested: false,
       runtime_activation_requested: false,
       promotion_execution_requested: false,
@@ -165,6 +180,7 @@ export class CanaryService {
       replayed,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      ...(currentSource ? { current_source: currentSource } : {}),
       deployment: {
         deployment_id: envelope.deployment_id,
         portfolio_id: certification.portfolio_id,

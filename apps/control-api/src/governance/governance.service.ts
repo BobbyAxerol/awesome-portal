@@ -6,11 +6,12 @@ import {
   governanceApplySigningKeys,
   querySigningKeys,
 } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { ControlPlaneQueryService, KeysetCursorCodec, RawKeysetQuery } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { TypedCondition } from "../operations/contracts";
+import { ProfileReadService } from "../profile-read/profile-read.service";
 import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
   approvalHistoryResource,
@@ -141,6 +142,7 @@ export class GovernanceService {
   constructor(
     @Inject(GovernanceRepository) private readonly repository: GovernanceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
   ) {
     const keys = querySigningKeys(config);
     this.query = new ControlPlaneQueryService(
@@ -392,6 +394,53 @@ export class GovernanceService {
           separation_of_duties: self ? "VIOLATION" : "OK",
         },
       },
+    };
+  }
+
+  async liveDetail(
+    user: PortalUser,
+    session: AuthSession,
+    workspaceId: string,
+    approvalId: string,
+  ) {
+    const backbone = await this.r2Detail(user, workspaceId, approvalId) as Record<string, unknown>;
+    const data = backbone.data as { approval?: { subject_id?: unknown } } | undefined;
+    const subjectId = data?.approval?.subject_id;
+    if (typeof subjectId !== "string" || subjectId.length < 1 || subjectId.length > 191) {
+      throw new GovernanceError(
+        "N23_LIVE_GATE_SUBJECT_INVALID",
+        "Live gate approval subject is not a deployment.",
+        409,
+      );
+    }
+    const currentSource = await this.profileReads.snapshot(
+      { user, session, workspaceId },
+      "canary",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      subjectId,
+    );
+    return {
+      schema_version: "governance.live-review.v1",
+      record_authority: "PORTAL_CONTROL",
+      source_authority: "TRADING_SYSTEM",
+      delivery_profile: "LIVE_BINANCE_USDM",
+      read_at: new Date().toISOString(),
+      actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      approval_id: approvalId,
+      canary_ref: {
+        deployment_id: subjectId,
+        composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
+      },
+      governance_backbone: backbone,
+      current_source: currentSource,
+      derived_branches: [
+        { capability_id: "live-gate.kpis", state: "UNAVAILABLE", reason_code: "N25_LIVE_GATE_DERIVATIONS_NOT_ACTIVE" },
+        { capability_id: "live-gate.drift-series", state: "UNAVAILABLE", reason_code: "N25_LIVE_GATE_DERIVATIONS_NOT_ACTIVE" },
+        { capability_id: "live-gate.criteria", state: "UNAVAILABLE", reason_code: "N24_GATE_POLICY_REGISTRY_NOT_ACTIVE" },
+        { capability_id: "live-gate.capital-step", state: "UNAVAILABLE", reason_code: "N24_CAPITAL_LEDGER_NOT_ACTIVE" },
+      ],
+      source_side_effect_requested: false,
+      production_command_active: false,
     };
   }
 

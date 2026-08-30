@@ -83,6 +83,9 @@ jobs:
       - name: Validate N22 full Paper read activation
         run: ./scripts/execution-n22-full-paper-read-test.sh
 
+      - name: Validate N23 Sandbox and Live read profiles
+        run: ./scripts/execution-n23-sandbox-live-read-test.sh
+
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 

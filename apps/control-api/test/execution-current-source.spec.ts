@@ -14,9 +14,12 @@ import {
   N15B_CURRENT_QUERY_ACCEPTANCE,
   N17B_CURRENT_EXACT_QUERY_ACCEPTANCE,
   N22_PAPER_READ_ACCEPTANCE,
+  N23_PROFILE_READ_ACCEPTANCE,
   assertN22PaperReadAccepted,
+  assertN23ProfileReadAccepted,
   currentManagerV2Path,
   paperManagerV2Path,
+  profileManagerV2Path,
   currentSourcePath,
   currentSourceUpstreamError,
 } from "../src/execution/current-source.proxy";
@@ -373,5 +376,44 @@ describe("N22 full Paper read acceptance", () => {
       "orders",
       { limit: 201 },
     )).toThrowError(expect.objectContaining({ code: "N22_PAPER_PAGE_INVALID" }));
+  });
+});
+
+describe("N23 Sandbox and Live profile acceptance", () => {
+  it("accepts only the exact Sandbox/Live screen matrix and maps Canary to Live", () => {
+    expect(N23_PROFILE_READ_ACCEPTANCE).toMatchObject({
+      decision: "N23_SANDBOX_LIVE_READ_ACCEPTED",
+      profiles: {
+        sandbox: { profileId: "SANDBOX_BINANCE_USDM", audience: "portal-execution-edge-sandbox" },
+        live: { profileId: "LIVE_BINANCE_USDM", audience: "portal-execution-edge-live" },
+      },
+      canaryComposition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
+    });
+    expect(() => assertN23ProfileReadAccepted("sandbox", "SANDBOX_TRADING_SCREEN")).not.toThrow();
+    expect(() => assertN23ProfileReadAccepted("live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN")).not.toThrow();
+    expect(() => assertN23ProfileReadAccepted("canary", "EXECUTION_CANARY_CONTROL_ROOM_SCREEN")).not.toThrow();
+    expect(() => assertN23ProfileReadAccepted("canary", "LIVE_OPERATIONS_SCREEN"))
+      .toThrowError(expect.objectContaining({ code: "N23_CANARY_COMPOSITION_INVALID" }));
+    expect(() => assertN23ProfileReadAccepted("sandbox", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"))
+      .toThrowError(expect.objectContaining({ code: "N23_PROFILE_READ_NOT_ACCEPTED" }));
+    expect(() => assertN23ProfileReadAccepted("paper", "PAPER_TRADING_SCREEN"))
+      .toThrowError(expect.objectContaining({ code: "N23_PROFILE_READ_NOT_ACCEPTED" }));
+  });
+
+  it("keeps source relations server-owned and separately bounded per profile", () => {
+    expect(profileManagerV2Path(
+      "sandbox", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "manager.accounts", "account_sync_effective", { limit: 100 },
+    )).toBe("/internal/v2/manager/relations/public/account_sync_effective?limit=100");
+    expect(profileManagerV2Path(
+      "live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "manager.orders", "orders", { limit: 200 },
+    )).toBe("/internal/v2/manager/relations/public/orders?limit=200");
+    expect(() => profileManagerV2Path(
+      "sandbox", "SANDBOX_TRADING_SCREEN", "manager.orders", "orders",
+    )).toThrowError(expect.objectContaining({ code: "N23_BINDING_NOT_ACCEPTED" }));
+    expect(() => profileManagerV2Path(
+      "live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "manager.orders", "orders", { limit: 201 },
+    )).toThrowError(expect.objectContaining({ code: "N23_PAGE_INVALID" }));
   });
 });

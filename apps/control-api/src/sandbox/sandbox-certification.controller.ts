@@ -14,7 +14,7 @@ import { FastifyRequest } from "fastify";
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
 import { ControlApiConfig } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { GovernanceError } from "../governance/governance.service";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -30,7 +30,7 @@ import { SandboxCertificationService } from "./sandbox-certification.service";
 interface SandboxRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
-  portalSession: { sessionId: string; csrfSecretHash: string };
+  portalSession: AuthSession & { csrfSecretHash: string };
 }
 
 @UseGuards(SessionGuard)
@@ -49,7 +49,7 @@ export class SandboxCertificationController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.certifications.detail(request.portalUser, workspaceId, deploymentId);
+    return this.certifications.detail(request.portalUser, request.portalSession, workspaceId, deploymentId);
   }
 
   @Post("/governance/sandbox-certifications")

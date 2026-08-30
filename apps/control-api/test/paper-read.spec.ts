@@ -80,6 +80,7 @@ function managerResponse(
 ) {
   return {
     schema_version: "portal.execution.current-source-bff.v2",
+    source_environment: "paper",
     profile_id: "PAPER_BINANCE_USDM",
     source: {
       contract_version: "trading-system.portal-execution.manager-v2.runtime.v1",

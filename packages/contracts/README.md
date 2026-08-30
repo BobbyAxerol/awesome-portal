@@ -125,6 +125,15 @@ Candles, venue calendar, derived analytics, exact Blotter totals and aggregates
 remain typed unavailable until their later source/query phases; no fixture is
 labelled as live data.
 
+N23 adds the profile-isolated Sandbox/Live read boundary at
+`execution-profile-read.openapi.json`, generated as
+`generated/execution-profile-read.d.ts`. Sandbox and Live carry distinct
+Manager profile IDs, delegated audiences, admission/cache scopes and rollback
+flags. A valid Live profile with zero rows is `empty`, while source loss is
+`unavailable` or `partial`; the two states cannot be interchanged. Canary is
+not a Trading System mode: `governance-live-review.v1` joins the existing
+Portal governance backbone to `LIVE_BINANCE_USDM` facts and remains read-only.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -172,6 +181,8 @@ packages/contracts/
     execution-staged-activation.v1.schema.json
     execution-intercell-gateway.v1.schema.json
     execution-paper-read.v1.schema.json
+    execution-profile-read.v1.schema.json
+    governance-live-review.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
@@ -199,6 +210,9 @@ packages/contracts/
     execution-paper-overview.{ready,empty,stale,partial,unavailable}.valid.json
     execution-paper-workbench{,-vnm}.partial.valid.json
     execution-full-blotter.partial.valid.json
+    execution-sandbox-overview.ready.valid.json
+    execution-live-overview.empty.valid.json
+    execution-canary-live-facts.empty.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-analytics-series.openapi.json
@@ -210,6 +224,7 @@ packages/contracts/
     execution-intercell-gateway.openapi.json
     execution-emergency-routing.openapi.json
     execution-paper-read.openapi.json
+    execution-profile-read.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts

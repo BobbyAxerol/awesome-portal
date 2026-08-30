@@ -1379,3 +1379,22 @@ durable run/attempt events. Detailed evidence:
   post-merge image publication is the only remaining release-process step.
 - Detail:
   [`EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md`](./EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md).
+
+## Backend state — 2026-08-30 (N23 Sandbox and Live read profiles)
+
+- N23 is `COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED /
+  SIGNED_DEV_DEPLOYMENT_PENDING / N24_READY`.
+- Distinct Sandbox and Live Manager profile IDs, delegated audiences,
+  admission/cache scopes and release flags serve six product compositions.
+- Canary is Portal governance joined to Live facts; no Trading System Canary
+  mode, fake Live row or browser-selectable raw relation was introduced.
+- Empty Live is authoritative `empty/COMPLETE`; loss/contract/profile failures
+  remain partial or unavailable and cannot masquerade as empty.
+- Existing Sandbox/Canary/Live detail contracts remain source-dark compatible
+  until the exact profile is active. Projection/SSE/analytics/command flags and
+  Trading System/stable runtime remain unchanged.
+- Evidence: shared contracts 102/102, focused profile reads 29/29, immutable
+  release tests 4/4, fresh-PostgreSQL Control API 236/236 across 26 files,
+  dump/restore and independent Sandbox/Live Compose rollback all pass.
+- Detail:
+  [`EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md`](./EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md).

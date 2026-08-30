@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "../canary/canary.repository";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
+import { ProfileReadService } from "../profile-read/profile-read.service";
 
 function decimal(value: string): string {
   const [whole, fraction = ""] = value.split(".");
@@ -10,22 +11,40 @@ function decimal(value: string): string {
 
 @Injectable()
 export class LiveOperationsService {
-  constructor(@Inject(CanaryRepository) private readonly canaries: CanaryRepository) {}
+  constructor(
+    @Inject(CanaryRepository) private readonly canaries: CanaryRepository,
+    @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+  ) {}
 
-  async detail(user: PortalUser, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
     const canary = await this.canaries.latestByDeployment(workspaceId, deploymentId);
-    const lineage = await this.canaries.lineageFor(canary);
-    return this.sourceDarkDetail(user, canary, lineage);
+    const [lineage, currentSource] = await Promise.all([
+      this.canaries.lineageFor(canary),
+      this.profileReads.snapshot(
+        { user, session, workspaceId },
+        "live",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        deploymentId,
+      ),
+    ]);
+    return this.sourceDarkDetail(user, canary, lineage, currentSource);
   }
 
-  private sourceDarkDetail(user: PortalUser, canary: CanaryEnvelopeRow, lineage: CanaryLineage) {
+  private sourceDarkDetail(
+    user: PortalUser,
+    canary: CanaryEnvelopeRow,
+    lineage: CanaryLineage,
+    currentSource: Record<string, unknown>,
+  ) {
     const readAt = new Date().toISOString();
     const certification = lineage.certification.certification;
+    const sourceUnavailable = currentSource.state === "unavailable";
+    const sourceConnected = !sourceUnavailable;
     const blockers = [
       "PRODUCTION_COMMAND_INACTIVE",
       "LIVE_FULL_ACTIVATION_NOT_APPROVED",
       "CANARY_EXIT_EVIDENCE_UNAVAILABLE",
-      "LIVE_SOURCE_UNAVAILABLE",
+      ...(sourceUnavailable ? ["LIVE_SOURCE_UNAVAILABLE"] : []),
       "SOURCE_CONTINUITY_UNAVAILABLE",
       "BROKER_STATE_UNAVAILABLE",
       "ROLLBACK_EVIDENCE_UNAVAILABLE",
@@ -71,8 +90,8 @@ export class LiveOperationsService {
     return {
       schema_version: "execution.live-full-operations.v1",
       record_authority: "PORTAL",
-      delivery_profile: "fixture",
-      source_integration_state: "UNAVAILABLE",
+      delivery_profile: sourceConnected ? "LIVE_BINANCE_USDM" : "fixture",
+      source_integration_state: sourceConnected ? "SOURCE_BACKED" : "UNAVAILABLE",
       source_side_effect_requested: false,
       runtime_activation_requested: false,
       promotion_execution_requested: false,
@@ -80,6 +99,7 @@ export class LiveOperationsService {
       realtime_active: false,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      current_source: currentSource,
       deployment: {
         deployment_id: canary.deployment_id,
         portfolio_id: certification.portfolio_id,

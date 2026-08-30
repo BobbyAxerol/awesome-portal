@@ -26,10 +26,11 @@ openapi = (root / "packages/contracts/openapi/execution-screen-bff.openapi.json"
 generated = (root / "packages/contracts/generated/execution-screen-bff.d.ts").read_text()
 
 assert catalogue.count("screen({") == 23
-# N20 established the immutable 23-screen catalogue at 10/13. N22 is allowed
-# to promote exactly four Paper product contracts without changing its shape.
-assert catalogue.count('status: "AVAILABLE"') == 14
-assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 9
+# N20 established the immutable 23-screen catalogue. Later read-profile phases
+# may promote only their named rows without changing its shape or request set:
+# N22 owns four Paper products and N23 owns six Sandbox/Live compositions.
+assert catalogue.count('status: "AVAILABLE"') == 17
+assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 6
 assert catalogue.count('deliveryPhase: "N22"') == 4
 for screen_id in [
     "PAPER_TRADING_SCREEN",
@@ -39,6 +40,17 @@ for screen_id in [
 ]:
     row = next(line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line)
     assert 'status: "AVAILABLE"' in row and 'deliveryPhase: "N22"' in row
+assert catalogue.count('deliveryPhase: "N23"') == 6
+for screen_id in [
+    "SANDBOX_TRADING_SCREEN",
+    "LIVE_OPERATIONS_SCREEN",
+    "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+    "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+    "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+    "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+]:
+    row = next(line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line)
+    assert 'status: "AVAILABLE"' in row and 'deliveryPhase: "N23"' in row
 request_ids = set(re.findall(r'BR-EX-\d{2}', catalogue))
 assert request_ids == {f"BR-EX-{number}" for number in range(41, 72)}
 for token in ["BR-EX-55", "BR-EX-58", "portal.entity-names", "portal.blocker-catalog"]:

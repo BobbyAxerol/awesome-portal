@@ -1570,6 +1570,9 @@ post-merge workflow. Detail:
 
 #### N23 — Sandbox and Live read profiles
 
+**Status (2026-08-30):** `COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED /
+SIGNED_DEV_DEPLOYMENT_PENDING / N24_READY`.
+
 **Goal:** reuse stable Portal contracts for Sandbox and Live and represent
 valid empty data truthfully, without inventing a Trading System Canary mode.
 
@@ -1590,6 +1593,18 @@ load, source loss/recovery, cache/cursor isolation and independent rollback.
 **N23 exit gate:** Sandbox and Live reads pass positive/negative matrices and
 independent rollback; empty Live state is visible and truthful; no profile
 leakage exists.
+
+**Closeout:** two isolated Manager-v2 profile bindings now serve Sandbox and
+Live current facts through six session/workspace-scoped product compositions.
+Canary remains Portal governance over `LIVE_BINANCE_USDM`, never a fabricated
+Trading System mode. Exact scalar allowlists, cross-profile row rejection,
+per-profile admission/cache identity, fixed fan-out, valid-empty Live truth,
+source loss/recovery and independent rollback pass. Existing details retain
+`fixture/UNAVAILABLE` while a profile is dark; projection, SSE, analytics,
+commands and Trading System remain unchanged. Contract, release and evidence:
+contracts 102/102, focused profile reads 29/29, immutable release 4/4,
+fresh-PostgreSQL Control API 236/236 plus dump/restore and Compose rollback.
+[`EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md`](./backend/EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md).
 
 #### N24 — Durable Portal projection
 

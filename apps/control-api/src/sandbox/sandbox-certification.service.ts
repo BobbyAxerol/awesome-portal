@@ -1,8 +1,9 @@
 import { createHash } from "crypto";
 import { Inject, Injectable } from "@nestjs/common";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
+import { ProfileReadService } from "../profile-read/profile-read.service";
 import {
   SANDBOX_CERTIFICATION_STEPS,
   SandboxCertificationCreateRequest,
@@ -140,10 +141,20 @@ export function evaluateSandboxCertification(
 export class SandboxCertificationService {
   constructor(
     @Inject(SandboxCertificationRepository) private readonly repository: SandboxCertificationRepository,
+    @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
   ) {}
 
-  async detail(user: PortalUser, workspaceId: string, deploymentId: string) {
-    return this.publicDetail(await this.repository.detailByDeployment(workspaceId, deploymentId), user, false);
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+    const [detail, currentSource] = await Promise.all([
+      this.repository.detailByDeployment(workspaceId, deploymentId),
+      this.profileReads.snapshot(
+        { user, session, workspaceId },
+        "sandbox",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        deploymentId,
+      ),
+    ]);
+    return this.publicDetail(detail, user, false, currentSource);
   }
 
   async create(user: PortalUser, input: SandboxCertificationCreateRequest, requestId: string) {
@@ -281,10 +292,16 @@ export class SandboxCertificationService {
     };
   }
 
-  private publicDetail(detail: SandboxCertificationDetail, user: PortalUser, replayed: boolean) {
+  private publicDetail(
+    detail: SandboxCertificationDetail,
+    user: PortalUser,
+    replayed: boolean,
+    currentSource?: Record<string, unknown>,
+  ) {
     const record = detail.certification;
     const evaluation = evaluateSandboxCertification(detail);
     const readAt = new Date().toISOString();
+    const sourceConnected = currentSource !== undefined && currentSource.state !== "unavailable";
     const currentIndex = evaluation.steps.findIndex((item) => item.evaluationState !== "PASS");
     const sourcePanel = (
       panelId: string,
@@ -329,14 +346,15 @@ export class SandboxCertificationService {
     return {
       schema_version: "governance.sandbox-certification.v1",
       record_authority: "PORTAL",
-      delivery_profile: record.delivery_profile,
-      source_integration_state: record.source_integration_state,
+      delivery_profile: sourceConnected ? "SANDBOX_BINANCE_USDM" : record.delivery_profile,
+      source_integration_state: sourceConnected ? "SOURCE_BACKED" : record.source_integration_state,
       source_side_effect_requested: false,
       runtime_activation_requested: false,
       promotion_execution_requested: false,
       replayed,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      ...(currentSource ? { current_source: currentSource } : {}),
       certification: {
         certification_id: record.certification_id,
         deployment_id: record.deployment_id,

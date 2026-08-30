@@ -1,6 +1,6 @@
 import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { GovernanceError } from "../governance/governance.service";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -9,6 +9,7 @@ import { LiveOperationsService } from "./live-operations.service";
 interface LiveRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalSession: AuthSession;
 }
 
 @UseGuards(SessionGuard)
@@ -31,6 +32,6 @@ export class LiveOperationsController {
     if (!workspaceId || !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
       throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
-    return this.live.detail(request.portalUser, workspaceId, deploymentId);
+    return this.live.detail(request.portalUser, request.portalSession, workspaceId, deploymentId);
   }
 }

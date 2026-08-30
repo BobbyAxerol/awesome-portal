@@ -10,6 +10,18 @@ export interface ManagerPage {
   nextCursor: string | null;
 }
 
+export interface ManagerReadContext {
+  profileId: "PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+  mode: "paper" | "sandbox" | "live";
+  errorPrefix: "N22" | "N23";
+}
+
+const PAPER_CONTEXT: ManagerReadContext = {
+  profileId: "PAPER_BINANCE_USDM",
+  mode: "paper",
+  errorPrefix: "N22",
+};
+
 const FORBIDDEN_FIELD = /(?:^|_)(?:raw|secret|credential|password|token|dsn)(?:_|$)/i;
 const FRESHNESS = new Set(["FRESH", "AGING", "STALE", "UNKNOWN"]);
 const COMPLETENESS = new Set(["COMPLETE", "PARTIAL", "UNKNOWN"]);
@@ -23,47 +35,55 @@ export function managerPage(
   response: unknown,
   expectedRelation: string,
   allowedFields: readonly string[],
+  context: ManagerReadContext = PAPER_CONTEXT,
 ): ManagerPage {
-  const bff = object(response, "N22_CURRENT_SOURCE_ENVELOPE_INVALID");
-  if (bff.profile_id !== "PAPER_BINANCE_USDM") {
-    throw contractError("N22_PROFILE_CONTEXT_MISMATCH");
+  const bff = object(response, `${context.errorPrefix}_CURRENT_SOURCE_ENVELOPE_INVALID`);
+  if (bff.profile_id !== context.profileId || bff.source_environment !== context.mode) {
+    throw contractError(`${context.errorPrefix}_PROFILE_CONTEXT_MISMATCH`);
   }
-  const source = object(bff.source, "N22_MANAGER_ENVELOPE_INVALID");
-  if (source.profile_id !== "PAPER_BINANCE_USDM" || source.authority !== "EXECUTION_CELL") {
-    throw contractError("N22_MANAGER_AUTHORITY_MISMATCH");
+  const source = object(bff.source, `${context.errorPrefix}_MANAGER_ENVELOPE_INVALID`);
+  if (source.profile_id !== context.profileId || source.authority !== "EXECUTION_CELL") {
+    throw contractError(`${context.errorPrefix}_MANAGER_AUTHORITY_MISMATCH`);
   }
   if (source.availability !== "AVAILABLE") {
-    throw contractError("N22_MANAGER_RELATION_UNAVAILABLE");
+    throw contractError(`${context.errorPrefix}_MANAGER_RELATION_UNAVAILABLE`);
   }
-  const data = object(source.data, "N22_MANAGER_DATA_INVALID");
-  const relation = object(data.relation, "N22_MANAGER_RELATION_INVALID");
+  const data = object(source.data, `${context.errorPrefix}_MANAGER_DATA_INVALID`);
+  const relation = object(data.relation, `${context.errorPrefix}_MANAGER_RELATION_INVALID`);
   if (relation.schema !== "public" || relation.relation !== expectedRelation) {
-    throw contractError("N22_MANAGER_RELATION_MISMATCH");
+    throw contractError(`${context.errorPrefix}_MANAGER_RELATION_MISMATCH`);
   }
   if (!Array.isArray(data.items) || data.items.length > 200) {
-    throw contractError("N22_MANAGER_PAGE_INVALID");
+    throw contractError(`${context.errorPrefix}_MANAGER_PAGE_INVALID`);
   }
   const allowed = new Set(allowedFields);
   const items = data.items.map((raw) => {
-    const record = object(raw, "N22_MANAGER_RECORD_INVALID");
-    const recordRelation = object(record.relation, "N22_MANAGER_RECORD_RELATION_INVALID");
+    const record = object(raw, `${context.errorPrefix}_MANAGER_RECORD_INVALID`);
+    const recordRelation = object(record.relation, `${context.errorPrefix}_MANAGER_RECORD_RELATION_INVALID`);
     if (recordRelation.schema !== "public" || recordRelation.relation !== expectedRelation) {
-      throw contractError("N22_MANAGER_RECORD_RELATION_MISMATCH");
+      throw contractError(`${context.errorPrefix}_MANAGER_RECORD_RELATION_MISMATCH`);
     }
-    const fields = object(record.fields, "N22_MANAGER_FIELDS_INVALID");
+    const fields = object(record.fields, `${context.errorPrefix}_MANAGER_FIELDS_INVALID`);
     const output: Record<string, Scalar | readonly Scalar[]> = {};
     for (const [name, tagged] of Object.entries(fields)) {
       if (!allowed.has(name) || FORBIDDEN_FIELD.test(name)) continue;
-      output[name] = taggedValue(tagged);
+      output[name] = taggedValue(tagged, context.errorPrefix);
     }
     if (Object.keys(output).length === 0) {
-      throw contractError("N22_MANAGER_RECORD_EMPTY_AFTER_NARROWING");
+      throw contractError(`${context.errorPrefix}_MANAGER_RECORD_EMPTY_AFTER_NARROWING`);
+    }
+    if (
+      "mode" in output &&
+      typeof output.mode === "string" &&
+      output.mode.toLowerCase() !== context.mode
+    ) {
+      throw contractError(`${context.errorPrefix}_CROSS_PROFILE_ROW_REJECTED`);
     }
     return output;
   });
   const nextCursor = data.next_cursor;
   if (nextCursor !== null && (typeof nextCursor !== "string" || nextCursor.length > 4096)) {
-    throw contractError("N22_MANAGER_CURSOR_INVALID");
+    throw contractError(`${context.errorPrefix}_MANAGER_CURSOR_INVALID`);
   }
   const freshness = typeof source.freshness === "string" && FRESHNESS.has(source.freshness)
     ? source.freshness as ManagerPage["freshness"]
@@ -80,8 +100,8 @@ export function managerPage(
   };
 }
 
-function taggedValue(value: unknown): Scalar | readonly Scalar[] {
-  const tagged = object(value, "N22_MANAGER_TAGGED_VALUE_INVALID");
+function taggedValue(value: unknown, errorPrefix: "N22" | "N23"): Scalar | readonly Scalar[] {
+  const tagged = object(value, `${errorPrefix}_MANAGER_TAGGED_VALUE_INVALID`);
   const kind = tagged.kind;
   const item = tagged.value;
   if (kind === "NULL" && item === null) return null;
@@ -96,7 +116,7 @@ function taggedValue(value: unknown): Scalar | readonly Scalar[] {
   }
   // Manager OBJECT values can contain source-specific JSON. N22 does not
   // expose them until a dedicated product contract explicitly models them.
-  throw contractError("N22_MANAGER_VALUE_KIND_NOT_ACCEPTED");
+  throw contractError(`${errorPrefix}_MANAGER_VALUE_KIND_NOT_ACCEPTED`);
 }
 
 function object(value: unknown, code: string): Record<string, unknown> {

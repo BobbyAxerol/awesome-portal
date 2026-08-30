@@ -1,0 +1,25 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Primus Portal N23 Profile Read API", "version": "1.0.0" },
+  "paths": {
+    "/api/v1/execution/screens/sandbox": {
+      "get": {
+        "operationId": "executionSandboxOverviewV1",
+        "responses": { "200": { "description": "Sandbox profile overview", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-profile-read.v1.schema.json#/$defs/ProfileRead" } } } } }
+      }
+    },
+    "/api/v1/execution/screens/live": {
+      "get": {
+        "operationId": "executionLiveOverviewV1",
+        "responses": { "200": { "description": "Live profile overview, including truthful empty", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-profile-read.v1.schema.json#/$defs/ProfileRead" } } } } }
+      }
+    },
+    "/api/v1/execution/governance/approvals/{approval_id}/live": {
+      "get": {
+        "operationId": "executionGateLiveReviewV1",
+        "parameters": [{ "name": "approval_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Portal live gate joined to Live-profile facts", "content": { "application/json": { "schema": { "$ref": "../schemas/governance-live-review.v1.schema.json" } } } } }
+      }
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": "portal.sandbox-live-read-release-profile.v1",
+  "phase": "N23",
+  "source_contract": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "adapter": "MANAGER_V2_CURRENT_AS_IS",
+  "profiles": {
+    "sandbox": {
+      "environment": "sandbox",
+      "manager_profile_id": "SANDBOX_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-sandbox",
+      "screen_ids": [
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "SANDBOX_TRADING_SCREEN"
+      ]
+    },
+    "live": {
+      "environment": "live",
+      "manager_profile_id": "LIVE_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-live",
+      "screen_ids": [
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "LIVE_OPERATIONS_SCREEN"
+      ]
+    }
+  },
+  "product_contract_ids": [
+    "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+    "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+    "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+    "LIVE_GATE_SCREEN",
+    "LIVE_OPERATIONS_SCREEN",
+    "SANDBOX_TRADING_SCREEN"
+  ],
+  "activated_read_capability_ids": [
+    "accounts.current",
+    "deployments.positions",
+    "ops.alerts",
+    "orders.fills",
+    "orders.list",
+    "reconciliation.current",
+    "sessions.current"
+  ],
+  "portal_join_capability_ids": [
+    "portal.activation",
+    "portal.governance"
+  ],
+  "typed_unavailable_capability_ids": ["market.ticks"],
+  "source_binding_ids": [
+    "manager.accounts",
+    "manager.deployments",
+    "manager.fills",
+    "manager.orders",
+    "manager.positions",
+    "manager.reconciliation",
+    "manager.sessions"
+  ],
+  "canary": {
+    "trading_system_mode": null,
+    "source_profile": "LIVE_BINANCE_USDM",
+    "composition": "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS"
+  },
+  "candidate_flags": {
+    "control_api_current_source_paper": true,
+    "control_api_current_source_sandbox": true,
+    "control_api_current_source_live": true,
+    "edge_manager_v2_read": true,
+    "edge_projection_ingestion": false,
+    "edge_realtime_sse": false,
+    "edge_analytics_query": false,
+    "edge_command_relay": false
+  },
+  "independent_rollback": {
+    "sandbox": "CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX=false",
+    "live": "CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_LIVE=false",
+    "database_action": "NONE"
+  },
+  "phase_authorization": {
+    "decision": "BOBBY_APPROVED_N23_SANDBOX_AND_LIVE_READ_PROFILES",
+    "sandbox_and_live_read_authorized": true,
+    "live_empty_is_authoritative": true,
+    "live_command_or_mutation_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

@@ -1701,6 +1701,23 @@ activation or the phase):**
   but not started. See
   [`EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md`](./backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md).
 
+- **N20–N23 Manager product-read foundation complete (2026-08-30):** N20
+  freezes the canonical workspace/resource screen BFF boundary; N21 adds
+  PostgreSQL-coordinated profile admission, request coalescing, scoped cache
+  and preserved source freshness; N22 activates the complete currently valid
+  Paper read set; N23 extends the same authority to independently isolated
+  Sandbox and Live profiles. Canary remains Portal governance over Live facts.
+  Valid zero-row Live is `empty/COMPLETE`, while source loss remains
+  `partial/unavailable`; raw Manager envelopes, arbitrary relations and fake
+  rows never cross the browser boundary. Sandbox and Live have separate
+  delegated audiences, cache/quota identity and rollback flags. Projection,
+  SSE, analytics and command authority remain outside N23. Current status is
+  `N23_COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED / N24_READY`; contracts
+  102/102, focused profile reads 29/29, immutable release 4/4 and the fresh-PG
+  Control API 236/236 plus dump/restore and independent Compose rollback pass;
+  see
+  [`EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md`](./backend/EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

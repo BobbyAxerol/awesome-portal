@@ -535,6 +535,34 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/paper-read/paper-read.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/paper-read/paper-read.service.ts" \
   "${ROOT_DIR}/apps/control-api/test/paper-read.spec.ts" \
+  "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh" \
+  "${ROOT_DIR}/scripts/portal-sandbox-live-read-release.py" \
+  "${ROOT_DIR}/scripts/test_portal_sandbox_live_read_release.py" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md" \
+  "${ROOT_DIR}/deploy/manifests/sandbox-live-read-release-profile.v1.json" \
+  "${ROOT_DIR}/deploy/runbooks/portal-n23-sandbox-live-read-release-and-rollback.md" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-profile-read.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/governance-live-review.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-sandbox-certification.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-canary-control-room.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-live-full-operations.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-profile-read.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-canary.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-live-full.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-profile-read.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-canary.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-live-full.d.ts" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-sandbox-overview.ready.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-live-overview.empty.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-canary-live-facts.empty.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-sandbox-certification.unavailable.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-canary-control-room.unavailable.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-live-full-operations.unavailable.valid.json" \
+  "${ROOT_DIR}/apps/control-api/src/profile-read/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/profile-read/profile-read.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/profile-read/profile-read.service.ts" \
+  "${ROOT_DIR}/apps/control-api/test/profile-read.spec.ts" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000014_execution-shared-admission.sql" \
   "${ROOT_DIR}/apps/control-api/src/execution/shared-read.repository.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-shared-admission.spec.ts" \
@@ -1468,6 +1496,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh" \
   "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh" \
   "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1572,5 +1601,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh"
 "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh"
 "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh"
+"${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'
