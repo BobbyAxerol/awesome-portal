@@ -30,6 +30,9 @@
       "@portal/contracts-command-center": [
         "../../../packages/contracts/generated/execution-command-center.d.ts"
       ],
+      "@portal/contracts-screen-bff": [
+        "../../../packages/contracts/generated/execution-screen-bff.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

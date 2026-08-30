@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json",
+  "title": "Canonical Execution screen BFF contract v1",
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$" },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "Role": { "enum": ["ADMIN", "USER"] },
+    "UiState": { "enum": ["ready", "empty", "stale", "partial", "denied", "unavailable", "error"] },
+    "Authority": { "enum": ["PORTAL_CONTROL", "TRADING_SYSTEM", "RESEARCH", "BROKER", "DERIVED"] },
+    "Freshness": { "enum": ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"] },
+    "Completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+    "ResourceKind": { "enum": ["WORKSPACE", "DEPLOYMENT", "INCIDENT", "APPROVAL", "REVIEW", "ALPHA", "PORTFOLIO", "ACCOUNT"] },
+    "Actor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["user_id", "username", "roles"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "roles": { "type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/Role" } }
+      }
+    },
+    "CompositionPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source_join", "verdicts", "counts", "filtering", "sorting", "sla", "permissions"],
+      "properties": {
+        "source_join": { "const": "SERVER_ONLY" },
+        "verdicts": { "const": "SERVER_ONLY" },
+        "counts": { "const": "SERVER_ONLY" },
+        "filtering": { "const": "SERVER_ONLY" },
+        "sorting": { "const": "SERVER_ONLY" },
+        "sla": { "const": "SERVER_ONLY" },
+        "permissions": { "const": "SERVER_ONLY" }
+      }
+    },
+    "DataApi": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "operation_id", "method", "path_template", "response_contract", "unavailable_reason", "delivery_phase"],
+      "properties": {
+        "status": { "enum": ["AVAILABLE", "TYPED_UNAVAILABLE"] },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "method": { "enum": ["GET", "POST"] },
+        "path_template": { "type": "string", "pattern": "^/api/v1/execution/", "maxLength": 300 },
+        "response_contract": { "$ref": "#/$defs/Identifier" },
+        "unavailable_reason": { "oneOf": [{ "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" }, { "type": "null" }] },
+        "delivery_phase": { "$ref": "#/$defs/Identifier" }
+      },
+      "allOf": [
+        { "if": { "properties": { "status": { "const": "AVAILABLE" } }, "required": ["status"] }, "then": { "properties": { "unavailable_reason": { "type": "null" } } } },
+        { "if": { "properties": { "status": { "const": "TYPED_UNAVAILABLE" } }, "required": ["status"] }, "then": { "properties": { "unavailable_reason": { "type": "string" } } } }
+      ]
+    },
+    "ScreenDefinition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["screen_id", "ui_route_template", "resource_kind", "resource_required", "required_roles", "request_ids", "source_authorities", "read_capabilities", "supported_ui_states", "composition_policy", "data_api"],
+      "properties": {
+        "screen_id": { "type": "string", "pattern": "^EXECUTION_[A-Z0-9_]+_SCREEN$|^(PAPER|SANDBOX|LIVE)_TRADING_SCREEN$|^LIVE_OPERATIONS_SCREEN$", "maxLength": 128 },
+        "ui_route_template": { "type": "string", "pattern": "^/", "maxLength": 300 },
+        "resource_kind": { "$ref": "#/$defs/ResourceKind" },
+        "resource_required": { "type": "boolean" },
+        "required_roles": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/Role" } },
+        "request_ids": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "type": "string", "pattern": "^BR-EX-[0-9]{2}$" } },
+        "source_authorities": { "type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true, "items": { "$ref": "#/$defs/Authority" } },
+        "read_capabilities": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "supported_ui_states": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "$ref": "#/$defs/UiState" } },
+        "composition_policy": { "$ref": "#/$defs/CompositionPolicy" },
+        "data_api": { "$ref": "#/$defs/DataApi" }
+      }
+    },
+    "CatalogueResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "workspace_id", "read_at", "actor", "exact_total", "total_count", "screens"],
+      "properties": {
+        "schema_version": { "const": "execution.screen-bff-catalogue.v1" },
+        "record_authority": { "const": "PORTAL_CONTROL" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "read_at": { "$ref": "#/$defs/DateTime" },
+        "actor": { "$ref": "#/$defs/Actor" },
+        "exact_total": { "const": true },
+        "total_count": { "type": "integer", "minimum": 1, "maximum": 23 },
+        "screens": { "type": "array", "minItems": 1, "maxItems": 23, "items": { "$ref": "#/$defs/ScreenDefinition" } }
+      }
+    },
+    "DetailResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "workspace_id", "resource", "read_at", "actor", "screen", "delivery"],
+      "properties": {
+        "schema_version": { "const": "execution.screen-bff-contract.v1" },
+        "record_authority": { "const": "PORTAL_CONTROL" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "resource": {
+          "type": "object", "additionalProperties": false, "required": ["kind", "id"],
+          "properties": { "kind": { "$ref": "#/$defs/ResourceKind" }, "id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] } }
+        },
+        "read_at": { "$ref": "#/$defs/DateTime" },
+        "actor": { "$ref": "#/$defs/Actor" },
+        "screen": { "$ref": "#/$defs/ScreenDefinition" },
+        "delivery": {
+          "type": "object", "additionalProperties": false,
+          "required": ["state", "freshness", "completeness", "payload", "reason_code", "retryable"],
+          "properties": {
+            "state": { "enum": ["ready", "unavailable"] },
+            "freshness": { "const": "UNKNOWN" },
+            "completeness": { "const": "UNKNOWN" },
+            "payload": { "type": "null" },
+            "reason_code": { "oneOf": [{ "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" }, { "type": "null" }] },
+            "retryable": { "const": false }
+          }
+        }
+      }
+    },
+    "UiStateCorpus": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "states"],
+      "properties": {
+        "schema_version": { "const": "execution.screen-bff-ui-state-corpus.v1" },
+        "states": {
+          "type": "array", "minItems": 7, "maxItems": 7,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["state", "http_status", "data_visible", "action_enabled", "reason_code"],
+            "properties": {
+              "state": { "$ref": "#/$defs/UiState" },
+              "http_status": { "enum": [200, 403, 500, 503] },
+              "data_visible": { "type": "boolean" },
+              "action_enabled": { "const": false },
+              "reason_code": { "oneOf": [{ "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" }, { "type": "null" }] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

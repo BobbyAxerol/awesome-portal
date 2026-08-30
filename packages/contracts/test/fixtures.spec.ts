@@ -144,6 +144,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-production-readiness.v1.schema.json#/$defs/GameDayCorpus",
   "execution-production-acceptance.current-paper.accepted.json":
     "https://schemas.primusspark.com/portal/execution-production-acceptance-current.v1.schema.json",
+  "execution-screen-bff.ui-states.valid.json":
+    "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json#/$defs/UiStateCorpus",
+  "execution-screen-bff.unavailable.valid.json":
+    "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json#/$defs/DetailResponse",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":
@@ -210,6 +214,56 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(commandValidate!({ ...command, injected: true })).toBe(false);
     expect(commandValidate!({ ...command, expected_aggregate_version: 0 })).toBe(false);
     expect(commandValidate!({ ...command, idempotency_key: "bad key!" })).toBe(false);
+  });
+
+  it("keeps the N20 seven-state corpus exact, non-actionable and source-safe", () => {
+    const corpus = loadJson(
+      join(fixtureDir, "execution-screen-bff.ui-states.valid.json"),
+    ) as { states: Array<Record<string, unknown>> };
+    expect(corpus.states.map((item) => item.state)).toEqual([
+      "ready", "empty", "stale", "partial", "denied", "unavailable", "error",
+    ]);
+    expect(corpus.states.every((item) => item.action_enabled === false)).toBe(true);
+    const unavailable = loadJson(
+      join(fixtureDir, "execution-screen-bff.unavailable.valid.json"),
+    ) as Record<string, unknown> & {
+      screen: { composition_policy: Record<string, unknown>; data_api: Record<string, unknown> };
+      delivery: Record<string, unknown>;
+    };
+    expect(unavailable.screen.composition_policy).toEqual({
+      source_join: "SERVER_ONLY",
+      verdicts: "SERVER_ONLY",
+      counts: "SERVER_ONLY",
+      filtering: "SERVER_ONLY",
+      sorting: "SERVER_ONLY",
+      sla: "SERVER_ONLY",
+      permissions: "SERVER_ONLY",
+    });
+    expect(unavailable.screen.data_api).toMatchObject({ status: "TYPED_UNAVAILABLE" });
+    expect(unavailable.delivery).toMatchObject({
+      state: "unavailable", payload: null, retryable: false,
+    });
+    expect(JSON.stringify(unavailable)).not.toMatch(/public\.|manager\.|postgres:|redis:/i);
+  });
+
+  it("keeps the generated N20 consumer types aligned with the canonical API", () => {
+    const generated = readFileSync(
+      join(ROOT, "generated", "execution-screen-bff.d.ts"),
+      "utf8",
+    );
+    expect(generated).toContain("executionScreenBffCatalogue");
+    expect(generated).toContain("executionScreenBffContract");
+    for (const state of [
+      "ready",
+      "empty",
+      "stale",
+      "partial",
+      "denied",
+      "unavailable",
+      "error",
+    ]) {
+      expect(generated).toContain(`\"${state}\"`);
+    }
   });
 
   it("keeps Live Full broker values suppressed and all runtime authorities inactive", () => {

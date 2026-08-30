@@ -13,6 +13,7 @@ import { QueryContractError } from "./query";
 import { AnalyticsProxyError } from "./execution/analytics.proxy";
 import { CommandCenterError } from "./command-center/command-center.service";
 import { CurrentSourceProxyError } from "./execution/current-source.proxy";
+import { ScreenBffError } from "./screen-bff/screen-bff.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -32,7 +33,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof QueryContractError ||
       exception instanceof AnalyticsProxyError ||
       exception instanceof CurrentSourceProxyError ||
-      exception instanceof CommandCenterError
+      exception instanceof CommandCenterError ||
+      exception instanceof ScreenBffError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

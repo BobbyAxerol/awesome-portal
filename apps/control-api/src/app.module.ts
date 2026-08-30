@@ -48,6 +48,8 @@ import { LiveOperationsService } from "./live/live-operations.service";
 import { ActivationController } from "./activation/activation.controller";
 import { ActivationRepository } from "./activation/activation.repository";
 import { ActivationService } from "./activation/activation.service";
+import { ScreenBffController } from "./screen-bff/screen-bff.controller";
+import { ScreenBffService } from "./screen-bff/screen-bff.service";
 
 @Module({})
 export class AppModule {
@@ -70,6 +72,7 @@ export class AppModule {
         CanaryController,
         LiveOperationsController,
         ActivationController,
+        ScreenBffController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -117,6 +120,7 @@ export class AppModule {
         LiveOperationsService,
         ActivationRepository,
         ActivationService,
+        ScreenBffService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

@@ -1326,3 +1326,20 @@ durable run/attempt events. Detailed evidence:
 - `TD-EX-03` is closed. N20 is ready only when Bobby explicitly starts it.
 - Detail:
   [`EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md`](./EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md).
+
+## Backend state — 2026-08-30 (N20 canonical screen BFF)
+
+- N20 is `N20_CANONICAL_SCREEN_BFF_CONTRACTS_COMPLETE / SOURCE_DARK /
+  TD-EX-01_CLOSED / N21_READY_NOT_STARTED`.
+- The TypeScript BFF publishes 23 role-filtered, workspace/resource-scoped
+  screen contracts covering BR-EX-41…71: 10 existing narrow APIs and 13 typed
+  unavailable future APIs.
+- JSON Schema, OpenAPI, generated TypeScript, fixtures and the strict frontend
+  reader share the same seven-state contract.
+- Browser-shaped raw Manager routes return typed HTTP 410. Rust remains the
+  internal source compatibility authority; no runtime/source/stable flag was
+  changed.
+- Full backend, contract, fresh-PostgreSQL and frontend consumer/build gates
+  pass. `TD-EX-01` is closed; N21 has not started.
+- Detail:
+  [`EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md`](./EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md).

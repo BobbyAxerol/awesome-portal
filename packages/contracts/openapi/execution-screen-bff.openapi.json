@@ -1,0 +1,108 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal canonical Execution screen BFF contract API",
+    "version": "1.0.0",
+    "description": "Session-guarded, workspace/resource-scoped discovery of narrow screen APIs. It never exposes Manager envelopes, relation selectors, SQL, source origins or browser-side policy decisions."
+  },
+  "paths": {
+    "/api/v1/execution/screen-contracts": {
+      "get": {
+        "operationId": "executionScreenBffCatalogue",
+        "parameters": [{ "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } }],
+        "responses": {
+          "200": { "description": "Exact role-filtered screen contract catalogue", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogueResponse" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/screen-contracts/{screen_id}": {
+      "get": {
+        "operationId": "executionScreenBffContract",
+        "parameters": [
+          { "name": "screen_id", "in": "path", "required": true, "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+          { "name": "resource_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } }
+        ],
+        "responses": {
+          "200": { "description": "Bound screen contract or explicit typed-unavailable delivery branch", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DetailResponse" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Problem": { "description": "Safe Portal problem", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$" },
+      "DateTime": { "type": "string", "format": "date-time" },
+      "Role": { "type": "string", "enum": ["ADMIN", "USER"] },
+      "UiState": { "type": "string", "enum": ["ready", "empty", "stale", "partial", "denied", "unavailable", "error"] },
+      "Authority": { "type": "string", "enum": ["PORTAL_CONTROL", "TRADING_SYSTEM", "RESEARCH", "BROKER", "DERIVED"] },
+      "Freshness": { "type": "string", "enum": ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"] },
+      "Completeness": { "type": "string", "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+      "ResourceKind": { "type": "string", "enum": ["WORKSPACE", "DEPLOYMENT", "INCIDENT", "APPROVAL", "REVIEW", "ALPHA", "PORTFOLIO", "ACCOUNT"] },
+      "Actor": {
+        "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"],
+        "properties": { "user_id": { "$ref": "#/components/schemas/Identifier" }, "username": { "type": "string", "minLength": 1, "maxLength": 64 }, "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/components/schemas/Role" } } }
+      },
+      "CompositionPolicy": {
+        "type": "object", "additionalProperties": false, "required": ["source_join", "verdicts", "counts", "filtering", "sorting", "sla", "permissions"],
+        "properties": {
+          "source_join": { "type": "string", "const": "SERVER_ONLY" }, "verdicts": { "type": "string", "const": "SERVER_ONLY" }, "counts": { "type": "string", "const": "SERVER_ONLY" }, "filtering": { "type": "string", "const": "SERVER_ONLY" }, "sorting": { "type": "string", "const": "SERVER_ONLY" }, "sla": { "type": "string", "const": "SERVER_ONLY" }, "permissions": { "type": "string", "const": "SERVER_ONLY" }
+        }
+      },
+      "DataApi": {
+        "type": "object", "additionalProperties": false, "required": ["status", "operation_id", "method", "path_template", "response_contract", "unavailable_reason", "delivery_phase"],
+        "properties": {
+          "status": { "type": "string", "enum": ["AVAILABLE", "TYPED_UNAVAILABLE"] },
+          "operation_id": { "$ref": "#/components/schemas/Identifier" },
+          "method": { "type": "string", "enum": ["GET", "POST"] },
+          "path_template": { "type": "string", "pattern": "^/api/v1/execution/", "maxLength": 300 },
+          "response_contract": { "$ref": "#/components/schemas/Identifier" },
+          "unavailable_reason": { "type": ["string", "null"] },
+          "delivery_phase": { "$ref": "#/components/schemas/Identifier" }
+        }
+      },
+      "ScreenDefinition": {
+        "type": "object", "additionalProperties": false, "required": ["screen_id", "ui_route_template", "resource_kind", "resource_required", "required_roles", "request_ids", "source_authorities", "read_capabilities", "supported_ui_states", "composition_policy", "data_api"],
+        "properties": {
+          "screen_id": { "type": "string", "maxLength": 128 },
+          "ui_route_template": { "type": "string", "pattern": "^/", "maxLength": 300 },
+          "resource_kind": { "$ref": "#/components/schemas/ResourceKind" },
+          "resource_required": { "type": "boolean" },
+          "required_roles": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "$ref": "#/components/schemas/Role" } },
+          "request_ids": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "type": "string" } },
+          "source_authorities": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "$ref": "#/components/schemas/Authority" } },
+          "read_capabilities": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/components/schemas/Identifier" } },
+          "supported_ui_states": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/components/schemas/UiState" } },
+          "composition_policy": { "$ref": "#/components/schemas/CompositionPolicy" },
+          "data_api": { "$ref": "#/components/schemas/DataApi" }
+        }
+      },
+      "CatalogueResponse": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "record_authority", "workspace_id", "read_at", "actor", "exact_total", "total_count", "screens"],
+        "properties": {
+          "schema_version": { "type": "string", "const": "execution.screen-bff-catalogue.v1" }, "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "workspace_id": { "$ref": "#/components/schemas/Identifier" }, "read_at": { "$ref": "#/components/schemas/DateTime" }, "actor": { "$ref": "#/components/schemas/Actor" }, "exact_total": { "type": "boolean", "const": true }, "total_count": { "type": "integer", "minimum": 1, "maximum": 23 }, "screens": { "type": "array", "minItems": 1, "maxItems": 23, "items": { "$ref": "#/components/schemas/ScreenDefinition" } }
+        }
+      },
+      "DetailResponse": {
+        "type": "object", "additionalProperties": false, "required": ["schema_version", "record_authority", "workspace_id", "resource", "read_at", "actor", "screen", "delivery"],
+        "properties": {
+          "schema_version": { "type": "string", "const": "execution.screen-bff-contract.v1" }, "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "workspace_id": { "$ref": "#/components/schemas/Identifier" },
+          "resource": { "type": "object", "additionalProperties": false, "required": ["kind", "id"], "properties": { "kind": { "$ref": "#/components/schemas/ResourceKind" }, "id": { "type": ["string", "null"] } } },
+          "read_at": { "$ref": "#/components/schemas/DateTime" }, "actor": { "$ref": "#/components/schemas/Actor" }, "screen": { "$ref": "#/components/schemas/ScreenDefinition" },
+          "delivery": { "type": "object", "additionalProperties": false, "required": ["state", "freshness", "completeness", "payload", "reason_code", "retryable"], "properties": { "state": { "type": "string", "enum": ["ready", "unavailable"] }, "freshness": { "type": "string", "const": "UNKNOWN" }, "completeness": { "type": "string", "const": "UNKNOWN" }, "payload": { "type": "null" }, "reason_code": { "type": ["string", "null"] }, "retryable": { "type": "boolean", "const": false } } }
+        }
+      },
+      "Problem": { "type": "object", "required": ["error", "request_id"], "properties": { "error": { "type": "object", "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } }, "request_id": { "type": "string" } } }
+    }
+  }
+}

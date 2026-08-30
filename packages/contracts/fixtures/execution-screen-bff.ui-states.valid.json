@@ -1,0 +1,12 @@
+{
+  "schema_version": "execution.screen-bff-ui-state-corpus.v1",
+  "states": [
+    { "state": "ready", "http_status": 200, "data_visible": true, "action_enabled": false, "reason_code": null },
+    { "state": "empty", "http_status": 200, "data_visible": true, "action_enabled": false, "reason_code": "EXACT_EMPTY_RESULT" },
+    { "state": "stale", "http_status": 200, "data_visible": true, "action_enabled": false, "reason_code": "SOURCE_FRESHNESS_STALE" },
+    { "state": "partial", "http_status": 200, "data_visible": true, "action_enabled": false, "reason_code": "SOURCE_COMPLETENESS_PARTIAL" },
+    { "state": "denied", "http_status": 403, "data_visible": false, "action_enabled": false, "reason_code": "SCREEN_ACCESS_DENIED" },
+    { "state": "unavailable", "http_status": 503, "data_visible": false, "action_enabled": false, "reason_code": "SCREEN_DATA_UNAVAILABLE" },
+    { "state": "error", "http_status": 500, "data_visible": false, "action_enabled": false, "reason_code": "SCREEN_BFF_ERROR" }
+  ]
+}

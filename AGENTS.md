@@ -152,6 +152,9 @@ Rules for these agents:
 
 ## Execution Manager N18–N29 campaign rules
 
+- Use the single campaign branch `feat/execution-manager-campaign` for every
+  approved N18–N29 phase. Do not create one branch per N phase unless Bobby
+  explicitly changes this campaign rule.
 - Bobby has approved the campaign direction: adapt and use the maximum
   semantically valid capability already published by the Trading System across
   Paper, Sandbox and Live. Paper is an evidence order, not a product ceiling.

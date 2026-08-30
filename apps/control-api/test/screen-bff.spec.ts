@@ -1,0 +1,235 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { AdminService } from "../src/admin/admin.service";
+import { Argon2CredentialService } from "../src/auth/argon";
+import { AuthService } from "../src/auth/auth.service";
+import { SCREEN_BFF_CATALOGUE } from "../src/screen-bff/catalogue";
+import { SCREEN_BFF_UI_STATES } from "../src/screen-bff/contracts";
+import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
+
+const DATABASE_URL = process.env.TEST_DATABASE_URL ??
+  "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
+
+interface Actor { userId: string; username: string; cookie: string }
+
+function cookies(response: { headers: Record<string, unknown> }): string {
+  const raw = response.headers["set-cookie"];
+  return (Array.isArray(raw) ? raw : [raw])
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.split(";")[0]).join("; ");
+}
+
+function csrfCookie(response: { headers: Record<string, unknown> }): string {
+  const raw = response.headers["set-cookie"];
+  const value = (Array.isArray(raw) ? raw : [raw]).find(
+    (item): item is string => typeof item === "string" && item.startsWith("__Host-portal_csrf="),
+  );
+  if (!value) throw new Error("csrf cookie missing");
+  return value.split(";")[0].split("=")[1];
+}
+
+describe("N20 canonical screen BFF catalogue", () => {
+  it("covers the exact 20 Manager-bound screens plus BR-EX-69/70/71 additions", () => {
+    expect(SCREEN_BFF_CATALOGUE).toHaveLength(23);
+    expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.screenId)).size).toBe(23);
+    expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.dataApi.operationId)).size).toBe(23);
+    expect([...new Set(SCREEN_BFF_CATALOGUE.flatMap((item) => item.requestIds))].sort()).toEqual(
+      Array.from({ length: 31 }, (_, index) => `BR-EX-${index + 41}`),
+    );
+    expect(SCREEN_BFF_CATALOGUE.map((item) => item.screenId)).toEqual(
+      expect.arrayContaining([
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+        "EXECUTION_WAIVERS_REGISTER_SCREEN",
+      ]),
+    );
+    const sandbox = SCREEN_BFF_CATALOGUE.find(
+      (item) => item.screenId === "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+    );
+    expect(sandbox?.requestIds).toEqual(
+      expect.arrayContaining(["BR-EX-55", "BR-EX-58", "BR-EX-60", "BR-EX-61"]),
+    );
+    expect(sandbox?.readCapabilities).toEqual(
+      expect.arrayContaining(["portal.entity-names", "portal.blocker-catalog"]),
+    );
+  });
+
+  it("publishes only narrow versioned paths and never raw Manager selectors", () => {
+    const identifier = /^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$/;
+    for (const item of SCREEN_BFF_CATALOGUE) {
+      expect(item.dataApi.pathTemplate).toMatch(/^\/api\/v1\/execution\//);
+      expect(item.dataApi.responseContract).toMatch(/\.v1$/);
+      expect(item.dataApi.operationId).toMatch(identifier);
+      expect(item.dataApi.responseContract).toMatch(identifier);
+      expect(item.dataApi.deliveryPhase).toMatch(identifier);
+      expect(item.requestIds.length).toBeGreaterThan(0);
+      expect(item.requestIds.every((requestId) => /^BR-EX-[0-9]{2}$/.test(requestId))).toBe(true);
+      expect(item.authorities.length).toBeGreaterThan(0);
+      expect(item.readCapabilities.length).toBeGreaterThan(0);
+      expect(item.readCapabilities.every((capability) => identifier.test(capability))).toBe(true);
+    }
+    expect(JSON.stringify(SCREEN_BFF_CATALOGUE)).not.toMatch(
+      /public\.|information_schema|pg_catalog|redis:|postgres:|\/internal\/v2\/manager\/relations/i,
+    );
+    expect(SCREEN_BFF_UI_STATES).toEqual([
+      "ready", "empty", "stale", "partial", "denied", "unavailable", "error",
+    ]);
+  });
+});
+
+describe("N20 session, RBAC, workspace and resource boundary", () => {
+  let ctx: Awaited<ReturnType<typeof setupApp>>;
+  let auth: AuthService;
+  let adminService: AdminService;
+  let admin: Actor;
+  let reader: Actor;
+  let workspaceId: string;
+
+  beforeAll(async () => {
+    await migrateTestDatabase(DATABASE_URL);
+    ctx = await setupApp({ AUTH_MODE: "dev" });
+    auth = new AuthService(ctx.pool, ctx.config, new Argon2CredentialService({
+      memoryKib: ctx.config.ARGON2_MEMORY_KIB,
+      iterations: ctx.config.ARGON2_ITERATIONS,
+      parallelism: ctx.config.ARGON2_PARALLELISM,
+    }));
+    adminService = new AdminService(ctx.pool, ctx.config, auth);
+    admin = await createActor("n20-bobby", "ADMIN");
+    reader = await createActor("n20-reader", "USER");
+    const workspaces = await inject(admin, "/api/workspaces");
+    workspaceId = workspaces.json().workspaces[0].workspace_id;
+    await ctx.pool.query(
+      `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'MEMBER')`,
+      [workspaceId, reader.userId],
+    );
+  }, 30_000);
+
+  afterAll(async () => teardownApp(ctx));
+
+  async function rawInject(url: string, options: Record<string, unknown> = {}) {
+    const headers = { ...((options.headers as Record<string, string>) ?? {}) };
+    if (!("x-dev-access-email" in headers)) headers["x-dev-access-email"] = "dev@azdag.com";
+    return ctx.app.getHttpAdapter().getInstance().inject({ method: "GET", url, ...options, headers });
+  }
+
+  async function inject(actor: Actor, url: string, options: Record<string, unknown> = {}) {
+    return rawInject(url, {
+      ...options,
+      headers: {
+        cookie: actor.cookie,
+        "x-dev-access-email": `${actor.username}@azdag.com`,
+        ...((options.headers as Record<string, string>) ?? {}),
+      },
+    });
+  }
+
+  async function createActor(username: string, role: "ADMIN" | "USER"): Promise<Actor> {
+    await adminService.createUser({ username, displayName: username, role });
+    const portalUser = await auth.users.findByUsername(username);
+    const { activationToken } = await adminService.resetCredential(portalUser!.userId);
+    const activated = await rawInject("/api/auth/login", {
+      method: "POST",
+      headers: { "x-dev-access-email": `${username}@azdag.com` },
+      payload: { username, credential: activationToken },
+    });
+    const password = `Cobalt-River-${username}-N20!`;
+    expect((await rawInject("/api/auth/change-password", {
+      method: "POST",
+      headers: {
+        cookie: cookies(activated),
+        "x-portal-csrf": csrfCookie(activated),
+        "x-dev-access-email": `${username}@azdag.com`,
+      },
+      payload: { current_password: activationToken, new_password: password },
+    })).statusCode).toBe(201);
+    const loggedIn = await rawInject("/api/auth/login", {
+      method: "POST",
+      headers: { "x-dev-access-email": `${username}@azdag.com` },
+      payload: { username, credential: password },
+    });
+    return { userId: portalUser!.userId, username, cookie: cookies(loggedIn) };
+  }
+
+  it("requires an active session and hides foreign workspaces", async () => {
+    expect((await rawInject("/api/v1/execution/screen-contracts")).statusCode).toBe(401);
+    const otherWorkspace = "ws_n20_foreign";
+    await ctx.pool.query(
+      `INSERT INTO workspaces (workspace_id, name, owner_user_id) VALUES ($1, 'Foreign', $2)`,
+      [otherWorkspace, reader.userId],
+    );
+    await ctx.pool.query(
+      `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'OWNER')`,
+      [otherWorkspace, reader.userId],
+    );
+    const denied = await inject(admin, `/api/v1/execution/screen-contracts?workspace_id=${otherWorkspace}`);
+    expect(denied.statusCode).toBe(404);
+    expect(denied.json().error.code).toBe("WORKSPACE_NOT_FOUND");
+  });
+
+  it("returns an exact role-filtered catalogue and enforces screen RBAC", async () => {
+    const adminCatalogue = await inject(admin, `/api/v1/execution/screen-contracts?workspace_id=${workspaceId}`);
+    expect(adminCatalogue.statusCode).toBe(200);
+    expect(adminCatalogue.json()).toMatchObject({ exact_total: true, total_count: 23 });
+    expect(Buffer.byteLength(adminCatalogue.body, "utf8")).toBeLessThan(96 * 1024);
+
+    const readerCatalogue = await inject(reader, `/api/v1/execution/screen-contracts?workspace_id=${workspaceId}`);
+    expect(readerCatalogue.statusCode).toBe(200);
+    expect(readerCatalogue.json()).toMatchObject({ exact_total: true, total_count: 22 });
+    expect(readerCatalogue.json().screens.some(
+      (item: { screen_id: string }) => item.screen_id === "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
+    )).toBe(false);
+    const denied = await inject(reader,
+      `/api/v1/execution/screen-contracts/EXECUTION_ADMIN_ACTION_DRAWER_SCREEN?workspace_id=${workspaceId}`,
+    );
+    expect(denied.statusCode).toBe(403);
+    expect(denied.json().error.code).toBe("N20_SCREEN_ACCESS_DENIED");
+  });
+
+  it("binds resource screens and returns honest ready or typed-unavailable contracts", async () => {
+    const missing = await inject(admin,
+      `/api/v1/execution/screen-contracts/EXECUTION_ALPHA_360_SCREEN?workspace_id=${workspaceId}`,
+    );
+    expect(missing.statusCode).toBe(400);
+    expect(missing.json().error.code).toBe("N20_RESOURCE_REQUIRED");
+
+    const unavailable = await inject(admin,
+      `/api/v1/execution/screen-contracts/EXECUTION_ALPHA_360_SCREEN?workspace_id=${workspaceId}&resource_id=alpha_42`,
+    );
+    expect(unavailable.statusCode).toBe(200);
+    expect(unavailable.json()).toMatchObject({
+      resource: { kind: "ALPHA", id: "alpha_42" },
+      screen: { data_api: { status: "TYPED_UNAVAILABLE", delivery_phase: "N25" } },
+      delivery: { state: "unavailable", payload: null, retryable: false },
+    });
+
+    const ready = await inject(admin,
+      `/api/v1/execution/screen-contracts/EXECUTION_COMMAND_CENTER_SCREEN?workspace_id=${workspaceId}`,
+    );
+    expect(ready.statusCode).toBe(200);
+    expect(ready.json()).toMatchObject({
+      resource: { kind: "WORKSPACE", id: null },
+      screen: { data_api: { status: "AVAILABLE", operation_id: "executionCommandCenterSnapshot" } },
+      delivery: { state: "ready", payload: null, reason_code: null },
+    });
+    expect(ready.json().screen.supported_ui_states).toEqual([
+      "ready", "empty", "stale", "partial", "denied", "unavailable", "error",
+    ]);
+  });
+
+  it("retires both raw Manager browser routes with a typed non-retryable response", async () => {
+    for (const path of [
+      "/api/v1/execution/current-source/paper/screens/PAPER_TRADING_SCREEN",
+      "/api/v1/execution/current-source/paper/screens/PAPER_TRADING_SCREEN/sources/manager.positions/relations/positions_v2?limit=10",
+    ]) {
+      const response = await inject(admin, path);
+      expect(response.statusCode).toBe(410);
+      expect(response.json()).toMatchObject({
+        error: { code: "N20_RAW_SOURCE_BROWSER_FORBIDDEN" },
+        details: {
+          availability: "UNAVAILABLE",
+          reason_code: "USE_CANONICAL_SCREEN_BFF",
+          retryable: false,
+        },
+      });
+    }
+  });
+});

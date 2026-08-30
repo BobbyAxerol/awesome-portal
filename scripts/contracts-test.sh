@@ -62,5 +62,7 @@ trap cleanup EXIT
     diff -q /tmp/execution-emergency-routing.d.ts generated/execution-emergency-routing.d.ts
     npx openapi-typescript openapi/execution-production-readiness.openapi.json -o /tmp/execution-production-readiness.d.ts
     diff -q /tmp/execution-production-readiness.d.ts generated/execution-production-readiness.d.ts
+    npx openapi-typescript openapi/execution-screen-bff.openapi.json -o /tmp/execution-screen-bff.d.ts
+    diff -q /tmp/execution-screen-bff.d.ts generated/execution-screen-bff.d.ts
   '
 printf 'Contracts workspace tests passed.\n'

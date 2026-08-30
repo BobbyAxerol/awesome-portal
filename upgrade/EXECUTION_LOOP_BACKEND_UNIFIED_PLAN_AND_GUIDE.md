@@ -1354,7 +1354,7 @@ no open item in that register silently reopens N17B.
 
 ### N18–N29 — Manager Surface Expansion campaign
 
-**Status:** `N18_COMPLETE / N19_COMPLETE_SOURCE_DARK / N20_READY_NOT_STARTED / NO_RUNTIME_EFFECT`.  
+**Status:** `N18_COMPLETE / N19_COMPLETE_SOURCE_DARK / N20_COMPLETE_SOURCE_DARK / N21_READY_NOT_STARTED / NO_RUNTIME_EFFECT`.  
 **Scope:** all current Manager-v2 relations, current external read and command
 catalogues, BR-EX-41 onward, and the Paper/Sandbox/Live internal Portal.  
 **Non-goal:** changing Trading System execution authority, bypassing its
@@ -1480,6 +1480,20 @@ unavailable/error fixtures; frontend consumer tests.
 **N20 exit gate:** every commissioned Execution screen has a stable versioned
 API or one explicit typed unavailable branch, and no screen depends on raw
 source envelopes or an undocumented fixture. `TD-EX-01` is closed.
+
+**Closeout 2026-08-30:** N20 is
+`N20_CANONICAL_SCREEN_BFF_CONTRACTS_COMPLETE / SOURCE_DARK /
+TD-EX-01_CLOSED / N21_READY_NOT_STARTED`. The session-guarded TypeScript BFF
+publishes exactly 23 workspace/resource-scoped screen contracts covering all
+31 requests BR-EX-41…71: 10 existing narrow APIs and 13 honest
+`TYPED_UNAVAILABLE` branches. BR-EX-55, BR-EX-58 and BR-EX-61 are explicitly
+mapped as cross-screen/stage/Sandbox dependencies. JSON Schema, OpenAPI,
+generated types, fixtures, a strict frontend consumer and seven canonical UI
+states are versioned together. The former browser current-source routes return
+typed HTTP 410; Manager selection remains internal to the Rust authority.
+Auth, RBAC, workspace/resource isolation, fresh PostgreSQL, frontend build and
+consumer tests pass. No source/runtime/stable deployment changed. Detail:
+[`EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md`](./backend/EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md).
 
 #### N21 — Shared admission, cache and freshness
 

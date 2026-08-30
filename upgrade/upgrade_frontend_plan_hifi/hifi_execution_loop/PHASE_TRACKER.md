@@ -2729,7 +2729,7 @@ backend gate.
 |---|---|---|---|
 | N18 | complete 96-relation/read/command/BR-EX-41–71 census | verify screen/request coverage and duplicate-free mapping | `N18_COMPLETE_SOURCE_DARK / CENSUS_FROZEN / N19_READY` |
 | N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `COMPLETE / SOURCE_DARK / TD-EX-03_CLOSED` |
-| N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states and retire smoke per slice | `READY_NOT_STARTED / OWNER_APPROVAL_REQUIRED` |
+| N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states; retire smoke only with later data parity | `COMPLETE / 23_SCREEN_CONTRACTS / BR-EX-41_71 / TD-EX-01_CLOSED` |
 | N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `PLANNED / N20_DEPENDENT` |
 | N22 | full current Paper read activation | retire only matching Paper smoke blocks | `PLANNED / N21_DEPENDENT` |
 | N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_DEPENDENT` |
@@ -3005,3 +3005,23 @@ Claude handoff:
 N19 adds no frontend route or fixture replacement. Claude must keep raw
 Manager relations/envelopes out of browser code. N20 will provide the narrow
 workspace/resource-scoped BFF contracts after explicit owner approval.
+
+### N20 backend — canonical screen BFF contracts (2026-08-30)
+
+N20 is `N20_CANONICAL_SCREEN_BFF_CONTRACTS_COMPLETE / SOURCE_DARK /
+TD-EX-01_CLOSED / N21_READY_NOT_STARTED`. The session-guarded TypeScript BFF
+publishes exactly 23 workspace/resource-scoped screen contracts and covers all
+31 requests BR-EX-41…71. Ten existing narrow APIs are marked `AVAILABLE`; 13
+future APIs are honest, non-retryable `TYPED_UNAVAILABLE` branches. The
+cross-screen BR-EX-55 entity-name dependency, BR-EX-58 stage blocker rail and
+BR-EX-61 Sandbox v1.1 ownership are explicit.
+
+Backend report:
+[`EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md`](../../backend/EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N20_SCREEN_BFF_HANDOFF.md`](./CODEX_TO_CLAUDE_N20_SCREEN_BFF_HANDOFF.md).
+
+Claude may consume the generated type, strict compatibility reader and seven
+canonical states. Smoke removal still waits for actual narrow data parity in
+N22–N27. Both raw browser current-source routes now return typed HTTP 410;
+server-to-server Rust compatibility remains intact. N21 has not started.
