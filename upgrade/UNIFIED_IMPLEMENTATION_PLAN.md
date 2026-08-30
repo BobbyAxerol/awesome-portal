@@ -2025,7 +2025,7 @@ không phải 17 màn.
 > **Backend checkpoint 2026-08-29 — N17B exact current set:** status is
 > `N17B_EXACT_CURRENT_SET_ACCEPTED / PAPER_PRIVATE_QUERY_QUALIFIED /
 > SIGNED_PRODUCT_IMAGE_NOT_PUBLISHED / LIVE_MUTATION_INACTIVE`. The Portal BFF
-> now adapts only the accepted Paper screen and seven allowlisted Manager-v2
+> now adapts only the accepted Paper screen and six allowlisted Manager-v2
 > relations, mints only the current read resource and hard-caps admission at
 > 15 r/s below the source's 20 r/s limit. The real private route passed 25/25
 > paced reads plus 401/403/405 negatives with zero emitted business rows,

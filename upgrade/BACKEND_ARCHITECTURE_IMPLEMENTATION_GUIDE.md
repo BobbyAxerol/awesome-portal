@@ -1643,7 +1643,7 @@ activation or the phase):**
   Control API now adapts the exact Paper screen contract to the current
   Manager-v2 capabilities/relation routes instead of requiring unpublished
   screen-native Edge routes. The server-only adapter enforces four source
-  aliases/seven relations, the exact Manager read resource and a burst-free
+  aliases/six relations, the exact Manager read resource and a burst-free
   15 r/s ceiling below the observed Source Proxy 20 r/s boundary. The real
   private route passed 25/25 paced reads with HTTP/2, TLS 1.3 mTLS and delegated
   JWT plus 401/403/405 negative checks. A strict JSON/Rust/CI record binds all
@@ -1663,6 +1663,18 @@ activation or the phase):**
   future-contract limitations. BR-EX-41…67 remains the next delivery backlog,
   not hidden N17B work. See
   [`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
+
+- **N18–N29 Manager Surface Expansion direction (2026-08-30):** Bobby approved
+  maximum source-as-is use of the current Trading System catalogue across
+  Paper, Sandbox and Live; Paper is evidence order, not a product boundary.
+  The finite campaign inventories the full surface once, moves compatibility
+  into versioned Rust Edge adapters, publishes stable screen BFF contracts,
+  proves multi-replica admission/cache/freshness, activates current reads,
+  projection/analytics/SSE and the typed Admin Action Drawer, consolidates only
+  truly absent source semantics in N28, then closes product/release evidence in
+  N29. Every phase owns its known exit work and may not create an unnamed later
+  phase to finish it. Canonical detail:
+  [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#n18n29--manager-surface-expansion-campaign).
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

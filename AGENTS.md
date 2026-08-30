@@ -150,6 +150,46 @@ Rules for these agents:
   credentials or owner-owned implementation must fail closed and be reported
   once, not rediscovered phase by phase.
 
+## Standing owner direction — internal Execution Manager coverage
+
+- Bobby's standing product direction, recorded on 2026-08-30, is to use the
+  maximum semantically valid capability already published by the Trading
+  System. Paper is the first evidence-rich profile, not a product boundary.
+  The backend campaign must cover Paper, Sandbox and Live reads wherever the
+  current source contract supports them; a valid empty Live result remains an
+  honest result rather than a reason to keep the profile artificially dark.
+- This standing approval covers implementation, integration, bounded dev
+  activation and declared evidence collection for the currently published
+  read surface, and implementation of the published command catalogue behind
+  its required authentication, step-up, approval, idempotency and audit
+  controls. Do not reopen a generic “Paper only” or repeated owner-promotion
+  gate for work already inside that direction.
+- Adapt source-as-is before asking the Trading System owner to add anything.
+  A new owner request is allowed only when the current catalogue/API cannot
+  supply the required semantics, not because the Portal adapter would be
+  inconvenient to write. Consolidate genuine missing capabilities into one
+  versioned owner packet instead of sending phase-by-phase requests.
+- Broad internal coverage does not mean a raw browser database, Redis or shell
+  escape hatch. Cloudflare Zero Trust authenticates ingress; Portal RBAC and
+  step-up authenticate the actor; mTLS and delegated JWT authenticate the
+  workload; Rust adapters and typed command contracts preserve source and
+  mutation semantics. The browser consumes stable screen APIs and typed
+  operator commands, never arbitrary SQL, relation names, URLs or CLI text.
+- Portal-facing endpoints and DTOs stay stable and versioned. Upstream Trading
+  System revisions are absorbed by versioned Rust adapters with a declared
+  compatibility/rollback matrix. Additive response evolution is preferred;
+  breaking changes require a new contract revision and coexistence window.
+- Scalability is a phase deliverable, not a later cleanup: shared per-profile
+  admission, bounded pagination/body size, backpressure, cache/coalescing,
+  projection retention, multi-replica tests and failure recovery must be
+  proven before the associated capability is widened.
+- A campaign phase closes in the same coherent change only after its declared
+  contract, code, negative/scale/fault tests, runtime evidence where applicable,
+  tracking and commit all pass. Standing approval must not leave a phase at
+  “implementation complete / Bobby approval pending”. A later phase may consume
+  the closed output, but must not be invented to finish an exit gate that was
+  already known when the earlier phase started.
+
 ## Commands
 
 All stack operations go through `./scripts/portal` (mirrored in `make`):

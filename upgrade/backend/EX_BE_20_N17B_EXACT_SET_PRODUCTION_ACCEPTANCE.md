@@ -37,7 +37,7 @@ It does publish the current Manager-v2 contract under:
 The Portal Control API now owns a versioned adapter from the unchanged
 same-origin screen BFF to those exact current routes. The browser still cannot
 choose an Edge origin, JWT audience/resource, profile, schema or arbitrary
-relation. Only the four Paper source aliases and their seven allowlisted
+relation. Only the four Paper source aliases and their six allowlisted
 relations can pass pre-transport validation.
 
 ## 3. Load/rate-limit finding and correction

@@ -407,6 +407,39 @@ their missing future owner bytes do not reopen or globally block the accepted
 N17B Paper current-source set. A later owner revision replaces a versioned
 adapter behind stable Portal output contracts.
 
+### 3.7 Standing owner directive for the next campaign — 2026-08-30
+
+Bobby approves the internal Execution Manager direction: use the maximum
+semantically valid surface already published by the Trading System, adapt it
+source-as-is and expose it through stable Portal product contracts. Paper is
+the first evidence-rich profile, not a campaign ceiling. Paper, Sandbox and
+Live reads are in scope wherever the current source supports them; an empty
+Live profile must be represented truthfully rather than hidden indefinitely.
+
+The approval covers implementation, integration, bounded dev activation and
+evidence collection for current read capabilities, plus implementation of the
+published command catalogue behind its declared RBAC, step-up, approval,
+idempotency, audit and verification controls. It does not turn the browser into
+a raw SQL/Redis/shell client or create command semantics the Trading System
+does not have. Zero Trust protects ingress; Portal session/RBAC protects the
+actor; mTLS/delegated JWT protects the service hop; Rust adapters and typed
+commands protect source and mutation semantics.
+
+The next campaign follows these closure rules:
+
+1. adapt the current source before requesting an owner-side upgrade;
+2. catalogue all known scope up front in N18–N29, rather than generating a new
+   phase for already-known completion work;
+3. keep stable Portal DTOs/endpoints independent from upstream revisions via
+   versioned Rust adapters and an explicit compatibility/rollback matrix;
+4. treat shared admission, horizontal scale, retention, backpressure and
+   recovery as exit gates of the relevant phase, not deferred cleanup;
+5. close each phase with contract, implementation, negative/scale/fault tests,
+   applicable runtime evidence, tracking and an immediate coherent commit;
+6. do not repeat an owner-approval gate already covered by this directive;
+7. consolidate only genuinely absent Trading System semantics into N28 and one
+   versioned owner packet.
+
 ---
 
 ## 4. Unified backend phases
@@ -1351,6 +1384,222 @@ remains false. Detail:
 The merge/activation/future-contract boundary is closed in
 [`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md);
 no open item in that register silently reopens N17B.
+
+### N18–N29 — Manager Surface Expansion campaign
+
+**Status:** `OWNER_DIRECTION_APPROVED / PLANNED / NO_RUNTIME_EFFECT`.  
+**Scope:** current Trading System Manager catalogue, current external read and
+command catalogues, BR-EX-41 onward, Paper/Sandbox/Live internal Portal.  
+**Non-goal:** changing Trading System execution authority or exposing arbitrary
+database/Redis/shell access.
+
+The campaign is finite. N18 records the complete known surface; N19–N27 deliver
+it; N28 contains only capabilities proved absent from the current source; N29
+closes release evidence. A known exit gate may not be deferred into an unnamed
+follow-up phase.
+
+#### N18 — Capability and data coverage census
+
+**Goal:** produce the one authoritative relation → source capability → Portal
+capability → screen/BR-EX coverage matrix.
+
+- inventory all 96 Manager relations and every published read/command
+  capability without retaining business rows;
+- record Paper/Sandbox/Live availability as `NONEMPTY`, `EMPTY`,
+  `UNAVAILABLE` or `NOT_APPLICABLE` with freshness/evidence time;
+- classify every relation `SCREEN_BOUND`, `PROJECTION_INPUT`, `AUDIT_ONLY` or
+  `INTERNAL_ONLY`; never create 96 raw table pages;
+- deduplicate Claude's final requests against BR-EX-41 onward and lock the
+  corrected N17B six-relation baseline with a verifier;
+- freeze the current-source compatibility baseline and owner catalogue digests.
+
+**N18 exit gate:** 100% of the catalogue and requests have one owner, source,
+profile state, consumer and delivery phase; no ambiguous or duplicate row
+remains. Contract fixtures, census verifier and sanitized current evidence pass.
+
+#### N19 — Rust Manager-v2 compatibility authority
+
+**Goal:** make Rust Edge the canonical compatibility boundary for the complete
+current Manager read surface.
+
+- consume all five published Manager GET primitives and all 96 validated
+  catalogue relations/keys/cursors as safe server-side source primitives;
+  N18 classification controls their product consumer, never their browser
+  exposure;
+- bind environment/profile/resource before transport and keep upstream
+  relation selection out of browser and TypeScript policy code;
+- version adapters by owner contract revision and publish a coexistence,
+  rollback and forward-compatibility matrix;
+- enforce TLS 1.3 mTLS, delegated JWT, row/body/cursor bounds, exact decimals,
+  typed source errors and no arbitrary URL/method/header/field input.
+
+**N19 exit gate:** full catalogue contract/negative/compatibility tests pass;
+the current adapter and one simulated future revision can switch and roll back
+behind unchanged Portal-facing contracts. `TD-EX-03` is closed.
+
+#### N20 — Canonical screen BFF contracts
+
+**Goal:** expose workspace/resource-scoped TypeScript APIs for Claude's final
+screen needs without relaying raw Manager envelopes to the browser.
+
+- deliver deduplicated BR-EX screen slices with schema/OpenAPI/generated types,
+  canonical fixtures, authority/freshness/completeness and typed seven-state UI
+  behavior;
+- join Trading System facts with Portal governance/control state only in the
+  declared server-side contract;
+- keep every analytics verdict, count, sort and policy decision server-owned;
+- give Claude one fixture/error/state handoff per closed slice.
+
+**N20 exit gate:** every commissioned Execution screen has a stable versioned
+API or an explicit typed unavailable branch; fresh PostgreSQL, auth/RBAC,
+contract parity and frontend consumer tests pass. `TD-EX-01` is closed.
+
+#### N21 — Shared admission, cache and freshness
+
+**Goal:** make the N19/N20 read plane horizontally scalable without exceeding
+Trading System/Source Proxy budgets.
+
+- implement shared per-profile quota/admission for multiple Edge/BFF replicas;
+- add bounded coalescing, short source-aware cache/ETag, concurrency bulkhead,
+  timeout budget and zero automatic retry after an ambiguous dispatch;
+- preserve source `as_of`, freshness, completeness and profile isolation;
+- prove bounded pagination/body sizes and no N+1 screen composition.
+
+**N21 exit gate:** multi-replica load/fault tests stay below each source limit,
+cache/coalescing never crosses profile/workspace, and loss/recovery/rollback
+passes. `TD-EX-02` is closed.
+
+#### N22 — Full Paper read activation
+
+**Goal:** activate every N18-classified current read capability that is valid
+for Paper, not only the original N17B three-capability slice.
+
+- publish immutable signed dev images and enable only version-pinned Paper read
+  routes;
+- replace matching frontend smoke data with real canonical payloads;
+- run auth, load, source-loss, stale/empty, rollback and bounded soak evidence.
+
+**N22 exit gate:** all source-backed Paper screen branches are real or honestly
+typed unavailable, no fake-real fixture remains, product-path SLO evidence
+passes and rollback restores the previous adapter without source mutation.
+
+#### N23 — Sandbox and Live read profiles
+
+**Goal:** use the same stable Portal contracts for Sandbox and Live without
+inventing a separate Canary execution mode.
+
+- activate isolated Sandbox and Live Manager/Proxy/Edge profile bindings;
+- show current Sandbox data and treat a valid empty Live result as `EMPTY`, not
+  `UNAVAILABLE` or fake zero;
+- join Canary as Portal governance/promotion state over the Live source profile;
+- prove no cross-profile cursor, cache, JWT, quota or projection leakage.
+
+**N23 exit gate:** positive and negative profile matrices, empty/live truth,
+load, loss/recovery and independent rollback pass for both profiles. No repeated
+generic owner approval remains; real mutation is still owned by N27 controls.
+
+#### N24 — Durable Portal projection
+
+**Goal:** build Portal-owned durable read models from the currently published
+orders, fills, sessions, snapshots and catalogue-accessible event facts.
+
+- ingest via N19 only; never connect Portal directly to Trading DB/Redis;
+- implement checkpoint/lease, idempotent reducer, dedupe, tombstone,
+  out-of-order/gap handling, epoch, snapshot and rebuild;
+- label polled/snapshot-derived deltas `PORTAL_PROJECTION_DELTA` unless an
+  authoritative owner event contract exists;
+- enforce retention, cleanup, encrypted backup, PITR and projection rollback.
+
+**N24 exit gate:** source/projection parity, duplicate/gap/restart/rebuild,
+retention, restore and rollback tests pass for all active profiles with declared
+RPO/RTO. `TD-EX-05` is closed.
+
+#### N25 — Query and analytics plane
+
+**Goal:** serve all currently derivable BR-EX analytics from N24 projections
+and current bounded sources.
+
+- implement exact counts/aggregates, bidirectional keyset, exposure,
+  execution quality, contribution, funnel, equity/drawdown, correlation and
+  replay series with formula version/provenance;
+- keep exact decimals, per-currency partitions, adaptive server downsampling
+  and chart-series rules;
+- use Rust for heavy query/series paths and TypeScript for product/control
+  composition.
+
+**N25 exit gate:** correctness fixtures, 182k keyset, declared large-series and
+correlation load gates, no-N+1, retention errors and deterministic rebuild pass.
+
+#### N26 — Realtime SSE activation
+
+**Goal:** provide authenticated snapshot → cursor/epoch → delta delivery from
+the N24/N25 Portal projection.
+
+- implement resume, gap/cursor-ahead/retention resync, bounded fan-out,
+  backpressure and slow-consumer policy;
+- close streams on terminal/auth errors and prevent infinite reconnect loops;
+- keep realtime flags/profile rollback independent from snapshot Query.
+
+**N26 exit gate:** multi-client/multi-replica H2 SSE, auth expiry, source loss,
+gap/restart/backpressure/load and rollback tests pass for Paper, Sandbox and
+Live profiles; a Live profile with no events emits authenticated snapshot/
+heartbeat truth and never invented deltas.
+
+#### N27 — Admin Action Drawer command plane
+
+**Goal:** make every semantically compatible current Trading System Admin
+API/CLI operation available as a typed Portal operator command.
+
+- map the owner-published catalogue source-as-is; use plan/apply/verify where
+  available and a controlled direct-apply wrapper where that is the actual
+  owner semantic;
+- require command-specific RBAC, step-up, approval/SoD where declared,
+  idempotency, optimistic conflict handling, actor/reason and audit/journal;
+- never accept raw shell text, SQL, generic URL or arbitrary command payload;
+- activate reads/status first, then Paper/Sandbox commands and Live protective
+  commands under their exact command policy and rollback window.
+
+**N27 exit gate:** every published operation is `CONNECTED`,
+`SUPPORTED_BUT_INACTIVE` with one factual reason, or `SEMANTICALLY_INCOMPATIBLE`;
+plan/apply/verify or direct-apply state tests, uncertain/restart/negative auth,
+audit and containment evidence pass. No dead Admin Drawer control remains.
+
+#### N28 — Genuine missing-capability adapters and owner packet
+
+**Goal:** handle only the capabilities N18/N19/N27 prove the current source
+cannot supply, after all adaptable current capabilities are consumed.
+
+- cover market ticks/candles, venue calendar, authoritative Event/Artifact and
+  genuinely absent commands or semantic fields;
+- prefer an existing Gateway, Historical/QDL or Portal-derived authority when
+  semantically correct;
+- consolidate remaining Trading System changes into one versioned request and
+  keep typed unavailable behavior until its return is verified.
+
+**N28 exit gate:** every missing capability has either a working versioned
+adapter or one consolidated owner contract entry with exact schema, auth,
+bounds, compatibility and acceptance fixture. No loose phase-specific owner
+request remains.
+
+#### N29 — Product acceptance and release closeout
+
+**Goal:** close the finite campaign as an internal scalable Execution Manager,
+not merely a collection of backend foundations.
+
+- run end-to-end UI → BFF → Rust Edge → source/projection and command evidence;
+- prove multi-replica capacity, WAN/auth/source loss, retention, restore,
+  command containment, adapter rollback and version upgrade;
+- publish signed immutable images, exact compatibility matrix, dashboards,
+  SLO/error budget, DR and owner/SRE runbooks;
+- promote dev according to the normal release workflow only after the accepted
+  scope is demonstrably complete.
+
+**N29 exit gate:** all N18 catalogue entries and Claude requests are served,
+honestly unavailable with a versioned N28 owner record, or intentionally
+internal; every visible action works; full evidence/rollback passes; no open
+campaign technical debt is deferred into an unnamed phase. N30 is not created
+for known campaign work; a later campaign requires genuinely new product scope
+or a new owner contract revision.
 
 ---
 
@@ -2433,17 +2682,15 @@ without reopening those phase labels:
    `main`/stable;
 2. integrate Claude's UI branch against the updated `dev` and resolve the
    shared tracker deliberately;
-3. start a new backend campaign from updated `dev`, beginning with the
-   canonical workspace/resource-scoped Paper screen API (`TD-EX-01`);
-4. move current-source compatibility ownership to the canonical Rust Edge
-   route and enforce an Edge-global/per-profile source quota before any
-   multi-replica rollout (`TD-EX-02`/`TD-EX-03`);
-5. publish a signed dev image and activate one Paper screen/profile in a
-   bounded dev window, leaving stable, Sandbox, Live and Command dark;
-6. run product-path auth/load/fault/rollback/soak evidence and claim an SLO
-   only from that deployed result;
-7. deliver BR-EX-41…67 in deduplicated screen slices, then widen reads Paper →
-   Sandbox → Live; keep Event/Artifact and every command independently gated.
+3. freeze Claude's final request intake and execute N18 so the complete current
+   catalogue is assigned once rather than rediscovered per screen;
+4. deliver N19–N21 as the stable/scalable adapter and product API foundation;
+5. activate the full current read surface through N22 Paper and N23
+   Sandbox/Live; Paper is validation order, not a product boundary;
+6. deliver durable projection, analytics and realtime through N24–N26;
+7. connect the full current typed operator-command surface through N27;
+8. consolidate only genuinely missing source semantics in N28, then close the
+   product/evidence/release campaign through N29.
 
 The exact open gates, owners and containment are authoritative in
 [`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
@@ -2483,6 +2730,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-08-30 | Approved and planned N18–N29 Manager Surface Expansion campaign | standing owner direction is maximum current Trading System coverage across Paper/Sandbox/Live; source-as-is adaptation, stable versioned Rust boundary, scalable endpoints and phase-local closure gates are mandatory; no runtime/profile/source/command change |
 | 2026-08-30 | N13B–N17B Debt Closeout and BR-EX-67 canonical intake | no open merge blocker; stale N13/phase-18/next-phase wording reconciled; activation debt and future-contract limitations receive IDs, owners and exact gates; BR-EX-67 R1/R2 evidence/policy-verdict scope is canonical and the next request is BR-EX-68; no runtime/profile/source/command change |
 | 2026-08-29 | Accepted N16B current-primitive protective-path compatibility | exactly one current primitive, `live.emergency-close`, is accepted for `LIVE_FULL / ACCOUNT / BINANCE / USD_M`; Rust and TypeScript reject identity, target, payload, R4 and runtime widening; the other eight N12 commands are typed inactive/absent; public route, transport, source call and Live mutation remain false pending N17B exact owner window |
 | 2026-08-29 | Accepted N17B exact current set | Portal adapts the exact Paper screen to current Manager-v2 routes, hard-caps source admission at 15 r/s, and records 25/25 paced private reads plus 401/403/405 negatives; N17A recovery/rollback is retained; signed product image, public BFF, Sandbox/Live reads and Live mutation remain inactive |

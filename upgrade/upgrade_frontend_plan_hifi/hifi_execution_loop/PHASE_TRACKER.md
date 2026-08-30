@@ -105,7 +105,7 @@ These qualify what is complete; they do not mean frontend `DONE`.
 | 15 | Alpha 360° (2a+2b) | **screen built** (9 tabs, fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | source owner/Codex activation parity + remaining detail/series integration | EX-BE-07b capped portfolio-bound insight API delivered; flag/profile remain off/fixture |
 | 16 | Portfolio 360° (1h→3a) | **screen built** (3 representations, fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner:** publish packed `sample_counts`; Claude labels per-cell floor unavailable | EX-BE-07b source-backed correlation + capital-ledger APIs delivered with exact decimals |
 | 17 | Account/Broker 360° (1g) | **screen built** (fixtures, scale-refined) | `INTEGRATION_COMPLETE / PRODUCTION_INACTIVE` | **Trading System source owner:** publish authoritative aggregate exposure verdict; Claude keeps unavailable, never sums | EX-BE-07b source-backed full-population exposure API delivered; count mismatches fail closed |
-| 18 | Hardening | `PAPER_PRIVATE_QUERY_QUALIFIED / PRODUCTION_INACTIVE` | `OPERATIONAL_EVIDENCE_PENDING` | publish the signed dev image, activate one resource-scoped Paper screen, then collect product-path load/fault/soak/SLO evidence; Sandbox/Live/Command remain separate | N17B private path: 25/25 paced H2/mTLS/JWT reads + 401/403/405 negatives; N17A restore/rollback evidence retained; debt closeout linked below |
+| 18 | Manager Surface Expansion campaign | `FINAL_REQUEST_INTAKE_PENDING` | `N18–N29 OWNER_DIRECTION_APPROVED / PLANNED` | Claude finishes and freezes the final BR-EX request set; Codex executes the finite full-catalogue campaign across Paper/Sandbox/Live | N18–N29 canonical plan: maximum current-source coverage, stable versioned Rust adapters, scalable BFF/projection/SSE/commands and phase-local exit gates |
 
 ¹ Phase 6's drawer shell, state machine and blocking rules are already built and
 tested (§4). What is blocked is wiring it to a real command endpoint — the
@@ -2862,7 +2862,7 @@ or mutation gate passes.
 | Slice | Backend result | Runtime truth | Frontend parallel lane |
 | --- | --- | --- | --- |
 | Paper Query | `CONNECTED_PRIVATE_ACCEPTED` | 25/25 paced private reads over H2/TLS 1.3 mTLS/delegated JWT | consume BFF v2 only after dev runtime flag is enabled |
-| source adaptation | `MANAGER_V2_CURRENT_AS_IS` | exact screen plus four source aliases/seven relations; no arbitrary Edge path | never call Edge or display infrastructure identifiers |
+| source adaptation | `MANAGER_V2_CURRENT_AS_IS` | exact screen plus four source aliases/six relations; no arbitrary Edge path | never call Edge or display infrastructure identifiers |
 | admission | `PORTAL_MAX_15_RPS` | below Source Proxy 20 r/s; typed overload; zero blind retry | one user retry only, no timer loop |
 | recovery | `N17A_REUSED / STATELESS_ADAPTER` | no projection persistence; feature/session rollback, zero source mutation | retain unavailable state during rollback |
 | Command/Event/Artifact | `INACTIVE / ABSENT / ABSENT` | Live mutation false; Event/Artifact source absent | no enabled action, fake stream or fake artifact |
@@ -2920,3 +2920,19 @@ Canonical register:
 It owns residual IDs, severity, containment and target gates. N01–N08/N11/N12
 remain the ideal/future-capability lane and do not reopen the exact N17B Paper
 acceptance.
+
+### N18–N29 Manager Surface Expansion — standing direction (2026-08-30)
+
+| Campaign boundary | Backend direction | Claude parallel lane |
+| --- | --- | --- |
+| scope | maximum semantically valid current Trading System catalogue across Paper, Sandbox and Live; Paper is evidence order, not product boundary | finish the remaining screens and freeze the complete BR-EX request set once |
+| compatibility | all 96 relations remain server-side behind versioned Rust adapters and stable screen BFF contracts | consume Portal DTOs/fixtures only; never Manager relation/envelope infrastructure |
+| scalability | shared multi-replica admission, bounded cache/coalescing, projection retention, Query load and SSE backpressure are phase exit gates | preserve honest loading/empty/stale/partial/unavailable/denied/error states |
+| command | full current typed Admin API/CLI catalogue is in N27; no raw shell/SQL/URL payload | keep controls disabled only until their typed contract arrives, then delete smoke/dead states |
+| closure | N18 inventories once; N19–N27 deliver; N28 consolidates genuine source absence; N29 closes product/release evidence; no N30 for known work | attach each new request to the existing N18–N29 consumer phase instead of opening an independent backend campaign |
+
+Standing Bobby approval covers implementation, bounded dev activation and
+declared evidence for this current-source direction. Agents must not reintroduce
+a generic Paper-only or repeated owner-promotion blocker. Exact command
+authentication, step-up, approval, idempotency, audit and containment remain
+part of the command contract, not a new product-scope approval question.

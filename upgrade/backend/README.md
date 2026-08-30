@@ -24,6 +24,15 @@ Chúng không thay thế phase hoặc exit gate trong
   delivery backlog with owner, containment and target gate. This is the single
   active debt register for the closed source-as-is campaign.
 
+- [N18–N29 Manager Surface Expansion campaign](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#n18n29--manager-surface-expansion-campaign)
+  — **owner direction approved / planned / no runtime effect:** consume the
+  maximum current Trading System catalogue source-as-is across Paper, Sandbox
+  and Live; move compatibility to versioned Rust adapters; expose stable
+  screen BFFs; prove shared admission, projection, analytics, SSE and the full
+  typed Admin Action Drawer; consolidate only genuinely absent capabilities in
+  N28 and close product/release evidence in N29. Each phase has a phase-local
+  exit gate and may not defer known completion work into a new unnamed phase.
+
 - [N15B — Current-capability inter-cell gateway acceptance](./EX_BE_18_N15B_CURRENT_CAPABILITY_INTERCELL_GATEWAY_ACCEPTANCE.md)
   — **Query contract accepted / product runtime dark:** exact Paper profile,
   screen, capabilities, source relations, bounds and immutable D3/Manager
