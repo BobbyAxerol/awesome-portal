@@ -525,6 +525,7 @@ dependencies = [
  "intercell-gateway",
  "jsonwebtoken",
  "manager-compat-authority",
+ "manager-projection",
  "manager-v2-client",
  "manager-v2-contract",
  "paper-source-ingestor",
@@ -1201,6 +1202,20 @@ name = "manager-compat-authority"
 version = "0.1.0"
 dependencies = [
  "manager-v2-contract",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
+name = "manager-projection"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "execution-contracts",
+ "manager-v2-contract",
+ "projection-core",
  "serde",
  "serde_json",
  "sha2",

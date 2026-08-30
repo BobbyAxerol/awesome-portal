@@ -1,0 +1,74 @@
+# N24 profile-isolated durable Manager-v2 projection worker.
+#
+# This overlay adds a no-port worker next to one already-qualified profile
+# Edge. It consumes only the bounded N19 Manager-v2 contract, writes only the
+# Portal-owned projection PostgreSQL and leaves Query/SSE/commands dark.
+services:
+  manager-projection-worker:
+    image: ${PORTAL_EXECUTION_EDGE_IMAGE:?set PORTAL_EXECUTION_EDGE_IMAGE to an immutable digest}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    command: ["manager-projection-run"]
+    user: "65532:65532"
+    group_add:
+      - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
+    read_only: true
+    pids_limit: 64
+    cpus: "1.0"
+    mem_limit: 1024m
+    mem_reservation: 256m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=16m,mode=1777
+    ulimits:
+      nofile:
+        soft: 512
+        hard: 1024
+    volumes:
+      - type: bind
+        source: ${EDGE_SECRET_DIRECTORY:?set the root-only edge secret directory}
+        target: /run/secrets
+        read_only: true
+    environment:
+      RUST_LOG: ${EDGE_RUST_LOG:-info}
+      EDGE_ENVIRONMENT: ${EDGE_ENVIRONMENT:?paper, sandbox, or live}
+      # These server-side files are parsed by the shared binary but the worker
+      # never binds a listener. Reuse avoids introducing another identity.
+      EDGE_TLS_CERTIFICATE_FILE: /run/secrets/edge-server.crt
+      EDGE_TLS_PRIVATE_KEY_FILE: /run/secrets/edge-server.key
+      EDGE_TLS_CLIENT_CA_FILE: /run/secrets/sgp-client-ca.crt
+      EDGE_DELEGATION_JWKS_FILE: /run/secrets/control-api.jwks.json
+      EDGE_DELEGATION_ISSUER: ${EDGE_DELEGATION_ISSUER:-portal-control-api}
+      EDGE_DELEGATION_AUDIENCE: ${EDGE_DELEGATION_AUDIENCE:?use an environment-specific audience}
+      EDGE_SOURCE_ORIGIN: ${EDGE_SOURCE_ORIGIN:?set the private Trading System gateway origin}
+      EDGE_SOURCE_CA_FILE: /run/secrets/trading-system-ca.crt
+      EDGE_SOURCE_CLIENT_IDENTITY_FILE: ${EDGE_SOURCE_CLIENT_IDENTITY_FILE:?set the Manager-v2 mTLS identity path}
+      EDGE_SOURCE_GATEWAY_DIGEST: ${EDGE_SOURCE_GATEWAY_DIGEST:?set the immutable gateway digest}
+      EDGE_MANAGER_V2_READ_ENABLED: "true"
+      EDGE_MANAGER_V2_PROFILE_ID: ${EDGE_MANAGER_V2_PROFILE_ID:?set the exact Manager profile ID}
+      EDGE_MANAGER_PROJECTION_ENABLED: "true"
+      EDGE_MANAGER_PROJECTION_REBUILD_AUTHORIZED: ${EDGE_MANAGER_PROJECTION_REBUILD_AUTHORIZED:-false}
+      EDGE_MANAGER_PROJECTION_ROLLBACK_AUTHORIZED: ${EDGE_MANAGER_PROJECTION_ROLLBACK_AUTHORIZED:-false}
+      EDGE_MANAGER_PROJECTION_FAILED_EPOCH_ID: ${EDGE_MANAGER_PROJECTION_FAILED_EPOCH_ID:-}
+      EDGE_MANAGER_PROJECTION_RETAINED_EPOCH_ID: ${EDGE_MANAGER_PROJECTION_RETAINED_EPOCH_ID:-}
+      EDGE_MANAGER_PROJECTION_OWNER_DIGEST: ${EDGE_MANAGER_PROJECTION_OWNER_DIGEST:?set a stable sha256 worker identity}
+      EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS: ${EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS:-2000}
+      EDGE_PROJECTION_DATABASE_URL_FILE: /run/secrets/projection-database-url
+      EDGE_PROJECTION_INGESTION_ENABLED: "false"
+      EDGE_REALTIME_SSE_ENABLED: "false"
+      EDGE_ANALYTICS_QUERY_ENABLED: "false"
+      EDGE_SHADOW_QUERY_ENABLED: "false"
+      EDGE_PAPER_WORKBENCH_SHADOW_ENABLED: "false"
+      EDGE_COMMAND_RELAY_ENABLED: "false"
+    stop_grace_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - execution-private

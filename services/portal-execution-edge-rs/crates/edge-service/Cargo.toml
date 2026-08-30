@@ -18,6 +18,7 @@ execution-contracts = { path = "../execution-contracts" }
 futures-util.workspace = true
 intercell-gateway = { path = "../intercell-gateway" }
 manager-compat-authority = { path = "../manager-compat-authority" }
+manager-projection = { path = "../manager-projection" }
 manager-v2-client = { path = "../manager-v2-client" }
 manager-v2-contract = { path = "../manager-v2-contract" }
 paper-source-ingestor = { path = "../paper-source-ingestor" }

@@ -15,6 +15,9 @@ const CLEANUP_STATEMENTS: &[&str] = &[
     "DELETE FROM portal_projection.d4_source_failures WHERE epoch_id=$1",
     "DELETE FROM portal_projection.d4_source_checkpoints WHERE epoch_id=$1",
     "DELETE FROM portal_projection.shared_consumer_leases WHERE epoch_id=$1",
+    "DELETE FROM portal_projection.manager_projection_leases WHERE epoch_id=$1",
+    "DELETE FROM portal_projection.manager_projection_commits WHERE epoch_id=$1",
+    "DELETE FROM portal_projection.manager_projection_cycles WHERE epoch_id=$1",
     "DELETE FROM portal_projection.series_points WHERE epoch_id=$1",
     "DELETE FROM portal_projection.snapshots WHERE epoch_id=$1",
     "DELETE FROM portal_projection.event_journal WHERE epoch_id=$1",
@@ -478,8 +481,11 @@ impl PgProjectionStore {
             return Err(StoreError::CleanupNotReady);
         }
         let live_lease_count: i64 = sqlx::query_scalar(
-            "SELECT count(*) FROM portal_projection.shared_consumer_leases
-             WHERE epoch_id=$1 AND expires_at > $2",
+            "SELECT
+               (SELECT count(*) FROM portal_projection.shared_consumer_leases
+                WHERE epoch_id=$1 AND expires_at > $2) +
+               (SELECT count(*) FROM portal_projection.manager_projection_leases
+                WHERE epoch_id=$1 AND expires_at > $2)",
         )
         .bind(epoch_id)
         .bind(executed_at)

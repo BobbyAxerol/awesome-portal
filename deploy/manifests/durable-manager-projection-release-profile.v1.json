@@ -1,0 +1,96 @@
+{
+  "schema_version": "portal.execution.durable-manager-projection-release-profile.v1",
+  "phase": "N24",
+  "source_contract": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "adapter_version": "portal.execution.manager-projection.manager-v2.runtime.v1",
+  "change_semantics": "PORTAL_PROJECTION_DELTA",
+  "source_sequence_semantics": "POLL_BOUNDED_NO_OWNER_SEQUENCE",
+  "profiles": {
+    "paper": "PAPER_BINANCE_USDM",
+    "sandbox": "SANDBOX_BINANCE_USDM",
+    "live": "LIVE_BINANCE_USDM"
+  },
+  "required_feeds": [
+    "manager.order",
+    "manager.fill",
+    "manager.position",
+    "manager.account",
+    "manager.reconciliation",
+    "manager.portfolio",
+    "relation.execution_sessions",
+    "relation.account_equity_snapshots",
+    "relation.performance_snapshots",
+    "relation.portfolio_equity_snapshots",
+    "relation.domain_events",
+    "relation.performance_events"
+  ],
+  "required_snapshot_kinds": [
+    "ACCOUNT",
+    "EVENT",
+    "FILL",
+    "ORDER",
+    "PERFORMANCE",
+    "POSITION",
+    "RECONCILIATION",
+    "RUNTIME"
+  ],
+  "bounds": {
+    "default_poll_interval_ms": 2000,
+    "minimum_poll_interval_ms": 250,
+    "maximum_poll_interval_ms": 60000,
+    "page_limit": 200,
+    "maximum_pages_per_feed": 100,
+    "maximum_records_per_feed": 20000,
+    "maximum_records_per_cycle": 80000,
+    "lease_ttl_seconds": 60,
+    "rollback_overlap_seconds": 900,
+    "maximum_total_storage_bytes": 19327352832,
+    "storage_soft_limit_percent": 70,
+    "storage_hard_limit_percent": 85,
+    "maximum_journal_rows": 5000000
+  },
+  "recovery_objectives": {
+    "steady_state_rpo_seconds": 10,
+    "worker_restart_rto_seconds": 120,
+    "local_rebuild_rto_seconds": 900,
+    "backup_restore_rto_seconds": 3600,
+    "pitr_required_before_runtime_activation": true,
+    "encrypted_backup_required": true,
+    "restore_parity_required": true
+  },
+  "durability": {
+    "database_clock_lease": true,
+    "fencing_token": true,
+    "idempotent_snapshot_commit": true,
+    "immutable_cycle_receipt": true,
+    "complete_empty_snapshot": true,
+    "explicit_tombstone": true,
+    "atomic_active_epoch_cutover": true,
+    "explicit_same_identity_rebuild": true,
+    "atomic_retained_epoch_rollback": true,
+    "retained_previous_epoch": true,
+    "audited_retired_epoch_cleanup": true
+  },
+  "candidate_flags": {
+    "edge_manager_v2_read": true,
+    "manager_projection_worker": true,
+    "edge_projection_ingestion": false,
+    "edge_realtime_sse": false,
+    "edge_analytics_query": false,
+    "edge_command_relay": false
+  },
+  "activation_order": ["paper", "sandbox", "live"],
+  "rollback": {
+    "stop_worker_only": true,
+    "source_or_trading_system_mutation": false,
+    "active_epoch_restore": "ATOMIC_PREVIOUS_RETAINED_EPOCH",
+    "database_restore_only_for_disaster_recovery": true
+  },
+  "phase_authorization": {
+    "decision": "BOBBY_APPROVED_N24_DURABLE_PORTAL_PROJECTION",
+    "implementation_authorized": true,
+    "signed_dev_deployment_authorized": false,
+    "stable_runtime_change_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

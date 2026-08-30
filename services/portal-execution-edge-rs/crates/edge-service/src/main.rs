@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod d4_command;
+mod manager_projection_command;
 
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
@@ -180,6 +181,13 @@ struct EdgeConfig {
     source_probes_enabled: RuntimeGate,
     manager_v2_read_enabled: RuntimeGate,
     manager_v2_profile_id: Option<String>,
+    manager_projection_enabled: RuntimeGate,
+    manager_projection_rebuild_authorized: RuntimeGate,
+    manager_projection_rollback_authorized: RuntimeGate,
+    manager_projection_failed_epoch_id: Option<Uuid>,
+    manager_projection_retained_epoch_id: Option<Uuid>,
+    manager_projection_owner_digest: Option<String>,
+    manager_projection_poll_interval: Duration,
     manager_shared_admission_maximum_rps: u16,
     manager_shared_admission_maximum_concurrency: u16,
     manager_shared_admission_maximum_wait: Duration,
@@ -230,6 +238,7 @@ impl EdgeConfig {
     fn projection_store_required(&self) -> RuntimeGate {
         RuntimeGate::from(
             self.projection_ingestion_enabled.is_enabled()
+                || self.manager_projection_enabled.is_enabled()
                 || self.realtime_sse_enabled.is_enabled()
                 || self.analytics_query_enabled.is_enabled()
                 || self.shadow_query_enabled.is_enabled()
@@ -259,6 +268,60 @@ impl EdgeConfig {
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_V2_READ_ENABLED", false)?);
         let manager_v2_profile_id =
             manager_v2_profile_from_environment(&environment, manager_v2_read_enabled)?;
+        let manager_projection_enabled =
+            RuntimeGate::from(strict_boolean("EDGE_MANAGER_PROJECTION_ENABLED", false)?);
+        if manager_projection_enabled.is_enabled() && !manager_v2_read_enabled.is_enabled() {
+            return Err(ConfigError::Invalid("EDGE_MANAGER_PROJECTION_ENABLED"));
+        }
+        let manager_projection_rebuild_authorized = RuntimeGate::from(strict_boolean(
+            "EDGE_MANAGER_PROJECTION_REBUILD_AUTHORIZED",
+            false,
+        )?);
+        if manager_projection_rebuild_authorized.is_enabled()
+            && !manager_projection_enabled.is_enabled()
+        {
+            return Err(ConfigError::Invalid(
+                "EDGE_MANAGER_PROJECTION_REBUILD_AUTHORIZED",
+            ));
+        }
+        let manager_projection_rollback_authorized = RuntimeGate::from(strict_boolean(
+            "EDGE_MANAGER_PROJECTION_ROLLBACK_AUTHORIZED",
+            false,
+        )?);
+        if manager_projection_rollback_authorized.is_enabled()
+            && !manager_projection_enabled.is_enabled()
+        {
+            return Err(ConfigError::Invalid(
+                "EDGE_MANAGER_PROJECTION_ROLLBACK_AUTHORIZED",
+            ));
+        }
+        let manager_projection_failed_epoch_id =
+            optional_uuid("EDGE_MANAGER_PROJECTION_FAILED_EPOCH_ID")?;
+        let manager_projection_retained_epoch_id =
+            optional_uuid("EDGE_MANAGER_PROJECTION_RETAINED_EPOCH_ID")?;
+        if manager_projection_rollback_authorized.is_enabled()
+            && (manager_projection_failed_epoch_id.is_none()
+                || manager_projection_retained_epoch_id.is_none()
+                || manager_projection_failed_epoch_id == manager_projection_retained_epoch_id)
+        {
+            return Err(ConfigError::Invalid(
+                "EDGE_MANAGER_PROJECTION_ROLLBACK_AUTHORIZED",
+            ));
+        }
+        let manager_projection_owner_digest = optional("EDGE_MANAGER_PROJECTION_OWNER_DIGEST");
+        if manager_projection_enabled.is_enabled()
+            && !manager_projection_owner_digest
+                .as_deref()
+                .is_some_and(valid_sha256_digest)
+        {
+            return Err(ConfigError::Invalid("EDGE_MANAGER_PROJECTION_OWNER_DIGEST"));
+        }
+        let manager_projection_poll_interval = Duration::from_millis(bounded_usize(
+            "EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS",
+            2_000,
+            250,
+            60_000,
+        )? as u64);
         if manager_v2_read_enabled.is_enabled() && runtime.projection_database_url_file.is_none() {
             return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
         }
@@ -288,6 +351,13 @@ impl EdgeConfig {
             source_probes_enabled: runtime.source_probes_enabled,
             manager_v2_read_enabled,
             manager_v2_profile_id,
+            manager_projection_enabled,
+            manager_projection_rebuild_authorized,
+            manager_projection_rollback_authorized,
+            manager_projection_failed_epoch_id,
+            manager_projection_retained_epoch_id,
+            manager_projection_owner_digest,
+            manager_projection_poll_interval,
             manager_shared_admission_maximum_rps: u16::try_from(bounded_usize(
                 "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS",
                 15,
@@ -573,6 +643,26 @@ async fn main() -> Result<(), ServiceError> {
         Some("projection-migrate") => projection_check(true).await,
         Some("d4-prepare-building") => d4_command::prepare_building().await.map_err(Into::into),
         Some("d4-qualify") => d4_command::qualify().await.map_err(Into::into),
+        Some("manager-projection-once") => {
+            manager_projection_command::run_once_cli(&EdgeConfig::from_environment()?)
+                .await
+                .map_err(Into::into)
+        }
+        Some("manager-projection-rebuild-once") => {
+            manager_projection_command::run_rebuild_once_cli(&EdgeConfig::from_environment()?)
+                .await
+                .map_err(Into::into)
+        }
+        Some("manager-projection-rollback-once") => {
+            manager_projection_command::run_rollback_once_cli(&EdgeConfig::from_environment()?)
+                .await
+                .map_err(Into::into)
+        }
+        Some("manager-projection-run") => {
+            manager_projection_command::run_forever(&EdgeConfig::from_environment()?)
+                .await
+                .map_err(Into::into)
+        }
         Some("serve") | None => serve(EdgeConfig::from_environment()?).await,
         Some(_) => Err(ServiceError::UnsupportedCommand),
     }
@@ -3552,6 +3642,12 @@ fn optional_path(name: &str) -> Option<PathBuf> {
     optional(name).map(PathBuf::from)
 }
 
+fn optional_uuid(name: &'static str) -> Result<Option<Uuid>, ConfigError> {
+    optional(name)
+        .map(|value| Uuid::parse_str(&value).map_err(|_| ConfigError::Invalid(name)))
+        .transpose()
+}
+
 fn bounded_usize(
     name: &'static str,
     default: usize,
@@ -3591,6 +3687,15 @@ fn strict_boolean(name: &'static str, default: bool) -> Result<bool, ConfigError
         Some("false") => Ok(false),
         Some(_) => Err(ConfigError::Invalid(name)),
     }
+}
+
+fn valid_sha256_digest(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    })
 }
 
 fn delivery_profile(value: &str) -> Result<DeliveryProfile, ConfigError> {
@@ -3667,6 +3772,8 @@ enum ServiceError {
     ProjectionStore(#[from] projection_store_pg::StoreError),
     #[error(transparent)]
     D4Command(#[from] d4_command::D4CommandError),
+    #[error(transparent)]
+    ManagerProjectionCommand(#[from] manager_projection_command::ManagerProjectionCommandError),
     #[error(transparent)]
     Realtime(#[from] realtime_sse::RealtimeError),
     #[error(transparent)]

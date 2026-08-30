@@ -1629,6 +1629,23 @@ rebuild, retention, restore, RPO/RTO and rollback across active profiles.
 **N24 exit gate:** projection parity and recovery tests pass for all active
 profiles with declared RPO/RTO and bounded storage. `TD-EX-05` is closed.
 
+**Closeout (2026-08-30):** `COMPLETE /
+IMPLEMENTATION_AND_RECOVERY_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING /
+N25_READY`. Rust now collects exactly 12 bounded Manager-v2 feeds into eight
+complete Portal-owned snapshots for each Paper/Sandbox/Live profile, including
+truthful empty Live. Database-time leases and fencing, idempotent immutable
+cycle evidence, explicit tombstones, parity-gated atomic epoch cutover,
+explicit operator-gated same-identity rebuild, DB-clock 15-minute
+previous-epoch rollback, retained cleanup gates and PostgreSQL dump/restore
+all pass. Page collection enforces the 20,000/feed and 80,000/cycle memory
+bounds before allocation growth. Poll-derived facts are labelled
+`PORTAL_PROJECTION_DELTA`; no Trading System event sequence was invented.
+Declared healthy-source objectives are RPO 10s, worker restart RTO 120s,
+local rebuild RTO 15m and encrypted backup/PITR restore RTO 60m. Query,
+analytics, SSE, commands, Trading System and stable runtime remain unchanged.
+`TD-EX-05` is closed. Evidence and operations:
+[`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](./backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
+
 #### N25 — Query and analytics plane
 
 **Goal:** serve every currently derivable BR-EX query, series and insight from

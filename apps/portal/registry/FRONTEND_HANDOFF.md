@@ -1829,3 +1829,22 @@ governance over Live-profile facts and must not be rendered as a separate
 Trading System mode. Keep market ticks and N24/N25 derived branches typed
 unavailable. Full routes/state guidance:
 [`CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md`](../../../upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md).
+
+### 8.42 Backend N24 durable projection handoff (2026-08-30)
+
+N24 is `COMPLETE / IMPLEMENTATION_AND_RECOVERY_QUALIFIED / N25_READY`. The
+Portal now has a durable Rust/PostgreSQL projection foundation for isolated
+Paper, Sandbox and Live Manager profiles, including truthful empty Live,
+explicit tombstones, freshness lineage, gap/dead-letter blockers, rebuild and
+atomic epoch rollback. Poll-derived changes are labelled
+`PORTAL_PROJECTION_DELTA`; they are not Trading System event authority.
+Rebuild/rollback are operator-only, default-false backend operations and must
+not become browser controls in N24.
+
+There is intentionally no new frontend payload in N24. Keep the N23 current
+screen contracts and typed derived-data unavailable states until N25 publishes
+the exact projection-backed Query/analytics contracts. Do not read projection
+tables, raw Manager records or internal epoch IDs from the browser. When N25
+lands, Claude can consume freshness/gap/rebuild/rollback states from the BFF,
+not infer them client-side. Backend detail:
+[`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](../../../upgrade/backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).

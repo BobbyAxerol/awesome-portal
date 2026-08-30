@@ -2732,8 +2732,8 @@ backend gate.
 | N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states; retire smoke only with later data parity | `COMPLETE / 23_SCREEN_CONTRACTS / BR-EX-41_71 / TD-EX-01_CLOSED` |
 | N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `COMPLETE / DUAL_CELL_SHARED_AUTHORITY / TD-EX-02_CLOSED` |
 | N22 | full current Paper read activation | retire only matching Paper smoke blocks | `COMPLETE / PAPER_PRODUCT_READ_RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
-| N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_COMPLETE / READY` |
-| N24 | durable Portal projection | consume projection freshness/gap/rebuild states | `PLANNED / N23_DEPENDENT` |
+| N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED` |
+| N24 | durable Portal projection | keep N23 contracts; consume projection states only after N25 BFF contract | `COMPLETE / RECOVERY_QUALIFIED / TD-EX-05_CLOSED / N25_READY` |
 | N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `PLANNED / N24_DEPENDENT` |
 | N26 | projection-backed authenticated SSE | close terminal streams; no infinite reconnect loop | `PLANNED / N25_DEPENDENT` |
 | N27 | typed Admin Action Drawer command plane | enable controls only at authoritative terminal parity | `PLANNED / N20_N21_DEPENDENT` |

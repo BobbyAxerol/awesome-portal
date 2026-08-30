@@ -1398,3 +1398,25 @@ durable run/attempt events. Detailed evidence:
   dump/restore and independent Sandbox/Live Compose rollback all pass.
 - Detail:
   [`EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md`](./EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md).
+
+## Backend state — 2026-08-30 (N24 durable Portal projection)
+
+- N24 is `COMPLETE / IMPLEMENTATION_AND_RECOVERY_QUALIFIED /
+  SIGNED_DEV_DEPLOYMENT_PENDING / N25_READY`.
+- A profile-isolated Rust worker maps exactly 12 bounded Manager-v2 feeds into
+  eight combined Portal projection snapshots; zero-row Live is complete and
+  truthful rather than unavailable.
+- PostgreSQL-time leases/fencing, idempotent reducer/journal, explicit
+  tombstones, immutable cycle receipts, parity-gated epoch cutover and
+  retained-epoch rollback are implemented for Paper/Sandbox/Live. Rebuild and
+  rollback are separate default-false one-shot commands; collection enforces
+  feed/cycle memory bounds before retaining a page.
+- Retention blocks live leases, requires encrypted restore evidence and can
+  compact immutable N24 rows only inside the existing audited RETIRED-epoch
+  cleanup transaction.
+- Static three-profile Compose, Rust all-target tests, zero-warning Clippy,
+  fresh PostgreSQL migration/recovery and dump/restore gates pass.
+- No source, Trading System, Query, analytics, SSE, command or stable runtime
+  flag changed. `TD-EX-05` is closed; N25 is next.
+- Detail:
+  [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](./EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).

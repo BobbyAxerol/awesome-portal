@@ -19,6 +19,7 @@ use uuid::Uuid;
 
 mod analytics_repository;
 mod d4_writer;
+mod manager_projection;
 mod query;
 mod realtime;
 mod retention;
@@ -32,6 +33,11 @@ pub use d4_writer::{
     D4BaselineCommitInput, D4CommitOutcome, D4EventPageCommitInput, D4ProjectionWrite,
     D4QualificationSnapshot, D4ResourceCounts, D4ResumePhase, D4ResumeState, D4SensitiveValue,
     D4SnapshotLeaseInput, D4_CONTRACT_REVISION, D4_SCOPE_ID,
+};
+pub use manager_projection::{
+    ManagerCycleCommitInput, ManagerProjectionCycleReceipt, ManagerProjectionEpochSelection,
+    ManagerProjectionLeaseAcquireOutcome, ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof,
+    ManagerSnapshotCommitInput, ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
 };
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
@@ -1497,6 +1503,28 @@ pub enum StoreError {
     SharedConsumerLeaseBusy,
     #[error("shared consumer lease is absent, expired or fenced out")]
     SharedConsumerLeaseLost,
+    #[error("N24 Manager projection lease request is invalid")]
+    InvalidManagerProjectionLease,
+    #[error("another N24 Manager projection worker owns the active scope lease")]
+    ManagerProjectionLeaseBusy,
+    #[error("N24 Manager projection lease is absent, expired or fenced out")]
+    ManagerProjectionLeaseLost,
+    #[error("N24 Manager projection snapshot is invalid")]
+    InvalidManagerProjectionSnapshot,
+    #[error("N24 Manager projection source input digest does not match")]
+    ManagerProjectionInputDigestMismatch,
+    #[error("N24 Manager projection snapshot was rejected atomically")]
+    ManagerProjectionSnapshotRejected,
+    #[error("N24 Manager projection durable commit collides with existing evidence")]
+    ManagerProjectionCommitCollision,
+    #[error("N24 Manager projection cycle is invalid")]
+    InvalidManagerProjectionCycle,
+    #[error("N24 Manager projection cycle is missing required snapshots")]
+    ManagerProjectionCycleIncomplete,
+    #[error("another incompatible N24 Manager projection rebuild is already in progress")]
+    ManagerProjectionRebuildBusy,
+    #[error("N24 Manager projection rollback state or overlap is invalid")]
+    InvalidManagerProjectionRollback,
     #[error("retention lifecycle policy is invalid")]
     InvalidRetentionLifecyclePolicy,
     #[error("retention lifecycle policy version was reused with different content")]
@@ -3707,6 +3735,44 @@ mod tests {
                 .await
                 .is_err()
         );
+        sqlx::query(
+            "INSERT INTO portal_projection.manager_projection_commits
+             (epoch_id,snapshot_id,cycle_id,profile_id,entity_kind,source_input_digest,
+              catalogue_digest,fencing_token,expected_count,applied_count,removed_count,
+              source_read_at,committed_at,state_digest)
+             VALUES ($1,'n24-retention-snapshot','n24-retention-cycle',
+              'PAPER_BINANCE_USDM','ORDER',$2,$3,1,1,1,0,$4,$4,$5)",
+        )
+        .bind(retired_epoch)
+        .bind(digest('4'))
+        .bind(digest('5'))
+        .bind(at(34))
+        .bind(retired_digest.clone())
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO portal_projection.manager_projection_cycles
+             (epoch_id,cycle_id,profile_id,catalogue_digest,source_input_digest,
+              feed_count,snapshot_count,record_count,source_read_at,committed_at,state_digest)
+             VALUES ($1,'n24-retention-cycle','PAPER_BINANCE_USDM',$2,$3,
+              12,8,1,$4,$4,$5)",
+        )
+        .bind(retired_epoch)
+        .bind(digest('5'))
+        .bind(digest('6'))
+        .bind(at(34))
+        .bind(retired_digest.clone())
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        assert!(sqlx::query(
+            "DELETE FROM portal_projection.manager_projection_cycles WHERE epoch_id=$1",
+        )
+        .bind(retired_epoch)
+        .execute(&store.pool)
+        .await
+        .is_err());
 
         let plan = store
             .plan_retired_epoch_cleanup(
@@ -3746,6 +3812,21 @@ mod tests {
         .execute(&store.pool)
         .await
         .unwrap();
+        sqlx::query(
+            "INSERT INTO portal_projection.manager_projection_leases
+             (workspace_id, environment, source_scope_id, epoch_id, lease_id,
+              owner_digest, fencing_token, acquired_at, renewed_at, expires_at, updated_at)
+             VALUES ($1,'paper','MANAGER_V2',$2,$3,$4,1,$5,$5,$6,$5)",
+        )
+        .bind(scope.workspace_id.as_str())
+        .bind(retired_epoch)
+        .bind(Uuid::now_v7())
+        .bind(format!("sha256:{}", "f".repeat(64)))
+        .bind(at(80))
+        .bind(at(100))
+        .execute(&store.pool)
+        .await
+        .unwrap();
         assert!(matches!(
             store
                 .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(90))
@@ -3753,6 +3834,17 @@ mod tests {
             Err(StoreError::CleanupLeaseStillActive)
         ));
         sqlx::query("DELETE FROM portal_projection.shared_consumer_leases WHERE epoch_id=$1")
+            .bind(retired_epoch)
+            .execute(&store.pool)
+            .await
+            .unwrap();
+        assert!(matches!(
+            store
+                .execute_retired_epoch_cleanup(plan.cleanup_run_id, at(90))
+                .await,
+            Err(StoreError::CleanupLeaseStillActive)
+        ));
+        sqlx::query("DELETE FROM portal_projection.manager_projection_leases WHERE epoch_id=$1")
             .bind(retired_epoch)
             .execute(&store.pool)
             .await
@@ -3773,6 +3865,16 @@ mod tests {
             .await
             .unwrap()
             .is_empty());
+        for table in ["manager_projection_commits", "manager_projection_cycles"] {
+            let count: i64 = sqlx::query_scalar(&format!(
+                "SELECT count(*) FROM portal_projection.{table} WHERE epoch_id=$1"
+            ))
+            .bind(retired_epoch)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap();
+            assert_eq!(count, 0, "{table} must be compacted by audited cleanup");
+        }
         assert_eq!(
             projection_core::replay(scope, retired_epoch, archived_journal)
                 .unwrap()
@@ -3807,5 +3909,346 @@ mod tests {
                 .await,
             Err(StoreError::CleanupNotReady)
         ));
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // One integration drill covers all three isolated profiles.
+    async fn n24_manager_projection_is_durable_fenced_and_profile_complete() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let kinds = [
+            ProjectionEntityKind::Account,
+            ProjectionEntityKind::Event,
+            ProjectionEntityKind::Fill,
+            ProjectionEntityKind::Order,
+            ProjectionEntityKind::Performance,
+            ProjectionEntityKind::Position,
+            ProjectionEntityKind::Reconciliation,
+            ProjectionEntityKind::Runtime,
+        ];
+        for (environment, profile_id, catalogue_marker) in [
+            ("paper", "PAPER_BINANCE_USDM", 'a'),
+            ("sandbox", "SANDBOX_BINANCE_USDM", 'b'),
+            ("live", "LIVE_BINANCE_USDM", 'c'),
+        ] {
+            let scope = ProjectionScope::new(
+                CanonicalId::parse(format!("workspace_n24_{environment}")).unwrap(),
+                environment,
+            )
+            .unwrap();
+            let catalogue_digest = digest(catalogue_marker);
+            let epoch_id = store
+                .create_building_epoch(
+                    &scope,
+                    &EpochMetadata {
+                        adapter_version:
+                            "portal.execution.manager-projection.manager-v2.runtime.v1".to_owned(),
+                        source_gateway_digest: digest('f'),
+                        capability_snapshot_id: catalogue_digest.clone(),
+                    },
+                    Utc::now(),
+                )
+                .await
+                .unwrap();
+            let owner = digest('d');
+            let first_lease = match store
+                .acquire_manager_projection_lease(
+                    &scope,
+                    epoch_id,
+                    Uuid::now_v7(),
+                    &owner,
+                    Duration::from_secs(30),
+                )
+                .await
+                .unwrap()
+            {
+                ManagerProjectionLeaseAcquireOutcome::Acquired(grant) => grant,
+                ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(_) => {
+                    panic!("fresh scope cannot already own a lease")
+                }
+            };
+            let cycle_id = CanonicalId::parse(format!("n24-cycle-{environment}-1")).unwrap();
+            for (kind_index, kind) in (0_i64..).zip(kinds.iter().copied()) {
+                let observation = ProjectionObservation {
+                    ingestion_id: CanonicalId::parse(format!(
+                        "n24-ingest-{environment}-{kind_index}-1"
+                    ))
+                    .unwrap(),
+                    entity: ProjectionEntityKey {
+                        kind,
+                        entity_id: CanonicalId::parse(format!(
+                            "n24:{environment}:{}:entity-1",
+                            kind.as_str().to_ascii_lowercase()
+                        ))
+                        .unwrap(),
+                    },
+                    source_authority: SourceAuthority::Execution,
+                    as_of: Some(at(100 + kind_index)),
+                    source_read_at: at(200),
+                    source_cursor: Some(SourceCursor {
+                        event_ts: at(200),
+                        created_at: at(200),
+                        event_id: cycle_id.clone(),
+                    }),
+                    source_sequence: None,
+                    source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+                    operation: ProjectionOperation::Upsert,
+                    source_completeness: SourceCompleteness::PollBounded,
+                    poll_interval_ms: Some(2_000),
+                    adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v1"
+                        .to_owned(),
+                    capability_snapshot_id: catalogue_digest.clone(),
+                    payload: serde_json::json!({
+                        "change_label": "PORTAL_PROJECTION_DELTA",
+                        "source_feed": kind.as_str(),
+                    }),
+                };
+                let snapshot = projection_core::ProjectionSnapshot::new(
+                    CanonicalId::parse(format!("n24-snapshot-{environment}-{kind_index}-1"))
+                        .unwrap(),
+                    kind,
+                    SnapshotCompleteness::Complete,
+                    1,
+                    vec![observation],
+                )
+                .unwrap();
+                let source_input_digest = canonical_digest(&snapshot.observations).unwrap();
+                let receipt = store
+                    .commit_manager_projection_snapshot(
+                        &scope,
+                        epoch_id,
+                        first_lease.proof(),
+                        &ManagerSnapshotCommitInput {
+                            cycle_id: cycle_id.clone(),
+                            profile_id: profile_id.to_owned(),
+                            catalogue_digest: catalogue_digest.clone(),
+                            source_input_digest,
+                            source_read_at: at(200),
+                            poll_interval_ms: 2_000,
+                            snapshot,
+                        },
+                        at(201),
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(receipt.applied_count, 1);
+                assert_eq!(receipt.removed_count, 0);
+            }
+            let cycle_input = ManagerCycleCommitInput {
+                cycle_id: cycle_id.clone(),
+                profile_id: profile_id.to_owned(),
+                catalogue_digest: catalogue_digest.clone(),
+                source_input_digest: digest('b'),
+                feed_count: 12,
+                record_count: 12,
+                source_read_at: at(200),
+            };
+            let first_cycle = store
+                .commit_manager_projection_cycle(
+                    &scope,
+                    epoch_id,
+                    first_lease.proof(),
+                    &cycle_input,
+                    at(202),
+                )
+                .await
+                .unwrap();
+            let repeated = store
+                .commit_manager_projection_cycle(
+                    &scope,
+                    epoch_id,
+                    first_lease.proof(),
+                    &cycle_input,
+                    at(203),
+                )
+                .await
+                .unwrap();
+            assert!(repeated.already_durable);
+            assert_eq!(repeated.state_digest, first_cycle.state_digest);
+            let activated = store
+                .activate_manager_projection_epoch(
+                    &scope,
+                    epoch_id,
+                    &first_cycle.state_digest,
+                    at(204),
+                    Duration::from_secs(300),
+                )
+                .await
+                .unwrap();
+            assert_eq!(activated.active_epoch_id, epoch_id);
+
+            store
+                .release_manager_projection_lease(&scope, epoch_id, first_lease.proof())
+                .await
+                .unwrap();
+            let second_lease = match store
+                .acquire_manager_projection_lease(
+                    &scope,
+                    epoch_id,
+                    Uuid::now_v7(),
+                    &owner,
+                    Duration::from_secs(30),
+                )
+                .await
+                .unwrap()
+            {
+                ManagerProjectionLeaseAcquireOutcome::Acquired(grant) => grant,
+                ManagerProjectionLeaseAcquireOutcome::AlreadyHeld(_) => {
+                    panic!("released lease must advance fencing")
+                }
+            };
+            assert!(second_lease.fencing_token > first_lease.fencing_token);
+            let empty_order = projection_core::ProjectionSnapshot::new(
+                CanonicalId::parse(format!("n24-snapshot-{environment}-order-empty")).unwrap(),
+                ProjectionEntityKind::Order,
+                SnapshotCompleteness::Complete,
+                0,
+                Vec::new(),
+            )
+            .unwrap();
+            let empty_input = ManagerSnapshotCommitInput {
+                cycle_id: CanonicalId::parse(format!("n24-cycle-{environment}-2")).unwrap(),
+                profile_id: profile_id.to_owned(),
+                catalogue_digest: catalogue_digest.clone(),
+                source_input_digest: canonical_digest(&empty_order.observations).unwrap(),
+                source_read_at: at(300),
+                poll_interval_ms: 2_000,
+                snapshot: empty_order,
+            };
+            assert!(matches!(
+                store
+                    .commit_manager_projection_snapshot(
+                        &scope,
+                        epoch_id,
+                        first_lease.proof(),
+                        &empty_input,
+                        at(301),
+                    )
+                    .await,
+                Err(StoreError::ManagerProjectionLeaseLost)
+            ));
+            let tombstone = store
+                .commit_manager_projection_snapshot(
+                    &scope,
+                    epoch_id,
+                    second_lease.proof(),
+                    &empty_input,
+                    at(301),
+                )
+                .await
+                .unwrap();
+            assert_eq!(tombstone.removed_count, 1);
+            assert!(store
+                .load_entity(
+                    epoch_id,
+                    &ProjectionEntityKey {
+                        kind: ProjectionEntityKind::Order,
+                        entity_id: CanonicalId::parse(format!("n24:{environment}:order:entity-1"))
+                            .unwrap(),
+                    },
+                )
+                .await
+                .unwrap()
+                .is_none());
+        }
+    }
+
+    #[tokio::test]
+    async fn n24_rebuild_is_singleton_and_rollback_is_atomic() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+
+        let scope = ProjectionScope::new(
+            CanonicalId::parse("workspace_n24_rebuild").unwrap(),
+            "paper",
+        )
+        .unwrap();
+        let metadata = EpochMetadata {
+            adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v1".to_owned(),
+            source_gateway_digest: digest('a'),
+            capability_snapshot_id: digest('b'),
+        };
+        let original_epoch = store
+            .create_building_epoch(&scope, &metadata, Utc::now())
+            .await
+            .unwrap();
+        let empty_digest = semantic_state_digest(&[]).unwrap();
+        store
+            .activate_epoch(
+                &scope,
+                original_epoch,
+                &empty_digest,
+                Utc::now(),
+                Duration::from_secs(300),
+            )
+            .await
+            .unwrap();
+
+        let rebuild = store
+            .prepare_manager_projection_rebuild_epoch(&scope, &metadata, Utc::now())
+            .await
+            .unwrap();
+        assert!(rebuild.created);
+        let repeated = store
+            .prepare_manager_projection_rebuild_epoch(&scope, &metadata, Utc::now())
+            .await
+            .unwrap();
+        assert!(!repeated.created);
+        assert_eq!(repeated.epoch_id, rebuild.epoch_id);
+        let selected = store
+            .ensure_manager_projection_epoch(&scope, &metadata, Utc::now())
+            .await
+            .unwrap();
+        assert_eq!(selected.epoch_id, rebuild.epoch_id);
+        assert_eq!(selected.status, ProjectionEpochStatus::Building);
+
+        store
+            .activate_epoch(
+                &scope,
+                rebuild.epoch_id,
+                &empty_digest,
+                Utc::now(),
+                Duration::from_secs(300),
+            )
+            .await
+            .unwrap();
+        let rollback = store
+            .rollback_manager_projection_epoch(&scope, rebuild.epoch_id, original_epoch)
+            .await
+            .unwrap();
+        assert_eq!(rollback.failed_epoch_id, rebuild.epoch_id);
+        assert_eq!(rollback.restored_epoch_id, original_epoch);
+        assert_eq!(rollback.restored_state_digest, empty_digest);
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT status FROM portal_projection.epochs WHERE epoch_id=$1",
+            )
+            .bind(original_epoch)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap(),
+            "ACTIVE"
+        );
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(
+                "SELECT status FROM portal_projection.epochs WHERE epoch_id=$1",
+            )
+            .bind(rebuild.epoch_id)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap(),
+            "FAILED"
+        );
     }
 }
