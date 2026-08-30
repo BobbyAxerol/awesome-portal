@@ -2368,6 +2368,63 @@ R1/R2 smoke baselines. The honest not-published path remains for absent additive
 
 ---
 
+### 7.10 BR-EX-68 — Admin Action Drawer WF 1i: operator-task catalog + command relay flow (filed 2026-08-30)
+
+The owner's WF 1i hi-fi (2026-08-30) specifies the drawer the relay will one day serve. The
+frontend ships the full interaction as a DECLARED DEMO on `adminCli.smoke.ts` — that file is this
+row's reference for every shape below — while the published F0 truth (rev 2, 64 entries, relay
+`DISABLED`, nothing reachable) stays quoted on screen and rendered in full underneath.
+
+**(1) Operator-task catalog.** The hi-fi groups by operator task (Read & inspect · Portfolio &
+capital · Deployment & risk · Account · Broker sync & reconciliation · Emergency & destructive),
+not by system domain. F0 settled that the server's `group` wins for the published listing; the
+task view therefore needs its own server-declared fields — additive on the existing entries or a
+parallel `execution.command-tasks.v1` joined on `noun/verb`:
+
+```jsonc
+{
+  "key": "account/policy",
+  "task_group": "ACCOUNT",            // the six WF 1i groups, server-declared
+  "task_title": "Account policy",
+  "cli_form": "cli account policy … --reason \"hedge mode\"",
+  "params": [                          // registry-picked, never free-typed
+    { "key": "account_id", "source_registry": "accounts", "constraint": null },
+    { "key": "--position-accounting-mode", "source_registry": null, "constraint": "NET | HEDGE" },
+    { "key": "--reason", "source_registry": null, "constraint": "required · audit" }
+  ]
+}
+```
+
+Two hi-fi commands (`System health`, `Change allocation`) have no rev-2 key — the drawer says
+"not in published catalogue rev 2" today; this row must either add them or name their keys.
+
+**(2) Read path.** `POST /api/v1/execution/commands/{key}/run` for R0 entries only: no step-up,
+verbatim transcript lines and exit code (`adminCli.smoke.ts` `CLI_OUT` shows the seven expected
+transcripts). Freshness belongs to the row (`WATCH` re-runs client-side); the endpoint never
+caches away a stale read.
+
+**(3) Mutation flow.** PLAN → APPLY (step-up) → VERIFY, exactly the F0 verbs with the refusal
+semantics kept for unreachable keys:
+
+- `POST /commands/{key}/plan` → `{ plan_id, ttl_s, preflight: [{check, verdict: OK|WARN|FAIL,
+  detail}] }` — preflight is SERVER-side (identity/lineage digest, approval ref validity,
+  cell health, expected revision, concentration, idempotency key), the browser renders verdicts
+  and never computes one;
+- `POST /plans/{plan_id}/apply` — step-up enforced; DANGER tier requires the typed confirm word
+  in the payload (`CLOSE`, `BINANCE_TESTNET_ONLY`); response is `202 + operation_id` and 202 is
+  NOT success;
+- `GET /operations/{operation_id}/verify` → timeline rows with authoritative ACKs; terminal
+  `VERIFIED` or `PARTIAL` (+ residue rows and a re-apply pointer with the SAME idempotency key).
+  PARTIAL never renders green and the drawer waits for terminal state.
+
+**(4) Two-man rule.** For OPERATOR actors: `POST /plans/{plan_id}/key-request` → admin issues a
+single-use key bound to that plan id with a TTL; issuance and use land in the audit log. ADMIN
+actors apply without a key; VIEWER actors hold no command grant (the catalog stays visible —
+visibility ≠ authority — and reads remain available).
+
+**Retire on delivery:** `adminCli.smoke.ts`, the SMOKE cases in `adminCli.test.tsx`, the
+"declared demo" copy in the drawer, and the `?role=/?outcome=` demo addresses.
+
 ## 8. Test and evidence matrix
 
 | Change class | Minimum gate |
