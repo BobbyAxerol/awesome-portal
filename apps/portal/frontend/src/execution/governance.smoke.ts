@@ -137,12 +137,15 @@ export const NEW_REQUEST = {
 function canaryDriftSeries() {
   const day = (i: number) => `2026-08-${String(9 + i).padStart(2, "0")}`;
   const twin: [string, number][] = [], canary: [string, number][] = [];
-  let a = 1, b = 1;
+  let a = 1;
   for (let i = 0; i < 21; i += 1) {
+    // One path, two executions: the canary differs from its twin only by
+    // execution noise (~bp), because that IS the claim the criteria make —
+    // a visibly diverging pair would contradict "fill Δ +0.6bp within band".
     a *= 1 + 0.0021 + det(i, 11) * 0.006;
-    b *= 1 + 0.0019 + det(i, 12) * 0.006;
+    const drift = det(i, 12) * 0.0012 - 0.0004;
     twin.push([day(i), Number(a.toFixed(4))]);
-    canary.push([day(i), Number(b.toFixed(4))]);
+    canary.push([day(i), Number((a * (1 + drift)).toFixed(4))]);
   }
   return {
     series: [

@@ -6513,7 +6513,7 @@
 .exec-gov-headlink:hover { text-decoration: underline; }
 .exec-gov .exec-role-control select, .exec-gov select.exec-role-control { width: 100%; max-width: 100%; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
 .exec-gate-wvfilters { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
-.exec-gate-wvtable th[scope="row"] { font-weight: 400; overflow-wrap: anywhere; }
+.exec-gate-wvtable th[scope="row"] { font-weight: 400; overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; font: var(--exec-font-body, inherit); color: var(--ink); }
 .exec-gate-wvtable td[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
 .exec-gate-wvtable td[data-tone="bad"] { color: var(--bad); }
 .exec-gov-v[data-tone="good"] { color: var(--good); }

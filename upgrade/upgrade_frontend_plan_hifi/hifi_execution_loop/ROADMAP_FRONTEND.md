@@ -493,3 +493,11 @@ persona có đúng một chỗ để làm; "clear" = không việc nào phải �
 2. H.2.2 — hi-fi Live-gate review (hoặc chốt "R2 đủ").
 3. H.2.3 — hi-fi Waivers & Conditions.
 4. Phần backend hiện hữu: codex giao BR-EX-41…68 để bóc dần SMOKE.
+
+> 2026-08-30 (cùng ngày, owner "làm luôn"): **H.2.1/H.2.2/H.2.3 đã dựng** —
+> `/governance/approvals/new` (entry, BR-EX-69) · `/governance/approvals/{id}/live`
+> (LIVE_GATE đổi đích khỏi R2, BR-EX-70) · `/governance/waivers` (BR-EX-71).
+> Cả ba declared-demo trên grammar `.exec-gov` sẵn có; route claim tạm qua
+> preview (registry rows: HOTFIX §2). Evidence: governanceAdditions.test 9/9,
+> vitest full 1,767, screenshot soi tay cả ba; full gate chạy nền.
+
