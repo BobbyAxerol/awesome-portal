@@ -1354,7 +1354,7 @@ no open item in that register silently reopens N17B.
 
 ### N18–N29 — Manager Surface Expansion campaign
 
-**Status:** `N18_COMPLETE_SOURCE_DARK / CENSUS_FROZEN / N19_APPROVED_IN_PROGRESS / NO_RUNTIME_EFFECT`.  
+**Status:** `N18_COMPLETE / N19_COMPLETE_SOURCE_DARK / N20_READY_NOT_STARTED / NO_RUNTIME_EFFECT`.  
 **Scope:** all current Manager-v2 relations, current external read and command
 catalogues, BR-EX-41 onward, and the Paper/Sandbox/Live internal Portal.  
 **Non-goal:** changing Trading System execution authority, bypassing its
@@ -1434,6 +1434,24 @@ switch/rollback; bounded transport/load test.
 **N19 exit gate:** the complete current catalogue passes compatibility and
 negative tests behind unchanged Portal-facing primitives; adapter upgrade and
 rollback work without screen-contract changes. `TD-EX-03` is closed.
+
+**Closeout 2026-08-30:** N19 is
+`N19_RUST_MANAGER_COMPATIBILITY_AUTHORITY_COMPLETE / SOURCE_DARK / N20_READY`.
+The digest-bound Rust authority accepts exactly the N18 96-relation set, five
+Manager GET primitives, seven projections and the three deployment/profile
+bindings. Only Paper is currently transport-qualified; the exact Sandbox and
+Live bindings remain dormant and fail closed until their named qualification
+phases. It constructs relation, opaque key/cursor and projection requests
+only from the authenticated catalogue; Edge catalogue/capability/relation/
+projection and current-source paths now pass through that authority. The
+current deployable adapter and non-deployable future simulation have an
+explicit rollback mapping. TLS 1.3 mTLS, delegated JWT, GET/origin/header,
+200-row/1-MiB/4-KiB/two-concurrency bounds, exact decimals and redirect-free
+transport remain enforced by the sealed Manager client. The static gate,
+8 Rust authority tests, 25 Edge tests and zero-warning Clippy pass. No source,
+product route, profile, database, credential, image or runtime changed.
+`TD-EX-03` is closed; N20 is ready but has not started. Detail:
+[`EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md`](./backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md).
 
 #### N20 — Canonical screen BFF contracts
 

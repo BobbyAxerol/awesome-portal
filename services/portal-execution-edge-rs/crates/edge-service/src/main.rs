@@ -40,6 +40,10 @@ use execution_contracts::{
 };
 use futures_util::stream;
 use intercell_gateway::current_acceptance::{CurrentAcceptanceError, CurrentGatewayAcceptance};
+use manager_compat_authority::{
+    AuthorityError as ManagerAuthorityError, BoundManagerAuthority, DeploymentEnvironment,
+    ManagerCompatibilityAuthority, ManagerRequestContext, DELEGATED_RESOURCE,
+};
 use manager_v2_client::{
     ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError, ManagerV2ClientLimits,
 };
@@ -145,6 +149,7 @@ struct AppState {
     shadow_query_freshness_policy: FreshnessPolicy,
     manager_v2_client: Option<ManagerV2Client>,
     manager_v2_profile_id: Option<String>,
+    manager_compatibility: Arc<ManagerCompatibilityAuthority>,
     current_source_map: Arc<CurrentSourceMap>,
     current_gateway_acceptance: Arc<CurrentGatewayAcceptance>,
 }
@@ -542,6 +547,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         3,
     )?;
     let (negotiator, manager_v2_client) = source_clients(&config)?;
+    let manager_compatibility = Arc::new(ManagerCompatibilityAuthority::canonical()?);
     let current_source_map = Arc::new(CurrentSourceMap::canonical()?);
     let current_gateway_acceptance = Arc::new(CurrentGatewayAcceptance::canonical()?);
     // N16B is compatibility-only. Loading the immutable contract at startup
@@ -592,6 +598,7 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         shadow_query_freshness_policy: config.shadow_query_freshness_policy.clone(),
         manager_v2_client,
         manager_v2_profile_id: config.manager_v2_profile_id.clone(),
+        manager_compatibility,
         current_source_map,
         current_gateway_acceptance,
     };
@@ -1100,6 +1107,13 @@ async fn current_source_relation_from_manager(
         Ok(catalogue) => catalogue,
         Err(response) => return response,
     };
+    let manager_authority = match bind_manager_authority(state, &profile.manager_profile_id) {
+        Ok(authority) => authority,
+        Err(response) => return response,
+    };
+    if let Err(error) = manager_authority.validate_catalogue(&catalogue) {
+        return manager_authority_error_response(&error);
+    }
     if let Err(error) = state
         .current_source_map
         .validate_manager_source(source, &catalogue)
@@ -1131,7 +1145,7 @@ async fn current_source_relation_from_manager(
         );
     };
     let Ok(request) =
-        ManagerV2Request::relation_records(catalogued_relation, cursor.as_ref(), limit)
+        manager_authority.relation_page_request(&catalogue, &relation_id, cursor.as_ref(), limit)
     else {
         return current_source_problem(
             StatusCode::BAD_REQUEST,
@@ -1318,30 +1332,30 @@ fn current_source_problem(
 }
 
 async fn manager_catalogue(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    let client = match manager_request_client(&state, &headers) {
-        Ok(client) => client,
+    let access = match manager_request_client(&state, &headers) {
+        Ok(access) => access,
         Err(response) => return response,
     };
-    manager_read_response(
-        client.execute(&ManagerV2Request::catalogue()).await,
-        |payload| match payload {
-            ManagerPayload::Catalogue(envelope) => Some(envelope),
-            _ => None,
-        },
+    manager_catalogue_response(
+        access
+            .client
+            .execute(&access.authority.catalogue_request())
+            .await,
+        &access.authority,
     )
 }
 
 async fn manager_capabilities(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    let client = match manager_request_client(&state, &headers) {
-        Ok(client) => client,
+    let access = match manager_request_client(&state, &headers) {
+        Ok(access) => access,
         Err(response) => return response,
     };
-    manager_read_response(
-        client.execute(&ManagerV2Request::capabilities()).await,
-        |payload| match payload {
-            ManagerPayload::Capabilities(envelope) => Some(envelope),
-            _ => None,
-        },
+    manager_capabilities_response(
+        access
+            .client
+            .execute(&access.authority.capabilities_request())
+            .await,
+        &access.authority,
     )
 }
 
@@ -1351,8 +1365,8 @@ async fn manager_projection(
     Query(query): Query<ManagerPageQuery>,
     headers: HeaderMap,
 ) -> Response {
-    let client = match manager_request_client(&state, &headers) {
-        Ok(client) => client,
+    let access = match manager_request_client(&state, &headers) {
+        Ok(access) => access,
         Err(response) => return response,
     };
     let Some(kind) = ProjectionKind::from_path_segment(&kind) else {
@@ -1366,7 +1380,7 @@ async fn manager_projection(
         Ok(limit) => limit,
         Err(response) => return response,
     };
-    let catalogue = match fetch_manager_catalogue(client).await {
+    let catalogue = match fetch_manager_catalogue(access.client).await {
         Ok(catalogue) => catalogue,
         Err(response) => return response,
     };
@@ -1381,17 +1395,23 @@ async fn manager_projection(
             "The Manager pagination cursor is invalid for this request.",
         );
     };
-    let Ok(request) = ManagerV2Request::projection(&catalogue, kind, cursor.as_ref(), limit) else {
+    let Ok(request) = access
+        .authority
+        .projection_request(&catalogue, kind, cursor.as_ref(), limit)
+    else {
         return manager_problem(
-            StatusCode::BAD_REQUEST,
-            "MANAGER_V2_INVALID_CURSOR",
-            "The Manager pagination cursor is invalid for this request.",
+            StatusCode::BAD_GATEWAY,
+            "MANAGER_V2_AUTHORITY_REJECTED",
+            "The Manager projection is not accepted by the compatibility authority.",
         );
     };
-    manager_read_response(client.execute(&request).await, |payload| match payload {
-        ManagerPayload::Projection(envelope) => Some(envelope),
-        _ => None,
-    })
+    manager_read_response(
+        access.client.execute(&request).await,
+        |payload| match payload {
+            ManagerPayload::Projection(envelope) => Some(envelope),
+            _ => None,
+        },
+    )
 }
 
 async fn manager_relation_records(
@@ -1400,8 +1420,8 @@ async fn manager_relation_records(
     Query(query): Query<ManagerPageQuery>,
     headers: HeaderMap,
 ) -> Response {
-    let client = match manager_request_client(&state, &headers) {
-        Ok(client) => client,
+    let access = match manager_request_client(&state, &headers) {
+        Ok(access) => access,
         Err(response) => return response,
     };
     if !manager_identifier(&schema) || !manager_identifier(&relation) {
@@ -1415,7 +1435,7 @@ async fn manager_relation_records(
         Ok(limit) => limit,
         Err(response) => return response,
     };
-    let catalogue = match fetch_manager_catalogue(client).await {
+    let catalogue = match fetch_manager_catalogue(access.client).await {
         Ok(catalogue) => catalogue,
         Err(response) => return response,
     };
@@ -1437,25 +1457,36 @@ async fn manager_relation_records(
             "The Manager pagination cursor is invalid for this relation.",
         );
     };
+    let relation_id = format!("{schema}.{relation}");
     let Ok(request) =
-        ManagerV2Request::relation_records(catalogued_relation, cursor.as_ref(), limit)
+        access
+            .authority
+            .relation_page_request(&catalogue, &relation_id, cursor.as_ref(), limit)
     else {
         return manager_problem(
-            StatusCode::BAD_REQUEST,
-            "MANAGER_V2_INVALID_CURSOR",
-            "The Manager pagination cursor is invalid for this relation.",
+            StatusCode::BAD_GATEWAY,
+            "MANAGER_V2_AUTHORITY_REJECTED",
+            "The Manager relation is not accepted by the compatibility authority.",
         );
     };
-    manager_read_response(client.execute(&request).await, |payload| match payload {
-        ManagerPayload::RelationRecords(envelope) => Some(envelope),
-        _ => None,
-    })
+    manager_read_response(
+        access.client.execute(&request).await,
+        |payload| match payload {
+            ManagerPayload::RelationRecords(envelope) => Some(envelope),
+            _ => None,
+        },
+    )
+}
+
+struct AuthorizedManagerRequest<'a> {
+    client: &'a ManagerV2Client,
+    authority: BoundManagerAuthority<'a>,
 }
 
 fn manager_request_client<'a>(
     state: &'a AppState,
     headers: &HeaderMap,
-) -> Result<&'a ManagerV2Client, Response> {
+) -> Result<AuthorizedManagerRequest<'a>, Response> {
     let token = bearer(headers).ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
     let claims = state
         .verifier
@@ -1470,13 +1501,41 @@ fn manager_request_client<'a>(
     if claims.profile_id.as_deref() != state.manager_v2_profile_id.as_deref() {
         return Err(StatusCode::FORBIDDEN.into_response());
     }
-    state.manager_v2_client.as_ref().ok_or_else(|| {
+    let client = state.manager_v2_client.as_ref().ok_or_else(|| {
         manager_problem(
             StatusCode::SERVICE_UNAVAILABLE,
             "MANAGER_V2_READ_DISABLED",
             "Manager read-through is disabled for this Edge runtime.",
         )
-    })
+    })?;
+    let profile_id = claims
+        .profile_id
+        .as_deref()
+        .ok_or_else(|| StatusCode::FORBIDDEN.into_response())?;
+    let authority = bind_manager_authority(state, profile_id)?;
+    Ok(AuthorizedManagerRequest { client, authority })
+}
+
+fn bind_manager_authority<'a>(
+    state: &'a AppState,
+    profile_id: &str,
+) -> Result<BoundManagerAuthority<'a>, Response> {
+    let environment = DeploymentEnvironment::from_config(&state.environment).ok_or_else(|| {
+        manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "MANAGER_COMPAT_ENVIRONMENT_DENIED",
+            "The Edge deployment environment is not accepted by Manager compatibility policy.",
+        )
+    })?;
+    state
+        .manager_compatibility
+        .bind(ManagerRequestContext {
+            environment,
+            profile_id,
+            delegated_resource: DELEGATED_RESOURCE,
+            owner_contract_revision: manager_v2_contract::RUNTIME_CONTRACT_REVISION,
+        })
+        .map_err(|error| manager_authority_error_response(&error))
 }
 
 fn manager_page_limit(value: Option<u16>) -> Result<PageLimit, Response> {
@@ -1526,6 +1585,86 @@ async fn fetch_manager_catalogue(client: &ManagerV2Client) -> Result<ManagerCata
         )),
         Err(error) => Err(manager_client_error_response(&error)),
     }
+}
+
+fn manager_catalogue_response(
+    read: Result<ManagerRead, ManagerV2ClientError>,
+    authority: &BoundManagerAuthority<'_>,
+) -> Response {
+    match read {
+        Ok(ManagerRead::Available(ManagerPayload::Catalogue(envelope))) => {
+            if let Err(error) = authority.validate_catalogue(envelope.data()) {
+                return manager_authority_error_response(&error);
+            }
+            manager_json_response(StatusCode::OK, envelope)
+        }
+        Ok(ManagerRead::Available(_)) => manager_problem(
+            StatusCode::BAD_GATEWAY,
+            "MANAGER_V2_UNEXPECTED_PAYLOAD",
+            "Manager returned a response that does not match the requested operation.",
+        ),
+        Ok(ManagerRead::Unavailable(unavailable)) => {
+            manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable)
+        }
+        Err(error) => manager_client_error_response(&error),
+    }
+}
+
+fn manager_capabilities_response(
+    read: Result<ManagerRead, ManagerV2ClientError>,
+    authority: &BoundManagerAuthority<'_>,
+) -> Response {
+    match read {
+        Ok(ManagerRead::Available(ManagerPayload::Capabilities(envelope))) => {
+            if let Err(error) = authority.validate_capabilities(envelope.data()) {
+                return manager_authority_error_response(&error);
+            }
+            manager_json_response(StatusCode::OK, envelope)
+        }
+        Ok(ManagerRead::Available(_)) => manager_problem(
+            StatusCode::BAD_GATEWAY,
+            "MANAGER_V2_UNEXPECTED_PAYLOAD",
+            "Manager returned a response that does not match the requested operation.",
+        ),
+        Ok(ManagerRead::Unavailable(unavailable)) => {
+            manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable)
+        }
+        Err(error) => manager_client_error_response(&error),
+    }
+}
+
+fn manager_authority_error_response(error: &ManagerAuthorityError) -> Response {
+    let (status, code, message) = match error {
+        ManagerAuthorityError::EnvironmentDenied
+        | ManagerAuthorityError::ProfileDenied
+        | ManagerAuthorityError::ResourceDenied
+        | ManagerAuthorityError::AdapterNotDeployable => (
+            StatusCode::FORBIDDEN,
+            "MANAGER_COMPAT_BINDING_DENIED",
+            "The Manager deployment binding is not authorized.",
+        ),
+        ManagerAuthorityError::TransportNotQualified => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "MANAGER_COMPAT_TRANSPORT_NOT_QUALIFIED",
+            "The Manager transport has not been qualified for this deployment profile.",
+        ),
+        ManagerAuthorityError::RelationNotApproved => (
+            StatusCode::NOT_FOUND,
+            "MANAGER_COMPAT_RELATION_NOT_APPROVED",
+            "The relation is not part of the frozen Manager compatibility surface.",
+        ),
+        ManagerAuthorityError::Contract(_) => (
+            StatusCode::BAD_REQUEST,
+            "MANAGER_COMPAT_REQUEST_INVALID",
+            "The Manager request violates an opaque key, cursor or page bound.",
+        ),
+        _ => (
+            StatusCode::BAD_GATEWAY,
+            "MANAGER_COMPAT_SOURCE_DRIFT",
+            "The Manager source no longer matches the accepted compatibility contract.",
+        ),
+    };
+    manager_problem(status, code, message)
 }
 
 fn manager_read_response<T, F>(
@@ -3255,6 +3394,8 @@ enum ServiceError {
     Transport(#[from] ts_transport::TransportError),
     #[error(transparent)]
     ManagerTransport(#[from] ManagerV2ClientError),
+    #[error("Manager compatibility authority rejected startup: {0}")]
+    ManagerCompatibility(#[from] ManagerAuthorityError),
     #[error("current-source contract rejected: {0}")]
     CurrentSource(#[from] MappingError),
     #[error("current inter-cell gateway acceptance rejected: {0}")]
@@ -3410,6 +3551,7 @@ mod tests {
             },
             manager_v2_client: None,
             manager_v2_profile_id: Some("PAPER_BINANCE_USDM".to_owned()),
+            manager_compatibility: Arc::new(ManagerCompatibilityAuthority::canonical().unwrap()),
             current_source_map: Arc::new(CurrentSourceMap::canonical().unwrap()),
             current_gateway_acceptance: Arc::new(CurrentGatewayAcceptance::canonical().unwrap()),
         }

@@ -1807,3 +1807,14 @@ empty/unavailable/not-applicable states, never expose raw Manager relation
 names/envelopes, and retire smoke only after the corresponding delivery gate.
 The next frontend request ID is BR-EX-72. Full handoff:
 [`CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md`](../../../upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md).
+
+### 8.40 Backend N19 Rust compatibility handoff (2026-08-30)
+
+N19 is `N19_COMPLETE / SOURCE_DARK / N20_READY_NOT_STARTED`. Rust Edge now
+owns the digest-bound 96-relation/five-primitive compatibility surface,
+profile/resource/revision binding and adapter upgrade/rollback. This adds no
+browser payload or route. Only Paper is transport-qualified; Sandbox and Live
+remain typed dormant bindings. Frontend must not consume raw Manager envelopes or
+relation names; keep approved seven-state fixtures until N20 delivers each
+narrow workspace/resource-scoped screen contract. Full handoff:
+[`CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md`](../../../upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md).

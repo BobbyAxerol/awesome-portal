@@ -19,6 +19,7 @@ Chúng không thay thế phase hoặc exit gate trong
   activation.
 
 - [N18 — Manager Relation & Capability Census](./EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md)
+- [N19 — Rust Manager-v2 Compatibility Authority](./EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md)
   — **complete / source-dark:** digest-bound inventory of all 96 Manager
   relations, five Manager primitives, 104 Gateway operations, 64 CLI actions,
   27 Portal reads, nine requested commands and BR-EX-41–71. Every item has a
@@ -1307,3 +1308,21 @@ durable run/attempt events. Detailed evidence:
   changed. N19 is the next approved Rust compatibility phase.
 - Detail:
   [`EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md`](./EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md).
+
+## Backend state — 2026-08-30 (N19 Rust Manager compatibility)
+
+- N19 is `N19_RUST_MANAGER_COMPATIBILITY_AUTHORITY_COMPLETE / SOURCE_DARK /
+  N20_READY_NOT_STARTED`.
+- Rust Edge now owns the exact 96-relation, five-primitive, three-profile and
+  seven-projection compatibility boundary. Catalogue, revision, resource,
+  opaque key/cursor and adapter rollback checks fail closed.
+- Only Paper is transport-qualified in N19. The exact Sandbox and Live
+  bindings are versioned but dormant and return a typed unavailable error.
+- Current and simulated-future adapter switch/rollback is versioned without a
+  Portal screen-contract change; the simulated adapter is not deployable.
+- Eight authority tests, 25 Edge tests, static/manifest gates and zero-warning
+  Clippy pass. No source, product route, profile, image or stable runtime was
+  activated.
+- `TD-EX-03` is closed. N20 is ready only when Bobby explicitly starts it.
+- Detail:
+  [`EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md`](./EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md).

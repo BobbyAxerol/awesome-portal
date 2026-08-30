@@ -20,6 +20,7 @@ members = [
   "crates/ts-transport",
   "crates/manager-v2-contract",
   "crates/manager-v2-client",
+  "crates/manager-compat-authority",
   "crates/current-source-compat",
   "crates/command-relay",
   "crates/external-read-adapter",

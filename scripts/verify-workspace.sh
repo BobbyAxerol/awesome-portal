@@ -495,6 +495,16 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n18-census.py" \
   "${ROOT_DIR}/scripts/test_execution_n18_census.py" \
   "${ROOT_DIR}/scripts/execution-n18-census-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/negative-matrix.v1.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/manager-compat-authority/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/manager-compat-authority/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/manager-compat-authority/src/tests.rs" \
+  "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
   "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
@@ -1196,6 +1206,8 @@ for tracked_source in \
   scripts/execution-n17b-current-acceptance-test.sh \
   services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.schema.json \
   services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json \
+  services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json \
+  services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/negative-matrix.v1.json \
   deploy/.env.development.example \
   deploy/manifests/deployment-profile.v1.schema.json \
   deploy/manifests/deployment-profiles.source-dark.json \
@@ -1417,6 +1429,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/execution-n18-census-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1517,5 +1530,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
 "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh"
 "${ROOT_DIR}/scripts/execution-n18-census-test.sh"
+"${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

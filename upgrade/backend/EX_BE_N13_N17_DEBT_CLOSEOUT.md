@@ -51,7 +51,7 @@ product/runtime switch remains off.
 | --- | --- | --- | --- | --- | --- |
 | `TD-EX-01` | P0 | Current Manager relation reads are profile-bounded but are not yet a canonical resource/workspace-scoped Paper screen payload. The product flag remains off, so the browser cannot request broad profile-level relations. | Codex | first product-visible Paper current-source route | `ACTIVATION_BLOCKER` |
 | `TD-EX-02` | P0 for multi-replica | The N17B 15 r/s pacer is process-local. One Control API replica is bounded below the Source Proxy 20 r/s limit; multiple replicas could exceed it. | Codex | Control API scale above one source-consuming replica | `ACTIVATION_BLOCKER` |
-| `TD-EX-03` | P1 | The accepted compatibility path teaches TypeScript the current Manager-v2 relation mapping because the deployed Edge lacks the draft screen-native route. Long-term source compatibility belongs in Rust; TypeScript should retain only narrow BFF/product policy. | Codex | expanding the current-source route beyond the exact N17B Paper slice | `ACTIVATION_BLOCKER` |
+| `TD-EX-03` | P1 | N19 added the digest-bound Rust Manager compatibility authority for all 96 N18 relations, five sealed GET primitives, exact profile/resource/revision binding, catalogue/key/cursor validation and adapter rollback. TypeScript now retains only narrow BFF/product policy. | Codex | closed before broader current-source expansion | `CLOSED_N19` |
 | `TD-EX-04` | P0 | No signed Control API product image containing N17B has been published or deployed; registry and Paper product flags remain off. | Codex + Bobby | dev Paper activation window | `ACTIVATION_BLOCKER` |
 | `TD-EX-05` | P1 | N17B is a stateless read adapter. Projection PostgreSQL is not the source for the accepted query and does not yet back the broader analytics/screen aggregates. | Codex | projection-backed analytics or multi-screen rollout | `ACTIVATION_BLOCKER` |
 | `TD-EX-06` | P0 | The 25/25 private transport probe is not a post-deployment product SLO/load/fault/soak result. No production error budget is claimed. | Codex + Bobby | marking the selected product screen `PRODUCT_COMPLETE` | `ACTIVATION_BLOCKER` |
@@ -76,10 +76,10 @@ they are not evidence that N17B failed. They must be deduplicated against
 existing N09–N12 contracts and delivered in a new backend campaign from the
 updated `dev` branch.
 
-The first campaign slice must close `TD-EX-01`: a canonical
-workspace/resource-scoped Paper screen API. Then close `TD-EX-02`/`TD-EX-03`,
-publish a signed dev image, activate one Paper screen only, and collect
-`TD-EX-06` evidence before widening screens or profiles.
+N19 has closed `TD-EX-03`. The next campaign slice must close `TD-EX-01` with
+canonical workspace/resource-scoped screen APIs; N21 owns Edge-global
+admission and `TD-EX-02`. Signed dev publication and post-deploy `TD-EX-06`
+evidence remain later explicit gates rather than N19 debt.
 
 ## 7. Merge and activation decision
 
@@ -104,4 +104,3 @@ Start a new branch from the updated `dev` after frontend/backend integration.
 Deliver the resource-scoped Paper screen API, Edge-global admission policy and
 canonical Rust compatibility route first. Product activation and post-deploy
 soak are a separate bounded dev window, not an implicit effect of merge.
-

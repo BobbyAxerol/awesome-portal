@@ -2728,8 +2728,8 @@ backend gate.
 | Phase | Backend output | Claude parallel/consumer lane | Status |
 |---|---|---|---|
 | N18 | complete 96-relation/read/command/BR-EX-41–71 census | verify screen/request coverage and duplicate-free mapping | `N18_COMPLETE_SOURCE_DARK / CENSUS_FROZEN / N19_READY` |
-| N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `APPROVED / IN_PROGRESS` |
-| N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states and retire smoke per slice | `PLANNED / N19_DEPENDENT` |
+| N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `COMPLETE / SOURCE_DARK / TD-EX-03_CLOSED` |
+| N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states and retire smoke per slice | `READY_NOT_STARTED / OWNER_APPROVAL_REQUIRED` |
 | N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `PLANNED / N20_DEPENDENT` |
 | N22 | full current Paper read activation | retire only matching Paper smoke blocks | `PLANNED / N21_DEPENDENT` |
 | N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_DEPENDENT` |
@@ -2979,4 +2979,29 @@ Claude handoff:
 
 Claude may verify duplicate-free screen coverage and honest unavailable/empty
 states. Raw Manager envelopes and relations remain server-only; smoke removal
-waits for the matching delivery phase. N19 is approved and is backend-only.
+waits for the matching delivery phase. N19 is now complete and remains
+backend-only; N20 has not started.
+
+### N19 backend — Rust Manager-v2 compatibility authority (2026-08-30)
+
+N19 is `N19_RUST_MANAGER_COMPATIBILITY_AUTHORITY_COMPLETE / SOURCE_DARK /
+N20_READY_NOT_STARTED`. Rust Edge now validates the SHA-256-bound 96-relation
+census, five sealed GET primitives, seven projections and exact
+environment/profile/resource/owner-revision binding before transport. The
+complete catalogue and capability surface fail closed on missing/extra/drift;
+keys and cursors remain source-issued and bound. Current and simulated-future
+adapters switch/rollback without changing future screen contracts, and the
+future simulation cannot bind in production.
+
+Only Paper is transport-qualified at this gate. Sandbox and Live have exact
+versioned bindings but remain dormant and return typed unavailable until their
+independent qualification phases.
+
+Backend report:
+[`EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md`](../../backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md).
+
+N19 adds no frontend route or fixture replacement. Claude must keep raw
+Manager relations/envelopes out of browser code. N20 will provide the narrow
+workspace/resource-scoped BFF contracts after explicit owner approval.

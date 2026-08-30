@@ -8,6 +8,9 @@ PACK_DIR="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/tra
 IMAGE="portal-execution-edge-ci:rust-1.85.1"
 NETWORK="execution-edge-test-net"
 PG_CONTAINER="execution-edge-test-postgres"
+REUSE_IMAGE="${EXECUTION_EDGE_CI_IMAGE_REUSE:-false}"
+INTERNAL_NETWORK="${EXECUTION_EDGE_INTERNAL_NETWORK:-false}"
+CARGO_CACHE_VOLUME="${EXECUTION_EDGE_CARGO_CACHE_VOLUME:-}"
 
 command -v docker >/dev/null 2>&1 || {
   printf 'Docker CLI is required.\n' >&2
@@ -43,7 +46,11 @@ cleanup() {
 }
 trap cleanup EXIT
 cleanup
-"${DOCKER[@]}" network create "${NETWORK}" >/dev/null
+if [[ "${INTERNAL_NETWORK}" == true ]]; then
+  "${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
+else
+  "${DOCKER[@]}" network create "${NETWORK}" >/dev/null
+fi
 "${DOCKER[@]}" run -d --name "${PG_CONTAINER}" --network "${NETWORK}" \
   -e POSTGRES_USER=portal -e POSTGRES_PASSWORD=portal \
   -e POSTGRES_DB=portal_projection_test \
@@ -64,10 +71,20 @@ if [[ "${ready}" != true ]]; then
   exit 1
 fi
 
-"${DOCKER[@]}" build \
-  --tag "${IMAGE}" \
-  --file "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
-  "${ROOT_DIR}"
+if [[ "${REUSE_IMAGE}" == true ]]; then
+  "${DOCKER[@]}" image inspect "${IMAGE}" >/dev/null
+else
+  "${DOCKER[@]}" build \
+    --tag "${IMAGE}" \
+    --file "${ROOT_DIR}/deploy/images/execution-edge-ci.Dockerfile" \
+    "${ROOT_DIR}"
+fi
+
+cargo_cache_mount=(--tmpfs /cargo:rw,exec,mode=1777,size=512m)
+if [[ -n "${CARGO_CACHE_VOLUME}" ]]; then
+  "${DOCKER[@]}" volume inspect "${CARGO_CACHE_VOLUME}" >/dev/null
+  cargo_cache_mount=(-v "${CARGO_CACHE_VOLUME}:/cargo:ro")
+fi
 
 "${DOCKER[@]}" run --rm \
   --network "${NETWORK}" \
@@ -76,7 +93,7 @@ fi
   --cap-drop ALL \
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m \
-  --tmpfs /cargo:rw,exec,mode=1777,size=512m \
+  "${cargo_cache_mount[@]}" \
   --tmpfs /target:rw,exec,mode=1777,size=4096m \
   -e HOME=/tmp \
   -e CARGO_HOME=/cargo \

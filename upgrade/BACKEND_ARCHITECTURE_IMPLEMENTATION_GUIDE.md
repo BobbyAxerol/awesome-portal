@@ -1686,6 +1686,21 @@ activation or the phase):**
   the canonical Rust Manager-v2 compatibility boundary. See
   [`EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md`](./backend/EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md).
 
+- **N19 Rust Manager-v2 compatibility authority complete (2026-08-30):** the
+  Edge loads a SHA-256-bound N18/N19 authority at startup and accepts exactly
+  96 relations, five sealed Manager GET primitives, seven projections and the
+  Paper/Sandbox/Live profile/resource bindings. Only Paper is currently
+  transport-qualified; Sandbox and Live are recognized but fail closed until
+  their independent qualification phases. Complete catalogue and
+  capability responses are validated before use; relation/key/cursor and
+  projection requests can only be built from the authenticated catalogue.
+  Current and simulated-future adapters have explicit qualification/rollback
+  semantics, while the simulated adapter cannot bind in production. TLS 1.3
+  mTLS, delegated JWT and fixed transport bounds remain in the sealed client.
+  No source or product runtime changed; `TD-EX-03` is closed and N20 is ready
+  but not started. See
+  [`EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md`](./backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

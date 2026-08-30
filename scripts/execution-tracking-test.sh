@@ -42,6 +42,9 @@ N17B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop
 N18_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md"
 N18_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md"
 N18_CENSUS="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json"
+N19_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md"
+N19_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md"
+N19_MATRIX="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json"
 DEBT_CLOSEOUT="${ROOT_DIR}/upgrade/backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 
 for required_file in \
@@ -66,6 +69,9 @@ for required_file in \
     "${N18_REPORT}" \
     "${N18_HANDOFF}" \
     "${N18_CENSUS}" \
+    "${N19_REPORT}" \
+    "${N19_HANDOFF}" \
+    "${N19_MATRIX}" \
     "${DEBT_CLOSEOUT}"
 do
     if [[ ! -f "${required_file}" ]]; then
@@ -99,6 +105,33 @@ do
 done
 if ! grep -Fq "N18 backend — Manager relation and capability census" "${TRACKER}"; then
     echo "shared tracker lost N18 closeout section" >&2
+    exit 1
+fi
+for token in \
+    "N19_RUST_MANAGER_COMPATIBILITY_AUTHORITY_COMPLETE" \
+    "96-relation" \
+    "five owner-published Manager GET primitives" \
+    "simulated-future" \
+    "TD-EX-03" \
+    "No source, product route"
+do
+    if ! grep -Fq "${token}" "${N19_REPORT}"; then
+        echo "N19 report lost compatibility invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N19_COMPLETE / SOURCE_DARK / N20_READY_NOT_STARTED" \
+    'Do not call `/internal/v2/manager/**` from the browser' \
+    "Do not remove smoke/fixture data"
+do
+    if ! grep -Fq "${token}" "${N19_HANDOFF}"; then
+        echo "N19 Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N19 backend — Rust Manager-v2 compatibility authority" "${TRACKER}"; then
+    echo "shared tracker lost N19 closeout section" >&2
     exit 1
 fi
 for token in \
@@ -409,6 +442,7 @@ for token in \
     "TD-EX-01" \
     "TD-EX-02" \
     "TD-EX-03" \
+    "CLOSED_N19" \
     "TD-EX-06" \
     "TD-FC-01" \
     "BR-EX-41…67"

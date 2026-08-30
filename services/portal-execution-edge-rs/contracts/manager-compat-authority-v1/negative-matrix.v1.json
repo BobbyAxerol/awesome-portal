@@ -1,0 +1,18 @@
+{
+  "schema_version": "portal.execution.manager-compat-negative-matrix.v1",
+  "phase": "N19",
+  "cases": [
+    {"id": "wrong_environment", "expected_error": "ENVIRONMENT_DENIED"},
+    {"id": "wrong_profile", "expected_error": "PROFILE_DENIED"},
+    {"id": "wrong_resource", "expected_error": "RESOURCE_DENIED"},
+    {"id": "unknown_owner_revision", "expected_error": "REVISION_UNSUPPORTED"},
+    {"id": "future_candidate_production_bind", "expected_error": "ADAPTER_NOT_DEPLOYABLE"},
+    {"id": "unknown_relation", "expected_error": "RELATION_NOT_APPROVED"},
+    {"id": "catalogue_relation_missing", "expected_error": "CATALOGUE_DRIFT"},
+    {"id": "catalogue_relation_extra", "expected_error": "CATALOGUE_DRIFT"},
+    {"id": "wrong_relation_cursor", "expected_error": "CURSOR_BINDING_DENIED"},
+    {"id": "wrong_projection_cursor", "expected_error": "CURSOR_BINDING_DENIED"},
+    {"id": "invalid_page_limit", "expected_error": "INVALID_PAGE_LIMIT"},
+    {"id": "arbitrary_transport_shape", "expected_error": "NOT_CONSTRUCTIBLE"}
+  ]
+}
