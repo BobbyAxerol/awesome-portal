@@ -278,6 +278,13 @@ smoke to fixtures at each stage.
 3. **(B1)** read transcript one-shot vs SSE — FE recommends one-shot.
 4. **Impact computation owner** — `marginal.v1` lives with BR-EX-51's what-if engine; confirm reuse, don't fork.
 5. **Step-up dependency** — confirm this rides U07's token verification, not a new mechanism.
+6. **Credential rotation command is missing from BOTH catalogs.** Accounts & Bindings and
+   Binding Detail already deep-link `/administration/actions?action=rotate_credential&binding=…`
+   (expiring-credential flows), but neither the WF 1i hi-fi's 24 tasks nor catalogue rev 2
+   carries a rotation command. The drawer answers the deep link honestly today (banner + link
+   back to Accounts). Decide: add `binding/rotate-credential` (MUTATION, binding scope,
+   `--binding` from the bindings registry, reason required) to Contract A, or name the real
+   command it maps to.
 
 **Retire on delivery (per stage):** the delivered slice of `adminCli.smoke.ts`, the SMOKE cases in
 `adminCli.test.tsx` for that tier, the "declared demo" copy for the delivered tier, and the
