@@ -408,7 +408,30 @@ raw-ISO gate · screenshot soi tay PF-360, Exit Review) + full gate 103 e2e.
 4. Profile & Access: COMMISSIONED, thuộc lane U07 (login/step-up) — chưa có
    việc frontend đến khi codex mở U10/U07.
 
-### G.5 Không thiếu màn nào khác trong scope §0
-17 màn Execution Loop + 3 governance mới + Admin WF 1i đã dựng đủ; các mục
-sidebar còn lại (Alpha Mining, Strategy Composer, Data Catalog, Portal Map…)
-ngoài scope Execution Loop, đúng trạng thái SOON/PROTOTYPE theo registry.
+### G.5 Verdict đóng luồng (owner hỏi 2026-08-30): ĐỦ ĐỂ ĐÓNG — với 1 gap có thực
+
+Chuỗi quyết định khép kín đầu-cuối, kiểm theo code (`reviewRouteFor`, 5 gate):
+R1 → R2 → Inbox (queue mọi gate) → Paper workbench → **PAPER_EXIT** (WF 4b) →
+Sandbox cert workbench → **SANDBOX_EXIT** (cùng màn exit review, copy tự theo
+`plan.targetStage`) → Canary control room → **LIVE_GATE** → Live full ops.
+Cross-cutting đủ: CC triage, Ops Queue, Incident, Admin WF 1i, Fleet,
+Alpha/Portfolio/Account 360, Blotter, Accounts & Bindings.
+
+**Gap cấu trúc duy nhất đáng một màn**: `LIVE_GATE` (canary → live) đang
+**mượn composition màn R2** (`reviewRouteFor` map LIVE_GATE → `/r2`). Có chỗ
+quyết định — không đứt luồng — nhưng reviewer duyệt lên live nhìn bằng chứng
+CAPITAL (R2), không phải bằng chứng CANARY (drift vs paper twin, envelope
+compliance, fill delta). Cần: hi-fi riêng cho màn Live-gate review, hoặc owner
+chốt "R2 composition là đủ cho LIVE_GATE".
+
+**Một màn có giá trị vận hành nếu muốn thêm** (không phải lỗ hổng): Waivers &
+Conditions — sổ điều kiện mở toàn fleet; hiện điều kiện chỉ thấy per-request
+(tạo ở R1/R2, hiện lại ở exit review), không có chỗ nào liệt kê tất cả điều
+kiện đang mở.
+
+**Tiện ích, không phải lỗ hổng**: Exit Reviews list (Inbox đã là queue của cả
+5 gate) · Promotion Timeline (stage trail đã có trên từng màn gate/exit).
+
+Ngoài scope §0: Profile & Access (lane U07 codex). Các mục sidebar còn lại
+(Alpha Mining, Strategy Composer, Data Catalog, Portal Map…) ngoài scope
+Execution Loop, đúng trạng thái SOON/PROTOTYPE theo registry.
