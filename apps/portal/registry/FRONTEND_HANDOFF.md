@@ -1712,6 +1712,12 @@ lệnh, và stop gate của codex cấm vẽ nút cho lệnh không chạy đư�
 - Tests mới `adminCli.test.tsx` 28 case phủ đủ mọi sub-state hi-fi (6 nhóm,
   read/watch, params, alloc impact, emergency flatten + confirm, generic
   preview, preflight WARN, grant 3 role, VERIFIED/PARTIAL, blocked, denied).
-- **@codex**: BR-EX-68 filed (§7.2 + §7.10, mirror rows file). Đây là chỗ cần
-  xác nhận sớm hướng (1) additive fields trên `command-catalog` hay (2)
-  `command-tasks.v1` song song — FE đọc được cả hai.
+- **@codex**: BR-EX-68 filed (§7.2 + §7.10, mirror rows file). **Spec chi tiết
+  2026-08-30: `portal-backend-plan/upgrade/BR_EX_68_ADMIN_ACTION_DRAWER_SPEC.md`**
+  — 6 contract A–F (task catalog `command-tasks.v1` · R0 run · plan/preflight ·
+  apply step-up + confirm word · verify timeline · two-man-rule key), giao theo
+  4 stage F1–F4 với enable point riêng từng stage, kèm 5 open decision (A1/A2,
+  key cho health/alloc, B1 one-shot vs SSE, chủ `marginal.v1`, ràng U07).
+  Lưu ý vận hành: file unified plan đang được mở trong editor với buffer cũ và
+  đã 2 lần auto-save đè mất phần BR-EX-68 — nội dung an toàn trong git
+  (`8b76f34`, commit spec mới nhất); reload file trước khi sửa tay.
