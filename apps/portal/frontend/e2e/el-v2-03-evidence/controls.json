@@ -2408,497 +2408,567 @@
   "route": "/administration/actions",
   "index": 0,
   "tag": "BUTTON",
-  "text": "All",
-  "verdict": "skipped:selected"
+  "text": "System healthREADsystemcli health",
+  "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 1,
   "tag": "BUTTON",
-  "text": "R0 read",
+  "text": "Alpha / account inspectREADalpha · accountcli al",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 2,
   "tag": "BUTTON",
-  "text": "R1 paper",
+  "text": "Capital historyREADportfolio · accountcli capita",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 3,
   "tag": "BUTTON",
-  "text": "R2 sandbox",
+  "text": "Performance & NAVREADalpha · account · portfolio",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 4,
   "tag": "BUTTON",
-  "text": "R3 protective",
+  "text": "Sizing explanationsREADalpha · symbolcli sizing ",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 5,
   "tag": "BUTTON",
-  "text": "R4 risk-increasing",
+  "text": "Broker bindings & exposureREADexternal_account_r",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 6,
   "tag": "BUTTON",
-  "text": "account policyR1 · paper mutationowner reviewOBS",
+  "text": "Redis inspectionREADdebug onlycli redis trading-",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 7,
   "tag": "BUTTON",
-  "text": "account reconcile-open-ordersR2 · sandboxowner r",
+  "text": "Create portfolioMUTATIONportfoliocli portfolio c",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 8,
   "tag": "BUTTON",
-  "text": "account reconcile-positionsR2 · sandboxowner rev",
+  "text": "Portfolio state (kill switch)MUTATIONportfoliocl",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 9,
   "tag": "BUTTON",
-  "text": "account seed-paperR1 · paper mutationowner revie",
-  "verdict": "changed"
+  "text": "Change allocationMUTATIONportfolio · accountcli ",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/administration/actions",
   "index": 10,
   "tag": "BUTTON",
-  "text": "account stateR0 · readOBSERVEDGET /v1/admin/acco",
+  "text": "Declarative config plan / applyMUTATIONmulti-res",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 11,
   "tag": "BUTTON",
-  "text": "account syncR2 · sandboxowner reviewOBSERVEDPOST",
+  "text": "Deployment state (isolated)MUTATIONalpha:mode:ve",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 12,
   "tag": "BUTTON",
-  "text": "allocation <root>R1 · paper mutationowner review",
+  "text": "Trading state per mode/venueMUTATIONmode · venue",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 13,
   "tag": "BUTTON",
-  "text": "authority createR1 · paper mutationowner reviewD",
+  "text": "Risk profile (alpha / instrument)MUTATIONalpha ·",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 14,
   "tag": "BUTTON",
-  "text": "authority listR0 · readDIRECT_ACCESS_PROHIBITEDn",
+  "text": "Register alphaMUTATIONalphacli alpha register ca",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 15,
   "tag": "BUTTON",
-  "text": "capital historyR0 · readOBSERVEDGET /v1/admin/po",
+  "text": "Account policyMUTATIONaccountcli account policy ",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 16,
   "tag": "BUTTON",
-  "text": "portfolio createR1 · paper mutationowner reviewA",
+  "text": "Seed / reset paper accountMUTATIONpaper account ",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 17,
   "tag": "BUTTON",
-  "text": "portfolio listR0 · readOBSERVEDGET /v1/admin/por",
+  "text": "Broker account syncMUTATIONaccount · venue-speci",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 18,
   "tag": "BUTTON",
-  "text": "portfolio stateR1 · paper mutationowner reviewOB",
+  "text": "Reconcile positionsMUTATIONaccountcli account re",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 19,
   "tag": "BUTTON",
-  "text": "alpha inspectR0 · readAMBIGUOUSno HTTP route pub",
+  "text": "Reconcile open ordersMUTATIONaccountcli account ",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 20,
   "tag": "BUTTON",
-  "text": "alpha registerR1 · paper mutationowner reviewOBS",
+  "text": "Aggregate physical reconcileMUTATIONexternal_acc",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 21,
   "tag": "BUTTON",
-  "text": "copy policiesR0 · readAMBIGUOUSno HTTP route pub",
+  "text": "Emergency close (flatten)DANGERaccount · alpha [",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 22,
   "tag": "BUTTON",
-  "text": "copy policyunclassifiedAMBIGUOUSno HTTP route pu",
+  "text": "Shared testnet hard resetDANGERbinance_testnet_m",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 23,
   "tag": "BUTTON",
-  "text": "deployment stateR1 · paper mutationowner reviewO",
+  "text": "Lab reset (alpha-scoped / global)BLOCKEDlab only",
   "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 24,
   "tag": "BUTTON",
-  "text": "bracket-audit <root>R1 · paper mutationowner rev",
-  "verdict": "changed"
+  "text": "All",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 25,
   "tag": "BUTTON",
-  "text": "order-group listR0 · readAMBIGUOUSno HTTP route ",
-  "verdict": "changed"
+  "text": "R0 read",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 26,
   "tag": "BUTTON",
-  "text": "order-group showR0 · readAMBIGUOUSno HTTP route ",
-  "verdict": "changed"
+  "text": "R1 paper",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 27,
   "tag": "BUTTON",
-  "text": "replay compareR0 · readOBSERVEDGET /v1/admin/rep",
-  "verdict": "changed"
+  "text": "R2 sandbox",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 28,
   "tag": "BUTTON",
-  "text": "replay createR1 · paper mutationowner reviewAMBI",
-  "verdict": "changed"
+  "text": "R3 protective",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 29,
   "tag": "BUTTON",
-  "text": "replay eventsR0 · readOBSERVEDGET /v1/admin/even",
-  "verdict": "changed"
+  "text": "R4 risk-increasing",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 30,
   "tag": "BUTTON",
-  "text": "replay exportR1 · paper mutationowner reviewOBSE",
-  "verdict": "changed"
+  "text": "account policyR1 · paper mutationowner reviewOBS",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 31,
   "tag": "BUTTON",
-  "text": "replay jobsR0 · readAMBIGUOUSno HTTP route publi",
-  "verdict": "changed"
+  "text": "account reconcile-open-ordersR2 · sandboxowner r",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 32,
   "tag": "BUTTON",
-  "text": "replay lifecycleR0 · readOBSERVEDGET /v1/admin/r",
-  "verdict": "changed"
+  "text": "account reconcile-positionsR2 · sandboxowner rev",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 33,
   "tag": "BUTTON",
-  "text": "replay quantbt-diffR1 · paper mutationowner revi",
-  "verdict": "changed"
+  "text": "account seed-paperR1 · paper mutationowner revie",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 34,
   "tag": "BUTTON",
-  "text": "replay runR1 · paper mutationowner reviewOBSERVE",
-  "verdict": "changed"
+  "text": "account stateR0 · readOBSERVEDGET /v1/admin/acco",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 35,
   "tag": "BUTTON",
-  "text": "replay showR0 · readAMBIGUOUSno HTTP route publi",
-  "verdict": "changed"
+  "text": "account syncR2 · sandboxowner reviewOBSERVEDPOST",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 36,
   "tag": "BUTTON",
-  "text": "ops alertsR0 · readUNPUBLISHEDno HTTP route publ",
-  "verdict": "changed"
+  "text": "allocation <root>R1 · paper mutationowner review",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 37,
   "tag": "BUTTON",
-  "text": "ops alpha-activityR0 · readUNPUBLISHEDno HTTP ro",
-  "verdict": "changed"
+  "text": "authority createR1 · paper mutationowner reviewD",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 38,
   "tag": "BUTTON",
-  "text": "ops command-journalR0 · readUNPUBLISHEDno HTTP r",
-  "verdict": "changed"
+  "text": "authority listR0 · readDIRECT_ACCESS_PROHIBITEDn",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 39,
   "tag": "BUTTON",
-  "text": "ops dead-lettersR0 · readUNPUBLISHEDno HTTP rout",
-  "verdict": "changed"
+  "text": "capital historyR0 · readOBSERVEDGET /v1/admin/po",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 40,
   "tag": "BUTTON",
-  "text": "ops emergency-closeR3 · live protectiveowner rev",
-  "verdict": "changed"
+  "text": "portfolio createR1 · paper mutationowner reviewA",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 41,
   "tag": "BUTTON",
-  "text": "ops emergency-close-verifyR3 · live protectiveow",
-  "verdict": "changed"
+  "text": "portfolio listR0 · readOBSERVEDGET /v1/admin/por",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 42,
   "tag": "BUTTON",
-  "text": "ops findingsR0 · readUNPUBLISHEDno HTTP route pu",
-  "verdict": "changed"
+  "text": "portfolio stateR1 · paper mutationowner reviewOB",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 43,
   "tag": "BUTTON",
-  "text": "ops redis-retentionR0 · readUNPUBLISHEDno HTTP r",
-  "verdict": "changed"
+  "text": "alpha inspectR0 · readAMBIGUOUSno HTTP route pub",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 44,
   "tag": "BUTTON",
-  "text": "ops streamsR0 · readUNPUBLISHEDno HTTP route pub",
-  "verdict": "changed"
+  "text": "alpha registerR1 · paper mutationowner reviewOBS",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 45,
   "tag": "BUTTON",
-  "text": "ops trace-orderR0 · readUNPUBLISHEDno HTTP route",
-  "verdict": "changed"
+  "text": "copy policiesR0 · readAMBIGUOUSno HTTP route pub",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 46,
   "tag": "BUTTON",
-  "text": "broker bindingsR0 · readAMBIGUOUSno HTTP route p",
-  "verdict": "changed"
+  "text": "copy policyunclassifiedAMBIGUOUSno HTTP route pu",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 47,
   "tag": "BUTTON",
-  "text": "broker exposureR0 · readOBSERVEDGET /v1/admin/br",
-  "verdict": "changed"
+  "text": "deployment stateR1 · paper mutationowner reviewO",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 48,
   "tag": "BUTTON",
-  "text": "broker reconcile-open-ordersR2 · sandboxowner re",
-  "verdict": "changed"
+  "text": "bracket-audit <root>R1 · paper mutationowner rev",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 49,
   "tag": "BUTTON",
-  "text": "broker reconcile-positionsR2 · sandboxowner revi",
-  "verdict": "changed"
+  "text": "order-group listR0 · readAMBIGUOUSno HTTP route ",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 50,
   "tag": "BUTTON",
-  "text": "broker stateR0 · readOBSERVEDGET /v1/admin/broke",
-  "verdict": "changed"
+  "text": "order-group showR0 · readAMBIGUOUSno HTTP route ",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 51,
   "tag": "BUTTON",
-  "text": "config applyR1 · paper mutationowner reviewAMBIG",
-  "verdict": "changed"
+  "text": "replay compareR0 · readOBSERVEDGET /v1/admin/rep",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 52,
   "tag": "BUTTON",
-  "text": "config planR0 · readAMBIGUOUSno HTTP route publi",
-  "verdict": "changed"
+  "text": "replay createR1 · paper mutationowner reviewAMBI",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 53,
   "tag": "BUTTON",
-  "text": "health <root>R0 · readOBSERVEDGET /v1/health",
-  "verdict": "changed"
+  "text": "replay eventsR0 · readOBSERVEDGET /v1/admin/even",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 54,
   "tag": "BUTTON",
-  "text": "performance accountR0 · readAMBIGUOUSno HTTP rou",
-  "verdict": "changed"
+  "text": "replay exportR1 · paper mutationowner reviewOBSE",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 55,
   "tag": "BUTTON",
-  "text": "performance account-historyR0 · readOBSERVEDGET ",
-  "verdict": "changed"
+  "text": "replay jobsR0 · readAMBIGUOUSno HTTP route publi",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 56,
   "tag": "BUTTON",
-  "text": "performance dashboardR0 · readOBSERVEDGET /v1/ad",
-  "verdict": "changed"
+  "text": "replay lifecycleR0 · readOBSERVEDGET /v1/admin/r",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 57,
   "tag": "BUTTON",
-  "text": "performance instrumentR0 · readOBSERVEDGET /v1/a",
-  "verdict": "changed"
+  "text": "replay quantbt-diffR1 · paper mutationowner revi",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 58,
   "tag": "BUTTON",
-  "text": "performance portfolioR0 · readAMBIGUOUSno HTTP r",
-  "verdict": "changed"
+  "text": "replay runR1 · paper mutationowner reviewOBSERVE",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 59,
   "tag": "BUTTON",
-  "text": "performance portfolio-historyR0 · readOBSERVEDGE",
-  "verdict": "changed"
+  "text": "replay showR0 · readAMBIGUOUSno HTTP route publi",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 60,
   "tag": "BUTTON",
-  "text": "redis alpha-authR0 · readDIRECT_ACCESS_PROHIBITE",
-  "verdict": "changed"
+  "text": "ops alertsR0 · readUNPUBLISHEDno HTTP route publ",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 61,
   "tag": "BUTTON",
-  "text": "redis getR0 · readDIRECT_ACCESS_PROHIBITEDno HTT",
-  "verdict": "changed"
+  "text": "ops alpha-activityR0 · readUNPUBLISHEDno HTTP ro",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 62,
   "tag": "BUTTON",
-  "text": "redis scanR0 · readDIRECT_ACCESS_PROHIBITEDno HT",
-  "verdict": "changed"
+  "text": "ops command-journalR0 · readUNPUBLISHEDno HTTP r",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 63,
   "tag": "BUTTON",
-  "text": "redis streamunclassifiedDIRECT_ACCESS_PROHIBITED",
-  "verdict": "changed"
+  "text": "ops dead-lettersR0 · readUNPUBLISHEDno HTTP rout",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 64,
   "tag": "BUTTON",
-  "text": "redis trading-stateR0 · readDIRECT_ACCESS_PROHIB",
-  "verdict": "changed"
+  "text": "ops emergency-closeR3 · live protectiveowner rev",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 65,
   "tag": "BUTTON",
-  "text": "risk profileR0 · readAMBIGUOUSno HTTP route publ",
-  "verdict": "changed"
+  "text": "ops emergency-close-verifyR3 · live protectiveow",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 66,
   "tag": "BUTTON",
-  "text": "risk stateR1 · paper mutationowner reviewOBSERVE",
-  "verdict": "changed"
+  "text": "ops findingsR0 · readUNPUBLISHEDno HTTP route pu",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 67,
   "tag": "BUTTON",
-  "text": "sizing decisionR0 · readAMBIGUOUSno HTTP route p",
-  "verdict": "changed"
+  "text": "ops redis-retentionR0 · readUNPUBLISHEDno HTTP r",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 68,
   "tag": "BUTTON",
-  "text": "sizing historyR0 · readAMBIGUOUSno HTTP route pu",
-  "verdict": "changed"
+  "text": "ops streamsR0 · readUNPUBLISHEDno HTTP route pub",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 69,
   "tag": "BUTTON",
-  "text": "sizing summaryR0 · readOBSERVEDGET /v1/admin/siz",
-  "verdict": "changed"
+  "text": "ops trace-orderR0 · readUNPUBLISHEDno HTTP route",
+  "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 70,
   "tag": "BUTTON",
-  "text": "Copy full source commit",
+  "text": "broker bindingsR0 · readAMBIGUOUSno HTTP route p",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 71,
+  "tag": "BUTTON",
+  "text": "broker exposureR0 · readOBSERVEDGET /v1/admin/br",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 72,
+  "tag": "BUTTON",
+  "text": "broker reconcile-open-ordersR2 · sandboxowner re",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 73,
+  "tag": "BUTTON",
+  "text": "broker reconcile-positionsR2 · sandboxowner revi",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 74,
+  "tag": "BUTTON",
+  "text": "broker stateR0 · readOBSERVEDGET /v1/admin/broke",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 75,
+  "tag": "BUTTON",
+  "text": "config applyR1 · paper mutationowner reviewAMBIG",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 76,
+  "tag": "BUTTON",
+  "text": "config planR0 · readAMBIGUOUSno HTTP route publi",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 77,
+  "tag": "BUTTON",
+  "text": "health <root>R0 · readOBSERVEDGET /v1/health",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 78,
+  "tag": "BUTTON",
+  "text": "performance accountR0 · readAMBIGUOUSno HTTP rou",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 79,
+  "tag": "BUTTON",
+  "text": "performance account-historyR0 · readOBSERVEDGET ",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/administration/actions",
+  "index": 80,
+  "tag": "BUTTON",
+  "text": "performance dashboardR0 · readOBSERVEDGET /v1/ad",
   "verdict": "skipped:hidden"
  }
 ]
