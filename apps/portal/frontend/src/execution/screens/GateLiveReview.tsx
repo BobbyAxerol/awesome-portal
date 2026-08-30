@@ -14,6 +14,8 @@
  */
 import { Fragment, type ReactNode } from "react";
 
+import { preciseAge, useInboxTick } from "../approvalInbox.smoke";
+
 import { LIVE_GATE } from "../governance.smoke";
 import { LinesChart } from "../components/marketChart";
 import { ExecutionDecisionBar } from "../components/decisionBar";
@@ -56,6 +58,7 @@ export function GateLiveReview({
   denyLocked: boolean;
   trail?: ReactNode;
 }) {
+  const tick = useInboxTick();
   if (status !== "ok" && status !== "partial") {
     return (
       <section className="exec-gate exec-gov" aria-label={`Gate LIVE review ${approvalId}`}>
@@ -75,7 +78,7 @@ export function GateLiveReview({
           <a href={LIVE_GATE.r2Ref.href}>{LIVE_GATE.r2Ref.note} →</a> · evidence window lives in the{" "}
           <a href={LIVE_GATE.canaryHref}>Canary Control Room</a> · request {approvalId} · dual
           approval {quorumMet}/{quorumRequired} · reviewer {actor}
-          {sla ? <> · <SlaCell sla={sla} /></> : null}
+          {sla ? <> · <SlaCell sla={sla} preciseAgeText={preciseAge(sla.ageMinutes, tick)} /></> : null}
         </span>
       </div>
       <p className="exec-af-smoke">
@@ -152,6 +155,16 @@ export function GateLiveReview({
                 <span className="exec-gov-v">{row.v}</span>
               </Fragment>
             ))}
+          </div>
+          <div className="exec-gate-capstep" aria-label="Capital step toward target">
+            <span className="exec-gate-capsteptrack" aria-hidden="true">
+              <span className="exec-gate-capstepfill" data-seg="now" style={{ width: "6.25%" }} />
+              <span className="exec-gate-capstepfill" data-seg="step" style={{ left: "6.25%", width: "18.75%" }} />
+              <span className="exec-gate-capstepmark" style={{ left: "6.25%" }} data-label="5k now" />
+              <span className="exec-gate-capstepmark" style={{ left: "25%" }} data-label="20k this approval" />
+              <span className="exec-gate-capstepmark" style={{ left: "100%" }} data-label="80k target" />
+            </span>
+            <span className="exec-gate-capsteplegend">canary 5,000 → <b>this step 20,000 (25% of target)</b> → target 80,000 · each later step is its own approval at this gate</span>
           </div>
           <p className="exec-gate-note">{LIVE_GATE.capital.note}</p>
         </div>

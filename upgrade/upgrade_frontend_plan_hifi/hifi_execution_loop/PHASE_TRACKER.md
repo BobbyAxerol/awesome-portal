@@ -2812,3 +2812,9 @@ N13B and proceed in order through N17B.
 > adminCli.test 28/28, adminDrawer.test 22/22 (invariant F0 giữ), tokens gate
 > 12/12, tsc xanh; full gate + baseline đang chạy nền.
 
+> **2026-08-30 · UI/UX VERSION FREEZE (owner):** tạm chốt toàn bộ UI/UX
+> Execution Loop — không màn/luồng/request mới. Worklist đóng version:
+> ROADMAP §J.2 (registry ×2 + fixture routes + BR-EX-41…71 + OHLC decision).
+> Điều kiện đóng: §J.3. Frontend trong freeze chỉ: chỉnh theo owner trên màn
+> hiện có + bóc SMOKE khi từng gói codex về.
+

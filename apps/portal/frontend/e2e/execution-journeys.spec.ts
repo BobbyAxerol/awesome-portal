@@ -558,6 +558,11 @@ test.describe("EL-V2-07 · operations workflow", () => {
     ["operations-queue", "/execution/operations"],
     ["incident-inc_fixture_44", "/execution/operations/incidents/inc_fixture_44"],
     ["admin-actions", "/administration/actions"],
+    // UI freeze 2026-08-30: the three owner-commissioned governance screens
+    // are locked into the shell-visible baseline set.
+    ["gov-new-request", "/governance/approvals/new"],
+    ["gov-live-gate", "/governance/approvals/AP-311/live"],
+    ["gov-waivers", "/governance/waivers"],
   ] as const) {
     test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
       await open(page, route);

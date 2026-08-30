@@ -30,6 +30,14 @@ describe("loop entry — New approval request", () => {
     expect(screen.getByText(/R2 \(capital\) requires an approved R1/)).toBeTruthy();
   });
 
+  it("shows the loop path, the run's quick facts, and warns on a re-review pick", () => {
+    render(<NewApprovalRequestScreen />);
+    expect(screen.getByText(/1 · DECLARE — you, now/)).toBeTruthy();
+    expect(screen.getAllByText(/sharpe 1\.74 net/).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText("Alpha (from the alpha registry)"), { target: { value: "grid" } });
+    expect(screen.getByText(/opens a RE-REVIEW of its evidence/)).toBeTruthy();
+  });
+
   it("blocks submit until the summary is a real sentence", () => {
     render(<NewApprovalRequestScreen />);
     const submit = screen.getByRole("button", { name: "Submit for R1 review" }) as HTMLButtonElement;
@@ -69,6 +77,12 @@ describe("live gate — its own review room", () => {
     expect(screen.getByText(/fill Δ vs paper twin/)).toBeTruthy();
     expect(screen.getAllByText(/gate_live rev 3/).length).toBeGreaterThan(0);
     expect(screen.getByText(/BR-EX-70/)).toBeTruthy();
+  });
+
+  it("draws the capital step toward target, each later step its own approval", async () => {
+    render(<GateLiveReviewContainer api={createFixtureApi()} approvalId="AP-311" />);
+    expect(await screen.findByText(/this step 20,000 \(25% of target\)/)).toBeTruthy();
+    expect(screen.getByText(/each later step is its own approval at this gate/)).toBeTruthy();
   });
 
   it("approval grants the step only — activation stays with the Action Drawer", async () => {

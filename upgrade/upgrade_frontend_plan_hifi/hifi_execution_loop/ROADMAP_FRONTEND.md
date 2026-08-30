@@ -527,3 +527,49 @@ nhiều alpha đã nằm trong §8 scale-refine từng màn (keyset Inbox/Blotte
 2. Nhãn entity trong breadcrumb preview (`av_2041 → "Grid v2.1"`) đang map cứng
    ở ExecutionPreviewRoute — chuyển sang đọc từ data trả về (server sẽ cấp
    label khi contract về).
+
+---
+
+## J. UI/UX VERSION FREEZE — owner chốt 2026-08-30
+
+**Quyết định owner (Bobby, 2026-08-30):** tạm chốt version UI/UX Execution
+Loop như hiện tại. **Không mở màn mới, không mở luồng mới, không thêm backend
+request mới.** Codex tập trung giao backend; hai bên theo dõi song song; mọi
+điều chỉnh trên màn hiện có chỉ làm khi owner yêu cầu/chấp nhận (khoảng cách,
+màu sắc, component… — không cần request backend). Nâng cấp/thêm màn chỉ bàn
+SAU khi version này đóng.
+
+### J.1 Phạm vi đã chốt (25 màn + shell)
+
+17 màn Execution review + Governance Light (Inbox 4a · R1 1a · R2 1b · Exit
+4b) + Admin WF 1i + 3 màn governance bổ sung (New request · Gate LIVE ·
+Waivers) + workspace mode/theme + link-integrity toàn cục. Cả 3 màn mới đã
+qua polish pass "trau chuốt" cùng ngày và **khoá vào baseline chính thức
+el-v2-07** (gov-new-request · gov-live-gate · gov-waivers).
+
+### J.2 Worklist codex để ĐÓNG version (toàn bộ, không thêm nữa)
+
+| # | Việc | Nguồn |
+|---|---|---|
+| 1 | Registry: flip `show_in_sidebar` cho EXECUTION_ADMIN_ACTIONS | HOTFIX §1 |
+| 2 | Registry: 3 screen row + feature Waivers (sidebar GOVERNANCE order 30) | HOTFIX §2 + §2.1 |
+| 3 | Fixture route fix: `op_1249` query-form · `PX-29` exit-review path (xoá `canonicalHref` adapter khi xong) | §8.34 |
+| 4 | BR-EX-41…66: các contract màn cũ đang `RECEIVED` | plan §7.2 |
+| 5 | BR-EX-67 (R1/R2 evidence+policy) · BR-EX-68 (WF 1i, spec file riêng, 6 open decision) · BR-EX-69/70/71 (entry · live-gate payload · conditions register) | plan §7.9–§7.11 |
+| 6 | OHLC owner decision §7.5.5(1) — vẫn escalated | plan §7.5 |
+
+Mỗi gói giao xong → frontend xoá đúng khối SMOKE theo deletion contract ghi
+trong từng file smoke, re-record baseline liên quan — **không đổi composition**.
+
+### J.3 Điều kiện đóng version (kiểm được)
+
+1. Toàn bộ J.2 giao đủ; lệnh ritual §7.8(3) trả về 0 contract chưa đọc.
+2. Không còn chuỗi "SMOKE DATA" nào trên 27 route (crawler hiện có sẽ chuyển
+   thành gate khẳng định 0 SMOKE khi J.2 xong).
+3. Full gate 2 project xanh trên dữ liệu contract thật + Bobby ký duyệt hình.
+
+### J.4 Trong lúc chờ (frontend được làm mà không phá freeze)
+
+- Chỉnh sửa theo yêu cầu owner trên màn hiện có (spacing/màu/component).
+- Xoá smoke + nối contract khi từng gói codex về (J.2).
+- Không: màn mới, luồng mới, request mới, đổi composition đã duyệt.

@@ -118,12 +118,12 @@ export const GOV_CHARTS = {
 export const NEW_REQUEST = {
   alphas: [
     { id: "carry", label: "Carry v3.2", note: "research complete · run_5512" },
-    { id: "grid", label: "Grid v2.1", note: "already in loop — dep_94 canary" },
+    { id: "grid", label: "Grid v2.1", note: "already in loop — dep_94 canary", warn: "Grid v2.1 is already in the loop (dep_94, canary). A second R1 for the same alpha opens a RE-REVIEW of its evidence — it never creates a parallel lane." },
     { id: "vnmomo", label: "VnMomo v0.9", note: "research complete · run_5320 · DNSE" },
   ],
   runs: [
-    { id: "run_5512", label: "run_5512 · 2019-01 → 2026-06 · 1h · fees 4bp", digest: "sha256:41bb7d…c4" },
-    { id: "run_5320", label: "run_5320 · 2021-03 → 2026-06 · session · VN", digest: "sha256:9e12aa…07" },
+    { id: "run_5512", label: "run_5512 · 2019-01 → 2026-06 · 1h · fees 4bp", digest: "sha256:41bb7d…c4", facts: "sharpe 1.74 net · maxDD −5.1% · 1,212 trades · WFO min 0.71 (fold 6)" },
+    { id: "run_5320", label: "run_5320 · 2021-03 → 2026-06 · session · VN", digest: "sha256:9e12aa…07", facts: "sharpe 1.38 net · maxDD −4.2% · 618 trades · session-only, no overnight" },
   ],
   claims: [
     { id: "clm_31", label: "clm_31 · window roles IS/OOS/holdout fixed" },

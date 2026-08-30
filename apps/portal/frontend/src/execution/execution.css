@@ -6572,3 +6572,19 @@
   .exec-wv-lanetext { grid-column: 1 / -1; }
 }
 .exec-px-panel .exec-gov-headlink { margin-left: auto; font: var(--exec-font-meta); text-transform: none; letter-spacing: 0; }
+
+/* ── Gate LIVE + New-request polish (freeze pass 2026-08-30). */
+.exec-gate-criteria tbody tr:hover th, .exec-gate-criteria tbody tr:hover td { background: var(--paper-raised); }
+.exec-gate-note[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-gate-note[data-tone="mute"] { color: var(--ink-mute); }
+.exec-gate-capstep { display: flex; flex-direction: column; gap: 18px; margin-top: 10px; }
+.exec-gate-capsteptrack { position: relative; height: 8px; background: var(--paper-sunken); border: 1px solid var(--line-strong); }
+.exec-gate-capstepfill { position: absolute; top: 0; bottom: 0; }
+.exec-gate-capstepfill[data-seg="now"] { left: 0; background: var(--good); }
+.exec-gate-capstepfill[data-seg="step"] { background: var(--accent); opacity: 0.85; transition: width 600ms ease; }
+.exec-gate-capstepmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink-soft); transform: translateX(-50%); }
+.exec-gate-capstepmark::after { content: attr(data-label); position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font: 400 9px/1.4 var(--font-mono); color: var(--ink-mute); white-space: nowrap; }
+.exec-gate-capstepmark:last-of-type::after { transform: translateX(-100%); }
+.exec-gate-capsteplegend { font: var(--exec-font-meta); color: var(--ink-soft); margin-top: 6px; }
+.exec-gate-capsteplegend b { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .exec-gate-capstepfill[data-seg="step"] { transition: none; } }

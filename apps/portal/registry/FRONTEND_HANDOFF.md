@@ -1779,3 +1779,21 @@ Routing: 3 route chưa có registry row → claim tạm qua
 HOTFIX_REQUEST_2026-08-30 §2; `previewRegistry.test` ghi danh sách pending
 chính xác (không nới lỏng assertion). Tests mới `governanceAdditions.test.tsx`
 9 case; R2 link-tests cập nhật vì Decision panel thêm link waivers.
+
+### 8.38 UI/UX VERSION FREEZE (owner 2026-08-30) + polish pass cuối
+
+Owner chốt: tạm đóng version UI/UX — không mở màn/luồng/request mới; codex
+tập trung giao backend (worklist đầy đủ: ROADMAP §J.2); điều chỉnh màn hiện
+có chỉ theo yêu cầu owner. Trước khi chốt, polish pass "trau chuốt" cho 2 màn
+còn lại cùng chuẩn với Waivers:
+
+- **New request**: thêm loop-path chips (1·DECLARE you-now → 2·R1 not-you →
+  3·R2 after-R1), evidence quick facts theo run đang chọn (khớp số cast:
+  sharpe 1.74/−5.1%/1,212), cảnh báo re-review khi chọn alpha đã trong loop
+  (Grid → "RE-REVIEW, never a parallel lane").
+- **Gate LIVE**: SLA đếm chính xác từng giây trên metaline (`preciseAge` +
+  tick, gated); thanh **capital step** trong panel inverse (5k now → 20k this
+  approval → 80k target, mỗi bước sau là approval riêng); drift chart sửa
+  data để canary bám twin đúng như criteria claim; hover criteria.
+- **Khoá baseline**: 3 màn mới vào danh sách el-v2-07 (`gov-new-request`,
+  `gov-live-gate`, `gov-waivers`) — visual từ giờ là gate thật.

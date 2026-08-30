@@ -44,6 +44,12 @@ export function NewApprovalRequestScreen() {
           {NEW_REQUEST.slaBudgetHours}h starts at submit · {NEW_REQUEST.policy}
         </span>
       </div>
+      <div className="exec-gate-stagechips" role="group" aria-label="Where this request sits in the loop">
+        <span className="exec-gate-stagechip" data-state="eligible">1 · DECLARE — you, now</span>
+        <span className="exec-gate-stagechip">2 · R1 — a quant reviewer, not you</span>
+        <span className="exec-gate-stagechip">3 · R2 — capital, only after R1 approves</span>
+        <span className="exec-gov-meta">the request you submit is step 1 of 3 — nothing trades until both gates say yes</span>
+      </div>
       <p className="exec-af-smoke">
         ! SMOKE DATA — the create-request endpoint is not published; this form is a declared demo
         and nothing is persisted. Delete when BR-EX-69 ships
@@ -98,6 +104,12 @@ export function NewApprovalRequestScreen() {
               <span className="exec-gov-k">gate</span>
               <span className="exec-gov-v">R1 — research evidence. R2 (capital) requires an approved R1 and opens from its decision.</span>
             </div>
+            <p className="exec-gate-note" data-tone="mute">
+              evidence quick facts · <span className="exec-gov-v">{run.facts}</span>
+            </p>
+            {"warn" in alpha && alpha.warn ? (
+              <p className="exec-gate-note" data-tone="warn" role="note">! {alpha.warn}</p>
+            ) : null}
             <p className="exec-gate-note">
               ids picked from registries — never free-typed · the request carries the run digest,
               not the numbers: reviewers read evidence from the run itself
@@ -116,6 +128,8 @@ export function NewApprovalRequestScreen() {
           <div className="exec-gov-panel" data-smoke="true">
             <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">What R1 will review</span></div>
             <div className="exec-gov-kv">
+              <span className="exec-gov-k">evidence facts</span>
+              <span className="exec-gov-v">{run.facts} — headline only; the reviewer decides from the run, not this line</span>
               <span className="exec-gov-k">artifact digest</span>
               <span className="exec-gov-v">{run.digest} · pinned at submit</span>
               <span className="exec-gov-k">window roles</span>
