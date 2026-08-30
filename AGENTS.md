@@ -150,6 +150,35 @@ Rules for these agents:
   credentials or owner-owned implementation must fail closed and be reported
   once, not rediscovered phase by phase.
 
+## Execution Manager N18–N29 campaign rules
+
+- Bobby has approved the campaign direction: adapt and use the maximum
+  semantically valid capability already published by the Trading System across
+  Paper, Sandbox and Live. Paper is an evidence order, not a product ceiling.
+- Campaign direction is not permission to start every phase automatically.
+  Begin N18–N29 only when Bobby names that phase. After approval, finish its
+  declared code, tests, evidence, tracking and coherent commit without asking
+  for the same generic approval again.
+- Source-as-is comes first. Request a Trading System change only in N28 and
+  only after the N18/N19/N27 evidence proves the semantic capability is truly
+  absent from current Manager, Gateway, market/data or command sources.
+- Rust is the versioned compatibility/query/projection/realtime authority;
+  TypeScript owns actor, workspace, RBAC, governance and screen composition.
+  Do not add Python except for an unavoidable quant-compute adapter.
+- Never expose raw Manager relations, SQL, Redis, shell, generic URLs or
+  arbitrary upstream payloads to the browser. Keep mTLS/delegated JWT, Portal
+  session/RBAC and typed command controls as separate boundaries.
+- Horizontal admission, cache isolation, bounds, retention, backpressure,
+  restart, restore and rollback belong to the phase exit gate. Do not label
+  them future cleanup or create an unnamed phase for already-known work.
+- Use the shortest real evidence profile that exercises the phase risk. An
+  extended soak is required only where the release gate names it; synthetic
+  evidence is never presented as real.
+- N18 freezes the whole known campaign, including Claude BR-EX-41–71. N29 must
+  close every frozen entry as served, intentionally internal or honestly
+  unavailable with one N28 owner record; a new phase requires genuinely new
+  scope or a new owner contract revision.
+
 ## Commands
 
 All stack operations go through `./scripts/portal` (mirrored in `make`):

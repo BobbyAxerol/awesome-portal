@@ -1664,6 +1664,18 @@ activation or the phase):**
   not hidden N17B work. See
   [`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
 
+- **Manager Surface Expansion campaign planned (2026-08-30):** N18–N29 is the
+  finite follow-on campaign for maximum semantically valid current Trading
+  System coverage across Paper, Sandbox and Live. N18 freezes all 96 Manager
+  relations, published reads/commands and Claude BR-EX-41–71 before code;
+  N19–N27 deliver the versioned Rust compatibility plane, TypeScript screen
+  BFF, shared scale controls, full profile reads, durable projection,
+  analytics/SSE and typed Admin Action Drawer. N28 alone consolidates genuinely
+  absent owner semantics; N29 closes product/release evidence without unnamed
+  debt. The direction is approved, but each phase begins only when Bobby names
+  it. This tracking update changes no runtime, source, profile, route,
+  credential, command or stable deployment.
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

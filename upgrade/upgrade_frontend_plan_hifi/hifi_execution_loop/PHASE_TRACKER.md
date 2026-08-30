@@ -2717,6 +2717,29 @@ for Trading System. A B lane uses only bounded authenticated current sources,
 never template/candidate/fixture bytes presented as real. No A-lane status may
 remove an unavailable label or enable a source, Query/SSE profile or command.
 
+### N18–N29 Manager Surface Expansion campaign (planned 2026-08-30)
+
+The canonical scope, rules and exit gates live in
+[`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+Bobby has approved the campaign direction but starts each phase by naming it.
+Claude may continue against stable fixtures; smoke removal follows the matching
+backend gate.
+
+| Phase | Backend output | Claude parallel/consumer lane | Status |
+|---|---|---|---|
+| N18 | complete 96-relation/read/command/BR-EX-41–71 census | verify screen/request coverage and duplicate-free mapping | `PLANNED / NAMED_APPROVAL_PENDING` |
+| N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `PLANNED / N18_DEPENDENT` |
+| N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states and retire smoke per slice | `PLANNED / N19_DEPENDENT` |
+| N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `PLANNED / N20_DEPENDENT` |
+| N22 | full current Paper read activation | retire only matching Paper smoke blocks | `PLANNED / N21_DEPENDENT` |
+| N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_DEPENDENT` |
+| N24 | durable Portal projection | consume projection freshness/gap/rebuild states | `PLANNED / N23_DEPENDENT` |
+| N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `PLANNED / N24_DEPENDENT` |
+| N26 | projection-backed authenticated SSE | close terminal streams; no infinite reconnect loop | `PLANNED / N25_DEPENDENT` |
+| N27 | typed Admin Action Drawer command plane | enable controls only at authoritative terminal parity | `PLANNED / N20_N21_DEPENDENT` |
+| N28 | one owner packet for proved genuine gaps only | retain typed unavailable until verified return | `PLANNED / CENSUS_EVIDENCE_DEPENDENT` |
+| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `PLANNED / N18_N28_DEPENDENT` |
+
 ### N14A backend — Portal release authority, source-dark (2026-08-26)
 
 Codex completed the Portal-owned release lane: all six images are digest-bound,
