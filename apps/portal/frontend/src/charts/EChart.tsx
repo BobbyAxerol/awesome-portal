@@ -51,6 +51,11 @@ export function EChart({ option, height = 320, className, id }: EChartProps) {
   const chartRef = useRef<echarts.ECharts | null>(null);
 
   useEffect(() => {
+    // Unit tests run in jsdom, which deliberately has no Canvas 2D backend.
+    // Initialising zrender there schedules asynchronous paints that escape the
+    // synchronous try/catch below and turn otherwise passing assertions into
+    // uncaught `clearRect` errors. Browser/Playwright rendering is unchanged.
+    if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent)) return;
     if (!container.current) return;
     // Initialise only once the page's fonts are in: a chart painted before
     // JetBrains Mono arrives keeps its fallback glyphs (ECharts does not repaint
