@@ -20,6 +20,7 @@ use uuid::Uuid;
 mod analytics_repository;
 mod d4_writer;
 mod manager_projection;
+mod manager_query_analytics;
 mod query;
 mod realtime;
 mod retention;
@@ -38,6 +39,10 @@ pub use manager_projection::{
     ManagerCycleCommitInput, ManagerProjectionCycleReceipt, ManagerProjectionEpochSelection,
     ManagerProjectionLeaseAcquireOutcome, ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof,
     ManagerSnapshotCommitInput, ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
+};
+pub use manager_query_analytics::{
+    ManagerAnalyticsFact, ManagerAnalyticsSnapshot, ManagerAnalyticsSubject,
+    ManagerAnalyticsSubjectKind, N25_MANAGER_ANALYTICS_MAX_FACTS,
 };
 pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
 pub use realtime::{
@@ -2812,12 +2817,16 @@ mod tests {
                     $2 + g * interval '1 second','UNKNOWN','ts-adapter-v1',
                     'cap_scale','sha256:scale',
                     jsonb_build_object(
-                      'status', CASE WHEN g % 2 = 0 THEN 'OPEN' ELSE 'FILLED' END,
-                      'currency', CASE WHEN g % 3 = 0 THEN 'USD' ELSE 'VND' END,
-                      'instrument_id', 'BTC-PERP',
-                      'deployment_id', CASE WHEN g % 2 = 0 THEN 'dep_74' ELSE 'dep_other' END,
-                      'quantity', '0.100000000000000001',
-                      'notional', g::text || '.000000000000000001')
+                      'change_label','PORTAL_PROJECTION_DELTA',
+                      'source_feed','manager.order',
+                      'source_relation','public.orders',
+                      'fields',jsonb_build_object(
+                        'status',jsonb_build_object('kind','TEXT','value',CASE WHEN g % 2 = 0 THEN 'OPEN' ELSE 'FILLED' END),
+                        'currency',jsonb_build_object('kind','TEXT','value',CASE WHEN g % 3 = 0 THEN 'USD' ELSE 'VND' END),
+                        'instrument_id',jsonb_build_object('kind','TEXT','value','BTC-PERP'),
+                        'deployment_id',jsonb_build_object('kind','TEXT','value',CASE WHEN g % 2 = 0 THEN 'dep_74' ELSE 'dep_other' END),
+                        'quantity',jsonb_build_object('kind','DECIMAL','value','0.100000000000000001'),
+                        'notional',jsonb_build_object('kind','DECIMAL','value',g::text || '.000000000000000001')))
              FROM generate_series(1,182000) AS g",
         )
         .bind(epoch_id)
@@ -2857,7 +2866,7 @@ mod tests {
               capability_snapshot_id,payload_digest,payload)
              VALUES ($1,'ORDER','order_newer',182001,'EXECUTION',$2,$2,$2,'UNKNOWN',
                      'ts-adapter-v1','cap_scale','sha256:newer',
-                     '{\"status\":\"OPEN\",\"currency\":\"USD\",\"deployment_id\":\"dep_74\",\"quantity\":\"0.1\",\"notional\":\"1.1\"}')",
+                     '{\"source_relation\":\"public.orders\",\"status\":\"OPEN\",\"currency\":\"USD\",\"deployment_id\":\"dep_74\",\"quantity\":\"0.1\",\"notional\":\"1.1\"}')",
         )
         .bind(epoch_id)
         .bind(at(300_000))
@@ -2978,6 +2987,11 @@ mod tests {
             .unwrap();
         assert_eq!(deployment_scoped.total_count, 91_000);
         assert_eq!(deployment_scoped.filtered_count, 91_000);
+        assert_eq!(deployment_scoped.rows[0].payload["status"], "OPEN");
+        assert_eq!(
+            deployment_scoped.rows[0].payload["source_relation"],
+            "public.orders"
+        );
         assert!(deployment_scoped.rows.iter().all(|row| {
             row.payload
                 .get("deployment_id")
@@ -3912,6 +3926,213 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one fresh-PG drill covers scope, empty and hard population bounds
+    async fn n25_manager_analytics_snapshot_is_scoped_tagged_empty_safe_and_one_query() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let _guard = postgres_test_lock().lock().await;
+        let store = PgProjectionStore::connect(&database_url).await.unwrap();
+        store.migrate().await.unwrap();
+        reset(&store, &database_url).await;
+        let scope =
+            ProjectionScope::new(CanonicalId::parse("workspace_n25").unwrap(), "paper").unwrap();
+        let epoch_id = Uuid::now_v7();
+        let catalogue = digest('a');
+        let state = digest('b');
+        sqlx::query(
+            "INSERT INTO portal_projection.epochs
+             (epoch_id,workspace_id,environment,status,adapter_version,
+              source_gateway_digest,capability_snapshot_id,created_at,activated_at,
+              next_projection_sequence)
+             VALUES ($1,$2,$3,'ACTIVE',$4,$5,$6,$7,$7,5)",
+        )
+        .bind(epoch_id)
+        .bind(scope.workspace_id.as_str())
+        .bind(&scope.environment)
+        .bind("portal.execution.manager-projection.manager-v2.runtime.v2")
+        .bind(digest('f'))
+        .bind(&catalogue)
+        .bind(at(100))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO portal_projection.manager_projection_cycles
+             (epoch_id,cycle_id,profile_id,catalogue_digest,source_input_digest,
+              feed_count,snapshot_count,record_count,source_read_at,committed_at,state_digest)
+             VALUES ($1,'n25-cycle','PAPER_BINANCE_USDM',$2,$3,13,8,4,$4,$4,$5)",
+        )
+        .bind(epoch_id)
+        .bind(&catalogue)
+        .bind(digest('c'))
+        .bind(at(200))
+        .bind(&state)
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        let facts = [
+            (
+                "RUNTIME",
+                "deployment-1",
+                serde_json::json!({
+                    "change_label":"PORTAL_PROJECTION_DELTA",
+                    "source_feed":"relation.strategy_deployments",
+                    "source_relation":"public.strategy_deployments",
+                    "fields":{
+                        "deployment_id":{"kind":"TEXT","value":"dep_74"},
+                        "strategy_id":{"kind":"TEXT","value":"alpha_1"},
+                        "account_id":{"kind":"TEXT","value":"account_1"},
+                        "portfolio_id":{"kind":"TEXT","value":"portfolio_1"}
+                    }
+                }),
+            ),
+            (
+                "ORDER",
+                "order-1",
+                serde_json::json!({
+                    "change_label":"PORTAL_PROJECTION_DELTA","source_feed":"manager.order",
+                    "source_relation":"public.orders","fields":{
+                        "order_id":{"kind":"TEXT","value":"order_1"},
+                        "strategy_id":{"kind":"TEXT","value":"alpha_1"},
+                        "account_id":{"kind":"TEXT","value":"account_1"},
+                        "status":{"kind":"TEXT","value":"FILLED"},
+                        "currency":{"kind":"TEXT","value":"USDT"},
+                        "quantity":{"kind":"DECIMAL","value":"1.25"},
+                        "notional":{"kind":"DECIMAL","value":"250.00"}
+                    }
+                }),
+            ),
+            (
+                "FILL",
+                "fill-1",
+                serde_json::json!({
+                    "change_label":"PORTAL_PROJECTION_DELTA","source_feed":"manager.fill",
+                    "source_relation":"public.fills","fields":{
+                        "fill_id":{"kind":"TEXT","value":"fill_1"},
+                        "event_id":{"kind":"TEXT","value":"event_1"},
+                        "strategy_id":{"kind":"TEXT","value":"alpha_1"},
+                        "account_id":{"kind":"TEXT","value":"account_1"},
+                        "currency":{"kind":"TEXT","value":"USDT"},
+                        "price":{"kind":"DECIMAL","value":"200.00"},
+                        "quantity":{"kind":"DECIMAL","value":"1.25"},
+                        "realized_pnl":{"kind":"DECIMAL","value":"7.50"},
+                        "trade_time":{"kind":"TIMESTAMP","value":"1970-01-01T00:02:00Z"}
+                    }
+                }),
+            ),
+            (
+                "PERFORMANCE",
+                "performance-1",
+                serde_json::json!({
+                    "change_label":"PORTAL_PROJECTION_DELTA","source_feed":"relation.performance_snapshots",
+                    "source_relation":"public.performance_snapshots","fields":{
+                        "deployment_id":{"kind":"TEXT","value":"dep_74"},
+                        "strategy_id":{"kind":"TEXT","value":"alpha_1"},
+                        "account_id":{"kind":"TEXT","value":"account_1"},
+                        "currency":{"kind":"TEXT","value":"USDT"},
+                        "equity":{"kind":"DECIMAL","value":"1007.50"},
+                        "ts":{"kind":"TIMESTAMP","value":"1970-01-01T00:02:00Z"}
+                    }
+                }),
+            ),
+        ];
+        for (index, (kind, entity_id, payload)) in facts.into_iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO portal_projection.entities
+                 (epoch_id,entity_kind,entity_id,projection_sequence,source_authority,
+                  as_of,source_read_at,projected_at,source_completeness,poll_interval_ms,
+                  adapter_version,capability_snapshot_id,payload_digest,payload)
+                 VALUES ($1,$2,$3,$4,'EXECUTION',$5,$6,$6,'POLL_BOUNDED',2000,$7,$8,$9,$10)",
+            )
+            .bind(epoch_id)
+            .bind(kind)
+            .bind(entity_id)
+            .bind(i64::try_from(index + 1).unwrap())
+            .bind(at(120))
+            .bind(at(200))
+            .bind("portal.execution.manager-projection.manager-v2.runtime.v2")
+            .bind(&catalogue)
+            .bind(digest(char::from(b'd' + u8::try_from(index).unwrap())))
+            .bind(payload)
+            .execute(&store.pool)
+            .await
+            .unwrap();
+        }
+        let snapshot = store
+            .load_manager_analytics_snapshot(
+                &scope,
+                &ManagerAnalyticsSubject {
+                    kind: ManagerAnalyticsSubjectKind::Deployment,
+                    id: CanonicalId::parse("dep_74").unwrap(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(snapshot.fact_count, 4);
+        assert_eq!(snapshot.repository_query_count, 1);
+        assert_eq!(snapshot.projection_state_digest, state);
+        assert!(snapshot.fact_digest.starts_with("sha256:"));
+        assert!(snapshot
+            .facts
+            .iter()
+            .any(|fact| fact.fields["status"] == "FILLED"));
+        let empty = store
+            .load_manager_analytics_snapshot(
+                &scope,
+                &ManagerAnalyticsSubject {
+                    kind: ManagerAnalyticsSubjectKind::Portfolio,
+                    id: CanonicalId::parse("portfolio_empty").unwrap(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(empty.fact_count, 0);
+        assert_eq!(empty.repository_query_count, 1);
+
+        sqlx::query(
+            "INSERT INTO portal_projection.entities
+             (epoch_id,entity_kind,entity_id,projection_sequence,source_authority,
+              as_of,source_read_at,projected_at,source_completeness,poll_interval_ms,
+              adapter_version,capability_snapshot_id,payload_digest,payload)
+             SELECT $1,'EVENT','event-' || value,value,'EXECUTION',$2,$3,$3,
+                    'POLL_BOUNDED',2000,$4,$5,$6,
+                    jsonb_build_object(
+                      'change_label','PORTAL_PROJECTION_DELTA',
+                      'source_feed','relation.domain_events',
+                      'source_relation','public.domain_events',
+                      'fields',jsonb_build_object(
+                        'event_id',jsonb_build_object('kind','TEXT','value','event-' || value),
+                        'strategy_id',jsonb_build_object('kind','TEXT','value','alpha_1'),
+                        'event_type',jsonb_build_object('kind','TEXT','value','ORDER_UPDATED')
+                      )
+                    )
+             FROM generate_series(5,20005) AS value",
+        )
+        .bind(epoch_id)
+        .bind(at(120))
+        .bind(at(200))
+        .bind("portal.execution.manager-projection.manager-v2.runtime.v2")
+        .bind(&catalogue)
+        .bind(digest('e'))
+        .execute(&store.pool)
+        .await
+        .unwrap();
+        assert!(matches!(
+            store
+                .load_manager_analytics_snapshot(
+                    &scope,
+                    &ManagerAnalyticsSubject {
+                        kind: ManagerAnalyticsSubjectKind::Deployment,
+                        id: CanonicalId::parse("dep_74").unwrap(),
+                    },
+                )
+                .await,
+            Err(StoreError::AnalyticsSourceLimitExceeded)
+        ));
+    }
+
+    #[tokio::test]
     #[allow(clippy::too_many_lines)] // One integration drill covers all three isolated profiles.
     async fn n24_manager_projection_is_durable_fenced_and_profile_complete() {
         let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
@@ -4045,8 +4266,8 @@ mod tests {
                 profile_id: profile_id.to_owned(),
                 catalogue_digest: catalogue_digest.clone(),
                 source_input_digest: digest('b'),
-                feed_count: 12,
-                record_count: 12,
+                feed_count: 13,
+                record_count: 13,
                 source_read_at: at(200),
             };
             let first_cycle = store

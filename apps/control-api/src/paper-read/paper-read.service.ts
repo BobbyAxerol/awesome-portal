@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { PortalUser, AuthSession } from "../domain";
 import {
@@ -7,6 +7,7 @@ import {
   CurrentSourceProxyError,
   ExecutionCurrentSourceProxy,
 } from "../execution/current-source.proxy";
+import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "../execution/analytics.proxy";
 import { KeysetCursorCodec, QueryContractError } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { PaperBlotterQuery } from "./contracts";
@@ -136,6 +137,9 @@ export class PaperReadService {
   constructor(
     @Inject(ExecutionCurrentSourceProxy) private readonly source: ExecutionCurrentSourceProxy,
     @Inject(CONTROL_API_CONFIG) config: ControlApiConfig,
+    @Optional()
+    @Inject(ExecutionAnalyticsProxy)
+    private readonly analytics?: ExecutionAnalyticsProxy,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -170,10 +174,30 @@ export class PaperReadService {
       item.spec.key,
       item.page?.items.filter((row) => item.spec.key === "deployments" || matchesDeployment(row, deploymentId, deployment)) ?? [],
     ]));
+    let queryAnalytics: unknown = null;
+    let analyticsReason = "N25_DERIVED_ANALYTICS_NOT_ACTIVE";
+    if (this.analytics) {
+      try {
+        queryAnalytics = await this.analytics.managerQueryAnalytics(
+          principal,
+          "deployment",
+          deploymentId,
+        );
+      } catch (error) {
+        analyticsReason = error instanceof AnalyticsProxyError
+          ? error.code
+          : "ANALYTICS_UPSTREAM_UNAVAILABLE";
+      }
+    }
     const branches = [
       ...this.unavailableBranches(),
       capability("market.candles", "UNAVAILABLE", ["market_candles"], "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED"),
-      capability("workbench.analytics", "UNAVAILABLE", ["equity_band", "correlation"], "N25_DERIVED_ANALYTICS_NOT_ACTIVE"),
+      capability(
+        "workbench.analytics",
+        queryAnalytics === null ? "UNAVAILABLE" : "AVAILABLE",
+        ["query_analytics"],
+        queryAnalytics === null ? analyticsReason : null,
+      ),
       ...(vnm
         ? [capability("venue.calendar", "UNAVAILABLE", ["session_shading"], "N28_VENUE_CALENDAR_NOT_ACTIVE")]
         : []),
@@ -185,7 +209,7 @@ export class PaperReadService {
       vnm ? "execution.paper-workbench-vnm.v1" : "execution.paper-workbench.v1",
       principal,
       relations,
-      { deployment: deployment ?? null, ...scoped },
+      { deployment: deployment ?? null, query_analytics: queryAnalytics, ...scoped },
       branches,
       { resource: { kind: "DEPLOYMENT", id: deploymentId } },
     );

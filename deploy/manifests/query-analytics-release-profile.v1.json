@@ -1,0 +1,86 @@
+{
+  "schema_version": "portal.execution.query-analytics-release-profile.v1",
+  "phase": "N25",
+  "query_contract": "execution.query-analytics-envelope.v1",
+  "analytics_contract": "execution.query-analytics.v1",
+  "chart_contract": "chart-series.rules.v1",
+  "source_contract": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "projection_schema": "portal.execution.manager-projection.v2",
+  "projection_adapter": "portal.execution.manager-projection.manager-v2.runtime.v2",
+  "profiles": {
+    "paper": "PAPER_BINANCE_USDM",
+    "sandbox": "SANDBOX_BINANCE_USDM",
+    "live": "LIVE_BINANCE_USDM"
+  },
+  "subject_routes": {
+    "DEPLOYMENT": "/api/v1/execution/deployments/{deploymentId}/query-analytics",
+    "ALPHA": "/api/v1/execution/alphas/{alphaId}/query-analytics",
+    "PORTFOLIO": "/api/v1/execution/portfolios/{portfolioId}/query-analytics",
+    "LIVE_GATE": "/api/v1/execution/live-gates/{approvalId}/query-analytics"
+  },
+  "required_new_feed_count": 13,
+  "historical_receipt_feed_counts": [12, 13],
+  "required_relations": [
+    "public.strategy_deployments",
+    "public.orders",
+    "public.fills",
+    "public.positions_v2",
+    "public.execution_sessions",
+    "public.account_equity_snapshots",
+    "public.performance_snapshots",
+    "public.portfolio_equity_snapshots",
+    "public.domain_events",
+    "public.performance_events"
+  ],
+  "bounds": {
+    "maximum_source_facts": 20000,
+    "repository_queries_per_request": 1,
+    "maximum_currency_partitions": 64,
+    "maximum_chart_series": 20,
+    "maximum_input_points_per_series": 20000,
+    "maximum_output_points_per_series": 5000,
+    "maximum_correlation_alphas": 20,
+    "maximum_correlation_pairs": 190,
+    "maximum_replay_rows": 200,
+    "maximum_positions": 500,
+    "maximum_response_bytes": 2097152
+  },
+  "derivations": {
+    "exact_aggregates": "relation_currency_partition.v1",
+    "order_funnel": "order_funnel.v1",
+    "execution_quality": "execution_quality.v1",
+    "equity_drawdown": "equity_projection.v1",
+    "daily_contribution": "performance_snapshot_net_pnl_delta.v1",
+    "portfolio_correlation": "portfolio-correlation-returns.v1",
+    "drawdown_overlap": "drawdown_overlap.v1",
+    "adaptive_downsampling": "extrema_stride_v1"
+  },
+  "typed_external_gaps": {
+    "market_candles": "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED",
+    "benchmark_correlation": "N28_BENCHMARK_SERIES_SOURCE_NOT_ACTIVATED",
+    "cross_profile_canary_drift": "N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED",
+    "broker_ack_latency": "N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED"
+  },
+  "candidate_flags": {
+    "manager_projection_worker": true,
+    "edge_analytics_query": true,
+    "control_api_execution_analytics_query": true,
+    "edge_realtime_sse": false,
+    "edge_command_relay": false
+  },
+  "activation_order": ["paper", "sandbox", "live"],
+  "rollback": {
+    "disable_analytics_only": true,
+    "preserve_active_projection_epoch": true,
+    "restore_retained_projection_epoch_when_projection_faulted": true,
+    "current_source_fallback_remains_available": true,
+    "source_or_trading_system_mutation": false
+  },
+  "phase_authorization": {
+    "decision": "BOBBY_APPROVED_N25_QUERY_ANALYTICS_PLANE",
+    "implementation_authorized": true,
+    "signed_dev_deployment_authorized": false,
+    "stable_runtime_change_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-query-analytics.v1.schema.json",
+  "title": "N25 Manager query and analytics envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "runtime_active", "source_side_effect_requested", "epoch_id", "catalogue_digest", "projection_state_digest", "source_fact_digest", "source_fact_count", "repository_query_count", "source_read_at", "read_at", "analytics"],
+  "properties": {
+    "schema_version": { "const": "execution.query-analytics-envelope.v1" },
+    "runtime_active": { "const": true },
+    "source_side_effect_requested": { "const": false },
+    "epoch_id": { "type": "string", "format": "uuid" },
+    "catalogue_digest": { "$ref": "#/$defs/Digest" },
+    "projection_state_digest": { "$ref": "#/$defs/Digest" },
+    "source_fact_digest": { "$ref": "#/$defs/Digest" },
+    "source_fact_count": { "type": "integer", "minimum": 0, "maximum": 20000 },
+    "repository_query_count": { "const": 1 },
+    "source_read_at": { "$ref": "#/$defs/DateTime" },
+    "read_at": { "$ref": "#/$defs/DateTime" },
+    "analytics": { "$ref": "#/$defs/ManagerAnalytics" }
+  },
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "Decimal": { "type": "string", "pattern": "^[+-]?[0-9]+(?:[.][0-9]+)?$" },
+    "Digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "Authority": { "type": "string", "enum": ["RESEARCH", "EXECUTION", "BROKER", "DERIVED"] },
+    "Completeness": { "type": "string", "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+    "CapabilityState": { "type": "string", "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
+    "NullableDecimal": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] },
+    "NullableString": { "type": ["string", "null"] },
+    "Capability": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability_id", "state", "authority", "formula_version", "source_relations", "reason_code"],
+      "properties": {
+        "capability_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "state": { "$ref": "#/$defs/CapabilityState" },
+        "authority": { "$ref": "#/$defs/Authority" },
+        "formula_version": { "$ref": "#/$defs/NullableString" },
+        "source_relations": { "type": "array", "maxItems": 12, "uniqueItems": true, "items": { "type": "string", "pattern": "^public[.][a-z0-9_]+$" } },
+        "reason_code": { "$ref": "#/$defs/NullableString" }
+      }
+    },
+    "CurrencyPartition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["relation", "currency", "row_count", "quantity_count", "quantity", "notional_count", "notional", "realized_pnl_count", "realized_pnl", "invalid_numeric_count"],
+      "properties": {
+        "relation": { "type": "string", "pattern": "^public[.][a-z0-9_]+$" },
+        "currency": { "type": ["string", "null"], "pattern": "^[A-Z0-9]{2,12}$" },
+        "row_count": { "type": "integer", "minimum": 0 },
+        "quantity_count": { "type": "integer", "minimum": 0 },
+        "quantity": { "$ref": "#/$defs/Decimal" },
+        "notional_count": { "type": "integer", "minimum": 0 },
+        "notional": { "$ref": "#/$defs/Decimal" },
+        "realized_pnl_count": { "type": "integer", "minimum": 0 },
+        "realized_pnl": { "$ref": "#/$defs/Decimal" },
+        "invalid_numeric_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "ChartPoint": {
+      "type": "object", "additionalProperties": false, "required": ["timestamp", "value"],
+      "properties": { "timestamp": { "$ref": "#/$defs/DateTime" }, "value": { "$ref": "#/$defs/NullableDecimal" } }
+    },
+    "ChartGap": {
+      "type": "object", "additionalProperties": false, "required": ["from", "to", "reason"],
+      "properties": { "from": { "$ref": "#/$defs/DateTime" }, "to": { "$ref": "#/$defs/DateTime" }, "reason": { "enum": ["SOURCE_GAP", "RETENTION", "VENUE_CLOSED", "PROJECTION_DISCONTINUITY"] } }
+    },
+    "ChartMarker": {
+      "type": "object", "additionalProperties": false, "required": ["timestamp", "marker_type", "journal_id"],
+      "properties": { "timestamp": { "$ref": "#/$defs/DateTime" }, "marker_type": { "type": "string", "minLength": 1, "maxLength": 128 }, "journal_id": { "$ref": "#/$defs/Identifier" } }
+    },
+    "ChartAnnotation": {
+      "type": "object", "additionalProperties": false, "required": ["timestamp", "value", "label"],
+      "properties": { "timestamp": { "$ref": "#/$defs/DateTime" }, "value": { "$ref": "#/$defs/Decimal" }, "label": { "type": "string", "minLength": 1, "maxLength": 256 } }
+    },
+    "Downsample": {
+      "type": "object", "additionalProperties": false,
+      "required": ["method", "input_points", "output_points", "input_minimum", "input_maximum"],
+      "properties": {
+        "method": { "enum": ["none", "extrema_stride_v1"] },
+        "input_points": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "output_points": { "type": "integer", "minimum": 0, "maximum": 5000 },
+        "input_minimum": { "$ref": "#/$defs/NullableDecimal" },
+        "input_maximum": { "$ref": "#/$defs/NullableDecimal" }
+      }
+    },
+    "ChartSeries": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "series_id", "kind", "unit", "currency", "authority", "as_of", "formula_version", "completeness", "join_digest", "ohlc_owner", "points", "gaps", "markers", "annotations", "declared_total", "downsample"],
+      "properties": {
+        "schema_version": { "const": "chart-series.rules.v1" },
+        "series_id": { "$ref": "#/$defs/Identifier" },
+        "kind": { "enum": ["LINE", "BAR", "CANDLESTICK", "EPISODE"] },
+        "unit": { "enum": ["MONEY", "RATIO", "PERCENT", "BASIS_POINTS", "COUNT", "PRICE", "QUANTITY"] },
+        "currency": { "type": ["string", "null"] },
+        "authority": { "$ref": "#/$defs/Authority" },
+        "as_of": { "$ref": "#/$defs/DateTime" },
+        "formula_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "completeness": { "$ref": "#/$defs/Completeness" },
+        "join_digest": { "oneOf": [{ "$ref": "#/$defs/Digest" }, { "type": "null" }] },
+        "ohlc_owner": { "oneOf": [{ "$ref": "#/$defs/Authority" }, { "type": "null" }] },
+        "points": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/ChartPoint" } },
+        "gaps": { "type": "array", "maxItems": 5000, "items": { "$ref": "#/$defs/ChartGap" } },
+        "markers": { "type": "array", "maxItems": 500, "items": { "$ref": "#/$defs/ChartMarker" } },
+        "annotations": { "type": "array", "maxItems": 500, "items": { "$ref": "#/$defs/ChartAnnotation" } },
+        "declared_total": { "$ref": "#/$defs/NullableDecimal" },
+        "downsample": { "$ref": "#/$defs/Downsample" }
+      }
+    },
+    "ReplayRow": {
+      "type": "object", "additionalProperties": false,
+      "required": ["timestamp", "journal_id", "event_type", "order_id", "fill_id", "price", "quantity"],
+      "properties": {
+        "timestamp": { "$ref": "#/$defs/DateTime" }, "journal_id": { "$ref": "#/$defs/Identifier" },
+        "event_type": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "order_id": { "$ref": "#/$defs/NullableString" }, "fill_id": { "$ref": "#/$defs/NullableString" },
+        "price": { "$ref": "#/$defs/NullableDecimal" }, "quantity": { "$ref": "#/$defs/NullableDecimal" }
+      }
+    },
+    "Replay": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "markers", "trade_log", "candles_state", "candles_reason_code"],
+      "properties": {
+        "state": { "$ref": "#/$defs/CapabilityState" }, "reason_code": { "$ref": "#/$defs/NullableString" },
+        "markers": { "type": "array", "maxItems": 500, "items": { "$ref": "#/$defs/ChartMarker" } },
+        "trade_log": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/ReplayRow" } },
+        "candles_state": { "$ref": "#/$defs/CapabilityState" }, "candles_reason_code": { "type": "string", "minLength": 1 }
+      }
+    },
+    "DrawdownEpisode": {
+      "type": "object", "additionalProperties": false, "required": ["alpha_id", "from", "to", "depth_pct", "recovered"],
+      "properties": { "alpha_id": { "$ref": "#/$defs/Identifier" }, "from": { "$ref": "#/$defs/DateTime" }, "to": { "$ref": "#/$defs/DateTime" }, "depth_pct": { "$ref": "#/$defs/Decimal" }, "recovered": { "type": "boolean" } }
+    },
+    "JointWindow": {
+      "type": "object", "additionalProperties": false, "required": ["from", "to", "member_alpha_ids"],
+      "properties": { "from": { "$ref": "#/$defs/DateTime" }, "to": { "$ref": "#/$defs/DateTime" }, "member_alpha_ids": { "type": "array", "minItems": 2, "maxItems": 20, "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } } }
+    },
+    "DrawdownOverlap": {
+      "type": "object", "additionalProperties": false, "required": ["formula_version", "episodes", "insufficient_alpha_ids", "joint_windows"],
+      "properties": {
+        "formula_version": { "const": "drawdown_overlap.v1" },
+        "episodes": { "type": "array", "maxItems": 800, "items": { "$ref": "#/$defs/DrawdownEpisode" } },
+        "insufficient_alpha_ids": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/Identifier" } },
+        "joint_windows": { "type": "array", "maxItems": 10, "items": { "$ref": "#/$defs/JointWindow" } }
+      }
+    },
+    "CorrelationPair": {
+      "type": "object", "additionalProperties": false,
+      "required": ["left_alpha_id", "right_alpha_id", "coefficient", "sample_count"],
+      "properties": {
+        "left_alpha_id": { "$ref": "#/$defs/Identifier" },
+        "right_alpha_id": { "$ref": "#/$defs/Identifier" },
+        "coefficient": { "$ref": "#/$defs/Decimal" },
+        "sample_count": { "type": "integer", "minimum": 2, "maximum": 20000 }
+      }
+    },
+    "ManagerCorrelation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["formula_version", "state", "reason_code", "alpha_ids", "pairs"],
+      "properties": {
+        "formula_version": { "const": "portfolio-correlation-returns.v1" },
+        "state": { "$ref": "#/$defs/CapabilityState" },
+        "reason_code": { "$ref": "#/$defs/NullableString" },
+        "alpha_ids": { "type": "array", "maxItems": 20, "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "pairs": { "type": "array", "maxItems": 190, "items": { "$ref": "#/$defs/CorrelationPair" } }
+      }
+    },
+    "ManagerAnalytics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "formula_version", "subject_kind", "subject_id", "environment", "profile_id", "authority", "derived_authority", "as_of", "completeness", "projection_state_digest", "source_fact_count", "capabilities", "exact_currency_partitions", "order_funnel", "execution_quality", "chart_series", "replay", "drawdown_overlap", "correlation", "positions"],
+      "properties": {
+        "schema_version": { "const": "execution.query-analytics.v1" },
+        "formula_version": { "const": "manager-query-analytics.v1" },
+        "subject_kind": { "enum": ["DEPLOYMENT", "ALPHA", "PORTFOLIO", "LIVE_GATE"] },
+        "subject_id": { "$ref": "#/$defs/Identifier" },
+        "environment": { "enum": ["paper", "sandbox", "live"] },
+        "profile_id": { "$ref": "#/$defs/Identifier" },
+        "authority": { "const": "EXECUTION" }, "derived_authority": { "const": "DERIVED" },
+        "as_of": { "$ref": "#/$defs/DateTime" }, "completeness": { "$ref": "#/$defs/Completeness" },
+        "projection_state_digest": { "$ref": "#/$defs/Digest" }, "source_fact_count": { "type": "integer", "minimum": 0, "maximum": 20000 },
+        "capabilities": { "type": "array", "minItems": 12, "maxItems": 16, "items": { "$ref": "#/$defs/Capability" } },
+        "exact_currency_partitions": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/CurrencyPartition" } },
+        "order_funnel": {
+          "type": "object", "additionalProperties": false, "required": ["formula_version", "total_orders", "status_counts"],
+          "properties": { "formula_version": { "const": "order_funnel.v1" }, "total_orders": { "type": "integer", "minimum": 0 }, "status_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } } }
+        },
+        "execution_quality": {
+          "type": "object", "additionalProperties": false,
+          "required": ["formula_version", "submitted_count", "risk_rejected_count", "broker_rejected_count", "filled_count", "reject_rate", "latency_state", "latency_reason_code"],
+          "properties": {
+            "formula_version": { "const": "execution_quality.v1" }, "submitted_count": { "type": "integer", "minimum": 0 }, "risk_rejected_count": { "type": "integer", "minimum": 0 }, "broker_rejected_count": { "type": "integer", "minimum": 0 }, "filled_count": { "type": "integer", "minimum": 0 }, "reject_rate": { "$ref": "#/$defs/NullableDecimal" }, "latency_state": { "$ref": "#/$defs/CapabilityState" }, "latency_reason_code": { "$ref": "#/$defs/NullableString" }
+          }
+        },
+        "chart_series": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/ChartSeries" } },
+        "replay": { "$ref": "#/$defs/Replay" },
+        "drawdown_overlap": { "oneOf": [{ "$ref": "#/$defs/DrawdownOverlap" }, { "type": "null" }] },
+        "correlation": { "$ref": "#/$defs/ManagerCorrelation" },
+        "positions": { "type": "array", "maxItems": 500, "items": { "type": "object" } }
+      }
+    }
+  }
+}

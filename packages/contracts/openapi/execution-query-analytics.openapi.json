@@ -1,0 +1,27 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Execution Query and Analytics API",
+    "version": "1.0.0",
+    "description": "N25 source-attributed analytics over the immutable N24 Manager projection. Read-only; unavailable source semantics remain typed."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/deployments/{subjectId}/query-analytics": { "get": { "operationId": "executionDeploymentQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } },
+    "/api/v1/execution/alphas/{subjectId}/query-analytics": { "get": { "operationId": "executionAlphaQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } },
+    "/api/v1/execution/portfolios/{subjectId}/query-analytics": { "get": { "operationId": "executionPortfolioQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } },
+    "/api/v1/execution/live-gates/{subjectId}/query-analytics": { "get": { "operationId": "executionLiveGateQueryAnalytics", "parameters": [{ "$ref": "#/components/parameters/SubjectId" }], "responses": { "200": { "$ref": "#/components/responses/Analytics" }, "default": { "$ref": "#/components/responses/Problem" } } } }
+  },
+  "components": {
+    "securitySchemes": { "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" } },
+    "parameters": { "SubjectId": { "name": "subjectId", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$" } } },
+    "responses": {
+      "Analytics": { "description": "Bounded, exact and source-attributed analytics", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-query-analytics.v1.schema.json" } } } },
+      "Problem": { "description": "Typed fail-closed error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "Problem": { "type": "object", "additionalProperties": false, "required": ["error"], "properties": { "error": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } } }
+    }
+  }
+}

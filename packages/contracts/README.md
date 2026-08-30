@@ -134,6 +134,19 @@ flags. A valid Live profile with zero rows is `empty`, while source loss is
 not a Trading System mode: `governance-live-review.v1` joins the existing
 Portal governance backbone to `LIVE_BINANCE_USDM` facts and remains read-only.
 
+N25 adds the source-backed Query and analytics plane at
+`execution-query-analytics.openapi.json`, generated as
+`generated/execution-query-analytics.d.ts`. Four session-bound BFF routes map
+deployment, alpha, portfolio and live-gate subjects onto one immutable N24
+projection cycle. Rust owns exact decimal aggregation, currency partitions,
+order funnel, execution quality, equity/drawdown/contribution series, replay
+markers and adaptive extrema-preserving downsampling. Every response includes
+epoch, catalogue, projection and fact digests plus a constant one-query
+repository proof. Source semantics not yet published by the Trading System
+(market candles, benchmark/twin joins and ACK latency) remain typed
+`UNAVAILABLE`; TypeScript composes the product envelope but never recomputes
+financial truth.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -175,6 +188,7 @@ packages/contracts/
     execution-governance-paper-exit.v1.schema.json
     execution-realtime-event.v1.schema.json
     execution-analytics-series.v1.schema.json
+    execution-query-analytics.v1.schema.json
     execution-event-envelope.v1.schema.json
     execution-command-center-snapshot.v1.schema.json
     execution-operations.v1.schema.json
@@ -213,9 +227,11 @@ packages/contracts/
     execution-sandbox-overview.ready.valid.json
     execution-live-overview.empty.valid.json
     execution-canary-live-facts.empty.valid.json
+    execution-query-analytics.empty.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-analytics-series.openapi.json
+    execution-query-analytics.openapi.json
     execution-governance.openapi.json
     execution-realtime.openapi.json
     execution-command-center.openapi.json
@@ -229,6 +245,7 @@ packages/contracts/
     portal-api.d.ts
     execution-analytics.d.ts
     execution-analytics-series.d.ts
+    execution-query-analytics.d.ts
     execution-governance.d.ts
     execution-realtime.d.ts
     execution-command-center.d.ts

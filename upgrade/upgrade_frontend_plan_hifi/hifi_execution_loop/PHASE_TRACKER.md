@@ -2734,7 +2734,7 @@ backend gate.
 | N22 | full current Paper read activation | retire only matching Paper smoke blocks | `COMPLETE / PAPER_PRODUCT_READ_RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
 | N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED` |
 | N24 | durable Portal projection | keep N23 contracts; consume projection states only after N25 BFF contract | `COMPLETE / RECOVERY_QUALIFIED / TD-EX-05_CLOSED / N25_READY` |
-| N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `PLANNED / N24_DEPENDENT` |
+| N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `COMPLETE / SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING / N26_READY` |
 | N26 | projection-backed authenticated SSE | close terminal streams; no infinite reconnect loop | `PLANNED / N25_DEPENDENT` |
 | N27 | typed Admin Action Drawer command plane | enable controls only at authoritative terminal parity | `PLANNED / N20_N21_DEPENDENT` |
 | N28 | one owner packet for proved genuine gaps only | retain typed unavailable until verified return | `PLANNED / CENSUS_EVIDENCE_DEPENDENT` |

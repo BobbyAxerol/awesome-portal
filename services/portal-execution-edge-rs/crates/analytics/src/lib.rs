@@ -1,11 +1,14 @@
 #![forbid(unsafe_code)]
 
 mod capital;
+mod chart;
 mod correlation;
 mod exposure;
 mod funnel;
 mod insight;
 mod ledger;
+mod manager_plane;
+mod risk_series;
 mod series;
 mod tiles;
 mod types;
@@ -13,6 +16,11 @@ mod types;
 pub use capital::{
     build_capital_preview, CapitalBlocker, CapitalBucketInput, CapitalPreview,
     CapitalPreviewRequest,
+};
+pub use chart::{
+    downsample_extrema, validate_chart_batch, ChartAnnotation, ChartDownsample,
+    ChartDownsampleMethod, ChartGap, ChartGapReason, ChartMarker, ChartPoint, ChartSeries,
+    ChartSeriesKind, ChartUnit, MAX_CHART_MARKERS, MAX_CHART_SERIES,
 };
 pub use correlation::{
     build_correlation, CorrelationCluster, CorrelationInput, CorrelationLabel, CorrelationPair,
@@ -33,6 +41,17 @@ pub use insight::{
 pub use ledger::{
     build_capital_ledger, CapitalLedgerBucket, CapitalLedgerEntry, CapitalLedgerFact,
     CapitalLedgerInput, CapitalLedgerResult, CapitalLedgerWindow, LedgerDirection, MovementType,
+};
+pub use manager_plane::{
+    build_manager_query_analytics, AnalyticsCapability, AnalyticsCapabilityState,
+    ExactCurrencyPartition, ExecutionQualitySummary, ManagerQueryAnalytics,
+    ManagerQueryAnalyticsFact, ManagerQueryAnalyticsInput, OrderFunnelSummary, ReplayLogRow,
+    ReplaySummary,
+};
+pub use risk_series::{
+    build_canary_drift, build_drawdown_overlap, build_rho_timeline, CanaryDriftInput,
+    DrawdownEpisode, DrawdownInput, DrawdownOverlap, JointDrawdownWindow, NavPoint, RhoBreach,
+    RhoTimeline, RhoTimelineInput,
 };
 pub use series::{
     build_equity_projection, ApprovedBand, ApprovedBandPoint, EquityPoint, EquityProjection,

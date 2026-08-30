@@ -170,6 +170,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
   "execution-canary-live-facts.empty.valid.json":
     "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
+  "execution-query-analytics.empty.valid.json":
+    "https://schemas.primusspark.com/portal/execution-query-analytics.v1.schema.json",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":

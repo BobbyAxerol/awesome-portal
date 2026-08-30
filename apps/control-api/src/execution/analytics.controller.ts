@@ -11,6 +11,7 @@ import {
   AnalyticsProxyError,
   analyticsResource,
   ExecutionAnalyticsProxy,
+  type QueryAnalyticsSubjectKind,
 } from "./analytics.proxy";
 
 interface AnalyticsRequest extends FastifyRequest {
@@ -73,6 +74,32 @@ export class ExecutionAnalyticsController {
     return this.invoke(() => this.proxy.bindingExposure(principal(request), id));
   }
 
+  @Get("/deployments/:deploymentId/query-analytics")
+  deploymentQueryAnalytics(
+    @Req() request: AnalyticsRequest,
+    @Param("deploymentId") id: string,
+  ) {
+    return this.queryAnalytics(request, "deployment", id);
+  }
+
+  @Get("/alphas/:alphaId/query-analytics")
+  alphaQueryAnalytics(@Req() request: AnalyticsRequest, @Param("alphaId") id: string) {
+    return this.queryAnalytics(request, "alpha", id);
+  }
+
+  @Get("/portfolios/:portfolioId/query-analytics")
+  portfolioQueryAnalytics(
+    @Req() request: AnalyticsRequest,
+    @Param("portfolioId") id: string,
+  ) {
+    return this.queryAnalytics(request, "portfolio", id);
+  }
+
+  @Get("/live-gates/:approvalId/query-analytics")
+  liveGateQueryAnalytics(@Req() request: AnalyticsRequest, @Param("approvalId") id: string) {
+    return this.queryAnalytics(request, "live-gate", id);
+  }
+
   @Get("/deployments/paper/:deploymentId/projection/:panel")
   paperWorkbenchPanel(
     @Req() request: AnalyticsRequest,
@@ -102,6 +129,16 @@ export class ExecutionAnalyticsController {
       if (error instanceof AnalyticsProxyError) throw error;
       throw new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502);
     }
+  }
+
+  private queryAnalytics(
+    request: AnalyticsRequest,
+    subjectKind: QueryAnalyticsSubjectKind,
+    subjectId: string,
+  ) {
+    return this.invoke(() =>
+      this.proxy.managerQueryAnalytics(principal(request), subjectKind, subjectId),
+    );
   }
 }
 

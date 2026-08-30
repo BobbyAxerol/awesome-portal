@@ -15,6 +15,7 @@ generate_and_compare() {
 
 generate_and_compare /repo/apps/portal/registry/openapi/portal-api.openapi.json generated/portal-api.d.ts
 generate_and_compare openapi/execution-analytics.openapi.json generated/execution-analytics.d.ts
+generate_and_compare openapi/execution-query-analytics.openapi.json generated/execution-query-analytics.d.ts
 generate_and_compare openapi/execution-analytics-series.openapi.json generated/execution-analytics-series.d.ts
 generate_and_compare openapi/execution-governance.openapi.json generated/execution-governance.d.ts
 generate_and_compare openapi/execution-realtime.openapi.json generated/execution-realtime.d.ts

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config";
 import { AuthSession, PortalUser } from "../src/domain";
 import { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
+import { ExecutionAnalyticsProxy } from "../src/execution/analytics.proxy";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
 
 const user: PortalUser = {
@@ -61,13 +62,20 @@ function defaultRecord(relation: string): RecordInput {
   return defaults[relation] ?? { mode: "paper" };
 }
 
-function service(source: FakeCurrentSource): PaperReadService {
+function service(
+  source: FakeCurrentSource,
+  analytics?: Pick<ExecutionAnalyticsProxy, "managerQueryAnalytics">,
+): PaperReadService {
   const config = loadConfig({
     DATABASE_URL: "postgres://portal:portal@localhost/portal",
     PORTAL_ENV: "local",
     AUTH_MODE: "dev",
   });
-  return new PaperReadService(source as unknown as ExecutionCurrentSourceProxy, config);
+  return new PaperReadService(
+    source as unknown as ExecutionCurrentSourceProxy,
+    config,
+    analytics as ExecutionAnalyticsProxy | undefined,
+  );
 }
 
 function principal(workspaceId = "ws_primary") { return { user, session, workspaceId }; }
@@ -232,6 +240,40 @@ describe("N22 full Paper read product BFF", () => {
     }));
     expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "venue.calendar" }));
     expect(source.calls).toHaveLength(7);
+  });
+
+  it("composes the N25 Rust analytics envelope without recomputing it in TypeScript", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper" },
+    ]);
+    const calls: Array<{ kind: string; id: string }> = [];
+    const analytics = {
+      async managerQueryAnalytics(_principal: unknown, kind: string, id: string) {
+        calls.push({ kind, id });
+        return {
+          schema_version: "execution.query-analytics-envelope.v1",
+          projection_state_digest: `sha256:${"2".repeat(64)}`,
+          repository_query_count: 1,
+        };
+      },
+    };
+
+    const result = await service(
+      source,
+      analytics as Pick<ExecutionAnalyticsProxy, "managerQueryAnalytics">,
+    ).workbench(principal(), "dep_1", false) as Record<string, any>;
+
+    expect(calls).toEqual([{ kind: "deployment", id: "dep_1" }]);
+    expect(result.data.query_analytics).toEqual(expect.objectContaining({
+      schema_version: "execution.query-analytics-envelope.v1",
+      repository_query_count: 1,
+    }));
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "workbench.analytics",
+      state: "AVAILABLE",
+      reason_code: null,
+    }));
   });
 
   it("wraps the Manager cursor and binds it to workspace and limit", async () => {

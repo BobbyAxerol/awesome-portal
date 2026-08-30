@@ -531,13 +531,13 @@ fn validate_name(value: &str) -> Result<(), StoreError> {
 
 fn filter_expression(field: FilterField) -> &'static str {
     match field {
-        FilterField::Status => "COALESCE(payload->>'status','')",
-        FilterField::Currency => "COALESCE(payload->>'currency','')",
-        FilterField::InstrumentId => "COALESCE(payload->>'instrument_id','')",
-        FilterField::AccountId => "COALESCE(payload->>'account_id','')",
-        FilterField::PortfolioId => "COALESCE(payload->>'portfolio_id','')",
-        FilterField::StrategyId => "COALESCE(payload->>'strategy_id','')",
-        FilterField::DeploymentId => "COALESCE(payload->>'deployment_id','')",
+        FilterField::Status => projection_field_expression("status"),
+        FilterField::Currency => projection_field_expression("currency"),
+        FilterField::InstrumentId => projection_field_expression("instrument_id"),
+        FilterField::AccountId => projection_field_expression("account_id"),
+        FilterField::PortfolioId => projection_field_expression("portfolio_id"),
+        FilterField::StrategyId => projection_field_expression("strategy_id"),
+        FilterField::DeploymentId => projection_field_expression("deployment_id"),
         FilterField::SourceAuthority => "source_authority",
         FilterField::AsOf => "COALESCE(as_of, source_read_at)",
     }
@@ -587,12 +587,12 @@ fn push_filters<'args>(
     Ok(())
 }
 
-const fn sort_expression(field: SortField) -> &'static str {
+fn sort_expression(field: SortField) -> &'static str {
     match field {
         SortField::AsOf => "COALESCE(as_of, source_read_at)",
         SortField::ProjectionSequence => "projection_sequence",
-        SortField::Status => "COALESCE(payload->>'status','')",
-        SortField::Currency => "COALESCE(payload->>'currency','')",
+        SortField::Status => projection_field_expression("status"),
+        SortField::Currency => projection_field_expression("currency"),
     }
 }
 
@@ -709,6 +709,7 @@ fn push_order(
 }
 
 fn row_from_pg(row: &sqlx::postgres::PgRow) -> Result<ProjectionQueryRow, StoreError> {
+    let payload: serde_json::Value = row.try_get("payload")?;
     Ok(ProjectionQueryRow {
         entity_id: row.try_get("entity_id")?,
         projection_sequence: required_u64(row.try_get("projection_sequence")?)?,
@@ -722,7 +723,7 @@ fn row_from_pg(row: &sqlx::postgres::PgRow) -> Result<ProjectionQueryRow, StoreE
         projected_at: row.try_get("projected_at")?,
         adapter_version: row.try_get("adapter_version")?,
         capability_snapshot_id: row.try_get("capability_snapshot_id")?,
-        payload: row.try_get("payload")?,
+        payload: normalize_projection_payload(payload)?,
     })
 }
 
@@ -766,27 +767,27 @@ async fn query_aggregates(
     filters: &[QueryFilter],
 ) -> Result<Vec<CurrencyAggregate>, StoreError> {
     let mut query = QueryBuilder::<Postgres>::new(
-        "SELECT NULLIF(payload->>'currency','') AS currency, COUNT(*) AS row_count, \
-         COUNT(*) FILTER (WHERE COALESCE(payload->>'quantity','') ~ ",
+        "SELECT NULLIF(COALESCE(payload->>'currency',payload#>>'{fields,currency,value}',''),'') AS currency, COUNT(*) AS row_count, \
+         COUNT(*) FILTER (WHERE COALESCE(payload->>'quantity',payload#>>'{fields,quantity,value}','') ~ ",
     );
     query
         .push_bind(EXACT_DECIMAL_PATTERN)
-        .push(") AS quantity_count, COALESCE(SUM(CASE WHEN COALESCE(payload->>'quantity','') ~ ")
+        .push(") AS quantity_count, COALESCE(SUM(CASE WHEN COALESCE(payload->>'quantity',payload#>>'{fields,quantity,value}','') ~ ")
         .push_bind(EXACT_DECIMAL_PATTERN)
         .push(
-            " THEN (payload->>'quantity')::numeric ELSE 0 END),0)::text AS quantity, \
-               COUNT(*) FILTER (WHERE COALESCE(payload->>'notional','') ~ ",
+            " THEN COALESCE(payload->>'quantity',payload#>>'{fields,quantity,value}')::numeric ELSE 0 END),0)::text AS quantity, \
+               COUNT(*) FILTER (WHERE COALESCE(payload->>'notional',payload#>>'{fields,notional,value}','') ~ ",
         )
         .push_bind(EXACT_DECIMAL_PATTERN)
-        .push(") AS notional_count, COALESCE(SUM(CASE WHEN COALESCE(payload->>'notional','') ~ ")
+        .push(") AS notional_count, COALESCE(SUM(CASE WHEN COALESCE(payload->>'notional',payload#>>'{fields,notional,value}','') ~ ")
         .push_bind(EXACT_DECIMAL_PATTERN)
         .push(
-            " THEN (payload->>'notional')::numeric ELSE 0 END),0)::text AS notional, \
+            " THEN COALESCE(payload->>'notional',payload#>>'{fields,notional,value}')::numeric ELSE 0 END),0)::text AS notional, \
                COUNT(*) FILTER (WHERE \
-                 (payload ? 'quantity' AND NOT COALESCE(payload->>'quantity','') ~ ",
+                 (COALESCE(payload->'quantity',payload#>'{fields,quantity,value}') IS NOT NULL AND NOT COALESCE(payload->>'quantity',payload#>>'{fields,quantity,value}','') ~ ",
         )
         .push_bind(EXACT_DECIMAL_PATTERN)
-        .push(") OR (payload ? 'notional' AND NOT COALESCE(payload->>'notional','') ~ ")
+        .push(") OR (COALESCE(payload->'notional',payload#>'{fields,notional,value}') IS NOT NULL AND NOT COALESCE(payload->>'notional',payload#>>'{fields,notional,value}','') ~ ")
         .push_bind(EXACT_DECIMAL_PATTERN)
         .push(
             ") ) AS invalid_numeric_count \
@@ -796,7 +797,7 @@ async fn query_aggregates(
         .push(" AND entity_kind = ")
         .push_bind(kind.as_str());
     push_filters(&mut query, filters)?;
-    query.push(" GROUP BY NULLIF(payload->>'currency','') ORDER BY currency NULLS FIRST");
+    query.push(" GROUP BY NULLIF(COALESCE(payload->>'currency',payload#>>'{fields,currency,value}',''),'') ORDER BY currency NULLS FIRST");
     query
         .build()
         .fetch_all(&mut **transaction)
@@ -814,6 +815,66 @@ async fn query_aggregates(
             })
         })
         .collect()
+}
+
+fn projection_field_expression(field: &str) -> &'static str {
+    match field {
+        "status" => "COALESCE(payload->>'status',payload#>>'{fields,status,value}','')",
+        "currency" => "COALESCE(payload->>'currency',payload#>>'{fields,currency,value}','')",
+        "instrument_id" => {
+            "COALESCE(payload->>'instrument_id',payload#>>'{fields,instrument_id,value}','')"
+        }
+        "account_id" => "COALESCE(payload->>'account_id',payload#>>'{fields,account_id,value}','')",
+        "portfolio_id" => {
+            "COALESCE(payload->>'portfolio_id',payload#>>'{fields,portfolio_id,value}','')"
+        }
+        "strategy_id" => {
+            "COALESCE(payload->>'strategy_id',payload#>>'{fields,strategy_id,value}','')"
+        }
+        "deployment_id" => {
+            "COALESCE(payload->>'deployment_id',payload#>>'{fields,deployment_id,value}','')"
+        }
+        _ => unreachable!("projection field expressions are closed over the query allowlist"),
+    }
+}
+
+pub(super) fn normalize_projection_payload(
+    payload: serde_json::Value,
+) -> Result<serde_json::Value, StoreError> {
+    let Some(object) = payload.as_object() else {
+        return Err(StoreError::InvalidAnalyticsSourcePayload);
+    };
+    let Some(fields) = object.get("fields") else {
+        return Ok(payload);
+    };
+    let Some(fields) = fields.as_object() else {
+        return Err(StoreError::InvalidAnalyticsSourcePayload);
+    };
+    let mut normalized = serde_json::Map::new();
+    for (name, tagged) in fields {
+        let Some(tagged) = tagged.as_object() else {
+            return Err(StoreError::InvalidAnalyticsSourcePayload);
+        };
+        let Some(kind) = tagged.get("kind").and_then(serde_json::Value::as_str) else {
+            return Err(StoreError::InvalidAnalyticsSourcePayload);
+        };
+        let Some(value) = tagged.get("value") else {
+            return Err(StoreError::InvalidAnalyticsSourcePayload);
+        };
+        if !matches!(
+            kind,
+            "NULL" | "BOOLEAN" | "INTEGER" | "DECIMAL" | "TEXT" | "TIMESTAMP" | "ARRAY" | "OBJECT"
+        ) {
+            return Err(StoreError::InvalidAnalyticsSourcePayload);
+        }
+        normalized.insert(name.clone(), value.clone());
+    }
+    for metadata in ["change_label", "source_feed", "source_relation"] {
+        if let Some(value) = object.get(metadata) {
+            normalized.insert(metadata.to_owned(), value.clone());
+        }
+    }
+    Ok(serde_json::Value::Object(normalized))
 }
 
 fn empty_series(

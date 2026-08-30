@@ -1670,6 +1670,19 @@ and correlation load, no-N+1, retention error and deterministic rebuild tests.
 **N25 exit gate:** all derivable commissioned analytics have bounded,
 reproducible, source-attributed output and pass correctness/load/rebuild gates.
 
+**Closeout (2026-08-30):** `COMPLETE /
+SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING /
+N26_READY`. The Rust plane now loads one ACTIVE subject snapshot with one
+PostgreSQL statement, enforces exact relation/currency partitions and bounded
+series/correlation/replay outputs, and exposes four strict session-guarded BFF
+routes. N25 adds `strategy_deployments` lineage through projection adapter v2,
+so every new cycle requires 13 feeds; historical 12-feed N24 receipts remain
+immutable evidence. Market candles, benchmark rho, cross-profile canary drift
+and broker ACK latency remain typed unavailable under stable N28 source-gap
+codes because current Manager-v2 does not publish those semantics. No internal
+N25 implementation debt remains. Evidence and operations:
+[`EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md`](./backend/EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md).
+
 #### N26 — Realtime SSE activation
 
 **Goal:** provide authenticated snapshot → cursor/epoch → delta delivery from

@@ -22,9 +22,9 @@ use serde_json::{json, Value};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
-pub const MANAGER_PROJECTION_SCHEMA_VERSION: &str = "portal.execution.manager-projection.v1";
+pub const MANAGER_PROJECTION_SCHEMA_VERSION: &str = "portal.execution.manager-projection.v2";
 pub const MANAGER_PROJECTION_ADAPTER_VERSION: &str =
-    "portal.execution.manager-projection.manager-v2.runtime.v1";
+    "portal.execution.manager-projection.manager-v2.runtime.v2";
 pub const PORTAL_PROJECTION_DELTA: &str = "PORTAL_PROJECTION_DELTA";
 pub const DEFAULT_POLL_INTERVAL_MS: i64 = 2_000;
 pub const MAXIMUM_FEED_RECORDS: usize = 20_000;
@@ -91,7 +91,7 @@ pub enum ManagerProjectionSource {
 
 /// Current, source-as-is feed set. Named projections provide the cross-profile
 /// backbone; bounded relation reads add sessions, snapshots and event facts.
-pub const FEEDS: [ManagerProjectionFeed; 12] = [
+pub const FEEDS: [ManagerProjectionFeed; 13] = [
     ManagerProjectionFeed {
         feed_id: "manager.order",
         entity_kind: ProjectionEntityKind::Order,
@@ -121,6 +121,11 @@ pub const FEEDS: [ManagerProjectionFeed; 12] = [
         feed_id: "manager.portfolio",
         entity_kind: ProjectionEntityKind::Performance,
         source: ManagerProjectionSource::Named(ProjectionKind::Portfolio),
+    },
+    ManagerProjectionFeed {
+        feed_id: "relation.strategy_deployments",
+        entity_kind: ProjectionEntityKind::Runtime,
+        source: ManagerProjectionSource::Relation("public.strategy_deployments"),
     },
     ManagerProjectionFeed {
         feed_id: "relation.execution_sessions",

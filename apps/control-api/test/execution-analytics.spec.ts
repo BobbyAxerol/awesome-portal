@@ -4,6 +4,7 @@ import {
   AnalyticsBulkhead,
   AnalyticsProxyError,
   analyticsResource,
+  managerQueryAnalyticsTarget,
   typedUpstreamProblemCode,
 } from "../src/execution/analytics.proxy";
 import {
@@ -29,6 +30,24 @@ describe("EX-BE-07b analytics screen boundary", () => {
       "execution:screen:paper-workbench:dep_74",
     );
     expect(() => analyticsResource("blotter", "../other"))
+      .toThrowError(AnalyticsProxyError);
+  });
+
+  it("binds each N25 subject to one fixed private path and delegated screen resource", () => {
+    expect(managerQueryAnalyticsTarget("deployment", "dep_74")).toEqual({
+      path: "/internal/v1/query-analytics/deployment/dep_74",
+      resource: "execution:current-source:EXECUTION_PAPER_WORKBENCH_SCREEN:read",
+    });
+    expect(managerQueryAnalyticsTarget("alpha", "alpha_1").resource).toBe(
+      "execution:current-source:EXECUTION_ALPHA_360_SCREEN:read",
+    );
+    expect(managerQueryAnalyticsTarget("portfolio", "PF_1").resource).toBe(
+      "execution:current-source:EXECUTION_PORTFOLIO_360_SCREEN:read",
+    );
+    expect(managerQueryAnalyticsTarget("live-gate", "AP_1").resource).toBe(
+      "execution:current-source:EXECUTION_CANARY_CONTROL_ROOM_SCREEN:read",
+    );
+    expect(() => managerQueryAnalyticsTarget("deployment", "../escape"))
       .toThrowError(AnalyticsProxyError);
   });
 

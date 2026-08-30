@@ -6,7 +6,7 @@ import { AuthSession, PortalUser } from "../domain";
 import { ExecutionDelegationService } from "./delegation";
 
 const IDENTIFIER = /^[A-Za-z0-9._-]{1,128}$/;
-const TYPED_UPSTREAM_CODE = /^(?:N07|ANALYTICS)_[A-Z0-9_]{1,80}$/;
+const TYPED_UPSTREAM_CODE = /^(?:N07|N25|ANALYTICS)_[A-Z0-9_]{1,80}$/;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 export interface AnalyticsPrincipal {
@@ -22,6 +22,28 @@ type Screen =
   | "portfolio-360"
   | "account-broker-360"
   | "paper-workbench";
+
+export type QueryAnalyticsSubjectKind = "deployment" | "alpha" | "portfolio" | "live-gate";
+
+const QUERY_ANALYTICS_SCREEN: Readonly<Record<QueryAnalyticsSubjectKind, string>> = {
+  deployment: "EXECUTION_PAPER_WORKBENCH_SCREEN",
+  alpha: "EXECUTION_ALPHA_360_SCREEN",
+  portfolio: "EXECUTION_PORTFOLIO_360_SCREEN",
+  "live-gate": "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+};
+
+export function managerQueryAnalyticsTarget(
+  subjectKind: QueryAnalyticsSubjectKind,
+  subjectId: string,
+): { path: string; resource: string } {
+  if (!IDENTIFIER.test(subjectId)) {
+    throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
+  }
+  return {
+    path: `/internal/v1/query-analytics/${subjectKind}/${segment(subjectId)}`,
+    resource: `execution:current-source:${QUERY_ANALYTICS_SCREEN[subjectKind]}:read`,
+  };
+}
 
 export function analyticsResource(screen: Screen, id: string): string {
   if (!IDENTIFIER.test(id)) throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
@@ -203,6 +225,21 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       `/internal/v1/screens/paper-workbench/${segment(deploymentId)}/${panel}/query`,
       analyticsResource("paper-workbench", deploymentId),
       body,
+    );
+  }
+
+  managerQueryAnalytics(
+    principal: AnalyticsPrincipal,
+    subjectKind: QueryAnalyticsSubjectKind,
+    subjectId: string,
+  ): Promise<unknown> {
+    this.requireAnalytics();
+    const target = managerQueryAnalyticsTarget(subjectKind, subjectId);
+    return this.request(
+      principal,
+      "GET",
+      target.path,
+      target.resource,
     );
   }
 

@@ -16,8 +16,9 @@ use std::{
 
 use analytics::{
     aggregate_binding_exposure, build_capital_ledger, build_capital_preview, build_correlation,
-    build_insight_batch, build_order_funnel, AnalyticsError, CapitalPreviewRequest,
-    DerivedAnalytics, InsightBatchRequest,
+    build_insight_batch, build_manager_query_analytics, build_order_funnel, AnalyticsError,
+    CapitalPreviewRequest, DerivedAnalytics, InsightBatchRequest, ManagerQueryAnalytics,
+    ManagerQueryAnalyticsFact, ManagerQueryAnalyticsInput, PopulationCompleteness,
 };
 use axum::{
     extract::{Path as AxumPath, Query, State},
@@ -57,7 +58,8 @@ use projection_core::{
     ProjectionScope, ResumeDecision, VenueSessionState,
 };
 use projection_store_pg::{
-    AnalyticsReadRequirement, AnalyticsSourceRead, PgProjectionStore, RealtimeJournalRecord,
+    AnalyticsReadRequirement, AnalyticsSourceRead, ManagerAnalyticsSubject,
+    ManagerAnalyticsSubjectKind, PgProjectionStore, RealtimeJournalRecord,
     RealtimeScopeAvailability, SourceAdmissionDenyReason, SourceAdmissionOutcome,
     SourceAdmissionRequest, SourceReadCacheWrite, StoreError,
 };
@@ -100,6 +102,7 @@ const PAPER_WORKBENCH_SHADOW_SCHEMA_VERSION: &str = "execution.paper-workbench.s
 const PAPER_WORKBENCH_SCREEN_ID: &str = "EXECUTION_PAPER_WORKBENCH_SCREEN";
 const MANAGER_V2_RESOURCE: &str = "execution:manager-v2:read";
 const CURRENT_SOURCE_RESOURCE_PREFIX: &str = "execution:current-source:";
+const QUERY_ANALYTICS_SCHEMA_VERSION: &str = "execution.query-analytics-envelope.v1";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeGate {
@@ -1025,6 +1028,10 @@ fn private_router(state: AppState) -> Router {
         .route(
             "/internal/v1/screens/paper-workbench/:deployment_id/:panel/query",
             post(paper_workbench_shadow_query),
+        )
+        .route(
+            "/internal/v1/query-analytics/:subject_kind/:subject_id",
+            get(manager_query_analytics),
         )
         .with_state(state)
 }
@@ -2482,6 +2489,16 @@ fn analytics_error_contract(error: &AnalyticsError) -> (StatusCode, &'static str
             "ANALYTICS_RESPONSE_SIZE_LIMIT",
             "Analytics response exceeds the published size limit.",
         ),
+        AnalyticsError::ChartRule(_) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_CHART_RULE_VIOLATION",
+            "Analytics output violates chart-series.rules.v1.",
+        ),
+        AnalyticsError::RiskSeries(_) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "ANALYTICS_RISK_SERIES_INVALID",
+            "Analytics input cannot produce the requested bounded risk series.",
+        ),
     }
 }
 
@@ -2492,10 +2509,233 @@ fn analytics_store_error(error: &StoreError) -> Response {
         | StoreError::AnalyticsCapabilityMismatch
         | StoreError::AnalyticsPopulationMismatch
         | StoreError::InvalidAnalyticsSourcePayload
+        | StoreError::AnalyticsSourceIntegrityMismatch
         | StoreError::AnalyticsSourceLimitExceeded
+        | StoreError::AnalyticsSourcePayloadLimitExceeded
         | StoreError::ActiveEpochNotFound
         | StoreError::EpochNotFound => StatusCode::SERVICE_UNAVAILABLE.into_response(),
         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum QueryAnalyticsSubjectKind {
+    Deployment,
+    Alpha,
+    Portfolio,
+    LiveGate,
+}
+
+impl QueryAnalyticsSubjectKind {
+    fn parse(raw: &str) -> Option<Self> {
+        match raw {
+            "deployment" => Some(Self::Deployment),
+            "alpha" => Some(Self::Alpha),
+            "portfolio" => Some(Self::Portfolio),
+            "live-gate" => Some(Self::LiveGate),
+            _ => None,
+        }
+    }
+
+    const fn source_screen_id(self) -> &'static str {
+        match self {
+            Self::Deployment => "EXECUTION_PAPER_WORKBENCH_SCREEN",
+            Self::Alpha => "EXECUTION_ALPHA_360_SCREEN",
+            Self::Portfolio => "EXECUTION_PORTFOLIO_360_SCREEN",
+            Self::LiveGate => "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        }
+    }
+
+    const fn store_kind(self) -> ManagerAnalyticsSubjectKind {
+        match self {
+            Self::Deployment => ManagerAnalyticsSubjectKind::Deployment,
+            Self::Alpha => ManagerAnalyticsSubjectKind::Alpha,
+            Self::Portfolio => ManagerAnalyticsSubjectKind::Portfolio,
+            Self::LiveGate => ManagerAnalyticsSubjectKind::LiveGate,
+        }
+    }
+
+    const fn contract_name(self) -> &'static str {
+        match self {
+            Self::Deployment => "DEPLOYMENT",
+            Self::Alpha => "ALPHA",
+            Self::Portfolio => "PORTFOLIO",
+            Self::LiveGate => "LIVE_GATE",
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct QueryAnalyticsEnvelope {
+    schema_version: &'static str,
+    runtime_active: bool,
+    source_side_effect_requested: bool,
+    epoch_id: Uuid,
+    catalogue_digest: String,
+    projection_state_digest: String,
+    source_fact_digest: String,
+    source_fact_count: usize,
+    repository_query_count: u8,
+    source_read_at: DateTime<Utc>,
+    read_at: DateTime<Utc>,
+    analytics: ManagerQueryAnalytics,
+}
+
+#[allow(clippy::too_many_lines)] // one handler keeps auth, snapshot and immutable evidence atomic
+async fn manager_query_analytics(
+    State(state): State<AppState>,
+    AxumPath((raw_subject_kind, raw_subject_id)): AxumPath<(String, String)>,
+    headers: HeaderMap,
+) -> Response {
+    if !state.analytics_query_enabled.is_enabled() {
+        return manager_problem(
+            StatusCode::NOT_FOUND,
+            "N25_QUERY_ANALYTICS_DISABLED",
+            "The N25 query and analytics plane is not active in this runtime.",
+        );
+    }
+    let Some(subject_kind) = QueryAnalyticsSubjectKind::parse(&raw_subject_kind) else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "N25_SUBJECT_KIND_INVALID",
+            "The analytics subject kind is outside the fixed N25 contract.",
+        );
+    };
+    let subject_id = match screen_identifier(raw_subject_id) {
+        Ok(value) => value,
+        Err(status) => {
+            return manager_problem(
+                status,
+                "N25_SUBJECT_ID_INVALID",
+                "The analytics subject identifier is invalid.",
+            )
+        }
+    };
+    if let Err(response) =
+        current_source_authorize(&state, &headers, subject_kind.source_screen_id())
+    {
+        return response;
+    }
+    let Some(token) = bearer(&headers) else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    let resource = format!(
+        "{CURRENT_SOURCE_RESOURCE_PREFIX}{}:read",
+        subject_kind.source_screen_id()
+    );
+    let Ok(claims) = state.verifier.verify_read(
+        token,
+        &RequiredRead {
+            environment: &state.environment,
+            resource: Some(&resource),
+        },
+    ) else {
+        return StatusCode::FORBIDDEN.into_response();
+    };
+    let Ok(workspace_id) = CanonicalId::parse(claims.workspace_id) else {
+        return StatusCode::FORBIDDEN.into_response();
+    };
+    let Ok(scope) = ProjectionScope::new(workspace_id, state.environment.clone()) else {
+        return StatusCode::FORBIDDEN.into_response();
+    };
+    let Some(store) = state.projection_store.as_ref() else {
+        return manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N25_PROJECTION_UNAVAILABLE",
+            "The durable Manager projection is unavailable.",
+        );
+    };
+    let snapshot = match store
+        .load_manager_analytics_snapshot(
+            &scope,
+            &ManagerAnalyticsSubject {
+                kind: subject_kind.store_kind(),
+                id: subject_id,
+            },
+        )
+        .await
+    {
+        Ok(value) => value,
+        Err(error) => return n25_store_error(&error),
+    };
+    let completeness = if snapshot
+        .facts
+        .iter()
+        .any(|fact| fact.source_completeness == SourceCompleteness::Unknown)
+    {
+        PopulationCompleteness::Unknown
+    } else {
+        // A committed N24 cycle contains every page of every selected
+        // relation. PollBounded describes acquisition semantics, not a
+        // partial population inside that immutable cycle.
+        PopulationCompleteness::Complete
+    };
+    let analytics = match build_manager_query_analytics(&ManagerQueryAnalyticsInput {
+        subject_kind: subject_kind.contract_name().to_owned(),
+        subject_id: snapshot.subject_id.clone(),
+        environment: state.environment.clone(),
+        profile_id: snapshot.profile_id.clone(),
+        as_of: snapshot.as_of.unwrap_or(snapshot.source_read_at),
+        projection_state_digest: snapshot.projection_state_digest.clone(),
+        completeness,
+        facts: snapshot
+            .facts
+            .iter()
+            .map(|fact| ManagerQueryAnalyticsFact {
+                entity_id: fact.entity_id.clone(),
+                relation: fact.source_relation.clone(),
+                as_of: fact.as_of,
+                fields: fact.fields.clone(),
+            })
+            .collect(),
+    }) {
+        Ok(value) => value,
+        Err(error) => return analytics_error_response(&error),
+    };
+    manager_json_response(
+        StatusCode::OK,
+        QueryAnalyticsEnvelope {
+            schema_version: QUERY_ANALYTICS_SCHEMA_VERSION,
+            runtime_active: true,
+            source_side_effect_requested: false,
+            epoch_id: snapshot.epoch_id,
+            catalogue_digest: snapshot.catalogue_digest,
+            projection_state_digest: snapshot.projection_state_digest,
+            source_fact_digest: snapshot.fact_digest,
+            source_fact_count: snapshot.fact_count,
+            repository_query_count: snapshot.repository_query_count,
+            source_read_at: snapshot.source_read_at,
+            read_at: Utc::now(),
+            analytics,
+        },
+    )
+}
+
+fn n25_store_error(error: &StoreError) -> Response {
+    match error {
+        StoreError::AnalyticsSourceNotFound | StoreError::ActiveEpochNotFound => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N25_PROJECTION_CYCLE_NOT_FOUND",
+            "No committed active Manager projection cycle is available.",
+        ),
+        StoreError::AnalyticsSourceLimitExceeded => manager_problem(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "N25_SOURCE_FACT_LIMIT_EXCEEDED",
+            "The resource-scoped analytics population exceeds its published limit.",
+        ),
+        StoreError::AnalyticsSourceIntegrityMismatch
+        | StoreError::InvalidAnalyticsSourcePayload
+        | StoreError::PersistedVocabulary => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N25_PROJECTION_INTEGRITY_REJECTED",
+            "The Manager projection did not satisfy the fixed N25 integrity contract.",
+        ),
+        _ => manager_problem(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "N25_QUERY_ANALYTICS_FAILED",
+            "The N25 query and analytics request could not be completed.",
+        ),
     }
 }
 
@@ -4340,6 +4580,19 @@ mod tests {
         parse::<BindingExposureResult>(include_str!(
             "../../../../../packages/contracts/fixtures/execution-analytics.binding-exposure.valid.json"
         ));
+    }
+
+    #[test]
+    fn n25_query_analytics_contract_fixture_deserializes_through_rust_serde() {
+        let envelope = serde_json::from_str::<QueryAnalyticsEnvelope>(include_str!(
+            "../../../../../packages/contracts/fixtures/execution-query-analytics.empty.valid.json"
+        ))
+        .unwrap();
+        assert_eq!(envelope.schema_version, QUERY_ANALYTICS_SCHEMA_VERSION);
+        assert_eq!(envelope.repository_query_count, 1);
+        assert!(!envelope.source_side_effect_requested);
+        assert_eq!(envelope.analytics.subject_kind, "PORTFOLIO");
+        assert_eq!(envelope.analytics.source_fact_count, 0);
     }
 
     #[test]

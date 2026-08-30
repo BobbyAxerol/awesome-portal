@@ -991,7 +991,7 @@ fn validate_cycle_input(
     if !profile_matches(&scope.environment, &input.profile_id)
         || !valid_digest(&input.catalogue_digest)
         || !valid_digest(&input.source_input_digest)
-        || input.feed_count != 12
+        || input.feed_count != 13
         || input.record_count > 80_000
     {
         return Err(StoreError::InvalidManagerProjectionCycle);
@@ -1031,7 +1031,7 @@ fn tombstone_observation(
         operation: ProjectionOperation::Delete,
         source_completeness: SourceCompleteness::PollBounded,
         poll_interval_ms: Some(input.poll_interval_ms),
-        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v1".to_owned(),
+        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v2".to_owned(),
         capability_snapshot_id: input.catalogue_digest.clone(),
         payload: serde_json::json!({
             "change_label": "PORTAL_PROJECTION_DELTA",

@@ -116,6 +116,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-paper-exit.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-realtime-event.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-analytics-series.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-query-analytics.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-event-envelope.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-operations.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-staged-activation.v1.schema.json" \
@@ -158,12 +159,14 @@ for required in \
   "${ROOT_DIR}/packages/contracts/generated/portal-api.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-analytics-series.d.ts" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-query-analytics.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-governance.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-realtime.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-operations.d.ts" \
   "${ROOT_DIR}/packages/contracts/generated/execution-staged-activation.d.ts" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-analytics-series.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-query-analytics.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-governance.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-realtime.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
@@ -287,6 +290,9 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/execution-contracts/src/events.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/series.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/tiles.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/chart.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/manager_plane.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/analytics/src/risk_series.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-contract-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/ts-adapter-v1/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-auth/src/lib.rs" \
@@ -305,6 +311,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/query.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/analytics_repository.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/shared_consumer.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/manager_query_analytics.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/shared-consumer-core/src/tests.rs" \
@@ -321,6 +328,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0006_projection_operation_and_sequence_semantics.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0007_d4_source_checkpoint.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0008_shared_consumer_lease.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0013_manager_query_analytics.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/Cargo.toml" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/build.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/paper-source-contract/src/lib.rs" \
@@ -536,10 +544,15 @@ for required in \
   "${ROOT_DIR}/apps/control-api/src/paper-read/paper-read.service.ts" \
   "${ROOT_DIR}/apps/control-api/test/paper-read.spec.ts" \
   "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n25-query-analytics-test.sh" \
   "${ROOT_DIR}/scripts/portal-sandbox-live-read-release.py" \
   "${ROOT_DIR}/scripts/test_portal_sandbox_live_read_release.py" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N25_QUERY_ANALYTICS_HANDOFF.md" \
+  "${ROOT_DIR}/deploy/manifests/query-analytics-release-profile.v1.json" \
+  "${ROOT_DIR}/deploy/runbooks/execution-n25-query-analytics-release-and-rollback.md" \
   "${ROOT_DIR}/deploy/manifests/sandbox-live-read-release-profile.v1.json" \
   "${ROOT_DIR}/deploy/runbooks/portal-n23-sandbox-live-read-release-and-rollback.md" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-profile-read.v1.schema.json" \
@@ -559,6 +572,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-sandbox-certification.unavailable.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-canary-control-room.unavailable.valid.json" \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-live-full-operations.unavailable.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-query-analytics.empty.valid.json" \
   "${ROOT_DIR}/apps/control-api/src/profile-read/contracts.ts" \
   "${ROOT_DIR}/apps/control-api/src/profile-read/profile-read.controller.ts" \
   "${ROOT_DIR}/apps/control-api/src/profile-read/profile-read.service.ts" \

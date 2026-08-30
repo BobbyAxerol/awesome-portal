@@ -289,6 +289,10 @@ pub enum AnalyticsError {
     InvalidTileSampleState,
     #[error("analytics response is {actual} bytes; maximum is {maximum}")]
     ResponseSizeLimit { actual: usize, maximum: usize },
+    #[error("chart-series.rules.v1 violation: {0}")]
+    ChartRule(&'static str),
+    #[error("risk-series input is invalid: {0}")]
+    RiskSeries(&'static str),
 }
 
 impl FromStr for CurrencyCode {
