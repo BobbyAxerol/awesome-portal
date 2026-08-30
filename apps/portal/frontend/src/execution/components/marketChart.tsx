@@ -207,10 +207,14 @@ export function LinesChart({
                 label: { color: t.inkFaint, fontSize: 9, position: "insideTop" },
                 data: [
                   ...(closedWindows ?? []).map((w) => [{ xAxis: w.from, name: w.label ?? "" }, { xAxis: w.to }]),
-                  ...(bands ?? []).map((b) => {
+                  ...(bands ?? []).map((b, bi) => {
                     const c = toneColor(b.tone ?? "accent");
+                    // Adjacent era labels collide when a band is narrower than
+                    // its caption (PF360 90d: rev 12/13/14). Staggering odd
+                    // bands one line down keeps every caption legible without
+                    // dropping any — dropping would hide a config revision.
                     return [
-                      { xAxis: b.from, name: b.label ?? "", itemStyle: { color: withAlpha(c, 0.08) }, label: { color: c } },
+                      { xAxis: b.from, name: b.label ?? "", itemStyle: { color: withAlpha(c, 0.08) }, label: { color: c, offset: bi % 2 ? [0, 13] : [0, 0] } },
                       { xAxis: b.to },
                     ];
                   }),

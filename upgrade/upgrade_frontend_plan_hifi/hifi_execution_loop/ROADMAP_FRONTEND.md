@@ -360,3 +360,55 @@ nhận `api` từ ngoài, không route sản phẩm nào được mount.
 **Giục codex mở 8 endpoint `ops` (A1a).** Ba màn chưa dựng — Operations Queue,
 Incident Detail, Command Center — đều chờ đúng tám endpoint đó, và không có
 đường vòng nào cho chúng.
+
+---
+
+## G. Sweep toàn màn 2026-08-30 (owner yêu cầu) — kết quả + màn còn thiếu
+
+Cách rà: 4 probe trên 24–27 route (gutter/overflow/console · dead-link gate ·
+raw-ISO gate · screenshot soi tay PF-360, Exit Review) + full gate 103 e2e.
+
+### G.1 Đo được, đã xanh (không cần làm gì)
+- **Khoảng cách content–sidebar đồng nhất tuyệt đối**: content-left = 244px
+  trên cả 24 route (gap 16px; governance-light lệch 1px ở mép sidebar do
+  border theme sáng — mép content vẫn thẳng hàng 244). Câu hỏi owner từ ảnh
+  Portfolio 360: thứ nhìn thấy là **scrollbar của chính sidebar** (dọc = sidebar
+  cuộn, ngang = bug tràn ngang — đã fix, xem G.2).
+- overflowX trang = 0/24 route · console error = 0/24 · dead link 0 · raw ISO 0.
+- Hai "bug" tưởng thấy ở Exit Review (chữ đè trong card activation plan, nút đè
+  panel conditions) là **artifact của fullPage screenshot** với sticky bar —
+  viewport thật render đúng, bar nền đặc `--surface-2`. Đã chứng minh bằng
+  probe computed-style + screenshot viewport.
+
+### G.2 Đã sửa trong sweep này (Claude, xong)
+1. Sidebar tràn ngang → `overflow-x: hidden` cho `.portal-sidebar` (shell.css —
+   shared, nhưng chỉ đóng trục ngang vốn không bao giờ nên cuộn).
+2. Era labels đè nhau trên equity chart PF-360 (90d: rev 12/13/14) → stagger
+   label theo parity band trong `marketChart` markArea (không rơi label nào —
+   rơi là giấu một config revision).
+3. (từ lượt trước cùng ngày) `?action=rotate_credential` được drawer trả lời
+   honest + link ngược Accounts.
+
+### G.3 Bobby quyết
+1. **Scrollbar sidebar mỏng đi?** `scrollbar-width: thin` sẽ đổi pixel của
+   ~100 baseline research/operations (shared shell) — rule §0 bắt hỏi trước.
+   Nếu OK tôi làm + re-record trong một pass.
+2. **3 màn chưa có hi-fi**: Exit Reviews **list** (route gốc
+   `/governance/exit-reviews` hiện đưa thẳng vào EX-771 — hoạt động nhưng chưa
+   phải list), Promotion Timeline, Waivers & Conditions. Chờ Bobby giao hi-fi.
+3. "Micro…" trong ảnh owner: không tái hiện ở 1440/probe — nghi popup ngoài app
+   (OS/extension). Nếu còn thấy, cho xin ảnh + độ rộng cửa sổ.
+
+### G.4 Chờ codex
+1. **HOTFIX_REQUEST_2026-08-30.md** — `EXECUTION_ADMIN_ACTIONS.show_in_sidebar
+   false→true` (1 flag; duy nhất nó false trong 9 feature EXECUTION_*). Đây là
+   lý do nhóm ADMINISTRATION chưa có màn Admin Actions ở sidebar (owner report).
+2. BR-EX-68 `ACK` + 6 open decision (spec file riêng).
+3. BR-EX-41…67 vẫn `RECEIVED` · OHLC owner decision §7.5.5(1) vẫn treo.
+4. Profile & Access: COMMISSIONED, thuộc lane U07 (login/step-up) — chưa có
+   việc frontend đến khi codex mở U10/U07.
+
+### G.5 Không thiếu màn nào khác trong scope §0
+17 màn Execution Loop + 3 governance mới + Admin WF 1i đã dựng đủ; các mục
+sidebar còn lại (Alpha Mining, Strategy Composer, Data Catalog, Portal Map…)
+ngoài scope Execution Loop, đúng trạng thái SOON/PROTOTYPE theo registry.

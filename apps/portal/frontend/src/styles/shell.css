@@ -146,6 +146,10 @@
   border-right: 1px solid var(--line);
   background: var(--paper-sunken);
   overflow-y: auto;
+  /* A fixed-width nav must never scroll sideways: a label 2px over budget
+     was drawing a horizontal scrollbar under the group list (owner report
+     2026-08-30). Labels ellipsize; the axis is closed. */
+  overflow-x: hidden;
   position: sticky;
   top: var(--topbar-h);
   height: calc(100vh - var(--topbar-h));
