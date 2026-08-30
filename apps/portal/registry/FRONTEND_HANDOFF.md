@@ -1527,3 +1527,273 @@ Bobby: tile 8/10 của Insight Charts chưa có smoke khai báo; và mọi chart
 - Regression WCAG bắt được và sửa trong pass: `.exec-a3 .exec-role-meta` đè
   màu guard note trên Canary/Live (hai màn này cũng mang class `exec-a3`) →
   scoped bằng `:not(.exec-guard-note)`; audit 5 viewport xanh lại.
+
+### 8.30 Approval Inbox — pass hi-fi 4a trên nhánh continuation (2026-08-30)
+
+Màn đầu của đợt 18 màn mới (worktree `portal-uiux-next`). Theo owner override
+24/08 §0.1: một workspace Carbon — hi-fi "Governance Light" là floor chức năng,
+không phải pixel authority. Đã đủ minimum acceptance của §11.6:
+
+- **Recently decided chuyển sang `governance.approval-history.v1`**: type
+  `DecidedRow` + `readDecidedRow` (rows.ts), bảng decided có cột riêng
+  request · gate·subject · outcome chip · decided (date · người · policy) —
+  trước đó tái dùng cột pending và nhét outcome vào `blocker_summary`.
+  Fixture api reshape theo history schema + bổ sung AP-341 bị thiếu; test nạp
+  fixture canonical `execution-governance.approval-history.valid.json`.
+- **"Full history →" hết disabled-stale**: contract history là keyset page —
+  `has_more=true` → nút thật gọi `onLoadOlderDecided`; `has_more=false` → câu
+  "full history loaded · N decisions" thay vì nút chết. Lý do BR-EX-35 cũ đã
+  được contract này thay thế.
+- **Mine (N)**: `counts.mine` (đếm cả queue, server-side trong fixture api);
+  label filter INBOX = "Mine (3)", R2 = "Ops · R2" theo chữ hi-fi.
+- **Đồng hồ SLA**: `approvalInbox.smoke.ts` (`useInboxTick` — motion-gated
+  qua `smokeMotionAllowed`, đứng yên dưới fixtures/webdriver; deletion note
+  BR-EX-30/35 stream). Age chính xác `26h 00m 00s`, footer "next SLA breach
+  in … (AP-201)" đếm ngược — mọi số đều suy từ age/budget server publish.
+- **Row anatomy hi-fi**: SlaCell đổi DOM (text · flag · bar) — trong inbox bar
+  3px nằm dưới text (110px); OVERDUE badge + bar pulse (tắt theo
+  prefers-reduced-motion); blockers "N → summary"; id cell là <a> thật tới
+  route review theo gate; empty state "Inbox zero. Nothing waits on you…".
+- Tests 1718 pass; probe screenshot soi bằng mắt. R1/R2 là hai màn kế tiếp —
+  contract `governance.r1-review` đã publish mà frontend chưa đọc (phát hiện
+  của nghi thức §7.8), sẽ nạp ở slice R1.
+
+### 8.31 Gate R1/R2 — pass hi-fi 1a/1b bản owner 2026-08-30 (2026-08-30)
+
+Hi-fi R2 bản chat **mới hơn bản đĩa** (thêm Gate criteria + Stage eligibility).
+Đã làm:
+
+- **R1 Evidence hết honest-state**: `R1EvidenceSmoke` — equity 3 window-role
+  (IS/OOS/holdout, boundary label ngang, annotation max DD đúng giá trị series
+  — rule 6, trục năm 2019–2026) + WFO 12 fold bars (threshold 1.0, fold 6
+  highlight). `LinesChart` thêm formatter năm cho span >400d + `position` cho
+  verticalLines; `BarsChart` thêm `thresholdLine`/`highlight`. Checklist mang
+  chip `gate_r1 rev 4` (smoke).
+- **R2 thêm tab Gate criteria** (bảng policy-vs-evidence 5 dòng, verdict
+  server-worded PASS/WAIVERABLE, footer 4·1·0, policy chip `gate_r2 rev 7`) +
+  **Stage eligibility chips** (PAPER eligible · SANDBOX/CANARY needs) +
+  **Portfolio fit panel** trong Readiness (weight bar 8.0%, corr est,
+  marginal risk, diversification, symbol overlap). Tất cả smoke có nhãn.
+- **Request changes hết disabled-stale**: N09 đã publish verb
+  (`can_request_changes` + `REQUEST_CHANGES` trong decision enum) — eligibility
+  reader/port/containers nối verb thật; nút enable khi server cấp + đã viết
+  reason (≥8 ký tự, sàn của schema); lý do BR-EX-36 cũ gỡ bỏ.
+- Data không publish → smoke `governance.smoke.ts` (deletion contract) và
+  **BR-EX-67** đã file (plan §7.2 + §7.9, commit `bef4a58`): additive fields
+  trên `governance.r1-review.v1`/`r2-review.v1`, verdict server-side, policy
+  data không bao giờ là UI constant. Mirror row trong file này.
+- Link chuẩn: inbox → R1/R2 (id cell + row), R2 → R1 (`open AP-101` +
+  R1 reference tab), breadcrumb Governance/Approvals.
+
+### 8.32 Governance Light — owner đảo quyết định 24/08, ba màn theo hi-fi (2026-08-30)
+
+**Quyết định owner 2026-08-30 (Bobby, từ screenshot + hi-fi):** Governance
+(Inbox · R1 · R2 · exit reviews) là **phòng review sáng** đúng hi-fi — đảo
+§0.1(3) của handoff refactor 24/08 ("không có governance-light"). Codex lưu ý:
+mọi tài liệu còn nói "one Carbon workspace cho cả governance" cần đối chiếu
+mục này.
+
+Cách làm — theme là workspace mode, không phải skin cục bộ (giữ đúng bài học
+EL-V2-01): mode `governance-light` cho `/governance/*` (token research, ép
+trên preference; TopBar "Governance Light ▾" route-set); `ExecutionSurface`
+kind governance không stamp theme (inherit); ba màn bỏ workspace/rail/tabs →
+bố cục phẳng hi-fi (`.exec-gov-*`, `data-hifi-exact`); Inbox thêm
+`actor`/`policyVersion` vào port list (shape actor của workflow contract);
+Capital preview là inverse panel duy nhất (`--gov-inverse-line`); test cũ
+"never an inverted surface" (codex-era) viết lại theo hi-fi owner; typeRoles
+exemption thêm `gov|gate`; token mới `--warn-bg`(light)/`--gov-exit`. Tests
+1724 pass; baselines governance đổi toàn bộ có chủ ý ở gate kế.
+
+### 8.33 Governance polish pass 2 + Paper Exit Review (2026-08-30, ảnh 1/2/3)
+
+- **Typography trong panel**: input/textarea/composer/empty-state trong
+  `.exec-gov` về mono 12px compact; ConditionComposer gọn sau "+ add
+  condition" (details/summary, chuẩn hi-fi "CONDITION … + add"); grid2
+  `align-items: start` — hết panel trống kéo trắng nửa trang.
+- **Capital preview**: cột AFTER hết bị cắt (mono 11px, note wrap dưới số);
+  khối inverse giờ **re-scope token trong tokens.css** — một palette near-black
+  cố định mọi theme, mọi con (badge/state/note) tự đúng màu; specificity đôi
+  để không bị rule panel sau đè.
+- **A11y sạch 40/40 surface-audit**: phát hiện `--accent-contrast` là
+  convention có sẵn nhưng chưa từng được định nghĩa (nút Approve sống bằng
+  fallback) — nay định nghĩa theo `--accent-strong` từng theme; chip filter
+  active dùng đúng cặp đó; chip active-nhưng-disabled giữ cặp màu (1.49:1 cũ);
+  mobile: KV collapse, chip policy wrap — clipped audit xanh.
+- **Paper Exit Review**: `governance.paper-exit.v1` **có publish
+  `activation_plan`** mà màn nói "not published" — reader/fixture/container đã
+  nối đủ (mode PREVIEW_ONLY · target stage · authority semantics · external
+  side effect, cờ nguy hiểm đọc `!== false` theo fail-closed gate); bỏ khối
+  tabs "pointer" thừa; root mang `.exec-gov` để ăn polish.
+- Journey R2→R1 đổi theo metaline chip link (tab R1 reference đã bỏ).
+  Tests 1724 pass.
+
+### 8.34 Link sweep toàn màn + `canonicalHref` adapter (2026-08-30)
+
+Owner yêu cầu: "rà soát lại tất cả các màn chỗ nào đang còn không link tới
+nhau thì fix nốt". Cách rà: crawler `e2e/_probe-links-all.spec.ts` đi 27
+route, gom mọi `a[href^=/]` rồi ghé từng đích — đích nào registry trả "No
+feature in the current registry claims this route" là dead link; đồng thời
+liệt kê entity id trần (AP-/EX-/PX-/dep_/av_/acct-/inc_/PF-) không nằm trong
+anchor/button. Crawler giờ là **gate thật** (assert dead = 0) chạy trong
+project `chromium-preview`.
+
+- **Kết quả**: DEAD LINKS 0/27 route. Id trần đã nối trên mọi màn: Command
+  Center (pipeline ✓, venue, pin deployment), Live Overview (sub → R2), Alpha
+  Fleet (id row, PF-MAIN, note/chipNote → deployment/approval), Sandbox
+  (target note, cert KV AP-207/AP-352, lineage), Portfolio 360
+  (`workbenchRouteFor` holdings), Canary (envelope AP-311, twin dep_94, gates
+  tail), Operations Queue (target acct → Account 360), Incident (subject
+  acct), Accounts/Bindings (whoLinks, note inc_44).
+- **`src/execution/links.ts` — `canonicalHref()`**: hai fixture đã publish
+  mang route sai mà frontend không được sửa (drift test khoá byte-equality
+  với `packages/contracts/fixtures`):
+  1. `commandCenter.fixtures.ts` — `/execution/operations/op_1249`; route
+     thật là dạng query `/execution/operations?operation=op_1249`.
+  2. `certification.fixtures.ts` — `/deployments/paper/exit/PX-29`; route
+     thật là `/governance/exit-reviews/PX-29`.
+  Adapter map hai dạng này tại render edge (CommandCenter anchor + onOpen
+  navigate, SandboxCertification lineage). **@codex request**: sửa hai route
+  này tại nguồn fixture; khi fixture đúng, adapter thành no-op và sẽ xoá.
+- **Bỏ qua có chủ ý** (ghi để lần audit sau không tưởng là sót): chip
+  deployment trong Blotter (stage không suy được từ row contract — link bịa
+  là nói dối); `EX-nn` trong SMOKE note (là số BR-EX, không phải exit
+  review); option trong select; masthead tự trỏ mình; caption chart; id có
+  anchor tường minh ngay cạnh (vd AP-360 "review →" ở Alpha Fleet).
+
+### 8.35 Hiển thị thời gian: datetime64[ms], neo UTC+0 (owner 2026-08-30)
+
+Owner: ISO thô `as_of 2026-08-22T12:00:20Z` không đọc nổi; đổi mọi instant
+nhìn thấy sang dạng datetime64[ms] và **không map về +7** — nhiều venue
+(crypto UTC, Vietnam ICT) nên lấy một mốc chuẩn UTC+0, người đọc tự map theo
+venue của mình.
+
+- `src/execution/time.ts` — `utcStamp()`: `2026-08-22T12:00:20Z` →
+  `2026-08-22 12:00:20.000 UTC`; giữ ms thật nếu data có; instant **không có
+  offset** (đồng hồ phiên VN) render không gắn nhãn zone — data không khai
+  zone thì UI không bịa; chuỗi không phải ISO (clock ngắn `10:42:10Z`,
+  date-only) pass through nguyên vẹn.
+- Áp tại 6 render site dùng chung: `AuthorityBadge` (badges.tsx — mọi
+  authority meta line), `envelopeCaption` (chart.tsx — caption mọi chart),
+  Command Center as_of, Incident audit/annotation timeline, R2 capital
+  preview as_of, Paper Workbench provenance + "as of" note.
+- Gate mới `e2e/_probe-iso.spec.ts`: crawl 27 route, assert **0** raw ISO
+  nhìn thấy (trước fix: 27 chỗ / 8 route). Clock-only (`clockOf`,
+  `paperClock`) giữ nguyên — chúng đã đọc được và là chữ của hi-fi masthead.
+- Không đổi contract: format hoá chỉ ở render edge, giá trị ISO trong
+  fixture/contract giữ nguyên byte.
+
+### 8.36 Admin Action Drawer — WF 1i CLI catalog trên nền F0 (2026-08-30)
+
+Owner giao hi-fi WF 1i: drawer CLI đầy đủ tương tác. Nhưng F0 (EX-BE-05b,
+catalogue rev 2) publish `relay DISABLED` + `portal_reachable:false` cho cả 64
+lệnh, và stop gate của codex cấm vẽ nút cho lệnh không chạy được. Cách giải —
+**hai sự thật cùng màn, không cái nào che cái nào**:
+
+- **Composition = WF 1i** (flat, không rail): catalog 6 nhóm tác vụ × 24 lệnh
+  (`adminCli.smoke.ts` — SMOKE khai báo, deletion contract → **BR-EX-68**),
+  drawer 490px sticky: params bốc từ registry, read chạy transcript (stream
+  gated `smokeMotionAllowed`), PLAN → preflight server-demo → two-man-rule
+  key (OPERATOR) → APPLY (step-up, DANGER cần gõ confirm word) → VERIFY
+  timeline (202 ≠ success, VERIFIED/PARTIAL, PARTIAL không bao giờ xanh).
+  Demo states là địa chỉ: `?cmd=`, `?role=ADMIN|VIEWER`, `?outcome=PARTIAL`.
+- **Sự thật F0 giữ nguyên chỗ đứng**: câu "command relay is disabled
+  (EX_BE_05B_F0_CONTRACT_ONLY)" vẫn đứng đầu màn; toàn bộ 64 entry render đủ
+  trong `<details>` "Full published catalogue" với đúng EntryRow/EntryDetail
+  cũ — **không nút nào** cho published entry (invariant test giữ nguyên,
+  adminDrawer.test 22/22). Mỗi lệnh WF 1i in dòng join: `published as
+  <key> · not reachable`, hoặc nói thật "not in published catalogue rev 2"
+  (`health`, `alloc` — 2 lệnh hi-fi chưa có key; nêu trong §7.10 backend).
+- **SMOKE note tại điểm tương tác** — mọi transcript/preflight/verify là
+  declared fixture; không dòng nào claim đã chạm cell.
+- Link sang màn khác: AP-207 → R2 review, dep_74 → Paper workbench, op_1251 →
+  Operations Queue (`?operation=`), open reconciliation → operations;
+  `?operation=` đến từ Ops Queue/Incident được trả lời thật ("no operation
+  lookup yet · BR-EX-68") + link ngược.
+- Tests mới `adminCli.test.tsx` 28 case phủ đủ mọi sub-state hi-fi (6 nhóm,
+  read/watch, params, alloc impact, emergency flatten + confirm, generic
+  preview, preflight WARN, grant 3 role, VERIFIED/PARTIAL, blocked, denied).
+- **@codex**: BR-EX-68 filed (§7.2 + §7.10, mirror rows file). **Spec chi tiết
+  2026-08-30: `portal-backend-plan/upgrade/BR_EX_68_ADMIN_ACTION_DRAWER_SPEC.md`**
+  — 6 contract A–F (task catalog `command-tasks.v1` · R0 run · plan/preflight ·
+  apply step-up + confirm word · verify timeline · two-man-rule key), giao theo
+  4 stage F1–F4 với enable point riêng từng stage, kèm 5 open decision (A1/A2,
+  key cho health/alloc, B1 one-shot vs SSE, chủ `marginal.v1`, ràng U07).
+  Lưu ý vận hành: file unified plan đang được mở trong editor với buffer cũ và
+  đã 2 lần auto-save đè mất phần BR-EX-68 — nội dung an toàn trong git
+  (`8b76f34`, commit spec mới nhất); reload file trước khi sửa tay.
+
+#### 8.36.1 Luồng vào/ra của Admin Action Drawer (rà 2026-08-30, theo code)
+
+**Vào drawer** (mọi đường đều verify trong crawler-gate):
+| Từ màn | Trigger | Đích |
+|---|---|---|
+| Sidebar (registry) | nhóm ADMINISTRATION | `/administration/actions` |
+| Operations Queue 4e | `plan residue re-apply →` (op PARTIAL) · chip plan `cmd_9f12` · `audit →` (op VERIFIED) | `?operation=op_…` |
+| Incident Detail 4d | `Open apply plan ▸` · op id trong checklist · mọi op id ở panel "Operations taken" | `?operation=op_…` |
+| Command Center 5a → Incident → op | journey chuỗi 3 màn (e2e §8.2) | `?operation=op_…` |
+| Paper Workbench 1c | nút `Admin actions ⌄` (masthead) + nút ghost ở khối mutation | drawer root |
+| Accounts & Bindings 4f | `rotate credential ▸` (credential EXPIRING) | `?action=rotate_credential&binding=…` |
+| Binding Detail | footer `Rotate credential ▸` | `?action=rotate_credential&binding=…` |
+| (prose, không link) | AccountBroker360 note · Portfolio 360 rebalance-preview note · Incident ops footer | nhắc "plan → apply → verify ở Action Drawer" |
+
+**Ra khỏi drawer**: op_1251 → Operations Queue (`?operation=`) · AP-207 → Gate R2 review ·
+dep_74 → Paper Workbench · `open reconciliation →` → Operations Queue · banner `?operation=`/
+`?action=` → link ngược về Ops Queue / Accounts.
+
+**Gap tìm thấy khi rà (đã fix cùng ngày)**: hai link `?action=rotate_credential` bị drawer mới
+bỏ qua lặng lẽ — giờ trả lời bằng banner honest ("chưa có lệnh rotate credential trong cả hai
+catalog · BR-EX-68 open decision 6") + link ngược Accounts; test container mới (51 pass cả hai
+suite admin). Lệnh rotation thiếu ở CẢ hi-fi lẫn catalogue rev 2 → ghi vào spec BR-EX-68 §11(6)
+cho codex quyết.
+
+
+### 8.37 Ba màn governance owner-commissioned: entry · live gate · waivers (2026-08-30)
+
+Owner: "Làm luôn... (1) chốt cửa vào vòng đời → (2) Live-gate review → (3)
+Waivers". Cả ba dựng cùng ngày trên đúng grammar `.exec-gov`/`.exec-gate` đã
+có (không palette mới, không type-scale mới):
+
+1. **New approval request** `/governance/approvals/new` — cửa vào vòng đời
+   (§H.2.1). Alpha/run/claim bốc từ registry (rule WF 1i "never free-typed"),
+   summary bắt buộc ≥8 ký tự, panel "What R1 will review" (digest pin, window
+   roles, SoD, SLA 48h). Submit là **declared demo**: xác nhận nói thẳng
+   "nothing was written" → **BR-EX-69** (`POST /approvals`). Link vào từ Inbox
+   gov-head "New request ▸".
+2. **Gate LIVE review** `/governance/approvals/{id}/live` — phòng review riêng
+   cho LIVE_GATE (§H.2.2). Backbone thật: `getGateR2` (eligibility/quorum/SLA/
+   version/decide) — đúng contract đang phục vụ LIVE_GATE rows; evidence canary
+   là smoke `LIVE_GATE` → **BR-EX-70** (drift vs paper twin `LinesChart`, KPI
+   KV, criteria `gate_live rev 3` 5 PASS, capital step trong `.exec-gov-inverse`).
+   `reviewRouteFor(LIVE_GATE)` đổi `/r2` → `/live`; AP-311 links ở canary/live/
+   fleet smoke đổi theo; link ngược R2 AP-152 + Canary Control Room.
+3. **Waivers & Conditions** `/governance/waivers` — sổ điều kiện toàn fleet
+   (§H.2.3). 7 row smoke `WAIVER_ROWS` **mirror điều kiện có sẵn trong cast**
+   (AP-352 capacity, EX-771 slippage carried, AP-259 daily-loss, AP-207 hedge,
+   AP-201 WFO, PX-31 runbook, AP-311 waiver) — không bịa nghĩa vụ mới; filter
+   client-side trên demo rows và nói rõ vậy → **BR-EX-71** (register + LAPSED
+   là server transition, feed CC attention). Link vào từ Inbox head, R2
+   Decision panel, Exit-review Conditions panel.
+
+Routing: 3 route chưa có registry row → claim tạm qua
+`EXECUTION_PREVIEW_EXTRA_ROUTES` (previewRegistry.ts), request codex ở
+HOTFIX_REQUEST_2026-08-30 §2; `previewRegistry.test` ghi danh sách pending
+chính xác (không nới lỏng assertion). Tests mới `governanceAdditions.test.tsx`
+9 case; R2 link-tests cập nhật vì Decision panel thêm link waivers.
+
+### 8.38 UI/UX VERSION FREEZE (owner 2026-08-30) + polish pass cuối
+
+Owner chốt: tạm đóng version UI/UX — không mở màn/luồng/request mới; codex
+tập trung giao backend (worklist đầy đủ: ROADMAP §J.2); điều chỉnh màn hiện
+có chỉ theo yêu cầu owner. Trước khi chốt, polish pass "trau chuốt" cho 2 màn
+còn lại cùng chuẩn với Waivers:
+
+- **New request**: thêm loop-path chips (1·DECLARE you-now → 2·R1 not-you →
+  3·R2 after-R1), evidence quick facts theo run đang chọn (khớp số cast:
+  sharpe 1.74/−5.1%/1,212), cảnh báo re-review khi chọn alpha đã trong loop
+  (Grid → "RE-REVIEW, never a parallel lane").
+- **Gate LIVE**: SLA đếm chính xác từng giây trên metaline (`preciseAge` +
+  tick, gated); thanh **capital step** trong panel inverse (5k now → 20k this
+  approval → 80k target, mỗi bước sau là approval riêng); drift chart sửa
+  data để canary bám twin đúng như criteria claim; hover criteria.
+- **Khoá baseline**: 3 màn mới vào danh sách el-v2-07 (`gov-new-request`,
+  `gov-live-gate`, `gov-waivers`) — visual từ giờ là gate thật.

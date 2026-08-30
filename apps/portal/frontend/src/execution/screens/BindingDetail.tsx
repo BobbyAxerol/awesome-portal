@@ -55,7 +55,7 @@ export function BindingDetail({ bindingId }: { bindingId: string }) {
           <section className="exec-pf2-panel" aria-label="Sync stream">
             <header className="exec-pf2-head"><span className="exec-pf2-title">Sync stream — snapshots as they land</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">policy: ws + 5m snapshot · digest = content hash</span></header>
             <div className="exec-bd-stream" aria-live="polite">
-              {snaps.map((s) => <div key={s.time + s.digest} className="exec-bd-snap" data-edge={s.edge ? "bad" : undefined}><span className="exec-bd-soft exec-af-num">{s.time}</span><b data-tone={s.tone}>{s.state}</b><span className="exec-bd-mute">{s.digest}</span><span>{s.note}</span></div>)}
+              {snaps.map((s) => <div key={s.time + s.digest} className="exec-bd-snap" data-edge={s.edge ? "bad" : undefined}><span className="exec-bd-soft exec-af-num">{s.time}</span><b data-tone={s.tone}>{s.state}</b><span className="exec-bd-mute">{s.digest}</span><span>{s.noteLink && s.note.includes(s.noteLink.label) ? <>{s.note.split(s.noteLink.label)[0]}<a href={s.noteLink.href}>{s.noteLink.label}</a>{s.note.split(s.noteLink.label)[1]}</> : s.note}</span></div>)}
             </div>
             <footer className="exec-pf2-foot">{b.snapsFoot}</footer>
           </section>

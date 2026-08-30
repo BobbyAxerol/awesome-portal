@@ -14,7 +14,7 @@
  * it never becomes a thrown error the shell has to guess about.
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   OPERATION_STATUSES,
@@ -38,6 +38,7 @@ import type { CapitalPreviewInput, ExecutionApi, InsightBatchInput, Result } fro
 import type { CapitalLedger, InsightBatch } from "../analytics";
 import { OrderFunnelStrip } from "./FullBlotter";
 import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
+import type { CliOutcome, CliRole } from "../adminCli.smoke";
 import { HeadroomBanner } from "./AccountBroker360";
 import { CorrelationPanel } from "./PortfolioThreeSixty";
 import {
@@ -51,6 +52,8 @@ import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
 import { STAGE_SMOKE, stageVisuals } from "../stage.smoke";
 import { CommandCenterScreen } from "./CommandCenter";
+import { GateLiveReview } from "./GateLiveReview";
+import { canonicalHref } from "../links";
 import { useCommandCentreStream } from "../commandCenterStream";
 import type { CommandCenter } from "../commandCenter";
 import type { SseFactory } from "../sse";
@@ -76,7 +79,7 @@ type CapitalPreviewState =
   | { preview: CapitalPreview; envelope: AnalyticsEnvelope };
 import { stageRail } from "../components/lifecycle";
 import type { TypedCondition } from "../components/conditions";
-import { ApprovalInbox, type ApprovalRow, type InboxCounts, type InboxFilter, type ApprovalGate } from "./ApprovalInbox";
+import { ApprovalInbox, type ApprovalRow, type DecidedRow, type InboxCounts, type InboxFilter, type ApprovalGate } from "./ApprovalInbox";
 import { GateR1Review } from "./GateR1Review";
 import { GateR2Review } from "./GateR2Review";
 import { PaperExitReview, type ExitOutcome } from "./PaperExitReview";
@@ -198,7 +201,9 @@ export function ApprovalInboxContainer({
       page: KeysetPage<ApprovalRow>;
       counts: InboxCounts | null;
       inertCount?: number | null;
-      decided?: KeysetPage<ApprovalRow> | null;
+      decided?: KeysetPage<DecidedRow> | null;
+      actor?: { username: string; roles: readonly string[] } | null;
+      policyVersion?: string | null;
     }>
   >(loading);
 
@@ -279,6 +284,9 @@ export function ApprovalInboxContainer({
       onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
       page={state.value?.page ?? EMPTY_PAGE}
       counts={state.value?.counts ?? null}
+      policyVersion={state.value?.policyVersion ?? undefined}
+      actor={state.value?.actor?.username}
+      actorRoles={state.value?.actor?.roles}
       inertCount={state.value?.inertCount ?? null}
       decided={state.value?.decided ?? null}
       filter={filter}
@@ -394,7 +402,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
 
   const decide = useCallback(
     async (
-      verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
+      verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION" | "REQUEST_CHANGES",
       reason: string,
       extra?: { conditions?: readonly TypedCondition[] },
     ) => {
@@ -486,6 +494,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
         onApprove={() => void decide("APPROVE", note.trim() || "Evidence reviewed and accepted.")}
         onDeny={() => void decide("DENY", note.trim() || "Evidence rejected.")}
+        onRequestChanges={() => void decide("REQUEST_CHANGES", note.trim())}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
         onRequestCondition={() => {
@@ -740,7 +749,7 @@ export function GateR2ReviewContainer({
 
   const d = state.value;
   const run = (
-    verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION",
+    verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION" | "REQUEST_CHANGES",
     reason: string,
     attached?: readonly TypedCondition[],
   ) =>
@@ -805,6 +814,7 @@ export function GateR2ReviewContainer({
         reason={state.reason}
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
         onApprove={() => run("APPROVE", note.trim() || "Operational readiness accepted.")}
+        onRequestChanges={() => run("REQUEST_CHANGES", note.trim())}
         onDeny={() => run("DENY", note.trim() || "Operational readiness rejected.")}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
@@ -876,6 +886,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
         approverRole={d?.approverRole ?? undefined}
         sla={d?.sla ?? undefined}
         panels={d?.panels ?? []}
+        plan={d?.activationPlan ?? null}
         recommendation={d?.recommendation ?? undefined}
         status={state.status}
         reason={state.reason}
@@ -1021,9 +1032,69 @@ export function CapitalLedgerContainer({
  * seams — it is one seam and one leftover.
  */
 
+/**
+ * Gate LIVE (canary → live) — owner-commissioned 2026-08-30 (ROADMAP §H.2.2).
+ * The request backbone (eligibility, quorum, SLA, optimistic version) is the
+ * same `governance.r2-review.v1` read that served LIVE_GATE rows when they
+ * still opened the R2 screen; the canary evidence panels are the screen's own
+ * declared smoke until BR-EX-70.
+ */
+export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
+  const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
+  const [note, setNote] = useState("");
+  const { decision, decide } = useDecision(api);
+  useEffect(() => {
+    let cancelled = false;
+    setState(loading);
+    void api.getGateR2(approvalId).then((result) => {
+      if (cancelled) return;
+      setState(
+        result.ok
+          ? { status: result.warnings?.length ? "partial" : "ok", value: result.value, warnings: result.warnings ?? [] }
+          : { status: result.status, reason: result.reason, value: null, warnings: [] },
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, approvalId]);
+  const d = state.value;
+  const locked = !(d?.eligibility.canApprove ?? false);
+  const denyLocked = !(d?.eligibility.canDeny ?? false);
+  return (
+    <GateLiveReview
+      approvalId={approvalId}
+      actor={d?.actor ?? "unknown"}
+      policyVersion={d?.policyVersion ?? "unversioned"}
+      quorumMet={d?.quorumMet ?? 0}
+      quorumRequired={d?.quorumRequired ?? 0}
+      sla={d?.sla ?? undefined}
+      status={state.status}
+      reason={state.reason}
+      note={note}
+      onNoteChange={setNote}
+      locked={locked}
+      denyLocked={denyLocked}
+      trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
+      onApprove={() => void decide(approvalId, "APPROVE", note.trim() || "Canary evidence accepted for the live step.", d?.expectedVersion ?? null, { conditions: [] })}
+      onDeny={() => void decide(approvalId, "DENY", note.trim() || "Back to canary observation.", d?.expectedVersion ?? null, { conditions: [] })}
+    />
+  );
+}
+
 export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
   const [selected, setSelected] = useState<CatalogEntry | null>(null);
   const [tier, setTier] = useState<TierFilter>("ALL");
+  // WF 1i demo states are addresses, not chrome: `?role=VIEWER`,
+  // `?outcome=PARTIAL` and `?cmd=emergency` deep-link a reviewable state the
+  // way the hi-fi's prop editor did, without inventing a toggle the real
+  // screen will not have. `?operation=` arrives from Operations Queue /
+  // Incident Detail and is answered honestly (no lookup exists yet).
+  const [search] = useSearchParams();
+  const roleParam = search.get("role");
+  const role: CliRole = roleParam === "ADMIN" || roleParam === "VIEWER" ? roleParam : "OPERATOR";
+  const outcome: CliOutcome = search.get("outcome") === "PARTIAL" ? "PARTIAL" : "VERIFIED";
+  const cmd = search.get("cmd");
   // `ALL` sends no filter at all rather than a sentinel the server would have
   // to know about. The chip is the client's word; the query is the contract's.
   const state = useAnalyticsRead(
@@ -1044,6 +1115,11 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
         setSelected(null);
         setTier(next);
       }}
+      role={role}
+      outcome={outcome}
+      initialCommand={cmd ?? "alloc"}
+      operationRef={search.get("operation")}
+      actionRef={search.get("action") ? { action: search.get("action")!, binding: search.get("binding") } : null}
     />
   );
 }
@@ -1339,5 +1415,5 @@ export function CommandCenterLive({
   const navigate = useNavigate();
   // Every ranked row links to its owning screen (HiFi 5a). The href is the
   // server's; a row without one renders disabled inside the screen.
-  return <CommandCenterScreen snapshot={snapshot} live={live} onOpen={(item) => item.href && navigate(item.href)} />;
+  return <CommandCenterScreen snapshot={snapshot} live={live} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
 }

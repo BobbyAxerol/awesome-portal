@@ -360,3 +360,216 @@ nhận `api` từ ngoài, không route sản phẩm nào được mount.
 **Giục codex mở 8 endpoint `ops` (A1a).** Ba màn chưa dựng — Operations Queue,
 Incident Detail, Command Center — đều chờ đúng tám endpoint đó, và không có
 đường vòng nào cho chúng.
+
+---
+
+## G. Sweep toàn màn 2026-08-30 (owner yêu cầu) — kết quả + màn còn thiếu
+
+Cách rà: 4 probe trên 24–27 route (gutter/overflow/console · dead-link gate ·
+raw-ISO gate · screenshot soi tay PF-360, Exit Review) + full gate 103 e2e.
+
+### G.1 Đo được, đã xanh (không cần làm gì)
+- **Khoảng cách content–sidebar đồng nhất tuyệt đối**: content-left = 244px
+  trên cả 24 route (gap 16px; governance-light lệch 1px ở mép sidebar do
+  border theme sáng — mép content vẫn thẳng hàng 244). Câu hỏi owner từ ảnh
+  Portfolio 360: thứ nhìn thấy là **scrollbar của chính sidebar** (dọc = sidebar
+  cuộn, ngang = bug tràn ngang — đã fix, xem G.2).
+- overflowX trang = 0/24 route · console error = 0/24 · dead link 0 · raw ISO 0.
+- Hai "bug" tưởng thấy ở Exit Review (chữ đè trong card activation plan, nút đè
+  panel conditions) là **artifact của fullPage screenshot** với sticky bar —
+  viewport thật render đúng, bar nền đặc `--surface-2`. Đã chứng minh bằng
+  probe computed-style + screenshot viewport.
+
+### G.2 Đã sửa trong sweep này (Claude, xong)
+1. Sidebar tràn ngang → `overflow-x: hidden` cho `.portal-sidebar` (shell.css —
+   shared, nhưng chỉ đóng trục ngang vốn không bao giờ nên cuộn).
+2. Era labels đè nhau trên equity chart PF-360 (90d: rev 12/13/14) → stagger
+   label theo parity band trong `marketChart` markArea (không rơi label nào —
+   rơi là giấu một config revision).
+3. (từ lượt trước cùng ngày) `?action=rotate_credential` được drawer trả lời
+   honest + link ngược Accounts.
+
+### G.3 Bobby quyết
+1. **Scrollbar sidebar mỏng đi?** `scrollbar-width: thin` sẽ đổi pixel của
+   ~100 baseline research/operations (shared shell) — rule §0 bắt hỏi trước.
+   Nếu OK tôi làm + re-record trong một pass.
+2. **3 màn chưa có hi-fi**: Exit Reviews **list** (route gốc
+   `/governance/exit-reviews` hiện đưa thẳng vào EX-771 — hoạt động nhưng chưa
+   phải list), Promotion Timeline, Waivers & Conditions. Chờ Bobby giao hi-fi.
+3. "Micro…" trong ảnh owner: không tái hiện ở 1440/probe — nghi popup ngoài app
+   (OS/extension). Nếu còn thấy, cho xin ảnh + độ rộng cửa sổ.
+
+### G.4 Chờ codex
+1. **HOTFIX_REQUEST_2026-08-30.md** — `EXECUTION_ADMIN_ACTIONS.show_in_sidebar
+   false→true` (1 flag; duy nhất nó false trong 9 feature EXECUTION_*). Đây là
+   lý do nhóm ADMINISTRATION chưa có màn Admin Actions ở sidebar (owner report).
+2. BR-EX-68 `ACK` + 6 open decision (spec file riêng).
+3. BR-EX-41…67 vẫn `RECEIVED` · OHLC owner decision §7.5.5(1) vẫn treo.
+4. Profile & Access: COMMISSIONED, thuộc lane U07 (login/step-up) — chưa có
+   việc frontend đến khi codex mở U10/U07.
+
+### G.5 Verdict đóng luồng (owner hỏi 2026-08-30): ĐỦ ĐỂ ĐÓNG — với 1 gap có thực
+
+Chuỗi quyết định khép kín đầu-cuối, kiểm theo code (`reviewRouteFor`, 5 gate):
+R1 → R2 → Inbox (queue mọi gate) → Paper workbench → **PAPER_EXIT** (WF 4b) →
+Sandbox cert workbench → **SANDBOX_EXIT** (cùng màn exit review, copy tự theo
+`plan.targetStage`) → Canary control room → **LIVE_GATE** → Live full ops.
+Cross-cutting đủ: CC triage, Ops Queue, Incident, Admin WF 1i, Fleet,
+Alpha/Portfolio/Account 360, Blotter, Accounts & Bindings.
+
+**Gap cấu trúc duy nhất đáng một màn**: `LIVE_GATE` (canary → live) đang
+**mượn composition màn R2** (`reviewRouteFor` map LIVE_GATE → `/r2`). Có chỗ
+quyết định — không đứt luồng — nhưng reviewer duyệt lên live nhìn bằng chứng
+CAPITAL (R2), không phải bằng chứng CANARY (drift vs paper twin, envelope
+compliance, fill delta). Cần: hi-fi riêng cho màn Live-gate review, hoặc owner
+chốt "R2 composition là đủ cho LIVE_GATE".
+
+**Một màn có giá trị vận hành nếu muốn thêm** (không phải lỗ hổng): Waivers &
+Conditions — sổ điều kiện mở toàn fleet; hiện điều kiện chỉ thấy per-request
+(tạo ở R1/R2, hiện lại ở exit review), không có chỗ nào liệt kê tất cả điều
+kiện đang mở.
+
+**Tiện ích, không phải lỗ hổng**: Exit Reviews list (Inbox đã là queue của cả
+5 gate) · Promotion Timeline (stage trail đã có trên từng màn gate/exit).
+
+Ngoài scope §0: Profile & Access (lane U07 codex). Các mục sidebar còn lại
+(Alpha Mining, Strategy Composer, Data Catalog, Portal Map…) ngoài scope
+Execution Loop, đúng trạng thái SOON/PROTOTYPE theo registry.
+
+---
+
+## H. Đánh giá khách quan 2026-08-30 (owner hỏi): platform Execution Loop cho quỹ trung bình–nhỏ đã đủ và clear chưa?
+
+Cách đánh giá: đi lại vòng đời alpha theo 4 persona (PM/owner · quant · operator ·
+risk reviewer) thay vì theo danh sách màn. "Đủ" = mỗi việc hằng ngày của mỗi
+persona có đúng một chỗ để làm; "clear" = không việc nào phải đoán màn.
+
+### H.1 Verdict
+
+**Đủ để đóng scope §0 và vận hành được** — với **1 phát hiện mới đáng kể**
+(H.2.1) và 2 gap đã biết. Mức độ hoàn thiện theo persona:
+
+| Persona | Việc hằng ngày | Chỗ làm | Verdict |
+|---|---|---|---|
+| PM/owner | sáng mở xem NAV/PnL/attention · duyệt gate | CC triage + PF-360 + Inbox | ✅ đủ |
+| Quant | theo dõi alpha các stage · drift · sizing từ chối | Alpha 360 · stage workbench · Admin sizing read | ✅ đủ |
+| Operator | sự cố · recon · halt/resume · allocation | CC → Incident → Ops Queue → Drawer WF 1i | ✅ đủ, chuỗi link liền |
+| Risk reviewer | R1/R2/exit theo SLA · điều kiện đang mở | Inbox + 3 màn review / **điều kiện: chỉ per-request** | ⚠️ thiếu sổ Waivers (H.2.3) |
+
+### H.2 Ba phát hiện thật (không tính sửa nhỏ)
+
+1. **[MỚI] Cửa VÀO của vòng đời không có UI.** Kiểm code: không màn nào tạo
+   được một approval request — Inbox chỉ review những request "tự xuất hiện"
+   từ backend. Quỹ thật: quant xong backtest, ai bấm "Submit for R1 review",
+   ở đâu? Hiện tại câu trả lời là "không ở đâu trong portal". Đây là gap
+   thuộc ranh giới Research↔Execution (§0 khoá scope phía Research), nên nó
+   là **quyết định của Bobby**: (a) nút "Submit → R1" thuộc màn Research/Alpha
+   Pool (ngoài scope này, giao sau), hay (b) một surface tạo-request nhỏ trong
+   Execution Loop (cần hi-fi + BR mới về create-request API). Vòng đời chỉ
+   thật sự khép khi cửa vào có UI — dù nó nằm lane nào.
+2. **LIVE_GATE mượn màn R2** (§G.5) — cửa cuối trước tiền thật đang cho
+   reviewer xem bằng chứng capital thay vì bằng chứng canary.
+3. **Sổ Waivers & Conditions** (§G.5) — điều kiện tạo ở R1/R2 và chỉ hiện lại
+   ở exit review của đúng deployment đó; risk reviewer không có chỗ trả lời
+   "toàn quỹ đang nợ những điều kiện nào, cái nào sắp quá hạn".
+
+### H.3 Chấp nhận được ở quy mô quỹ nhỏ (ghi nhận, không cần màn)
+
+- **Alert history**: chip ⚑ topbar + Incident đã đủ cho đội 2–6 người (kênh
+  đẩy thật là Lark/email phía codex); notification center là đồ của quỹ lớn.
+- **Treasury/funding** (nạp rút USDT lên sàn): làm ở sàn, portal đối chiếu qua
+  broker sync + bindings — đúng phân vai, không thiếu.
+- **Audit search toàn cục**: config log PF-360 + Ops Queue audit + verify
+  timeline đã phủ; màn search riêng là nhu cầu compliance quỹ lớn.
+- **LP/investor reporting**: Report pack (BR-EX-66) là đúng chỗ dừng.
+- **Mobile**: audit pass, nhưng platform là desktop-first có chủ đích; journey
+  mobile duy nhất đáng tiền là "ack incident từ điện thoại" — để sau.
+- Mật độ chữ/jargon (SoD, quorum, envelope…) là chủ đích cho người chuyên —
+  đúng đối tượng quỹ quant tự vận hành.
+
+### H.4 Thứ tự khuyến nghị nếu làm tiếp (sau khi Bobby quyết)
+
+1. H.2.1 — chốt cửa vào vòng đời (lane nào, rồi mới nói tới hi-fi).
+2. H.2.2 — hi-fi Live-gate review (hoặc chốt "R2 đủ").
+3. H.2.3 — hi-fi Waivers & Conditions.
+4. Phần backend hiện hữu: codex giao BR-EX-41…68 để bóc dần SMOKE.
+
+> 2026-08-30 (cùng ngày, owner "làm luôn"): **H.2.1/H.2.2/H.2.3 đã dựng** —
+> `/governance/approvals/new` (entry, BR-EX-69) · `/governance/approvals/{id}/live`
+> (LIVE_GATE đổi đích khỏi R2, BR-EX-70) · `/governance/waivers` (BR-EX-71).
+> Cả ba declared-demo trên grammar `.exec-gov` sẵn có; route claim tạm qua
+> preview (registry rows: HOTFIX §2). Evidence: governanceAdditions.test 9/9,
+> vitest full 1,767, screenshot soi tay cả ba; full gate chạy nền.
+
+
+---
+
+## I. Xác nhận genericity (owner hỏi 2026-08-30): màn con có hard-code cho 1 alpha mẫu không?
+
+**Trả lời: KHÔNG ở tầng màn — CÓ ở tầng fixture, và đó là chủ đích.** Ba tầng,
+kiểm theo code:
+
+| Tầng | Bằng chứng | Kết luận |
+|---|---|---|
+| **Route** | `/deployments/paper/:deploymentId` · `/deployments/sandbox/:deploymentId` · `/deployments/alphas/:alphaId` · `/deployments/live/:deploymentId(/canary)` — mọi màn con đều parameterized; Alpha Fleet/list bấm row nào là truyền id đó (`workbenchRouteFor(stage, deploymentId)`) | generic ✅ |
+| **Component** | Màn nhận TOÀN BỘ dữ liệu qua props/port: `PaperWorkbench {...base}` (alphaLabel, equity, orders… đều là input), `alpha360()`/`paperWorkbench()` là factory nhận `deploymentId` + override; không màn nào chứa số liệu/nhãn alpha bên trong component | generic ✅ |
+| **Fixture (hôm nay)** | Cast canonical nhỏ có chủ đích (CANONICAL_CAST.md): dep_74/77/88/91/94/vnm, av_2041… Factory vá id truyền vào nhưng **giá trị mặc định là của cast** → mở id lạ sẽ thấy số liệu của cast dưới id đó (fixture-only preview, mỗi màn có preview banner nói rõ nguồn fixture) | cast mẫu, KHÔNG phải giới hạn của màn |
+
+Khi codex giao BR-EX rows (paper/sandbox/canary/live/360 contracts), container
+fetch theo id thật → **cùng màn đó chạy mọi alpha, không viết lại**. Scale
+nhiều alpha đã nằm trong §8 scale-refine từng màn (keyset Inbox/Blotter,
+`alpha360AtScale` fixture, cap trung thực "top N / M").
+
+**2 điểm sẽ siết khi owner OK (chưa làm):**
+1. Id lạ đang được serve dữ liệu cast im lặng — thêm 1 dòng honest trong
+   preview banner: "fixture cast — dữ liệu hiển thị là của dep_74/av_2041 dưới
+   id này" để người test không hiểu nhầm.
+2. Nhãn entity trong breadcrumb preview (`av_2041 → "Grid v2.1"`) đang map cứng
+   ở ExecutionPreviewRoute — chuyển sang đọc từ data trả về (server sẽ cấp
+   label khi contract về).
+
+---
+
+## J. UI/UX VERSION FREEZE — owner chốt 2026-08-30
+
+**Quyết định owner (Bobby, 2026-08-30):** tạm chốt version UI/UX Execution
+Loop như hiện tại. **Không mở màn mới, không mở luồng mới, không thêm backend
+request mới.** Codex tập trung giao backend; hai bên theo dõi song song; mọi
+điều chỉnh trên màn hiện có chỉ làm khi owner yêu cầu/chấp nhận (khoảng cách,
+màu sắc, component… — không cần request backend). Nâng cấp/thêm màn chỉ bàn
+SAU khi version này đóng.
+
+### J.1 Phạm vi đã chốt (25 màn + shell)
+
+17 màn Execution review + Governance Light (Inbox 4a · R1 1a · R2 1b · Exit
+4b) + Admin WF 1i + 3 màn governance bổ sung (New request · Gate LIVE ·
+Waivers) + workspace mode/theme + link-integrity toàn cục. Cả 3 màn mới đã
+qua polish pass "trau chuốt" cùng ngày và **khoá vào baseline chính thức
+el-v2-07** (gov-new-request · gov-live-gate · gov-waivers).
+
+### J.2 Worklist codex để ĐÓNG version (toàn bộ, không thêm nữa)
+
+| # | Việc | Nguồn |
+|---|---|---|
+| 1 | Registry: flip `show_in_sidebar` cho EXECUTION_ADMIN_ACTIONS | HOTFIX §1 |
+| 2 | Registry: 3 screen row + feature Waivers (sidebar GOVERNANCE order 30) | HOTFIX §2 + §2.1 |
+| 3 | Fixture route fix: `op_1249` query-form · `PX-29` exit-review path (xoá `canonicalHref` adapter khi xong) | §8.34 |
+| 4 | BR-EX-41…66: các contract màn cũ đang `RECEIVED` | plan §7.2 |
+| 5 | BR-EX-67 (R1/R2 evidence+policy) · BR-EX-68 (WF 1i, spec file riêng, 6 open decision) · BR-EX-69/70/71 (entry · live-gate payload · conditions register) | plan §7.9–§7.11 |
+| 6 | OHLC owner decision §7.5.5(1) — vẫn escalated | plan §7.5 |
+
+Mỗi gói giao xong → frontend xoá đúng khối SMOKE theo deletion contract ghi
+trong từng file smoke, re-record baseline liên quan — **không đổi composition**.
+
+### J.3 Điều kiện đóng version (kiểm được)
+
+1. Toàn bộ J.2 giao đủ; lệnh ritual §7.8(3) trả về 0 contract chưa đọc.
+2. Không còn chuỗi "SMOKE DATA" nào trên 27 route (crawler hiện có sẽ chuyển
+   thành gate khẳng định 0 SMOKE khi J.2 xong).
+3. Full gate 2 project xanh trên dữ liệu contract thật + Bobby ký duyệt hình.
+
+### J.4 Trong lúc chờ (frontend được làm mà không phá freeze)
+
+- Chỉnh sửa theo yêu cầu owner trên màn hiện có (spacing/màu/component).
+- Xoá smoke + nối contract khi từng gói codex về (J.2).
+- Không: màn mới, luồng mới, request mới, đổi composition đã duyệt.

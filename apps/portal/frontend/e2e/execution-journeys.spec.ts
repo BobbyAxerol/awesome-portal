@@ -353,8 +353,8 @@ test.describe("EL-V2-04 · Paper reference slice", () => {
     if (await cta.isEnabled()) {
       await cta.click();
       await expect(page).toHaveURL(/\/governance\/exit-reviews\/EX-771/);
-      await page.getByRole("tab", { name: /Conditions/ }).click();
-      await expect(page.getByText(/Conditions & recommendation/)).toBeVisible();
+      // Hi-fi 4b: conditions sit on the page, not behind a tab.
+      await expect(page.getByText(/Conditions & recommendation/i).first()).toBeVisible();
       await page.goBack();
       await expect(page).toHaveURL(/\/deployments\/paper\/dep_94\?tab=Evidence/);
     } else {
@@ -391,8 +391,8 @@ test.describe("EL-V2-05 · governance chain", () => {
     await expect(page).toHaveURL(/\/governance\/approvals$/);
     await page.getByRole("button", { name: /AP-352/ }).first().click();
     await expect(page).toHaveURL(/\/governance\/approvals\/AP-352\/r2/);
-    await page.getByRole("tab", { name: /R1 reference/ }).click();
-    await page.getByRole("link", { name: /^AP-/ }).first().click();
+    // Hi-fi 1b: the R1 lineage lives on the meta line — its chip is the link.
+    await page.getByRole("link", { name: /^AP-\d+$/ }).first().click();
     await expect(page).toHaveURL(/\/governance\/approvals\/AP-\d+\/r1/);
     await page.goBack();
     await expect(page).toHaveURL(/\/governance\/approvals\/AP-352\/r2/);
@@ -558,6 +558,11 @@ test.describe("EL-V2-07 · operations workflow", () => {
     ["operations-queue", "/execution/operations"],
     ["incident-inc_fixture_44", "/execution/operations/incidents/inc_fixture_44"],
     ["admin-actions", "/administration/actions"],
+    // UI freeze 2026-08-30: the three owner-commissioned governance screens
+    // are locked into the shell-visible baseline set.
+    ["gov-new-request", "/governance/approvals/new"],
+    ["gov-live-gate", "/governance/approvals/AP-311/live"],
+    ["gov-waivers", "/governance/waivers"],
   ] as const) {
     test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
       await open(page, route);

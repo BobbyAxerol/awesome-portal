@@ -131,7 +131,7 @@ function SmokeRow({ item, elapsed, sub, onOpen, selected }: { item: QueueSmokeRo
         <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri={item.priority}>{item.priority}</span></td>
         <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(item.row)}>{item.row.operationId}</button></th>
         <td className="exec-oq-cmd">{item.row.commandKey}<PhaseTrail phases={item.phases} /></td>
-        <td className="exec-oq-target">{item.row.target.id}</td>
+        <td className="exec-oq-target">{targetHref(item.row.target.id) ? <a href={targetHref(item.row.target.id)!}>{item.row.target.id}</a> : item.row.target.id}</td>
         <td><span className="exec-oq-state" data-tone={item.stateChip.tone} data-pulse={item.stateChip.pulse ? "true" : undefined}>{item.stateChip.label}{item.progress ? "" : ""}</span></td>
         <td className="exec-oq-age" data-tone={item.ageTone}>{fmtAge(age)}</td>
         <td className="exec-oq-next" data-muted={item.next.muted ? "true" : undefined}>{item.next.href ? <a href={item.next.href}>{item.next.label}</a> : item.next.label}</td>
@@ -156,13 +156,16 @@ function ContractRow({ row, now, onOpen, selected }: { row: QueueRow; now: Date;
       <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri="—">—</span></td>
       <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(row)}>{row.operationId}</button></th>
       <td className="exec-oq-cmd">{row.commandKey || "—"}</td>
-      <td className="exec-oq-target">{row.target.id ?? "—"}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
+      <td className="exec-oq-target">{targetHref(row.target.id) ? <a href={targetHref(row.target.id)!}>{row.target.id}</a> : (row.target.id ?? "—")}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
       <td className="exec-oq-three"><span className="exec-oq-state" data-tone="mute" data-col="source">{row.sourceStatus ?? "not stated"}</span> <span className="exec-oq-dim">verify <span data-col="verify">{row.verificationResult ?? "not stated"}</span></span> <span className="exec-oq-dim" data-col="triage">{row.triageState ? TRIAGE_LABEL[row.triageState] : "not stated"}</span></td>
       <td className="exec-oq-age" data-tone="mute">{ageFrom(row.createdAt, now)}</td>
       <td className="exec-oq-next" data-muted="true">{row.acknowledgedBy ?? row.resolvedBy ?? "—"}</td>
     </tr>
   );
 }
+
+const targetHref = (id: string | null | undefined): string | null =>
+  id && id.startsWith("acct-") ? `/deployments/accounts/${id}` : null;
 
 export function OperationsQueueScreen({
   queue,

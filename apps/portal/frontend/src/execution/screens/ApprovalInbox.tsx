@@ -26,18 +26,8 @@ import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sl
 import { StatusChip } from "../components/badges";
 import { SlaCell } from "../components/evidence";
 import { KeysetTable, type Column } from "../components/table";
-import { useState } from "react";
 import { PanelState } from "../components/states";
-import {
-  ExecutionContextRail,
-  ExecutionDecisionStrip,
-  ExecutionPageHeader,
-  ExecutionProvenanceDrawer,
-  ExecutionTabs,
-  ExecutionWorkspace,
-  type HeaderBadge,
-  type RailBlocker,
-} from "../components/workspace";
+import { preciseAge, useInboxTick } from "../approvalInbox.smoke";
 
 /** The gate a request is asking to pass. Portal-owned workflow vocabulary. */
 export type ApprovalGate = "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
@@ -71,12 +61,33 @@ export interface ApprovalRow {
   needsYou: boolean;
 }
 
+/**
+ * One row of `governance.approval-history.v1` — the decided list.
+ *
+ * A decided approval is not a pending one wearing a decision: its columns are
+ * outcome, decider and time, and its sort is `decided_at desc`. Reusing the
+ * pending row shape squeezed the outcome into `blocker_summary`, which is how
+ * "approved with conditions" ended up in a column titled blockers.
+ */
+export interface DecidedRow {
+  id: ApprovalId;
+  gate: ApprovalGate;
+  subject: string;
+  outcome: "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED";
+  decidedBy: string;
+  /** ISO timestamp, date part printed. */
+  decidedAt: string;
+  policyVersion: string | null;
+}
+
 export interface InboxCounts {
   /** Whole queue, from the server. */
   pending: number;
   /** `null` when unpublished. "0 overdue" is a claim the queue is clear. */
   overdue: number | null;
   dueSoon: number | null;
+  /** Rows the current actor can decide, counted over the whole queue — the hi-fi's "Mine (3)". */
+  mine?: number | null;
 }
 
 /**
@@ -135,10 +146,10 @@ export const INBOX_FILTERS = [
 export type InboxFilter = (typeof INBOX_FILTERS)[number];
 
 const FILTER_LABEL: Record<InboxFilter, string> = {
-  INBOX: "Inbox",
+  INBOX: "Mine",
   ALL: "All",
   R1: "Research · R1",
-  R2: "Capital · R2",
+  R2: "Ops · R2",
   PAPER: "Paper",
   SANDBOX: "Sandbox",
   LIVE_GATES: "Live gates",
@@ -163,7 +174,9 @@ export function reviewRouteFor(row: { id: string; gate: ApprovalGate }): string 
     case "SANDBOX_EXIT":
       return `/governance/exit-reviews/${row.id}`;
     case "LIVE_GATE":
-      return `/governance/approvals/${row.id}/r2`;
+      // Owner-commissioned 2026-08-30 (ROADMAP §H.2.2): the live gate has its
+      // own review room — canary evidence, not the R2 capital composition.
+      return `/governance/approvals/${row.id}/live`;
   }
 }
 
@@ -190,7 +203,7 @@ function quorum(row: ApprovalRow): ReactNode {
   }
   return (
     <span>
-      {text} {row.needsYou ? <StatusChip label="needs you" tone="warn" /> : null}
+      {text} {row.needsYou ? <b className="exec-inbox-needsyou">needs you</b> : null}
     </span>
   );
 }
@@ -212,13 +225,16 @@ function rowEmphasis(row: ApprovalRow): "overdue" | "inert" | undefined {
 }
 
 const COLUMNS: readonly Column<ApprovalRow>[] = [
-  { key: "id", header: "request", render: (r) => r.id },
-  { key: "gate", header: "gate", render: (r) => r.gate },
+  // A real anchor, not a click-only row: middle-click and copy-link work, and
+  // the row stays clickable around it.
+  { key: "id", header: "request", render: (r) => <a href={reviewRouteFor(r)} onClick={(e) => e.stopPropagation()}>{r.id}</a> },
+  { key: "gate", header: "gate", width: "8rem", render: (r) => <span className="exec-inbox-gate" data-gate={r.gate}>{r.gate === "LIVE_GATE" ? "LIVE · CANARY" : r.gate}</span> },
   { key: "subject", header: "subject", truncate: true, title: (r) => r.subject, render: (r) => r.subject },
-  { key: "target", header: "target", render: (r) => r.target },
+  { key: "target", header: "target", width: "10rem", truncate: true, title: (r) => r.target, render: (r) => r.target },
   {
     key: "blockers",
     header: "blockers",
+    width: "12rem",
     truncate: true,
     title: (r) => r.blockerSummary ?? "none",
     // The count is the server's and the summary names the first one. "0 —
@@ -229,12 +245,45 @@ const COLUMNS: readonly Column<ApprovalRow>[] = [
         <span className="exec-inbox-nocount">blocker count not published</span>
       ) : (
         <span data-blocking={r.blockerCount > 0 ? "true" : undefined}>
-          {r.blockerCount} — {r.blockerSummary ?? "none"}
+          {r.blockerSummary ? `${r.blockerCount} → ${r.blockerSummary}` : String(r.blockerCount)}
         </span>
       ),
   },
-  { key: "sla", header: "age / SLA", render: (r) => <SlaCell sla={r.sla} /> },
-  { key: "quorum", header: "quorum", render: quorum },
+  { key: "sla", header: "age / SLA", width: "10.5rem", render: (r) => <SlaCell sla={r.sla} /> },
+  { key: "quorum", header: "quorum", width: "12rem", render: quorum },
+];
+
+/** COLUMNS with the live age (hi-fi 4a): same cells, the SLA one ticking. */
+function columnsWithTick(tick: number): readonly Column<ApprovalRow>[] {
+  return COLUMNS.map((c) =>
+    c.key === "sla"
+      ? { ...c, render: (r: ApprovalRow) => <SlaCell sla={r.sla} preciseAgeText={r.sla.ageMinutes >= 0 ? preciseAge(r.sla.ageMinutes, tick) : undefined} /> }
+      : c,
+  );
+}
+
+const OUTCOME_TONE: Record<DecidedRow["outcome"], "good" | "bad"> = {
+  APPROVED: "good",
+  APPROVED_WITH_CONDITION: "good",
+  DENIED: "bad",
+  CHANGES_REQUESTED: "bad",
+};
+
+/** The decided list's own columns — outcome, decider, time; never blockers/SLA. */
+const DECIDED_COLUMNS: readonly Column<DecidedRow>[] = [
+  { key: "id", header: "request", render: (r) => <a href={reviewRouteFor(r)} onClick={(e) => e.stopPropagation()}>{r.id}</a> },
+  { key: "what", header: "gate · subject", truncate: true, title: (r) => `${r.gate} · ${r.subject}`, render: (r) => `${r.gate} · ${r.subject}` },
+  { key: "outcome", header: "outcome", render: (r) => <StatusChip label={r.outcome} tone={OUTCOME_TONE[r.outcome]} /> },
+  {
+    key: "decided",
+    header: "decided",
+    render: (r) => (
+      <span className="exec-inbox-decidedmeta">
+        {r.decidedAt.slice(0, 10)} · {r.decidedBy}
+        {r.policyVersion ? ` · ${r.policyVersion}` : ""}
+      </span>
+    ),
+  },
 ];
 
 export function ApprovalInbox({
@@ -256,7 +305,7 @@ export function ApprovalInbox({
   onDismissCursorNotice,
   onLoadOlder,
   onLoadNewer,
-  onCopyProvenance,
+  onLoadOlderDecided,
 }: {
   page: KeysetPage<ApprovalRow>;
   counts: InboxCounts | null;
@@ -270,210 +319,165 @@ export function ApprovalInbox({
   actorRoles?: readonly string[];
   /** Row → the review its gate owns. The gate travels with the id so the caller never guesses the route. */
   onOpenRequest?: (id: ApprovalId, gate: ApprovalGate) => void;
-  decided?: KeysetPage<ApprovalRow> | null;
+  decided?: KeysetPage<DecidedRow> | null;
   decidedWindow?: string;
   inertCount?: number | null;
   cursorNotice?: string | null;
   onDismissCursorNotice?: () => void;
   onLoadOlder?: () => void;
   onLoadNewer?: () => void;
-  onCopyProvenance: (full: string) => void;
+  /** Loads the older half of `governance.approval-history.v1` when its page says has_more. */
+  onLoadOlderDecided?: () => void;
+  /** Kept in the contract for the container; the hi-fi page has no provenance drawer. */
+  onCopyProvenance?: (full: string) => void;
 }) {
-  const [tab, setTab] = useState<"Pending" | "Recently decided">("Pending");
+  // SMOKE motion — ages and the breach countdown tick; 0 under fixtures/gates.
+  const tick = useInboxTick();
   const emptyInThisView =
     page.rows.length === 0 &&
     ((page.filteredCount ?? 0) === 0) &&
     (counts?.pending ?? 0) > 0;
-  const needsYou = page.rows.filter((r) => r.needsYou && !r.inert);
-  const first = needsYou[0] ?? null;
-  const overdue = page.rows.filter((r) => slaOverdue(r.sla));
-  const blockedRows = page.rows.filter((r) => r.inert === "BLOCKED");
-  const badges: HeaderBadge[] = [
-    ...(counts ? [{ label: `${counts.pending} PENDING`, axis: "other" } as HeaderBadge] : []),
-    ...(counts && (counts.overdue ?? 0) > 0 ? [{ label: `${counts.overdue} OVERDUE`, axis: "other", tone: "bad" } as HeaderBadge] : []),
-    ...(status === "stale" ? [{ label: "STALE", axis: "broker-sync", tone: "bad" } as HeaderBadge] : []),
-    ...(status === "partial" ? [{ label: "PARTIAL", axis: "broker-sync", tone: "warn" } as HeaderBadge] : []),
-  ];
-  const blockers: RailBlocker[] = [
-    ...overdue.map((r) => ({ label: `${r.id} OVERDUE`, detail: `${r.gate} · ${r.subject}`, severity: "blocking" as const })),
-    ...blockedRows.map((r) => ({ label: `${r.id} BLOCKED`, detail: r.blockerSummary ?? `${r.blockerCount} blockers`, severity: "watch" as const })),
-  ];
-  const rail = (
-    <ExecutionContextRail
-      next={{
-        title: first ? `Needs you: ${first.id}` : "Nothing needs you",
-        detail: first ? (
-          <span className="exec-role-body">
-            {first.gate} · {first.subject} → {first.target}
-          </span>
-        ) : (
-          <span className="exec-role-body">No pending request in this view is yours to decide.</span>
-        ),
-        action:
-          first && onOpenRequest ? (
-            <button type="button" className="exec-role-control exec-btn-apply" onClick={() => onOpenRequest(first.id, first.gate)}>
-              Open {first.id}
-            </button>
-          ) : undefined,
-      }}
-      blockers={blockers}
-      freshness={
-        <span className="exec-role-meta">
-          sort: overdue → due-soon → age · queue {status}
-          {inertCount !== null ? ` · ${inertCount} not yours` : ""}
-        </span>
-      }
-      provenance={
-        <ExecutionProvenanceDrawer
-          items={[
-            ...(policyVersion ? [{ label: "policy", short: policyVersion, full: null }] : []),
-            ...(actor ? [{ label: "you", short: actor, full: null }] : []),
-            ...(actorRoles?.length ? [{ label: "roles", short: actorRoles.join(" + "), full: null }] : []),
-          ]}
-          onCopy={onCopyProvenance}
-        />
-      }
-    />
-  );
+  // The next row to breach its SLA: smallest remaining budget among the
+  // not-yet-overdue. Derived from the server's own age/budget, never invented.
+  const nextBreach = page.rows
+    .filter((r) => !slaOverdue(r.sla) && r.sla.ageMinutes >= 0 && r.sla.budgetMinutes > 0)
+    .map((r) => ({ id: r.id, secondsLeft: Math.max(0, (r.sla.budgetMinutes - r.sla.ageMinutes) * 60 - tick) }))
+    .sort((a, b) => a.secondsLeft - b.secondsLeft)[0] ?? null;
   return (
-    <section className="exec-inbox" aria-label="Approval Inbox">
-      <ExecutionWorkspace layout="balanced" rail={rail}>
-        <ExecutionPageHeader
-          title="Approval Inbox"
-          badges={badges}
-          purpose="What waits on you, and what breaches SLA?"
-          secondary={
-            <>
-              <CountLine counts={counts} status={status} />
-              {/* Policy + actor + roles: the line that tells a reviewer whether
-                  a blocked Approve is their role or the request. */}
-              {policyVersion || actor ? (
-                <div className="exec-inbox-policy exec-role-meta">
-                  {policyVersion ? `policy ${policyVersion}` : null}
-                  {policyVersion && actor ? " · " : null}
-                  {actor ? `you are ${actor}` : null}
-                  {actorRoles?.length ? ` · ${actorRoles.join(" + ")}` : null}
-                </div>
-              ) : null}
-            </>
-          }
-        />
-        {status === "partial" ? (
-          <div className="exec-inbox-partial" role="status">
-            {partialReason ?? "Some linked facts could not be read. The rows below are real; the queue may be incomplete."}
-          </div>
+    <section className="exec-inbox exec-gov" aria-label="Approval Inbox" data-hifi-exact="approval-inbox-4a">
+      {/* Hi-fi 4a header: title · count chips · WF marker · policy line right. */}
+      <div className="exec-gov-head">
+        <h1 className="exec-gov-h1">Approval Inbox</h1>
+        {counts ? <span className="exec-gov-chip" data-fill="warn">{counts.pending} PENDING</span> : <CountLine counts={counts} status={status} />}
+        {counts && (counts.overdue ?? 0) > 0 ? (
+          <span className="exec-gov-chip" data-fill="bad" data-pulse="true">{counts.overdue} OVERDUE</span>
         ) : null}
-        {status === "stale" ? (
-          <div className="exec-inbox-partial" role="status">
-            {reason ?? "This queue is older than its freshness budget. Decide from it only after refreshing."}
-          </div>
+        {counts && counts.overdue === null ? <span className="exec-gov-meta">overdue not counted</span> : null}
+        {status === "stale" ? <span className="exec-gov-chip" data-fill="bad">STALE</span> : null}
+        {status === "partial" ? <span className="exec-gov-chip" data-fill="warn">PARTIAL</span> : null}
+        <span className="exec-gov-wf">WF 4a</span>
+        <span className="exec-gov-spacer" />
+        <a className="exec-gov-headlink" href="/governance/approvals/new">New request ▸</a>
+        <a className="exec-gov-headlink" href="/governance/waivers">Waivers &amp; conditions →</a>
+        {policyVersion || actor ? (
+          <span className="exec-inbox-policy exec-gov-meta">
+            {policyVersion ? `policy ${policyVersion}` : null}
+            {policyVersion && actor ? " · " : null}
+            {actor ? `you are ${actor}` : null}
+            {actorRoles?.length ? ` · ${actorRoles.join(" + ")}` : null}
+          </span>
         ) : null}
-        {cursorNotice ? (
-          <div className="exec-inbox-cursor-notice" role="status">
-            <span>{cursorNotice}</span>
-            {onDismissCursorNotice ? (
-              <button type="button" className="exec-btn-ghost" onClick={onDismissCursorNotice}>
-                Dismiss
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-        <ExecutionDecisionStrip
-          metrics={[
-            { label: "Pending", value: counts ? String(counts.pending) : null },
-            { label: "Overdue", value: counts && counts.overdue !== null ? String(counts.overdue) : null, tone: counts && (counts.overdue ?? 0) > 0 ? "bad" : undefined },
-            { label: "Due soon", value: counts && counts.dueSoon !== null ? String(counts.dueSoon) : null, tone: counts && (counts.dueSoon ?? 0) > 0 ? "warn" : undefined },
-            { label: "Needs you", value: String(needsYou.length), note: "in this view" },
-            { label: "Not yours", value: inertCount !== null ? String(inertCount) : null, note: "shown, dimmed" },
-          ]}
-        />
-        <div className="exec-inbox-filters" role="group" aria-label="Filters">
-          {INBOX_FILTERS.map((f) => (
-            <button
-              key={f}
-              type="button"
-              className="exec-inbox-filter"
-              data-active={f === filter ? "true" : undefined}
-              aria-pressed={f === filter}
-              disabled={status === "loading" || status === "denied" || status === "unavailable"}
-              onClick={() => onFilterChange?.(f)}
-            >
-              {FILTER_LABEL[f]}
-            </button>
-          ))}
+      </div>
+      {status === "partial" ? (
+        <div className="exec-inbox-partial" role="status">
+          {partialReason ?? "Some linked facts could not be read. The rows below are real; the queue may be incomplete."}
         </div>
-        <ExecutionTabs
-          tabs={[
-            { key: "Pending", label: "Pending", count: page.totalCount ?? page.rows.length },
-            { key: "Recently decided", label: `Recently decided · ${decidedWindow}`, count: decided ? decided.rows.length : null },
-          ]}
-          active={tab}
-          onChange={(key) => setTab(key as "Pending" | "Recently decided")}
-          label="Approval queues"
-        >
-          {tab === "Pending" ? (
-            <>
-              <KeysetTable
-                label="Pending approvals"
-                columns={COLUMNS}
-                page={page}
-                rowKey={(r) => r.id}
-                rowEmphasis={rowEmphasis}
-                neverVirtualize
-                overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
-                status={status}
-                reason={
-                  reason ??
-                  (status === "ok" && page.rows.length === 0
-                    ? emptyInThisView
-                      ? `Nothing in ${FILTER_LABEL[filter]}. ${counts?.pending ?? 0} still pending in the queue.`
-                      : "Inbox zero."
-                    : undefined)
-                }
-                onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id, r.gate) : undefined}
-                onLoadOlder={onLoadOlder}
-                onLoadNewer={onLoadNewer}
-              />
-              {/* The sentence that explains why un-actionable rows are still on
-                  screen; without it the dimming reads as a rendering bug. */}
-              <div className="exec-inbox-strip exec-role-meta">
-                {counts ? (
-                  <span>
-                    {counts.overdue} overdue · {counts.dueSoon} due soon
-                  </span>
-                ) : null}
-                {inertCount !== null ? (
-                  <span title="Rows you cannot act on are still counted and still shown.">{inertCount} not yours</span>
-                ) : null}
-                <strong>visibility ≠ authority</strong>
-              </div>
-            </>
+      ) : null}
+      {status === "stale" ? (
+        <div className="exec-inbox-partial" role="status">
+          {reason ?? "This queue is older than its freshness budget. Decide from it only after refreshing."}
+        </div>
+      ) : null}
+      {cursorNotice ? (
+        <div className="exec-inbox-cursor-notice" role="status">
+          <span>{cursorNotice}</span>
+          {onDismissCursorNotice ? (
+            <button type="button" className="exec-btn-ghost" onClick={onDismissCursorNotice}>
+              Dismiss
+            </button>
           ) : null}
-          {tab === "Recently decided" ? (
-            <div className="exec-inbox-decided">
-              {decided ? (
-                <KeysetTable
-                  label="Recently decided"
-                  columns={COLUMNS}
-                  page={decided}
-                  rowKey={(r) => r.id}
-                  reason={`Nothing decided in this window (${decidedWindow}).`}
-                />
-              ) : (
-                <PanelState status="empty" reason={`No decided list was published for ${decidedWindow}.`} />
-              )}
-              <button
-                type="button"
-                className="exec-role-control exec-btn-ghost"
-                disabled
-                title="Full history — no paginated history endpoint is published (BR-EX-35)."
-              >
-                Full history →
-              </button>
-            </div>
+        </div>
+      ) : null}
+      <div className="exec-inbox-filters" role="group" aria-label="Filters">
+        {INBOX_FILTERS.map((f) => (
+          <button
+            key={f}
+            type="button"
+            className="exec-inbox-filter"
+            data-filter={f}
+            data-active={f === filter ? "true" : undefined}
+            aria-pressed={f === filter}
+            disabled={status === "loading" || status === "denied" || status === "unavailable"}
+            onClick={() => onFilterChange?.(f)}
+          >
+            {f === "INBOX" && counts?.mine !== null && counts?.mine !== undefined ? `Mine (${counts.mine})` : FILTER_LABEL[f]}
+          </button>
+        ))}
+      </div>
+      {/* Hi-fi: the pending table and Recently decided are both on the page —
+          a decided request never hides behind a tab, and neither does history. */}
+      <div className="exec-gov-panel">
+        <KeysetTable
+          label="Pending approvals"
+          columns={columnsWithTick(tick)}
+          page={page}
+          rowKey={(r) => r.id}
+          rowEmphasis={rowEmphasis}
+          neverVirtualize
+          overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
+          status={status}
+          reason={
+            reason ??
+            (status === "ok" && page.rows.length === 0
+              ? emptyInThisView
+                ? `Nothing in ${FILTER_LABEL[filter]}. ${counts?.pending ?? 0} still pending in the queue.`
+                : "Inbox zero. Nothing waits on you — pending requests owned by other approvers stay in All."
+              : undefined)
+          }
+          onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id, r.gate) : undefined}
+          onLoadOlder={onLoadOlder}
+          onLoadNewer={onLoadNewer}
+        />
+        {/* The sentence that explains why un-actionable rows are still on
+            screen; without it the dimming reads as a rendering bug. */}
+        <div className="exec-inbox-strip exec-role-meta">
+          {counts ? (
+            <span>
+              {counts.overdue === null ? "overdue not counted" : `${counts.overdue} overdue`} · {counts.dueSoon === null ? "due-soon not counted" : `${counts.dueSoon} due soon`}
+              {nextBreach ? (
+                <>
+                  {" · next SLA breach in "}
+                  <span className="exec-inbox-breach">{preciseAge(0, nextBreach.secondsLeft)}</span> ({nextBreach.id})
+                </>
+              ) : null}
+            </span>
           ) : null}
-        </ExecutionTabs>
-      </ExecutionWorkspace>
+          <span>sort: overdue → due-soon → age</span>
+          {inertCount !== null ? (
+            <span title="Rows you cannot act on are still counted and still shown.">{inertCount} not yours</span>
+          ) : null}
+          <strong>visibility ≠ authority</strong>
+          <span className="exec-inbox-rownote">row → gate review screen</span>
+        </div>
+      </div>
+      <div className="exec-gov-panel exec-inbox-decided">
+        <div className="exec-gov-panelhead">
+          <span className="exec-gov-paneltitle">Recently decided</span>
+          <span className="exec-gov-meta">{decidedWindow}</span>
+          <span className="exec-gov-spacer" />
+          {/* `governance.approval-history.v1` is a keyset page: when it says
+              has_more the control loads it; when it says the window is whole,
+              the screen states that instead of rendering a dead promise. */}
+          {decided?.hasMore ? (
+            <button type="button" className="exec-role-control exec-btn-ghost" onClick={onLoadOlderDecided} disabled={!onLoadOlderDecided}>
+              Full history →
+            </button>
+          ) : decided ? (
+            <span className="exec-gov-meta">full history loaded · {decided.rows.length} decisions in {decidedWindow}</span>
+          ) : null}
+        </div>
+        {decided ? (
+          <KeysetTable
+            label="Recently decided"
+            columns={DECIDED_COLUMNS}
+            page={decided}
+            rowKey={(r) => r.id}
+            reason={`Nothing decided in this window (${decidedWindow}).`}
+          />
+        ) : (
+          <PanelState status="empty" reason={`No decided list was published for ${decidedWindow}.`} />
+        )}
+      </div>
     </section>
   );
 }

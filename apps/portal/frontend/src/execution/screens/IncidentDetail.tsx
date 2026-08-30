@@ -7,6 +7,7 @@
  * decision (Acknowledge / Mark RESOLVED) lives in the sticky bar with the
  * gate's blocker codes as its reasons.
  */
+import { utcStamp } from "../time";
 import type { ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
@@ -50,7 +51,7 @@ function Panel({ title, label, meta, footer, children, className }: { title: str
 function OpLine({ op }: { op: OpRow }) {
   return (
     <span className="exec-inc2-op">
-      <span className="exec-inc2-dim">{op.at}</span> <a href={`/administration/actions?operation=${encodeURIComponent(op.id)}`}>{op.id}</a> {op.command}{" "}
+      <span className="exec-inc2-dim">{utcStamp(op.at)}</span> <a href={`/administration/actions?operation=${encodeURIComponent(op.id)}`}>{op.id}</a> {op.command}{" "}
       <span className="exec-inc2-status" data-status={op.status}>{op.status}</span>
       {op.note ? <> — {op.note}</> : null}
     </span>
@@ -127,7 +128,19 @@ export function IncidentDetailScreen({
           <header className="exec-inc2-masthead">
             <span className="exec-inc2-kind">INCIDENT</span>
             <h1 className="exec-inc2-h1">
-              {incident.incidentId} <span className="exec-inc2-subject">— {smoke?.subject ?? incident.title}</span>
+              {incident.incidentId}{" "}
+              <span className="exec-inc2-subject">
+                —{" "}
+                {smoke?.subjectLink && smoke.subject.includes(smoke.subjectLink.label) ? (
+                  <>
+                    {smoke.subject.split(smoke.subjectLink.label)[0]}
+                    <a href={smoke.subjectLink.href}>{smoke.subjectLink.label}</a>
+                    {smoke.subject.split(smoke.subjectLink.label)[1]}
+                  </>
+                ) : (
+                  smoke?.subject ?? incident.title
+                )}
+              </span>
             </h1>
             {resolved ? (
               <span className="exec-inc2-state" data-tone="good">RESOLVED</span>
@@ -259,7 +272,7 @@ export function IncidentDetailScreen({
                 {smoke && !resolved ? <span className="exec-inc2-waiting">{smoke.waitingLine}</span> : null}
                 {incident.timeline.rows.map((event) => (
                   <span key={event.eventId} className="exec-inc2-dim">
-                    {event.createdAt ?? "time not stated"} · {event.action ?? "action not stated"} · {event.actor ?? "actor not stated"} · v{event.versionBefore ?? "—"}→v{event.versionAfter ?? "—"}
+                    {event.createdAt ? utcStamp(event.createdAt) : "time not stated"} · {event.action ?? "action not stated"} · {event.actor ?? "actor not stated"} · v{event.versionBefore ?? "—"}→v{event.versionAfter ?? "—"}
                   </span>
                 ))}
                 <CountNote collection={incident.timeline} noun="events" />
@@ -271,7 +284,7 @@ export function IncidentDetailScreen({
               <Panel title="Annotations" label="Annotations">
                 <div className="exec-inc2-timeline">
                   {incident.annotations.rows.map((a) => (
-                    <span key={a.annotationId}>{a.body} <span className="exec-inc2-dim">— {a.author ?? "author not stated"} · {a.createdAt ?? "time not stated"}{a.redactionState && a.redactionState !== "CLEAR" ? ` · ${a.redactionState}` : ""}</span></span>
+                    <span key={a.annotationId}>{a.body} <span className="exec-inc2-dim">— {a.author ?? "author not stated"} · {a.createdAt ? utcStamp(a.createdAt) : "time not stated"}{a.redactionState && a.redactionState !== "CLEAR" ? ` · ${a.redactionState}` : ""}</span></span>
                   ))}
                 </div>
               </Panel>

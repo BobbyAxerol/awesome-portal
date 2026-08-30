@@ -114,6 +114,16 @@ export function TopBar({
             <option value="execution-carbon">Execution Carbon</option>
           </select>
         </label>
+      ) : presentationMode === "governance-light" ? (
+        <label
+          className="portal-pref mono"
+          title="Governance routes always use the light review room (owner, 2026-08-30). Your theme preference still applies to Research and Planning."
+        >
+          <span className="sr-only">Theme</span>
+          <select value="governance-light" disabled aria-label="Theme (Governance Light, route-set)">
+            <option value="governance-light">Governance Light</option>
+          </select>
+        </label>
       ) : (
         <label className="portal-pref mono">
           <span className="sr-only">Theme</span>

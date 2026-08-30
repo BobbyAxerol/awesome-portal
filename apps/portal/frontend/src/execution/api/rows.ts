@@ -25,7 +25,7 @@
  */
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
 import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
-import type { ApprovalGate, ApprovalRow, InertReason } from "../screens/ApprovalInbox";
+import type { ApprovalGate, ApprovalRow, DecidedRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
 import type { CapitalPreview } from "../analytics";
 
@@ -146,6 +146,41 @@ export function readApprovalRow(raw: Record<string, unknown>): ApprovalRowRead {
   };
 }
 
+/**
+ * One row of `governance.approval-history.v1` — the decided list.
+ *
+ * A decided approval is not a pending one wearing a decision: its columns are
+ * outcome, decider and time, and its sort is `decided_at desc`. Reusing the
+ * pending row shape squeezed the outcome into `blocker_summary`, which is how
+ * "approved with conditions" ended up in a column titled blockers.
+ */
+const OUTCOMES = ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED"] as const;
+
+export function readDecidedRow(raw: Record<string, unknown>): { row: DecidedRow | null; gaps: readonly string[] } {
+  const gaps: string[] = [];
+  const id = readId(raw.approval_id) as ApprovalId | null;
+  const gateParsed = readEnum(raw.gate, GATES);
+  const outcomeParsed = readEnum(raw.outcome, OUTCOMES);
+  if (!id) return { row: null, gaps: ["approval_id"] };
+  if (!gateParsed?.known) return { row: null, gaps: [`gate="${gateParsed?.raw ?? "absent"}"`] };
+  if (!outcomeParsed?.known) return { row: null, gaps: [`outcome="${outcomeParsed?.raw ?? "absent"}"`] };
+  const by = obj(raw.decided_by);
+  const decidedAt = readTimestamp(raw.decided_at);
+  if (!decidedAt) gaps.push("decided_at");
+  return {
+    row: {
+      id,
+      gate: gateParsed.value,
+      subject: str(raw.subject) ?? id,
+      outcome: outcomeParsed.value,
+      decidedBy: (by && str(by.username)) ?? "decider not published",
+      decidedAt: decidedAt ?? "—",
+      policyVersion: str(raw.policy_version),
+    },
+    gaps,
+  };
+}
+
 /** One line of the Gate R1 artifact passport (§10.2, "immutable evidence manifest"). */
 export function readPassportEntry(raw: unknown): PassportEntry | null {
   const o = obj(raw);
@@ -209,6 +244,8 @@ export interface Eligibility {
   canApprove: boolean;
   canApproveWithCondition: boolean;
   canDeny: boolean;
+  /** N09 delivered the REQUEST_CHANGES verb; absent still means no. */
+  canRequestChanges: boolean;
   /** Paper Exit only. Extend the observation window by the policy's fixed term. */
   canExtendObservation: boolean;
   /** Paper Exit only. Send the deployment back to PAPER_HELD. */
@@ -222,6 +259,7 @@ export const NO_ELIGIBILITY: Eligibility = {
   canApprove: false,
   canApproveWithCondition: false,
   canDeny: false,
+  canRequestChanges: false,
   canExtendObservation: false,
   canReject: false,
   separationOfDuties: null,
@@ -237,6 +275,7 @@ export function readEligibility(raw: unknown): Eligibility {
     canApprove: o.can_approve === true,
     canApproveWithCondition: o.can_approve_with_condition === true,
     canDeny: o.can_deny === true,
+    canRequestChanges: o.can_request_changes === true,
     canExtendObservation: o.can_extend_observation === true,
     canReject: o.can_reject === true,
     separationOfDuties: sod === "OK" || sod === "VIOLATION" ? sod : null,
@@ -643,6 +682,16 @@ export interface PaperExitDetail {
   panels: readonly EvidencePanelSpec[];
   recommendation: string | null;
   /**
+   * `activation_plan` — published by `governance.paper-exit.v1`, PREVIEW_ONLY.
+   * `null` when the response really has none; the screen then says so.
+   */
+  activationPlan: {
+    mode: string;
+    targetStage: string;
+    authoritySemantics: string;
+    externalSideEffectRequested: boolean;
+  } | null;
+  /**
    * Optimistic-concurrency version, as the published row carries it.
    *
    * A **number**, not a string, and named `approval_version` — the first
@@ -704,6 +753,23 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     lineage,
     panels,
     recommendation: str(data.recommendation),
+    activationPlan: (() => {
+      const plan = obj(data.activation_plan);
+      if (!plan) return null;
+      const mode = str(plan.mode);
+      const target = str(plan.target_stage);
+      if (!mode || !target) {
+        gaps.push("activation_plan present but unreadable");
+        return null;
+      }
+      return {
+        mode,
+        targetStage: target,
+        authoritySemantics: str(plan.authority_semantics) ?? "not stated",
+        // Dangerous flag: absent must mean "may have been requested".
+        externalSideEffectRequested: plan.external_side_effect_requested !== false,
+      };
+    })(),
     // `review_version` — the name the published Paper Exit schema uses
     // (`execution-governance-paper-exit.v1`, $defs.Review). The approval
     // spelling is kept as a fallback and would otherwise have read null,

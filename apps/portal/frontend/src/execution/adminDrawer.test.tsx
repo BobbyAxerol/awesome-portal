@@ -10,6 +10,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
+import { MemoryRouter } from "react-router-dom";
 
 import { readCommandCatalogue, type CatalogEntry } from "./adminCatalog";
 import { COMMAND_CATALOGUE_FIXTURE } from "./adminCatalog.fixtures";
@@ -126,7 +127,9 @@ describe("the detail pane explains rather than blocks silently", () => {
     render(
       <AdminActionDrawerScreen catalogue={CATALOGUE} selected={null} onSelect={onSelect} />,
     );
-    fireEvent.click(screen.getAllByRole("button")[0]);
+    const { container } = render(<span />);
+    void container;
+    fireEvent.click(document.querySelector(".exec-admin-row")!);
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect.mock.calls[0][0].key).toBeTruthy();
   });
@@ -181,15 +184,17 @@ describe("a non-Admin actor is denied without learning anything", () => {
 
 describe("the container fetches through the port", () => {
   it("loads the catalogue and renders it", async () => {
-    const { container } = render(<AdminCatalogueContainer api={createFixtureApi()} />);
+    const { container } = render(<MemoryRouter><AdminCatalogueContainer api={createFixtureApi()} /></MemoryRouter>);
     await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64));
   });
 
   it("shows the port's failure rather than an empty catalogue", async () => {
     const { container } = render(
-      <AdminCatalogueContainer
-        api={createFixtureApi({ unavailableEndpoints: ["getCommandCatalogue"] })}
-      />,
+      <MemoryRouter>
+        <AdminCatalogueContainer
+          api={createFixtureApi({ unavailableEndpoints: ["getCommandCatalogue"] })}
+        />
+      </MemoryRouter>,
     );
     await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(0));
     // An empty list would read as "there are no admin actions".
@@ -255,7 +260,7 @@ describe("sixty-four entries need a way in, and the server provides it", () => {
   it("re-queries through the port and moves returned_entries, not total", async () => {
     const api = createFixtureApi();
     const spy = vi.spyOn(api, "getCommandCatalogue");
-    const { container } = render(<AdminCatalogueContainer api={api} />);
+    const { container } = render(<MemoryRouter><AdminCatalogueContainer api={api} /></MemoryRouter>);
     await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64));
 
     fireEvent.click(screen.getByRole("button", { name: "R3 protective" }));
@@ -270,16 +275,17 @@ describe("sixty-four entries need a way in, and the server provides it", () => {
   it("sends no filter at all for ALL, rather than a sentinel", async () => {
     const api = createFixtureApi();
     const spy = vi.spyOn(api, "getCommandCatalogue");
-    const { container } = render(<AdminCatalogueContainer api={api} />);
+    const { container } = render(<MemoryRouter><AdminCatalogueContainer api={api} /></MemoryRouter>);
     await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64));
     expect(spy).toHaveBeenCalledWith(undefined);
   });
 
   it("drops the selection when the result set changes underneath it", async () => {
     const api = createFixtureApi();
-    const { container } = render(<AdminCatalogueContainer api={api} />);
+    const { container } = render(<MemoryRouter><AdminCatalogueContainer api={api} /></MemoryRouter>);
     await waitFor(() => expect(container.querySelectorAll(".exec-admin-row")).toHaveLength(64));
-    fireEvent.click(screen.getAllByRole("button", { name: /account policy/i })[0]);
+    const publishedRows = [...document.querySelectorAll(".exec-admin-row")];
+    fireEvent.click(publishedRows.find((r) => /account\s+policy/i.test(r.textContent ?? ""))!);
     expect(screen.getByLabelText("Command detail").textContent).toContain("account");
 
     fireEvent.click(screen.getByRole("button", { name: "R3 protective" }));

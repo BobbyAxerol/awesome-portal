@@ -17,6 +17,7 @@
  * `sandbox-certification.v1` exactly as before. When BR-EX-61 ships, the smoke
  * module goes and the hi-fi body reads the contract instead.
  */
+import { canonicalHref } from "../links";
 import { useState, type ReactNode } from "react";
 import { CapGauges, HistogramChart, OrderTypeMatrix, PositionsTable, SparkTile } from "../components/visuals";
 import type { StageVisuals } from "../stage.smoke";
@@ -103,7 +104,7 @@ function Facts({ rows }: { rows: CertKV[] }) {
       {rows.map((r) => (
         <div key={r.k} className="exec-sbc-fact">
           <dt>{r.k}</dt>
-          <dd data-tone={r.tone}>{r.v}</dd>
+          <dd data-tone={r.tone}>{r.href ? <a href={r.href}>{r.v}</a> : r.v}</dd>
         </div>
       ))}
     </dl>
@@ -238,7 +239,7 @@ export function SandboxCertificationScreen({
     ...certification.steps.filter((s) => s.evaluationState === "FAIL" || s.evaluationState === "STALE").map((s) => ({ label: `${s.label} ${s.evaluationState}`, detail: s.blockerCode ?? s.summary ?? null, severity: (s.evaluationState === "FAIL" ? "blocking" : "watch") as "blocking" | "watch" })),
   ];
   const provenanceItems = [
-    ...certification.lineage.map((l) => ({ label: l.kind, short: l.value.startsWith("sha256:") ? shortDigest(l.value) : l.value, full: l.value.startsWith("sha256:") ? l.value : null, href: l.href })),
+    ...certification.lineage.map((l) => ({ label: l.kind, short: l.value.startsWith("sha256:") ? shortDigest(l.value) : l.value, full: l.value.startsWith("sha256:") ? l.value : null, href: canonicalHref(l.href) })),
     ...(certification.progress?.evidenceSetHash ? [{ label: "evidence set", short: shortDigest(certification.progress.evidenceSetHash), full: certification.progress.evidenceSetHash }] : []),
     ...(certification.externalAccountRef ? [{ label: "external account", short: certification.externalAccountRef, full: null }] : []),
     { label: "profile", short: certification.deliveryProfile ?? "not stated", full: null },

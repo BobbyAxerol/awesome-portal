@@ -65,7 +65,7 @@ export function EvidencePanel({ rows }: { rows: readonly EvidenceRow[] }) {
  * for the Approval Inbox and the Command Center triage list — a reader scanning
  * for what is late must be able to see it without relying on the red.
  */
-export function SlaCell({ sla }: { sla: Sla }) {
+export function SlaCell({ sla, preciseAgeText }: { sla: Sla; preciseAgeText?: string }) {
   // `slaOverdue` prefers the server's own verdict. It knows about paused
   // clocks, market-hours policies and granted extensions; two minute counts
   // do not, and they get those cases wrong in the direction that matters.
@@ -78,18 +78,18 @@ export function SlaCell({ sla }: { sla: Sla }) {
       {/* EL-V2-05: a compact bar carries the ratio; the number stays. Width is
           the age over its budget, capped at full — an overdue bar is full and
           red, not longer than its box. */}
+      {preciseAgeText ?? format(sla.ageMinutes)} / {format(sla.budgetMinutes)}
+      {overdue ? (
+        <span className="exec-sla-flag"> · {sla.state ?? "OVERDUE"}</span>
+      ) : sla.state === "DUE_SOON" ? (
+        <span className="exec-sla-flag" data-tone="warn"> · DUE SOON</span>
+      ) : null}
       <span className="exec-sla-bar" aria-hidden="true">
         <span
           className="exec-sla-fill"
           style={{ width: `${Math.min(100, Math.round((sla.ageMinutes / Math.max(1, sla.budgetMinutes)) * 100))}%` }}
         />
       </span>
-      {format(sla.ageMinutes)} / {format(sla.budgetMinutes)}
-      {overdue ? (
-        <span className="exec-sla-flag"> · {sla.state ?? "OVERDUE"}</span>
-      ) : sla.state === "DUE_SOON" ? (
-        <span className="exec-sla-flag" data-tone="warn"> · DUE SOON</span>
-      ) : null}
     </span>
   );
 }

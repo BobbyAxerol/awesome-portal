@@ -23,6 +23,7 @@ const ALL = {
   canApprove: true,
   canApproveWithCondition: true,
   canDeny: true,
+  canRequestChanges: true,
   canExtendObservation: true,
   canReject: true,
   separationOfDuties: "OK" as const,
@@ -304,15 +305,21 @@ describe("B5/B6 — the transport the decision actually travels on", () => {
 });
 
 describe("EL-V2-04 — Paper Exit Review on the workspace anatomy", () => {
-  it("offers Evidence, Activation plan and Conditions as tabs and renders Evidence first", () => {
+  it("shows evidence, the activation plan and conditions on one page — no tabs (hi-fi 4b)", () => {
     exit();
-    for (const name of [/Evidence/, /Activation plan/, /Conditions/]) expect(screen.getByRole("tab", { name })).toBeTruthy();
     expect(screen.getByText("Observation coverage")).toBeTruthy();
+    expect(screen.getAllByText(/Sandbox activation plan — preview/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Conditions & recommendation/i).length).toBeGreaterThanOrEqual(1);
   });
-  it("switches to the activation plan and says when none was published", async () => {
+  it("renders the published activation plan, and says so when none was published", () => {
+    // `governance.paper-exit.v1` publishes the plan; "not published" was the
+    // screen dropping a published field.
+    exit({ plan: { mode: "PREVIEW_ONLY", targetStage: "SANDBOX_VALIDATION", authoritySemantics: "APPROVAL_CREATES_PROMOTION_GRANT_ONLY", externalSideEffectRequested: false } });
+    expect(screen.getByText("PREVIEW_ONLY")).toBeTruthy();
+    expect(screen.getByText("none requested")).toBeTruthy();
+    cleanup();
     exit();
-    screen.getByRole("tab", { name: /Activation plan/ }).click();
-    expect(await screen.findByText(/No activation plan was published/)).toBeTruthy();
+    expect(screen.getByText(/No activation plan was published/)).toBeTruthy();
   });
   it("keeps the decision in the context rail with the reasons beside it", () => {
     exit({ gateMet: false });

@@ -22,6 +22,7 @@ import {
   EXECUTION_PREVIEW_ENABLED,
   EXECUTION_PREVIEW_FEATURE_DEFAULTS,
   hasExecutionPreview,
+  EXECUTION_PREVIEW_EXTRA_ROUTES,
 } from "../execution/previewRegistry";
 import { screenDeliveryProfile } from "../execution/profile";
 
@@ -150,6 +151,15 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
               element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} />}
             />
           ))}
+        {EXECUTION_PREVIEW_ENABLED
+          ? EXECUTION_PREVIEW_EXTRA_ROUTES.map((extra) => (
+              <Route
+                key={`execution-preview-extra:${extra.screenId}`}
+                path={extra.path}
+                element={<ExecutionPreviewRoute screenId={extra.screenId} profile={null} />}
+              />
+            ))
+          : null}
         {registry.features.map((feature) => {
           const module = MODULES[feature.id];
           const previewScreen = previewByExactRoute.get(feature.canonical_route);

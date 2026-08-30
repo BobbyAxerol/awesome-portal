@@ -11,7 +11,7 @@
  * them into `catch (e)` is how they end up as one grey error box.
  */
 import type { KeysetPage, PanelStatus } from "../contracts";
-import type { ApprovalRow } from "../screens/ApprovalInbox";
+import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
 import type {
   AnalyticsEnvelope,
@@ -68,14 +68,17 @@ export interface InboxQuery {
 
 export interface InboxResult {
   page: KeysetPage<ApprovalRow>;
-  counts: { pending: number; overdue: number | null; dueSoon: number | null } | null;
+  counts: { pending: number; overdue: number | null; dueSoon: number | null; mine?: number | null } | null;
   /** Server-counted over the whole filter. See `ApprovalInbox.inertCount`. */
   inertCount?: number | null;
   /**
    * Recently decided, its own page. A decided request in the pending list is an
    * action item that is not one, so the two never share a query.
    */
-  decided?: KeysetPage<ApprovalRow> | null;
+  decided?: KeysetPage<DecidedRow> | null;
+  /** The workflow contract's actor object (hi-fi header: "you are Lan · roles"). */
+  actor?: { username: string; roles: readonly string[] } | null;
+  policyVersion?: string | null;
 }
 
 /** What apply returned. A 202 and nothing more (master plan §7.3). */
@@ -293,6 +296,8 @@ export interface ExecutionApi {
       | "APPROVE"
       | "DENY"
       | "APPROVE_WITH_CONDITION"
+      /** N09: typed request-changes verb — requires a reason like every decision. */
+      | "REQUEST_CHANGES"
       | "PROMOTE"
       | "EXTEND_OBSERVATION"
       | "REJECT";

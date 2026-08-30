@@ -32,8 +32,13 @@ import "./execution.css";
  */
 export type ExecutionSurfaceKind = "governance" | "deployments";
 
-const THEME: Record<ExecutionSurfaceKind, string> = {
-  governance: "operations-carbon",
+/**
+ * `deployments` stamps Carbon; `governance` inherits the workspace theme —
+ * the route provider sets it light (owner decision 2026-08-30), and inside a
+ * dark fixture page the same screen simply follows that page's theme.
+ */
+const THEME: Record<ExecutionSurfaceKind, string | null> = {
+  governance: null,
   deployments: "operations-carbon",
 };
 
@@ -57,7 +62,7 @@ export function ExecutionSurface({
   return (
     <div
       {...rest}
-      data-theme={THEME[kind]}
+      data-theme={THEME[kind] ?? undefined}
       data-density={DENSITY[kind]}
       data-surface={kind}
       className={className ? `exec-surface ${className}` : "exec-surface"}

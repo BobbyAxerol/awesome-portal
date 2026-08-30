@@ -776,7 +776,7 @@
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--accent-strong);
   background: var(--accent-strong);
-  color: var(--on-accent);
+  color: var(--accent-contrast);
   cursor: pointer;
   min-height: 30px;
 }
@@ -1128,7 +1128,7 @@
 
 .exec-inbox-filter {
   font: var(--exec-font-control);
-  padding: 2px var(--space-2);
+  padding: 5px 12px;
   border: 1px solid var(--line);
   background: var(--surface-2);
   color: var(--ink-soft);
@@ -1136,8 +1136,12 @@
 }
 
 .exec-inbox-filter[data-active="true"] {
-  border-color: var(--accent);
-  color: var(--ink);
+  /* The same pairing as the apply button — accent-strong carries text safely
+     in every theme; bare --accent does not. */
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
+  font-weight: 600;
 }
 
 .exec-inbox-sort {
@@ -1265,6 +1269,42 @@
   margin-top: var(--space-1);
 }
 
+.exec-gov-dim { color: var(--ink-faint); }
+.exec-gov-reglink { font: 400 10px/14px var(--font-mono); color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; }
+.exec-gov-reglink:disabled { color: var(--ink-faint); cursor: not-allowed; }
+.exec-gate-checklines { display: flex; flex-direction: column; gap: 7px; padding: 14px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); }
+.exec-gate-checklines [data-mark="pass"] b, .exec-gate-checklines [data-kind="lineage"] b { color: var(--good); }
+.exec-gate-checklines [data-mark="watch"] b, .exec-gate-checklines [data-kind="warning"] b, .exec-gate-checklines [data-mark="insufficient"] b { color: var(--warn); }
+.exec-gate-checklines [data-mark="watch"], .exec-gate-checklines [data-kind="warning"] { color: var(--warn); }
+.exec-gate-checklines [data-mark="fail"] b { color: var(--bad); }
+.exec-gate-checkfoot { margin-top: auto; border-top: 1px solid var(--line-soft); padding-top: 8px; color: var(--ink); }
+.exec-gate-checkfoot [data-tone="warn"] { color: var(--warn); }
+.exec-gate-decisionbody { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.exec-gate-fitbody { padding: 14px; display: flex; flex-direction: column; gap: 10px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); }
+.exec-gate-fitbody .exec-gov-kv, .exec-gov-kv[data-flush="true"] { padding: 0; }
+.exec-gate-obsbody { padding: 14px; }
+.exec-gov-kv .exec-gov-v[data-tone="good"] { color: var(--good); }
+/* The one deliberately inverse block (hi-fi 1b): near-black in every theme.
+   Its palette is re-scoped in tokens.css, so children just use tokens. */
+/* Doubled class beats the later panel-background rules without !important. */
+.exec-gov-inverse.exec-gov-inverse { border: 1px solid var(--line-strong); background: var(--paper); color: var(--ink); }
+.exec-gate-policychip[data-inverse="true"] { background: none; border-color: var(--line-strong); color: var(--ink); }
+/* Gate R1/R2 hi-fi additions: policy chips, criteria verdicts, stage chips,
+   portfolio-fit bar, window-role legend. */
+.exec-gate-panelhead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.exec-gate-policychip { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--paper-sunken); padding: 1px 7px; }
+.exec-gate-waiverable { color: var(--warn); font: 600 11px/16px var(--font-mono); }
+.exec-gate-criteriafoot { margin: 8px 0 0; }
+.exec-gate-stagechips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.exec-gate-stagechip { font: 600 10px/14px var(--font-mono); padding: 3px 9px; border: 1px solid var(--line); color: var(--ink-mute); }
+.exec-gate-stagechip[data-state="eligible"] { border-color: var(--good); color: var(--good); }
+.exec-gate-fitweight { display: flex; justify-content: space-between; font: 400 12px/18px var(--font-mono); }
+.exec-gate-fitbar { height: 7px; background: var(--paper-sunken); border: 1px solid var(--line); margin: 4px 0 10px; }
+.exec-gate-fitbar > span { display: block; height: 100%; background: var(--accent); }
+.exec-gate-rolelegend { display: flex; gap: 14px; margin: 2px 0 0; font: 400 10px/14px var(--font-mono); }
+.exec-gate-rolelegend [data-tone="mute"] { color: var(--ink-faint); }
+.exec-gate-rolelegend [data-tone="accent"] { color: var(--accent); }
+.exec-gate-rolelegend [data-tone="warn"] { color: var(--warn); }
 .exec-gate-verified {
   color: var(--good);
 }
@@ -1333,6 +1373,8 @@
   color: var(--ink-mute);
   border-color: var(--line-soft);
 }
+/* A disabled ACTIVE chip keeps its pairing — faint-on-accent was 1.49:1. */
+.exec-inbox-filter[data-active="true"]:disabled { color: var(--accent-contrast); opacity: 0.75; }
 
 .exec-gate-banner {
   font: var(--exec-font-body);
@@ -1550,6 +1592,96 @@
 
 /* The hi-fi's footer strip. "visibility ≠ authority" is the sentence that
  * explains the dimmed rows; without it the dimming reads as a rendering bug. */
+
+/* Governance polish (owner feedback 2026-08-30, ảnh 2/3): mono type inside
+   panels, compact empty states, no stretched dead space, hi-fi condition UI. */
+.exec-gov-grid2 { align-items: start; }
+/* Mobile: nothing clipped without a scroll — KV collapses, chips wrap. */
+.exec-gov-h1 { min-width: 0; overflow-wrap: anywhere; }
+.exec-gate-policychip { white-space: normal; }
+.exec-gate-checklines span { min-width: 0; overflow-wrap: anywhere; }
+.exec-gov-head > *, .exec-gov-panelhead > *, .exec-gov-metaline > * { min-width: 0; }
+@media (max-width: 640px) {
+  .exec-gov-kv { grid-template-columns: minmax(0, 1fr); }
+  .exec-gov-kv > .exec-gov-k { margin-top: 6px; }
+}
+.exec-gov .exec-state { padding: 12px 14px; border: none; background: none; }
+.exec-gov .exec-state-title { font: 600 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); }
+.exec-gov .exec-state-reason { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); max-width: 62ch; }
+.exec-gov input, .exec-gov textarea, .exec-gov select { font: 400 12px/18px var(--font-mono); }
+.exec-gov .exec-composer { border: 1px solid var(--line); background: var(--paper-sunken); padding: 8px 10px; gap: 6px; }
+.exec-gov .exec-composer .input { padding: 4px 8px; }
+.exec-gov .exec-composer-field { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); gap: 3px; }
+.exec-gov .exec-composer label { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); }
+.exec-gov .exec-composer-hint, .exec-gov .exec-composer p { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-gov-addcond > summary { list-style: none; cursor: pointer; font: 600 11px/16px var(--font-mono); color: var(--accent); }
+.exec-gov-addcond > summary::-webkit-details-marker { display: none; }
+.exec-gov-addcond[open] > summary { margin-bottom: 8px; }
+.exec-gov .exec-condition { font: 400 11px/16px var(--font-mono); background: var(--paper-sunken); border: 1px solid var(--line); padding: 8px 10px; }
+.exec-gov .exec-condition-empty { font: 400 11px/16px var(--font-mono); color: var(--ink-mute); }
+/* Capital preview must show its AFTER column: mono 11, tight cells, and the
+   prose note wraps under the number instead of stretching the row. */
+.exec-gov-inverse .exec-gate-capital th, .exec-gov-inverse .exec-gate-capital td { font: 400 11px/16px var(--font-mono); padding: 5px 10px; }
+.exec-gov-inverse .exec-gate-capital td:last-child { white-space: normal; }
+.exec-gov-inverse .exec-gate-capital .exec-gate-note { display: block; white-space: normal; color: var(--ink-faint); }
+.exec-gov-inverse .exec-gate-capital td, .exec-gov-inverse .exec-gate-capital tbody th { color: var(--ink-mute); }
+.exec-gov-inverse .exec-gate-capital td.exec-num { color: var(--ink); }
+
+/* ── Governance review room (hi-fi 4a/1a/1b, owner 2026-08-30) ──────────────
+   Light-first: the route provider renders /governance/* on the research
+   tokens; every value here is a token so the same screens stay legible when
+   a fixture page mounts them under Carbon. Numbers are the hi-fi's. */
+.exec-gov { max-width: 1200px; margin: 0 auto; padding: 24px 20px 120px; display: flex; flex-direction: column; gap: 14px; }
+.exec-gov-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 2px; }
+.exec-gov-h1 { margin: 0; font: 300 22px/1.3 var(--font-body); color: var(--ink); }
+.exec-gov-chip { font: 600 11px/16px var(--font-mono); padding: 1px 8px; }
+.exec-gov-chip[data-fill="warn"] { background: var(--warn-bg); color: var(--warn-strong, var(--warn)); }
+.exec-gov-chip[data-fill="bad"] { background: var(--bad-bg); color: var(--bad); }
+.exec-gov-chip[data-fill="good"] { background: var(--good-bg); color: var(--good); }
+.exec-gov-chip[data-pulse="true"] { animation: exec-inbox-pulse 1.8s infinite; }
+@media (prefers-reduced-motion: reduce) { .exec-gov-chip[data-pulse="true"] { animation: none; } }
+.exec-gov-wf { font: 400 9px/14px var(--font-mono); color: var(--ink-faint); border: 1px dashed var(--line-strong); padding: 1px 6px; }
+.exec-gov-spacer { flex: 1; }
+.exec-gov-meta { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); }
+.exec-gov-panel { border: 1px solid var(--line); background: var(--paper-raised); }
+.exec-gov-panelhead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); }
+.exec-gov-paneltitle { font: 400 11px/16px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-gov-metaline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font: 400 11px/16px var(--font-mono); color: var(--ink-soft); }
+.exec-gov-metaline [data-tone="good"] { color: var(--good); }
+.exec-gov-metaline [data-tone="warn"] { color: var(--warn); }
+.exec-gov-metaline [data-tone="bad"] { color: var(--bad); font-weight: 600; }
+.exec-gov-kv { display: grid; grid-template-columns: minmax(72px, 40%) minmax(0, 1fr); gap: 6px 12px; padding: 14px; font: 400 12px/18px var(--font-mono); color: var(--ink-soft); overflow-wrap: anywhere; }
+.exec-gov-kv > .exec-gov-k { font: 400 10px/16px var(--font-mono); text-transform: uppercase; color: var(--ink-faint); overflow-wrap: anywhere; }
+.exec-gov-kv > .exec-gov-v { color: var(--ink); }
+.exec-gov-grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.exec-gov-grid2[data-ratio="1.15"] { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); }
+.exec-gov-grid2[data-ratio="1.5"] { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
+.exec-gov-grid2[data-ratio="1.35"] { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+@media (max-width: 1024px) { .exec-gov-grid2 { grid-template-columns: minmax(0, 1fr); } }
+.exec-gov-verified { color: var(--good); }
+.exec-gov-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.exec-gov-actions .exec-gov-count { font: 400 10px/14px var(--font-mono); color: var(--ink-faint); }
+/* Gate chips in the inbox table (hi-fi: bordered, per-gate hue). */
+.exec-inbox-gate { font: 600 10px/14px var(--font-mono); padding: 1px 6px; border: 1px solid var(--accent); color: var(--accent); white-space: nowrap; }
+.exec-inbox-gate[data-gate="PAPER_EXIT"], .exec-inbox-gate[data-gate="SANDBOX_EXIT"] { border-color: var(--gov-exit); color: var(--gov-exit); }
+.exec-inbox-gate[data-gate="LIVE_GATE"] { border-width: 2px; border-color: var(--bad); color: var(--bad); font-weight: 700; }
+
+/* Hi-fi 4a: the OVERDUE badge and an overdue row's SLA bar pulse; the breach
+   countdown is the strip's one emphatic number. */
+@keyframes exec-inbox-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.exec-inbox .exec-masthead-badges .exec-chip[data-tone="bad"] { animation: exec-inbox-pulse 1.8s infinite; }
+.exec-inbox .exec-sla[data-overdue="true"] .exec-sla-fill { animation: exec-inbox-pulse 1.2s infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .exec-inbox .exec-masthead-badges .exec-chip[data-tone="bad"],
+  .exec-inbox .exec-sla[data-overdue="true"] .exec-sla-fill { animation: none; }
+}
+/* Hi-fi 4a row anatomy: the age text on top, the 3px budget bar under it. */
+.exec-inbox .exec-sla { display: block; }
+.exec-inbox .exec-sla .exec-sla-bar { display: block; width: 110px; margin-top: 4px; }
+.exec-inbox-breach { color: var(--ink); font-variant-numeric: tabular-nums; }
+.exec-inbox-rownote { margin-left: auto; }
+.exec-inbox-needsyou { color: var(--accent); font-weight: 600; }
+.exec-inbox-decidedmeta { color: var(--ink-mute); font: 400 11px/16px var(--font-mono); }
 .exec-inbox-strip {
   font: var(--exec-font-meta);
   display: flex;
@@ -5877,7 +6009,7 @@
 .exec-pw-source[data-tone="calendar"] b { color: var(--accent); }
 .exec-pw-age { color: var(--good); font-variant-numeric: tabular-nums; }
 .exec-pw-paused { color: var(--accent); }
-.exec-pw-primary { font: 600 11px/16px var(--font-mono); color: var(--on-accent); background: var(--accent-strong); border: 0; padding: 6px 14px; cursor: pointer; }
+.exec-pw-primary { font: 600 11px/16px var(--font-mono); color: var(--accent-contrast); background: var(--accent-strong); border: 0; padding: 6px 14px; cursor: pointer; }
 .exec-pw-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 .exec-pw-meta { margin-bottom: 14px; }
 .exec-pw-meta b[data-tone="warn"] { color: var(--warn); font-weight: 400; }
@@ -6223,3 +6355,236 @@
   .exec-po-cells > span[data-kind="today"] { animation: exec-sb-tick 1.2s infinite; }
   .exec-po-gatechip { animation: exec-sb-pulse 1.8s infinite; }
 }
+
+/* ── Admin Action Drawer — hi-fi WF 1i CLI catalog, owner 2026-08-30.
+   Two panes: task catalog (flex) + 490px sticky drawer. Every color is a
+   token so the same markup would read on any theme; the screen itself is
+   pinned to operations-carbon by its surface. Measured from the hi-fi:
+   rows 7/10 with a 3px select rail, group heads 10px uppercase, drawer
+   header 16/400, params grid minmax(120px,32%)/1fr/30%, terminal 11/1.65. */
+.exec-cli-head { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--paper); flex-wrap: wrap; }
+.exec-cli-headchip { font: 700 10px/1.6 var(--font-mono); letter-spacing: 0.08em; color: var(--bad); border: 1px solid var(--bad); padding: 1px 7px; }
+.exec-cli-headline { font: 400 11px/1.5 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-wf { font: 400 9px/1.6 var(--font-mono); color: var(--ink-faint); border: 1px dashed var(--line-strong); padding: 1px 6px; }
+.exec-cli-headgap, .exec-cli-footgap { flex: 1; }
+.exec-cli-stepup { font: 400 10px/1.5 var(--font-mono); color: var(--ink-mute); }
+.exec-cli-actor { font: 600 10px/1.6 var(--font-mono); padding: 2px 8px; border: 1px solid var(--line-strong); color: var(--ink-mute); }
+.exec-cli-actor[data-role="ADMIN"] { color: var(--bad); border-color: var(--bad); }
+.exec-cli-actor[data-role="OPERATOR"] { color: var(--accent); border-color: var(--accent); }
+.exec-cli-opref { font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); border: 1px dashed var(--accent); padding: 7px 12px; margin: 10px 16px 0; }
+.exec-cli-body { display: flex; align-items: stretch; min-height: 0; }
+.exec-cli-catalog { flex: 1; min-width: 0; padding: 14px 16px; }
+.exec-cli-hint { font: 400 10px/1.6 var(--font-mono); color: var(--ink-faint); margin: 0 0 10px; }
+.exec-cli-group { margin-bottom: 14px; }
+.exec-cli-groupname { font: 400 10px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-mute); padding-bottom: 5px; border-bottom: 1px solid var(--line); margin: 0 0 4px; }
+.exec-cli-row { display: block; width: 100%; text-align: left; padding: 7px 10px; border: 1px solid var(--line-soft); border-left: 3px solid transparent; background: var(--paper); margin-bottom: 3px; cursor: pointer; color: inherit; }
+.exec-cli-row[data-selected] { border-left-color: var(--accent); background: var(--paper-raised); }
+.exec-cli-rowhead { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.exec-cli-rowtitle { font: 400 12px/1.5 var(--font-sans); color: var(--ink); }
+.exec-cli-tag { font: 600 9px/1.6 var(--font-mono); letter-spacing: 0.06em; padding: 0 5px; }
+.exec-cli-tag[data-size="lg"] { font: 600 10px/1.6 var(--font-mono); padding: 1px 7px; }
+.exec-cli-tag[data-tag="READ"] { color: var(--good); border: 1px solid var(--good); }
+.exec-cli-tag[data-tag="MUTATION"] { color: var(--accent); border: 1px solid var(--accent); }
+.exec-cli-tag[data-tag="DANGER"] { color: var(--bad); border: 1px solid var(--bad); }
+.exec-cli-tag[data-tag="BLOCKED"] { color: var(--ink-mute); border: 1px dashed var(--ink-faint); }
+.exec-cli-rowscope { font: 400 9px/1.5 var(--font-mono); color: var(--ink-faint); margin-left: auto; }
+.exec-cli-rowcli { display: block; font: 400 10px/1.5 var(--font-mono); color: var(--accent); opacity: 0.75; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exec-cli-published { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 10px; }
+.exec-cli-published > summary { font: 400 10px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); cursor: pointer; }
+.exec-cli-drawer { width: 490px; flex: none; background: var(--paper-raised); border-left: 1px solid var(--line-strong); box-shadow: var(--shadow-e3); display: flex; flex-direction: column; max-height: 100vh; position: sticky; top: 0; }
+.exec-cli-drawhead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.exec-cli-drawhead h1 { margin: 0; width: 100%; font: 400 16px/1.35 var(--font-sans); color: var(--ink); }
+.exec-cli-drawmeta { font: 400 10px/1.5 var(--font-mono); color: var(--ink-mute); width: 100%; }
+.exec-cli-reset { font: 400 11px/1.5 var(--font-mono); color: var(--ink-mute); background: none; border: 0; padding: 0; cursor: pointer; margin-left: auto; }
+.exec-cli-steps { display: flex; border-bottom: 1px solid var(--line); }
+.exec-cli-steps span { flex: 1; text-align: center; font: 400 10px/1.5 var(--font-mono); letter-spacing: 0.06em; padding: 9px 4px; color: var(--ink-faint); border-bottom: 2px solid transparent; }
+.exec-cli-steps span[data-state="active"] { color: var(--ink); border-bottom-color: var(--accent); }
+.exec-cli-steps span[data-state="done"] { color: var(--good); }
+.exec-cli-drawbody { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.exec-cli-smoke { font: 400 9px/1.6 var(--font-mono); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 6px 8px; margin: 0; }
+.exec-cli-joined { font: 400 9px/1.6 var(--font-mono); color: var(--ink-faint); margin: 0; }
+.exec-cli-joined[data-missing] { color: var(--warn); }
+.exec-cli-params, .exec-cli-panel { border: 1px solid var(--line); background: var(--paper); }
+.exec-cli-panel { padding: 10px 12px; }
+.exec-cli-panel[data-danger] { border-color: var(--bad); }
+.exec-cli-paramhead { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); font: 400 10px/1.5 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); }
+.exec-cli-paramhead .exec-cli-paramsrc { margin-left: auto; text-transform: none; }
+.exec-cli-paramrow { display: grid; grid-template-columns: minmax(120px, 32%) minmax(0, 1fr) minmax(0, 30%); gap: 8px; padding: 5px 12px; border-bottom: 1px solid var(--line-soft); align-items: center; }
+.exec-cli-paramk { font: 400 10px/1.5 var(--font-mono); color: var(--ink-mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exec-cli-paramv { font: 400 11px/1.5 var(--font-mono); color: var(--ink); background: var(--paper-sunken); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 3px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exec-cli-paramsrc { font: 400 9px/1.5 var(--font-mono); color: var(--ink-faint); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exec-cli-paramfoot { font: 400 9px/1.6 var(--font-mono); color: var(--ink-faint); padding: 6px 12px; margin: 0; }
+.exec-cli-readbanner { border: 1px solid var(--good); background: var(--good-bg); padding: 8px 12px; font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-readbanner b { color: var(--good); }
+.exec-cli-terminal { border: 1px solid var(--line); background: var(--console-bg); padding: 10px 12px; min-height: 190px; font: 400 11px/1.65 var(--font-mono); }
+.exec-cli-runhint { color: var(--ink-faint); }
+.exec-cli-runhint b { color: var(--accent); }
+.exec-cli-ghost { color: var(--ink-faint); opacity: 0.55; margin: 6px 0 0; white-space: pre-wrap; font: inherit; }
+.exec-cli-outline { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-soft); }
+.exec-cli-outline[data-tone="cmd"] { color: var(--accent); }
+.exec-cli-outline[data-tone="exit"] { color: var(--ink-faint); }
+.exec-cli-outline[data-tone="bad"] { color: var(--bad); }
+.exec-cli-outline[data-tone="good"] { color: var(--good); }
+.exec-cli-cursor { color: var(--accent); animation: exec-inbox-pulse 0.8s infinite; }
+.exec-cli-watchbanner { border: 1px solid var(--accent); background: var(--paper); padding: 7px 12px; font: 400 10px/1.6 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-watchbanner b { color: var(--accent); }
+.exec-cli-num { color: var(--ink); font-variant-numeric: tabular-nums; }
+.exec-cli-blockbanner { border: 1px solid var(--bad); background: var(--bad-bg); padding: 10px 12px; font: 400 11px/1.6 var(--font-mono); color: var(--ink); display: flex; flex-direction: column; gap: 4px; }
+.exec-cli-blockbanner b { color: var(--bad); }
+.exec-cli-blockbanner span { color: var(--ink-soft); white-space: pre-wrap; }
+.exec-cli-deniedbanner { border: 1px solid var(--warn); background: var(--warn-bg); padding: 12px 14px; font: 400 11px/1.7 var(--font-mono); color: var(--ink); display: flex; flex-direction: column; gap: 4px; }
+.exec-cli-deniedbanner > b { color: var(--warn); }
+.exec-cli-deniedbanner span { color: var(--ink-soft); }
+.exec-cli-deniedfoot { color: var(--ink-mute); }
+.exec-cli-deadref { text-decoration: underline dotted; cursor: help; }
+.exec-cli-impact { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.exec-cli-impactcard { border: 1px solid var(--line); background: var(--paper); padding: 10px 12px; }
+.exec-cli-impactcard[data-after] { border-color: var(--accent); }
+.exec-cli-cardlabel { font: 400 10px/1.5 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 6px; }
+.exec-cli-impactcard[data-after] .exec-cli-cardlabel { color: var(--accent); }
+.exec-cli-cardlabel[data-tone="bad"] { color: var(--bad); }
+.exec-cli-cardbody { font: 400 12px/1.7 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-cardbody b { color: var(--ink); }
+.exec-cli-cardbody [data-tone="warn"] { color: var(--warn); }
+.exec-cli-checks { display: flex; flex-direction: column; gap: 5px; }
+.exec-cli-check { font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-check b { color: var(--good); }
+.exec-cli-check[data-tone="warn"] { color: var(--warn); }
+.exec-cli-check[data-tone="warn"] b { color: var(--warn); }
+.exec-cli-check[data-tone="mute"] { color: var(--ink-mute); }
+.exec-cli-check[data-tone="running"] { color: var(--accent); animation: exec-inbox-pulse 1s infinite; }
+.exec-cli-check[data-tone="running"] b { color: var(--accent); }
+.exec-cli-check[data-tone="idle"] { color: var(--ink-faint); }
+.exec-cli-check[data-tone="idle"] b { color: var(--ink-faint); }
+.exec-cli-vat { color: var(--ink-mute); }
+.exec-cli-202 { font: 600 10px/1.5 var(--font-mono); padding: 1px 6px; background: var(--paper-sunken); color: var(--ink-soft); margin-left: 6px; }
+.exec-cli-equiv { border: 1px dashed var(--line-strong); background: var(--paper-sunken); padding: 10px 12px; }
+.exec-cli-pre { margin: 0; font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); white-space: pre-wrap; overflow-wrap: anywhere; }
+.exec-cli-pre[data-cli] { color: var(--accent); }
+.exec-cli-reason { border: 1px solid var(--line); border-bottom-color: var(--ink); background: var(--paper-sunken); padding: 8px 10px; font: 400 12px/1.5 var(--font-mono); color: var(--ink-soft); min-height: 34px; }
+.exec-cli-confirm { border: 1px solid var(--line); background: var(--paper-sunken); padding: 8px 10px; font: 400 12px/1.5 var(--font-mono); color: var(--ink); }
+.exec-cli-confirm[data-danger] { border-bottom-color: var(--bad); }
+.exec-cli-planbanner { border: 1px solid var(--accent); background: var(--paper); padding: 8px 12px; font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-planbanner b { color: var(--accent); }
+.exec-cli-pfhead { display: flex; align-items: center; gap: 8px; font: 400 10px/1.5 var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-mute); margin-bottom: 7px; }
+.exec-cli-pfbadge { margin-left: auto; font: 600 10px/1.5 var(--font-mono); color: var(--accent); }
+.exec-cli-pfbadge[data-done] { color: var(--good); }
+.exec-cli-applywarn { border: 1px solid var(--warn); background: var(--warn-bg); padding: 9px 12px; font: 400 11px/1.6 var(--font-mono); color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
+.exec-cli-applywarn b { color: var(--warn); }
+.exec-cli-applywarn span { color: var(--ink-soft); }
+.exec-cli-grantask { border: 1px dashed var(--accent); background: var(--paper-sunken); padding: 10px 12px; font: 400 11px/1.7 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-grantask b { color: var(--accent); }
+.exec-cli-grantwait { border: 1px solid var(--accent); background: var(--paper); padding: 10px 12px; font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); animation: exec-inbox-pulse 1.6s infinite; }
+.exec-cli-grantwait b { color: var(--accent); }
+.exec-cli-grantok { border: 1px solid var(--good); background: var(--good-bg); padding: 10px 12px; font: 400 11px/1.7 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-grantok b { color: var(--good); }
+.exec-cli-verified { border: 1px solid var(--good); background: var(--good-bg); padding: 10px 12px; font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); }
+.exec-cli-verified b { color: var(--good); }
+.exec-cli-partial { border: 1px solid var(--warn); background: var(--warn-bg); padding: 10px 12px; font: 400 11px/1.6 var(--font-mono); color: var(--ink); }
+.exec-cli-partial b { color: var(--warn); }
+.exec-cli-partial span { color: var(--ink-soft); }
+.exec-cli-verifyfoot { font: 400 10px/1.6 var(--font-mono); color: var(--ink-faint); margin: 0; }
+.exec-cli-foot { display: flex; gap: 8px; align-items: center; padding: 12px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.exec-cli-footnote { font: 400 10px/1.5 var(--font-mono); color: var(--ink-faint); }
+.exec-cli-footnote[data-end] { margin-left: auto; }
+.exec-cli-run { font: 600 11px/1.5 var(--font-mono); color: var(--paper); background: var(--good); border: 0; padding: 6px 14px; cursor: pointer; }
+.exec-cli-running { font: 400 11px/1.5 var(--font-mono); color: var(--accent); border: 1px dashed var(--accent); padding: 6px 14px; animation: exec-inbox-pulse 1.2s infinite; }
+.exec-cli-watch { font: 400 11px/1.5 var(--font-mono); color: var(--accent); border: 1px solid var(--accent); background: none; padding: 6px 14px; cursor: pointer; }
+.exec-cli-watch[data-on] { color: var(--paper); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.exec-cli-cancel { font: 400 11px/1.5 var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--paper-sunken); padding: 6px 14px; cursor: pointer; }
+.exec-cli-genplan, .exec-cli-reqkey { font: 600 11px/1.5 var(--font-mono); color: var(--accent); border: 1px solid var(--accent); background: none; padding: 6px 14px; cursor: pointer; }
+.exec-cli-needsplan { font: 400 11px/1.5 var(--font-mono); color: var(--ink-faint); border: 1px dashed var(--line-strong); background: none; padding: 6px 14px; cursor: not-allowed; }
+.exec-cli-residue { font: 400 11px/1.5 var(--font-mono); color: var(--warn); border: 1px solid var(--warn); background: none; padding: 6px 14px; cursor: pointer; }
+.exec-cli-apply { font: 600 11px/1.5 var(--font-mono); color: var(--accent-contrast); background: var(--accent-strong); border: 0; padding: 7px 16px; cursor: pointer; }
+.exec-cli-apply[data-danger] { background: var(--bad); }
+@media (max-width: 900px) {
+  .exec-cli-body { flex-direction: column; }
+  .exec-cli-drawer { width: auto; position: static; max-height: none; border-left: 0; border-top: 1px solid var(--line-strong); box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exec-cli-cursor, .exec-cli-check[data-tone="running"], .exec-cli-grantwait, .exec-cli-running { animation: none; }
+}
+
+/* ── Governance additions 2026-08-30 (loop entry · live gate · waivers) —
+   three screens on the existing .exec-gov grammar; only what the grammar
+   lacks is added here. */
+.exec-gov-headlink { font: var(--exec-font-meta); color: var(--accent); text-decoration: none; }
+.exec-gov-headlink:hover { text-decoration: underline; }
+.exec-gov .exec-role-control select, .exec-gov select.exec-role-control { width: 100%; max-width: 100%; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
+.exec-gate-wvfilters { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.exec-gate-wvtable th[scope="row"] { font-weight: 400; overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; font: var(--exec-font-body, inherit); color: var(--ink); }
+.exec-gate-wvtable td[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-gate-wvtable td[data-tone="bad"] { color: var(--bad); }
+.exec-gov-v[data-tone="good"] { color: var(--good); }
+
+/* ── Waivers register polish (owner 2026-08-30: "sáng tạo, kỹ, động hơn").
+   Runway lanes on one shared 0→45d axis, per-row state rail, expandable
+   "what closes it" detail, live countdown on EXPIRING. Motion respects
+   prefers-reduced-motion; the tick itself is gated in JS. */
+.exec-wv-runway { display: flex; flex-direction: column; gap: 7px; }
+.exec-wv-lane { display: grid; grid-template-columns: minmax(110px, 14%) minmax(120px, 1fr) minmax(96px, auto) minmax(0, 46%); gap: 10px; align-items: center; }
+.exec-wv-lanewho { font: var(--exec-font-meta); color: var(--ink-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exec-wv-lanetrack { position: relative; height: 6px; background: var(--surface-3, var(--line-soft)); border: 1px solid var(--line); overflow: visible; }
+.exec-wv-lanefill { position: absolute; inset: 0 auto 0 0; background: var(--line-strong); opacity: 0.55; transition: width 600ms ease; }
+.exec-wv-lanefill[data-tone="warn"] { background: var(--warn); opacity: 0.8; }
+.exec-wv-lanefill[data-tone="good"] { background: var(--good); opacity: 0.5; }
+.exec-wv-lanedot { position: absolute; top: 50%; width: 8px; height: 8px; transform: translate(-50%, -50%); background: var(--ink-mute); border: 1px solid var(--paper); }
+.exec-wv-lanedot[data-tone="warn"] { background: var(--warn); }
+.exec-wv-lanedot[data-tone="good"] { background: var(--good); }
+.exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanedot { background: var(--bad); animation: exec-inbox-pulse 1.4s infinite; }
+.exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanefill { background: var(--bad); opacity: 0.75; }
+.exec-wv-lanedue { font: var(--exec-font-num, 500 12px/1.4 var(--font-mono)); font-variant-numeric: tabular-nums; color: var(--ink-soft); text-align: right; white-space: nowrap; }
+.exec-wv-lanedue[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-wv-lanedue[data-live] { color: var(--bad); }
+.exec-wv-lanetext { font: var(--exec-font-meta); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.exec-wv-debtrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 2px 0; }
+.exec-wv-debtchip { font: var(--exec-font-meta); color: var(--ink-soft); border: 1px solid var(--line-strong); padding: 2px 9px; text-decoration: none; background: var(--paper); }
+.exec-wv-debtchip b { color: var(--ink); font-weight: 600; margin-left: 4px; }
+.exec-wv-debtchip:hover { border-color: var(--accent); color: var(--accent); }
+.exec-wv-row { border-left: 3px solid transparent; }
+.exec-wv-row[data-state="OPEN"] { border-left-color: var(--warn); }
+.exec-wv-row[data-state="EXPIRING"] { border-left-color: var(--bad); }
+.exec-wv-row[data-state="WAIVED"], .exec-wv-row[data-state="SATISFIED"] { border-left-color: var(--good); }
+.exec-wv-row:hover th, .exec-wv-row:hover td { background: var(--paper-raised); }
+.exec-wv-row[data-expanded] th, .exec-wv-row[data-expanded] td { background: var(--paper-raised); }
+.exec-wv-rowbtn { display: flex; align-items: baseline; gap: 7px; width: 100%; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
+.exec-wv-carret { color: var(--ink-faint); flex: none; }
+.exec-wv-row[data-expanded] .exec-wv-carret { color: var(--accent); }
+.exec-wv-detailrow td { border-left: 3px solid var(--line-strong); background: var(--paper-sunken); }
+.exec-wv-detail { display: grid; grid-template-columns: minmax(96px, 12%) minmax(0, 1fr); gap: 4px 14px; padding: 8px 6px; }
+.exec-wv-detailk { font: var(--exec-font-th, 600 10px/1.6 var(--font-mono)); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); }
+.exec-wv-detailv { font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-wv-due { display: inline-flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+.exec-wv-duenum { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.exec-wv-duenum[data-live] { color: var(--bad); }
+.exec-wv-duebar { width: 64px; }
+.exec-wv-duefill { display: block; height: 100%; background: var(--good); transition: width 600ms ease; }
+.exec-wv-duefill[data-tone="warn"] { background: var(--warn); }
+.exec-wv-duefill[data-tone="bad"] { background: var(--bad); }
+.exec-wv-duechip { font: var(--exec-font-meta); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 1px 7px; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) {
+  .exec-wv-lanefill, .exec-wv-duefill { transition: none; }
+  .exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanedot { animation: none; }
+}
+@media (max-width: 900px) {
+  .exec-wv-lane { grid-template-columns: minmax(90px, 30%) 1fr minmax(90px, auto); }
+  .exec-wv-lanetext { grid-column: 1 / -1; }
+}
+.exec-px-panel .exec-gov-headlink { margin-left: auto; font: var(--exec-font-meta); text-transform: none; letter-spacing: 0; }
+
+/* ── Gate LIVE + New-request polish (freeze pass 2026-08-30). */
+.exec-gate-criteria tbody tr:hover th, .exec-gate-criteria tbody tr:hover td { background: var(--paper-raised); }
+.exec-gate-note[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-gate-note[data-tone="mute"] { color: var(--ink-mute); }
+.exec-gate-capstep { display: flex; flex-direction: column; gap: 18px; margin-top: 10px; }
+.exec-gate-capsteptrack { position: relative; height: 8px; background: var(--paper-sunken); border: 1px solid var(--line-strong); }
+.exec-gate-capstepfill { position: absolute; top: 0; bottom: 0; }
+.exec-gate-capstepfill[data-seg="now"] { left: 0; background: var(--good); }
+.exec-gate-capstepfill[data-seg="step"] { background: var(--accent); opacity: 0.85; transition: width 600ms ease; }
+.exec-gate-capstepmark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink-soft); transform: translateX(-50%); }
+.exec-gate-capstepmark::after { content: attr(data-label); position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font: 400 9px/1.4 var(--font-mono); color: var(--ink-mute); white-space: nowrap; }
+.exec-gate-capstepmark:last-of-type::after { transform: translateX(-100%); }
+.exec-gate-capsteplegend { font: var(--exec-font-meta); color: var(--ink-soft); margin-top: 6px; }
+.exec-gate-capsteplegend b { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .exec-gate-capstepfill[data-seg="step"] { transition: none; } }

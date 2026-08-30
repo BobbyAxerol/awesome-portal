@@ -27,6 +27,7 @@
   --line: #e3e0d7;
   --line-soft: #efede4;
   --accent: #0f4c5c;
+  --accent-contrast: #ffffff;
   /* Stage identity colours (hi-fi 5a pinned/pipeline): paper is the one hue no state owns. */
   --stage-paper: #7c5cbf;
   --stage-paper-bg: #efe9fb;
@@ -36,6 +37,9 @@
   --accent-2-soft: #f4ecdb;
   --good: #1e7b4f;
   --good-bg: #e3f1e9;
+  --warn-bg: #fcf4d6;
+  --gov-exit: #8a3ffc;
+  --gov-inverse-line: #393939;
   --bad: #b43a3a;
   --bad-bg: #f7e8e8;
   --ink-panel: #161e2a;
@@ -271,6 +275,7 @@
   --line: #2b3747;
   --line-soft: #212c3a;
   --accent: #7fb3c4;
+  --accent-contrast: #101010;
   --accent-soft: #1a2b34;
   --accent-strong: #9ac6d4;
   --accent-2: #d4a75e;
@@ -384,6 +389,7 @@
   --line-strong: #4c4c4c;
 
   --accent: #78a9ff;
+  --accent-contrast: #ffffff;
   --stage-paper: #be95ff;
   --stage-paper-bg: #1f1630;
   --accent-soft: #001d6c;
@@ -412,6 +418,8 @@
   --bad-bg-soft: #1f0507;
   --warn: #f1c21b;
   --warn-bg: #302608;
+  --gov-exit: #b99bff;
+  --gov-inverse-line: #393939;
 
   --role-is: #8d8d8d;
   --role-oos: #78a9ff;
@@ -549,6 +557,7 @@
     --line: #c9c5ba;
     --line-soft: #ddd9cf;
     --accent: #0f4c5c;
+    --accent-contrast: #ffffff;
     --accent-2: #9a6a1f;
     --good: #1e7b4f;
     --bad: #b43a3a;
@@ -557,4 +566,25 @@
     --shadow-e3: none;
     color-scheme: light;
   }
+}
+
+/* The governance capital preview is deliberately near-black in EVERY theme
+   (hi-fi 1b): one fixed palette, re-scoped here so every token-based child —
+   badges, states, notes — reads correctly without per-element overrides. */
+.exec-gov-inverse {
+  --paper: #161616;
+  --paper-raised: #161616;
+  --paper-sunken: #101010;
+  --ink: #f4f4f4;
+  --ink-soft: #c6c6c6;
+  --ink-mute: #a8a8a8;
+  --ink-faint: #8d8d8d;
+  --line: #393939;
+  --line-soft: #393939;
+  --line-strong: #525252;
+  --accent: #78a9ff;
+  --accent-contrast: #101010;
+  --good: #42be65;
+  --warn: #f1c21b;
+  --bad: #fa4d56;
 }

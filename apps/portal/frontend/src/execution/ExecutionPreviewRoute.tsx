@@ -20,6 +20,8 @@ import { usePresentation } from "../app/presentation";
 
 import { createFixtureApi } from "./api/fixtureApi";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
+import { NewApprovalRequestScreen } from "./screens/NewApprovalRequest";
+import { WaiversRegisterScreen } from "./screens/WaiversRegister";
 import { readCommandCenter } from "./commandCenter";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
 import {
@@ -41,6 +43,7 @@ import {
   OperationsQueueContainer,
   PaperExitReviewContainer,
   SandboxCertificationContainer,
+  GateLiveReviewContainer,
 } from "./screens/containers";
 
 const QUEUE_NOW = new Date("2026-08-23T09:05:00.000Z");
@@ -50,6 +53,9 @@ const GOVERNANCE_SCREENS = new Set([
   "EXECUTION_GATE_R1_REVIEW_SCREEN",
   "EXECUTION_GATE_R2_REVIEW_SCREEN",
   "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+  "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+  "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+  "EXECUTION_WAIVERS_REGISTER_SCREEN",
 ]);
 
 /**
@@ -149,7 +155,8 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? "PF-CRYPTO";
       case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return params.accountId ?? search.get("binding") ?? null;
       case "EXECUTION_GATE_R1_REVIEW_SCREEN":
-      case "EXECUTION_GATE_R2_REVIEW_SCREEN": return approvalId;
+      case "EXECUTION_GATE_R2_REVIEW_SCREEN":
+      case "EXECUTION_GATE_LIVE_REVIEW_SCREEN": return approvalId;
       case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": return reviewId;
       case "EXECUTION_INCIDENT_DETAIL_SCREEN": return incidentId;
       default: return null;
@@ -176,6 +183,15 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
       // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
       content = <ApprovalInboxContainer api={api} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
+      break;
+    case "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN":
+      content = <NewApprovalRequestScreen />;
+      break;
+    case "EXECUTION_GATE_LIVE_REVIEW_SCREEN":
+      content = <GateLiveReviewContainer api={api} approvalId={approvalId} />;
+      break;
+    case "EXECUTION_WAIVERS_REGISTER_SCREEN":
+      content = <WaiversRegisterScreen />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       content = <GateR1ReviewContainer api={api} approvalId={approvalId} />;

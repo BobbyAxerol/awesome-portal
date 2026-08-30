@@ -37,6 +37,7 @@ export interface OpRow {
 export interface IncidentSmoke {
   warning: string;
   subject: string; // "position MISMATCH · acct-live-grid-v21 · BINANCE"
+  subjectLink?: { label: string; href: string };
   openedAt: string; // "10:41:52Z"
   owner: string;
   origin: string; // "from alert"
@@ -70,6 +71,7 @@ export interface IncidentSmoke {
 export const INCIDENT_SMOKE_DATA: IncidentSmoke = {
   warning: INCIDENT_SMOKE_WARNING,
   subject: "position MISMATCH · acct-live-grid-v21 · BINANCE",
+  subjectLink: { label: "acct-live-grid-v21", href: "/deployments/accounts/acct-live-grid-v21" },
   openedAt: "10:41:52Z",
   owner: "Stan",
   origin: "from alert",

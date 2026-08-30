@@ -25,7 +25,7 @@ export const FLEET_SMOKE_WARNING =
 export type StageTone = "live" | "canary" | "sandbox" | "paper" | "research" | "blocked";
 export interface StageChip { label: string; tone: StageTone; strong?: boolean; dashed?: boolean }
 export interface FleetDeployment {
-  id: string; href: string; venueMode: string; chip: StageChip; chipNote: string; chipNoteTone?: "good" | "warn" | "bad" | "mute";
+  id: string; href: string; venueMode: string; chip: StageChip; chipNote: string; chipNoteLinks?: { label: string; href: string }[]; chipNoteTone?: "good" | "warn" | "bad" | "mute";
   alloc: string; pnl: string | null; pnlKey?: "live" | "canary"; pnlCcy?: string; dd: string | null; account: string; accountHref: string; portfolio: string;
   health: string; healthTone: "good" | "warn" | "bad" | "mute"; healthLink?: { label: string; href: string }; syncTick?: boolean;
 }
@@ -45,7 +45,7 @@ export const FLEET_SMOKE_DATA = {
     pnl: { base: 2085.0, sub: "live + canary marks · re-prices per tick" },
     deployments: { value: "8", sub: "2 live · 2 canary · 2 sbx · 3 paper" },
     attention: { value: "1", label: "MISMATCH", sub: "+ 1 HALTED · 1 gate OVERDUE" },
-    portfolios: { items: [{ label: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO" }, { label: "PF-MAIN", href: null }], sub: "allocation authority — capital ledger per portfolio" },
+    portfolios: { items: [{ label: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO" }, { label: "PF-MAIN", href: "/deployments/portfolios/PF-MAIN" }], sub: "allocation authority — capital ledger per portfolio" },
   },
   counts: { all: 6, live: 1, canary: 2, sandbox: 2, paper: 3, research: 2 },
   rows: [
@@ -59,32 +59,32 @@ export const FLEET_SMOKE_DATA = {
       health: { text: "1 MISMATCH", tone: "bad", tail: " · paper exit ", link: { label: "EX-771", href: "/governance/exit-reviews/EX-771" } },
       note: "4 deployments (strategy_deployments) · click to collapse",
       deployments: [
-        { id: "dep_live", href: "/deployments/live/dep_live", venueMode: "BINANCE · live", chip: { label: "LIVE_FULL", tone: "live", strong: true }, chipNote: "since 2026-08-01 · AP-330 · CX-08", alloc: "18,400", pnl: "+1,954.00", pnlKey: "live", dd: "−1.2%", account: "acct-live-grid-v21", accountHref: "/deployments/accounts/acct-live-grid-v21", portfolio: "PF-CRYPTO", health: "sync MISMATCH · inc_44", healthTone: "bad", healthLink: { label: "inc_44", href: "/execution/operations/incidents/inc_44" } },
-        { id: "dep_88", href: "/deployments/live/dep_88", venueMode: "BINANCE · live", chip: { label: "⛨ LIVE_CANARY", tone: "canary", strong: true }, chipNote: "day 9/14 · AP-311", alloc: "5,000", pnl: "+112.40", pnlKey: "canary", dd: "−0.8%", account: "acct-canary-grid", accountHref: "/deployments/accounts/acct-canary-grid", portfolio: "PF-CRYPTO", health: "READY · sync", healthTone: "good", syncTick: true },
+        { id: "dep_live", href: "/deployments/live/dep_live", venueMode: "BINANCE · live", chip: { label: "LIVE_FULL", tone: "live", strong: true }, chipNote: "since 2026-08-01 · AP-330 · CX-08", chipNoteLinks: [{ label: "AP-330", href: "/governance/approvals/AP-330/r2" }], alloc: "18,400", pnl: "+1,954.00", pnlKey: "live", dd: "−1.2%", account: "acct-live-grid-v21", accountHref: "/deployments/accounts/acct-live-grid-v21", portfolio: "PF-CRYPTO", health: "sync MISMATCH · inc_44", healthTone: "bad", healthLink: { label: "inc_44", href: "/execution/operations/incidents/inc_44" } },
+        { id: "dep_88", href: "/deployments/live/dep_88", venueMode: "BINANCE · live", chip: { label: "⛨ LIVE_CANARY", tone: "canary", strong: true }, chipNote: "day 9/14 · AP-311", chipNoteLinks: [{ label: "AP-311", href: "/governance/approvals/AP-311/live" }], alloc: "5,000", pnl: "+112.40", pnlKey: "canary", dd: "−0.8%", account: "acct-canary-grid", accountHref: "/deployments/accounts/acct-canary-grid", portfolio: "PF-CRYPTO", health: "READY · sync", healthTone: "good", syncTick: true },
         { id: "dep_91", href: "/deployments/sandbox/dep_91", venueMode: "OKX · sandbox", chip: { label: "SBX_VALIDATION", tone: "sandbox" }, chipNote: "HALTED · op_1187", chipNoteTone: "warn", alloc: "10,000", pnl: null, dd: null, account: "acct-sbx-grid-okx", accountHref: "/deployments/accounts/acct-sbx-grid-okx", portfolio: "PF-CRYPTO", health: "no active session", healthTone: "warn" },
         { id: "dep_94", href: "/deployments/paper/dep_94", venueMode: "DERIBIT · paper", chip: { label: "PAPER_OBS", tone: "paper" }, chipNote: "30/30 gate met", chipNoteTone: "good", alloc: "60,000", pnl: "+1,842.00", pnlCcy: "USDC", dd: "−1.4%", account: "acct-paper-grid-drb", accountHref: "/deployments/accounts/acct-paper-grid-drb", portfolio: "PF-CRYPTO", health: "READY · exit review ", healthTone: "good", healthLink: { label: "EX-771", href: "/governance/exit-reviews/EX-771" } },
       ],
     },
     {
-      alpha: "Carry v3.2", version: "", href: null, id: "av_2088", digest: "sha256:9c1e…", status: "RESEARCH_APPROVED", owner: "Lan",
-      portfolios: [{ label: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO" }, { label: "PF-MAIN", href: null }],
+      alpha: "Carry v3.2", version: "", href: "/deployments/alphas/av_2088", id: "av_2088", digest: "sha256:9c1e…", status: "RESEARCH_APPROVED", owner: "Lan",
+      portfolios: [{ label: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO" }, { label: "PF-MAIN", href: "/deployments/portfolios/PF-MAIN" }],
       stages: [{ label: "SANDBOX cert 5/7", tone: "sandbox" }, { label: "PAPER 12/30", tone: "paper" }], stageKeys: ["sandbox", "paper"],
       alloc: "60,000", pnl: "+342.10", pnlCcy: "USDT", dd: "−0.9%", spark: [18, 17, 18, 15, 16, 12, 13, 11, 10, 9],
       health: { text: "R2 AP-352 OVERDUE 26h", tone: "warn", tail: " · ", link: { label: "review →", href: "/governance/approvals/AP-352/r2" } },
       note: "dep_74 paper BINANCE · paper-binance-carry-v32 · PF-CRYPTO — dep_77 sandbox OKX TESTNET · acct-sbx-carry-okx · target PF-MAIN (AP-352)",
-      noteLinks: [{ label: "paper-binance-carry-v32", href: "/deployments/accounts/paper-binance-carry-v32" }, { label: "acct-sbx-carry-okx", href: "/deployments/accounts/acct-sbx-carry-okx" }],
+      noteLinks: [{ label: "dep_74", href: "/deployments/paper/dep_74" }, { label: "paper-binance-carry-v32", href: "/deployments/accounts/paper-binance-carry-v32" }, { label: "dep_77", href: "/deployments/sandbox/dep_77" }, { label: "acct-sbx-carry-okx", href: "/deployments/accounts/acct-sbx-carry-okx" }, { label: "AP-352", href: "/governance/approvals/AP-352/r2" }],
     },
     {
-      alpha: "MM v1.1", version: "", href: null, id: "av_1990", digest: "sha256:c7a2…", status: "RESEARCH_APPROVED", owner: "Minh",
+      alpha: "MM v1.1", version: "", href: "/deployments/alphas/av_1990", id: "av_1990", digest: "sha256:c7a2…", status: "RESEARCH_APPROVED", owner: "Minh",
       portfolios: [{ label: "PF-CRYPTO", href: "/deployments/portfolios/PF-CRYPTO" }],
       stages: [{ label: "⛨ CANARY d2/14", tone: "canary", strong: true }], stageKeys: ["canary"],
       alloc: "7,700", pnl: "+18.60", pnlKey: "mm", pnlCcy: "USDT", dd: "−0.3%", spark: [14, 15, 13, 14, 12, 13, 12, 11, 12, 11],
       health: { text: "READY", tone: "good", tail: " · AP-259 condition exp 2026-10-01" },
-      note: "dep_63 canary BINANCE · acct-canary-mm-v11 · PF-CRYPTO · PX-31 ✓", noteLinks: [{ label: "acct-canary-mm-v11", href: "/deployments/accounts/acct-canary-mm-v11" }],
+      note: "dep_63 canary BINANCE · acct-canary-mm-v11 · PF-CRYPTO · PX-31 ✓", noteLinks: [{ label: "dep_63", href: "/deployments/live/dep_63/canary" }, { label: "acct-canary-mm-v11", href: "/deployments/accounts/acct-canary-mm-v11" }, { label: "PX-31", href: "/governance/exit-reviews/PX-31" }],
     },
     {
       alpha: "VnMomo v0.9", version: "", href: "/deployments/paper/dep_102/vn-market", id: "av_2110", digest: "sha256:e44d…", status: "RESEARCH_APPROVED", owner: "Stan",
-      portfolios: [{ label: "PF-MAIN", href: null }],
+      portfolios: [{ label: "PF-MAIN", href: "/deployments/portfolios/PF-MAIN" }],
       stages: [{ label: "PAPER 6/30 sessions", tone: "paper" }, { label: "VN MARKET · 09:00–14:45 ICT", tone: "research", dashed: true }], stageKeys: ["paper"],
       alloc: "500,000,000", allocCcy: "VND", pnl: "+2,140,000", pnlCcy: "VND", dd: "−0.6%", spark: [16, 15, 16, 13, 14, 12, 11],
       health: { text: "", tone: "mute", sessionClock: true },
@@ -101,7 +101,7 @@ export const FLEET_SMOKE_DATA = {
       alpha: "MeanRev v0.3", version: "", href: null, id: "RC-52", digest: "research — blocked", status: "", owner: "Lan", portfolios: [],
       stages: [{ label: "RESEARCH · BLOCKED", tone: "blocked", dashed: true }], stageKeys: ["research"],
       alloc: null, pnl: null, dd: null, spark: null,
-      health: { text: "AP-360 — audit replay failed", tone: "bad" },
+      health: { text: "AP-360 — audit replay failed", tone: "bad", link: { label: "review →", href: "/governance/approvals/AP-360/r1" } },
       note: "blocked rows stay visible — hiding a failed gate is how bad artifacts sneak back in", dim: true,
     },
   ] as FleetRow[],

@@ -119,6 +119,23 @@ export function correlationView(
   };
 }
 
+
+/** The stage workbench a holdings row's deployment lives on (HiFi 3a). */
+export function workbenchRouteFor(row: { deploymentId: string; stage: PromotionStage; mode: string }): string | null {
+  switch (row.stage) {
+    case "PAPER_OBSERVATION":
+      return `/deployments/paper/${row.deploymentId}`;
+    case "SANDBOX_VALIDATION":
+      return `/deployments/sandbox/${row.deploymentId}`;
+    case "LIVE_CANARY":
+      return `/deployments/live/${row.deploymentId}/canary`;
+    case "LIVE_FULL":
+      return `/deployments/live/${row.deploymentId}`;
+    default:
+      return null;
+  }
+}
+
 export interface HoldingRow {
   alpha: string;
   deploymentId: string;
@@ -910,7 +927,12 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                           {row.alpha}
                         </button>
                       </th>
-                      <td>{row.deploymentId}</td>
+                      <td>
+                        {(() => {
+                          const href = workbenchRouteFor(row);
+                          return href ? <a href={href}>{row.deploymentId}</a> : row.deploymentId;
+                        })()}
+                      </td>
                       <td>
                         <button type="button" className="exec-link" onClick={() => onOpenAccount(row.accountId)}>
                           {row.accountId}

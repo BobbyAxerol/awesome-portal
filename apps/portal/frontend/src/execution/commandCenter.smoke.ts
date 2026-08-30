@@ -35,6 +35,9 @@ export interface FunnelStage {
 }
 export interface MatrixCell {
   kind: "done" | "current" | "none";
+  /** ✓ label → its decision record (the footer promises this link). */
+  href?: string;
+  venueHref?: string;
   /** "PX-22" for done (links the exit decision) · "30/30 gate met" for current */
   label?: string;
   venue?: string;
@@ -61,7 +64,7 @@ export interface PinExtra {
   status: "READY" | "HALTED" | "BLOCKED" | "DEGRADED";
   venue: string;
   deploymentId: string;
-}
+ deploymentHref?: string; }
 export interface FleetExtra {
   sub?: string;
   subTone?: "good" | "warn" | "bad" | "mute";
@@ -78,17 +81,17 @@ export const CC_PIPELINE: Pipeline = {
     { key: "LIVE", label: "Live", entered: 2, conversion: { num: 2, den: 3 }, note: "in stage now 2" },
   ],
   rows: [
-    { alpha: "Grid v2.1", href: "/deployments/alphas/av_2041", cells: { PAPER: { kind: "done", label: "PX-22", ref: "30/30 gate met", venue: "DERIBIT · EX-771" }, SANDBOX: { kind: "done", label: "SX-14", venue: "OKX", paused: true }, CANARY: { kind: "current", label: "d9/14", venue: "BINANCE" }, LIVE: { kind: "done", label: "08-01", venue: "CX-08" } } },
+    { alpha: "Grid v2.1", href: "/deployments/alphas/av_2041", cells: { PAPER: { kind: "done", label: "PX-22", href: "/governance/exit-reviews/PX-22", ref: "30/30 gate met", venue: "DERIBIT · EX-771", venueHref: "/governance/exit-reviews/EX-771" }, SANDBOX: { kind: "done", label: "SX-14", venue: "OKX", paused: true }, CANARY: { kind: "current", label: "d9/14", venue: "BINANCE" }, LIVE: { kind: "done", label: "08-01", venue: "CX-08" } } },
     { alpha: "Carry v3.2", href: "/deployments/alphas", cells: { PAPER: { kind: "current", label: "12/30", venue: "BINANCE" }, SANDBOX: { kind: "current", label: "cert 5/7", venue: "OKX-T" }, CANARY: { kind: "none" }, LIVE: { kind: "none" } } },
-    { alpha: "MM v1.1", href: "/deployments/alphas", cells: { PAPER: { kind: "done", label: "PX-31" }, SANDBOX: { kind: "done", label: "07-22" }, CANARY: { kind: "current", label: "d2/14", venue: "BINANCE" }, LIVE: { kind: "none" } } },
+    { alpha: "MM v1.1", href: "/deployments/alphas", cells: { PAPER: { kind: "done", label: "PX-31", href: "/governance/exit-reviews/PX-31" }, SANDBOX: { kind: "done", label: "07-22" }, CANARY: { kind: "current", label: "d2/14", venue: "BINANCE" }, LIVE: { kind: "none" } } },
     { alpha: "VnMomo v0.9", href: "/deployments/alphas", cells: { PAPER: { kind: "current", label: "6/30", venue: "VN MARKET" }, SANDBOX: { kind: "none" }, CANARY: { kind: "none" }, LIVE: { kind: "none" } } },
   ],
 };
 
 /** Keyed by the pinned row's label as the fixture publishes it. */
 export const CC_PIN_EXTRA: Record<string, PinExtra> = {
-  "Carry v3.2": { stage: "PAPER", figure: "12/30d", figureTone: "mute", status: "READY", venue: "BINANCE", deploymentId: "dep_74" },
-  "Basis v2.1": { stage: "CANARY", figure: "+112", figureTone: "good", status: "READY", venue: "BINANCE", deploymentId: "dep_88" },
+  "Carry v3.2": { stage: "PAPER", figure: "12/30d", figureTone: "mute", status: "READY", venue: "BINANCE", deploymentId: "dep_74", deploymentHref: "/deployments/paper/dep_74" },
+  "Basis v2.1": { stage: "CANARY", figure: "+112", figureTone: "good", status: "READY", venue: "BINANCE", deploymentId: "dep_88", deploymentHref: "/deployments/live/dep_88/canary" },
 };
 
 /** Keyed by fleet cell label. */
