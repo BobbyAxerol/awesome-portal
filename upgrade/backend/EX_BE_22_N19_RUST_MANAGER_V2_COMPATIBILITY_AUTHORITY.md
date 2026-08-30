@@ -133,7 +133,9 @@ changed by this phase.
 
 `TD-EX-03` is closed. Rust now owns the 96-relation/version/cursor/key
 compatibility boundary, while TypeScript can be reduced in N20 to stable narrow
-screen BFF composition. There is no N19 merge or activation debt.
+screen BFF composition. No unnamed N19 implementation debt remains; branch
+merge and later runtime activation are explicit owner-governed transitions,
+not completed effects of this phase.
 
 Items owned by named later phases are not N19 debt:
 
