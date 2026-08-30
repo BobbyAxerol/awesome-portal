@@ -435,3 +435,61 @@ kiện đang mở.
 Ngoài scope §0: Profile & Access (lane U07 codex). Các mục sidebar còn lại
 (Alpha Mining, Strategy Composer, Data Catalog, Portal Map…) ngoài scope
 Execution Loop, đúng trạng thái SOON/PROTOTYPE theo registry.
+
+---
+
+## H. Đánh giá khách quan 2026-08-30 (owner hỏi): platform Execution Loop cho quỹ trung bình–nhỏ đã đủ và clear chưa?
+
+Cách đánh giá: đi lại vòng đời alpha theo 4 persona (PM/owner · quant · operator ·
+risk reviewer) thay vì theo danh sách màn. "Đủ" = mỗi việc hằng ngày của mỗi
+persona có đúng một chỗ để làm; "clear" = không việc nào phải đoán màn.
+
+### H.1 Verdict
+
+**Đủ để đóng scope §0 và vận hành được** — với **1 phát hiện mới đáng kể**
+(H.2.1) và 2 gap đã biết. Mức độ hoàn thiện theo persona:
+
+| Persona | Việc hằng ngày | Chỗ làm | Verdict |
+|---|---|---|---|
+| PM/owner | sáng mở xem NAV/PnL/attention · duyệt gate | CC triage + PF-360 + Inbox | ✅ đủ |
+| Quant | theo dõi alpha các stage · drift · sizing từ chối | Alpha 360 · stage workbench · Admin sizing read | ✅ đủ |
+| Operator | sự cố · recon · halt/resume · allocation | CC → Incident → Ops Queue → Drawer WF 1i | ✅ đủ, chuỗi link liền |
+| Risk reviewer | R1/R2/exit theo SLA · điều kiện đang mở | Inbox + 3 màn review / **điều kiện: chỉ per-request** | ⚠️ thiếu sổ Waivers (H.2.3) |
+
+### H.2 Ba phát hiện thật (không tính sửa nhỏ)
+
+1. **[MỚI] Cửa VÀO của vòng đời không có UI.** Kiểm code: không màn nào tạo
+   được một approval request — Inbox chỉ review những request "tự xuất hiện"
+   từ backend. Quỹ thật: quant xong backtest, ai bấm "Submit for R1 review",
+   ở đâu? Hiện tại câu trả lời là "không ở đâu trong portal". Đây là gap
+   thuộc ranh giới Research↔Execution (§0 khoá scope phía Research), nên nó
+   là **quyết định của Bobby**: (a) nút "Submit → R1" thuộc màn Research/Alpha
+   Pool (ngoài scope này, giao sau), hay (b) một surface tạo-request nhỏ trong
+   Execution Loop (cần hi-fi + BR mới về create-request API). Vòng đời chỉ
+   thật sự khép khi cửa vào có UI — dù nó nằm lane nào.
+2. **LIVE_GATE mượn màn R2** (§G.5) — cửa cuối trước tiền thật đang cho
+   reviewer xem bằng chứng capital thay vì bằng chứng canary.
+3. **Sổ Waivers & Conditions** (§G.5) — điều kiện tạo ở R1/R2 và chỉ hiện lại
+   ở exit review của đúng deployment đó; risk reviewer không có chỗ trả lời
+   "toàn quỹ đang nợ những điều kiện nào, cái nào sắp quá hạn".
+
+### H.3 Chấp nhận được ở quy mô quỹ nhỏ (ghi nhận, không cần màn)
+
+- **Alert history**: chip ⚑ topbar + Incident đã đủ cho đội 2–6 người (kênh
+  đẩy thật là Lark/email phía codex); notification center là đồ của quỹ lớn.
+- **Treasury/funding** (nạp rút USDT lên sàn): làm ở sàn, portal đối chiếu qua
+  broker sync + bindings — đúng phân vai, không thiếu.
+- **Audit search toàn cục**: config log PF-360 + Ops Queue audit + verify
+  timeline đã phủ; màn search riêng là nhu cầu compliance quỹ lớn.
+- **LP/investor reporting**: Report pack (BR-EX-66) là đúng chỗ dừng.
+- **Mobile**: audit pass, nhưng platform là desktop-first có chủ đích; journey
+  mobile duy nhất đáng tiền là "ack incident từ điện thoại" — để sau.
+- Mật độ chữ/jargon (SoD, quorum, envelope…) là chủ đích cho người chuyên —
+  đúng đối tượng quỹ quant tự vận hành.
+
+### H.4 Thứ tự khuyến nghị nếu làm tiếp (sau khi Bobby quyết)
+
+1. H.2.1 — chốt cửa vào vòng đời (lane nào, rồi mới nói tới hi-fi).
+2. H.2.2 — hi-fi Live-gate review (hoặc chốt "R2 đủ").
+3. H.2.3 — hi-fi Waivers & Conditions.
+4. Phần backend hiện hữu: codex giao BR-EX-41…68 để bóc dần SMOKE.
