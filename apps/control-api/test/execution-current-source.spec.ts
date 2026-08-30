@@ -13,7 +13,10 @@ import {
   CurrentSourceRateLimiter,
   N15B_CURRENT_QUERY_ACCEPTANCE,
   N17B_CURRENT_EXACT_QUERY_ACCEPTANCE,
+  N22_PAPER_READ_ACCEPTANCE,
+  assertN22PaperReadAccepted,
   currentManagerV2Path,
+  paperManagerV2Path,
   currentSourcePath,
   currentSourceUpstreamError,
 } from "../src/execution/current-source.proxy";
@@ -320,5 +323,55 @@ describe("N17B exact current-set production acceptance", () => {
         retryable: false,
       }),
     });
+  });
+});
+
+describe("N22 full Paper read acceptance", () => {
+  it("widens only the four canonical Paper BFF screens", () => {
+    expect(N22_PAPER_READ_ACCEPTANCE).toMatchObject({
+      decision: "N22_FULL_PAPER_READ_ACCEPTED",
+      lineageDecision: "N17B_EXACT_CURRENT_SET_ACCEPTED",
+      environment: "paper",
+      profileId: "PAPER_BINANCE_USDM",
+      screenIds: [
+        "EXECUTION_FULL_BLOTTER_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "PAPER_TRADING_SCREEN",
+      ],
+    });
+    for (const screenId of N22_PAPER_READ_ACCEPTANCE.screenIds) {
+      expect(() => assertN22PaperReadAccepted("paper", screenId)).not.toThrow();
+    }
+    expect(() => assertN22PaperReadAccepted("sandbox", "PAPER_TRADING_SCREEN"))
+      .toThrowError(expect.objectContaining({ code: "N22_PAPER_READ_NOT_ACCEPTED" }));
+    expect(() => assertN22PaperReadAccepted("paper", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"))
+      .toThrowError(expect.objectContaining({ code: "N22_PAPER_READ_NOT_ACCEPTED" }));
+  });
+
+  it("uses server-owned source bindings and bounded Manager pages", () => {
+    expect(paperManagerV2Path(
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "manager.orders",
+      "orders",
+      { limit: 200, cursor: "opaque+/=" },
+    )).toBe("/internal/v2/manager/relations/public/orders?limit=200&cursor=opaque%2B%2F%3D");
+    expect(paperManagerV2Path(
+      "EXECUTION_FULL_BLOTTER_SCREEN",
+      "manager.conditional-orders",
+      "conditional_order_group_legs",
+      { limit: 100 },
+    )).toBe("/internal/v2/manager/relations/public/conditional_order_group_legs?limit=100");
+    expect(() => paperManagerV2Path(
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "manager.orders",
+      "command_journal",
+    )).toThrowError(expect.objectContaining({ code: "N22_PAPER_BINDING_NOT_ACCEPTED" }));
+    expect(() => paperManagerV2Path(
+      "EXECUTION_FULL_BLOTTER_SCREEN",
+      "manager.orders",
+      "orders",
+      { limit: 201 },
+    )).toThrowError(expect.objectContaining({ code: "N22_PAPER_PAGE_INVALID" }));
   });
 });

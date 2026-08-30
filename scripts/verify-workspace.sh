@@ -169,6 +169,7 @@ for required in \
   "${ROOT_DIR}/packages/contracts/openapi/execution-operations.openapi.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-staged-activation.openapi.json" \
   "${ROOT_DIR}/packages/contracts/tooling/generate-execution-command-catalog.mjs" \
+  "${ROOT_DIR}/packages/contracts/tooling/verify-generated.sh" \
   "${ROOT_DIR}/packages/contracts/vitest.config.ts" \
   "${ROOT_DIR}/packages/contracts/test/fixtures.spec.ts" \
   "${ROOT_DIR}/scripts/contracts-test.sh" \
@@ -510,6 +511,30 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N21_SHARED_ADMISSION_HANDOFF.md" \
+  "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh" \
+  "${ROOT_DIR}/scripts/portal-full-paper-read-release.py" \
+  "${ROOT_DIR}/scripts/test_portal_full_paper_read_release.py" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N22_FULL_PAPER_READ_HANDOFF.md" \
+  "${ROOT_DIR}/deploy/manifests/full-paper-read-release-profile.v1.json" \
+  "${ROOT_DIR}/deploy/runbooks/portal-n22-full-paper-read-release-and-rollback.md" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-paper-read.v1.schema.json" \
+  "${ROOT_DIR}/packages/contracts/openapi/execution-paper-read.openapi.json" \
+  "${ROOT_DIR}/packages/contracts/generated/execution-paper-read.d.ts" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-overview.ready.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-overview.empty.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-overview.stale.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-overview.partial.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-overview.unavailable.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-workbench.partial.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-paper-workbench-vnm.partial.valid.json" \
+  "${ROOT_DIR}/packages/contracts/fixtures/execution-full-blotter.partial.valid.json" \
+  "${ROOT_DIR}/packages/contracts/tooling/verify-generated.sh" \
+  "${ROOT_DIR}/apps/control-api/src/paper-read/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/paper-read/manager-records.ts" \
+  "${ROOT_DIR}/apps/control-api/src/paper-read/paper-read.controller.ts" \
+  "${ROOT_DIR}/apps/control-api/src/paper-read/paper-read.service.ts" \
+  "${ROOT_DIR}/apps/control-api/test/paper-read.spec.ts" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000014_execution-shared-admission.sql" \
   "${ROOT_DIR}/apps/control-api/src/execution/shared-read.repository.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-shared-admission.spec.ts" \
@@ -1442,6 +1467,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh" \
   "${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh" \
   "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1545,5 +1571,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh"
 "${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh"
 "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh"
+"${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

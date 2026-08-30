@@ -14,6 +14,7 @@ import { AnalyticsProxyError } from "./execution/analytics.proxy";
 import { CommandCenterError } from "./command-center/command-center.service";
 import { CurrentSourceProxyError } from "./execution/current-source.proxy";
 import { ScreenBffError } from "./screen-bff/screen-bff.service";
+import { PaperReadError } from "./paper-read/paper-read.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -34,7 +35,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof AnalyticsProxyError ||
       exception instanceof CurrentSourceProxyError ||
       exception instanceof CommandCenterError ||
-      exception instanceof ScreenBffError
+      exception instanceof ScreenBffError ||
+      exception instanceof PaperReadError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

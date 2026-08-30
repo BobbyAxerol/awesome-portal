@@ -1532,6 +1532,9 @@ profile/revision scope and no retry after ambiguous dispatch. Report:
 
 #### N22 — Full Paper read activation
 
+**Status (2026-08-30):** `COMPLETE / PAPER_PRODUCT_READ_RELEASE_QUALIFIED /
+SIGNED_DEV_DEPLOYMENT_PENDING / N23_READY`.
+
 **Goal:** activate every N18-classified current read capability valid for
 Paper, not only the first bounded N17B slice.
 
@@ -1551,6 +1554,19 @@ load, stale/empty/source-loss, restart, rollback and Paper-fast soak.
 **N22 exit gate:** every Paper screen branch is real or honestly typed
 unavailable; no fake-real fixture or dead read action remains; product-path SLO
 and rollback pass without source mutation.
+
+**Closeout:** four session/workspace-scoped product BFFs now compose the entire
+currently supported Paper read set through the N21 shared path and Rust
+Manager-v2 authority. The server owns exact screen-to-relation bindings,
+runtime-verified source field allowlists, deployment scoping and signed cursor
+wrapping. Current facts expose honest ready/empty/stale/partial/unavailable
+states; N25 analytics/exact query and N28 candles/calendar remain typed future
+branches. Contract schema, OpenAPI, generated types, eight fixtures,
+source-loss/profile/auth/load tests, immutable image lineage, Paper-only
+Compose render and one-flag rollback pass. No source, Sandbox, Live, command or
+stable runtime changed. Signed dev images are published only by the normal
+post-merge workflow. Detail:
+[`EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md`](./backend/EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md).
 
 #### N23 — Sandbox and Live read profiles
 

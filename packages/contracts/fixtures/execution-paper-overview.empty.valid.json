@@ -1,0 +1,7 @@
+{
+  "schema_version": "execution.paper-overview.v1", "record_authority": "PORTAL_CONTROL", "source_authority": "TRADING_SYSTEM", "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_fixture", "read_at": "2026-08-30T12:00:01Z", "as_of": "2026-08-30T12:00:00Z", "state": "empty", "freshness": "FRESH", "completeness": "COMPLETE",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "capabilities": [{ "capability_id": "source.deployments", "state": "EMPTY", "relations": ["strategy_deployments"], "reason_code": null, "retryable": false }],
+  "data": { "deployments": [], "positions": [], "sessions": [], "performance": [], "account_equity": [], "portfolio_equity": [] }
+}

@@ -80,6 +80,9 @@ jobs:
       - name: Validate N21 shared admission, cache and freshness
         run: ./scripts/execution-n21-shared-admission-test.sh
 
+      - name: Validate N22 full Paper read activation
+        run: ./scripts/execution-n22-full-paper-read-test.sh
+
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 

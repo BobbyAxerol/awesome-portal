@@ -1360,3 +1360,22 @@ durable run/attempt events. Detailed evidence:
   restore/replay and secret gates pass. No runtime/source/stable flag changed.
 - Detail:
   [`EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md`](./EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md).
+
+## Backend state — 2026-08-30 (N22 full Paper read activation)
+
+- N22 is `COMPLETE / PAPER_PRODUCT_READ_RELEASE_QUALIFIED /
+  SIGNED_DEV_DEPLOYMENT_PENDING / N23_READY`.
+- Four session/workspace-scoped product APIs cover Paper Overview, both Paper
+  Workbenches and Full Blotter through the N21 shared path and Rust Manager-v2
+  authority.
+- Exact server-owned bindings expose nine current source aliases and seven
+  accepted capabilities; raw Manager envelopes, opaque keys, JSON/raw/secret
+  fields and cross-profile rows cannot reach the browser.
+- Runtime-verified source columns, five canonical product states, deployment
+  scoping, signed cursors, bounded fan-out/load and one-flag rollback pass.
+- N25 analytics/exact query and N28 candle/calendar branches are typed
+  unavailable; they are planned capabilities rather than hidden N22 debt.
+- No Trading System, Sandbox, Live, command or stable runtime changed. Normal
+  post-merge image publication is the only remaining release-process step.
+- Detail:
+  [`EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md`](./EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md).

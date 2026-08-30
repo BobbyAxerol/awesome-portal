@@ -1,0 +1,79 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal N22 source-backed Paper screen API",
+    "version": "1.0.0",
+    "description": "Session and workspace scoped product BFFs over the Paper Manager-v2 profile. Browser callers never select source relations or receive Manager envelopes."
+  },
+  "paths": {
+    "/api/v1/execution/screens/paper": {
+      "get": {
+        "operationId": "executionPaperOverviewV1",
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Current Paper overview or honest typed state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/screens/paper/{deployment_id}": {
+      "get": {
+        "operationId": "executionPaperWorkbenchV1",
+        "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Current deployment-scoped Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/screens/paper/{deployment_id}/vn-market": {
+      "get": {
+        "operationId": "executionPaperWorkbenchVnmV1",
+        "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "responses": { "200": { "description": "Current deployment-scoped VNM Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+      }
+    },
+    "/api/v1/execution/screens/blotter": {
+      "get": {
+        "operationId": "executionFullBlotterV1",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 } },
+          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } }
+        ],
+        "responses": { "200": { "description": "Current Paper blotter page; exact totals and aggregates remain typed unavailable until N25", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "DeploymentId": { "name": "deployment_id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } }
+    },
+    "responses": {
+      "Problem": { "description": "Safe Portal problem", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+    },
+    "schemas": {
+      "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$" },
+      "Actor": { "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"], "properties": { "user_id": { "$ref": "#/components/schemas/Identifier" }, "username": { "type": "string" }, "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string", "enum": ["ADMIN", "USER"] } } } },
+      "Capability": { "type": "object", "additionalProperties": false, "required": ["capability_id", "state", "relations", "reason_code", "retryable"], "properties": { "capability_id": { "$ref": "#/components/schemas/Identifier" }, "state": { "type": "string", "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] }, "relations": { "type": "array", "items": { "type": "string" } }, "reason_code": { "type": ["string", "null"] }, "retryable": { "type": "boolean", "const": false } } },
+      "NarrowRecord": { "type": "object", "maxProperties": 40, "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "array", "items": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }] } },
+      "PaperData": {
+        "type": "object", "additionalProperties": false,
+        "properties": {
+          "deployment": { "oneOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "null" }] },
+          "deployments": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "positions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "performance": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "account_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "portfolio_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "orders": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "fills": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "conditional_groups": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "conditional_legs": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "reconciliation": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "command_journal": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
+          "page": { "type": "object", "additionalProperties": false, "required": ["limit", "next_cursor", "previous_cursor"], "properties": { "limit": { "type": "integer" }, "next_cursor": { "type": ["string", "null"] }, "previous_cursor": { "type": "null" } } },
+          "exact_total": { "type": "null" }, "aggregates": { "type": "null" }
+        }
+      },
+      "PaperReadResponse": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "read_at", "as_of", "state", "freshness", "completeness", "actor", "capabilities", "data"],
+        "properties": {
+          "schema_version": { "type": "string", "enum": ["execution.paper-overview.v1", "execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1", "execution.full-blotter.v1"] },
+          "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "source_authority": { "type": "string", "const": "TRADING_SYSTEM" }, "delivery_profile": { "type": "string", "const": "PAPER_BINANCE_USDM" },
+          "workspace_id": { "$ref": "#/components/schemas/Identifier" }, "read_at": { "type": "string", "format": "date-time" }, "as_of": { "type": ["string", "null"], "format": "date-time" },
+          "state": { "type": "string", "enum": ["ready", "empty", "stale", "partial", "unavailable"] }, "freshness": { "type": "string", "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] }, "completeness": { "type": "string", "enum": ["COMPLETE", "PARTIAL"] },
+          "actor": { "$ref": "#/components/schemas/Actor" }, "resource": { "type": "object", "additionalProperties": false, "required": ["kind", "id"], "properties": { "kind": { "type": "string", "const": "DEPLOYMENT" }, "id": { "$ref": "#/components/schemas/Identifier" } } },
+          "capabilities": { "type": "array", "items": { "$ref": "#/components/schemas/Capability" } }, "data": { "$ref": "#/components/schemas/PaperData" }
+        }
+      },
+      "Problem": { "type": "object", "required": ["error", "request_id"], "properties": { "error": { "type": "object", "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } }, "request_id": { "type": "string" } } }
+    }
+  }
+}

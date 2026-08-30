@@ -5,6 +5,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACTS_DIR="${ROOT_DIR}/packages/contracts"
 NODE_CONTAINER="contracts-test-node"
+NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
+DEPS_DIR="$(mktemp -d)"
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
 DOCKER=(docker)
@@ -19,50 +21,29 @@ fi
 
 cleanup() {
   "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
+  rm -rf -- "${DEPS_DIR}"
 }
 trap cleanup EXIT
 
-"${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" \
+# The egress-capable dependency step sees package metadata only. Contract and
+# application source are mounted later, read-only, in a networkless container.
+cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_DIR}/"
+"${DOCKER[@]}" run --rm --network bridge --read-only \
+  -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
+  -v "${DEPS_DIR}:/deps" \
+  --tmpfs /tmp:rw,exec,mode=1777,size=256m \
+  -w /deps -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
+  "${NODE_IMAGE}" npm ci --no-audit --no-fund
+
+"${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
   -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
   -v "${ROOT_DIR}:/repo:ro" \
-  -v "${CONTRACTS_DIR}:/work" \
-  -w /work \
+  -v "${DEPS_DIR}/node_modules:/repo/packages/contracts/node_modules:ro" \
+  --tmpfs /tmp:rw,exec,mode=1777,size=256m \
+  -w /repo/packages/contracts \
   -e HOME=/tmp \
-  -e npm_config_cache=/tmp/.npm \
-  node:22-alpine sh -c '
+  "${NODE_IMAGE}" sh -c '
     set -e
-    if [ ! -d node_modules ]; then
-      npm ci --no-audit --no-fund
-    fi
-    npx vitest run
-    node /repo/packages/contracts/tooling/generate-execution-command-catalog.mjs --check
-    npx openapi-typescript /repo/apps/portal/registry/openapi/portal-api.openapi.json -o /tmp/portal-api.d.ts
-    diff -q /tmp/portal-api.d.ts generated/portal-api.d.ts
-    npx openapi-typescript openapi/execution-analytics.openapi.json -o /tmp/execution-analytics.d.ts
-    diff -q /tmp/execution-analytics.d.ts generated/execution-analytics.d.ts
-    npx openapi-typescript openapi/execution-analytics-series.openapi.json -o /tmp/execution-analytics-series.d.ts
-    diff -q /tmp/execution-analytics-series.d.ts generated/execution-analytics-series.d.ts
-    npx openapi-typescript openapi/execution-governance.openapi.json -o /tmp/execution-governance.d.ts
-    diff -q /tmp/execution-governance.d.ts generated/execution-governance.d.ts
-    npx openapi-typescript openapi/execution-realtime.openapi.json -o /tmp/execution-realtime.d.ts
-    diff -q /tmp/execution-realtime.d.ts generated/execution-realtime.d.ts
-    npx openapi-typescript openapi/execution-command-center.openapi.json -o /tmp/execution-command-center.d.ts
-    diff -q /tmp/execution-command-center.d.ts generated/execution-command-center.d.ts
-    npx openapi-typescript openapi/execution-operations.openapi.json -o /tmp/execution-operations.d.ts
-    diff -q /tmp/execution-operations.d.ts generated/execution-operations.d.ts
-    npx openapi-typescript openapi/execution-canary.openapi.json -o /tmp/execution-canary.d.ts
-    diff -q /tmp/execution-canary.d.ts generated/execution-canary.d.ts
-    npx openapi-typescript openapi/execution-live-full.openapi.json -o /tmp/execution-live-full.d.ts
-    diff -q /tmp/execution-live-full.d.ts generated/execution-live-full.d.ts
-    npx openapi-typescript openapi/execution-staged-activation.openapi.json -o /tmp/execution-staged-activation.d.ts
-    diff -q /tmp/execution-staged-activation.d.ts generated/execution-staged-activation.d.ts
-    npx openapi-typescript openapi/execution-intercell-gateway.openapi.json -o /tmp/execution-intercell-gateway.d.ts
-    diff -q /tmp/execution-intercell-gateway.d.ts generated/execution-intercell-gateway.d.ts
-    npx openapi-typescript openapi/execution-emergency-routing.openapi.json -o /tmp/execution-emergency-routing.d.ts
-    diff -q /tmp/execution-emergency-routing.d.ts generated/execution-emergency-routing.d.ts
-    npx openapi-typescript openapi/execution-production-readiness.openapi.json -o /tmp/execution-production-readiness.d.ts
-    diff -q /tmp/execution-production-readiness.d.ts generated/execution-production-readiness.d.ts
-    npx openapi-typescript openapi/execution-screen-bff.openapi.json -o /tmp/execution-screen-bff.d.ts
-    diff -q /tmp/execution-screen-bff.d.ts generated/execution-screen-bff.d.ts
+    ./tooling/verify-generated.sh
   '
 printf 'Contracts workspace tests passed.\n'

@@ -36,6 +36,97 @@ const N17B_PAPER_RELATIONS = Object.freeze({
   "manager.sessions": Object.freeze(["execution_sessions"]),
 } as const);
 
+const N22_PAPER_SCREEN_BINDINGS = Object.freeze({
+  PAPER_TRADING_SCREEN: Object.freeze({
+    capabilityIds: Object.freeze([
+      "deployments.positions",
+      "deployments.execution-quality",
+      "sessions.current",
+    ]),
+    relations: Object.freeze({
+      "manager.deployments": Object.freeze(["strategy_deployments"]),
+      "manager.performance": Object.freeze([
+        "performance_snapshots",
+        "account_equity_snapshots",
+        "portfolio_equity_snapshots",
+      ]),
+      "manager.positions": Object.freeze(["positions_v2"]),
+      "manager.sessions": Object.freeze(["execution_sessions"]),
+    }),
+  }),
+  EXECUTION_PAPER_WORKBENCH_SCREEN: Object.freeze({
+    capabilityIds: Object.freeze([
+      "deployments.positions",
+      "deployments.execution-quality",
+      "orders.list",
+      "orders.fills",
+    ]),
+    relations: Object.freeze({
+      "manager.deployments": Object.freeze(["strategy_deployments"]),
+      "manager.performance": Object.freeze([
+        "performance_snapshots",
+        "account_equity_snapshots",
+        "portfolio_equity_snapshots",
+      ]),
+      "manager.positions": Object.freeze(["positions_v2"]),
+      "manager.orders": Object.freeze(["orders"]),
+      "manager.fills": Object.freeze(["fills"]),
+    }),
+  }),
+  EXECUTION_PAPER_WORKBENCH_VNM_SCREEN: Object.freeze({
+    capabilityIds: Object.freeze([
+      "deployments.positions",
+      "deployments.execution-quality",
+      "orders.list",
+      "orders.fills",
+    ]),
+    relations: Object.freeze({
+      "manager.deployments": Object.freeze(["strategy_deployments"]),
+      "manager.performance": Object.freeze([
+        "performance_snapshots",
+        "account_equity_snapshots",
+        "portfolio_equity_snapshots",
+      ]),
+      "manager.positions": Object.freeze(["positions_v2"]),
+      "manager.orders": Object.freeze(["orders"]),
+      "manager.fills": Object.freeze(["fills"]),
+    }),
+  }),
+  EXECUTION_FULL_BLOTTER_SCREEN: Object.freeze({
+    capabilityIds: Object.freeze([
+      "orders.list",
+      "orders.fills",
+      "orders.legs",
+      "orders.trace",
+    ]),
+    relations: Object.freeze({
+      "manager.orders": Object.freeze(["orders"]),
+      "manager.fills": Object.freeze(["fills"]),
+      "manager.conditional-orders": Object.freeze([
+        "conditional_order_groups",
+        "conditional_order_group_legs",
+      ]),
+      "manager.sessions": Object.freeze(["execution_sessions"]),
+      "manager.reconciliation": Object.freeze(["reconciliation_findings"]),
+      "manager.command-journal": Object.freeze(["command_journal"]),
+    }),
+  }),
+} as const);
+
+type N22PaperScreenId = keyof typeof N22_PAPER_SCREEN_BINDINGS;
+
+export const N22_PAPER_READ_ACCEPTANCE = Object.freeze({
+  schemaVersion: "portal.execution.paper-read-acceptance.v1",
+  decision: "N22_FULL_PAPER_READ_ACCEPTED",
+  lineageDecision: "N17B_EXACT_CURRENT_SET_ACCEPTED",
+  environment: "paper" as const,
+  profileId: "PAPER_BINANCE_USDM",
+  adapter: "MANAGER_V2_CURRENT_AS_IS",
+  sourceContract: "trading-system.portal-execution.manager-v2.runtime.v1",
+  screenIds: Object.freeze(Object.keys(N22_PAPER_SCREEN_BINDINGS).sort()),
+  sourceMaximumRequestsPerSecond: 20,
+});
+
 export const N15B_CURRENT_QUERY_ACCEPTANCE = Object.freeze({
   schemaVersion: "portal.execution.intercell-gateway-current.v1",
   environment: "paper" as const,
@@ -254,12 +345,12 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     environment: CurrentSourceEnvironment,
     screenId: string,
   ): Promise<unknown> {
-    assertN15bCurrentQueryAccepted(environment, screenId);
+    assertN22PaperReadAccepted(environment, screenId);
     return this.request(
       principal,
       environment,
       screenId,
-      currentManagerV2Path(screenId),
+      paperManagerV2Path(screenId),
     );
   }
 
@@ -271,8 +362,8 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     relation: string,
     query: CurrentSourcePageQuery,
   ): Promise<unknown> {
-    assertN15bCurrentQueryAccepted(environment, screenId);
-    const path = currentManagerV2Path(screenId, sourceId, relation, query);
+    assertN22PaperReadAccepted(environment, screenId);
+    const path = paperManagerV2Path(screenId, sourceId, relation, query);
     return this.request(principal, environment, screenId, path);
   }
 
@@ -309,7 +400,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       workspaceId: principal.workspaceId,
       principalId: principal.user.userId,
       principalRole: principal.user.role,
-      adapterRevision: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.adapter,
+      adapterRevision: N22_PAPER_READ_ACCEPTANCE.adapter,
       requestPath: path,
     };
     const shared = await this.sharedReads.begin(scope);
@@ -381,6 +472,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     cached: SharedReadCacheValue,
     cacheState: "HIT" | "MISS" | "COALESCED",
   ): unknown {
+    const binding = n22PaperScreenBinding(screenId);
     return {
       schema_version: "portal.execution.current-source-bff.v2",
       authority: "PORTAL_CONTROL_API",
@@ -392,16 +484,16 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       profile_id: profileId,
       gateway: {
           interface: "QUERY",
-          acceptance: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.decision,
-          adapter: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.adapter,
-          source_contract: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.sourceContract,
+          acceptance: N22_PAPER_READ_ACCEPTANCE.decision,
+          adapter: N22_PAPER_READ_ACCEPTANCE.adapter,
+          source_contract: N22_PAPER_READ_ACCEPTANCE.sourceContract,
           screen_id: screenId,
-          capability_ids: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.capabilityIds,
-          source_binding_ids: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.sourceBindingIds,
+          capability_ids: binding.capabilityIds,
+          source_binding_ids: Object.keys(binding.relations).sort(),
           request_id: randomUUID(),
           transport: "H2_MTLS_DELEGATED_JWT",
           source_maximum_requests_per_second:
-            N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.sourceMaximumRequestsPerSecond,
+            N22_PAPER_READ_ACCEPTANCE.sourceMaximumRequestsPerSecond,
           portal_maximum_requests_per_second:
             this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND,
           retry_count: 0,
@@ -547,6 +639,78 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       });
     });
   }
+}
+
+export function assertN22PaperReadAccepted(
+  environment: CurrentSourceEnvironment,
+  screenId: string,
+): asserts screenId is N22PaperScreenId {
+  if (environment !== "paper" || !(screenId in N22_PAPER_SCREEN_BINDINGS)) {
+    throw new CurrentSourceProxyError("N22_PAPER_READ_NOT_ACCEPTED", 404, {
+      classification: "SUPPORTED_BUT_NOT_ACTIVATED",
+      availability: "UNAVAILABLE",
+      reason_code: "N22_PAPER_SCREEN_OUTSIDE_RELEASE",
+      requested_environment: environment,
+      requested_screen_id: screenId,
+    });
+  }
+  // Preserve the narrower N15B acceptance as an explicit invariant for the
+  // original Paper Overview slice while N22 adds three sibling product paths.
+  if (screenId === N15B_CURRENT_QUERY_ACCEPTANCE.screenId) {
+    assertN15bCurrentQueryAccepted(environment, screenId);
+  }
+}
+
+function n22PaperScreenBinding(screenId: string) {
+  assertN22PaperReadAccepted("paper", screenId);
+  return N22_PAPER_SCREEN_BINDINGS[screenId];
+}
+
+/**
+ * N22 expands only the four Paper product paths declared by the canonical
+ * screen catalogue. The browser still cannot select a Manager relation: each
+ * source alias and relation pair is resolved from this server-owned map.
+ */
+export function paperManagerV2Path(
+  screenId: string,
+  sourceId?: string,
+  relation?: string,
+  query: CurrentSourcePageQuery = {},
+): string {
+  const binding = n22PaperScreenBinding(screenId);
+  if (sourceId === undefined && relation === undefined) {
+    return "/internal/v2/manager/capabilities";
+  }
+  if (
+    sourceId === undefined ||
+    relation === undefined ||
+    !SOURCE_ID.test(sourceId) ||
+    !RELATION.test(relation)
+  ) {
+    throw new CurrentSourceProxyError("N22_PAPER_BINDING_INVALID", 400);
+  }
+  const relations = binding.relations as Readonly<Record<string, readonly string[]>>;
+  const acceptedRelations = relations[sourceId];
+  if (!acceptedRelations?.includes(relation)) {
+    throw new CurrentSourceProxyError("N22_PAPER_BINDING_NOT_ACCEPTED", 404, {
+      classification: "SUPPORTED_BUT_NOT_ACTIVATED",
+      availability: "UNAVAILABLE",
+      reason_code: "RELATION_OUTSIDE_N22_PAPER_SET",
+    });
+  }
+  if (
+    (query.limit !== undefined &&
+      (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 200)) ||
+    (query.cursor !== undefined &&
+      (query.cursor.length < 1 || Buffer.byteLength(query.cursor, "utf8") > 4096))
+  ) {
+    throw new CurrentSourceProxyError("N22_PAPER_PAGE_INVALID", 400);
+  }
+  const parameters = new URLSearchParams();
+  if (query.limit !== undefined) parameters.set("limit", String(query.limit));
+  if (query.cursor !== undefined) parameters.set("cursor", query.cursor);
+  const suffix = parameters.size > 0 ? `?${parameters.toString()}` : "";
+  return `/internal/v2/manager/relations/public/${encodeURIComponent(relation)}${suffix}`;
 }
 
 export function assertN15bCurrentQueryAccepted(

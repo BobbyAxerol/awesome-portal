@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "title": "N22 canonical source-backed Paper screen contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "read_at", "as_of", "state", "freshness", "completeness", "actor", "capabilities", "data"],
+  "properties": {
+    "schema_version": { "enum": ["execution.paper-overview.v1", "execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1", "execution.full-blotter.v1"] },
+    "record_authority": { "const": "PORTAL_CONTROL" },
+    "source_authority": { "const": "TRADING_SYSTEM" },
+    "delivery_profile": { "const": "PAPER_BINANCE_USDM" },
+    "workspace_id": { "$ref": "#/$defs/Identifier" },
+    "read_at": { "$ref": "#/$defs/DateTime" },
+    "as_of": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+    "state": { "enum": ["ready", "empty", "stale", "partial", "unavailable"] },
+    "freshness": { "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] },
+    "completeness": { "enum": ["COMPLETE", "PARTIAL"] },
+    "actor": { "$ref": "#/$defs/Actor" },
+    "resource": { "$ref": "#/$defs/Resource" },
+    "capabilities": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "$ref": "#/$defs/Capability" } },
+    "data": { "$ref": "#/$defs/Data" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "schema_version": { "enum": ["execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1"] } }, "required": ["schema_version"] },
+      "then": { "properties": { "resource": { "$ref": "#/$defs/Resource" } }, "required": ["resource"] },
+      "else": { "properties": { "resource": false } }
+    }
+  ],
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$" },
+    "DateTime": { "type": "string", "format": "date-time" },
+    "Actor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["user_id", "username", "roles"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "roles": { "type": "array", "minItems": 1, "maxItems": 1, "uniqueItems": true, "items": { "enum": ["ADMIN", "USER"] } }
+      }
+    },
+    "Resource": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": { "kind": { "const": "DEPLOYMENT" }, "id": { "$ref": "#/$defs/Identifier" } }
+    },
+    "Capability": {
+      "type": "object", "additionalProperties": false,
+      "required": ["capability_id", "state", "relations", "reason_code", "retryable"],
+      "properties": {
+        "capability_id": { "$ref": "#/$defs/Identifier" },
+        "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
+        "relations": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,127}$" } },
+        "reason_code": { "oneOf": [{ "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" }, { "type": "null" }] },
+        "retryable": { "const": false }
+      }
+    },
+    "Scalar": { "oneOf": [{ "type": "string", "maxLength": 8192 }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] },
+    "NarrowRecord": {
+      "type": "object", "minProperties": 1, "maxProperties": 40,
+      "propertyNames": { "pattern": "^(?!record_key$)(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$" },
+      "additionalProperties": { "oneOf": [{ "$ref": "#/$defs/Scalar" }, { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/Scalar" } }] }
+    },
+    "Records": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/NarrowRecord" } },
+    "Page": {
+      "type": "object", "additionalProperties": false,
+      "required": ["limit", "next_cursor", "previous_cursor"],
+      "properties": {
+        "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "next_cursor": { "oneOf": [{ "type": "string", "pattern": "^kc1\\.", "maxLength": 4096 }, { "type": "null" }] },
+        "previous_cursor": { "type": "null" }
+      }
+    },
+    "Data": {
+      "type": "object", "additionalProperties": false, "minProperties": 1,
+      "properties": {
+        "deployment": { "oneOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "null" }] },
+        "deployments": { "$ref": "#/$defs/Records" },
+        "positions": { "$ref": "#/$defs/Records" },
+        "sessions": { "$ref": "#/$defs/Records" },
+        "performance": { "$ref": "#/$defs/Records" },
+        "account_equity": { "$ref": "#/$defs/Records" },
+        "portfolio_equity": { "$ref": "#/$defs/Records" },
+        "orders": { "$ref": "#/$defs/Records" },
+        "fills": { "$ref": "#/$defs/Records" },
+        "conditional_groups": { "$ref": "#/$defs/Records" },
+        "conditional_legs": { "$ref": "#/$defs/Records" },
+        "reconciliation": { "$ref": "#/$defs/Records" },
+        "command_journal": { "$ref": "#/$defs/Records" },
+        "page": { "$ref": "#/$defs/Page" },
+        "exact_total": { "type": "null" },
+        "aggregates": { "type": "null" }
+      }
+    }
+  }
+}

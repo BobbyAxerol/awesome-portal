@@ -148,6 +148,22 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json#/$defs/UiStateCorpus",
   "execution-screen-bff.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json#/$defs/DetailResponse",
+  "execution-paper-overview.ready.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-paper-overview.empty.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-paper-overview.stale.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-paper-overview.partial.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-paper-overview.unavailable.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-paper-workbench.partial.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-paper-workbench-vnm.partial.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-full-blotter.partial.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
   "execution-analytics.equity-projection.valid.json":
     "https://schemas.primusspark.com/portal/execution-analytics-series.v1.schema.json#/$defs/EquityProjectionResponse",
   "execution-analytics.insight-line.valid.json":

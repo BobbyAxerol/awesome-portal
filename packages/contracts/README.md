@@ -114,6 +114,17 @@ and keep N12 R3 unpublished plus R4 resume/scale structurally forbidden. The
 matching OpenAPI has no path or server; generated types are safe for Claude to
 consume without implying a public route or command authority.
 
+N22 adds the first fully source-backed Paper product contract at
+`execution-paper-read.openapi.json`, generated as
+`generated/execution-paper-read.d.ts`. It covers Paper Overview, both Paper
+Workbench variants and Full Blotter through session/workspace-scoped BFF
+routes. Manager tagged records are narrowed through explicit field allowlists;
+opaque record keys, raw payloads and source selectors never cross the product
+boundary. Empty, stale, partial and unavailable are first-class states.
+Candles, venue calendar, derived analytics, exact Blotter totals and aggregates
+remain typed unavailable until their later source/query phases; no fixture is
+labelled as live data.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -160,6 +171,7 @@ packages/contracts/
     execution-operations.v1.schema.json
     execution-staged-activation.v1.schema.json
     execution-intercell-gateway.v1.schema.json
+    execution-paper-read.v1.schema.json
   fixtures/
     problem.valid.json
     command.valid.json
@@ -184,6 +196,9 @@ packages/contracts/
     execution-staged-activation.{capabilities,plan-blocked,states}.valid.json
     execution-intercell-gateway.{source-dark,event-corpus,artifact-corpus}.valid.json
     execution-emergency-routing.{source-dark,ui-corpus}.valid.json
+    execution-paper-overview.{ready,empty,stale,partial,unavailable}.valid.json
+    execution-paper-workbench{,-vnm}.partial.valid.json
+    execution-full-blotter.partial.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-analytics-series.openapi.json
@@ -194,6 +209,7 @@ packages/contracts/
     execution-staged-activation.openapi.json
     execution-intercell-gateway.openapi.json
     execution-emergency-routing.openapi.json
+    execution-paper-read.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
@@ -205,6 +221,7 @@ packages/contracts/
     execution-staged-activation.d.ts
     execution-intercell-gateway.d.ts
     execution-emergency-routing.d.ts
+    execution-paper-read.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

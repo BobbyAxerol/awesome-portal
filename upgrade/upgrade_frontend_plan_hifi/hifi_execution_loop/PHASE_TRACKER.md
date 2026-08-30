@@ -2731,8 +2731,8 @@ backend gate.
 | N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `COMPLETE / SOURCE_DARK / TD-EX-03_CLOSED` |
 | N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states; retire smoke only with later data parity | `COMPLETE / 23_SCREEN_CONTRACTS / BR-EX-41_71 / TD-EX-01_CLOSED` |
 | N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `COMPLETE / DUAL_CELL_SHARED_AUTHORITY / TD-EX-02_CLOSED` |
-| N22 | full current Paper read activation | retire only matching Paper smoke blocks | `PLANNED / N21_DEPENDENT` |
-| N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_DEPENDENT` |
+| N22 | full current Paper read activation | retire only matching Paper smoke blocks | `COMPLETE / PAPER_PRODUCT_READ_RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
+| N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_COMPLETE / READY` |
 | N24 | durable Portal projection | consume projection freshness/gap/rebuild states | `PLANNED / N23_DEPENDENT` |
 | N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `PLANNED / N24_DEPENDENT` |
 | N26 | projection-backed authenticated SSE | close terminal streams; no infinite reconnect loop | `PLANNED / N25_DEPENDENT` |
@@ -3045,3 +3045,23 @@ Claude handoff:
 Claude may validate cached/stale/partial/unavailable presentation and remove
 infinite client retry behavior. Paper smoke replacement still belongs to N22
 and requires per-screen real-source parity.
+
+### N22 backend — full Paper read activation (2026-08-30)
+
+N22 is `COMPLETE / PAPER_PRODUCT_READ_RELEASE_QUALIFIED /
+SIGNED_DEV_DEPLOYMENT_PENDING / N23_READY`. Four same-origin, session-guarded
+product APIs now cover Paper Overview, Paper Workbench, VN Paper Workbench and
+Full Blotter. They compose current Trading System facts server-side through
+the N21 shared admission/cache path and Rust Manager-v2 authority; raw source
+relations remain unavailable to browser code.
+
+Backend report:
+[`EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md`](../../backend/EX_BE_25_N22_FULL_PAPER_READ_ACTIVATION.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N22_FULL_PAPER_READ_HANDOFF.md`](./CODEX_TO_CLAUDE_N22_FULL_PAPER_READ_HANDOFF.md).
+
+Claude may wire the four routes section-by-section and retire only fixtures
+that reach canonical dev parity. `ready`, `empty`, `stale`, `partial` and
+`unavailable` are server truth. N25 exact-query/analytics and N28
+candles/calendar must remain local typed unavailable branches; no client-side
+join, fake row, source hash or automatic retry loop is allowed.

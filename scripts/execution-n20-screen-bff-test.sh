@@ -26,8 +26,19 @@ openapi = (root / "packages/contracts/openapi/execution-screen-bff.openapi.json"
 generated = (root / "packages/contracts/generated/execution-screen-bff.d.ts").read_text()
 
 assert catalogue.count("screen({") == 23
-assert catalogue.count('status: "AVAILABLE"') == 10
-assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 13
+# N20 established the immutable 23-screen catalogue at 10/13. N22 is allowed
+# to promote exactly four Paper product contracts without changing its shape.
+assert catalogue.count('status: "AVAILABLE"') == 14
+assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 9
+assert catalogue.count('deliveryPhase: "N22"') == 4
+for screen_id in [
+    "PAPER_TRADING_SCREEN",
+    "EXECUTION_PAPER_WORKBENCH_SCREEN",
+    "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+    "EXECUTION_FULL_BLOTTER_SCREEN",
+]:
+    row = next(line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line)
+    assert 'status: "AVAILABLE"' in row and 'deliveryPhase: "N22"' in row
 request_ids = set(re.findall(r'BR-EX-\d{2}', catalogue))
 assert request_ids == {f"BR-EX-{number}" for number in range(41, 72)}
 for token in ["BR-EX-55", "BR-EX-58", "portal.entity-names", "portal.blocker-catalog"]:

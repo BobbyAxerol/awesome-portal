@@ -232,4 +232,64 @@ describe("N20 session, RBAC, workspace and resource boundary", () => {
       });
     }
   });
+
+  it("guards N22 Paper product routes and degrades honestly while the source profile is dark", async () => {
+    expect((await rawInject("/api/v1/execution/screens/paper")).statusCode).toBe(401);
+    const foreignWorkspace = "ws_n22_foreign";
+    await ctx.pool.query(
+      `INSERT INTO workspaces (workspace_id, name, owner_user_id) VALUES ($1, 'N22 Foreign', $2)
+       ON CONFLICT (workspace_id) DO NOTHING`,
+      [foreignWorkspace, reader.userId],
+    );
+    await ctx.pool.query(
+      `INSERT INTO workspace_members (workspace_id, user_id, role) VALUES ($1, $2, 'OWNER')
+       ON CONFLICT (workspace_id, user_id) DO NOTHING`,
+      [foreignWorkspace, reader.userId],
+    );
+    const foreign = await inject(
+      admin,
+      `/api/v1/execution/screens/paper?workspace_id=${foreignWorkspace}`,
+    );
+    expect(foreign.statusCode).toBe(404);
+    expect(foreign.json().error.code).toBe("WORKSPACE_NOT_FOUND");
+
+    const overview = await inject(
+      admin,
+      `/api/v1/execution/screens/paper?workspace_id=${workspaceId}`,
+    );
+    expect(overview.statusCode).toBe(200);
+    expect(overview.json()).toMatchObject({
+      schema_version: "execution.paper-overview.v1",
+      delivery_profile: "PAPER_BINANCE_USDM",
+      workspace_id: workspaceId,
+      state: "unavailable",
+      freshness: "UNKNOWN",
+      completeness: "PARTIAL",
+    });
+    expect(overview.json().capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "source.deployments",
+      state: "UNAVAILABLE",
+      reason_code: "N13B_PROFILE_NOT_ACTIVATED",
+    }));
+    expect(JSON.stringify(overview.json())).not.toMatch(/record_key|raw_response|\/internal\/v2\/manager/i);
+
+    for (const screenId of [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+      "EXECUTION_FULL_BLOTTER_SCREEN",
+    ]) {
+      const contract = await inject(
+        admin,
+        `/api/v1/execution/screen-contracts/${screenId}?workspace_id=${workspaceId}` +
+          (screenId.includes("WORKBENCH") ? "&resource_id=dep_1" : ""),
+      );
+      expect(contract.statusCode).toBe(200);
+      expect(contract.json().screen.data_api).toMatchObject({
+        status: "AVAILABLE",
+        unavailable_reason: null,
+        delivery_phase: "N22",
+      });
+    }
+  });
 });

@@ -1,0 +1,53 @@
+{
+  "schema_version": "portal.full-paper-read-release-profile.v1",
+  "phase": "N22",
+  "profile": "PAPER",
+  "environment": "paper",
+  "manager_profile_id": "PAPER_BINANCE_USDM",
+  "delegation_audience": "portal-execution-edge-paper",
+  "screen_ids": [
+    "EXECUTION_FULL_BLOTTER_SCREEN",
+    "EXECUTION_PAPER_WORKBENCH_SCREEN",
+    "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+    "PAPER_TRADING_SCREEN"
+  ],
+  "activated_capability_ids": [
+    "deployments.execution-quality",
+    "deployments.positions",
+    "orders.fills",
+    "orders.legs",
+    "orders.list",
+    "orders.trace",
+    "sessions.current"
+  ],
+  "typed_unavailable_capability_ids": ["market.candles"],
+  "source_binding_ids": [
+    "manager.command-journal",
+    "manager.conditional-orders",
+    "manager.deployments",
+    "manager.fills",
+    "manager.orders",
+    "manager.performance",
+    "manager.positions",
+    "manager.reconciliation",
+    "manager.sessions"
+  ],
+  "candidate_flags": {
+    "control_api_current_source_paper": true,
+    "control_api_current_source_sandbox": false,
+    "control_api_current_source_live": false,
+    "edge_manager_v2_read": true,
+    "edge_projection_ingestion": false,
+    "edge_realtime_sse": false,
+    "edge_analytics_query": false,
+    "edge_command_relay": false
+  },
+  "phase_authorization": {
+    "decision": "BOBBY_APPROVED_N22_IMPLEMENTATION_AND_PAPER_ACTIVATION",
+    "scope": "FULL_CURRENT_SOURCE_PAPER_READ",
+    "paper_read_release_authorized": true,
+    "sandbox_or_live_read_authorized": false,
+    "command_or_mutation_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

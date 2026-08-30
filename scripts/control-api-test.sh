@@ -7,7 +7,9 @@ APP_DIR="${ROOT_DIR}/apps/control-api"
 NETWORK="control-api-test-net"
 PG_CONTAINER="control-api-test-postgres"
 NODE_CONTAINER="control-api-test-node"
-PG_PORT="${CONTROL_API_TEST_PG_PORT:-55432}"
+NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
+POSTGRES_IMAGE="postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
+DEPS_DIR="$(mktemp -d)"
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
 DOCKER=(docker)
@@ -23,14 +25,32 @@ fi
 cleanup() {
   "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" "${PG_CONTAINER}" >/dev/null 2>&1 || true
   "${DOCKER[@]}" network rm "${NETWORK}" >/dev/null 2>&1 || true
+  rm -rf -- "${DEPS_DIR}"
 }
 trap cleanup EXIT
 
-"${DOCKER[@]}" network create "${NETWORK}" >/dev/null
+# Dependency resolution sees package metadata only; the repository source is
+# not mounted in this egress-capable preparation container. The resulting
+# node_modules tree becomes read-only in the internal test cell below.
+cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
+"${DOCKER[@]}" run --rm --network bridge --read-only \
+  -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
+  -v "${DEPS_DIR}:/deps" \
+  --tmpfs /tmp:rw,exec,mode=1777,size=256m \
+  -w /deps -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
+  "${NODE_IMAGE}" npm ci --no-audit --no-fund
+test -x "${DEPS_DIR}/node_modules/.bin/tsc"
 
-"${DOCKER[@]}" run -d --name "${PG_CONTAINER}" --network "${NETWORK}" \
+# The test cell can reach only its temporary PostgreSQL container. Source is
+# mounted read-only and all generated/runtime files live in tmpfs.
+"${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
+
+"${DOCKER[@]}" run -d --name "${PG_CONTAINER}" --network "${NETWORK}" --read-only \
+  --tmpfs /var/lib/postgresql/data:rw,exec,mode=0700,size=2048m \
+  --tmpfs /run/postgresql:rw,exec,mode=1777,size=16m \
+  --tmpfs /tmp:rw,exec,mode=1777,size=64m \
   -e POSTGRES_USER=portal -e POSTGRES_PASSWORD=portal -e POSTGRES_DB=portal_control_test \
-  postgres:16-alpine >/dev/null
+  "${POSTGRES_IMAGE}" >/dev/null
 
 ready=false
 for _ in $(seq 1 30); do
@@ -46,18 +66,19 @@ if [[ "${ready}" != true ]]; then
   exit 1
 fi
 
-"${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" \
+"${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
   -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
   -v "${ROOT_DIR}:/repo:ro" \
-  -v "${APP_DIR}:/work" \
-  --tmpfs /work/node_modules:rw,exec,mode=1777,size=512m \
+  -v "${APP_DIR}:/work:ro" \
+  -v "${DEPS_DIR}/node_modules:/work/node_modules:ro" \
+  --tmpfs /work/dist:rw,exec,mode=1777,size=128m \
+  --tmpfs /tmp:rw,exec,mode=1777,size=512m \
   -w /work \
   -e HOME=/tmp \
   -e npm_config_cache=/tmp/.npm \
   -e TEST_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_control_test" \
-  node:22-alpine sh -c '
+  "${NODE_IMAGE}" sh -c '
     set -e
-    npm ci --no-audit --no-fund
     npm run build
     npm test
   '
