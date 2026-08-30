@@ -486,6 +486,15 @@ for required in \
   "${ROOT_DIR}/packages/contracts/fixtures/execution-production-acceptance.current-paper.accepted.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/production-readiness/src/current_acceptance.rs" \
   "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json" \
+  "${ROOT_DIR}/scripts/execution-n18-census.py" \
+  "${ROOT_DIR}/scripts/test_execution_n18_census.py" \
+  "${ROOT_DIR}/scripts/execution-n18-census-test.sh" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
   "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
@@ -1185,6 +1194,8 @@ for tracked_source in \
   packages/contracts/fixtures/execution-production-acceptance.current-paper.accepted.json \
   services/portal-execution-edge-rs/crates/production-readiness/src/current_acceptance.rs \
   scripts/execution-n17b-current-acceptance-test.sh \
+  services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.schema.json \
+  services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json \
   deploy/.env.development.example \
   deploy/manifests/deployment-profile.v1.schema.json \
   deploy/manifests/deployment-profiles.source-dark.json \
@@ -1405,6 +1416,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh" \
   "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n18-census-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1439,7 +1451,9 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/portal-current-source-release.py" \
   "${ROOT_DIR}/scripts/test_portal_current_source_release.py" \
   "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
-  "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py"
+  "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py" \
+  "${ROOT_DIR}/scripts/execution-n18-census.py" \
+  "${ROOT_DIR}/scripts/test_execution_n18_census.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
@@ -1457,6 +1471,8 @@ python3 "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
 python3 "${ROOT_DIR}/scripts/portal-release-authority.py" verify --mode template
 python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
 python3 "${ROOT_DIR}/scripts/test_portal_current_source_release.py"
+python3 "${ROOT_DIR}/scripts/execution-n18-census.py" --verify
+python3 "${ROOT_DIR}/scripts/test_execution_n18_census.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"
@@ -1500,5 +1516,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh"
 "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
 "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh"
+"${ROOT_DIR}/scripts/execution-n18-census-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

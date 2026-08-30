@@ -39,6 +39,9 @@ N17A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17A_SOURCE_DARK_PRODUCTION_DR
 N17A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17A_PRODUCTION_READINESS_HANDOFF.md"
 N17B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_20_N17B_EXACT_SET_PRODUCTION_ACCEPTANCE.md"
 N17B_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N17B_EXACT_SET_HANDOFF.md"
+N18_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md"
+N18_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md"
+N18_CENSUS="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json"
 DEBT_CLOSEOUT="${ROOT_DIR}/upgrade/backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 
 for required_file in \
@@ -60,6 +63,9 @@ for required_file in \
     "${N17A_HANDOFF}" \
     "${N17B_REPORT}" \
     "${N17B_HANDOFF}" \
+    "${N18_REPORT}" \
+    "${N18_HANDOFF}" \
+    "${N18_CENSUS}" \
     "${DEBT_CLOSEOUT}"
 do
     if [[ ! -f "${required_file}" ]]; then
@@ -67,6 +73,34 @@ do
         exit 1
     fi
 done
+
+for token in \
+    "N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE" \
+    "Manager relations" \
+    "Gateway operations" \
+    "CLI actions" \
+    "BR-EX-41–71" \
+    'Runtime effect: `NONE`'
+do
+    if ! grep -Fqi "${token}" "${N18_REPORT}"; then
+        echo "N18 report lost census invariant: ${token}" >&2
+        exit 1
+    fi
+done
+for token in \
+    "N18_COMPLETE_SOURCE_DARK / CENSUS_FROZEN / N19_READY" \
+    "BR-EX-72" \
+    "enable any source or action from N18"
+do
+    if ! grep -Fq "${token}" "${N18_HANDOFF}"; then
+        echo "N18 Claude handoff lost consumer boundary: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N18 backend — Manager relation and capability census" "${TRACKER}"; then
+    echo "shared tracker lost N18 closeout section" >&2
+    exit 1
+fi
 for token in \
     "OFFICIAL_SINGLE_OWNER_REQUEST" \
     "d4-paper-read-v2-request" \
@@ -386,7 +420,11 @@ do
 done
 for token in \
     "BR-EX-67" \
-    "_next: BR-EX-68_" \
+    "BR-EX-68" \
+    "BR-EX-69" \
+    "BR-EX-70" \
+    "BR-EX-71" \
+    "_next: BR-EX-72_" \
     "EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then

@@ -1797,3 +1797,13 @@ còn lại cùng chuẩn với Waivers:
   data để canary bám twin đúng như criteria claim; hover criteria.
 - **Khoá baseline**: 3 màn mới vào danh sách el-v2-07 (`gov-new-request`,
   `gov-live-gate`, `gov-waivers`) — visual từ giờ là gate thật.
+
+### 8.39 Backend N18 census handoff (2026-08-30)
+
+N18 is source-dark and delivers no new UI payload. Its canonical census
+freezes all 96 Manager relations, published read/command catalogues and
+BR-EX-41–71 with one delivery phase each. Frontend must preserve distinct
+empty/unavailable/not-applicable states, never expose raw Manager relation
+names/envelopes, and retire smoke only after the corresponding delivery gate.
+The next frontend request ID is BR-EX-72. Full handoff:
+[`CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md`](../../../upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md).

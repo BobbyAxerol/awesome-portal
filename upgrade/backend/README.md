@@ -18,6 +18,13 @@ Chúng không thay thế phase hoặc exit gate trong
   (current-source acceptance) lanes. Phase acceptance never implies product
   activation.
 
+- [N18 — Manager Relation & Capability Census](./EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md)
+  — **complete / source-dark:** digest-bound inventory of all 96 Manager
+  relations, five Manager primitives, 104 Gateway operations, 64 CLI actions,
+  27 Portal reads, nine requested commands and BR-EX-41–71. Every item has a
+  source, profile state, owner, consumer and one delivery phase; no business
+  rows or runtime authority are retained.
+
 - [N13B–N17B Debt Closeout](./EX_BE_N13_N17_DEBT_CLOSEOUT.md)
   — **merge-ready / product runtime inactive:** no open merge blocker; every
   residual item is classified as activation blocker, future contract or
@@ -1287,3 +1294,16 @@ durable run/attempt events. Detailed evidence:
 - BR-EX-67 is canonical; the next request identifier is BR-EX-68.
 - Full register:
   [`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./EX_BE_N13_N17_DEBT_CLOSEOUT.md).
+
+## Backend state — 2026-08-30 (N18 census)
+
+- N18 is `N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE / SOURCE_DARK /
+  N19_READY`.
+- The canonical census covers 100% of the known Manager relation, Gateway,
+  CLI, Portal capability, command and commissioned-request surfaces.
+- BR-EX-68–71 are canonical and each BR-EX-41–71 request has one N19–N29
+  delivery phase; the next request ID is BR-EX-72.
+- No source call, endpoint, migration, runtime flag or stable deployment was
+  changed. N19 is the next approved Rust compatibility phase.
+- Detail:
+  [`EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md`](./EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md).

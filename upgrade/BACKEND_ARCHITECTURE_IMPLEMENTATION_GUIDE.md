@@ -1676,6 +1676,16 @@ activation or the phase):**
   it. This tracking update changes no runtime, source, profile, route,
   credential, command or stable deployment.
 
+- **N18 Manager relation/capability census complete (2026-08-30):** the
+  source-dark, SHA-256-bound census freezes all 96 Manager relations, five
+  Manager primitives, 104 Gateway operations, 64 CLI actions, 27 Portal read
+  capabilities, nine requested commands and BR-EX-41–71. Every item has one
+  source/profile state/owner/consumer/delivery phase; all 96 relations are
+  classified and no business rows are retained. Paper/Sandbox/Live adapter
+  truth remains explicit and product runtime remains dark. N19 is approved as
+  the canonical Rust Manager-v2 compatibility boundary. See
+  [`EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md`](./backend/EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

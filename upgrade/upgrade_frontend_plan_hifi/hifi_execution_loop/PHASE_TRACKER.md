@@ -2727,8 +2727,8 @@ backend gate.
 
 | Phase | Backend output | Claude parallel/consumer lane | Status |
 |---|---|---|---|
-| N18 | complete 96-relation/read/command/BR-EX-41–71 census | verify screen/request coverage and duplicate-free mapping | `PLANNED / NAMED_APPROVAL_PENDING` |
-| N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `PLANNED / N18_DEPENDENT` |
+| N18 | complete 96-relation/read/command/BR-EX-41–71 census | verify screen/request coverage and duplicate-free mapping | `N18_COMPLETE_SOURCE_DARK / CENSUS_FROZEN / N19_READY` |
+| N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `APPROVED / IN_PROGRESS` |
 | N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states and retire smoke per slice | `PLANNED / N19_DEPENDENT` |
 | N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `PLANNED / N20_DEPENDENT` |
 | N22 | full current Paper read activation | retire only matching Paper smoke blocks | `PLANNED / N21_DEPENDENT` |
@@ -2961,3 +2961,22 @@ acceptance.
 > ROADMAP §J.2 (registry ×2 + fixture routes + BR-EX-41…71 + OHLC decision).
 > Điều kiện đóng: §J.3. Frontend trong freeze chỉ: chỉnh theo owner trên màn
 > hiện có + bóc SMOKE khi từng gói codex về.
+
+### N18 backend — Manager relation and capability census (2026-08-30)
+
+N18 is `N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE / SOURCE_DARK / N19_READY`.
+The digest-bound contract freezes 96 relations, five Manager primitives, 104
+Gateway operations, 64 CLI actions, 27 Portal read capabilities, nine command
+contracts and all 31 requests BR-EX-41–71. Relation classification is 54
+screen-bound, 16 projection inputs, 13 audit-only and 13 internal-only; every
+relation has explicit Paper/Sandbox/Live state. No business rows are retained,
+no source is activated and no runtime/stable deployment changed.
+
+Backend report:
+[`EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md`](../../backend/EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md`](./CODEX_TO_CLAUDE_N18_MANAGER_SURFACE_CENSUS_HANDOFF.md).
+
+Claude may verify duplicate-free screen coverage and honest unavailable/empty
+states. Raw Manager envelopes and relations remain server-only; smoke removal
+waits for the matching delivery phase. N19 is approved and is backend-only.

@@ -68,6 +68,9 @@ jobs:
       - name: Validate N17B exact current-set acceptance
         run: ./scripts/execution-n17b-current-acceptance-test.sh
 
+      - name: Validate N18 Manager surface census
+        run: ./scripts/execution-n18-census-test.sh
+
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.local/contracts/portal.execution.manager-surface-census.v1.schema.json",
+  "title": "Portal Execution Manager Surface Census v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "decision",
+    "generated_from_sanitized_contracts_only",
+    "runtime_effect",
+    "source_artifacts",
+    "evidence_time",
+    "counts",
+    "corrected_n17b_baseline",
+    "manager_primitives",
+    "relations",
+    "gateway_operations",
+    "cli_actions",
+    "portal_read_capabilities",
+    "requested_command_capabilities",
+    "commissioned_requests",
+    "authority"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.execution.manager-surface-census.v1"},
+    "phase": {"const": "N18"},
+    "decision": {"const": "N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE"},
+    "generated_from_sanitized_contracts_only": {"const": true},
+    "runtime_effect": {"const": "NONE"},
+    "source_artifacts": {
+      "type": "object",
+      "minProperties": 13,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "evidence_time": {"type": "object", "minProperties": 5},
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relations", "manager_primitives", "gateway_operations",
+        "gateway_get_operations", "gateway_mutation_operations", "cli_actions",
+        "cli_direct_only_actions", "portal_read_capabilities",
+        "requested_command_capabilities", "commissioned_requests"
+      ],
+      "properties": {
+        "relations": {"const": 96},
+        "manager_primitives": {"const": 5},
+        "gateway_operations": {"const": 104},
+        "gateway_get_operations": {"const": 56},
+        "gateway_mutation_operations": {"const": 48},
+        "cli_actions": {"const": 64},
+        "cli_direct_only_actions": {"const": 7},
+        "portal_read_capabilities": {"const": 27},
+        "requested_command_capabilities": {"const": 9},
+        "commissioned_requests": {"const": 31}
+      }
+    },
+    "corrected_n17b_baseline": {"type": "object"},
+    "manager_primitives": {"type": "array", "minItems": 5, "maxItems": 5},
+    "relations": {
+      "type": "array",
+      "minItems": 96,
+      "maxItems": 96,
+      "items": {
+        "type": "object",
+        "required": [
+          "relation_id", "kind", "source_capability", "source_authority",
+          "source_snapshot_state", "source_snapshot_evidence",
+          "profile_availability", "classification", "owner", "consumer",
+          "screen_ids", "delivery_phase"
+        ],
+        "properties": {
+          "relation_id": {"type": "string", "pattern": "^public\\.[a-z0-9_]+$"},
+          "source_snapshot_state": {"enum": ["NONEMPTY", "EMPTY"]},
+          "classification": {
+            "enum": ["SCREEN_BOUND", "PROJECTION_INPUT", "AUDIT_ONLY", "INTERNAL_ONLY"]
+          },
+          "delivery_phase": {"pattern": "^N(19|2[0-9])$"}
+        }
+      }
+    },
+    "gateway_operations": {"type": "array", "minItems": 104, "maxItems": 104},
+    "cli_actions": {"type": "array", "minItems": 64, "maxItems": 64},
+    "portal_read_capabilities": {"type": "array", "minItems": 27, "maxItems": 27},
+    "requested_command_capabilities": {"type": "array", "minItems": 9, "maxItems": 9},
+    "commissioned_requests": {"type": "array", "minItems": 31, "maxItems": 31},
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_owner", "compatibility_owner", "control_and_screen_owner",
+        "browser_raw_relation_access", "database_redis_cli_shell_access",
+        "source_activation", "schema_migration", "product_endpoint_added"
+      ],
+      "properties": {
+        "source_owner": {"const": "TRADING_SYSTEM"},
+        "compatibility_owner": {"const": "RUST_EXECUTION_EDGE"},
+        "control_and_screen_owner": {"const": "TYPESCRIPT_CONTROL_API"},
+        "browser_raw_relation_access": {"const": false},
+        "database_redis_cli_shell_access": {"const": false},
+        "source_activation": {"const": false},
+        "schema_migration": {"const": false},
+        "product_endpoint_added": {"const": false}
+      }
+    }
+  }
+}
