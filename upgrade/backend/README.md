@@ -1343,3 +1343,20 @@ durable run/attempt events. Detailed evidence:
   pass. `TD-EX-01` is closed; N21 has not started.
 - Detail:
   [`EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md`](./EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md).
+
+## Backend state — 2026-08-30 (N21 shared admission/cache/freshness)
+
+- N21 is `N21_COMPLETE / DUAL_CELL_SHARED_AUTHORITY / TD-EX-02_CLOSED /
+  N22_READY`.
+- SGP Control API replicas share source/profile quotas, bounded coalescing and
+  security-scoped short cache through Control PostgreSQL.
+- AWS-HK Rust Edge replicas share source/profile permits and the authenticated
+  Manager catalogue cache through projection PostgreSQL.
+- PostgreSQL time, row locks and expiring leases prevent replica-multiplied
+  traffic and recover from process loss. No ambiguous source dispatch retries.
+- Authority, `as_of`, freshness, completeness, profile/workspace/principal,
+  adapter revision and ETag survive cache/composition without widening.
+- N21 static, real-PostgreSQL multi-replica, Rust workspace, Clippy, formatting,
+  restore/replay and secret gates pass. No runtime/source/stable flag changed.
+- Detail:
+  [`EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md`](./EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md).

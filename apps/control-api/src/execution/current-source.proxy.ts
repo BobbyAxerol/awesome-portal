@@ -9,6 +9,11 @@ import {
   ExecutionDelegationService,
   MANAGER_V2_READ_RESOURCE,
 } from "./delegation";
+import {
+  ExecutionSharedReadRepository,
+  SharedReadCacheValue,
+  SharedReadScope,
+} from "./shared-read.repository";
 
 export const CURRENT_SOURCE_ENVIRONMENTS = ["paper", "sandbox", "live", "canary"] as const;
 export type CurrentSourceEnvironment = (typeof CURRENT_SOURCE_ENVIRONMENTS)[number];
@@ -194,6 +199,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     private readonly config: ControlApiConfig,
     private readonly profiles: Map<string, ProfileTransport>,
     private readonly tls: { ca: Buffer; cert: Buffer; key: Buffer } | null,
+    private readonly sharedReads: ExecutionSharedReadRepository,
   ) {
     this.bulkhead = new CurrentSourceBulkhead(
       config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY,
@@ -206,10 +212,13 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     );
   }
 
-  static async create(config: ControlApiConfig): Promise<ExecutionCurrentSourceProxy> {
+  static async create(
+    config: ControlApiConfig,
+    sharedReads: ExecutionSharedReadRepository,
+  ): Promise<ExecutionCurrentSourceProxy> {
     const enabled = enabledProfileConfigurations(config);
     if (enabled.length === 0) {
-      return new ExecutionCurrentSourceProxy(config, new Map(), null);
+      return new ExecutionCurrentSourceProxy(config, new Map(), null, sharedReads);
     }
     const [privateKeyPem, ca, cert, key] = await Promise.all([
       readFile(config.EXECUTION_EDGE_PRIVATE_KEY_FILE!, "utf8"),
@@ -237,7 +246,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         connecting: null,
       });
     }
-    return new ExecutionCurrentSourceProxy(config, profiles, { ca, cert, key });
+    return new ExecutionCurrentSourceProxy(config, profiles, { ca, cert, key }, sharedReads);
   }
 
   screen(
@@ -294,8 +303,47 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         source_environment: sourceEnvironment,
       });
     }
+    const scope: SharedReadScope = {
+      sourceId: "manager-v2",
+      profileId: profile.profileId,
+      workspaceId: principal.workspaceId,
+      principalId: principal.user.userId,
+      principalRole: principal.user.role,
+      adapterRevision: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.adapter,
+      requestPath: path,
+    };
+    const shared = await this.sharedReads.begin(scope);
+    if (shared.kind === "CACHE_HIT") {
+      return this.composedResponse(
+        requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
+        shared.value, "HIT",
+      );
+    }
+    if (shared.kind === "FOLLOWER") {
+      const value = await this.sharedReads.waitForLeader(scope, shared.cacheKey);
+      if (!value) {
+        throw new CurrentSourceProxyError("N21_COALESCED_SOURCE_UNAVAILABLE", 503, {
+          availability: "DEGRADED", retryable: false,
+        });
+      }
+      return this.composedResponse(
+        requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
+        value, "COALESCED",
+      );
+    }
+    if (shared.kind === "DENIED") {
+      throw new CurrentSourceProxyError(shared.reasonCode, 503, {
+        availability: "DEGRADED", retryable: false,
+      });
+    }
+    let sharedCompleted = false;
     const release = await this.bulkhead.acquire();
     try {
+      // The PostgreSQL pacer is the cross-replica authority. This local pacer
+      // remains a second, burst-free defence and can never increase traffic.
+      if (shared.waitMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, shared.waitMs));
+      }
       await this.rateLimiter.acquire();
       const assertion = await profile.delegation.issueReadAssertion({
         principalId: principal.user.userId,
@@ -308,13 +356,41 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       });
       const session = await this.getSession(profile);
       const source = await this.sendRequest(session, assertion, path);
-      return {
-        schema_version: "portal.execution.current-source-bff.v2",
-        authority: "PORTAL_CONTROL_API",
-        requested_environment: requestedEnvironment,
-        source_environment: sourceEnvironment,
-        profile_id: profile.profileId,
-        gateway: {
+      const value = await this.sharedReads.complete(scope, shared, source);
+      sharedCompleted = true;
+      return this.composedResponse(
+        requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
+        value, "MISS",
+      );
+    } finally {
+      release();
+      if (!sharedCompleted) {
+        // The source failure remains authoritative. Lease cleanup is best
+        // effort because both records expire by PostgreSQL time and a cleanup
+        // outage must not mask the original bounded, non-retried failure.
+        await this.sharedReads.fail(shared).catch(() => undefined);
+      }
+    }
+  }
+
+  private composedResponse(
+    requestedEnvironment: CurrentSourceEnvironment,
+    sourceEnvironment: Exclude<CurrentSourceEnvironment, "canary">,
+    screenId: string,
+    profileId: string,
+    cached: SharedReadCacheValue,
+    cacheState: "HIT" | "MISS" | "COALESCED",
+  ): unknown {
+    return {
+      schema_version: "portal.execution.current-source-bff.v2",
+      authority: "PORTAL_CONTROL_API",
+      as_of: cached.metadata.asOf,
+      freshness: cached.metadata.freshness,
+      completeness: cached.metadata.completeness,
+      requested_environment: requestedEnvironment,
+      source_environment: sourceEnvironment,
+      profile_id: profileId,
+      gateway: {
           interface: "QUERY",
           acceptance: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.decision,
           adapter: N17B_CURRENT_EXACT_QUERY_ACCEPTANCE.adapter,
@@ -329,15 +405,19 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
           portal_maximum_requests_per_second:
             this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND,
           retry_count: 0,
-        },
-        ...(requestedEnvironment === "canary"
-          ? { composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS" }
-          : {}),
-        source,
-      };
-    } finally {
-      release();
-    }
+          cache: {
+            state: cacheState,
+            etag: cached.etag,
+            stored_at: cached.storedAt,
+            expires_at: cached.expiresAt,
+            source_authority: cached.metadata.authority,
+          },
+      },
+      ...(requestedEnvironment === "canary"
+        ? { composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS" }
+        : {}),
+      source: cached.body,
+    };
   }
 
   private sendRequest(

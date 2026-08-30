@@ -50,7 +50,7 @@ product/runtime switch remains off.
 | ID | Severity | Exact debt and current containment | Owner | Must close before | Status |
 | --- | --- | --- | --- | --- | --- |
 | `TD-EX-01` | P0 | N20 publishes 23 canonical workspace/resource-scoped screen contracts for BR-EX-41…71 and retires both raw browser current-source routes with typed HTTP 410. Manager relation selection remains server-only behind Rust compatibility authority. | Codex | closed before first product-visible Paper screen route | `CLOSED_N20` |
-| `TD-EX-02` | P0 for multi-replica | The N17B 15 r/s pacer is process-local. One Control API replica is bounded below the Source Proxy 20 r/s limit; multiple replicas could exceed it. | Codex | Control API scale above one source-consuming replica | `ACTIVATION_BLOCKER` |
+| `TD-EX-02` | P0 for multi-replica | N21 adds DB-clock, row-locked source/profile admission and expiring leases in both cells. SGP BFF uses Control PostgreSQL; AWS-HK Rust Edge uses projection PostgreSQL. Short cache/coalescing is workspace/principal/profile/adapter/request scoped and ambiguous dispatch is never retried. | Codex | closed before multi-replica source activation | `CLOSED_N21` |
 | `TD-EX-03` | P1 | N19 added the digest-bound Rust Manager compatibility authority for all 96 N18 relations, five sealed GET primitives, exact profile/resource/revision binding, catalogue/key/cursor validation and adapter rollback. TypeScript now retains only narrow BFF/product policy. | Codex | closed before broader current-source expansion | `CLOSED_N19` |
 | `TD-EX-04` | P0 | No signed Control API product image containing N17B has been published or deployed; registry and Paper product flags remain off. | Codex + Bobby | dev Paper activation window | `ACTIVATION_BLOCKER` |
 | `TD-EX-05` | P1 | N17B is a stateless read adapter. Projection PostgreSQL is not the source for the accepted query and does not yet back the broader analytics/screen aggregates. | Codex | projection-backed analytics or multi-screen rollout | `ACTIVATION_BLOCKER` |
@@ -78,7 +78,7 @@ updated `dev` branch.
 
 N19 closed `TD-EX-03`; N20 closed `TD-EX-01` with canonical
 workspace/resource-scoped screen contracts and explicit typed-unavailable
-branches. N21 owns Edge-global admission and `TD-EX-02`. Signed dev
+branches. N21 closed `TD-EX-02` with dual-cell shared admission. Signed dev
 publication and post-deploy `TD-EX-06` evidence remain later explicit gates
 rather than N20 debt.
 

@@ -57,7 +57,8 @@ use projection_core::{
 };
 use projection_store_pg::{
     AnalyticsReadRequirement, AnalyticsSourceRead, PgProjectionStore, RealtimeJournalRecord,
-    RealtimeScopeAvailability, StoreError,
+    RealtimeScopeAvailability, SourceAdmissionDenyReason, SourceAdmissionOutcome,
+    SourceAdmissionRequest, SourceReadCacheWrite, StoreError,
 };
 use query_api::{
     CursorCodec, EntityQueryRequest, FilterField, FilterOperator, ProjectionQueryPage, QueryError,
@@ -149,6 +150,11 @@ struct AppState {
     shadow_query_freshness_policy: FreshnessPolicy,
     manager_v2_client: Option<ManagerV2Client>,
     manager_v2_profile_id: Option<String>,
+    manager_shared_admission_maximum_rps: u16,
+    manager_shared_admission_maximum_concurrency: u16,
+    manager_shared_admission_maximum_wait: Duration,
+    manager_shared_admission_lease_ttl: Duration,
+    manager_shared_cache_ttl: Duration,
     manager_compatibility: Arc<ManagerCompatibilityAuthority>,
     current_source_map: Arc<CurrentSourceMap>,
     current_gateway_acceptance: Arc<CurrentGatewayAcceptance>,
@@ -174,6 +180,11 @@ struct EdgeConfig {
     source_probes_enabled: RuntimeGate,
     manager_v2_read_enabled: RuntimeGate,
     manager_v2_profile_id: Option<String>,
+    manager_shared_admission_maximum_rps: u16,
+    manager_shared_admission_maximum_concurrency: u16,
+    manager_shared_admission_maximum_wait: Duration,
+    manager_shared_admission_lease_ttl: Duration,
+    manager_shared_cache_ttl: Duration,
     probe_alpha_id: Option<String>,
     probe_interval: Duration,
     transport_limits: TransportLimits,
@@ -221,10 +232,12 @@ impl EdgeConfig {
             self.projection_ingestion_enabled.is_enabled()
                 || self.realtime_sse_enabled.is_enabled()
                 || self.analytics_query_enabled.is_enabled()
-                || self.shadow_query_enabled.is_enabled(),
+                || self.shadow_query_enabled.is_enabled()
+                || self.manager_v2_read_enabled.is_enabled(),
         )
     }
 
+    #[allow(clippy::too_many_lines)] // Keep one auditable fail-closed environment parser.
     fn from_environment() -> Result<Self, ConfigError> {
         let environment = required("EDGE_ENVIRONMENT")?;
         if !matches!(environment.as_str(), "paper" | "sandbox" | "live") {
@@ -246,6 +259,9 @@ impl EdgeConfig {
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_V2_READ_ENABLED", false)?);
         let manager_v2_profile_id =
             manager_v2_profile_from_environment(&environment, manager_v2_read_enabled)?;
+        if manager_v2_read_enabled.is_enabled() && runtime.projection_database_url_file.is_none() {
+            return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
+        }
         let (realtime_freshness_policy, realtime_venue_session) =
             realtime_freshness_from_environment()?;
         Ok(Self {
@@ -272,6 +288,40 @@ impl EdgeConfig {
             source_probes_enabled: runtime.source_probes_enabled,
             manager_v2_read_enabled,
             manager_v2_profile_id,
+            manager_shared_admission_maximum_rps: u16::try_from(bounded_usize(
+                "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS",
+                15,
+                1,
+                15,
+            )?)
+            .map_err(|_| ConfigError::Invalid("EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS"))?,
+            manager_shared_admission_maximum_concurrency: u16::try_from(bounded_usize(
+                "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_CONCURRENCY",
+                8,
+                1,
+                64,
+            )?)
+            .map_err(|_| {
+                ConfigError::Invalid("EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_CONCURRENCY")
+            })?,
+            manager_shared_admission_maximum_wait: Duration::from_millis(bounded_usize(
+                "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_WAIT_MS",
+                1_000,
+                10,
+                5_000,
+            )? as u64),
+            manager_shared_admission_lease_ttl: Duration::from_millis(bounded_usize(
+                "EDGE_MANAGER_SHARED_ADMISSION_LEASE_TTL_MS",
+                7_000,
+                500,
+                35_000,
+            )? as u64),
+            manager_shared_cache_ttl: Duration::from_millis(bounded_usize(
+                "EDGE_MANAGER_SHARED_CACHE_TTL_MS",
+                750,
+                50,
+                5_000,
+            )? as u64),
             probe_alpha_id: optional("EDGE_PROBE_ALPHA_ID"),
             probe_interval: Duration::from_secs(probe_interval_seconds as u64),
             transport_limits: transport_limits_from_environment()?,
@@ -528,6 +578,7 @@ async fn main() -> Result<(), ServiceError> {
     }
 }
 
+#[allow(clippy::too_many_lines)] // Startup composition stays explicit and ordered for auditability.
 async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
     let EdgeTlsMaterial {
         certificate,
@@ -598,6 +649,12 @@ async fn serve(config: EdgeConfig) -> Result<(), ServiceError> {
         shadow_query_freshness_policy: config.shadow_query_freshness_policy.clone(),
         manager_v2_client,
         manager_v2_profile_id: config.manager_v2_profile_id.clone(),
+        manager_shared_admission_maximum_rps: config.manager_shared_admission_maximum_rps,
+        manager_shared_admission_maximum_concurrency: config
+            .manager_shared_admission_maximum_concurrency,
+        manager_shared_admission_maximum_wait: config.manager_shared_admission_maximum_wait,
+        manager_shared_admission_lease_ttl: config.manager_shared_admission_lease_ttl,
+        manager_shared_cache_ttl: config.manager_shared_cache_ttl,
         manager_compatibility,
         current_source_map,
         current_gateway_acceptance,
@@ -722,6 +779,7 @@ async fn connect_projection_store(
         && !config.realtime_sse_enabled.is_enabled()
         && !config.analytics_query_enabled.is_enabled()
         && !config.shadow_query_enabled.is_enabled()
+        && !config.manager_v2_read_enabled.is_enabled()
     {
         return Ok(None);
     }
@@ -1059,6 +1117,7 @@ async fn current_source_relation(
     .await
 }
 
+#[allow(clippy::too_many_lines)] // The source-as-is validation chain must remain visible in order.
 async fn current_source_relation_from_manager(
     state: &AppState,
     screen_id: String,
@@ -1103,7 +1162,8 @@ async fn current_source_relation_from_manager(
         Ok(limit) => limit,
         Err(response) => return response,
     };
-    let catalogue = match fetch_manager_catalogue(client).await {
+    let catalogue = match fetch_manager_catalogue(state, &profile.manager_profile_id, client).await
+    {
         Ok(catalogue) => catalogue,
         Err(response) => return response,
     };
@@ -1164,11 +1224,14 @@ async fn current_source_relation_from_manager(
         adapter: source.adapter,
         relation: relation_id,
     };
-    current_source_manager_read_response(client.execute(&request).await, context)
+    current_source_manager_read_response(
+        admitted_manager_execute(state, &profile.manager_profile_id, client, &request).await,
+        context,
+    )
 }
 
 fn current_source_manager_read_response(
-    read: Result<ManagerRead, ManagerV2ClientError>,
+    read: Result<ManagerRead, ManagerDispatchError>,
     context: CurrentSourceRelationContext,
 ) -> Response {
     match read {
@@ -1206,7 +1269,30 @@ fn current_source_manager_read_response(
             "UNAVAILABLE",
             Some(unavailable.reason_code().to_owned()),
         ),
-        Err(error) => current_source_client_error(&error),
+        Err(ManagerDispatchError::Client(error)) => current_source_client_error(&error),
+        Err(ManagerDispatchError::AdmissionDenied(reason)) => current_source_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N21_SHARED_SOURCE_ADMISSION_DENIED",
+            "The shared source budget is temporarily exhausted.",
+            FactClassification::Connected,
+            "UNAVAILABLE",
+            Some(match reason {
+                SourceAdmissionDenyReason::ConcurrencyExhausted => {
+                    "SHARED_CONCURRENCY_EXHAUSTED".to_owned()
+                }
+                SourceAdmissionDenyReason::RateBudgetExhausted => {
+                    "SHARED_RATE_BUDGET_EXHAUSTED".to_owned()
+                }
+            }),
+        ),
+        Err(ManagerDispatchError::AdmissionUnavailable) => current_source_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N21_SHARED_SOURCE_ADMISSION_UNAVAILABLE",
+            "The shared source admission authority is unavailable.",
+            FactClassification::Connected,
+            "UNAVAILABLE",
+            Some("SHARED_ADMISSION_FAIL_CLOSED".to_owned()),
+        ),
     }
 }
 
@@ -1337,10 +1423,13 @@ async fn manager_catalogue(State(state): State<AppState>, headers: HeaderMap) ->
         Err(response) => return response,
     };
     manager_catalogue_response(
-        access
-            .client
-            .execute(&access.authority.catalogue_request())
-            .await,
+        admitted_manager_execute(
+            &state,
+            access.profile_id,
+            access.client,
+            &access.authority.catalogue_request(),
+        )
+        .await,
         &access.authority,
     )
 }
@@ -1351,10 +1440,13 @@ async fn manager_capabilities(State(state): State<AppState>, headers: HeaderMap)
         Err(response) => return response,
     };
     manager_capabilities_response(
-        access
-            .client
-            .execute(&access.authority.capabilities_request())
-            .await,
+        admitted_manager_execute(
+            &state,
+            access.profile_id,
+            access.client,
+            &access.authority.capabilities_request(),
+        )
+        .await,
         &access.authority,
     )
 }
@@ -1380,7 +1472,7 @@ async fn manager_projection(
         Ok(limit) => limit,
         Err(response) => return response,
     };
-    let catalogue = match fetch_manager_catalogue(access.client).await {
+    let catalogue = match fetch_manager_catalogue(&state, access.profile_id, access.client).await {
         Ok(catalogue) => catalogue,
         Err(response) => return response,
     };
@@ -1406,7 +1498,7 @@ async fn manager_projection(
         );
     };
     manager_read_response(
-        access.client.execute(&request).await,
+        admitted_manager_execute(&state, access.profile_id, access.client, &request).await,
         |payload| match payload {
             ManagerPayload::Projection(envelope) => Some(envelope),
             _ => None,
@@ -1435,7 +1527,7 @@ async fn manager_relation_records(
         Ok(limit) => limit,
         Err(response) => return response,
     };
-    let catalogue = match fetch_manager_catalogue(access.client).await {
+    let catalogue = match fetch_manager_catalogue(&state, access.profile_id, access.client).await {
         Ok(catalogue) => catalogue,
         Err(response) => return response,
     };
@@ -1470,7 +1562,7 @@ async fn manager_relation_records(
         );
     };
     manager_read_response(
-        access.client.execute(&request).await,
+        admitted_manager_execute(&state, access.profile_id, access.client, &request).await,
         |payload| match payload {
             ManagerPayload::RelationRecords(envelope) => Some(envelope),
             _ => None,
@@ -1481,6 +1573,7 @@ async fn manager_relation_records(
 struct AuthorizedManagerRequest<'a> {
     client: &'a ManagerV2Client,
     authority: BoundManagerAuthority<'a>,
+    profile_id: &'a str,
 }
 
 fn manager_request_client<'a>(
@@ -1508,12 +1601,16 @@ fn manager_request_client<'a>(
             "Manager read-through is disabled for this Edge runtime.",
         )
     })?;
-    let profile_id = claims
-        .profile_id
+    let profile_id = state
+        .manager_v2_profile_id
         .as_deref()
         .ok_or_else(|| StatusCode::FORBIDDEN.into_response())?;
     let authority = bind_manager_authority(state, profile_id)?;
-    Ok(AuthorizedManagerRequest { client, authority })
+    Ok(AuthorizedManagerRequest {
+        client,
+        authority,
+        profile_id,
+    })
 }
 
 fn bind_manager_authority<'a>(
@@ -1571,9 +1668,135 @@ fn manager_profile_matches_environment(environment: &str, profile_id: &str) -> b
             .all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_')
 }
 
-async fn fetch_manager_catalogue(client: &ManagerV2Client) -> Result<ManagerCatalogue, Response> {
-    match client.execute(&ManagerV2Request::catalogue()).await {
-        Ok(ManagerRead::Available(ManagerPayload::Catalogue(envelope))) => Ok(envelope.into_data()),
+#[derive(Debug)]
+enum ManagerDispatchError {
+    AdmissionDenied(SourceAdmissionDenyReason),
+    AdmissionUnavailable,
+    Client(ManagerV2ClientError),
+}
+
+/// Executes one and only one Manager request after a PostgreSQL-coordinated
+/// source/profile permit. There is deliberately no retry branch: a timeout or
+/// ambiguous dispatch is returned to the caller exactly once.
+async fn admitted_manager_execute(
+    state: &AppState,
+    profile_id: &str,
+    client: &ManagerV2Client,
+    request: &ManagerV2Request,
+) -> Result<ManagerRead, ManagerDispatchError> {
+    let store = state
+        .projection_store
+        .as_ref()
+        .ok_or(ManagerDispatchError::AdmissionUnavailable)?;
+    let admission = store
+        .acquire_source_admission(&SourceAdmissionRequest {
+            source_id: "manager-v2".to_owned(),
+            profile_id: profile_id.to_owned(),
+            owner_id: format!("edge:{}", Uuid::now_v7()),
+            maximum_requests_per_second: state.manager_shared_admission_maximum_rps,
+            maximum_concurrency: state.manager_shared_admission_maximum_concurrency,
+            maximum_wait: state.manager_shared_admission_maximum_wait,
+            lease_ttl: state.manager_shared_admission_lease_ttl,
+        })
+        .await
+        .map_err(|_| ManagerDispatchError::AdmissionUnavailable)?;
+    let lease = match admission {
+        SourceAdmissionOutcome::Accepted(lease) => lease,
+        SourceAdmissionOutcome::Denied(reason) => {
+            return Err(ManagerDispatchError::AdmissionDenied(reason));
+        }
+    };
+    if !lease.wait.is_zero() {
+        tokio::time::sleep(lease.wait).await;
+    }
+    let result = client
+        .execute(request)
+        .await
+        .map_err(ManagerDispatchError::Client);
+    store
+        .release_source_admission(&lease)
+        .await
+        .map_err(|_| ManagerDispatchError::AdmissionUnavailable)?;
+    result
+}
+
+async fn fetch_manager_catalogue(
+    state: &AppState,
+    profile_id: &str,
+    client: &ManagerV2Client,
+) -> Result<ManagerCatalogue, Response> {
+    const SOURCE_ID: &str = "manager-v2";
+    const ADAPTER_REVISION: &str = "portal.execution.manager-adapter.runtime-v1";
+    const OPERATION_ID: &str = "managerCatalog";
+    let store = state.projection_store.as_ref().ok_or_else(|| {
+        manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N21_SHARED_CACHE_UNAVAILABLE",
+            "The shared Manager catalogue cache is unavailable.",
+        )
+    })?;
+    if let Some(cached) = store
+        .load_source_read_cache(SOURCE_ID, profile_id, ADAPTER_REVISION, OPERATION_ID)
+        .await
+        .map_err(|_| {
+            manager_problem(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "N21_SHARED_CACHE_UNAVAILABLE",
+                "The shared Manager catalogue cache is unavailable.",
+            )
+        })?
+    {
+        let body = serde_json::to_vec(&cached.response_body).map_err(|_| {
+            manager_problem(
+                StatusCode::BAD_GATEWAY,
+                "N21_SHARED_CACHE_CONTRACT_INVALID",
+                "The cached Manager catalogue no longer matches its contract.",
+            )
+        })?;
+        return match manager_v2_contract::decode_success_for_profile(
+            &ManagerV2Request::catalogue(),
+            &body,
+            profile_id,
+        ) {
+            Ok(ManagerPayload::Catalogue(envelope)) => Ok(envelope.into_data()),
+            _ => Err(manager_problem(
+                StatusCode::BAD_GATEWAY,
+                "N21_SHARED_CACHE_CONTRACT_INVALID",
+                "The cached Manager catalogue no longer matches its contract.",
+            )),
+        };
+    }
+    match admitted_manager_execute(state, profile_id, client, &ManagerV2Request::catalogue()).await
+    {
+        Ok(ManagerRead::Available(ManagerPayload::Catalogue(envelope))) => {
+            let metadata = envelope.meta();
+            let write = SourceReadCacheWrite {
+                source_id: SOURCE_ID.to_owned(),
+                profile_id: profile_id.to_owned(),
+                adapter_revision: ADAPTER_REVISION.to_owned(),
+                operation_id: OPERATION_ID.to_owned(),
+                authority: metadata.authority().to_owned(),
+                freshness: serde_enum_name(metadata.freshness())?,
+                completeness: serde_enum_name(metadata.completeness())?,
+                as_of: metadata.as_of(),
+                response_body: serde_json::to_value(&envelope).map_err(|_| {
+                    manager_problem(
+                        StatusCode::BAD_GATEWAY,
+                        "N21_SOURCE_PROVENANCE_INVALID",
+                        "The Manager catalogue cannot be cached without exact provenance.",
+                    )
+                })?,
+                ttl: state.manager_shared_cache_ttl,
+            };
+            store.store_source_read_cache(&write).await.map_err(|_| {
+                manager_problem(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "N21_SHARED_CACHE_UNAVAILABLE",
+                    "The shared Manager catalogue cache is unavailable.",
+                )
+            })?;
+            Ok(envelope.into_data())
+        }
         Ok(ManagerRead::Available(_)) => Err(manager_problem(
             StatusCode::BAD_GATEWAY,
             "MANAGER_V2_UNEXPECTED_PAYLOAD",
@@ -1583,12 +1806,50 @@ async fn fetch_manager_catalogue(client: &ManagerV2Client) -> Result<ManagerCata
             StatusCode::SERVICE_UNAVAILABLE,
             unavailable,
         )),
-        Err(error) => Err(manager_client_error_response(&error)),
+        Err(error) => Err(manager_dispatch_error_response(&error)),
+    }
+}
+
+fn serde_enum_name<T: Serialize>(value: T) -> Result<String, Response> {
+    serde_json::to_value(value)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .ok_or_else(|| {
+            manager_problem(
+                StatusCode::BAD_GATEWAY,
+                "N21_SOURCE_PROVENANCE_INVALID",
+                "The Manager source provenance is invalid.",
+            )
+        })
+}
+
+fn manager_dispatch_error_response(error: &ManagerDispatchError) -> Response {
+    match error {
+        ManagerDispatchError::Client(error) => manager_client_error_response(error),
+        ManagerDispatchError::AdmissionDenied(SourceAdmissionDenyReason::ConcurrencyExhausted) => {
+            manager_problem(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "N21_SHARED_CONCURRENCY_EXHAUSTED",
+                "The Edge-wide Manager concurrency budget is exhausted.",
+            )
+        }
+        ManagerDispatchError::AdmissionDenied(SourceAdmissionDenyReason::RateBudgetExhausted) => {
+            manager_problem(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "N21_SHARED_RATE_BUDGET_EXHAUSTED",
+                "The Edge-wide Manager rate budget is exhausted.",
+            )
+        }
+        ManagerDispatchError::AdmissionUnavailable => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N21_SHARED_ADMISSION_UNAVAILABLE",
+            "The Edge-wide Manager admission authority is unavailable.",
+        ),
     }
 }
 
 fn manager_catalogue_response(
-    read: Result<ManagerRead, ManagerV2ClientError>,
+    read: Result<ManagerRead, ManagerDispatchError>,
     authority: &BoundManagerAuthority<'_>,
 ) -> Response {
     match read {
@@ -1606,12 +1867,12 @@ fn manager_catalogue_response(
         Ok(ManagerRead::Unavailable(unavailable)) => {
             manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable)
         }
-        Err(error) => manager_client_error_response(&error),
+        Err(error) => manager_dispatch_error_response(&error),
     }
 }
 
 fn manager_capabilities_response(
-    read: Result<ManagerRead, ManagerV2ClientError>,
+    read: Result<ManagerRead, ManagerDispatchError>,
     authority: &BoundManagerAuthority<'_>,
 ) -> Response {
     match read {
@@ -1629,7 +1890,7 @@ fn manager_capabilities_response(
         Ok(ManagerRead::Unavailable(unavailable)) => {
             manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable)
         }
-        Err(error) => manager_client_error_response(&error),
+        Err(error) => manager_dispatch_error_response(&error),
     }
 }
 
@@ -1668,7 +1929,7 @@ fn manager_authority_error_response(error: &ManagerAuthorityError) -> Response {
 }
 
 fn manager_read_response<T, F>(
-    read: Result<ManagerRead, ManagerV2ClientError>,
+    read: Result<ManagerRead, ManagerDispatchError>,
     select: F,
 ) -> Response
 where
@@ -1687,7 +1948,7 @@ where
         Ok(ManagerRead::Unavailable(unavailable)) => {
             manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable)
         }
-        Err(error) => manager_client_error_response(&error),
+        Err(error) => manager_dispatch_error_response(&error),
     }
 }
 
@@ -3551,6 +3812,11 @@ mod tests {
             },
             manager_v2_client: None,
             manager_v2_profile_id: Some("PAPER_BINANCE_USDM".to_owned()),
+            manager_shared_admission_maximum_rps: 15,
+            manager_shared_admission_maximum_concurrency: 8,
+            manager_shared_admission_maximum_wait: Duration::from_secs(1),
+            manager_shared_admission_lease_ttl: Duration::from_secs(7),
+            manager_shared_cache_ttl: Duration::from_millis(750),
             manager_compatibility: Arc::new(ManagerCompatibilityAuthority::canonical().unwrap()),
             current_source_map: Arc::new(CurrentSourceMap::canonical().unwrap()),
             current_gateway_acceptance: Arc::new(CurrentGatewayAcceptance::canonical().unwrap()),

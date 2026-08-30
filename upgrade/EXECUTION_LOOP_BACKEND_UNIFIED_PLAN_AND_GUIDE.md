@@ -1497,6 +1497,9 @@ consumer tests pass. No source/runtime/stable deployment changed. Detail:
 
 #### N21 — Shared admission, cache and freshness
 
+**Status (2026-08-30):** `COMPLETE / DUAL_CELL_SHARED_AUTHORITY /
+TD-EX-02_CLOSED / N22_READY`.
+
 **Goal:** make N19/N20 horizontally scalable without exceeding Trading System
 or Source Proxy budgets.
 
@@ -1519,6 +1522,13 @@ isolation, stampede, timeout, loss/recovery and rollback tests.
 **N21 exit gate:** all replicas stay within declared source budgets, cache and
 coalescing never cross security boundaries, and loss/recovery/rollback are
 bounded. `TD-EX-02` is closed.
+
+**Closeout:** SGP BFF replicas coordinate source/profile admission,
+request-flight coalescing and short cache through Control PostgreSQL; AWS-HK
+Rust Edge replicas coordinate source/profile permits and catalogue cache
+through projection PostgreSQL. Both use DB time, expiring leases, exact
+profile/revision scope and no retry after ambiguous dispatch. Report:
+[`EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md`](./backend/EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md).
 
 #### N22 — Full Paper read activation
 

@@ -74,6 +74,12 @@ jobs:
       - name: Validate N19 Rust Manager compatibility authority
         run: ./scripts/execution-n19-manager-compat-test.sh
 
+      - name: Validate N20 canonical screen BFF contracts
+        run: ./scripts/execution-n20-screen-bff-test.sh
+
+      - name: Validate N21 shared admission, cache and freshness
+        run: ./scripts/execution-n21-shared-admission-test.sh
+
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 

@@ -165,6 +165,11 @@ const EnvSchema = z.object({
   // safety margin and intentionally permits no burst above 15 r/s.
   EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND: z.coerce.number().int().min(1).max(15).default(15),
   EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS: z.coerce.number().int().min(10).max(5_000).default(1_000),
+  // N21 cache/coalescing is deliberately shorter than a normal UI refresh.
+  // It suppresses replica stampedes without becoming an execution authority.
+  EXECUTION_EDGE_CURRENT_SOURCE_CACHE_TTL_MS: z.coerce.number().int().min(50).max(5_000).default(750),
+  EXECUTION_EDGE_CURRENT_SOURCE_COALESCE_WAIT_MS: z.coerce.number().int().min(10).max(5_000).default(750),
+  EXECUTION_EDGE_CURRENT_SOURCE_LEASE_TTL_MS: z.coerce.number().int().min(500).max(35_000).default(7_000),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 

@@ -505,6 +505,16 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/manager-compat-authority/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/manager-compat-authority/src/tests.rs" \
   "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_23_N20_CANONICAL_SCREEN_BFF_CONTRACTS.md" \
+  "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N21_SHARED_ADMISSION_HANDOFF.md" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000014_execution-shared-admission.sql" \
+  "${ROOT_DIR}/apps/control-api/src/execution/shared-read.repository.ts" \
+  "${ROOT_DIR}/apps/control-api/test/execution-shared-admission.spec.ts" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0011_shared_source_admission.sql" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/src/source_admission.rs" \
   "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" \
   "${ROOT_DIR}/deploy/manifests/deployment-profile.v1.schema.json" \
   "${ROOT_DIR}/deploy/manifests/deployment-profiles.source-dark.json" \
@@ -1430,6 +1440,8 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/execution-n18-census-test.sh" \
   "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1531,5 +1543,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh"
 "${ROOT_DIR}/scripts/execution-n18-census-test.sh"
 "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh"
+"${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh"
+"${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

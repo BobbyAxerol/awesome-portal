@@ -44,6 +44,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_activation_capabilities: boolean;
       has_activation_plans: boolean;
       has_activation_events: boolean;
+      has_shared_admission: boolean;
+      has_shared_cache: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -69,6 +71,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_activation_capabilities') IS NOT NULL AS has_activation_capabilities,
          to_regclass('public.execution_activation_plans') IS NOT NULL AS has_activation_plans,
          to_regclass('public.execution_activation_events') IS NOT NULL AS has_activation_events,
+         to_regclass('public.execution_shared_admission_state') IS NOT NULL AS has_shared_admission,
+         to_regclass('public.execution_shared_read_cache') IS NOT NULL AS has_shared_cache,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -93,6 +97,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_activation_capabilities ||
       !row.has_activation_plans ||
       !row.has_activation_events ||
+      !row.has_shared_admission ||
+      !row.has_shared_cache ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
@@ -110,6 +116,8 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `activation_capabilities=${row.has_activation_capabilities}, ` +
         `activation_plans=${row.has_activation_plans}, ` +
         `activation_events=${row.has_activation_events}, ` +
+        `shared_admission=${row.has_shared_admission}, ` +
+        `shared_cache=${row.has_shared_cache}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

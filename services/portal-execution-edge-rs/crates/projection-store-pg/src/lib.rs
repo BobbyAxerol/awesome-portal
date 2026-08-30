@@ -23,6 +23,7 @@ mod query;
 mod realtime;
 mod retention;
 mod shared_consumer;
+mod source_admission;
 
 pub use analytics_repository::{
     analytics_facts_digest, AnalyticsFactDigestInput, AnalyticsReadRequirement, AnalyticsSourceRead,
@@ -43,6 +44,10 @@ pub use retention::{
     RetentionLifecyclePolicySnapshot, StorageBudgetObservation, StoragePressure,
 };
 pub use shared_consumer::SharedConsumerLeaseAcquireOutcome;
+pub use source_admission::{
+    SourceAdmissionDenyReason, SourceAdmissionLease, SourceAdmissionOutcome,
+    SourceAdmissionRequest, SourceReadCacheEntry, SourceReadCacheWrite,
+};
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!();
 
@@ -1394,6 +1399,8 @@ pub enum StoreError {
     InvalidEpochMetadata,
     #[error("projection stream key is invalid")]
     InvalidStreamKey,
+    #[error("N21 shared source admission configuration is invalid")]
+    InvalidSourceAdmission,
     #[error("projection epoch does not exist")]
     EpochNotFound,
     #[error("projection scope does not match the epoch")]

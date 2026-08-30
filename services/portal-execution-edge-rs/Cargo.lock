@@ -1588,6 +1588,7 @@ dependencies = [
  "analytics",
  "chrono",
  "execution-contracts",
+ "hex",
  "home",
  "projection-core",
  "query-api",

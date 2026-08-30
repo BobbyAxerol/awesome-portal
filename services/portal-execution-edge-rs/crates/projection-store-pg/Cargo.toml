@@ -10,6 +10,7 @@ repository.workspace = true
 analytics = { path = "../analytics" }
 chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
+hex.workspace = true
 home.workspace = true
 projection-core = { path = "../projection-core" }
 query-api = { path = "../query-api" }

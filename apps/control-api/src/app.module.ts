@@ -27,6 +27,7 @@ import { ExecutionAnalyticsController } from "./execution/analytics.controller";
 import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
 import { ExecutionCurrentSourceController } from "./execution/current-source.controller";
 import { ExecutionCurrentSourceProxy } from "./execution/current-source.proxy";
+import { ExecutionSharedReadRepository } from "./execution/shared-read.repository";
 import { CommandCenterController } from "./command-center/command-center.controller";
 import { CommandCenterRepository } from "./command-center/command-center.repository";
 import { CommandCenterService } from "./command-center/command-center.service";
@@ -121,6 +122,7 @@ export class AppModule {
         ActivationRepository,
         ActivationService,
         ScreenBffService,
+        ExecutionSharedReadRepository,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),
@@ -133,8 +135,9 @@ export class AppModule {
         },
         {
           provide: ExecutionCurrentSourceProxy,
-          useFactory: (cfg: ControlApiConfig) => ExecutionCurrentSourceProxy.create(cfg),
-          inject: [CONTROL_API_CONFIG],
+          useFactory: (cfg: ControlApiConfig, sharedReads: ExecutionSharedReadRepository) =>
+            ExecutionCurrentSourceProxy.create(cfg, sharedReads),
+          inject: [CONTROL_API_CONFIG, ExecutionSharedReadRepository],
         },
         {
           provide: PortalProxyService,

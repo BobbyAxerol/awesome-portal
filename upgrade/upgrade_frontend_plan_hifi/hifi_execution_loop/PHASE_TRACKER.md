@@ -2730,7 +2730,7 @@ backend gate.
 | N18 | complete 96-relation/read/command/BR-EX-41–71 census | verify screen/request coverage and duplicate-free mapping | `N18_COMPLETE_SOURCE_DARK / CENSUS_FROZEN / N19_READY` |
 | N19 | versioned Rust Manager-v2 compatibility authority | no raw Manager envelope consumption | `COMPLETE / SOURCE_DARK / TD-EX-03_CLOSED` |
 | N20 | canonical TypeScript screen BFF contracts | consume fixtures/errors/states; retire smoke only with later data parity | `COMPLETE / 23_SCREEN_CONTRACTS / BR-EX-41_71 / TD-EX-01_CLOSED` |
-| N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `PLANNED / N20_DEPENDENT` |
+| N21 | shared admission/cache/freshness and horizontal-scale gate | verify loading/stale/partial/unavailable behavior | `COMPLETE / DUAL_CELL_SHARED_AUTHORITY / TD-EX-02_CLOSED` |
 | N22 | full current Paper read activation | retire only matching Paper smoke blocks | `PLANNED / N21_DEPENDENT` |
 | N23 | isolated Sandbox/Live reads and honest empty Live | wire Sandbox/Live/Canary read states | `PLANNED / N22_DEPENDENT` |
 | N24 | durable Portal projection | consume projection freshness/gap/rebuild states | `PLANNED / N23_DEPENDENT` |
@@ -3024,4 +3024,24 @@ Claude handoff:
 Claude may consume the generated type, strict compatibility reader and seven
 canonical states. Smoke removal still waits for actual narrow data parity in
 N22–N27. Both raw browser current-source routes now return typed HTTP 410;
-server-to-server Rust compatibility remains intact. N21 has not started.
+server-to-server Rust compatibility remains intact. N21 subsequently closed
+the shared-admission dependency below.
+
+### N21 backend — shared admission, cache and freshness (2026-08-30)
+
+N21 is `N21_COMPLETE / DUAL_CELL_SHARED_AUTHORITY / TD-EX-02_CLOSED /
+N22_READY`. SGP BFF replicas coordinate through Control PostgreSQL; AWS-HK
+Rust Edge replicas coordinate through projection PostgreSQL. Source/profile
+rate and concurrency are DB-clock bounded, permits/flights expire safely, and
+an ambiguous dispatch is never retried. Short cache and coalescing preserve
+authority, `as_of`, freshness and completeness and cannot cross workspace,
+principal, role, profile, adapter or request boundaries.
+
+Backend report:
+[`EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md`](../../backend/EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md).  
+Claude handoff:
+[`CODEX_TO_CLAUDE_N21_SHARED_ADMISSION_HANDOFF.md`](./CODEX_TO_CLAUDE_N21_SHARED_ADMISSION_HANDOFF.md).
+
+Claude may validate cached/stale/partial/unavailable presentation and remove
+infinite client retry behavior. Paper smoke replacement still belongs to N22
+and requires per-screen real-source parity.
