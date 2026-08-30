@@ -501,3 +501,29 @@ persona có đúng một chỗ để làm; "clear" = không việc nào phải �
 > preview (registry rows: HOTFIX §2). Evidence: governanceAdditions.test 9/9,
 > vitest full 1,767, screenshot soi tay cả ba; full gate chạy nền.
 
+
+---
+
+## I. Xác nhận genericity (owner hỏi 2026-08-30): màn con có hard-code cho 1 alpha mẫu không?
+
+**Trả lời: KHÔNG ở tầng màn — CÓ ở tầng fixture, và đó là chủ đích.** Ba tầng,
+kiểm theo code:
+
+| Tầng | Bằng chứng | Kết luận |
+|---|---|---|
+| **Route** | `/deployments/paper/:deploymentId` · `/deployments/sandbox/:deploymentId` · `/deployments/alphas/:alphaId` · `/deployments/live/:deploymentId(/canary)` — mọi màn con đều parameterized; Alpha Fleet/list bấm row nào là truyền id đó (`workbenchRouteFor(stage, deploymentId)`) | generic ✅ |
+| **Component** | Màn nhận TOÀN BỘ dữ liệu qua props/port: `PaperWorkbench {...base}` (alphaLabel, equity, orders… đều là input), `alpha360()`/`paperWorkbench()` là factory nhận `deploymentId` + override; không màn nào chứa số liệu/nhãn alpha bên trong component | generic ✅ |
+| **Fixture (hôm nay)** | Cast canonical nhỏ có chủ đích (CANONICAL_CAST.md): dep_74/77/88/91/94/vnm, av_2041… Factory vá id truyền vào nhưng **giá trị mặc định là của cast** → mở id lạ sẽ thấy số liệu của cast dưới id đó (fixture-only preview, mỗi màn có preview banner nói rõ nguồn fixture) | cast mẫu, KHÔNG phải giới hạn của màn |
+
+Khi codex giao BR-EX rows (paper/sandbox/canary/live/360 contracts), container
+fetch theo id thật → **cùng màn đó chạy mọi alpha, không viết lại**. Scale
+nhiều alpha đã nằm trong §8 scale-refine từng màn (keyset Inbox/Blotter,
+`alpha360AtScale` fixture, cap trung thực "top N / M").
+
+**2 điểm sẽ siết khi owner OK (chưa làm):**
+1. Id lạ đang được serve dữ liệu cast im lặng — thêm 1 dòng honest trong
+   preview banner: "fixture cast — dữ liệu hiển thị là của dep_74/av_2041 dưới
+   id này" để người test không hiểu nhầm.
+2. Nhãn entity trong breadcrumb preview (`av_2041 → "Grid v2.1"`) đang map cứng
+   ở ExecutionPreviewRoute — chuyển sang đọc từ data trả về (server sẽ cấp
+   label khi contract về).
