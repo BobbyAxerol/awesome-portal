@@ -3495,7 +3495,11 @@ describe("Gate R2 — the R1 reference is openable", () => {
     // Two links now: the meta chip and the R1 reference panel. Both point at
     // the same decision, which is the point.
     render(r2({ r1Href: "/governance/approvals/AP-101/r1" }));
-    const links = screen.getAllByRole("link");
+    // The decision panel also links the fleet-wide conditions register
+    // (owner 2026-08-30) — every other link is the R1 decision.
+    const links = screen
+      .getAllByRole("link")
+      .filter((l) => l.getAttribute("href") !== "/governance/waivers");
     expect(links.length).toBeGreaterThan(0);
     for (const link of links) {
       expect(link.getAttribute("href")).toBe("/governance/approvals/AP-101/r1");
@@ -3504,7 +3508,7 @@ describe("Gate R2 — the R1 reference is openable", () => {
 
   it("says so when no link was published rather than rendering a dead reference", () => {
     const { container } = render(r2());
-    expect(container.querySelector("a")).toBeNull();
+    expect(container.querySelector('a:not([href="/governance/waivers"])')).toBeNull();
     expect(screen.getByTitle(/No link to the R1 decision/)).toBeTruthy();
   });
 

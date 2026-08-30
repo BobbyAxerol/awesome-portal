@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  EXECUTION_PREVIEW_EXTRA_ROUTES,
   EXECUTION_PREVIEW_FEATURE_DEFAULTS,
   EXECUTION_PREVIEW_SCREEN_IDS,
   hasExecutionPreview,
@@ -26,7 +27,19 @@ describe("Execution integration preview registry", () => {
     const declared = registry.screens
       .map((screen) => screen.screen_id)
       .filter((screenId) => screenId.startsWith("EXECUTION_"));
-    expect([...EXECUTION_PREVIEW_SCREEN_IDS].sort()).toEqual(declared.sort());
+    // The three owner-commissioned screens (2026-08-30) have no registry rows
+    // yet — HOTFIX_REQUEST_2026-08-30 §2 asks codex for them. Until they land,
+    // the preview claims their paths via EXECUTION_PREVIEW_EXTRA_ROUTES and
+    // this test names the difference precisely instead of loosening.
+    const pendingRegistryRows = EXECUTION_PREVIEW_EXTRA_ROUTES.map((r) => r.screenId).sort();
+    expect(pendingRegistryRows).toEqual([
+      "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+      "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+      "EXECUTION_WAIVERS_REGISTER_SCREEN",
+    ]);
+    expect(
+      [...EXECUTION_PREVIEW_SCREEN_IDS].filter((id) => !pendingRegistryRows.includes(id)).sort(),
+    ).toEqual(declared.sort());
     expect(declared.every(hasExecutionPreview)).toBe(true);
   });
 

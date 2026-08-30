@@ -431,7 +431,8 @@ export function GateR2Review({
         </div>
       </div>
       <div className="exec-gov-panel">
-        <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Decision — structured, immutable once submitted</span></div>
+        <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Decision — structured, immutable once submitted</span>
+          <a className="exec-gov-headlink" href="/governance/waivers">open conditions fleet-wide →</a></div>
         <div className="exec-gate-decisionbody">
           <ConditionList conditions={conditions ?? []} emptyNote="No conditions attached yet." />
           {onAttachCondition ? (

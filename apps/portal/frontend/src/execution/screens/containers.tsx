@@ -52,6 +52,7 @@ import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
 import { STAGE_SMOKE, stageVisuals } from "../stage.smoke";
 import { CommandCenterScreen } from "./CommandCenter";
+import { GateLiveReview } from "./GateLiveReview";
 import { canonicalHref } from "../links";
 import { useCommandCentreStream } from "../commandCenterStream";
 import type { CommandCenter } from "../commandCenter";
@@ -1030,6 +1031,56 @@ export function CapitalLedgerContainer({
  * Two containers for one endpoint, one of them unused, is not a choice of
  * seams — it is one seam and one leftover.
  */
+
+/**
+ * Gate LIVE (canary → live) — owner-commissioned 2026-08-30 (ROADMAP §H.2.2).
+ * The request backbone (eligibility, quorum, SLA, optimistic version) is the
+ * same `governance.r2-review.v1` read that served LIVE_GATE rows when they
+ * still opened the R2 screen; the canary evidence panels are the screen's own
+ * declared smoke until BR-EX-70.
+ */
+export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
+  const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
+  const [note, setNote] = useState("");
+  const { decision, decide } = useDecision(api);
+  useEffect(() => {
+    let cancelled = false;
+    setState(loading);
+    void api.getGateR2(approvalId).then((result) => {
+      if (cancelled) return;
+      setState(
+        result.ok
+          ? { status: result.warnings?.length ? "partial" : "ok", value: result.value, warnings: result.warnings ?? [] }
+          : { status: result.status, reason: result.reason, value: null, warnings: [] },
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, approvalId]);
+  const d = state.value;
+  const locked = !(d?.eligibility.canApprove ?? false);
+  const denyLocked = !(d?.eligibility.canDeny ?? false);
+  return (
+    <GateLiveReview
+      approvalId={approvalId}
+      actor={d?.actor ?? "unknown"}
+      policyVersion={d?.policyVersion ?? "unversioned"}
+      quorumMet={d?.quorumMet ?? 0}
+      quorumRequired={d?.quorumRequired ?? 0}
+      sla={d?.sla ?? undefined}
+      status={state.status}
+      reason={state.reason}
+      note={note}
+      onNoteChange={setNote}
+      locked={locked}
+      denyLocked={denyLocked}
+      trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
+      onApprove={() => void decide(approvalId, "APPROVE", note.trim() || "Canary evidence accepted for the live step.", d?.expectedVersion ?? null, { conditions: [] })}
+      onDeny={() => void decide(approvalId, "DENY", note.trim() || "Back to canary observation.", d?.expectedVersion ?? null, { conditions: [] })}
+    />
+  );
+}
 
 export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
   const [selected, setSelected] = useState<CatalogEntry | null>(null);

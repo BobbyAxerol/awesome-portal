@@ -1746,3 +1746,36 @@ catalog · BR-EX-68 open decision 6") + link ngược Accounts; test container m
 suite admin). Lệnh rotation thiếu ở CẢ hi-fi lẫn catalogue rev 2 → ghi vào spec BR-EX-68 §11(6)
 cho codex quyết.
 
+
+### 8.37 Ba màn governance owner-commissioned: entry · live gate · waivers (2026-08-30)
+
+Owner: "Làm luôn... (1) chốt cửa vào vòng đời → (2) Live-gate review → (3)
+Waivers". Cả ba dựng cùng ngày trên đúng grammar `.exec-gov`/`.exec-gate` đã
+có (không palette mới, không type-scale mới):
+
+1. **New approval request** `/governance/approvals/new` — cửa vào vòng đời
+   (§H.2.1). Alpha/run/claim bốc từ registry (rule WF 1i "never free-typed"),
+   summary bắt buộc ≥8 ký tự, panel "What R1 will review" (digest pin, window
+   roles, SoD, SLA 48h). Submit là **declared demo**: xác nhận nói thẳng
+   "nothing was written" → **BR-EX-69** (`POST /approvals`). Link vào từ Inbox
+   gov-head "New request ▸".
+2. **Gate LIVE review** `/governance/approvals/{id}/live` — phòng review riêng
+   cho LIVE_GATE (§H.2.2). Backbone thật: `getGateR2` (eligibility/quorum/SLA/
+   version/decide) — đúng contract đang phục vụ LIVE_GATE rows; evidence canary
+   là smoke `LIVE_GATE` → **BR-EX-70** (drift vs paper twin `LinesChart`, KPI
+   KV, criteria `gate_live rev 3` 5 PASS, capital step trong `.exec-gov-inverse`).
+   `reviewRouteFor(LIVE_GATE)` đổi `/r2` → `/live`; AP-311 links ở canary/live/
+   fleet smoke đổi theo; link ngược R2 AP-152 + Canary Control Room.
+3. **Waivers & Conditions** `/governance/waivers` — sổ điều kiện toàn fleet
+   (§H.2.3). 7 row smoke `WAIVER_ROWS` **mirror điều kiện có sẵn trong cast**
+   (AP-352 capacity, EX-771 slippage carried, AP-259 daily-loss, AP-207 hedge,
+   AP-201 WFO, PX-31 runbook, AP-311 waiver) — không bịa nghĩa vụ mới; filter
+   client-side trên demo rows và nói rõ vậy → **BR-EX-71** (register + LAPSED
+   là server transition, feed CC attention). Link vào từ Inbox head, R2
+   Decision panel, Exit-review Conditions panel.
+
+Routing: 3 route chưa có registry row → claim tạm qua
+`EXECUTION_PREVIEW_EXTRA_ROUTES` (previewRegistry.ts), request codex ở
+HOTFIX_REQUEST_2026-08-30 §2; `previewRegistry.test` ghi danh sách pending
+chính xác (không nới lỏng assertion). Tests mới `governanceAdditions.test.tsx`
+9 case; R2 link-tests cập nhật vì Decision panel thêm link waivers.

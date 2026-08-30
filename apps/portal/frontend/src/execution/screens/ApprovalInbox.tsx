@@ -174,7 +174,9 @@ export function reviewRouteFor(row: { id: string; gate: ApprovalGate }): string 
     case "SANDBOX_EXIT":
       return `/governance/exit-reviews/${row.id}`;
     case "LIVE_GATE":
-      return `/governance/approvals/${row.id}/r2`;
+      // Owner-commissioned 2026-08-30 (ROADMAP §H.2.2): the live gate has its
+      // own review room — canary evidence, not the R2 capital composition.
+      return `/governance/approvals/${row.id}/live`;
   }
 }
 
@@ -355,6 +357,8 @@ export function ApprovalInbox({
         {status === "partial" ? <span className="exec-gov-chip" data-fill="warn">PARTIAL</span> : null}
         <span className="exec-gov-wf">WF 4a</span>
         <span className="exec-gov-spacer" />
+        <a className="exec-gov-headlink" href="/governance/approvals/new">New request ▸</a>
+        <a className="exec-gov-headlink" href="/governance/waivers">Waivers &amp; conditions →</a>
         {policyVersion || actor ? (
           <span className="exec-inbox-policy exec-gov-meta">
             {policyVersion ? `policy ${policyVersion}` : null}

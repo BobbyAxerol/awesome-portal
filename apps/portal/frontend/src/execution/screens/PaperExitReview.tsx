@@ -520,7 +520,7 @@ export function PaperExitReview({
                 </div>
               )}
               <div className="exec-gate-panel exec-px-panel">
-                <ExecutionSectionTitle>Conditions &amp; recommendation</ExecutionSectionTitle>
+                <ExecutionSectionTitle>Conditions &amp; recommendation <a className="exec-gov-headlink" href="/governance/waivers">fleet-wide →</a></ExecutionSectionTitle>
                 <ConditionList conditions={conditions ?? []} emptyNote="No conditions carried into this review." />
                 {recommendation ? (
                   <p className="exec-px-recommend"><b>Recommended next action:</b> {recommendation}</p>
@@ -588,7 +588,7 @@ export function PaperExitReview({
           ) : null}
           {tab === "conditions" ? (
             <div className="exec-gate-panel">
-              <ExecutionSectionTitle>Conditions &amp; recommendation</ExecutionSectionTitle>
+              <ExecutionSectionTitle>Conditions &amp; recommendation <a className="exec-gov-headlink" href="/governance/waivers">fleet-wide →</a></ExecutionSectionTitle>
               <ConditionList conditions={conditions ?? []} emptyNote="No conditions carried into this review." />
             </div>
           ) : null}

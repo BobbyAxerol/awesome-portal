@@ -105,3 +105,110 @@ export const GOV_CHARTS = {
     { stage: "CANARY", state: "needs" as const, detail: "needs sandbox cert 7/7 · dual approval" },
   ],
 } as const;
+
+/* ---------------------------------------------------------------------------
+ * Owner-commissioned governance additions, 2026-08-30 ("làm luôn" pass).
+ * Same deletion discipline as GOV_CHARTS: every block below is a labeled
+ * SMOKE frame with its own backend request, deleted the commit its contract
+ * ships. The cast is the canonical one — no new entity is invented here.
+ * ------------------------------------------------------------------------ */
+
+/** New-request pick lists (WF: loop entry) — DELETE WHEN BR-EX-69 SHIPS.
+ * Registry-picked, never free-typed: the same rule as WF 1i params. */
+export const NEW_REQUEST = {
+  alphas: [
+    { id: "carry", label: "Carry v3.2", note: "research complete · run_5512" },
+    { id: "grid", label: "Grid v2.1", note: "already in loop — dep_94 canary" },
+    { id: "vnmomo", label: "VnMomo v0.9", note: "research complete · run_5320 · DNSE" },
+  ],
+  runs: [
+    { id: "run_5512", label: "run_5512 · 2019-01 → 2026-06 · 1h · fees 4bp", digest: "sha256:41bb7d…c4" },
+    { id: "run_5320", label: "run_5320 · 2021-03 → 2026-06 · session · VN", digest: "sha256:9e12aa…07" },
+  ],
+  claims: [
+    { id: "clm_31", label: "clm_31 · window roles IS/OOS/holdout fixed" },
+    { id: "clm_29", label: "clm_29 · session-buckets, no overnight" },
+  ],
+  slaBudgetHours: 48,
+  policy: "gate_r1 rev 4 · effective 2026-06-15",
+} as const;
+
+/** Live-gate (canary → live) evidence frames — DELETE WHEN BR-EX-70 SHIPS. */
+function canaryDriftSeries() {
+  const day = (i: number) => `2026-08-${String(9 + i).padStart(2, "0")}`;
+  const twin: [string, number][] = [], canary: [string, number][] = [];
+  let a = 1, b = 1;
+  for (let i = 0; i < 21; i += 1) {
+    a *= 1 + 0.0021 + det(i, 11) * 0.006;
+    b *= 1 + 0.0019 + det(i, 12) * 0.006;
+    twin.push([day(i), Number(a.toFixed(4))]);
+    canary.push([day(i), Number(b.toFixed(4))]);
+  }
+  return {
+    series: [
+      { name: "paper twin (dep_94)", tone: "mute" as const, width: 1.6, points: twin },
+      { name: "canary (dep_88)", tone: "accent" as const, width: 2, points: canary },
+    ],
+    foot: "21d · 1d buckets · fill Δ +0.6bp vs twin · envelope breaches 0 · drift.v1",
+  };
+}
+
+export const LIVE_GATE = {
+  approvalId: "AP-311",
+  subject: "Grid v2.1 → BINANCE",
+  canaryHref: "/deployments/live/dep_88/canary",
+  r2Ref: { id: "AP-152", href: "/governance/approvals/AP-152/r2", note: "capital approved at R2" },
+  drift: canaryDriftSeries(),
+  kpis: [
+    { k: "canary window", v: "21d observed · policy min 14d" },
+    { k: "fills", v: "412 · reject 0.2%" },
+    { k: "fill Δ vs paper twin", v: "+0.6bp · band ±2bp" },
+    { k: "slippage p95", v: "1.9bp · model 2.4bp" },
+    { k: "envelope breaches", v: "0", tone: "good" as const },
+    { k: "incidents touching dep_88", v: "0 in window", tone: "good" as const },
+  ],
+  policy: "gate_live rev 3 · effective 2026-07-15 · declared by Risk admin",
+  criteria: [
+    { criterion: "Canary window", threshold: "≥ 14d", observed: "21d", verdict: "PASS" as const },
+    { criterion: "Fill Δ vs paper twin", threshold: "≤ 2.0bp", observed: "+0.6bp", verdict: "PASS" as const },
+    { criterion: "Envelope breaches", threshold: "0", observed: "0", verdict: "PASS" as const },
+    { criterion: "Incident-free window", threshold: "≥ 14d", observed: "21d", verdict: "PASS" as const },
+    { criterion: "Capital step", threshold: "≤ 25% of target", observed: "5,000 → 20,000 (25%)", verdict: "PASS" as const },
+  ],
+  criteriaFoot:
+    "5 PASS · 0 WAIVERABLE · 0 FAIL — verdicts computed against gate_live rev 3; thresholds are admin-declared and versioned",
+  capital: {
+    rows: [
+      { k: "canary allocation (today)", v: "5,000 USDT · acct-canary-grid" },
+      { k: "live step on approval", v: "20,000 USDT · +15,000" },
+      { k: "target allocation", v: "80,000 USDT · reached by later steps, each its own approval" },
+      { k: "ledger", v: "one CANARY_PROMOTE row · movement visible in Capital Ledger" },
+    ],
+    note: "approve grants the 20,000 step only — later steps return here; activation itself is plan → apply → verify by an Operator Admin",
+  },
+} as const;
+
+/** Cross-fleet conditions register — DELETE WHEN BR-EX-71 SHIPS.
+ * Every row mirrors a condition that already exists somewhere in the cast:
+ * nothing here invents an obligation. */
+export type WaiverState = "OPEN" | "WAIVED" | "SATISFIED" | "EXPIRING";
+export interface WaiverRow {
+  id: string;
+  text: string;
+  source: { label: string; href: string };
+  deployment: { label: string; href: string } | null;
+  stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
+  due: string;
+  dueTone: "good" | "warn" | "bad";
+  state: WaiverState;
+  owner: string;
+}
+export const WAIVER_ROWS: readonly WaiverRow[] = [
+  { id: "cn_101", text: "Capacity at target weight 2.4× < 3× — re-measure at 30d live volume", source: { label: "AP-352 · R2", href: "/governance/approvals/AP-352/r2" }, deployment: { label: "dep_74", href: "/deployments/paper/dep_74" }, stage: "PAPER", due: "12d left", dueTone: "good", state: "OPEN", owner: "Lan" },
+  { id: "cn_102", text: "Slippage evidence carries into sandbox certification — measured, not assumed", source: { label: "EX-771 · exit", href: "/governance/exit-reviews/EX-771" }, deployment: { label: "dep_94", href: "/deployments/paper/dep_94" }, stage: "PAPER", due: "at cert", dueTone: "good", state: "OPEN", owner: "Stan" },
+  { id: "cn_103", text: "Daily-loss cap −3.0% while canary runs (risk profile rev 12)", source: { label: "AP-259 · R2", href: "/governance/approvals/AP-259/r2" }, deployment: { label: "dep_88", href: "/deployments/live/dep_88/canary" }, stage: "CANARY", due: "3d left", dueTone: "warn", state: "EXPIRING", owner: "Lan" },
+  { id: "cn_104", text: "Hedge-mode flatten check before NET→HEDGE flip on shared binding", source: { label: "AP-207 · R2", href: "/governance/approvals/AP-207/r2" }, deployment: null, stage: "SANDBOX", due: "no clock", dueTone: "good", state: "OPEN", owner: "Stan" },
+  { id: "cn_105", text: "WFO fold-6 dispersion re-check after 60d live data", source: { label: "AP-201 · R1", href: "/governance/approvals/AP-201/r1" }, deployment: { label: "dep_74", href: "/deployments/paper/dep_74" }, stage: "PAPER", due: "41d left", dueTone: "good", state: "OPEN", owner: "Minh" },
+  { id: "cn_106", text: "VN venue-calendar pause behaviour documented in runbook", source: { label: "PX-31 · exit", href: "/governance/exit-reviews/PX-31" }, deployment: { label: "dep_vnm", href: "/deployments/paper/dep_vnm/vn-market" }, stage: "PAPER", due: "done 08-21", dueTone: "good", state: "SATISFIED", owner: "Stan" },
+  { id: "cn_107", text: "Capacity waiver granted for canary step — expires with gate_live rev change", source: { label: "AP-311 · live gate", href: "/governance/approvals/AP-311/live" }, deployment: { label: "dep_88", href: "/deployments/live/dep_88/canary" }, stage: "CANARY", due: "policy-bound", dueTone: "good", state: "WAIVED", owner: "Lan" },
+] as const;

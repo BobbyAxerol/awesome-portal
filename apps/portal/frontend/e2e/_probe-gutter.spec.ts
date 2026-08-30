@@ -9,6 +9,7 @@ const ROUTES: string[] = [
   "/execution", "/execution/operations", "/execution/operations/incidents/inc_fixture_44",
   "/governance/approvals", "/governance/approvals/AP-201/r1", "/governance/approvals/AP-352/r2",
   "/governance/exit-reviews/EX-771",
+  "/governance/approvals/new", "/governance/approvals/AP-311/live", "/governance/waivers",
   "/deployments/paper", "/deployments/paper/dep_74", "/deployments/paper/dep_vnm/vn-market",
   "/deployments/sandbox", "/deployments/sandbox/dep_77", "/deployments/sandbox/dep_91",
   "/deployments/live/dep_88/canary", "/deployments/live/dep_live", "/deployments/blotter",

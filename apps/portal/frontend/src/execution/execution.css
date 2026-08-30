@@ -6505,3 +6505,15 @@
 @media (prefers-reduced-motion: reduce) {
   .exec-cli-cursor, .exec-cli-check[data-tone="running"], .exec-cli-grantwait, .exec-cli-running { animation: none; }
 }
+
+/* ── Governance additions 2026-08-30 (loop entry · live gate · waivers) —
+   three screens on the existing .exec-gov grammar; only what the grammar
+   lacks is added here. */
+.exec-gov-headlink { font: var(--exec-font-meta); color: var(--accent); text-decoration: none; }
+.exec-gov-headlink:hover { text-decoration: underline; }
+.exec-gov .exec-role-control select, .exec-gov select.exec-role-control { width: 100%; max-width: 100%; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
+.exec-gate-wvfilters { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.exec-gate-wvtable th[scope="row"] { font-weight: 400; overflow-wrap: anywhere; }
+.exec-gate-wvtable td[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-gate-wvtable td[data-tone="bad"] { color: var(--bad); }
+.exec-gov-v[data-tone="good"] { color: var(--good); }
