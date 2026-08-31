@@ -14,7 +14,7 @@ import { SandboxOverview } from "./screens/SandboxOverview";
 import { SandboxCertificationScreen } from "./screens/SandboxCertification";
 import { readSandboxCertification } from "./certification";
 import { SANDBOX_CERTIFICATION_FIXTURE } from "./certification.fixtures";
-import { certSmoke, CERT_SMOKE_DATA, SANDBOX_SMOKE_DATA } from "./sandbox.smoke";
+import { sandboxSmoke, certSmoke, CERT_SMOKE_DATA, SANDBOX_SMOKE_DATA } from "./sandbox.smoke";
 
 afterEach(cleanup);
 
@@ -24,7 +24,7 @@ function overview() {
   return render(
     <MemoryRouter initialEntries={["/deployments/sandbox"]}>
       <Routes>
-        <Route path="/deployments/sandbox" element={<SandboxOverview />} />
+        <Route path="/deployments/sandbox" element={<SandboxOverview demo={sandboxSmoke()} />} />
         <Route path="/deployments/sandbox/:id" element={<div>workbench for the row</div>} />
       </Routes>
     </MemoryRouter>,

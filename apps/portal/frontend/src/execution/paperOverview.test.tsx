@@ -9,7 +9,8 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { PaperOverview } from "./screens/PaperOverview";
-import { PAPER_OVERVIEW, poCells } from "./paper.smoke";
+import { PAPER_OVERVIEW, PAPER_SMOKE_WARNING, paperOverviewDemo } from "./paper.smoke";
+import { poCells } from "./poVisual";
 
 afterEach(cleanup);
 
@@ -17,7 +18,7 @@ function view() {
   return render(
     <MemoryRouter initialEntries={["/deployments/paper"]}>
       <Routes>
-        <Route path="/deployments/paper" element={<PaperOverview />} />
+        <Route path="/deployments/paper" element={<PaperOverview demo={paperOverviewDemo()} demoWarning={PAPER_SMOKE_WARNING} />} />
         <Route path="/deployments/paper/:id" element={<div>workbench</div>} />
         <Route path="/deployments/paper/:id/vn-market" element={<div>vn workbench</div>} />
       </Routes>

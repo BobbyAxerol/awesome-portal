@@ -4,6 +4,7 @@
  * the M7 footer, chart export/cross-filter, and the 10⁵-row residency budget.
  */
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { pfDemo, pfDemoPanels } from "./lab/portfolioDemo";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 import { AlphaThreeSixty } from "./screens/AlphaThreeSixty";
@@ -72,7 +73,7 @@ describe("Portfolio 360 — heatmap, lens and influence from the published matri
     expect(absBucket("0.91")).toBe("4");
     expect(absBucket("-0.65")).toBe("3");
     expect(absBucket("0.05")).toBe("0");
-    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />);
+    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} demo={pfDemo()} demoPanels={pfDemoPanels("PF-CRYPTO", "BTC benchmark", null)} />);
     const tinted = container.querySelectorAll(".exec-pf-matrix td[data-abs]");
     expect(tinted.length).toBeGreaterThan(0);
     expect(container.querySelectorAll('.exec-pf-matrix td[data-self="true"]').length).toBeGreaterThan(0);
@@ -92,7 +93,7 @@ describe("Portfolio 360 — heatmap, lens and influence from the published matri
     expect(container.querySelector("figcaption")!.textContent).toMatch(/\d+ edges/);
   });
   it("ρ timeline and drawdown overlap draw real charts and are labeled as smoke frames", () => {
-    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} />);
+    const { container } = render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360({ tab: "Structure & Correlation" })} demo={pfDemo()} demoPanels={pfDemoPanels("PF-CRYPTO", "BTC benchmark", null)} />);
     const slot = container.querySelector(".exec-alpha-tiles")!;
     expect(slot.querySelectorAll("[data-echart]").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/sustained ρ > 0.6 raises a finding/)).toBeTruthy();

@@ -10,6 +10,7 @@
  * The second is the one that matters. The first proves a design; the second
  * proves it survives contact with the Trading System.
  */
+import { TILE_CHARTS, alphaStageEquity } from "./alpha360.smoke";
 import type {
   AccountingRow,
   AlphaScope,
@@ -162,6 +163,8 @@ const POSITIONS: PositionRow[] = [
 
 export function alpha360(over: Partial<AlphaThreeSixtyData> = {}): AlphaThreeSixtyData {
   return {
+    demoStageSeries: alphaStageEquity(),
+    demoTiles: TILE_CHARTS,
     alphaId: "av_2041",
     alphaName: "Grid v2.1",
     artifactDigest: "sha256:41bb7d…c4",
