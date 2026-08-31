@@ -1,0 +1,1390 @@
+{
+  "schema_version": "execution.command-tasks.v1",
+  "catalogue_revision": 3,
+  "source_catalogue_revision": 2,
+  "relay_state": "DISABLED",
+  "task_groups": [
+    "READ_INSPECT",
+    "PORTFOLIO_CAPITAL",
+    "DEPLOYMENT_RISK",
+    "ACCOUNT",
+    "BROKER_SYNC_RECONCILIATION",
+    "EMERGENCY_DESTRUCTIVE"
+  ],
+  "total_tasks": 24,
+  "classification_counts": {
+    "CONNECTED": 0,
+    "SUPPORTED_BUT_INACTIVE": 14,
+    "SEMANTICALLY_INCOMPATIBLE": 10
+  },
+  "bounds": {
+    "catalogue": 64,
+    "params_per_task": 8,
+    "transcript_lines": 200,
+    "preflight_rows": 10,
+    "verify_rows": 20
+  },
+  "tasks": [
+    {
+      "task_id": "health",
+      "key": null,
+      "task_group": "READ_INSPECT",
+      "task_title": "System health",
+      "tag": "READ",
+      "mode": "READ",
+      "catalog_key": null,
+      "scope": "system",
+      "cli_forms": [],
+      "meta": "Portal-curated task; source operation not published",
+      "params": [
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "UNCLASSIFIED",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": "CATALOG_ENTRY_NOT_PUBLISHED",
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "TYPED_SOURCE_OPERATION_NOT_PUBLISHED",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "inspect",
+      "key": "alpha/inspect",
+      "task_group": "READ_INSPECT",
+      "task_title": "Alpha / account inspect",
+      "tag": "READ",
+      "mode": "READ",
+      "catalog_key": "alpha/inspect",
+      "scope": "account · alpha",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1570",
+      "params": [
+        {
+          "key": "alpha_id",
+          "source_registry": "alphas",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "capital",
+      "key": "capital/history",
+      "task_group": "READ_INSPECT",
+      "task_title": "Capital history",
+      "tag": "READ",
+      "mode": "READ",
+      "catalog_key": "capital/history",
+      "scope": "portfolio · account",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1636",
+      "params": [
+        {
+          "key": "portfolio_id",
+          "source_registry": "portfolios",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "limit",
+          "source_registry": "server_bounds",
+          "constraint": "integer 1..500",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "GET",
+        "path": "/v1/admin/portfolio-capital/history"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "performance",
+      "key": "performance/portfolio",
+      "task_group": "READ_INSPECT",
+      "task_title": "Performance & NAV",
+      "tag": "READ",
+      "mode": "READ",
+      "catalog_key": "performance/portfolio",
+      "scope": "portfolio · account · alpha",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:2034",
+      "params": [
+        {
+          "key": "portfolio_id",
+          "source_registry": "portfolios",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "alpha_id",
+          "source_registry": "alphas",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "sizing",
+      "key": "sizing/history",
+      "task_group": "READ_INSPECT",
+      "task_title": "Sizing explanations",
+      "tag": "READ",
+      "mode": "READ",
+      "catalog_key": "sizing/history",
+      "scope": "alpha",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:2079",
+      "params": [
+        {
+          "key": "alpha_id",
+          "source_registry": "alphas",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "symbol",
+          "source_registry": "symbols",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "limit",
+          "source_registry": "server_bounds",
+          "constraint": "integer 1..500",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "broker-read",
+      "key": "broker/bindings",
+      "task_group": "READ_INSPECT",
+      "task_title": "Broker bindings & exposure",
+      "tag": "READ",
+      "mode": "READ",
+      "catalog_key": "broker/bindings",
+      "scope": "account · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1655",
+      "params": [
+        {
+          "key": "external_account_ref",
+          "source_registry": "bindings",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "redis-inspect",
+      "key": "redis/trading-state",
+      "task_group": "READ_INSPECT",
+      "task_title": "Redis inspection",
+      "tag": "READ",
+      "mode": "READ",
+      "catalog_key": "redis/trading-state",
+      "scope": "venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1936",
+      "params": [
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "DIRECT_REDIS_ACCESS_FORBIDDEN",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "portfolio-create",
+      "key": "portfolio/create",
+      "task_group": "PORTFOLIO_CAPITAL",
+      "task_title": "Create portfolio",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "portfolio/create",
+      "scope": "portfolio",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1592",
+      "params": [
+        {
+          "key": "portfolio_id",
+          "source_registry": "portfolios",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "name",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "base_currency",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "state",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "portfolio-state",
+      "key": "portfolio/state",
+      "task_group": "PORTFOLIO_CAPITAL",
+      "task_title": "Portfolio state",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "portfolio/state",
+      "scope": "portfolio",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1592",
+      "params": [
+        {
+          "key": "portfolio_id",
+          "source_registry": "portfolios",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "state",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "PATCH",
+        "path": "/v1/admin/portfolios/{portfolio_id}/state"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "allocation-change",
+      "key": "allocation/<root>",
+      "task_group": "PORTFOLIO_CAPITAL",
+      "task_title": "Change allocation",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "allocation/<root>",
+      "scope": "portfolio · account",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1617",
+      "params": [
+        {
+          "key": "portfolio_id",
+          "source_registry": "portfolios",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "allocated_capital",
+          "source_registry": "server_bounds",
+          "constraint": "exact decimal string; server policy bound",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "max_capital",
+          "source_registry": "server_bounds",
+          "constraint": "exact decimal string; server policy bound",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "movement_type",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/portfolio-allocations"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "config-plan",
+      "key": "config/plan",
+      "task_group": "PORTFOLIO_CAPITAL",
+      "task_title": "Declarative config plan / apply",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "config/plan",
+      "scope": "system",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1842",
+      "params": [
+        {
+          "key": "config_artifact_id",
+          "source_registry": "artifacts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "deployment-state",
+      "key": "deployment/state",
+      "task_group": "DEPLOYMENT_RISK",
+      "task_title": "Deployment state",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "deployment/state",
+      "scope": "deployment",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1612",
+      "params": [
+        {
+          "key": "deployment_id",
+          "source_registry": "deployments",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "state",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "PATCH",
+        "path": "/v1/admin/deployments/{deployment_id}/state"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "trading-state",
+      "key": "risk/state",
+      "task_group": "DEPLOYMENT_RISK",
+      "task_title": "Trading state per mode/venue",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "risk/state",
+      "scope": "venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1783",
+      "params": [
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "state",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/trading-state"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "risk-profile",
+      "key": "risk/profile",
+      "task_group": "DEPLOYMENT_RISK",
+      "task_title": "Risk profile",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "risk/profile",
+      "scope": "alpha · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1783",
+      "params": [
+        {
+          "key": "alpha_id",
+          "source_registry": "alphas",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "risk_profile_id",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R0_READ",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "SOURCE_ROUTE_MAPPING_AMBIGUOUS",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "alpha-register",
+      "key": "alpha/register",
+      "task_group": "DEPLOYMENT_RISK",
+      "task_title": "Register alpha",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "alpha/register",
+      "scope": "alpha",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1570",
+      "params": [
+        {
+          "key": "alpha_id",
+          "source_registry": "alphas",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "registration_artifact_id",
+          "source_registry": "artifacts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/alphas/register"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "account-policy",
+      "key": "account/policy",
+      "task_group": "ACCOUNT",
+      "task_title": "Account policy",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "account/policy",
+      "scope": "account",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1690",
+      "params": [
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "policy_id",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "expected_revision",
+          "source_registry": "server_bounds",
+          "constraint": "positive integer; optimistic conflict required",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "PUT",
+        "path": "/v1/admin/accounts/{account_id}/policy"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "account-seed-paper",
+      "key": "account/seed-paper",
+      "task_group": "ACCOUNT",
+      "task_title": "Seed paper account",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "account/seed-paper",
+      "scope": "account · alpha · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1690",
+      "params": [
+        {
+          "key": "alpha_id",
+          "source_registry": "alphas",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "currency",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "amount",
+          "source_registry": "server_bounds",
+          "constraint": "exact decimal string; server policy bound",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "account_type",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R1_PAPER_MUTATION",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/accounts/paper/seed"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "account-sync",
+      "key": "account/sync",
+      "task_group": "BROKER_SYNC_RECONCILIATION",
+      "task_title": "Broker account sync",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "account/sync",
+      "scope": "account · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1690",
+      "params": [
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R2_SANDBOX",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/accounts/{account_id}/sync"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "reconcile-positions",
+      "key": "account/reconcile-positions",
+      "task_group": "BROKER_SYNC_RECONCILIATION",
+      "task_title": "Reconcile positions",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "account/reconcile-positions",
+      "scope": "account · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1690",
+      "params": [
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "sync_first",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "apply",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R2_SANDBOX",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/accounts/{account_id}/reconcile-positions"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "reconcile-open-orders",
+      "key": "account/reconcile-open-orders",
+      "task_group": "BROKER_SYNC_RECONCILIATION",
+      "task_title": "Reconcile open orders",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "account/reconcile-open-orders",
+      "scope": "account · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1690",
+      "params": [
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "sync_first",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "apply",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R2_SANDBOX",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/accounts/{account_id}/reconcile-open-orders"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "broker-reconcile",
+      "key": "broker/reconcile-positions",
+      "task_group": "BROKER_SYNC_RECONCILIATION",
+      "task_title": "Aggregate physical reconcile",
+      "tag": "MUTATION",
+      "mode": "MUTATION",
+      "catalog_key": "broker/reconcile-positions",
+      "scope": "account · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1655",
+      "params": [
+        {
+          "key": "external_account_ref",
+          "source_registry": "bindings",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "domain",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "sync_first",
+          "source_registry": "server_bounds",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": false,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R2_SANDBOX",
+        "step_up_required": true,
+        "two_man_rule": false,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N27_COMMAND_TRANSPORT_NOT_ACTIVATED",
+      "source_route": {
+        "method": "POST",
+        "path": "/v1/admin/broker-bindings/{external_account_ref}/reconcile-positions"
+      },
+      "source_request_sent": false
+    },
+    {
+      "task_id": "emergency-close",
+      "key": "ops/emergency-close",
+      "task_group": "EMERGENCY_DESTRUCTIVE",
+      "task_title": "Emergency close",
+      "tag": "DANGER",
+      "mode": "DANGER",
+      "catalog_key": "ops/emergency-close",
+      "scope": "account · alpha · venue",
+      "cli_forms": [],
+      "meta": "cli/__main__.py:1985",
+      "params": [
+        {
+          "key": "account_id",
+          "source_registry": "accounts",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "alpha_id",
+          "source_registry": "alphas",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "mode",
+          "source_registry": "modes",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "venue",
+          "source_registry": "venues",
+          "constraint": "selected from the named server registry/allowlist",
+          "required": true,
+          "default": null
+        },
+        {
+          "key": "reason",
+          "source_registry": "server_bounds",
+          "constraint": "8..2000 UTF-8 characters; credential-like assignments forbidden",
+          "required": false,
+          "default": null
+        }
+      ],
+      "typed_confirm_word": "CLOSE",
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "R3_LIVE_PROTECTIVE",
+        "step_up_required": true,
+        "two_man_rule": true,
+        "plan_required": true,
+        "apply_required": true,
+        "verify_required": true,
+        "runtime_active": false
+      },
+      "unlisted_reason": null,
+      "state": "SUPPORTED_BUT_INACTIVE",
+      "reason_code": "N16B_COMPATIBLE_COMMAND_IDENTITY_NOT_ACTIVATED",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "testnet-hard-reset",
+      "key": null,
+      "task_group": "EMERGENCY_DESTRUCTIVE",
+      "task_title": "Shared testnet hard reset",
+      "tag": "BLOCKED",
+      "mode": "BLOCKED",
+      "catalog_key": null,
+      "scope": "system",
+      "cli_forms": [],
+      "meta": "Portal-curated task; source operation not published",
+      "params": [],
+      "typed_confirm_word": "BINANCE_TESTNET_ONLY",
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "BLOCKED",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": "CATALOG_ENTRY_NOT_PUBLISHED",
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "HOST_DESTRUCTIVE_PROCEDURE_NOT_EXPOSED",
+      "source_route": null,
+      "source_request_sent": false
+    },
+    {
+      "task_id": "lab-reset",
+      "key": null,
+      "task_group": "EMERGENCY_DESTRUCTIVE",
+      "task_title": "Lab reset",
+      "tag": "BLOCKED",
+      "mode": "BLOCKED",
+      "catalog_key": null,
+      "scope": "system",
+      "cli_forms": [],
+      "meta": "Portal-curated task; source operation not published",
+      "params": [],
+      "typed_confirm_word": null,
+      "authority": {
+        "required_role": "ADMIN",
+        "risk_tier": "BLOCKED",
+        "step_up_required": false,
+        "two_man_rule": false,
+        "plan_required": false,
+        "apply_required": false,
+        "verify_required": false,
+        "runtime_active": false
+      },
+      "unlisted_reason": "CATALOG_ENTRY_NOT_PUBLISHED",
+      "state": "SEMANTICALLY_INCOMPATIBLE",
+      "reason_code": "HOST_DESTRUCTIVE_PROCEDURE_NOT_EXPOSED",
+      "source_route": null,
+      "source_request_sent": false
+    }
+  ],
+  "scope": {
+    "workspace_id": "fixture-workspace",
+    "actor_user_id": "fixture-admin",
+    "actor_role": "ADMIN"
+  }
+}

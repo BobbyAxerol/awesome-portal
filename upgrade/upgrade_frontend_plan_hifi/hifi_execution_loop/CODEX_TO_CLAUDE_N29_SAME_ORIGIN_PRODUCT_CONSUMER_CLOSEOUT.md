@@ -1,3 +1,4 @@
+
 # Codex → Claude — N29 Same-Origin Product Consumer Closeout
 
 **Issued:** 2026-08-31  

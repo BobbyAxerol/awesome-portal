@@ -1,0 +1,30 @@
+{
+  "schema_version": "execution.sandbox-overview.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "SANDBOX_BINANCE_USDM",
+  "requested_environment": "sandbox",
+  "source_environment": "sandbox",
+  "composition": "DIRECT_PROFILE_READ",
+  "workspace_id": "ws_primary",
+  "resource": { "kind": "WORKSPACE", "id": "ws_primary" },
+  "read_at": "2026-08-30T12:00:01Z",
+  "as_of": "2026-08-30T12:00:00Z",
+  "state": "ready",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "capabilities": [
+    { "capability_id": "source.deployments", "state": "AVAILABLE", "relations": ["strategy_deployments"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.positions", "state": "AVAILABLE", "relations": ["positions_v2"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.sessions", "state": "AVAILABLE", "relations": ["execution_sessions"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.reconciliation", "state": "EMPTY", "relations": ["reconciliation_findings"], "reason_code": null, "retryable": false }
+  ],
+  "data": {
+    "deployments": [{ "deployment_id": "dep_sandbox_1", "account_id": "acc_sandbox_1", "mode": "sandbox", "venue": "BINANCE" }],
+    "positions": [{ "position_id": "pos_sandbox_1", "account_id": "acc_sandbox_1", "mode": "sandbox", "quantity": "1.25" }],
+    "sessions": [{ "execution_session_id": "ses_sandbox_1", "account_id": "acc_sandbox_1", "mode": "sandbox", "state": "ACTIVE" }],
+    "reconciliation": []
+  },
+  "unavailable_branches": []
+}

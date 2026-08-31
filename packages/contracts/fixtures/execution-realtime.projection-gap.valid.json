@@ -1,6 +1,8 @@
 {
   "event_type": "projection.gap",
   "schema_version": "execution.realtime.v1",
+  "terminal": true,
+  "reconnect_required": false,
   "reason": "slow_consumer",
   "last_good_cursor": "018f0df0-9568-7cc2-babc-76a14ab55d2a:1842",
   "earliest_available_sequence": null,

@@ -18,7 +18,7 @@ import {
   AlphaInsightContainer,
   CorrelationContainer,
   FullBlotterFunnelContainer,
-} from "./screens/containers";
+} from "./lab/insightContainers";
 
 import { createHttpApi } from "./api/httpApi";
 import { createFixtureApi } from "./api/fixtureApi";

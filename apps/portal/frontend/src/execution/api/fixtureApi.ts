@@ -11,7 +11,18 @@
  * the ones in the mapping, not the ones in `fetch`. A fixture that returned
  * finished `ApprovalRow` objects would test nothing.
  */
+import CC_SNAPSHOT_BUSY from "../../../../../../packages/contracts/fixtures/execution-command-center.busy.valid.json";
+import PAPER_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-paper-overview.ready.valid.json";
+import SANDBOX_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-sandbox-overview.ready.valid.json";
+import LIVE_OVERVIEW_EMPTY from "../../../../../../packages/contracts/fixtures/execution-live-overview.empty.valid.json";
+import FULL_BLOTTER_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-full-blotter.partial.valid.json";
+import PAPER_WORKBENCH_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-paper-workbench.partial.valid.json";
+import PAPER_WORKBENCH_VNM_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-paper-workbench-vnm.partial.valid.json";
+import QUERY_ANALYTICS_EMPTY from "../../../../../../packages/contracts/fixtures/execution-query-analytics.empty.valid.json";
+import COMMAND_TASKS from "../../../../../../packages/contracts/fixtures/execution-command-tasks.valid.json";
 import { readKeysetPage } from "../adapter";
+import { readLiveReview, readOperatorTasks, readProfileEnvelope, readQueryAnalytics } from "./profileRead";
+import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail, readDecidedRow, readApprovalCreated, readConditionsPage } from "./rows";
 import {
   readAnalyticsEnvelope,
@@ -514,7 +525,68 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       : null;
   }
 
+  const fixtureRead = <T>(raw: unknown, reader: (r: unknown) => T | null, what: string): Result<T> => {
+    const value = reader(raw);
+    return value !== null && value !== undefined ? { ok: true as const, value } : unavailable(`${what} fixture could not be read.`);
+  };
+
   return {
+    /* N29-FE-01 lab/test port — serves the canonical contract fixtures. */
+    async getCommandCenterSnapshot() {
+      const blocked = gate<unknown>("getCommandCenterSnapshot");
+      if (blocked) return blocked;
+      return { ok: true as const, value: CC_SNAPSHOT_BUSY as unknown };
+    },
+    async getScreenProfile(screenName: "paper" | "sandbox" | "live" | "blotter") {
+      const blocked = gate<ProfileEnvelope>("getScreenProfile");
+      if (blocked) return blocked;
+      const raw = screenName === "paper" ? PAPER_OVERVIEW_READY : screenName === "sandbox" ? SANDBOX_OVERVIEW_READY : screenName === "live" ? LIVE_OVERVIEW_EMPTY : FULL_BLOTTER_PARTIAL;
+      return fixtureRead(raw, readProfileEnvelope, `The ${screenName} overview`);
+    },
+    async getPaperWorkbenchProfile(_deploymentId: string, variant: "paper" | "vnm" = "paper") {
+      const blocked = gate<ProfileEnvelope>("getPaperWorkbenchProfile");
+      if (blocked) return blocked;
+      return fixtureRead(variant === "vnm" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL, readProfileEnvelope, "The paper workbench");
+    },
+    async getQueryAnalytics(_subject: "alphas" | "portfolios", _subjectId: string) {
+      const blocked = gate<QueryAnalytics>("getQueryAnalytics");
+      if (blocked) return blocked;
+      return fixtureRead(QUERY_ANALYTICS_EMPTY, readQueryAnalytics, "The query-analytics envelope");
+    },
+    async getOperatorTasks() {
+      const blocked = gate<OperatorTaskCatalogue>("getOperatorTasks");
+      if (blocked) return blocked;
+      return fixtureRead(COMMAND_TASKS, readOperatorTasks, "The operator task catalogue");
+    },
+    async getLiveReview(approvalId: string) {
+      const blocked = gate<LiveReviewPayload>("getLiveReview");
+      if (blocked) return blocked;
+      // No canonical fixture is published for live-review yet (noted in the
+      // return packet); the lab composes one from the canonical r2 backbone
+      // and the schema's four UNAVAILABLE branches.
+      return fixtureRead(
+        {
+          schema_version: "governance.live-review.v1",
+          approval_id: approvalId,
+          canary_ref: { deployment_id: "dep_88", composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS" },
+          governance_backbone: { ...R2_DETAIL, approval: { ...(R2_DETAIL.approval as object), approval_id: approvalId } },
+          current_source: LIVE_OVERVIEW_EMPTY,
+          derived_branches: [
+            { capability_id: "canary.drift-vs-twin", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
+            { capability_id: "canary.kpis", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
+            { capability_id: "canary.gate-criteria", state: "UNAVAILABLE", reason_code: "N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED" },
+            { capability_id: "canary.capital-step", state: "UNAVAILABLE", reason_code: "N23_CAPITAL_STEP_NOT_PUBLISHED" },
+          ],
+          read_at: "2026-08-31T12:00:00.000Z",
+          actor: { user_id: "usr_lan", username: "Lan", roles: ["ADMIN"] },
+        },
+        readLiveReview,
+        "The live review",
+      );
+    },
+    async getAccountBroker360(_accountId: string) {
+      return unavailable("N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED: the full exposure population is not published; this screen stays typed unavailable.");
+    },
     async createApprovalRequest(input: ApprovalCreateInput): Promise<ApprovalCreateOutcome> {
       const blocked = gate<never>("createApprovalRequest");
       if (blocked && !blocked.ok) return { kind: "failed", status: blocked.status, reason: blocked.reason };

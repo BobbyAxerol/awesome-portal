@@ -12,11 +12,12 @@ import { useState, type ReactNode } from "react";
 import { Hint } from "../components/hint";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { LinesChart } from "../components/marketChart";
-import { canarySmoke, canaryStageSeries, clockZ, exitIn, fmtPlus, useCanaryTick } from "../canary.smoke";
+import { clockZ, fmtPlus } from "../clock";
+import type { CanaryDemo, CanaryStages, CanaryTick } from "../canary.smoke";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
 import { CapGauges, HistogramChart, PositionsTable, SparkTile, StageLinesChart } from "../components/visuals";
-import type { StageVisuals } from "../stage.smoke";
+import type { StageVisuals } from "../stage.types";
 import { SourceTile, StageGuardBand } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
 import {
@@ -58,8 +59,10 @@ type Tab = (typeof TABS)[number];
 
 
 /** Live vs paper vs backtest on one digest, with the canary start marked. */
-function StageLines() {
-  const st = canaryStageSeries();
+function StageLines({ st }: { st: CanaryStages | null }) {
+  if (!st) {
+    return <PanelState status="unavailable" reason="Stage-projection series are not published (BR-EX-59); nothing is drawn from a fixture." />;
+  }
   return (
     <LinesChart
       height={230}
@@ -84,6 +87,10 @@ export function CanaryControlRoomScreen({
   onCopyProvenance,
   visuals,
   children,
+  demo,
+  demoTick,
+  demoStages,
+  demoExitIn,
 }: {
   room: CanaryControlRoom | null;
   status?: PanelStatus;
@@ -93,13 +100,17 @@ export function CanaryControlRoomScreen({
   visuals?: StageVisuals;
   onCopyProvenance?: (full: string) => void;
   children?: ReactNode;
+  demo?: CanaryDemo | null;
+  demoTick?: CanaryTick;
+  demoStages?: CanaryStages | null;
+  demoExitIn?: string;
 }) {
   const [tab, setTab] = useState<Tab>("Envelope");
-  const smoke = canarySmoke();
-  const { now, j } = useCanaryTick();
+  const smoke = demo ?? null;
+  const { now, j } = demoTick ?? { now: new Date(0), j: 0 };
   const secs = now.getTime() / 1000;
   const wsAge = `${(0.4 + (secs % 4.6)).toFixed(1)}s`;
-  const left = exitIn(now);
+  const left = demoExitIn ?? "—";
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-canary">
@@ -217,7 +228,7 @@ export function CanaryControlRoomScreen({
                     {/* A real chart, not a stand-in: three stages joined by the
                         artifact digest, differentiated by line style — never by
                         colour alone — with the canary start marked in time. */}
-                    <StageLines />
+                    <StageLines st={demoStages ?? null} />
                   </div>
                   <footer className="exec-pf2-foot">{smoke.chart.foot}</footer>
                 </section>

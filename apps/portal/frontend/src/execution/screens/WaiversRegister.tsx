@@ -15,7 +15,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import type { ConditionRow, ConditionsPage, ExecutionApi, WaiverStateCode } from "../api/ports";
-import { useInboxTick } from "../approvalInbox.smoke";
+import { useInboxTick } from "../liveTick";
 import { ExecutionDecisionStrip } from "../components/workspace";
 import { PanelState } from "../components/states";
 import { reviewRouteFor, type ApprovalGate } from "./ApprovalInbox";

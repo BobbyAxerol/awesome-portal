@@ -12,11 +12,11 @@
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { BarsChart } from "../components/marketChart";
-import { liveSmoke } from "../live.smoke";
+import type { LiveDemo } from "../live.smoke";
 import { PanelState } from "../components/states";
 import { EquityChart } from "../components/EquityChart";
 import { CapGauges, DailyBarsChart, HistogramChart, PositionsTable, SparkTile } from "../components/visuals";
-import type { StageVisuals } from "../stage.smoke";
+import type { StageVisuals } from "../stage.types";
 import { SourceTile, StageGuardBand } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
 import { ExecutionContextRail, ExecutionDecisionStrip, ExecutionProvenanceDrawer, ExecutionTabs, ExecutionWorkspace, shortDigest, type RailBlocker } from "../components/workspace";
@@ -55,8 +55,10 @@ export function LiveFullOperationsScreen({
   onCopyProvenance,
   visuals,
   children,
+  demo,
 }: {
   live: LiveFullOperations | null;
+  demo?: LiveDemo | null;
   status?: PanelStatus;
   reason?: string;
   /** Stage visuals (smoke until BR-EX-41). Absent = honest states only. */
@@ -80,7 +82,7 @@ export function LiveFullOperationsScreen({
     );
   }
   const rules = liveGuardRules(live);
-  const smoke = liveSmoke();
+  const smoke = demo ?? null;
   const policy = live.commandPolicy;
   const gap = live.projectionContinuity?.gapDetected ?? null;
   const consistency = live.brokerConsistency;

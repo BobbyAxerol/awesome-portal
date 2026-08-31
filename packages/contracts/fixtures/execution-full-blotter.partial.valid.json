@@ -1,0 +1,10 @@
+{
+  "schema_version": "execution.full-blotter.v1", "record_authority": "PORTAL_CONTROL", "source_authority": "TRADING_SYSTEM", "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_fixture", "read_at": "2026-08-30T12:00:01Z", "as_of": "2026-08-30T12:00:00Z", "state": "ready", "freshness": "FRESH", "completeness": "COMPLETE",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "capabilities": [{ "capability_id": "blotter.exact-query", "state": "UNAVAILABLE", "relations": ["exact_total", "filters", "sort", "aggregates"], "reason_code": "N25_EXACT_QUERY_NOT_ACTIVE", "retryable": false }],
+  "data": {
+    "orders": [{ "order_id": "ord_1", "mode": "paper", "quantity": "1.25" }], "fills": [], "conditional_groups": [], "conditional_legs": [], "sessions": [], "reconciliation": [], "command_journal": [],
+    "page": { "limit": 50, "next_cursor": null, "previous_cursor": null }, "exact_total": null, "aggregates": null
+  }
+}

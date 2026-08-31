@@ -90,3 +90,5 @@ export function sparkSeries(sp: readonly number[], scale: number, off: number): 
     Number((v * scale - off).toFixed(2)),
   ]);
 }
+
+export type LiveDemo = NonNullable<ReturnType<typeof liveSmoke>>;

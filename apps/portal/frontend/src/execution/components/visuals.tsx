@@ -10,7 +10,7 @@ import type { EChartsOption } from "echarts";
 import { EChart } from "../../charts/EChart";
 import { baseOption, chartTokens } from "../../charts/theme";
 import { activeTheme } from "../../styles/tokens";
-import type { CapGaugeItem, DailyBar, Histogram, OrderTypeRow, PositionRow, Spark, StageLine } from "../stage.smoke";
+import type { CapGaugeItem, DailyBar, Histogram, OrderTypeRow, PositionRow, Spark, StageLine } from "../stage.types";
 import { EnvelopeCaption } from "./EquityChart";
 import type { ChartEnvelope } from "../contracts";
 

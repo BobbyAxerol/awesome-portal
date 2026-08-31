@@ -27,7 +27,7 @@ import { EvidencePanel, SlaCell, type EvidenceRow } from "../components/evidence
 import { LifecycleRail, type RailStep } from "../components/lifecycle";
 import { PanelState } from "../components/states";
 import { useState } from "react";
-import { paperSmoke, PAPER_SMOKE_WARNING } from "../paper.smoke";
+import type { PaperDemo } from "../paper.smoke";
 import { ExecutionDecisionBar } from "../components/decisionBar";
 import { ExecutionSectionTitle } from "../components/typography";
 import {
@@ -161,6 +161,7 @@ export function PaperExitReview({
   onDecide,
   onCopyProvenance,
   trail,
+  demo,
 }: {
   reviewId: ApprovalId;
   deploymentId: DeploymentId;
@@ -213,11 +214,12 @@ export function PaperExitReview({
   onCopyProvenance: (full: string) => void;
   /** DecisionTrail from the container while a decision is in flight. */
   trail?: ReactNode;
+  demo?: PaperDemo | null;
 }) {
   const [tab, setTab] = useState<ExitTab>("evidence");
   const [note, setNote] = useState("");
   const [copied, setCopied] = useState(false);
-  const smoke = paperSmoke();
+  const smoke = demo ?? null;
   if (status !== "ok" && status !== "partial" && status !== "stale") {
     return (
       <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
@@ -511,7 +513,7 @@ export function PaperExitReview({
                   ) : (
                     activationPlan
                   )}
-                  <p className="exec-px-plannote">{smoke.exit.planNote}</p>
+                  <p className="exec-px-plannote">{smoke?.exit.planNote}</p>
                 </div>
               ) : (
                 <div className="exec-gate-panel exec-px-panel">
@@ -595,7 +597,7 @@ export function PaperExitReview({
           </>
         </ExecutionTabs>
         )}
-        {smoke ? <p className="exec-af-smoke">! {PAPER_SMOKE_WARNING}</p> : null}
+        {smoke ? <p className="exec-af-smoke">! {smoke.warning}</p> : null}
         <ExecutionDecisionBar
           label={`Paper exit decision ${reviewId}`}
           verdict={decided ? EXIT_OUTCOME[decided.outcome].label : promoteBlocked && extendBlocked && rejectBlocked ? "BLOCKED" : promoteBlocked ? "PROMOTE BLOCKED" : "READY"}

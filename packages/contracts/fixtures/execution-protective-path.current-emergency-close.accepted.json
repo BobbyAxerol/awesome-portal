@@ -1,0 +1,93 @@
+{
+  "schema_version": "portal.execution.protective-path-current.v1",
+  "phase": "N16B",
+  "status": "CURRENT_PRIMITIVE_COMPATIBILITY_ACCEPTED",
+  "source": {
+    "authority": "TRADING_SYSTEM_CURRENT",
+    "source_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+    "gateway_image": "tradingsystem-image:sha-8b88daa61e3",
+    "gateway_digest": "sha256:4f63dc9949f8102714ab0ee9391757dee3a704135be6680cc2a96d89f54a1db9",
+    "runtime_profile": "LIVE_BINANCE_USDM_HALTED"
+  },
+  "immutable_bindings": {
+    "command_catalog_sha256": "sha256:74a59d0042ea254717b1831fd93da153de99e83258a6d8fe57b01478d7990122",
+    "openapi_sha256": "sha256:c4f6530981752cb9a9610b704416ee422094abc89c1d63d96ceb7918b38a19f6",
+    "request_contracts_sha256": "sha256:fea6a04cf5a499a431897e8451a7b07825ab5470960b0f61a40e0a2c576d22be",
+    "response_shapes_sha256": "sha256:f7710023ffd0d4fe36475d505b23b66bb4bb0968e97eca125b2341a46eccc51b",
+    "n15b_acceptance_sha256": "sha256:64d881eefc901174a0b4e1a16767b6b64924aa72368533d3d24390f1abebfda8",
+    "n16a_profile_sha256": "sha256:83c4e12e91e8f5788f882670ed41a82c6ea81463e896d33f5ee393109ebc51e8"
+  },
+  "identity_boundary": {
+    "edge_identity": "portal-execution-command",
+    "read_identity_forbidden": true,
+    "authentication": "MTLS_AND_ONE_OPERATION_DELEGATED_JWT",
+    "delegated_scope": "execution.command.live.protective",
+    "delegated_resource": "execution:command:LIVE_FULL:ACCOUNT:{account_id}:live.emergency-close",
+    "jwt_maximum_ttl_seconds": 60,
+    "source_credential_server_side_only": true,
+    "browser_internal_hostname_visible": false,
+    "browser_source_credential_visible": false
+  },
+  "accepted_mapping": {
+    "capability_id": "live.emergency-close",
+    "catalog_key": "ops/emergency-close",
+    "environment": "LIVE_FULL",
+    "risk_tier": "R3_LIVE_PROTECTIVE",
+    "effect": "PROTECTIVE",
+    "target_types": ["ACCOUNT"],
+    "mode": "live",
+    "venue": "BINANCE",
+    "product": "USD_M",
+    "plan": "GET /v1/admin/ops/emergency-close/plan",
+    "apply": "POST /v1/admin/ops/emergency-close",
+    "operation": "GET /v1/admin/ops/emergency-close/{operation_id}",
+    "verify": "POST /v1/admin/ops/emergency-close/{operation_id}/verify",
+    "maximum_request_bytes": 16384,
+    "maximum_response_bytes": 262144,
+    "source_idempotent": false,
+    "portal_idempotency_required": true,
+    "automatic_retry_after_dispatch": false,
+    "requires_webauthn": true,
+    "distinct_approver_count": 2
+  },
+  "capability_classification": [
+    { "capability_id": "paper.halt", "state": "SUPPORTED_BUT_NOT_ACTIVATED", "reason_code": "CURRENT_STATE_ROUTE_LACKS_PLAN_VERIFY_AND_TARGET_VERSION" },
+    { "capability_id": "paper.cancel-open-orders", "state": "SOURCE_DOES_NOT_CURRENTLY_EXIST", "reason_code": "RECONCILE_OPEN_ORDERS_IS_NOT_CANCEL_OPEN_ORDERS" },
+    { "capability_id": "sandbox.halt", "state": "SUPPORTED_BUT_NOT_ACTIVATED", "reason_code": "CURRENT_STATE_ROUTE_LACKS_PLAN_VERIFY_AND_TARGET_VERSION" },
+    { "capability_id": "sandbox.cancel-open-orders", "state": "SOURCE_DOES_NOT_CURRENTLY_EXIST", "reason_code": "RECONCILE_OPEN_ORDERS_IS_NOT_CANCEL_OPEN_ORDERS" },
+    { "capability_id": "live.halt", "state": "SUPPORTED_BUT_NOT_ACTIVATED", "reason_code": "CURRENT_TRADING_STATE_ROUTE_LACKS_PLAN_VERIFY_AND_TARGET_VERSION" },
+    { "capability_id": "live.reduce", "state": "SOURCE_DOES_NOT_CURRENTLY_EXIST", "reason_code": "NO_EXACT_BOUNDED_REDUCE_PRIMITIVE" },
+    { "capability_id": "live.emergency-close", "state": "ACCEPTED_CURRENT_PRIMITIVE", "reason_code": "EXACT_PLAN_APPLY_OPERATION_VERIFY_CHAIN_CONFIRMED" },
+    { "capability_id": "live.resume", "state": "SUPPORTED_BUT_NOT_ACTIVATED", "reason_code": "R4_CANNOT_INHERIT_PROTECTIVE_BREAK_GLASS" },
+    { "capability_id": "live.scale", "state": "SUPPORTED_BUT_NOT_ACTIVATED", "reason_code": "R4_CANNOT_INHERIT_PROTECTIVE_BREAK_GLASS" }
+  ],
+  "terminal_reconciliation": {
+    "source_states": ["PLANNED", "INTENTS_QUEUED", "PARTIAL", "VERIFIED", "FAILED"],
+    "terminal_states": ["VERIFIED", "FAILED", "PARTIAL"],
+    "http_200_is_terminal": false,
+    "operation_id_required": true,
+    "verify_required": true,
+    "partial_is_failure_visible": true,
+    "ambiguous_becomes_uncertain": true,
+    "retry_while_uncertain": false
+  },
+  "runtime_authority": {
+    "compatibility_contract_accepted": true,
+    "command_transport_enabled": false,
+    "source_call_authorized": false,
+    "public_route_enabled": false,
+    "live_mutation_authorized": false,
+    "trading_system_changed": false,
+    "runtime_probe_executed": false
+  },
+  "rollback": {
+    "scope": "N16B_CURRENT_PROTECTIVE_COMPATIBILITY_ONLY",
+    "steps": [
+      "DISABLE_LIVE_PROTECTIVE_COMMAND_FLAG",
+      "REVOKE_COMMAND_DELEGATION_ISSUER",
+      "RESTORE_PREVIOUS_EDGE_RELEASE_DIGEST",
+      "VERIFY_COMMANDS_TYPED_UNAVAILABLE_AND_NO_SOURCE_CALL"
+    ],
+    "database_restore_required": false
+  }
+}

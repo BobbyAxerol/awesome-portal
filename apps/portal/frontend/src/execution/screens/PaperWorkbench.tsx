@@ -25,7 +25,7 @@ import { Fragment, useState, type ReactNode } from "react";
 import { clockOf, corrSeries, paperCandles, paperSmoke, paperVariant, researchBand, untilVnOpen, usePaperTick, vnSessions, PAPER_SMOKE_WARNING } from "../paper.smoke";
 import { CandlesChart, LinesChart } from "../components/marketChart";
 import { CapGauges, HistogramChart, SparkTile } from "../components/visuals";
-import type { StageVisuals } from "../stage.smoke";
+import type { StageVisuals } from "../stage.types";
 
 import type {
   ChartEnvelope,

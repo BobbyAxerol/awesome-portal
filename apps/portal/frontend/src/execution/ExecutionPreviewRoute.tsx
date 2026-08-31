@@ -1,43 +1,35 @@
 /**
- * Safe product-route preview for the seventeen reviewed Execution screens.
+ * Product route for the Execution screens (N29-FE-01).
  *
- * Every read goes through `createFixtureApi`; no HTTP adapter, EventSource or
- * Trading System client is constructed here. Interactive governance and
- * triage actions exercise the real plan/apply/poll UI against an in-memory
- * fixture response whose source-side-effect flag is false.
+ * Every read goes through the same-origin HTTP adapter against the declared
+ * BFF routes. No query parameter and no registry profile flag may swap real
+ * financial data for a fixture on a product route; screens whose contract is
+ * not published render a typed unavailable state instead.
  */
 import { useEffect, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { AlphaFleet } from "./screens/AlphaFleet";
-import { AccountsBindings } from "./screens/AccountsBindings";
-import { BindingDetail } from "./screens/BindingDetail";
-import { LiveOverview } from "./screens/LiveOverview";
-import { SandboxOverview } from "./screens/SandboxOverview";
-import { PaperOverview } from "./screens/PaperOverview";
+import {
+  AccountBroker360Container,
+  AccountsBindingsUnavailable,
+  AlphaFleetUnavailable,
+  CommandCenterSnapshotContainer,
+  PaperWorkbenchContainer,
+  QueryAnalyticsContainer,
+  StageOverviewContainer,
+} from "./screens/profileContainers";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
 
-import { createFixtureApi } from "./api/fixtureApi";
 import { createHttpApi } from "./api/httpApi";
 import type { DeliveryPolicy } from "./profile";
-import { CC_FIXTURES } from "./commandCenter.fixtures";
 import { NewApprovalRequestContainer } from "./screens/NewApprovalRequest";
 import { WaiversRegisterContainer } from "./screens/WaiversRegister";
-import { readCommandCenter } from "./commandCenter";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
-import {
-  AccountBroker360Preview,
-  AlphaThreeSixtyPreview,
-  FullBlotterPreview,
-  PaperWorkbenchPreview,
-  PortfolioThreeSixtyPreview,
-} from "./previewControllers";
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
   CanaryControlRoomContainer,
-  CommandCenterLive,
   GateR1ReviewContainer,
   GateR2ReviewContainer,
   IncidentDetailContainer,
@@ -48,7 +40,8 @@ import {
   GateLiveReviewContainer,
 } from "./screens/containers";
 
-const QUEUE_NOW = new Date("2026-08-23T09:05:00.000Z");
+// Product truth: the operations clock is the real one (frozen by the e2e
+// harness where determinism is required).
 
 const GOVERNANCE_SCREENS = new Set([
   "EXECUTION_APPROVAL_INBOX_SCREEN",
@@ -129,24 +122,6 @@ function PreviewFrame({ screenId, profile, children }: { screenId: string; profi
 }
 
 
-/**
- * `?api=http` browser-smoke escape (N29 acceptance): lets the preview drive
- * the same-origin BFF before the registry publishes a policy for a screen.
- * It loosens only the CLIENT's courtesy gate — the server keeps enforcing
- * origin, session, CSRF and workspace on every call, which is the point of
- * the smoke.
- */
-const BROWSER_SMOKE_POLICY: DeliveryPolicy = {
-  policyRevision: 0,
-  queryEnabled: true,
-  projectionIngestionEnabled: false,
-  sseEnabled: false,
-  governanceWriteEnabled: true,
-  paperCommandsEnabled: false,
-  sandboxCommandsEnabled: false,
-  liveProtectiveCommandsEnabled: false,
-  liveRiskIncreasingCommandsEnabled: false,
-};
 
 export function ExecutionPreviewRoute({ screenId, profile = null, policy = null }: { screenId: string; profile?: string | null; policy?: DeliveryPolicy | null }) {
   const params = useParams();
@@ -155,16 +130,11 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   // N29: the preview finally owns an HTTP consumer. The registry's delivery
   // profile decides; `?api=http` forces the same-origin BFF for the browser
   // smoke (preview builds only — this route exists only behind the flag).
-  const wantsHttp = profile !== null && profile !== "fixture";
-  const forceHttp = search.get("api") === "http";
-  const api = useMemo(
-    () =>
-      wantsHttp || forceHttp
-        ? createHttpApi({ policy: policy ?? (forceHttp ? BROWSER_SMOKE_POLICY : null) })
-        : createFixtureApi(),
-    [wantsHttp, forceHttp, policy],
-  );
-  const commandCenter = useMemo(() => readCommandCenter(CC_FIXTURES.busy), []);
+  // N29-FE-01: the product transport is the same-origin BFF, unconditionally.
+  // No query parameter and no registry profile flag may swap real financial
+  // data for a fixture on a product route; the fixture port lives on only in
+  // unit tests and the fixture lab.
+  const api = useMemo(() => createHttpApi({ policy }), [policy]);
 
   const { setEntityLabel } = usePresentation();
   const approvalId = params.approvalId ?? (screenId.includes("R2") ? "AP-352" : "AP-201");
@@ -205,10 +175,10 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   let content: ReactNode;
   switch (screenId) {
     case "EXECUTION_COMMAND_CENTER_SCREEN":
-      content = commandCenter ? <CommandCenterLive snapshot={commandCenter} /> : null;
+      content = <CommandCenterSnapshotContainer api={api} />;
       break;
     case "EXECUTION_OPERATIONS_QUEUE_SCREEN":
-      content = <OperationsQueueContainer api={api} now={QUEUE_NOW} />;
+      content = <OperationsQueueContainer api={api} now={new Date()} />;
       break;
     case "EXECUTION_INCIDENT_DETAIL_SCREEN":
       content = <IncidentDetailContainer api={api} incidentId={incidentId} />;
@@ -236,20 +206,20 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = <PaperExitReviewContainer api={api} reviewId={reviewId} />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
-      content = <PaperWorkbenchPreview deploymentId={deploymentId} variant="vnm" />;
+      content = <PaperWorkbenchContainer api={api} deploymentId={deploymentId} variant="vnm" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
       // Feature canonical route (/deployments/paper) = the paper list, entry
       // of WF 1c; /:deploymentId opens that deployment's workbench. The
       // sidebar must never land an operator inside one alpha unasked.
-      content = params.deploymentId ? <PaperWorkbenchPreview deploymentId={deploymentId} /> : <PaperOverview />;
+      content = params.deploymentId ? <PaperWorkbenchContainer api={api} deploymentId={deploymentId} /> : <StageOverviewContainer api={api} screen="paper" />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       // Feature canonical route (/deployments/sandbox) = the sandbox overview,
       // entry screen of WF 1d; /:deploymentId opens that certification.
       content = params.deploymentId
         ? <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
-        : <SandboxOverview />;
+        : <StageOverviewContainer api={api} screen="sandbox" />;
       break;
     case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
       content = <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />;
@@ -257,28 +227,28 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
       // Feature canonical route (/deployments/live) = the live overview, entry
       // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
-      content = params.deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverview />;
+      content = params.deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <StageOverviewContainer api={api} screen="live" />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
-      content = <FullBlotterPreview initialFilter="ALL" />;
+      content = <StageOverviewContainer api={api} screen="blotter" />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
-      content = params.alphaId ? <AlphaThreeSixtyPreview alphaId={params.alphaId} /> : <AlphaFleet />;
+      content = params.alphaId ? <QueryAnalyticsContainer api={api} subject="alphas" subjectId={params.alphaId} /> : <AlphaFleetUnavailable />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
-      content = <PortfolioThreeSixtyPreview portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
+      content = <QueryAnalyticsContainer api={api} subject="portfolios" subjectId={params.portfolioId ?? "PF-CRYPTO"} />;
       break;
     case "EXECUTION_ACCOUNT_BROKER_360_SCREEN":
       // Feature canonical route (/deployments/accounts) = the bindings list,
       // entry screen of WF 1g; ?binding= opens a binding; /:accountId opens
       // the account's 360.
       content = params.accountId
-        ? <AccountBroker360Preview accountId={params.accountId} />
+        ? <AccountBroker360Container api={api} accountId={params.accountId} />
         : search.get("binding")
-          ? <BindingDetail bindingId={search.get("binding")!} />
-          : <AccountsBindings />;
+          ? <AccountsBindingsUnavailable bindingId={search.get("binding")} />
+          : <AccountsBindingsUnavailable />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = <AdminCatalogueContainer api={api} />;

@@ -175,3 +175,5 @@ export const LIVE_GATE = {
 /* NEW_REQUEST and WAIVER_ROWS smoke retired 2026-08-31 — the N29 consumer
  * reads `governance.approval-create.v1` and `governance.conditions-register.v1`
  * through the port (codex handoff, items 4/5/7). */
+
+export type LiveGateDemo = typeof LIVE_GATE;

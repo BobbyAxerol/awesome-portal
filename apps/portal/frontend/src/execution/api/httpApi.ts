@@ -56,6 +56,8 @@ import type {
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
 import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
 import { readApprovalCreated, readConditionsPage } from "./rows";
+import { readLiveReview, readOperatorTasks, readProfileEnvelope, readQueryAnalytics } from "./profileRead";
+import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
@@ -236,6 +238,48 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
   };
 
   /** N29 consumer — `GET /governance/waivers`: exact counts, both cursors. */
+  /**
+   * N29-FE-01: one shape for every same-origin GET consumer — fetch, typed
+   * problem on !ok, reader on the body, unavailable when the body cannot be
+   * read. No client-side policy pre-block: the server is the enforcer and a
+   * refusal arrives as its own typed status (the registry's stale
+   * delivery-policy metadata is codex's amendment, not a reason to fake).
+   */
+  const readGet = async <T>(path: string, reader: (raw: unknown) => T | null, what: string): Promise<Result<T>> => {
+    let response: Response;
+    try {
+      response = await get(path, signal);
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* reader fails closed below */ }
+    const value = reader(body);
+    return value !== null && value !== undefined
+      ? { ok: true as const, value }
+      : unavailable(`${what} response could not be read.`);
+  };
+
+  const getCommandCenterSnapshot = () =>
+    readGet("/command-center", (raw) => raw as unknown, "The command-center snapshot");
+  const getScreenProfile = (screenName: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/screens/${screenName}`, readProfileEnvelope, `The ${screenName} overview`);
+  const getPaperWorkbenchProfile = (deploymentId: string, variant: "paper" | "vnm" = "paper"): Promise<Result<ProfileEnvelope>> =>
+    readGet(
+      `/screens/paper/${encodeURIComponent(deploymentId)}${variant === "vnm" ? "/vn-market" : ""}`,
+      readProfileEnvelope,
+      "The paper workbench",
+    );
+  const getQueryAnalytics = (subject: "alphas" | "portfolios", subjectId: string): Promise<Result<QueryAnalytics>> =>
+    readGet(`/${subject}/${encodeURIComponent(subjectId)}/query-analytics`, readQueryAnalytics, "The query-analytics envelope");
+  const getOperatorTasks = (): Promise<Result<OperatorTaskCatalogue>> =>
+    readGet("/commands/tasks", readOperatorTasks, "The operator task catalogue");
+  const getLiveReview = (approvalId: string): Promise<Result<LiveReviewPayload>> =>
+    readGet(`/governance/approvals/${encodeURIComponent(approvalId)}/live`, readLiveReview, "The live review");
+  const getAccountBroker360 = (accountId: string): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/screens/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account 360");
+
   const getWaivers = async (query: WaiverQuery = {}): Promise<Result<ConditionsPage>> => {
     const blocked = readBlocked();
     if (blocked) return unavailable(blocked);
@@ -285,6 +329,13 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
   return {
     createApprovalRequest,
     getWaivers,
+    getCommandCenterSnapshot,
+    getScreenProfile,
+    getPaperWorkbenchProfile,
+    getQueryAnalytics,
+    getOperatorTasks,
+    getLiveReview,
+    getAccountBroker360,
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);

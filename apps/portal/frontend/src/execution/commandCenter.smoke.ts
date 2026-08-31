@@ -122,16 +122,9 @@ export function useSmokeTick(everyMs = 1000): number {
   return tick;
 }
 
-/** ISO as_of advanced by `seconds`, printed without milliseconds. */
-export function advanceAsOf(asOf: string | null, seconds: number): string | null {
-  if (!asOf) return null;
-  const t = Date.parse(asOf);
-  if (!Number.isFinite(t)) return asOf;
-  return new Date(t + seconds * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
-}
 
 /** deterministic jitter in [-1, 1] from the tick */
-export function jitter(tick: number, seed = 1): number {
-  const x = Math.sin(tick * 12.9898 + seed * 78.233) * 43758.5453;
-  return (x - Math.floor(x)) * 2 - 1;
-}
+
+export { advanceAsOf, jitter } from "./clock";
+
+export type CcDemo = NonNullable<ReturnType<typeof ccSmoke>>;

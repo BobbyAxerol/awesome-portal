@@ -1,0 +1,8 @@
+{
+  "schema_version": "execution.paper-workbench-vnm.v1", "record_authority": "PORTAL_CONTROL", "source_authority": "TRADING_SYSTEM", "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_fixture", "read_at": "2026-08-30T12:00:01Z", "as_of": "2026-08-30T12:00:00Z", "state": "ready", "freshness": "FRESH", "completeness": "COMPLETE",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "resource": { "kind": "DEPLOYMENT", "id": "dep_1" },
+  "capabilities": [{ "capability_id": "venue.calendar", "state": "UNAVAILABLE", "relations": ["session_shading"], "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE", "retryable": false }],
+  "data": { "deployment": { "deployment_id": "dep_1", "mode": "paper" }, "deployments": [{ "deployment_id": "dep_1", "mode": "paper" }], "positions": [], "orders": [], "fills": [], "performance": [], "account_equity": [], "portfolio_equity": [] }
+}

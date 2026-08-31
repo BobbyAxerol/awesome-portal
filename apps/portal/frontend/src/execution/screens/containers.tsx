@@ -2,12 +2,10 @@
  * Containers — where the port meets the screens.
  *
  * The screens themselves take props and know nothing about transport. These
- * components own the calls, and they exist now, before `EX-BE-05a`, because the
- * wiring is the part with the interesting mistakes in it: what a failure maps
- * to, when a 202 stops being interesting, whether a filter change discards a
- * cursor. Building that against `createFixtureApi` and swapping in
- * `createHttpApi` later is a one-line change; discovering it against a live
- * endpoint under time pressure is not.
+ * components own the calls: what a failure maps to, when a 202 stops being
+ * interesting, whether a filter change discards a cursor. They take the port
+ * as a prop, so the product route hands them the same-origin HTTP adapter and
+ * the fixtures lab hands them its own — the wiring never changes shape.
  *
  * One rule runs through all of it: a `Result` that is not `ok` becomes a panel
  * state with the server's reason attached. It never becomes an empty list, and
@@ -32,15 +30,10 @@ import {
   shouldPoll,
   type DecisionState,
 } from "../decision";
-import type { ReactNode } from "react";
 
-import type { CapitalPreviewInput, ExecutionApi, InsightBatchInput, Result } from "../api/ports";
-import type { CapitalLedger, InsightBatch } from "../analytics";
-import { OrderFunnelStrip } from "./FullBlotter";
+import type { CapitalPreviewInput, ExecutionApi, Result } from "../api/ports";
+import type { LiveReviewPayload } from "../api/profileRead";
 import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
-import type { CliOutcome, CliRole } from "../adminCli.smoke";
-import { HeadroomBanner } from "./AccountBroker360";
-import { CorrelationPanel } from "./PortfolioThreeSixty";
 import {
   OperationsQueueScreen,
   TriagePanel,
@@ -50,7 +43,7 @@ import { IncidentDetailScreen } from "./IncidentDetail";
 import { SandboxCertificationScreen } from "./SandboxCertification";
 import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
-import { STAGE_SMOKE, stageVisuals } from "../stage.smoke";
+import type { StageVisuals } from "../stage.types";
 import { CommandCenterScreen } from "./CommandCenter";
 import { GateLiveReview } from "./GateLiveReview";
 import { canonicalHref } from "../links";
@@ -58,10 +51,8 @@ import { useCommandCentreStream } from "../commandCenterStream";
 import type { CommandCenter } from "../commandCenter";
 import type { SseFactory } from "../sse";
 import { workflowEffectText, type QueueRow, type WorkflowResult } from "../operations";
-import { PanelState } from "../components/states";
-import { aggregateHeadroomFrom, envelopeFromAnalytics } from "../analytics";
 import type { CatalogEntry } from "../adminCatalog";
-import { capitalDeltasFromPreview } from "../api/rows";
+import { capitalDeltasFromPreview, readGateR2Detail } from "../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../api/rows";
 import type { AnalyticsEnvelope, CapitalPreview } from "../analytics";
 
@@ -142,7 +133,7 @@ export const INBOX_SCOPE_SORT = "sla_due_at:asc,approval_id:asc";
  * a closure changes identity every render and depending on it would re-fetch
  * forever.
  */
-function useAnalyticsRead<T>(
+export function useAnalyticsRead<T>(
   read: () => Promise<Result<T>>,
   deps: readonly unknown[],
 ): LoadState<T> {
@@ -899,139 +890,6 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
   );
 }
 
-/* ---------------------------------------------------------------------------
- * The four analytics screens
- *
- * Each screen was reachable only by passing it props, which meant the port
- * method, the reader and the screen had never been joined anywhere — the join
- * is where a route typo or a mismapped state actually shows up.
- *
- * They stay on Lane A. These containers take an `api`, and the fixtures page
- * hands them the fixture port; nothing here mounts a product route or enables a
- * registry flag.
- * ------------------------------------------------------------------------ */
-
-export function FullBlotterFunnelContainer({
-  api,
-  orderId,
-}: {
-  api: ExecutionApi;
-  orderId: string;
-}) {
-  const state = useAnalyticsRead(() => api.getOrderFunnel(orderId), [api, orderId]);
-  return (
-    <OrderFunnelStrip
-      funnel={state.value?.funnel ?? null}
-      status={state.status}
-      reason={state.reason}
-    />
-  );
-}
-
-export function AlphaInsightContainer({
-  api,
-  alphaId,
-  request,
-  render,
-}: {
-  api: ExecutionApi;
-  alphaId: string;
-  request: InsightBatchInput;
-  /** The screen decides how a batch is drawn; this only supplies it. */
-  render: (state: {
-    batch: InsightBatch | null;
-    envelope: AnalyticsEnvelope | null;
-    status: PanelStatus;
-    reason?: string;
-  }) => ReactNode;
-}) {
-  // `request` is an object literal at most call sites, so a new identity every
-  // render. Depending on it directly would re-fetch forever; the fields that
-  // change the answer are the dependency.
-  const itemKey = request.items.map((i) => `${i.insightId}:${i.alphaId}`).join(",");
-  const state = useAnalyticsRead(
-    () => api.getInsightBatch(alphaId, request),
-    [api, alphaId, request.portfolioId, itemKey],
-  );
-  return (
-    <>
-      {render({
-        batch: state.value?.batch ?? null,
-        envelope: state.value?.envelope ?? null,
-        status: state.status,
-        reason: state.reason,
-      })}
-    </>
-  );
-}
-
-/**
- * Concrete rather than a render prop.
- *
- * The first draft handed the parsed correlation to a callback so a screen could
- * decide how to draw it, and no screen ever did — the panel already exists and
- * already owns those decisions, including the leader lens and the cell budget.
- * A container whose only consumer is its own test is not a seam, it is an
- * unfinished bridge.
- */
-export function CorrelationContainer({
-  api,
-  portfolioId,
-}: {
-  api: ExecutionApi;
-  portfolioId: string;
-}) {
-  const [lensIndex, setLensIndex] = useState<number | null>(null);
-  const state = useAnalyticsRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
-  if (state.status !== "ok" && state.status !== "partial") {
-    return <PanelState status={state.status} reason={state.reason} />;
-  }
-  return (
-    <CorrelationPanel
-      correlation={state.value?.correlation ?? null}
-      envelope={state.value ? envelopeFromAnalytics(state.value.envelope) : undefined}
-      lensIndex={lensIndex}
-      onLensChange={setLensIndex}
-    />
-  );
-}
-
-export function CapitalLedgerContainer({
-  api,
-  portfolioId,
-  render,
-}: {
-  api: ExecutionApi;
-  portfolioId: string;
-  render: (state: {
-    ledger: CapitalLedger | null;
-    envelope: AnalyticsEnvelope | null;
-    status: PanelStatus;
-    reason?: string;
-  }) => ReactNode;
-}) {
-  const state = useAnalyticsRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
-  return (
-    <>
-      {render({
-        ledger: state.value?.ledger ?? null,
-        envelope: state.value?.envelope ?? null,
-        status: state.status,
-        reason: state.reason,
-      })}
-    </>
-  );
-}
-
-/*
- * `BindingExposureContainer` was here and is gone.
- *
- * It handed the parsed exposure to a render prop and nothing consumed it, while
- * `ExposureHeadroomContainer` below does the job the contract actually answers.
- * Two containers for one endpoint, one of them unused, is not a choice of
- * seams — it is one seam and one leftover.
- */
-
 /**
  * Gate LIVE (canary → live) — owner-commissioned 2026-08-30 (ROADMAP §H.2.2).
  * The request backbone (eligibility, quorum, SLA, optimistic version) is the
@@ -1040,13 +898,13 @@ export function CapitalLedgerContainer({
  * declared smoke until BR-EX-70.
  */
 export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
-  const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
+  const [state, setState] = useState<LoadState<LiveReviewPayload>>(loading);
   const [note, setNote] = useState("");
   const { decision, decide } = useDecision(api);
   useEffect(() => {
     let cancelled = false;
     setState(loading);
-    void api.getGateR2(approvalId).then((result) => {
+    void api.getLiveReview(approvalId).then((result) => {
       if (cancelled) return;
       setState(
         result.ok
@@ -1058,13 +916,16 @@ export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi
       cancelled = true;
     };
   }, [api, approvalId]);
-  const d = state.value;
+  // The governance backbone rides inside the live payload as a full
+  // r2-review document — same reader, same eligibility semantics.
+  const d = state.value ? readGateR2Detail(state.value.governanceBackbone) : null;
   const locked = !(d?.eligibility.canApprove ?? false);
   const denyLocked = !(d?.eligibility.canDeny ?? false);
   return (
     <GateLiveReview
       approvalId={approvalId}
-      actor={d?.actor ?? "unknown"}
+      subject={d?.subject}
+      actor={state.value?.actor ?? d?.actor ?? "unknown"}
       policyVersion={d?.policyVersion ?? "unversioned"}
       quorumMet={d?.quorumMet ?? 0}
       quorumRequired={d?.quorumRequired ?? 0}
@@ -1078,6 +939,10 @@ export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi
       trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
       onApprove={() => void decide(approvalId, "APPROVE", note.trim() || "Canary evidence accepted for the live step.", d?.expectedVersion ?? null, { conditions: [] })}
       onDeny={() => void decide(approvalId, "DENY", note.trim() || "Back to canary observation.", d?.expectedVersion ?? null, { conditions: [] })}
+      canaryDeploymentId={state.value?.canaryDeploymentId ?? null}
+      branches={state.value?.derivedBranches}
+      currentSource={state.value?.currentSource ?? null}
+      readAt={state.value?.readAt ?? null}
     />
   );
 }
@@ -1085,15 +950,11 @@ export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi
 export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
   const [selected, setSelected] = useState<CatalogEntry | null>(null);
   const [tier, setTier] = useState<TierFilter>("ALL");
-  // WF 1i demo states are addresses, not chrome: `?role=VIEWER`,
-  // `?outcome=PARTIAL` and `?cmd=emergency` deep-link a reviewable state the
-  // way the hi-fi's prop editor did, without inventing a toggle the real
-  // screen will not have. `?operation=` arrives from Operations Queue /
-  // Incident Detail and is answered honestly (no lookup exists yet).
+  // `?cmd=` deep-links a task; `?operation=` arrives from Operations Queue /
+  // Incident Detail and is answered honestly (no lookup exists yet). The old
+  // `?role=`/`?outcome=` WF 1i demo states left with the demo machine — the
+  // product route renders the published N27 tasks, not a rehearsal.
   const [search] = useSearchParams();
-  const roleParam = search.get("role");
-  const role: CliRole = roleParam === "ADMIN" || roleParam === "VIEWER" ? roleParam : "OPERATOR";
-  const outcome: CliOutcome = search.get("outcome") === "PARTIAL" ? "PARTIAL" : "VERIFIED";
   const cmd = search.get("cmd");
   // `ALL` sends no filter at all rather than a sentinel the server would have
   // to know about. The chip is the client's word; the query is the contract's.
@@ -1101,6 +962,7 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
     () => api.getCommandCatalogue(tier === "ALL" ? undefined : { riskTier: tier }),
     [api, tier],
   );
+  const taskState = useAnalyticsRead(() => api.getOperatorTasks(), [api]);
   return (
     <AdminActionDrawerScreen
       catalogue={state.value}
@@ -1115,50 +977,12 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
         setSelected(null);
         setTier(next);
       }}
-      role={role}
-      outcome={outcome}
-      initialCommand={cmd ?? "alloc"}
+      tasks={taskState.value}
+      tasksStatus={taskState.status}
+      tasksReason={taskState.reason}
+      initialCommand={cmd}
       operationRef={search.get("operation")}
       actionRef={search.get("action") ? { action: search.get("action")!, binding: search.get("binding") } : null}
-    />
-  );
-}
-
-/**
- * The aggregate headroom banner, fed from the port.
- *
- * Narrow on purpose. `AccountBroker360` needs sync rows, linked accounts and a
- * policy that the exposure endpoint does not carry, so a container for the whole
- * screen would have to invent them. The banner is the part the exposure contract
- * actually answers, and it is the part that decides whether an operator places
- * an order — so it is the part worth wiring first.
- *
- * `aggregateHeadroomFrom` returns null unless every figure is present, and the
- * banner renders null as unavailable with its own reason. Nothing here computes
- * a verdict, and nothing falls back to summing the buckets when one is missing.
- */
-export function ExposureHeadroomContainer({
-  api,
-  bindingId,
-}: {
-  api: ExecutionApi;
-  bindingId: string;
-}) {
-  const state = useAnalyticsRead(() => api.getBindingExposure(bindingId), [api, bindingId]);
-  const exposure = state.value?.exposure ?? null;
-  const envelope = state.value?.envelope ?? null;
-  const figures = aggregateHeadroomFrom(exposure?.aggregate ?? null);
-
-  if (state.status !== "ok" && state.status !== "partial") {
-    return <PanelState status={state.status} reason={state.reason} />;
-  }
-  return (
-    <HeadroomBanner
-      // Both or neither: a verdict without its envelope is an unattributed
-      // claim about exposure, and this banner is the one place that must not
-      // make one.
-      aggregate={figures && envelope ? { ...figures, envelope: envelopeFromAnalytics(envelope) } : null}
-      exposure={exposure}
     />
   );
 }
@@ -1320,9 +1144,12 @@ export function IncidentDetailContainer({
 export function SandboxCertificationContainer({
   api,
   deploymentId,
+  visuals,
 }: {
   api: ExecutionApi;
   deploymentId: string;
+  /** Demo stage visuals — the lab passes them; the product route never does. */
+  visuals?: StageVisuals;
 }) {
   const state = useAnalyticsRead(
     () => api.getSandboxCertification(deploymentId),
@@ -1334,7 +1161,7 @@ export function SandboxCertificationContainer({
       deploymentId={deploymentId}
       status={state.status}
       reason={state.reason}
-      visuals={STAGE_SMOKE ? stageVisuals("sandbox") : undefined}
+      visuals={visuals}
     />
   );
 }
@@ -1343,11 +1170,14 @@ export function CanaryControlRoomContainer({
   api,
   deploymentId,
   brokerStale,
+  visuals,
 }: {
   api: ExecutionApi;
   deploymentId: string;
   /** The hi-fi's OK / STALE demo state. Drives the asymmetry, not the copy. */
   brokerStale?: boolean;
+  /** Demo stage visuals — the lab passes them; the product route never does. */
+  visuals?: StageVisuals;
 }) {
   const state = useAnalyticsRead(
     () => api.getCanaryControlRoom(deploymentId),
@@ -1359,7 +1189,7 @@ export function CanaryControlRoomContainer({
       status={state.status}
       reason={state.reason}
       brokerStale={brokerStale}
-      visuals={STAGE_SMOKE ? stageVisuals("canary") : undefined}
+      visuals={visuals}
     />
   );
 }
@@ -1367,16 +1197,19 @@ export function CanaryControlRoomContainer({
 export function LiveFullOperationsContainer({
   api,
   deploymentId,
+  visuals,
 }: {
   api: ExecutionApi;
   deploymentId: string;
+  /** Demo stage visuals — the lab passes them; the product route never does. */
+  visuals?: StageVisuals;
 }) {
   const state = useAnalyticsRead(
     () => api.getLiveFullOperations(deploymentId),
     [api, deploymentId],
   );
   return (
-    <LiveFullOperationsScreen live={state.value} status={state.status} reason={state.reason} visuals={STAGE_SMOKE ? stageVisuals("live") : undefined} />
+    <LiveFullOperationsScreen live={state.value} status={state.status} reason={state.reason} visuals={visuals} />
   );
 }
 
