@@ -22,8 +22,8 @@
  */
 import { utcStamp } from "../time";
 import { Fragment, useState, type ReactNode } from "react";
-import { clockOf, corrSeries, paperCandles, paperSmoke, paperVariant, researchBand, untilVnOpen, usePaperTick, vnSessions, PAPER_SMOKE_WARNING } from "../paper.smoke";
-import { CandlesChart, LinesChart } from "../components/marketChart";
+import { clockOf, untilVnOpen } from "../clock";
+import type { PaperDemo, PaperVariant } from "../paper.smoke";
 import { CapGauges, HistogramChart, SparkTile } from "../components/visuals";
 import type { StageVisuals } from "../stage.types";
 
@@ -199,6 +199,14 @@ export interface PaperWorkbenchProps {
   onCopyProvenance: (full: string) => void;
   status?: PanelStatus;
   reason?: string;
+  /** Reviewed hi-fi demo bundle — the lab passes it; the product never does. */
+  demo?: PaperDemo | null;
+  demoHifi?: PaperVariant | null;
+  /** The hi-fi's chart panels, injected by the lab beside `demoHifi`. */
+  demoPlots?: { equity: ReactNode; overlay?: ReactNode; correlation?: ReactNode; drift?: ReactNode } | null;
+  demoTick?: { now: Date; age: string };
+  /** The published reason the market-candles branch is unavailable. */
+  candlesReason?: string | null;
 }
 
 function Num({ value, absent = "not published" }: { value: string | null; absent?: string }) {
@@ -271,10 +279,15 @@ export function PaperWorkbench({
   onCopyProvenance,
   status = "ok",
   reason,
+  demo,
+  demoHifi,
+  demoPlots,
+  demoTick,
+  candlesReason,
 }: PaperWorkbenchProps) {
-  const smoke = paperSmoke();
-  const hifi = paperVariant(Boolean(calendar));
-  const { now, age } = usePaperTick();
+  const smoke = demo ?? null;
+  const hifi = demoHifi ?? null;
+  const { now, age } = demoTick ?? { now: new Date(0), age: "—" };
   const [report, setReport] = useState(false);
   if (status !== "ok" && status !== "partial") {
     return (
@@ -564,7 +577,7 @@ export function PaperWorkbench({
                   <span className="exec-a3-spacer" />
                   <span className="exec-pw-note">{calendar ? hifi.chart.legend : hifi.chart.legend}</span>
                 </header>
-                <div className="exec-pw-plot exec-pw-chartplot">{hifi.kind === "vnm" ? <VnEquity asOf={envelope.asOf} /> : <CryptoEquity asOf={envelope.asOf} />}</div>
+                <div className="exec-pw-plot exec-pw-chartplot">{demoPlots?.equity ?? <PanelState status="unavailable" reason={candlesReason ?? "The equity band series is not published for this window."} />}</div>
                 <footer className="exec-pw-foot">
                   {hifi.kind === "vnm" ? hifi.chart.foot : `${hifi.chartFoot} · as_of ${clockOf(envelope.asOf)}`}
                 </footer>
@@ -594,7 +607,7 @@ export function PaperWorkbench({
                     <span className="exec-a3-spacer" />
                     <span className="exec-pw-note">{hifi.overlay.legend}</span>
                   </header>
-                  <div className="exec-pw-plot exec-pw-chartplot"><Overlay asOf={envelope.asOf} /></div>
+                  <div className="exec-pw-plot exec-pw-chartplot">{demoPlots?.overlay ?? <PanelState status="unavailable" reason={candlesReason ?? "Market candles are not published for this deployment."} />}</div>
                   <footer className="exec-pw-foot">{hifi.overlay.foot}</footer>
                 </section>
               ) : null}
@@ -618,7 +631,7 @@ export function PaperWorkbench({
                     <span className="exec-a3-spacer" />
                     <span className="exec-pw-note">{hifi.correlation.head}</span>
                   </header>
-                  <div className="exec-pw-plot exec-pw-chartplot"><Correlation asOf={envelope.asOf} /></div>
+                  <div className="exec-pw-plot exec-pw-chartplot">{demoPlots?.correlation ?? <PanelState status="unavailable" reason="The rolling-correlation series is not published for this deployment." />}</div>
                   <footer className="exec-pw-foot exec-pw-corrfoot">
                     {/* ρ is already on the chart's own labels; repeating it here
                         is the same number twice in one panel. */}
@@ -631,7 +644,7 @@ export function PaperWorkbench({
               ) : (
                 <FactPanel title="Portfolio contribution · rolling correlation" rows={contribution} hifi />
               )}
-              <Drift drift={shownDrift.shown} note={driftNote} notice={driftNotice} head={hifi.drift} />
+              <Drift drift={shownDrift.shown} note={driftNote} notice={driftNotice} head={hifi.drift} demoChart={demoPlots?.drift} />
             </div>
             {equity ? (
               <details className="exec-pw-contract">
@@ -744,7 +757,7 @@ export function PaperWorkbench({
             </section>
           ) : null}
         </ExecutionTabs>
-        {smoke ? <p className="exec-af-smoke">! {PAPER_SMOKE_WARNING}</p> : null}
+        {smoke ? <p className="exec-af-smoke">! {smoke.warning}</p> : null}
       </ExecutionWorkspace>
     </ExecutionSurface>
   );
@@ -762,95 +775,10 @@ function PanelPointer({ what }: { what: string }) {
 }
 
 
-/** Drift vs the backtest expectation: dashed expected, solid paper, ±1σ band. */
-function DriftChart() {
-  const rows = researchBand(12, "2026-08-22", 0.02);
-  return (
-    <LinesChart
-      height={150}
-      series={[
-        { name: "backtest expected", tone: "mute", dashed: true, width: 1.4, points: rows.map((r) => [r.t, r.bt] as const) },
-        { name: "paper", tone: "good", width: 2, points: rows.map((r) => [r.t, r.pp] as const) },
-      ]}
-      band={{ points: rows.map((r) => [r.t, r.lo, r.hi] as const) }}
-      yFormatter={(v) => `${v.toFixed(1)}pt`}
-      provenance={{ authority: "DERIVED", asOf: "2026-08-22", formula: "drift.v1 · run_5512" }}
-      ariaLabel="Paper against the backtest expectation, inside a one-sigma band"
-    />
-  );
-}
 
-/** Equity vs the approved run: expected band, backtest dashed, paper solid. */
-function CryptoEquity({ asOf }: { asOf: string | null }) {
-  // The dip sits at index 19 = 2026-08-12: the KPI strip's −2.14% max drawdown
-  // happened on a stated day, and the annotation sits on that day's trough
-  // rather than floating where a label was pinned. Repeats the KPI, never
-  // recomputes it.
-  const rows = researchBand(30, "2026-08-22", 0.012, 19);
-  const dd = rows[19];
-  return (
-    <LinesChart
-      height={230}
-      series={[
-        { name: "backtest", tone: "mute", dashed: true, width: 1.4, points: rows.map((r) => [r.t, r.bt] as const) },
-        { name: "paper", tone: "accent", width: 2, points: rows.map((r) => [r.t, r.pp] as const) },
-      ]}
-      band={{ points: rows.map((r) => [r.t, r.lo, r.hi] as const) }}
-      annotation={{ t: dd.t, v: dd.pp, label: "DD −2.14% · Aug 12", tone: "bad" }}
-      yFormatter={(v) => `${v.toFixed(1)}%`}
-      provenance={{ authority: "EXECUTION", asOf: asOf ?? "—", formula: "equity_projection.v1" }}
-      ariaLabel="Paper equity against the backtest line and the expected band"
-    />
-  );
-}
 
-/** VN equity: the line exists only inside a session; the closed windows are the venue's calendar, drawn as areas. */
-function VnEquity({ asOf }: { asOf: string | null }) {
-  const vn = vnSessions();
-  return (
-    <LinesChart
-      height={230}
-      series={[{ name: "equity", tone: "accent", width: 2, points: vn.points }]}
-      closedWindows={vn.closed}
-      annotation={{ t: vn.frozen.t, v: vn.frozen.v, label: "frozen at close", tone: "accent" }}
-      yFormatter={(v) => `${(v / 1_000_000).toFixed(0)}M`}
-      provenance={{ authority: "EXECUTION", asOf: asOf ?? "—", formula: "equity_projection.v1" }}
-      ariaLabel="Equity by session, shaded where the market is closed"
-    />
-  );
-}
 
-/** Real candles with the order journal on them — a marker answers the hover with its order. */
-function Overlay({ asOf }: { asOf: string | null }) {
-  const { candles, markers } = paperCandles();
-  return (
-    <CandlesChart
-      height={210}
-      candles={candles}
-      markers={markers}
-      provenance={{ authority: "EXECUTION", asOf: asOf ?? "—", formula: "BINANCE data_layer snapshot ds_5512" }}
-      ariaLabel="Candles with order and fill markers"
-    />
-  );
-}
 
-/** Rolling correlation vs portfolio and benchmark, around rho = 0. */
-function Correlation({ asOf }: { asOf: string | null }) {
-  const rows = corrSeries("2026-08-22");
-  return (
-    <LinesChart
-      height={170}
-      series={[
-        { name: "ρ vs portfolio", tone: "accent", width: 2, points: rows.map((r) => [r.t, r.pf] as const) },
-        { name: "ρ vs benchmark", tone: "paper", dashed: true, width: 1.4, points: rows.map((r) => [r.t, r.bm] as const) },
-      ]}
-      zeroLine={{ label: "ρ = 0" }}
-      yFormatter={(v) => v.toFixed(2)}
-      provenance={{ authority: "DERIVED", asOf: asOf ?? "—", formula: "corr.v1 · cov_30d_v2" }}
-      ariaLabel="Rolling correlation vs portfolio and benchmark"
-    />
-  );
-}
 
 /**
  * Drift vs the approved run. The verdict column is the server's — "within
@@ -862,11 +790,13 @@ function Drift({
   note,
   notice,
   head,
+  demoChart,
 }: {
   drift: readonly DriftRow[];
   note?: string | null;
   notice: string | null;
   head: DriftHead | null;
+  demoChart?: ReactNode;
 }) {
   const table = (
     <div className="exec-scroll-x">
@@ -923,7 +853,7 @@ function Drift({
         <span className="exec-pw-note">{head.run}</span>
       </header>
       <div className="exec-pw-plot exec-pw-driftplot exec-pw-chartplot">
-        <DriftChart />
+        {demoChart ?? <PanelState status="unavailable" reason="The drift band series is not published; the verdicts below are the server's." />}
       </div>
       <p className="exec-pw-driftwindow">{head.window}</p>
       {/* Three columns, as the hi-fi draws them: what was approved, what paper

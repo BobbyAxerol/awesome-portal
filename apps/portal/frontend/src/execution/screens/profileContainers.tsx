@@ -25,7 +25,7 @@ type Loaded<T> =
   | { status: "ok"; reason?: undefined; value: T }
   | { status: Exclude<PanelStatus, "ok">; reason?: string; value: null };
 
-function useApiRead<T>(run: () => Promise<Result<T>>, deps: readonly unknown[]): Loaded<T> {
+export function useApiRead<T>(run: () => Promise<Result<T>>, deps: readonly unknown[]): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ status: "loading", value: null });
   useEffect(() => {
     let cancelled = false;

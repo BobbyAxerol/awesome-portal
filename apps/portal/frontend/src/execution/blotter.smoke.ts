@@ -144,3 +144,6 @@ export function useBlotterTick(base: number): { elapsed: number; price: number; 
 }
 
 export { fmtBlotterAge } from "./clock";
+
+export type BlotterDemo = NonNullable<ReturnType<typeof blotterSmoke>>;
+export type BlotterTick = ReturnType<typeof useBlotterTick>;

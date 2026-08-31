@@ -110,6 +110,9 @@ export function useAccountsTick(stream = false): { now: Date; j: number; snaps: 
   return { now: s.now, j: s.j, snaps: s.snaps };
 }
 
-export const fmt0 = (n: number) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
-export const clockOf = (d: Date) => (d.getTime() === 0 ? "—" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}Z`);
-export const inIctSession = (d: Date) => { const h = (d.getUTCHours() + 7) % 24; return h >= 9 && (h < 14 || (h === 14 && d.getUTCMinutes() <= 45)); };
+export { fmt0 } from "./liveFormat";
+export { clockOfDate as clockOf } from "./clock";
+export { inIctSession } from "./clock";
+
+export type AccountsDemo = NonNullable<ReturnType<typeof accountsSmoke>>;
+export type AccountsTick = ReturnType<typeof useAccountsTick>;

@@ -6,7 +6,13 @@ import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
-import { accountsSmoke, clockOf, fmt0, inIctSession, useAccountsTick, type BindingRow, type Chip } from "../accounts.smoke";
+import { clockOfDate as clockOf, inIctSession } from "../clock";
+import { fmt0 } from "../liveFormat";
+import type { AccountsDemo, AccountsTick, BindingRow, Chip } from "../accounts.smoke";
+import type { BindingItem, ManagerListEnvelope } from "../api/profileRead";
+import type { PanelStatus } from "../contracts";
+import { utcStamp } from "../time";
+import { StatusChip } from "../components/badges";
 
 export const BINDING_FILTERS = ["all", "live", "testnet", "paper", "issues"] as const;
 export type BindingFilter = (typeof BINDING_FILTERS)[number];
@@ -22,13 +28,80 @@ function Note({ text, links }: { text: string; links?: { label: string; href: st
   out.push(rest); return <>{out}</>;
 }
 
-export function AccountsBindings() {
-  const smoke = accountsSmoke();
-  const { now, j } = useAccountsTick();
+export interface AccountsBindingsProps {
+  /** BR-EX-72 `GET /broker-bindings` — the published bindings projection. */
+  list?: ManagerListEnvelope<BindingItem> | null;
+  status?: PanelStatus;
+  reason?: string;
+  onNextPage?: (cursor: string) => void;
+  onPreviousPage?: (cursor: string) => void;
+  /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
+  demo?: AccountsDemo | null;
+  demoTick?: AccountsTick;
+}
+
+export function AccountsBindings({ list = null, status = "ok", reason, onNextPage, onPreviousPage, demo, demoTick }: AccountsBindingsProps) {
+  const smoke = demo ?? null;
+  const { now, j } = demoTick ?? { now: new Date(0), j: 0, snaps: [] };
   const [filter, setFilter] = useState<BindingFilter>("all");
   const [open, setOpen] = useState<Record<string, boolean>>({ binance_main_01: true });
+  if (!smoke && status !== "ok" && status !== "partial") {
+    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status={status} reason={reason} /></ExecutionSurface>;
+  }
+  if (!smoke && !list) {
+    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status="unavailable" reason="No bindings list was published for this workspace." /></ExecutionSurface>;
+  }
   if (!smoke) {
-    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status="unavailable" reason="No bindings list is published (BR-EX-52)." /></ExecutionSurface>;
+    // Product: the reviewed bindings table over the BR-EX-72 projection.
+    // `venue_credentials` is excluded server-side; the credential column
+    // carries the published state word only, never a secret.
+    const items = list!.page.rows;
+    const mute = <span className="exec-af-mute">—</span>;
+    return (
+      <ExecutionSurface kind="deployments" className="exec-ab exec-af" data-hifi-exact="accounts-bindings">
+        <ExecutionWorkspace layout="dense">
+          <div className="exec-af-page">
+            <header className="exec-af-masthead">
+              <h1 className="exec-af-h1">Accounts &amp; Bindings</h1>
+              <span className="exec-af-sum">{list!.page.filteredCount ?? items.length}/{list!.page.totalCount ?? "?"} bindings · {list!.environment.toUpperCase()}</span>
+              <span className="exec-af-wf">entry screen for WF 1g</span>
+              <span className="exec-af-spacer" />
+              <span className="exec-af-source"><b>BROKER</b> · <StatusChip label={list!.freshness} tone={list!.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list!.sourceAsOf)}</span></span>
+            </header>
+            <div className="exec-af-panel">
+              <div className="exec-scroll-x">
+                <table className="exec-af-table exec-ab-table" aria-label="Bindings">
+                  <thead><tr><th>binding · venue</th><th>account</th><th>state</th><th>credential</th><th data-numeric="true">physical equity</th><th data-numeric="true">Σ virtual · headroom</th><th>updated</th></tr></thead>
+                  <tbody>
+                    {items.map((item) => (
+                      <tr key={item.bindingId} className="exec-af-row">
+                        <td><a href={`/deployments/accounts?binding=${encodeURIComponent(item.bindingId)}`}><b>{item.bindingId}</b></a> · {item.venue}</td>
+                        <td><a href={`/deployments/accounts/${encodeURIComponent(item.accountId)}`}>{item.accountId}</a></td>
+                        <td><ChipEl chip={{ label: item.state.toUpperCase(), tone: item.state.toLowerCase() === "active" ? "paper" : "warn" }} /></td>
+                        <td className="exec-af-dim">{item.credentialState.toUpperCase()}</td>
+                        <td data-numeric="true">{mute}</td>
+                        <td data-numeric="true">{mute}</td>
+                        <td className="exec-af-mute">{utcStamp(item.updatedAt)}</td>
+                      </tr>
+                    ))}
+                    {items.length === 0 ? <tr><td colSpan={7}><span className="exec-af-empty">No binding exists in this workspace — the source published an empty set, and an empty set is a fact.</span></td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
+              <footer className="exec-af-foot">
+                <span>equity, virtual allocation and sync health are not published on this projection (N28 exposure population) — the Account 360° states its own reason</span>
+                <span className="exec-af-spacer" />
+                <span>binding row → binding detail · account → Account 360°</span>
+              </footer>
+            </div>
+            <nav className="exec-table-pager" aria-label="Result pages">
+              <button type="button" disabled={!list!.page.prevCursor} onClick={() => list!.page.prevCursor && onPreviousPage?.(list!.page.prevCursor)}>Previous</button>
+              <button type="button" disabled={!list!.page.nextCursor} onClick={() => list!.page.nextCursor && onNextPage?.(list!.page.nextCursor)}>Next</button>
+            </nav>
+          </div>
+        </ExecutionWorkspace>
+      </ExecutionSurface>
+    );
   }
   const phys = smoke.physBase + j * 2.2;
   const headroom = phys - smoke.virt;

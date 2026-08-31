@@ -20,7 +20,7 @@
  * affordance the design already has. Three representations, one rule choosing
  * between them, and the choice is always stated on screen.
  */
-import { useId, useState } from "react";
+import { useId, useState , type ReactNode } from "react";
 
 import {
   compareAbsDecimal,
@@ -36,11 +36,8 @@ import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badg
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
-import { EpisodesChart, InfluenceGraph, LinesChart } from "../components/marketChart";
-import { PF_CHARTS } from "../portfolio360.smoke";
-import { PfApprovalsHifi, PfAuditHifi, PfConfigLog, PfCorrMatrix, PfCrossPortfolio, PfDdOverlap, PfEraChart, PfFooterLinks, PfIncidentsHifi, PfInfluence, PfLeadership, PfLedgerHifi, PfLiveStrip, PfMarketCorr, PfSmokeNote, PfStructureExtras, PfWhatIf } from "../components/PortfolioOverview";
-import { pfSmoke } from "../portfolio360.smoke";
-import { useAlphaClock } from "../alpha360.smoke";
+import { InfluenceGraph } from "../components/marketChart";
+import type { PfDemo } from "../portfolio360.smoke";
 import { ExecutionWorkspace } from "../components/workspace";
 
 /**
@@ -205,7 +202,30 @@ export interface PortfolioThreeSixtyProps {
     resolved: readonly { id: string; at: string | null; closedBy: string | null }[];
   } | null;
   status?: PanelStatus;
-  reason?: string;
+  reason?: string;  /** Reviewed hi-fi demo layer — the lab passes it; the product never does. */
+  demo?: PfDemo | null;
+  demoPanels?: {
+    liveStrip?: ReactNode;
+    eraChart?: ReactNode;
+    crossPortfolio?: ReactNode;
+    configLog?: ReactNode;
+    structureExtras?: ReactNode;
+    corrMatrix?: ReactNode;
+    marketCorr?: ReactNode;
+    leadership?: (lensOn: boolean, onLens: () => void) => ReactNode;
+    whatIf?: ReactNode;
+    influence?: ReactNode;
+    ddOverlap?: ReactNode;
+    footerLinks?: ReactNode;
+    ledger?: ReactNode;
+    approvals?: ReactNode;
+    incidents?: ReactNode;
+    audit?: ReactNode;
+    smokeNote?: ReactNode;
+    rhoChart?: ReactNode;
+    ddOverlapChart?: ReactNode;
+  } | null;
+  demoClock?: string | null;
 }
 
 function Num({ value, absent = "not available" }: { value: string | null; absent?: string }) {
@@ -773,8 +793,9 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   // tabs point at the FIRST screen's panel. The fixtures surface renders five
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
-  const smoke = pfSmoke();
-  const clock = useAlphaClock(envelope.asOf);
+  const { demo, demoPanels, demoClock } = props;
+  const smoke = demo ?? null;
+  const clock = demoClock ?? null;
 
   return (
     <ExecutionSurface kind="deployments" className="exec-pf exec-a3 exec-pf2" data-hifi-exact="portfolio-360">
@@ -866,12 +887,12 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
       >
         {tab === "Overview" ? (
           <>
-            <PfLiveStrip />
-            <PfEraChart />
-            <PfCrossPortfolio portfolioId={portfolioId} />
-            <PfConfigLog />
+            {demoPanels?.liveStrip ?? null}
+            {demoPanels?.eraChart ?? null}
+            {demoPanels?.crossPortfolio ?? null}
+            {demoPanels?.configLog ?? null}
             <details className="exec-pf2-contract">
-              <summary className="exec-pf2-note">published KPIs (contract) — the strip above is smoke until BR-EX-51</summary>
+              <summary className="exec-pf2-note">{smoke ? "published KPIs (contract) — the strip above is smoke until BR-EX-51" : "published KPIs (contract)"}</summary>
             <div className="exec-alpha-kpis">
               {kpis.map((kpi) => (
                 <div key={kpi.label} className="exec-alpha-kpi">
@@ -891,7 +912,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
 
         {tab === "Structure & Correlation" ? (
           <>
-            <PfStructureExtras />
+            {demoPanels?.structureExtras ?? null}
             <section className="exec-gate-panel">
               <div className="exec-tile-title">
                 Holdings structure — portfolio → alpha → deployment → account
@@ -969,12 +990,12 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                   the note names it. */}
               {fxNote ? <p className="exec-blotter-note">{fxNote}</p> : null}
             </section>
-            <div className="exec-pf2-grid" data-ratio="1.15"><PfCorrMatrix /><PfMarketCorr /></div>
-            <div className="exec-pf2-grid" data-ratio="1"><PfLeadership lens={lens !== null} onLens={() => setLens(lens === null ? 0 : null)} /><PfWhatIf /></div>
-            <div className="exec-pf2-grid" data-ratio="1.2r"><PfInfluence /><PfDdOverlap /></div>
-            <PfFooterLinks />
+            {demoPanels ? <div className="exec-pf2-grid" data-ratio="1.15">{demoPanels.corrMatrix}{demoPanels.marketCorr}</div> : null}
+            {demoPanels ? <div className="exec-pf2-grid" data-ratio="1">{demoPanels.leadership?.(lens !== null, () => setLens(lens === null ? 0 : null))}{demoPanels.whatIf}</div> : null}
+            {demoPanels ? <div className="exec-pf2-grid" data-ratio="1.2r">{demoPanels.influence}{demoPanels.ddOverlap}</div> : null}
+            {demoPanels?.footerLinks ?? null}
             <details className="exec-pf2-contract" open>
-              <summary>published correlation · corr.v1 contract (matrix · lens · ranked · influence · ρ timeline · drawdown overlap · leaders) — retires with BR-EX-51</summary>
+              <summary>published correlation · corr.v1 contract (matrix · lens · ranked · influence · ρ timeline · drawdown overlap · leaders)</summary>
             <CorrelationPanel
               correlation={correlation}
               envelope={correlationEnvelope}
@@ -986,36 +1007,19 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
             ) : null}
             <div className="exec-alpha-tiles">
               <section className="exec-pf2-panel" aria-label="Correlation timeline vs benchmark">
-                <header className="exec-pf2-head"><span className="exec-pf2-title">ρ(NAV, {benchmark}) · 30d · threshold {PF_CHARTS.rho.threshold}</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">corr.v1</span></header>
+                <header className="exec-pf2-head"><span className="exec-pf2-title">ρ(NAV, {benchmark}) · 30d</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">corr.v1</span></header>
                 <div className="exec-pw-chartplot">
-                  <LinesChart
-                    height={210}
-                    series={[{ name: `ρ vs ${benchmark}`, tone: "accent", width: 2, points: PF_CHARTS.rho.points }]}
-                    thresholdLine={{ y: PF_CHARTS.rho.threshold, label: `threshold ${PF_CHARTS.rho.threshold}`, tone: "warn" }}
-                    annotation={{ t: PF_CHARTS.rho.breach.from, v: PF_CHARTS.rho.breach.peak, label: `breach ${PF_CHARTS.rho.breach.from.slice(5)}→${PF_CHARTS.rho.breach.to.slice(5)}`, tone: "warn" }}
-                    yFormatter={(v) => v.toFixed(2)}
-                    provenance={{ authority: "DERIVED", asOf: envelope.asOf ?? "—", formula: "corr.v1 · rho_timeline" }}
-                    ariaLabel={`Rolling correlation of NAV against ${benchmark} with the ${PF_CHARTS.rho.threshold} threshold`}
-                  />
+                  {demoPanels?.rhoChart ?? <PanelState status="unavailable" reason="The ρ timeline series is not published yet (BR-EX-65); the matrix above is the published correlation." />}
                 </div>
-                <footer className="exec-pf2-foot">{PF_CHARTS.rho.foot}</footer>
               </section>
               <section className="exec-pf2-panel" aria-label="Drawdown overlap timeline (contract slot)">
                 <header className="exec-pf2-head"><span className="exec-pf2-title">Drawdown overlap timeline</span><span className="exec-pf2-spacer" /><span className="exec-pf2-note">drawdown_overlap.v1</span></header>
                 <div className="exec-pw-chartplot">
-                  <EpisodesChart
-                    height={190}
-                    rows={PF_CHARTS.ddOverlap.rows}
-                    joint={PF_CHARTS.ddOverlap.joint}
-                    window={PF_CHARTS.ddOverlap.window}
-                    provenance={{ authority: "DERIVED", asOf: envelope.asOf ?? "—", formula: "drawdown_overlap.v1" }}
-                    ariaLabel="Drawdown overlap timeline in the published-correlation slot"
-                  />
+                  {demoPanels?.ddOverlapChart ?? <PanelState status="unavailable" reason="The drawdown-overlap series is not published yet (BR-EX-65)." />}
                 </div>
-                <footer className="exec-pf2-foot">{PF_CHARTS.ddOverlap.foot}</footer>
               </section>
             </div>
-            <p className="exec-af-smoke">! SMOKE DATA — the ρ timeline and drawdown overlap above are synthetic frames (BR-EX-65 publishes the series; the shapes are the reference); every other figure in this disclosure is the published contract. Delete when BR-EX-65/51 ship</p>
+            {demoPanels ? <p className="exec-af-smoke">! SMOKE DATA — the ρ timeline and drawdown overlap above are synthetic frames (BR-EX-65 publishes the series; the shapes are the reference); every other figure in this disclosure is the published contract. Delete when BR-EX-65/51 ship</p> : null}
             {insight ? (
               <section className="exec-gate-panel">
                 <div className="exec-360-colmeta">
@@ -1034,15 +1038,15 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
 
         {tab === "Capital Ledger" ? (
           <>
-            <PfLedgerHifi />
-            <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract — retires with BR-EX-51</summary><Ledger ledger={ledger} totals={ledgerTotals} /></details>
+            {demoPanels?.ledger ?? null}
+            <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract</summary><Ledger ledger={ledger} totals={ledgerTotals} /></details>
           </>
         ) : null}
 
         {tab === "Approvals" ? (
           <>
-          <PfApprovalsHifi />
-          <details className="exec-pf2-contract" open={!smoke}><summary>published approvals · contract — retires with BR-EX-51</summary>
+          {demoPanels?.approvals ?? null}
+          <details className="exec-pf2-contract" open={!smoke}><summary>published approvals · contract</summary>
           <section className="exec-gate-panel">
             <div className="exec-tile-title">Approvals touching this portfolio</div>
             <div className="exec-scroll-x">
@@ -1083,8 +1087,8 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
 
         {tab === "Incidents" ? (
           <>
-          <PfIncidentsHifi />
-          <details className="exec-pf2-contract" open={!smoke}><summary>published incidents · contract — retires with BR-EX-51</summary>
+          {demoPanels?.incidents ?? null}
+          <details className="exec-pf2-contract" open={!smoke}><summary>published incidents · contract</summary>
           {
           // Read, never asserted. The previous version rendered "No open
           // incidents" unconditionally — a claim about safety made by a
@@ -1164,11 +1168,11 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
           </>
         ) : null}
 
-        <PfSmokeNote />
+        {demoPanels?.smokeNote ?? null}
         {tab === "Audit" ? (
           <>
-          <PfAuditHifi />
-          <details className="exec-pf2-contract" open={!smoke}><summary>published audit · contract — retires with BR-EX-51</summary>
+          {demoPanels?.audit ?? null}
+          <details className="exec-pf2-contract" open={!smoke}><summary>published audit · contract</summary>
           <PanelState
             status="unavailable"
             reason="The portfolio command journal is not published yet."

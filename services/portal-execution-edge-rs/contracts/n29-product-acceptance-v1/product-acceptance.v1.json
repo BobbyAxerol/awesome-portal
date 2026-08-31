@@ -58,7 +58,7 @@
     "n28_registry_sha256": "sha256:a307b1b78c1724b51790abaf9e8e3b2f375017b2881d6f396a5d0e20e4674812",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
     "screen_bff_catalogue_sha256": "sha256:e344f13c3737257fed40f55f5b1108b027f0e82cab9c0cec1f090963eb64496d",
-    "frontend_product_route_sha256": "sha256:1c97abf0b406b5c91be92a31da5d84359549cb95aa9f43866295cb439ac73fa1",
+    "frontend_product_route_sha256": "sha256:e72c477e73ade4e06f10113193c9e825afe846e63219980f843d067eaaa5c571",
     "frontend_product_boundary_test_sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
     "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",
@@ -83,7 +83,7 @@
     "br72_registry_source_sha256": "sha256:d7ab618cae8cf97848f96c78932517f1cbf19bec15d82595c2f84f1ce5df1aac",
     "br72_registry_public_sha256": "sha256:0a5571bf6c646e3f97df034ccbe3fd83fe782464602f16f48cc4d805123aa19c",
     "br72_frontend_test_sha256": "sha256:04e3eaffd52bf44674e273a39f9bd9c9a57c26eb732c32bfde7d149732510368",
-    "br72_frontend_containers_sha256": "sha256:c4137dcb93ae891c7192cef62a51ab5a4432250cabe8fbfec3e92fcab56dc28f",
+    "br72_frontend_containers_sha256": "sha256:f126bcb731f8c72d34d923ddc6fa8592ab16b5efbeb843d934a96e3cea157fb1",
     "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e"
   },
   "rehearsals": {

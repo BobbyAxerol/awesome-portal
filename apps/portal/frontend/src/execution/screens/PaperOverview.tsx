@@ -5,34 +5,165 @@
  * designed, how far through its window, and what happens next — before an
  * operator commits to one deployment.
  *
- * Reads `paper.smoke.ts` until BR-EX-62 publishes the overview alongside
- * `paper-list.v1`. Every figure is the hi-fi's; the page says so at the end.
+ * Two renders of one layout: `demo` (the lab's hi-fi bundle) draws every
+ * reviewed panel; the product passes the published `execution.paper-overview.v1`
+ * envelope instead, and each panel shows exactly what that envelope carries —
+ * the deployments board from the published rows, and one honest state per
+ * branch the contract has not published (BR-EX-62 derived insights).
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
-import {
-  overviewReturns, paperClock, paperSmoke, poCells, poSparkSeries, untilVnOpen, usePaperTick,
-  PAPER_OVERVIEW, type PoBoardRow,
-} from "../paper.smoke";
+import { paperClock, untilVnOpen } from "../clock";
+import { poCells, poSparkSeries } from "../poVisual";
+import type { PaperOverviewDemo, PoBoardRow } from "../paper.smoke";
 import { LinesChart, SparkLine } from "../components/marketChart";
+import type { ProfileEnvelope } from "../api/profileRead";
+import type { PanelStatus } from "../contracts";
+import { utcStamp } from "../time";
 
-const PO = PAPER_OVERVIEW;
+export interface PaperOverviewProps {
+  /** `execution.paper-overview.v1` — the published truth for this stage. */
+  envelope?: ProfileEnvelope | null;
+  status?: PanelStatus;
+  reason?: string;
+  /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
+  demo?: PaperOverviewDemo | null;
+  demoWarning?: string;
+  demoTick?: { now: Date };
+}
 
-export function PaperOverview() {
-  const smoke = paperSmoke();
-  const { now } = usePaperTick();
+const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
+
+export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick }: PaperOverviewProps) {
+  const PO = demo ?? null;
+  const now = demoTick?.now ?? new Date(0);
   const [venue, setVenue] = useState("All");
   const navigate = useNavigate();
-  if (!smoke) {
+  if (!PO && status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-po">
-        <PanelState status="unavailable" reason="No paper overview is published (BR-EX-62)." />
+        <PanelState status={status} reason={reason} />
       </ExecutionSurface>
     );
   }
+  if (!PO && !envelope) {
+    return (
+      <ExecutionSurface kind="deployments" className="exec-po">
+        <PanelState status="unavailable" reason="No paper overview was published for this workspace." />
+      </ExecutionSurface>
+    );
+  }
+
+  if (!PO) {
+    // Product: the reviewed layout over the published envelope, panel by panel.
+    const deployments = envelope!.data.deployments ?? [];
+    const insight = envelope!.capabilities.find((c) => c.capabilityId === "paper.derived-insights");
+    const insightReason = insight && insight.state !== "AVAILABLE"
+      ? `${insight.capabilityId} is ${insight.state}${insight.reasonCode ? ` · ${insight.reasonCode}` : ""}`
+      : "The derived-insight series are not published for this overview (BR-EX-62).";
+    return (
+      <ExecutionSurface kind="deployments" className="exec-po" data-hifi-exact="paper-overview">
+        <ExecutionWorkspace layout="dense">
+          <div className="exec-po-page">
+            <header className="exec-po-masthead">
+              <h1 className="exec-po-h1">Paper</h1>
+              <span className="exec-po-spacer" />
+              <span className="exec-po-source">
+                <b>{envelope!.sourceAuthority ?? "authority not stated"}</b> · as_of{" "}
+                <span className="exec-po-num">{utcStamp(envelope!.asOf)}</span> · {envelope!.state.toUpperCase()} · {envelope!.freshness ?? "freshness not stated"}
+              </span>
+            </header>
+
+            <div className="exec-po-kpis">
+              <div className="exec-po-kpi">
+                <div className="exec-po-kpilabel">In observation</div>
+                <div className="exec-po-kpival">{deployments.length}</div>
+                <div className="exec-po-kpisub">published deployments in paper</div>
+              </div>
+              <div className="exec-po-kpi">
+                <div className="exec-po-kpilabel">Gate met</div>
+                <div className="exec-po-kpival"><span className="exec-gate-unverified">not published</span></div>
+                <div className="exec-po-kpisub">observation gates are read per workbench</div>
+              </div>
+              <div className="exec-po-kpi" data-wide="true">
+                <div className="exec-po-kpilabel">Next gate ≈</div>
+                <div className="exec-po-kpival" data-size="date"><span className="exec-gate-unverified">not published</span></div>
+                <div className="exec-po-kpisub">no gate projection is published on this contract</div>
+              </div>
+              <div className="exec-po-kpi" data-wide="true">
+                <div className="exec-po-kpilabel">Paper capital</div>
+                <div className="exec-po-kpival" data-size="date"><span className="exec-gate-unverified">not published</span></div>
+              </div>
+              <div className="exec-po-kpi">
+                <div className="exec-po-kpilabel">Drift alerts</div>
+                <div className="exec-po-kpival"><span className="exec-gate-unverified">not published</span></div>
+              </div>
+            </div>
+
+            <div className="exec-po-grid">
+              <section className="exec-po-panel" aria-label="Cumulative return, normalized">
+                <header className="exec-po-head">
+                  <span className="exec-po-title">Cumulative return — normalized, own currency</span>
+                </header>
+                <div className="exec-po-plot">
+                  <PanelState status="unavailable" reason={insightReason} />
+                </div>
+              </section>
+              <section className="exec-po-panel" aria-label="Order funnel">
+                <header className="exec-po-head">
+                  <span className="exec-po-title">Order funnel — 7d</span>
+                </header>
+                <div className="exec-po-funnel">
+                  <PanelState status="unavailable" reason={insightReason} />
+                </div>
+              </section>
+            </div>
+
+            <section className="exec-po-panel exec-po-runway" aria-label="Observation runway">
+              <header className="exec-po-head">
+                <span className="exec-po-title">Observation runway — published deployments</span>
+                <span className="exec-po-spacer" />
+                <span className="exec-po-note">{deployments.length} of {deployments.length} published</span>
+              </header>
+              <div className="exec-scroll-x"><div className="exec-po-board">
+                {deployments.map((row, i) => {
+                  const id = str(row.deployment_id) ?? `row ${i + 1}`;
+                  const href = `/deployments/paper/${encodeURIComponent(id)}`;
+                  return (
+                    <div
+                      key={id}
+                      className="exec-po-row"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${id} — open the workbench`}
+                      onClick={() => navigate(href)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(href); } }}
+                    >
+                      <div className="exec-po-id">
+                        <div className="exec-po-alpha"><a href={href} onClick={(e) => e.stopPropagation()}><b>{id}</b></a> <span className="exec-po-dim">· {str(row.mode) ?? "mode not published"}</span></div>
+                        <div className="exec-po-idline"><span className="exec-gate-unverified">alpha · portfolio · account not published on this contract</span></div>
+                      </div>
+                      <div className="exec-po-days">
+                        <div className="exec-po-gateline"><span className="exec-gate-unverified">observation gate not published</span></div>
+                      </div>
+                      <div className="exec-po-next">
+                        <a href={href} onClick={(e) => e.stopPropagation()}>Open workbench →</a>
+                      </div>
+                    </div>
+                  );
+                })}
+                {deployments.length === 0 ? <p className="exec-po-empty">No deployment is in paper — the source published an empty set, and an empty set is a fact.</p> : null}
+              </div></div>
+            </section>
+          </div>
+        </ExecutionWorkspace>
+      </ExecutionSurface>
+    );
+  }
+
   const rows = PO.runway.rows.filter((r) => venue === "All" || r.venue === venue);
   return (
     <ExecutionSurface kind="deployments" className="exec-po" data-hifi-exact="paper-overview">
@@ -96,7 +227,7 @@ export function PaperOverview() {
                     normalized in its own currency — the tooltip says so. */}
                 <LinesChart
                   height={150}
-                  series={overviewReturns("2026-08-22").map((l) => ({ name: l.name, tone: l.tone, points: l.points }))}
+                  series={PO.returns.map((l) => ({ name: l.name, tone: l.tone, points: l.points }))}
                   zeroLine={{ label: "0%" }}
                   yFormatter={(v) => `${v.toFixed(1)}%`}
                   provenance={{ authority: "DERIVED", asOf: paperClock(now), formula: "equity_projection.v1 · own currency, never mixed" }}
@@ -164,7 +295,7 @@ export function PaperOverview() {
             </div>
           </section>
 
-          <p className="exec-po-smoke">! {smoke.warning}</p>
+          {demoWarning ? <p className="exec-po-smoke">! {demoWarning}</p> : null}
         </div>
       </ExecutionWorkspace>
     </ExecutionSurface>

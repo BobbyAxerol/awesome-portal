@@ -294,12 +294,6 @@ export function poSpark(amp: number, drop: number): string {
 }
 
 /** One runway row's cells, exactly as the hi-fi builds them. */
-export function poCells(days: PoBoardRow["days"]): PoDay[] {
-  const out: PoDay[] = days.results.map((r) => ({ kind: r > 0 ? "up" : "down" }));
-  if (out.length < days.total) out.push({ kind: days.liveToday ? "today" : "next" });
-  while (out.length < days.total) out.push({ kind: "ahead" });
-  return out;
-}
 
 
 /* ---------------------------------------------------------------------------
@@ -435,14 +429,14 @@ export function usePaperTick(): { now: Date; age: string } {
 }
 
 /** Drift spark as data — the drift value itself (up is up), hourly, 26 points. */
-export function poSparkSeries(amp: number, drop: number): [string, number][] {
-  const n = 26;
-  return Array.from({ length: n }, (_, i) => [
-    new Date(Date.UTC(2026, 7, 22) - (n - 1 - i) * 3_600_000).toISOString(),
-    Number((amp * Math.sin(i / 6) - (i / n) * drop).toFixed(2)),
-  ]);
-}
 
 export { clockOf, untilVnOpen, paperClock } from "./clock";
+export { poCells, poSparkSeries } from "./poVisual";
 
 export type PaperDemo = NonNullable<ReturnType<typeof paperSmoke>>;
+
+/** The lab's Paper Overview bundle: the hi-fi board plus its return series. */
+export function paperOverviewDemo() {
+  return { ...PAPER_OVERVIEW, returns: overviewReturns("2026-08-22") };
+}
+export type PaperOverviewDemo = ReturnType<typeof paperOverviewDemo>;

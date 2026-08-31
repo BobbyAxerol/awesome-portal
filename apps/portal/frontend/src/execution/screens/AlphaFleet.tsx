@@ -12,7 +12,12 @@ import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
-import { fleetSmoke, fmt2, useFleetTick, type FleetDeployment, type FleetRow, type StageChip , fleetSparkSeries } from "../alphaFleet.smoke";
+import { fleetSparkSeries, fmt2 } from "../fleetFormat";
+import type { FleetDemo, FleetDeployment, FleetRow, FleetTick, StageChip } from "../alphaFleet.smoke";
+import type { AlphaFleetItem, ManagerListEnvelope } from "../api/profileRead";
+import type { PanelStatus } from "../contracts";
+import { utcStamp } from "../time";
+import { StatusChip } from "../components/badges";
 
 export const FLEET_FILTERS = ["all", "live", "canary", "sandbox", "paper", "research"] as const;
 export type FleetFilter = (typeof FLEET_FILTERS)[number];
@@ -61,19 +66,89 @@ function depPnl(d: FleetDeployment, j: number): string | null {
 export interface AlphaFleetProps {
   filter?: FleetFilter;
   onFilterChange?: (f: FleetFilter) => void;
+  /** BR-EX-72 `GET /alphas` — the published fleet projection. */
+  list?: ManagerListEnvelope<AlphaFleetItem> | null;
+  status?: PanelStatus;
+  reason?: string;
+  onNextPage?: (cursor: string) => void;
+  onPreviousPage?: (cursor: string) => void;
+  /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
+  demo?: FleetDemo | null;
+  demoTick?: FleetTick;
 }
 
-export function AlphaFleet({ filter: controlled, onFilterChange }: AlphaFleetProps) {
-  const smoke = fleetSmoke();
-  const { now, j } = useFleetTick();
+export function AlphaFleet({ filter: controlled, onFilterChange, list = null, status = "ok", reason, onNextPage, onPreviousPage, demo, demoTick }: AlphaFleetProps) {
+  const smoke = demo ?? null;
+  const { now, j } = demoTick ?? { now: new Date(0), j: 0 };
   const [local, setLocal] = useState<FleetFilter>("all");
   const [open, setOpen] = useState<Record<string, boolean>>({ av_2041: true });
   const filter = controlled ?? local;
   const setFilter = (f: FleetFilter) => { setLocal(f); onFilterChange?.(f); };
-  if (!smoke) {
+  if (!smoke && status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-fleet">
-        <PanelState status="unavailable" reason="No fleet list is published — the Alpha Fleet feature is commissioned (BR-EX-49)." />
+        <PanelState status={status} reason={reason} />
+      </ExecutionSurface>
+    );
+  }
+  if (!smoke && !list) {
+    return (
+      <ExecutionSurface kind="deployments" className="exec-fleet">
+        <PanelState status="unavailable" reason="No fleet list was published for this workspace." />
+      </ExecutionSurface>
+    );
+  }
+  if (!smoke) {
+    // Product: the reviewed fleet table over the BR-EX-72 projection —
+    // published columns real, unpublished columns stated, never invented.
+    const items = list!.page.rows;
+    return (
+      <ExecutionSurface kind="deployments" className="exec-fleet exec-af" data-hifi-exact="alpha-fleet">
+        <ExecutionWorkspace layout="dense">
+          <div className="exec-af-page">
+            <header className="exec-af-masthead">
+              <h1 className="exec-af-h1">Alpha Fleet</h1>
+              <span className="exec-af-sum">{list!.page.filteredCount ?? items.length}/{list!.page.totalCount ?? "?"} alphas · {list!.environment.toUpperCase()}</span>
+              <span className="exec-af-wf">entry screen for WF 2a</span>
+              <span className="exec-af-spacer" />
+              <span className="exec-af-source"><b>EXECUTION</b> · <StatusChip label={list!.freshness} tone={list!.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list!.sourceAsOf)}</span></span>
+            </header>
+            <div className="exec-af-panel">
+              <div className="exec-scroll-x">
+                <table className="exec-af-table" aria-label="Alpha fleet">
+                  <thead>
+                    <tr>
+                      <th className="exec-af-th-mark" />
+                      <th>alpha · version</th><th>owner · portfolio</th><th>stage presence (deployments)</th>
+                      <th data-numeric="true">alloc Σ</th><th data-numeric="true">net pnl · 30d</th><th data-numeric="true">max dd</th>
+                      <th>equity 30d</th><th>health · next gate</th><th className="exec-af-th-go" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item) => {
+                      const href = `/deployments/alphas/${encodeURIComponent(item.alphaId)}`;
+                      const expandable = item.deployments.length > 0;
+                      const isOpen = expandable && Boolean(open[item.alphaId]);
+                      return (
+                        <FleetItemRows key={item.alphaId} item={item} href={href} expandable={expandable} isOpen={isOpen} onToggle={() => setOpen((m) => ({ ...m, [item.alphaId]: !isOpen }))} />
+                      );
+                    })}
+                    {items.length === 0 ? <tr><td colSpan={10} className="exec-af-empty">No alpha is present in this workspace and execution profile — an empty set is a fact.</td></tr> : null}
+                  </tbody>
+                </table>
+              </div>
+              <footer className="exec-af-foot">
+                <span>allocation, pnl, drawdown, equity and health are not published on this projection — they are read per alpha on its 360°</span>
+                <span className="exec-af-spacer" />
+                <span>row → Alpha 360° · deployment row → its stage workbench</span>
+              </footer>
+            </div>
+            <nav className="exec-table-pager" aria-label="Result pages">
+              <button type="button" disabled={!list!.page.prevCursor} onClick={() => list!.page.prevCursor && onPreviousPage?.(list!.page.prevCursor)}>Previous</button>
+              <button type="button" disabled={!list!.page.nextCursor} onClick={() => list!.page.nextCursor && onNextPage?.(list!.page.nextCursor)}>Next</button>
+            </nav>
+          </div>
+        </ExecutionWorkspace>
       </ExecutionSurface>
     );
   }
@@ -188,6 +263,48 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
           </tr>
         );
       }) : null}
+    </>
+  );
+}
+
+const STAGE_TONE: Record<string, StageChip["tone"]> = { live: "live", canary: "canary", sandbox: "sandbox", paper: "paper", research: "research" };
+const stageChip = (stage: string): StageChip => ({ label: stage.toUpperCase(), tone: STAGE_TONE[stage.toLowerCase()] ?? "research" });
+
+/** One published fleet row: real columns real, the rest stated as absent. */
+function FleetItemRows({ item, href, expandable, isOpen, onToggle }: { item: AlphaFleetItem; href: string; expandable: boolean; isOpen: boolean; onToggle: () => void }) {
+  const mute = <span className="exec-af-mute">—</span>;
+  const stageHref = (d: { deploymentId: string; stage: string }) =>
+    d.stage === "paper" ? `/deployments/paper/${encodeURIComponent(d.deploymentId)}`
+    : d.stage === "sandbox" ? `/deployments/sandbox/${encodeURIComponent(d.deploymentId)}`
+    : `/deployments/live/${encodeURIComponent(d.deploymentId)}`;
+  return (
+    <>
+      <tr className="exec-af-row" onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
+        <td className="exec-af-mark">{expandable ? (isOpen ? "▾" : "▸") : ""}</td>
+        <td><A href={href} bold>{item.alphaLabel}</A><div className="exec-af-sub"><A href={href}>{item.alphaId}</A> · v{item.version}</div></td>
+        <td className="exec-af-dim">{mute}</td>
+        <td><span className="exec-af-stages"><Chip chip={stageChip(item.stage)} /></span></td>
+        <td data-numeric="true">{mute}</td>
+        <td data-numeric="true">{mute}</td>
+        <td data-numeric="true">{mute}</td>
+        <td>{mute}</td>
+        <td><span className="exec-af-mute">updated {utcStamp(item.updatedAt)}</span></td>
+        <td className="exec-af-go"><a href={href} aria-label={`Open ${item.alphaLabel}`}>→</a></td>
+      </tr>
+      {isOpen ? item.deployments.map((d, i) => (
+        <tr key={d.deploymentId} className="exec-af-dep" data-last={i === item.deployments.length - 1 ? "true" : undefined}>
+          <td />
+          <td>└ <a href={stageHref(d)}>{d.deploymentId}</a></td>
+          <td className="exec-af-mute">{d.venue}</td>
+          <td><Chip chip={stageChip(d.stage)} /></td>
+          <td data-numeric="true">{mute}</td>
+          <td data-numeric="true">{mute}</td>
+          <td data-numeric="true">{mute}</td>
+          <td className="exec-af-mute">{mute}</td>
+          <td>{mute}</td>
+          <td className="exec-af-go"><a href={stageHref(d)} aria-label={`Open ${d.deploymentId}`}>→</a></td>
+        </tr>
+      )) : null}
     </>
   );
 }

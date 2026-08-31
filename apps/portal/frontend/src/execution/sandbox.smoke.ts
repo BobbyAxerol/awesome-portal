@@ -410,8 +410,11 @@ export function useCertTick(): Date {
   return now;
 }
 
-export const sbPct = (n: number) => `${n.toFixed(1)}%`;
+export { sbPct } from "./sbFormat";
 
 export { sbClock, sbAge, sbAgeSeconds } from "./clock";
 
 export type CertDemo = NonNullable<ReturnType<typeof certSmoke>>;
+
+export type SandboxDemo = NonNullable<ReturnType<typeof sandboxSmoke>>;
+export type SandboxTick = ReturnType<typeof useSandboxTick>;

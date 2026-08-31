@@ -9,14 +9,20 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
-  AccountBroker360Container,
-  AccountsBindingsContainer,
-  AlphaFleetContainer,
   CommandCenterSnapshotContainer,
-  PaperWorkbenchContainer,
-  QueryAnalyticsContainer,
-  StageOverviewContainer,
 } from "./screens/profileContainers";
+import {
+  AccountBroker360RichContainer,
+  AccountsBindingsRichContainer,
+  AlphaFleetRichContainer,
+  AlphaThreeSixtyRichContainer,
+  FullBlotterRichContainer,
+  LiveOverviewRichContainer,
+  PaperOverviewRichContainer,
+  PaperWorkbenchRichContainer,
+  PortfolioThreeSixtyRichContainer,
+  SandboxOverviewRichContainer,
+} from "./screens/recomposeContainers";
 import { reviewRouteFor } from "./screens/ApprovalInbox";
 
 import { usePresentation } from "../app/presentation";
@@ -214,20 +220,20 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = <PaperExitReviewContainer api={api} reviewId={reviewId} />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN":
-      content = <PaperWorkbenchContainer api={api} deploymentId={deploymentId} variant="vnm" />;
+      content = <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} variant="vnm" />;
       break;
     case "EXECUTION_PAPER_WORKBENCH_SCREEN":
       // Feature canonical route (/deployments/paper) = the paper list, entry
       // of WF 1c; /:deploymentId opens that deployment's workbench. The
       // sidebar must never land an operator inside one alpha unasked.
-      content = params.deploymentId ? <PaperWorkbenchContainer api={api} deploymentId={deploymentId} /> : <StageOverviewContainer api={api} screen="paper" />;
+      content = params.deploymentId ? <PaperWorkbenchRichContainer api={api} deploymentId={deploymentId} /> : <PaperOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_SANDBOX_CERTIFICATION_SCREEN":
       // Feature canonical route (/deployments/sandbox) = the sandbox overview,
       // entry screen of WF 1d; /:deploymentId opens that certification.
       content = params.deploymentId
         ? <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
-        : <StageOverviewContainer api={api} screen="sandbox" />;
+        : <SandboxOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_CANARY_CONTROL_ROOM_SCREEN":
       content = <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />;
@@ -235,36 +241,36 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN":
       // Feature canonical route (/deployments/live) = the live overview, entry
       // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
-      content = params.deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <StageOverviewContainer api={api} screen="live" />;
+      content = params.deploymentId ? <LiveFullOperationsContainer api={api} deploymentId={deploymentId} /> : <LiveOverviewRichContainer api={api} />;
       break;
     case "EXECUTION_FULL_BLOTTER_SCREEN":
-      content = <StageOverviewContainer api={api} screen="blotter" />;
+      content = <FullBlotterRichContainer api={api} />;
       break;
     case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
-      content = <AlphaFleetContainer api={api} />;
+      content = <AlphaFleetRichContainer api={api} />;
       break;
     case "EXECUTION_ALPHA_360_SCREEN":
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
-      content = params.alphaId ? <QueryAnalyticsContainer api={api} subject="alphas" subjectId={params.alphaId} /> : <AlphaFleetContainer api={api} />;
+      content = params.alphaId ? <AlphaThreeSixtyRichContainer api={api} alphaId={params.alphaId} /> : <AlphaFleetRichContainer api={api} />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
-      content = <QueryAnalyticsContainer api={api} subject="portfolios" subjectId={params.portfolioId ?? "PF-CRYPTO"} />;
+      content = <PortfolioThreeSixtyRichContainer api={api} portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
       break;
     case "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN":
       content = search.get("binding")
-        ? <AccountsBindingsContainer api={api} bindingId={search.get("binding")} />
-        : <AccountsBindingsContainer api={api} />;
+        ? <AccountsBindingsRichContainer api={api} bindingId={search.get("binding")} />
+        : <AccountsBindingsRichContainer api={api} />;
       break;
     case "EXECUTION_ACCOUNT_BROKER_360_SCREEN":
       // Feature canonical route (/deployments/accounts) = the bindings list,
       // entry screen of WF 1g; ?binding= opens a binding; /:accountId opens
       // the account's 360.
       content = params.accountId
-        ? <AccountBroker360Container api={api} accountId={params.accountId} />
+        ? <AccountBroker360RichContainer api={api} accountId={params.accountId} />
         : search.get("binding")
-          ? <AccountsBindingsContainer api={api} bindingId={search.get("binding")} />
-          : <AccountsBindingsContainer api={api} />;
+          ? <AccountsBindingsRichContainer api={api} bindingId={search.get("binding")} />
+          : <AccountsBindingsRichContainer api={api} />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = <AdminCatalogueContainer api={api} />;

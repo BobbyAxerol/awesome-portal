@@ -39,8 +39,7 @@ import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
-import { TradeReplay } from "../components/TradeReplay";
-import { TILE_CHARTS, alphaStageEquity, useAlphaClock } from "../alpha360.smoke";
+import type { AlphaDemoTiles, AlphaStageSeries } from "../alpha360.smoke";
 import { EnvelopeCaption, EquityChart, type EquitySeries } from "../components/EquityChart";
 import { ContributionChart } from "../components/ContributionChart";
 import { DensityHeatmap, LinesChart } from "../components/marketChart";
@@ -188,7 +187,11 @@ export interface AlphaThreeSixtyProps {
   reconciliation?: readonly ReconciliationRow[];
   risk?: readonly RiskRow[];
   status?: PanelStatus;
-  reason?: string;
+  reason?: string;  /** Reviewed demo series — the lab passes them; the product never does. */
+  demoStageSeries?: AlphaStageSeries | null;
+  demoTiles?: AlphaDemoTiles | null;
+  demoClock?: string | null;
+  demoReplay?: ReactNode;
 }
 
 export interface PositionRow {
@@ -439,7 +442,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
   const researchStatus = props.researchStatus ?? "RESEARCH_APPROVED";
-  const clock = useAlphaClock(envelope.asOf);
+  const clock = props.demoClock ?? null;
   const stagesNow = Array.from(new Set(deployments.map((d) => d.stage)));
 
   return (
@@ -521,13 +524,15 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 <div data-scope-panel="equity">
                   {equity.series ? (
                     <EquityChart title={`Equity by stage · ${scope.venue} · ${scope.window}`} envelope={equity.envelope} series={equity.series} />
+                  ) : !props.demoStageSeries ? (
+                    <PanelState status="unavailable" reason="No equity series was published for this alpha and window (BR-EX-41 stage series)." />
                   ) : (
                     <section className="exec-chart-tile" aria-label={`Equity by stage · ${scope.venue} · ${scope.window}`}>
                       <h3 className="exec-section-title">Equity by stage · {scope.venue} · {scope.window}</h3>
                       <p className="exec-a3-stagelegend" aria-hidden="true"><span data-tone="accent">— paper</span><span data-tone="warn">— sandbox</span><span data-tone="good">— canary</span></p>
                       <LinesChart
                         height={200}
-                        series={alphaStageEquity()}
+                        series={props.demoStageSeries ?? []}
                         yFormatter={(v) => v.toFixed(3)}
                         provenance={{ authority: "DERIVED", asOf: equity.envelope.asOf ?? "—", formula: equity.envelope.formulaVersion ?? "equity_projection.v1" }}
                         ariaLabel={`Equity by stage, normalized at stage entry — ${scope.venue}, ${scope.window}`}
@@ -551,8 +556,8 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
           </>
         ) : null}
 
-        {tab === "Insight Charts" ? <Tiles tiles={tiles} /> : null}
-        {tab === "Trade Replay" ? <TradeReplay /> : null}
+        {tab === "Insight Charts" ? <Tiles tiles={tiles} demoTiles={props.demoTiles ?? null} /> : null}
+        {tab === "Trade Replay" ? (props.demoReplay ?? <PanelState status="unavailable" reason="Trade replay draws market candles, which are not published (N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED)." />) : null}
         {tab === "Positions" ? <Positions {...props} /> : null}
         {tab === "Orders & Fills" ? <Orders {...props} /> : null}
         {tab === "Risk" ? <Risk rows={props.risk ?? []} /> : null}
@@ -667,12 +672,12 @@ function Deployments({ onOpenDeployment, onOpenAccount, rows, scope }: { rows: r
   );
 }
 
-function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
+function Tiles({ tiles, demoTiles }: { tiles: readonly InsightTile[]; demoTiles: AlphaDemoTiles | null }) {
   // Twelve tiles, each a real chart or an explicit state — never a frame with a caption.
   return (
     <div className="exec-alpha-tiles" data-scope-panel="tiles">
       {tiles.map((tile) =>
-        tile.smokeChart === "density" ? (
+        tile.smokeChart === "density" && demoTiles ? (
           /* Declared smoke in the unavailable slot: the kline shard publishes
              nothing (the honest reason), so the frame draws TILE_CHARTS.density
              and says so — undeclared pixels are how real data gets mistrusted. */
@@ -680,26 +685,26 @@ function Tiles({ tiles }: { tiles: readonly InsightTile[] }) {
             <div className="exec-chart-head"><h3 className="exec-section-title">{tile.index} · {tile.title}</h3></div>
             <DensityHeatmap
               height={200}
-              days={TILE_CHARTS.density.days}
-              hours={TILE_CHARTS.density.hours}
-              cells={TILE_CHARTS.density.cells}
+              days={demoTiles.density.days}
+              hours={demoTiles.density.hours}
+              cells={demoTiles.density.cells}
               provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "execution.v1 (BR-EX-40 heatmap)" }}
               ariaLabel="Execution density by day and hour, fills per bucket"
             />
-            <p className="exec-af-smoke">! SMOKE DATA — {TILE_CHARTS.density.foot} · reference shape for the BR-EX-40 heatmap tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
+            <p className="exec-af-smoke">! SMOKE DATA — {demoTiles.density.foot} · reference shape for the BR-EX-40 heatmap tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
             <EnvelopeCaption envelope={tile.envelope} compact />
           </section>
-        ) : tile.smokeChart === "drift" ? (
+        ) : tile.smokeChart === "drift" && demoTiles ? (
           <section key={tile.index} className="exec-chart-tile" aria-label={`${tile.index} · ${tile.title}`} data-state="ok">
             <div className="exec-chart-head"><h3 className="exec-section-title">{tile.index} · {tile.title}</h3></div>
             <LinesChart
               height={200}
-              series={TILE_CHARTS.drift.series}
+              series={demoTiles.drift.series}
               yFormatter={(v) => v.toFixed(3)}
               provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "paper.v1 (BR-EX-40 line pair)" }}
               ariaLabel="Paper versus live equity on the same artifact digest, normalized at window start"
             />
-            <p className="exec-af-smoke">! SMOKE DATA — {TILE_CHARTS.drift.foot} · reference shape for the BR-EX-40 line-pair tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
+            <p className="exec-af-smoke">! SMOKE DATA — {demoTiles.drift.foot} · reference shape for the BR-EX-40 line-pair tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
             <EnvelopeCaption envelope={tile.envelope} compact />
           </section>
         ) : tile.state === "ok" ? (

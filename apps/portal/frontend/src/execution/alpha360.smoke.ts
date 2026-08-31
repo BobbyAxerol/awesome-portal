@@ -182,3 +182,6 @@ export const TILE_CHARTS = {
     foot: "normalized 1.0 at window start · joined by artifact digest · gap paper−live is the drift",
   },
 };
+
+export type AlphaDemoTiles = typeof TILE_CHARTS;
+export type AlphaStageSeries = ReturnType<typeof alphaStageEquity>;

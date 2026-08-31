@@ -322,3 +322,5 @@ export function usePfTick(): { now: Date; j: number } {
   }, []);
   return { now: s.now, j: s.j };
 }
+
+export type PfDemo = NonNullable<ReturnType<typeof pfSmoke>>;

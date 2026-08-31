@@ -24,7 +24,8 @@
  * Trading System client.
  */
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useParamState } from "./routeState";
+import { useNavigate } from "react-router-dom";
 
 import { FUNNEL_COMPLETE } from "./analytics.presentation.fixtures";
 import { readOrderFunnel } from "./analytics";
@@ -99,21 +100,6 @@ export interface SimulatedAction {
  * list falls back to `fallback` — a hand-edited `?tab=x` cannot select a tab
  * that does not exist.
  */
-function useParamState<T extends string>(key: string, allowed: readonly T[], fallback: T): [T, (next: T) => void] {
-  const [params, setParams] = useSearchParams();
-  const raw = params.get(key);
-  const value = (allowed as readonly string[]).includes(raw ?? "") ? (raw as T) : fallback;
-  const set = useCallback(
-    (next: T) => {
-      const copy = new URLSearchParams(params);
-      if (next === fallback) copy.delete(key);
-      else copy.set(key, next);
-      setParams(copy, { replace: false });
-    },
-    [params, setParams, key, fallback],
-  );
-  return [value, set];
-}
 
 /**
  * The simulated-action ledger. Each safe workflow records what it did and

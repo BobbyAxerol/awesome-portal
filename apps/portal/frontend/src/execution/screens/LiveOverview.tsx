@@ -1,6 +1,9 @@
 /**
  * Live Overview — hi-fi "Live Overview (entry)", entry screen for WF 1f/1e.
- * Reads `live.smoke.ts` until BR-EX-56 publishes `live-overview.v1`.
+ *
+ * The product passes the published `execution.live-overview.v1` envelope and
+ * every panel shows exactly what it carries — a valid empty Live is empty.
+ * The lab passes `demo` (the reviewed hi-fi bundle) instead.
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
@@ -8,7 +11,12 @@ import { SparkLine } from "../components/marketChart";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
 import { usePresentationChrome } from "../../app/presentation";
-import { clockOf, fmt0, fmtPnl, liveSmoke, sparkSeries, useLiveTick, type LiveRow } from "../live.smoke";
+import { clockOfDate as clockOf } from "../clock";
+import { fmt0, fmtPnl, sparkSeries } from "../liveFormat";
+import type { LiveDemo, LiveRow, LiveTick } from "../live.smoke";
+import type { ProfileEnvelope } from "../api/profileRead";
+import type { PanelStatus } from "../contracts";
+import { utcStamp } from "../time";
 
 export const LIVE_FILTERS = ["all", "full", "canary", "issues"] as const;
 export type LiveFilter = (typeof LIVE_FILTERS)[number];
@@ -21,9 +29,19 @@ function Note({ text, links }: { text: string; links?: { label: string; href: st
   out.push(rest); return <>{out}</>;
 }
 
-export function LiveOverview() {
-  const smoke = liveSmoke();
-  const { now, j, price, prev, sp } = useLiveTick();
+export interface LiveOverviewProps {
+  /** `execution.live-overview.v1` — the published truth. Empty is a fact. */
+  envelope?: ProfileEnvelope | null;
+  status?: PanelStatus;
+  reason?: string;
+  /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
+  demo?: LiveDemo | null;
+  demoTick?: LiveTick;
+}
+
+export function LiveOverview({ envelope = null, status = "ok", reason, demo, demoTick }: LiveOverviewProps) {
+  const smoke = demo ?? null;
+  const { now, j, price, prev, sp } = demoTick ?? { now: new Date(0), j: 0, price: 0, prev: 0, sp: [] };
   const [filter, setFilter] = useState<LiveFilter>("all");
   const chrome = usePresentationChrome();
   useEffect(() => {
@@ -32,7 +50,62 @@ export function LiveOverview() {
     return () => chrome?.setChrome({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [price, prev, smoke]);
-  if (!smoke) return <ExecutionSurface kind="deployments" className="exec-lv"><PanelState status="unavailable" reason="No live overview is published (BR-EX-56)." /></ExecutionSurface>;
+  if (!smoke && status !== "ok" && status !== "partial") {
+    return <ExecutionSurface kind="deployments" className="exec-lv"><PanelState status={status} reason={reason} /></ExecutionSurface>;
+  }
+  if (!smoke && !envelope) {
+    return <ExecutionSurface kind="deployments" className="exec-lv"><PanelState status="unavailable" reason="No live overview was published for this workspace." /></ExecutionSurface>;
+  }
+  if (!smoke) {
+    // Product: the reviewed layout over the published envelope. Live is empty
+    // in this workspace today, and a valid empty Live renders as empty.
+    const deployments = envelope!.data.deployments ?? [];
+    const notPublished = <span className="exec-gate-unverified">not published</span>;
+    return (
+      <ExecutionSurface kind="deployments" className="exec-lv exec-af" data-hifi-exact="live-overview">
+        <ExecutionWorkspace layout="dense">
+          <div className="exec-af-page">
+            <header className="exec-af-masthead">
+              <h1 className="exec-af-h1">Live</h1>
+              <span className="exec-af-sum">{deployments.length} live deployment{deployments.length === 1 ? "" : "s"} published</span>
+              <span className="exec-af-wf">entry screen for WF 1f/1e</span>
+              <span className="exec-af-spacer" />
+              <span className="exec-af-source"><b>{envelope!.sourceAuthority ?? "authority not stated"}</b> · real capital · as_of <span className="exec-af-num">{utcStamp(envelope!.asOf)}</span> · {envelope!.state.toUpperCase()}</span>
+            </header>
+            <div className="exec-af-kpis exec-lv-kpis">
+              <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Live capital Σ</div><div className="exec-af-kpival">{notPublished}</div><div className="exec-af-kpisub">account balances are published per deployment</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Session PnL</div><div className="exec-af-kpival">{notPublished}</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Gross exposure</div><div className="exec-af-kpival">{notPublished}</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope!.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope!.completeness ?? "completeness not stated"}</div></div>
+            </div>
+            <div className="exec-af-panel">
+              <div className="exec-scroll-x">
+                <table className="exec-af-table exec-lv-table" aria-label="Live deployments">
+                  <thead><tr><th>deployment</th><th>mode</th><th>stage</th><th>venue · account · portfolio</th></tr></thead>
+                  <tbody>
+                    {deployments.map((row, i) => {
+                      const id = typeof row.deployment_id === "string" ? row.deployment_id : `row ${i + 1}`;
+                      return (
+                        <tr key={id} className="exec-af-row exec-lv-row">
+                          <td className="exec-lv-edge"><a href={`/deployments/live/${encodeURIComponent(id)}`}><b>{id}</b></a></td>
+                          <td>{typeof row.mode === "string" ? row.mode : notPublished}</td>
+                          <td>{notPublished}</td>
+                          <td className="exec-af-dim">{notPublished}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {deployments.length === 0 ? (
+                  <p className="exec-po-empty">No live deployment exists in this workspace — the source published an empty set, and nothing here will ever fill that in from a fixture.</p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </ExecutionWorkspace>
+      </ExecutionSurface>
+    );
+  }
   const secs = now.getTime() / 1000;
   const wsAge = `${(0.4 + (secs % 4.6)).toFixed(1)}s`;
   const incAge = `${Math.floor((secs / 60) % 20) + 2}m`;

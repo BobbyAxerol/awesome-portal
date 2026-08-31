@@ -102,3 +102,13 @@ export function jitter(tick: number, seed = 1): number {
   const x = Math.sin(tick * 12.9898 + seed) * 43758.5453;
   return ((x - Math.floor(x)) - 0.5) * 2;
 }
+
+/** `HH:MM:SSZ` from a Date; epoch-zero (frozen demo clock) renders as a dash. */
+export const clockOfDate = (d: Date, z = true): string =>
+  d.getTime() === 0 ? "—" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}${z ? "Z" : ""}`;
+
+/** Whether a UTC instant falls inside the ICT (UTC+7) 09:00–14:45 session. */
+export const inIctSession = (d: Date): boolean => {
+  const h = (d.getUTCHours() + 7) % 24;
+  return h >= 9 && (h < 14 || (h === 14 && d.getUTCMinutes() <= 45));
+};

@@ -14,7 +14,12 @@ import { useNavigate } from "react-router-dom";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
-import { sandboxSmoke, sbAge, sbClock, sbPct, useSandboxTick, type SbLink, type SbRow } from "../sandbox.smoke";
+import { sbAge, sbClock } from "../clock";
+import { sbPct } from "../sbFormat";
+import type { SandboxDemo, SandboxTick, SbLink, SbRow } from "../sandbox.smoke";
+import type { ProfileEnvelope } from "../api/profileRead";
+import type { PanelStatus } from "../contracts";
+import { utcStamp } from "../time";
 
 export const SANDBOX_FILTERS = ["all", "halted", "findings"] as const;
 export type SandboxFilter = (typeof SANDBOX_FILTERS)[number];
@@ -46,15 +51,88 @@ function StepBar({ row }: { row: SbRow }) {
   );
 }
 
-export function SandboxOverview() {
-  const smoke = sandboxSmoke();
-  const { now, orders, filled, ack, fill } = useSandboxTick();
+export interface SandboxOverviewProps {
+  /** `execution.sandbox-overview.v1` — the published truth. */
+  envelope?: ProfileEnvelope | null;
+  status?: PanelStatus;
+  reason?: string;
+  /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
+  demo?: SandboxDemo | null;
+  demoTick?: SandboxTick;
+}
+
+export function SandboxOverview({ envelope = null, status = "ok", reason, demo, demoTick }: SandboxOverviewProps) {
+  const smoke = demo ?? null;
+  const { now, orders, filled, ack, fill } = demoTick ?? { now: new Date(0), orders: 0, filled: 0, ack: 0, fill: 0 };
   const [filter, setFilter] = useState<SandboxFilter>("all");
   const navigate = useNavigate();
-  if (!smoke) {
+  if (!smoke && status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-sb">
-        <PanelState status="unavailable" reason="No sandbox overview is published (BR-EX-60)." />
+        <PanelState status={status} reason={reason} />
+      </ExecutionSurface>
+    );
+  }
+  if (!smoke && !envelope) {
+    return (
+      <ExecutionSurface kind="deployments" className="exec-sb">
+        <PanelState status="unavailable" reason="No sandbox overview was published for this workspace." />
+      </ExecutionSurface>
+    );
+  }
+  if (!smoke) {
+    // Product: the reviewed layout over the published envelope, panel by panel.
+    const deployments = envelope!.data.deployments ?? [];
+    const notPublished = <span className="exec-gate-unverified">not published</span>;
+    return (
+      <ExecutionSurface kind="deployments" className="exec-sb exec-af" data-hifi-exact="sandbox-overview">
+        <ExecutionWorkspace layout="dense">
+          <div className="exec-af-page">
+            <header className="exec-af-masthead">
+              <h1 className="exec-af-h1">Sandbox</h1>
+              <span className="exec-af-sum">{deployments.length} deployment{deployments.length === 1 ? "" : "s"} published in certification</span>
+              <span className="exec-af-wf">entry for WF 1d</span>
+              <span className="exec-af-spacer" />
+              <span className="exec-af-source">
+                <b>{envelope!.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope!.asOf)}</span> · {envelope!.state.toUpperCase()}
+              </span>
+            </header>
+            <div className="exec-af-kpis exec-sb-kpis">
+              <div className="exec-af-kpi">
+                <div className="exec-af-kpilabel">In certification</div>
+                <div className="exec-af-kpival">{deployments.length}</div>
+                <div className="exec-af-kpisub">published deployments</div>
+              </div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Halted</div><div className="exec-af-kpival">{notPublished}</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Open findings</div><div className="exec-af-kpival">{notPublished}</div></div>
+              <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Test-fund equity</div><div className="exec-af-kpival">{notPublished}</div></div>
+              <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope!.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope!.completeness ?? "completeness not stated"}</div></div>
+            </div>
+            <div className="exec-af-panel">
+              <div className="exec-scroll-x">
+                <table className="exec-af-table exec-sb-table" aria-label="Deployments in certification">
+                  <thead><tr><th>deployment</th><th>mode</th><th>certification</th><th>next step</th></tr></thead>
+                  <tbody>
+                    {deployments.map((row, i) => {
+                      const id = typeof row.deployment_id === "string" ? row.deployment_id : `row ${i + 1}`;
+                      return (
+                        <tr key={id} className="exec-af-row">
+                          <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}><b>{id}</b></a></td>
+                          <td>{typeof row.mode === "string" ? row.mode : notPublished}</td>
+                          <td>{notPublished}</td>
+                          <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}>Open certification →</a></td>
+                        </tr>
+                      );
+                    })}
+                    {deployments.length === 0 ? (
+                      <tr><td colSpan={4}><span className="exec-af-empty">No deployment is in certification — the source published an empty set, and an empty set is a fact.</span></td></tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </ExecutionWorkspace>
       </ExecutionSurface>
     );
   }

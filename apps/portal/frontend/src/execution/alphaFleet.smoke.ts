@@ -130,12 +130,8 @@ export function useFleetTick(): { now: Date; j: number } {
   return { now: s.now, j: s.j };
 }
 
-export const fmt2 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Spark rows above store compact pixel-y arrays; the chart wants data — value = inverted y (up is up), one point ≈ 3 days of the 30d window. */
-export function fleetSparkSeries(pts: readonly number[]): [string, number][] {
-  return pts.map((y, i) => [
-    new Date(Date.UTC(2026, 7, 22) - (pts.length - 1 - i) * 3 * 86_400_000).toISOString().slice(0, 10),
-    24 - y,
-  ]);
-}
+export { fleetSparkSeries, fmt2 } from "./fleetFormat";
+export type FleetDemo = NonNullable<ReturnType<typeof fleetSmoke>>;
+export type FleetTick = ReturnType<typeof useFleetTick>;

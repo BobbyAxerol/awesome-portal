@@ -1,17 +1,76 @@
 /**
- * Binding Detail — hi-fi "Binding Detail — binance_main_01". Reads
- * `accounts.smoke.ts` until BR-EX-53 publishes `binding-detail.v1`.
+ * Binding Detail — hi-fi "Binding Detail — binance_main_01".
+ *
+ * The product passes the BR-EX-72 binding projection (`detail`) and renders
+ * its published facts in the reviewed frame; every unpublished panel states
+ * itself. The lab passes `demo` for the full hi-fi.
  */
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
-import { accountsSmoke, clockOf, fmt0, useAccountsTick } from "../accounts.smoke";
+import { clockOfDate as clockOf } from "../clock";
+import { fmt0 } from "../liveFormat";
+import type { AccountsDemo, AccountsTick } from "../accounts.smoke";
+import type { BindingItem } from "../api/profileRead";
+import type { PanelStatus } from "../contracts";
+import { utcStamp } from "../time";
 
-export function BindingDetail({ bindingId }: { bindingId: string }) {
-  const smoke = accountsSmoke();
-  const { now, j, snaps } = useAccountsTick(true);
-  if (!smoke || bindingId !== smoke.binding.id) {
-    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status="unavailable" reason={`No binding detail is published for ${bindingId} (BR-EX-53).`} /></ExecutionSurface>;
+export interface BindingDetailProps {
+  bindingId: string;
+  /** BR-EX-72 `GET /broker-bindings/{id}` — non-secret published facts. */
+  detail?: BindingItem | null;
+  status?: PanelStatus;
+  reason?: string;
+  /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
+  demo?: AccountsDemo | null;
+  demoTick?: AccountsTick;
+}
+
+export function BindingDetail({ bindingId, detail = null, status = "ok", reason, demo, demoTick }: BindingDetailProps) {
+  const smoke = demo && bindingId === demo.binding.id ? demo : null;
+  const { now, j, snaps } = demoTick ?? { now: new Date(0), j: 0, snaps: [] };
+  if (!smoke && status !== "ok" && status !== "partial") {
+    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status={status} reason={reason} /></ExecutionSurface>;
+  }
+  if (!smoke && !detail) {
+    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status="unavailable" reason={`No binding detail was published for ${bindingId}.`} /></ExecutionSurface>;
+  }
+  if (!smoke) {
+    // Product: the published, non-secret binding facts in the reviewed frame.
+    const d = detail!;
+    return (
+      <ExecutionSurface kind="deployments" className="exec-ab exec-a3 exec-bd" data-hifi-exact="binding-detail">
+        <ExecutionWorkspace layout="dense">
+          <header className="exec-a3-masthead">
+            <span className="exec-bd-kind">BINDING</span>
+            <h1 className="exec-a3-h1">{d.bindingId} <span className="exec-a3-id">— {d.venue}</span></h1>
+            <span className="exec-a3-spacer" />
+            <span className="exec-a3-source"><b>BROKER</b> · updated {utcStamp(d.updatedAt)}</span>
+          </header>
+          <section className="exec-pf2-panel" aria-label="Binding facts">
+            <header className="exec-pf2-head"><span className="exec-pf2-title">Published binding facts</span></header>
+            <div className="exec-gov-kv" data-flush="true">
+              <span className="exec-gov-k">account</span>
+              <span className="exec-gov-v"><a href={`/deployments/accounts/${encodeURIComponent(d.accountId)}`}>{d.accountId}</a></span>
+              <span className="exec-gov-k">venue</span>
+              <span className="exec-gov-v">{d.venue}</span>
+              <span className="exec-gov-k">state</span>
+              <span className="exec-gov-v">{d.state.toUpperCase()}</span>
+              <span className="exec-gov-k">credential</span>
+              <span className="exec-gov-v">{d.credentialState.toUpperCase()} — state word only; credentials never leave the vault</span>
+            </div>
+          </section>
+          <section className="exec-pf2-panel" aria-label="Capital invariant">
+            <header className="exec-pf2-head"><span className="exec-pf2-title">Capital invariant — Σ virtual ≤ physical</span></header>
+            <PanelState status="unavailable" reason="Physical equity and the virtual-allocation ledger are not published on this projection (N28 exposure population)." />
+          </section>
+          <section className="exec-pf2-panel" aria-label="Sync and policy">
+            <header className="exec-pf2-head"><span className="exec-pf2-title">Sync · policy</span></header>
+            <PanelState status="unavailable" reason="Broker sync ages and per-venue policy verdicts are not published on this projection." />
+          </section>
+        </ExecutionWorkspace>
+      </ExecutionSurface>
+    );
   }
   const b = smoke.binding;
   const phys = smoke.physBase + j * 2.2;

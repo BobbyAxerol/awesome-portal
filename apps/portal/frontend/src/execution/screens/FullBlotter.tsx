@@ -40,7 +40,8 @@ import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionWorkspace } from "../components/workspace";
-import { blotterSmoke, fmtBlotterAge, useBlotterTick, type Flag, type SmokeOrder } from "../blotter.smoke";
+import { fmtBlotterAge } from "../clock";
+import type { BlotterDemo, BlotterTick, Flag, SmokeOrder } from "../blotter.smoke";
 
 /**
  * Fills shown per funnel stage before capping.
@@ -315,7 +316,9 @@ export interface FullBlotterProps {
   funnelReason?: string;
   onExpand: (row: BlotterRow) => void;
   /** M7 totals per currency — server-published, three counts kept apart. */
-  aggregates?: readonly CurrencyAggregate[] | null;
+  aggregates?: readonly CurrencyAggregate[] | null;  /** Reviewed hi-fi demo bundle — the lab passes it; the product never does. */
+  demo?: BlotterDemo | null;
+  demoTick?: BlotterTick;
 }
 
 const FLAG_TONE: Record<NonNullable<Flag["tone"]>, string> = { warn: "warn", bad: "bad", good: "good", paper: "paper" };
@@ -417,9 +420,11 @@ export function FullBlotter({
   funnelReason,
   onExpand,
   aggregates,
+  demo,
+  demoTick,
 }: FullBlotterProps) {
-  const smoke = blotterSmoke();
-  const tick = useBlotterTick(smoke?.basePrice ?? 0);
+  const smoke = demo ?? null;
+  const tick: BlotterTick = demoTick ?? { elapsed: 0, price: smoke?.basePrice ?? 0, prev: smoke?.basePrice ?? 0, slice: 0 };
   const [view, setView] = useState<"CONDITIONAL" | "BRACKETS" | null>(null);
   const [openSmoke, setOpenSmoke] = useState<Record<string, boolean>>({ br_0092: true });
   const columns: readonly Column<BlotterRow>[] = [
