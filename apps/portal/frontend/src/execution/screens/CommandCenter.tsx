@@ -263,7 +263,14 @@ export function Today({ panel }: { panel: TodayPanel }) {
           {panel.items.map((item) => (
             <li key={item.id}>
               <span className="exec-cc-todaykind">{item.kind ?? "—"}</span>
-              <a href={canonicalHref(item.href) ?? undefined}>{item.label}</a>
+              <a
+                href={
+                  // N29 item 6: a condition-expiry item is an obligation — its
+                  // home is the fleet-wide register, whatever approval href the
+                  // feed row carries.
+                  item.kind === "CONDITION_EXPIRY" ? "/governance/waivers" : canonicalHref(item.href) ?? undefined
+                }
+              >{item.label}</a>
             </li>
           ))}
         </ul>

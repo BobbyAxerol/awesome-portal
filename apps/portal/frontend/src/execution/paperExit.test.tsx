@@ -4,7 +4,7 @@
  * Each test is a way the screen could have told a reviewer something false
  * while looking entirely correct.
  */
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PaperExitReview, type EvidencePanelSpec } from "./screens/PaperExitReview";
@@ -332,13 +332,16 @@ describe("EL-V2-04 — Paper Exit Review on the workspace anatomy", () => {
     expect(screen.getByText("Blocking findings").parentElement?.textContent).toContain("1");
     expect(screen.getByText("breach", { selector: ".exec-rail-blocker *, .exec-blocker *, [class*=blocker] *" })).toBeTruthy();
   });
-  it("shows a full digest as head-6/tail-2 in provenance with a Copy control", () => {
+  it("shows a full digest as head-6/tail-2 in provenance with a Copy control", async () => {
     const digest = "sha256:9f3c1a7b2e4d5c6f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1e2";
     const onCopy = vi.fn();
     exit({ lineage: [{ label: "artifact", value: digest }], onCopyProvenance: onCopy });
     expect(screen.queryByText(digest)).toBeNull();
     expect(screen.getByText(/9f3c1a…e2/)).toBeTruthy();
-    screen.getByRole("button", { name: /Copy/ }).click();
+    await act(async () => { screen.getByRole("button", { name: /Copy/ }).click(); });
     expect(onCopy).toHaveBeenCalledWith(digest);
+    // Settle the container's trailing async dispatch inside act — the N29
+    // acceptance requires a warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 });

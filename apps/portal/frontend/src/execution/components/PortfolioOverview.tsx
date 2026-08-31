@@ -178,7 +178,7 @@ export function PfCorrMatrix() {
   return (
     <Panel title="Cross-alpha correlation · rolling 30d" note="★ benchmark pinned in-matrix" label="Cross-alpha correlation (hi-fi)">
       <table className="exec-pf2-table exec-pf2-corrm">
-        <thead><tr><th /> {c.labels.map((l) => <th key={l} data-numeric="true">{l}</th>)}<th data-numeric="true" data-tone="warn">{c.bm}</th></tr></thead>
+        <thead><tr><th />{c.labels.map((l) => <th key={l} data-numeric="true">{l}</th>)}<th data-numeric="true" data-tone="warn">{c.bm}</th></tr></thead>
         <tbody>
           {c.rows.map((r, i) => (
             <tr key={r.label}>

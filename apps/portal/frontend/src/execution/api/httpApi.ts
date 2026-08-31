@@ -54,6 +54,8 @@ import type {
   Result,
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
+import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
+import { readApprovalCreated, readConditionsPage } from "./rows";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
@@ -178,6 +180,86 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
    * and the wrong half of that disagreement is a blind retry against a
    * record that has changed.
    */
+  /**
+   * N29 consumer — `POST /governance/approvals` (codex handoff 2026-08-31).
+   *
+   * The request key is the CALLER's: minted per submit intent, reused only to
+   * retry the same payload. The server replays a matching key, answers a
+   * changed key with 409, and rejects duplicate open alpha/run work naming
+   * the existing approval — that name is surfaced, not buried in a toast.
+   * The artifact digest is never sent: the server pins it from its own run
+   * registry, which is the whole point of the guard.
+   */
+  const createApprovalRequest = async (input: ApprovalCreateInput): Promise<ApprovalCreateOutcome> => {
+    // A create is a GOVERNANCE write, not a trading command: the policy bit
+    // that gates it is governance_write, same as decide().
+    const blocked = governanceWriteBlocked(policy);
+    if (blocked) return { kind: "failed", status: "unavailable", reason: blocked };
+    let response: Response;
+    try {
+      response = await post("/governance/approvals", {
+        schema_version: "governance.approval-create-request.v1",
+        workspace_id: "primary",
+        request_key: input.requestKey,
+        gate: "R1",
+        alpha_id: input.alphaId,
+        evidence_run_id: input.evidenceRunId,
+        methodology_claim_id: input.methodologyClaimId,
+        summary: input.summary,
+      }, signal);
+    } catch {
+      return {
+        kind: "failed",
+        status: "unavailable",
+        reason: "The request never reached the Portal — network failure. Retry sends the SAME request key, so a submit that did land is replayed, not duplicated.",
+        offline: true,
+      };
+    }
+    if (response.ok) {
+      let body: unknown = null;
+      try { body = await response.json(); } catch { /* handled below */ }
+      const outcome = readApprovalCreated(body);
+      return outcome ?? { kind: "failed", status: "unavailable", reason: "The create response could not be read." };
+    }
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* status alone still types the failure */ }
+    const problemBody = readProblem(body, response.status);
+    if (response.status === 409 && /DUPLICATE/i.test(problemBody.code)) {
+      const match = /\b(apr_[A-Za-z0-9]+|AP-\d+)\b/.exec(problemBody.message);
+      return { kind: "duplicate", existingApprovalId: match ? match[1] : null, reason: problemBody.message };
+    }
+    return {
+      kind: "failed",
+      status: response.status === 409 ? "unavailable" : panelStatusForHttp(response.status),
+      reason: `${problemBody.code}: ${problemBody.message}`,
+    };
+  };
+
+  /** N29 consumer — `GET /governance/waivers`: exact counts, both cursors. */
+  const getWaivers = async (query: WaiverQuery = {}): Promise<Result<ConditionsPage>> => {
+    const blocked = readBlocked();
+    if (blocked) return unavailable(blocked);
+    const params = new URLSearchParams();
+    if (query.state) params.set("state", query.state);
+    if (query.after) params.set("after", query.after);
+    if (query.before) params.set("before", query.before);
+    if (query.limit !== undefined) params.set("limit", String(query.limit));
+    const suffix = params.size > 0 ? `?${params.toString()}` : "";
+    let response: Response;
+    try {
+      response = await get(`/governance/waivers${suffix}`, signal);
+    } catch {
+      return unavailable("The register never reached the Portal — network failure.");
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* falls through to reader */ }
+    const page = readConditionsPage(body);
+    return page
+      ? { ok: true as const, value: page }
+      : unavailable("The conditions-register response could not be read.");
+  };
+
   const triageMutation = async (
     path: string,
     body: unknown,
@@ -201,6 +283,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
   };
 
   return {
+    createApprovalRequest,
+    getWaivers,
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);

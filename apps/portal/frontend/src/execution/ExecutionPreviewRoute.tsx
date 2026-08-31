@@ -19,9 +19,11 @@ import { reviewRouteFor } from "./screens/ApprovalInbox";
 import { usePresentation } from "../app/presentation";
 
 import { createFixtureApi } from "./api/fixtureApi";
+import { createHttpApi } from "./api/httpApi";
+import type { DeliveryPolicy } from "./profile";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
-import { NewApprovalRequestScreen } from "./screens/NewApprovalRequest";
-import { WaiversRegisterScreen } from "./screens/WaiversRegister";
+import { NewApprovalRequestContainer } from "./screens/NewApprovalRequest";
+import { WaiversRegisterContainer } from "./screens/WaiversRegister";
 import { readCommandCenter } from "./commandCenter";
 import { ExecutionSurface, type ExecutionSurfaceKind } from "./ExecutionSurface";
 import {
@@ -126,11 +128,42 @@ function PreviewFrame({ screenId, profile, children }: { screenId: string; profi
   );
 }
 
-export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: string; profile?: string | null }) {
+
+/**
+ * `?api=http` browser-smoke escape (N29 acceptance): lets the preview drive
+ * the same-origin BFF before the registry publishes a policy for a screen.
+ * It loosens only the CLIENT's courtesy gate — the server keeps enforcing
+ * origin, session, CSRF and workspace on every call, which is the point of
+ * the smoke.
+ */
+const BROWSER_SMOKE_POLICY: DeliveryPolicy = {
+  policyRevision: 0,
+  queryEnabled: true,
+  projectionIngestionEnabled: false,
+  sseEnabled: false,
+  governanceWriteEnabled: true,
+  paperCommandsEnabled: false,
+  sandboxCommandsEnabled: false,
+  liveProtectiveCommandsEnabled: false,
+  liveRiskIncreasingCommandsEnabled: false,
+};
+
+export function ExecutionPreviewRoute({ screenId, profile = null, policy = null }: { screenId: string; profile?: string | null; policy?: DeliveryPolicy | null }) {
   const params = useParams();
   const [search] = useSearchParams();
   const navigate = useNavigate();
-  const api = useMemo(() => createFixtureApi(), []);
+  // N29: the preview finally owns an HTTP consumer. The registry's delivery
+  // profile decides; `?api=http` forces the same-origin BFF for the browser
+  // smoke (preview builds only — this route exists only behind the flag).
+  const wantsHttp = profile !== null && profile !== "fixture";
+  const forceHttp = search.get("api") === "http";
+  const api = useMemo(
+    () =>
+      wantsHttp || forceHttp
+        ? createHttpApi({ policy: policy ?? (forceHttp ? BROWSER_SMOKE_POLICY : null) })
+        : createFixtureApi(),
+    [wantsHttp, forceHttp, policy],
+  );
   const commandCenter = useMemo(() => readCommandCenter(CC_FIXTURES.busy), []);
 
   const { setEntityLabel } = usePresentation();
@@ -185,13 +218,13 @@ export function ExecutionPreviewRoute({ screenId, profile = null }: { screenId: 
       content = <ApprovalInboxContainer api={api} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN":
-      content = <NewApprovalRequestScreen />;
+      content = <NewApprovalRequestContainer api={api} />;
       break;
     case "EXECUTION_GATE_LIVE_REVIEW_SCREEN":
       content = <GateLiveReviewContainer api={api} approvalId={approvalId} />;
       break;
     case "EXECUTION_WAIVERS_REGISTER_SCREEN":
-      content = <WaiversRegisterScreen />;
+      content = <WaiversRegisterContainer api={api} />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       content = <GateR1ReviewContainer api={api} approvalId={approvalId} />;

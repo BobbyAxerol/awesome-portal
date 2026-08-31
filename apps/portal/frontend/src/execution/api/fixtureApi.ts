@@ -12,7 +12,7 @@
  * finished `ApprovalRow` objects would test nothing.
  */
 import { readKeysetPage } from "../adapter";
-import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail , readDecidedRow } from "./rows";
+import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail, readDecidedRow, readApprovalCreated, readConditionsPage } from "./rows";
 import {
   readAnalyticsEnvelope,
   readBindingExposure,
@@ -56,6 +56,10 @@ import type {
   InboxResult,
   OperationSnapshot,
   Result,
+  ApprovalCreateInput,
+  ApprovalCreateOutcome,
+  ConditionsPage,
+  WaiverQuery,
 } from "./ports";
 import { unavailable } from "./ports";
 import type { CapitalPreviewInput, InsightBatchInput, DecisionPlan } from "./ports";
@@ -462,6 +466,44 @@ export interface FixtureApiOptions {
  */
 export const BREACHING_AMOUNT = "600";
 
+/* ── N29 governance consumer — fixture semantics ─────────────────────────────
+ * Mirrors the server rules the handoff states: request-key replay, changed-key
+ * 409, duplicate open alpha/run rejected WITH the existing approval id, ids
+ * validated against the server-owned registries (unknown → 422). State lives
+ * at module scope so a retry after navigation still replays.
+ */
+const CREATE_KNOWN = {
+  alphas: new Set(["carry", "grid", "vnmomo"]),
+  runs: new Set(["run_5512", "run_5320"]),
+  claims: new Set(["clm_31", "clm_29"]),
+};
+/** Open R1 work in the cast: carry × run_5512 is already AP-201. */
+const CREATE_OPEN: ReadonlyMap<string, string> = new Map([["carry|run_5512", "AP-201"]]);
+const CREATE_BY_KEY = new Map<string, { payload: string; approvalId: string }>();
+let CREATE_SEQ = 400;
+
+/** The register the GET serves — the cast's obligations in contract shape. */
+const CONDITION_FIXTURES: readonly Record<string, unknown>[] = [
+  { condition_id: "cn_101", approval_id: "AP-352", gate: "R2", subject: { id: "dep_74", label: "Carry v3.2" }, environment: "PAPER", kind: "RESTRICTION", state: "OPEN", label: "Capacity re-measure", statement: "Capacity at target weight 2.4× < 3× — re-measure at 30d live volume.", owner: { user_id: "usr_lan", username: "Lan" }, due_at: "2026-09-11T12:00:00.000Z", blocking: false, policy_version: "approval.v3", created_at: "2026-08-18T09:00:00.000Z", updated_at: "2026-08-29T09:00:00.000Z" },
+  { condition_id: "cn_102", approval_id: "EX-771", gate: "PAPER_EXIT", subject: { id: "dep_94", label: "Grid v2.1" }, environment: "PAPER", kind: "WARNING", state: "OPEN", label: "Slippage carries to cert", statement: "Slippage evidence carries into sandbox certification — measured, not assumed.", owner: { user_id: "usr_stan", username: "Stan" }, due_at: null, blocking: false, policy_version: "approval.v3", created_at: "2026-08-21T09:00:00.000Z", updated_at: "2026-08-28T09:00:00.000Z" },
+  { condition_id: "cn_103", approval_id: "AP-259", gate: "R2", subject: { id: "dep_88", label: "Grid v2.1" }, environment: "LIVE", kind: "RESTRICTION", state: "EXPIRING", label: "Daily-loss cap while canary runs", statement: "Daily-loss cap −3.0% while canary runs (risk profile rev 12).", owner: { user_id: "usr_lan", username: "Lan" }, due_at: "2026-09-02T12:00:00.000Z", blocking: false, policy_version: "approval.v3", created_at: "2026-07-28T09:00:00.000Z", updated_at: "2026-08-30T09:00:00.000Z" },
+  { condition_id: "cn_104", approval_id: "AP-207", gate: "R2", subject: { id: "binding", label: "shared binding" }, environment: "SANDBOX", kind: "RESTRICTION", state: "OPEN", label: "Flatten before NET→HEDGE", statement: "Hedge-mode flatten check before NET→HEDGE flip on shared binding.", owner: { user_id: "usr_stan", username: "Stan" }, due_at: null, blocking: true, policy_version: "approval.v3", created_at: "2026-08-12T09:00:00.000Z", updated_at: "2026-08-27T09:00:00.000Z" },
+  { condition_id: "cn_105", approval_id: "AP-201", gate: "R1", subject: { id: "dep_74", label: "Carry v3.2" }, environment: "PAPER", kind: "WARNING", state: "OPEN", label: "WFO fold-6 re-check", statement: "WFO fold-6 dispersion re-check after 60d live data.", owner: { user_id: "usr_minh", username: "Minh" }, due_at: "2026-10-10T12:00:00.000Z", blocking: false, policy_version: "approval.v3", created_at: "2026-08-14T09:00:00.000Z", updated_at: "2026-08-26T09:00:00.000Z" },
+  { condition_id: "cn_106", approval_id: "PX-31", gate: "PAPER_EXIT", subject: { id: "dep_vnm", label: "VnMomo v0.9" }, environment: "PAPER", kind: "LINEAGE", state: "WAIVED", label: "Runbook documented", statement: "VN venue-calendar pause behaviour documented in runbook — waiver recorded on the exit decision.", owner: { user_id: "usr_stan", username: "Stan" }, due_at: null, blocking: false, policy_version: "approval.v3", created_at: "2026-08-15T09:00:00.000Z", updated_at: "2026-08-21T09:00:00.000Z" },
+  { condition_id: "cn_107", approval_id: "AP-311", gate: "LIVE_GATE", subject: { id: "dep_88", label: "Grid v2.1" }, environment: "LIVE", kind: "WAIVER", state: "WAIVED", label: "Capacity waiver — canary step", statement: "Capacity waiver granted for the canary step — expires with a gate_live policy revision change.", owner: { user_id: "usr_lan", username: "Lan" }, due_at: null, blocking: false, policy_version: "gate_live.rev3", created_at: "2026-08-26T09:00:00.000Z", updated_at: "2026-08-29T09:00:00.000Z" },
+  { condition_id: "cn_108", approval_id: "AP-198", gate: "R1", subject: { id: "rsi_v09", label: "RSI v0.9" }, environment: "RESEARCH", kind: "RESTRICTION", state: "LAPSED", label: "Re-review evidence expired", statement: "RSI v0.9 re-review evidence window lapsed before resubmission — blocking any new request for this alpha until re-run.", owner: { user_id: "usr_lan", username: "Lan" }, due_at: "2026-08-24T12:00:00.000Z", blocking: true, policy_version: "approval.v3", created_at: "2026-07-01T09:00:00.000Z", updated_at: "2026-08-24T12:00:01.000Z" },
+];
+
+const CREATE_APPROVAL_BASE = {
+  gate: "R1", subject_type: "ALPHA_VERSION", release_candidate: null, environment: "RESEARCH",
+  target_label: "R1", requester: { user_id: "usr_lan", username: "Lan" }, creator: { user_id: "usr_lan", username: "Lan" },
+  status: "PENDING", policy_version: "approval.v3", quorum_met: 0, quorum_required: 1, approval_version: 1,
+  evidence_set_hash: "sha256:41bb7d000000000000000000000000000000000000000000000000000000c4aa",
+  evidence_complete: true, blocker_count: 0, blocker_summary: null,
+  sla_due_at: "2026-09-01T12:00:00.000Z", expires_at: "2026-09-03T12:00:00.000Z",
+  created_at: "2026-08-31T12:00:00.000Z", updated_at: "2026-08-31T12:00:00.000Z",
+} as const;
+
 export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi {
   const down = new Set(options.unavailableEndpoints ?? []);
   let polls = 0;
@@ -473,6 +515,73 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
   }
 
   return {
+    async createApprovalRequest(input: ApprovalCreateInput): Promise<ApprovalCreateOutcome> {
+      const blocked = gate<never>("createApprovalRequest");
+      if (blocked && !blocked.ok) return { kind: "failed", status: blocked.status, reason: blocked.reason };
+      const payload = JSON.stringify([input.alphaId, input.evidenceRunId, input.methodologyClaimId, input.summary]);
+      const byKey = CREATE_BY_KEY.get(input.requestKey);
+      if (byKey) {
+        if (byKey.payload !== payload) {
+          return { kind: "failed", status: "unavailable", reason: "REQUEST_KEY_REUSED: this request key was already used for a different payload (409). Start a new submit intent." };
+        }
+        return readApprovalCreated({ schema_version: "governance.approval-create.v1", replayed: true, approval: { ...CREATE_APPROVAL_BASE, approval_id: byKey.approvalId, subject_id: input.alphaId, subject_label: input.alphaId } })!;
+      }
+      const missing = [
+        !CREATE_KNOWN.alphas.has(input.alphaId) ? `alpha_id ${input.alphaId}` : null,
+        !CREATE_KNOWN.runs.has(input.evidenceRunId) ? `evidence_run_id ${input.evidenceRunId}` : null,
+        !CREATE_KNOWN.claims.has(input.methodologyClaimId) ? `methodology_claim_id ${input.methodologyClaimId}` : null,
+      ].filter((x): x is string => x !== null);
+      if (missing.length > 0) {
+        return { kind: "failed", status: "unavailable", reason: `UNKNOWN_REGISTRY_ID: ${missing.join(" · ")} is not in the server-owned registry (422).` };
+      }
+      if (input.summary.trim().length < 8) {
+        return { kind: "failed", status: "unavailable", reason: "SUMMARY_TOO_SHORT: the summary is the reviewer's first sentence (422)." };
+      }
+      const dup = CREATE_OPEN.get(`${input.alphaId}|${input.evidenceRunId}`);
+      if (dup) {
+        return { kind: "duplicate", existingApprovalId: dup, reason: `Open R1 work already exists for ${input.alphaId} × ${input.evidenceRunId} — decide ${dup} instead of opening a twin.` };
+      }
+      CREATE_SEQ += 1;
+      const approvalId = `AP-${CREATE_SEQ}`;
+      CREATE_BY_KEY.set(input.requestKey, { payload, approvalId });
+      return readApprovalCreated({ schema_version: "governance.approval-create.v1", replayed: false, approval: { ...CREATE_APPROVAL_BASE, approval_id: approvalId, subject_id: input.alphaId, subject_label: input.alphaId } })!;
+    },
+
+    async getWaivers(query: WaiverQuery = {}): Promise<Result<ConditionsPage>> {
+      const blocked = gate<ConditionsPage>("getWaivers");
+      if (blocked) return blocked;
+      if (query.after && query.before) {
+        return unavailable("A page cannot be requested in both directions at once.");
+      }
+      const filtered = CONDITION_FIXTURES.filter((c) => !query.state || c.state === query.state);
+      const ids = filtered.map((c) => c.condition_id as string);
+      let start = 0;
+      let end = filtered.length;
+      const limit = query.limit ?? 50;
+      if (query.after) start = ids.indexOf(query.after) + 1;
+      if (query.before) { end = ids.indexOf(query.before); start = Math.max(0, end - limit); }
+      const window = filtered.slice(start, Math.min(end, start + limit));
+      const page = readConditionsPage({
+        schema_version: "governance.conditions-register.v1",
+        record_authority: "PORTAL_CONTROL",
+        delivery_profile: "portal",
+        read_at: "2026-08-31T12:00:00.000Z",
+        actor: { user_id: "usr_bobby", username: "bobby", roles: ["ADMIN"] },
+        page: {
+          rows: window,
+          total_count: CONDITION_FIXTURES.length,
+          filtered_count: filtered.length,
+          next_cursor: start + window.length < filtered.length ? (window[window.length - 1]?.condition_id as string) ?? null : null,
+          prev_cursor: start > 0 ? (window[0]?.condition_id as string) ?? null : null,
+          has_more: start + window.length < filtered.length,
+          has_previous: start > 0,
+          applied_filters: [],
+          applied_sort: [],
+        },
+      });
+      return page ? { ok: true as const, value: page } : unavailable("The conditions-register fixture could not be read.");
+    },
+
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {
       const blocked = gate<InboxResult>("listApprovals");
       if (blocked) return blocked;

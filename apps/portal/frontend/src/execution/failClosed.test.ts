@@ -38,6 +38,12 @@ const FLAGS: Record<string, { dangerous: boolean; why: string }> = {
   // `governance.paper-exit.v1` activation_plan. PREVIEW_ONLY by contract; the
   // reader keeps absent as false and the screen prints "none requested" — a
   // plan that DID request one must say so, so the flag is a warning too.
+  // A condition whose blocking bit cannot be read must block: the register
+  // exists to stop quiet defaults, and "unknown, so not blocking" is one.
+  blocking: {
+    dangerous: true,
+    why: "an unreadable obligation must block, never wave through",
+  },
   external_side_effect_requested: {
     dangerous: true,
     why: "an exit-review plan that requested an external effect must never read as inert",

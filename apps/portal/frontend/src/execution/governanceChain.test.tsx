@@ -5,7 +5,7 @@
  * sticky decision bar's contract, the Inbox rail, and the "zero fabricated
  * write" gate: no governance screen calls anything but the published verbs.
  */
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -130,6 +130,9 @@ describe("sticky decision bar", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Approve" }));
     expect(spy).toHaveBeenCalled();
     expect(spy.mock.calls[0][0].reason).toBe("holdout replayed by hand — accepted");
+    // Settle the decide chain inside act — the N29 acceptance requires a
+    // warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
   it("prints no lock reason once the gate is decided", () => {
     r1({ actorId: "u_minh", actor: "Minh", decided: { outcome: "DENIED", by: "Lan", at: "2026-08-21T09:12Z" } });

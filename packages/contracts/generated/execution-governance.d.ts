@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/v1/execution/governance/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Creates one Portal-owned R1 request from a workspace-bound completed run. The server pins the registered artifact digest and rejects duplicate open alpha/run requests. */
+        post: operations["executionNewApprovalRequestV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/waivers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Returns every Portal-owned approval condition with exact counts, bounded bidirectional keyset pagination and server-computed OPEN/WAIVED/EXPIRING/LAPSED state. */
+        get: operations["executionWaiversRegisterV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/governance/approvals/{approval_id}/r1": {
         parameters: {
             query?: never;
@@ -268,14 +302,26 @@ export interface components {
             };
             request_id: string;
         };
-        /** Format: date-time */
-        Timestamp: string;
         "$defs-Identifier": string;
+        ApprovalCreateRequest: {
+            /** @constant */
+            schema_version: "governance.approval-create-request.v1";
+            workspace_id: string;
+            request_key: string;
+            /** @constant */
+            gate: "R1";
+            alpha_id: components["schemas"]["$defs-Identifier"];
+            evidence_run_id: components["schemas"]["$defs-Identifier"];
+            methodology_claim_id: components["schemas"]["$defs-Identifier"];
+            summary: string;
+        };
         Actor: {
             user_id: components["schemas"]["$defs-Identifier"];
             username: string;
             roles?: ("ADMIN" | "USER")[];
         };
+        /** Format: date-time */
+        Timestamp: string;
         Approval: {
             approval_id: components["schemas"]["$defs-Identifier"];
             /** @constant */
@@ -304,6 +350,62 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
         };
+        ApprovalCreateResponse: {
+            /** @constant */
+            schema_version: "governance.approval-create.v1";
+            replayed: boolean;
+            approval: components["schemas"]["Approval"];
+        };
+        NullableTimestamp: components["schemas"]["Timestamp"] | null;
+        Condition: {
+            condition_id: components["schemas"]["$defs-Identifier"];
+            approval_id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            gate: "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
+            subject: {
+                id: components["schemas"]["$defs-Identifier"];
+                label: string;
+            };
+            /** @enum {unknown} */
+            environment: "RESEARCH" | "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {unknown} */
+            kind: "LINEAGE" | "WARNING" | "RESTRICTION" | "WAIVER";
+            /** @enum {unknown} */
+            state: "OPEN" | "WAIVED" | "EXPIRING" | "LAPSED";
+            label: string;
+            statement: string;
+            owner: {
+                user_id: components["schemas"]["$defs-Identifier"];
+                username: string;
+            };
+            due_at: components["schemas"]["NullableTimestamp"];
+            blocking: boolean;
+            policy_version: string;
+            created_at: components["schemas"]["Timestamp"];
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        ConditionPage: {
+            rows: components["schemas"]["Condition"][];
+            total_count: number;
+            filtered_count: number;
+            next_cursor: string | null;
+            prev_cursor: string | null;
+            has_more: boolean;
+            has_previous: boolean;
+            applied_filters: Record<string, never>[];
+            applied_sort: Record<string, never>[];
+        };
+        ConditionsRegisterResponse: {
+            /** @constant */
+            schema_version: "governance.conditions-register.v1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            delivery_profile: "portal";
+            read_at: components["schemas"]["Timestamp"];
+            actor: components["schemas"]["Actor"];
+            page: components["schemas"]["ConditionPage"];
+        };
         Eligibility: {
             can_approve: boolean;
             can_approve_with_condition: boolean;
@@ -313,7 +415,6 @@ export interface components {
             /** @enum {unknown} */
             separation_of_duties: "OK" | "VIOLATION";
         };
-        NullableTimestamp: components["schemas"]["Timestamp"] | null;
         KnownLimitation: {
             limitation_id: components["schemas"]["$defs-Identifier"];
             /** @enum {unknown} */
@@ -924,6 +1025,68 @@ export interface components {
             username: string;
             roles: ("ADMIN" | "USER")[];
         };
+        "execution-profile-read.v1.schema_$defs-Identifier": string;
+        Capability: {
+            capability_id: string;
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+            relations: string[];
+            reason_code: string | null;
+            /** @constant */
+            retryable: false;
+        };
+        Scalar: string | number | boolean | null | (string | number | boolean | null)[];
+        ManagerRecord: {
+            [key: string]: components["schemas"]["Scalar"];
+        };
+        UnavailableBranch: {
+            capability_id: string;
+            /** @constant */
+            state: "UNAVAILABLE";
+            reason_code: string;
+            /** @constant */
+            retryable: false;
+        };
+        ProfileRead: {
+            /** @enum {unknown} */
+            schema_version: "execution.sandbox-overview.v1" | "execution.sandbox-current-source.v1" | "execution.live-overview.v1" | "execution.live-current-source.v1" | "execution.canary-live-facts.v1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "TRADING_SYSTEM";
+            /** @enum {unknown} */
+            delivery_profile: "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+            /** @enum {unknown} */
+            requested_environment: "sandbox" | "live" | "canary";
+            /** @enum {unknown} */
+            source_environment: "sandbox" | "live";
+            /** @enum {unknown} */
+            composition: "DIRECT_PROFILE_READ" | "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS";
+            workspace_id: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+            resource: {
+                /** @enum {unknown} */
+                kind: "WORKSPACE" | "DEPLOYMENT";
+                id: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+            };
+            read_at: components["schemas"]["Timestamp"];
+            as_of: components["schemas"]["Timestamp"] | null;
+            /** @enum {unknown} */
+            state: "ready" | "empty" | "stale" | "partial" | "unavailable";
+            /** @enum {unknown} */
+            freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+            /** @enum {unknown} */
+            completeness: "COMPLETE" | "PARTIAL";
+            actor: {
+                user_id: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+                username: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+                roles: ("ADMIN" | "USER")[];
+            };
+            capabilities: components["schemas"]["Capability"][];
+            data: {
+                [key: string]: components["schemas"]["ManagerRecord"][];
+            };
+            unavailable_branches: components["schemas"]["UnavailableBranch"][];
+        } & (unknown & unknown & unknown);
         NullableIdentifier: components["schemas"]["$defs-Identifier"] | null;
         NullableHash: components["schemas"]["Hash"] | null;
         CertificationRecord: {
@@ -1094,9 +1257,9 @@ export interface components {
             /** @constant */
             record_authority: "PORTAL";
             /** @enum {unknown} */
-            delivery_profile: "fixture" | "shadow";
+            delivery_profile: "fixture" | "shadow" | "SANDBOX_BINANCE_USDM";
             /** @enum {unknown} */
-            source_integration_state: "UNAVAILABLE" | "SHADOW";
+            source_integration_state: "UNAVAILABLE" | "SHADOW" | "SOURCE_BACKED";
             /** @constant */
             source_side_effect_requested: false;
             /** @constant */
@@ -1106,6 +1269,7 @@ export interface components {
             replayed: boolean;
             read_at: components["schemas"]["Timestamp"];
             actor: components["schemas"]["execution-sandbox-certification.v1.schema_$defs-Actor"];
+            current_source?: components["schemas"]["ProfileRead"];
             certification: components["schemas"]["CertificationRecord"];
             lineage: components["schemas"]["LineageItem"][];
             progress: components["schemas"]["Progress"];
@@ -1212,6 +1376,66 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionNewApprovalRequestV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created or idempotently replayed R1 request */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalCreateResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionWaiversRegisterV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                after?: string;
+                before?: string;
+                limit?: number;
+                state?: string;
+                kind?: string;
+                gate?: string;
+                environment?: string;
+                owner?: string;
+                subject?: string;
+                due_from?: string;
+                due_to?: string;
+                sort?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal-owned conditions and waivers register */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConditionsRegisterResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     executionGovernanceR1Review: {
         parameters: {
             query?: {
