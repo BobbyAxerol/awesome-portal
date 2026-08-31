@@ -6509,7 +6509,7 @@
 /* ── Governance additions 2026-08-30 (loop entry · live gate · waivers) —
    three screens on the existing .exec-gov grammar; only what the grammar
    lacks is added here. */
-.exec-gov-headlink { font: var(--exec-font-meta); color: var(--accent); text-decoration: none; }
+.exec-gov-headlink { font: 400 11px/1.6 var(--font-mono); color: var(--accent); text-decoration: none; }
 .exec-gov-headlink:hover { text-decoration: underline; }
 .exec-gov .exec-role-control select, .exec-gov select.exec-role-control { width: 100%; max-width: 100%; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
 .exec-gate-wvfilters { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
