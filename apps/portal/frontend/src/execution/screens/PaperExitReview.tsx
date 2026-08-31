@@ -35,14 +35,12 @@ import {
   ExecutionDecisionStrip,
   ExecutionPageHeader,
   ExecutionProvenanceDrawer,
-  ExecutionTabs,
   ExecutionWorkspace,
   shortDigest,
   type HeaderBadge,
   type RailBlocker,
 } from "../components/workspace";
 
-type ExitTab = "evidence" | "plan" | "conditions";
 
 export interface ExitFinding {
   label: string;
@@ -216,7 +214,6 @@ export function PaperExitReview({
   trail?: ReactNode;
   demo?: PaperDemo | null;
 }) {
-  const [tab, setTab] = useState<ExitTab>("evidence");
   const [note, setNote] = useState("");
   const [copied, setCopied] = useState(false);
   const smoke = demo ?? null;
@@ -482,8 +479,7 @@ export function PaperExitReview({
             {carried.length} carried {carried.length === 1 ? "question follows" : "questions follow"} into {carried[0].carriesTo} — promotion does not resolve {carried.length === 1 ? "it" : "them"}.
           </p>
         ) : null}
-        {smoke ? (
-          <>
+        <>
             <div className="exec-px-grid" data-cols="auto">
               {panels.map((panel) => (
                 <div className="exec-gate-panel exec-px-panel" key={panel.title}>
@@ -513,7 +509,7 @@ export function PaperExitReview({
                   ) : (
                     activationPlan
                   )}
-                  <p className="exec-px-plannote">{smoke?.exit.planNote}</p>
+                  {smoke ? <p className="exec-px-plannote">{smoke.exit.planNote}</p> : null}
                 </div>
               ) : (
                 <div className="exec-gate-panel exec-px-panel">
@@ -539,64 +535,7 @@ export function PaperExitReview({
                 </label>
               </div>
             </div>
-          </>
-        ) : null}
-        {smoke ? null : (
-        <ExecutionTabs
-          tabs={[
-            { key: "evidence", label: "Evidence", count: panels.length },
-            { key: "plan", label: "Activation plan" },
-            { key: "conditions", label: "Conditions", count: conditions?.length ?? 0 },
-          ]}
-          active={tab}
-          onChange={(key) => setTab(key as ExitTab)}
-          label="Exit review sections"
-        >
-          <>
-          {tab === "evidence" ? (
-            <div className="exec-grid-auto">
-              {panels.map((panel) => (
-                <div className="exec-gate-panel" key={panel.title}>
-                  <ExecutionSectionTitle>
-                    {panel.title}
-                    {panel.source ? <span className="exec-gate-rc"> · {panel.source}</span> : null}
-                  </ExecutionSectionTitle>
-                  <Findings panel={panel} />
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {tab === "plan" ? (
-            plan || activationPlan ? (
-              <div className="exec-gov-inverse exec-gate-panel">
-                {plan ? (
-                  <div className="exec-gov-kv">
-                    <span className="exec-gov-k">mode</span>
-                    <span className="exec-gov-v">{plan.mode}</span>
-                    <span className="exec-gov-k">target stage</span>
-                    <span className="exec-gov-v">{plan.targetStage}</span>
-                    <span className="exec-gov-k">authority</span>
-                    <span className="exec-gov-v">{plan.authoritySemantics.replace(/_/g, " ").toLowerCase()}</span>
-                    <span className="exec-gov-k">external side effect</span>
-                    <span className="exec-gov-v">{plan.externalSideEffectRequested ? "REQUESTED" : "none requested"}</span>
-                  </div>
-                ) : (
-                  activationPlan
-                )}
-              </div>
-            ) : (
-              <PanelState status="empty" reason="No activation plan was published for this review." />
-            )
-          ) : null}
-          {tab === "conditions" ? (
-            <div className="exec-gate-panel">
-              <ExecutionSectionTitle>Conditions &amp; recommendation <a className="exec-gov-headlink" href="/governance/waivers">fleet-wide →</a></ExecutionSectionTitle>
-              <ConditionList conditions={conditions ?? []} emptyNote="No conditions carried into this review." />
-            </div>
-          ) : null}
-          </>
-        </ExecutionTabs>
-        )}
+        </>
         {smoke ? <p className="exec-af-smoke">! {smoke.warning}</p> : null}
         <ExecutionDecisionBar
           label={`Paper exit decision ${reviewId}`}

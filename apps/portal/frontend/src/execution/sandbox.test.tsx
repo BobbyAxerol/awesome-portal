@@ -14,7 +14,7 @@ import { SandboxOverview } from "./screens/SandboxOverview";
 import { SandboxCertificationScreen } from "./screens/SandboxCertification";
 import { readSandboxCertification } from "./certification";
 import { SANDBOX_CERTIFICATION_FIXTURE } from "./certification.fixtures";
-import { CERT_SMOKE_DATA, SANDBOX_SMOKE_DATA } from "./sandbox.smoke";
+import { certSmoke, CERT_SMOKE_DATA, SANDBOX_SMOKE_DATA } from "./sandbox.smoke";
 
 afterEach(cleanup);
 
@@ -84,7 +84,7 @@ describe("Sandbox Overview — entry screen for WF 1d (smoke until BR-EX-60)", (
 
 describe("Sandbox Certification — the hi-fi body (smoke until BR-EX-61)", () => {
   it("the switcher marks the deployment being read and links the other one", () => {
-    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" />);
+    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" demo={certSmoke("dep_91")} />);
     const active = screen.getByText(/Grid v2.1 · dep_91/).closest("a")!;
     expect(active.getAttribute("aria-current")).toBe("page");
     const other = screen.getByText(/Carry v3.2 · dep_77/).closest("a")!;
@@ -93,15 +93,15 @@ describe("Sandbox Certification — the hi-fi body (smoke until BR-EX-61)", () =
   });
 
   it("reads the deployment in the route, not the one the fixture happens to carry", () => {
-    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" />);
+    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" demo={certSmoke("dep_91")} />);
     expect(screen.getByText(/acct-sbx-grid-okx/)).toBeTruthy();
     cleanup();
-    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_77" />);
+    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_77" demo={certSmoke("dep_77")} />);
     expect(screen.getByText(/acct-sbx-carry-okx/)).toBeTruthy();
   });
 
   it("a deployment with an open CRITICAL finding fails closed in the stepper and the banner", () => {
-    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" />);
+    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" demo={certSmoke("dep_91")} />);
     expect(screen.getByRole("alert").textContent).toMatch(/activation fail-closed/);
     expect(screen.getByText("✕ 1 critical")).toBeTruthy();
     // The smoke window is not a disabled button — it is not a control at all
@@ -111,7 +111,7 @@ describe("Sandbox Certification — the hi-fi body (smoke until BR-EX-61)", () =
   });
 
   it("each action opens its plan, and the plan's apply is disabled with the reason", () => {
-    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_77" />);
+    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_77" demo={certSmoke("dep_77")} />);
     for (const [name, title] of [
       [/Sync broker/, /broker snapshot sync/],
       [/Dry-run reconcile/, /reconciliation dry-run/],
@@ -127,7 +127,7 @@ describe("Sandbox Certification — the hi-fi body (smoke until BR-EX-61)", () =
   });
 
   it("the smoke plan the button previews is the plan the panel prints — one source, not two", () => {
-    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_77" />);
+    render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_77" demo={certSmoke("dep_77")} />);
     fireEvent.click(screen.getByRole("button", { name: /Open smoke window/ }));
     const plan = screen.getByRole("region", { name: /smoke activation window/ });
     for (const row of CERT_SMOKE_DATA.dep_77.plan.rows) {
@@ -136,7 +136,7 @@ describe("Sandbox Certification — the hi-fi body (smoke until BR-EX-61)", () =
   });
 
   it("never states a runtime the contract did not publish", () => {
-    const { container } = render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" />);
+    const { container } = render(<SandboxCertificationScreen certification={cert()} deploymentId="dep_91" demo={certSmoke("dep_91")} />);
     const head = container.querySelector(".exec-cert-head")!;
     expect(head.textContent).toMatch(/runtime not stated/);
     expect(head.textContent).not.toMatch(/\bHALTED\b/);

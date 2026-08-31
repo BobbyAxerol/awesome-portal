@@ -113,17 +113,25 @@ describe("live gate — its own review room (unchanged backbone)", () => {
     expect(reviewRouteFor({ id: "AP-311", gate: "LIVE_GATE" })).toBe("/governance/approvals/AP-311/live");
   });
 
-  it("shows canary evidence with links back to R2 and the control room", async () => {
+  it("renders the live payload's published truth: canary link, four typed branches, empty live source", async () => {
     render(<GateLiveReviewContainer api={createFixtureApi()} approvalId="AP-311" />);
     expect(await screen.findByText(/Canary Evidence Approval/)).toBeTruthy();
-    expect(document.querySelector('a[href="/governance/approvals/AP-152/r2"]')).toBeTruthy();
+    // canary_ref, not a smoke frame, names the control room
     expect(document.querySelector('a[href="/deployments/live/dep_88/canary"]')).toBeTruthy();
-    expect(screen.getAllByText(/gate_live rev 3/).length).toBeGreaterThan(0);
+    // the four derived branches arrive typed UNAVAILABLE with their reason codes
+    expect(screen.getByText("canary.drift-vs-twin")).toBeTruthy();
+    expect(screen.getAllByText(/N23_CANARY_DERIVATION_NOT_PUBLISHED/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED/)).toBeTruthy();
+    // a valid empty Live renders EMPTY — never a fixture's numbers
+    expect(screen.getByText("EMPTY")).toBeTruthy();
   });
 
-  it("draws the capital step toward target, each later step its own approval", async () => {
+  it("holds the capital step as a typed gap — no number is invented for real money", async () => {
     render(<GateLiveReviewContainer api={createFixtureApi()} approvalId="AP-311" />);
-    expect(await screen.findByText(/this step 20,000 \(25% of target\)/)).toBeTruthy();
+    await screen.findByText(/Canary Evidence Approval/);
+    expect(screen.getAllByText(/not published · BR-EX-70/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Approving without it approves the stage grant only/)).toBeTruthy();
+    expect(screen.queryByText(/this step 20,000/)).toBeNull();
   });
 });
 

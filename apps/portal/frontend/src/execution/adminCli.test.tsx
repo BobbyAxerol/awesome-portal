@@ -17,6 +17,7 @@ import { readCommandCatalogue } from "./adminCatalog";
 import { COMMAND_CATALOGUE_FIXTURE } from "./adminCatalog.fixtures";
 import { CLI_ACTIONS, CLI_GROUPS, CLI_PARAMS } from "./adminCli.smoke";
 import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
+import { wfCliDemo } from "./lab/adminCliDemo";
 import { AdminCatalogueContainer } from "./screens/containers";
 import { createFixtureApi } from "./api/fixtureApi";
 import type { CliOutcome, CliRole } from "./adminCli.smoke";
@@ -30,12 +31,14 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-function mount(props: { role?: CliRole; outcome?: CliOutcome; initialCommand?: string | null; operationRef?: string | null } = {}) {
+function mount({ role = "OPERATOR", outcome = "VERIFIED", initialCommand = "alloc", ...props }: { role?: CliRole; outcome?: CliOutcome; initialCommand?: string | null; operationRef?: string | null } = {}) {
   return render(
     <AdminActionDrawerScreen
       catalogue={CATALOGUE}
       selected={null}
       onSelect={() => {}}
+      demoCli={wfCliDemo(role, outcome)}
+      initialCommand={initialCommand}
       {...props}
     />,
   );
@@ -301,14 +304,17 @@ describe("blocked and denied stay blocked and denied", () => {
 });
 
 describe("the container wires demo states as addresses", () => {
-  it("?cmd=&role=&outcome= preselect the drawer state", async () => {
+  it("?cmd= preselects a published task; the old role/outcome demo params are ignored", async () => {
     render(
-      <MemoryRouter initialEntries={["/administration/actions?cmd=emergency&role=VIEWER"]}>
+      <MemoryRouter initialEntries={["/administration/actions?cmd=health&role=VIEWER&outcome=PARTIAL"]}>
         <AdminCatalogueContainer api={createFixtureApi()} />
       </MemoryRouter>,
     );
-    expect(await screen.findByText(/ROLE GRANT REQUIRED/)).toBeTruthy();
-    expect(screen.getByText(/actor Stan · Viewer/)).toBeTruthy();
+    // The product route renders the N27 task, not the WF 1i rehearsal: the
+    // task detail opens with its published state, and no demo actor appears.
+    expect(await screen.findByLabelText("Task detail")).toBeTruthy();
+    expect(screen.getAllByText(/SUPPORTED · INACTIVE/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/actor Stan/)).toBeNull();
   });
 
   it("?action=rotate_credential is answered honestly with a link back to Accounts", async () => {
