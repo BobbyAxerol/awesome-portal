@@ -17,6 +17,7 @@ COPY features/roadmap-task-board/frontend features/roadmap-task-board/frontend
 # Portal types are generated from the canonical OpenAPI document, so the
 # contracts workspace is a build input rather than a runtime dependency.
 COPY packages/contracts/generated packages/contracts/generated
+COPY packages/contracts/fixtures packages/contracts/fixtures
 COPY apps/portal/frontend apps/portal/frontend
 ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
 ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
