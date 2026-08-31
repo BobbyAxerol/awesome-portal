@@ -46,6 +46,9 @@ N19_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILI
 N19_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md"
 N19_MATRIX="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json"
 DEBT_CLOSEOUT="${ROOT_DIR}/upgrade/backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md"
+N28_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md"
+N28_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md"
+N28_REGISTRY="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/missing-capability-registry.v1.json"
 
 for required_file in \
     "${OWNER_MASTER_REQUEST}" \
@@ -72,7 +75,10 @@ for required_file in \
     "${N19_REPORT}" \
     "${N19_HANDOFF}" \
     "${N19_MATRIX}" \
-    "${DEBT_CLOSEOUT}"
+    "${DEBT_CLOSEOUT}" \
+    "${N28_REPORT}" \
+    "${N28_HANDOFF}" \
+    "${N28_REGISTRY}"
 do
     if [[ ! -f "${required_file}" ]]; then
         echo "execution owner/phase plan is missing: ${required_file}" >&2
@@ -135,18 +141,34 @@ if ! grep -Fq "N19 backend — Rust Manager-v2 compatibility authority" "${TRACK
     exit 1
 fi
 for token in \
-    "OFFICIAL_SINGLE_OWNER_REQUEST" \
-    "d4-paper-read-v2-request" \
-    "n11-external-read-v1-request" \
-    "n12-command-relay-v1-request" \
-    "N01–N17 dependency audit" \
-    "no additional Trading System feature request"
+    "OFFICIAL_SINGLE_OWNER_REQUEST_V3" \
+    "source-as-is" \
+    "MC-01" \
+    "MC-09" \
+    "exactly MC-01…MC-09" \
+    "portal_activation=false"
 do
     if ! grep -Fq "${token}" "${OWNER_MASTER_REQUEST}"; then
         echo "official Trading System master request lost invariant: ${token}" >&2
         exit 1
     fi
 done
+
+for token in \
+    "13_CURRENT_SOURCE_ADAPTERS" \
+    "9_GENUINE_OWNER_GAPS" \
+    "3_INTENTIONAL_EXCLUSIONS" \
+    "N29_READY"
+do
+    if ! grep -Fq "${token}" "${N28_REPORT}"; then
+        echo "N28 report lost closeout invariant: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N28 backend — genuine missing-capability adapters" "${TRACKER}"; then
+    echo "shared tracker lost N28 closeout section" >&2
+    exit 1
+fi
 for token in \
     "N13A_COMPLETE_SOURCE_DARK / N13B_PORTAL_IMPLEMENTATION_ACCEPTED / CURRENT_SOURCE_SET_PINNED / PROFILE_RUNTIME_DARK" \
     "N14A_COMPLETE_SOURCE_DARK / N14B_PORTAL_COMPATIBILITY_ACCEPTED / PROFILE_RUNTIME_NOT_ACTIVATED" \

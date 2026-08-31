@@ -1,0 +1,14 @@
+{
+  "provider": "binance",
+  "market": "um",
+  "symbol": "BTCUSDT",
+  "requested_interval": "1m",
+  "provider_interval": "1m",
+  "params": {"limit": 2},
+  "data": [
+    [1000, "100.125", "101.000", "99.500", "100.750", "12.25"],
+    [2000, "100.750", "102.000", "100.000", "101.500", "8.50"]
+  ],
+  "cached": false,
+  "stored": false
+}

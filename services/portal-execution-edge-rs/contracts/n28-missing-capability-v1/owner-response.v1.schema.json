@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-missing-capability-owner-response.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_revision", "source_commit", "source_image_digest", "owner_id", "owner_accepted", "entries", "authority"],
+  "properties": {
+    "schema_version": {"const": "trading-system.portal-execution.missing-capability-publication.v1"},
+    "request_revision": {"const": "portal.execution.trading-system-owner-request.v3"},
+    "source_commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "source_image_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "owner_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "owner_accepted": {"type": "boolean"},
+    "entries": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["request_id", "capability_id", "state", "contract_revision", "schema_sha256", "fixture_index_sha256", "acceptance_sha256", "portal_activation"],
+        "properties": {
+          "request_id": {"pattern": "^MC-0[1-9]$"},
+          "capability_id": {"type": "string", "minLength": 1},
+          "state": {"enum": ["PUBLISHED", "TYPED_UNAVAILABLE"]},
+          "contract_revision": {"type": ["string", "null"]},
+          "schema_sha256": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+          "fixture_index_sha256": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+          "acceptance_sha256": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+          "portal_activation": {"const": false}
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_credentials", "contains_business_rows", "contains_raw_sql", "portal_database_or_redis_authority", "portal_cli_or_broker_authority", "runtime_flags_changed"],
+      "properties": {
+        "contains_credentials": {"const": false},
+        "contains_business_rows": {"const": false},
+        "contains_raw_sql": {"const": false},
+        "portal_database_or_redis_authority": {"const": false},
+        "portal_cli_or_broker_authority": {"const": false},
+        "runtime_flags_changed": {"const": false}
+      }
+    }
+  }
+}

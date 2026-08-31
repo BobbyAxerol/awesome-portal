@@ -556,7 +556,10 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md" \
+  "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md" \
   "${ROOT_DIR}/deploy/manifests/realtime-manager-release-profile.v2.json" \
   "${ROOT_DIR}/deploy/manifests/operator-command-plane-release-profile.v1.json" \
   "${ROOT_DIR}/deploy/runbooks/execution-n26-manager-realtime-release-and-rollback.md" \
@@ -573,6 +576,8 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0014_manager_realtime_cycle_journal.sql" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/README.md" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256" \
   "${ROOT_DIR}/deploy/manifests/sandbox-live-read-release-profile.v1.json" \
   "${ROOT_DIR}/deploy/runbooks/portal-n23-sandbox-live-read-release-and-rollback.md" \
@@ -1365,7 +1370,10 @@ for tracked_source in \
   scripts/execution-n26-n27-test.sh \
   upgrade/backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md \
   upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md \
+  scripts/execution-n28-missing-capability-test.sh \
+  upgrade/backend/EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md \
   deploy/manifests/realtime-manager-release-profile.v2.json \
   deploy/manifests/operator-command-plane-release-profile.v1.json \
   deploy/runbooks/execution-n26-manager-realtime-release-and-rollback.md \
@@ -1382,7 +1390,9 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0014_manager_realtime_cycle_journal.sql \
   services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/README.md \
   services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json \
-  services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256; do
+  services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256 \
+  services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256 \
+  services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs; do
   git -C "${ROOT_DIR}" ls-files --error-unmatch "${tracked_source}" >/dev/null || {
     printf 'Portal source is present but not tracked by the parent Git: %s\n' "${tracked_source}" >&2
     exit 1
@@ -1562,6 +1572,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh" \
   "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh" \
   "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1668,5 +1679,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh"
 "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh"
 "${ROOT_DIR}/scripts/execution-n26-n27-test.sh"
+"${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

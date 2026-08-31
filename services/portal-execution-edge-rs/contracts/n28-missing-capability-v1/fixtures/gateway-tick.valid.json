@@ -1,0 +1,12 @@
+{
+  "status": "OK",
+  "venue": "BINANCE",
+  "product": "USDM",
+  "symbol": "BTCUSDT",
+  "canonical_instrument_id": "BINANCE:USDM:BTCUSDT",
+  "key": "BINANCE:USDM:BTCUSDT",
+  "market": {
+    "last_price": "12345.6789",
+    "observed_at": "2026-08-31T00:00:00Z"
+  }
+}

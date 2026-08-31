@@ -301,13 +301,12 @@ adapter must record the mapping and must not invent broader semantics.
 
 ### 3.4 Single official Trading System owner request and compatibility catalogue
 
-All known external dependencies are now consolidated in
+All genuine remaining external dependencies are now consolidated in
 [`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](./backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
-It remains the only consolidated document sent to the Trading System owner and covers
-N02/N03 source publication, N06 operational evidence, N11 reads, N12 commands,
-N15 Event/Artifact authority and the N13–N17 promotion/release/emergency/DR
-evidence ladder. Component request directories are machine annexes, not
-separate owner asks. Older D4 and Claude request prose is audit-only.
+It remains the only document sent to the Trading System owner. Revision v3 is
+the N28 source-as-is result: 13 needs are handled by Portal adapters, three are
+intentional exclusions, and only MC-01…MC-09 are owner gaps. Older D4,
+N02/N03/N11/N12/N15 and Claude request prose is audit-only, not an active ask.
 
 From the 2026-08-29 rebaseline onward, this owner campaign is a capability and
 evidence catalogue, not a global prerequisite for Portal delivery. Returned
@@ -317,15 +316,11 @@ services and Portal-owned derivations behind versioned compatibility adapters.
 Future owner publications replace an adapter revision; they do not require a
 Portal screen-contract rewrite.
 
-Current inspection found no additional known Trading System feature request
-after this master campaign. N13–N17 use the same contracts with independently
-reviewed evidence/profile promotions. A genuinely new product capability or an
-incompatible owner contract change amends the master revision instead of
-creating another phase-local request file.
+Any genuinely new product capability or incompatible owner contract change
+amends this master revision instead of creating a phase-local request file.
 
-**Owner campaign consolidation checkpoint — 2026-08-27.** The only active
-owner input is revision `portal.execution.trading-system-owner-request.v2`,
-built by `scripts/build-trading-system-owner-campaign-pack.sh`. Portal commit
+**Historical owner campaign checkpoint — 2026-08-27.** Revision v2 was built
+by `scripts/build-trading-system-owner-campaign-pack.sh` at that time. Portal commit
 `d6609c8` produced the manifest-bound input; AWS-HK imported it at Trading
 System commit `d900265` on branch
 `feat/portal-execution-owner-campaign-v2`, worktree
@@ -341,6 +336,11 @@ single campaign worktree. No older root-level packet or D4 v1 runtime is an
 active instruction/source dependency. Real activation still requires the exact
 capability gate below, but an incomplete future-facing owner contract no longer
 parks unrelated current capabilities.
+
+**Current owner request — 2026-08-31.** The pack builder now emits revision
+`portal.execution.trading-system-owner-request.v3` plus the N28 registry and
+return schema only. Publication remains evidence-only and does not activate
+Portal.
 
 ### 3.5 Source-as-is compatibility decision — 2026-08-29
 
@@ -1788,6 +1788,17 @@ compatibility fixtures when available.
 
 **N28 exit gate:** each genuine gap has a working versioned adapter or exactly
 one consolidated owner contract entry; no loose Trading System request remains.
+
+**Closeout (2026-08-31):** `COMPLETE / 13_CURRENT_SOURCE_ADAPTERS /
+9_GENUINE_OWNER_GAPS / 3_INTENTIONAL_EXCLUSIONS / SOURCE_DARK / N29_READY`.
+Seven immutable source artifacts prove the classification. The Rust N28
+authority supplies bounded tick/candle/calendar/partial-event adapters, exact
+cross-profile drift and five source-dark N27 reclassification candidates. It
+contains no HTTP client and cannot dispatch the two mutation candidates. The
+only active owner request is revision v3 with MC-01…MC-09 and a strict returned
+publication schema; the pending template is rejected for activation. Direct
+Redis and destructive reset actions are permanently outside Portal. Evidence:
+[`EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md`](./backend/EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md).
 
 #### N29 — Product acceptance and release closeout
 

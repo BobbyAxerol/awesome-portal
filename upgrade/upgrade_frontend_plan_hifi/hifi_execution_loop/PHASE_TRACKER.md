@@ -2737,7 +2737,7 @@ backend gate.
 | N25 | query/analytics/series plane | replace derived chart smoke with canonical series | `COMPLETE / SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING / N26_READY` |
 | N26 | projection-backed authenticated SSE | consume manager snapshot; call `EventSource.close()` on terminal auth/gap; resnapshot before reconnect | `COMPLETE / RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
 | N27 | typed Admin Action Drawer command plane | render 24 server tasks; 14 inactive + 10 incompatible; enable only future authoritative `CONNECTED` tasks | `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK` |
-| N28 | one owner packet for proved genuine gaps only | retain typed unavailable until verified return | `PLANNED / CENSUS_EVIDENCE_DEPENDENT` |
+| N28 | 13 current-source adapters + one nine-entry genuine-gap owner packet | retain typed unavailable until verified return; never call source directly | `COMPLETE / SOURCE_DARK / N29_READY` |
 | N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `PLANNED / N18_N28_DEPENDENT` |
 
 ### N14A backend — Portal release authority, source-dark (2026-08-26)
@@ -3092,3 +3092,16 @@ Claude must render this server catalogue instead of retaining a separate
 hard-coded list. Inactive/incompatible tasks stay explanatory disabled;
 blocked plan, HTTP 202, `PARTIAL` and `UNCERTAIN` are never success. Detail:
 [`CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md`](./CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md).
+
+### N28 backend — genuine missing-capability adapters (2026-08-31)
+
+N28 is `COMPLETE / 13_CURRENT_SOURCE_ADAPTERS / 9_GENUINE_OWNER_GAPS /
+SOURCE_DARK / N29_READY`. Existing Gateway, Market Data Layer, N25 projection
+and Portal-derived authorities cover tick/candle/calendar/benchmark/drift,
+partial order-event and five N27 candidate needs. Exact request/response bounds
+and semantic fixtures are enforced by Rust; no adapter can dispatch itself.
+
+Only MC-01…MC-09 remain in the single official Trading System owner request v3.
+Until a manifest-bound owner return verifies, Claude retains typed unavailable
+states. See
+[`CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md).

@@ -97,13 +97,17 @@ fi
   --tmpfs /target:rw,exec,mode=1777,size=4096m \
   -e HOME=/tmp \
   -e CARGO_HOME=/cargo \
-  -e CARGO_TARGET_DIR=/target \
+  -e CARGO_TARGET_DIR=/target/build \
   -e TEST_PROJECTION_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_projection_test" \
   -v "${ROOT_DIR}:/repo:ro" \
   -w /repo/services/portal-execution-edge-rs \
   "${IMAGE}" sh -eu -c '
     cargo fmt --all -- --check
     cargo test --locked --all-targets
+    # The read-only CI container uses a bounded /target tmpfs. Test binaries
+    # and a full-workspace clippy cache together exceed that boundary; release
+    # test artifacts before rebuilding the independent lint gate.
+    cargo clean
     cargo clippy --locked --all-targets -- -D warnings
     n06_template_report="$(cargo run --locked -q -p source-qualification --bin n06_verify -- \
       --mode template \

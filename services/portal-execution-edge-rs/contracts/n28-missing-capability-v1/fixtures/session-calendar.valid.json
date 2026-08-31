@@ -1,0 +1,18 @@
+{
+  "vn_stock": {
+    "timezone": "Asia/Ho_Chi_Minh",
+    "date": "2026-08-31",
+    "is_open": false,
+    "sessions": [
+      {"name": "morning", "open": "09:00", "close": "11:30"},
+      {"name": "afternoon", "open": "13:00", "close": "14:30"}
+    ]
+  },
+  "crypto": {
+    "timezone": "UTC",
+    "is_open": true,
+    "sessions": [
+      {"name": "continuous", "open": "00:00", "close": "24:00"}
+    ]
+  }
+}

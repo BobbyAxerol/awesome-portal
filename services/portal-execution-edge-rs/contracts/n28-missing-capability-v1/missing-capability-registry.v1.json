@@ -1,0 +1,269 @@
+{
+  "schema_version": "portal.execution.missing-capability-registry.v1",
+  "phase": "N28",
+  "decision": "N28_GENUINE_GAPS_CLASSIFIED_AND_BOUND",
+  "runtime_effect": "NONE",
+  "source_evidence": {
+    "n18_census_sha256": "sha256:9b0c58dfa1a3475434a618821991dd8f531db269fd49e285a757089f8d888b47",
+    "current_source_map_sha256": "sha256:d269bcaa11a4985ab1121d15f0af4cf2f09dc49bfe8e2c60ab18d0b39bb2e3c9",
+    "n25_release_profile_sha256": "sha256:2cbeb5f3a83ba63e3e4b851e00fbb4cb2df45712613e70ebdfeb2fbb3e36c290",
+    "n27_task_fixture_sha256": "sha256:5ff678f8ac4994ec74ad08589ef5397a51ec34aafea466ad0599e6a79fd16d81",
+    "data_layer_contract_sha256": "sha256:4872c4161df2a1f28a77f2ff0fe5b184df304f6c574fcd96147050619e085410",
+    "gateway_api_surface_sha256": "sha256:05463507eb2edf27882c97bb4f6d0ecaea1d22f175eef043d17e92e7df1459de",
+    "gateway_event_catalog_sha256": "sha256:0cac06b47f28803b556ef5b9d54c7e7714ff9ae04669e1caeb0af2acf5081855"
+  },
+  "counts": {
+    "alternative_adapters": 13,
+    "owner_contract_entries": 9,
+    "intentional_exclusions": 3,
+    "n27_reclassification_candidates": 5
+  },
+  "alternative_adapters": [
+    {
+      "capability_id": "market.ticks",
+      "adapter_revision": "portal.execution.gateway-market-tick.v1",
+      "authority": "TRADING_SYSTEM_GATEWAY",
+      "resolution": "CURRENT_SOURCE_ADAPTER",
+      "source_operations": ["GET /v1/market/latest/{venue}/{symbol}"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 1,
+      "maximum_response_bytes": 524288,
+      "completeness": "LATEST_OBSERVATION_ONLY",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "market.candles.crypto",
+      "adapter_revision": "portal.execution.data-layer-binance-candles.v1",
+      "authority": "MARKET_DATA_LAYER",
+      "resolution": "CURRENT_SOURCE_ADAPTER",
+      "source_operations": ["GET /v1/binance/klines/{symbol}"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 1500,
+      "maximum_response_bytes": 8388608,
+      "completeness": "BOUNDED_PROVIDER_WINDOW",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "market.candles.vnm",
+      "adapter_revision": "portal.execution.data-layer-vn-preload-candles.v1",
+      "authority": "MARKET_DATA_LAYER",
+      "resolution": "CURRENT_SOURCE_ADAPTER",
+      "source_operations": ["GET /v1/preload/{symbol}?fresh=false"],
+      "profiles": ["PAPER", "SANDBOX"],
+      "maximum_rows": 2000,
+      "maximum_response_bytes": 8388608,
+      "completeness": "CANONICAL_PRELOAD_WINDOW",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "venues.calendar",
+      "adapter_revision": "portal.execution.data-layer-session-calendar.v1",
+      "authority": "MARKET_DATA_LAYER",
+      "resolution": "CURRENT_SOURCE_ADAPTER",
+      "source_operations": ["GET /v1/control/session-calendar"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 8,
+      "maximum_response_bytes": 262144,
+      "completeness": "CURRENT_SESSION_RULES",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "benchmark.series",
+      "adapter_revision": "portal.execution.benchmark-candle-series.v1",
+      "authority": "MARKET_DATA_LAYER",
+      "resolution": "DERIVED_FROM_ADAPTED_SOURCE",
+      "source_operations": ["portal.execution.data-layer-binance-candles.v1", "portal.execution.data-layer-vn-preload-candles.v1"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 1500,
+      "maximum_response_bytes": 8388608,
+      "completeness": "MATCHED_WINDOW_ONLY",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "analytics.cross-profile-drift",
+      "adapter_revision": "portal.execution.cross-profile-drift.v1",
+      "authority": "PORTAL_PROJECTION",
+      "resolution": "PORTAL_DERIVED_ADAPTER",
+      "source_operations": ["N24 ACTIVE Paper epoch", "N24 ACTIVE Live/Canary epoch"],
+      "profiles": ["PAPER", "LIVE"],
+      "maximum_rows": 5000,
+      "maximum_response_bytes": 2097152,
+      "completeness": "EXACT_TIMESTAMP_INTERSECTION",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "event.order-lifecycle",
+      "adapter_revision": "portal.execution.gateway-order-events.v1",
+      "authority": "TRADING_SYSTEM_GATEWAY",
+      "resolution": "CURRENT_SOURCE_ADAPTER",
+      "source_operations": ["GET /v1/admin/events"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 5000,
+      "maximum_response_bytes": 8388608,
+      "completeness": "ORDER_LIFECYCLE_ONLY_POLL_BOUNDED",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "admin.health",
+      "adapter_revision": "portal.execution.gateway-admin-health.v1",
+      "authority": "TRADING_SYSTEM_GATEWAY",
+      "resolution": "CURRENT_SOURCE_ADAPTER",
+      "source_operations": ["GET /v1/health"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 1,
+      "maximum_response_bytes": 524288,
+      "completeness": "CURRENT_GATEWAY_HEALTH",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "admin.inspect",
+      "adapter_revision": "portal.execution.gateway-alpha-account-inspect.v1",
+      "authority": "TRADING_SYSTEM_GATEWAY",
+      "resolution": "CURRENT_SOURCE_COMPOSITE_ADAPTER",
+      "source_operations": ["GET /v1/admin/alphas/{alpha_id}", "GET /v1/admin/accounts/{account_id}/state"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 64,
+      "maximum_response_bytes": 2097152,
+      "completeness": "ALPHA_AND_ACCOUNT_PAIR",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "admin.performance",
+      "adapter_revision": "portal.execution.current-performance-query.v1",
+      "authority": "PORTAL_PROJECTION",
+      "resolution": "PORTAL_DERIVED_ADAPTER",
+      "source_operations": ["N25 query-analytics subject routes"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 5000,
+      "maximum_response_bytes": 2097152,
+      "completeness": "SUBJECT_BOUND_PROJECTION",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "admin.broker-read",
+      "adapter_revision": "portal.execution.gateway-broker-binding-read.v1",
+      "authority": "TRADING_SYSTEM_GATEWAY",
+      "resolution": "CURRENT_SOURCE_COMPOSITE_ADAPTER",
+      "source_operations": ["GET /v1/admin/broker-bindings/{external_account_ref}/state", "GET /v1/admin/broker-bindings/{external_account_ref}/exposure"],
+      "profiles": ["SANDBOX", "LIVE"],
+      "maximum_rows": 64,
+      "maximum_response_bytes": 2097152,
+      "completeness": "BINDING_STATE_AND_EXPOSURE_PAIR",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "admin.portfolio-create",
+      "adapter_revision": "portal.execution.gateway-portfolio-create.v1",
+      "authority": "TRADING_SYSTEM_GATEWAY",
+      "resolution": "CURRENT_SOURCE_COMMAND_ADAPTER",
+      "source_operations": ["POST /v1/admin/portfolios"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 1,
+      "maximum_response_bytes": 1048576,
+      "completeness": "AUTHORITATIVE_RESPONSE_REQUIRES_VERIFY_READ",
+      "activation_state": "SOURCE_DARK"
+    },
+    {
+      "capability_id": "admin.risk-profile",
+      "adapter_revision": "portal.execution.gateway-alpha-risk-profile.v1",
+      "authority": "TRADING_SYSTEM_GATEWAY",
+      "resolution": "CURRENT_SOURCE_COMMAND_ADAPTER",
+      "source_operations": ["PATCH /v1/admin/alphas/{alpha_id}/risk", "GET /v1/admin/alphas/{alpha_id}"],
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "maximum_rows": 1,
+      "maximum_response_bytes": 1048576,
+      "completeness": "AUTHORITATIVE_RESPONSE_AND_VERIFY_READ",
+      "activation_state": "SOURCE_DARK"
+    }
+  ],
+  "owner_contract_entries": [
+    {
+      "capability_id": "event.full-incremental",
+      "reason_code": "N28_FULL_EVENT_COMPLETENESS_NOT_PUBLISHED",
+      "owner_request_id": "MC-01",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "artifact.reference",
+      "reason_code": "N28_ARTIFACT_REFERENCE_CONTRACT_NOT_PUBLISHED",
+      "owner_request_id": "MC-02",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "execution.broker-ack-timestamps",
+      "reason_code": "N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED",
+      "owner_request_id": "MC-03",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "execution.signal-intent-funnel",
+      "reason_code": "N28_SIGNAL_INTENT_FACTS_NOT_PUBLISHED",
+      "owner_request_id": "MC-04",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "binding.full-exposure-population",
+      "reason_code": "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED",
+      "owner_request_id": "MC-05",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "venue.vnm-order-types",
+      "reason_code": "N28_VNM_ORDER_TYPE_AUTHORITY_NOT_PUBLISHED",
+      "owner_request_id": "MC-06",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "admin.sizing-explanation",
+      "reason_code": "N28_SIZING_EXPLANATION_ROUTE_NOT_PUBLISHED",
+      "owner_request_id": "MC-07",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "admin.config-plan-apply",
+      "reason_code": "N28_CONFIG_PLAN_APPLY_CONTRACT_NOT_PUBLISHED",
+      "owner_request_id": "MC-08",
+      "typed_unavailable_until_verified": true
+    },
+    {
+      "capability_id": "command.delegated-terminal-policy",
+      "reason_code": "N28_COMMAND_IDENTITY_TERMINAL_POLICY_NOT_PUBLISHED",
+      "owner_request_id": "MC-09",
+      "typed_unavailable_until_verified": true
+    }
+  ],
+  "intentional_exclusions": [
+    {
+      "task_id": "redis-inspect",
+      "reason_code": "DIRECT_REDIS_ACCESS_FORBIDDEN",
+      "owner_request_created": false
+    },
+    {
+      "task_id": "testnet-hard-reset",
+      "reason_code": "HOST_DESTRUCTIVE_PROCEDURE_NOT_EXPOSED",
+      "owner_request_created": false
+    },
+    {
+      "task_id": "lab-reset",
+      "reason_code": "HOST_DESTRUCTIVE_PROCEDURE_NOT_EXPOSED",
+      "owner_request_created": false
+    }
+  ],
+  "n27_reclassification_candidates": [
+    "inspect",
+    "performance",
+    "broker-read",
+    "portfolio-create",
+    "risk-profile"
+  ],
+  "authority": {
+    "browser_source_access": false,
+    "direct_database_access": false,
+    "direct_redis_access": false,
+    "raw_cli_or_shell": false,
+    "source_command_activation": false,
+    "source_network_change": false,
+    "trading_system_mutation": false,
+    "typed_unavailable_retained": true
+  }
+}

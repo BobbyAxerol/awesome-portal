@@ -1,0 +1,135 @@
+{
+  "schema_version": "portal.execution.missing-capability-owner-request.v1",
+  "request_revision": "portal.execution.trading-system-owner-request.v3",
+  "phase": "N28",
+  "status": "OWNER_PUBLICATION_PENDING",
+  "supersedes_request_revision": "portal.execution.trading-system-owner-request.v2",
+  "registry_revision": "portal.execution.missing-capability-registry.v1",
+  "common_contract": {
+    "transport": "TLS_1_3_MTLS",
+    "identity": "SHORT_LIVED_DELEGATED_JWT_EXACT_CAPABILITY_RESOURCE_PROFILE",
+    "read_and_command_identities_distinct": true,
+    "browser_direct_access": false,
+    "version_header": "X-Trading-Contract-Revision",
+    "additive_compatibility_required": true,
+    "maximum_response_bytes": 8388608,
+    "maximum_page_rows": 5000,
+    "maximum_concurrency_per_identity": 2,
+    "automatic_retry": false,
+    "portal_activation_on_publication": false
+  },
+  "entries": [
+    {
+      "request_id": "MC-01",
+      "capability_id": "event.full-incremental",
+      "kind": "READ",
+      "preferred_operation": "GET /portal/execution/v3/events",
+      "required_schema": "trading-system.portal-execution.incremental-events.v1",
+      "required_fields": ["event_id", "event_time", "event_type", "entity_kind", "entity_id", "operation", "payload_schema_version", "cursor", "completeness", "payload"],
+      "bounds": {"maximum_page_rows": 5000, "maximum_response_bytes": 8388608, "maximum_cursor_bytes": 4096},
+      "semantic_requirements": ["stable event identity", "ordered opaque cursor", "UPSERT and DELETE", "duplicate and replay rules", "retention floor", "typed cursor gap and resync", "coverage by entity kind"],
+      "required_fixtures": ["empty", "upsert", "delete", "duplicate", "cursor_gap", "cursor_expired", "retention_floor"]
+    },
+    {
+      "request_id": "MC-02",
+      "capability_id": "artifact.reference",
+      "kind": "READ",
+      "preferred_operation": "GET /portal/execution/v3/artifacts/{artifact_id}",
+      "required_schema": "trading-system.portal-execution.artifact-reference.v1",
+      "required_fields": ["artifact_id", "kind", "sha256", "size_bytes", "media_type", "schema_version", "source_authority", "created_at", "retention_class", "access_policy", "signed_read_url_expiry"],
+      "bounds": {"maximum_page_rows": 1, "maximum_response_bytes": 1048576, "maximum_cursor_bytes": 0},
+      "semantic_requirements": ["metadata or reference only", "digest verification", "short-lived workload scope", "no permanent object-store credential", "typed expired and digest mismatch"],
+      "required_fixtures": ["reference", "not_found", "expired", "digest_mismatch", "incompatible_schema"]
+    },
+    {
+      "request_id": "MC-03",
+      "capability_id": "execution.broker-ack-timestamps",
+      "kind": "READ",
+      "preferred_operation": "GET /portal/execution/v3/orders/{order_id}/ack-timeline",
+      "required_schema": "trading-system.portal-execution.order-ack-timeline.v1",
+      "required_fields": ["order_id", "submit_at", "source_ack_at", "broker_ack_at", "terminal_at", "broker_message_id", "completeness", "clock_authority"],
+      "bounds": {"maximum_page_rows": 16, "maximum_response_bytes": 524288, "maximum_cursor_bytes": 0},
+      "semantic_requirements": ["timestamps from authoritative stages", "no updated_at proxy", "clock authority and precision", "missing stage is null plus completeness, never zero latency"],
+      "required_fixtures": ["complete", "source_ack_only", "broker_rejected", "clock_unknown", "not_found"]
+    },
+    {
+      "request_id": "MC-04",
+      "capability_id": "execution.signal-intent-funnel",
+      "kind": "READ",
+      "preferred_operation": "GET /portal/execution/v3/deployments/{deployment_id}/intent-funnel",
+      "required_schema": "trading-system.portal-execution.intent-funnel.v1",
+      "required_fields": ["deployment_id", "window", "signal_count", "intent_count", "submit_count", "source_ack_count", "broker_ack_count", "fill_count", "stage_completeness"],
+      "bounds": {"maximum_page_rows": 12, "maximum_response_bytes": 1048576, "maximum_cursor_bytes": 0},
+      "semantic_requirements": ["authoritative signal and intent identities", "stage join rule", "dedupe rule", "window and sample population", "missing stages remain incomplete"],
+      "required_fixtures": ["complete", "partial", "empty", "duplicate", "late_event"]
+    },
+    {
+      "request_id": "MC-05",
+      "capability_id": "binding.full-exposure-population",
+      "kind": "READ",
+      "preferred_operation": "GET /portal/execution/v3/broker-bindings/{binding_id}/exposure-population",
+      "required_schema": "trading-system.portal-execution.binding-exposure-population.v1",
+      "required_fields": ["binding_id", "physical_positions", "virtual_positions", "open_orders", "reservations", "population_counts", "as_of", "completeness", "verdict"],
+      "bounds": {"maximum_page_rows": 1000, "maximum_response_bytes": 4194304, "maximum_cursor_bytes": 4096},
+      "semantic_requirements": ["full audited physical and virtual population", "open orders and reservations included", "missing or stale never becomes zero or OK", "exact decimal strings"],
+      "required_fixtures": ["matched", "mismatch", "stale", "partial", "empty_complete"]
+    },
+    {
+      "request_id": "MC-06",
+      "capability_id": "venue.vnm-order-types",
+      "kind": "READ",
+      "preferred_operation": "GET /portal/execution/v3/venues/{venue}/order-types",
+      "required_schema": "trading-system.portal-execution.venue-order-types.v1",
+      "required_fields": ["venue", "market", "effective_from", "order_types", "session_constraints", "source_authority", "as_of"],
+      "bounds": {"maximum_page_rows": 64, "maximum_response_bytes": 524288, "maximum_cursor_bytes": 0},
+      "semantic_requirements": ["ATO and ATC advertised only when handled end to end", "session constraints separate from data-layer calendar", "effective revision and rollback"],
+      "required_fixtures": ["continuous_only", "auction_supported", "auction_unavailable", "revision_mismatch"]
+    },
+    {
+      "request_id": "MC-07",
+      "capability_id": "admin.sizing-explanation",
+      "kind": "READ",
+      "preferred_operation": "GET /portal/execution/v3/alphas/{alpha_id}/sizing-explanations",
+      "required_schema": "trading-system.portal-execution.sizing-explanation.v1",
+      "required_fields": ["decision_id", "alpha_id", "account_id", "symbol", "decision_at", "inputs", "constraints", "requested_quantity", "approved_quantity", "reason_codes", "completeness"],
+      "bounds": {"maximum_page_rows": 500, "maximum_response_bytes": 4194304, "maximum_cursor_bytes": 4096},
+      "semantic_requirements": ["bounded keyset history", "exact decimals", "no raw secret or broker payload", "stable typed reason codes"],
+      "required_fixtures": ["approved", "reduced", "rejected", "empty", "next_page"]
+    },
+    {
+      "request_id": "MC-08",
+      "capability_id": "admin.config-plan-apply",
+      "kind": "COMMAND",
+      "preferred_operation": "POST /portal/execution/v3/config-plans",
+      "required_schema": "trading-system.portal-execution.config-plan-command.v1",
+      "required_fields": ["plan_id", "target_kind", "target_id", "target_version", "artifact_id", "artifact_sha256", "diff_summary", "policy_verdict", "expires_at", "terminal_state"],
+      "bounds": {"maximum_page_rows": 1, "maximum_response_bytes": 1048576, "maximum_cursor_bytes": 0},
+      "semantic_requirements": ["immutable artifact reference only", "plan then apply then verify", "optimistic target version", "idempotency", "no arbitrary config object", "ambiguous dispatch becomes UNCERTAIN"],
+      "required_fixtures": ["plan", "denied", "expired", "applied", "partial", "uncertain", "version_conflict"]
+    },
+    {
+      "request_id": "MC-09",
+      "capability_id": "command.delegated-terminal-policy",
+      "kind": "COMMAND",
+      "preferred_operation": "POST /portal/execution/v3/commands/{capability_id}",
+      "required_schema": "trading-system.portal-execution.command-terminal.v1",
+      "required_fields": ["command_id", "capability_id", "target_id", "target_version", "payload_sha256", "idempotency_key", "accepted_at", "terminal_state", "terminal_at", "verification_evidence"],
+      "bounds": {"maximum_page_rows": 1, "maximum_response_bytes": 1048576, "maximum_cursor_bytes": 0},
+      "semantic_requirements": ["one-operation delegated identity", "read and command identities distinct", "R3 phishing-resistant step-up", "R4 distinct approvers", "202 is non-terminal", "no blind retry after ambiguity", "terminal GET verification"],
+      "required_fixtures": ["accepted_nonterminal", "succeeded", "failed", "denied", "partial", "uncertain", "duplicate", "stale_target", "revoked_identity"]
+    }
+  ],
+  "return_pack": {
+    "root_name": "portal-execution-owner-return-v3",
+    "manifest_schema": "trading-system.portal-execution.missing-capability-publication.v1",
+    "required_files": ["MASTER_RESPONSE.md", "owner-response.v1.json", "schemas/", "fixtures/", "MANIFEST.sha256"],
+    "forbidden_content": ["credentials", "private keys", "DSN", "raw SQL", "Redis keys or payloads", "broker secrets", "business rows"]
+  },
+  "authority": {
+    "trading_system_change_authorized_by_this_file": false,
+    "portal_runtime_activation": false,
+    "portal_source_network_change": false,
+    "partial_publication_allowed": true,
+    "unpublished_entry_remains_typed_unavailable": true
+  }
+}

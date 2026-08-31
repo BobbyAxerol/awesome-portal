@@ -1,0 +1,8 @@
+{
+  "status": "OK",
+  "count": 2,
+  "events": [
+    {"event_id": "evt-001", "event_type": "ORDER_SUBMITTED", "event_time": "2026-08-31T00:00:00Z"},
+    {"event_id": "evt-002", "event_type": "ORDER_ACKNOWLEDGED", "event_time": "2026-08-31T00:00:01Z"}
+  ]
+}

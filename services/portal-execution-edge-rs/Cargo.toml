@@ -28,6 +28,7 @@ members = [
   "crates/intercell-gateway",
   "crates/emergency-routing",
   "crates/production-readiness",
+  "crates/missing-capability-adapter",
 ]
 resolver = "2"
 

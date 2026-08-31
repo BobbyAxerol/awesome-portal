@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-missing-capability-registry.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "phase", "decision", "runtime_effect", "source_evidence", "counts", "alternative_adapters", "owner_contract_entries", "intentional_exclusions", "n27_reclassification_candidates", "authority"],
+  "properties": {
+    "schema_version": {"const": "portal.execution.missing-capability-registry.v1"},
+    "phase": {"const": "N28"},
+    "decision": {"const": "N28_GENUINE_GAPS_CLASSIFIED_AND_BOUND"},
+    "runtime_effect": {"const": "NONE"},
+    "source_evidence": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+      "minProperties": 7,
+      "maxProperties": 7
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alternative_adapters", "owner_contract_entries", "intentional_exclusions", "n27_reclassification_candidates"],
+      "properties": {
+        "alternative_adapters": {"const": 13},
+        "owner_contract_entries": {"const": 9},
+        "intentional_exclusions": {"const": 3},
+        "n27_reclassification_candidates": {"const": 5}
+      }
+    },
+    "alternative_adapters": {
+      "type": "array",
+      "minItems": 13,
+      "maxItems": 13,
+      "items": {"$ref": "#/$defs/adapter"}
+    },
+    "owner_contract_entries": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {"$ref": "#/$defs/ownerEntry"}
+    },
+    "intentional_exclusions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "reason_code", "owner_request_created"],
+        "properties": {
+          "task_id": {"type": "string", "minLength": 1},
+          "reason_code": {"type": "string", "minLength": 1},
+          "owner_request_created": {"const": false}
+        }
+      }
+    },
+    "n27_reclassification_candidates": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["browser_source_access", "direct_database_access", "direct_redis_access", "raw_cli_or_shell", "source_command_activation", "source_network_change", "trading_system_mutation", "typed_unavailable_retained"],
+      "properties": {
+        "browser_source_access": {"const": false},
+        "direct_database_access": {"const": false},
+        "direct_redis_access": {"const": false},
+        "raw_cli_or_shell": {"const": false},
+        "source_command_activation": {"const": false},
+        "source_network_change": {"const": false},
+        "trading_system_mutation": {"const": false},
+        "typed_unavailable_retained": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "adapter_revision", "authority", "resolution", "source_operations", "profiles", "maximum_rows", "maximum_response_bytes", "completeness", "activation_state"],
+      "properties": {
+        "capability_id": {"type": "string", "minLength": 1},
+        "adapter_revision": {"type": "string", "pattern": "^portal\\.execution\\.[a-z0-9.-]+\\.v1$"},
+        "authority": {"enum": ["TRADING_SYSTEM_GATEWAY", "MARKET_DATA_LAYER", "PORTAL_PROJECTION"]},
+        "resolution": {"enum": ["CURRENT_SOURCE_ADAPTER", "CURRENT_SOURCE_COMPOSITE_ADAPTER", "CURRENT_SOURCE_COMMAND_ADAPTER", "DERIVED_FROM_ADAPTED_SOURCE", "PORTAL_DERIVED_ADAPTER"]},
+        "source_operations": {"type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "profiles": {"type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": {"enum": ["PAPER", "SANDBOX", "LIVE"]}},
+        "maximum_rows": {"type": "integer", "minimum": 1, "maximum": 5000},
+        "maximum_response_bytes": {"type": "integer", "minimum": 1, "maximum": 8388608},
+        "completeness": {"type": "string", "minLength": 1},
+        "activation_state": {"const": "SOURCE_DARK"}
+      }
+    },
+    "ownerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability_id", "reason_code", "owner_request_id", "typed_unavailable_until_verified"],
+      "properties": {
+        "capability_id": {"type": "string", "minLength": 1},
+        "reason_code": {"type": "string", "pattern": "^N28_[A-Z0-9_]+$"},
+        "owner_request_id": {"pattern": "^MC-0[1-9]$"},
+        "typed_unavailable_until_verified": {"const": true}
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "trading-system.portal-execution.missing-capability-publication.v1",
+  "request_revision": "portal.execution.trading-system-owner-request.v3",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "source_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "owner_id": "PENDING_OWNER",
+  "owner_accepted": false,
+  "entries": [
+    {"request_id": "MC-01", "capability_id": "event.full-incremental", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-02", "capability_id": "artifact.reference", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-03", "capability_id": "execution.broker-ack-timestamps", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-04", "capability_id": "execution.signal-intent-funnel", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-05", "capability_id": "binding.full-exposure-population", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-06", "capability_id": "venue.vnm-order-types", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-07", "capability_id": "admin.sizing-explanation", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-08", "capability_id": "admin.config-plan-apply", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false},
+    {"request_id": "MC-09", "capability_id": "command.delegated-terminal-policy", "state": "TYPED_UNAVAILABLE", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "portal_activation": false}
+  ],
+  "authority": {
+    "contains_credentials": false,
+    "contains_business_rows": false,
+    "contains_raw_sql": false,
+    "portal_database_or_redis_authority": false,
+    "portal_cli_or_broker_authority": false,
+    "runtime_flags_changed": false
+  }
+}
