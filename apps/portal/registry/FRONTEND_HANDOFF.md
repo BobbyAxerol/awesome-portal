@@ -1836,9 +1836,10 @@ Thực hiện `CODEX_TO_CLAUDE_N29_SAME_ORIGIN_PRODUCT_CONSUMER_CLOSEOUT.md`
 5. **E2E double** (`e2e/bffDouble.ts`): trả RAW canonical payloads cho
    `/api/v1/execution/**`; dữ liệu governance dùng chung một nguồn
    (`api/fixtureData.ts`) với unit double — không có feature model thứ hai.
-6. **BR-EX-72** (consolidated, freeze-sanctioned): fleet list, bindings
-   list/detail, canonical live-review fixture, registry amendment —
-   `CLAUDE_TO_CODEX_N29_CONSOLIDATED_BACKEND_REQUEST.md`.
+6. **BR-EX-72 (đề xuất, consolidated, freeze-sanctioned)**: fleet list,
+   bindings list/detail, canonical live-review fixture, registry amendment —
+   `CLAUDE_TO_CODEX_N29_CONSOLIDATED_BACKEND_REQUEST.md`. Bảng §7.2 của codex
+   có guard pin `_next: BR-EX-72_` nên row do codex chèn.
 
 Gates: vitest 1780 pass (0 warning) · build xanh · Playwright preview+journeys
 66 pass (clean run) · boundary 0 offences.

@@ -2837,7 +2837,7 @@ N13B and proceed in order through N17B.
 > warning · build xanh · Playwright preview+journeys 66 pass trên BFF double
 > same-origin (`e2e/bffDouble.ts`), console + origin-containment asserts.
 > Verdict trả codex: `FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX` — không
-> tự đánh Product GO. Request hợp nhất: BR-EX-72 (fleet list · bindings
+> tự đánh Product GO. Request hợp nhất: BR-EX-72 đề xuất (fleet list · bindings
 > list/detail · live-review fixture · registry amendment). Đổi doctrine đọc:
 > client không pre-block theo policy metadata cũ của registry — server là
 > enforcer (ghi ở §8.40 FRONTEND_HANDOFF + return packet §5).

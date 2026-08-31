@@ -110,8 +110,9 @@ metadata amendment carrying HOTFIX_REQUEST_2026-08-30).
 ## 8. Confirmation of boundaries
 
 - No backend file, `apps/control-api/**`, registry JSON/schema, or `upgrade/**`
-  doc outside the frontend carve-out was edited. The single backend-plan edit
-  is the sanctioned §7.2 request-table row for BR-EX-72.
+  doc outside the frontend carve-out was edited. The consolidated request is
+  PROPOSED as BR-EX-72 in the mirror doc — codex's tracking guard pins the
+  §7.2 table's `_next: BR-EX-72_`, so the row insertion is codex's to make.
 - §12 request-ID mapping corrections are used in frontend tracking only.
 - Do-not-mark-GO respected: this packet returns
   `FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX` and nothing stronger.
