@@ -6513,7 +6513,7 @@
 .exec-gov-headlink:hover { text-decoration: underline; }
 .exec-gov .exec-role-control select, .exec-gov select.exec-role-control { width: 100%; max-width: 100%; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
 .exec-gate-wvfilters { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
-.exec-gate-wvtable th[scope="row"] { font-weight: 400; overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; font: var(--exec-font-body, inherit); color: var(--ink); }
+.exec-gate-wvtable th[scope="row"] { overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; font: 400 12px/1.6 var(--font-mono); color: var(--ink); }
 .exec-gate-wvtable td[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
 .exec-gate-wvtable td[data-tone="bad"] { color: var(--bad); }
 .exec-gov-v[data-tone="good"] { color: var(--good); }
@@ -6588,3 +6588,21 @@
 .exec-gate-capsteplegend { font: var(--exec-font-meta); color: var(--ink-soft); margin-top: 6px; }
 .exec-gate-capsteplegend b { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .exec-gate-capstepfill[data-seg="step"] { transition: none; } }
+
+/* ── Governance typography unification (owner review 2026-08-31): inside
+   .exec-gov every explanatory note is MONO like the metas around it — the
+   sans --exec-font-meta belongs to the carbon operational screens, not this
+   room. Also the register pieces that shipped unstyled. */
+.exec-gov .exec-gate-note { font: 400 11px/1.7 var(--font-mono); color: var(--ink-mute); margin: 10px 0 0; overflow-wrap: anywhere; }
+.exec-gov .exec-gate-note a { color: var(--accent); }
+.exec-wv-lanewho { font: 400 11px/1.5 var(--font-mono); }
+.exec-wv-lanetext { font: 400 11px/1.5 var(--font-mono); color: var(--ink-mute); }
+.exec-wv-runway { padding-bottom: 2px; }
+.exec-wv-debtrow .exec-gov-meta { font: 400 10px/1.6 var(--font-mono); }
+.exec-wv-debtchip { font: 400 11px/1.5 var(--font-mono); background: var(--paper-raised); }
+.exec-wv-blocking { font: 600 9px/1.5 var(--font-mono); letter-spacing: 0.06em; color: var(--bad); border: 1px solid var(--bad); padding: 0 5px; margin-left: 6px; white-space: nowrap; }
+.exec-wv-pager { display: flex; align-items: center; gap: 10px; padding: 10px 14px 2px; border-top: 1px solid var(--line-soft); }
+.exec-wv-pager .exec-role-meta { flex: 1; text-align: center; font: 400 10px/1.6 var(--font-mono); color: var(--ink-mute); }
+.exec-gov-kvfoot { display: flex; flex-direction: column; gap: 4px; padding: 0 14px 14px; }
+.exec-gov-kvfoot .exec-gate-note { margin: 4px 0 0; }
+.exec-gov-kvfoot .exec-px-note { margin-top: 8px; }

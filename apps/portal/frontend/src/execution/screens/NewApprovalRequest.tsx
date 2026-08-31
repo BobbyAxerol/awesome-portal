@@ -119,7 +119,7 @@ export function NewApprovalRequestScreen({
         <div className="exec-gov-grid2" data-ratio="1.15">
           <div className="exec-gov-panel">
             <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Target &amp; evidence — declare before submit</span></div>
-            <div className="exec-gov-kv" data-flush="true">
+            <div className="exec-gov-kv">
               <span className="exec-gov-k">alpha</span>
               <span className="exec-gov-v">
                 <select className="exec-role-control" value={alphaId} onChange={(e) => setAlphaId(e.target.value)} aria-label="Alpha (from the alpha registry)" disabled={submitting}>
@@ -147,6 +147,7 @@ export function NewApprovalRequestScreen({
               <span className="exec-gov-k">gate</span>
               <span className="exec-gov-v">R1 — research evidence. R2 (capital) requires an approved R1 and opens from its decision.</span>
             </div>
+            <div className="exec-gov-kvfoot">
             {"warn" in alpha && alpha.warn ? (
               <p className="exec-gate-note" data-tone="warn" role="note">! {alpha.warn}</p>
             ) : null}
@@ -165,6 +166,7 @@ export function NewApprovalRequestScreen({
                 onChange={(e) => setSummary(e.target.value)}
               />
             </label>
+            </div>
           </div>
           <div className="exec-gov-panel">
             <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">What R1 will review</span></div>

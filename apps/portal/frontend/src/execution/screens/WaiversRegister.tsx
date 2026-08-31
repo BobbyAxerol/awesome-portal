@@ -46,6 +46,11 @@ function remaining(row: ConditionRow, readAt: string | null, tick: number): { te
   const h = String(Math.floor((left % 86_400) / 3600)).padStart(2, "0");
   const m = String(Math.floor((left % 3600) / 60)).padStart(2, "0");
   const sec = String(left % 60).padStart(2, "0");
+  // A clock a month out ticking seconds reads as noise; the second hand is
+  // reserved for the week that matters. EXPIRING/LAPSED always show it.
+  if (row.state !== "EXPIRING" && row.state !== "LAPSED" && d >= 7) {
+    return { text: `${d}d left`, tone: d < 21 ? "warn" : "good" };
+  }
   return { text: `${d}d ${h}:${m}:${sec}`, tone: d < 7 ? "bad" : d < 21 ? "warn" : "good" };
 }
 
