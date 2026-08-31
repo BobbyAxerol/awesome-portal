@@ -47,6 +47,12 @@ import { readAggregatesByCurrency } from "./blotterAggregates";
 import type { BlotterFilter } from "./contracts";
 import { PaperWorkbench, WORKBENCH_TABS, type WorkbenchTab } from "./screens/PaperWorkbench";
 import { STAGE_SMOKE, primaryEquity, stageVisuals } from "./stage.smoke";
+import { paperSmoke, paperVariant, usePaperTick } from "./paper.smoke";
+import { blotterSmoke, useBlotterTick } from "./blotter.smoke";
+import { useAlphaClock } from "./alpha360.smoke";
+import { CryptoEquity, Correlation as PaperCorrelation, DriftChart as PaperDriftChart, Overlay as PaperOverlay, VnEquity } from "./lab/paperDemo";
+import { pfDemo, pfDemoPanels } from "./lab/portfolioDemo";
+import { TradeReplay } from "./components/TradeReplay";
 import { PORTFOLIO_TABS, PortfolioThreeSixty, type PortfolioTab } from "./screens/PortfolioThreeSixty";
 
 /* -------------------------------------------------------------------------
@@ -152,6 +158,7 @@ export function PaperWorkbenchPreview({
   // Overview now points at panels that moved up, so landing on it shows a
   // signpost where the reader expected the day's orders.
   const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
+  const paperTick = usePaperTick();
   const { record, view } = useSimulationLedger();
   const base = useMemo(() => {
     const data = variant === "vnm" ? vnmWorkbench({ deploymentId, ...initial }) : paperWorkbench({ ...GATE_MET, deploymentId, ...initial });
@@ -166,6 +173,15 @@ export function PaperWorkbenchPreview({
     <>
       <PaperWorkbench
         {...base}
+        demo={paperSmoke()}
+        demoHifi={paperVariant(variant === "vnm")}
+        demoPlots={{
+          equity: variant === "vnm" ? <VnEquity asOf={base.envelope.asOf} /> : <CryptoEquity asOf={base.envelope.asOf} />,
+          overlay: <PaperOverlay asOf={base.envelope.asOf} />,
+          correlation: <PaperCorrelation asOf={base.envelope.asOf} />,
+          drift: <PaperDriftChart />,
+        }}
+        demoTick={paperTick}
         tab={tab}
         onTabChange={setTab}
         onLoadOlder={(which) => record(`load older · ${which}`, "fixture holds one page; no older rows exist")}
@@ -214,6 +230,7 @@ export function AlphaThreeSixtyPreview({ alphaId, initial }: { alphaId: string; 
   const { record, view } = useSimulationLedger();
   const base = useMemo(() => alpha360({ alphaId, ...initial }), [alphaId, initial]);
   const scoped = useMemo(() => scopeAlpha(base, venue), [base, venue]);
+  const alphaClock = useAlphaClock(base.envelope.asOf);
   const onScopeChange = (scope: AlphaScope) => {
     const next = (ALPHA_VENUES as readonly string[]).includes(scope.venue) ? (scope.venue as (typeof ALPHA_VENUES)[number]) : "All";
     setVenue(next);
@@ -225,6 +242,8 @@ export function AlphaThreeSixtyPreview({ alphaId, initial }: { alphaId: string; 
     <>
       <AlphaThreeSixty
         {...scoped}
+        demoClock={alphaClock}
+        demoReplay={<TradeReplay />}
         tab={tab}
         onTabChange={setTab}
         onScopeChange={onScopeChange}
@@ -246,9 +265,13 @@ export function PortfolioThreeSixtyPreview({ portfolioId, initial }: { portfolio
   const [tab, setTab] = useParamState<PortfolioTab>("tab", PORTFOLIO_TABS, "Overview");
   const [lens, setLens] = useState<number | null>(null);
   const base = useMemo(() => portfolio360({ portfolioId, ...initial }), [portfolioId, initial]);
+  const pfClock = useAlphaClock(base.envelope.asOf);
   return (
     <PortfolioThreeSixty
       {...base}
+      demo={pfDemo()}
+      demoPanels={pfDemoPanels(portfolioId, base.benchmark, base.envelope.asOf)}
+      demoClock={pfClock}
       tab={tab}
       onTabChange={setTab}
       lensIndex={lens}
@@ -289,12 +312,15 @@ export function FullBlotterPreview({ initialFilter = "ALL" }: { initialFilter?: 
   const [filter, setFilter] = useParamState<BlotterFilter>("filter", BLOTTER_FILTERS, initialFilter);
   const [crossFilter, setCrossFilter] = useState<string | null>(BLOTTER_CROSS_FILTER);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const blotterTick = useBlotterTick(blotterSmoke()?.basePrice ?? 0);
   const { record, view } = useSimulationLedger();
   const page = useMemo(() => blotterPage(filter === "ALL" ? "ALL" : filter, crossFilter ? undefined : 0), [filter, crossFilter]);
   const funnel = useMemo(() => readOrderFunnel(FUNNEL_COMPLETE), []);
   return (
     <>
       <FullBlotter
+        demo={blotterSmoke()}
+        demoTick={blotterTick}
         aggregates={readAggregatesByCurrency(AGGREGATES_BY_CURRENCY_RAW)}
         envelope={{ authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" }}
         page={page}

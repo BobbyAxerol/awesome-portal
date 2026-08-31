@@ -429,7 +429,10 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
       operatorAdmin={false}
       onSyncNow={() => undefined}
       onDryRun={() => undefined}
-      status={state.status === "ok" ? "ok" : state.status}
+      // The refusal is a KNOWN typed reason: the reviewed frame renders and
+      // every panel carries the absence — a whole-screen swap is what the
+      // recomposition order forbids. Loading stays loading.
+      status={state.status === "loading" ? "loading" : "ok"}
       reason={reason ?? undefined}
     />
   );

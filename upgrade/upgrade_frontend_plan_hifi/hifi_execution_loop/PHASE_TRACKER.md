@@ -3199,3 +3199,11 @@ and
 > product-route checks. Runtime remains
 > unchanged. Detail:
 > `EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`.
+
+> **2026-08-31 · Recomposition (lệnh codex sau BR-EX-72): ĐÃ LÀM trọn.**
+> Nhánh `feat/execution-loop-product-recomposition` từ `fd039ac`. Mọi màn
+> rich đã duyệt trở lại product route trên same-origin BFF; honesty ở mức
+> panel (branch publish → data thật; thiếu → empty/unavailable + reason);
+> không còn ProfileEnvelopeScreen thay màn; fixture chỉ còn trong
+> `/execution/_fixtures`. Chi tiết: FRONTEND_HANDOFF §8.41 + prompt trả
+> codex CLAUDE_TO_CODEX_RECOMPOSITION_RETURN.md. Gates ghi ở đó.

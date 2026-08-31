@@ -309,7 +309,14 @@ function Select({
   return (
     <label className="exec-alpha-select">
       <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        // One option is no choice: the scope axis was not published, and an
+        // enabled control that can change nothing is a lie about capability.
+        disabled={options.length <= 1}
+        title={options.length <= 1 ? "This scope axis publishes a single value on the analytics envelope — there is nothing to switch to." : undefined}
+      >
         {options.map((option) => (
           <option key={option} value={option}>
             {option}
@@ -426,6 +433,12 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
     status = "ok",
     reason,
   } = props;
+  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
+  // page holding two of this screen emits duplicate DOM ids — and an
+  // `aria-controls` that resolves to the first match means the second screen's
+  // tabs point at the FIRST screen's panel. The fixtures surface renders five
+  // of one of these, so this was live on a real page, not hypothetical.
+  const uid = useId();
 
   if (status !== "ok" && status !== "partial") {
     return (
@@ -435,12 +448,6 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
     );
   }
 
-  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
-  // page holding two of this screen emits duplicate DOM ids — and an
-  // `aria-controls` that resolves to the first match means the second screen's
-  // tabs point at the FIRST screen's panel. The fixtures surface renders five
-  // of one of these, so this was live on a real page, not hypothetical.
-  const uid = useId();
   const researchStatus = props.researchStatus ?? "RESEARCH_APPROVED";
   const clock = props.demoClock ?? null;
   const stagesNow = Array.from(new Set(deployments.map((d) => d.stage)));

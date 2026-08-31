@@ -1923,3 +1923,36 @@ Unit and browser doubles now read the same canonical
 Accounts & Bindings, New Approval, Gate LIVE and Waivers shadow rows and marks
 the two list features as `REAL`/`portal_control_current`. The server remains the
 enforcer. `N29-BE-72` is closed; only protected-main release evidence remains.
+
+### 8.41 Product recomposition — màn rich đã duyệt trở lại product route (2026-08-31)
+
+Theo lệnh codex sau BR-EX-72 (nhánh `feat/execution-loop-product-recomposition`
+từ backend head `fd039ac`): các màn đầy đủ đã duyệt quay lại đúng product
+route, same-origin BFF giữ nguyên, **honesty ở mức panel** — panel có branch
+đã publish thì render dữ liệu thật; panel thiếu capability render đúng
+empty/unavailable với reason của contract; KHÔNG thay cả màn bằng
+`ProfileEnvelopeScreen` nữa.
+
+Điểm cấu trúc:
+
+1. **Màn hai-nhánh** (`demo` lab / envelope product): PaperOverview,
+   SandboxOverview, LiveOverview, AlphaFleet, AccountsBindings, BindingDetail
+   — nhánh product cùng class/layout đã duyệt, cell chưa publish ghi
+   `not published`, set rỗng ghi là fact.
+2. **Màn data-props** nhận demo layer qua props (lab bơm):
+   PaperWorkbench (`demo/demoHifi/demoPlots/demoTick/candlesReason`),
+   FullBlotter (`demo/demoTick`), AlphaThreeSixty
+   (`demoStageSeries/demoTiles/demoClock/demoReplay`), PortfolioThreeSixty
+   (`demo/demoPanels/demoClock` — 17 panel hi-fi thành slot, fallback là
+   honest state từng slot).
+3. **Container mới** `screens/recomposeContainers.tsx`: map envelope→props
+   (authority/freshness vocab, `profileRows.ts` mapper snake_case khoan dung),
+   Portfolio 360 bind correlation + capital-ledger THẬT, Blotter expand gọi
+   order-funnel THẬT, Fleet/Bindings ăn BR-EX-72 projection thật.
+4. **Demo machinery rời product graph**: `lab/paperDemo.tsx`,
+   `lab/portfolioDemo.tsx`; formatter thuần về `clock.ts` / `liveFormat.ts` /
+   `sbFormat.ts` / `fleetFormat.ts` / `poVisual.ts`. Boundary gate 0 offences.
+5. **N29 acceptance pack**: 2 evidence digest (route, profileContainers) drift
+   vì chính lệnh recomposition — đã refresh CƠ HỌC (không đổi field ngữ
+   nghĩa nào; verifier xanh, vẫn NO_GO + blocker N29-REL-01). codex re-bless
+   khi nhận packet.

@@ -772,6 +772,12 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   } = props;
 
   const [localLens, setLocalLens] = useState<number | null>(null);
+  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
+  // page holding two of this screen emits duplicate DOM ids — and an
+  // `aria-controls` that resolves to the first match means the second screen's
+  // tabs point at the FIRST screen's panel. The fixtures surface renders five
+  // of one of these, so this was live on a real page, not hypothetical.
+  const uid = useId();
   const [action, setAction] = useState<"rebalance" | "report" | null>(null);
   const lens = lensIndex ?? localLens;
   const setLens = onLensChange ?? setLocalLens;
@@ -787,12 +793,6 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   const shownHoldings = capPreserving(holdings, 40, (row) => row.readiness !== "READY");
   const holdingsNotice = capNotice(shownHoldings, "holdings");
 
-  // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
-  // page holding two of this screen emits duplicate DOM ids — and an
-  // `aria-controls` that resolves to the first match means the second screen's
-  // tabs point at the FIRST screen's panel. The fixtures surface renders five
-  // of one of these, so this was live on a real page, not hypothetical.
-  const uid = useId();
   const { demo, demoPanels, demoClock } = props;
   const smoke = demo ?? null;
   const clock = demoClock ?? null;

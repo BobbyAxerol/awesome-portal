@@ -383,6 +383,116 @@
   "verdict": "skipped:hidden"
  },
  {
+  "route": "/deployments/paper/dep_94",
+  "index": 0,
+  "tag": "BUTTON",
+  "text": "Overview",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Overview"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Positions",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Positions"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Orders",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Fills",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Fills"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Sessions",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Sessions"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Accounting",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Accounting"
+ },
+ {
+  "route": "/deployments/paper/dep_94",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Evidence",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_94?tab=Evidence"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 0,
+  "tag": "BUTTON",
+  "text": "Overview",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Overview"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Positions",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Positions"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Orders",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Fills",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Fills"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Sessions",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Sessions"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Accounting",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Accounting"
+ },
+ {
+  "route": "/deployments/paper/dep_vnm/vn-market",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Evidence",
+  "verdict": "navigated",
+  "detail": "/deployments/paper/dep_vnm/vn-market?tab=Evidence"
+ },
+ {
   "route": "/deployments/sandbox/dep_77",
   "index": 0,
   "tag": "BUTTON",
@@ -572,12 +682,284 @@
   "verdict": "skipped:hidden"
  },
  {
+  "route": "/deployments/blotter",
+  "index": 0,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 1,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 2,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 3,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 4,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 5,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 6,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 7,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 8,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 9,
+  "tag": "INPUT",
+  "text": "",
+  "verdict": "skipped:hidden"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Export loaded rows",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 11,
+  "tag": "BUTTON",
+  "text": "All",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 12,
+  "tag": "BUTTON",
+  "text": "Working",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=OPEN"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 13,
+  "tag": "BUTTON",
+  "text": "Filled",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=FILLED"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 14,
+  "tag": "BUTTON",
+  "text": "Partial",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=PARTIAL"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 15,
+  "tag": "BUTTON",
+  "text": "Rejected",
+  "verdict": "navigated",
+  "detail": "/deployments/blotter?filter=REJECTED"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 0,
+  "tag": "A",
+  "text": "digest…pe",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Audit"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Overview",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Insight Charts",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Insight+Charts"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Trade Replay",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Trade+Replay"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Positions",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Positions"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Orders & Fills",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Orders+%26+Fills"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Risk",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Risk"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 7,
+  "tag": "BUTTON",
+  "text": "Sessions",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Sessions"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Accounting",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Accounting"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Reconciliation",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Reconciliation"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Audit",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/av_2041?tab=Audit"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 0,
+  "tag": "BUTTON",
+  "text": "Report pack",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 1,
+  "tag": "BUTTON",
+  "text": "Rebalance plan ▾",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Overview",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Structure & Correlation",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO?tab=Structure+%26+Correlation"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Capital Ledger",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO?tab=Capital+Ledger"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Approvals",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO?tab=Approvals"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Incidents",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO?tab=Incidents"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 7,
+  "tag": "BUTTON",
+  "text": "Audit",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/PF-CRYPTO?tab=Audit"
+ },
+ {
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 0,
   "tag": "A",
-  "text": "Operations Queue",
+  "text": "not published",
   "verdict": "navigated",
-  "detail": "/execution/operations"
+  "detail": "/deployments/live/not%20published"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 1,
+  "tag": "A",
+  "text": "not published",
+  "verdict": "navigated",
+  "detail": "/deployments/portfolios/not%20published"
  },
  {
   "route": "/administration/actions",
