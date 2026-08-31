@@ -295,3 +295,109 @@ export function readQueryAnalytics(raw: unknown): QueryAnalytics | null {
     correlation: corr ? { state: s(corr.state), reasonCode: s(corr.reasonCode ?? corr.reason_code) } : null,
   };
 }
+
+/* ── BR-EX-72 manager list projections ─────────────────────────────────── */
+
+export interface ManagerListPage<T> {
+  rows: readonly T[];
+  totalCount: number;
+  filteredCount: number;
+  nextCursor: string | null;
+  prevCursor: string | null;
+  hasMore: boolean;
+  hasPrevious: boolean;
+}
+
+export interface AlphaFleetItem {
+  alphaId: string;
+  alphaLabel: string;
+  version: string;
+  stage: string;
+  deployments: readonly { deploymentId: string; stage: string; venue: string }[];
+  updatedAt: string;
+}
+
+export interface BindingItem {
+  bindingId: string;
+  accountId: string;
+  venue: string;
+  state: string;
+  credentialState: string;
+  updatedAt: string;
+}
+
+export interface ManagerListEnvelope<T> {
+  environment: string;
+  freshness: string;
+  completeness: string;
+  sourceAsOf: string | null;
+  readAt: string;
+  page: ManagerListPage<T>;
+}
+
+function readManagerPage<T>(raw: unknown, row: (value: unknown) => T | null): ManagerListPage<T> | null {
+  const root = obj(raw);
+  if (!root || !Array.isArray(root.rows)) return null;
+  const rows = root.rows.map(row);
+  if (rows.some((item) => item === null)) return null;
+  const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  const totalCount = count(root.total_count);
+  const filteredCount = count(root.filtered_count);
+  if (totalCount === null || filteredCount === null) return null;
+  return {
+    rows: rows as T[], totalCount, filteredCount,
+    nextCursor: str(root.next_cursor), prevCursor: str(root.prev_cursor),
+    hasMore: root.has_more === true, hasPrevious: root.has_previous === true,
+  };
+}
+
+function readManagerEnvelope<T>(
+  raw: unknown,
+  schemaVersion: string,
+  row: (value: unknown) => T | null,
+): ManagerListEnvelope<T> | null {
+  const root = obj(raw);
+  if (!root || root.schema_version !== schemaVersion || root.record_authority !== "PORTAL_PROJECTION") return null;
+  const page = readManagerPage(root.page, row);
+  const environment = str(root.environment);
+  const freshness = str(root.freshness);
+  const completeness = str(root.completeness);
+  const readAt = str(root.read_at);
+  if (!page || !environment || !freshness || !completeness || !readAt) return null;
+  return { environment, freshness, completeness, sourceAsOf: str(root.source_as_of), readAt, page };
+}
+
+function readFleetItem(raw: unknown): AlphaFleetItem | null {
+  const root = obj(raw);
+  if (!root || !Array.isArray(root.deployments)) return null;
+  const alphaId = str(root.alpha_id); const alphaLabel = str(root.alpha_label);
+  const version = str(root.version); const stage = str(root.stage); const updatedAt = str(root.updated_at);
+  if (!alphaId || !alphaLabel || !version || !stage || !updatedAt) return null;
+  const deployments = root.deployments.flatMap((value) => {
+    const item = obj(value); const deploymentId = str(item?.deployment_id);
+    const itemStage = str(item?.stage); const venue = str(item?.venue);
+    return item && deploymentId && itemStage && venue ? [{ deploymentId, stage: itemStage, venue }] : [];
+  });
+  if (deployments.length !== root.deployments.length) return null;
+  return { alphaId, alphaLabel, version, stage, deployments, updatedAt };
+}
+
+function readBindingItem(raw: unknown): BindingItem | null {
+  const root = obj(raw);
+  const bindingId = str(root?.binding_id); const accountId = str(root?.account_id);
+  const venue = str(root?.venue); const state = str(root?.state);
+  const credentialState = str(root?.credential_state); const updatedAt = str(root?.updated_at);
+  return root && bindingId && accountId && venue && state && credentialState && updatedAt
+    ? { bindingId, accountId, venue, state, credentialState, updatedAt } : null;
+}
+
+export const readAlphaFleet = (raw: unknown) =>
+  readManagerEnvelope(raw, "execution.alpha-fleet-list.v1", readFleetItem);
+
+export const readBindings = (raw: unknown) =>
+  readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem);
+
+export function readBindingDetail(raw: unknown): BindingItem | null {
+  const root = obj(raw);
+  return root?.schema_version === "execution.binding-detail.v1" ? readBindingItem(root.item) : null;
+}

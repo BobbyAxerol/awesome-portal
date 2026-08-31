@@ -27,29 +27,32 @@ describe("Execution integration preview registry", () => {
     const declared = registry.screens
       .map((screen) => screen.screen_id)
       .filter((screenId) => screenId.startsWith("EXECUTION_"));
-    // The three owner-commissioned screens (2026-08-30) have no registry rows
-    // yet — HOTFIX_REQUEST_2026-08-30 §2 asks codex for them. Until they land,
-    // the preview claims their paths via EXECUTION_PREVIEW_EXTRA_ROUTES and
-    // this test names the difference precisely instead of loosening.
-    const pendingRegistryRows = EXECUTION_PREVIEW_EXTRA_ROUTES.map((r) => r.screenId).sort();
-    expect(pendingRegistryRows).toEqual([
-      "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
-      "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
-      "EXECUTION_WAIVERS_REGISTER_SCREEN",
-    ]);
-    expect(
-      [...EXECUTION_PREVIEW_SCREEN_IDS].filter((id) => !pendingRegistryRows.includes(id)).sort(),
-    ).toEqual(declared.sort());
+    expect(EXECUTION_PREVIEW_EXTRA_ROUTES).toEqual([]);
+    expect([...EXECUTION_PREVIEW_SCREEN_IDS].sort()).toEqual(declared.sort());
     expect(declared.every(hasExecutionPreview)).toBe(true);
   });
 
-  it("mounts only fixture-profile screens whose capability policy remains dark", () => {
+  it("publishes the exact BR-EX-72 shadow policy while keeping legacy screens dark", () => {
+    const shadowPolicies: Record<string, string[]> = {
+      EXECUTION_ALPHA_FLEET_LIST_SCREEN: ["projection_ingestion_enabled", "query_enabled"],
+      EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN: ["projection_ingestion_enabled", "query_enabled"],
+      EXECUTION_NEW_APPROVAL_REQUEST_SCREEN: ["governance_write_enabled"],
+      EXECUTION_GATE_LIVE_REVIEW_SCREEN: ["query_enabled"],
+      EXECUTION_WAIVERS_REGISTER_SCREEN: ["query_enabled"],
+    };
     for (const screen of registry.screens.filter((entry) => hasExecutionPreview(entry.screen_id))) {
+      const enabled = Object.entries(screen.delivery_policy ?? {})
+        .filter(([key, value]) => key.endsWith("_enabled") && value === true)
+        .map(([key]) => key)
+        .sort();
+      if (screen.screen_id in shadowPolicies) {
+        expect(screen.delivery_profile, screen.screen_id).toBe("shadow");
+        expect(enabled, screen.screen_id).toEqual(shadowPolicies[screen.screen_id]);
+        continue;
+      }
       expect(screen.delivery_profile, screen.screen_id).toBe("fixture");
       expect(screen.delivery_policy, screen.screen_id).not.toBeNull();
-      for (const [key, value] of Object.entries(screen.delivery_policy ?? {})) {
-        if (key.endsWith("_enabled")) expect(value, `${screen.screen_id}.${key}`).toBe(false);
-      }
+      expect(enabled, screen.screen_id).toEqual([]);
     }
   });
 

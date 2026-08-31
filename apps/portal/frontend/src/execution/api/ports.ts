@@ -10,7 +10,10 @@
  * stale and partial provoke different responses from a human, and collapsing
  * them into `catch (e)` is how they end up as one grey error box.
  */
-import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
+import type {
+  AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
+  OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics,
+} from "./profileRead";
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
@@ -216,6 +219,25 @@ export interface WaiverQuery {
   limit?: number;
 }
 
+export interface ManagerListQuery {
+  environment?: "paper" | "sandbox" | "live";
+  after?: string;
+  before?: string;
+  limit?: number;
+  sort?: string;
+}
+
+export interface AlphaFleetQuery extends ManagerListQuery {
+  search?: string;
+  stage?: string;
+}
+
+export interface BindingListQuery extends ManagerListQuery {
+  search?: string;
+  venue?: string;
+  state?: string;
+}
+
 export interface ExecutionApi {
   /** `GET /api/v1/execution/governance/approvals` */
   listApprovals(query: InboxQuery): Promise<Result<InboxResult>>;
@@ -235,6 +257,12 @@ export interface ExecutionApi {
   getLiveReview(approvalId: string): Promise<Result<LiveReviewPayload>>;
   /** `GET /screens/accounts/{id}` — N28 typed unavailable until published. */
   getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
+  /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
+  getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
+  /** `GET /broker-bindings` — BR-EX-72 bounded binding projection. */
+  getBindings(query?: BindingListQuery): Promise<Result<ManagerListEnvelope<BindingItem>>>;
+  /** `GET /broker-bindings/{id}` — narrow, non-secret binding detail. */
+  getBindingDetail(bindingId: string, environment?: "paper" | "sandbox" | "live"): Promise<Result<BindingItem>>;
 
   getWaivers(query?: WaiverQuery): Promise<Result<ConditionsPage>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r1` */

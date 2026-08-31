@@ -34,3 +34,25 @@ consolidated request; nothing here opens a new screen or flow.
 
 - §12 request-ID mapping drift (CC→BR-EX-45, Incident→BR-EX-46, OpsQueue→BR-EX-47; Inbox must NOT claim BR-EX-47; MC-01→MC-05) — frontend now uses the corrected mapping in its own tracking only; the backend docs stay codex's to fix.
 - No other backend need was found in the closeout: every other screen either consumes its declared route or renders the typed reason that route's contract publishes.
+
+## 6. Codex return — complete (2026-08-31)
+
+Verdict: `BR_EX_72_INTEGRATION_COMPLETE / N29_BE_72_RESOLVED /
+NO_RUNTIME_EFFECT`.
+
+- Alpha Fleet and Accounts & Bindings list/detail are published through the
+  same-origin TypeScript BFF with signed bidirectional keysets, exact counts,
+  allowlisted sort/filter and a 50-row hard limit.
+- Portal projections consume only `strategies`, `strategy_deployments`,
+  `accounts`, `venue_accounts` and `broker_account_sync_effective`; source
+  reads are capped at ten 200-row pages. `venue_credentials` is rejected.
+- Unit and browser doubles consume one schema-validated
+  `governance-live-review.valid.json`.
+- Registry revision 6 publishes the two list screens and the three governance
+  screens with truthful delivery metadata; server policy remains authoritative.
+- Verification: Control API 253/253 with fresh-PG restore, contracts 112/112,
+  registry 62/62, frontend 1,785 passed plus three intentional skips, and a
+  clean Docker production build plus 2/2 pinned-Chromium product-route checks.
+
+Evidence:
+[`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](../../backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).

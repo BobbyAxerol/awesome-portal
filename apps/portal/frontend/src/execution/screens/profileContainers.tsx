@@ -8,19 +8,22 @@
  */
 import { useEffect, useState } from "react";
 
-import type { ExecutionApi, Result } from "../api/ports";
-import type { LiveReviewPayload, ProfileEnvelope, QueryAnalytics } from "../api/profileRead";
+import type { AlphaFleetQuery, BindingListQuery, ExecutionApi, Result } from "../api/ports";
+import type {
+  AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
+  ProfileEnvelope, QueryAnalytics,
+} from "../api/profileRead";
 import { readCommandCenter, type CommandCenter } from "../commandCenter";
 import { CommandCenterLive } from "./containers";
 import { PanelState } from "../components/states";
 import { ProfileEnvelopeScreen, QueryAnalyticsScreen, TypedUnavailableScreen } from "./ProfileScreens";
 import type { PanelStatus } from "../contracts";
+import { StatusChip } from "../components/badges";
+import { utcStamp } from "../time";
 
-interface Loaded<T> {
-  status: PanelStatus;
-  reason?: string;
-  value: T | null;
-}
+type Loaded<T> =
+  | { status: "ok"; reason?: undefined; value: T }
+  | { status: Exclude<PanelStatus, "ok">; reason?: string; value: null };
 
 function useApiRead<T>(run: () => Promise<Result<T>>, deps: readonly unknown[]): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ status: "loading", value: null });
@@ -139,34 +142,120 @@ export function AccountBroker360Container({ api, accountId }: { api: ExecutionAp
   );
 }
 
-/**
- * §4.3 — routes that share a screen id with a detail screen but have no
- * accepted narrow API of their own. One consolidated backend request covers
- * them; until codex answers it, the honest render is the typed gap.
- */
-export function AlphaFleetUnavailable() {
+function ManagerListHeader<T>({ title, envelope }: { title: string; envelope: ManagerListEnvelope<T> }) {
   return (
-    <TypedUnavailableScreen
-      title="Alpha Fleet"
-      reason="N20_FLEET_LIST_CONTRACT_NOT_PUBLISHED"
-      detail="The N20 catalogue publishes Alpha 360 per alpha but no fleet list route. Consolidated backend request filed; this screen will not invent an alpha id to call the 360 with."
-      links={[{ label: "Portfolios", href: "/deployments/portfolios/PF-CRYPTO" }, { label: "Paper overview", href: "/deployments/paper" }]}
-    />
+    <header className="exec-envelope-head">
+      <h1 className="exec-role-h1">{title}</h1>
+      <StatusChip label={envelope.freshness} tone={envelope.freshness === "FRESH" ? "good" : "warn"} />
+      <span className="exec-role-meta">
+        {envelope.environment.toUpperCase()} · {envelope.completeness} · {envelope.page.filteredCount}/{envelope.page.totalCount} rows · source {utcStamp(envelope.sourceAsOf)}
+      </span>
+    </header>
   );
 }
 
-export function AccountsBindingsUnavailable({ bindingId }: { bindingId?: string | null }) {
+function ManagerListPager({
+  nextCursor, prevCursor, onNext, onPrevious,
+}: {
+  nextCursor: string | null;
+  prevCursor: string | null;
+  onNext: (cursor: string) => void;
+  onPrevious: (cursor: string) => void;
+}) {
   return (
-    <TypedUnavailableScreen
-      title={bindingId ? `Binding · ${bindingId}` : "Accounts & Bindings"}
-      reason="N20_BINDINGS_LIST_CONTRACT_NOT_PUBLISHED"
-      detail={
-        bindingId
-          ? "No binding-detail route is published; a detail inferred from Account 360 would be a second feature model. Consolidated backend request filed."
-          : "The N20 catalogue publishes Account 360 per account (itself N28-unavailable) but no bindings list route. Consolidated backend request filed."
-      }
-      links={[{ label: "Operations Queue", href: "/execution/operations" }]}
-    />
+    <nav className="exec-table-pager" aria-label="Result pages">
+      <button type="button" disabled={!prevCursor} onClick={() => prevCursor && onPrevious(prevCursor)}>Previous</button>
+      <button type="button" disabled={!nextCursor} onClick={() => nextCursor && onNext(nextCursor)}>Next</button>
+    </nav>
+  );
+}
+
+export function AlphaFleetContainer({ api }: { api: ExecutionApi }) {
+  const [query, setQuery] = useState<AlphaFleetQuery>({ limit: 50 });
+  const state = useApiRead<ManagerListEnvelope<AlphaFleetItem>>(() => api.getAlphaFleet(query), [api, query]);
+  if (state.status !== "ok" || !state.value) {
+    return <section className="exec-envelope" aria-label="Alpha Fleet"><h1 className="exec-role-h1">Alpha Fleet</h1><PanelState status={state.status} reason={state.reason} /></section>;
+  }
+  return (
+    <section className="exec-envelope" aria-label="Alpha Fleet">
+      <ManagerListHeader title="Alpha Fleet" envelope={state.value} />
+      {state.value.page.rows.length === 0 ? <PanelState status="empty" reason="No alpha is present in this workspace and execution profile." /> : (
+        <div className="exec-table"><div className="exec-table-scroll"><table aria-label="Alpha Fleet rows">
+          <thead><tr><th>alpha</th><th>version</th><th>stage</th><th>deployments</th><th>updated</th></tr></thead>
+          <tbody>{state.value.page.rows.map((row) => (
+            <tr key={row.alphaId}>
+              <td><a className="exec-link" href={`/deployments/alphas/${encodeURIComponent(row.alphaId)}`}>{row.alphaLabel}</a><div className="exec-role-meta">{row.alphaId}</div></td>
+              <td className="exec-role-num">{row.version}</td>
+              <td><StatusChip label={row.stage} tone="mute" /></td>
+              <td>{row.deployments.length === 0 ? "—" : row.deployments.map((deployment) => `${deployment.deploymentId} · ${deployment.venue}`).join("; ")}</td>
+              <td className="exec-role-meta">{utcStamp(row.updatedAt)}</td>
+            </tr>
+          ))}</tbody>
+        </table></div></div>
+      )}
+      <ManagerListPager
+        nextCursor={state.value.page.nextCursor}
+        prevCursor={state.value.page.prevCursor}
+        onNext={(after) => setQuery((current) => ({ ...current, after, before: undefined }))}
+        onPrevious={(before) => setQuery((current) => ({ ...current, before, after: undefined }))}
+      />
+    </section>
+  );
+}
+
+function BindingFacts({ item }: { item: BindingItem }) {
+  return (
+    <dl className="exec-admin-facts">
+      <div><dt>binding</dt><dd>{item.bindingId}</dd></div>
+      <div><dt>account</dt><dd><a className="exec-link" href={`/deployments/accounts/${encodeURIComponent(item.accountId)}`}>{item.accountId}</a></dd></div>
+      <div><dt>venue</dt><dd>{item.venue}</dd></div>
+      <div><dt>state</dt><dd>{item.state}</dd></div>
+      <div><dt>sync evidence</dt><dd>{item.credentialState}</dd></div>
+      <div><dt>updated</dt><dd>{utcStamp(item.updatedAt)}</dd></div>
+    </dl>
+  );
+}
+
+export function AccountsBindingsContainer({ api, bindingId }: { api: ExecutionApi; bindingId?: string | null }) {
+  const [query, setQuery] = useState<BindingListQuery>({ limit: 50 });
+  const detail = useApiRead<BindingItem>(
+    () => bindingId ? api.getBindingDetail(bindingId) : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "list" }),
+    [api, bindingId],
+  );
+  const list = useApiRead<ManagerListEnvelope<BindingItem>>(() => api.getBindings(query), [api, query]);
+  if (bindingId) {
+    return (
+      <section className="exec-envelope" aria-label={`Binding ${bindingId}`}>
+        <header className="exec-envelope-head"><h1 className="exec-role-h1">Binding · {bindingId}</h1><a className="exec-link" href="/deployments/accounts">All bindings</a></header>
+        {detail.status === "ok" && detail.value ? <section className="exec-envelope-panel"><BindingFacts item={detail.value} /></section> : <PanelState status={detail.status} reason={detail.reason} />}
+      </section>
+    );
+  }
+  if (list.status !== "ok" || !list.value) {
+    return <section className="exec-envelope" aria-label="Accounts and Bindings"><h1 className="exec-role-h1">Accounts &amp; Bindings</h1><PanelState status={list.status} reason={list.reason} /></section>;
+  }
+  return (
+    <section className="exec-envelope" aria-label="Accounts and Bindings">
+      <ManagerListHeader title="Accounts & Bindings" envelope={list.value} />
+      {list.value.page.rows.length === 0 ? <PanelState status="empty" reason="No binding is present in this workspace and execution profile." /> : (
+        <div className="exec-table"><div className="exec-table-scroll"><table aria-label="Account binding rows">
+          <thead><tr><th>binding</th><th>account</th><th>venue</th><th>state</th><th>sync evidence</th><th>updated</th></tr></thead>
+          <tbody>{list.value.page.rows.map((row) => (
+            <tr key={row.bindingId}>
+              <td><a className="exec-link" href={`/deployments/accounts?binding=${encodeURIComponent(row.bindingId)}`}>{row.bindingId}</a></td>
+              <td><a className="exec-link" href={`/deployments/accounts/${encodeURIComponent(row.accountId)}`}>{row.accountId}</a></td>
+              <td>{row.venue}</td><td>{row.state}</td><td>{row.credentialState}</td><td className="exec-role-meta">{utcStamp(row.updatedAt)}</td>
+            </tr>
+          ))}</tbody>
+        </table></div></div>
+      )}
+      <ManagerListPager
+        nextCursor={list.value.page.nextCursor}
+        prevCursor={list.value.page.prevCursor}
+        onNext={(after) => setQuery((current) => ({ ...current, after, before: undefined }))}
+        onPrevious={(before) => setQuery((current) => ({ ...current, before, after: undefined }))}
+      />
+    </section>
   );
 }
 

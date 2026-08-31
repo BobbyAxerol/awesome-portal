@@ -16,6 +16,7 @@ import { CurrentSourceProxyError } from "./execution/current-source.proxy";
 import { ScreenBffError } from "./screen-bff/screen-bff.service";
 import { PaperReadError } from "./paper-read/paper-read.service";
 import { ProfileReadError } from "./profile-read/profile-read.controller";
+import { ManagerListsError } from "./manager-lists/manager-lists.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -38,7 +39,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof CommandCenterError ||
       exception instanceof ScreenBffError ||
       exception instanceof PaperReadError ||
-      exception instanceof ProfileReadError
+      exception instanceof ProfileReadError ||
+      exception instanceof ManagerListsError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

@@ -7,12 +7,12 @@ conditions contracts, release workflow and recovery runbook. Twenty-two screen
 contracts have a canonical backend API; Account/Broker 360 remains the one
 typed N28 unavailable screen. The same-origin frontend consumer is accepted
 with a warning-clean product import graph. `debt-register.v1.json` separates
-zero unnamed backend debt from the named BR-EX-72 product request, protected
+zero unnamed backend debt from the closed BR-EX-72 product request, protected
 release gate and nine typed owner gaps.
 
-The `BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO` decision is deliberate. It permits
-the reviewed campaign branch to proceed through normal development review, but
-it cannot authorize stable merge/deployment, source activation or any Live
-mutation. Product release becomes eligible only when BR-EX-72 is delivered and
-the protected main workflow returns verified image evidence. The closed
-`N29-FE-01` evidence remains digest-bound in this pack.
+The `RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING` decision is deliberate.
+BR-EX-72 is complete and the reviewed campaign branch may proceed through
+normal development review, but the pack cannot authorize stable deployment,
+source activation or any Live mutation. Product release becomes eligible only
+when the protected main workflow returns verified image evidence. The closed
+`N29-FE-01` and `N29-BE-72` evidence remains digest-bound in this pack.

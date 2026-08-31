@@ -24,8 +24,10 @@ export const EXECUTION_PREVIEW_SCREEN_IDS = new Set([
   "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
   "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
   "EXECUTION_FULL_BLOTTER_SCREEN",
+  "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
   "EXECUTION_ALPHA_360_SCREEN",
   "EXECUTION_PORTFOLIO_360_SCREEN",
+  "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
   "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
   "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
   "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
@@ -33,16 +35,8 @@ export const EXECUTION_PREVIEW_SCREEN_IDS = new Set([
   "EXECUTION_WAIVERS_REGISTER_SCREEN",
 ] as const);
 
-/**
- * Owner-commissioned screens (2026-08-30, ROADMAP §H.2) whose registry rows
- * are requested from codex (HOTFIX_REQUEST_2026-08-30 §2). The preview claims
- * these paths until the registry does — same footing as the feature-default
- * mechanism above, and removed the day the registry rows land.
- */
+/** Revision 6 owns every reviewed route; retained as an empty compatibility export. */
 export const EXECUTION_PREVIEW_EXTRA_ROUTES: readonly { path: string; screenId: string }[] = [
-  { path: "/governance/approvals/new", screenId: "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN" },
-  { path: "/governance/approvals/:approvalId/live", screenId: "EXECUTION_GATE_LIVE_REVIEW_SCREEN" },
-  { path: "/governance/waivers", screenId: "EXECUTION_WAIVERS_REGISTER_SCREEN" },
 ];
 
 /**
@@ -56,8 +50,8 @@ export const EXECUTION_PREVIEW_FEATURE_DEFAULTS: Readonly<Record<string, string>
   LIVE_OPERATIONS: "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
   EXECUTION_EXIT_REVIEWS: "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
   EXECUTION_PORTFOLIOS: "EXECUTION_PORTFOLIO_360_SCREEN",
-  EXECUTION_ALPHA_FLEET: "EXECUTION_ALPHA_360_SCREEN",
-  EXECUTION_ACCOUNTS_BINDINGS: "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+  EXECUTION_ALPHA_FLEET: "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+  EXECUTION_ACCOUNTS_BINDINGS: "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
 };
 
 export function hasExecutionPreview(screenId: string): boolean {

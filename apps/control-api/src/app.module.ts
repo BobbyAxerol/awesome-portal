@@ -55,6 +55,9 @@ import { PaperReadController } from "./paper-read/paper-read.controller";
 import { PaperReadService } from "./paper-read/paper-read.service";
 import { ProfileReadController } from "./profile-read/profile-read.controller";
 import { ProfileReadService } from "./profile-read/profile-read.service";
+import { ManagerListsController } from "./manager-lists/manager-lists.controller";
+import { ManagerListsRepository } from "./manager-lists/manager-lists.repository";
+import { ManagerListsService } from "./manager-lists/manager-lists.service";
 
 @Module({})
 export class AppModule {
@@ -80,6 +83,7 @@ export class AppModule {
         ScreenBffController,
         PaperReadController,
         ProfileReadController,
+        ManagerListsController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -130,6 +134,8 @@ export class AppModule {
         ScreenBffService,
         PaperReadService,
         ProfileReadService,
+        ManagerListsRepository,
+        ManagerListsService,
         ExecutionSharedReadRepository,
         {
           provide: ExecutionRealtimeProxy,

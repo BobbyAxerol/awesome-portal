@@ -11,6 +11,7 @@ import {
   CurrentSourceBulkhead,
   CurrentSourceProxyError,
   CurrentSourceRateLimiter,
+  BR72_MANAGER_LIST_ACCEPTANCE,
   N15B_CURRENT_QUERY_ACCEPTANCE,
   N17B_CURRENT_EXACT_QUERY_ACCEPTANCE,
   N22_PAPER_READ_ACCEPTANCE,
@@ -18,6 +19,7 @@ import {
   assertN22PaperReadAccepted,
   assertN23ProfileReadAccepted,
   currentManagerV2Path,
+  managerListManagerV2Path,
   paperManagerV2Path,
   profileManagerV2Path,
   currentSourcePath,
@@ -415,5 +417,47 @@ describe("N23 Sandbox and Live profile acceptance", () => {
     expect(() => profileManagerV2Path(
       "live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "manager.orders", "orders", { limit: 201 },
     )).toThrowError(expect.objectContaining({ code: "N23_PAGE_INVALID" }));
+  });
+});
+
+describe("BR-EX-72 Manager list source acceptance", () => {
+  it("maps only the exact list relations across the three accepted profiles", () => {
+    expect(BR72_MANAGER_LIST_ACCEPTANCE).toMatchObject({
+      decision: "BR_EX_72_MANAGER_LISTS_ACCEPTED",
+      environments: ["paper", "sandbox", "live"],
+      screenIds: [
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+      ],
+    });
+    expect(managerListManagerV2Path(
+      "paper", "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+      "manager.strategies", "strategies", { limit: 50 },
+    )).toBe("/internal/v2/manager/relations/public/strategies?limit=50");
+    expect(managerListManagerV2Path(
+      "sandbox", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+      "manager.accounts", "broker_account_sync_effective", { limit: 200 },
+    )).toBe("/internal/v2/manager/relations/public/broker_account_sync_effective?limit=200");
+    expect(managerListManagerV2Path(
+      "live", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+      "manager.venue-accounts", "venue_accounts",
+    )).toBe("/internal/v2/manager/relations/public/venue_accounts");
+  });
+
+  it("rejects credentials, unrelated relations, over-bound pages and other profiles/screens", () => {
+    expect(() => managerListManagerV2Path(
+      "paper", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+      "manager.venue-accounts", "venue_credentials",
+    )).toThrowError(expect.objectContaining({ code: "BR72_BINDING_NOT_ACCEPTED" }));
+    expect(() => managerListManagerV2Path(
+      "live", "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+      "manager.strategies", "strategies", { limit: 201 },
+    )).toThrowError(expect.objectContaining({ code: "BR72_PAGE_INVALID" }));
+    expect(() => managerListManagerV2Path(
+      "paper", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders", "orders",
+    )).toThrowError(expect.objectContaining({ code: "BR72_MANAGER_LIST_NOT_ACCEPTED" }));
+    expect(() => managerListManagerV2Path(
+      "canary", "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies",
+    )).toThrowError(expect.objectContaining({ code: "BR72_MANAGER_LIST_NOT_ACCEPTED" }));
   });
 });

@@ -82,7 +82,7 @@ async def test_registry_endpoint_serves_validated_document_and_cache_headers() -
     payload = response.json()
     assert payload["schema_version"] == "portal.registry.v1"
     assert payload["registry_id"] == "portal-default"
-    assert payload["revision"] == 5
+    assert payload["revision"] == 6
     execution = next(
         screen
         for screen in payload["screens"]

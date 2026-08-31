@@ -4,7 +4,7 @@
 **Branch:** `feat/execution-manager-campaign`  
 **Runtime effect:** none  
 **Backend verdict:** `ACCEPTED`  
-**Product release verdict:** `NO_GO`
+**Product release verdict:** `RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING`
 
 ## 1. Outcome
 
@@ -26,10 +26,13 @@ The backend candidate remains accepted. Claude's N29-FE-01 return is now
 independently accepted: the product import graph uses the same-origin HTTP BFF,
 the fixture implementation is lab/test-only, the console guard is clean and
 the controlled browser double rejects requests that leave the Portal origin.
-A product release is still not authorized: the consolidated BR-EX-72 product
-request is tracked but undelivered, and signed image evidence can only be
-produced by the protected `main` publication workflow. These are explicit
-delivery gates, not unnamed technical debt.
+BR-EX-72 is now delivered and independently verified: bounded Alpha Fleet and
+Accounts & Bindings list/detail contracts use Portal projections over the exact
+qualified Manager-v2 source set; both test doubles share one canonical Live
+Review fixture; registry revision 6 publishes truthful delivery metadata. The
+candidate is ready for the protected release path. Signed image evidence can
+only be produced by the protected `main` publication workflow, so deployment is
+still not authorized by this branch alone.
 
 ## 2. Product gaps closed in N29
 
@@ -87,11 +90,12 @@ for every one of the 23 screens; a global-set equality can no longer hide a
 swap. The Account/Broker 360 report reference is corrected from `MC-01` to
 `MC-05`.
 
-`BR-EX-72` is the only consolidated request admitted after the freeze. It owns
+`BR-EX-72` was the only consolidated request admitted after the freeze. It owns
 Alpha Fleet list, Accounts & Bindings list/detail, one canonical Live Review
 fixture and the registry delivery-metadata amendment. It is a named product
 request with a bounded acceptance contract, not hidden technical debt and not
-permission to activate a source or command.
+permission to activate a source or command. Its delivery is recorded in
+[`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
 ## 3. Release authority and evidence
 
@@ -112,20 +116,20 @@ The debt register is explicit:
 - internal technical debt: zero;
 - typed external owner gaps: nine, not backend-release-blocking and fail-closed;
 - intentional exclusions: three, not release-blocking;
-- resolved delivery gate: `N29-FE-01`;
-- product release blockers: `N29-BE-72` and `N29-REL-01` only.
+- resolved delivery gates: `N29-FE-01` and `N29-BE-72`;
+- protected release blocker: `N29-REL-01` only.
 
 ## 4. Verification
 
 Required gates and final results:
 
-- Control API build, 27 files / 247 tests, fresh PostgreSQL and restore drill:
+- Control API build, 28 files / 253 tests, fresh PostgreSQL and restore drill:
   pass;
-- contracts, schemas, fixtures and generated OpenAPI types, 108 tests: pass;
+- contracts, schemas, fixtures and generated OpenAPI types, 112 tests: pass;
 - Rust workspace format, all-target tests, clippy `-D warnings`, qualification
   CLI and projection PostgreSQL restore: pass;
-- frontend contract consumers after the integrated Codex amendment, 1,784
-  passed / 1 intentionally skipped / zero React or DOM warnings, plus the
+- frontend contract consumers after the integrated Codex amendment, 1,785
+  passed / 3 intentionally skipped / zero failures, plus the
   production TypeScript/Vite build: pass;
 - the focused same-origin preview/journey return remains 66 passed; the wider
   integrated Playwright parity is 309 passed / 16 intentional skips / zero
@@ -142,18 +146,14 @@ keyset/count semantics, lapsed state and Command Center integration.
 
 The product graph boundary scan reports zero reachable fixture producers from
 `ExecutionPreviewRoute.tsx`. `createFixtureApi()` remains only in lab/tests and
-cannot satisfy the product acceptance gate. N29-FE-01 is therefore closed,
-while Product GO remains false until BR-EX-72 and protected release evidence
-are complete.
+cannot satisfy the product acceptance gate. N29-FE-01 and N29-BE-72 are closed;
+the candidate now waits only for protected release evidence.
 
 ## 5. Release sequence
 
-1. Deliver BR-EX-72 through the normal contract, implementation, fixture,
-   registry and frontend-parity gates; keep its current typed-unavailable
-   screens honest until then.
-2. Bobby merges through the normal protected path. The `main` workflow builds,
+1. Bobby merges through the normal protected path. The `main` workflow builds,
    signs and attests immutable images.
-3. Bind those protected image digests into the release manifest, run the
+2. Bind those protected image digests into the release manifest, run the
    documented smoke/rollback rehearsal, then issue Product GO in a new evidence
    revision.
 

@@ -23,13 +23,16 @@ SCHEMA_PATHS = {
     "summary": SCHEMA_ROOT / "portal-summary.v1.schema.json",
 }
 
-EXECUTION_LOOP_REVISION_5_ROUTES = {
+EXECUTION_LOOP_REVISION_6_ROUTES = {
     "EXECUTION_COMMAND_CENTER_SCREEN": "/execution",
     "EXECUTION_OPERATIONS_QUEUE_SCREEN": "/execution/operations",
     "EXECUTION_INCIDENT_DETAIL_SCREEN": "/execution/operations/incidents/:incidentId",
     "EXECUTION_APPROVAL_INBOX_SCREEN": "/governance/approvals",
     "EXECUTION_GATE_R1_REVIEW_SCREEN": "/governance/approvals/:approvalId/r1",
     "EXECUTION_GATE_R2_REVIEW_SCREEN": "/governance/approvals/:approvalId/r2",
+    "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN": "/governance/approvals/new",
+    "EXECUTION_GATE_LIVE_REVIEW_SCREEN": "/governance/approvals/:approvalId/live",
+    "EXECUTION_WAIVERS_REGISTER_SCREEN": "/governance/waivers",
     "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": "/governance/exit-reviews/:reviewId",
     "EXECUTION_PAPER_WORKBENCH_SCREEN": "/deployments/paper/:deploymentId",
     "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": "/deployments/paper/:deploymentId/vn-market",
@@ -37,8 +40,10 @@ EXECUTION_LOOP_REVISION_5_ROUTES = {
     "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": "/deployments/live/:deploymentId/canary",
     "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": "/deployments/live/:deploymentId",
     "EXECUTION_FULL_BLOTTER_SCREEN": "/deployments/blotter",
+    "EXECUTION_ALPHA_FLEET_LIST_SCREEN": "/deployments/alphas",
     "EXECUTION_ALPHA_360_SCREEN": "/deployments/alphas/:alphaId",
     "EXECUTION_PORTFOLIO_360_SCREEN": "/deployments/portfolios/:portfolioId",
+    "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN": "/deployments/accounts",
     "EXECUTION_ACCOUNT_BROKER_360_SCREEN": "/deployments/accounts/:accountId",
     "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN": "/administration/actions",
 }
@@ -337,9 +342,9 @@ def test_canonical_registry_source_and_public_document_validate() -> None:
     _assert_valid("public", public_document)
 
 
-def test_revision_5_commissions_execution_routes_with_fail_closed_fixture_policy() -> None:
+def test_revision_6_commissions_execution_routes_with_bounded_shadow_policy() -> None:
     source = _load_json(SOURCE_PATH)
-    assert source["revision"] == 5
+    assert source["revision"] == 6
     assert [group["id"] for group in source["feature_groups"][:4]] == [
         "command",
         "governance",
@@ -350,22 +355,38 @@ def test_revision_5_commissions_execution_routes_with_fail_closed_fixture_policy
     screens = {screen["screen_id"]: screen for screen in source["screens"]}
     assert {
         screen_id: screens[screen_id]["route"]
-        for screen_id in EXECUTION_LOOP_REVISION_5_ROUTES
-    } == EXECUTION_LOOP_REVISION_5_ROUTES
+        for screen_id in EXECUTION_LOOP_REVISION_6_ROUTES
+    } == EXECUTION_LOOP_REVISION_6_ROUTES
 
-    for screen_id in EXECUTION_LOOP_REVISION_5_ROUTES:
+    shadow = {
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN": {"governance_write_enabled"},
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN": {"query_enabled"},
+        "EXECUTION_WAIVERS_REGISTER_SCREEN": {"query_enabled"},
+    }
+    for screen_id in EXECUTION_LOOP_REVISION_6_ROUTES:
         screen = screens[screen_id]
         assert screen["contract_revision"] == 2
         assert screen["maturity"] == "COMMISSIONED"
-        assert screen["data_mode"] == "NONE"
-        assert screen["delivery_profile"] == "fixture"
-        assert screen["delivery_policy"]["policy_revision"] == 2
         assert DELIVERY_POLICY_FLAGS <= screen["delivery_policy"].keys()
-        assert not any(
-            screen["delivery_policy"][flag] for flag in DELIVERY_POLICY_FLAGS
-        )
-        assert screen["inputs"] == []
-        assert screen["backend_dependency_ids"] == []
+        enabled = {
+            flag for flag in DELIVERY_POLICY_FLAGS if screen["delivery_policy"][flag]
+        }
+        if screen_id in shadow:
+            assert screen["data_mode"] == "REAL"
+            assert screen["delivery_profile"] == "shadow"
+            assert screen["delivery_policy"]["policy_revision"] == 3
+            assert enabled == shadow[screen_id]
+            assert screen["inputs"]
+            assert screen["backend_dependency_ids"]
+        else:
+            assert screen["data_mode"] == "NONE"
+            assert screen["delivery_profile"] == "fixture"
+            assert screen["delivery_policy"]["policy_revision"] == 2
+            assert not enabled
+            assert screen["inputs"] == []
+            assert screen["backend_dependency_ids"] == []
 
     for screen in source["screens"]:
         if screen["maturity"] in {"COMMISSIONED", "BLOCKED"}:
@@ -394,7 +415,14 @@ def test_only_current_real_capabilities_are_marked_available() -> None:
     assert available == {"QUANTBT_RESEARCH", "PLANNING"}
     # v0.4 P0.6: the Command Center aggregates real counts while the screen
     # itself is still PROTOTYPE — REAL data mode under PROTOTYPE maturity.
-    assert real == {"QUANTBT_RESEARCH", "PLANNING", "COMMAND_CENTER"}
+    assert real == {
+        "QUANTBT_RESEARCH",
+        "PLANNING",
+        "COMMAND_CENTER",
+        "EXECUTION_ALPHA_FLEET",
+        "EXECUTION_ACCOUNTS_BINDINGS",
+        "EXECUTION_WAIVERS",
+    }
     for feature in source["features"]:
         if feature["data_mode"] == "REAL":
             assert feature["maturity"] in {"AVAILABLE", "PROTOTYPE"}

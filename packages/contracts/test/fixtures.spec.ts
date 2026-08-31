@@ -94,6 +94,14 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateResponse",
   "execution-governance.conditions-register.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-product.v1.schema.json#/$defs/ConditionsRegisterResponse",
+  "execution-alpha-fleet-list.valid.json":
+    "https://schemas.primusspark.com/portal/execution-manager-lists.v1.schema.json#/$defs/AlphaFleetResponse",
+  "execution-bindings-list.valid.json":
+    "https://schemas.primusspark.com/portal/execution-manager-lists.v1.schema.json#/$defs/BindingsResponse",
+  "execution-binding-detail.valid.json":
+    "https://schemas.primusspark.com/portal/execution-manager-lists.v1.schema.json#/$defs/BindingDetailResponse",
+  "governance-live-review.valid.json":
+    "https://schemas.primusspark.com/portal/governance-live-review.v1.schema.json",
   "execution-command-center.busy.valid.json":
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
   "execution-command-center.empty.valid.json":

@@ -55,9 +55,16 @@ import type {
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
 import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
+import type { AlphaFleetQuery, BindingListQuery } from "./ports";
 import { readApprovalCreated, readConditionsPage } from "./rows";
-import { readLiveReview, readOperatorTasks, readProfileEnvelope, readQueryAnalytics } from "./profileRead";
-import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
+import {
+  readAlphaFleet, readBindingDetail, readBindings, readLiveReview,
+  readOperatorTasks, readProfileEnvelope, readQueryAnalytics,
+} from "./profileRead";
+import type {
+  AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
+  OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics,
+} from "./profileRead";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
@@ -286,6 +293,19 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     readGet(`/governance/approvals/${encodeURIComponent(approvalId)}/live`, readLiveReview, "The live review");
   const getAccountBroker360 = (accountId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/screens/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account 360");
+  const listParameters = (query: object) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
+      if (value !== undefined && value !== "") params.set(key, String(value));
+    }
+    return params.size > 0 ? `?${params.toString()}` : "";
+  };
+  const getAlphaFleet = (query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> =>
+    readGet(`/alphas${listParameters(query)}`, readAlphaFleet, "The Alpha Fleet");
+  const getBindings = (query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> =>
+    readGet(`/broker-bindings${listParameters(query)}`, readBindings, "The bindings register");
+  const getBindingDetail = (bindingId: string, environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<BindingItem>> =>
+    readGet(`/broker-bindings/${encodeURIComponent(bindingId)}?environment=${environment}`, readBindingDetail, "The binding detail");
 
   const getWaivers = async (query: WaiverQuery = {}): Promise<Result<ConditionsPage>> => {
     const blocked = readBlocked();
@@ -343,6 +363,9 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getOperatorTasks,
     getLiveReview,
     getAccountBroker360,
+    getAlphaFleet,
+    getBindings,
+    getBindingDetail,
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);

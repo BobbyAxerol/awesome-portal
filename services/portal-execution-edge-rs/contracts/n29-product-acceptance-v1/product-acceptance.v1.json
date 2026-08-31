@@ -1,8 +1,8 @@
 {
   "schema_version": "portal.execution.product-acceptance.v1",
   "phase": "N29",
-  "decision": "BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO",
-  "release_channel": "DEV_CANDIDATE_ONLY",
+  "decision": "RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING",
+  "release_channel": "PROTECTED_MAIN_CANDIDATE",
   "runtime_effect": "NONE",
   "accepted_scope": {
     "relations": {
@@ -43,6 +43,14 @@
       "intentional_exclusions": 3,
       "owner_return_status": "PENDING",
       "unavailable_behavior": "TYPED_FAIL_CLOSED"
+    },
+    "br_ex_72": {
+      "status": "COMPLETE",
+      "same_origin_read_routes": 3,
+      "bounded_page_maximum": 50,
+      "registry_revision": 6,
+      "canonical_live_review_fixture": true,
+      "frontend_consumer_parity": true
     }
   },
   "evidence": {
@@ -50,18 +58,33 @@
     "n28_registry_sha256": "sha256:a307b1b78c1724b51790abaf9e8e3b2f375017b2881d6f396a5d0e20e4674812",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
     "screen_bff_catalogue_sha256": "sha256:e344f13c3737257fed40f55f5b1108b027f0e82cab9c0cec1f090963eb64496d",
-    "frontend_product_route_sha256": "sha256:7675738e8b349421871ca2583f805d83a6de544d4789e704830fa53634cf1616",
+    "frontend_product_route_sha256": "sha256:1c97abf0b406b5c91be92a31da5d84359549cb95aa9f43866295cb439ac73fa1",
     "frontend_product_boundary_test_sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
     "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",
-    "frontend_same_origin_bff_double_sha256": "sha256:f02325756f0b3f547b9201a7422e9a5de1d0c7cbd0a75c3bdd903513746c01f9",
+    "frontend_same_origin_bff_double_sha256": "sha256:4cf323b7e44f53797268b7f7caa58e2b2732ac681b785b3562f1fbf971a413c8",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
     "release_workflow_sha256": "sha256:a38c0664b40737532fba09f8b97ddc5ce729f7e9826275673136df01beaabbcd",
     "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
     "governance_product_migration_sha256": "sha256:e9193e9baaa1886dd882d1e6b806dd117b6f6a08d0862bc386ac20c81c679383",
     "governance_product_schema_sha256": "sha256:432b1fd69b5fd3c57687f2e96c9e1803f3a09f6f5f3068379c0a2a7b59bebe3e",
     "governance_product_openapi_sha256": "sha256:7c6a53cfb69a52152427f30c84fb68e2511709dcb177224103345eb8940a2bf2",
-    "governance_product_test_sha256": "sha256:ad69352f994ad8048d13b4b628cf3ce160bb6fad89a5a6f2c1cbe6e64131fa76"
+    "governance_product_test_sha256": "sha256:ad69352f994ad8048d13b4b628cf3ce160bb6fad89a5a6f2c1cbe6e64131fa76",
+    "br72_schema_sha256": "sha256:4469604586ec260f7d9a8cdef7c16ac557233443ae10b63e2145e7c450bf7f62",
+    "br72_openapi_sha256": "sha256:235a3216bba08eab6ef3a7b24e9391d5b93c3673608e26a1f684f7f88a2b2d85",
+    "br72_migration_sha256": "sha256:387de443953be329d38b84c9244677bd8b696b0a5e71caf40aaab688b31d9ff5",
+    "br72_service_sha256": "sha256:a2f6dc10ffc22bb0f5d760e75efe1594bc43bd0d3a82733e6e6f7a363e1a72da",
+    "br72_repository_sha256": "sha256:b88741226d07d1fc30e6b81ed1513d3ba4179c3c88b5d9748b70824ed86c6ab4",
+    "br72_controller_sha256": "sha256:0698e0cf20cc3a50d45e0d5c29d66b3df86e80ad8bf63a7b6292b3af772001ad",
+    "br72_test_sha256": "sha256:d99f45d02e117ce2787097126c4cb72d99b8d3a4dc8a5fa9a5c7013df5a158e4",
+    "br72_source_boundary_sha256": "sha256:d10ad85628c64c95d9d17f64e9c37bee6999da5f7bc604daf755b24bcd2a409d",
+    "br72_source_boundary_test_sha256": "sha256:adb037b61a45b0c550a0f4593354e1697ed84a1fefbb2a153fba0b3c431662e3",
+    "br72_live_review_fixture_sha256": "sha256:9fc9fddd082533e02d1b856492d0f80513e19726598bcb7a3978ab6ad68ae15e",
+    "br72_registry_source_sha256": "sha256:d7ab618cae8cf97848f96c78932517f1cbf19bec15d82595c2f84f1ce5df1aac",
+    "br72_registry_public_sha256": "sha256:0a5571bf6c646e3f97df034ccbe3fd83fe782464602f16f48cc4d805123aa19c",
+    "br72_frontend_test_sha256": "sha256:04e3eaffd52bf44674e273a39f9bd9c9a57c26eb732c32bfde7d149732510368",
+    "br72_frontend_containers_sha256": "sha256:c4137dcb93ae891c7192cef62a51ab5a4432250cabe8fbfec3e92fcab56dc28f",
+    "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e"
   },
   "rehearsals": {
     "multi_replica_admission": "PASS_N21",
@@ -71,13 +94,15 @@
     "adapter_rollback": "PASS_N19_N28",
     "version_upgrade_rollback": "PASS_N14B_N19",
     "real_accepted_profile_smoke": "PASS_N17B_PAPER",
-    "portal_governance_product": "PASS_N29_BR_EX_69_71"
+    "portal_governance_product": "PASS_N29_BR_EX_69_71",
+    "manager_lists_registry_and_fixture": "PASS_BR_EX_72"
   },
   "release_gates": {
     "backend_contracts": "PASS",
     "rust_edge": "PASS",
     "control_plane": "PASS",
     "frontend_http_consumer": "PASS_SAME_ORIGIN_CONSUMER_ACCEPTED",
+    "br_ex_72": "PASS_COMPLETE",
     "signed_immutable_images": "PENDING_PROTECTED_MAIN_WORKFLOW",
     "stable_release": "NOT_AUTHORIZED"
   },

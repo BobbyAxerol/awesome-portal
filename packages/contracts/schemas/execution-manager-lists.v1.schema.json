@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-manager-lists.v1.schema.json",
+  "$defs": {
+    "Identifier": { "type": "string", "minLength": 1, "maxLength": 191 },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "Environment": { "enum": ["paper", "sandbox", "live"] },
+    "Freshness": { "enum": ["FRESH", "STALE"] },
+    "Completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+    "Deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deployment_id", "stage", "venue"],
+      "properties": {
+        "deployment_id": { "$ref": "#/$defs/Identifier" },
+        "stage": { "$ref": "#/$defs/Identifier" },
+        "venue": { "$ref": "#/$defs/Identifier" }
+      }
+    },
+    "AlphaFleetItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["alpha_id", "alpha_label", "version", "stage", "deployments", "updated_at"],
+      "properties": {
+        "alpha_id": { "$ref": "#/$defs/Identifier" },
+        "alpha_label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "version": { "$ref": "#/$defs/Identifier" },
+        "stage": { "$ref": "#/$defs/Identifier" },
+        "deployments": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/Deployment" } },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "BindingItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding_id", "account_id", "venue", "state", "credential_state", "updated_at"],
+      "properties": {
+        "binding_id": { "$ref": "#/$defs/Identifier" },
+        "account_id": { "$ref": "#/$defs/Identifier" },
+        "venue": { "$ref": "#/$defs/Identifier" },
+        "state": { "$ref": "#/$defs/Identifier" },
+        "credential_state": { "$ref": "#/$defs/Identifier" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "AppliedFilter": {
+      "type": "object", "additionalProperties": false,
+      "required": ["field", "op", "value"],
+      "properties": {
+        "field": { "type": "string" }, "op": { "type": "string" }, "value": { "type": "string" }
+      }
+    },
+    "AppliedSort": {
+      "type": "object", "additionalProperties": false,
+      "required": ["field", "direction"],
+      "properties": {
+        "field": { "type": "string" }, "direction": { "enum": ["asc", "desc"] }
+      }
+    },
+    "AlphaPage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows", "total_count", "filtered_count", "next_cursor", "prev_cursor", "has_more", "has_previous", "applied_filters", "applied_sort"],
+      "properties": {
+        "rows": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/AlphaFleetItem" } },
+        "total_count": { "type": "integer", "minimum": 0 },
+        "filtered_count": { "type": "integer", "minimum": 0 },
+        "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "prev_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "has_more": { "type": "boolean" }, "has_previous": { "type": "boolean" },
+        "applied_filters": { "type": "array", "items": { "$ref": "#/$defs/AppliedFilter" } },
+        "applied_sort": { "type": "array", "items": { "$ref": "#/$defs/AppliedSort" } }
+      }
+    },
+    "BindingPage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows", "total_count", "filtered_count", "next_cursor", "prev_cursor", "has_more", "has_previous", "applied_filters", "applied_sort"],
+      "properties": {
+        "rows": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/BindingItem" } },
+        "total_count": { "type": "integer", "minimum": 0 },
+        "filtered_count": { "type": "integer", "minimum": 0 },
+        "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "prev_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "has_more": { "type": "boolean" }, "has_previous": { "type": "boolean" },
+        "applied_filters": { "type": "array", "items": { "$ref": "#/$defs/AppliedFilter" } },
+        "applied_sort": { "type": "array", "items": { "$ref": "#/$defs/AppliedSort" } }
+      }
+    },
+    "EnvelopeBase": {
+      "type": "object",
+      "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "environment", "read_at", "source_as_of", "freshness", "completeness"],
+      "properties": {
+        "schema_version": { "type": "string" },
+        "record_authority": { "const": "PORTAL_PROJECTION" },
+        "source_authority": { "const": "TRADING_SYSTEM" },
+        "delivery_profile": { "enum": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"] },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "environment": { "$ref": "#/$defs/Environment" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "source_as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "freshness": { "$ref": "#/$defs/Freshness" },
+        "completeness": { "$ref": "#/$defs/Completeness" }
+      }
+    },
+    "AlphaFleetResponse": {
+      "allOf": [
+        { "$ref": "#/$defs/EnvelopeBase" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "environment", "read_at", "source_as_of", "freshness", "completeness", "page"],
+          "properties": {
+            "schema_version": { "const": "execution.alpha-fleet-list.v1" },
+            "record_authority": {}, "source_authority": {}, "delivery_profile": {}, "workspace_id": {}, "environment": {},
+            "read_at": {}, "source_as_of": {}, "freshness": {}, "completeness": {},
+            "page": { "$ref": "#/$defs/AlphaPage" }
+          }
+        }
+      ]
+    },
+    "BindingsResponse": {
+      "allOf": [
+        { "$ref": "#/$defs/EnvelopeBase" },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "environment", "read_at", "source_as_of", "freshness", "completeness", "page"],
+          "properties": {
+            "schema_version": { "const": "execution.bindings-list.v1" },
+            "record_authority": {}, "source_authority": {}, "delivery_profile": {}, "workspace_id": {}, "environment": {},
+            "read_at": {}, "source_as_of": {}, "freshness": {}, "completeness": {},
+            "page": { "$ref": "#/$defs/BindingPage" }
+          }
+        }
+      ]
+    },
+    "BindingDetailResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "environment", "read_at", "source_as_of", "freshness", "item"],
+      "properties": {
+        "schema_version": { "const": "execution.binding-detail.v1" },
+        "record_authority": { "const": "PORTAL_PROJECTION" },
+        "source_authority": { "const": "TRADING_SYSTEM" },
+        "delivery_profile": { "enum": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"] },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "environment": { "$ref": "#/$defs/Environment" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "source_as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "freshness": { "$ref": "#/$defs/Freshness" },
+        "item": { "$ref": "#/$defs/BindingItem" }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/AlphaFleetResponse" },
+    { "$ref": "#/$defs/BindingsResponse" },
+    { "$ref": "#/$defs/BindingDetailResponse" }
+  ]
+}

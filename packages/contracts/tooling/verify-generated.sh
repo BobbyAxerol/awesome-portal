@@ -30,3 +30,4 @@ generate_and_compare openapi/execution-production-readiness.openapi.json generat
 generate_and_compare openapi/execution-screen-bff.openapi.json generated/execution-screen-bff.d.ts
 generate_and_compare openapi/execution-paper-read.openapi.json generated/execution-paper-read.d.ts
 generate_and_compare openapi/execution-profile-read.openapi.json generated/execution-profile-read.d.ts
+generate_and_compare openapi/execution-manager-lists.openapi.json generated/execution-manager-lists.d.ts

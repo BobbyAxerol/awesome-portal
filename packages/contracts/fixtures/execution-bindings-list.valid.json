@@ -1,0 +1,21 @@
+{
+  "schema_version": "execution.bindings-list.v1",
+  "record_authority": "PORTAL_PROJECTION",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_primary",
+  "environment": "paper",
+  "read_at": "2026-08-31T10:00:01Z",
+  "source_as_of": "2026-08-31T10:00:00Z",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "page": {
+    "rows": [{
+      "binding_id": "acc_a@BINANCE", "account_id": "acc_a", "venue": "BINANCE",
+      "state": "ACTIVE", "credential_state": "SYNC_SYNCED", "updated_at": "2026-08-31T10:00:00Z"
+    }],
+    "total_count": 1, "filtered_count": 1, "next_cursor": null, "prev_cursor": null,
+    "has_more": false, "has_previous": false, "applied_filters": [],
+    "applied_sort": [{ "field": "updated_at", "direction": "desc" }, { "field": "binding_id", "direction": "desc" }]
+  }
+}

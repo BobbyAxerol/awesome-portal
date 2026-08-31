@@ -32,9 +32,9 @@ const FEATURE_ROOTS = [
   ["/deployments/sandbox", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN"],
   ["/deployments/live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"],
   ["/governance/exit-reviews", "EXECUTION_PAPER_EXIT_REVIEW_SCREEN"],
-  ["/deployments/alphas", "EXECUTION_ALPHA_360_SCREEN"],
+  ["/deployments/alphas", "EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
   ["/deployments/portfolios", "EXECUTION_PORTFOLIO_360_SCREEN"],
-  ["/deployments/accounts", "EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+  ["/deployments/accounts", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN"],
 ] as const;
 
 test("every product route consumes the same-origin BFF and never leaves the origin", async ({ page, baseURL }) => {

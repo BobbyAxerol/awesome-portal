@@ -1,0 +1,80 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Primus Portal Manager Lists API",
+    "version": "1.0.0",
+    "description": "BR-EX-72 narrow same-origin BFF contracts over workspace/profile-scoped Portal projections."
+  },
+  "paths": {
+    "/api/v1/execution/alphas": {
+      "get": {
+        "operationId": "listAlphaFleet",
+        "parameters": [
+          { "$ref": "#/components/parameters/Workspace" },
+          { "$ref": "#/components/parameters/Environment" },
+          { "$ref": "#/components/parameters/After" },
+          { "$ref": "#/components/parameters/Before" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Sort" },
+          { "name": "search", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "stage", "in": "query", "schema": { "type": "string", "maxLength": 64 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded Fleet page with exact counts.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-manager-lists.v1.schema.json#/$defs/AlphaFleetResponse" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/broker-bindings": {
+      "get": {
+        "operationId": "listBrokerBindings",
+        "parameters": [
+          { "$ref": "#/components/parameters/Workspace" },
+          { "$ref": "#/components/parameters/Environment" },
+          { "$ref": "#/components/parameters/After" },
+          { "$ref": "#/components/parameters/Before" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Sort" },
+          { "name": "search", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "venue", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
+          { "name": "state", "in": "query", "schema": { "type": "string", "maxLength": 64 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded binding page with exact counts and no credentials.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-manager-lists.v1.schema.json#/$defs/BindingsResponse" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/broker-bindings/{binding_id}": {
+      "get": {
+        "operationId": "getBrokerBinding",
+        "parameters": [
+          { "name": "binding_id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 160 } },
+          { "$ref": "#/components/parameters/Workspace" },
+          { "$ref": "#/components/parameters/Environment" }
+        ],
+        "responses": {
+          "200": {
+            "description": "One narrow binding detail.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-manager-lists.v1.schema.json#/$defs/BindingDetailResponse" } } }
+          },
+          "404": { "description": "Binding not found in this workspace/profile projection." }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Workspace": { "name": "workspace_id", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+      "Environment": { "name": "environment", "in": "query", "schema": { "enum": ["paper", "sandbox", "live"], "default": "paper" } },
+      "After": { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+      "Before": { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+      "Limit": { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 50 } },
+      "Sort": { "name": "sort", "in": "query", "schema": { "type": "string", "maxLength": 160 } }
+    }
+  }
+}

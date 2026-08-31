@@ -1907,5 +1907,19 @@ Integrated evidence is broader than the historical return: 1,784 Vitest
 assertions pass with one intentional skip and zero React/DOM warning; the
 production build passes; full Playwright parity is 309 passed / 16 intentional
 skips / zero failures, including 40/40 responsive viewports and origin
-containment. Product GO remains false:
-BR-EX-72 and protected-main signed publication evidence are still required.
+containment. This was the acceptance baseline before BR-EX-72 delivery.
+
+### 8.46 BR-EX-72 backend return (2026-08-31)
+
+BR-EX-72 is `INTEGRATION_COMPLETE`. `/deployments/alphas`,
+`/deployments/accounts` and `?binding=` now map to the same-origin BFF routes
+`GET /api/v1/execution/alphas`, `GET /api/v1/execution/broker-bindings` and
+`GET /api/v1/execution/broker-bindings/:binding_id`. They return bounded
+server-filtered/sorted signed-keyset envelopes over Portal projections; source
+credentials and relation rows never cross the BFF boundary.
+
+Unit and browser doubles now read the same canonical
+`governance-live-review.valid.json`. Registry revision 6 adds Alpha Fleet,
+Accounts & Bindings, New Approval, Gate LIVE and Waivers shadow rows and marks
+the two list features as `REAL`/`portal_control_current`. The server remains the
+enforcer. `N29-BE-72` is closed; only protected-main release evidence remains.

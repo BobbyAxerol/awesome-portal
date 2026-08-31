@@ -10,8 +10,8 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   AccountBroker360Container,
-  AccountsBindingsUnavailable,
-  AlphaFleetUnavailable,
+  AccountsBindingsContainer,
+  AlphaFleetContainer,
   CommandCenterSnapshotContainer,
   PaperWorkbenchContainer,
   QueryAnalyticsContainer,
@@ -240,13 +240,21 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       content = <StageOverviewContainer api={api} screen="blotter" />;
       break;
+    case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
+      content = <AlphaFleetContainer api={api} />;
+      break;
     case "EXECUTION_ALPHA_360_SCREEN":
       // The feature's canonical route (/deployments/alphas, no alphaId) is the
       // fleet list — the entry screen of WF 2a; a row opens the alpha's 360.
-      content = params.alphaId ? <QueryAnalyticsContainer api={api} subject="alphas" subjectId={params.alphaId} /> : <AlphaFleetUnavailable />;
+      content = params.alphaId ? <QueryAnalyticsContainer api={api} subject="alphas" subjectId={params.alphaId} /> : <AlphaFleetContainer api={api} />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
       content = <QueryAnalyticsContainer api={api} subject="portfolios" subjectId={params.portfolioId ?? "PF-CRYPTO"} />;
+      break;
+    case "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN":
+      content = search.get("binding")
+        ? <AccountsBindingsContainer api={api} bindingId={search.get("binding")} />
+        : <AccountsBindingsContainer api={api} />;
       break;
     case "EXECUTION_ACCOUNT_BROKER_360_SCREEN":
       // Feature canonical route (/deployments/accounts) = the bindings list,
@@ -255,8 +263,8 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = params.accountId
         ? <AccountBroker360Container api={api} accountId={params.accountId} />
         : search.get("binding")
-          ? <AccountsBindingsUnavailable bindingId={search.get("binding")} />
-          : <AccountsBindingsUnavailable />;
+          ? <AccountsBindingsContainer api={api} bindingId={search.get("binding")} />
+          : <AccountsBindingsContainer api={api} />;
       break;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       content = <AdminCatalogueContainer api={api} />;

@@ -2,8 +2,8 @@
 """N29 finite campaign product-acceptance verifier.
 
 The verifier is intentionally offline. It binds committed evidence, proves the
-complete census disposition and rejects a product GO while BR-EX-72 or the
-protected image publication has not returned evidence.
+complete census disposition and BR-EX-72 delivery, and rejects a product GO
+until protected-main image publication has returned evidence.
 """
 
 from __future__ import annotations
@@ -41,6 +41,21 @@ EVIDENCE_PATHS = {
     "governance_product_schema_sha256": ROOT / "packages/contracts/schemas/execution-governance-product.v1.schema.json",
     "governance_product_openapi_sha256": ROOT / "packages/contracts/openapi/execution-governance.openapi.json",
     "governance_product_test_sha256": ROOT / "apps/control-api/test/governance-product.spec.ts",
+    "br72_schema_sha256": ROOT / "packages/contracts/schemas/execution-manager-lists.v1.schema.json",
+    "br72_openapi_sha256": ROOT / "packages/contracts/openapi/execution-manager-lists.openapi.json",
+    "br72_migration_sha256": ROOT / "apps/control-api/migrations/1723680000016_execution-manager-lists.sql",
+    "br72_service_sha256": ROOT / "apps/control-api/src/manager-lists/manager-lists.service.ts",
+    "br72_repository_sha256": ROOT / "apps/control-api/src/manager-lists/manager-lists.repository.ts",
+    "br72_controller_sha256": ROOT / "apps/control-api/src/manager-lists/manager-lists.controller.ts",
+    "br72_test_sha256": ROOT / "apps/control-api/test/manager-lists.spec.ts",
+    "br72_source_boundary_sha256": ROOT / "apps/control-api/src/execution/current-source.proxy.ts",
+    "br72_source_boundary_test_sha256": ROOT / "apps/control-api/test/execution-current-source.spec.ts",
+    "br72_live_review_fixture_sha256": ROOT / "packages/contracts/fixtures/governance-live-review.valid.json",
+    "br72_registry_source_sha256": ROOT / "apps/portal/registry/registry.json",
+    "br72_registry_public_sha256": ROOT / "apps/portal/registry/fixtures/registry.public.json",
+    "br72_frontend_test_sha256": ROOT / "apps/portal/frontend/src/execution/brEx72.test.tsx",
+    "br72_frontend_containers_sha256": ROOT / "apps/portal/frontend/src/execution/screens/profileContainers.tsx",
+    "br72_frontend_registry_sha256": ROOT / "apps/portal/frontend/src/execution/previewRegistry.ts",
 }
 
 SENSITIVE = re.compile(
@@ -231,6 +246,81 @@ def validate_governance_product() -> None:
         require(token in migration, f"N29 governance migration boundary missing: {token}")
 
 
+def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
+    openapi = read_json(EVIDENCE_PATHS["br72_openapi_sha256"])
+    require(set(openapi.get("paths", {})) == {
+        "/api/v1/execution/alphas",
+        "/api/v1/execution/broker-bindings",
+        "/api/v1/execution/broker-bindings/{binding_id}",
+    }, "BR-EX-72 route set drifted")
+    limit = openapi["components"]["parameters"]["Limit"]["schema"]
+    require(limit == {"type": "integer", "minimum": 1, "maximum": 50, "default": 50}, "BR-EX-72 page bound drifted")
+
+    migration = EVIDENCE_PATHS["br72_migration_sha256"].read_text(encoding="utf-8")
+    repository = EVIDENCE_PATHS["br72_repository_sha256"].read_text(encoding="utf-8")
+    service = EVIDENCE_PATHS["br72_service_sha256"].read_text(encoding="utf-8")
+    controller = EVIDENCE_PATHS["br72_controller_sha256"].read_text(encoding="utf-8")
+    source_boundary = EVIDENCE_PATHS["br72_source_boundary_sha256"].read_text(encoding="utf-8")
+    for token in [
+        "execution_manager_projection_snapshots",
+        "execution_alpha_fleet_projection",
+        "execution_binding_projection",
+    ]:
+        require(token in migration and token in repository, f"BR-EX-72 projection missing: {token}")
+    for token in [
+        "MAX_SOURCE_PAGES = 10",
+        "SOURCE_PAGE_LIMIT = 200",
+        "BR72_SOURCE_POPULATION_EXCEEDS_BOUND",
+        "BR72_SOURCE_CURSOR_CYCLE",
+        "execution.alpha-fleet-list.v1",
+        "execution.bindings-list.v1",
+    ]:
+        require(token in service, f"BR-EX-72 service boundary missing: {token}")
+    for token in ["@Get(\"/alphas\")", "@Get(\"/broker-bindings\")", "@Get(\"/broker-bindings/:binding_id\")"]:
+        require(token in controller, f"BR-EX-72 controller route missing: {token}")
+    for token in [
+        "BR72_MANAGER_LIST_ACCEPTANCE",
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+        "broker_account_sync_effective",
+    ]:
+        require(token in source_boundary, f"BR-EX-72 source boundary missing: {token}")
+    require("venue_credentials" not in source_boundary.split("BR72_MANAGER_LIST_SCREEN_BINDINGS", 1)[1].split("type Br72ManagerListScreenId", 1)[0], "BR-EX-72 source boundary exposes credentials")
+
+    live_review = read_json(EVIDENCE_PATHS["br72_live_review_fixture_sha256"])
+    require(live_review.get("schema_version") == "governance.live-review.v1", "canonical Live Review fixture drifted")
+    for consumer in [
+        ROOT / "apps/portal/frontend/src/execution/api/fixtureApi.ts",
+        ROOT / "apps/portal/frontend/e2e/bffDouble.ts",
+    ]:
+        require("governance-live-review.valid.json" in consumer.read_text(encoding="utf-8"), "Live Review consumer stopped using canonical fixture")
+
+    registry = read_json(EVIDENCE_PATHS["br72_registry_source_sha256"])
+    public_registry = read_json(EVIDENCE_PATHS["br72_registry_public_sha256"])
+    require(registry.get("revision") == 6 and public_registry.get("revision") == 6, "registry revision 6 drifted")
+    screens = {row["screen_id"]: row for row in registry["screens"]}
+    expected = {
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN": {"governance_write_enabled"},
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN": {"query_enabled"},
+        "EXECUTION_WAIVERS_REGISTER_SCREEN": {"query_enabled"},
+    }
+    for screen_id, enabled_expected in expected.items():
+        row = screens[screen_id]
+        enabled = {key for key, value in row["delivery_policy"].items() if key.endswith("_enabled") and value}
+        require(row["delivery_profile"] == "shadow" and enabled == enabled_expected, f"registry delivery policy drifted: {screen_id}")
+
+    containers = EVIDENCE_PATHS["br72_frontend_containers_sha256"].read_text(encoding="utf-8")
+    frontend_registry = EVIDENCE_PATHS["br72_frontend_registry_sha256"].read_text(encoding="utf-8")
+    require("AlphaFleetContainer" in containers and "AccountsBindingsContainer" in containers, "BR-EX-72 frontend containers missing")
+    require("N20_FLEET_LIST_CONTRACT_NOT_PUBLISHED" not in containers, "Fleet still renders typed unavailable")
+    require("N20_BINDINGS_LIST_CONTRACT_NOT_PUBLISHED" not in containers, "Bindings still renders typed unavailable")
+    require("EXECUTION_ALPHA_FLEET_LIST_SCREEN" in frontend_registry and "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN" in frontend_registry, "BR-EX-72 frontend registry roots missing")
+    require(acceptance["accepted_scope"]["br_ex_72"]["status"] == "COMPLETE", "BR-EX-72 acceptance state drifted")
+    require({item["blocker_id"] for item in debt["resolved_delivery_gates"]} == {"N29-FE-01", "N29-BE-72"}, "BR-EX-72 resolved gate missing")
+
+
 def validate_release_authority(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
     for key, path in EVIDENCE_PATHS.items():
         require(acceptance["evidence"][key] == digest(path), f"evidence digest drifted: {key}")
@@ -244,13 +334,12 @@ def validate_release_authority(acceptance: dict[str, Any], debt: dict[str, Any])
             require(value is False, f"authority widened: {key}")
     require(acceptance["authority"]["portal_release_candidate"] is True, "backend candidate authority missing")
     require(debt["internal_technical_debt"] == [], "unnamed internal technical debt exists")
-    require({item["blocker_id"] for item in debt["release_blockers"]} == {"N29-BE-72", "N29-REL-01"}, "release blocker set drifted")
-    require({item["blocker_id"] for item in debt["resolved_delivery_gates"]} == {"N29-FE-01"}, "resolved delivery gate set drifted")
+    require({item["blocker_id"] for item in debt["release_blockers"]} == {"N29-REL-01"}, "release blocker set drifted")
     require(debt["typed_external_gaps"]["count"] == 9 and debt["typed_external_gaps"]["release_blocking"] is False, "typed owner gap policy drifted")
     require(debt["intentional_exclusions"]["count"] == 3 and debt["intentional_exclusions"]["release_blocking"] is False, "intentional exclusion policy drifted")
 
     release = read_json(ROOT / "deploy/manifests/execution-manager-product-release-profile.v1.json")
-    require(release["decision"] == "DEV_BACKEND_CANDIDATE_READY_PRODUCT_NO_GO", "release profile decision drifted")
+    require(release["decision"] == "DEV_PRODUCT_CANDIDATE_READY_PROTECTED_RELEASE_PENDING", "release profile decision drifted")
     require(release["accepted_runtime_authority"]["commands"] is False, "command authority widened")
     require(release["accepted_runtime_authority"]["live_mutation"] is False, "Live mutation authority widened")
     require(release["publication"]["published_by_this_phase"] is False, "N29 falsely claimed publication")
@@ -277,12 +366,13 @@ def main() -> int:
         acceptance = read_json(ACCEPTANCE)
         debt = read_json(DEBT)
         require(acceptance["schema_version"] == "portal.execution.product-acceptance.v1", "acceptance revision drifted")
-        require(acceptance["decision"] == "BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO", "acceptance verdict drifted")
+        require(acceptance["decision"] == "RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING", "acceptance verdict drifted")
         require(debt["decision"] == "NO_UNNAMED_DEBT", "debt decision drifted")
         validate_manifest()
         validate_inventory(acceptance)
         validate_screen_and_ui(acceptance)
         validate_governance_product()
+        validate_br_ex_72(acceptance, debt)
         validate_release_authority(acceptance, debt)
         validate_no_sensitive_material()
     except (AcceptanceError, OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
@@ -290,7 +380,7 @@ def main() -> int:
         return 1
     print(json.dumps({
         "phase": "N29",
-        "backend_decision": "ACCEPTED",
+        "backend_decision": "RELEASE_CANDIDATE_READY",
         "product_release": "NO_GO",
         "relations": 96,
         "commissioned_requests": 31,
@@ -298,7 +388,7 @@ def main() -> int:
         "commands": 9,
         "screen_contracts": 23,
         "internal_technical_debt": 0,
-        "release_blockers": ["N29-BE-72", "N29-REL-01"],
+        "release_blockers": ["N29-REL-01"],
     }, sort_keys=True))
     return 0
 

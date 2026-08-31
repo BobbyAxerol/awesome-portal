@@ -1466,9 +1466,10 @@ durable run/attempt events. Detailed evidence:
 - Detail:
   [`EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md`](./EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md).
 
-## Backend state — 2026-08-31 (N29 product acceptance and release closeout)
+## Backend state — 2026-08-31 (N29 + BR-EX-72 release-candidate closeout)
 
-- N29 is `BACKEND_ACCEPTED / PRODUCT_RELEASE_NO_GO / NO_RUNTIME_EFFECT`.
+- N29 is `BACKEND_ACCEPTED / RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING /
+  NO_RUNTIME_EFFECT`.
 - The finite inventory is closed at 96 relations, 31 commissioned requests,
   27 reads, nine commands and 23 screen contracts. Twenty-two screen APIs are
   available; Account/Broker 360 is the one typed N28 unavailable screen.
@@ -1477,8 +1478,11 @@ durable run/attempt events. Detailed evidence:
   idempotency, exact bounded queries and Command Center integration.
 - Internal technical debt is zero. Claude's same-origin product consumer,
   product-boundary scan and warning-clean browser evidence close `N29-FE-01`.
-  Product release remains blocked only by the admitted consolidated
-  `N29-BE-72` backend delivery and protected-main signed image evidence
-  (`N29-REL-01`); neither gate authorizes runtime or stable mutation.
+  BR-EX-72 is delivered with bounded Fleet/Bindings projection APIs, one
+  canonical Live Review fixture and registry revision 6. Product release now
+  waits only for protected-main signed image evidence (`N29-REL-01`); the
+  delivery does not authorize runtime or stable mutation.
 - Detail:
   [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).
+- BR-EX-72 implementation detail:
+  [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).

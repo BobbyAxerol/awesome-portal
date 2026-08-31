@@ -37,6 +37,10 @@ const INSIGHT_BATCH = canonical("execution-analytics.insight-batch.valid.json") 
 const CORRELATION = canonical("execution-analytics.correlation.valid.json") as Record<string, unknown>;
 const CAPITAL_LEDGER = canonical("execution-analytics.capital-ledger.valid.json") as Record<string, unknown>;
 const BINDING_EXPOSURE = canonical("execution-analytics.binding-exposure.valid.json") as Record<string, unknown>;
+const ALPHA_FLEET = canonical("execution-alpha-fleet-list.valid.json") as Record<string, unknown>;
+const BINDINGS_LIST = canonical("execution-bindings-list.valid.json") as Record<string, unknown>;
+const BINDING_DETAIL = canonical("execution-binding-detail.valid.json") as Record<string, unknown>;
+const LIVE_REVIEW = canonical("governance-live-review.valid.json") as Record<string, unknown>;
 
 
 import {
@@ -128,23 +132,17 @@ function waiversPage(search: URLSearchParams): Answer {
   });
 }
 
-/** No canonical live-review fixture is published (consolidated request); the
- *  double composes one exactly the way the unit double does. */
 function liveReview(approvalId: string): Answer {
+  const backbone = LIVE_REVIEW.governance_backbone as Record<string, unknown>;
+  const data = backbone.data as Record<string, unknown>;
+  const approval = data.approval as Record<string, unknown>;
   return ok({
-    schema_version: "governance.live-review.v1",
+    ...LIVE_REVIEW,
     approval_id: approvalId,
-    canary_ref: { deployment_id: "dep_88", composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS" },
-    governance_backbone: { ...R2_DETAIL, approval: { ...(R2_DETAIL.approval as object), approval_id: approvalId } },
-    current_source: LIVE_OVERVIEW_EMPTY,
-    derived_branches: [
-      { capability_id: "canary.drift-vs-twin", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
-      { capability_id: "canary.kpis", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
-      { capability_id: "canary.gate-criteria", state: "UNAVAILABLE", reason_code: "N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED" },
-      { capability_id: "canary.capital-step", state: "UNAVAILABLE", reason_code: "N23_CAPITAL_STEP_NOT_PUBLISHED" },
-    ],
-    read_at: "2026-08-31T12:00:00.000Z",
-    actor: { user_id: "usr_lan", username: "Lan", roles: ["ADMIN"] },
+    governance_backbone: {
+      ...backbone,
+      data: { ...data, approval: { ...approval, approval_id: approvalId } },
+    },
   });
 }
 
@@ -171,6 +169,11 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if ((seg[0] === "alphas" || seg[0] === "portfolios") && seg[2] === "query-analytics") return ok(QUERY_ANALYTICS_EMPTY);
     if (path === "/commands/tasks") return ok(COMMAND_TASKS);
     if (path === "/commands/catalog") return ok(COMMAND_CATALOGUE_FIXTURE);
+    if (path === "/alphas") return ok(ALPHA_FLEET);
+    if (path === "/broker-bindings") return ok(BINDINGS_LIST);
+    if (seg[0] === "broker-bindings" && seg.length === 2) {
+      return ok({ ...BINDING_DETAIL, item: { ...((BINDING_DETAIL.item as object) ?? {}), binding_id: seg[1] } });
+    }
     if (path === "/governance/approvals") return approvalsPage(search);
     if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "r1")
       return ok({ ...R1_DETAIL, approval: { ...(R1_DETAIL.approval as object), approval_id: seg[2] } });

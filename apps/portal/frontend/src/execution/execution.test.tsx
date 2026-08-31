@@ -936,7 +936,7 @@ describe("M1 keyset table — the server's filter is the truth on display", () =
 });
 
 /* ===========================================================================
- * Registry revision 5 — delivery profile reconciliation and governance policy
+ * Registry revision 6 — delivery profile reconciliation and governance policy
  * ======================================================================== */
 
 describe("delivery profile reconciliation is fail-closed", () => {
@@ -991,8 +991,8 @@ describe("delivery profile reconciliation is fail-closed", () => {
   });
 });
 
-describe("registry revision 5 consumption", () => {
-  it("reads the profile off a screen contract, where revision 5 publishes it", () => {
+describe("registry revision 6 consumption", () => {
+  it("reads the profile off a screen contract, where revision 6 publishes it", () => {
     expect(
       screenDeliveryProfile({ screen_id: "EXECUTION_BLOTTER_SCREEN", delivery_profile: "shadow" }),
     ).toBe("shadow");
@@ -1031,8 +1031,8 @@ describe("delivery policy — independent flags gate governance and commands", (
     const p = screenDeliveryPolicy(REV5_FIXTURE_SCREEN);
     expect(p).not.toBeNull();
     expect(p?.policyRevision).toBe(2);
-    // Everything is off in revision 5 as delivered, which is correct: nothing
-    // is wired yet.
+    // Legacy fixture rows remain dark; revision 6 only commissions the exact
+    // BR-EX-72 governance capabilities.
     expect(p?.queryEnabled).toBe(false);
     expect(p?.liveRiskIncreasingCommandsEnabled).toBe(false);
   });
@@ -1086,7 +1086,7 @@ describe("delivery policy — independent flags gate governance and commands", (
   });
 });
 
-describe("registry revision 5 — parsed against the registry actually shipped", () => {
+describe("registry revision 6 — parsed against the registry actually shipped", () => {
   // A contract test across the FE/BE boundary rather than against a fixture of
   // our own making. It is the thing that notices the day the field moves, is
   // renamed, or grows a value this build does not know.
@@ -1108,10 +1108,8 @@ describe("registry revision 5 — parsed against the registry actually shipped",
     }
   });
 
-  it("parses every published policy and enables no command or governance write at revision 5", () => {
-    expect(registry.revision).toBe(5);
-    // Every screen ships with all eight flags off. If this ever fails, an
-    // command was switched on in the registry and somebody should know.
+  it("parses every policy and enables only the commissioned Portal governance write", () => {
+    expect(registry.revision).toBe(6);
     // Not `continue`. A policy this build cannot parse used to skip the check
     // silently, so the loop passed loudest exactly when it understood least —
     // a registry that switched a command on in a shape we could not read would
@@ -1125,10 +1123,10 @@ describe("registry revision 5 — parsed against the registry actually shipped",
       ).not.toBeNull();
       if (!policy) continue;
       checked += 1;
-      expect(
-        policy.governanceWriteEnabled,
-        `${String((screen as Record<string, unknown>).screen_id)} has governance writes enabled`,
-      ).toBe(false);
+      const screenId = String((screen as Record<string, unknown>).screen_id);
+      expect(policy.governanceWriteEnabled, `${screenId} governance write drift`).toBe(
+        screenId === "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+      );
       for (const tier of ["R1", "R2", "R3", "R4"] as const) {
         expect(
           commandEnabled(policy, tier),
@@ -1140,22 +1138,25 @@ describe("registry revision 5 — parsed against the registry actually shipped",
     expect(checked).toBeGreaterThan(0);
   });
 
-  /* Codex's constraint, 2026-08-21: the frontend adapter may be finished, but
-   * `delivery_profile` stays `fixture` and every runtime flag stays false until
-   * `EX-BE-02`/`EX-BE-03` have evidence. A constraint nobody can check is a
-   * hope, so it is checked here. Both assertions are meant to fail the day the
-   * activation happens — that is the point. When they do, the change is
-   * deliberate and this test is updated in the same commit that activates it. */
-  it("keeps every execution screen at delivery_profile=fixture", () => {
+  it("keeps only the five BR-EX-72 screens at shadow", () => {
+    const shadow = new Set([
+      "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+      "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+      "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+      "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+      "EXECUTION_WAIVERS_REGISTER_SCREEN",
+    ]);
     for (const screen of registry.screens) {
       const s = screen as Record<string, unknown>;
       const id = String(s.screen_id ?? "");
       if (!id.startsWith("EXECUTION_")) continue;
-      expect(screenDeliveryProfile(screen), `${id} is no longer fixture`).toBe("fixture");
+      expect(screenDeliveryProfile(screen), `${id} profile drift`).toBe(
+        shadow.has(id) ? "shadow" : "fixture",
+      );
     }
   });
 
-  it("keeps query, projection ingestion and SSE switched off too", () => {
+  it("keeps SSE dark and enables only the exact BR-EX-72 read/projection policies", () => {
     // The four command tiers are covered above. These three are the read and
     // realtime halves, and leaving them out would let the surface start
     // consuming real data while the assertion above still passed.
@@ -1163,10 +1164,20 @@ describe("registry revision 5 — parsed against the registry actually shipped",
       const policy = screenDeliveryPolicy(screen);
       if (!policy) continue;
       const id = String((screen as Record<string, unknown>).screen_id ?? "");
-      expect(policy.queryEnabled, `${id} query_enabled`).toBe(false);
-      expect(policy.projectionIngestionEnabled, `${id} projection_ingestion_enabled`).toBe(false);
+      expect(policy.queryEnabled, `${id} query_enabled`).toBe(
+        id === "EXECUTION_ALPHA_FLEET_LIST_SCREEN" ||
+          id === "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN" ||
+        id === "EXECUTION_GATE_LIVE_REVIEW_SCREEN" ||
+          id === "EXECUTION_WAIVERS_REGISTER_SCREEN",
+      );
+      expect(policy.projectionIngestionEnabled, `${id} projection_ingestion_enabled`).toBe(
+        id === "EXECUTION_ALPHA_FLEET_LIST_SCREEN" ||
+          id === "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+      );
       expect(policy.sseEnabled, `${id} sse_enabled`).toBe(false);
-      expect(policy.governanceWriteEnabled, `${id} governance_write_enabled`).toBe(false);
+      expect(policy.governanceWriteEnabled, `${id} governance_write_enabled`).toBe(
+        id === "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+      );
     }
   });
 });

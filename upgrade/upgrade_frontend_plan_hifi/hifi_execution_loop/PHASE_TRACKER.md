@@ -2738,7 +2738,7 @@ backend gate.
 | N26 | projection-backed authenticated SSE | consume manager snapshot; call `EventSource.close()` on terminal auth/gap; resnapshot before reconnect | `COMPLETE / RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
 | N27 | typed Admin Action Drawer command plane | render 24 server tasks; 14 inactive + 10 incompatible; enable only future authoritative `CONNECTED` tasks | `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK` |
 | N28 | 13 current-source adapters + one nine-entry genuine-gap owner packet | retain typed unavailable until verified return; never call source directly | `COMPLETE / SOURCE_DARK / N29_READY` |
-| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `BACKEND_ACCEPTED / FRONTEND_CONSUMER_ACCEPTED / PRODUCT_RELEASE_NO_GO / BR_EX_72_AND_SIGNED_RELEASE_PENDING` |
+| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `BACKEND_ACCEPTED / FRONTEND_CONSUMER_ACCEPTED / BR_EX_72_COMPLETE / RELEASE_CANDIDATE_READY / PROTECTED_RELEASE_PENDING` |
 
 ### N14A backend — Portal release authority, source-dark (2026-08-26)
 
@@ -3134,19 +3134,20 @@ states. See
 
 ### N29 backend — product acceptance and release closeout (2026-08-31)
 
-N29 is `BACKEND_ACCEPTED / PRODUCT_RELEASE_NO_GO / NO_RUNTIME_EFFECT`. The
+N29 is `BACKEND_ACCEPTED / RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING /
+NO_RUNTIME_EFFECT`. The
 campaign inventory is closed at 96 relations, 31 requests, 27 reads and nine
 commands. The canonical catalogue now exposes 22 available backend screen APIs
 and one typed unavailable Account/Broker 360 API. `BR-EX-69` and `BR-EX-71`
 are closed with a server-pinned, serializable/idempotent R1 approval mutation
 and an exact keyset/count conditions register. Internal technical debt is zero.
 
-N29-FE-01 is now closed by Claude's warning-clean same-origin consumer return,
-product import-graph gate and 66 browser journeys. Product GO remains blocked
-by two named gates only: `N29-BE-72` (the consolidated Fleet/Bindings/Live
-Review fixture/registry request) and `N29-REL-01` (signed/attested immutable
-images from protected `main`). No direct browser → Edge/Trading System call is
-allowed. See
+N29-FE-01 is closed by Claude's warning-clean same-origin consumer return,
+product import-graph gate and browser journeys. BR-EX-72 is now closed by the
+bounded Fleet/Bindings projection APIs, canonical Live Review fixture and
+registry revision 6. The only remaining gate is `N29-REL-01`
+(signed/attested immutable images from protected `main`). No direct browser →
+Edge/Trading System call is allowed. See
 [`CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md`](./CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md)
 and
 [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](../../backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).
@@ -3187,3 +3188,14 @@ and
 > and same-origin network containment.
 > Three intentional journey baselines were refreshed after the product/lab
 > split, and the obsolete `_probe-exitbar.spec.ts` debug probe was removed.
+
+> **2026-08-31 · Codex BR-EX-72 closeout:** `N29-BE-72` is resolved. Alpha
+> Fleet and Accounts & Bindings list/detail now use same-origin BFF contracts
+> over exact bounded Portal projections; `venue_credentials` is excluded;
+> both doubles read one canonical Live Review fixture; registry revision 6
+> adds five truthful shadow rows. Gates: Control API 253/253 with fresh-PG
+> restore, contracts 112/112, registry 62/62, frontend 1,785 passed + three
+> intentional skips, clean Docker production build and 2/2 pinned-Chromium
+> product-route checks. Runtime remains
+> unchanged. Detail:
+> `EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`.

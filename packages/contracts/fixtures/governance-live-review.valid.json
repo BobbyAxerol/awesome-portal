@@ -1,0 +1,93 @@
+{
+  "schema_version": "governance.live-review.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "LIVE_BINANCE_USDM",
+  "read_at": "2026-08-31T12:00:00Z",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "approval_id": "AP-R2-DETAIL",
+  "canary_ref": {
+    "deployment_id": "dep_88",
+    "composition": "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS"
+  },
+  "governance_backbone": {
+    "schema_version": "governance.r2-review.v1",
+    "record_authority": "PORTAL",
+    "delivery_profile": "fixture",
+    "read_at": "2026-08-22T10:00:00Z",
+    "data": {
+      "approval": {
+        "approval_id": "AP-R2-DETAIL", "gate": "R2", "subject_type": "DEPLOYMENT",
+        "subject_id": "deployment-paper-1", "subject_label": "Paper deployment",
+        "release_candidate": null, "environment": "PAPER", "target_label": "R2 capital review",
+        "requester": { "user_id": "usr_stan", "username": "stan" },
+        "creator": { "user_id": "usr_stan", "username": "stan" },
+        "status": "PENDING", "policy_version": "approval.v3", "quorum_met": 0,
+        "quorum_required": 1, "approval_version": 1,
+        "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_complete": true, "blocker_count": 0, "blocker_summary": null,
+        "sla_due_at": "2026-08-22T16:00:00Z", "expires_at": "2026-08-24T10:00:00Z",
+        "created_at": "2026-08-22T10:00:00Z", "updated_at": "2026-08-22T10:00:00Z",
+        "portfolio_id": "PF_R2_1", "currency": "USDT"
+      },
+      "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+      "r1_reference": {
+        "approval_id": "AP-R1-DETAIL", "state": "APPROVED",
+        "href": "/governance/approvals/AP-R1-DETAIL/r1", "expiry": "2026-08-24T09:30:00Z",
+        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "decided_by": "lan", "decided_at": "2026-08-22T09:30:00Z"
+      },
+      "r1_state": "APPROVED", "r1_id": "AP-R1-DETAIL",
+      "grant_id": "grant-paper-activation-1", "grant_name": "paper_activation_authorization",
+      "approver_role": "ADMIN", "plan_author": "stan",
+      "evidence_manifest": {
+        "manifest_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "complete": true,
+        "entries": [{
+          "evidence_id": "ev-r1-artifact", "ordinal": 0, "kind": "ALPHA_ARTIFACT",
+          "label": "Approved alpha artifact",
+          "sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "schema_version": "alpha-artifact.v1", "source_authority": "RESEARCH",
+          "captured_at": "2026-08-22T08:00:00Z"
+        }]
+      },
+      "eligibility": {
+        "can_approve": true, "can_approve_with_condition": true, "can_deny": true,
+        "can_request_changes": true, "locks": [], "separation_of_duties": "OK"
+      }
+    }
+  },
+  "current_source": {
+    "schema_version": "execution.live-overview.v1",
+    "record_authority": "PORTAL_CONTROL", "source_authority": "TRADING_SYSTEM",
+    "delivery_profile": "LIVE_BINANCE_USDM", "requested_environment": "live",
+    "source_environment": "live", "composition": "DIRECT_PROFILE_READ",
+    "workspace_id": "ws_primary", "resource": { "kind": "WORKSPACE", "id": "ws_primary" },
+    "read_at": "2026-08-30T12:00:01Z", "as_of": "2026-08-30T12:00:00Z",
+    "state": "empty", "freshness": "FRESH", "completeness": "COMPLETE",
+    "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+    "capabilities": [
+      { "capability_id": "source.deployments", "state": "EMPTY", "relations": ["strategy_deployments"], "reason_code": null, "retryable": false },
+      { "capability_id": "source.positions", "state": "EMPTY", "relations": ["positions_v2"], "reason_code": null, "retryable": false },
+      { "capability_id": "source.sessions", "state": "EMPTY", "relations": ["execution_sessions"], "reason_code": null, "retryable": false },
+      { "capability_id": "source.accounts", "state": "EMPTY", "relations": ["accounts"], "reason_code": null, "retryable": false },
+      { "capability_id": "source.account_balances", "state": "EMPTY", "relations": ["account_balances"], "reason_code": null, "retryable": false },
+      { "capability_id": "source.margin_balances", "state": "EMPTY", "relations": ["margin_balances"], "reason_code": null, "retryable": false },
+      { "capability_id": "source.account_sync", "state": "EMPTY", "relations": ["account_sync_effective"], "reason_code": null, "retryable": false },
+      { "capability_id": "source.broker_sync", "state": "EMPTY", "relations": ["broker_account_sync_effective"], "reason_code": null, "retryable": false }
+    ],
+    "data": {
+      "deployments": [], "positions": [], "sessions": [], "accounts": [],
+      "account_balances": [], "margin_balances": [], "account_sync": [], "broker_sync": []
+    },
+    "unavailable_branches": []
+  },
+  "derived_branches": [
+    { "capability_id": "canary.drift-vs-twin", "state": "UNAVAILABLE", "reason_code": "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
+    { "capability_id": "canary.kpis", "state": "UNAVAILABLE", "reason_code": "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
+    { "capability_id": "canary.gate-criteria", "state": "UNAVAILABLE", "reason_code": "N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED" },
+    { "capability_id": "canary.capital-step", "state": "UNAVAILABLE", "reason_code": "N23_CAPITAL_STEP_NOT_PUBLISHED" }
+  ],
+  "source_side_effect_requested": false,
+  "production_command_active": false
+}

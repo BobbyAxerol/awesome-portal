@@ -1,7 +1,7 @@
 {
   "schema_version": "portal.execution.manager-product-release-profile.v1",
   "phase": "N29",
-  "decision": "DEV_BACKEND_CANDIDATE_READY_PRODUCT_NO_GO",
+  "decision": "DEV_PRODUCT_CANDIDATE_READY_PROTECTED_RELEASE_PENDING",
   "contract": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
   "debt_register": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/debt-register.v1.json",
   "accepted_profiles": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"],

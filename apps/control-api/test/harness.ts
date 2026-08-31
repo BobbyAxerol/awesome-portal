@@ -7,6 +7,9 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_manager_projection_snapshots",
+  "execution_alpha_fleet_projection",
+  "execution_binding_projection",
   "execution_command_center_pins",
   "auth_audit_events",
   "auth_sessions",
@@ -46,6 +49,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_activation_events: boolean;
       has_shared_admission: boolean;
       has_shared_cache: boolean;
+      has_manager_projection_snapshots: boolean;
+      has_alpha_fleet_projection: boolean;
+      has_binding_projection: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -73,6 +79,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_activation_events') IS NOT NULL AS has_activation_events,
          to_regclass('public.execution_shared_admission_state') IS NOT NULL AS has_shared_admission,
          to_regclass('public.execution_shared_read_cache') IS NOT NULL AS has_shared_cache,
+         to_regclass('public.execution_manager_projection_snapshots') IS NOT NULL AS has_manager_projection_snapshots,
+         to_regclass('public.execution_alpha_fleet_projection') IS NOT NULL AS has_alpha_fleet_projection,
+         to_regclass('public.execution_binding_projection') IS NOT NULL AS has_binding_projection,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -99,6 +108,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_activation_events ||
       !row.has_shared_admission ||
       !row.has_shared_cache ||
+      !row.has_manager_projection_snapshots ||
+      !row.has_alpha_fleet_projection ||
+      !row.has_binding_projection ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
@@ -118,6 +130,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `activation_events=${row.has_activation_events}, ` +
         `shared_admission=${row.has_shared_admission}, ` +
         `shared_cache=${row.has_shared_cache}, ` +
+        `manager_projection_snapshots=${row.has_manager_projection_snapshots}, ` +
+        `alpha_fleet_projection=${row.has_alpha_fleet_projection}, ` +
+        `binding_projection=${row.has_binding_projection}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

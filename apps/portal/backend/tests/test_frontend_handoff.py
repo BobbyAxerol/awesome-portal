@@ -109,24 +109,38 @@ def test_registry_fixture_is_the_public_document_with_computed_digest() -> None:
     )
 
 
-def test_registry_fixture_exposes_revision_5_delivery_contract() -> None:
+def test_registry_fixture_exposes_revision_6_delivery_contract() -> None:
     document = _fixture("registry.public.json")
-    assert document["revision"] == 5
+    assert document["revision"] == 6
     execution_screens = [
         screen
         for screen in document["screens"]
         if screen["screen_id"].startswith("EXECUTION_")
     ]
-    assert len(execution_screens) == 17
+    assert len(execution_screens) == 22
+    shadow = {
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN": {"governance_write_enabled"},
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN": {"query_enabled"},
+        "EXECUTION_WAIVERS_REGISTER_SCREEN": {"query_enabled"},
+    }
     for screen in execution_screens:
         assert screen["contract_revision"] == 2
-        assert screen["delivery_profile"] == "fixture"
         policy = screen["delivery_policy"]
-        assert policy["policy_revision"] == 2
-        assert policy["governance_write_enabled"] is False
-        assert not any(
-            value for key, value in policy.items() if key.endswith("_enabled")
-        )
+        enabled = {
+            key
+            for key, value in policy.items()
+            if key.endswith("_enabled") and value
+        }
+        if screen["screen_id"] in shadow:
+            assert screen["delivery_profile"] == "shadow"
+            assert policy["policy_revision"] == 3
+            assert enabled == shadow[screen["screen_id"]]
+        else:
+            assert screen["delivery_profile"] == "fixture"
+            assert policy["policy_revision"] == 2
+            assert not enabled
 
 
 def test_summary_fixtures_share_the_registry_fixture_digest() -> None:

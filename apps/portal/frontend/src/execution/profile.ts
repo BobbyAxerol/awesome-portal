@@ -1,9 +1,9 @@
 /**
- * Delivery-profile reconciliation — registry revision 5 consumption.
+ * Delivery-profile reconciliation — registry revision 6 consumption.
  *
  * Master plan §12.3 gives this module one rule and it is a safety rule:
  *
- *   "Registry revision 5 is the authority for the active profile and policy of
+ *   "Registry revision 6 is the authority for the active profile and policy of
  *    every commissioned screen. Every backend envelope echoes `delivery_profile`;
  *    a composed screen may return a **stricter** profile on an individual panel.
  *    A registry/envelope mismatch is fail-closed and makes the affected panel

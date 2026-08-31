@@ -89,3 +89,27 @@ requires query plus projection ingestion, and Paper/Sandbox cannot exceed their
 command boundary. These fields describe commissioning state only. They never
 grant a user permission, replace TypeScript RBAC/ABAC, or override a runtime
 capability probe.
+
+## Revision 5 — Portal governance policy split
+
+Revision 5 adds `governance_write_enabled` as an authority independent from
+Trading System command tiers. Existing Execution rows remain fail-closed until
+their concrete same-origin BFF contracts are commissioned.
+
+## Revision 6 — BR-EX-72 screen and navigation closure
+
+Revision 6 removes the frontend-only route exception for New Approval, Gate
+LIVE Review and Waivers, and adds canonical entry-screen rows for Alpha Fleet
+and Accounts & Bindings. All five are canonical registry rows. Waivers is a
+first-class Governance sidebar feature. Their delivery metadata is deliberately
+bounded:
+
+- Alpha Fleet and Accounts & Bindings are `shadow` with query and their
+  bounded Portal projection ingestion enabled;
+- New Approval is `shadow` with only Portal governance write enabled;
+- Gate LIVE Review and Waivers are `shadow` with only query enabled;
+- no SSE or Trading System command flag is enabled.
+
+The other 17 Execution screens remain at the revision-5 `fixture` policy. The
+registry describes commissioning state; runtime session/RBAC and service-side
+enforcement remain authoritative.

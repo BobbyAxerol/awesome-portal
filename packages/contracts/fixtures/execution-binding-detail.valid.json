@@ -1,0 +1,15 @@
+{
+  "schema_version": "execution.binding-detail.v1",
+  "record_authority": "PORTAL_PROJECTION",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_primary",
+  "environment": "paper",
+  "read_at": "2026-08-31T10:00:01Z",
+  "source_as_of": "2026-08-31T10:00:00Z",
+  "freshness": "FRESH",
+  "item": {
+    "binding_id": "acc_a@BINANCE", "account_id": "acc_a", "venue": "BINANCE",
+    "state": "ACTIVE", "credential_state": "SYNC_SYNCED", "updated_at": "2026-08-31T10:00:00Z"
+  }
+}

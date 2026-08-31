@@ -7,8 +7,8 @@
   "properties": {
     "schema_version": {"const": "portal.execution.product-acceptance.v1"},
     "phase": {"const": "N29"},
-    "decision": {"const": "BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO"},
-    "release_channel": {"const": "DEV_CANDIDATE_ONLY"},
+    "decision": {"const": "RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING"},
+    "release_channel": {"const": "PROTECTED_MAIN_CANDIDATE"},
     "runtime_effect": {"const": "NONE"},
     "accepted_scope": {"type": "object"},
     "evidence": {"type": "object"},

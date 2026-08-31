@@ -1731,6 +1731,18 @@ activation or the phase):**
   remain dark. Status: `N24_COMPLETE / TD-EX-05_CLOSED / N25_READY`; see
   [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](./backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
 
+- **N25–N29 + BR-EX-72 release candidate complete (2026-08-31):** the
+  query/analytics plane, projection-backed SSE, Admin Action Drawer command
+  plane, genuine-gap registry and product consumer acceptance are complete.
+  BR-EX-72 adds bounded Alpha Fleet and Accounts & Bindings list/detail BFF
+  contracts over exact current Manager-v2 Portal projections, one canonical
+  Live Review fixture and truthful registry revision 6. Source credentials,
+  arbitrary relations and external references remain outside the browser;
+  `venue_credentials` is rejected at the source boundary. Status is
+  `RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING / NO_RUNTIME_EFFECT`;
+  only `N29-REL-01` remains. See
+  [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

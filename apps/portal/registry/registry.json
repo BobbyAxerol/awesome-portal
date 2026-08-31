@@ -1,7 +1,7 @@
 {
   "schema_version": "portal.registry.v1",
   "registry_id": "portal-default",
-  "revision": 5,
+  "revision": 6,
   "feature_groups": [
     {
       "id": "command",
@@ -808,7 +808,9 @@
       "screen_ids": [
         "EXECUTION_APPROVAL_INBOX_SCREEN",
         "EXECUTION_GATE_R1_REVIEW_SCREEN",
-        "EXECUTION_GATE_R2_REVIEW_SCREEN"
+        "EXECUTION_GATE_R2_REVIEW_SCREEN",
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN"
       ],
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
@@ -819,6 +821,48 @@
       "activation_gate": "Execution Loop Phases 1 through 3 approval contracts and policy evidence pass.",
       "navigation": {
         "order": 10,
+        "icon_key": "task-approved",
+        "show_in_sidebar": true,
+        "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "EXECUTION_WAIVERS",
+      "group": "governance",
+      "label": "Waivers",
+      "description": "Workspace-scoped register of governed conditions, waivers and expiry state.",
+      "canonical_route": "/governance/waivers",
+      "legacy_routes": [],
+      "maturity": "PROTOTYPE",
+      "data_mode": "REAL",
+      "permissions": [
+        "approval.read"
+      ],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": "apps/control-api",
+      "prototype_frame_id": "WF-4A-WAIVERS",
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [
+        "EXECUTION_WAIVERS_REGISTER_SCREEN"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [
+        "portal_control_current"
+      ],
+      "hidden_for_roles": [],
+      "activation_gate": "N29 BR-EX-72 registry, same-origin BFF and workspace-isolation evidence pass.",
+      "navigation": {
+        "order": 15,
         "icon_key": "task-approved",
         "show_in_sidebar": true,
         "show_in_command_palette": true
@@ -911,8 +955,8 @@
       "description": "Portfolio-scoped alpha deployment, execution and evidence drill-down.",
       "canonical_route": "/deployments/alphas",
       "legacy_routes": [],
-      "maturity": "COMMISSIONED",
-      "data_mode": "NONE",
+      "maturity": "PROTOTYPE",
+      "data_mode": "REAL",
       "permissions": [
         "alpha.read"
       ],
@@ -923,20 +967,23 @@
         "sandbox",
         "live"
       ],
-      "source_module": null,
+      "source_module": "apps/control-api",
       "prototype_frame_id": "WF-2A-2B",
       "roadmap_epic_id": "EXECUTION-LOOP",
       "default_task_id": null,
       "screen_ids": [
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
         "EXECUTION_ALPHA_360_SCREEN"
       ],
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
       "lifecycle_stage_ids": [],
-      "summary_source_ids": [],
+      "summary_source_ids": [
+        "portal_control_current"
+      ],
       "hidden_for_roles": [],
-      "activation_gate": "Execution Loop Phase 15 scope-consistent query contracts and evidence pass.",
+      "activation_gate": "N29 BR-EX-72 bounded list projection, same-origin BFF and workspace-isolation evidence pass.",
       "navigation": {
         "order": 20,
         "icon_key": "network-3",
@@ -951,8 +998,8 @@
       "description": "Virtual account, physical broker binding and reconciliation boundary.",
       "canonical_route": "/deployments/accounts",
       "legacy_routes": [],
-      "maturity": "COMMISSIONED",
-      "data_mode": "NONE",
+      "maturity": "PROTOTYPE",
+      "data_mode": "REAL",
       "permissions": [
         "live.read"
       ],
@@ -963,20 +1010,23 @@
         "sandbox",
         "live"
       ],
-      "source_module": null,
+      "source_module": "apps/control-api",
       "prototype_frame_id": "WF-1G",
       "roadmap_epic_id": "EXECUTION-LOOP",
       "default_task_id": null,
       "screen_ids": [
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
         "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
       ],
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
       "lifecycle_stage_ids": [],
-      "summary_source_ids": [],
+      "summary_source_ids": [
+        "portal_control_current"
+      ],
       "hidden_for_roles": [],
-      "activation_gate": "Execution Loop Phase 17 broker-binding aggregate and freshness contracts pass.",
+      "activation_gate": "N29 BR-EX-72 bounded binding projection, no-secret contract and workspace-isolation evidence pass.",
       "navigation": {
         "order": 60,
         "icon_key": "account",
@@ -1956,6 +2006,139 @@
       "activation_gate": "Execution Loop Phase 3 capital preview, R1 expiry and readiness contracts pass."
     },
     {
+      "screen_id": "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+      "contract_revision": 2,
+      "feature_id": "EXECUTION_APPROVALS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "REAL",
+      "delivery_profile": "shadow",
+      "delivery_policy": {
+        "policy_revision": 3,
+        "query_enabled": false,
+        "projection_ingestion_enabled": false,
+        "sse_enabled": false,
+        "governance_write_enabled": true,
+        "paper_commands_enabled": false,
+        "sandbox_commands_enabled": false,
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false
+      },
+      "route": "/governance/approvals/new",
+      "primary_persona": "reviewer",
+      "primary_decision": "Is the selected immutable evidence complete enough to request the next governed review?",
+      "primary_action": "Create approval request",
+      "permissions": [
+        "approval.read"
+      ],
+      "inputs": [
+        {
+          "id": "approval_request",
+          "authority": "portal.governance.approval-create.v1",
+          "required": true
+        }
+      ],
+      "backend_dependency_ids": [
+        "portal_control_api"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "N29 BR-EX-69 create-approval and BR-EX-72 registry evidence pass."
+    },
+    {
+      "screen_id": "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+      "contract_revision": 2,
+      "feature_id": "EXECUTION_APPROVALS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "REAL",
+      "delivery_profile": "shadow",
+      "delivery_policy": {
+        "policy_revision": 3,
+        "query_enabled": true,
+        "projection_ingestion_enabled": false,
+        "sse_enabled": false,
+        "governance_write_enabled": false,
+        "paper_commands_enabled": false,
+        "sandbox_commands_enabled": false,
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false
+      },
+      "route": "/governance/approvals/:approvalId/live",
+      "primary_persona": "risk_manager",
+      "primary_decision": "Does the exact evidence set support the requested Live transition without increasing authority?",
+      "primary_action": null,
+      "permissions": [
+        "approval.read"
+      ],
+      "inputs": [
+        {
+          "id": "live_review",
+          "authority": "portal.governance.live-review.v1",
+          "required": true
+        }
+      ],
+      "backend_dependency_ids": [
+        "portal_control_api",
+        "execution_current_source"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "N29 BR-EX-70 live-review and BR-EX-72 canonical-fixture evidence pass."
+    },
+    {
+      "screen_id": "EXECUTION_WAIVERS_REGISTER_SCREEN",
+      "contract_revision": 2,
+      "feature_id": "EXECUTION_WAIVERS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "REAL",
+      "delivery_profile": "shadow",
+      "delivery_policy": {
+        "policy_revision": 3,
+        "query_enabled": true,
+        "projection_ingestion_enabled": false,
+        "sse_enabled": false,
+        "governance_write_enabled": false,
+        "paper_commands_enabled": false,
+        "sandbox_commands_enabled": false,
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false
+      },
+      "route": "/governance/waivers",
+      "primary_persona": "risk_manager",
+      "primary_decision": "Which governed condition or waiver is active, expiring or due for review?",
+      "primary_action": null,
+      "permissions": [
+        "approval.read"
+      ],
+      "inputs": [
+        {
+          "id": "waiver_register",
+          "authority": "portal.governance.conditions-register.v1",
+          "required": true
+        }
+      ],
+      "backend_dependency_ids": [
+        "portal_control_api"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "N29 BR-EX-71 waivers and BR-EX-72 registry evidence pass."
+    },
+    {
       "screen_id": "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
       "contract_revision": 2,
       "feature_id": "EXECUTION_EXIT_REVIEWS",
@@ -2208,6 +2391,51 @@
       "activation_gate": "Execution Loop Phase 14 keyset, exact-count, server-filter and funnel contracts pass."
     },
     {
+      "screen_id": "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+      "contract_revision": 2,
+      "feature_id": "EXECUTION_ALPHA_FLEET",
+      "maturity": "COMMISSIONED",
+      "data_mode": "REAL",
+      "delivery_profile": "shadow",
+      "delivery_policy": {
+        "policy_revision": 3,
+        "query_enabled": true,
+        "projection_ingestion_enabled": true,
+        "sse_enabled": false,
+        "governance_write_enabled": false,
+        "paper_commands_enabled": false,
+        "sandbox_commands_enabled": false,
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false
+      },
+      "route": "/deployments/alphas",
+      "primary_persona": "portfolio_manager",
+      "primary_decision": "Which alpha version and deployment needs attention in this workspace and execution profile?",
+      "primary_action": null,
+      "permissions": [
+        "alpha.read"
+      ],
+      "inputs": [
+        {
+          "id": "alpha_fleet",
+          "authority": "execution.alpha-fleet-list.v1",
+          "required": true
+        }
+      ],
+      "backend_dependency_ids": [
+        "portal_control_api",
+        "execution_current_source"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "N29 BR-EX-72 bounded list projection, same-origin BFF and workspace-isolation evidence pass."
+    },
+    {
       "screen_id": "EXECUTION_ALPHA_360_SCREEN",
       "contract_revision": 2,
       "feature_id": "EXECUTION_ALPHA_FLEET",
@@ -2278,6 +2506,56 @@
       ],
       "related_task_ids": [],
       "activation_gate": "Execution Loop Phase 16 packed correlation, sample coverage and capital-ledger contracts pass."
+    },
+    {
+      "screen_id": "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+      "contract_revision": 2,
+      "feature_id": "EXECUTION_ACCOUNTS_BINDINGS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "REAL",
+      "delivery_profile": "shadow",
+      "delivery_policy": {
+        "policy_revision": 3,
+        "query_enabled": true,
+        "projection_ingestion_enabled": true,
+        "sse_enabled": false,
+        "governance_write_enabled": false,
+        "paper_commands_enabled": false,
+        "sandbox_commands_enabled": false,
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false
+      },
+      "route": "/deployments/accounts",
+      "primary_persona": "operator",
+      "primary_decision": "Which account-to-venue binding is active, stale or missing published sync evidence?",
+      "primary_action": null,
+      "permissions": [
+        "live.read"
+      ],
+      "inputs": [
+        {
+          "id": "binding_list",
+          "authority": "execution.bindings-list.v1",
+          "required": true
+        },
+        {
+          "id": "binding_detail",
+          "authority": "execution.binding-detail.v1",
+          "required": false
+        }
+      ],
+      "backend_dependency_ids": [
+        "portal_control_api",
+        "execution_current_source"
+      ],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "N29 BR-EX-72 bounded binding projection, no-secret contract and workspace-isolation evidence pass."
     },
     {
       "screen_id": "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
@@ -2581,11 +2859,12 @@
       "category": "BACKEND_CONTRACT",
       "status": "PARTIAL",
       "severity": "HIGH",
-      "statement": "Execution Loop revision 3 routes are metadata only; every screen remains commissioned until its authority, freshness, query or command contract and operational evidence pass.",
+      "statement": "Execution Loop revision 6 publishes bounded same-origin governance metadata; every screen remains constrained by its authority, freshness, query, governance or command contract and recorded operational evidence.",
       "feature_ids": [
         "EXECUTION_COMMAND_CENTER",
         "EXECUTION_OPERATIONS",
         "EXECUTION_APPROVALS",
+        "EXECUTION_WAIVERS",
         "EXECUTION_EXIT_REVIEWS",
         "PAPER_TRADING",
         "SANDBOX_TRADING",
@@ -2603,6 +2882,9 @@
         "EXECUTION_APPROVAL_INBOX_SCREEN",
         "EXECUTION_GATE_R1_REVIEW_SCREEN",
         "EXECUTION_GATE_R2_REVIEW_SCREEN",
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+        "EXECUTION_WAIVERS_REGISTER_SCREEN",
         "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
         "EXECUTION_PAPER_WORKBENCH_SCREEN",
         "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
@@ -2610,8 +2892,10 @@
         "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
         "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
         "EXECUTION_FULL_BLOTTER_SCREEN",
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
         "EXECUTION_ALPHA_360_SCREEN",
         "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
         "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
         "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN"
       ],

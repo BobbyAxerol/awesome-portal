@@ -20,10 +20,20 @@ import PAPER_WORKBENCH_PARTIAL from "../../../../../../packages/contracts/fixtur
 import PAPER_WORKBENCH_VNM_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-paper-workbench-vnm.partial.valid.json";
 import QUERY_ANALYTICS_EMPTY from "../../../../../../packages/contracts/fixtures/execution-query-analytics.empty.valid.json";
 import COMMAND_TASKS from "../../../../../../packages/contracts/fixtures/execution-command-tasks.valid.json";
+import ALPHA_FLEET from "../../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.valid.json";
+import BINDINGS_LIST from "../../../../../../packages/contracts/fixtures/execution-bindings-list.valid.json";
+import BINDING_DETAIL from "../../../../../../packages/contracts/fixtures/execution-binding-detail.valid.json";
+import LIVE_REVIEW from "../../../../../../packages/contracts/fixtures/governance-live-review.valid.json";
 import { readKeysetPage } from "../adapter";
 import { APPROVAL_ROWS, CONDITION_FIXTURES, EXIT_DETAIL, R1_DETAIL, R2_DETAIL, matchesView } from "./fixtureData";
-import { readLiveReview, readOperatorTasks, readProfileEnvelope, readQueryAnalytics } from "./profileRead";
-import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
+import {
+  readAlphaFleet, readBindingDetail, readBindings, readLiveReview,
+  readOperatorTasks, readProfileEnvelope, readQueryAnalytics,
+} from "./profileRead";
+import type {
+  AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
+  OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics,
+} from "./profileRead";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail, readDecidedRow, readApprovalCreated, readConditionsPage } from "./rows";
 import {
   readAnalyticsEnvelope,
@@ -70,6 +80,8 @@ import type {
   Result,
   ApprovalCreateInput,
   ApprovalCreateOutcome,
+  AlphaFleetQuery,
+  BindingListQuery,
   ConditionsPage,
   WaiverQuery,
 } from "./ports";
@@ -222,6 +234,20 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     return value !== null && value !== undefined ? { ok: true as const, value } : unavailable(`${what} fixture could not be read.`);
   };
 
+  const liveReviewFixture = (approvalId: string): unknown => {
+    const backbone = LIVE_REVIEW.governance_backbone as Record<string, unknown>;
+    const data = backbone.data as Record<string, unknown>;
+    const approval = data.approval as Record<string, unknown>;
+    return {
+      ...LIVE_REVIEW,
+      approval_id: approvalId,
+      governance_backbone: {
+        ...backbone,
+        data: { ...data, approval: { ...approval, approval_id: approvalId } },
+      },
+    };
+  };
+
   return {
     /* N29-FE-01 lab/test port — serves the canonical contract fixtures. */
     async getCommandCenterSnapshot() {
@@ -253,31 +279,30 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getLiveReview(approvalId: string) {
       const blocked = gate<LiveReviewPayload>("getLiveReview");
       if (blocked) return blocked;
-      // No canonical fixture is published for live-review yet (noted in the
-      // return packet); the lab composes one from the canonical r2 backbone
-      // and the schema's four UNAVAILABLE branches.
       return fixtureRead(
-        {
-          schema_version: "governance.live-review.v1",
-          approval_id: approvalId,
-          canary_ref: { deployment_id: "dep_88", composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS" },
-          governance_backbone: { ...R2_DETAIL, approval: { ...(R2_DETAIL.approval as object), approval_id: approvalId } },
-          current_source: LIVE_OVERVIEW_EMPTY,
-          derived_branches: [
-            { capability_id: "canary.drift-vs-twin", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
-            { capability_id: "canary.kpis", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
-            { capability_id: "canary.gate-criteria", state: "UNAVAILABLE", reason_code: "N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED" },
-            { capability_id: "canary.capital-step", state: "UNAVAILABLE", reason_code: "N23_CAPITAL_STEP_NOT_PUBLISHED" },
-          ],
-          read_at: "2026-08-31T12:00:00.000Z",
-          actor: { user_id: "usr_lan", username: "Lan", roles: ["ADMIN"] },
-        },
+        liveReviewFixture(approvalId),
         readLiveReview,
         "The live review",
       );
     },
     async getAccountBroker360(_accountId: string) {
       return unavailable("N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED: the full exposure population is not published; this screen stays typed unavailable.");
+    },
+    async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
+      const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
+      return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");
+    },
+    async getBindings(_query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> {
+      const blocked = gate<ManagerListEnvelope<BindingItem>>("getBindings");
+      return blocked ?? fixtureRead(BINDINGS_LIST, readBindings, "The bindings register");
+    },
+    async getBindingDetail(bindingId: string, _environment = "paper"): Promise<Result<BindingItem>> {
+      const blocked = gate<BindingItem>("getBindingDetail");
+      return blocked ?? fixtureRead(
+        { ...BINDING_DETAIL, item: { ...BINDING_DETAIL.item, binding_id: bindingId } },
+        readBindingDetail,
+        "The binding detail",
+      );
     },
     async createApprovalRequest(input: ApprovalCreateInput): Promise<ApprovalCreateOutcome> {
       const blocked = gate<never>("createApprovalRequest");

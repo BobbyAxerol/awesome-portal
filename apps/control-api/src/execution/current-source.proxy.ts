@@ -195,6 +195,32 @@ const N23_PROFILE_SCREEN_BINDINGS = Object.freeze({
   }),
 } as const);
 
+/**
+ * BR-EX-72 publishes two workspace-scoped manager list projections. They are
+ * deliberately separate from the N22/N23 stage screens: the browser asks for
+ * a Portal list and this server-owned binding is the only place where the
+ * underlying Manager relations are selected. `venue_credentials` is not in
+ * this map and therefore cannot cross the boundary.
+ */
+const BR72_MANAGER_LIST_SCREEN_BINDINGS = Object.freeze({
+  EXECUTION_ALPHA_FLEET_LIST_SCREEN: Object.freeze({
+    capabilityIds: Object.freeze(["manager.strategies", "manager.deployments"]),
+    relations: Object.freeze({
+      "manager.strategies": Object.freeze(["strategies"]),
+      "manager.deployments": Object.freeze(["strategy_deployments"]),
+    }),
+  }),
+  EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN: Object.freeze({
+    capabilityIds: Object.freeze(["manager.accounts", "manager.venue-accounts"]),
+    relations: Object.freeze({
+      "manager.accounts": Object.freeze(["accounts", "broker_account_sync_effective"]),
+      "manager.venue-accounts": Object.freeze(["venue_accounts"]),
+    }),
+  }),
+} as const);
+
+type Br72ManagerListScreenId = keyof typeof BR72_MANAGER_LIST_SCREEN_BINDINGS;
+
 type N23ProfileEnvironment = keyof typeof N23_PROFILE_SCREEN_BINDINGS;
 type ScreenBinding = {
   readonly capabilityIds: readonly string[];
@@ -232,6 +258,16 @@ export const N23_PROFILE_READ_ACCEPTANCE = Object.freeze({
     }),
   }),
   canaryComposition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
+  sourceMaximumRequestsPerSecond: 20,
+});
+
+export const BR72_MANAGER_LIST_ACCEPTANCE = Object.freeze({
+  schemaVersion: "portal.execution.manager-list-acceptance.v1",
+  decision: "BR_EX_72_MANAGER_LISTS_ACCEPTED",
+  adapter: "MANAGER_V2_CURRENT_AS_IS",
+  sourceContract: "trading-system.portal-execution.manager-v2.runtime.v1",
+  environments: Object.freeze(["paper", "sandbox", "live"]),
+  screenIds: Object.freeze(Object.keys(BR72_MANAGER_LIST_SCREEN_BINDINGS).sort()),
   sourceMaximumRequestsPerSecond: 20,
 });
 
@@ -818,6 +854,10 @@ function assertAcceptedProfileRead(
   environment: CurrentSourceEnvironment,
   screenId: string,
 ): void {
+  if (screenId in BR72_MANAGER_LIST_SCREEN_BINDINGS) {
+    assertBr72ManagerListAccepted(environment, screenId);
+    return;
+  }
   if (environment === "paper") {
     assertN22PaperReadAccepted(environment, screenId);
     return;
@@ -837,6 +877,13 @@ function acceptedScreenBinding(
     readonly sourceMaximumRequestsPerSecond: number;
   };
 } {
+  if (screenId in BR72_MANAGER_LIST_SCREEN_BINDINGS) {
+    assertBr72ManagerListAccepted(environment, screenId);
+    return {
+      binding: BR72_MANAGER_LIST_SCREEN_BINDINGS[screenId as Br72ManagerListScreenId],
+      acceptance: BR72_MANAGER_LIST_ACCEPTANCE,
+    };
+  }
   if (environment === "paper") {
     return { binding: n22PaperScreenBinding(screenId), acceptance: N22_PAPER_READ_ACCEPTANCE };
   }
@@ -862,6 +909,43 @@ export function profileManagerV2Path(
   return managerV2Path(binding, "N23", sourceId, relation, query);
 }
 
+export function assertBr72ManagerListAccepted(
+  environment: CurrentSourceEnvironment,
+  screenId: string,
+): asserts screenId is Br72ManagerListScreenId {
+  if (
+    !BR72_MANAGER_LIST_ACCEPTANCE.environments.includes(
+      environment as (typeof BR72_MANAGER_LIST_ACCEPTANCE.environments)[number],
+    ) ||
+    !(screenId in BR72_MANAGER_LIST_SCREEN_BINDINGS)
+  ) {
+    throw new CurrentSourceProxyError("BR72_MANAGER_LIST_NOT_ACCEPTED", 404, {
+      classification: "SUPPORTED_BUT_NOT_ACTIVATED",
+      availability: "UNAVAILABLE",
+      reason_code: "BR72_SCREEN_OR_PROFILE_OUTSIDE_RELEASE",
+      requested_environment: environment,
+      requested_screen_id: screenId,
+    });
+  }
+}
+
+export function managerListManagerV2Path(
+  environment: CurrentSourceEnvironment,
+  screenId: string,
+  sourceId?: string,
+  relation?: string,
+  query: CurrentSourcePageQuery = {},
+): string {
+  assertBr72ManagerListAccepted(environment, screenId);
+  return managerV2Path(
+    BR72_MANAGER_LIST_SCREEN_BINDINGS[screenId],
+    "BR72",
+    sourceId,
+    relation,
+    query,
+  );
+}
+
 function acceptedManagerV2Path(
   environment: CurrentSourceEnvironment,
   screenId: string,
@@ -869,6 +953,10 @@ function acceptedManagerV2Path(
   relation?: string,
   query: CurrentSourcePageQuery = {},
 ): string {
+  if (screenId in BR72_MANAGER_LIST_SCREEN_BINDINGS) {
+    assertBr72ManagerListAccepted(environment, screenId);
+    return managerListManagerV2Path(environment, screenId, sourceId, relation, query);
+  }
   if (environment === "paper") {
     return paperManagerV2Path(screenId, sourceId, relation, query);
   }
@@ -892,7 +980,7 @@ export function paperManagerV2Path(
 
 function managerV2Path(
   binding: ScreenBinding,
-  errorPrefix: "N22_PAPER" | "N23",
+  errorPrefix: "N22_PAPER" | "N23" | "BR72",
   sourceId?: string,
   relation?: string,
   query: CurrentSourcePageQuery = {},
@@ -915,7 +1003,9 @@ function managerV2Path(
       availability: "UNAVAILABLE",
       reason_code: errorPrefix === "N22_PAPER"
         ? "RELATION_OUTSIDE_N22_PAPER_SET"
-        : "RELATION_OUTSIDE_N23_PROFILE_SET",
+        : errorPrefix === "BR72"
+          ? "RELATION_OUTSIDE_BR72_MANAGER_LIST_SET"
+          : "RELATION_OUTSIDE_N23_PROFILE_SET",
     });
   }
   if (
