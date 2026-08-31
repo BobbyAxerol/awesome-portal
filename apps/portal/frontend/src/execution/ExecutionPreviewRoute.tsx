@@ -59,10 +59,10 @@ const GOVERNANCE_SCREENS = new Set([
  * shadow says shadow, source says source (EL-V2-09: the profile never lies).
  */
 export const PROFILE_BANNER: Record<string, { title: string; line: string; detail: string }> = {
-  fixture: {
-    title: "FIXTURE PREVIEW",
-    line: "No live connection · Actions are simulated",
-    detail: "Local fixture data only. No connection to AWS-HK, the Trading System, any broker or any realtime stream. Every action is simulated inside the browser and nothing is sent anywhere.",
+  http: {
+    title: "PORTAL READS · SAME-ORIGIN",
+    line: "Every read is a same-origin Portal BFF call · commands go through the relay",
+    detail: "The browser calls only the Portal's declared /api/v1/execution routes on this origin. It never contacts AWS-HK, the Trading System, any broker or any database directly; screens whose contract is not published render a typed unavailable state instead of substitute data.",
   },
   shadow: {
     title: "SHADOW PROJECTION",
@@ -75,8 +75,8 @@ export const PROFILE_BANNER: Record<string, { title: string; line: string; detai
     detail: "Values are read from the promoted projection served by the Portal boundary (SGP). The browser never contacts AWS-HK or the Trading System; command relay stays disabled unless a later authority contract enables it.",
   },
 };
-export function PreviewBanner({ profile, screenId }: { profile: string | null | undefined; screenId?: string }) {
-  const key = profile && PROFILE_BANNER[profile] ? profile : profile ? "unknown" : "fixture";
+export function PreviewBanner({ profile, screenId, registryWord }: { profile: string | null | undefined; screenId?: string; registryWord?: string | null }) {
+  const key = profile && PROFILE_BANNER[profile] ? profile : profile ? "unknown" : "http";
   const copy = PROFILE_BANNER[key] ?? {
     title: `PROFILE ${String(profile).toUpperCase()}`,
     line: "Unrecognised delivery profile — treated as not live",
@@ -97,6 +97,9 @@ export function PreviewBanner({ profile, screenId }: { profile: string | null | 
         <dl className="exec-preview-inspector-list">
           <div><dt>screen</dt><dd><code data-preview-screen-id>{screenId ?? "—"}</code></dd></div>
           <div><dt>delivery</dt><dd><code>{key}</code></dd></div>
+          {registryWord && registryWord !== key ? (
+            <div><dt>registry says</dt><dd><code>{registryWord}</code> — stale metadata, amendment is codex&apos;s</dd></div>
+          ) : null}
           <div><dt>build flag</dt><dd><code>VITE_EXECUTION_PREVIEW_ENABLED=true</code></dd></div>
         </dl>
       </details>
@@ -115,7 +118,12 @@ function PreviewFrame({ screenId, profile, children }: { screenId: string; profi
           rule §3.8) at production-warning volume; the detail it carried now
           lives in the disclosure so the default reading cost is one glance.
           `screenId` moved into the inspector in EL-V2-03. */}
-      <PreviewBanner profile={profile} screenId={screenId} />
+      {/* N29-FE-01: the transport is same-origin HTTP unconditionally, so the
+          banner states that truth. The registry still publishes
+          delivery_profile "fixture" for these screens — stale metadata whose
+          amendment is codex's (consolidated request); shown in the inspector
+          as drift, never used to pick a data source. */}
+      <PreviewBanner profile="http" screenId={screenId} registryWord={profile} />
       {children}
     </ExecutionSurface>
   );
