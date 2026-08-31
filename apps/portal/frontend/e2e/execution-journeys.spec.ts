@@ -1,100 +1,76 @@
 /**
- * EL-V2-03 — the six §8.2 journeys, and the structural rule behind them.
+ * EL-V2-03 — the §8.2 journeys under the N29-FE-01 product truth, and the
+ * structural rule behind them.
  *
- * Runs on the preview build (chromium-preview project). Every test here is a
- * real product route with the real shell; nothing is a fixture crop.
+ * Runs on the preview build (chromium-preview project) against the controlled
+ * same-origin BFF double (`bffDouble.ts`): every screen consumes the declared
+ * routes through the product HTTP client. Screens whose published payload is
+ * a sparse envelope are asserted AS envelopes — the reviewed rich
+ * compositions live in the fixture lab, not on these routes.
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
+import { stubExecutionBff } from "./bffDouble";
 import { freezeClock, settle, stubPortalApi, usePreferences } from "./fixtures";
 
 async function open(page: Page, route: string) {
   await freezeClock(page);
   await usePreferences(page, "research");
   await stubPortalApi(page, "healthy");
+  await stubExecutionBff(page);
   await page.goto(route);
   await settle(page);
 }
 
-test.describe("§8.2 journeys", () => {
-  test("1 · Paper: every tab → request exit → Paper Exit Review → back with context", async ({ page }) => {
+test.describe("§8.2 journeys — product truth", () => {
+  test("1 · Paper workbench renders the published envelope: masthead facts, branch tables, capability reasons", async ({ page }) => {
     await open(page, "/deployments/paper/dep_94");
-    for (const tab of ["Fills", "Positions", "Sessions", "Accounting", "Evidence", "Overview", "Orders"]) {
-      await page.getByRole("tab", { name: tab }).click();
-      await expect(page.getByRole("tab", { name: tab })).toHaveAttribute("aria-selected", "true");
-      // The default tab is represented by the ABSENCE of the param —
-      // a clean URL for the clean state; every other tab is mirrored.
-      // The default is Orders: the hi-fi's journal strip opens there, and
-      // Overview's content (runtime health) moved onto the page itself, so
-      // landing on it would open the workbench on a pointer.
-      if (tab === "Orders") await expect(page).not.toHaveURL(/tab=/);
-      else await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
-    }
-    await page.getByRole("tab", { name: "Fills" }).click();
-    await page.getByRole("button", { name: /Request Paper Exit Review/ }).click();
-    await expect(page).toHaveURL(/\/governance\/exit-reviews\/EX-771/);
-    await expect(page.locator("[data-execution-preview]")).toBeAttached();
-    await page.goBack();
-    await expect(page).toHaveURL(/\/deployments\/paper\/dep_94\?tab=Fills/);
-    await expect(page.getByRole("tab", { name: "Fills" })).toHaveAttribute("aria-selected", "true");
+    const screen = page.getByLabel("Paper Workbench · dep_94");
+    await expect(screen.getByRole("heading", { level: 1 })).toContainText("Paper Workbench · dep_94");
+    await expect(screen.getByText("READY", { exact: true })).toBeVisible();
+    await expect(screen.getByText(/freshness FRESH/)).toBeVisible();
+    // Every published array renders verbatim; the empty ones state themselves.
+    await expect(screen.getByLabel("deployments")).toBeVisible();
+    await expect(screen.getByText(/an empty set is a fact, not a failure/).first()).toBeVisible();
+    // The branch that did not answer is a named reason, not a blank frame.
+    await expect(screen.getByText("market.candles")).toBeVisible();
   });
 
-  test("2 · Alpha 360: change venue → KPIs and tables follow → open deployment and account", async ({ page }) => {
+  test("2 · Alpha 360 is the analytics envelope: an empty funnel is a fact, quality states its gap", async ({ page }) => {
     await open(page, "/deployments/alphas/av_2041");
-    const rowsBefore = await page.locator("table tbody tr").count();
-    await page.getByLabel(/Venue/).selectOption("BINANCE");
-    await expect(page).toHaveURL(/venue=BINANCE/);
-    expect(await page.locator("table tbody tr").count()).toBeLessThan(rowsBefore);
-    await expect(page.getByText(/not published for scope BINANCE/).first()).toBeVisible();
-    await page.getByRole("button", { name: "dep_88" }).click();
-    await expect(page).toHaveURL(/\/deployments\/live\/dep_88\/canary/);
-    await page.goBack();
-    await expect(page).toHaveURL(/venue=BINANCE/);
-    await page.getByRole("button", { name: /acct-canary-grid/ }).first().click();
-    await expect(page).toHaveURL(/\/deployments\/accounts\/acct-canary-grid/);
+    const screen = page.getByLabel("Alpha 360 · av_2041");
+    // The published funnel is zero orders — rendered as the number it is.
+    await expect(screen.getByRole("term").filter({ hasText: "total orders" })).toBeVisible();
+    await expect(screen.getByText(/EXECUTION · manager-query-analytics\.v1/)).toBeVisible();
+    // No venue scope, no insight tiles: those compositions are not published.
+    expect(await page.getByLabel(/Venue/).count()).toBe(0);
   });
 
-  test("3 · Portfolio 360: switch tabs → select correlation lens → open Alpha 360", async ({ page }) => {
+  test("3 · Portfolio 360 consumes the same analytics contract for its subject", async ({ page }) => {
     await open(page, "/deployments/portfolios/PF-CRYPTO");
-    await page.getByRole("tab", { name: "Structure & Correlation" }).click();
-    await expect(page).toHaveURL(/tab=Structure/);
-    const lens = page.getByLabel(/lens/i).first();
-    if (await lens.count()) {
-      await lens.selectOption({ index: 1 });
-    }
-    // Holdings live on Structure & Correlation (hi-fi 3a); the alpha link is there.
-    await page.getByRole("button", { name: "Grid v2.1" }).first().click();
-    await expect(page).toHaveURL(/\/deployments\/alphas\/Grid v2\.1|\/deployments\/alphas\//);
+    const screen = page.getByLabel("Portfolio 360 · PF-CRYPTO");
+    await expect(screen.getByRole("heading", { level: 1 })).toContainText("Portfolio 360 · PF-CRYPTO");
+    await expect(screen.getByRole("term").filter({ hasText: "total orders" })).toBeVisible();
   });
 
-  test("4 · Full Blotter: change filter → reset cross-filter → expand row funnel → load older", async ({ page }) => {
+  test("4 · Full Blotter renders the published order rows and nothing it was not given", async ({ page }) => {
     await open(page, "/deployments/blotter");
-    // Only the unfiltered query carries a cursor (a filter change voids it —
-    // blotter.fixtures documents this), so paging is exercised on All first.
-    await page.getByRole("button", { name: /^All/ }).first().click();
-    await page.getByRole("button", { name: /load older/i }).first().click();
-    await expect(page.locator(".exec-sim-live")).toContainText("no older rows exist");
-    await page.getByRole("button", { name: /partial/i }).first().click();
-    await expect(page).toHaveURL(/filter=PARTIAL/);
-    await page.getByRole("button", { name: /Reset the cross-filter/ }).click();
-    await expect(page.locator(".exec-sim-live")).toContainText("reset cross-filter");
-    // A clickable row IS the expand control (KeysetTable renders it as a
-    // button-role row with Enter/Space), so click the row itself.
-    const expand = page.locator("tbody tr[role='button']").first();
-    await expand.click();
-    await expect(page.locator(".exec-funnel-card").first()).toBeVisible();
+    const screen = page.getByLabel("Full Blotter");
+    await expect(screen.getByText("READY", { exact: true })).toBeVisible();
+    // The one published order row appears in its branch table, unrenamed.
+    await expect(screen.getByLabel("orders")).toBeVisible();
+    await expect(screen.getByText("blotter.exact-query")).toBeVisible();
   });
 
-  test("5 · Account 360: dry-run and sync simulate visibly", async ({ page }) => {
+  test("5 · Account 360 is typed unavailable with the N28 reason — and its link out works", async ({ page }) => {
     await open(page, "/deployments/accounts/acct-live-grid-v21");
-    await page.getByRole("button", { name: /Sync now/ }).click();
-    await expect(page.locator(".exec-sim-live")).toContainText("Simulated · sync now");
-    await page.getByRole("button", { name: /Dry-run reconcile/ }).click();
-    await expect(page.locator(".exec-sim-live")).toContainText("0 findings");
+    await expect(page.getByText(/N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED/)).toBeVisible();
+    await page.getByLabel(/Account \/ Broker 360/).getByRole("link", { name: "Operations Queue" }).click();
+    await expect(page).toHaveURL(/\/execution\/operations/);
   });
 
-  test("6 · Queue → Incident → Action Drawer → Verify → back to Queue", async ({ page }) => {
+  test("6 · Queue → Incident → Action Drawer → back to Queue", async ({ page }) => {
     // The Queue leg: selecting a row makes the triage rail follow it, and the
     // hop to its incident is rendered as UNAVAILABLE with the reason — the
     // operation contract publishes no incident reference (BR-EX-33). A guessed
@@ -115,10 +91,12 @@ test.describe("§8.2 journeys", () => {
     // Incident → its operation row → the Action Drawer, carrying the operation.
     await page.locator(".exec-linkbtn", { hasText: /op_/ }).first().click();
     await expect(page).toHaveURL(/\/administration\/actions\?operation=op_/);
-    await expect(page.locator("[data-execution-preview]")).toBeAttached();
+    // The drawer answers the deep link honestly and lists the published N27
+    // tasks — nothing is CONNECTED, so nothing offers a run control.
+    await expect(page.getByText(/no operation lookup yet/)).toBeVisible();
+    await expect(page.locator(".exec-cli-row").first()).toBeVisible();
+    await expect(page.getByText(/0 connected/)).toBeVisible();
 
-    // Verify is the drawer's own PLAN/APPLY/VERIFY surface (exercised by its
-    // unit and fixture tests); the journey proves the hand-off and the return.
     await page.goBack();
     await expect(page).toHaveURL(/\/execution\/operations\/incidents\//);
     await page.goBack();
@@ -311,22 +289,11 @@ test("structural: no enabled control on any preview route is a no-op", async ({ 
 test.describe("EL-V2-04 · Paper reference slice", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("Paper: masthead, Next rail, CTA and chart tile sit above the fold at 1440×900", async ({ page }) => {
+  test("Paper: the envelope's verdict is on the first screen at 1440×900", async ({ page }) => {
     await open(page, "/deployments/paper/dep_94");
-    const within = async (locator: ReturnType<typeof page.locator>) => {
-      const box = await locator.first().boundingBox();
-      expect(box, await locator.first().evaluate((n) => n.outerHTML.slice(0, 80))).not.toBeNull();
-      expect(box!.y + box!.height, "bottom edge inside 900px fold").toBeLessThanOrEqual(900);
-    };
-    await within(page.getByRole("heading", { name: /Carry v3\.2|Grid v2\.1|dep_94/ }).or(page.locator("h1")));
-    // What carries "what's next" moved, and the requirement did not: the hi-fi
-    // (WF 1c) puts the observation gate and its CTA in a panel beside the
-    // chart, which is where a reader already is. The context rail still
-    // publishes the same sentence — it now sits under the page as a footer, so
-    // the fold assertion follows the gate rather than the rail's copy of it.
-    await within(page.getByLabel("Observation gate"));
-    await within(page.getByRole("button", { name: /Request Paper Exit Review/ }));
-    await within(page.getByLabel("Equity vs approved research evidence"));
+    const head = await page.locator(".exec-envelope-head").first().boundingBox();
+    expect(head).not.toBeNull();
+    expect(head!.y + head!.height, "masthead inside the 900px fold").toBeLessThanOrEqual(900);
     // Document never scrolls sideways at this width.
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
@@ -344,24 +311,10 @@ test.describe("EL-V2-04 · Paper reference slice", () => {
     expect(approve!.y + approve!.height).toBeLessThanOrEqual(900);
   });
 
-  test("Paper → request exit → decide → back keeps the tab context", async ({ page }) => {
-    await open(page, "/deployments/paper/dep_94");
-    await page.getByRole("tab", { name: "Evidence" }).click();
-    await expect(page).toHaveURL(/tab=Evidence/);
-    await expect(page.getByText(/Drift vs approved evidence/)).toBeVisible();
-    const cta = page.getByRole("button", { name: /Request Paper Exit Review/ });
-    if (await cta.isEnabled()) {
-      await cta.click();
-      await expect(page).toHaveURL(/\/governance\/exit-reviews\/EX-771/);
-      // Hi-fi 4b: conditions sit on the page, not behind a tab.
-      await expect(page.getByText(/Conditions & recommendation/i).first()).toBeVisible();
-      await page.goBack();
-      await expect(page).toHaveURL(/\/deployments\/paper\/dep_94\?tab=Evidence/);
-    } else {
-      // Unmet gate: the CTA names what blocks it and the Blockers rail lists each criterion.
-      await expect(cta).toHaveAttribute("title", /Blocked — \d+ criteri/);
-      await expect(page.getByText(/18 more days of observation/).first()).toBeVisible();
-    }
+  test("Exit Review still carries conditions and the recommendation on one page", async ({ page }) => {
+    await open(page, "/governance/exit-reviews/EX-771");
+    await expect(page.getByText(/Conditions & recommendation/i).first()).toBeVisible();
+    await expect(page.getByRole("region", { name: /Paper exit decision/ })).toBeVisible();
   });
 
   for (const [name, route] of [
@@ -444,7 +397,6 @@ test.describe("EL-V2-06 · stage workbenches", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   const STAGES = [
-    ["paper-vnm", "/deployments/paper/dep_vnm/vn-market", 0],
     ["sandbox-dep_77", "/deployments/sandbox/dep_77", 0],
     ["canary-dep_88", "/deployments/live/dep_88/canary", 1],
     ["live-dep_live", "/deployments/live/dep_live", 1],
@@ -500,12 +452,17 @@ test.describe("EL-V2-06 · stage workbenches", () => {
     await expect(page.getByText(/Scale-up is blocked|Scale-up is not blocked/)).toBeVisible();
   });
 
-  test("VNM: the session timeline draws ATO · continuous · break · ATC with a venue-time marker", async ({ page }) => {
+  test("VNM: the vn-market variant consumes its own declared route and states its venue branch", async ({ page }) => {
     await open(page, "/deployments/paper/dep_vnm/vn-market");
-    const blocks = page.locator(".exec-session-block");
-    expect(await blocks.count()).toBe(5);
-    await expect(page.locator(".exec-session-now")).toHaveCount(1);
-    await expect(page.locator(".exec-session-caption")).toContainText("VN MARKET");
+    const screen = page.getByLabel("Paper Workbench · dep_vnm · VN market");
+    await expect(screen.getByRole("heading", { level: 1 })).toContainText("VN market");
+    // venue.calendar is the branch this variant adds; it answers with a reason today.
+    await expect(screen.getByText("venue.calendar")).toBeVisible();
+  });
+
+  test("paper-vnm shell-visible baseline · 1440×900", async ({ page }) => {
+    await open(page, "/deployments/paper/dep_vnm/vn-market");
+    await expect(page).toHaveScreenshot("el-v2-06-paper-vnm.png", { fullPage: true, animations: "disabled" });
   });
 });
 
@@ -575,49 +532,30 @@ test.describe("EL-V2-07 · operations workflow", () => {
 test.describe("EL-V2-08 · analytical surfaces", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("Alpha 360: changing the venue scope changes every scoped panel", async ({ page }) => {
+  test("Alpha 360: the twelve analytics branches answer or say why not — no blank frame", async ({ page }) => {
     await open(page, "/deployments/alphas/av_2041");
-    const panels = page.locator("[data-scope-panel]");
-    await expect.poll(() => panels.count()).toBeGreaterThanOrEqual(4);
-    const before = await panels.evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
-    await page.getByLabel(/Venue/).selectOption("BINANCE");
-    await expect(page).toHaveURL(/venue=BINANCE/);
-    // The query string is committed before React finishes the route-state
-    // render. Wait for a scoped fact instead of reading the transient empty
-    // remount between those two events.
-    await expect(page.getByText(/not published for scope BINANCE/).first()).toBeVisible();
-    await expect.poll(() => panels.count()).toBe(before.length);
-    const after = await panels.evaluateAll((nodes) => nodes.map((n) => [n.getAttribute("data-scope-panel"), n.textContent]));
-    expect(after.length).toBe(before.length);
-    const changed = after.filter((a, i) => a[1] !== before[i][1]).length;
-    expect(changed).toBe(after.length);
-  });
-
-  test("Alpha 360: every insight tile is a chart or an explicit state — no blank frame", async ({ page }) => {
-    await open(page, "/deployments/alphas/av_2041?tab=Insight+Charts");
-    const tiles = page.locator(".exec-alpha-tiles > *");
-    expect(await tiles.count()).toBe(12);
-    for (let i = 0; i < 12; i += 1) {
-      const t = tiles.nth(i);
-      const ok = (await t.locator("canvas, .exec-state, .exec-chart-unavailable-body").count()) > 0;
-      expect(ok, `tile ${i + 1}`).toBe(true);
+    const caps = page.getByLabel("Alpha 360 · av_2041 analytics branches");
+    // Every branch row carries a state chip; nothing renders as an empty tile.
+    const rows = caps.locator("tbody tr");
+    await expect.poll(() => rows.count()).toBeGreaterThanOrEqual(1);
+    for (let i = 0; i < (await rows.count()); i += 1) {
+      await expect(rows.nth(i).locator("td").first()).not.toBeEmpty();
     }
   });
 
-  test("Blotter: footer totals per currency come from the contract fixture, unsummed and unrounded", async ({ page }) => {
+  test("Blotter: only published rows render — no totals are summed client-side", async ({ page }) => {
     await open(page, "/deployments/blotter");
-    const footer = page.getByLabel("Totals by currency");
-    await expect(footer).toContainText("125000.250000000000000001");
-    await expect(footer).toContainText("4875000.750000000000000001");
-    await expect(footer).toContainText("USDT");
+    const screen = page.getByLabel("Full Blotter");
+    // The contract publishes one order row; the screen shows exactly the
+    // published branches and never a client-computed aggregate.
+    await expect(screen.getByLabel("orders").locator("tbody tr")).toHaveCount(1);
+    await expect(screen.getByText(/no rows — the source published an empty/).first()).toBeVisible();
   });
 
-  test("Portfolio 360: heatmap cell click drills into the lens", async ({ page }) => {
-    await open(page, "/deployments/portfolios/PF-CRYPTO?tab=Structure+%26+Correlation");
-    const cell = page.locator(".exec-pf-matrix tbody tr").first().locator("td button").nth(1);
-    await cell.click();
-    await expect(page.locator('.exec-pf-matrix [data-lens="true"]').first()).toBeVisible();
-    await expect(page.locator(".exec-influence-wrap canvas")).toBeVisible();
+  test("Account 360 stays a typed refusal — no partial truth about money", async ({ page }) => {
+    await open(page, "/deployments/accounts/acct-live-grid-v21");
+    await expect(page.getByText(/typed unavailable rather than showing a partial truth about money|full exposure population is not published/i).first()).toBeVisible();
+    expect(await page.locator("table").count()).toBe(0);
   });
 
   for (const [name, route] of [

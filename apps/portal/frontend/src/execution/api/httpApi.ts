@@ -20,7 +20,7 @@ import {
   readOperation,
   readProblem,
 } from "../adapter";
-import { commandBlockedReason, governanceWriteBlocked, type DeliveryPolicy } from "../profile";
+import { governanceWriteBlocked, type DeliveryPolicy } from "../profile";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
 import {
   INSIGHT_BATCH_LIMIT,
@@ -54,6 +54,10 @@ import type {
   Result,
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
+import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
+import { readApprovalCreated, readConditionsPage } from "./rows";
+import { readLiveReview, readOperatorTasks, readProfileEnvelope, readQueryAnalytics } from "./profileRead";
+import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
@@ -166,9 +170,16 @@ export interface HttpApiOptions {
 }
 
 export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi {
-  /** R0 covers every read on this surface. */
+  /**
+   * N29-FE-01: reads never pre-block on registry metadata. The server is the
+   * enforcer — a refusal arrives as its own typed status and is rendered
+   * verbatim. The registry's stale delivery-policy bits (rev 4 still says
+   * `fixture`/false for these screens) are codex's amendment, not a reason
+   * for the client to fake a refusal the server never made. Same doctrine as
+   * `readGet` below; writes keep their own gate.
+   */
   function readBlocked(): string | null {
-    return commandBlockedReason(policy, "R0");
+    return null;
   }
 
   /**
@@ -178,6 +189,128 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
    * and the wrong half of that disagreement is a blind retry against a
    * record that has changed.
    */
+  /**
+   * N29 consumer — `POST /governance/approvals` (codex handoff 2026-08-31).
+   *
+   * The request key is the CALLER's: minted per submit intent, reused only to
+   * retry the same payload. The server replays a matching key, answers a
+   * changed key with 409, and rejects duplicate open alpha/run work naming
+   * the existing approval — that name is surfaced, not buried in a toast.
+   * The artifact digest is never sent: the server pins it from its own run
+   * registry, which is the whole point of the guard.
+   */
+  const createApprovalRequest = async (input: ApprovalCreateInput): Promise<ApprovalCreateOutcome> => {
+    // A create is a GOVERNANCE write, not a trading command: the policy bit
+    // that gates it is governance_write, same as decide().
+    const blocked = governanceWriteBlocked(policy);
+    if (blocked) return { kind: "failed", status: "unavailable", reason: blocked };
+    let response: Response;
+    try {
+      response = await post("/governance/approvals", {
+        schema_version: "governance.approval-create-request.v1",
+        workspace_id: "primary",
+        request_key: input.requestKey,
+        gate: "R1",
+        alpha_id: input.alphaId,
+        evidence_run_id: input.evidenceRunId,
+        methodology_claim_id: input.methodologyClaimId,
+        summary: input.summary,
+      }, signal);
+    } catch {
+      return {
+        kind: "failed",
+        status: "unavailable",
+        reason: "The request never reached the Portal — network failure. Retry sends the SAME request key, so a submit that did land is replayed, not duplicated.",
+        offline: true,
+      };
+    }
+    if (response.ok) {
+      let body: unknown = null;
+      try { body = await response.json(); } catch { /* handled below */ }
+      const outcome = readApprovalCreated(body);
+      return outcome ?? { kind: "failed", status: "unavailable", reason: "The create response could not be read." };
+    }
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* status alone still types the failure */ }
+    const problemBody = readProblem(body, response.status);
+    if (response.status === 409 && /DUPLICATE/i.test(problemBody.code)) {
+      const match = /\b(apr_[A-Za-z0-9]+|AP-\d+)\b/.exec(problemBody.message);
+      return { kind: "duplicate", existingApprovalId: match ? match[1] : null, reason: problemBody.message };
+    }
+    return {
+      kind: "failed",
+      status: response.status === 409 ? "unavailable" : panelStatusForHttp(response.status),
+      reason: `${problemBody.code}: ${problemBody.message}`,
+    };
+  };
+
+  /** N29 consumer — `GET /governance/waivers`: exact counts, both cursors. */
+  /**
+   * N29-FE-01: one shape for every same-origin GET consumer — fetch, typed
+   * problem on !ok, reader on the body, unavailable when the body cannot be
+   * read. No client-side policy pre-block: the server is the enforcer and a
+   * refusal arrives as its own typed status (the registry's stale
+   * delivery-policy metadata is codex's amendment, not a reason to fake).
+   */
+  const readGet = async <T>(path: string, reader: (raw: unknown) => T | null, what: string): Promise<Result<T>> => {
+    let response: Response;
+    try {
+      response = await get(path, signal);
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* reader fails closed below */ }
+    const value = reader(body);
+    return value !== null && value !== undefined
+      ? { ok: true as const, value }
+      : unavailable(`${what} response could not be read.`);
+  };
+
+  const getCommandCenterSnapshot = () =>
+    readGet("/command-center", (raw) => raw as unknown, "The command-center snapshot");
+  const getScreenProfile = (screenName: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/screens/${screenName}`, readProfileEnvelope, `The ${screenName} overview`);
+  const getPaperWorkbenchProfile = (deploymentId: string, variant: "paper" | "vnm" = "paper"): Promise<Result<ProfileEnvelope>> =>
+    readGet(
+      `/screens/paper/${encodeURIComponent(deploymentId)}${variant === "vnm" ? "/vn-market" : ""}`,
+      readProfileEnvelope,
+      "The paper workbench",
+    );
+  const getQueryAnalytics = (subject: "alphas" | "portfolios", subjectId: string): Promise<Result<QueryAnalytics>> =>
+    readGet(`/${subject}/${encodeURIComponent(subjectId)}/query-analytics`, readQueryAnalytics, "The query-analytics envelope");
+  const getOperatorTasks = (): Promise<Result<OperatorTaskCatalogue>> =>
+    readGet("/commands/tasks", readOperatorTasks, "The operator task catalogue");
+  const getLiveReview = (approvalId: string): Promise<Result<LiveReviewPayload>> =>
+    readGet(`/governance/approvals/${encodeURIComponent(approvalId)}/live`, readLiveReview, "The live review");
+  const getAccountBroker360 = (accountId: string): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/screens/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account 360");
+
+  const getWaivers = async (query: WaiverQuery = {}): Promise<Result<ConditionsPage>> => {
+    const blocked = readBlocked();
+    if (blocked) return unavailable(blocked);
+    const params = new URLSearchParams();
+    if (query.state) params.set("state", query.state);
+    if (query.after) params.set("after", query.after);
+    if (query.before) params.set("before", query.before);
+    if (query.limit !== undefined) params.set("limit", String(query.limit));
+    const suffix = params.size > 0 ? `?${params.toString()}` : "";
+    let response: Response;
+    try {
+      response = await get(`/governance/waivers${suffix}`, signal);
+    } catch {
+      return unavailable("The register never reached the Portal — network failure.");
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* falls through to reader */ }
+    const page = readConditionsPage(body);
+    return page
+      ? { ok: true as const, value: page }
+      : unavailable("The conditions-register response could not be read.");
+  };
+
   const triageMutation = async (
     path: string,
     body: unknown,
@@ -201,6 +334,15 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
   };
 
   return {
+    createApprovalRequest,
+    getWaivers,
+    getCommandCenterSnapshot,
+    getScreenProfile,
+    getPaperWorkbenchProfile,
+    getQueryAnalytics,
+    getOperatorTasks,
+    getLiveReview,
+    getAccountBroker360,
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);

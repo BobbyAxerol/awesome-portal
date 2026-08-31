@@ -20,7 +20,7 @@ import {
   readAnalyticsEnvelope,
   readBindingExposure,
 } from "./analytics";
-import { ExposureHeadroomContainer } from "./screens/containers";
+import { ExposureHeadroomContainer } from "./lab/insightContainers";
 import { createFixtureApi } from "./api/fixtureApi";
 import type { ExecutionApi } from "./api/ports";
 

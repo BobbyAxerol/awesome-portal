@@ -52,7 +52,20 @@ for screen_id in [
     row = next(line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line)
     assert 'status: "AVAILABLE"' in row and 'deliveryPhase: "N23"' in row
 request_ids = set(re.findall(r'BR-EX-\d{2}', catalogue))
-assert request_ids == {f"BR-EX-{number}" for number in range(41, 72)}
+assert {request_id for request_id in request_ids if 41 <= int(request_id[-2:]) <= 71} == {
+    f"BR-EX-{number}" for number in range(41, 72)
+}
+expected_base_mapping = {
+    "EXECUTION_COMMAND_CENTER_SCREEN": ["BR-EX-42", "BR-EX-43", "BR-EX-44", "BR-EX-45"],
+    "EXECUTION_OPERATIONS_QUEUE_SCREEN": ["BR-EX-47"],
+    "EXECUTION_INCIDENT_DETAIL_SCREEN": ["BR-EX-46"],
+    "EXECUTION_APPROVAL_INBOX_SCREEN": ["BR-EX-35"],
+}
+for screen_id, expected in expected_base_mapping.items():
+    row = next(line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line)
+    actual = re.search(r'requestIds: \[([^]]*)\]', row)
+    assert actual is not None
+    assert re.findall(r'BR-EX-\d{2}', actual.group(1)) == expected
 for token in ["BR-EX-55", "BR-EX-58", "portal.entity-names", "portal.blocker-catalog"]:
     assert token in catalogue
 for forbidden in ["information_schema", "pg_catalog", "postgres://", "redis://"]:

@@ -1475,8 +1475,10 @@ durable run/attempt events. Detailed evidence:
 - R1 approval creation and the stateful conditions/waivers register close the
   final Portal-owned product gaps with server-pinned evidence, serializable
   idempotency, exact bounded queries and Command Center integration.
-- Internal technical debt is zero. Product release remains blocked only by
-  Claude's fixture-only frontend transport and protected-main signed image
-  evidence; neither gate authorizes runtime or stable mutation.
+- Internal technical debt is zero. Claude's same-origin product consumer,
+  product-boundary scan and warning-clean browser evidence close `N29-FE-01`.
+  Product release remains blocked only by the admitted consolidated
+  `N29-BE-72` backend delivery and protected-main signed image evidence
+  (`N29-REL-01`); neither gate authorizes runtime or stable mutation.
 - Detail:
   [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).

@@ -11,8 +11,20 @@
  * the ones in the mapping, not the ones in `fetch`. A fixture that returned
  * finished `ApprovalRow` objects would test nothing.
  */
+import CC_SNAPSHOT_BUSY from "../../../../../../packages/contracts/fixtures/execution-command-center.busy.valid.json";
+import PAPER_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-paper-overview.ready.valid.json";
+import SANDBOX_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-sandbox-overview.ready.valid.json";
+import LIVE_OVERVIEW_EMPTY from "../../../../../../packages/contracts/fixtures/execution-live-overview.empty.valid.json";
+import FULL_BLOTTER_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-full-blotter.partial.valid.json";
+import PAPER_WORKBENCH_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-paper-workbench.partial.valid.json";
+import PAPER_WORKBENCH_VNM_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-paper-workbench-vnm.partial.valid.json";
+import QUERY_ANALYTICS_EMPTY from "../../../../../../packages/contracts/fixtures/execution-query-analytics.empty.valid.json";
+import COMMAND_TASKS from "../../../../../../packages/contracts/fixtures/execution-command-tasks.valid.json";
 import { readKeysetPage } from "../adapter";
-import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail , readDecidedRow } from "./rows";
+import { APPROVAL_ROWS, CONDITION_FIXTURES, EXIT_DETAIL, R1_DETAIL, R2_DETAIL, matchesView } from "./fixtureData";
+import { readLiveReview, readOperatorTasks, readProfileEnvelope, readQueryAnalytics } from "./profileRead";
+import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
+import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail, readDecidedRow, readApprovalCreated, readConditionsPage } from "./rows";
 import {
   readAnalyticsEnvelope,
   readBindingExposure,
@@ -56,6 +68,10 @@ import type {
   InboxResult,
   OperationSnapshot,
   Result,
+  ApprovalCreateInput,
+  ApprovalCreateOutcome,
+  ConditionsPage,
+  WaiverQuery,
 } from "./ports";
 import { unavailable } from "./ports";
 import type { CapitalPreviewInput, InsightBatchInput, DecisionPlan } from "./ports";
@@ -71,77 +87,6 @@ import type { CapitalPreviewInput, InsightBatchInput, DecisionPlan } from "./por
  *
  * AP-259 and AP-341 belong in Recently decided, which is where the hi-fi puts
  * them. */
-const APPROVAL_ROWS: Record<string, unknown>[] = [
-  {
-    approval_id: "AP-352",
-    gate: "R2",
-    subject: "Carry v3.2 → PF-MAIN",
-    target: "sandbox · OKX TESTNET",
-    blocker_count: 1,
-    blocker_summary: "broker sync stale",
-    sla: { age_minutes: 1560, budget_minutes: 1440, due_at: "2026-08-21T09:00:00Z" },
-    quorum_met: 0,
-    quorum_required: 2,
-    inert: null,
-    needs_you: true,
-  },
-  {
-    approval_id: "AP-201",
-    gate: "R1",
-    subject: "RSI v1.7 · RC-41",
-    target: "research",
-    blocker_count: 0,
-    blocker_summary: "none",
-    sla: { age_minutes: 120, budget_minutes: 1440 },
-    quorum_met: 1,
-    quorum_required: 2,
-    inert: null,
-    needs_you: true,
-  },
-  {
-    approval_id: "EX-771",
-    gate: "PAPER_EXIT",
-    subject: "Grid v2.1 · dep_94",
-    target: "→ sandbox · DERIBIT",
-    blocker_count: 0,
-    blocker_summary: "observation gate met",
-    sla: { age_minutes: 240, budget_minutes: 2880 },
-    quorum_met: 0,
-    quorum_required: 1,
-    inert: null,
-    needs_you: true,
-  },
-  {
-    approval_id: "AP-360",
-    gate: "R1",
-    subject: "MeanRev v0.3 · RC-52",
-    target: "research",
-    blocker_count: 2,
-    blocker_summary: "audit replay failed",
-    sla: { age_minutes: 360, budget_minutes: 1440 },
-    quorum_met: 0,
-    quorum_required: 2,
-    // Blocked before review: the request itself is not decidable yet, which is
-    // a different reason to be inert than "not you".
-    inert: "BLOCKED",
-    needs_you: false,
-  },
-  {
-    approval_id: "AP-311",
-    gate: "LIVE_GATE",
-    subject: "Grid v2.1 → BINANCE",
-    target: "live · dual approval",
-    blocker_count: 0,
-    blocker_summary: "none",
-    sla: { age_minutes: 1440, budget_minutes: 4320 },
-    quorum_met: 1,
-    quorum_required: 2,
-    // The separation-of-duty row. Dimmed and still counted, because its
-    // visibility is the proof that separation of duties is working.
-    inert: "SELF",
-    needs_you: false,
-  },
-];
 
 /**
  * Recently decided — `governance.approval-history.v1` rows (the canonical
@@ -181,190 +126,10 @@ const DECIDED_ROWS: Record<string, unknown>[] = [
  * under `data.approval`, the passport is `evidence_manifest.entries[]`, the
  * locks sit under `eligibility`, and the decision in force is the last entry of
  * `decisions[]`. */
-const R1_DETAIL: Record<string, unknown> = {
-  approval: {
-    approval_id: "AP-201",
-    subject_label: "RSI v1.7",
-    release_candidate: "RC-41",
-    quorum_met: 1,
-    quorum_required: 2,
-    policy_version: "approval.v3",
-    creator: "Minh",
-    expected_version: "v7",
-    sla: { age_minutes: 120, budget_minutes: 1440 },
-  },
-  actor: "Lan",
-  eligibility: {
-    can_approve: true,
-    can_approve_with_condition: true,
-    can_deny: true,
-    can_request_changes: true,
-    locks: [],
-  },
-  decisions: [],
-  evidence_manifest: {
-    entries: [
-      { label: "alpha version", value: "av_2041", note: "· supersedes av_1988", verification: "✓ verified" },
-      { label: "artifact digest", value: "sha256:9f3c1a…e2", verification: "✓ verified" },
-      { label: "entrypoint", value: "rsi_pkg.strategy:RsiAlpha" },
-      { label: "final audit run", value: "run_5512", note: "/ attempt 2 · replay", verification: "✓ reproduced" },
-      { label: "engine", value: "quantbt 1.0.8 · image sha256:77bd…a1", verification: "✓ verified" },
-      { label: "datasets", value: "3 snapshots · universe univ_88", verification: "PASS" },
-    ],
-  },
-  checklist: [
-    { label: "exact engine / data / version pinned by digest", outcome: "pass" },
-    { label: "final audit replay reproducible (checksum match)", outcome: "pass" },
-    { label: "outer OOS policy satisfied — holdout untouched by selection", outcome: "pass" },
-    { label: "parameter stability ≥ threshold across folds", outcome: "pass" },
-    { label: "execution assumptions declared (fee/slippage/latency)", outcome: "pass" },
-    {
-      label: "capacity evidence limited — volume data covers top-3 symbols only",
-      outcome: "watch",
-      suggestion: "suggested condition below",
-    },
-  ],
-};
 
 /* Wire-shaped, per master plan §10.3. Every capital row names its currency:
  * a strip that implies one number is wrong the moment a portfolio holds two. */
-const R2_DETAIL: Record<string, unknown> = {
-  approval: {
-    // §3 names the screen's data: AP-352 Carry v3.2 → PF-MAIN. The cast puts
-    // that approval on dep_77, OKX TESTNET, sandbox — not on the BINANCE paper
-    // deployment, whose R2 is AP-207. And Carry v3.2's R1 is AP-101; the
-    // AP-201 an earlier fixture used belongs to RSI, a different alpha.
-    approval_id: "AP-352",
-    // BR-EX-23, delivered: the review row names what the capital preview is
-    // computed against, so the screen no longer substitutes a fixture literal.
-    portfolio_id: "PF-MAIN",
-    currency: "USDT",
-    requested_amount: "50.000000000000000001",
-    subject_label: "Carry v3.2 → PF-MAIN · Sandbox · OKX TESTNET",
-    deployment_candidate: "DC-91",
-    release_candidate: "RC-41",
-    artifact_digest: "sha256:9f3c1a…e2",
-    policy_version: "approval.v3",
-    plan_author: "Stan",
-    quorum_met: 0,
-    quorum_required: 2,
-    expected_version: "v3",
-    sla: { age_minutes: 960, budget_minutes: 1440 },
-  },
-  actor: "Lan",
-  r1_reference: {
-    approval_id: "AP-101",
-    state: "APPROVED",
-    href: "/governance/approvals/AP-101/r1",
-    expiry: "2026-11-01",
-    digest: "sha256:c81f2d4a…7e",
-    decided_by: "Minh",
-    decided_at: "2026-07-30",
-  },
-  eligibility: { can_approve: true, can_approve_with_condition: true, can_deny: true, can_request_changes: true, locks: [] },
-  grant_name: "paper_activation_authorization",
-  readiness: [
-    {
-      title: "Account & risk plan",
-      entries: [
-        { label: "account (new)", value: "acct-sbx-carry-okx", revision: "account policy rev 7" },
-        { label: "margin", value: "MARGIN · CROSS · 2x · settle USDT", revision: "account policy rev 7" },
-        { label: "risk profile", value: "max order 5,000 · DD 8% · daily loss 3%", revision: "rev 12" },
-        { label: "matcher config", value: "taker 4.0bp · latency 120ms", revision: "rev 3" },
-      ],
-    },
-  ],
-  capital: [
-    { label: "allocated capital", currency: "USDT", before: "0.00", after: "50,000.00" },
-    { label: "max capital", currency: "USDT", before: "0.00", after: "100,000.00" },
-    { label: "portfolio weight", currency: "%", before: "0.0", after: "12.0" },
-    { label: "concentration top-3", currency: "%", before: "44.0", after: "46.0", note: "within policy ceiling 55%" },
-  ],
-};
 
-const EXIT_DETAIL: Record<string, unknown> = {
-  review: {
-    review_id: "EX-771",
-    // The stage being left, so the rail draws the right current step. The same
-    // template serves the Sandbox and Canary exits, and a rail that assumed
-    // paper would be wrong on two of the three screens it exists for.
-    stage: "PAPER_OBSERVATION",
-    deployment_id: "dep_94",
-    subject_label: "Grid v2.1 · dep_94 · DERIBIT",
-    promote_to: "SANDBOX_VALIDATION",
-    quorum_met: 0,
-    quorum_required: 1,
-    expected_version: "v2",
-    sla: { age_minutes: 240, budget_minutes: 2880 },
-  },
-  actor: "Lan",
-  approver_role: "Ops Approver",
-  gate_met: true,
-  gate_summary: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles",
-  policy_id: "obs_29",
-  // The Paper Exit vocabulary, in full. `can_approve_with_condition` is carried
-  // because the payload publishes it, not because this screen offers it — the
-  // three outcomes here are PROMOTE, EXTEND_OBSERVATION and REJECT.
-  eligibility: {
-    can_approve: true,
-    can_approve_with_condition: true,
-    can_deny: true,
-    can_extend_observation: true,
-    can_reject: true,
-    separation_of_duties: "OK",
-    locks: [],
-  },
-  recommendation: "Approve promotion with the carried capacity condition.",
-  // `governance.paper-exit.v1` publishes the plan as PREVIEW_ONLY (canonical
-  // fixture); the screen had been saying "not published" over a published field.
-  activation_plan: {
-    mode: "PREVIEW_ONLY",
-    target_stage: "SANDBOX_VALIDATION",
-    authority_semantics: "APPROVAL_CREATES_PROMOTION_GRANT_ONLY",
-    external_side_effect_requested: false,
-  },
-  lineage: [
-    { label: "artifact", value: "sha256:41bb7d…c4" },
-    { label: "R1", value: "AP-118", href: "/governance/approvals/AP-118/r1" },
-    { label: "R2", value: "AP-152", href: "/governance/approvals/AP-152/r2" },
-    { label: "observation policy", value: "obs_29" },
-    { label: "evidence pack", value: "ep_4471 · digest e9a2…" },
-  ],
-  panels: [
-    {
-      title: "Observation coverage",
-      source: "obs_29",
-      findings: [
-        { label: "30 / 30 days · 312 / 300 trades · 2 / 2 restart cycles", outcome: "pass", href: "/deployments/paper/dep_94#sessions", source_label: "sessions" },
-        { label: "data freshness violations: 0 · coverage 99.6%", outcome: "pass", href: "/deployments/paper/dep_94#sessions", source_label: "sessions" },
-      ],
-    },
-    {
-      title: "Drift vs approved evidence",
-      source: "run_5498",
-      findings: [
-        { label: "hit rate −1.1pt · avg trade net −0.04pt — within band", outcome: "pass", href: "/research/quantbt/runs/run_5498", source_label: "run 5498" },
-        { label: "fee drag +0.006pt · signal→fill +70ms — non-blocking", outcome: "watch", href: "/deployments/blotter?deployment=dep_94", source_label: "blotter" },
-        { label: "slippage", outcome: "insufficient", carries_to: "sandbox certification", href: "/deployments/blotter?deployment=dep_94", source_label: "blotter" },
-      ],
-    },
-    {
-      title: "Limits & operational health",
-      findings: [
-        { label: "max DD −1.4% / 6% · worst daily loss −0.6% / 3%", outcome: "pass", href: "/deployments/paper/dep_94", source_label: "workbench" },
-        { label: "rejects 0.2% / 0.5% · dead letters 0", outcome: "pass", href: "/execution/operations?deployment=dep_94", source_label: "operations" },
-      ],
-    },
-    {
-      title: "Portfolio fit — observed vs expected",
-      source: "720 samples · corr.v1",
-      findings: [
-        { label: "ρ vs benchmark: expected 0.18 → observed 0.21 — within band", outcome: "pass", href: "/deployments/portfolios/pf_main", source_label: "portfolio" },
-        { label: "contribution +1,842.00 USDC · concentration unchanged", outcome: "pass", href: "/deployments/portfolios/pf_main", source_label: "portfolio" },
-      ],
-    },
-  ],
-};
 
 /**
  * The verification sequence a poll walks.
@@ -375,54 +140,6 @@ const EXIT_DETAIL: Record<string, unknown> = {
  */
 const VERIFICATION_WALK = ["PENDING", "ACKNOWLEDGED", "SUCCEEDED"] as const;
 
-/**
- * The eight views `EX-BE-05a` §3 supports, as a predicate.
- *
- * The fixture applied none of them: it echoed the view back and returned the
- * same rows, so every chip looked wired and changed nothing. That is worse than
- * an unwired chip, because it is indistinguishable from a working one.
- *
- * The real filters are server-side and allowlisted (BR-EX-02) — this is the
- * shape of the answer, not the implementation of it. What it exercises is the
- * client's half: that a view change resets the cursor, that the counts follow
- * the view, and that an empty view is not reported as an empty queue.
- */
-function matchesView(row: Record<string, unknown>, view: string): boolean {
-  const gate = String(row.gate ?? "");
-  const target = String(row.target ?? "").toLowerCase();
-  const sla = (row.sla ?? {}) as Record<string, unknown>;
-  const overdue =
-    typeof sla.age_minutes === "number" &&
-    typeof sla.budget_minutes === "number" &&
-    sla.age_minutes > sla.budget_minutes;
-
-  switch (view) {
-    case "ALL":
-      return true;
-    // "Mine" in the hi-fi: what this actor is expected to act on. It is not
-    // "everything I can see" — that is ALL, and conflating them is how a
-    // triage queue stops being a triage queue.
-    case "INBOX":
-      return row.needs_you === true;
-    case "R1":
-      return gate === "R1";
-    case "PAPER":
-      return target.includes("paper");
-    case "SANDBOX":
-      return target.includes("sandbox");
-    case "LIVE_GATES":
-      return gate === "LIVE_GATE" || target.includes("live");
-    case "EXIT_REVIEWS":
-      return gate === "PAPER_EXIT" || gate === "SANDBOX_EXIT";
-    case "OVERDUE":
-      return overdue;
-    default:
-      // An unrecognised view returns nothing rather than everything. Falling
-      // back to ALL would show a full queue under a filter that was never
-      // applied, which is the same lie in a different direction.
-      return false;
-  }
-}
 
 /** Opaque to the caller, which is the only property that matters here. */
 function encodeCursor(row: Record<string, unknown>): string {
@@ -462,6 +179,34 @@ export interface FixtureApiOptions {
  */
 export const BREACHING_AMOUNT = "600";
 
+/* ── N29 governance consumer — fixture semantics ─────────────────────────────
+ * Mirrors the server rules the handoff states: request-key replay, changed-key
+ * 409, duplicate open alpha/run rejected WITH the existing approval id, ids
+ * validated against the server-owned registries (unknown → 422). State lives
+ * at module scope so a retry after navigation still replays.
+ */
+const CREATE_KNOWN = {
+  alphas: new Set(["carry", "grid", "vnmomo"]),
+  runs: new Set(["run_5512", "run_5320"]),
+  claims: new Set(["clm_31", "clm_29"]),
+};
+/** Open R1 work in the cast: carry × run_5512 is already AP-201. */
+const CREATE_OPEN: ReadonlyMap<string, string> = new Map([["carry|run_5512", "AP-201"]]);
+const CREATE_BY_KEY = new Map<string, { payload: string; approvalId: string }>();
+let CREATE_SEQ = 400;
+
+/** The register the GET serves — the cast's obligations in contract shape. */
+
+const CREATE_APPROVAL_BASE = {
+  gate: "R1", subject_type: "ALPHA_VERSION", release_candidate: null, environment: "RESEARCH",
+  target_label: "R1", requester: { user_id: "usr_lan", username: "Lan" }, creator: { user_id: "usr_lan", username: "Lan" },
+  status: "PENDING", policy_version: "approval.v3", quorum_met: 0, quorum_required: 1, approval_version: 1,
+  evidence_set_hash: "sha256:41bb7d000000000000000000000000000000000000000000000000000000c4aa",
+  evidence_complete: true, blocker_count: 0, blocker_summary: null,
+  sla_due_at: "2026-09-01T12:00:00.000Z", expires_at: "2026-09-03T12:00:00.000Z",
+  created_at: "2026-08-31T12:00:00.000Z", updated_at: "2026-08-31T12:00:00.000Z",
+} as const;
+
 export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi {
   const down = new Set(options.unavailableEndpoints ?? []);
   let polls = 0;
@@ -472,7 +217,135 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       : null;
   }
 
+  const fixtureRead = <T>(raw: unknown, reader: (r: unknown) => T | null, what: string): Result<T> => {
+    const value = reader(raw);
+    return value !== null && value !== undefined ? { ok: true as const, value } : unavailable(`${what} fixture could not be read.`);
+  };
+
   return {
+    /* N29-FE-01 lab/test port — serves the canonical contract fixtures. */
+    async getCommandCenterSnapshot() {
+      const blocked = gate<unknown>("getCommandCenterSnapshot");
+      if (blocked) return blocked;
+      return { ok: true as const, value: CC_SNAPSHOT_BUSY as unknown };
+    },
+    async getScreenProfile(screenName: "paper" | "sandbox" | "live" | "blotter") {
+      const blocked = gate<ProfileEnvelope>("getScreenProfile");
+      if (blocked) return blocked;
+      const raw = screenName === "paper" ? PAPER_OVERVIEW_READY : screenName === "sandbox" ? SANDBOX_OVERVIEW_READY : screenName === "live" ? LIVE_OVERVIEW_EMPTY : FULL_BLOTTER_PARTIAL;
+      return fixtureRead(raw, readProfileEnvelope, `The ${screenName} overview`);
+    },
+    async getPaperWorkbenchProfile(_deploymentId: string, variant: "paper" | "vnm" = "paper") {
+      const blocked = gate<ProfileEnvelope>("getPaperWorkbenchProfile");
+      if (blocked) return blocked;
+      return fixtureRead(variant === "vnm" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL, readProfileEnvelope, "The paper workbench");
+    },
+    async getQueryAnalytics(_subject: "alphas" | "portfolios", _subjectId: string) {
+      const blocked = gate<QueryAnalytics>("getQueryAnalytics");
+      if (blocked) return blocked;
+      return fixtureRead(QUERY_ANALYTICS_EMPTY, readQueryAnalytics, "The query-analytics envelope");
+    },
+    async getOperatorTasks() {
+      const blocked = gate<OperatorTaskCatalogue>("getOperatorTasks");
+      if (blocked) return blocked;
+      return fixtureRead(COMMAND_TASKS, readOperatorTasks, "The operator task catalogue");
+    },
+    async getLiveReview(approvalId: string) {
+      const blocked = gate<LiveReviewPayload>("getLiveReview");
+      if (blocked) return blocked;
+      // No canonical fixture is published for live-review yet (noted in the
+      // return packet); the lab composes one from the canonical r2 backbone
+      // and the schema's four UNAVAILABLE branches.
+      return fixtureRead(
+        {
+          schema_version: "governance.live-review.v1",
+          approval_id: approvalId,
+          canary_ref: { deployment_id: "dep_88", composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS" },
+          governance_backbone: { ...R2_DETAIL, approval: { ...(R2_DETAIL.approval as object), approval_id: approvalId } },
+          current_source: LIVE_OVERVIEW_EMPTY,
+          derived_branches: [
+            { capability_id: "canary.drift-vs-twin", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
+            { capability_id: "canary.kpis", state: "UNAVAILABLE", reason_code: "N23_CANARY_DERIVATION_NOT_PUBLISHED" },
+            { capability_id: "canary.gate-criteria", state: "UNAVAILABLE", reason_code: "N23_GATE_POLICY_EVALUATION_NOT_PUBLISHED" },
+            { capability_id: "canary.capital-step", state: "UNAVAILABLE", reason_code: "N23_CAPITAL_STEP_NOT_PUBLISHED" },
+          ],
+          read_at: "2026-08-31T12:00:00.000Z",
+          actor: { user_id: "usr_lan", username: "Lan", roles: ["ADMIN"] },
+        },
+        readLiveReview,
+        "The live review",
+      );
+    },
+    async getAccountBroker360(_accountId: string) {
+      return unavailable("N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED: the full exposure population is not published; this screen stays typed unavailable.");
+    },
+    async createApprovalRequest(input: ApprovalCreateInput): Promise<ApprovalCreateOutcome> {
+      const blocked = gate<never>("createApprovalRequest");
+      if (blocked && !blocked.ok) return { kind: "failed", status: blocked.status, reason: blocked.reason };
+      const payload = JSON.stringify([input.alphaId, input.evidenceRunId, input.methodologyClaimId, input.summary]);
+      const byKey = CREATE_BY_KEY.get(input.requestKey);
+      if (byKey) {
+        if (byKey.payload !== payload) {
+          return { kind: "failed", status: "unavailable", reason: "REQUEST_KEY_REUSED: this request key was already used for a different payload (409). Start a new submit intent." };
+        }
+        return readApprovalCreated({ schema_version: "governance.approval-create.v1", replayed: true, approval: { ...CREATE_APPROVAL_BASE, approval_id: byKey.approvalId, subject_id: input.alphaId, subject_label: input.alphaId } })!;
+      }
+      const missing = [
+        !CREATE_KNOWN.alphas.has(input.alphaId) ? `alpha_id ${input.alphaId}` : null,
+        !CREATE_KNOWN.runs.has(input.evidenceRunId) ? `evidence_run_id ${input.evidenceRunId}` : null,
+        !CREATE_KNOWN.claims.has(input.methodologyClaimId) ? `methodology_claim_id ${input.methodologyClaimId}` : null,
+      ].filter((x): x is string => x !== null);
+      if (missing.length > 0) {
+        return { kind: "failed", status: "unavailable", reason: `UNKNOWN_REGISTRY_ID: ${missing.join(" · ")} is not in the server-owned registry (422).` };
+      }
+      if (input.summary.trim().length < 8) {
+        return { kind: "failed", status: "unavailable", reason: "SUMMARY_TOO_SHORT: the summary is the reviewer's first sentence (422)." };
+      }
+      const dup = CREATE_OPEN.get(`${input.alphaId}|${input.evidenceRunId}`);
+      if (dup) {
+        return { kind: "duplicate", existingApprovalId: dup, reason: `Open R1 work already exists for ${input.alphaId} × ${input.evidenceRunId} — decide ${dup} instead of opening a twin.` };
+      }
+      CREATE_SEQ += 1;
+      const approvalId = `AP-${CREATE_SEQ}`;
+      CREATE_BY_KEY.set(input.requestKey, { payload, approvalId });
+      return readApprovalCreated({ schema_version: "governance.approval-create.v1", replayed: false, approval: { ...CREATE_APPROVAL_BASE, approval_id: approvalId, subject_id: input.alphaId, subject_label: input.alphaId } })!;
+    },
+
+    async getWaivers(query: WaiverQuery = {}): Promise<Result<ConditionsPage>> {
+      const blocked = gate<ConditionsPage>("getWaivers");
+      if (blocked) return blocked;
+      if (query.after && query.before) {
+        return unavailable("A page cannot be requested in both directions at once.");
+      }
+      const filtered = CONDITION_FIXTURES.filter((c) => !query.state || c.state === query.state);
+      const ids = filtered.map((c) => c.condition_id as string);
+      let start = 0;
+      let end = filtered.length;
+      const limit = query.limit ?? 50;
+      if (query.after) start = ids.indexOf(query.after) + 1;
+      if (query.before) { end = ids.indexOf(query.before); start = Math.max(0, end - limit); }
+      const window = filtered.slice(start, Math.min(end, start + limit));
+      const page = readConditionsPage({
+        schema_version: "governance.conditions-register.v1",
+        record_authority: "PORTAL_CONTROL",
+        delivery_profile: "portal",
+        read_at: "2026-08-31T12:00:00.000Z",
+        actor: { user_id: "usr_bobby", username: "bobby", roles: ["ADMIN"] },
+        page: {
+          rows: window,
+          total_count: CONDITION_FIXTURES.length,
+          filtered_count: filtered.length,
+          next_cursor: start + window.length < filtered.length ? (window[window.length - 1]?.condition_id as string) ?? null : null,
+          prev_cursor: start > 0 ? (window[0]?.condition_id as string) ?? null : null,
+          has_more: start + window.length < filtered.length,
+          has_previous: start > 0,
+          applied_filters: [],
+          applied_sort: [],
+        },
+      });
+      return page ? { ok: true as const, value: page } : unavailable("The conditions-register fixture could not be read.");
+    },
+
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {
       const blocked = gate<InboxResult>("listApprovals");
       if (blocked) return blocked;

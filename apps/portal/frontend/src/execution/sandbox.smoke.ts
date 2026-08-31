@@ -353,9 +353,10 @@ export const CERT_SMOKE_DATA: Record<string, CertSmoke> = {
 };
 
 /** The workbench's smoke for a deployment, or null when the flag is off. */
-export function certSmoke(deploymentId: string | null | undefined): CertSmoke | null {
+export function certSmoke(deploymentId: string | null | undefined): (CertSmoke & { warning: string }) | null {
   if (!SANDBOX_SMOKE) return null;
-  return CERT_SMOKE_DATA[deploymentId ?? ""] ?? CERT_SMOKE_DATA.dep_77;
+  const data = CERT_SMOKE_DATA[deploymentId ?? ""] ?? CERT_SMOKE_DATA.dep_77;
+  return { ...data, warning: SANDBOX_SMOKE_WARNING };
 }
 
 function noise(i: number, seed: number): number {
@@ -409,11 +410,8 @@ export function useCertTick(): Date {
   return now;
 }
 
-export const sbClock = (d: Date, z = true) =>
-  d.getTime() === 0
-    ? "—"
-    : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}${z ? "Z" : ""}`;
-/** REST snapshot age against the venue policy — the hi-fi's `now % 58`. */
-export const sbAgeSeconds = (d: Date) => (d.getTime() === 0 ? 0 : Math.floor((d.getTime() / 1000) % 58));
-export const sbAge = (d: Date) => (d.getTime() === 0 ? "—" : `${sbAgeSeconds(d)}s`);
 export const sbPct = (n: number) => `${n.toFixed(1)}%`;
+
+export { sbClock, sbAge, sbAgeSeconds } from "./clock";
+
+export type CertDemo = NonNullable<ReturnType<typeof certSmoke>>;

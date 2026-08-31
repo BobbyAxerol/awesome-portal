@@ -812,3 +812,82 @@ export function capitalDeltasFromPreview(preview: CapitalPreview): CapitalDelta[
       : [],
   );
 }
+
+/* ── N29 governance consumer readers ─────────────────────────────────────── */
+
+import type { ApprovalCreateOutcome, ConditionRow, ConditionsPage, WaiverStateCode } from "./ports";
+
+const WAIVER_STATES: readonly WaiverStateCode[] = ["OPEN", "WAIVED", "EXPIRING", "LAPSED"];
+
+/** `governance.approval-create.v1` — the created/replayed half of the outcome. */
+export function readApprovalCreated(raw: unknown): ApprovalCreateOutcome | null {
+  const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
+  const approval =
+    root && typeof root.approval === "object" && root.approval !== null
+      ? (root.approval as Record<string, unknown>)
+      : null;
+  const id = approval && typeof approval.approval_id === "string" ? approval.approval_id : null;
+  if (!root || !approval || !id) return null;
+  return {
+    kind: root.replayed === true ? "replayed" : "created",
+    approvalId: id,
+    subjectLabel: typeof approval.subject_label === "string" ? approval.subject_label : id,
+    status: typeof approval.status === "string" ? approval.status : "PENDING",
+    slaDueAt: typeof approval.sla_due_at === "string" ? approval.sla_due_at : null,
+    policyVersion: typeof approval.policy_version === "string" ? approval.policy_version : null,
+    quorumRequired: typeof approval.quorum_required === "number" ? approval.quorum_required : null,
+    requester:
+      typeof approval.requester === "object" && approval.requester !== null && typeof (approval.requester as Record<string, unknown>).username === "string"
+        ? ((approval.requester as Record<string, unknown>).username as string)
+        : null,
+  };
+}
+
+function readConditionRow(raw: unknown): ConditionRow | null {
+  const o = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
+  const id = o && typeof o.condition_id === "string" ? o.condition_id : null;
+  const state = o && typeof o.state === "string" && (WAIVER_STATES as readonly string[]).includes(o.state) ? (o.state as WaiverStateCode) : null;
+  if (!o || !id || !state) return null;
+  const subject = typeof o.subject === "object" && o.subject !== null ? (o.subject as Record<string, unknown>) : null;
+  const owner = typeof o.owner === "object" && o.owner !== null ? (o.owner as Record<string, unknown>) : null;
+  return {
+    conditionId: id,
+    approvalId: typeof o.approval_id === "string" ? o.approval_id : "",
+    gate: typeof o.gate === "string" ? o.gate : "R1",
+    subjectId: subject && typeof subject.id === "string" ? subject.id : "",
+    subjectLabel: subject && typeof subject.label === "string" ? subject.label : "",
+    environment: typeof o.environment === "string" ? o.environment : "RESEARCH",
+    kind: typeof o.kind === "string" ? o.kind : "RESTRICTION",
+    state,
+    label: typeof o.label === "string" ? o.label : "",
+    statement: typeof o.statement === "string" ? o.statement : "",
+    owner: owner && typeof owner.username === "string" ? owner.username : "owner not stated",
+    dueAt: typeof o.due_at === "string" ? o.due_at : null,
+    // Dangerous flag: a condition whose blocking bit cannot be read must
+    // BLOCK — waving an unreadable obligation through is the lie that costs.
+    blocking: o.blocking !== false,
+    policyVersion: typeof o.policy_version === "string" ? o.policy_version : "unversioned",
+    createdAt: typeof o.created_at === "string" ? o.created_at : null,
+    updatedAt: typeof o.updated_at === "string" ? o.updated_at : null,
+  };
+}
+
+/** `governance.conditions-register.v1` — exact counts and both cursors kept. */
+export function readConditionsPage(raw: unknown): ConditionsPage | null {
+  const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
+  const page = root && typeof root.page === "object" && root.page !== null ? (root.page as Record<string, unknown>) : null;
+  if (!root || !page || !Array.isArray(page.rows)) return null;
+  return {
+    rows: page.rows.flatMap((r) => {
+      const row = readConditionRow(r);
+      return row ? [row] : [];
+    }),
+    totalCount: typeof page.total_count === "number" ? page.total_count : null,
+    filteredCount: typeof page.filtered_count === "number" ? page.filtered_count : null,
+    nextCursor: typeof page.next_cursor === "string" ? page.next_cursor : null,
+    prevCursor: typeof page.prev_cursor === "string" ? page.prev_cursor : null,
+    hasMore: page.has_more === true,
+    hasPrevious: page.has_previous === true,
+    readAt: typeof root.read_at === "string" ? root.read_at : null,
+  };
+}

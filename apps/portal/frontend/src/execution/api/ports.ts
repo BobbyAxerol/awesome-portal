@@ -10,6 +10,7 @@
  * stale and partial provoke different responses from a human, and collapsing
  * them into `catch (e)` is how they end up as one grey error box.
  */
+import type { LiveReviewPayload, OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics } from "./profileRead";
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
@@ -140,9 +141,102 @@ export interface OperationSnapshot {
   sourceSideEffectRequested: boolean;
 }
 
+
+/* ── N29 governance consumer (codex handoff 2026-08-31) ──────────────────── */
+
+/** `POST /governance/approvals` — the loop's entry door, server-validated. */
+export interface ApprovalCreateInput {
+  /** Stable per submit INTENT; reused only to retry the same payload. */
+  requestKey: string;
+  alphaId: string;
+  evidenceRunId: string;
+  methodologyClaimId: string;
+  summary: string;
+}
+
+/**
+ * The four states the entry screen binds (N29 §4). `duplicate` carries the
+ * existing approval so the UI can link it instead of apologizing; `failed`
+ * carries the typed problem. A thrown fetch becomes `failed` with
+ * `offline: true` — the request key survives for a retry of the SAME payload.
+ */
+export type ApprovalCreateOutcome =
+  | {
+      kind: "created" | "replayed";
+      approvalId: string;
+      subjectLabel: string;
+      status: string;
+      slaDueAt: string | null;
+      policyVersion: string | null;
+      quorumRequired: number | null;
+      requester: string | null;
+    }
+  | { kind: "duplicate"; existingApprovalId: string | null; reason: string }
+  | { kind: "failed"; status: PanelStatus; reason: string; offline?: boolean };
+
+export type WaiverStateCode = "OPEN" | "WAIVED" | "EXPIRING" | "LAPSED";
+
+export interface ConditionRow {
+  conditionId: string;
+  approvalId: string;
+  gate: string;
+  subjectId: string;
+  subjectLabel: string;
+  environment: string;
+  kind: string;
+  /** Server-computed. The client renders it and never re-derives it. */
+  state: WaiverStateCode;
+  label: string;
+  statement: string;
+  owner: string;
+  dueAt: string | null;
+  /** Dangerous flag: an unreadable value must block, never wave through. */
+  blocking: boolean;
+  policyVersion: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface ConditionsPage {
+  rows: readonly ConditionRow[];
+  totalCount: number | null;
+  filteredCount: number | null;
+  nextCursor: string | null;
+  prevCursor: string | null;
+  hasMore: boolean;
+  hasPrevious: boolean;
+  /** Server read time — the anchor every due display counts from. */
+  readAt: string | null;
+}
+
+export interface WaiverQuery {
+  state?: WaiverStateCode;
+  after?: string;
+  before?: string;
+  limit?: number;
+}
+
 export interface ExecutionApi {
   /** `GET /api/v1/execution/governance/approvals` */
   listApprovals(query: InboxQuery): Promise<Result<InboxResult>>;
+  createApprovalRequest(input: ApprovalCreateInput): Promise<ApprovalCreateOutcome>;
+  /* ── N29-FE-01 same-origin screen BFF (codex closeout 2026-08-31) ──────── */
+  /** `GET /command-center` — the product snapshot (PRE-IAM-03). */
+  getCommandCenterSnapshot(): Promise<Result<unknown>>;
+  /** `GET /screens/{paper|sandbox|live|blotter}` — N22/N23 profile envelopes. */
+  getScreenProfile(screen: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>>;
+  /** `GET /screens/paper/{id}[/vn-market]` — the workbench envelope. */
+  getPaperWorkbenchProfile(deploymentId: string, variant?: "paper" | "vnm"): Promise<Result<ProfileEnvelope>>;
+  /** `GET /{alphas|portfolios}/{id}/query-analytics` — N25 envelope. */
+  getQueryAnalytics(subject: "alphas" | "portfolios", subjectId: string): Promise<Result<QueryAnalytics>>;
+  /** `GET /commands/tasks` — the N27 operator task catalogue. */
+  getOperatorTasks(): Promise<Result<OperatorTaskCatalogue>>;
+  /** `GET /governance/approvals/{id}/live` — `governance.live-review.v1`. */
+  getLiveReview(approvalId: string): Promise<Result<LiveReviewPayload>>;
+  /** `GET /screens/accounts/{id}` — N28 typed unavailable until published. */
+  getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
+
+  getWaivers(query?: WaiverQuery): Promise<Result<ConditionsPage>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r1` */
   getGateR1(approvalId: string): Promise<Result<GateR1Detail>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r2` */

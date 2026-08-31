@@ -27,7 +27,8 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { smokeMotionAllowed } from "../smokeMotion";
 import { canonicalHref } from "../links";
-import { advanceAsOf, ccSmoke, jitter, useSmokeTick, type MatrixCell, type Pipeline, type StageKey } from "../commandCenter.smoke";
+import { advanceAsOf, jitter } from "../clock";
+import type { CcDemo, MatrixCell, Pipeline, StageKey } from "../commandCenter.smoke";
 
 const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const;
 const SLA_ORDER = ["OVERDUE", "DUE_SOON", "ON_TRACK"] as const;
@@ -141,9 +142,9 @@ function TriageRow({ item, position, onOpen, elapsed = 0, readAt = null }: { ite
   );
 }
 
-export function NeedsYou({ panel, onOpen, readAt = null }: { panel: NeedsYouPanel; onOpen: (item: TriageItem) => void; readAt?: string | null }) {
+export function NeedsYou({ panel, onOpen, readAt = null, demoElapsed = 0 }: { panel: NeedsYouPanel; onOpen: (item: TriageItem) => void; readAt?: string | null; demoElapsed?: number }) {
   const ranked = rankTriage(panel.items);
-  const elapsed = useSmokeTick(1000);
+  const elapsed = demoElapsed;
   return (
     <Panel label="Needs you now" title="Needs you now — ranked across all loops" authority={panel.authority} freshness={panel.freshness} meta="rank = severity → SLA → age">
       {panel.state !== "ok" ? (
@@ -167,9 +168,9 @@ export function NeedsYou({ panel, onOpen, readAt = null }: { panel: NeedsYouPane
   );
 }
 
-export function FleetHealth({ panel }: { panel: FleetPanel }) {
-  const smoke = ccSmoke();
-  const tick = useSmokeTick(2000);
+export function FleetHealth({ panel, demo, demoTick = 0 }: { panel: FleetPanel; demo?: CcDemo | null; demoTick?: number }) {
+  const smoke = demo ?? null;
+  const tick = demoTick;
   return (
     <Panel
       label="Fleet health"
@@ -202,9 +203,9 @@ export function FleetHealth({ panel }: { panel: FleetPanel }) {
   );
 }
 
-export function PinnedWatchlist({ panel }: { panel: PinnedPanel }) {
-  const smoke = ccSmoke();
-  const tick = useSmokeTick(3000);
+export function PinnedWatchlist({ panel, demo, demoTick = 0 }: { panel: PinnedPanel; demo?: CcDemo | null; demoTick?: number }) {
+  const smoke = demo ?? null;
+  const tick = demoTick;
   const nudge = (figure: string): string => {
     const m = /^([+−-])(\d+)$/.exec(figure);
     if (!m) return figure;
@@ -263,7 +264,14 @@ export function Today({ panel }: { panel: TodayPanel }) {
           {panel.items.map((item) => (
             <li key={item.id}>
               <span className="exec-cc-todaykind">{item.kind ?? "—"}</span>
-              <a href={canonicalHref(item.href) ?? undefined}>{item.label}</a>
+              <a
+                href={
+                  // N29 item 6: a condition-expiry item is an obligation — its
+                  // home is the fleet-wide register, whatever approval href the
+                  // feed row carries.
+                  item.kind === "CONDITION_EXPIRY" ? "/governance/waivers" : canonicalHref(item.href) ?? undefined
+                }
+              >{item.label}</a>
             </li>
           ))}
         </ul>
@@ -359,10 +367,10 @@ export function PromotionPipeline({ pipeline, warning }: { pipeline: Pipeline; w
   );
 }
 
-export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null }) {
+export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0 }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null; demo?: CcDemo | null; demoTick?: number }) {
   const gate = streamGate(snapshot);
-  const smoke = ccSmoke();
-  const clock = useSmokeTick(1000);
+  const smoke = demo ?? null;
+  const clock = demoTick;
   const asOf = smoke ? advanceAsOf(snapshot.readAt, clock) : snapshot.readAt;
   const ranked = rankTriage(snapshot.needsYou?.items ?? []);
   const critical = ranked.filter((i) => i.severity === "CRITICAL").length;
@@ -412,10 +420,10 @@ export function CommandCenterScreen({ snapshot, onOpen, live }: { snapshot: Comm
               ))}
             </ul>
           ) : null}
-          {snapshot.needsYou ? <NeedsYou panel={snapshot.needsYou} onOpen={onOpen} readAt={snapshot.readAt} /> : null}
+          {snapshot.needsYou ? <NeedsYou panel={snapshot.needsYou} onOpen={onOpen} readAt={snapshot.readAt} demoElapsed={smoke ? clock : 0} /> : null}
           <div className="exec-cc-twoup">
-            {snapshot.fleet ? <FleetHealth panel={snapshot.fleet} /> : null}
-            {snapshot.pinned ? <PinnedWatchlist panel={snapshot.pinned} /> : null}
+            {snapshot.fleet ? <FleetHealth panel={snapshot.fleet} demo={demo} demoTick={demoTick} /> : null}
+            {snapshot.pinned ? <PinnedWatchlist panel={snapshot.pinned} demo={demo} demoTick={demoTick} /> : null}
           </div>
           {smoke ? <PromotionPipeline pipeline={smoke.pipeline} warning={smoke.warning} /> : null}
           {snapshot.today ? <Today panel={snapshot.today} /> : null}

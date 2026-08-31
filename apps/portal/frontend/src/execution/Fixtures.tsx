@@ -33,11 +33,14 @@ import { INITIAL_SUBSCRIPTION, type SubscriptionState } from "./subscription";
 import { ApprovalInbox, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
 import { GateR1Review } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
-import { ApprovalInboxContainer, GateR1ReviewContainer, GateR2ReviewContainer, AdminCatalogueContainer, CanaryControlRoomContainer, LiveFullOperationsContainer, SandboxCertificationContainer, IncidentDetailContainer, OperationsQueueContainer, AlphaInsightContainer, CapitalLedgerContainer, CorrelationContainer, ExposureHeadroomContainer, FullBlotterFunnelContainer, PaperExitReviewContainer } from "./screens/containers";
+import { ApprovalInboxContainer, GateR1ReviewContainer, GateR2ReviewContainer, AdminCatalogueContainer, CanaryControlRoomContainer, LiveFullOperationsContainer, SandboxCertificationContainer, IncidentDetailContainer, OperationsQueueContainer, PaperExitReviewContainer } from "./screens/containers";
+import { STAGE_SMOKE, stageVisuals } from "./stage.smoke";
+import { AlphaInsightContainer, CapitalLedgerContainer, CorrelationContainer, ExposureHeadroomContainer, FullBlotterFunnelContainer } from "./lab/insightContainers";
 import { createFixtureApi } from "./api/fixtureApi";
 import { PaperExitReview } from "./screens/PaperExitReview";
 import { OrderFunnelStrip } from "./screens/FullBlotter";
 import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
+import { wfCliDemo } from "./lab/adminCliDemo";
 
 /** Every Paper Exit capability granted. Absence is refusal, so cases say so. */
 /** Stable across renders: a fresh literal would re-fetch on every one. */
@@ -1684,8 +1687,8 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <div className="exec-guard-pair">
-            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" brokerStale />
-            <LiveFullOperationsContainer api={WIRED_API} deploymentId="dep_88" />
+            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" brokerStale visuals={STAGE_SMOKE ? stageVisuals("canary") : undefined} />
+            <LiveFullOperationsContainer api={WIRED_API} deploymentId="dep_88" visuals={STAGE_SMOKE ? stageVisuals("live") : undefined} />
           </div>
         </Group>
 
@@ -1696,7 +1699,7 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="fixture · production inactive — broker panel suppressed, and it says the Portal is withholding rather than failing to read">
-            <LiveFullOperationsContainer api={WIRED_API} deploymentId="dep_88" />
+            <LiveFullOperationsContainer api={WIRED_API} deploymentId="dep_88" visuals={STAGE_SMOKE ? stageVisuals("live") : undefined} />
           </Case>
           <Case caption="the port refuses — a guard band over nothing would read as a live deployment">
             <LiveFullOperationsContainer
@@ -1713,7 +1716,7 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="0/7 unavailable — seven blocker codes named, and no source panel claims a clean result">
-            <SandboxCertificationContainer api={WIRED_API} deploymentId="dep_77" />
+            <SandboxCertificationContainer api={WIRED_API} deploymentId="dep_77" visuals={STAGE_SMOKE ? stageVisuals("sandbox") : undefined} />
           </Case>
           <Case caption="the port refuses — an empty strip would read as a certification with no steps">
             <SandboxCertificationContainer
@@ -1730,10 +1733,10 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="fixture · production inactive — five KPI slots unavailable, never zero">
-            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" />
+            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" visuals={STAGE_SMOKE ? stageVisuals("canary") : undefined} />
           </Case>
           <Case caption="broker stale — the asymmetry holds: it would block scale-up and not protective actions">
-            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" brokerStale />
+            <CanaryControlRoomContainer api={WIRED_API} deploymentId="dep_88" brokerStale visuals={STAGE_SMOKE ? stageVisuals("canary") : undefined} />
           </Case>
         </Group>
 
@@ -1835,6 +1838,15 @@ export default function ExecutionFixtures() {
           surface="deployments"
         >
           <Case caption="the WF 1i catalog with the allocation drawer (hi-fi default) — SMOKE demo over the published, disabled catalogue">
+            <AdminActionDrawerScreen
+              catalogue={null}
+              selected={null}
+              onSelect={() => {}}
+              initialCommand="alloc"
+              demoCli={wfCliDemo("OPERATOR", "VERIFIED")}
+            />
+          </Case>
+          <Case caption="the product route truth — N27 operator tasks from the same-origin BFF, published catalogue below">
             <AdminCatalogueContainer api={WIRED_API} />
           </Case>
           <Case caption="a Viewer picks a mutation — role banner, catalog stays visible, reads stay available">
@@ -1842,7 +1854,8 @@ export default function ExecutionFixtures() {
               catalogue={null}
               selected={null}
               onSelect={() => {}}
-              role="VIEWER"
+              initialCommand="alloc"
+              demoCli={wfCliDemo("VIEWER", "VERIFIED")}
             />
           </Case>
           <Case caption="a non-Admin actor — denied, and the catalogue does not leak through the message">

@@ -182,16 +182,6 @@ export function useIncidentLive(base: IncidentSmoke | null, resolved: boolean): 
   return state;
 }
 
-export function mmss(seconds: number): string {
-  const m = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const s = String(seconds % 60).padStart(2, "0");
-  return `${m}:${s}`;
-}
-export function hhmm(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
-  return `${h}h ${m}m`;
-}
 export function sparkPoints(values: number[], w = 260, h = 36): string {
   const sp = values.length > 1 ? values : [values[0] ?? 0, values[0] ?? 0];
   const min = Math.min(...sp);
@@ -200,7 +190,7 @@ export function sparkPoints(values: number[], w = 260, h = 36): string {
   return sp.map((v, i) => `${((i / (sp.length - 1)) * w).toFixed(1)},${(h - 4 - ((v - min) / rng) * (h - 8) + 2).toFixed(1)}`).join(" ");
 }
 
-/** The live mismatch spark as data — one point per minute from detection. */
-export function incidentSparkSeries(values: readonly number[]): [string, number][] {
-  return values.map((v, i) => [new Date(Date.UTC(2026, 7, 22, 10, 0) + i * 60_000).toISOString(), v]);
-}
+
+export { mmss, hhmm, incidentSparkSeries } from "./clock";
+
+export type IncidentDemo = NonNullable<ReturnType<typeof incidentSmoke>>;

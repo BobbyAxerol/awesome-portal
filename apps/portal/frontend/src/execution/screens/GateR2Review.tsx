@@ -23,7 +23,6 @@ import { ExecutionDecisionBar } from "../components/decisionBar";
 import { PanelState } from "../components/states";
 import { shortDigest } from "../components/workspace";
 import { REQUEST_CHANGES_DENIED_REASON, REQUEST_CHANGES_NOTE_REASON } from "./GateR1Review";
-import { GOV_CHARTS } from "../governance.smoke";
 
 export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENIED" | "PENDING" | "MISSING";
 
@@ -97,6 +96,9 @@ export function GateR2Review({
   readiness,
   capital,
   capitalEnvelope,
+  fitPanel,
+  criteriaPanel,
+  stageChips,
   eligibility,
   capitalReason,
   capitalDecidable,
@@ -138,6 +140,9 @@ export function GateR2Review({
   sla?: Sla;
   readiness: readonly ReadinessGroup[];
   capital: readonly CapitalDelta[];
+  fitPanel?: ReactNode;
+  criteriaPanel?: ReactNode;
+  stageChips?: ReactNode;
   capitalEnvelope?: Envelope;
   eligibility?: { canApprove: boolean; canApproveWithCondition: boolean; canDeny: boolean; canRequestChanges?: boolean };
   capitalReason?: string | null;
@@ -276,25 +281,12 @@ export function GateR2Review({
         </div>
       ) : null}
       <div className="exec-gov-grid2">
-        <div className="exec-gov-panel" data-smoke="true">
-          <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Portfolio fit</span></div>
-          <div className="exec-gate-fitbody">
-            <div className="exec-gate-fitweight">
-              <span>target capital weight</span>
-              <b className="exec-num">{GOV_CHARTS.r2Fit.targetWeightPct.toFixed(1)}%</b>
-            </div>
-            <div className="exec-gate-fitbar" aria-hidden="true"><span style={{ width: `${Math.min(100, GOV_CHARTS.r2Fit.targetWeightPct * 4)}%` }} /></div>
-            <div className="exec-gov-kv" data-flush="true">
-              {GOV_CHARTS.r2Fit.rows.map((r) => (
-                <Fragment key={r.k}>
-                  <span className="exec-gov-k">{r.k}</span>
-                  <span className="exec-gov-v" data-tone={"tone" in r ? r.tone : undefined}>{r.v}{"tail" in r && r.tail ? <span className="exec-gate-note">{r.tail}</span> : null}</span>
-                </Fragment>
-              ))}
-            </div>
-            <p className="exec-af-smoke">! SMOKE DATA — {GOV_CHARTS.r2Fit.foot}. Reference shape for BR-EX-67. Delete when BR-EX-67 ships</p>
+        {fitPanel ?? (
+          <div className="exec-gov-panel">
+            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Portfolio fit</span></div>
+            <PanelState status="unavailable" reason="portfolio_fit is not published on governance.r2-review.v1 yet (BR-EX-67). Nothing here estimates it client-side." />
           </div>
-        </div>
+        )}
         {readiness.map((group) => (
           <div className="exec-gov-panel" key={group.title}>
             <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">{group.title}</span></div>
@@ -313,55 +305,18 @@ export function GateR2Review({
         ))}
         {readiness.length === 0 ? <PanelState status="empty" reason="No readiness groups were published." /> : null}
       </div>
-      <div className="exec-gov-panel">
-        {/* SMOKE until BR-EX-67: criteria are POLICY DATA — thresholds from the
-            versioned gate policy, verdicts computed server-side (hi-fi 1b note).
-            The browser renders, never re-derives. */}
-        <div className="exec-gov-panelhead">
-          <span className="exec-gov-paneltitle">Gate criteria — policy vs evidence</span>
-          <span className="exec-gate-policychip" title="SMOKE — the versioned gate policy reference ships with BR-EX-67">{GOV_CHARTS.r2Criteria.policy}</span>
-          <span className="exec-gov-spacer" />
-          <button type="button" className="exec-gov-reglink" disabled title="The policy registry route ships with BR-EX-67.">policy registry →</button>
+      {criteriaPanel ?? (
+        <div className="exec-gov-panel">
+          <div className="exec-gov-panelhead">
+            <span className="exec-gov-paneltitle">Gate criteria — policy vs evidence</span>
+            <span className="exec-gate-policychip" title="The versioned gate policy ships with BR-EX-67.">gate policy not published · BR-EX-67</span>
+          </div>
+          <PanelState status="unavailable" reason="gate_criteria are POLICY DATA computed server-side and are not published yet (BR-EX-67). The browser never re-derives a verdict." />
         </div>
-        <div className="exec-scroll-x">
-          <table className="exec-360-sync exec-gate-criteria">
-            <thead>
-              <tr>
-                <th scope="col">criterion</th>
-                <th scope="col" data-numeric="true">threshold</th>
-                <th scope="col" data-numeric="true">run_5512</th>
-                <th scope="col">verdict</th>
-              </tr>
-            </thead>
-            <tbody>
-              {GOV_CHARTS.r2Criteria.rows.map((row) => (
-                <tr key={row.criterion} data-verdict={row.verdict}>
-                  <th scope="row">{row.criterion}</th>
-                  <td className="exec-num">{row.threshold}</td>
-                  <td className="exec-num">{row.observed}</td>
-                  <td>
-                    {row.verdict === "PASS" ? (
-                      <span className="exec-gov-verified">✓ PASS</span>
-                    ) : (
-                      <span className="exec-gate-waiverable">! WAIVERABLE {row.note ?? ""}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="exec-role-meta exec-gate-criteriafoot">{GOV_CHARTS.r2Criteria.foot} · evidence: {GOV_CHARTS.r2Criteria.evidence.map((e) => e.label).join(" · ")}</p>
-      </div>
-      <div className="exec-gate-stagechips" role="group" aria-label="Stage eligibility, derived from gate policies">
-        <span className="exec-gov-meta">Stage eligibility (derived from gate policies)</span>
-        {GOV_CHARTS.r2Stages.map((c) => (
-          <span key={c.stage} className="exec-gate-stagechip" data-state={c.state}>
-            {c.stage} — {c.detail}
-          </span>
-        ))}
-        <span className="exec-gov-meta">each chip = that stage's gate policy, evaluated against today's evidence · SMOKE, BR-EX-67</span>
-      </div>
+      )}
+      {stageChips ?? (
+        <p className="exec-role-meta">stage_eligibility is not published yet (BR-EX-67) — no chip is invented for it.</p>
+      )}
       <div className="exec-gov-grid2" data-ratio="1.35">
         {capital.length > 0 ? (
           <div className="exec-preview-panel exec-gov-inverse">

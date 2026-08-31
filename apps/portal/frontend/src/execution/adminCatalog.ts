@@ -206,10 +206,13 @@ function readEntry(raw: unknown): CatalogEntry | null {
     sourceRiskTier: pick(o.source_risk_tier, CATALOG_RISK_TIERS),
     // Every one of these four is deny-by-default: a flag we cannot read is not
     // a flag that grants anything.
-    ownerReviewRequired: o.owner_review_required === true,
-    planRequired: o.plan_required === true,
-    applyRequired: o.apply_required === true,
-    verifyRequired: o.verify_required === true,
+    ownerReviewRequired: o.owner_review_required !== false,
+    // Aligned with the N27 authority reads (failClosed registry): an
+    // unreadable ceremony bit must demand MORE ceremony, never less — a step
+    // rail that over-claims a PLAN step is the safe error.
+    planRequired: o.plan_required !== false,
+    applyRequired: o.apply_required !== false,
+    verifyRequired: o.verify_required !== false,
     // Read, not assumed from the const. If a later revision flips one to true
     // this reports it rather than continuing to say false.
     portalReachable: o.portal_reachable === true,

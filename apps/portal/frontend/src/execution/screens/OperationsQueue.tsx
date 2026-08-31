@@ -34,7 +34,8 @@ import { ExecutionWorkspace } from "../components/workspace";
 import { usePresentationChrome } from "../../app/presentation";
 import type { PanelStatus } from "../contracts";
 import type { OperationsQueue, QueueRow, TriageState } from "../operations";
-import { fmtAge, queueSmoke, throughputSeries, useQueueTick, type DetailPart, type QueueSmokeRow } from "../operationsQueue.smoke";
+import { fmtAge, throughputSeries } from "../clock";
+import type { DetailPart, QueueDemo, QueueSmokeRow } from "../operationsQueue.smoke";
 
 /** The hi-fi's three chips. Applied server-side; they never filter loaded rows. */
 export const QUEUE_FILTERS = ["NEEDS_ATTENTION", "MINE", "ALL_24H"] as const;
@@ -181,6 +182,8 @@ export function OperationsQueueScreen({
   triage,
   selectedId = null,
   children,
+  demo,
+  demoTick,
 }: {
   queue: OperationsQueue | null;
   status?: PanelStatus;
@@ -196,9 +199,12 @@ export function OperationsQueueScreen({
   triage?: ReactNode;
   selectedId?: string | null;
   children?: ReactNode;
+  /** Lab-injected demo bundle + its motion; product routes pass neither. */
+  demo?: QueueDemo | null;
+  demoTick?: { elapsed: number; sub: number };
 }) {
-  const smoke = queueSmoke();
-  const { elapsed, sub } = useQueueTick();
+  const smoke = demo ?? null;
+  const { elapsed, sub } = demoTick ?? { elapsed: 0, sub: 66 };
   const [railOpen, setRailOpen] = useState(true);
   const chrome = usePresentationChrome();
   const page = queue?.page;

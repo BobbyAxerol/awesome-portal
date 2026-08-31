@@ -5,11 +5,11 @@
   "internal_technical_debt": [],
   "release_blockers": [
     {
-      "blocker_id": "N29-FE-01",
-      "owner": "CLAUDE_FRONTEND",
-      "state": "OPEN",
-      "reason": "ExecutionPreviewRoute still instantiates createFixtureApi and has no same-origin HTTP product adapter.",
-      "required_evidence": "warning-clean UI consumer tests and browser smoke over canonical BFF states without direct Edge access"
+      "blocker_id": "N29-BE-72",
+      "owner": "CODEX_BACKEND",
+      "state": "TRACKED_REQUEST_PENDING",
+      "reason": "BR-EX-72 consolidates the Alpha Fleet and Bindings list/detail APIs, canonical Live Review fixture and registry delivery-metadata amendment discovered during frontend closeout.",
+      "required_evidence": "BR-EX-72 contract, implementation, canonical fixtures, registry revision and frontend parity"
     },
     {
       "blocker_id": "N29-REL-01",
@@ -17,6 +17,19 @@
       "state": "WAITING_FOR_MAIN_RELEASE_REF",
       "reason": "Cosign signatures, SBOM, provenance and immutable image digests are produced only from protected main.",
       "required_evidence": "verified release candidate artifact from publish-images.yml"
+    }
+  ],
+  "resolved_delivery_gates": [
+    {
+      "blocker_id": "N29-FE-01",
+      "owner": "CLAUDE_FRONTEND",
+      "state": "CLOSED_ACCEPTED_BY_CODEX",
+      "evidence": [
+        "CLAUDE_TO_CODEX_N29_FE_01_RETURN_PACKET.md",
+        "CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md",
+        "productBoundary.test.ts",
+        "bffDouble.ts"
+      ]
     }
   ],
   "typed_external_gaps": {

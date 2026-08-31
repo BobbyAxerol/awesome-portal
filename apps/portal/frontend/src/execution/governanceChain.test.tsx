@@ -5,13 +5,14 @@
  * sticky decision bar's contract, the Inbox rail, and the "zero fabricated
  * write" gate: no governance screen calls anything but the published verbs.
  */
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { GateR1Review, REQUEST_CHANGES_NOTE_REASON } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
+import { R1EvidenceSmoke, R2CriteriaSmoke, R2FitSmoke, R2StagesSmoke, R1_POLICY_CHIP } from "./lab/governanceDemo";
 import { ApprovalInbox, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
 import { ApprovalInboxContainer } from "./screens/containers";
 import { readDecidedRow } from "./api/rows";
@@ -40,6 +41,8 @@ function r1(over: Record<string, unknown> = {}) {
       passport={[{ label: "artifact", value: "sha256:9f3c1a7b2e4d5c6f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1e2", verification: "✓ verified" }]}
       checklist={[{ label: "engine pinned", outcome: "pass" }, { label: "capacity evidence limited", outcome: "watch" }]}
       eligibility={ALL}
+      evidence={<R1EvidenceSmoke />}
+      policyChip={R1_POLICY_CHIP}
       {...over}
     />,
   );
@@ -65,6 +68,9 @@ function r2(over: Record<string, unknown> = {}) {
       capitalEnvelope={{ authority: "EXECUTION", asOf: "2026-08-22T10:41:07Z", freshness: "OK", formulaVersion: "capital-preview.v1" }}
       eligibility={ALL}
       grantName="paper_activation_authorization"
+      fitPanel={<R2FitSmoke />}
+      criteriaPanel={<R2CriteriaSmoke />}
+      stageChips={<R2StagesSmoke />}
       {...over}
     />,
   );
@@ -130,6 +136,9 @@ describe("sticky decision bar", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Approve" }));
     expect(spy).toHaveBeenCalled();
     expect(spy.mock.calls[0][0].reason).toBe("holdout replayed by hand — accepted");
+    // Settle the decide chain inside act — the N29 acceptance requires a
+    // warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
   it("prints no lock reason once the gate is decided", () => {
     r1({ actorId: "u_minh", actor: "Minh", decided: { outcome: "DENIED", by: "Lan", at: "2026-08-21T09:12Z" } });

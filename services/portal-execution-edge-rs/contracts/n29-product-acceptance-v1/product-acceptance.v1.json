@@ -15,7 +15,7 @@
     "commissioned_requests": {
       "total": 31,
       "backend_contract_covered": 31,
-      "frontend_source_consumer_accepted": 0
+      "frontend_source_consumer_accepted": 31
     },
     "portal_reads": {
       "total": 27,
@@ -49,8 +49,12 @@
     "n18_census_sha256": "sha256:9b0c58dfa1a3475434a618821991dd8f531db269fd49e285a757089f8d888b47",
     "n28_registry_sha256": "sha256:a307b1b78c1724b51790abaf9e8e3b2f375017b2881d6f396a5d0e20e4674812",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
-    "screen_bff_catalogue_sha256": "sha256:478c608479fa1a210b285ab07c761c239911c22a61d2d566e629e2f91749b821",
-    "frontend_product_route_sha256": "sha256:7995b50979ba245cc49acc83e2175766aa5d58a68c2674742e75688a4d551e53",
+    "screen_bff_catalogue_sha256": "sha256:e344f13c3737257fed40f55f5b1108b027f0e82cab9c0cec1f090963eb64496d",
+    "frontend_product_route_sha256": "sha256:7675738e8b349421871ca2583f805d83a6de544d4789e704830fa53634cf1616",
+    "frontend_product_boundary_test_sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795",
+    "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
+    "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",
+    "frontend_same_origin_bff_double_sha256": "sha256:f02325756f0b3f547b9201a7422e9a5de1d0c7cbd0a75c3bdd903513746c01f9",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
     "release_workflow_sha256": "sha256:a38c0664b40737532fba09f8b97ddc5ce729f7e9826275673136df01beaabbcd",
     "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
@@ -73,7 +77,7 @@
     "backend_contracts": "PASS",
     "rust_edge": "PASS",
     "control_plane": "PASS",
-    "frontend_http_consumer": "BLOCKED_FIXTURE_ONLY",
+    "frontend_http_consumer": "PASS_SAME_ORIGIN_CONSUMER_ACCEPTED",
     "signed_immutable_images": "PENDING_PROTECTED_MAIN_WORKFLOW",
     "stable_release": "NOT_AUTHORIZED"
   },

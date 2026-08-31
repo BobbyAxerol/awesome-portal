@@ -113,25 +113,6 @@ export const GOV_CHARTS = {
  * ships. The cast is the canonical one — no new entity is invented here.
  * ------------------------------------------------------------------------ */
 
-/** New-request pick lists (WF: loop entry) — DELETE WHEN BR-EX-69 SHIPS.
- * Registry-picked, never free-typed: the same rule as WF 1i params. */
-export const NEW_REQUEST = {
-  alphas: [
-    { id: "carry", label: "Carry v3.2", note: "research complete · run_5512" },
-    { id: "grid", label: "Grid v2.1", note: "already in loop — dep_94 canary", warn: "Grid v2.1 is already in the loop (dep_94, canary). A second R1 for the same alpha opens a RE-REVIEW of its evidence — it never creates a parallel lane." },
-    { id: "vnmomo", label: "VnMomo v0.9", note: "research complete · run_5320 · DNSE" },
-  ],
-  runs: [
-    { id: "run_5512", label: "run_5512 · 2019-01 → 2026-06 · 1h · fees 4bp", digest: "sha256:41bb7d…c4", facts: "sharpe 1.74 net · maxDD −5.1% · 1,212 trades · WFO min 0.71 (fold 6)" },
-    { id: "run_5320", label: "run_5320 · 2021-03 → 2026-06 · session · VN", digest: "sha256:9e12aa…07", facts: "sharpe 1.38 net · maxDD −4.2% · 618 trades · session-only, no overnight" },
-  ],
-  claims: [
-    { id: "clm_31", label: "clm_31 · window roles IS/OOS/holdout fixed" },
-    { id: "clm_29", label: "clm_29 · session-buckets, no overnight" },
-  ],
-  slaBudgetHours: 48,
-  policy: "gate_r1 rev 4 · effective 2026-06-15",
-} as const;
 
 /** Live-gate (canary → live) evidence frames — DELETE WHEN BR-EX-70 SHIPS. */
 function canaryDriftSeries() {
@@ -191,37 +172,8 @@ export const LIVE_GATE = {
   },
 } as const;
 
-/** Cross-fleet conditions register — DELETE WHEN BR-EX-71 SHIPS.
- * Every row mirrors a condition that already exists somewhere in the cast:
- * nothing here invents an obligation. */
-export type WaiverState = "OPEN" | "WAIVED" | "SATISFIED" | "EXPIRING";
-export interface WaiverRow {
-  id: string;
-  text: string;
-  source: { label: string; href: string };
-  deployment: { label: string; href: string } | null;
-  stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
-  due: string;
-  dueTone: "good" | "warn" | "bad";
-  state: WaiverState;
-  owner: string;
-  /** Days-left on the clock, or null when the due is an event/policy, not time. */
-  dueDays: number | null;
-  /** Seconds already elapsed inside the current day — the live tick's anchor. */
-  dueAnchorSeconds: number;
-  created: string;
-  /** The one sentence that says what CLOSES this row — a decision, never decay. */
-  closes: string;
-}
-export const WAIVER_ROWS: readonly WaiverRow[] = [
-  { id: "cn_101", text: "Capacity at target weight 2.4× < 3× — re-measure at 30d live volume", source: { label: "AP-352 · R2", href: "/governance/approvals/AP-352/r2" }, deployment: { label: "dep_74", href: "/deployments/paper/dep_74" }, stage: "PAPER", due: "12d left", dueTone: "good", state: "OPEN", owner: "Lan", dueDays: 12, dueAnchorSeconds: 30_240, created: "08-18", closes: "closes by an R2 amendment recording capacity ≥ 3× at 30d live volume — measured, not extrapolated" },
-  { id: "cn_102", text: "Slippage evidence carries into sandbox certification — measured, not assumed", source: { label: "EX-771 · exit", href: "/governance/exit-reviews/EX-771" }, deployment: { label: "dep_94", href: "/deployments/paper/dep_94" }, stage: "PAPER", due: "at cert", dueTone: "good", state: "OPEN", owner: "Stan", dueDays: null, dueAnchorSeconds: 0, created: "08-21", closes: "closes when sandbox certification records ≥ 30 measured fills — the cert workbench carries the check" },
-  { id: "cn_103", text: "Daily-loss cap −3.0% while canary runs (risk profile rev 12)", source: { label: "AP-259 · R2", href: "/governance/approvals/AP-259/r2" }, deployment: { label: "dep_88", href: "/deployments/live/dep_88/canary" }, stage: "CANARY", due: "3d left", dueTone: "warn", state: "EXPIRING", owner: "Lan", dueDays: 3, dueAnchorSeconds: 71_530, created: "07-28", closes: "closes by the live-gate decision on AP-311 — approval re-baselines the cap, denial returns it to canary defaults" },
-  { id: "cn_104", text: "Hedge-mode flatten check before NET→HEDGE flip on shared binding", source: { label: "AP-207 · R2", href: "/governance/approvals/AP-207/r2" }, deployment: null, stage: "SANDBOX", due: "no clock", dueTone: "good", state: "OPEN", owner: "Stan", dueDays: null, dueAnchorSeconds: 0, created: "08-12", closes: "closes when the flatten check runs in the Action Drawer before the account-policy flip — event-bound, no clock" },
-  { id: "cn_105", text: "WFO fold-6 dispersion re-check after 60d live data", source: { label: "AP-201 · R1", href: "/governance/approvals/AP-201/r1" }, deployment: { label: "dep_74", href: "/deployments/paper/dep_74" }, stage: "PAPER", due: "41d left", dueTone: "good", state: "OPEN", owner: "Minh", dueDays: 41, dueAnchorSeconds: 12_600, created: "08-14", closes: "closes by an R1 note re-running wfo_stability.v1 over the live window — fold 6 must clear 1.0" },
-  { id: "cn_106", text: "VN venue-calendar pause behaviour documented in runbook", source: { label: "PX-31 · exit", href: "/governance/exit-reviews/PX-31" }, deployment: { label: "dep_vnm", href: "/deployments/paper/dep_vnm/vn-market" }, stage: "PAPER", due: "done 08-21", dueTone: "good", state: "SATISFIED", owner: "Stan", dueDays: null, dueAnchorSeconds: 0, created: "08-15", closes: "closed 08-21 — runbook §7 records the pause/resume drill; the exit decision references it" },
-  { id: "cn_107", text: "Capacity waiver granted for canary step — expires with gate_live rev change", source: { label: "AP-311 · live gate", href: "/governance/approvals/AP-311/live" }, deployment: { label: "dep_88", href: "/deployments/live/dep_88/canary" }, stage: "CANARY", due: "policy-bound", dueTone: "good", state: "WAIVED", owner: "Lan", dueDays: null, dueAnchorSeconds: 0, created: "08-26", closes: "granted under gate_live rev 3 — any rev change voids it and reopens the capacity criterion at the gate" },
-] as const;
+/* NEW_REQUEST and WAIVER_ROWS smoke retired 2026-08-31 — the N29 consumer
+ * reads `governance.approval-create.v1` and `governance.conditions-register.v1`
+ * through the port (codex handoff, items 4/5/7). */
 
-/** Longest clock on the register — the runway strip's right edge. */
-export const WAIVER_RUNWAY_DAYS = 45;
+export type LiveGateDemo = typeof LIVE_GATE;

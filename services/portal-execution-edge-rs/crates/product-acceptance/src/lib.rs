@@ -106,7 +106,7 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         .pointer("/evidence")
         .and_then(Value::as_object)
         .ok_or(AcceptanceError::Malformed)?;
-    if evidence.len() != 12
+    if evidence.len() != 16
         || evidence
             .values()
             .any(|value| !value.as_str().is_some_and(is_sha256))
@@ -131,30 +131,41 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         return Err(AcceptanceError::AuthorityWidened);
     }
 
-    if text(&debt, "/schema_version") != Some(DEBT_REVISION)
-        || text(&debt, "/phase") != Some("N29")
-        || text(&debt, "/decision") != Some("NO_UNNAMED_DEBT")
-        || !array(&debt, "/internal_technical_debt")?.is_empty()
-        || number(&debt, "/typed_external_gaps/count")? != 9
-        || boolean(&debt, "/typed_external_gaps/release_blocking")?
-        || number(&debt, "/intentional_exclusions/count")? != 3
-        || boolean(&debt, "/intentional_exclusions/release_blocking")?
-        || text(&debt, "/new_phase_policy")
+    validate_debt_register(&debt)?;
+    Ok(summary)
+}
+
+fn validate_debt_register(debt: &Value) -> Result<(), AcceptanceError> {
+    if text(debt, "/schema_version") != Some(DEBT_REVISION)
+        || text(debt, "/phase") != Some("N29")
+        || text(debt, "/decision") != Some("NO_UNNAMED_DEBT")
+        || !array(debt, "/internal_technical_debt")?.is_empty()
+        || number(debt, "/typed_external_gaps/count")? != 9
+        || boolean(debt, "/typed_external_gaps/release_blocking")?
+        || number(debt, "/intentional_exclusions/count")? != 3
+        || boolean(debt, "/intentional_exclusions/release_blocking")?
+        || text(debt, "/new_phase_policy")
             != Some("N30_REQUIRES_GENUINELY_NEW_PRODUCT_SCOPE_OR_NEW_OWNER_REVISION")
     {
         return Err(AcceptanceError::DebtDrift);
     }
 
-    let blockers = array(&debt, "/release_blockers")?;
-    let blocker_ids: BTreeSet<_> = blockers
+    let blocker_ids = item_ids(array(debt, "/release_blockers")?);
+    let resolved_ids = item_ids(array(debt, "/resolved_delivery_gates")?);
+    if blocker_ids != BTreeSet::from(["N29-BE-72", "N29-REL-01"])
+        || resolved_ids != BTreeSet::from(["N29-FE-01"])
+    {
+        return Err(AcceptanceError::DebtDrift);
+    }
+    Ok(())
+}
+
+fn item_ids(items: &[Value]) -> BTreeSet<&str> {
+    items
         .iter()
         .filter_map(|item| item.get("blocker_id"))
         .filter_map(Value::as_str)
-        .collect();
-    if blocker_ids != BTreeSet::from(["N29-FE-01", "N29-REL-01"]) {
-        return Err(AcceptanceError::DebtDrift);
-    }
-    Ok(summary)
+        .collect()
 }
 
 fn text<'a>(value: &'a Value, pointer: &str) -> Option<&'a str> {

@@ -24,7 +24,7 @@ import {
   hasExecutionPreview,
   EXECUTION_PREVIEW_EXTRA_ROUTES,
 } from "../execution/previewRegistry";
-import { screenDeliveryProfile } from "../execution/profile";
+import { screenDeliveryProfile, screenDeliveryPolicy } from "../execution/profile";
 
 /**
  * Heavy modules are loaded when their route is entered, not before.
@@ -148,7 +148,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             <Route
               key={`execution-preview:${screen.screen_id}`}
               path={screen.route}
-              element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} />}
+              element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} policy={screenDeliveryPolicy(screen)} />}
             />
           ))}
         {EXECUTION_PREVIEW_ENABLED

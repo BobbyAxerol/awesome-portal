@@ -87,11 +87,15 @@ export function useCanaryTick(): { now: Date; j: number } {
   return { now: s.now, j: s.j };
 }
 
-export const fmtPlus = (v: number) => `+${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+export { clockZ, fmtPlus } from "./clock";
+
 export function exitIn(now: Date): string {
   if (now.getTime() === 0) return "—";
   const left = Math.max(0, Math.floor((EXIT_REVIEW_AT - now.getTime()) / 1000));
   const p2 = (n: number) => String(n).padStart(2, "0");
   return `${Math.floor(left / 86400)}d ${p2(Math.floor((left % 86400) / 3600))}:${p2(Math.floor((left % 3600) / 60))}:${p2(left % 60)}`;
 }
-export const clockZ = (d: Date) => (d.getTime() === 0 ? "—" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}Z`);
+
+export type CanaryDemo = NonNullable<ReturnType<typeof canarySmoke>>;
+export type CanaryTick = { now: Date; j: number };
+export type CanaryStages = ReturnType<typeof canaryStageSeries>;

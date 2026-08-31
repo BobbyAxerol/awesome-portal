@@ -181,6 +181,7 @@ for token in \
     "22 available backend APIs" \
     "internal technical debt: zero" \
     "N29-FE-01" \
+    "N29-BE-72" \
     "N29-REL-01"
 do
     if ! grep -Fq "${token}" "${N29_REPORT}"; then
@@ -503,7 +504,8 @@ for token in \
     "BR-EX-69" \
     "BR-EX-70" \
     "BR-EX-71" \
-    "_next: BR-EX-72_" \
+    "BR-EX-72" \
+    "_next: BR-EX-73_" \
     "EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then

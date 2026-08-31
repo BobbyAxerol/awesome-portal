@@ -12,8 +12,8 @@ Live mutation. Bobby owns merge and stable release decisions.
 2. Require the BR-EX-69 create/idempotency/SoD suite and BR-EX-71
    keyset/LAPSED-attention suite to pass against a fresh PostgreSQL migration.
 3. Require the N29 verdict to remain `BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO`
-   until the frontend same-origin consumer gate is attached and its browser
-   smoke evidence is recorded.
+   until BR-EX-72 is complete. The same-origin frontend consumer gate is
+   already accepted and remains digest-bound; it must be rerun after BR-EX-72.
 4. Merge through `dev`; promote a reviewed commit to `main` only after the
    exact product gate changes to GO in a later manifest revision.
 5. Let `publish-images.yml` build, scan, sign and attest all six images. Never

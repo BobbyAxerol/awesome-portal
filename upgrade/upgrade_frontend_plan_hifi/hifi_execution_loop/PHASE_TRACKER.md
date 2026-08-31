@@ -2738,7 +2738,7 @@ backend gate.
 | N26 | projection-backed authenticated SSE | consume manager snapshot; call `EventSource.close()` on terminal auth/gap; resnapshot before reconnect | `COMPLETE / RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
 | N27 | typed Admin Action Drawer command plane | render 24 server tasks; 14 inactive + 10 incompatible; enable only future authoritative `CONNECTED` tasks | `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK` |
 | N28 | 13 current-source adapters + one nine-entry genuine-gap owner packet | retain typed unavailable until verified return; never call source directly | `COMPLETE / SOURCE_DARK / N29_READY` |
-| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `BACKEND_ACCEPTED / PRODUCT_RELEASE_NO_GO / FRONTEND_AND_SIGNED_RELEASE_PENDING` |
+| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `BACKEND_ACCEPTED / FRONTEND_CONSUMER_ACCEPTED / PRODUCT_RELEASE_NO_GO / BR_EX_72_AND_SIGNED_RELEASE_PENDING` |
 
 ### N14A backend — Portal release authority, source-dark (2026-08-26)
 
@@ -3066,6 +3066,32 @@ that reach canonical dev parity. `ready`, `empty`, `stale`, `partial` and
 candles/calendar must remain local typed unavailable branches; no client-side
 join, fake row, source hash or automatic retry loop is allowed.
 
+### N23 backend — Sandbox and Live read profiles (2026-08-30)
+
+N23 is `COMPLETE / SANDBOX_LIVE_READ_RELEASE_QUALIFIED`. Six same-origin BFF
+compositions cover Sandbox Overview, Sandbox Certification, Live Overview,
+Canary, Live Full and Gate LIVE. Empty Live is valid source truth; source loss
+is partial/unavailable and Canary remains Portal governance over Live-profile
+facts rather than a fabricated source mode. Detail:
+[`CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md`](./CODEX_TO_CLAUDE_N23_SANDBOX_LIVE_READ_HANDOFF.md).
+
+### N24 backend — durable Portal projection (2026-08-30)
+
+N24 is `COMPLETE / IMPLEMENTATION_AND_RECOVERY_QUALIFIED`. Profile-isolated
+Rust/PostgreSQL projection state now preserves epoch/cursor lineage,
+tombstones, freshness, gap/dead-letter blockers, deterministic rebuild and
+atomic rollback. Poll-derived changes remain labelled
+`PORTAL_PROJECTION_DELTA`; no Trading System event authority is invented.
+Detail: [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](../../backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
+
+### N25 backend — Query and analytics plane (2026-08-30)
+
+N25 is `COMPLETE / QUERY_ANALYTICS_RELEASE_QUALIFIED`. Alpha and Portfolio 360
+consume bounded projection-backed analytics with exact decimals, typed empty/
+retention/error states and server-owned series rules. The browser never joins
+raw Manager relations or recomputes risk verdicts. Detail:
+[`EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md`](../../backend/EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md).
+
 ### N26 backend — projection-backed authenticated SSE (2026-08-30)
 
 N26 is `COMPLETE / IMPLEMENTATION_AND_RELEASE_QUALIFIED /
@@ -3115,10 +3141,49 @@ and one typed unavailable Account/Broker 360 API. `BR-EX-69` and `BR-EX-71`
 are closed with a server-pinned, serializable/idempotent R1 approval mutation
 and an exact keyset/count conditions register. Internal technical debt is zero.
 
-Product GO remains blocked by two named delivery gates only: Claude must replace
-`createFixtureApi()` with same-origin BFF consumers and return parity evidence;
-then the protected `main` workflow must publish signed/attested immutable image
-digests. No direct browser → Edge/Trading System call is allowed. See
+N29-FE-01 is now closed by Claude's warning-clean same-origin consumer return,
+product import-graph gate and 66 browser journeys. Product GO remains blocked
+by two named gates only: `N29-BE-72` (the consolidated Fleet/Bindings/Live
+Review fixture/registry request) and `N29-REL-01` (signed/attested immutable
+images from protected `main`). No direct browser → Edge/Trading System call is
+allowed. See
 [`CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md`](./CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md)
 and
 [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](../../backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).
+
+> **2026-08-31 · N29 handoff: ĐÃ ĐỌC toàn bộ + ĐÃ LÀM consumer slice** (commit
+> `fb2d14b`, evidence: CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md). Hai route
+> governance bound end-to-end qua port; NEW_REQUEST/WAIVER_ROWS smoke đã xoá;
+> suite 1,779 pass · 0 React warning. Còn treo: browser smoke trên BFF thật —
+> gateway đang chạy image cũ (waivers 404); chạy được ngay khi image N29 lên.
+
+
+> **2026-08-31 · N29-FE-01 closeout: ĐÃ ĐỌC toàn bộ + ĐÃ LÀM trọn gói**
+> (`CODEX_TO_CLAUDE_N29_SAME_ORIGIN_PRODUCT_CONSUMER_CLOSEOUT.md`, backend
+> truth `e226ffb`). Product graph không còn reachable fixture producer nào —
+> gate tự động `productBoundary.test.ts` 0 offences. Mọi màn có route BFF đều
+> HTTP_CONSUMER same-origin (ma trận:
+> CLAUDE_TO_CODEX_N29_FE_01_RETURN_PACKET.md); Account360 + Fleet + Bindings
+> là TYPED_UNAVAILABLE đúng reason code; Admin drawer chạy N27
+> `command-tasks.v1` (24 task · 0 CONNECTED → không bật gì); Gate LIVE chạy
+> `governance.live-review.v1`. Gates: vitest 1780 pass + console guard 0
+> warning · build xanh · Playwright preview+journeys 66 pass trên BFF double
+> same-origin (`e2e/bffDouble.ts`), console + origin-containment asserts.
+> Verdict trả codex: `FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX` — không
+> tự đánh Product GO. Request hợp nhất: BR-EX-72 đề xuất (fleet list · bindings
+> list/detail · live-review fixture · registry amendment). Đổi doctrine đọc:
+> client không pre-block theo policy metadata cũ của registry — server là
+> enforcer (ghi ở §8.44 FRONTEND_HANDOFF + return packet §5).
+
+> **2026-08-31 · Codex N29 closeout amendment:** accepted N29-FE-01, corrected
+> Command Center/Incident/Operations/Inbox request attribution, pinned exact
+> request IDs for all 23 screens, corrected Account/Broker owner gap to MC-05,
+> and admitted the single consolidated `BR-EX-72` row. Internal technical debt
+> remains zero; Product GO remains false behind `N29-BE-72` and `N29-REL-01`.
+> The integrated branch gate is stricter than the historical Claude return:
+> 1,784 Vitest assertions pass with one intentional skip and zero console
+> warnings; the production build passes; full Playwright parity is 309 passed,
+> 16 intentional skips and zero failures, including the 40/40 responsive audit
+> and same-origin network containment.
+> Three intentional journey baselines were refreshed after the product/lab
+> split, and the obsolete `_probe-exitbar.spec.ts` debug probe was removed.

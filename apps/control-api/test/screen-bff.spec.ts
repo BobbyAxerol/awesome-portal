@@ -32,7 +32,11 @@ describe("N20 canonical screen BFF catalogue", () => {
     expect(SCREEN_BFF_CATALOGUE).toHaveLength(23);
     expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.screenId)).size).toBe(23);
     expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.dataApi.operationId)).size).toBe(23);
-    expect([...new Set(SCREEN_BFF_CATALOGUE.flatMap((item) => item.requestIds))].sort()).toEqual(
+    const commissioned = new Set(
+      SCREEN_BFF_CATALOGUE.flatMap((item) => item.requestIds)
+        .filter((requestId) => /^BR-EX-(?:4[1-9]|5[0-9]|6[0-9]|7[01])$/.test(requestId)),
+    );
+    expect([...commissioned].sort()).toEqual(
       Array.from({ length: 31 }, (_, index) => `BR-EX-${index + 41}`),
     );
     expect(SCREEN_BFF_CATALOGUE.map((item) => item.screenId)).toEqual(
@@ -51,6 +55,35 @@ describe("N20 canonical screen BFF catalogue", () => {
     expect(sandbox?.readCapabilities).toEqual(
       expect.arrayContaining(["portal.entity-names", "portal.blocker-catalog"]),
     );
+  });
+
+  it("pins the exact request mapping for every commissioned screen", () => {
+    const expected: Record<string, readonly string[]> = {
+      PAPER_TRADING_SCREEN: ["BR-EX-41", "BR-EX-55"],
+      SANDBOX_TRADING_SCREEN: ["BR-EX-60", "BR-EX-55"],
+      LIVE_OPERATIONS_SCREEN: ["BR-EX-56", "BR-EX-55"],
+      EXECUTION_COMMAND_CENTER_SCREEN: ["BR-EX-42", "BR-EX-43", "BR-EX-44", "BR-EX-45", "BR-EX-55"],
+      EXECUTION_OPERATIONS_QUEUE_SCREEN: ["BR-EX-47", "BR-EX-55"],
+      EXECUTION_INCIDENT_DETAIL_SCREEN: ["BR-EX-46", "BR-EX-55"],
+      EXECUTION_APPROVAL_INBOX_SCREEN: ["BR-EX-35", "BR-EX-55"],
+      EXECUTION_GATE_R1_REVIEW_SCREEN: ["BR-EX-67", "BR-EX-55"],
+      EXECUTION_GATE_R2_REVIEW_SCREEN: ["BR-EX-67", "BR-EX-55"],
+      EXECUTION_PAPER_EXIT_REVIEW_SCREEN: ["BR-EX-63", "BR-EX-55"],
+      EXECUTION_PAPER_WORKBENCH_SCREEN: ["BR-EX-62", "BR-EX-55", "BR-EX-58"],
+      EXECUTION_PAPER_WORKBENCH_VNM_SCREEN: ["BR-EX-62", "BR-EX-55", "BR-EX-58"],
+      EXECUTION_SANDBOX_CERTIFICATION_SCREEN: ["BR-EX-60", "BR-EX-61", "BR-EX-55", "BR-EX-58"],
+      EXECUTION_CANARY_CONTROL_ROOM_SCREEN: ["BR-EX-59", "BR-EX-55", "BR-EX-58"],
+      EXECUTION_LIVE_FULL_OPERATIONS_SCREEN: ["BR-EX-57", "BR-EX-55", "BR-EX-58"],
+      EXECUTION_FULL_BLOTTER_SCREEN: ["BR-EX-48", "BR-EX-55"],
+      EXECUTION_ALPHA_360_SCREEN: ["BR-EX-49", "BR-EX-50", "BR-EX-64", "BR-EX-55"],
+      EXECUTION_PORTFOLIO_360_SCREEN: ["BR-EX-51", "BR-EX-65", "BR-EX-66", "BR-EX-55"],
+      EXECUTION_ACCOUNT_BROKER_360_SCREEN: ["BR-EX-52", "BR-EX-53", "BR-EX-54", "BR-EX-55"],
+      EXECUTION_ADMIN_ACTION_DRAWER_SCREEN: ["BR-EX-68", "BR-EX-55"],
+      EXECUTION_NEW_APPROVAL_REQUEST_SCREEN: ["BR-EX-69", "BR-EX-55"],
+      EXECUTION_GATE_LIVE_REVIEW_SCREEN: ["BR-EX-70", "BR-EX-55"],
+      EXECUTION_WAIVERS_REGISTER_SCREEN: ["BR-EX-71", "BR-EX-55"],
+    };
+    expect(Object.fromEntries(SCREEN_BFF_CATALOGUE.map((item) => [item.screenId, item.requestIds]))).toEqual(expected);
   });
 
   it("publishes only narrow versioned paths and never raw Manager selectors", () => {

@@ -1,91 +1,93 @@
 /**
- * Waivers & Conditions — the fleet-wide obligations register
- * (owner-commissioned 2026-08-30, ROADMAP §H.2.3; polish pass same day after
- * owner review: "sáng tạo, kỹ, động hơn").
+ * Waivers & Conditions — the fleet-wide obligations register, now the N29
+ * consumer (codex handoff 2026-08-31): rows, exact counts, bidirectional
+ * keyset cursors and the four states OPEN/WAIVED/EXPIRING/LAPSED all come
+ * from `governance.conditions-register.v1`. The client renders server state
+ * and never re-derives it; every due display counts from the server's own
+ * `read_at`, not the browser clock.
  *
- * The screen answers three questions in order, top to bottom:
- *   1. how much does the fund owe, and how urgent is it?  (strip + runway)
- *   2. where does the debt sit?                            (per-deployment chips)
- *   3. what exactly is each obligation, and what CLOSES it? (register + expand)
- *
- * Motion is real and honest: the EXPIRING clock ticks per second
- * (`useInboxTick`, gated by `smokeMotionAllowed` so audits and baselines
- * measure a still page), the runway bars are CSS-animated on mount under the
- * same reduced-motion guard, and nothing else moves — governance reads calm.
- *
- * Register rows are DECLARED SMOKE (`WAIVER_ROWS`) mirroring conditions that
- * already exist in the cast; the cross-fleet query ships with BR-EX-71.
+ * The composition keeps the owner-approved reading order: how much and how
+ * urgent (strip) → what lapses when (runway) → where the debt sits (subject
+ * chips) → the register itself, each row expandable to its source decision.
+ * LAPSED is BLOCKING: it renders as a blocking finding, exactly as it enters
+ * the Command Center `today` feed as CONDITION_EXPIRY.
  */
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
-import { WAIVER_ROWS, WAIVER_RUNWAY_DAYS, type WaiverRow, type WaiverState } from "../governance.smoke";
-import { useInboxTick } from "../approvalInbox.smoke";
+import type { ConditionRow, ConditionsPage, ExecutionApi, WaiverStateCode } from "../api/ports";
+import { useInboxTick } from "../liveTick";
 import { ExecutionDecisionStrip } from "../components/workspace";
+import { PanelState } from "../components/states";
+import { reviewRouteFor, type ApprovalGate } from "./ApprovalInbox";
+import type { PanelStatus } from "../contracts";
 
-const FILTERS = ["ALL", "OPEN", "EXPIRING", "WAIVED", "SATISFIED"] as const;
+const FILTERS = ["ALL", "OPEN", "EXPIRING", "LAPSED", "WAIVED"] as const;
 type Filter = (typeof FILTERS)[number];
 
-const STATE_FILL: Record<WaiverState, "warn" | "bad" | "good"> = {
+const STATE_FILL: Record<WaiverStateCode, "warn" | "bad" | "good"> = {
   OPEN: "warn",
   EXPIRING: "bad",
+  LAPSED: "bad",
   WAIVED: "good",
-  SATISFIED: "good",
 };
 
-/** `3d 04:07:12` — the live remainder of a due clock, counting down. */
-function countdown(row: WaiverRow, tick: number): string {
-  if (row.dueDays === null) return row.due;
-  const secondsLeft = Math.max(0, row.dueDays * 86_400 - row.dueAnchorSeconds - tick);
-  const d = Math.floor(secondsLeft / 86_400);
-  const h = String(Math.floor((secondsLeft % 86_400) / 3600)).padStart(2, "0");
-  const m = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0");
-  const sec = String(secondsLeft % 60).padStart(2, "0");
-  return `${d}d ${h}:${m}:${sec}`;
-}
+const PAGE_SIZE = 5;
 
-function DueCell({ row, tick }: { row: WaiverRow; tick: number }) {
-  if (row.dueDays === null) {
-    return <span className="exec-wv-duechip" data-tone={row.dueTone}>{row.due}</span>;
+/** Remaining time from the SERVER's read anchor — never the browser clock. */
+function remaining(row: ConditionRow, readAt: string | null, tick: number): { text: string; tone: "good" | "warn" | "bad" } {
+  if (!row.dueAt) return { text: "no clock", tone: "good" };
+  if (!readAt) return { text: "due " + row.dueAt.slice(0, 10), tone: "warn" };
+  const left = Math.floor((Date.parse(row.dueAt) - Date.parse(readAt)) / 1000) - tick;
+  if (left <= 0) {
+    const ago = Math.abs(left);
+    return { text: `lapsed ${Math.floor(ago / 86_400)}d ${String(Math.floor((ago % 86_400) / 3600)).padStart(2, "0")}h ago`, tone: "bad" };
   }
-  const pct = Math.min(100, Math.round((row.dueDays / WAIVER_RUNWAY_DAYS) * 100));
-  return (
-    <span className="exec-wv-due" data-tone={row.dueTone}>
-      <span className="exec-wv-duenum" data-live={row.state === "EXPIRING" ? "true" : undefined}>
-        {row.state === "EXPIRING" ? countdown(row, tick) : row.due}
-      </span>
-      <span className="exec-sla-bar exec-wv-duebar" aria-hidden="true">
-        <span className="exec-wv-duefill" data-tone={row.dueTone} style={{ width: `${pct}%` }} />
-      </span>
-    </span>
-  );
+  const d = Math.floor(left / 86_400);
+  const h = String(Math.floor((left % 86_400) / 3600)).padStart(2, "0");
+  const m = String(Math.floor((left % 3600) / 60)).padStart(2, "0");
+  const sec = String(left % 60).padStart(2, "0");
+  // A clock a month out ticking seconds reads as noise; the second hand is
+  // reserved for the week that matters. EXPIRING/LAPSED always show it.
+  if (row.state !== "EXPIRING" && row.state !== "LAPSED" && d >= 7) {
+    return { text: `${d}d left`, tone: d < 21 ? "warn" : "good" };
+  }
+  return { text: `${d}d ${h}:${m}:${sec}`, tone: d < 7 ? "bad" : d < 21 ? "warn" : "good" };
 }
 
-/** The runway: every clocked obligation placed on one shared time axis. */
-function Runway({ rows, tick }: { rows: readonly WaiverRow[]; tick: number }) {
-  const clocked = rows.filter((r) => r.dueDays !== null && (r.state === "OPEN" || r.state === "EXPIRING"));
-  const unclocked = rows.filter((r) => r.dueDays === null && (r.state === "OPEN" || r.state === "EXPIRING"));
+function sourceHref(row: ConditionRow): string {
+  return reviewRouteFor({ id: row.approvalId, gate: row.gate as ApprovalGate });
+}
+
+/** Longest clock drawn on the shared runway axis. */
+const RUNWAY_DAYS = 45;
+
+function Runway({ rows, readAt, tick }: { rows: readonly ConditionRow[]; readAt: string | null; tick: number }) {
+  const urgent = rows.filter((r) => r.state === "OPEN" || r.state === "EXPIRING" || r.state === "LAPSED");
+  const clocked = urgent.filter((r) => r.dueAt !== null);
+  const unclocked = urgent.filter((r) => r.dueAt === null);
+  const days = (r: ConditionRow) =>
+    readAt && r.dueAt ? Math.max(0, (Date.parse(r.dueAt) - Date.parse(readAt)) / 86_400_000) : 0;
   return (
-    <div className="exec-gov-panel" data-smoke="true">
+    <div className="exec-gov-panel">
       <div className="exec-gov-panelhead">
         <span className="exec-gov-paneltitle">Runway — what lapses when</span>
-        <span className="exec-gov-meta">shared axis 0 → {WAIVER_RUNWAY_DAYS}d · a bar reaching zero becomes a blocking finding</span>
+        <span className="exec-gov-meta">shared axis 0 → {RUNWAY_DAYS}d · at zero an obligation is a blocking finding, and LAPSED already is one</span>
       </div>
       <div className="exec-wv-runway" role="list" aria-label="Obligation runway">
-        {[...clocked].sort((a, b) => (a.dueDays ?? 0) - (b.dueDays ?? 0)).map((r) => {
-          const pct = Math.min(100, Math.round(((r.dueDays ?? 0) / WAIVER_RUNWAY_DAYS) * 100));
+        {[...clocked].sort((a, b) => days(a) - days(b)).map((r) => {
+          const pct = Math.min(100, Math.round((days(r) / RUNWAY_DAYS) * 100));
+          const due = remaining(r, readAt, tick);
           return (
-            <div className="exec-wv-lane" role="listitem" key={r.id} data-state={r.state}>
-              <span className="exec-wv-lanewho">
-                {r.deployment ? <a href={r.deployment.href}>{r.deployment.label}</a> : "binding"} · {r.owner}
-              </span>
+            <div className="exec-wv-lane" role="listitem" key={r.conditionId} data-state={r.state}>
+              <span className="exec-wv-lanewho">{r.subjectLabel} · {r.owner}</span>
               <span className="exec-wv-lanetrack" aria-hidden="true">
-                <span className="exec-wv-lanefill" data-tone={r.dueTone} style={{ width: `${pct}%` }} />
-                <span className="exec-wv-lanedot" data-tone={r.dueTone} style={{ left: `${pct}%` }} />
+                <span className="exec-wv-lanefill" data-tone={due.tone} style={{ width: `${pct}%` }} />
+                <span className="exec-wv-lanedot" data-tone={due.tone} style={{ left: `${pct}%` }} />
               </span>
-              <span className="exec-wv-lanedue" data-tone={r.dueTone} data-live={r.state === "EXPIRING" ? "true" : undefined}>
-                {r.state === "EXPIRING" ? countdown(r, tick) : r.due}
+              <span className="exec-wv-lanedue" data-tone={due.tone} data-live={r.state === "EXPIRING" || r.state === "LAPSED" ? "true" : undefined}>
+                {due.text}
               </span>
-              <span className="exec-wv-lanetext">{r.text}</span>
+              <span className="exec-wv-lanetext">{r.statement}</span>
             </div>
           );
         })}
@@ -93,37 +95,55 @@ function Runway({ rows, tick }: { rows: readonly WaiverRow[]; tick: number }) {
       {unclocked.length > 0 ? (
         <p className="exec-gate-note">
           {unclocked.length} open obligation{unclocked.length > 1 ? "s are" : " is"} event-bound, not
-          clocked — {unclocked.map((r) => `${r.id.replace("cn_", "#")} ${r.due}`).join(" · ")} — they
-          close by their event, and the event is asserted by a decision
+          clocked — {unclocked.map((r) => `${r.conditionId.replace("cn_", "#")} (${r.label})`).join(" · ")} —
+          each closes by its event, and the event is asserted by a decision on its source approval
         </p>
       ) : null}
     </div>
   );
 }
 
-export function WaiversRegisterScreen() {
-  const [filter, setFilter] = useState<Filter>("ALL");
-  const [expanded, setExpanded] = useState<string | null>("cn_103");
-  const tick = useInboxTick();
-  const rows = WAIVER_ROWS.filter((r) => filter === "ALL" || r.state === filter);
+export interface WaiverCounts {
+  total: number | null;
+  byState: Partial<Record<WaiverStateCode, number | null>>;
+}
 
-  const open = WAIVER_ROWS.filter((r) => r.state === "OPEN").length;
-  const expiring = WAIVER_ROWS.filter((r) => r.state === "EXPIRING").length;
-  const waived = WAIVER_ROWS.filter((r) => r.state === "WAIVED").length;
-  const nearest = useMemo(
-    () => [...WAIVER_ROWS].filter((r) => r.dueDays !== null && r.state !== "SATISFIED").sort((a, b) => (a.dueDays ?? 99) - (b.dueDays ?? 99))[0],
-    [],
-  );
-  const byDeployment = useMemo(() => {
-    const m = new Map<string, { href: string; open: number }>();
-    for (const r of WAIVER_ROWS) {
-      if (r.state === "SATISFIED" || !r.deployment) continue;
-      const cur = m.get(r.deployment.label) ?? { href: r.deployment.href, open: 0 };
-      cur.open += 1;
-      m.set(r.deployment.label, cur);
+export function WaiversRegisterScreen({
+  page,
+  counts,
+  filter,
+  onFilter,
+  onNext,
+  onPrev,
+  status = "ok",
+  reason,
+}: {
+  page: ConditionsPage | null;
+  counts: WaiverCounts;
+  filter: Filter;
+  onFilter: (next: Filter) => void;
+  onNext: () => void;
+  onPrev: () => void;
+  status?: PanelStatus;
+  reason?: string;
+}) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const tick = useInboxTick();
+  const rows = page?.rows ?? [];
+  const readAt = page?.readAt ?? null;
+
+  const open = counts.byState.OPEN ?? null;
+  const expiring = counts.byState.EXPIRING ?? null;
+  const lapsed = counts.byState.LAPSED ?? null;
+  const waived = counts.byState.WAIVED ?? null;
+  const bySubject = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of rows) {
+      if (r.state === "WAIVED") continue;
+      m.set(r.subjectLabel, (m.get(r.subjectLabel) ?? 0) + 1);
     }
     return [...m.entries()];
-  }, []);
+  }, [rows]);
 
   return (
     <section className="exec-gate exec-gov" aria-label="Waivers and conditions register" data-hifi-exact="waivers-register">
@@ -132,130 +152,206 @@ export function WaiversRegisterScreen() {
         <h1 className="exec-gov-h1">Waivers &amp; Conditions <span className="exec-gov-dim">—</span> what the fund owes, fleet-wide</h1>
       </div>
       <div className="exec-gov-metaline">
-        <span className="exec-gov-chip" data-fill="warn">{open} OPEN</span>
-        {expiring > 0 ? <span className="exec-gov-chip" data-fill="bad" data-pulse="true">{expiring} EXPIRING</span> : null}
-        {waived > 0 ? <span className="exec-gov-chip" data-fill="good">{waived} WAIVED</span> : null}
+        {open !== null ? <span className="exec-gov-chip" data-fill="warn">{open} OPEN</span> : null}
+        {expiring !== null && expiring > 0 ? <span className="exec-gov-chip" data-fill="bad" data-pulse="true">{expiring} EXPIRING</span> : null}
+        {lapsed !== null && lapsed > 0 ? <span className="exec-gov-chip" data-fill="bad">{lapsed} LAPSED · BLOCKING</span> : null}
+        {waived !== null && waived > 0 ? <span className="exec-gov-chip" data-fill="good">{waived} WAIVED</span> : null}
         <span className="exec-gov-meta">
-          every row was created by a decision — R1/R2 conditions, exit-review carried questions,
-          policy-bound waivers · a condition closes only by a decision, never by scrolling past it
+          governance.conditions-register.v1 · PORTAL_CONTROL · states computed server-side — this
+          screen renders them and never re-derives · a condition closes only by a decision
         </span>
       </div>
-      <p className="exec-af-smoke">
-        ! SMOKE DATA — register rows mirror the cast&apos;s existing conditions; the cross-fleet
-        query, due-clock and state transitions ship with BR-EX-71. Delete when BR-EX-71 ships
-      </p>
 
       <ExecutionDecisionStrip
         metrics={[
-          { label: "Open + expiring", value: String(open + expiring), tone: open + expiring > 0 ? "warn" : "good" },
-          { label: "Expiring ≤ 7d", value: String(expiring), tone: expiring > 0 ? "bad" : "good" },
-          { label: "Next to lapse", value: nearest ? `${nearest.id.replace("cn_", "#")} · ${countdown(nearest, tick)}` : "—", tone: nearest?.dueTone },
-          { label: "Active waivers", value: String(waived), tone: "good" },
-          { label: "Deployments carrying debt", value: String(byDeployment.length) },
+          { label: "Open + expiring", value: open !== null && expiring !== null ? String(open + expiring) : null, tone: (open ?? 0) + (expiring ?? 0) > 0 ? "warn" : "good" },
+          { label: "Lapsed (blocking)", value: lapsed !== null ? String(lapsed) : null, tone: (lapsed ?? 0) > 0 ? "bad" : "good" },
+          { label: "Active waivers", value: waived !== null ? String(waived) : null, tone: "good" },
+          { label: "Register total", value: counts.total !== null ? String(counts.total) : null },
+          { label: "Read at", value: readAt ? readAt.slice(11, 19) + " UTC" : null },
         ]}
       />
 
-      <Runway rows={WAIVER_ROWS} tick={tick} />
+      {status !== "ok" && status !== "partial" ? (
+        <PanelState status={status} reason={reason} />
+      ) : (
+        <>
+          <Runway rows={rows} readAt={readAt} tick={tick} />
 
-      <div className="exec-wv-debtrow" role="group" aria-label="Obligations by deployment">
-        <span className="exec-gov-meta">where the debt sits:</span>
-        {byDeployment.map(([label, v]) => (
-          <a className="exec-wv-debtchip" href={v.href} key={label}>
-            {label} <b>{v.open}</b>
-          </a>
-        ))}
-        <span className="exec-gov-meta">· counts exclude SATISFIED · a chip opens the deployment&apos;s workbench</span>
-      </div>
-
-      <div className="exec-gov-panel">
-        <div className="exec-gov-panelhead">
-          <span className="exec-gov-paneltitle">Register</span>
-          <span className="exec-gov-meta">click a row for what closes it</span>
-          <div role="group" aria-label="Filter by state" className="exec-gate-wvfilters">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                className="exec-inbox-filter"
-                aria-pressed={f === filter}
-                data-active={f === filter ? "true" : undefined}
-                onClick={() => setFilter(f)}
-              >
-                {f === "ALL" ? `All (${WAIVER_ROWS.length})` : f}
-              </button>
+          <div className="exec-wv-debtrow" role="group" aria-label="Obligations by subject">
+            <span className="exec-gov-meta">on this page, the debt sits with:</span>
+            {bySubject.map(([label, n]) => (
+              <span className="exec-wv-debtchip" key={label}>{label} <b>{n}</b></span>
             ))}
+            <span className="exec-gov-meta">· WAIVED excluded · exact fleet totals live in the strip above</span>
           </div>
-        </div>
-        <div className="exec-gate-criteriawrap">
-          <table className="exec-360-sync exec-gate-criteria exec-gate-wvtable">
-            <thead>
-              <tr>
-                <th scope="col">condition</th>
-                <th scope="col">source decision</th>
-                <th scope="col">deployment</th>
-                <th scope="col">stage</th>
-                <th scope="col" data-numeric="true">due</th>
-                <th scope="col">state</th>
-                <th scope="col">owner</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <Fragment key={r.id}>
-                  <tr
-                    data-state={r.state}
-                    data-expanded={expanded === r.id ? "true" : undefined}
-                    className="exec-wv-row"
+
+          <div className="exec-gov-panel">
+            <div className="exec-gov-panelhead">
+              <span className="exec-gov-paneltitle">Register</span>
+              <span className="exec-gov-meta">click a row for its source decision</span>
+              <div role="group" aria-label="Filter by state" className="exec-gate-wvfilters">
+                {FILTERS.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    className="exec-inbox-filter"
+                    aria-pressed={f === filter}
+                    data-active={f === filter ? "true" : undefined}
+                    onClick={() => onFilter(f)}
                   >
-                    <th scope="row">
-                      <button
-                        type="button"
-                        className="exec-wv-rowbtn"
-                        aria-expanded={expanded === r.id}
-                        onClick={() => setExpanded((cur) => (cur === r.id ? null : r.id))}
-                      >
-                        <span className="exec-wv-carret" aria-hidden="true">{expanded === r.id ? "▾" : "▸"}</span>
-                        {r.text}
-                      </button>
-                    </th>
-                    <td><a href={r.source.href}>{r.source.label}</a></td>
-                    <td>{r.deployment ? <a href={r.deployment.href}>{r.deployment.label}</a> : <span className="exec-gate-unverified">binding-scoped</span>}</td>
-                    <td><span className="exec-gov-chip" data-fill="good">{r.stage}</span></td>
-                    <td className="exec-num"><DueCell row={r} tick={tick} /></td>
-                    <td><span className="exec-gov-chip" data-fill={STATE_FILL[r.state]} data-pulse={r.state === "EXPIRING" ? "true" : undefined}>{r.state}</span></td>
-                    <td>{r.owner}</td>
+                    {f === "ALL" ? `All${counts.total !== null ? ` (${counts.total})` : ""}` : f}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="exec-gate-criteriawrap">
+              <table className="exec-360-sync exec-gate-criteria exec-gate-wvtable">
+                <thead>
+                  <tr>
+                    <th scope="col">condition</th>
+                    <th scope="col">source decision</th>
+                    <th scope="col">subject</th>
+                    <th scope="col">env</th>
+                    <th scope="col" data-numeric="true">due</th>
+                    <th scope="col">state</th>
+                    <th scope="col">owner</th>
                   </tr>
-                  {expanded === r.id ? (
-                    <tr className="exec-wv-detailrow" data-state={r.state}>
-                      <td colSpan={7}>
-                        <div className="exec-wv-detail">
-                          <span className="exec-wv-detailk">what closes it</span>
-                          <span className="exec-wv-detailv">{r.closes}</span>
-                          <span className="exec-wv-detailk">opened</span>
-                          <span className="exec-wv-detailv">
-                            {r.created} by <a href={r.source.href}>{r.source.label}</a> · owner {r.owner} — closing is a
-                            decision on that surface, this register only watches
-                          </span>
-                        </div>
-                      </td>
+                </thead>
+                <tbody>
+                  {rows.map((r) => {
+                    const due = remaining(r, readAt, tick);
+                    return (
+                      <Fragment key={r.conditionId}>
+                        <tr data-state={r.state} data-expanded={expanded === r.conditionId ? "true" : undefined} className="exec-wv-row">
+                          <th scope="row">
+                            <button
+                              type="button"
+                              className="exec-wv-rowbtn"
+                              aria-expanded={expanded === r.conditionId}
+                              onClick={() => setExpanded((cur) => (cur === r.conditionId ? null : r.conditionId))}
+                            >
+                              <span className="exec-wv-carret" aria-hidden="true">{expanded === r.conditionId ? "▾" : "▸"}</span>
+                              {r.statement}
+                            </button>
+                          </th>
+                          <td><a href={sourceHref(r)}>{r.approvalId} · {r.gate}</a></td>
+                          <td>{r.subjectLabel}</td>
+                          <td><span className="exec-gov-chip" data-fill="good">{r.environment}</span></td>
+                          <td className="exec-num"><span className="exec-wv-duenum" data-live={r.state === "EXPIRING" ? "true" : undefined} data-tone={due.tone}>{due.text}</span></td>
+                          <td>
+                            <span className="exec-gov-chip" data-fill={STATE_FILL[r.state]} data-pulse={r.state === "EXPIRING" ? "true" : undefined}>{r.state}</span>
+                            {r.state === "LAPSED" || r.blocking ? <span className="exec-wv-blocking"> BLOCKING</span> : null}
+                          </td>
+                          <td>{r.owner}</td>
+                        </tr>
+                        {expanded === r.conditionId ? (
+                          <tr className="exec-wv-detailrow" data-state={r.state}>
+                            <td colSpan={7}>
+                              <div className="exec-wv-detail">
+                                <span className="exec-wv-detailk">obligation</span>
+                                <span className="exec-wv-detailv">{r.label} · {r.kind} · policy {r.policyVersion}</span>
+                                <span className="exec-wv-detailk">closes by</span>
+                                <span className="exec-wv-detailv">
+                                  a decision on <a href={sourceHref(r)}>{r.approvalId}</a> — this register only watches;
+                                  opened {r.createdAt ? r.createdAt.slice(0, 10) : "date not stated"} · owner {r.owner}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
+                  {rows.length === 0 ? (
+                    <tr>
+                      <th scope="row" colSpan={7}>no conditions in this state — an empty filter is a fact, not a failure</th>
                     </tr>
                   ) : null}
-                </Fragment>
-              ))}
-              {rows.length === 0 ? (
-                <tr>
-                  <th scope="row" colSpan={7}>no conditions in this state — an empty filter is a fact, not a failure</th>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
-        <p className="exec-role-meta exec-gate-criteriafoot">
-          {rows.length} of {WAIVER_ROWS.length} shown · a WAIVED row names the policy revision that
-          granted it and expires with a policy change · EXPIRING escalates in Command Center before
-          it lapses — a lapsed condition is a blocking finding, never a quiet default
-        </p>
-      </div>
+                </tbody>
+              </table>
+            </div>
+            <div className="exec-wv-pager">
+              <button type="button" className="exec-inbox-filter" disabled={!page?.hasPrevious} onClick={onPrev}>← newer</button>
+              <span className="exec-role-meta">
+                {rows.length} of {page?.filteredCount ?? "?"} in this state · register total {page?.totalCount ?? "?"} · exact server counts, keyset paged
+              </span>
+              <button type="button" className="exec-inbox-filter" disabled={!page?.hasMore} onClick={onNext}>older →</button>
+            </div>
+            <p className="exec-role-meta exec-gate-criteriafoot">
+              a WAIVED row names the policy revision that granted it and expires with a policy change ·
+              LAPSED is blocking and enters Command Center today as CONDITION_EXPIRY — never a quiet default
+            </p>
+          </div>
+        </>
+      )}
     </section>
+  );
+}
+
+/** Fetches pages + exact per-state counts through the port. */
+export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
+  const [filter, setFilter] = useState<Filter>("ALL");
+  const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
+  const [page, setPage] = useState<ConditionsPage | null>(null);
+  const [status, setStatus] = useState<PanelStatus>("loading");
+  const [reason, setReason] = useState<string | undefined>(undefined);
+  const [counts, setCounts] = useState<WaiverCounts>({ total: null, byState: {} });
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatus("loading");
+    void api
+      .getWaivers({ state: filter === "ALL" ? undefined : filter, limit: PAGE_SIZE, ...cursor })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok) {
+          setPage(result.value);
+          setStatus("ok");
+        } else {
+          setPage(null);
+          setStatus(result.status);
+          setReason(result.reason);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, filter, cursor]);
+
+  // Exact per-state counts are the SERVER's `filtered_count`, one bounded
+  // probe per state — never a client-side tally of a partial page.
+  useEffect(() => {
+    let cancelled = false;
+    const states: WaiverStateCode[] = ["OPEN", "EXPIRING", "LAPSED", "WAIVED"];
+    void Promise.all(states.map((state) => api.getWaivers({ state, limit: 1 }))).then((results) => {
+      if (cancelled) return;
+      const byState: WaiverCounts["byState"] = {};
+      let total: number | null = null;
+      results.forEach((result, i) => {
+        byState[states[i]] = result.ok ? result.value.filteredCount : null;
+        if (result.ok && result.value.totalCount !== null) total = result.value.totalCount;
+      });
+      setCounts({ total, byState });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
+  return (
+    <WaiversRegisterScreen
+      page={page}
+      counts={counts}
+      filter={filter}
+      onFilter={(next) => {
+        setCursor({});
+        setFilter(next);
+      }}
+      onNext={() => page?.nextCursor && setCursor({ after: page.nextCursor })}
+      onPrev={() => page?.prevCursor && setCursor({ before: page.prevCursor })}
+      status={status}
+      reason={reason}
+    />
   );
 }

@@ -15,7 +15,8 @@ import { PanelState } from "../components/states";
 import { ExecutionWorkspace, shortDigest } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
 import { blockerText, incidentRail, type IncidentCollection, type IncidentDetail as Incident } from "../operations";
-import { hhmm, incidentSmoke, incidentSparkSeries, mmss, useIncidentLive, type GateRow, type OpRow } from "../incident.smoke";
+import { hhmm, incidentSparkSeries, mmss } from "../clock";
+import type { GateRow, IncidentDemo, IncidentLive, OpRow } from "../incident.smoke";
 
 const PANEL_TITLE: Record<string, string> = {
   findings: "Findings",
@@ -77,6 +78,8 @@ export function IncidentDetailScreen({
   conflict,
   trail,
   children,
+  demo,
+  demoLive,
 }: {
   incident: Incident | null;
   status?: PanelStatus;
@@ -87,10 +90,13 @@ export function IncidentDetailScreen({
   conflict?: boolean;
   trail?: ReactNode;
   children?: ReactNode;
+  /** Lab-injected demo bundle + its motion; product routes pass neither. */
+  demo?: IncidentDemo | null;
+  demoLive?: IncidentLive;
 }) {
-  const smoke = incidentSmoke();
+  const smoke = demo ?? null;
   const resolved = incident?.workflowState === "RESOLVED";
-  const live = useIncidentLive(smoke, resolved);
+  const live: IncidentLive = demoLive ?? { openSeconds: 0, price: 0, prev: 0, spark: [] };
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-inc">

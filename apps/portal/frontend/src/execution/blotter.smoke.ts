@@ -143,8 +143,4 @@ export function useBlotterTick(base: number): { elapsed: number; price: number; 
   return { elapsed: Math.floor(s.elapsed), price: s.price, prev: s.prev, slice: s.slice };
 }
 
-export function fmtBlotterAge(t: number): string {
-  if (t >= 3600) return `${Math.floor(t / 3600)}h ${Math.floor((t % 3600) / 60)}m`;
-  if (t >= 60) return `${Math.floor(t / 60)}m ${String(t % 60).padStart(2, "0")}s`;
-  return `${t}s`;
-}
+export { fmtBlotterAge } from "./clock";

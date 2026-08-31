@@ -27,7 +27,7 @@ import { StatusChip } from "../components/badges";
 import { SlaCell } from "../components/evidence";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
-import { preciseAge, useInboxTick } from "../approvalInbox.smoke";
+import { preciseAge, useInboxTick } from "../liveTick";
 
 /** The gate a request is asking to pass. Portal-owned workflow vocabulary. */
 export type ApprovalGate = "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";

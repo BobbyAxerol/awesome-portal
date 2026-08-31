@@ -10,7 +10,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExecutionSurface } from "./ExecutionSurface";
@@ -2827,26 +2827,27 @@ describe("the fixture API exercises the real mapping path", () => {
   });
 });
 
-describe("the HTTP API refuses before it calls, when the registry says no", () => {
+describe("the HTTP API reads through to the server whatever the registry metadata says", () => {
   const off = screenDeliveryPolicy({
     delivery_policy: { policy_revision: 1, query_enabled: false, paper_commands_enabled: false },
   });
 
-  it("does not make a request the registry has already refused", async () => {
-    // A 403 arriving thirty seconds later is a worse explanation than the one
-    // the registry can give immediately.
+  it("still asks the server, and renders the server's own refusal verbatim (N29 §2)", async () => {
+    // The registry's stale delivery-policy bits are metadata, not an
+    // enforcer. A client that refuses on them fakes a refusal the server
+    // never made — the historical failure this doctrine replaces.
     let called = false;
     const original = globalThis.fetch;
     globalThis.fetch = (async () => {
       called = true;
-      return new Response("{}", { status: 200 });
+      return new Response(JSON.stringify({ error: { code: "forbidden", message: "Query is disabled for this workspace." } }), { status: 403 });
     }) as typeof fetch;
     try {
       const api = createHttpApi({ policy: off });
       const result = await api.listApprovals({ filter: "INBOX" });
-      expect(called).toBe(false);
+      expect(called).toBe(true);
       expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.reason).toContain("Query are disabled");
+      if (!result.ok) expect(result.reason).toContain("Query is disabled for this workspace.");
     } finally {
       globalThis.fetch = original;
     }
@@ -3044,10 +3045,13 @@ describe("containers — the port meets the screens", () => {
     expect(pending?.querySelectorAll("tbody tr").length).toBe(3);
   });
 
-  it("renders a loading skeleton before the first answer, not an empty queue", () => {
+  it("renders a loading skeleton before the first answer, not an empty queue", async () => {
     const { container } = render(<ApprovalInboxContainer api={createFixtureApi()} />);
     expect(container.querySelectorAll(".exec-skeleton-block").length).toBeGreaterThan(0);
     expect(screen.queryByText(/Inbox zero/)).toBeNull();
+    // Settle the container's trailing async dispatch inside act — the N29
+    // acceptance requires a warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 
   it("shows an unwired endpoint as unavailable with the reason attached", async () => {
@@ -3059,13 +3063,20 @@ describe("containers — the port meets the screens", () => {
     expect(screen.queryByText(/Inbox zero/)).toBeNull();
   });
 
-  it("renders a denied read as denied rather than as an error", async () => {
-    const api = createHttpApi({
-      policy: screenDeliveryPolicy({ delivery_policy: { policy_revision: 1, query_enabled: false } }),
-    });
-    const { container } = render(<ApprovalInboxContainer api={api} />);
-    await screen.findByText(/Query are disabled/);
-    expect(container.querySelector(".exec-state")).not.toBeNull();
+  it("renders the server's denial as denied rather than as an error", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ error: { code: "forbidden", message: "Query is disabled for this workspace." } }), { status: 403 })) as typeof fetch;
+    try {
+      const api = createHttpApi({
+        policy: screenDeliveryPolicy({ delivery_policy: { policy_revision: 1, query_enabled: false } }),
+      });
+      const { container } = render(<ApprovalInboxContainer api={api} />);
+      await screen.findByText(/Query is disabled for this workspace/);
+      expect(container.querySelector(".exec-state")).not.toBeNull();
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 
   it("loads a gate review through the port", async () => {
@@ -3085,26 +3096,35 @@ describe("containers — the port meets the screens", () => {
     // The whole point. The trail stays on screen saying so.
     render(<GateR1ReviewContainer api={createFixtureApi()} approvalId="AP-201" />);
     const approve = await screen.findByRole("button", { name: "Approve" });
-    approve.click();
+    await act(async () => { approve.click(); });
     expect(await screen.findByText(/This command has not been confirmed/)).toBeTruthy();
     expect(screen.getByText(/a receipt, not a result/)).toBeTruthy();
+    // Settle the container's trailing async dispatch inside act — the N29
+    // acceptance requires a warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 
   it("reports a blocked plan instead of pretending the decision landed", async () => {
     const api = createFixtureApi({ unavailableEndpoints: ["planDecision"] });
     render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
     const approve = await screen.findByRole("button", { name: "Approve" });
-    approve.click();
+    await act(async () => { approve.click(); });
     expect(await screen.findByText(/No operation was created/)).toBeTruthy();
+    // Settle the container's trailing async dispatch inside act — the N29
+    // acceptance requires a warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 
   it("records a request-key conflict as a conflict, not as a generic failure", async () => {
     const api = createFixtureApi({ conflict: true });
     const { container } = render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
     const approve = await screen.findByRole("button", { name: "Approve" });
-    approve.click();
+    await act(async () => { approve.click(); });
     await screen.findByText(/Start a new command/);
     expect(container.querySelector(".exec-decision-trail")).not.toBeNull();
+    // Settle the container's trailing async dispatch inside act — the N29
+    // acceptance requires a warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 });
 
@@ -3715,8 +3735,11 @@ describe("Gate R2 and Paper Exit on the port", () => {
   it("runs an exit decision through the same 202 discipline", async () => {
     render(<PaperExitReviewContainer api={createFixtureApi()} reviewId="EX-771" />);
     const promote = await screen.findByRole("button", { name: "Approve promotion" });
-    promote.click();
+    await act(async () => { promote.click(); });
     expect(await screen.findByText(/This command has not been confirmed/)).toBeTruthy();
+    // Settle the container's trailing async dispatch inside act — the N29
+    // acceptance requires a warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 });
 
@@ -4724,7 +4747,7 @@ describe("figures nobody published are stated, not substituted", () => {
           {
             rows: [
               {
-                approvalId: "AP-201",
+                id: "AP-201",
                 gate: "R1",
                 subject: "RSI v1.7",
                 target: "PF-MAIN · Paper",
@@ -4937,7 +4960,7 @@ describe("the wired containers pass what the screens were built to show", () => 
     render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
     await screen.findByRole("button", { name: "Approve with condition" });
     // Nothing composed yet: the button must not send an empty condition.
-    screen.getByRole("button", { name: "Approve with condition" }).click();
+    await act(async () => { screen.getByRole("button", { name: "Approve with condition" }).click(); });
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -4946,11 +4969,14 @@ describe("the wired containers pass what the screens were built to show", () => 
     const spy = vi.spyOn(api, "planDecision");
     render(<GateR1ReviewContainer api={api} approvalId="AP-201" />);
     const deny = await screen.findByRole("button", { name: "Deny" });
-    deny.click();
+    await act(async () => { deny.click(); });
     await screen.findByText(/PLAN|DENY|plan/i).catch(() => undefined);
     const call = spy.mock.calls.at(-1)?.[0];
     // Conditions travel only with approve-with-condition; a DENY carries none.
     if (call) expect(call.conditions ?? []).toEqual([]);
+    // Settle the container's trailing async dispatch inside act — the N29
+    // acceptance requires a warning-free suite.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 });
 

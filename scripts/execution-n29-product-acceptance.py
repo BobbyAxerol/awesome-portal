@@ -2,8 +2,8 @@
 """N29 finite campaign product-acceptance verifier.
 
 The verifier is intentionally offline. It binds committed evidence, proves the
-complete census disposition and rejects a product GO while the reviewed UI is
-fixture-only or the protected image publication has not returned evidence.
+complete census disposition and rejects a product GO while BR-EX-72 or the
+protected image publication has not returned evidence.
 """
 
 from __future__ import annotations
@@ -30,6 +30,10 @@ EVIDENCE_PATHS = {
     "n28_owner_request_sha256": ROOT / "services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/owner-request.v3.json",
     "screen_bff_catalogue_sha256": ROOT / "apps/control-api/src/screen-bff/catalogue.ts",
     "frontend_product_route_sha256": ROOT / "apps/portal/frontend/src/execution/ExecutionPreviewRoute.tsx",
+    "frontend_product_boundary_test_sha256": ROOT / "apps/portal/frontend/src/execution/productBoundary.test.ts",
+    "frontend_consumer_return_packet_sha256": ROOT / "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CLAUDE_TO_CODEX_N29_FE_01_RETURN_PACKET.md",
+    "frontend_consumer_evidence_sha256": ROOT / "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md",
+    "frontend_same_origin_bff_double_sha256": ROOT / "apps/portal/frontend/e2e/bffDouble.ts",
     "n17b_real_paper_acceptance_sha256": ROOT / "packages/contracts/fixtures/execution-production-acceptance.current-paper.accepted.json",
     "release_workflow_sha256": ROOT / ".github/workflows/publish-images.yml",
     "recovery_runbook_sha256": ROOT / "deploy/runbooks/portal-n17a-source-dark-production-dr.md",
@@ -135,7 +139,39 @@ def validate_screen_and_ui(acceptance: dict[str, Any]) -> None:
     require(catalogue.count("screen({") == 23, "screen catalogue size drifted")
     require(catalogue.count('status: "AVAILABLE"') == 22, "available screen count drifted")
     require(catalogue.count('status: "TYPED_UNAVAILABLE"') == 1, "unavailable screen count drifted")
-    require(set(re.findall(r"BR-EX-\d{2}", catalogue)) == {f"BR-EX-{n}" for n in range(41, 72)}, "screen request coverage drifted")
+    request_ids = set(re.findall(r"BR-EX-\d{2}", catalogue))
+    require({request_id for request_id in request_ids if 41 <= int(request_id[-2:]) <= 71} == {f"BR-EX-{n}" for n in range(41, 72)}, "screen request coverage drifted")
+    expected_base_mapping = {
+        "PAPER_TRADING_SCREEN": ["BR-EX-41"],
+        "SANDBOX_TRADING_SCREEN": ["BR-EX-60"],
+        "LIVE_OPERATIONS_SCREEN": ["BR-EX-56"],
+        "EXECUTION_COMMAND_CENTER_SCREEN": ["BR-EX-42", "BR-EX-43", "BR-EX-44", "BR-EX-45"],
+        "EXECUTION_OPERATIONS_QUEUE_SCREEN": ["BR-EX-47"],
+        "EXECUTION_INCIDENT_DETAIL_SCREEN": ["BR-EX-46"],
+        "EXECUTION_APPROVAL_INBOX_SCREEN": ["BR-EX-35"],
+        "EXECUTION_GATE_R1_REVIEW_SCREEN": ["BR-EX-67"],
+        "EXECUTION_GATE_R2_REVIEW_SCREEN": ["BR-EX-67"],
+        "EXECUTION_PAPER_EXIT_REVIEW_SCREEN": ["BR-EX-63"],
+        "EXECUTION_PAPER_WORKBENCH_SCREEN": ["BR-EX-62"],
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN": ["BR-EX-62"],
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN": ["BR-EX-60", "BR-EX-61"],
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN": ["BR-EX-59"],
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": ["BR-EX-57"],
+        "EXECUTION_FULL_BLOTTER_SCREEN": ["BR-EX-48"],
+        "EXECUTION_ALPHA_360_SCREEN": ["BR-EX-49", "BR-EX-50", "BR-EX-64"],
+        "EXECUTION_PORTFOLIO_360_SCREEN": ["BR-EX-51", "BR-EX-65", "BR-EX-66"],
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN": ["BR-EX-52", "BR-EX-53", "BR-EX-54"],
+        "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN": ["BR-EX-68"],
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN": ["BR-EX-69"],
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN": ["BR-EX-70"],
+        "EXECUTION_WAIVERS_REGISTER_SCREEN": ["BR-EX-71"],
+    }
+    for screen_id, expected in expected_base_mapping.items():
+        row = next((line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line), None)
+        require(row is not None, f"screen mapping missing: {screen_id}")
+        match = re.search(r"requestIds: \[([^]]*)\]", row)
+        require(match is not None, f"screen request mapping malformed: {screen_id}")
+        require(re.findall(r"BR-EX-\d{2}", match.group(1)) == expected, f"screen request mapping drifted: {screen_id}")
     for reason in [
         "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED",
     ]:
@@ -150,14 +186,15 @@ def validate_screen_and_ui(acceptance: dict[str, Any]) -> None:
         require(promoted in catalogue, f"delivered backend screen remains stale: {promoted}")
 
     frontend = EVIDENCE_PATHS["frontend_product_route_sha256"].read_text(encoding="utf-8")
-    require("createFixtureApi()" in frontend, "frontend transport changed without N29 evidence refresh")
-    require(
-        "no HTTP adapter, EventSource or" in frontend
-        and "Trading System client is constructed here" in frontend,
-        "frontend fixture boundary is no longer explicit",
-    )
-    require(acceptance["release_gates"]["frontend_http_consumer"] == "BLOCKED_FIXTURE_ONLY", "fixture UI was presented as product-ready")
-    require(acceptance["authority"]["product_release_authorized"] is False, "fixture UI authorized a product release")
+    boundary = EVIDENCE_PATHS["frontend_product_boundary_test_sha256"].read_text(encoding="utf-8")
+    return_packet = EVIDENCE_PATHS["frontend_consumer_return_packet_sha256"].read_text(encoding="utf-8")
+    require("createHttpApi" in frontend and "createFixtureApi" not in frontend, "product route is not the same-origin HTTP consumer")
+    for token in ["ExecutionPreviewRoute", "createFixtureApi", "CC_FIXTURES", ".smoke", ".fixtures"]:
+        require(token in boundary, f"frontend product-boundary gate missing: {token}")
+    require("FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX" in return_packet, "frontend return verdict missing")
+    require(acceptance["accepted_scope"]["commissioned_requests"]["frontend_source_consumer_accepted"] == 31, "frontend request acceptance drifted")
+    require(acceptance["release_gates"]["frontend_http_consumer"] == "PASS_SAME_ORIGIN_CONSUMER_ACCEPTED", "same-origin frontend acceptance missing")
+    require(acceptance["authority"]["product_release_authorized"] is False, "frontend acceptance widened product authority")
 
 
 def validate_governance_product() -> None:
@@ -207,7 +244,8 @@ def validate_release_authority(acceptance: dict[str, Any], debt: dict[str, Any])
             require(value is False, f"authority widened: {key}")
     require(acceptance["authority"]["portal_release_candidate"] is True, "backend candidate authority missing")
     require(debt["internal_technical_debt"] == [], "unnamed internal technical debt exists")
-    require({item["blocker_id"] for item in debt["release_blockers"]} == {"N29-FE-01", "N29-REL-01"}, "release blocker set drifted")
+    require({item["blocker_id"] for item in debt["release_blockers"]} == {"N29-BE-72", "N29-REL-01"}, "release blocker set drifted")
+    require({item["blocker_id"] for item in debt["resolved_delivery_gates"]} == {"N29-FE-01"}, "resolved delivery gate set drifted")
     require(debt["typed_external_gaps"]["count"] == 9 and debt["typed_external_gaps"]["release_blocking"] is False, "typed owner gap policy drifted")
     require(debt["intentional_exclusions"]["count"] == 3 and debt["intentional_exclusions"]["release_blocking"] is False, "intentional exclusion policy drifted")
 
@@ -260,7 +298,7 @@ def main() -> int:
         "commands": 9,
         "screen_contracts": 23,
         "internal_technical_debt": 0,
-        "release_blockers": ["N29-FE-01", "N29-REL-01"],
+        "release_blockers": ["N29-BE-72", "N29-REL-01"],
     }, sort_keys=True))
     return 0
 

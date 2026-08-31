@@ -434,33 +434,6 @@ export function usePaperTick(): { now: Date; age: string } {
   return { now, age: `${((now.getTime() / 1000) % 4 + 0.8).toFixed(1)}s` };
 }
 
-/**
- * The masthead prints a clock, never the ISO string.
- *
- * `2026-08-22T10:42:01Z` is eleven characters of date the reader already knows,
- * and those eleven characters are what pushed the hi-fi's single masthead row
- * onto a second line. The date stays in the provenance drawer, where a reader
- * who wants it goes looking.
- */
-export function clockOf(asOf: string | null | undefined): string {
-  if (!asOf) return "—";
-  const m = /(\d{2}:\d{2}:\d{2})/.exec(asOf);
-  return m ? `${m[1]}${asOf.endsWith("Z") ? "Z" : ""}` : asOf;
-}
-
-export const paperClock = (d: Date) =>
-  `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}Z`;
-
-/** Countdown to the next 09:00 ICT open (02:00Z), as the VN hi-fi prints it. */
-export function untilVnOpen(now: Date): string {
-  const d = now;
-  let target = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 2, 0, 0));
-  if (target <= d) target = new Date(target.getTime() + 86_400_000);
-  const left = Math.max(0, Math.floor((target.getTime() - d.getTime()) / 1000));
-  const p2 = (n: number) => String(n).padStart(2, "0");
-  return `${Math.floor(left / 3600)}h ${p2(Math.floor((left % 3600) / 60))}m ${p2(left % 60)}s`;
-}
-
 /** Drift spark as data — the drift value itself (up is up), hourly, 26 points. */
 export function poSparkSeries(amp: number, drop: number): [string, number][] {
   const n = 26;
@@ -469,3 +442,7 @@ export function poSparkSeries(amp: number, drop: number): [string, number][] {
     Number((amp * Math.sin(i / 6) - (i / n) * drop).toFixed(2)),
   ]);
 }
+
+export { clockOf, untilVnOpen, paperClock } from "./clock";
+
+export type PaperDemo = NonNullable<ReturnType<typeof paperSmoke>>;

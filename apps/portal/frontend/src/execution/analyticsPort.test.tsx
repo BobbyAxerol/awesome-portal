@@ -18,7 +18,7 @@ import {
   AlphaInsightContainer,
   CorrelationContainer,
   FullBlotterFunnelContainer,
-} from "./screens/containers";
+} from "./lab/insightContainers";
 
 import { createHttpApi } from "./api/httpApi";
 import { createFixtureApi } from "./api/fixtureApi";
@@ -150,9 +150,13 @@ describe("a typed 422 arrives as something the operator can act on", () => {
   });
 });
 
-describe("delivery policy still gates every one of them", () => {
-  it("answers unavailable when the screen has no published policy", async () => {
-    const fetchMock = vi.fn();
+describe("reads go to the server whatever the registry metadata says (N29 §2)", () => {
+  it("asks the server even with no published policy, and renders the server's own refusal", async () => {
+    // The registry's delivery-policy metadata is not an enforcer. Every read
+    // reaches the server; a refusal arrives as the server's typed answer.
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ failure_code: "SOURCE_UNAVAILABLE", message: "The analytics source is not reachable." }), { status: 503 }),
+    );
     vi.stubGlobal("fetch", fetchMock);
     const api = createHttpApi({ policy: null });
     for (const call of [
@@ -164,8 +168,7 @@ describe("delivery policy still gates every one of them", () => {
     ]) {
       expect((await call).ok).toBe(false);
     }
-    // Deny-by-default is enforced before the request, not after it.
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 });
 

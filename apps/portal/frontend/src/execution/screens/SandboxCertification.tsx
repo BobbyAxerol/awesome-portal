@@ -20,13 +20,14 @@
 import { canonicalHref } from "../links";
 import { useState, type ReactNode } from "react";
 import { CapGauges, HistogramChart, OrderTypeMatrix, PositionsTable, SparkTile } from "../components/visuals";
-import type { StageVisuals } from "../stage.smoke";
+import type { StageVisuals } from "../stage.types";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { AuthorityWord } from "../components/badges";
 import { SourceTile } from "../components/stageWorkbench";
 import { ExecutionSectionTitle } from "../components/typography";
-import { certSmoke, sbAge, sbAgeSeconds, sbClock, useCertTick, SANDBOX_SMOKE_WARNING, type CertKV, type CertSmoke } from "../sandbox.smoke";
+import { sbAge, sbAgeSeconds, sbClock } from "../clock";
+import type { CertDemo, CertKV, CertSmoke } from "../sandbox.smoke";
 import {
   ExecutionContextRail,
   ExecutionDecisionStrip,
@@ -176,8 +177,12 @@ export function SandboxCertificationScreen({
   onCopyProvenance,
   visuals,
   children,
+  demo,
+  demoNow,
 }: {
   certification: SandboxCertification | null;
+  demo?: CertDemo | null;
+  demoNow?: Date;
   /** The route's deployment — which certification the hi-fi body describes.
       The fixture publishes one document, so without this the switcher would
       always land back on the same page. */
@@ -193,8 +198,8 @@ export function SandboxCertificationScreen({
 }) {
   const [tab, setTab] = useState<Tab>("Reconciliation");
   const [plan, setPlan] = useState<string | null>(null);
-  const now = useCertTick();
-  const smoke = certSmoke(deploymentId ?? certification?.deploymentId);
+  const now = demoNow ?? new Date(0);
+  const smoke = demo ?? null;
   const brokerFresh = sbAgeSeconds(now) < BROKER_POLICY_SECONDS;
   if (status !== "ok" && status !== "partial") {
     return (
@@ -330,7 +335,7 @@ export function SandboxCertificationScreen({
             <ExecutionPageHeader
               title={
                 <>
-                  {certification.deploymentId ?? certification.certificationId}
+                  {certification.deploymentId ?? deploymentId ?? certification.certificationId}
                   <span className="exec-cert-venue"> · {certification.venue ?? "venue not stated"}</span>
                 </>
               }
@@ -474,7 +479,7 @@ export function SandboxCertificationScreen({
                 <span className="exec-sbc-actionfoot">{smoke.actionsFoot}</span>
               </div>
               {plan ? <ActionPlan plan={plan} cert={smoke} onClose={() => setPlan(null)} /> : null}
-              <p className="exec-af-smoke">! {SANDBOX_SMOKE_WARNING}</p>
+              <p className="exec-af-smoke">! {smoke.warning}</p>
           </>
         ) : null}
         <details className="exec-pf2-contract exec-sbc-contract" open>

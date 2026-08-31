@@ -38,6 +38,21 @@ const FLAGS: Record<string, { dangerous: boolean; why: string }> = {
   // `governance.paper-exit.v1` activation_plan. PREVIEW_ONLY by contract; the
   // reader keeps absent as false and the screen prints "none requested" — a
   // plan that DID request one must say so, so the flag is a warning too.
+  // N27 task authority: absent ceremony bits must demand MORE ceremony.
+  owner_review_required: { dangerous: true, why: "an unreadable owner-review bit must require owner review" },
+  required: { dangerous: true, why: "an unreadable required bit on a param must block submission" },
+
+  step_up_required: { dangerous: true, why: "an unreadable step-up bit must require step-up" },
+  two_man_rule: { dangerous: true, why: "an unreadable two-man bit must require the second man" },
+  plan_required: { dangerous: true, why: "an unreadable plan bit must require a plan" },
+  apply_required: { dangerous: true, why: "an unreadable apply bit must require an explicit apply" },
+  verify_required: { dangerous: true, why: "an unreadable verify bit must require verification" },
+  // A condition whose blocking bit cannot be read must block: the register
+  // exists to stop quiet defaults, and "unknown, so not blocking" is one.
+  blocking: {
+    dangerous: true,
+    why: "an unreadable obligation must block, never wave through",
+  },
   external_side_effect_requested: {
     dangerous: true,
     why: "an exit-review plan that requested an external effect must never read as inert",

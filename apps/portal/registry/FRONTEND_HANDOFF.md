@@ -1848,3 +1848,64 @@ tables, raw Manager records or internal epoch IDs from the browser. When N25
 lands, Claude can consume freshness/gap/rebuild/rollback states from the BFF,
 not infer them client-side. Backend detail:
 [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](../../../upgrade/backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
+
+### 8.43 N29 consumer (2026-08-31) — bóc SMOKE thật đầu tiên của freeze
+
+Theo đúng §J.4: codex giao N29 → frontend nối contract, xoá smoke, không đổi
+composition. Chi tiết + bảng 9 hạng mục: CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md.
+Điểm đáng nhớ: request-key giữ theo *ý định submit* (ref, không phải state —
+double-click bị chặn đồng bộ); đồng hồ due neo `read_at` của server, không
+phải đồng hồ máy người xem; LAPSED render blocking đúng như nó vào CC today.
+Suite lần đầu đạt **0 React warning** (yêu cầu acceptance của codex).
+
+### 8.44 N29-FE-01 closeout — product graph rời fixture hoàn toàn (2026-08-31)
+
+Thực hiện `CODEX_TO_CLAUDE_N29_SAME_ORIGIN_PRODUCT_CONSUMER_CLOSEOUT.md`
+(backend truth tại `e226ffb`). Kết quả + ma trận từng màn:
+`CLAUDE_TO_CODEX_N29_FE_01_RETURN_PACKET.md` — verdict
+`FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX` (không tự đánh Product GO).
+
+Điểm cấu trúc phải nhớ:
+
+1. **Boundary gate tự động** (`productBoundary.test.ts`): walk import graph
+   thật từ `ExecutionPreviewRoute` — mọi value-import `*.smoke`/`*.fixtures`,
+   `createFixtureApi`, `CC_FIXTURES` reachable là FAIL. Type-only import được
+   phép (erased); demo VALUES chỉ vào màn qua prop `demo*` do lab bơm.
+2. **Envelope screens** (`ProfileScreens.tsx`): N22/N23/N25 là envelope thưa —
+   product render đúng sự thưa đó (masthead state/freshness, mọi array đã
+   publish nguyên văn, mỗi capability thiếu một dòng reason). Bản rich đã
+   review nằm ở lab. Class đổi tên `exec-envelope*` vì `exec-profile` đã là
+   badge delivery-profile từ trước (đụng tên → tràn ngang, đã sửa).
+3. **Doctrine đọc**: client KHÔNG pre-block read theo delivery-policy metadata
+   của registry (rev 4 còn ghi `fixture`/false — metadata cũ). Server là
+   enforcer; refusal của server render nguyên văn. Write vẫn giữ gate.
+   Banner route nói sự thật transport (`PORTAL READS · SAME-ORIGIN`), chữ cũ
+   của registry hiện thành drift trong inspector.
+4. **Console guard** (`src/test/consoleGuard.ts`): mọi console.error/warn
+   trong test là FAIL; allowlist 3 mục jsdom có tên. E2E preview spec cũng
+   fail trên console/pageerror và trên bất kỳ request rời origin.
+5. **E2E double** (`e2e/bffDouble.ts`): trả RAW canonical payloads cho
+   `/api/v1/execution/**`; dữ liệu governance dùng chung một nguồn
+   (`api/fixtureData.ts`) với unit double — không có feature model thứ hai.
+6. **BR-EX-72 (đề xuất, consolidated, freeze-sanctioned)**: fleet list,
+   bindings list/detail, canonical live-review fixture, registry amendment —
+   `CLAUDE_TO_CODEX_N29_CONSOLIDATED_BACKEND_REQUEST.md`. Bảng §7.2 của codex
+   có guard pin `_next: BR-EX-72_` nên row do codex chèn.
+
+Gates: vitest 1780 pass (0 warning) · build xanh · Playwright preview+journeys
+66 pass (clean run) · boundary 0 offences.
+
+### 8.45 Codex N29 closeout amendment acceptance (2026-08-31)
+
+Codex accepted the N29-FE-01 return into the campaign branch without changing
+its Product GO boundary. The canonical BFF catalogue now maps Command Center
+to BR-EX-45, Incident Detail to BR-EX-46, Operations Queue to BR-EX-47 and
+Approval Inbox to historical BR-EX-35. A per-screen gate freezes the complete
+23-screen mapping, and the Account/Broker unavailable dependency is MC-05.
+
+Integrated evidence is broader than the historical return: 1,784 Vitest
+assertions pass with one intentional skip and zero React/DOM warning; the
+production build passes; full Playwright parity is 309 passed / 16 intentional
+skips / zero failures, including 40/40 responsive viewports and origin
+containment. Product GO remains false:
+BR-EX-72 and protected-main signed publication evidence are still required.

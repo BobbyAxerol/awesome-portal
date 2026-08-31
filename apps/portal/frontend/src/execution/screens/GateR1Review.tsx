@@ -21,8 +21,6 @@ import {
   type TypedCondition,
 } from "../components/conditions";
 import { ExecutionDecisionBar } from "../components/decisionBar";
-import { BarsChart, LinesChart } from "../components/marketChart";
-import { GOV_CHARTS } from "../governance.smoke";
 
 import { PanelState } from "../components/states";
 
@@ -89,6 +87,7 @@ export function GateR1Review({
   eligibility,
   conditions,
   evidence,
+  policyChip,
   note,
   onNoteChange,
   trail,
@@ -121,6 +120,7 @@ export function GateR1Review({
   conditions?: readonly TypedCondition[];
   /** Research evidence body (IS/OOS/holdout, WFO). Absent = not published. */
   evidence?: ReactNode;
+  policyChip?: string;
   /** Reviewer note — becomes the decision reason. */
   note?: string;
   onNoteChange?: (next: string) => void;
@@ -263,7 +263,7 @@ export function GateR1Review({
           <div className="exec-gov-panelhead">
             <span className="exec-gov-paneltitle">Decision checklist</span>
             {/* SMOKE until BR-EX-67 publishes the gate-policy reference. */}
-            <span className="exec-gate-policychip" title="SMOKE — the versioned gate policy reference ships with BR-EX-67">{GOV_CHARTS.r1Policy}</span>
+            <span className="exec-gate-policychip" title="The versioned gate policy reference ships with BR-EX-67.">{policyChip ?? "gate policy reference not published · BR-EX-67"}</span>
             <span className="exec-gov-spacer" />
             <button type="button" className="exec-gov-reglink" disabled title="The policy registry route ships with BR-EX-67.">policy registry →</button>
           </div>
@@ -282,7 +282,12 @@ export function GateR1Review({
           </div>
         </div>
       </div>
-      {evidence ?? <R1EvidenceSmoke />}
+      {evidence ?? (
+        <PanelState
+          status="unavailable"
+          reason="Evidence series are not published on governance.r1-review.v1 yet (BR-EX-67 evidence_series). The checklist verdicts above are the server's; the charts arrive with the field."
+        />
+      )}
       <div className="exec-gov-grid2">
         <div className="exec-gov-panel">
           <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Known limitations &amp; proposed restrictions</span></div>
@@ -380,36 +385,3 @@ export function GateR1Review({
  * publishes `evidence_series` on `governance.r1-review.v1`. The checklist
  * marks above them are the server's; these frames are layout-true references.
  */
-export function R1EvidenceSmoke() {
-  return (
-    <div className="exec-grid-2" data-ratio="1.5">
-      <section className="exec-chart-tile" aria-label="Equity across window roles">
-        <h3 className="exec-section-title">Equity across window roles</h3>
-        <p className="exec-gate-rolelegend" aria-hidden="true"><span data-tone="mute">— IS</span><span data-tone="accent">— Outer OOS</span><span data-tone="warn">— holdout</span></p>
-        <LinesChart
-          height={230}
-          series={GOV_CHARTS.r1Equity.series}
-          verticalLines={GOV_CHARTS.r1Equity.boundaries}
-          annotation={GOV_CHARTS.r1Equity.maxDd}
-          yFormatter={(v) => v.toFixed(1)}
-          provenance={{ authority: "RESEARCH", asOf: "run_5512", formula: "window roles fixed by claim clm_31" }}
-          ariaLabel="Equity across in-sample, outer out-of-sample and holdout windows"
-        />
-        <p className="exec-af-smoke">! SMOKE DATA — {GOV_CHARTS.r1Equity.foot} · reference shape for BR-EX-67 evidence_series. Delete when BR-EX-67 ships</p>
-      </section>
-      <section className="exec-chart-tile" aria-label="WFO stability — Sharpe per fold">
-        <h3 className="exec-section-title">WFO stability — Sharpe per fold</h3>
-        <BarsChart
-          height={230}
-          points={GOV_CHARTS.wfo.folds}
-          thresholdLine={{ y: GOV_CHARTS.wfo.threshold, label: `threshold ${GOV_CHARTS.wfo.threshold.toFixed(1)}`, tone: "mute" }}
-          highlight={{ index: GOV_CHARTS.wfo.worst.index, label: GOV_CHARTS.wfo.worst.label, tone: "warn" }}
-          yFormatter={(v) => v.toFixed(2)}
-          provenance={{ authority: "RESEARCH", asOf: "run_5512", formula: "wfo_stability.v1" }}
-          ariaLabel="Walk-forward Sharpe per fold against the stability threshold"
-        />
-        <p className="exec-af-smoke">! SMOKE DATA — {GOV_CHARTS.wfo.foot} · reference shape for BR-EX-67 evidence_series. Delete when BR-EX-67 ships</p>
-      </section>
-    </div>
-  );
-}
