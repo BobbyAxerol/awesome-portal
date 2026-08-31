@@ -1797,3 +1797,12 @@ còn lại cùng chuẩn với Waivers:
   data để canary bám twin đúng như criteria claim; hover criteria.
 - **Khoá baseline**: 3 màn mới vào danh sách el-v2-07 (`gov-new-request`,
   `gov-live-gate`, `gov-waivers`) — visual từ giờ là gate thật.
+
+### 8.39 N29 consumer (2026-08-31) — bóc SMOKE thật đầu tiên của freeze
+
+Theo đúng §J.4: codex giao N29 → frontend nối contract, xoá smoke, không đổi
+composition. Chi tiết + bảng 9 hạng mục: CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md.
+Điểm đáng nhớ: request-key giữ theo *ý định submit* (ref, không phải state —
+double-click bị chặn đồng bộ); đồng hồ due neo `read_at` của server, không
+phải đồng hồ máy người xem; LAPSED render blocking đúng như nó vào CC today.
+Suite lần đầu đạt **0 React warning** (yêu cầu acceptance của codex).

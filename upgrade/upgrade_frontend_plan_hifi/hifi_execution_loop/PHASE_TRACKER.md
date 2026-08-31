@@ -2818,3 +2818,9 @@ N13B and proceed in order through N17B.
 > Điều kiện đóng: §J.3. Frontend trong freeze chỉ: chỉnh theo owner trên màn
 > hiện có + bóc SMOKE khi từng gói codex về.
 
+> **2026-08-31 · N29 handoff: ĐÃ ĐỌC toàn bộ + ĐÃ LÀM consumer slice** (commit
+> `fb2d14b`, evidence: CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md). Hai route
+> governance bound end-to-end qua port; NEW_REQUEST/WAIVER_ROWS smoke đã xoá;
+> suite 1,779 pass · 0 React warning. Còn treo: browser smoke trên BFF thật —
+> gateway đang chạy image cũ (waivers 404); chạy được ngay khi image N29 lên.
+
