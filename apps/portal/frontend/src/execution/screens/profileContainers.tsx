@@ -47,7 +47,7 @@ export function CommandCenterSnapshotContainer({ api }: { api: ExecutionApi }) {
   const state = useApiRead(() => api.getCommandCenterSnapshot(), [api]);
   if (state.status !== "ok") {
     return (
-      <section className="exec-profile" aria-label="Command Center">
+      <section className="exec-envelope" aria-label="Command Center">
         <h1 className="exec-role-h1">Command Center</h1>
         <PanelState status={state.status} reason={state.reason} />
       </section>
@@ -56,7 +56,7 @@ export function CommandCenterSnapshotContainer({ api }: { api: ExecutionApi }) {
   const snapshot: CommandCenter | null = readCommandCenter(state.value);
   if (!snapshot) {
     return (
-      <section className="exec-profile" aria-label="Command Center">
+      <section className="exec-envelope" aria-label="Command Center">
         <h1 className="exec-role-h1">Command Center</h1>
         <PanelState status="unavailable" reason="The command-center snapshot could not be read." />
       </section>
@@ -82,7 +82,7 @@ export function StageOverviewContainer({ api, screen }: { api: ExecutionApi; scr
       reason={state.reason}
       intro={
         screen === "live" && state.value?.state === "empty" ? (
-          <p className="exec-role-meta exec-profile-empty">
+          <p className="exec-role-meta exec-envelope-empty">
             A valid empty Live is empty — no live deployment exists in this workspace, and nothing
             here will ever fill that in from a fixture.
           </p>
@@ -120,7 +120,7 @@ export function AccountBroker360Container({ api, accountId }: { api: ExecutionAp
   const state = useApiRead<ProfileEnvelope>(() => api.getAccountBroker360(accountId), [api, accountId]);
   if (state.status === "loading") {
     return (
-      <section className="exec-profile" aria-label="Account 360">
+      <section className="exec-envelope" aria-label="Account 360">
         <h1 className="exec-role-h1">Account / Broker 360 · {accountId}</h1>
         <PanelState status="loading" />
       </section>

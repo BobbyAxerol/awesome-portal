@@ -29,7 +29,7 @@ const STATE_TONE: Record<string, "good" | "warn" | "bad" | "mute"> = {
 
 export function EnvelopeMasthead({ title, envelope, sub }: { title: string; envelope: ProfileEnvelope; sub?: ReactNode }) {
   return (
-    <header className="exec-profile-head">
+    <header className="exec-envelope-head">
       <h1 className="exec-role-h1">{title}</h1>
       <StatusChip label={envelope.state.toUpperCase()} tone={STATE_TONE[envelope.state] ?? "mute"} />
       {envelope.freshness ? <span className="exec-role-meta">freshness {envelope.freshness}</span> : null}
@@ -47,10 +47,10 @@ export function EnvelopeMasthead({ title, envelope, sub }: { title: string; enve
 export function CapabilityTable({ capabilities, label }: { capabilities: readonly BranchCapability[]; label: string }) {
   if (capabilities.length === 0) return null;
   return (
-    <section className="exec-profile-panel">
+    <section className="exec-envelope-panel">
       <ExecutionSectionTitle>Data branches <span className="exec-role-meta">{capabilities.length}</span></ExecutionSectionTitle>
       <div className="exec-gate-criteriawrap">
-        <table className="exec-360-sync exec-profile-caps" aria-label={label}>
+        <table className="exec-360-sync exec-envelope-caps" aria-label={label}>
           <thead>
             <tr><th scope="col">branch</th><th scope="col">state</th><th scope="col">reason</th></tr>
           </thead>
@@ -77,12 +77,12 @@ export function DataBranches({ envelope }: { envelope: ProfileEnvelope }) {
   return (
     <>
       {entries.map(([branch, rows]) => (
-        <section className="exec-profile-panel" key={branch}>
+        <section className="exec-envelope-panel" key={branch}>
           <ExecutionSectionTitle>
             {branch.replace(/_/g, " ")} <span className="exec-role-meta">{rows.length}</span>
           </ExecutionSectionTitle>
           {rows.length === 0 ? (
-            <p className="exec-role-meta exec-profile-empty">
+            <p className="exec-role-meta exec-envelope-empty">
               no rows — the source published an empty {branch.replace(/_/g, " ")} set, and an empty
               set is a fact, not a failure
             </p>
@@ -127,7 +127,7 @@ export function ProfileEnvelopeScreen({
 }) {
   if (status !== "ok" && status !== "partial") {
     return (
-      <section className="exec-profile" aria-label={title}>
+      <section className="exec-envelope" aria-label={title}>
         <h1 className="exec-role-h1">{title}</h1>
         <PanelState status={status} reason={reason} />
       </section>
@@ -135,11 +135,11 @@ export function ProfileEnvelopeScreen({
   }
   if (!envelope) return null;
   return (
-    <section className="exec-profile" aria-label={title}>
+    <section className="exec-envelope" aria-label={title}>
       <EnvelopeMasthead title={title} envelope={envelope} />
       {intro}
       {envelope.objects.deployment ? (
-        <section className="exec-profile-panel">
+        <section className="exec-envelope-panel">
           <ExecutionSectionTitle>deployment</ExecutionSectionTitle>
           <dl className="exec-admin-facts">
             {Object.entries(envelope.objects.deployment).map(([k, v]) => (
@@ -168,7 +168,7 @@ export function TypedUnavailableScreen({
   links?: readonly { label: string; href: string }[];
 }) {
   return (
-    <section className="exec-profile" aria-label={title}>
+    <section className="exec-envelope" aria-label={title}>
       <h1 className="exec-role-h1">{title}</h1>
       <PanelState status="unavailable" reason={`${reason}: ${detail}`} />
       {links?.length ? (
@@ -196,7 +196,7 @@ export function QueryAnalyticsScreen({
 }) {
   if (status !== "ok" && status !== "partial") {
     return (
-      <section className="exec-profile" aria-label={title}>
+      <section className="exec-envelope" aria-label={title}>
         <h1 className="exec-role-h1">{title}</h1>
         <PanelState status={status} reason={reason} />
       </section>
@@ -205,15 +205,15 @@ export function QueryAnalyticsScreen({
   if (!analytics) return null;
   const funnelEntries = analytics.orderFunnel ? Object.entries(analytics.orderFunnel.statusCounts) : [];
   return (
-    <section className="exec-profile" aria-label={title}>
-      <header className="exec-profile-head">
+    <section className="exec-envelope" aria-label={title}>
+      <header className="exec-envelope-head">
         <h1 className="exec-role-h1">{title}</h1>
         <span className="exec-role-meta">
           {analytics.authority ?? "authority not stated"} · {analytics.formulaVersion ?? "formula not stated"} · as_of{" "}
           {utcStamp(analytics.asOf)} · {analytics.completeness ?? "completeness not stated"}
         </span>
       </header>
-      <section className="exec-profile-panel">
+      <section className="exec-envelope-panel">
         <ExecutionSectionTitle>Order funnel</ExecutionSectionTitle>
         {analytics.orderFunnel && analytics.orderFunnel.totalOrders !== null ? (
           <dl className="exec-admin-facts">
@@ -226,7 +226,7 @@ export function QueryAnalyticsScreen({
           <PanelState status="empty" reason="No orders in the analytics window — an empty funnel is a fact." />
         )}
       </section>
-      <section className="exec-profile-panel">
+      <section className="exec-envelope-panel">
         <ExecutionSectionTitle>Execution quality</ExecutionSectionTitle>
         {analytics.executionQuality ? (
           <dl className="exec-admin-facts">

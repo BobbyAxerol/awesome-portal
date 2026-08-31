@@ -1806,3 +1806,39 @@ composition. Chi tiết + bảng 9 hạng mục: CLAUDE_TO_CODEX_N29_CONSUMER_EV
 double-click bị chặn đồng bộ); đồng hồ due neo `read_at` của server, không
 phải đồng hồ máy người xem; LAPSED render blocking đúng như nó vào CC today.
 Suite lần đầu đạt **0 React warning** (yêu cầu acceptance của codex).
+
+### 8.40 N29-FE-01 closeout — product graph rời fixture hoàn toàn (2026-08-31)
+
+Thực hiện `CODEX_TO_CLAUDE_N29_SAME_ORIGIN_PRODUCT_CONSUMER_CLOSEOUT.md`
+(backend truth tại `e226ffb`). Kết quả + ma trận từng màn:
+`CLAUDE_TO_CODEX_N29_FE_01_RETURN_PACKET.md` — verdict
+`FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX` (không tự đánh Product GO).
+
+Điểm cấu trúc phải nhớ:
+
+1. **Boundary gate tự động** (`productBoundary.test.ts`): walk import graph
+   thật từ `ExecutionPreviewRoute` — mọi value-import `*.smoke`/`*.fixtures`,
+   `createFixtureApi`, `CC_FIXTURES` reachable là FAIL. Type-only import được
+   phép (erased); demo VALUES chỉ vào màn qua prop `demo*` do lab bơm.
+2. **Envelope screens** (`ProfileScreens.tsx`): N22/N23/N25 là envelope thưa —
+   product render đúng sự thưa đó (masthead state/freshness, mọi array đã
+   publish nguyên văn, mỗi capability thiếu một dòng reason). Bản rich đã
+   review nằm ở lab. Class đổi tên `exec-envelope*` vì `exec-profile` đã là
+   badge delivery-profile từ trước (đụng tên → tràn ngang, đã sửa).
+3. **Doctrine đọc**: client KHÔNG pre-block read theo delivery-policy metadata
+   của registry (rev 4 còn ghi `fixture`/false — metadata cũ). Server là
+   enforcer; refusal của server render nguyên văn. Write vẫn giữ gate.
+   Banner route nói sự thật transport (`PORTAL READS · SAME-ORIGIN`), chữ cũ
+   của registry hiện thành drift trong inspector.
+4. **Console guard** (`src/test/consoleGuard.ts`): mọi console.error/warn
+   trong test là FAIL; allowlist 3 mục jsdom có tên. E2E preview spec cũng
+   fail trên console/pageerror và trên bất kỳ request rời origin.
+5. **E2E double** (`e2e/bffDouble.ts`): trả RAW canonical payloads cho
+   `/api/v1/execution/**`; dữ liệu governance dùng chung một nguồn
+   (`api/fixtureData.ts`) với unit double — không có feature model thứ hai.
+6. **BR-EX-72** (consolidated, freeze-sanctioned): fleet list, bindings
+   list/detail, canonical live-review fixture, registry amendment —
+   `CLAUDE_TO_CODEX_N29_CONSOLIDATED_BACKEND_REQUEST.md`.
+
+Gates: vitest 1780 pass (0 warning) · build xanh · Playwright preview+journeys
+66 pass (clean run) · boundary 0 offences.

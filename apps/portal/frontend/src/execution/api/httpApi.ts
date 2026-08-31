@@ -20,7 +20,7 @@ import {
   readOperation,
   readProblem,
 } from "../adapter";
-import { commandBlockedReason, governanceWriteBlocked, type DeliveryPolicy } from "../profile";
+import { governanceWriteBlocked, type DeliveryPolicy } from "../profile";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
 import {
   INSIGHT_BATCH_LIMIT,
@@ -170,9 +170,16 @@ export interface HttpApiOptions {
 }
 
 export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi {
-  /** R0 covers every read on this surface. */
+  /**
+   * N29-FE-01: reads never pre-block on registry metadata. The server is the
+   * enforcer — a refusal arrives as its own typed status and is rendered
+   * verbatim. The registry's stale delivery-policy bits (rev 4 still says
+   * `fixture`/false for these screens) are codex's amendment, not a reason
+   * for the client to fake a refusal the server never made. Same doctrine as
+   * `readGet` below; writes keep their own gate.
+   */
   function readBlocked(): string | null {
-    return commandBlockedReason(policy, "R0");
+    return null;
   }
 
   /**

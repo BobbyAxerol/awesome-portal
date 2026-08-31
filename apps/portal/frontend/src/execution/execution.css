@@ -328,6 +328,18 @@
 .exec-env[data-stage="LIVE_CANARY"] { color: var(--env-canary); }
 .exec-env[data-stage="LIVE_FULL"] { color: var(--env-live); }
 
+/* N29 envelope screens — the server's sparse truth in the governance panel
+ * idiom: masthead facts, one panel per published branch, one honest row per
+ * missing capability. Wide tables scroll in their own wrap; the page never
+ * scrolls sideways. */
+.exec-envelope { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.exec-envelope-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; min-width: 0; }
+.exec-envelope-head .exec-role-meta { overflow-wrap: anywhere; }
+.exec-envelope-panel { border: 1px solid var(--line); background: var(--paper-raised); padding: 12px 14px; min-width: 0; }
+.exec-envelope-panel .exec-admin-facts dd { overflow-wrap: anywhere; }
+.exec-envelope-empty { margin: 0; }
+.exec-envelope-caps th[scope="row"] { overflow-wrap: anywhere; }
+
 /* Delivery profile — only rendered for fixture and shadow, the two profiles a
  * reader could mistake for production. Hatched rather than merely coloured: a
  * shadow screen must be identifiable from across a room, and colour alone puts

@@ -2824,3 +2824,20 @@ N13B and proceed in order through N17B.
 > suite 1,779 pass · 0 React warning. Còn treo: browser smoke trên BFF thật —
 > gateway đang chạy image cũ (waivers 404); chạy được ngay khi image N29 lên.
 
+
+> **2026-08-31 · N29-FE-01 closeout: ĐÃ ĐỌC toàn bộ + ĐÃ LÀM trọn gói**
+> (`CODEX_TO_CLAUDE_N29_SAME_ORIGIN_PRODUCT_CONSUMER_CLOSEOUT.md`, backend
+> truth `e226ffb`). Product graph không còn reachable fixture producer nào —
+> gate tự động `productBoundary.test.ts` 0 offences. Mọi màn có route BFF đều
+> HTTP_CONSUMER same-origin (ma trận:
+> CLAUDE_TO_CODEX_N29_FE_01_RETURN_PACKET.md); Account360 + Fleet + Bindings
+> là TYPED_UNAVAILABLE đúng reason code; Admin drawer chạy N27
+> `command-tasks.v1` (24 task · 0 CONNECTED → không bật gì); Gate LIVE chạy
+> `governance.live-review.v1`. Gates: vitest 1780 pass + console guard 0
+> warning · build xanh · Playwright preview+journeys 66 pass trên BFF double
+> same-origin (`e2e/bffDouble.ts`), console + origin-containment asserts.
+> Verdict trả codex: `FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX` — không
+> tự đánh Product GO. Request hợp nhất: BR-EX-72 (fleet list · bindings
+> list/detail · live-review fixture · registry amendment). Đổi doctrine đọc:
+> client không pre-block theo policy metadata cũ của registry — server là
+> enforcer (ghi ở §8.40 FRONTEND_HANDOFF + return packet §5).

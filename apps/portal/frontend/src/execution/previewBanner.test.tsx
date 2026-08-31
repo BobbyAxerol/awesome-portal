@@ -8,7 +8,7 @@ afterEach(cleanup);
 
 describe("PreviewBanner", () => {
   it.each([
-    ["fixture", "FIXTURE PREVIEW", /No live connection/],
+    ["http", "PORTAL READS · SAME-ORIGIN", /same-origin Portal BFF call/],
     ["shadow", "SHADOW PROJECTION", /not the live source/],
     ["source", "SOURCE · READ-ONLY", /commands remain disabled/],
   ])("%s says %s", (profile, title, line) => {
@@ -17,9 +17,11 @@ describe("PreviewBanner", () => {
     expect(screen.getByText(line)).toBeTruthy();
     expect(container.querySelector("[data-execution-preview]")?.getAttribute("data-execution-preview")).toBe(profile);
   });
-  it("a null profile (registry publishes none) is fixture; an unknown profile is named and treated as not live", () => {
+  it("a null profile (registry publishes none) states the same-origin transport; an unknown profile is named and treated as not live", () => {
+    // N29: the transport is same-origin HTTP unconditionally — a missing
+    // registry word cannot demote the banner to a fixture claim.
     render(<PreviewBanner profile={null} />);
-    expect(screen.getByText("FIXTURE PREVIEW")).toBeTruthy();
+    expect(screen.getByText("PORTAL READS · SAME-ORIGIN")).toBeTruthy();
     cleanup();
     const { container } = render(<PreviewBanner profile="mystery" />);
     expect(screen.getByText("PROFILE MYSTERY")).toBeTruthy();

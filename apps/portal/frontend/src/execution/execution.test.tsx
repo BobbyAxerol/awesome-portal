@@ -2827,26 +2827,27 @@ describe("the fixture API exercises the real mapping path", () => {
   });
 });
 
-describe("the HTTP API refuses before it calls, when the registry says no", () => {
+describe("the HTTP API reads through to the server whatever the registry metadata says", () => {
   const off = screenDeliveryPolicy({
     delivery_policy: { policy_revision: 1, query_enabled: false, paper_commands_enabled: false },
   });
 
-  it("does not make a request the registry has already refused", async () => {
-    // A 403 arriving thirty seconds later is a worse explanation than the one
-    // the registry can give immediately.
+  it("still asks the server, and renders the server's own refusal verbatim (N29 §2)", async () => {
+    // The registry's stale delivery-policy bits are metadata, not an
+    // enforcer. A client that refuses on them fakes a refusal the server
+    // never made — the historical failure this doctrine replaces.
     let called = false;
     const original = globalThis.fetch;
     globalThis.fetch = (async () => {
       called = true;
-      return new Response("{}", { status: 200 });
+      return new Response(JSON.stringify({ error: { code: "forbidden", message: "Query is disabled for this workspace." } }), { status: 403 });
     }) as typeof fetch;
     try {
       const api = createHttpApi({ policy: off });
       const result = await api.listApprovals({ filter: "INBOX" });
-      expect(called).toBe(false);
+      expect(called).toBe(true);
       expect(result.ok).toBe(false);
-      if (!result.ok) expect(result.reason).toContain("Query are disabled");
+      if (!result.ok) expect(result.reason).toContain("Query is disabled for this workspace.");
     } finally {
       globalThis.fetch = original;
     }
@@ -3062,13 +3063,20 @@ describe("containers — the port meets the screens", () => {
     expect(screen.queryByText(/Inbox zero/)).toBeNull();
   });
 
-  it("renders a denied read as denied rather than as an error", async () => {
-    const api = createHttpApi({
-      policy: screenDeliveryPolicy({ delivery_policy: { policy_revision: 1, query_enabled: false } }),
-    });
-    const { container } = render(<ApprovalInboxContainer api={api} />);
-    await screen.findByText(/Query are disabled/);
-    expect(container.querySelector(".exec-state")).not.toBeNull();
+  it("renders the server's denial as denied rather than as an error", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ error: { code: "forbidden", message: "Query is disabled for this workspace." } }), { status: 403 })) as typeof fetch;
+    try {
+      const api = createHttpApi({
+        policy: screenDeliveryPolicy({ delivery_policy: { policy_revision: 1, query_enabled: false } }),
+      });
+      const { container } = render(<ApprovalInboxContainer api={api} />);
+      await screen.findByText(/Query is disabled for this workspace/);
+      expect(container.querySelector(".exec-state")).not.toBeNull();
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 
   it("loads a gate review through the port", async () => {
