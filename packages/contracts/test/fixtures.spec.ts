@@ -90,6 +90,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json#/$defs/ApprovalHistoryResponse",
   "execution-governance.paper-exit-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse",
+  "execution-governance.approval-create.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateResponse",
+  "execution-governance.conditions-register.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-product.v1.schema.json#/$defs/ConditionsRegisterResponse",
   "execution-command-center.busy.valid.json":
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
   "execution-command-center.empty.valid.json":

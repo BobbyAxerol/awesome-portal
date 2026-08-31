@@ -49,6 +49,9 @@ DEBT_CLOSEOUT="${ROOT_DIR}/upgrade/backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 N28_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md"
 N28_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md"
 N28_REGISTRY="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/missing-capability-registry.v1.json"
+N29_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md"
+N29_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md"
+N29_ACCEPTANCE="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json"
 
 for required_file in \
     "${OWNER_MASTER_REQUEST}" \
@@ -78,7 +81,10 @@ for required_file in \
     "${DEBT_CLOSEOUT}" \
     "${N28_REPORT}" \
     "${N28_HANDOFF}" \
-    "${N28_REGISTRY}"
+    "${N28_REGISTRY}" \
+    "${N29_REPORT}" \
+    "${N29_HANDOFF}" \
+    "${N29_ACCEPTANCE}"
 do
     if [[ ! -f "${required_file}" ]]; then
         echo "execution owner/phase plan is missing: ${required_file}" >&2
@@ -167,6 +173,23 @@ do
 done
 if ! grep -Fq "N28 backend — genuine missing-capability adapters" "${TRACKER}"; then
     echo "shared tracker lost N28 closeout section" >&2
+    exit 1
+fi
+for token in \
+    "Backend verdict" \
+    "Product release verdict" \
+    "22 available backend APIs" \
+    "internal technical debt: zero" \
+    "N29-FE-01" \
+    "N29-REL-01"
+do
+    if ! grep -Fq "${token}" "${N29_REPORT}"; then
+        echo "N29 report lost closeout invariant: ${token}" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq "N29 backend — product acceptance and release closeout" "${TRACKER}"; then
+    echo "shared tracker lost N29 closeout section" >&2
     exit 1
 fi
 for token in \

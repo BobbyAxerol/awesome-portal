@@ -1,7 +1,7 @@
 /**
  * C-PI04-05 gates.
  *
- * The thirteen 422/503 codes are read from the edge service source rather than copied into
+ * The fifteen 422/503 codes are read from the edge service source rather than copied into
  * this file, so a rename or a reclassification upstream fails here instead of
  * reaching an operator as a wrong instruction.
  */
@@ -40,10 +40,10 @@ describe("the frontend's code list matches the edge service", () => {
   it("finds the mapping at all", () => {
     // Guards the regex: if it stops matching, every assertion below passes
     // vacuously.
-    expect(edgeCodes().size).toBe(13);
+    expect(edgeCodes().size).toBe(15);
   });
 
-  it("classifies exactly the twelve 422 codes as correctable", () => {
+  it("classifies exactly the fourteen 422 codes as correctable", () => {
     const edge = edgeCodes();
     const correctable = [...edge].filter(([, status]) => status === 422).map(([code]) => code);
     expect([...ANALYTICS_CORRECTABLE].sort()).toEqual(correctable.sort());

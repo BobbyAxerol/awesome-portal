@@ -2,12 +2,69 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.3.0",
-    "description": "Same-origin, session-guarded Portal governance boundaries for R1/R2 review, immutable approval history, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
+    "version": "1.4.0",
+    "description": "Same-origin, session-guarded Portal governance boundaries for R1/R2 review, immutable approval history, R1 request creation, conditions/waivers, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
   "paths": {
+    "/api/v1/execution/governance/approvals": {
+      "post": {
+        "operationId": "executionNewApprovalRequestV1",
+        "description": "Creates one Portal-owned R1 request from a workspace-bound completed run. The server pins the registered artifact digest and rejects duplicate open alpha/run requests.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created or idempotently replayed R1 request",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateResponse" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/governance/waivers": {
+      "get": {
+        "operationId": "executionWaiversRegisterV1",
+        "description": "Returns every Portal-owned approval condition with exact counts, bounded bidirectional keyset pagination and server-computed OPEN/WAIVED/EXPIRING/LAPSED state.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
+          { "name": "state", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
+          { "name": "kind", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
+          { "name": "gate", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "environment", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "owner", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "subject", "in": "query", "schema": { "type": "string", "maxLength": 160 } },
+          { "name": "due_from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "due_to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "maxLength": 256 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal-owned conditions and waivers register",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ConditionsRegisterResponse" }
+              }
+            }
+          },
+          "default": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
     "/api/v1/execution/governance/approvals/{approval_id}/r1": {
       "get": {
         "operationId": "executionGovernanceR1Review",

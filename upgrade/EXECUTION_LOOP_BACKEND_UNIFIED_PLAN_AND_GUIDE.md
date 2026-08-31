@@ -1354,7 +1354,7 @@ no open item in that register silently reopens N17B.
 
 ### N18–N29 — Manager Surface Expansion campaign
 
-**Status:** `N18_N27_IMPLEMENTATION_COMPLETE / SIGNED_DEV_DEPLOYMENT_PENDING / N28_READY / NO_RUNTIME_EFFECT`.  
+**Status:** `N18_N29_BACKEND_COMPLETE / PRODUCT_RELEASE_NO_GO / FRONTEND_AND_SIGNED_RELEASE_PENDING / NO_RUNTIME_EFFECT`.  
 **Scope:** all current Manager-v2 relations, current external read and command
 catalogues, BR-EX-41 onward, and the Paper/Sandbox/Live internal Portal.  
 **Non-goal:** changing Trading System execution authority, bypassing its
@@ -1827,6 +1827,17 @@ internal, or honestly unavailable with a versioned N28 record; every visible
 action works; evidence and rollback pass; no known campaign debt is deferred
 into an unnamed phase. N30 is created only for genuinely new product scope or
 a new owner contract revision.
+
+**Closeout (2026-08-31):** `BACKEND_ACCEPTED / PRODUCT_RELEASE_NO_GO /
+22_AVAILABLE_SCREEN_APIS / 1_TYPED_UNAVAILABLE / ZERO_INTERNAL_TECHNICAL_DEBT /
+NO_RUNTIME_EFFECT`. N29 closes the missing R1 approval-creation and stateful
+conditions/waivers APIs, pins research evidence server-side, enforces
+serializable idempotent creation and publishes exact bounded condition queries.
+The digest-bound Python and Rust authorities prove the complete 96-relation,
+31-request, 27-read and nine-command disposition. Product GO remains correctly
+blocked only by the fixture-only frontend consumer and protected-main signed
+image evidence. Evidence:
+[`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).
 
 ---
 

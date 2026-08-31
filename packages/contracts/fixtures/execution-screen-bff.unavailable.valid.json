@@ -2,21 +2,21 @@
   "schema_version": "execution.screen-bff-contract.v1",
   "record_authority": "PORTAL_CONTROL",
   "workspace_id": "ws_fixture",
-  "resource": { "kind": "ALPHA", "id": "alpha_carry_v3" },
+  "resource": { "kind": "ACCOUNT", "id": "account_paper_usdm" },
   "read_at": "2026-08-30T12:00:00.000Z",
   "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
   "screen": {
-    "screen_id": "EXECUTION_ALPHA_360_SCREEN",
-    "ui_route_template": "/deployments/alphas/:alphaId",
-    "resource_kind": "ALPHA",
+    "screen_id": "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    "ui_route_template": "/deployments/accounts/:accountId",
+    "resource_kind": "ACCOUNT",
     "resource_required": true,
     "required_roles": ["ADMIN", "USER"],
-    "request_ids": ["BR-EX-49", "BR-EX-50", "BR-EX-64", "BR-EX-55"],
-    "source_authorities": ["TRADING_SYSTEM", "RESEARCH", "DERIVED"],
-    "read_capabilities": ["ops.alpha-activity", "deployments.execution-quality", "deployments.contribution", "market.candles", "portal.entity-names"],
+    "request_ids": ["BR-EX-52", "BR-EX-53", "BR-EX-54", "BR-EX-55"],
+    "source_authorities": ["PORTAL_CONTROL", "TRADING_SYSTEM", "BROKER", "DERIVED"],
+    "read_capabilities": ["bindings.snapshot", "bindings.exposure-verdict", "accounts.current", "reconciliation.current", "portal.entity-names"],
     "supported_ui_states": ["ready", "empty", "stale", "partial", "denied", "unavailable", "error"],
     "composition_policy": { "source_join": "SERVER_ONLY", "verdicts": "SERVER_ONLY", "counts": "SERVER_ONLY", "filtering": "SERVER_ONLY", "sorting": "SERVER_ONLY", "sla": "SERVER_ONLY", "permissions": "SERVER_ONLY" },
-    "data_api": { "status": "TYPED_UNAVAILABLE", "operation_id": "executionAlpha360V1", "method": "GET", "path_template": "/api/v1/execution/screens/alphas/{resource_id}", "response_contract": "execution.alpha-360.v1", "unavailable_reason": "N25_ALPHA_360_NOT_DELIVERED", "delivery_phase": "N25" }
+    "data_api": { "status": "TYPED_UNAVAILABLE", "operation_id": "executionAccountBroker360V1", "method": "GET", "path_template": "/api/v1/execution/screens/accounts/{resource_id}", "response_contract": "execution.account-broker-360.v1", "unavailable_reason": "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED", "delivery_phase": "N28" }
   },
-  "delivery": { "state": "unavailable", "freshness": "UNKNOWN", "completeness": "UNKNOWN", "payload": null, "reason_code": "N25_ALPHA_360_NOT_DELIVERED", "retryable": false }
+  "delivery": { "state": "unavailable", "freshness": "UNKNOWN", "completeness": "UNKNOWN", "payload": null, "reason_code": "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED", "retryable": false }
 }

@@ -16,6 +16,7 @@ import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
   approvalHistoryResource,
   approvalInboxResource,
+  governanceConditionsResource,
   R1Decision,
 } from "./contracts";
 import {
@@ -46,6 +47,15 @@ interface PlanInput {
   reason: string;
   conditions: TypedCondition[];
   evidenceHashes: string[];
+}
+
+interface CreateApprovalInput {
+  workspaceId: string;
+  requestKey: string;
+  alphaId: string;
+  evidenceRunId: string;
+  methodologyClaimId: string;
+  summary: string;
 }
 
 function canonical(value: unknown): string {
@@ -197,6 +207,164 @@ export class GovernanceService {
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
       page,
     };
+  }
+
+  async conditions(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+    const page = await this.query.list(
+      governanceConditionsResource(),
+      { actorId: user.userId, workspaceId, role: user.role },
+      raw,
+    );
+    return {
+      schema_version: "governance.conditions-register.v1",
+      record_authority: "PORTAL_CONTROL",
+      delivery_profile: "portal",
+      read_at: new Date().toISOString(),
+      actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      page,
+    };
+  }
+
+  async createApproval(user: PortalUser, input: CreateApprovalInput, requestId: string) {
+    const payloadHash = digest({
+      gate: "R1",
+      alpha_id: input.alphaId,
+      evidence_run_id: input.evidenceRunId,
+      methodology_claim_id: input.methodologyClaimId,
+      summary: input.summary,
+    });
+    const replay = await this.repository.findCreatedApproval(
+      input.workspaceId,
+      user.userId,
+      input.requestKey,
+    );
+    if (replay) {
+      if (replay.payloadHash !== payloadHash) {
+        throw new GovernanceError(
+          "REQUEST_KEY_PAYLOAD_CONFLICT",
+          "Request key was already used for another approval request.",
+          409,
+        );
+      }
+      return {
+        schema_version: "governance.approval-create.v1",
+        replayed: true,
+        approval: this.publicApproval(replay.approval),
+      };
+    }
+
+    const run = await this.repository.approvalEvidenceRun(input.workspaceId, input.evidenceRunId);
+    if (!run) {
+      throw new GovernanceError("EVIDENCE_RUN_NOT_FOUND", "Evidence run was not found.", 422);
+    }
+    if (
+      run.alphaId !== input.alphaId ||
+      !["COMPLETED", "SUCCEEDED", "COMPLETE"].includes(run.status) ||
+      !run.methodologyClaimIds.includes(input.methodologyClaimId)
+    ) {
+      throw new GovernanceError(
+        "EVIDENCE_RUN_NOT_ELIGIBLE",
+        "Evidence run is not eligible for this alpha and methodology claim.",
+        422,
+      );
+    }
+    const evidenceId = newUlid("ev");
+    const evidence: EvidenceRecord = {
+      evidenceId,
+      ordinal: 0,
+      kind: "ALPHA_ARTIFACT",
+      label: "Pinned research artifact",
+      displayValue: run.runId,
+      note: input.summary,
+      verification: "SERVER_PINNED",
+      artifactId: run.runId,
+      sha256: run.artifactSha256,
+      sizeBytes: null,
+      mediaType: "application/json",
+      schemaVersion: run.artifactSchemaVersion,
+      sourceAuthority: "RESEARCH",
+      sourceReference: run.runId,
+      required: true,
+      capturedAt: run.capturedAt,
+      retentionClass: "GOVERNANCE_LONG_TERM",
+      accessPolicy: "WORKSPACE_APPROVER",
+    };
+    const createdAt = new Date();
+    try {
+      const created = await this.repository.createR1Approval({
+        approvalId: newUlid("apr"),
+        evidenceId,
+        auditEventId: newUlid("evt"),
+        requestId,
+        requestKey: input.requestKey,
+        payloadHash,
+        workspaceId: input.workspaceId,
+        requesterUserId: user.userId,
+        requesterUsername: user.username,
+        alphaId: input.alphaId,
+        sourceRunId: input.evidenceRunId,
+        methodologyClaimId: input.methodologyClaimId,
+        summary: input.summary,
+        expectedArtifactSha256: run.artifactSha256,
+        evidenceSetHash: computeEvidenceManifestHash([evidence]),
+        createdAt,
+        evidenceCapturedAt: run.capturedAt,
+        slaDueAt: new Date(createdAt.valueOf() + 24 * 60 * 60 * 1000),
+        expiresAt: new Date(createdAt.valueOf() + 72 * 60 * 60 * 1000),
+      });
+      return {
+        schema_version: "governance.approval-create.v1",
+        replayed: false,
+        approval: this.publicApproval(created),
+      };
+    } catch (error) {
+      const typed = error as { code?: string; constraint?: string; governanceCode?: string; status?: number };
+      if (typed.governanceCode) {
+        throw new GovernanceError(typed.governanceCode, "Approval request could not be created.", typed.status ?? 422);
+      }
+      if (
+        (typed.code === "23505" && typed.constraint === "governance_approval_request_key_idx") ||
+        typed.code === "40001"
+      ) {
+        const raced = await this.repository.findCreatedApproval(input.workspaceId, user.userId, input.requestKey);
+        if (raced?.payloadHash === payloadHash) {
+          return {
+            schema_version: "governance.approval-create.v1",
+            replayed: true,
+            approval: this.publicApproval(raced.approval),
+          };
+        }
+        if (raced) {
+          throw new GovernanceError("REQUEST_KEY_PAYLOAD_CONFLICT", "Request key payload conflicts.", 409);
+        }
+      }
+      if (
+        (typed.code === "23505" && typed.constraint === "governance_approval_open_alpha_run_idx") ||
+        typed.code === "40001"
+      ) {
+        const existing = await this.repository.findOpenApprovalForAlphaRun(
+          input.workspaceId,
+          input.alphaId,
+          input.evidenceRunId,
+        );
+        if (existing) {
+          throw new GovernanceError(
+            "DUPLICATE_OPEN_APPROVAL",
+            "An open approval already exists for this alpha and evidence run.",
+            409,
+            { approval_id: existing.approvalId },
+          );
+        }
+      }
+      if (typed.code === "40001") {
+        throw new GovernanceError(
+          "APPROVAL_CREATE_SERIALIZATION_CONFLICT",
+          "Concurrent approval creation did not settle within this request.",
+          409,
+        );
+      }
+      throw error;
+    }
   }
 
   async detail(user: PortalUser, workspaceId: string, approvalId: string) {
@@ -588,6 +756,7 @@ export class GovernanceService {
         auditEventId: newUlid("evt"),
         outboxMessageId: newUlid("msg"),
         reasonHash: digest(plan.reason),
+        limitationIds: plan.conditions.map(() => newUlid("lim")),
       });
       return {
         schema_version: "governance.r1-decision-apply.v1",

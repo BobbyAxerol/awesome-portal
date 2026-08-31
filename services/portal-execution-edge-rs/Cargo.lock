@@ -1584,6 +1584,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "product-acceptance"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "production-readiness"
 version = "0.1.0"
 dependencies = [

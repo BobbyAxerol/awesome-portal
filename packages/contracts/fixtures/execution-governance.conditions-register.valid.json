@@ -1,0 +1,36 @@
+{
+  "schema_version": "governance.conditions-register.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "delivery_profile": "portal",
+  "read_at": "2026-08-31T12:00:00.000Z",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "page": {
+    "rows": [
+      {
+        "condition_id": "lim_01J6N29PRODUCT",
+        "approval_id": "apr_01J6N29PRODUCT",
+        "gate": "R1",
+        "subject": { "id": "alpha_n29", "label": "alpha_n29" },
+        "environment": "RESEARCH",
+        "kind": "WAIVER",
+        "state": "EXPIRING",
+        "label": "Approved waiver · risk-team",
+        "statement": "Keep paper exposure below the certified envelope.",
+        "owner": { "user_id": "usr_stan", "username": "stan" },
+        "due_at": "2026-09-03T23:59:59.999Z",
+        "blocking": false,
+        "policy_version": "approval.v3",
+        "created_at": "2026-08-31T12:00:00.000Z",
+        "updated_at": "2026-08-31T12:00:00.000Z"
+      }
+    ],
+    "total_count": 1,
+    "filtered_count": 1,
+    "next_cursor": null,
+    "prev_cursor": null,
+    "has_more": false,
+    "has_previous": false,
+    "applied_filters": [{ "field": "state", "op": "eq", "value": "EXPIRING" }],
+    "applied_sort": [{ "field": "updated_at", "direction": "desc" }, { "field": "condition_id", "direction": "asc" }]
+  }
+}

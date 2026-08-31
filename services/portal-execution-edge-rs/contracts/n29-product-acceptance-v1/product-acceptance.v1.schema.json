@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-execution-product-acceptance.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "phase", "decision", "release_channel", "runtime_effect", "accepted_scope", "evidence", "rehearsals", "release_gates", "authority"],
+  "properties": {
+    "schema_version": {"const": "portal.execution.product-acceptance.v1"},
+    "phase": {"const": "N29"},
+    "decision": {"const": "BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO"},
+    "release_channel": {"const": "DEV_CANDIDATE_ONLY"},
+    "runtime_effect": {"const": "NONE"},
+    "accepted_scope": {"type": "object"},
+    "evidence": {"type": "object"},
+    "rehearsals": {"type": "object"},
+    "release_gates": {"type": "object"},
+    "authority": {"type": "object"}
+  }
+}

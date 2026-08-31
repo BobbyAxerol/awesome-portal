@@ -192,12 +192,12 @@ describe("N20 session, RBAC, workspace and resource boundary", () => {
     expect(missing.json().error.code).toBe("N20_RESOURCE_REQUIRED");
 
     const unavailable = await inject(admin,
-      `/api/v1/execution/screen-contracts/EXECUTION_ALPHA_360_SCREEN?workspace_id=${workspaceId}&resource_id=alpha_42`,
+      `/api/v1/execution/screen-contracts/EXECUTION_ACCOUNT_BROKER_360_SCREEN?workspace_id=${workspaceId}&resource_id=account_42`,
     );
     expect(unavailable.statusCode).toBe(200);
     expect(unavailable.json()).toMatchObject({
-      resource: { kind: "ALPHA", id: "alpha_42" },
-      screen: { data_api: { status: "TYPED_UNAVAILABLE", delivery_phase: "N25" } },
+      resource: { kind: "ACCOUNT", id: "account_42" },
+      screen: { data_api: { status: "TYPED_UNAVAILABLE", delivery_phase: "N28" } },
       delivery: { state: "unavailable", payload: null, retryable: false },
     });
 

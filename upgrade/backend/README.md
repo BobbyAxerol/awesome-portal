@@ -1455,3 +1455,28 @@ durable run/attempt events. Detailed evidence:
   disabled.
 - Detail:
   [`EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md`](./EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md).
+
+## Backend state — 2026-08-31 (N28 genuine missing capabilities)
+
+- N28 is `COMPLETE / 13_CURRENT_SOURCE_ADAPTERS / 9_GENUINE_OWNER_GAPS /
+  3_INTENTIONAL_EXCLUSIONS / SOURCE_DARK / N29_READY`.
+- Existing Gateway, Market Data, projection and Portal authorities cover every
+  semantically adaptable gap. MC-01…MC-09 form the only manifest-bound Trading
+  System owner request; pending returns remain typed unavailable.
+- Detail:
+  [`EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md`](./EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md).
+
+## Backend state — 2026-08-31 (N29 product acceptance and release closeout)
+
+- N29 is `BACKEND_ACCEPTED / PRODUCT_RELEASE_NO_GO / NO_RUNTIME_EFFECT`.
+- The finite inventory is closed at 96 relations, 31 commissioned requests,
+  27 reads, nine commands and 23 screen contracts. Twenty-two screen APIs are
+  available; Account/Broker 360 is the one typed N28 unavailable screen.
+- R1 approval creation and the stateful conditions/waivers register close the
+  final Portal-owned product gaps with server-pinned evidence, serializable
+  idempotency, exact bounded queries and Command Center integration.
+- Internal technical debt is zero. Product release remains blocked only by
+  Claude's fixture-only frontend transport and protected-main signed image
+  evidence; neither gate authorizes runtime or stable mutation.
+- Detail:
+  [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).

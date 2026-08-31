@@ -33,11 +33,13 @@ import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
 import {
   ApplyOperationRequestSchema,
+  ApprovalCreateRequestSchema,
   approvalHistoryQuery,
   approvalListQuery,
   DecisionPlanRequestSchema,
   PaperExitApplyOperationRequestSchema,
   PaperExitDecisionPlanRequestSchema,
+  governanceConditionsQuery,
 } from "./contracts";
 import { GovernanceError, GovernanceService } from "./governance.service";
 import { PaperExitService } from "./paper-exit.service";
@@ -193,6 +195,42 @@ export class GovernanceController {
   ) {
     const workspaceId = await this.workspace(request, query.workspace_id);
     return this.governance.list(request.portalUser, workspaceId, approvalListQuery(query));
+  }
+
+  @Post("/governance/approvals")
+  @HttpCode(201)
+  async createApproval(@Req() request: GovernanceRequest, @Body() body: unknown) {
+    this.assertMutationSecurity(request);
+    const parsed = ApprovalCreateRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_APPROVAL_CREATE_REQUEST", "Invalid approval request.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.governance.createApproval(
+      request.portalUser,
+      {
+        workspaceId,
+        requestKey: parsed.data.request_key,
+        alphaId: parsed.data.alpha_id,
+        evidenceRunId: parsed.data.evidence_run_id,
+        methodologyClaimId: parsed.data.methodology_claim_id,
+        summary: parsed.data.summary,
+      },
+      this.requestId(request),
+    );
+  }
+
+  @Get("/governance/waivers")
+  async conditionsRegister(
+    @Req() request: GovernanceRequest,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const workspaceId = await this.workspace(request, query.workspace_id);
+    return this.governance.conditions(
+      request.portalUser,
+      workspaceId,
+      governanceConditionsQuery(query),
+    );
   }
 
   @Get("/governance/approvals/history")

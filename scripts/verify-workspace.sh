@@ -578,6 +578,19 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs" \
+  "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py" \
+  "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md" \
+  "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md" \
+  "${ROOT_DIR}/deploy/manifests/execution-manager-product-release-profile.v1.json" \
+  "${ROOT_DIR}/deploy/execution-manager-v2/product-dashboard.v1.json" \
+  "${ROOT_DIR}/deploy/execution-manager-v2/product-slo.v1.yml" \
+  "${ROOT_DIR}/deploy/runbooks/execution-manager-n29-product-release-and-rollback.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/product-acceptance/src/lib.rs" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000015_execution-product-governance.sql" \
+  "${ROOT_DIR}/apps/control-api/test/governance-product.spec.ts" \
+  "${ROOT_DIR}/packages/contracts/schemas/execution-governance-product.v1.schema.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256" \
   "${ROOT_DIR}/deploy/manifests/sandbox-live-read-release-profile.v1.json" \
   "${ROOT_DIR}/deploy/runbooks/portal-n23-sandbox-live-read-release-and-rollback.md" \
@@ -1392,7 +1405,20 @@ for tracked_source in \
   services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json \
   services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256 \
   services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256 \
-  services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs; do
+  services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs \
+  scripts/execution-n29-product-acceptance.py \
+  scripts/execution-n29-product-acceptance-test.sh \
+  upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md \
+  upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md \
+  deploy/manifests/execution-manager-product-release-profile.v1.json \
+  deploy/execution-manager-v2/product-dashboard.v1.json \
+  deploy/execution-manager-v2/product-slo.v1.yml \
+  deploy/runbooks/execution-manager-n29-product-release-and-rollback.md \
+  services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/MANIFEST.sha256 \
+  services/portal-execution-edge-rs/crates/product-acceptance/src/lib.rs \
+  apps/control-api/migrations/1723680000015_execution-product-governance.sql \
+  apps/control-api/test/governance-product.spec.ts \
+  packages/contracts/schemas/execution-governance-product.v1.schema.json; do
   git -C "${ROOT_DIR}" ls-files --error-unmatch "${tracked_source}" >/dev/null || {
     printf 'Portal source is present but not tracked by the parent Git: %s\n' "${tracked_source}" >&2
     exit 1
@@ -1573,6 +1599,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh" \
   "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
   "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
+  "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1609,6 +1636,7 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
   "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py" \
   "${ROOT_DIR}/scripts/execution-n18-census.py" \
+  "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py" \
   "${ROOT_DIR}/scripts/test_execution_n18_census.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
@@ -1680,5 +1708,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh"
 "${ROOT_DIR}/scripts/execution-n26-n27-test.sh"
 "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh"
+"${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

@@ -17,7 +17,7 @@ describe("N20 canonical screen BFF consumer", () => {
     ));
     const contract = readScreenBffContract(document);
     expect(contract).not.toBeNull();
-    expect(contract!.screen.screen_id).toBe("EXECUTION_ALPHA_360_SCREEN");
+    expect(contract!.screen.screen_id).toBe("EXECUTION_ACCOUNT_BROKER_360_SCREEN");
     expect(contract!.screen.supported_ui_states).toEqual(SCREEN_BFF_UI_STATES);
     expect(screenBffDataFetchAllowed(contract!)).toBe(false);
     expect(contract!.delivery).toMatchObject({

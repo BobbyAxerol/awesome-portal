@@ -376,6 +376,110 @@ export const ApplyOperationRequestSchema = z
   })
   .strict();
 
+export const ApprovalCreateRequestSchema = z
+  .object({
+    schema_version: z.literal("governance.approval-create-request.v1"),
+    workspace_id: z.string().min(3).max(96),
+    request_key: RequestKey,
+    gate: z.literal("R1"),
+    alpha_id: z.string().trim().min(1).max(191),
+    evidence_run_id: z.string().trim().min(1).max(191),
+    methodology_claim_id: z.string().trim().min(1).max(191),
+    summary: z.string().trim().min(8).max(2000),
+  })
+  .strict();
+
+const CONDITION_STATES = ["OPEN", "WAIVED", "EXPIRING", "LAPSED"] as const;
+const CONDITION_KINDS = ["LINEAGE", "WARNING", "RESTRICTION", "WAIVER"] as const;
+
+interface ConditionRegisterRow extends QueryResultRow {
+  condition_id: string;
+  workspace_id: string;
+  approval_id: string;
+  gate: ApprovalGate;
+  subject_id: string;
+  subject_label: string;
+  environment: ApprovalEnvironment;
+  kind: (typeof CONDITION_KINDS)[number];
+  label: string;
+  statement: string;
+  condition_state: (typeof CONDITION_STATES)[number];
+  owner_user_id: string;
+  owner_username: string;
+  due_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+  policy_version: string;
+}
+
+export function governanceConditionsResource(): PostgresListResource<ConditionRegisterRow, Record<string, unknown>> {
+  return {
+    resourceId: "governance.conditions-register",
+    table: "governance_conditions_register",
+    selectColumns: [
+      "condition_id", "workspace_id", "approval_id", "gate", "subject_id",
+      "subject_label", "environment", "kind", "label", "statement",
+      "condition_state", "owner_user_id", "owner_username", "due_at",
+      "created_at", "updated_at", "policy_version",
+    ],
+    workspaceColumn: "workspace_id",
+    idSortField: "condition_id",
+    filters: {
+      state: { column: "condition_state", kind: "enum", operators: ["eq", "in"], enumValues: CONDITION_STATES },
+      kind: { column: "kind", kind: "enum", operators: ["eq", "in"], enumValues: CONDITION_KINDS },
+      gate: { column: "gate", kind: "enum", operators: ["eq", "in"], enumValues: APPROVAL_GATES },
+      environment: { column: "environment", kind: "enum", operators: ["eq", "in"], enumValues: APPROVAL_ENVIRONMENTS },
+      owner: { column: "owner_username", kind: "text", operators: ["eq", "contains"], maxLength: 128 },
+      subject: { column: "subject_label", kind: "text", operators: ["contains"], maxLength: 160 },
+      due_at: { column: "due_at", kind: "timestamp", operators: ["gte", "lte"] },
+    },
+    sorts: {
+      due_at: { column: "due_at", kind: "timestamp" },
+      updated_at: { column: "updated_at", kind: "timestamp" },
+      created_at: { column: "created_at", kind: "timestamp" },
+      condition_id: { column: "condition_id", kind: "text" },
+    },
+    defaultSort: [{ field: "updated_at", direction: "desc" }],
+    allowedRoles: ["ADMIN", "USER"],
+    statementTimeoutMs: 2_000,
+    mapRow: (row) => ({
+      condition_id: row.condition_id,
+      approval_id: row.approval_id,
+      gate: row.gate,
+      subject: { id: row.subject_id, label: row.subject_label },
+      environment: row.environment,
+      kind: row.kind,
+      state: row.condition_state,
+      label: row.label,
+      statement: row.statement,
+      owner: { user_id: row.owner_user_id, username: row.owner_username },
+      due_at: row.due_at?.toISOString() ?? null,
+      blocking: row.condition_state === "LAPSED",
+      policy_version: row.policy_version,
+      created_at: row.created_at.toISOString(),
+      updated_at: row.updated_at.toISOString(),
+    }),
+  };
+}
+
+export function governanceConditionsQuery(raw: Record<string, unknown>): RawKeysetQuery {
+  const filters: RawFilterInput[] = [];
+  for (const [field, value] of [
+    ["state", raw.state],
+    ["kind", raw.kind],
+    ["gate", raw.gate],
+    ["environment", raw.environment],
+  ] as const) {
+    const parsed = inFilter(field, value);
+    if (parsed) filters.push(parsed);
+  }
+  if (raw.owner !== undefined) filters.push({ field: "owner", op: "contains", value: raw.owner });
+  if (raw.subject !== undefined) filters.push({ field: "subject", op: "contains", value: raw.subject });
+  if (raw.due_from !== undefined) filters.push({ field: "due_at", op: "gte", value: raw.due_from });
+  if (raw.due_to !== undefined) filters.push({ field: "due_at", op: "lte", value: raw.due_to });
+  return { after: raw.after, before: raw.before, limit: raw.limit, sort: raw.sort, filters };
+}
+
 export const PaperExitDecisionPlanRequestSchema = z
   .object({
     schema_version: z.literal("governance.paper-exit-decision-plan-request.v1"),

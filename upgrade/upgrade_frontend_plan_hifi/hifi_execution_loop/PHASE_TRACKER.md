@@ -2738,7 +2738,7 @@ backend gate.
 | N26 | projection-backed authenticated SSE | consume manager snapshot; call `EventSource.close()` on terminal auth/gap; resnapshot before reconnect | `COMPLETE / RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING` |
 | N27 | typed Admin Action Drawer command plane | render 24 server tasks; 14 inactive + 10 incompatible; enable only future authoritative `CONNECTED` tasks | `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK` |
 | N28 | 13 current-source adapters + one nine-entry genuine-gap owner packet | retain typed unavailable until verified return; never call source directly | `COMPLETE / SOURCE_DARK / N29_READY` |
-| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `PLANNED / N18_N28_DEPENDENT` |
+| N29 | product/release evidence and debt closeout | full consumer/e2e/release review | `BACKEND_ACCEPTED / PRODUCT_RELEASE_NO_GO / FRONTEND_AND_SIGNED_RELEASE_PENDING` |
 
 ### N14A backend — Portal release authority, source-dark (2026-08-26)
 
@@ -3105,3 +3105,20 @@ Only MC-01…MC-09 remain in the single official Trading System owner request v3
 Until a manifest-bound owner return verifies, Claude retains typed unavailable
 states. See
 [`CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md`](./CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md).
+
+### N29 backend — product acceptance and release closeout (2026-08-31)
+
+N29 is `BACKEND_ACCEPTED / PRODUCT_RELEASE_NO_GO / NO_RUNTIME_EFFECT`. The
+campaign inventory is closed at 96 relations, 31 requests, 27 reads and nine
+commands. The canonical catalogue now exposes 22 available backend screen APIs
+and one typed unavailable Account/Broker 360 API. `BR-EX-69` and `BR-EX-71`
+are closed with a server-pinned, serializable/idempotent R1 approval mutation
+and an exact keyset/count conditions register. Internal technical debt is zero.
+
+Product GO remains blocked by two named delivery gates only: Claude must replace
+`createFixtureApi()` with same-origin BFF consumers and return parity evidence;
+then the protected `main` workflow must publish signed/attested immutable image
+digests. No direct browser → Edge/Trading System call is allowed. See
+[`CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md`](./CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md)
+and
+[`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](../../backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).

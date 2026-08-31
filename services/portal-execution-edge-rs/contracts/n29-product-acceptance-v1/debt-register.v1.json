@@ -1,0 +1,35 @@
+{
+  "schema_version": "portal.execution.product-debt-register.v1",
+  "phase": "N29",
+  "decision": "NO_UNNAMED_DEBT",
+  "internal_technical_debt": [],
+  "release_blockers": [
+    {
+      "blocker_id": "N29-FE-01",
+      "owner": "CLAUDE_FRONTEND",
+      "state": "OPEN",
+      "reason": "ExecutionPreviewRoute still instantiates createFixtureApi and has no same-origin HTTP product adapter.",
+      "required_evidence": "warning-clean UI consumer tests and browser smoke over canonical BFF states without direct Edge access"
+    },
+    {
+      "blocker_id": "N29-REL-01",
+      "owner": "PROTECTED_RELEASE_WORKFLOW",
+      "state": "WAITING_FOR_MAIN_RELEASE_REF",
+      "reason": "Cosign signatures, SBOM, provenance and immutable image digests are produced only from protected main.",
+      "required_evidence": "verified release candidate artifact from publish-images.yml"
+    }
+  ],
+  "typed_external_gaps": {
+    "registry_revision": "portal.execution.missing-capability-registry.v1",
+    "owner_request_revision": "portal.execution.trading-system-owner-request.v3",
+    "count": 9,
+    "release_blocking": false,
+    "behavior": "TYPED_UNAVAILABLE_UNTIL_MANIFEST_BOUND_OWNER_RETURN"
+  },
+  "intentional_exclusions": {
+    "count": 3,
+    "items": ["redis-inspect", "testnet-hard-reset", "lab-reset"],
+    "release_blocking": false
+  },
+  "new_phase_policy": "N30_REQUIRES_GENUINELY_NEW_PRODUCT_SCOPE_OR_NEW_OWNER_REVISION"
+}

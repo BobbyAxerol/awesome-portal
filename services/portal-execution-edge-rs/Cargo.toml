@@ -29,6 +29,7 @@ members = [
   "crates/emergency-routing",
   "crates/production-readiness",
   "crates/missing-capability-adapter",
+  "crates/product-acceptance",
 ]
 resolver = "2"
 

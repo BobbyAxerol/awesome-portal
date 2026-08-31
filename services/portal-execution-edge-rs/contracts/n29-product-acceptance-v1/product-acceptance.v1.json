@@ -1,0 +1,90 @@
+{
+  "schema_version": "portal.execution.product-acceptance.v1",
+  "phase": "N29",
+  "decision": "BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO",
+  "release_channel": "DEV_CANDIDATE_ONLY",
+  "runtime_effect": "NONE",
+  "accepted_scope": {
+    "relations": {
+      "total": 96,
+      "screen_bound": 54,
+      "projection_input": 16,
+      "audit_evidence": 13,
+      "intentionally_internal": 13
+    },
+    "commissioned_requests": {
+      "total": 31,
+      "backend_contract_covered": 31,
+      "frontend_source_consumer_accepted": 0
+    },
+    "portal_reads": {
+      "total": 27,
+      "connected": 14,
+      "derived_from_existing_source": 10,
+      "supported_but_not_activated": 2,
+      "source_absent": 1
+    },
+    "requested_commands": {
+      "total": 9,
+      "connected": 0,
+      "typed_unavailable": 9
+    },
+    "screen_contracts": {
+      "total": 23,
+      "available_backend_api": 22,
+      "typed_unavailable": 1,
+      "typed_unavailable_screen_ids": [
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ]
+    },
+    "n28": {
+      "current_source_adapters": 13,
+      "owner_gaps": 9,
+      "intentional_exclusions": 3,
+      "owner_return_status": "PENDING",
+      "unavailable_behavior": "TYPED_FAIL_CLOSED"
+    }
+  },
+  "evidence": {
+    "n18_census_sha256": "sha256:9b0c58dfa1a3475434a618821991dd8f531db269fd49e285a757089f8d888b47",
+    "n28_registry_sha256": "sha256:a307b1b78c1724b51790abaf9e8e3b2f375017b2881d6f396a5d0e20e4674812",
+    "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
+    "screen_bff_catalogue_sha256": "sha256:478c608479fa1a210b285ab07c761c239911c22a61d2d566e629e2f91749b821",
+    "frontend_product_route_sha256": "sha256:7995b50979ba245cc49acc83e2175766aa5d58a68c2674742e75688a4d551e53",
+    "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
+    "release_workflow_sha256": "sha256:a38c0664b40737532fba09f8b97ddc5ce729f7e9826275673136df01beaabbcd",
+    "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
+    "governance_product_migration_sha256": "sha256:e9193e9baaa1886dd882d1e6b806dd117b6f6a08d0862bc386ac20c81c679383",
+    "governance_product_schema_sha256": "sha256:432b1fd69b5fd3c57687f2e96c9e1803f3a09f6f5f3068379c0a2a7b59bebe3e",
+    "governance_product_openapi_sha256": "sha256:7c6a53cfb69a52152427f30c84fb68e2511709dcb177224103345eb8940a2bf2",
+    "governance_product_test_sha256": "sha256:ad69352f994ad8048d13b4b628cf3ce160bb6fad89a5a6f2c1cbe6e64131fa76"
+  },
+  "rehearsals": {
+    "multi_replica_admission": "PASS_N21",
+    "wan_auth_source_loss": "PASS_N15B_N17A",
+    "retention_restore_rebuild": "PASS_N24_N17A",
+    "command_containment": "PASS_N16B_N27",
+    "adapter_rollback": "PASS_N19_N28",
+    "version_upgrade_rollback": "PASS_N14B_N19",
+    "real_accepted_profile_smoke": "PASS_N17B_PAPER",
+    "portal_governance_product": "PASS_N29_BR_EX_69_71"
+  },
+  "release_gates": {
+    "backend_contracts": "PASS",
+    "rust_edge": "PASS",
+    "control_plane": "PASS",
+    "frontend_http_consumer": "BLOCKED_FIXTURE_ONLY",
+    "signed_immutable_images": "PENDING_PROTECTED_MAIN_WORKFLOW",
+    "stable_release": "NOT_AUTHORIZED"
+  },
+  "authority": {
+    "portal_release_candidate": true,
+    "product_release_authorized": false,
+    "stable_merge_authorized": false,
+    "stable_deployment_authorized": false,
+    "source_activation_authorized": false,
+    "command_activation_authorized": false,
+    "live_mutation_authorized": false,
+    "trading_system_change_authorized": false
+  }
+}

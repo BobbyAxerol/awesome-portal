@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-governance-product.v1.schema.json",
+  "title": "Portal governance product additions v1",
+  "$defs": {
+    "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "NullableTimestamp": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+    "ApprovalCreateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "workspace_id", "request_key", "gate", "alpha_id", "evidence_run_id", "methodology_claim_id", "summary"],
+      "properties": {
+        "schema_version": { "const": "governance.approval-create-request.v1" },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+        "gate": { "const": "R1" },
+        "alpha_id": { "$ref": "#/$defs/Identifier" },
+        "evidence_run_id": { "$ref": "#/$defs/Identifier" },
+        "methodology_claim_id": { "$ref": "#/$defs/Identifier" },
+        "summary": { "type": "string", "minLength": 8, "maxLength": 2000 }
+      }
+    },
+    "ApprovalCreateResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "replayed", "approval"],
+      "properties": {
+        "schema_version": { "const": "governance.approval-create.v1" },
+        "replayed": { "type": "boolean" },
+        "approval": { "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Approval" }
+      }
+    },
+    "Condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condition_id", "approval_id", "gate", "subject", "environment", "kind", "state", "label", "statement", "owner", "due_at", "blocking", "policy_version", "created_at", "updated_at"],
+      "properties": {
+        "condition_id": { "$ref": "#/$defs/Identifier" },
+        "approval_id": { "$ref": "#/$defs/Identifier" },
+        "gate": { "enum": ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] },
+        "subject": {
+          "type": "object", "additionalProperties": false, "required": ["id", "label"],
+          "properties": { "id": { "$ref": "#/$defs/Identifier" }, "label": { "type": "string", "minLength": 1, "maxLength": 512 } }
+        },
+        "environment": { "enum": ["RESEARCH", "PAPER", "SANDBOX", "LIVE"] },
+        "kind": { "enum": ["LINEAGE", "WARNING", "RESTRICTION", "WAIVER"] },
+        "state": { "enum": ["OPEN", "WAIVED", "EXPIRING", "LAPSED"] },
+        "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "statement": { "type": "string", "minLength": 8, "maxLength": 2000 },
+        "owner": {
+          "type": "object", "additionalProperties": false, "required": ["user_id", "username"],
+          "properties": { "user_id": { "$ref": "#/$defs/Identifier" }, "username": { "type": "string", "minLength": 1, "maxLength": 128 } }
+        },
+        "due_at": { "$ref": "#/$defs/NullableTimestamp" },
+        "blocking": { "type": "boolean" },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "created_at": { "$ref": "#/$defs/Timestamp" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "ConditionPage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows", "total_count", "filtered_count", "next_cursor", "prev_cursor", "has_more", "has_previous", "applied_filters", "applied_sort"],
+      "properties": {
+        "rows": { "type": "array", "maxItems": 250, "items": { "$ref": "#/$defs/Condition" } },
+        "total_count": { "type": "integer", "minimum": 0 },
+        "filtered_count": { "type": "integer", "minimum": 0 },
+        "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "prev_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "has_more": { "type": "boolean" },
+        "has_previous": { "type": "boolean" },
+        "applied_filters": { "type": "array", "maxItems": 12, "items": { "type": "object" } },
+        "applied_sort": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "type": "object" } }
+      }
+    },
+    "ConditionsRegisterResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "actor", "page"],
+      "properties": {
+        "schema_version": { "const": "governance.conditions-register.v1" },
+        "record_authority": { "const": "PORTAL_CONTROL" },
+        "delivery_profile": { "const": "portal" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "actor": { "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Actor" },
+        "page": { "$ref": "#/$defs/ConditionPage" }
+      }
+    }
+  }
+}

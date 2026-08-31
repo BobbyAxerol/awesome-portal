@@ -7,9 +7,9 @@
  * arithmetic overflow inside the engine produced the same "backend
  * unavailable" panel, and only one of those is something a human can fix.
  *
- * The thirteen 422/503 codes are read from the edge service itself
+ * The fifteen 422/503 codes are read from the edge service itself
  * (`edge-service/src/main.rs`, `analytics_error_contract`), not from prose:
- * twelve are 422 and correctable by changing the request, one is 503 and is
+ * fourteen are 422 and correctable by changing the request, one is 503 and is
  * not. The separate 413 response-size guard is handled by the HTTP envelope
  * layer because it is a transport bound rather than a panel correction.
  *
@@ -34,6 +34,8 @@ export const ANALYTICS_CORRECTABLE = [
   "ANALYTICS_APPROVED_BAND_LINEAGE_MISMATCH",
   "ANALYTICS_TILE_KIND_MISMATCH",
   "ANALYTICS_TILE_SAMPLE_STATE_INVALID",
+  "ANALYTICS_CHART_RULE_VIOLATION",
+  "ANALYTICS_RISK_SERIES_INVALID",
 ] as const;
 
 export type AnalyticsCorrectableCode = (typeof ANALYTICS_CORRECTABLE)[number];
@@ -128,6 +130,14 @@ const CORRECTABLE: Record<AnalyticsCorrectableCode, { title: string; action: str
   ANALYTICS_TILE_SAMPLE_STATE_INVALID: {
     title: "The tile series and its sample-state evidence disagree.",
     action: "Refresh the source samples before requesting this tile again.",
+  },
+  ANALYTICS_CHART_RULE_VIOLATION: {
+    title: "The chart series violates a published rendering rule.",
+    action: "Reload the published chart inputs or choose a compatible view before asking again.",
+  },
+  ANALYTICS_RISK_SERIES_INVALID: {
+    title: "The requested risk series cannot be derived from the published samples.",
+    action: "Choose a complete, scope-matched risk window and ask again.",
   },
 };
 

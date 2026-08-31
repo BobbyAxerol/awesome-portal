@@ -1,0 +1,17 @@
+{
+  "schema_version": "portal.execution.manager-product-dashboard.v1",
+  "phase": "N29",
+  "title": "Execution Manager release health",
+  "datasource_bound": false,
+  "panels": [
+    {"id": "bff-latency", "metric": "portal_execution_bff_duration_seconds", "labels": ["profile", "screen", "state"]},
+    {"id": "edge-admission", "metric": "portal_execution_edge_admission_total", "labels": ["profile", "decision"]},
+    {"id": "projection-freshness", "metric": "portal_execution_projection_age_seconds", "labels": ["profile", "epoch_state"]},
+    {"id": "sse-recovery", "metric": "portal_execution_sse_terminal_total", "labels": ["profile", "reason"]},
+    {"id": "typed-unavailable", "metric": "portal_execution_unavailable_total", "labels": ["profile", "capability", "reason_code"]},
+    {"id": "command-containment", "metric": "portal_execution_command_dispatch_total", "labels": ["task_id", "state"]}
+  ],
+  "secrets": false,
+  "business_rows": false,
+  "activation_state": "UNBOUND_TEMPLATE"
+}

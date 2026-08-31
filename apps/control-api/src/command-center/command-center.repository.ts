@@ -24,10 +24,11 @@ interface GovernanceTriageRow {
   total_count: string;
 }
 interface TodayRow {
-  approval_id: string;
-  gate: "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
-  subject_label: string;
-  sla_due_at: Date;
+  item_id: string;
+  kind: "REVIEW_DUE" | "CONDITION_EXPIRY";
+  label: string;
+  scheduled_at: Date;
+  href: string;
   updated_at: Date;
   total_count: string;
 }
@@ -206,26 +207,51 @@ export class CommandCenterRepository {
   ): Promise<ExactSourceSlice<TodayCandidate>> {
     const result = await client.query<TodayRow>(
       `WITH upcoming AS (
-         SELECT approval_id, gate, subject_label, sla_due_at, updated_at
+         SELECT concat('review:', approval_id) AS item_id,
+                'REVIEW_DUE'::text AS kind,
+                concat(gate, ' review · ', subject_label) AS label,
+                sla_due_at AS scheduled_at,
+                CASE
+                  WHEN gate = 'R1' THEN concat('/governance/approvals/', approval_id, '/r1')
+                  WHEN gate IN ('R2', 'LIVE_GATE') THEN concat('/governance/approvals/', approval_id, '/r2')
+                  ELSE concat('/governance/exit-reviews/', approval_id)
+                END AS href,
+                updated_at
            FROM governance_approval_requests
           WHERE workspace_id = $1
             AND status = 'PENDING'
             AND expires_at > $2
             AND sla_due_at <= $2 + interval '48 hours'
+         UNION ALL
+         SELECT concat('condition:', condition_id), 'CONDITION_EXPIRY',
+                concat('Condition ', lower(condition_state), ' · ', label), due_at,
+                '/governance/waivers', updated_at
+           FROM governance_conditions_register
+          WHERE workspace_id = $1
+            AND condition_state IN ('EXPIRING', 'LAPSED')
+            AND due_at IS NOT NULL
+            AND due_at BETWEEN $2 - interval '30 days' AND $2 + interval '48 hours'
        )
        SELECT *, count(*) OVER() AS total_count
          FROM upcoming
-        ORDER BY sla_due_at, approval_id
+        ORDER BY scheduled_at, kind, item_id
         LIMIT 12`,
       [workspaceId, readAt],
     );
     const total = result.rows[0]
       ? Number(result.rows[0].total_count)
       : Number((await client.query<{ total_count: string }>(
-        `SELECT count(*) AS total_count
-           FROM governance_approval_requests
-          WHERE workspace_id = $1 AND status = 'PENDING'
-            AND expires_at > $2 AND sla_due_at <= $2 + interval '48 hours'`,
+        `SELECT (
+           (SELECT count(*) FROM governance_approval_requests
+             WHERE workspace_id = $1 AND status = 'PENDING'
+               AND expires_at > $2 AND sla_due_at <= $2 + interval '48 hours')
+           +
+           (SELECT count(*) FROM governance_conditions_register
+             WHERE workspace_id = $1
+               AND condition_state IN ('EXPIRING', 'LAPSED')
+               AND due_at IS NOT NULL
+               AND due_at BETWEEN $2 - interval '30 days' AND $2 + interval '48 hours')
+         ) AS total_count`,
         [workspaceId, readAt],
       )).rows[0]?.total_count ?? 0);
     const asOf = result.rows.reduce<Date | null>(
@@ -236,13 +262,13 @@ export class CommandCenterRepository {
       status: portalSourceStatus(asOf, readAt),
       exact_total_count: total,
       items: result.rows.map((row) => ({
-        id: `review:${row.approval_id}`,
-        kind: "REVIEW_DUE",
-        label: `${row.gate} review · ${row.subject_label}`,
-        scheduled_at: row.sla_due_at.toISOString(),
+        id: row.item_id,
+        kind: row.kind,
+        label: row.label,
+        scheduled_at: row.scheduled_at.toISOString(),
         authority: "PORTAL",
         as_of: row.updated_at.toISOString(),
-        href: reviewHref(row.gate, row.approval_id),
+        href: row.href,
       })),
     };
   }

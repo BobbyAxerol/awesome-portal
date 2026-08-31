@@ -1,0 +1,38 @@
+{
+  "schema_version": "portal.execution.manager-product-release-profile.v1",
+  "phase": "N29",
+  "decision": "DEV_BACKEND_CANDIDATE_READY_PRODUCT_NO_GO",
+  "contract": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
+  "debt_register": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/debt-register.v1.json",
+  "accepted_profiles": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"],
+  "accepted_runtime_authority": {
+    "reads": true,
+    "projection": true,
+    "analytics": true,
+    "sse": true,
+    "commands": false,
+    "live_mutation": false
+  },
+  "candidate_components": [
+    "control-api",
+    "execution-edge",
+    "source-proxy",
+    "projection-postgres"
+  ],
+  "publication": {
+    "workflow": ".github/workflows/publish-images.yml",
+    "required_branch": "main",
+    "cosign": true,
+    "sbom": true,
+    "slsa_provenance": true,
+    "vulnerability_scan": true,
+    "published_by_this_phase": false
+  },
+  "rollback": {
+    "runbook": "deploy/runbooks/execution-manager-n29-product-release-and-rollback.md",
+    "profile_isolated": true,
+    "disable_consumer_before_edge": true,
+    "commands_remain_disabled": true,
+    "automatic_retry_after_ambiguous_command": false
+  }
+}

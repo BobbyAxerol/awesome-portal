@@ -159,6 +159,41 @@ export interface EvidenceRecord {
   accessPolicy: string;
 }
 
+export interface ApprovalEvidenceRunRecord {
+  runId: string;
+  workspaceId: string;
+  ownerUserId: string;
+  ownerUsername: string;
+  status: string;
+  alphaId: string;
+  artifactSha256: string;
+  artifactSchemaVersion: string;
+  artifactCreatorUserId: string;
+  artifactCreatorUsername: string;
+  methodologyClaimIds: string[];
+  capturedAt: Date;
+}
+
+interface ApprovalEvidenceRunRow {
+  run_id: string;
+  workspace_id: string;
+  owner_user_id: string;
+  owner_username: string;
+  status: string;
+  strategy_id: string;
+  artifact_sha256: string;
+  artifact_schema_version: string;
+  artifact_creator_user_id: string;
+  artifact_creator_username: string;
+  methodology_claim_ids: string[];
+  updated_at: Date;
+}
+
+interface ApprovalCreateRow extends ApprovalRow {
+  request_key: string | null;
+  request_payload_hash: string | null;
+}
+
 interface EvidenceRow {
   evidence_id: string;
   ordinal: number;
@@ -408,6 +443,191 @@ function plan(row: PlanRow): DecisionPlanRecord {
 @Injectable()
 export class GovernanceRepository {
   constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
+
+  async approvalEvidenceRun(
+    workspaceId: string,
+    runId: string,
+  ): Promise<ApprovalEvidenceRunRecord | null> {
+    const result = await this.pool.query<ApprovalEvidenceRunRow>(
+      `SELECT run.run_id, run.workspace_id, run.owner_user_id,
+              owner.username AS owner_username, run.status, run.strategy_id,
+              run.artifact_sha256, run.artifact_schema_version,
+              run.artifact_creator_user_id, creator.username AS artifact_creator_username,
+              run.methodology_claim_ids, run.updated_at
+         FROM run_read_models run
+         JOIN portal_users owner ON owner.user_id = run.owner_user_id
+         JOIN portal_users creator ON creator.user_id = run.artifact_creator_user_id
+        WHERE run.workspace_id = $1 AND run.run_id = $2`,
+      [workspaceId, runId],
+    );
+    const row = result.rows[0];
+    return row
+      ? {
+          runId: row.run_id,
+          workspaceId: row.workspace_id,
+          ownerUserId: row.owner_user_id,
+          ownerUsername: row.owner_username,
+          status: row.status,
+          alphaId: row.strategy_id,
+          artifactSha256: row.artifact_sha256,
+          artifactSchemaVersion: row.artifact_schema_version,
+          artifactCreatorUserId: row.artifact_creator_user_id,
+          artifactCreatorUsername: row.artifact_creator_username,
+          methodologyClaimIds: row.methodology_claim_ids,
+          capturedAt: row.updated_at,
+        }
+      : null;
+  }
+
+  async findCreatedApproval(
+    workspaceId: string,
+    requesterUserId: string,
+    requestKey: string,
+  ): Promise<{ approval: ApprovalRecord; payloadHash: string } | null> {
+    const result = await this.pool.query<ApprovalCreateRow>(
+      `SELECT * FROM governance_approval_requests
+       WHERE workspace_id = $1 AND requester_user_id = $2 AND request_key = $3`,
+      [workspaceId, requesterUserId, requestKey],
+    );
+    const row = result.rows[0];
+    return row?.request_payload_hash
+      ? { approval: approval(row), payloadHash: row.request_payload_hash }
+      : null;
+  }
+
+  async findOpenApprovalForAlphaRun(
+    workspaceId: string,
+    alphaId: string,
+    sourceRunId: string,
+  ): Promise<ApprovalRecord | null> {
+    const result = await this.pool.query<ApprovalRow>(
+      `SELECT * FROM governance_approval_requests
+       WHERE workspace_id = $1 AND subject_id = $2 AND source_run_id = $3
+         AND status = 'PENDING'
+       ORDER BY created_at DESC, approval_id DESC LIMIT 1`,
+      [workspaceId, alphaId, sourceRunId],
+    );
+    return result.rows[0] ? approval(result.rows[0]) : null;
+  }
+
+  async createR1Approval(input: {
+    approvalId: string;
+    evidenceId: string;
+    auditEventId: string;
+    requestId: string;
+    requestKey: string;
+    payloadHash: string;
+    workspaceId: string;
+    requesterUserId: string;
+    requesterUsername: string;
+    alphaId: string;
+    sourceRunId: string;
+    methodologyClaimId: string;
+    summary: string;
+    expectedArtifactSha256: string;
+    evidenceSetHash: string;
+    createdAt: Date;
+    evidenceCapturedAt: Date;
+    slaDueAt: Date;
+    expiresAt: Date;
+  }): Promise<ApprovalRecord> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+      const runResult = await client.query<ApprovalEvidenceRunRow>(
+        `SELECT run.run_id, run.workspace_id, run.owner_user_id,
+                owner.username AS owner_username, run.status, run.strategy_id,
+                run.artifact_sha256, run.artifact_schema_version,
+                run.artifact_creator_user_id, creator.username AS artifact_creator_username,
+                run.methodology_claim_ids, run.updated_at
+           FROM run_read_models run
+           JOIN portal_users owner ON owner.user_id = run.owner_user_id
+           JOIN portal_users creator ON creator.user_id = run.artifact_creator_user_id
+          WHERE run.workspace_id = $1 AND run.run_id = $2
+          FOR SHARE OF run`,
+        [input.workspaceId, input.sourceRunId],
+      );
+      const run = runResult.rows[0];
+      if (!run) {
+        throw Object.assign(new Error("evidence run not found"), {
+          governanceCode: "EVIDENCE_RUN_NOT_FOUND",
+          status: 422,
+        });
+      }
+      if (
+        run.strategy_id !== input.alphaId ||
+        !["COMPLETED", "SUCCEEDED", "COMPLETE"].includes(run.status) ||
+        run.artifact_sha256 !== input.expectedArtifactSha256 ||
+        !run.methodology_claim_ids.includes(input.methodologyClaimId)
+      ) {
+        throw Object.assign(new Error("evidence run is not eligible"), {
+          governanceCode: "EVIDENCE_RUN_NOT_ELIGIBLE",
+          status: 422,
+        });
+      }
+      const inserted = await client.query<ApprovalRow>(
+        `INSERT INTO governance_approval_requests
+           (approval_id, workspace_id, gate, subject_type, subject_id, subject_label,
+            environment, target_label, requester_user_id, requester_username,
+            artifact_creator_user_id, artifact_creator_username, status, policy_version,
+            quorum_required, evidence_set_hash, evidence_complete, blocker_count,
+            sla_due_at, expires_at, created_at, updated_at, source_run_id,
+            methodology_claim_id, request_summary, request_key, request_payload_hash)
+         VALUES ($1, $2, 'R1', 'ALPHA_VERSION', $3, $3, 'RESEARCH', 'R1',
+                 $4, $5, $6, $7, 'PENDING', 'approval.v3', 1, $8, true, 0,
+                 $9, $10, $11, $11, $12, $13, $14, $15, $16)
+         RETURNING *`,
+        [
+          input.approvalId, input.workspaceId, input.alphaId,
+          input.requesterUserId, input.requesterUsername,
+          run.artifact_creator_user_id, run.artifact_creator_username,
+          input.evidenceSetHash, input.slaDueAt, input.expiresAt, input.createdAt,
+          input.sourceRunId, input.methodologyClaimId, input.summary,
+          input.requestKey, input.payloadHash,
+        ],
+      );
+      await client.query(
+        `INSERT INTO governance_approval_evidence
+           (evidence_id, approval_id, ordinal, kind, label, display_value, note,
+            verification, artifact_id, sha256, schema_version, source_authority,
+            source_reference, required, captured_at, retention_class, access_policy)
+         VALUES ($1, $2, 0, 'ALPHA_ARTIFACT', 'Pinned research artifact', $3, $4,
+                 'SERVER_PINNED', $3, $5, $6, 'RESEARCH', $7, true, $8,
+                 'GOVERNANCE_LONG_TERM', 'WORKSPACE_APPROVER')`,
+        [
+          input.evidenceId, input.approvalId, input.sourceRunId, input.summary,
+          run.artifact_sha256, run.artifact_schema_version, input.sourceRunId,
+          input.evidenceCapturedAt,
+        ],
+      );
+      await client.query(
+        `INSERT INTO product_audit_events
+           (event_id, event_type, actor_user_id, workspace_id, request_id,
+            idempotency_key, aggregate_type, aggregate_id, aggregate_version,
+            result, metadata_json)
+         VALUES ($1, 'governance.r1_request.created', $2, $3, $4, $5,
+                 'governance_approval', $6, 1, 'SUCCESS', $7)`,
+        [
+          input.auditEventId, input.requesterUserId, input.workspaceId,
+          input.requestId, input.requestKey, input.approvalId,
+          JSON.stringify({
+            alpha_id: input.alphaId,
+            evidence_run_id: input.sourceRunId,
+            methodology_claim_id: input.methodologyClaimId,
+            artifact_sha256: run.artifact_sha256,
+            request_payload_hash: input.payloadHash,
+          }),
+        ],
+      );
+      await client.query("COMMIT");
+      return approval(inserted.rows[0]);
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 
   async counts(workspaceId: string): Promise<{ pending: number; overdue: number; dueSoon: number }> {
     const result = await this.pool.query<{ pending: string; overdue: string; due_soon: string }>(
@@ -730,6 +950,7 @@ export class GovernanceRepository {
     auditEventId: string;
     outboxMessageId: string;
     reasonHash: string;
+    limitationIds: string[];
   }): Promise<{ plan: DecisionPlanRecord; approval: ApprovalRecord; replayed: boolean }> {
     const client = await this.pool.connect();
     let transactionOpen = false;
@@ -807,6 +1028,12 @@ export class GovernanceRepository {
         nextStatus = conditional ? "APPROVED_WITH_CONDITION" : "APPROVED";
       }
       const decidedAt = new Date();
+      if (planRow.conditions.length !== input.limitationIds.length) {
+        throw Object.assign(new Error("condition identifier set drifted"), {
+          governanceCode: "CONDITION_IDENTIFIER_SET_DRIFTED",
+          status: 409,
+        });
+      }
       await client.query(
         `INSERT INTO governance_approval_decisions
            (decision_id, operation_id, workspace_id, approval_id, actor_user_id,
@@ -820,6 +1047,21 @@ export class GovernanceRepository {
           versionAfter, decidedAt,
         ],
       );
+      for (const [ordinal, condition] of planRow.conditions.entries()) {
+        const expiresOn = condition.expires_at ?? condition.deadline;
+        const expiresAt = expiresOn ? new Date(`${expiresOn}T23:59:59.999Z`) : null;
+        const kind = planRow.decision === "APPROVE_WITH_CONDITION" ? "WAIVER" : "RESTRICTION";
+        const labelPrefix = kind === "WAIVER" ? "Approved waiver" : "Required change";
+        await client.query(
+          `INSERT INTO governance_approval_known_limitations
+             (limitation_id, approval_id, ordinal, kind, label, statement, expires_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            input.limitationIds[ordinal], request.approval_id, ordinal, kind,
+            `${labelPrefix} · ${condition.owner}`, condition.text, expiresAt,
+          ],
+        );
+      }
       const terminalAt = terminal ? decidedAt : null;
       const terminalActorId = terminal ? input.actorUserId : null;
       const updated = await client.query<ApprovalRow>(

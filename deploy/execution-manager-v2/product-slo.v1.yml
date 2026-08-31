@@ -1,0 +1,22 @@
+schema_version: portal.execution.manager-product-slo.v1
+phase: N29
+measurement_authority: RELEASE_CANDIDATE_PROVISIONAL
+production_slo_claimed: false
+error_budget_window_open: false
+objectives:
+  - id: bff_current_state
+    target_availability_basis_points: 9990
+    maximum_p95_ms: 400
+  - id: cross_cell_uncached_read
+    target_availability_basis_points: 9950
+    maximum_p95_ms: 1200
+  - id: cached_chart
+    target_availability_basis_points: 9990
+    maximum_p95_ms: 500
+  - id: first_sse_event
+    target_availability_basis_points: 9950
+    maximum_p95_ms: 2000
+  - id: command_plan_local
+    target_availability_basis_points: 9990
+    maximum_p95_ms: 500
+activation_rule: PROMOTE_ONLY_AFTER_REAL_PROFILE_MEASUREMENT
