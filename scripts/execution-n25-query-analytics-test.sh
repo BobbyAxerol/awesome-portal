@@ -17,11 +17,18 @@ root = pathlib.Path(sys.argv[1])
 manifest = json.loads((root / "deploy/manifests/query-analytics-release-profile.v1.json").read_text())
 assert manifest["phase"] == "N25"
 assert manifest["projection_schema"] == "portal.execution.manager-projection.v2"
-assert manifest["projection_adapter"] == "portal.execution.manager-projection.manager-v2.runtime.v2"
+assert manifest["projection_adapter"] == "portal.execution.manager-projection.manager-v2.runtime.v3"
 assert manifest["required_new_feed_count"] == 13
 assert manifest["historical_receipt_feed_counts"] == [12, 13]
-assert len(manifest["required_relations"]) == 10
-assert len(set(manifest["required_relations"])) == 10
+assert len(manifest["required_relations"]) == 13
+assert len(set(manifest["required_relations"])) == 13
+assert set(manifest["required_relations"]) == {
+    "public.strategy_deployments", "public.orders", "public.fills",
+    "public.positions_v2", "public.accounts", "public.reconciliation_findings",
+    "public.portfolios", "public.account_balances", "public.account_policies",
+    "public.account_reservations", "public.portfolio_allocations",
+    "public.risk_profiles", "public.domain_events",
+}
 assert set(manifest["subject_routes"]) == {"DEPLOYMENT", "ALPHA", "PORTFOLIO", "LIVE_GATE"}
 bounds = manifest["bounds"]
 assert bounds == {
@@ -43,6 +50,10 @@ assert set(manifest["typed_external_gaps"].values()) == {
     "N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED",
     "N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED",
 }
+assert manifest["typed_current_source_gaps"] == {
+    "historical_time_series": "N25_CURRENT_SOURCE_HISTORY_NOT_INCREMENTAL",
+    "execution_session_quality": "N25_CURRENT_SOURCE_SESSIONS_NOT_INCREMENTAL",
+}
 flags = manifest["candidate_flags"]
 assert flags["edge_analytics_query"] is True
 assert flags["control_api_execution_analytics_query"] is True
@@ -59,7 +70,7 @@ migration = (root / "services/portal-execution-edge-rs/crates/projection-store-p
 controller = (root / "apps/control-api/src/execution/analytics.controller.ts").read_text()
 proxy = (root / "apps/control-api/src/execution/analytics.proxy.ts").read_text()
 
-for token in ("MAX_MANAGER_ANALYTICS_FACTS", "exact_partitions", "equity_and_contribution_series", "manager_correlation", "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED"):
+for token in ("MAX_MANAGER_ANALYTICS_FACTS", "exact_partitions", "equity_and_contribution_series", "manager_correlation", "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED", "N25_CURRENT_SOURCE_HISTORY_NOT_INCREMENTAL", "N25_CURRENT_SOURCE_SESSIONS_NOT_INCREMENTAL"):
     assert token in analytics
 for token in ("N25_MANAGER_ANALYTICS_MAX_FACTS", "N25_MANAGER_ANALYTICS_REPOSITORY_QUERIES", "LIMIT 20001", "public.strategy_deployments"):
     assert token in repository

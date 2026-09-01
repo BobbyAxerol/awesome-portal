@@ -1,8 +1,8 @@
 # EX-BE-28 — N25 Query and Analytics Plane
 
-**Status:** `COMPLETE / SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING`  
-**Date:** 2026-08-30  
-**Branch:** `feat/execution-manager-campaign`  
+**Status:** `COMPLETE / CURRENT_SOURCE_QUERY_ANALYTICS_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED`  
+**Date:** 2026-09-01  
+**Branch:** `feat/execution-data-activation`  
 **Runtime effect:** no stable/dev deployment, Trading System mutation, SSE or command activation
 
 ## 1. Goal and result
@@ -24,11 +24,11 @@ ACTIVE profile-isolated N24 epoch
 
 ## 2. Projection and query boundary
 
-N25 adds `public.strategy_deployments` to the projection mapper, producing
-adapter `manager-v2.runtime.v2` with 13 complete feeds. This closes the missing
-deployment/alpha/portfolio lineage needed to scope analytics. Historical N24
-12-feed receipts remain immutable; migration `0013` accepts them for evidence,
-while the new writer rejects any new cycle not containing all 13 feeds.
+N25 consumes projection adapter `manager-v2.runtime.v3` with 13 current-state
+feeds. It retains deployment/alpha/portfolio lineage and adds current account,
+policy, allocation and risk facts without periodically scanning unbounded
+history. Historical v1/v2 receipts remain immutable evidence; every v3 writer
+cycle still requires exactly all 13 declared feeds.
 
 The repository selects ACTIVE epoch, latest complete cycle, subject lineage and
 all allowlisted facts in one SQL statement. It returns zero facts as a valid
@@ -47,18 +47,21 @@ status, currency, deployment, portfolio, strategy and account lookups.
 
 ## 3. Exact analytics authority
 
-The Rust plane supplies:
+From the current source, the Rust plane supplies:
 
 - exact relation + currency partitions for quantity, notional and realized
   PnL; unrelated relations or currencies are never summed together;
-- order-funnel counts and execution-quality reject ratios;
+- order-funnel counts and current position exposure;
 - position exposure and bounded position rows;
-- equity/drawdown series and drawdown-overlap episodes;
-- daily contribution from daily-ending `performance_snapshots.net_pnl`
-  differences per strategy and currency;
-- portfolio pairwise correlation from aligned daily alpha-return observations;
 - source-journal replay markers and a bounded trade log; and
 - deterministic extrema-preserving adaptive downsampling.
+
+The engine retains the tested historical formulas for compatibility with an
+explicit future incremental source. In runtime v3, stage equity, contribution,
+drawdown overlap, portfolio correlation and execution-session quality are
+typed `UNAVAILABLE` with stable N25 reason codes. They are not rendered as
+zero/empty because Manager-v2 currently lacks a bounded incremental history
+contract for those relations.
 
 All decimals are strings and every output declares formula version, authority,
 completeness and source relations. `chart-series.rules.v1` validates ordering,
@@ -108,10 +111,10 @@ MiB. Query/analytics flags are independent from SSE and commands.
 
 ## 6. Debt closeout and next phase
 
-There is no open internal N25 implementation debt. New N25 cycles have the
-lineage feed, every derivable current-source insight has a bounded canonical
-output, and every non-derivable insight is explicitly unavailable rather than
-fabricated.
+There is no open internal N25 implementation debt. Every derivable
+current-source insight has a bounded canonical output; historical insight and
+session-quality gaps are explicitly unavailable rather than fabricated or
+implemented through an unbounded full scan.
 
 Publishing a signed dev image and collecting runtime latency/size evidence are
 release operations. N26 is next: authenticated snapshot → epoch/cursor → delta

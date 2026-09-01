@@ -16,6 +16,8 @@ const MAX_REPLAY_LOG_ROWS: usize = 200;
 const MAX_POSITIONS: usize = 500;
 const MAX_CURRENCY_PARTITIONS: usize = 64;
 const MAX_CORRELATION_ALPHAS: usize = 20;
+const CURRENT_SOURCE_HISTORY_GAP: &str = "N25_CURRENT_SOURCE_HISTORY_NOT_INCREMENTAL";
+const CURRENT_SOURCE_SESSIONS_GAP: &str = "N25_CURRENT_SOURCE_SESSIONS_NOT_INCREMENTAL";
 type DailyDecimalSnapshots = BTreeMap<chrono::NaiveDate, (DateTime<Utc>, Decimal)>;
 type StrategyCurrencySnapshots = BTreeMap<(String, String), DailyDecimalSnapshots>;
 type AlphaDailySnapshots = BTreeMap<String, DailyDecimalSnapshots>;
@@ -174,6 +176,18 @@ pub fn build_manager_query_analytics(
     {
         return Err(AnalyticsError::RiskSeries("manager_analytics_input"));
     }
+    let historical_series_source_present = input.facts.iter().any(|fact| {
+        matches!(
+            fact.relation.as_str(),
+            "public.performance_snapshots"
+                | "public.account_equity_snapshots"
+                | "public.portfolio_equity_snapshots"
+        )
+    });
+    let execution_session_source_present = input
+        .facts
+        .iter()
+        .any(|fact| fact.relation == "public.execution_sessions");
     let partitions = exact_partitions(&input.facts)?;
     let funnel = order_funnel(&input.facts)?;
     let quality = execution_quality(&input.facts)?;
@@ -184,7 +198,11 @@ pub fn build_manager_query_analytics(
     chart_series.sort_by(|left, right| left.series_id.cmp(&right.series_id));
     let replay = replay(&input.facts)?;
     let drawdown_overlap = drawdown_overlap(&input.facts)?;
-    let correlation = manager_correlation(&input.facts)?;
+    let mut correlation = manager_correlation(&input.facts)?;
+    if !historical_series_source_present {
+        correlation.state = AnalyticsCapabilityState::Unavailable;
+        correlation.reason_code = Some(CURRENT_SOURCE_HISTORY_GAP.to_owned());
+    }
     let positions = input
         .facts
         .iter()
@@ -193,7 +211,9 @@ pub fn build_manager_query_analytics(
         .map(|fact| fact.fields.clone())
         .collect::<Vec<_>>();
 
-    let equity_state = if chart_series.is_empty() {
+    let equity_state = if !historical_series_source_present {
+        AnalyticsCapabilityState::Unavailable
+    } else if chart_series.is_empty() {
         AnalyticsCapabilityState::Empty
     } else {
         AnalyticsCapabilityState::Available
@@ -203,7 +223,9 @@ pub fn build_manager_query_analytics(
     } else {
         AnalyticsCapabilityState::Unavailable
     };
-    let contribution_state = if chart_series
+    let contribution_state = if !historical_series_source_present {
+        AnalyticsCapabilityState::Unavailable
+    } else if chart_series
         .iter()
         .any(|series| series.series_id.starts_with("daily-contribution:"))
     {
@@ -246,15 +268,21 @@ pub fn build_manager_query_analytics(
                 "public.account_equity_snapshots",
                 "public.portfolio_equity_snapshots",
             ],
-            None,
+            equity_state
+                .eq(&AnalyticsCapabilityState::Unavailable)
+                .then_some(CURRENT_SOURCE_HISTORY_GAP),
         ),
         capability(
             "execution-quality",
-            AnalyticsCapabilityState::Available,
+            if execution_session_source_present {
+                AnalyticsCapabilityState::Available
+            } else {
+                AnalyticsCapabilityState::Unavailable
+            },
             SourceAuthority::Derived,
             Some("execution_quality.v1"),
             &["public.execution_sessions"],
-            None,
+            (!execution_session_source_present).then_some(CURRENT_SOURCE_SESSIONS_GAP),
         ),
         capability(
             "contribution",
@@ -262,7 +290,9 @@ pub fn build_manager_query_analytics(
             SourceAuthority::Derived,
             Some("contribution.v1"),
             &["public.performance_snapshots"],
-            None,
+            contribution_state
+                .eq(&AnalyticsCapabilityState::Unavailable)
+                .then_some(CURRENT_SOURCE_HISTORY_GAP),
         ),
         capability(
             "order-funnel",
@@ -300,7 +330,11 @@ pub fn build_manager_query_analytics(
             &["public.performance_snapshots"],
             overlap_state
                 .eq(&AnalyticsCapabilityState::Unavailable)
-                .then_some("N25_INSUFFICIENT_MULTI_ALPHA_HISTORY"),
+                .then_some(if historical_series_source_present {
+                    "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY"
+                } else {
+                    CURRENT_SOURCE_HISTORY_GAP
+                }),
         ),
         capability(
             "portfolio-correlation",
@@ -1126,6 +1160,64 @@ mod tests {
                 && capability.reason_code.as_deref()
                     == Some("N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED")
         }));
+    }
+
+    #[test]
+    fn current_source_without_incremental_history_is_typed_unavailable() {
+        let mut source = input();
+        source.facts.retain(|fact| {
+            !matches!(
+                fact.relation.as_str(),
+                "public.execution_sessions"
+                    | "public.performance_snapshots"
+                    | "public.account_equity_snapshots"
+                    | "public.portfolio_equity_snapshots"
+            )
+        });
+        source.facts.push(fact(
+            "balance-1",
+            "public.account_balances",
+            9,
+            json!({"account_id":"account-1","currency":"USDT","equity":"101.25"}),
+        ));
+
+        let output = build_manager_query_analytics(&source).unwrap();
+        for capability_id in [
+            "stage-equity",
+            "contribution",
+            "portfolio-drawdown-overlap",
+            "portfolio-correlation",
+        ] {
+            let capability = output
+                .capabilities
+                .iter()
+                .find(|candidate| candidate.capability_id == capability_id)
+                .unwrap();
+            assert_eq!(capability.state, AnalyticsCapabilityState::Unavailable);
+            assert_eq!(
+                capability.reason_code.as_deref(),
+                Some(CURRENT_SOURCE_HISTORY_GAP)
+            );
+        }
+        let quality = output
+            .capabilities
+            .iter()
+            .find(|candidate| candidate.capability_id == "execution-quality")
+            .unwrap();
+        assert_eq!(quality.state, AnalyticsCapabilityState::Unavailable);
+        assert_eq!(
+            quality.reason_code.as_deref(),
+            Some(CURRENT_SOURCE_SESSIONS_GAP)
+        );
+        assert!(output.chart_series.is_empty());
+        assert_eq!(
+            output.correlation.state,
+            AnalyticsCapabilityState::Unavailable
+        );
+        assert_eq!(
+            output.correlation.reason_code.as_deref(),
+            Some(CURRENT_SOURCE_HISTORY_GAP)
+        );
     }
 
     #[test]

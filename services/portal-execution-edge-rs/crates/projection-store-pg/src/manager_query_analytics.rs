@@ -213,12 +213,15 @@ fn n25_relations() -> &'static [&'static str] {
         "public.orders",
         "public.fills",
         "public.positions_v2",
-        "public.execution_sessions",
-        "public.account_equity_snapshots",
-        "public.performance_snapshots",
-        "public.portfolio_equity_snapshots",
+        "public.accounts",
+        "public.reconciliation_findings",
+        "public.portfolios",
+        "public.account_balances",
+        "public.account_policies",
+        "public.account_reservations",
+        "public.portfolio_allocations",
+        "public.risk_profiles",
         "public.domain_events",
-        "public.performance_events",
     ]
 }
 

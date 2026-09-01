@@ -1718,16 +1718,18 @@ activation or the phase):**
   see
   [`EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md`](./backend/EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md).
 
-- **N24 durable Portal projection complete (2026-08-30):** a dedicated
+- **N24 durable Portal projection runtime v3 qualified (2026-09-01):** a dedicated
   no-port Rust worker consumes only the exact N19 Manager-v2 boundary and
-  persists 12 complete feeds as eight combined snapshots for each isolated
+  persists 13 bounded current-state feeds as eight combined snapshots for each isolated
   Paper/Sandbox/Live profile. Truthful empty Live, database-time leases,
   fencing, idempotency, tombstones, immutable cycle evidence, parity-gated
   ACTIVE cutover, operator-gated singleton rebuild, DB-clock retained
   rollback, collection-time memory bounds, bounded cleanup and
   fresh-PostgreSQL restore all pass. Poll changes remain
   `PORTAL_PROJECTION_DELTA`; no source
-  event authority is invented. Query/SSE/analytics/commands and stable runtime
+  event authority is invented. Adapter v3 enforces the owner pagination shape
+  and excludes unbounded oldest-first history without an incremental contract.
+  Query/SSE/analytics/commands and stable runtime
   remain dark. Status: `N24_COMPLETE / TD-EX-05_CLOSED / N25_READY`; see
   [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](./backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
 

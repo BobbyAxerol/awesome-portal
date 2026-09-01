@@ -23,8 +23,17 @@ assert manifest["profiles"] == {
     "sandbox": "SANDBOX_BINANCE_USDM",
     "live": "LIVE_BINANCE_USDM",
 }
-assert len(manifest["required_feeds"]) == 12
-assert len(set(manifest["required_feeds"])) == 12
+assert manifest["adapter_version"] == "portal.execution.manager-projection.manager-v2.runtime.v3"
+assert len(manifest["required_feeds"]) == 13
+assert len(set(manifest["required_feeds"])) == 13
+assert set(manifest["required_feeds"]) == {
+    "manager.order", "manager.fill", "manager.position", "manager.account",
+    "manager.reconciliation", "manager.portfolio",
+    "relation.strategy_deployments", "relation.account_balances",
+    "relation.account_policies", "relation.account_reservations",
+    "relation.portfolio_allocations", "relation.risk_profiles",
+    "relation.domain_events",
+}
 assert manifest["required_snapshot_kinds"] == [
     "ACCOUNT", "EVENT", "FILL", "ORDER", "PERFORMANCE", "POSITION",
     "RECONCILIATION", "RUNTIME",
@@ -53,6 +62,7 @@ for flag in ("edge_projection_ingestion", "edge_realtime_sse", "edge_analytics_q
     assert flags[flag] is False
 assert manifest["rollback"]["stop_worker_only"] is True
 assert manifest["rollback"]["source_or_trading_system_mutation"] is False
+assert manifest["phase_authorization"]["content_addressed_dev_deployment_authorized"] is True
 
 mapper = (root / "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs").read_text()
 store = (root / "services/portal-execution-edge-rs/crates/projection-store-pg/src/manager_projection.rs").read_text()
@@ -66,7 +76,7 @@ for token in ("ManagerProjectionLeaseProof", "commit_manager_projection_cycle", 
     assert token in store
 for token in ("manager_projection_leases", "manager_projection_commits", "manager_projection_cycles", "'EVENT'"):
     assert token in migration
-for token in ("MAXIMUM_FEED_PAGES", "MAXIMUM_FEED_RECORDS", "MAXIMUM_CYCLE_RECORDS", "FeedBoundExceeded", "CycleBoundExceeded", "CursorCycle", "MissedTickBehavior::Skip"):
+for token in ("MAXIMUM_FEED_PAGES", "MAXIMUM_FEED_RECORDS", "MAXIMUM_CYCLE_RECORDS", "FeedBoundExceeded", "CycleBoundExceeded", "CursorCycle", "MissedTickBehavior::Skip", "valid_page_shape"):
     assert token in worker
 assert 'Some("manager-projection-run")' in edge_main
 assert 'Some("manager-projection-rebuild-once")' in edge_main

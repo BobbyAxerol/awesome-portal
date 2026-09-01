@@ -1399,11 +1399,14 @@ durable run/attempt events. Detailed evidence:
 - Detail:
   [`EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md`](./EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md).
 
-## Backend state — 2026-08-30 (N24 durable Portal projection)
+## Backend state — 2026-09-01 (N24 current-source runtime v3 amendment)
 
-- N24 is `COMPLETE / IMPLEMENTATION_AND_RECOVERY_QUALIFIED /
-  SIGNED_DEV_DEPLOYMENT_PENDING / N25_READY`.
-- A profile-isolated Rust worker maps exactly 12 bounded Manager-v2 feeds into
+- N24 is `COMPLETE / CURRENT_SOURCE_RUNTIME_V3_QUALIFIED /
+  CONTENT_ADDRESSED_DEV_AUTHORIZED / N25_READY`.
+- The exact 13-feed set is bounded current state. Adapter v3 accepts the owner
+  `PARTIAL* -> COMPLETE` pagination contract with monotonic per-page `as_of`.
+  Oldest-first historical tables without incremental semantics are excluded.
+- A profile-isolated Rust worker maps exactly 13 bounded current-state Manager-v2 feeds into
   eight combined Portal projection snapshots; zero-row Live is complete and
   truthful rather than unavailable.
 - PostgreSQL-time leases/fencing, idempotent reducer/journal, explicit
@@ -1421,10 +1424,13 @@ durable run/attempt events. Detailed evidence:
 - Detail:
   [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](./EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
 
-## Backend state — 2026-08-30 (N25 query and analytics)
+## Backend state — 2026-09-01 (N25 current-source query and analytics amendment)
 
-- N25 is `COMPLETE / SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED /
-  SIGNED_DEV_DEPLOYMENT_PENDING / N26_READY`.
+- N25 is `COMPLETE / CURRENT_SOURCE_QUERY_ANALYTICS_QUALIFIED /
+  CONTENT_ADDRESSED_DEV_AUTHORIZED / N26_READY`.
+- Exact aggregates, order funnel, exposure and replay use current projected
+  facts. Historical series and execution-session quality return stable typed
+  gaps until the owner publishes a bounded incremental source.
 - One ACTIVE N24 subject snapshot drives exact Rust aggregates, adaptive
   series, insights and four authenticated BFF routes without browser financial
   recomputation or N+1 source fan-out.

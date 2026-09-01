@@ -1629,10 +1629,10 @@ rebuild, retention, restore, RPO/RTO and rollback across active profiles.
 **N24 exit gate:** projection parity and recovery tests pass for all active
 profiles with declared RPO/RTO and bounded storage. `TD-EX-05` is closed.
 
-**Closeout (2026-08-30):** `COMPLETE /
-IMPLEMENTATION_AND_RECOVERY_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING /
-N25_READY`. Rust now collects exactly 12 bounded Manager-v2 feeds into eight
-complete Portal-owned snapshots for each Paper/Sandbox/Live profile, including
+**Runtime amendment (2026-09-01):** `COMPLETE /
+CURRENT_SOURCE_RUNTIME_V3_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED /
+N25_READY`. Rust collects exactly 13 bounded current-state Manager-v2 feeds
+into eight complete Portal-owned snapshots for each Paper/Sandbox/Live profile, including
 truthful empty Live. Database-time leases and fencing, idempotent immutable
 cycle evidence, explicit tombstones, parity-gated atomic epoch cutover,
 explicit operator-gated same-identity rebuild, DB-clock 15-minute
@@ -1640,6 +1640,9 @@ previous-epoch rollback, retained cleanup gates and PostgreSQL dump/restore
 all pass. Page collection enforces the 20,000/feed and 80,000/cycle memory
 bounds before allocation growth. Poll-derived facts are labelled
 `PORTAL_PROJECTION_DELTA`; no Trading System event sequence was invented.
+Adapter v3 follows the owner pagination contract (`PARTIAL* -> COMPLETE`,
+monotonic per-page `as_of`) and deliberately excludes oldest-first historical
+tables that lack a snapshot token/latest-window/incremental watermark.
 Declared healthy-source objectives are RPO 10s, worker restart RTO 120s,
 local rebuild RTO 15m and encrypted backup/PITR restore RTO 60m. Query,
 analytics, SSE, commands, Trading System and stable runtime remain unchanged.
@@ -1670,17 +1673,18 @@ and correlation load, no-N+1, retention error and deterministic rebuild tests.
 **N25 exit gate:** all derivable commissioned analytics have bounded,
 reproducible, source-attributed output and pass correctness/load/rebuild gates.
 
-**Closeout (2026-08-30):** `COMPLETE /
-SOURCE_BACKED_QUERY_ANALYTICS_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING /
+**Runtime amendment (2026-09-01):** `COMPLETE /
+CURRENT_SOURCE_QUERY_ANALYTICS_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED /
 N26_READY`. The Rust plane now loads one ACTIVE subject snapshot with one
 PostgreSQL statement, enforces exact relation/currency partitions and bounded
 series/correlation/replay outputs, and exposes four strict session-guarded BFF
-routes. N25 adds `strategy_deployments` lineage through projection adapter v2,
-so every new cycle requires 13 feeds; historical 12-feed N24 receipts remain
-immutable evidence. Market candles, benchmark rho, cross-profile canary drift
-and broker ACK latency remain typed unavailable under stable N28 source-gap
-codes because current Manager-v2 does not publish those semantics. No internal
-N25 implementation debt remains. Evidence and operations:
+routes. Projection adapter v3 requires the exact 13 current-state feeds;
+historical v1/v2 receipts remain immutable evidence. Historical series and
+execution-session quality are typed unavailable under stable N25 source-gap
+codes rather than produced by an unbounded scan. Market candles, benchmark
+rho, cross-profile canary drift and broker ACK latency remain typed unavailable
+under stable N28 source-gap codes. No internal N25 implementation debt remains.
+Evidence and operations:
 [`EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md`](./backend/EX_BE_28_N25_QUERY_AND_ANALYTICS_PLANE.md).
 
 #### N26 — Realtime SSE activation

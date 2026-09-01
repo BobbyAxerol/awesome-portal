@@ -406,7 +406,7 @@ async fn load_feed(
     let mut seen_cursors = BTreeSet::new();
     let mut page_count = 0_usize;
     let mut facts = Vec::new();
-    let mut first_meta: Option<ManagerMeta> = None;
+    let mut previous_meta: Option<ManagerMeta> = None;
     loop {
         page_count += 1;
         if page_count > MAXIMUM_FEED_PAGES {
@@ -430,10 +430,13 @@ async fn load_feed(
         // Capture the read boundary after the response so a complete current
         // snapshot never claims to have been observed before its source as_of.
         let source_read_at = Utc::now();
-        validate_page_meta(first_meta.as_ref(), &meta, profile, catalogue)?;
-        if first_meta.is_none() {
-            first_meta = Some(meta.clone());
-        }
+        validate_page_meta(
+            previous_meta.as_ref(),
+            &meta,
+            next.is_some(),
+            profile,
+            catalogue,
+        )?;
         let next_count = facts
             .len()
             .checked_add(records.len())
@@ -451,9 +454,7 @@ async fn load_feed(
             return ManagerFeedSnapshot::from_manager_meta(
                 feed,
                 profile,
-                first_meta
-                    .as_ref()
-                    .ok_or(ManagerProjectionCommandError::CycleMetadataDrift)?,
+                &meta,
                 source_read_at,
                 page_count,
                 facts,
@@ -463,6 +464,7 @@ async fn load_feed(
         if !seen_cursors.insert(next.as_str().to_owned()) {
             return Err(ManagerProjectionCommandError::CursorCycle);
         }
+        previous_meta = Some(meta);
         cursor = Some(next);
     }
 }
@@ -506,24 +508,41 @@ fn page_result(
 }
 
 fn validate_page_meta(
-    first: Option<&ManagerMeta>,
+    previous: Option<&ManagerMeta>,
     current: &ManagerMeta,
+    has_next: bool,
     profile: ManagerProjectionProfile,
     catalogue: &ManagerCatalogue,
 ) -> Result<(), ManagerProjectionCommandError> {
     if current.profile_id() != profile.profile_id()
         || current.catalogue_sha256() != catalogue.catalogue_revision()
-        || current.completeness() != Completeness::Complete
-        || first.is_some_and(|first| {
-            first.profile_id() != current.profile_id()
-                || first.catalogue_sha256() != current.catalogue_sha256()
-                || first.as_of() != current.as_of()
-                || first.completeness() != current.completeness()
+        || !valid_page_shape(
+            previous.map(ManagerMeta::as_of),
+            current.as_of(),
+            current.completeness(),
+            has_next,
+        )
+        || previous.is_some_and(|previous| {
+            previous.profile_id() != current.profile_id()
+                || previous.catalogue_sha256() != current.catalogue_sha256()
         })
     {
         return Err(ManagerProjectionCommandError::CycleMetadataDrift);
     }
     Ok(())
+}
+
+fn valid_page_shape(
+    previous_as_of: Option<DateTime<Utc>>,
+    current_as_of: DateTime<Utc>,
+    completeness: Completeness,
+    has_next: bool,
+) -> bool {
+    previous_as_of.is_none_or(|previous| current_as_of >= previous)
+        && matches!(
+            (has_next, completeness),
+            (true, Completeness::Partial) | (false, Completeness::Complete)
+        )
 }
 
 async fn commit_cycle(
@@ -623,4 +642,47 @@ pub enum ManagerProjectionCommandError {
     Projection(#[from] projection_core::ProjectionError),
     #[error(transparent)]
     Store(#[from] StoreError),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::TimeZone as _;
+
+    fn at(second: u32) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 9, 1, 0, 0, second)
+            .single()
+            .unwrap()
+    }
+
+    #[test]
+    fn current_source_page_shape_accepts_partial_then_complete() {
+        assert!(valid_page_shape(None, at(1), Completeness::Partial, true));
+        assert!(valid_page_shape(
+            Some(at(1)),
+            at(2),
+            Completeness::Partial,
+            true
+        ));
+        assert!(valid_page_shape(
+            Some(at(2)),
+            at(3),
+            Completeness::Complete,
+            false
+        ));
+        assert!(valid_page_shape(None, at(1), Completeness::Complete, false));
+    }
+
+    #[test]
+    fn current_source_page_shape_rejects_drift_and_false_completion() {
+        assert!(!valid_page_shape(
+            Some(at(2)),
+            at(1),
+            Completeness::Partial,
+            true
+        ));
+        assert!(!valid_page_shape(None, at(1), Completeness::Complete, true));
+        assert!(!valid_page_shape(None, at(1), Completeness::Partial, false));
+        assert!(!valid_page_shape(None, at(1), Completeness::Unknown, false));
+    }
 }

@@ -1,8 +1,8 @@
 # EX-BE-27 — N24 Durable Portal Projection
 
-**Status:** `COMPLETE / IMPLEMENTATION_AND_RECOVERY_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING`  
-**Date:** 2026-08-30  
-**Branch:** `feat/execution-manager-campaign`  
+**Status:** `COMPLETE / CURRENT_SOURCE_RUNTIME_V3_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED`  
+**Date:** 2026-09-01  
+**Branch:** `feat/execution-data-activation`  
 **Runtime effect:** no stable runtime, Trading System, Query, SSE, analytics or command activation
 
 ## 1. Goal and result
@@ -16,7 +16,7 @@ or broker endpoints.
 Trading System current facts
   -> exact profile Source Proxy
   -> N19 Rust Manager-v2 compatibility authority
-  -> bounded N24 collector (12 complete feeds)
+  -> bounded N24 collector (13 current-state feeds)
   -> deterministic PORTAL_PROJECTION_DELTA mapper (8 snapshots)
   -> fenced PostgreSQL reducer + immutable cycle receipt
   -> BUILDING parity gate
@@ -26,10 +26,24 @@ Trading System current facts
 
 ## 2. Exact source and projection contract
 
-The worker consumes six named Manager projections plus six catalogue-bound
-relations: sessions, three snapshot families and two event-fact relations.
-There is no arbitrary relation endpoint in the worker. Every cycle is bounded
-to 100 pages/feed, 20,000 records/feed and 80,000 records total.
+The worker consumes six named Manager projections plus seven catalogue-bound
+current/operational relations: deployments, balances, policies, reservations,
+allocations, risk profiles and domain events. There is no arbitrary relation
+endpoint in the worker. Every cycle is bounded to 100 pages/feed, 20,000
+records/feed and 80,000 records total.
+
+Manager-v2 publishes paginated relation reads with a new read-only transaction
+and `as_of` on every page. Adapter v3 therefore accepts only monotonically
+advancing `as_of`, requires every intermediate page to be `PARTIAL`, requires
+the terminal page to be `COMPLETE`, and pins profile/catalogue identity for the
+whole traversal. It no longer demands the impossible same-`as_of` invariant.
+
+The current owner API serves historical sessions/snapshot tables oldest-first
+without a latest-window selector, stable snapshot token or incremental
+watermark. Those unbounded relations are deliberately excluded from periodic
+projection. Full-scanning them would violate source semantics and the cycle
+bounds. Analytics requiring those histories remain typed unavailable until an
+incremental owner capability is published.
 
 The mapper combines feeds that share an entity kind before applying a complete
 snapshot. This prevents one source feed from tombstoning a sibling feed. It
@@ -110,6 +124,9 @@ does not fabricate operational evidence.
 ## 6. Verification
 
 - mapper determinism and complete snapshots across Paper/Sandbox/Live: pass;
+- Manager-v2 `PARTIAL* -> COMPLETE` pagination with monotonic `as_of`: pass;
+- same-version feed drift prevented by adapter v3; v1/v2 evidence immutable: pass;
+- unbounded oldest-first history excluded from periodic projection: pass;
 - valid zero-row Live cycle with all eight empty snapshots: pass;
 - partial/missing/duplicate/cross-profile/relation drift negative matrix: pass;
 - one-way source key and non-event-authority labeling: pass;

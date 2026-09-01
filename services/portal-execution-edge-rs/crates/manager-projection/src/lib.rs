@@ -24,7 +24,7 @@ use thiserror::Error;
 
 pub const MANAGER_PROJECTION_SCHEMA_VERSION: &str = "portal.execution.manager-projection.v2";
 pub const MANAGER_PROJECTION_ADAPTER_VERSION: &str =
-    "portal.execution.manager-projection.manager-v2.runtime.v2";
+    "portal.execution.manager-projection.manager-v2.runtime.v3";
 pub const PORTAL_PROJECTION_DELTA: &str = "PORTAL_PROJECTION_DELTA";
 pub const DEFAULT_POLL_INTERVAL_MS: i64 = 2_000;
 pub const MAXIMUM_FEED_RECORDS: usize = 20_000;
@@ -90,7 +90,13 @@ pub enum ManagerProjectionSource {
 }
 
 /// Current, source-as-is feed set. Named projections provide the cross-profile
-/// backbone; bounded relation reads add sessions, snapshots and event facts.
+/// backbone. The additional relations are bounded operational/current-state
+/// sources that the owner already publishes for every admitted profile.
+///
+/// Historical snapshot/session tables are deliberately absent: Manager-v2
+/// serves them oldest-first without a snapshot token, latest-window selector
+/// or incremental watermark. Periodically full-scanning those relations would
+/// be both incorrect at page boundaries and unbounded as history grows.
 pub const FEEDS: [ManagerProjectionFeed; 13] = [
     ManagerProjectionFeed {
         feed_id: "manager.order",
@@ -128,34 +134,34 @@ pub const FEEDS: [ManagerProjectionFeed; 13] = [
         source: ManagerProjectionSource::Relation("public.strategy_deployments"),
     },
     ManagerProjectionFeed {
-        feed_id: "relation.execution_sessions",
-        entity_kind: ProjectionEntityKind::Runtime,
-        source: ManagerProjectionSource::Relation("public.execution_sessions"),
-    },
-    ManagerProjectionFeed {
-        feed_id: "relation.account_equity_snapshots",
+        feed_id: "relation.account_balances",
         entity_kind: ProjectionEntityKind::Account,
-        source: ManagerProjectionSource::Relation("public.account_equity_snapshots"),
+        source: ManagerProjectionSource::Relation("public.account_balances"),
     },
     ManagerProjectionFeed {
-        feed_id: "relation.performance_snapshots",
-        entity_kind: ProjectionEntityKind::Performance,
-        source: ManagerProjectionSource::Relation("public.performance_snapshots"),
+        feed_id: "relation.account_policies",
+        entity_kind: ProjectionEntityKind::Account,
+        source: ManagerProjectionSource::Relation("public.account_policies"),
     },
     ManagerProjectionFeed {
-        feed_id: "relation.portfolio_equity_snapshots",
+        feed_id: "relation.account_reservations",
+        entity_kind: ProjectionEntityKind::Account,
+        source: ManagerProjectionSource::Relation("public.account_reservations"),
+    },
+    ManagerProjectionFeed {
+        feed_id: "relation.portfolio_allocations",
         entity_kind: ProjectionEntityKind::Performance,
-        source: ManagerProjectionSource::Relation("public.portfolio_equity_snapshots"),
+        source: ManagerProjectionSource::Relation("public.portfolio_allocations"),
+    },
+    ManagerProjectionFeed {
+        feed_id: "relation.risk_profiles",
+        entity_kind: ProjectionEntityKind::Runtime,
+        source: ManagerProjectionSource::Relation("public.risk_profiles"),
     },
     ManagerProjectionFeed {
         feed_id: "relation.domain_events",
         entity_kind: ProjectionEntityKind::Event,
         source: ManagerProjectionSource::Relation("public.domain_events"),
-    },
-    ManagerProjectionFeed {
-        feed_id: "relation.performance_events",
-        entity_kind: ProjectionEntityKind::Event,
-        source: ManagerProjectionSource::Relation("public.performance_events"),
     },
 ];
 
@@ -649,5 +655,34 @@ mod tests {
         assert!(serialized.contains(PORTAL_PROJECTION_DELTA));
         assert!(serialized.contains("POLL_BOUNDED"));
         assert!(!serialized.contains("EVENT_SOURCED"));
+    }
+
+    #[test]
+    fn current_feed_set_excludes_unbounded_oldest_first_history() {
+        let feeds = FEEDS
+            .iter()
+            .map(|feed| feed.feed_id)
+            .collect::<BTreeSet<_>>();
+        assert_eq!(feeds.len(), 13);
+        for forbidden in [
+            "relation.execution_sessions",
+            "relation.account_equity_snapshots",
+            "relation.performance_snapshots",
+            "relation.portfolio_equity_snapshots",
+            "relation.performance_events",
+        ] {
+            assert!(!feeds.contains(forbidden));
+        }
+        for required in [
+            "relation.strategy_deployments",
+            "relation.account_balances",
+            "relation.account_policies",
+            "relation.account_reservations",
+            "relation.portfolio_allocations",
+            "relation.risk_profiles",
+            "relation.domain_events",
+        ] {
+            assert!(feeds.contains(required));
+        }
     }
 }

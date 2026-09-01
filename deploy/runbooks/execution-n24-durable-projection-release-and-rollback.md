@@ -1,8 +1,8 @@
 # N24 Durable Manager Projection Release and Rollback
 
-Status: implementation-qualified; signed dev deployment remains a separate
-release action. This runbook does not authorize a stable or Trading System
-change.
+Status: current-source runtime v3 qualified; content-addressed dev deployment
+is owner-authorized. This runbook does not authorize a stable or Trading
+System change.
 
 ## Boundary
 
@@ -13,9 +13,15 @@ Redis, CLI, broker APIs or browser-selected relations.
 
 The source has snapshot/poll semantics. Every durable change is therefore
 labelled `PORTAL_PROJECTION_DELTA`; N24 never invents a Trading-System event
-sequence. The worker collects exactly 12 complete feeds and atomically seals
+sequence. The worker collects exactly 13 bounded current-state feeds and atomically seals
 eight entity-kind snapshots per cycle. A valid empty Live profile still seals
 all eight empty snapshots.
+
+Historical session/snapshot relations are not periodic feeds because the
+current owner API exposes them oldest-first without an incremental watermark,
+latest-window selector or stable snapshot token. Adapter v3 requires
+`PARTIAL` on intermediate pages, `COMPLETE` on the terminal page, fixed
+profile/catalogue identity and monotonic page `as_of`.
 
 ## Preconditions
 
@@ -66,7 +72,7 @@ docker compose ... run --rm --no-deps manager-projection-worker \
 
 Accept only the sanitized receipt containing profile, epoch/cycle IDs,
 digests, counts, timestamps and activation result. It must not contain source
-rows, opaque record keys or credentials. Verify the cycle has 12 feeds, eight
+rows, opaque record keys or credentials. Verify the cycle has 13 feeds, eight
 snapshots, no gaps/dead letters and exact semantic parity. Then start the
 long-running worker. Release order is Paper, Sandbox, then Live; do not couple
 the three change windows.

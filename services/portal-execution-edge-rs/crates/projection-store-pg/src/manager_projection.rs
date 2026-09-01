@@ -1050,7 +1050,7 @@ fn manager_cycle_observation(
         operation: ProjectionOperation::Upsert,
         source_completeness: SourceCompleteness::PollBounded,
         poll_interval_ms: Some(input.poll_interval_ms),
-        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v2".to_owned(),
+        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v3".to_owned(),
         capability_snapshot_id: input.catalogue_digest.clone(),
         payload: serde_json::json!({
             "delta_kind": "PORTAL_PROJECTION_DELTA",
@@ -1095,7 +1095,7 @@ fn tombstone_observation(
         operation: ProjectionOperation::Delete,
         source_completeness: SourceCompleteness::PollBounded,
         poll_interval_ms: Some(input.poll_interval_ms),
-        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v2".to_owned(),
+        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v3".to_owned(),
         capability_snapshot_id: input.catalogue_digest.clone(),
         payload: serde_json::json!({
             "change_label": "PORTAL_PROJECTION_DELTA",

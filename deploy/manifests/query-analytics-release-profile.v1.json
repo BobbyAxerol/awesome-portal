@@ -6,7 +6,7 @@
   "chart_contract": "chart-series.rules.v1",
   "source_contract": "trading-system.portal-execution.manager-v2.runtime.v1",
   "projection_schema": "portal.execution.manager-projection.v2",
-  "projection_adapter": "portal.execution.manager-projection.manager-v2.runtime.v2",
+  "projection_adapter": "portal.execution.manager-projection.manager-v2.runtime.v3",
   "profiles": {
     "paper": "PAPER_BINANCE_USDM",
     "sandbox": "SANDBOX_BINANCE_USDM",
@@ -25,12 +25,15 @@
     "public.orders",
     "public.fills",
     "public.positions_v2",
-    "public.execution_sessions",
-    "public.account_equity_snapshots",
-    "public.performance_snapshots",
-    "public.portfolio_equity_snapshots",
-    "public.domain_events",
-    "public.performance_events"
+    "public.accounts",
+    "public.reconciliation_findings",
+    "public.portfolios",
+    "public.account_balances",
+    "public.account_policies",
+    "public.account_reservations",
+    "public.portfolio_allocations",
+    "public.risk_profiles",
+    "public.domain_events"
   ],
   "bounds": {
     "maximum_source_facts": 20000,
@@ -60,6 +63,10 @@
     "benchmark_correlation": "N28_BENCHMARK_SERIES_SOURCE_NOT_ACTIVATED",
     "cross_profile_canary_drift": "N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED",
     "broker_ack_latency": "N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED"
+  },
+  "typed_current_source_gaps": {
+    "historical_time_series": "N25_CURRENT_SOURCE_HISTORY_NOT_INCREMENTAL",
+    "execution_session_quality": "N25_CURRENT_SOURCE_SESSIONS_NOT_INCREMENTAL"
   },
   "candidate_flags": {
     "manager_projection_worker": true,

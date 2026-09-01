@@ -3950,7 +3950,7 @@ mod tests {
         .bind(epoch_id)
         .bind(scope.workspace_id.as_str())
         .bind(&scope.environment)
-        .bind("portal.execution.manager-projection.manager-v2.runtime.v2")
+        .bind("portal.execution.manager-projection.manager-v2.runtime.v3")
         .bind(digest('f'))
         .bind(&catalogue)
         .bind(at(100))
@@ -4022,17 +4022,16 @@ mod tests {
                 }),
             ),
             (
-                "PERFORMANCE",
-                "performance-1",
+                "ACCOUNT",
+                "balance-1",
                 serde_json::json!({
-                    "change_label":"PORTAL_PROJECTION_DELTA","source_feed":"relation.performance_snapshots",
-                    "source_relation":"public.performance_snapshots","fields":{
+                    "change_label":"PORTAL_PROJECTION_DELTA","source_feed":"relation.account_balances",
+                    "source_relation":"public.account_balances","fields":{
                         "deployment_id":{"kind":"TEXT","value":"dep_74"},
                         "strategy_id":{"kind":"TEXT","value":"alpha_1"},
                         "account_id":{"kind":"TEXT","value":"account_1"},
                         "currency":{"kind":"TEXT","value":"USDT"},
-                        "equity":{"kind":"DECIMAL","value":"1007.50"},
-                        "ts":{"kind":"TIMESTAMP","value":"1970-01-01T00:02:00Z"}
+                        "equity":{"kind":"DECIMAL","value":"1007.50"}
                     }
                 }),
             ),
@@ -4051,7 +4050,7 @@ mod tests {
             .bind(i64::try_from(index + 1).unwrap())
             .bind(at(120))
             .bind(at(200))
-            .bind("portal.execution.manager-projection.manager-v2.runtime.v2")
+            .bind("portal.execution.manager-projection.manager-v2.runtime.v3")
             .bind(&catalogue)
             .bind(digest(char::from(b'd' + u8::try_from(index).unwrap())))
             .bind(payload)
@@ -4112,7 +4111,7 @@ mod tests {
         .bind(epoch_id)
         .bind(at(120))
         .bind(at(200))
-        .bind("portal.execution.manager-projection.manager-v2.runtime.v2")
+        .bind("portal.execution.manager-projection.manager-v2.runtime.v3")
         .bind(&catalogue)
         .bind(digest('e'))
         .execute(&store.pool)
