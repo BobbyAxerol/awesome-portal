@@ -1757,6 +1757,14 @@ activation or the phase):**
   The non-root Control API receives only the numeric `portal-runtime`
   supplementary group required to read SGP mTLS/delegation files. Profile
   flags remain independent and command relay is still forced false.
+  Dev runtime qualification passed over the real SGP↔AWS-HK path for Edge
+  revision `f014b772c621373e1215163f8053477d86db157d`: HTTP/2 Manager metadata,
+  a bounded projection, the exact Paper screen and one bounded relation are
+  200; missing JWT, wrong scope and missing client certificate fail closed.
+  The projection DB was backed up before migration, and only its dedicated
+  migration identity could apply DDL. Sandbox/Live/SSE remain independently
+  dark because their distinct private origins/ACTIVE projection evidence do
+  not yet pass preflight; commands and stable authority remain false.
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/

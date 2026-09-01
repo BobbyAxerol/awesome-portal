@@ -1527,3 +1527,17 @@ durable run/attempt events. Detailed evidence:
   its non-root process can read the existing group-scoped SGP mTLS and
   delegation files. The overlay still hard-disables command relay and leaves
   Sandbox/Live/SSE dark unless each independent profile flag is supplied.
+- Dev activation evidence is accepted for Paper: AWS-HK Edge revision
+  `f014b772c621373e1215163f8053477d86db157d` is healthy at the private
+  WireGuard origin; Manager capabilities, catalogue and one portfolio page
+  return HTTP/2 200 while no-JWT/wrong-scope/no-client-certificate remain
+  401/403/TLS-refused. The exact Paper screen and a bounded positions relation
+  also return 200 through the same Control API signer/mTLS identity.
+- Projection schema was backed up before the idempotent N21–N26 migration and
+  migrated only with the dedicated migration DSN; the serving runtime DSN was
+  correctly denied DDL. Source Proxy, projection PostgreSQL and both Manager
+  read sidecars stayed healthy with zero restarts/OOM. Commands remain dark.
+- This is a dev read activation, not N29 Product GO. Sandbox/Live still lack
+  distinct qualified Edge origins, and SSE still lacks an accepted ACTIVE
+  projection/realtime manifest. `main`, stable and their runtime were not
+  touched; `N29-REL-01` remains the protected-main signed publication gate.
