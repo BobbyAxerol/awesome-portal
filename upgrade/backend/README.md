@@ -1421,12 +1421,14 @@ durable run/attempt events. Detailed evidence:
   timestamps and randomized five-minute source retrieval cursors. Durable IDs
   use the validated catalogue relation/key columns. Per-fact idempotency uses
   the same semantic value and excludes receipt timestamps/cursors; a mixed
-  snapshot appends only facts whose business state changed. An unchanged poll
+  snapshot appends only facts whose business state changed. Immutable
+  per-cycle membership references unchanged semantic snapshots, so every cycle
+  still proves all eight kinds without rewriting them. An unchanged poll
   advances a bounded per-epoch heartbeat without appending another immutable
   cycle or one journal row per record; adaptive 60–900 second database leases
   remain tied to the 80,000-record hard bound.
 - Static three-profile Compose, Rust all-target tests, zero-warning Clippy,
-  fresh PostgreSQL migration through `0015`, heartbeat/idempotency recovery and
+  fresh PostgreSQL migration through `0016`, heartbeat/idempotency recovery and
   dump/restore gates pass.
 - No source, Trading System, Query, analytics, SSE, command or stable runtime
   flag changed. `TD-EX-05` is closed; N25 is next.

@@ -67,6 +67,7 @@ assert manifest["phase_authorization"]["content_addressed_dev_deployment_authori
 mapper = (root / "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs").read_text()
 store = (root / "services/portal-execution-edge-rs/crates/projection-store-pg/src/manager_projection.rs").read_text()
 migration = (root / "services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0012_manager_projection.sql").read_text()
+cycle_reuse_migration = (root / "services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0016_manager_projection_cycle_snapshot_reuse.sql").read_text()
 worker = (root / "services/portal-execution-edge-rs/crates/edge-service/src/manager_projection_command.rs").read_text()
 edge_main = (root / "services/portal-execution-edge-rs/crates/edge-service/src/main.rs").read_text()
 overlay = (root / "deploy/execution-manager-v2/compose.durable-projection.yaml").read_text()
@@ -76,6 +77,8 @@ for token in ("ManagerProjectionLeaseProof", "commit_manager_projection_cycle", 
     assert token in store
 for token in ("manager_projection_leases", "manager_projection_commits", "manager_projection_cycles", "'EVENT'"):
     assert token in migration
+for token in ("PRIMARY KEY (epoch_id, cycle_id, entity_kind)", "idx_manager_projection_commits_snapshot"):
+    assert token in cycle_reuse_migration
 for token in ("MAXIMUM_FEED_PAGES", "MAXIMUM_FEED_RECORDS", "MAXIMUM_CYCLE_RECORDS", "FeedBoundExceeded", "CycleBoundExceeded", "CursorCycle", "MissedTickBehavior::Skip", "valid_page_shape"):
     assert token in worker
 assert 'Some("manager-projection-run")' in edge_main

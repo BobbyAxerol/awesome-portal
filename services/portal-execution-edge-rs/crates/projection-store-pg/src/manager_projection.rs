@@ -530,27 +530,65 @@ impl PgProjectionStore {
         }
         let mut transaction = self.pool.begin().await?;
         validate_lease_tx(&mut transaction, scope, epoch_id, proof).await?;
-        let prior = sqlx::query(
-            "SELECT entity_kind,source_input_digest,applied_count,removed_count,state_digest
+        let cycle_prior = sqlx::query(
+            "SELECT snapshot_id,profile_id,entity_kind,source_input_digest,catalogue_digest,
+                    expected_count,applied_count,removed_count,state_digest
              FROM portal_projection.manager_projection_commits
-             WHERE epoch_id=$1 AND snapshot_id=$2",
+             WHERE epoch_id=$1 AND cycle_id=$2 AND entity_kind=$3",
+        )
+        .bind(epoch_id)
+        .bind(input.cycle_id.as_str())
+        .bind(input.snapshot.entity_kind.as_str())
+        .fetch_optional(&mut *transaction)
+        .await?;
+        if let Some(row) = cycle_prior {
+            validate_existing_snapshot_commit(&row, input)?;
+            transaction.commit().await?;
+            return snapshot_commit_receipt(&row, input, true);
+        }
+        let prior = sqlx::query(
+            "SELECT snapshot_id,profile_id,entity_kind,source_input_digest,catalogue_digest,
+                    expected_count,applied_count,removed_count,state_digest
+             FROM portal_projection.manager_projection_commits
+             WHERE epoch_id=$1 AND snapshot_id=$2
+             ORDER BY committed_at LIMIT 1",
         )
         .bind(epoch_id)
         .bind(input.snapshot.snapshot_id.as_str())
         .fetch_optional(&mut *transaction)
         .await?;
         if let Some(row) = prior {
-            if row.try_get::<String, _>("entity_kind")? != input.snapshot.entity_kind.as_str()
-                || row.try_get::<String, _>("source_input_digest")? != input.source_input_digest
-            {
-                return Err(StoreError::ManagerProjectionCommitCollision);
-            }
+            validate_existing_snapshot_commit(&row, input)?;
+            sqlx::query(
+                "INSERT INTO portal_projection.manager_projection_commits
+                 (epoch_id,snapshot_id,cycle_id,profile_id,entity_kind,source_input_digest,
+                  catalogue_digest,fencing_token,expected_count,applied_count,removed_count,
+                  source_read_at,committed_at,state_digest)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0,0,$10,$11,$12)",
+            )
+            .bind(epoch_id)
+            .bind(input.snapshot.snapshot_id.as_str())
+            .bind(input.cycle_id.as_str())
+            .bind(&input.profile_id)
+            .bind(input.snapshot.entity_kind.as_str())
+            .bind(&input.source_input_digest)
+            .bind(&input.catalogue_digest)
+            .bind(i64_from_u64(proof.fencing_token)?)
+            .bind(
+                i64::try_from(input.snapshot.expected_count)
+                    .map_err(|_| StoreError::NumericOverflow)?,
+            )
+            .bind(input.source_read_at)
+            .bind(committed_at)
+            .bind(row.try_get::<String, _>("state_digest")?)
+            .execute(&mut *transaction)
+            .await?;
             transaction.commit().await?;
             return Ok(ManagerSnapshotCommitReceipt {
                 snapshot_id: input.snapshot.snapshot_id.clone(),
                 entity_kind: input.snapshot.entity_kind,
-                applied_count: required_usize(row.try_get("applied_count")?)?,
-                removed_count: required_usize(row.try_get("removed_count")?)?,
+                applied_count: 0,
+                removed_count: 0,
                 state_digest: row.try_get("state_digest")?,
                 already_durable: true,
             });
@@ -1142,6 +1180,37 @@ fn validate_snapshot_input(
         return Err(StoreError::InvalidManagerProjectionSnapshot);
     }
     Ok(())
+}
+
+fn validate_existing_snapshot_commit(
+    row: &sqlx::postgres::PgRow,
+    input: &ManagerSnapshotCommitInput,
+) -> Result<(), StoreError> {
+    if row.try_get::<String, _>("snapshot_id")? != input.snapshot.snapshot_id.as_str()
+        || row.try_get::<String, _>("profile_id")? != input.profile_id
+        || row.try_get::<String, _>("entity_kind")? != input.snapshot.entity_kind.as_str()
+        || row.try_get::<String, _>("source_input_digest")? != input.source_input_digest
+        || row.try_get::<String, _>("catalogue_digest")? != input.catalogue_digest
+        || required_usize(row.try_get("expected_count")?)? != input.snapshot.expected_count
+    {
+        return Err(StoreError::ManagerProjectionCommitCollision);
+    }
+    Ok(())
+}
+
+fn snapshot_commit_receipt(
+    row: &sqlx::postgres::PgRow,
+    input: &ManagerSnapshotCommitInput,
+    already_durable: bool,
+) -> Result<ManagerSnapshotCommitReceipt, StoreError> {
+    Ok(ManagerSnapshotCommitReceipt {
+        snapshot_id: input.snapshot.snapshot_id.clone(),
+        entity_kind: input.snapshot.entity_kind,
+        applied_count: required_usize(row.try_get("applied_count")?)?,
+        removed_count: required_usize(row.try_get("removed_count")?)?,
+        state_digest: row.try_get("state_digest")?,
+        already_durable,
+    })
 }
 
 fn validate_cycle_input(

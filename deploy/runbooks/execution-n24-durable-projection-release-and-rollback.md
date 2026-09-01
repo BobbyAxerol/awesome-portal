@@ -41,7 +41,7 @@ Stop unless all of these are true:
 5. database capacity is below the 70% soft limit and the 5,000,000-row journal
    limit;
 6. `projection-migrator` has applied migrations through
-   `0015_manager_projection_heartbeat.sql`; and
+   `0016_manager_projection_cycle_snapshot_reuse.sql`; and
 7. Query/analytics is either false or independently N25-qualified, while SSE
    and command flags remain false.
 
@@ -101,6 +101,9 @@ the three change windows.
 - a snapshot in which one fact changes and its siblings only receive newer
   transport timestamps must append exactly the changed fact and no dead
   letter; an idempotency collision is a hard stop;
+- every complete cycle has eight immutable entity-kind membership rows;
+  unchanged semantic snapshots are referenced by the new cycle rather than
+  rewritten, and a missing membership keeps the cycle unsealed;
 - steady-state RPO target is 10 seconds while the qualified source is healthy;
 - process restart RTO is 120 seconds; an expired database lease advances the
   fencing token and rejects a stale writer;

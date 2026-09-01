@@ -1648,7 +1648,8 @@ transport receipt timestamps and the owner's randomized five-minute retrieval
 cursor. Entity IDs use the exact validated catalogue key columns plus relation
 ID. Per-fact idempotency uses the same semantic value as snapshot identity,
 excluding receipt timestamps and retrieval cursors; a mixed snapshot appends
-only facts whose business state changed. Repeat unchanged polls update one
+only facts whose business state changed. Per-cycle membership references
+unchanged semantic snapshots while retaining an exact eight-kind seal. Repeat unchanged polls update one
 bounded per-epoch heartbeat and do not amplify immutable cycles/journal rows.
 Lease TTL scales from 60 to 900 seconds by the already bounded record count,
 and the large Paper dev profile polls every 60 seconds. Existing immutable

@@ -4481,7 +4481,7 @@ mod tests {
                     epoch_id,
                     second_lease.proof(),
                     &ManagerSnapshotCommitInput {
-                        cycle_id: mixed_cycle_id,
+                        cycle_id: mixed_cycle_id.clone(),
                         profile_id: profile_id.to_owned(),
                         catalogue_digest: catalogue_digest.clone(),
                         source_input_digest: manager_snapshot_semantic_digest(
@@ -4498,6 +4498,110 @@ mod tests {
                 .unwrap();
             assert_eq!(mixed_receipt.applied_count, 1);
             assert_eq!(mixed_receipt.removed_count, 0);
+            for (kind_index, kind) in (0_i64..)
+                .zip(kinds.iter().copied())
+                .filter(|(_, kind)| *kind != ProjectionEntityKind::Order)
+            {
+                let unchanged = ProjectionObservation {
+                    ingestion_id: CanonicalId::parse(format!(
+                        "n24-ingest-{environment}-{kind_index}-1"
+                    ))
+                    .unwrap(),
+                    entity: ProjectionEntityKey {
+                        kind,
+                        entity_id: CanonicalId::parse(format!(
+                            "n24:{environment}:{}:entity-1",
+                            kind.as_str().to_ascii_lowercase()
+                        ))
+                        .unwrap(),
+                    },
+                    source_authority: SourceAuthority::Execution,
+                    as_of: Some(at(100 + kind_index)),
+                    source_read_at: at(250),
+                    source_cursor: Some(SourceCursor {
+                        event_ts: at(250),
+                        created_at: at(250),
+                        event_id: mixed_cycle_id.clone(),
+                    }),
+                    source_sequence: None,
+                    source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+                    operation: ProjectionOperation::Upsert,
+                    source_completeness: SourceCompleteness::PollBounded,
+                    poll_interval_ms: Some(2_000),
+                    adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v1"
+                        .to_owned(),
+                    capability_snapshot_id: catalogue_digest.clone(),
+                    payload: serde_json::json!({
+                        "change_label": "PORTAL_PROJECTION_DELTA",
+                        "source_feed": kind.as_str(),
+                    }),
+                };
+                let unchanged_snapshot = projection_core::ProjectionSnapshot::new(
+                    CanonicalId::parse(format!("n24-snapshot-{environment}-{kind_index}-1"))
+                        .unwrap(),
+                    kind,
+                    SnapshotCompleteness::Complete,
+                    1,
+                    vec![unchanged],
+                )
+                .unwrap();
+                let reused = store
+                    .commit_manager_projection_snapshot(
+                        &scope,
+                        epoch_id,
+                        second_lease.proof(),
+                        &ManagerSnapshotCommitInput {
+                            cycle_id: mixed_cycle_id.clone(),
+                            profile_id: profile_id.to_owned(),
+                            catalogue_digest: catalogue_digest.clone(),
+                            source_input_digest: manager_snapshot_semantic_digest(
+                                &unchanged_snapshot.observations,
+                            )
+                            .unwrap(),
+                            source_read_at: at(250),
+                            poll_interval_ms: 2_000,
+                            snapshot: unchanged_snapshot,
+                        },
+                        at(251),
+                    )
+                    .await
+                    .unwrap();
+                assert!(reused.already_durable);
+                assert_eq!(reused.applied_count, 0);
+                assert_eq!(reused.removed_count, 0);
+            }
+            let mixed_cycle = store
+                .commit_manager_projection_cycle(
+                    &scope,
+                    epoch_id,
+                    second_lease.proof(),
+                    &ManagerCycleCommitInput {
+                        cycle_id: mixed_cycle_id.clone(),
+                        profile_id: profile_id.to_owned(),
+                        catalogue_digest: catalogue_digest.clone(),
+                        source_input_digest: digest('e'),
+                        feed_count: 13,
+                        record_count: 9,
+                        source_read_at: at(250),
+                        poll_interval_ms: 2_000,
+                    },
+                    at(252),
+                )
+                .await
+                .unwrap();
+            assert!(!mixed_cycle.already_durable);
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM portal_projection.manager_projection_commits
+                     WHERE epoch_id=$1 AND cycle_id=$2",
+                )
+                .bind(epoch_id)
+                .bind(mixed_cycle_id.as_str())
+                .fetch_one(&store.pool)
+                .await
+                .unwrap(),
+                8
+            );
             let journal_after: i64 = sqlx::query_scalar(
                 "SELECT count(*) FROM portal_projection.event_journal WHERE epoch_id=$1",
             )

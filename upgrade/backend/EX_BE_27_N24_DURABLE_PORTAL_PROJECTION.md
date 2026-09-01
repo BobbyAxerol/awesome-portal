@@ -71,6 +71,14 @@ unchanged. Adapter v5 was required after a real second Paper v4 cycle proved
 that mixing stable semantic ingestion IDs with receipt-time-sensitive input
 digests correctly failed closed as `IDEMPOTENCY_COLLISION`.
 
+Migration `0016_manager_projection_cycle_snapshot_reuse.sql` makes snapshot
+reuse explicit: `manager_projection_commits` is keyed by epoch, cycle and
+entity kind, while `snapshots` remains the unique semantic snapshot. A later
+cycle may reference an unchanged snapshot with zero applied/removed facts, but
+cycle sealing still requires eight exact membership rows. This closes the
+`ManagerProjectionCycleIncomplete` finding from the first real mixed-state v5
+Paper replay without weakening the eight-kind completeness gate.
+
 ## 3. Durable reducer and horizontal safety
 
 Migration `0012_manager_projection.sql` adds:
@@ -159,6 +167,8 @@ does not fabricate operational evidence.
 - mixed snapshot replay (one changed fact plus unchanged siblings with newer
   receipt metadata) appends only the changed fact and creates no dead letter:
   pass;
+- mixed cycle reuses seven unchanged semantic snapshots, records eight exact
+  cycle memberships and seals atomically: pass;
 - fresh PostgreSQL migration and three-profile commit/parity/cutover: pass;
 - duplicate cycle restart/idempotency and stale-fence rejection: pass;
 - singleton same-identity rebuild and DB-clock atomic rollback: pass;

@@ -1733,6 +1733,8 @@ activation or the phase):**
   history without an incremental contract. Its per-fact idempotency digest is
   the same semantic fact value, so newer receipt metadata cannot collide with
   an unchanged semantic ingestion ID; freshness remains a bounded heartbeat.
+  Per-cycle entity-kind membership references reused semantic snapshots and
+  preserves the exact eight-kind seal without duplicate fact writes.
   Query/SSE/analytics/commands and stable runtime
   remain dark. Status: `N24_COMPLETE / TD-EX-05_CLOSED / N25_READY`; see
   [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](./backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
