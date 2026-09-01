@@ -20,6 +20,13 @@ async function open(page: Page, route: string) {
   await stubPortalApi(page, "healthy");
   await stubExecutionBff(page);
   await page.goto(route);
+  // The product routes compose several independent same-origin BFF reads.
+  // A mounted <main> is not enough to prove that the last panel has replaced
+  // its loading state; taking a full-page screenshot during that replacement
+  // made the Admin Action Drawer oscillate by one text line (16 px). The BFF
+  // double has no long-lived transport, so network-idle is the exact stable
+  // boundary for this controlled browser corpus.
+  await page.waitForLoadState("networkidle");
   await settle(page);
 }
 

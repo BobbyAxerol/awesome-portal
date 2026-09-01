@@ -1956,3 +1956,17 @@ empty/unavailable với reason của contract; KHÔNG thay cả màn bằng
    vì chính lệnh recomposition — đã refresh CƠ HỌC (không đổi field ngữ
    nghĩa nào; verifier xanh, vẫn NO_GO + blocker N29-REL-01). codex re-bless
    khi nhận packet.
+
+### 8.47 Codex recomposition integration acceptance (2026-09-01)
+
+Codex accepted the rich product recomposition without replacing any reviewed
+screen or weakening the same-origin BFF boundary. Portal and Planning unit and
+production-build gates pass from a clean two-package dependency graph; the
+N29 verifier still reports exactly one blocker, `N29-REL-01`.
+
+The only browser harness fix waits for the controlled BFF requests to reach
+network-idle before full-page capture. It removes a deterministic
+loading-to-content height race on Admin Action Drawer; no snapshot, component,
+fixture or product behavior was changed. Backend authority pins, isolated
+Control API/contracts cells, full Rust/Clippy and PostgreSQL restore were also
+requalified before the `dev` integration.

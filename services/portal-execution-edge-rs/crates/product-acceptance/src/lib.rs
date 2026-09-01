@@ -60,8 +60,9 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
 
     if text(&acceptance, "/schema_version") != Some(ACCEPTANCE_REVISION)
         || text(&acceptance, "/phase") != Some("N29")
-        || text(&acceptance, "/decision") != Some("BACKEND_ACCEPTED_PRODUCT_RELEASE_NO_GO")
-        || text(&acceptance, "/release_channel") != Some("DEV_CANDIDATE_ONLY")
+        || text(&acceptance, "/decision")
+            != Some("RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING")
+        || text(&acceptance, "/release_channel") != Some("PROTECTED_MAIN_CANDIDATE")
         || text(&acceptance, "/runtime_effect") != Some("NONE")
     {
         return Err(AcceptanceError::InventoryDrift);
@@ -86,7 +87,7 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         || summary.requested_command_count != 9
         || summary.screen_contract_count != 23
         || summary.typed_owner_gap_count != 9
-        || summary.release_blocker_count != 2
+        || summary.release_blocker_count != 1
         || summary.product_release_authorized
     {
         return Err(AcceptanceError::InventoryDrift);
@@ -106,7 +107,7 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         .pointer("/evidence")
         .and_then(Value::as_object)
         .ok_or(AcceptanceError::Malformed)?;
-    if evidence.len() != 16
+    if evidence.len() != 31
         || evidence
             .values()
             .any(|value| !value.as_str().is_some_and(is_sha256))
@@ -152,8 +153,8 @@ fn validate_debt_register(debt: &Value) -> Result<(), AcceptanceError> {
 
     let blocker_ids = item_ids(array(debt, "/release_blockers")?);
     let resolved_ids = item_ids(array(debt, "/resolved_delivery_gates")?);
-    if blocker_ids != BTreeSet::from(["N29-BE-72", "N29-REL-01"])
-        || resolved_ids != BTreeSet::from(["N29-FE-01"])
+    if blocker_ids != BTreeSet::from(["N29-REL-01"])
+        || resolved_ids != BTreeSet::from(["N29-BE-72", "N29-FE-01"])
     {
         return Err(AcceptanceError::DebtDrift);
     }
@@ -212,7 +213,7 @@ mod tests {
         let result = validate_embedded_acceptance().expect("valid N29 closeout");
         assert_eq!(result.relation_count, 96);
         assert_eq!(result.commissioned_request_count, 31);
-        assert_eq!(result.release_blocker_count, 2);
+        assert_eq!(result.release_blocker_count, 1);
         assert!(!result.product_release_authorized);
     }
 

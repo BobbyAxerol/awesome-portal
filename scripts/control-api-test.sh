@@ -10,6 +10,7 @@ NODE_CONTAINER="control-api-test-node"
 NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
 POSTGRES_IMAGE="postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
 DEPS_DIR="$(mktemp -d)"
+WORK_DIR="${DEPS_DIR}/work"
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required.\n' >&2; exit 1; }
 DOCKER=(docker)
@@ -41,6 +42,23 @@ cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
   "${NODE_IMAGE}" npm ci --no-audit --no-fund
 test -x "${DEPS_DIR}/node_modules/.bin/tsc"
 
+# Docker/containerd cannot create a nested tmpfs or bind mount below a
+# read-only bind destination on every supported host. Build a non-secret,
+# disposable test cell instead: the repository stays untouched and read-only
+# rootfs/network isolation remain intact.
+mkdir -p "${WORK_DIR}"
+cp -a \
+  "${APP_DIR}/migrations" \
+  "${APP_DIR}/src" \
+  "${APP_DIR}/test" \
+  "${APP_DIR}/package.json" \
+  "${APP_DIR}/package-lock.json" \
+  "${APP_DIR}/tsconfig.build.json" \
+  "${APP_DIR}/tsconfig.json" \
+  "${APP_DIR}/vitest.config.ts" \
+  "${WORK_DIR}/"
+ln -s ../node_modules "${WORK_DIR}/node_modules"
+
 # The test cell can reach only its temporary PostgreSQL container. Source is
 # mounted read-only and all generated/runtime files live in tmpfs.
 "${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
@@ -68,12 +86,9 @@ fi
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
   -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
-  -v "${ROOT_DIR}:/repo:ro" \
-  -v "${APP_DIR}:/work:ro" \
-  -v "${DEPS_DIR}/node_modules:/work/node_modules:ro" \
-  --tmpfs /work/dist:rw,exec,mode=1777,size=128m \
+  -v "${DEPS_DIR}:/cell" \
   --tmpfs /tmp:rw,exec,mode=1777,size=512m \
-  -w /work \
+  -w /cell/work \
   -e HOME=/tmp \
   -e npm_config_cache=/tmp/.npm \
   -e TEST_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_control_test" \

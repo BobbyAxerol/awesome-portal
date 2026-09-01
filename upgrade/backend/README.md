@@ -1486,3 +1486,22 @@ durable run/attempt events. Detailed evidence:
   [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).
 - BR-EX-72 implementation detail:
   [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
+
+## Backend state — 2026-09-01 (product recomposition integration acceptance)
+
+- Claude's reviewed rich compositions are accepted on the product routes over
+  the same-origin BFF; the N29 product-boundary remains fail-closed and the
+  only release blocker remains `N29-REL-01` (protected-main publication).
+- The N18 census digest embedded by the Rust Manager authority and the Rust
+  N29 closeout authority now match the regenerated immutable evidence pack.
+  Full Rust all-target tests, zero-warning Clippy and PostgreSQL dump/restore
+  pass with the revised authority.
+- Control API and contract test cells use disposable copied workspaces instead
+  of unsupported nested mounts below a read-only bind. The checkout stays
+  immutable while fresh PostgreSQL, offline contract generation and restore
+  gates retain their original isolation.
+- The browser corpus now waits for the controlled same-origin BFF reads to
+  settle before full-page capture. This removes the 16 px loading-to-content
+  race in the Admin Action Drawer without changing product code or baselines.
+- Runtime/stable authority is unchanged. Integration into `dev` and the
+  isolated dev rebuild are deployment steps, not an N29 Product GO.

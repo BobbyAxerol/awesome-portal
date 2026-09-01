@@ -3,7 +3,7 @@
 **Date:** 2026-08-30  
 **Decision:** `N19_RUST_MANAGER_COMPATIBILITY_AUTHORITY_COMPLETE`  
 **Runtime effect:** `SOURCE_DARK / PRODUCT_ROUTES_UNCHANGED / NO_STABLE_DEPLOYMENT`  
-**Input authority:** N18 census digest `sha256:9b0c58dfa1a3475434a618821991dd8f531db269fd49e285a757089f8d888b47`  
+**Input authority:** N18 census digest `sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3`  
 **Next named phase:** `N20_CANONICAL_SCREEN_BFF_CONTRACTS` (ready, not started)
 
 ## 1. Goal and result

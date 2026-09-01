@@ -26,7 +26,7 @@ const MATRIX_JSON: &str =
 pub const AUTHORITY_REVISION: &str = "portal.execution.manager-compat-authority.v1";
 pub const DELEGATED_RESOURCE: &str = "execution:manager-v2:read";
 const N18_CENSUS_DIGEST: &str =
-    "sha256:9b0c58dfa1a3475434a618821991dd8f531db269fd49e285a757089f8d888b47";
+    "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3";
 const REQUIRED_OPERATIONS: [&str; 5] = [
     "managerCapabilities",
     "managerCatalog",
