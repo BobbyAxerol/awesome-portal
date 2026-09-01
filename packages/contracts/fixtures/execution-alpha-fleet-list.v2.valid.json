@@ -1,0 +1,63 @@
+{
+  "schema_version": "execution.alpha-fleet-list.v2",
+  "record_authority": "PORTAL_PROJECTION",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "ALL_EXECUTION_PROFILES",
+  "workspace_id": "ws_primary",
+  "environment": "all",
+  "read_at": "2026-09-01T15:00:01Z",
+  "source_as_of": "2026-09-01T15:00:00Z",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "summary": {
+    "alpha_count": 1,
+    "deployment_count": 1,
+    "portfolio_count": 1,
+    "needs_attention_count": 0,
+    "research_only_count": 0,
+    "stage_counts": { "PAPER": 1 },
+    "allocation_by_currency": [{ "currency": "USDT", "value": "20000" }],
+    "exposure_by_currency": [{ "currency": "USDT", "value": "0" }],
+    "current_position_pnl_by_currency": [{ "currency": "USDT", "realized": "123.19605", "unrealized": "0", "net": "123.19605" }],
+    "metric_basis": "CURRENT_SOURCE_FACTS"
+  },
+  "page": {
+    "rows": [{
+      "alpha_id": "alpha_a",
+      "alpha_label": "Carry A",
+      "version": "3.2",
+      "stage": "PAPER",
+      "stages": ["PAPER"],
+      "owner": "Bobby-001",
+      "portfolios": [{ "portfolio_id": "pf_main", "name": "Main", "base_currency": "USDT" }],
+      "deployments": [{
+        "deployment_id": "dep_a", "stage": "PAPER", "venue": "BINANCE", "account_id": "acc_a",
+        "portfolio_id": "pf_main", "portfolio_name": "Main", "currency": "USDT",
+        "allocation": "20000", "balance_total": "20123.19605", "balance_free": "20123.19605", "balance_locked": "0", "position_fact_count": 1,
+        "realized_pnl": "123.19605", "unrealized_pnl": "0", "net_pnl": "123.19605", "exposure": "0",
+        "state": "ACTIVE", "active": true, "health": "READY", "updated_at": "2026-09-01T15:00:00Z"
+      }],
+      "allocations": [{ "currency": "USDT", "value": "20000" }],
+      "balances": [{ "currency": "USDT", "total": "20123.19605", "free": "20123.19605", "locked": "0" }],
+      "position_pnl": [{ "currency": "USDT", "realized": "123.19605", "unrealized": "0", "net": "123.19605" }],
+      "exposure": [{ "currency": "USDT", "value": "0" }],
+      "health": "READY",
+      "attention_reasons": [],
+      "metrics_availability": {
+        "account_balance": { "state": "AVAILABLE", "reason_code": null },
+        "current_position_pnl": { "state": "AVAILABLE", "reason_code": null },
+        "equity_series_30d": { "state": "UNAVAILABLE", "reason_code": "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" },
+        "max_drawdown_30d": { "state": "UNAVAILABLE", "reason_code": "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" }
+      },
+      "updated_at": "2026-09-01T15:00:00Z"
+    }],
+    "total_count": 1,
+    "filtered_count": 1,
+    "next_cursor": null,
+    "prev_cursor": null,
+    "has_more": false,
+    "has_previous": false,
+    "applied_filters": [],
+    "applied_sort": [{ "field": "stage_rank", "direction": "desc" }, { "field": "alpha_label", "direction": "asc" }, { "field": "alpha_id", "direction": "asc" }]
+  }
+}

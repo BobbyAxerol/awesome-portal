@@ -204,10 +204,17 @@ const N23_PROFILE_SCREEN_BINDINGS = Object.freeze({
  */
 const BR72_MANAGER_LIST_SCREEN_BINDINGS = Object.freeze({
   EXECUTION_ALPHA_FLEET_LIST_SCREEN: Object.freeze({
-    capabilityIds: Object.freeze(["manager.strategies", "manager.deployments"]),
+    capabilityIds: Object.freeze([
+      "manager.strategies", "manager.deployments", "manager.accounts",
+      "manager.portfolios", "manager.positions", "manager.reconciliation",
+    ]),
     relations: Object.freeze({
       "manager.strategies": Object.freeze(["strategies"]),
       "manager.deployments": Object.freeze(["strategy_deployments"]),
+      "manager.accounts": Object.freeze(["accounts", "account_balances"]),
+      "manager.portfolios": Object.freeze(["portfolios", "portfolio_allocations"]),
+      "manager.positions": Object.freeze(["positions_v2"]),
+      "manager.reconciliation": Object.freeze(["reconciliation_findings"]),
     }),
   }),
   EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN: Object.freeze({

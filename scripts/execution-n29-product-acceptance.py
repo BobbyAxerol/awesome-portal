@@ -42,8 +42,10 @@ EVIDENCE_PATHS = {
     "governance_product_openapi_sha256": ROOT / "packages/contracts/openapi/execution-governance.openapi.json",
     "governance_product_test_sha256": ROOT / "apps/control-api/test/governance-product.spec.ts",
     "br72_schema_sha256": ROOT / "packages/contracts/schemas/execution-manager-lists.v1.schema.json",
+    "br72_fleet_v2_schema_sha256": ROOT / "packages/contracts/schemas/execution-alpha-fleet-list.v2.schema.json",
     "br72_openapi_sha256": ROOT / "packages/contracts/openapi/execution-manager-lists.openapi.json",
     "br72_migration_sha256": ROOT / "apps/control-api/migrations/1723680000016_execution-manager-lists.sql",
+    "br72_fleet_v2_migration_sha256": ROOT / "apps/control-api/migrations/1723680000017_execution-alpha-fleet-v2.sql",
     "br72_service_sha256": ROOT / "apps/control-api/src/manager-lists/manager-lists.service.ts",
     "br72_repository_sha256": ROOT / "apps/control-api/src/manager-lists/manager-lists.repository.ts",
     "br72_controller_sha256": ROOT / "apps/control-api/src/manager-lists/manager-lists.controller.ts",
@@ -55,6 +57,8 @@ EVIDENCE_PATHS = {
     "br72_registry_public_sha256": ROOT / "apps/portal/registry/fixtures/registry.public.json",
     "br72_frontend_test_sha256": ROOT / "apps/portal/frontend/src/execution/brEx72.test.tsx",
     "br72_frontend_containers_sha256": ROOT / "apps/portal/frontend/src/execution/screens/profileContainers.tsx",
+    "br72_frontend_alpha_fleet_sha256": ROOT / "apps/portal/frontend/src/execution/screens/AlphaFleet.tsx",
+    "br72_frontend_recompose_sha256": ROOT / "apps/portal/frontend/src/execution/screens/recomposeContainers.tsx",
     "br72_frontend_registry_sha256": ROOT / "apps/portal/frontend/src/execution/previewRegistry.ts",
 }
 
@@ -257,6 +261,8 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
     require(limit == {"type": "integer", "minimum": 1, "maximum": 50, "default": 50}, "BR-EX-72 page bound drifted")
 
     migration = EVIDENCE_PATHS["br72_migration_sha256"].read_text(encoding="utf-8")
+    fleet_v2_schema = read_json(EVIDENCE_PATHS["br72_fleet_v2_schema_sha256"])
+    fleet_v2_migration = EVIDENCE_PATHS["br72_fleet_v2_migration_sha256"].read_text(encoding="utf-8")
     repository = EVIDENCE_PATHS["br72_repository_sha256"].read_text(encoding="utf-8")
     service = EVIDENCE_PATHS["br72_service_sha256"].read_text(encoding="utf-8")
     controller = EVIDENCE_PATHS["br72_controller_sha256"].read_text(encoding="utf-8")
@@ -267,12 +273,28 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
         "execution_binding_projection",
     ]:
         require(token in migration and token in repository, f"BR-EX-72 projection missing: {token}")
+    require(
+        fleet_v2_schema["$defs"]["AlphaFleetResponse"]["properties"]["schema_version"]["const"]
+        == "execution.alpha-fleet-list.v2",
+        "Alpha Fleet v2 schema authority drifted",
+    )
+    for token in [
+        "ADD COLUMN summary jsonb",
+        "environment IN ('all', 'paper', 'sandbox', 'live')",
+        "ADD COLUMN stages jsonb",
+        "ADD COLUMN metrics_availability jsonb",
+        "WHERE projection_kind = 'ALPHA_FLEET'",
+    ]:
+        require(token in fleet_v2_migration, f"Alpha Fleet v2 migration boundary missing: {token}")
     for token in [
         "MAX_SOURCE_PAGES = 10",
         "SOURCE_PAGE_LIMIT = 200",
         "BR72_SOURCE_POPULATION_EXCEEDS_BOUND",
         "BR72_SOURCE_CURSOR_CYCLE",
-        "execution.alpha-fleet-list.v1",
+        "execution.alpha-fleet-list.v2",
+        'environment === "all"',
+        "manager.positions",
+        "manager.reconciliation",
         "execution.bindings-list.v1",
     ]:
         require(token in service, f"BR-EX-72 service boundary missing: {token}")
@@ -312,10 +334,16 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
         require(row["delivery_profile"] == "shadow" and enabled == enabled_expected, f"registry delivery policy drifted: {screen_id}")
 
     containers = EVIDENCE_PATHS["br72_frontend_containers_sha256"].read_text(encoding="utf-8")
+    fleet_screen = EVIDENCE_PATHS["br72_frontend_alpha_fleet_sha256"].read_text(encoding="utf-8")
+    recompose = EVIDENCE_PATHS["br72_frontend_recompose_sha256"].read_text(encoding="utf-8")
     frontend_registry = EVIDENCE_PATHS["br72_frontend_registry_sha256"].read_text(encoding="utf-8")
     require("AlphaFleetContainer" in containers and "AccountsBindingsContainer" in containers, "BR-EX-72 frontend containers missing")
     require("N20_FLEET_LIST_CONTRACT_NOT_PUBLISHED" not in containers, "Fleet still renders typed unavailable")
     require("N20_BINDINGS_LIST_CONTRACT_NOT_PUBLISHED" not in containers, "Bindings still renders typed unavailable")
+    for token in ["item.stages.some", "positionPnl", "balance.locked", "SOURCE_LATEST_WINDOW_NOT_PUBLISHED"]:
+        require(token in fleet_screen, f"Alpha Fleet v2 product rendering missing: {token}")
+    for token in ["getAlphaFleet(query)", 'useState<FleetFilter>("all")', "stage: next === \"all\" ? undefined"]:
+        require(token in recompose, f"Alpha Fleet v2 product consumer missing: {token}")
     require("EXECUTION_ALPHA_FLEET_LIST_SCREEN" in frontend_registry and "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN" in frontend_registry, "BR-EX-72 frontend registry roots missing")
     require(acceptance["accepted_scope"]["br_ex_72"]["status"] == "COMPLETE", "BR-EX-72 acceptance state drifted")
     require({item["blocker_id"] for item in debt["resolved_delivery_gates"]} == {"N29-FE-01", "N29-BE-72"}, "BR-EX-72 resolved gate missing")

@@ -85,9 +85,10 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
   const filter = controlled ?? local;
   const setFilter = (f: FleetFilter) => { setLocal(f); onFilterChange?.(f); };
   if (!smoke) {
-    // Product: the reviewed fleet table over the BR-EX-72 projection —
-    // published columns real, unpublished columns stated, never invented.
     const items = list?.page.rows ?? [];
+    const summary = list?.summary;
+    const filteredItems = filter === "all" ? items : items.filter((item) =>
+      item.stages.some((stage) => stage.toLowerCase() === filter));
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
     const sourceReason = reason ?? (!list ? "No fleet list was published for this workspace." : undefined);
     return (
@@ -96,12 +97,29 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
           <div className="exec-af-page">
             <header className="exec-af-masthead">
               <h1 className="exec-af-h1">Alpha Fleet</h1>
-              <span className="exec-af-sum">{list?.page.filteredCount ?? items.length}/{list?.page.totalCount ?? "?"} alphas · {(list?.environment ?? "unknown").toUpperCase()}</span>
+              <span className="exec-af-sum">{summary?.alphaCount ?? list?.page.totalCount ?? items.length} alphas · {summary?.deploymentCount ?? 0} deployments · {(list?.environment ?? "unknown").toUpperCase()}</span>
               <span className="exec-af-wf">entry screen for WF 2a</span>
               <span className="exec-af-spacer" />
               <span className="exec-af-source"><b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
+            {list ? <div className="exec-af-kpis">
+              <FleetKpi label="Current exposure" values={summary?.exposureByCurrency ?? []} empty="No open notional" />
+              <FleetKpi label="Current position PnL" values={(summary?.currentPositionPnlByCurrency ?? []).map((value) => ({ currency: value.currency, value: value.net }))} empty="No current position PnL" tone="good" />
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Deployments</div><div className="exec-af-kpival">{summary?.deploymentCount ?? 0}</div><div className="exec-af-kpisub">current Trading System deployment rows</div></div>
+              <div className="exec-af-kpi" data-tint={(summary?.needsAttentionCount ?? 0) > 0 ? "true" : undefined}><div className="exec-af-kpilabel" data-tone={(summary?.needsAttentionCount ?? 0) > 0 ? "warn" : undefined}>Needs attention</div><div className="exec-af-kpival" data-tone={(summary?.needsAttentionCount ?? 0) > 0 ? "bad" : "good"}>{summary?.needsAttentionCount ?? 0}</div><div className="exec-af-kpisub">source health and reconciliation</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Portfolios</div><div className="exec-af-kpival">{summary?.portfolioCount ?? 0}</div><div className="exec-af-kpisub">allocation authority in current profile</div></div>
+            </div> : null}
+            <div className="exec-af-filters" role="group" aria-label="Stage">
+              {FLEET_FILTERS.map((value) => {
+                const count = value === "all" ? (summary?.alphaCount ?? items.length)
+                  : value === "research" ? (summary?.researchOnlyCount ?? items.filter((item) => item.stage === "RESEARCH").length)
+                    : summary?.stageCounts[value.toUpperCase()] ?? items.filter((item) =>
+                      item.stages.some((stage) => stage.toLowerCase() === value)).length;
+                return <button key={value} type="button" className="exec-af-chip" data-active={filter === value ? "true" : undefined} aria-pressed={filter === value} onClick={() => setFilter(value)}>{FILTER_LABEL[value]} ({count})</button>;
+              })}
+              <span className="exec-af-filternote">current source facts · exact decimals remain separated by currency</span>
+            </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
                 <table className="exec-af-table" aria-label="Alpha fleet">
@@ -109,12 +127,12 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                     <tr>
                       <th className="exec-af-th-mark" />
                       <th>alpha · version</th><th>owner · portfolio</th><th>stage presence (deployments)</th>
-                      <th data-numeric="true">alloc Σ</th><th data-numeric="true">net pnl · 30d</th><th data-numeric="true">max dd</th>
-                      <th>equity 30d</th><th>health · next gate</th><th className="exec-af-th-go" />
+                      <th data-numeric="true">alloc Σ</th><th data-numeric="true">position pnl · current</th><th data-numeric="true">exposure · current</th>
+                      <th>account balance</th><th>health · source state</th><th className="exec-af-th-go" />
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => {
+                    {filteredItems.map((item) => {
                       const href = `/deployments/alphas/${encodeURIComponent(item.alphaId)}`;
                       const expandable = item.deployments.length > 0;
                       const isOpen = expandable && Boolean(open[item.alphaId]);
@@ -122,14 +140,14 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                         <FleetItemRows key={item.alphaId} item={item} href={href} expandable={expandable} isOpen={isOpen} onToggle={() => setOpen((m) => ({ ...m, [item.alphaId]: !isOpen }))} />
                       );
                     })}
-                    {items.length === 0 ? <tr><td colSpan={10} className="exec-af-empty">No alpha is present in this workspace and execution profile — an empty set is a fact.</td></tr> : null}
+                    {filteredItems.length === 0 ? <tr><td colSpan={10} className="exec-af-empty">No alpha is present for this stage filter — an empty set is a fact.</td></tr> : null}
                   </tbody>
                 </table>
               </div>
               <footer className="exec-af-foot">
-                <span>allocation, pnl, drawdown, equity and health are not published on this projection — they are read per alpha on its 360°</span>
+                <span>source: strategies ⋈ deployments ⋈ accounts/balances ⋈ portfolios/allocations ⋈ current positions ⋈ reconciliation</span>
                 <span className="exec-af-spacer" />
-                <span>row → Alpha 360° · deployment row → its stage workbench</span>
+                <span>30d equity and max drawdown: <b>SOURCE_LATEST_WINDOW_NOT_PUBLISHED</b> · current facts remain usable</span>
               </footer>
             </div>
             <nav className="exec-table-pager" aria-label="Result pages">
@@ -259,38 +277,58 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
 const STAGE_TONE: Record<string, StageChip["tone"]> = { live: "live", canary: "canary", sandbox: "sandbox", paper: "paper", research: "research" };
 const stageChip = (stage: string): StageChip => ({ label: stage.toUpperCase(), tone: STAGE_TONE[stage.toLowerCase()] ?? "research" });
 
-/** One published fleet row: real columns real, the rest stated as absent. */
+function exactDisplay(value: string): string {
+  const [integer, fraction] = value.split(".");
+  const sign = integer.startsWith("-") ? "-" : "";
+  const digits = sign ? integer.slice(1) : integer;
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${sign}${grouped}${fraction ? `.${fraction}` : ""}`;
+}
+
+function ExactLines({ values, empty, tone }: { values: readonly { currency: string; value: string }[]; empty: string; tone?: "good" | "bad" }) {
+  if (values.length === 0) return <span className="exec-af-mute">{empty}</span>;
+  return <>{values.map((value, index) => {
+    const actualTone = value.value.startsWith("-") ? "bad" : tone;
+    return <div key={value.currency} data-tone={actualTone}>{index > 0 ? "+ " : ""}{exactDisplay(value.value)} <span className="exec-af-mute">{value.currency}</span></div>;
+  })}</>;
+}
+
+function FleetKpi({ label, values, empty, tone }: { label: string; values: readonly { currency: string; value: string }[]; empty: string; tone?: "good" | "bad" }) {
+  return <div className="exec-af-kpi"><div className="exec-af-kpilabel">{label}</div><div className="exec-af-kpival"><ExactLines values={values} empty={empty} tone={tone} /></div><div className="exec-af-kpisub">exact current-source values</div></div>;
+}
+
+/** One current-source fleet row, reduced by the server-owned v2 projection. */
 function FleetItemRows({ item, href, expandable, isOpen, onToggle }: { item: AlphaFleetItem; href: string; expandable: boolean; isOpen: boolean; onToggle: () => void }) {
   const mute = <span className="exec-af-mute">—</span>;
   const stageHref = (d: { deploymentId: string; stage: string }) =>
-    d.stage === "paper" ? `/deployments/paper/${encodeURIComponent(d.deploymentId)}`
-    : d.stage === "sandbox" ? `/deployments/sandbox/${encodeURIComponent(d.deploymentId)}`
+    d.stage.toLowerCase() === "paper" ? `/deployments/paper/${encodeURIComponent(d.deploymentId)}`
+    : d.stage.toLowerCase() === "sandbox" ? `/deployments/sandbox/${encodeURIComponent(d.deploymentId)}`
     : `/deployments/live/${encodeURIComponent(d.deploymentId)}`;
   return (
     <>
       <tr className="exec-af-row" onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
         <td className="exec-af-mark">{expandable ? (isOpen ? "▾" : "▸") : ""}</td>
         <td><A href={href} bold>{item.alphaLabel}</A><div className="exec-af-sub"><A href={href}>{item.alphaId}</A> · v{item.version}</div></td>
-        <td className="exec-af-dim">{mute}</td>
-        <td><span className="exec-af-stages"><Chip chip={stageChip(item.stage)} /></span></td>
-        <td data-numeric="true">{mute}</td>
-        <td data-numeric="true">{mute}</td>
-        <td data-numeric="true">{mute}</td>
-        <td>{mute}</td>
-        <td><span className="exec-af-mute">updated {utcStamp(item.updatedAt)}</span></td>
+        <td className="exec-af-dim">{item.owner ?? mute}{item.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{item.portfolios.map((portfolio, index) => <span key={portfolio.portfolioId}>{index ? " · " : ""}<A href={`/deployments/portfolios/${encodeURIComponent(portfolio.portfolioId)}`}>{portfolio.name}</A></span>)}</div> : null}</td>
+        <td><span className="exec-af-stages">{item.stages.map((stage) => <Chip key={stage} chip={stageChip(stage)} />)}</span></td>
+        <td data-numeric="true"><ExactLines values={item.allocations} empty="not allocated" /></td>
+        <td data-numeric="true"><ExactLines values={item.positionPnl.map((value) => ({ currency: value.currency, value: value.net }))} empty="no position facts" tone="good" /></td>
+        <td data-numeric="true"><ExactLines values={item.exposure} empty="flat" /></td>
+        <td>{item.balances.length ? item.balances.map((balance) => <div key={balance.currency}>{exactDisplay(balance.total)} <span className="exec-af-mute">{balance.currency}</span><div className="exec-af-sub">free {exactDisplay(balance.free)} · locked {exactDisplay(balance.locked)}</div></div>) : mute}</td>
+        <td><span data-tone={item.health === "READY" ? "good" : item.health === "ATTENTION" ? "bad" : "warn"}>{item.health}</span><div className="exec-af-sub">{item.attentionReasons.length ? item.attentionReasons.join(" · ") : `updated ${utcStamp(item.updatedAt)}`}</div></td>
         <td className="exec-af-go"><a href={href} aria-label={`Open ${item.alphaLabel}`}>→</a></td>
       </tr>
       {isOpen ? item.deployments.map((d, i) => (
         <tr key={d.deploymentId} className="exec-af-dep" data-last={i === item.deployments.length - 1 ? "true" : undefined}>
           <td />
           <td>└ <a href={stageHref(d)}>{d.deploymentId}</a></td>
-          <td className="exec-af-mute">{d.venue}</td>
-          <td><Chip chip={stageChip(d.stage)} /></td>
-          <td data-numeric="true">{mute}</td>
-          <td data-numeric="true">{mute}</td>
-          <td data-numeric="true">{mute}</td>
-          <td className="exec-af-mute">{mute}</td>
-          <td>{mute}</td>
+          <td className="exec-af-mute">{d.venue}<div className="exec-af-sub"><A href={`/deployments/accounts/${encodeURIComponent(d.accountId)}`}>{d.accountId}</A>{d.portfolioId ? <> · <A href={`/deployments/portfolios/${encodeURIComponent(d.portfolioId)}`}>{d.portfolioName ?? d.portfolioId}</A></> : null}</div></td>
+          <td><Chip chip={stageChip(d.stage)} /> <span className="exec-af-mute">{d.state}</span></td>
+          <td data-numeric="true">{d.allocation === null ? mute : <>{exactDisplay(d.allocation)} <span className="exec-af-mute">{d.currency}</span></>}</td>
+          <td data-numeric="true"><span data-tone={d.netPnl.startsWith("-") ? "bad" : "good"}>{exactDisplay(d.netPnl)}</span> <span className="exec-af-mute">{d.currency}</span><div className="exec-af-sub">R {exactDisplay(d.realizedPnl)} · U {exactDisplay(d.unrealizedPnl)}</div></td>
+          <td data-numeric="true">{exactDisplay(d.exposure)} <span className="exec-af-mute">{d.currency}</span></td>
+          <td className="exec-af-mute">{d.balanceTotal === null ? mute : <>{exactDisplay(d.balanceTotal)} {d.currency}<div className="exec-af-sub">free {exactDisplay(d.balanceFree ?? "0")} · locked {exactDisplay(d.balanceLocked ?? "0")}</div></>}</td>
+          <td><span data-tone={d.health === "READY" ? "good" : "bad"}>{d.health}</span><div className="exec-af-sub">updated {utcStamp(d.updatedAt)}</div></td>
           <td className="exec-af-go"><a href={stageHref(d)} aria-label={`Open ${d.deploymentId}`}>→</a></td>
         </tr>
       )) : null}

@@ -6,7 +6,8 @@ import { ControlPlaneQueryService, KeysetCursorCodec } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import {
-  AlphaFleetQuery, BindingItem, BindingsQuery, ManagerListEnvironment,
+  AlphaFleetEnvironment, AlphaFleetQuery, BindingItem, BindingsQuery,
+  MANAGER_LIST_ENVIRONMENTS, ManagerListEnvironment,
   alphaFleetResource, bindingsRawQuery, bindingsResource, fleetRawQuery,
 } from "./contracts";
 import {
@@ -25,11 +26,32 @@ const SNAPSHOT_MAX_AGE_MS = 5_000;
 
 const STRATEGY_FIELDS = [
   "strategy_id", "alpha_id", "name", "label", "version", "strategy_version",
-  "state", "stage", "active", "created_at", "updated_at",
+  "trader_id", "state", "stage", "active", "created_at", "updated_at",
 ] as const;
 const DEPLOYMENT_FIELDS = [
   "deployment_id", "strategy_id", "account_id", "mode", "venue", "state",
-  "active", "created_at", "updated_at",
+  "currency", "portfolio_id", "active", "created_at", "updated_at",
+] as const;
+const FLEET_ACCOUNT_FIELDS = [
+  "account_id", "trader_id", "strategy_id", "mode", "venue", "base_currency",
+  "active", "state", "created_at", "updated_at",
+] as const;
+const BALANCE_FIELDS = ["account_id", "currency", "total", "locked", "free", "updated_at"] as const;
+const PORTFOLIO_FIELDS = [
+  "portfolio_id", "name", "owner", "base_currency", "state", "created_at", "updated_at",
+] as const;
+const ALLOCATION_FIELDS = [
+  "allocation_id", "portfolio_id", "strategy_id", "deployment_id", "account_id",
+  "mode", "venue", "currency", "allocated_capital", "max_capital", "state",
+  "created_at", "updated_at",
+] as const;
+const POSITION_FIELDS = [
+  "position_id", "strategy_id", "account_id", "mode", "venue", "instrument_id",
+  "side", "signed_qty", "realized_pnl", "unrealized_pnl", "notional", "updated_at",
+] as const;
+const FINDING_FIELDS = [
+  "finding_id", "account_id", "strategy_id", "mode", "venue", "finding_type",
+  "severity", "status", "created_at", "resolved_at",
 ] as const;
 const ACCOUNT_FIELDS = [
   "account_id", "mode", "venue", "external_account_ref", "active", "state",
@@ -70,7 +92,10 @@ export class ManagerListsService {
       { actorId: principal.user.userId, workspaceId: scope(principal.workspaceId, query.environment), role: principal.user.role },
       fleetRawQuery(query),
     );
-    return envelope("execution.alpha-fleet-list.v1", principal, query.environment, snapshot, page);
+    return {
+      ...envelope("execution.alpha-fleet-list.v2", principal, query.environment, snapshot, page),
+      summary: snapshot.summary,
+    };
   }
 
   async bindings(principal: ManagerListPrincipal, query: BindingsQuery) {
@@ -103,7 +128,7 @@ export class ManagerListsService {
 
   private async ensureSnapshot(
     principal: ManagerListPrincipal,
-    environment: ManagerListEnvironment,
+    environment: AlphaFleetEnvironment,
     kind: "ALPHA_FLEET" | "BINDINGS",
     refreshAllowed: boolean,
   ): Promise<ProjectionSnapshot> {
@@ -124,7 +149,7 @@ export class ManagerListsService {
     if (current) return existing ?? current;
     const task = (kind === "ALPHA_FLEET"
       ? this.refreshFleet(principal, environment)
-      : this.refreshBindings(principal, environment))
+      : this.refreshBindings(principal, sourceEnvironment(environment)))
       .catch((error) => {
         if (existing) return existing;
         throw error;
@@ -134,17 +159,53 @@ export class ManagerListsService {
     return existing ?? task;
   }
 
-  private async refreshFleet(principal: ManagerListPrincipal, environment: ManagerListEnvironment) {
-    const context = readContext(environment);
-    const [strategies, deployments] = await Promise.all([
-      this.drain(principal, environment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies", STRATEGY_FIELDS, context),
-      this.drain(principal, environment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, context),
+  private async refreshFleet(principal: ManagerListPrincipal, environment: AlphaFleetEnvironment) {
+    const sourceEnvironments: readonly ManagerListEnvironment[] = environment === "all"
+      ? MANAGER_LIST_ENVIRONMENTS : [environment];
+    const reads: Array<{
+      strategies: ManagerPage; deployments: ManagerPage; accounts: ManagerPage; balances: ManagerPage;
+      portfolios: ManagerPage; allocations: ManagerPage; positions: ManagerPage; findings: ManagerPage;
+    }> = [];
+    // The shared N21 source authority is 15 r/s across every profile. Eight
+    // relations may run together inside one profile, but starting all three
+    // profiles together would enqueue 24 source reads and correctly trip the
+    // global fail-closed pacing budget. Profile-sized batches keep the source
+    // below its accepted envelope without weakening or retrying admission.
+    for (const sourceEnvironment of sourceEnvironments) {
+      const context = readContext(sourceEnvironment);
+      const [strategies, deployments, accounts, balances, portfolios, allocations, positions, findings] = await Promise.all([
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies", STRATEGY_FIELDS, context),
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, context),
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.accounts", "accounts", FLEET_ACCOUNT_FIELDS, context),
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.accounts", "account_balances", BALANCE_FIELDS, context),
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.portfolios", "portfolios", PORTFOLIO_FIELDS, context),
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.portfolios", "portfolio_allocations", ALLOCATION_FIELDS, context),
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.positions", "positions_v2", POSITION_FIELDS, context),
+        this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.reconciliation", "reconciliation_findings", FINDING_FIELDS, context),
+      ]);
+      reads.push({ strategies, deployments, accounts, balances, portfolios, allocations, positions, findings });
+    }
+    const strategies = combinePages(reads.map((read) => read.strategies), "strategy_id", "alpha_id");
+    const deployments = combinePages(reads.map((read) => read.deployments), "deployment_id");
+    const accounts = combinePages(reads.map((read) => read.accounts), "account_id");
+    const balances = combinePages(reads.map((read) => read.balances), "account_id", "currency");
+    const portfolios = combinePages(reads.map((read) => read.portfolios), "portfolio_id");
+    const allocations = combinePages(reads.map((read) => read.allocations), "allocation_id");
+    const positions = combinePages(reads.map((read) => read.positions), "position_id");
+    const findings = combinePages(reads.map((read) => read.findings), "finding_id");
+    const rows = fleetRows({
+      strategies: strategies.items, deployments: deployments.items, accounts: accounts.items,
+      balances: balances.items, portfolios: portfolios.items, allocations: allocations.items,
+      positions: positions.items, findings: findings.items, environment,
+    });
+    const pages = reads.flatMap((read) => [
+      read.strategies, read.deployments, read.accounts, read.balances,
+      read.portfolios, read.allocations, read.positions, read.findings,
     ]);
-    const rows = fleetRows(strategies.items, deployments.items, environment);
-    const sourceAsOf = latestDate(strategies.asOf, deployments.asOf);
+    const sourceAsOf = latestDate(...pages.map((page) => page.asOf));
     await this.repository.replaceAlphaFleet({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
-      completeness: completeness(strategies, deployments), rows,
+      completeness: completeness(...pages), rows, summary: fleetSummary(rows),
     });
     return requiredSnapshot(this.repository, principal.workspaceId, environment, "ALPHA_FLEET");
   }
@@ -205,10 +266,16 @@ export class ManagerListsError extends Error {
   constructor(readonly code: string, readonly status: number) { super(code); }
 }
 
-function scope(workspaceId: string, environment: ManagerListEnvironment) { return `${workspaceId}:${environment}`; }
-function profile(environment: ManagerListEnvironment) { return `${environment.toUpperCase()}_BINANCE_USDM`; }
+function scope(workspaceId: string, environment: AlphaFleetEnvironment) { return `${workspaceId}:${environment}`; }
+function profile(environment: AlphaFleetEnvironment) {
+  return environment === "all" ? "ALL_EXECUTION_PROFILES" : `${environment.toUpperCase()}_BINANCE_USDM`;
+}
 function readContext(environment: ManagerListEnvironment): ManagerReadContext {
   return { profileId: profile(environment) as ManagerReadContext["profileId"], mode: environment, errorPrefix: "N23" };
+}
+function sourceEnvironment(environment: AlphaFleetEnvironment): ManagerListEnvironment {
+  if (environment === "all") throw new ManagerListsError("BR72_BINDINGS_ENVIRONMENT_INVALID", 400);
+  return environment;
 }
 function text(row: Record<string, unknown>, ...keys: string[]): string | null {
   for (const key of keys) if (typeof row[key] === "string" && row[key]) return row[key] as string;
@@ -224,42 +291,289 @@ function date(row: Record<string, unknown>, ...keys: string[]): Date {
 }
 function normalized(value: string | null, fallback: string) { return value?.trim() ? value.trim().toUpperCase() : fallback; }
 
-function fleetRows(
-  strategies: readonly Record<string, unknown>[], deployments: readonly Record<string, unknown>[],
-  environment: ManagerListEnvironment,
-): AlphaProjectionRecord[] {
-  const byStrategy = new Map(strategies.flatMap((row) => {
-    const id = text(row, "strategy_id", "alpha_id"); return id ? [[id, row] as const] : [];
-  }));
-  const grouped = new Map<string, AlphaProjectionRecord>();
-  const attach = (alphaId: string, strategy: Record<string, unknown> | undefined, deployment?: Record<string, unknown>) => {
-    const current = grouped.get(alphaId);
-    const deploymentItem = deployment && text(deployment, "deployment_id") ? {
-      deployment_id: text(deployment, "deployment_id")!,
-      stage: normalized(text(deployment, "mode", "state"), environment.toUpperCase()),
-      venue: normalized(text(deployment, "venue"), "UNKNOWN"),
-    } : null;
-    const updatedAt = deployment ? date(deployment, "updated_at", "created_at") : strategy ? date(strategy, "updated_at", "created_at") : new Date(0);
-    const deploymentsNext = [...(current?.deployments ?? []), ...(deploymentItem ? [deploymentItem] : [])]
-      .filter((item, index, all) => all.findIndex((candidate) => candidate.deployment_id === item.deployment_id) === index)
-      .sort((a, b) => a.deployment_id.localeCompare(b.deployment_id));
-    grouped.set(alphaId, {
-      alphaId,
-      alphaLabel: text(strategy ?? {}, "label", "name") ?? current?.alphaLabel ?? alphaId,
-      version: text(strategy ?? {}, "version", "strategy_version") ?? current?.version ?? "UNVERSIONED",
-      stage: deploymentItem?.stage ?? current?.stage ?? normalized(text(strategy ?? {}, "stage", "state"), environment.toUpperCase()),
-      deployments: deploymentsNext,
-      updatedAt: current && current.updatedAt > updatedAt ? current.updatedAt : updatedAt,
+function fleetRows(input: {
+  strategies: readonly Record<string, unknown>[];
+  deployments: readonly Record<string, unknown>[];
+  accounts: readonly Record<string, unknown>[];
+  balances: readonly Record<string, unknown>[];
+  portfolios: readonly Record<string, unknown>[];
+  allocations: readonly Record<string, unknown>[];
+  positions: readonly Record<string, unknown>[];
+  findings: readonly Record<string, unknown>[];
+  environment: AlphaFleetEnvironment;
+}): AlphaProjectionRecord[] {
+  const strategyById = keyed(input.strategies, "strategy_id", "alpha_id");
+  const accountById = keyed(input.accounts, "account_id");
+  const portfolioById = keyed(input.portfolios, "portfolio_id");
+  const deploymentsByStrategy = groupedBy(input.deployments, "strategy_id");
+  const balancesByAccount = groupedBy(input.balances, "account_id");
+  const positionsByStrategy = groupedBy(input.positions, "strategy_id");
+  const findingsByStrategy = groupedBy(input.findings, "strategy_id");
+  const allocationsByDeployment = groupedBy(input.allocations, "deployment_id");
+  const allocationsByStrategy = groupedBy(input.allocations, "strategy_id");
+  const ids = new Set<string>([
+    ...strategyById.keys(),
+    ...input.deployments.flatMap((row) => text(row, "strategy_id") ? [text(row, "strategy_id")!] : []),
+  ]);
+
+  return [...ids].map((strategyId) => {
+    const strategy = strategyById.get(strategyId) ?? {};
+    const alphaId = text(strategy, "alpha_id", "strategy_id") ?? strategyId;
+    const sourceDeployments = deploymentsByStrategy.get(strategyId) ?? [];
+    const deploymentRecords = sourceDeployments.flatMap((deployment) => {
+      const deploymentId = text(deployment, "deployment_id");
+      const accountId = text(deployment, "account_id");
+      if (!deploymentId || !accountId) return [];
+      const account = accountById.get(accountId) ?? {};
+      const portfolioId = text(deployment, "portfolio_id");
+      const portfolio = portfolioId ? portfolioById.get(portfolioId) : undefined;
+      const allocation = (allocationsByDeployment.get(deploymentId) ?? [])[0]
+        ?? (allocationsByStrategy.get(strategyId) ?? []).find((row) => text(row, "account_id") === accountId);
+      const currency = normalized(
+        text(deployment, "currency") ?? text(allocation ?? {}, "currency") ?? text(account, "base_currency"),
+        "UNKNOWN",
+      );
+      const balanceRows = balancesByAccount.get(accountId) ?? [];
+      const balance = balanceRows.find((row) => normalized(text(row, "currency"), "UNKNOWN") === currency);
+      const positionRows = (positionsByStrategy.get(strategyId) ?? [])
+        .filter((row) => text(row, "account_id") === accountId);
+      const findingRows = unresolvedFindings([
+        ...(findingsByStrategy.get(strategyId) ?? []),
+        ...input.findings.filter((row) => !text(row, "strategy_id") && text(row, "account_id") === accountId),
+      ]);
+      const state = normalized(text(deployment, "state"), bool(deployment, "active") === false ? "INACTIVE" : "ACTIVE");
+      const active = (bool(deployment, "active") ?? true) && (bool(account, "active") ?? true);
+      const health = !active || ["HALTED", "ERROR", "FAILED", "SUSPENDED", "INACTIVE"].includes(state)
+        ? "ATTENTION" : findingRows.length > 0 ? "FINDING" : "READY";
+      const realized = sumExact(positionRows.map((row) => exact(row, "realized_pnl")));
+      const unrealized = sumExact(positionRows.map((row) => exact(row, "unrealized_pnl")));
+      const updatedAt = latestRecordDate([deployment, account, ...(balance ? [balance] : []), ...positionRows]);
+      return [{
+        deployment_id: deploymentId,
+        stage: normalized(text(deployment, "mode"), input.environment.toUpperCase()),
+        venue: normalized(text(deployment, "venue"), "UNKNOWN"),
+        account_id: accountId,
+        portfolio_id: portfolioId,
+        portfolio_name: text(portfolio ?? {}, "name"),
+        currency,
+        allocation: allocation ? exact(allocation, "allocated_capital") : null,
+        balance_total: balance ? exact(balance, "total") : null,
+        balance_free: balance ? exact(balance, "free") : null,
+        balance_locked: balance ? exact(balance, "locked") : null,
+        position_fact_count: positionRows.length,
+        realized_pnl: realized,
+        unrealized_pnl: unrealized,
+        net_pnl: sumExact([realized, unrealized]),
+        exposure: sumExact(positionRows.map((row) => absoluteExact(exact(row, "notional")))),
+        state,
+        active,
+        health,
+        updated_at: updatedAt.toISOString(),
+      }];
+    }).sort((left, right) => left.deployment_id.localeCompare(right.deployment_id));
+
+    const portfolioRecords = [...new Set(sourceDeployments.flatMap((row) => text(row, "portfolio_id") ? [text(row, "portfolio_id")!] : []))]
+      .map((portfolioId) => {
+        const portfolio = portfolioById.get(portfolioId) ?? {};
+        return {
+          portfolio_id: portfolioId,
+          name: text(portfolio, "name") ?? portfolioId,
+          base_currency: normalized(text(portfolio, "base_currency"), "UNKNOWN"),
+        };
+      });
+    const accountRows = sourceDeployments.flatMap((row) => {
+      const accountId = text(row, "account_id"); return accountId && accountById.has(accountId) ? [accountById.get(accountId)!] : [];
     });
+    const accountIds = [...new Set(sourceDeployments.flatMap((row) => {
+      const accountId = text(row, "account_id"); return accountId ? [accountId] : [];
+    }))];
+    const accountBalanceRows = accountIds.flatMap((accountId) => balancesByAccount.get(accountId) ?? []);
+    const positionRows = positionsByStrategy.get(strategyId) ?? [];
+    const allFindings = unresolvedFindings(findingsByStrategy.get(strategyId) ?? []);
+    const attentionReasons = [
+      ...(bool(strategy, "active") === false ? ["STRATEGY_INACTIVE"] : []),
+      ...deploymentRecords.filter((row) => row.health !== "READY").map((row) => `DEPLOYMENT_${row.health}`),
+      ...allFindings.map((row) => `RECONCILIATION_${normalized(text(row, "severity"), "OPEN")}`),
+    ].filter((value, index, all) => all.indexOf(value) === index).sort();
+    const stages = [...new Set(deploymentRecords.map((row) => row.stage))].sort((left, right) => stageRank(right) - stageRank(left));
+    if (stages.length === 0) stages.push("RESEARCH");
+    const stage = stages[0];
+    const positionCount = deploymentRecords.reduce((total, row) => total + row.position_fact_count, 0);
+    const balanceCount = accountBalanceRows.length;
+    return {
+      alphaId,
+      alphaLabel: text(strategy, "label", "name") ?? alphaId,
+      version: text(strategy, "version", "strategy_version") ?? "UNVERSIONED",
+      stage,
+      stages,
+      owner: text(strategy, "trader_id") ?? text(accountRows[0] ?? {}, "trader_id")
+        ?? text(portfolioById.get(portfolioRecords[0]?.portfolio_id ?? "") ?? {}, "owner"),
+      portfolios: portfolioRecords,
+      deployments: deploymentRecords,
+      allocations: currencyValues(deploymentRecords, "allocation"),
+      balances: currencyBalances(accountBalanceRows),
+      positionPnl: currencyPnl(deploymentRecords),
+      exposure: currencyValues(deploymentRecords, "exposure"),
+      health: deploymentRecords.length === 0 ? "RESEARCH_ONLY" : attentionReasons.length > 0 ? "ATTENTION" : "READY",
+      attentionReasons,
+      metricsAvailability: {
+        account_balance: { state: balanceCount > 0 ? "AVAILABLE" : "EMPTY", reason_code: balanceCount > 0 ? null : "NO_ACCOUNT_BALANCE_ROWS" },
+        current_position_pnl: { state: positionCount > 0 ? "AVAILABLE" : "EMPTY", reason_code: positionCount > 0 ? null : "NO_CURRENT_POSITION_FACTS" },
+        equity_series_30d: { state: "UNAVAILABLE", reason_code: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" },
+        max_drawdown_30d: { state: "UNAVAILABLE", reason_code: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" },
+      },
+      updatedAt: latestRecordDate([
+        strategy, ...sourceDeployments, ...accountRows, ...accountBalanceRows,
+        ...positionRows, ...(allocationsByStrategy.get(strategyId) ?? []),
+      ]),
+    };
+  }).sort((left, right) => left.alphaId.localeCompare(right.alphaId));
+}
+
+function fleetSummary(rows: readonly AlphaProjectionRecord[]): Record<string, unknown> {
+  const deployments = rows.flatMap((row) => row.deployments);
+  const portfolios = new Set(rows.flatMap((row) => row.portfolios.map((item) => item.portfolio_id)));
+  return {
+    alpha_count: rows.length,
+    deployment_count: deployments.length,
+    portfolio_count: portfolios.size,
+    needs_attention_count: rows.filter((row) => row.health === "ATTENTION").length,
+    research_only_count: rows.filter((row) => row.health === "RESEARCH_ONLY").length,
+    stage_counts: Object.fromEntries([...new Set(rows.flatMap((row) => row.stages))].sort()
+      .map((stage) => [stage, rows.filter((row) => row.stages.includes(stage)).length])),
+    allocation_by_currency: aggregateCurrencyValues(rows.flatMap((row) => row.allocations)),
+    exposure_by_currency: aggregateCurrencyValues(rows.flatMap((row) => row.exposure)),
+    current_position_pnl_by_currency: aggregateCurrencyPnl(rows.flatMap((row) => row.positionPnl)),
+    metric_basis: "CURRENT_SOURCE_FACTS",
   };
-  for (const row of strategies) {
-    const alphaId = text(row, "alpha_id", "strategy_id"); if (alphaId) attach(alphaId, row);
+}
+
+function keyed(rows: readonly Record<string, unknown>[], ...keys: string[]): Map<string, Record<string, unknown>> {
+  return new Map(rows.flatMap((row) => {
+    const id = text(row, ...keys); return id ? [[id, row] as const] : [];
+  }));
+}
+
+function groupedBy(rows: readonly Record<string, unknown>[], key: string): Map<string, Record<string, unknown>[]> {
+  const grouped = new Map<string, Record<string, unknown>[]>();
+  for (const row of rows) {
+    const id = text(row, key); if (!id) continue;
+    grouped.set(id, [...(grouped.get(id) ?? []), row]);
   }
-  for (const deployment of deployments) {
-    const strategyId = text(deployment, "strategy_id");
-    if (strategyId) attach(text(byStrategy.get(strategyId) ?? {}, "alpha_id", "strategy_id") ?? strategyId, byStrategy.get(strategyId), deployment);
+  return grouped;
+}
+
+function combinePages(pages: readonly ManagerPage[], ...keyFields: string[]): ManagerPage {
+  const records = new Map<string, ManagerPage["items"][number]>();
+  for (const row of pages.flatMap((page) => page.items)) {
+    const key = keyFields.map((field) => text(row, field) ?? "").join("\u001f");
+    if (key.replaceAll("\u001f", "")) records.set(key, row);
   }
-  return [...grouped.values()].sort((a, b) => a.alphaId.localeCompare(b.alphaId));
+  return {
+    items: [...records.values()], nextCursor: null,
+    asOf: latestString(...pages.map((page) => page.asOf)),
+    freshness: pages.reduce((state, page) => worstFreshness(state, page.freshness), "FRESH" as ManagerPage["freshness"]),
+    completeness: pages.reduce((state, page) => worstCompleteness(state, page.completeness), "COMPLETE" as ManagerPage["completeness"]),
+  };
+}
+
+function unresolvedFindings(rows: readonly Record<string, unknown>[]) {
+  return rows.filter((row) => !["RESOLVED", "CLOSED", "DISMISSED"].includes(normalized(text(row, "status"), "OPEN")));
+}
+
+function latestRecordDate(rows: readonly Record<string, unknown>[]): Date {
+  return rows.map((row) => date(row, "updated_at", "created_at"))
+    .sort((left, right) => right.valueOf() - left.valueOf())[0] ?? new Date(0);
+}
+
+function stageRank(stage: string): number {
+  return ({ RESEARCH: 0, PAPER: 1, SANDBOX: 2, CANARY: 3, LIVE: 4 } as Record<string, number>)[stage.toUpperCase()] ?? -1;
+}
+
+function exact(row: Record<string, unknown>, key: string): string {
+  const value = row[key];
+  if (value === null || value === undefined) return "0";
+  const result = typeof value === "string" || typeof value === "number" ? String(value) : "";
+  if (!/^-?\d+(?:\.\d+)?$/.test(result)) throw new ManagerListsError("BR72_SOURCE_DECIMAL_INVALID", 502);
+  return normalizeExact(result);
+}
+
+function absoluteExact(value: string): string { return value.startsWith("-") ? value.slice(1) : value; }
+
+function normalizeExact(value: string): string {
+  const negative = value.startsWith("-");
+  const [integerRaw, fractionRaw = ""] = (negative ? value.slice(1) : value).split(".");
+  const integer = integerRaw.replace(/^0+(?=\d)/, "") || "0";
+  const fraction = fractionRaw.replace(/0+$/, "");
+  const zero = integer === "0" && fraction === "";
+  return `${negative && !zero ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+}
+
+function sumExact(values: readonly string[]): string {
+  if (values.length === 0) return "0";
+  const parsed = values.map((value) => {
+    const normalizedValue = normalizeExact(value);
+    const negative = normalizedValue.startsWith("-");
+    const [integer, fraction = ""] = (negative ? normalizedValue.slice(1) : normalizedValue).split(".");
+    return { negative, integer, fraction };
+  });
+  const scale = Math.max(...parsed.map((value) => value.fraction.length));
+  const total = parsed.reduce((sum, value) => {
+    const units = BigInt(`${value.integer}${value.fraction.padEnd(scale, "0")}`);
+    return sum + (value.negative ? -units : units);
+  }, 0n);
+  const negative = total < 0n;
+  const digits = (negative ? -total : total).toString().padStart(scale + 1, "0");
+  const raw = scale === 0 ? digits : `${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
+  return normalizeExact(`${negative ? "-" : ""}${raw}`);
+}
+
+function currencyValues(
+  deployments: readonly AlphaProjectionRecord["deployments"][number][],
+  key: "allocation" | "exposure",
+) {
+  const values = deployments.flatMap((row) => row[key] === null || (key === "exposure" && row.position_fact_count === 0)
+    ? [] : [{ currency: row.currency, value: row[key]! }]);
+  return aggregateCurrencyValues(values);
+}
+
+function aggregateCurrencyValues(values: readonly { currency: string; value: string }[]) {
+  const currencies = [...new Set(values.map((value) => value.currency))].sort();
+  return currencies.map((currency) => ({ currency, value: sumExact(values.filter((value) => value.currency === currency).map((value) => value.value)) }));
+}
+
+function currencyBalances(balanceRows: readonly Record<string, unknown>[]) {
+  const currencies = [...new Set(balanceRows.map((row) => normalized(text(row, "currency"), "UNKNOWN")))].sort();
+  return currencies.map((currency) => {
+    const rows = balanceRows.filter((row) => normalized(text(row, "currency"), "UNKNOWN") === currency);
+    return {
+      currency,
+      total: sumExact(rows.map((row) => exact(row, "total"))),
+      free: sumExact(rows.map((row) => exact(row, "free"))),
+      locked: sumExact(rows.map((row) => exact(row, "locked"))),
+    };
+  });
+}
+
+function currencyPnl(deployments: readonly AlphaProjectionRecord["deployments"][number][]) {
+  const withFacts = deployments.filter((row) => row.position_fact_count > 0);
+  const currencies = [...new Set(withFacts.map((row) => row.currency))].sort();
+  return currencies.map((currency) => {
+    const rows = withFacts.filter((row) => row.currency === currency);
+    const realized = sumExact(rows.map((row) => row.realized_pnl));
+    const unrealized = sumExact(rows.map((row) => row.unrealized_pnl));
+    return { currency, realized, unrealized, net: sumExact([realized, unrealized]) };
+  });
+}
+
+function aggregateCurrencyPnl(values: readonly { currency: string; realized: string; unrealized: string; net: string }[]) {
+  const currencies = [...new Set(values.map((value) => value.currency))].sort();
+  return currencies.map((currency) => {
+    const rows = values.filter((value) => value.currency === currency);
+    const realized = sumExact(rows.map((row) => row.realized));
+    const unrealized = sumExact(rows.map((row) => row.unrealized));
+    return { currency, realized, unrealized, net: sumExact([realized, unrealized]) };
+  });
 }
 
 function bindingRows(
@@ -309,7 +623,7 @@ function worstCompleteness(left: ManagerPage["completeness"], right: ManagerPage
   const rank = { COMPLETE: 0, PARTIAL: 1, UNKNOWN: 2 }; return rank[right] > rank[left] ? right : left;
 }
 async function requiredSnapshot(
-  repository: ManagerListsRepository, workspaceId: string, environment: ManagerListEnvironment,
+  repository: ManagerListsRepository, workspaceId: string, environment: AlphaFleetEnvironment,
   kind: "ALPHA_FLEET" | "BINDINGS",
 ) {
   const snapshot = await repository.snapshot(workspaceId, environment, kind);
@@ -324,7 +638,7 @@ function bindingItem(item: BindingProjectionRecord): BindingItem {
     state: item.state, credential_state: item.credentialState, updated_at: item.updatedAt.toISOString() };
 }
 function envelope(
-  schemaVersion: string, principal: ManagerListPrincipal, environment: ManagerListEnvironment,
+  schemaVersion: string, principal: ManagerListPrincipal, environment: AlphaFleetEnvironment,
   snapshot: ProjectionSnapshot, page: unknown,
 ) {
   return {

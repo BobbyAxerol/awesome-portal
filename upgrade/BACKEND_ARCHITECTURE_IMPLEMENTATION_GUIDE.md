@@ -1791,6 +1791,17 @@ activation or the phase):**
   not yet pass preflight; commands and stable authority remain false.
 
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
+
+- **Alpha Fleet current-source v2 (2026-09-01):** the global fleet entry screen
+  now projects the already-published Manager strategy, deployment, account,
+  balance, portfolio, allocation, current-position and reconciliation facts
+  across Paper/Sandbox/Live. The server owns exact-decimal per-currency
+  aggregation, multi-stage membership, health, counts, filters, sort and signed
+  keysets; the browser owns presentation only. Historical equity/drawdown is
+  typed unavailable because no bounded latest-window source selector exists.
+  See [`EX_BE_35_ALPHA_FLEET_CURRENT_SOURCE_V2.md`](./backend/EX_BE_35_ALPHA_FLEET_CURRENT_SOURCE_V2.md).
+
+- **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and
   Paper BUILDING-epoch evidence. Full Portal remains on SGP.

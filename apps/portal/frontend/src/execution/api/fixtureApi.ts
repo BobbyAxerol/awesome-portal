@@ -20,7 +20,7 @@ import PAPER_WORKBENCH_PARTIAL from "../../../../../../packages/contracts/fixtur
 import PAPER_WORKBENCH_VNM_PARTIAL from "../../../../../../packages/contracts/fixtures/execution-paper-workbench-vnm.partial.valid.json";
 import QUERY_ANALYTICS_EMPTY from "../../../../../../packages/contracts/fixtures/execution-query-analytics.empty.valid.json";
 import COMMAND_TASKS from "../../../../../../packages/contracts/fixtures/execution-command-tasks.valid.json";
-import ALPHA_FLEET from "../../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.valid.json";
+import ALPHA_FLEET from "../../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.v2.valid.json";
 import BINDINGS_LIST from "../../../../../../packages/contracts/fixtures/execution-bindings-list.valid.json";
 import BINDING_DETAIL from "../../../../../../packages/contracts/fixtures/execution-binding-detail.valid.json";
 import LIVE_REVIEW from "../../../../../../packages/contracts/fixtures/governance-live-review.valid.json";

@@ -1984,3 +1984,19 @@ Projection/query/analytics and then SSE are activated in that order after the
 same immutable Edge image is accepted for all three profile runtimes. Command
 remains a separate exact-contract plane and must not be inferred from read
 availability.
+
+### 8.49 Alpha Fleet current-source v2 return (2026-09-01)
+
+The `/deployments/alphas` product route keeps the reviewed rich composition and
+now consumes `execution.alpha-fleet-list.v2`. The same-origin BFF combines the
+accepted Paper/Sandbox/Live profiles and publishes current owner, portfolios,
+allocations, all account-currency balances, current position PnL/exposure,
+multi-stage membership and reconciliation health. Capital aggregation remains
+server-owned exact-decimal logic.
+
+Frontend rules frozen by tests: stage chips trigger server re-query; an alpha
+with multiple stages remains visible under each held stage; expanded deployment
+links normalize source case and route to the correct Paper/Sandbox/Live
+workbench; missing bounded 30-day equity/drawdown stays a panel-local typed gap.
+Do not replace the screen with an envelope and do not reconstruct historical
+series or monetary totals in React.

@@ -1130,7 +1130,7 @@
       "summary_source_ids": []
     },
     {
-      "activation_gate": "N29 BR-EX-72 bounded list projection, same-origin BFF and workspace-isolation evidence pass.",
+      "activation_gate": "Alpha Fleet v2 current-source projection, exact-decimal reducer, same-origin BFF and workspace-isolation evidence pass.",
       "canonical_route": "/deployments/alphas",
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
@@ -1433,7 +1433,7 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_COMMAND_CENTER_PERFORMANCE"
       ],
-      "contract_revision": 2,
+      "contract_revision": 3,
       "data_mode": "REAL",
       "delivery_policy": null,
       "delivery_profile": null,
@@ -2722,7 +2722,7 @@
       "feature_id": "EXECUTION_ALPHA_FLEET",
       "inputs": [
         {
-          "authority": "execution.alpha-fleet-list.v1",
+          "authority": "execution.alpha-fleet-list.v2",
           "id": "alpha_fleet",
           "required": true
         }

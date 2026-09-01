@@ -4,6 +4,8 @@ import { PostgresListResource, RawKeysetQuery } from "../query";
 
 export const MANAGER_LIST_ENVIRONMENTS = ["paper", "sandbox", "live"] as const;
 export type ManagerListEnvironment = (typeof MANAGER_LIST_ENVIRONMENTS)[number];
+export const ALPHA_FLEET_ENVIRONMENTS = ["all", ...MANAGER_LIST_ENVIRONMENTS] as const;
+export type AlphaFleetEnvironment = (typeof ALPHA_FLEET_ENVIRONMENTS)[number];
 
 const QuerySchema = z.object({
   workspace_id: z.string().min(1).max(128).optional(),
@@ -16,6 +18,8 @@ const QuerySchema = z.object({
   stage: z.string().trim().min(1).max(64).optional(),
   venue: z.string().trim().min(1).max(64).optional(),
   state: z.string().trim().min(1).max(64).optional(),
+  owner: z.string().trim().min(1).max(128).optional(),
+  health: z.string().trim().min(1).max(64).optional(),
 }).strict();
 
 function assertCursorDirection(
@@ -28,8 +32,9 @@ function assertCursorDirection(
 }
 
 export const AlphaFleetQuerySchema = QuerySchema.omit({ venue: true, state: true })
+  .extend({ environment: z.enum(ALPHA_FLEET_ENVIRONMENTS).default("all") })
   .superRefine(assertCursorDirection);
-export const BindingsQuerySchema = QuerySchema.omit({ stage: true })
+export const BindingsQuerySchema = QuerySchema.omit({ stage: true, owner: true, health: true })
   .superRefine(assertCursorDirection);
 
 export type AlphaFleetQuery = z.infer<typeof AlphaFleetQuerySchema>;
@@ -41,7 +46,26 @@ export interface AlphaFleetRow extends QueryResultRow {
   alpha_label: string;
   version: string;
   stage: string;
-  deployments: Array<{ deployment_id: string; stage: string; venue: string }>;
+  stages: string[];
+  stage_filter: string;
+  stage_rank: number;
+  owner: string | null;
+  portfolios: Array<{ portfolio_id: string; name: string; base_currency: string }>;
+  deployments: Array<{
+    deployment_id: string; stage: string; venue: string; account_id: string;
+    portfolio_id: string | null; portfolio_name: string | null; currency: string;
+    allocation: string | null; balance_total: string | null; balance_free: string | null;
+    balance_locked: string | null; position_fact_count: number;
+    realized_pnl: string; unrealized_pnl: string; net_pnl: string; exposure: string;
+    state: string; active: boolean; health: string; updated_at: string;
+  }>;
+  allocations: Array<{ currency: string; value: string }>;
+  balances: Array<{ currency: string; total: string; free: string; locked: string }>;
+  position_pnl: Array<{ currency: string; realized: string; unrealized: string; net: string }>;
+  exposure: Array<{ currency: string; value: string }>;
+  health: string;
+  attention_reasons: string[];
+  metrics_availability: Record<string, { state: string; reason_code: string | null }>;
   updated_at: Date;
 }
 
@@ -60,7 +84,17 @@ export interface AlphaFleetItem {
   alpha_label: string;
   version: string;
   stage: string;
-  deployments: readonly { deployment_id: string; stage: string; venue: string }[];
+  stages: readonly string[];
+  owner: string | null;
+  portfolios: readonly { portfolio_id: string; name: string; base_currency: string }[];
+  deployments: AlphaFleetRow["deployments"];
+  allocations: AlphaFleetRow["allocations"];
+  balances: AlphaFleetRow["balances"];
+  position_pnl: AlphaFleetRow["position_pnl"];
+  exposure: AlphaFleetRow["exposure"];
+  health: string;
+  attention_reasons: readonly string[];
+  metrics_availability: AlphaFleetRow["metrics_availability"];
   updated_at: string;
 }
 
@@ -75,22 +109,30 @@ export interface BindingItem {
 
 export function alphaFleetResource(): PostgresListResource<AlphaFleetRow, AlphaFleetItem> {
   return {
-    resourceId: "execution.alpha-fleet-list.v1",
+    resourceId: "execution.alpha-fleet-list.v2",
     table: "execution_alpha_fleet_projection",
-    selectColumns: ["scope_id", "alpha_id", "alpha_label", "version", "stage", "deployments", "updated_at"],
+    selectColumns: [
+      "scope_id", "alpha_id", "alpha_label", "version", "stage", "stages", "stage_filter", "stage_rank", "owner", "portfolios",
+      "deployments", "allocations", "balances", "position_pnl", "exposure", "health",
+      "attention_reasons", "metrics_availability", "updated_at",
+    ],
     workspaceColumn: "scope_id",
     idSortField: "alpha_id",
     filters: {
       alpha_label: { column: "alpha_label", kind: "text", operators: ["contains"], maxLength: 128 },
-      stage: { column: "stage", kind: "text", operators: ["eq"], maxLength: 64 },
+      stage: { column: "stage_filter", kind: "text", operators: ["contains"], maxLength: 70 },
+      owner: { column: "owner", kind: "text", operators: ["eq"], maxLength: 128 },
+      health: { column: "health", kind: "text", operators: ["eq"], maxLength: 64 },
     },
     sorts: {
       updated_at: { column: "updated_at", kind: "timestamp" },
       alpha_label: { column: "alpha_label", kind: "text" },
       stage: { column: "stage", kind: "text" },
+      stage_rank: { column: "stage_rank", kind: "integer" },
+      health: { column: "health", kind: "text" },
       alpha_id: { column: "alpha_id", kind: "text" },
     },
-    defaultSort: [{ field: "updated_at", direction: "desc" }],
+    defaultSort: [{ field: "stage_rank", direction: "desc" }, { field: "alpha_label", direction: "asc" }],
     allowedRoles: ["ADMIN", "USER"],
     statementTimeoutMs: 2_000,
     mapRow: (row) => ({
@@ -98,7 +140,17 @@ export function alphaFleetResource(): PostgresListResource<AlphaFleetRow, AlphaF
       alpha_label: row.alpha_label,
       version: row.version,
       stage: row.stage,
+      stages: row.stages,
+      owner: row.owner,
+      portfolios: row.portfolios,
       deployments: row.deployments,
+      allocations: row.allocations,
+      balances: row.balances,
+      position_pnl: row.position_pnl,
+      exposure: row.exposure,
+      health: row.health,
+      attention_reasons: row.attention_reasons,
+      metrics_availability: row.metrics_availability,
       updated_at: row.updated_at.toISOString(),
     }),
   };
@@ -144,7 +196,9 @@ export function fleetRawQuery(query: AlphaFleetQuery): RawKeysetQuery {
     sort: query.sort,
     filters: [
       ...(query.search ? [{ field: "alpha_label", op: "contains", value: query.search }] : []),
-      ...(query.stage ? [{ field: "stage", op: "eq", value: query.stage }] : []),
+      ...(query.stage ? [{ field: "stage", op: "contains", value: `|${query.stage.toUpperCase()}|` }] : []),
+      ...(query.owner ? [{ field: "owner", op: "eq", value: query.owner }] : []),
+      ...(query.health ? [{ field: "health", op: "eq", value: query.health }] : []),
     ],
   };
 }

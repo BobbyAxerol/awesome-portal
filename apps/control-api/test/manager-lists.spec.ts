@@ -26,17 +26,30 @@ class FakeSource {
   pause: Promise<void> | null = null;
   readonly rows: Record<string, Array<Record<string, Scalar>>> = {
     strategies: [
-      { strategy_id: "str_a", alpha_id: "alpha_a", label: "Carry A", version: "3.2", state: "READY", updated_at: "2026-08-31T09:00:00Z", secret_token: "never" },
-      { strategy_id: "str_b", alpha_id: "alpha_b", label: "Breakout B", version: "1.1", state: "READY", updated_at: "2026-08-31T08:00:00Z" },
+      { strategy_id: "str_a", alpha_id: "alpha_a", label: "Carry A", version: "3.2", trader_id: "Bobby-001", state: "READY", active: true, updated_at: "2026-08-31T09:00:00Z", secret_token: "never" },
+      { strategy_id: "str_b", alpha_id: "alpha_b", label: "Breakout B", version: "1.1", trader_id: "Bobby-001", state: "READY", active: true, updated_at: "2026-08-31T08:00:00Z" },
     ],
     strategy_deployments: [
-      { deployment_id: "dep_a", strategy_id: "str_a", account_id: "acc_a", mode: "paper", venue: "BINANCE", state: "READY", updated_at: "2026-08-31T10:00:00Z" },
-      { deployment_id: "dep_b", strategy_id: "str_b", account_id: "acc_b", mode: "paper", venue: "BYBIT", state: "READY", updated_at: "2026-08-31T08:30:00Z" },
+      { deployment_id: "dep_a", strategy_id: "str_a", account_id: "acc_a", mode: "paper", venue: "BINANCE", currency: "USDT", portfolio_id: "pf_main", state: "ACTIVE", active: true, updated_at: "2026-08-31T10:00:00Z" },
+      { deployment_id: "dep_b", strategy_id: "str_b", account_id: "acc_b", mode: "paper", venue: "BYBIT", currency: "USDT", portfolio_id: "pf_main", state: "ACTIVE", active: true, updated_at: "2026-08-31T08:30:00Z" },
     ],
     accounts: [
-      { account_id: "acc_a", mode: "paper", venue: "BINANCE", external_account_ref: "ext_a", active: true, updated_at: "2026-08-31T09:30:00Z" },
-      { account_id: "acc_b", mode: "paper", venue: "BYBIT", external_account_ref: "ext_b", active: false, updated_at: "2026-08-31T08:30:00Z" },
+      { account_id: "acc_a", trader_id: "Bobby-001", strategy_id: "str_a", mode: "paper", venue: "BINANCE", base_currency: "USDT", external_account_ref: "ext_a", active: true, updated_at: "2026-08-31T09:30:00Z" },
+      { account_id: "acc_b", trader_id: "Bobby-001", strategy_id: "str_b", mode: "paper", venue: "BYBIT", base_currency: "USDT", external_account_ref: "ext_b", active: false, updated_at: "2026-08-31T08:30:00Z" },
     ],
+    account_balances: [
+      { account_id: "acc_a", currency: "USDT", total: "20123.19605", locked: "0", free: "20123.19605", updated_at: "2026-08-31T10:00:00Z" },
+      { account_id: "acc_b", currency: "USDT", total: "10000", locked: "100", free: "9900", updated_at: "2026-08-31T08:30:00Z" },
+    ],
+    portfolios: [{ portfolio_id: "pf_main", name: "Main", owner: "bobby", base_currency: "USDT", state: "ACTIVE", updated_at: "2026-08-31T09:00:00Z" }],
+    portfolio_allocations: [
+      { allocation_id: "alloc_a", portfolio_id: "pf_main", strategy_id: "str_a", deployment_id: "dep_a", account_id: "acc_a", mode: "paper", venue: "BINANCE", currency: "USDT", allocated_capital: "20000", max_capital: "25000", state: "ACTIVE", updated_at: "2026-08-31T09:00:00Z" },
+      { allocation_id: "alloc_b", portfolio_id: "pf_main", strategy_id: "str_b", deployment_id: "dep_b", account_id: "acc_b", mode: "paper", venue: "BYBIT", currency: "USDT", allocated_capital: "10000", max_capital: "12000", state: "ACTIVE", updated_at: "2026-08-31T08:00:00Z" },
+    ],
+    positions_v2: [
+      { position_id: "pos_a", strategy_id: "str_a", account_id: "acc_a", mode: "paper", venue: "BINANCE", instrument_id: "ETHUSDT.BINANCE", realized_pnl: "123.19605", unrealized_pnl: "0", notional: "0", updated_at: "2026-08-31T10:00:00Z" },
+    ],
+    reconciliation_findings: [],
     venue_accounts: [],
     broker_account_sync_effective: [
       { sync_id: "sync_a", external_account_ref: "ext_a", mode: "paper", venue: "BINANCE", status: "SYNCED", synced_at: "2026-08-31T09:31:00Z" },
@@ -49,7 +62,9 @@ class FakeSource {
   ) {
     this.calls.push(`${environment}:${screenId}:${relation}`);
     if (this.pause) await this.pause;
-    const all = this.rows[relation] ?? [];
+    const all = (this.rows[relation] ?? []).filter((row) =>
+      typeof row.mode !== "string" || row.mode.toLowerCase() === environment,
+    );
     const start = query.cursor ? Number(query.cursor) : 0;
     const slice = all.slice(start, start + 1);
     const next = start + 1 < all.length ? String(start + 1) : null;
@@ -105,26 +120,86 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
   const principal = (workspaceId = "ws_primary") => ({ user, session, workspaceId });
 
   it("projects the complete Fleet source, returns exact filtered counts, and never exposes source secrets", async () => {
-    const full = await service.fleet(principal(), { environment: "paper", limit: 1 }) as Record<string, any>;
+    const full = await service.fleet(principal(), { environment: "all", limit: 1 }) as Record<string, any>;
     expect(full).toMatchObject({
-      schema_version: "execution.alpha-fleet-list.v1", record_authority: "PORTAL_PROJECTION",
-      source_authority: "TRADING_SYSTEM", environment: "paper", freshness: "FRESH", completeness: "COMPLETE",
+      schema_version: "execution.alpha-fleet-list.v2", record_authority: "PORTAL_PROJECTION",
+      source_authority: "TRADING_SYSTEM", delivery_profile: "ALL_EXECUTION_PROFILES",
+      environment: "all", freshness: "FRESH", completeness: "COMPLETE",
     });
     expect(full.page.total_count).toBe(2);
     expect(full.page.rows).toHaveLength(1);
     expect(full.page.next_cursor).toMatch(/^kc1\./);
+    expect(full.summary).toMatchObject({
+      alpha_count: 2, deployment_count: 2, portfolio_count: 1,
+      allocation_by_currency: [{ currency: "USDT", value: "30000" }],
+    });
     expect(JSON.stringify(full)).not.toContain("secret_token");
     expect(JSON.stringify(full)).not.toContain("opaque-source-key");
 
+    const fleetCalls = source.calls.filter((call) => call.includes(":EXECUTION_ALPHA_FLEET_LIST_SCREEN:"));
+    const lastPaper = fleetCalls.map((call) => call.startsWith("paper:")).lastIndexOf(true);
+    const firstSandbox = fleetCalls.findIndex((call) => call.startsWith("sandbox:"));
+    const lastSandbox = fleetCalls.map((call) => call.startsWith("sandbox:")).lastIndexOf(true);
+    const firstLive = fleetCalls.findIndex((call) => call.startsWith("live:"));
+    expect(lastPaper).toBeGreaterThanOrEqual(0);
+    expect(firstSandbox).toBeGreaterThan(lastPaper);
+    expect(firstLive).toBeGreaterThan(lastSandbox);
+
     const filtered = await service.fleet(principal(), {
-      environment: "paper", limit: 10, search: "Carry", stage: "PAPER",
+      environment: "all", limit: 10, search: "Carry", stage: "PAPER",
     }) as Record<string, any>;
     expect(filtered.page.total_count).toBe(2);
     expect(filtered.page.filtered_count).toBe(1);
     expect(filtered.page.rows[0]).toMatchObject({
       alpha_id: "alpha_a", alpha_label: "Carry A", version: "3.2", stage: "PAPER",
-      deployments: [{ deployment_id: "dep_a", stage: "PAPER", venue: "BINANCE" }],
+      stages: ["PAPER"],
+      owner: "Bobby-001", portfolios: [{ portfolio_id: "pf_main", name: "Main", base_currency: "USDT" }],
+      allocations: [{ currency: "USDT", value: "20000" }],
+      position_pnl: [{ currency: "USDT", realized: "123.19605", unrealized: "0", net: "123.19605" }],
+      deployments: [expect.objectContaining({
+        deployment_id: "dep_a", stage: "PAPER", venue: "BINANCE", account_id: "acc_a",
+        balance_locked: "0", position_fact_count: 1,
+      })],
     });
+  });
+
+  it("combines accepted profiles without FX mixing and filters by every stage presence", async () => {
+    source.rows.strategy_deployments.push({
+      deployment_id: "dep_a_sbx", strategy_id: "str_a", account_id: "acc_a_sbx",
+      mode: "sandbox", venue: "BINANCE", currency: "USDC", portfolio_id: "pf_main",
+      state: "ACTIVE", active: true, updated_at: "2026-08-31T11:00:00Z",
+    });
+    source.rows.accounts.push({
+      account_id: "acc_a_sbx", trader_id: "Bobby-001", strategy_id: "str_a", mode: "sandbox",
+      venue: "BINANCE", base_currency: "USDC", active: true, updated_at: "2026-08-31T11:00:00Z",
+    });
+    source.rows.account_balances.push({
+      account_id: "acc_a_sbx", currency: "USDC", total: "5000", locked: "10", free: "4990",
+      updated_at: "2026-08-31T11:00:00Z",
+    });
+    source.rows.portfolio_allocations.push({
+      allocation_id: "alloc_a_sbx", portfolio_id: "pf_main", strategy_id: "str_a",
+      deployment_id: "dep_a_sbx", account_id: "acc_a_sbx", mode: "sandbox", venue: "BINANCE",
+      currency: "USDC", allocated_capital: "5000", state: "ACTIVE", updated_at: "2026-08-31T11:00:00Z",
+    });
+
+    const all = await service.fleet(principal(), { environment: "all", limit: 50 }) as Record<string, any>;
+    const carry = all.page.rows.find((row: any) => row.alpha_id === "alpha_a");
+    expect(carry).toMatchObject({ stage: "SANDBOX", stages: ["SANDBOX", "PAPER"] });
+    expect(carry.allocations).toEqual([
+      { currency: "USDC", value: "5000" },
+      { currency: "USDT", value: "20000" },
+    ]);
+    expect(carry.balances).toEqual([
+      { currency: "USDC", total: "5000", free: "4990", locked: "10" },
+      { currency: "USDT", total: "20123.19605", free: "20123.19605", locked: "0" },
+    ]);
+    expect(all.summary.stage_counts).toMatchObject({ PAPER: 2, SANDBOX: 1 });
+
+    const paper = await service.fleet(principal(), { environment: "all", limit: 50, stage: "PAPER" }) as Record<string, any>;
+    const sandbox = await service.fleet(principal(), { environment: "all", limit: 50, stage: "SANDBOX" }) as Record<string, any>;
+    expect(paper.page.rows.map((row: any) => row.alpha_id).sort()).toEqual(["alpha_a", "alpha_b"]);
+    expect(sandbox.page.rows.map((row: any) => row.alpha_id)).toEqual(["alpha_a"]);
   });
 
   it("publishes list/detail bindings without credentials and isolates workspaces", async () => {
@@ -200,6 +275,7 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
   });
 
   it("rejects page sizes above the published BR-EX-72 bound", () => {
+    expect(AlphaFleetQuerySchema.parse({}).environment).toBe("all");
     expect(AlphaFleetQuerySchema.safeParse({ limit: 51 }).success).toBe(false);
     expect(BindingsQuerySchema.safeParse({ limit: 51 }).success).toBe(false);
   });

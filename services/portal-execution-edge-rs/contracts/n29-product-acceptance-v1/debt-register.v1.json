@@ -30,9 +30,13 @@
       "state": "CLOSED_ACCEPTED_BY_N29_GATE",
       "evidence": [
         "execution-manager-lists.v1.schema.json",
+        "execution-alpha-fleet-list.v2.schema.json",
         "execution-manager-lists.openapi.json",
         "1723680000016_execution-manager-lists.sql",
+        "1723680000017_execution-alpha-fleet-v2.sql",
         "manager-lists.spec.ts",
+        "AlphaFleet.tsx",
+        "recomposeContainers.tsx",
         "governance-live-review.valid.json",
         "portal registry revision 6",
         "brEx72.test.tsx"

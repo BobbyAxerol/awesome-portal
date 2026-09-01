@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Primus Portal Manager Lists API",
-    "version": "1.0.0",
-    "description": "BR-EX-72 narrow same-origin BFF contracts over workspace/profile-scoped Portal projections."
+    "version": "2.0.0",
+    "description": "Versioned same-origin manager BFF contracts over workspace/profile-scoped Portal projections."
   },
   "paths": {
     "/api/v1/execution/alphas": {
@@ -11,18 +11,20 @@
         "operationId": "listAlphaFleet",
         "parameters": [
           { "$ref": "#/components/parameters/Workspace" },
-          { "$ref": "#/components/parameters/Environment" },
+          { "$ref": "#/components/parameters/AlphaFleetEnvironment" },
           { "$ref": "#/components/parameters/After" },
           { "$ref": "#/components/parameters/Before" },
           { "$ref": "#/components/parameters/Limit" },
           { "$ref": "#/components/parameters/Sort" },
           { "name": "search", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "stage", "in": "query", "schema": { "type": "string", "maxLength": 64 } }
+          { "name": "stage", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
+          { "name": "owner", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "health", "in": "query", "schema": { "type": "string", "maxLength": 64 } }
         ],
         "responses": {
           "200": {
-            "description": "Bounded Fleet page with exact counts.",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-manager-lists.v1.schema.json#/$defs/AlphaFleetResponse" } } }
+            "description": "Bounded enriched Fleet page and fleet-wide current-fact summary with exact counts.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-alpha-fleet-list.v2.schema.json#/$defs/AlphaFleetResponse" } } }
           }
         }
       }
@@ -70,6 +72,7 @@
   "components": {
     "parameters": {
       "Workspace": { "name": "workspace_id", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+      "AlphaFleetEnvironment": { "name": "environment", "in": "query", "schema": { "enum": ["all", "paper", "sandbox", "live"], "default": "all" } },
       "Environment": { "name": "environment", "in": "query", "schema": { "enum": ["paper", "sandbox", "live"], "default": "paper" } },
       "After": { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
       "Before": { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },

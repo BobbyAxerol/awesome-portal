@@ -2392,7 +2392,7 @@
     },
     {
       "screen_id": "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
-      "contract_revision": 2,
+      "contract_revision": 3,
       "feature_id": "EXECUTION_ALPHA_FLEET",
       "maturity": "COMMISSIONED",
       "data_mode": "REAL",
@@ -2418,7 +2418,7 @@
       "inputs": [
         {
           "id": "alpha_fleet",
-          "authority": "execution.alpha-fleet-list.v1",
+          "authority": "execution.alpha-fleet-list.v2",
           "required": true
         }
       ],
@@ -2433,7 +2433,7 @@
         "apps/portal"
       ],
       "related_task_ids": [],
-      "activation_gate": "N29 BR-EX-72 bounded list projection, same-origin BFF and workspace-isolation evidence pass."
+      "activation_gate": "Alpha Fleet v2 current-source projection, exact-decimal reducer, same-origin BFF and workspace-isolation evidence pass."
     },
     {
       "screen_id": "EXECUTION_ALPHA_360_SCREEN",

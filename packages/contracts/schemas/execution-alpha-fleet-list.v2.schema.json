@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-alpha-fleet-list.v2.schema.json",
+  "$defs": {
+    "Identifier": { "type": "string", "minLength": 1, "maxLength": 191 },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "Decimal": { "type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
+    "CurrencyValue": {
+      "type": "object", "additionalProperties": false, "required": ["currency", "value"],
+      "properties": { "currency": { "$ref": "#/$defs/Identifier" }, "value": { "$ref": "#/$defs/Decimal" } }
+    },
+    "CurrencyBalance": {
+      "type": "object", "additionalProperties": false, "required": ["currency", "total", "free", "locked"],
+      "properties": {
+        "currency": { "$ref": "#/$defs/Identifier" }, "total": { "$ref": "#/$defs/Decimal" },
+        "free": { "$ref": "#/$defs/Decimal" }, "locked": { "$ref": "#/$defs/Decimal" }
+      }
+    },
+    "CurrencyPnl": {
+      "type": "object", "additionalProperties": false, "required": ["currency", "realized", "unrealized", "net"],
+      "properties": {
+        "currency": { "$ref": "#/$defs/Identifier" }, "realized": { "$ref": "#/$defs/Decimal" },
+        "unrealized": { "$ref": "#/$defs/Decimal" }, "net": { "$ref": "#/$defs/Decimal" }
+      }
+    },
+    "MetricState": {
+      "type": "object", "additionalProperties": false, "required": ["state", "reason_code"],
+      "properties": {
+        "state": { "enum": ["AVAILABLE", "EMPTY", "UNAVAILABLE"] },
+        "reason_code": { "type": ["string", "null"], "maxLength": 128 }
+      }
+    },
+    "Portfolio": {
+      "type": "object", "additionalProperties": false, "required": ["portfolio_id", "name", "base_currency"],
+      "properties": {
+        "portfolio_id": { "$ref": "#/$defs/Identifier" }, "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "base_currency": { "$ref": "#/$defs/Identifier" }
+      }
+    },
+    "Deployment": {
+      "type": "object", "additionalProperties": false,
+      "required": ["deployment_id", "stage", "venue", "account_id", "portfolio_id", "portfolio_name", "currency", "allocation", "balance_total", "balance_free", "balance_locked", "position_fact_count", "realized_pnl", "unrealized_pnl", "net_pnl", "exposure", "state", "active", "health", "updated_at"],
+      "properties": {
+        "deployment_id": { "$ref": "#/$defs/Identifier" }, "stage": { "$ref": "#/$defs/Identifier" },
+        "venue": { "$ref": "#/$defs/Identifier" }, "account_id": { "$ref": "#/$defs/Identifier" },
+        "portfolio_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "portfolio_name": { "type": ["string", "null"], "maxLength": 256 },
+        "currency": { "$ref": "#/$defs/Identifier" },
+        "allocation": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] },
+        "balance_total": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] },
+        "balance_free": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] },
+        "balance_locked": { "oneOf": [{ "$ref": "#/$defs/Decimal" }, { "type": "null" }] },
+        "position_fact_count": { "type": "integer", "minimum": 0 },
+        "realized_pnl": { "$ref": "#/$defs/Decimal" }, "unrealized_pnl": { "$ref": "#/$defs/Decimal" },
+        "net_pnl": { "$ref": "#/$defs/Decimal" }, "exposure": { "$ref": "#/$defs/Decimal" },
+        "state": { "$ref": "#/$defs/Identifier" }, "active": { "type": "boolean" },
+        "health": { "enum": ["READY", "ATTENTION", "FINDING"] }, "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "AlphaFleetItem": {
+      "type": "object", "additionalProperties": false,
+      "required": ["alpha_id", "alpha_label", "version", "stage", "stages", "owner", "portfolios", "deployments", "allocations", "balances", "position_pnl", "exposure", "health", "attention_reasons", "metrics_availability", "updated_at"],
+      "properties": {
+        "alpha_id": { "$ref": "#/$defs/Identifier" }, "alpha_label": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "version": { "$ref": "#/$defs/Identifier" }, "stage": { "$ref": "#/$defs/Identifier" },
+        "stages": { "type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true, "items": { "enum": ["RESEARCH", "PAPER", "SANDBOX", "CANARY", "LIVE"] } },
+        "owner": { "type": ["string", "null"], "maxLength": 191 },
+        "portfolios": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/Portfolio" } },
+        "deployments": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/Deployment" } },
+        "allocations": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/CurrencyValue" } },
+        "balances": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/CurrencyBalance" } },
+        "position_pnl": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/CurrencyPnl" } },
+        "exposure": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/CurrencyValue" } },
+        "health": { "enum": ["READY", "ATTENTION", "RESEARCH_ONLY"] },
+        "attention_reasons": { "type": "array", "maxItems": 64, "items": { "type": "string", "maxLength": 128 } },
+        "metrics_availability": {
+          "type": "object", "additionalProperties": false,
+          "required": ["account_balance", "current_position_pnl", "equity_series_30d", "max_drawdown_30d"],
+          "properties": {
+            "account_balance": { "$ref": "#/$defs/MetricState" }, "current_position_pnl": { "$ref": "#/$defs/MetricState" },
+            "equity_series_30d": { "$ref": "#/$defs/MetricState" }, "max_drawdown_30d": { "$ref": "#/$defs/MetricState" }
+          }
+        },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "Summary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["alpha_count", "deployment_count", "portfolio_count", "needs_attention_count", "research_only_count", "stage_counts", "allocation_by_currency", "exposure_by_currency", "current_position_pnl_by_currency", "metric_basis"],
+      "properties": {
+        "alpha_count": { "type": "integer", "minimum": 0 }, "deployment_count": { "type": "integer", "minimum": 0 },
+        "portfolio_count": { "type": "integer", "minimum": 0 }, "needs_attention_count": { "type": "integer", "minimum": 0 },
+        "research_only_count": { "type": "integer", "minimum": 0 },
+        "stage_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "allocation_by_currency": { "type": "array", "items": { "$ref": "#/$defs/CurrencyValue" } },
+        "exposure_by_currency": { "type": "array", "items": { "$ref": "#/$defs/CurrencyValue" } },
+        "current_position_pnl_by_currency": { "type": "array", "items": { "$ref": "#/$defs/CurrencyPnl" } },
+        "metric_basis": { "const": "CURRENT_SOURCE_FACTS" }
+      }
+    },
+    "AlphaPage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["rows", "total_count", "filtered_count", "next_cursor", "prev_cursor", "has_more", "has_previous", "applied_filters", "applied_sort"],
+      "properties": {
+        "rows": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/AlphaFleetItem" } },
+        "total_count": { "type": "integer", "minimum": 0 }, "filtered_count": { "type": "integer", "minimum": 0 },
+        "next_cursor": { "type": ["string", "null"], "maxLength": 4096 }, "prev_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "has_more": { "type": "boolean" }, "has_previous": { "type": "boolean" },
+        "applied_filters": { "type": "array" }, "applied_sort": { "type": "array" }
+      }
+    },
+    "AlphaFleetResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "environment", "read_at", "source_as_of", "freshness", "completeness", "summary", "page"],
+      "properties": {
+        "schema_version": { "const": "execution.alpha-fleet-list.v2" }, "record_authority": { "const": "PORTAL_PROJECTION" },
+        "source_authority": { "const": "TRADING_SYSTEM" }, "delivery_profile": { "enum": ["ALL_EXECUTION_PROFILES", "PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"] },
+        "workspace_id": { "$ref": "#/$defs/Identifier" }, "environment": { "enum": ["all", "paper", "sandbox", "live"] },
+        "read_at": { "$ref": "#/$defs/Timestamp" }, "source_as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "freshness": { "enum": ["FRESH", "STALE"] }, "completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+        "summary": { "$ref": "#/$defs/Summary" }, "page": { "$ref": "#/$defs/AlphaPage" }
+      }
+    }
+  },
+  "$ref": "#/$defs/AlphaFleetResponse"
+}

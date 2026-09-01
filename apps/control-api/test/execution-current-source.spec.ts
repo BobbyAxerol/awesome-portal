@@ -435,6 +435,10 @@ describe("BR-EX-72 Manager list source acceptance", () => {
       "manager.strategies", "strategies", { limit: 50 },
     )).toBe("/internal/v2/manager/relations/public/strategies?limit=50");
     expect(managerListManagerV2Path(
+      "live", "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+      "manager.portfolios", "portfolio_allocations", { limit: 200 },
+    )).toBe("/internal/v2/manager/relations/public/portfolio_allocations?limit=200");
+    expect(managerListManagerV2Path(
       "sandbox", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
       "manager.accounts", "broker_account_sync_effective", { limit: 200 },
     )).toBe("/internal/v2/manager/relations/public/broker_account_sync_effective?limit=200");

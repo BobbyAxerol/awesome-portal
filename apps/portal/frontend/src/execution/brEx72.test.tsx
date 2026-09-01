@@ -1,7 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import ALPHA_FLEET from "../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.valid.json";
+import ALPHA_FLEET from "../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.v2.valid.json";
 import BINDINGS_LIST from "../../../../../packages/contracts/fixtures/execution-bindings-list.valid.json";
 import BINDING_DETAIL from "../../../../../packages/contracts/fixtures/execution-binding-detail.valid.json";
 import LIVE_REVIEW from "../../../../../packages/contracts/fixtures/governance-live-review.valid.json";
@@ -9,6 +9,8 @@ import { createFixtureApi } from "./api/fixtureApi";
 import { createHttpApi } from "./api/httpApi";
 import { readAlphaFleet, readBindingDetail, readBindings, readLiveReview } from "./api/profileRead";
 import { AccountsBindingsContainer, AlphaFleetContainer } from "./screens/profileContainers";
+import { AlphaFleetRichContainer } from "./screens/recomposeContainers";
+import { AlphaFleet } from "./screens/AlphaFleet";
 
 const POLICY = {
   policyRevision: 6,
@@ -61,5 +63,32 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     render(<AccountsBindingsContainer api={createFixtureApi()} />);
     await waitFor(() => expect(screen.getAllByText("acc_a@BINANCE").length).toBeGreaterThan(0));
     expect(screen.queryByText(/N20_BINDINGS_LIST_CONTRACT_NOT_PUBLISHED/)).toBeNull();
+  });
+
+  it("keeps the reviewed rich Fleet composition and wires current-source facts and drill-downs", async () => {
+    render(<AlphaFleetRichContainer api={createFixtureApi()} />);
+    expect(await screen.findByText("Bobby-001")).toBeTruthy();
+    expect(screen.getAllByText("123.19605").length).toBeGreaterThan(0);
+    expect(screen.getByText("SOURCE_LATEST_WINDOW_NOT_PUBLISHED")).toBeTruthy();
+
+    const alphaId = screen.getByText("alpha_a");
+    fireEvent.click(alphaId.closest("tr")!);
+    const deployment = await screen.findByRole("link", { name: "dep_a" });
+    expect(deployment.getAttribute("href")).toBe("/deployments/paper/dep_a");
+    expect(screen.getByRole("link", { name: "acc_a" }).getAttribute("href"))
+      .toBe("/deployments/accounts/acc_a");
+
+    fireEvent.click(screen.getByRole("button", { name: "Paper (1)" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Paper (1)" }).getAttribute("aria-pressed")).toBe("true"));
+  });
+
+  it("keeps a multi-stage alpha visible when filtering by any stage it holds", () => {
+    const list = readAlphaFleet(ALPHA_FLEET)!;
+    const row = list.page.rows[0];
+    render(<AlphaFleet filter="paper" list={{
+      ...list,
+      page: { ...list.page, rows: [{ ...row, stage: "LIVE", stages: ["LIVE", "PAPER"] }] },
+    }} />);
+    expect(screen.getByRole("link", { name: "Carry A" })).toBeTruthy();
   });
 });

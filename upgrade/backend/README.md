@@ -1602,3 +1602,18 @@ durable run/attempt events. Detailed evidence:
   access remain false.
 - Detail:
   [`EX_BE_34_MULTIPROFILE_CURRENT_SOURCE_RUNTIME_ACTIVATION.md`](./EX_BE_34_MULTIPROFILE_CURRENT_SOURCE_RUNTIME_ACTIVATION.md).
+
+## Backend state — 2026-09-01 (Alpha Fleet current-source v2)
+
+- Alpha Fleet no longer stops at the BR-EX-72 strategy/deployment shell. The
+  v2 projection consumes the existing bounded strategy, deployment, account,
+  balance, portfolio, allocation, position and reconciliation relations across
+  the independently accepted Paper/Sandbox/Live profiles.
+- Exact per-currency values, multi-stage membership, transactional projection,
+  signed keyset pagination and server-side stage filtering are authoritative;
+  the browser preserves the reviewed rich composition and does no capital
+  arithmetic.
+- Missing 30-day equity/drawdown remains a typed source gap rather than a fake
+  chart. Command, Live mutation, `main` and stable remain unchanged.
+- Detail:
+  [`EX_BE_35_ALPHA_FLEET_CURRENT_SOURCE_V2.md`](./EX_BE_35_ALPHA_FLEET_CURRENT_SOURCE_V2.md).

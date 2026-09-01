@@ -26,7 +26,7 @@ import type { BlotterFilter, OrderStatus } from "../contracts";
 import { ALPHA_TABS, AlphaThreeSixty, type AlphaScope, type AlphaTab, type InsightTile, type Kpi } from "./AlphaThreeSixty";
 import { PORTFOLIO_TABS, PortfolioThreeSixty, type PortfolioTab } from "./PortfolioThreeSixty";
 import { AccountBroker360 } from "./AccountBroker360";
-import { AlphaFleet } from "./AlphaFleet";
+import { AlphaFleet, type FleetFilter } from "./AlphaFleet";
 import { AccountsBindings } from "./AccountsBindings";
 import { BindingDetail } from "./BindingDetail";
 import type { OrderFunnel } from "../analytics";
@@ -442,12 +442,23 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
 
 export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
   const [query, setQuery] = useState<AlphaFleetQuery>({ limit: 50 });
+  const [filter, setFilter] = useState<FleetFilter>("all");
   const state = useApiRead(() => api.getAlphaFleet(query), [api, query]);
   return (
     <AlphaFleet
+      filter={filter}
       list={state.value}
       status={state.status}
       reason={state.reason}
+      onFilterChange={(next) => {
+        setFilter(next);
+        setQuery((current) => ({
+          ...current,
+          stage: next === "all" ? undefined : next.toUpperCase(),
+          after: undefined,
+          before: undefined,
+        }));
+      }}
       onNextPage={(cursor) => setQuery((q) => ({ ...q, after: cursor, before: undefined }))}
       onPreviousPage={(cursor) => setQuery((q) => ({ ...q, before: cursor, after: undefined }))}
     />

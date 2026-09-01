@@ -6,7 +6,10 @@ surface, N28 unavailable registry, accepted Paper evidence, N29 approval and
 conditions contracts, release workflow and recovery runbook. Twenty-two screen
 contracts have a canonical backend API; Account/Broker 360 remains the one
 typed N28 unavailable screen. The same-origin frontend consumer is accepted
-with a warning-clean product import graph. `debt-register.v1.json` separates
+with a warning-clean product import graph. The Alpha Fleet closeout is bound
+to `execution.alpha-fleet-list.v2`, its all-profile current-source projection,
+rich product composition and admission-pacing regression.
+`debt-register.v1.json` separates
 zero unnamed backend debt from the closed BR-EX-72 product request, protected
 release gate and nine typed owner gaps.
 

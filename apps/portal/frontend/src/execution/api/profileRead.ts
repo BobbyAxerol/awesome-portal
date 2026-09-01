@@ -313,8 +313,40 @@ export interface AlphaFleetItem {
   alphaLabel: string;
   version: string;
   stage: string;
-  deployments: readonly { deploymentId: string; stage: string; venue: string }[];
+  stages: readonly string[];
+  owner: string | null;
+  portfolios: readonly { portfolioId: string; name: string; baseCurrency: string }[];
+  deployments: readonly AlphaFleetDeployment[];
+  allocations: readonly CurrencyValue[];
+  balances: readonly CurrencyBalance[];
+  positionPnl: readonly CurrencyPnl[];
+  exposure: readonly CurrencyValue[];
+  health: string;
+  attentionReasons: readonly string[];
+  metricsAvailability: Readonly<Record<string, MetricState>>;
   updatedAt: string;
+}
+
+export interface CurrencyValue { currency: string; value: string }
+export interface CurrencyBalance { currency: string; total: string; free: string; locked: string }
+export interface CurrencyPnl { currency: string; realized: string; unrealized: string; net: string }
+export interface MetricState { state: string; reasonCode: string | null }
+export interface AlphaFleetDeployment {
+  deploymentId: string; stage: string; venue: string; accountId: string;
+  portfolioId: string | null; portfolioName: string | null; currency: string;
+  allocation: string | null; balanceTotal: string | null; balanceFree: string | null;
+  balanceLocked: string | null; positionFactCount: number;
+  realizedPnl: string; unrealizedPnl: string; netPnl: string; exposure: string;
+  state: string; active: boolean; health: string; updatedAt: string;
+}
+export interface AlphaFleetSummary {
+  alphaCount: number; deploymentCount: number; portfolioCount: number;
+  needsAttentionCount: number; researchOnlyCount: number;
+  stageCounts: Readonly<Record<string, number>>;
+  allocationByCurrency: readonly CurrencyValue[];
+  exposureByCurrency: readonly CurrencyValue[];
+  currentPositionPnlByCurrency: readonly CurrencyPnl[];
+  metricBasis: "CURRENT_SOURCE_FACTS";
 }
 
 export interface BindingItem {
@@ -333,6 +365,7 @@ export interface ManagerListEnvelope<T> {
   sourceAsOf: string | null;
   readAt: string;
   page: ManagerListPage<T>;
+  summary?: AlphaFleetSummary;
 }
 
 function readManagerPage<T>(raw: unknown, row: (value: unknown) => T | null): ManagerListPage<T> | null {
@@ -355,6 +388,7 @@ function readManagerEnvelope<T>(
   raw: unknown,
   schemaVersion: string,
   row: (value: unknown) => T | null,
+  summary?: (value: unknown) => AlphaFleetSummary | null,
 ): ManagerListEnvelope<T> | null {
   const root = obj(raw);
   if (!root || root.schema_version !== schemaVersion || root.record_authority !== "PORTAL_PROJECTION") return null;
@@ -363,23 +397,106 @@ function readManagerEnvelope<T>(
   const freshness = str(root.freshness);
   const completeness = str(root.completeness);
   const readAt = str(root.read_at);
-  if (!page || !environment || !freshness || !completeness || !readAt) return null;
-  return { environment, freshness, completeness, sourceAsOf: str(root.source_as_of), readAt, page };
+  const parsedSummary = summary ? summary(root.summary) : undefined;
+  if (!page || !environment || !freshness || !completeness || !readAt || (summary && !parsedSummary)) return null;
+  return { environment, freshness, completeness, sourceAsOf: str(root.source_as_of), readAt, page, ...(parsedSummary ? { summary: parsedSummary } : {}) };
 }
 
 function readFleetItem(raw: unknown): AlphaFleetItem | null {
   const root = obj(raw);
-  if (!root || !Array.isArray(root.deployments)) return null;
+  if (!root || !Array.isArray(root.deployments) || !Array.isArray(root.portfolios)
+    || !Array.isArray(root.allocations) || !Array.isArray(root.balances)
+    || !Array.isArray(root.position_pnl) || !Array.isArray(root.exposure)
+    || !Array.isArray(root.attention_reasons)) return null;
   const alphaId = str(root.alpha_id); const alphaLabel = str(root.alpha_label);
   const version = str(root.version); const stage = str(root.stage); const updatedAt = str(root.updated_at);
-  if (!alphaId || !alphaLabel || !version || !stage || !updatedAt) return null;
-  const deployments = root.deployments.flatMap((value) => {
-    const item = obj(value); const deploymentId = str(item?.deployment_id);
-    const itemStage = str(item?.stage); const venue = str(item?.venue);
-    return item && deploymentId && itemStage && venue ? [{ deploymentId, stage: itemStage, venue }] : [];
+  const health = str(root.health); const metrics = obj(root.metrics_availability);
+  const stages = Array.isArray(root.stages)
+    ? root.stages.flatMap((value) => typeof value === "string" && value.length > 0 ? [value] : []) : [];
+  if (!alphaId || !alphaLabel || !version || !stage || stages.length !== (Array.isArray(root.stages) ? root.stages.length : -1)
+    || stages.length === 0 || !health || !updatedAt || !metrics) return null;
+  const deployments = exactArray(root.deployments, readFleetDeployment);
+  const portfolios = exactArray(root.portfolios, (value) => {
+    const item = obj(value); const portfolioId = str(item?.portfolio_id);
+    const name = str(item?.name); const baseCurrency = str(item?.base_currency);
+    return item && portfolioId && name && baseCurrency ? { portfolioId, name, baseCurrency } : null;
   });
-  if (deployments.length !== root.deployments.length) return null;
-  return { alphaId, alphaLabel, version, stage, deployments, updatedAt };
+  const allocations = exactArray(root.allocations, readCurrencyValue);
+  const balances = exactArray(root.balances, readCurrencyBalance);
+  const positionPnl = exactArray(root.position_pnl, readCurrencyPnl);
+  const exposure = exactArray(root.exposure, readCurrencyValue);
+  const metricsAvailability = Object.fromEntries(Object.entries(metrics).flatMap(([key, value]) => {
+    const item = obj(value); const state = str(item?.state);
+    return item && state ? [[key, { state, reasonCode: str(item.reason_code) }] as const] : [];
+  }));
+  if (!deployments || !portfolios || !allocations || !balances || !positionPnl || !exposure
+    || Object.keys(metricsAvailability).length !== Object.keys(metrics).length
+    || root.attention_reasons.some((value) => typeof value !== "string")) return null;
+  return {
+    alphaId, alphaLabel, version, stage, stages, owner: str(root.owner), portfolios, deployments,
+    allocations, balances, positionPnl, exposure, health,
+    attentionReasons: root.attention_reasons as string[], metricsAvailability, updatedAt,
+  };
+}
+
+function exactArray<T>(raw: unknown[], reader: (value: unknown) => T | null): T[] | null {
+  const values = raw.map(reader); return values.some((value) => value === null) ? null : values as T[];
+}
+
+function readFleetDeployment(value: unknown): AlphaFleetDeployment | null {
+  const item = obj(value); if (!item) return null;
+  const deploymentId = str(item.deployment_id); const stage = str(item.stage); const venue = str(item.venue);
+  const accountId = str(item.account_id); const currency = str(item.currency); const state = str(item.state);
+  const health = str(item.health); const updatedAt = str(item.updated_at);
+  const realizedPnl = str(item.realized_pnl); const unrealizedPnl = str(item.unrealized_pnl);
+  const netPnl = str(item.net_pnl); const exposure = str(item.exposure);
+  const positionFactCount = typeof item.position_fact_count === "number"
+    && Number.isSafeInteger(item.position_fact_count) && item.position_fact_count >= 0
+    ? item.position_fact_count : null;
+  if (!deploymentId || !stage || !venue || !accountId || !currency || !state || !health || !updatedAt
+    || !realizedPnl || !unrealizedPnl || !netPnl || !exposure || positionFactCount === null
+    || typeof item.active !== "boolean") return null;
+  return {
+    deploymentId, stage, venue, accountId, portfolioId: str(item.portfolio_id),
+    portfolioName: str(item.portfolio_name), currency, allocation: str(item.allocation),
+    balanceTotal: str(item.balance_total), balanceFree: str(item.balance_free),
+    balanceLocked: str(item.balance_locked), positionFactCount,
+    realizedPnl, unrealizedPnl, netPnl, exposure, state, active: item.active, health, updatedAt,
+  };
+}
+
+function readCurrencyValue(value: unknown): CurrencyValue | null {
+  const item = obj(value); const currency = str(item?.currency); const exactValue = str(item?.value);
+  return item && currency && exactValue ? { currency, value: exactValue } : null;
+}
+function readCurrencyBalance(value: unknown): CurrencyBalance | null {
+  const item = obj(value); const currency = str(item?.currency); const total = str(item?.total);
+  const free = str(item?.free); const locked = str(item?.locked);
+  return item && currency && total && free && locked ? { currency, total, free, locked } : null;
+}
+function readCurrencyPnl(value: unknown): CurrencyPnl | null {
+  const item = obj(value); const currency = str(item?.currency); const realized = str(item?.realized);
+  const unrealized = str(item?.unrealized); const net = str(item?.net);
+  return item && currency && realized && unrealized && net ? { currency, realized, unrealized, net } : null;
+}
+
+function readFleetSummary(raw: unknown): AlphaFleetSummary | null {
+  const root = obj(raw); const stageCountsRaw = obj(root?.stage_counts);
+  if (!root || !stageCountsRaw || root.metric_basis !== "CURRENT_SOURCE_FACTS") return null;
+  const integer = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  const alphaCount = integer(root.alpha_count); const deploymentCount = integer(root.deployment_count);
+  const portfolioCount = integer(root.portfolio_count); const needsAttentionCount = integer(root.needs_attention_count);
+  const researchOnlyCount = integer(root.research_only_count);
+  const stageCounts = Object.fromEntries(Object.entries(stageCountsRaw).filter(([, value]) => integer(value) !== null)) as Record<string, number>;
+  const allocations = Array.isArray(root.allocation_by_currency) ? exactArray(root.allocation_by_currency, readCurrencyValue) : null;
+  const exposure = Array.isArray(root.exposure_by_currency) ? exactArray(root.exposure_by_currency, readCurrencyValue) : null;
+  const pnl = Array.isArray(root.current_position_pnl_by_currency) ? exactArray(root.current_position_pnl_by_currency, readCurrencyPnl) : null;
+  if (alphaCount === null || deploymentCount === null || portfolioCount === null || needsAttentionCount === null
+    || researchOnlyCount === null || Object.keys(stageCounts).length !== Object.keys(stageCountsRaw).length
+    || !allocations || !exposure || !pnl) return null;
+  return { alphaCount, deploymentCount, portfolioCount, needsAttentionCount, researchOnlyCount,
+    stageCounts, allocationByCurrency: allocations, exposureByCurrency: exposure,
+    currentPositionPnlByCurrency: pnl, metricBasis: "CURRENT_SOURCE_FACTS" };
 }
 
 function readBindingItem(raw: unknown): BindingItem | null {
@@ -392,7 +509,7 @@ function readBindingItem(raw: unknown): BindingItem | null {
 }
 
 export const readAlphaFleet = (raw: unknown) =>
-  readManagerEnvelope(raw, "execution.alpha-fleet-list.v1", readFleetItem);
+  readManagerEnvelope(raw, "execution.alpha-fleet-list.v2", readFleetItem, readFleetSummary);
 
 export const readBindings = (raw: unknown) =>
   readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem);

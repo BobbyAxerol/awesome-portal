@@ -57,10 +57,131 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Identifier: string;
-        /** @enum {unknown} */
-        Environment: "paper" | "sandbox" | "live";
         /** Format: date-time */
         Timestamp: string;
+        Decimal: string;
+        CurrencyValue: {
+            currency: components["schemas"]["Identifier"];
+            value: components["schemas"]["Decimal"];
+        };
+        CurrencyPnl: {
+            currency: components["schemas"]["Identifier"];
+            realized: components["schemas"]["Decimal"];
+            unrealized: components["schemas"]["Decimal"];
+            net: components["schemas"]["Decimal"];
+        };
+        Summary: {
+            alpha_count: number;
+            deployment_count: number;
+            portfolio_count: number;
+            needs_attention_count: number;
+            research_only_count: number;
+            stage_counts: {
+                [key: string]: number;
+            };
+            allocation_by_currency: components["schemas"]["CurrencyValue"][];
+            exposure_by_currency: components["schemas"]["CurrencyValue"][];
+            current_position_pnl_by_currency: components["schemas"]["CurrencyPnl"][];
+            /** @constant */
+            metric_basis: "CURRENT_SOURCE_FACTS";
+        };
+        Portfolio: {
+            portfolio_id: components["schemas"]["Identifier"];
+            name: string;
+            base_currency: components["schemas"]["Identifier"];
+        };
+        Deployment: {
+            deployment_id: components["schemas"]["Identifier"];
+            stage: components["schemas"]["Identifier"];
+            venue: components["schemas"]["Identifier"];
+            account_id: components["schemas"]["Identifier"];
+            portfolio_id: components["schemas"]["Identifier"] | null;
+            portfolio_name: string | null;
+            currency: components["schemas"]["Identifier"];
+            allocation: components["schemas"]["Decimal"] | null;
+            balance_total: components["schemas"]["Decimal"] | null;
+            balance_free: components["schemas"]["Decimal"] | null;
+            balance_locked: components["schemas"]["Decimal"] | null;
+            position_fact_count: number;
+            realized_pnl: components["schemas"]["Decimal"];
+            unrealized_pnl: components["schemas"]["Decimal"];
+            net_pnl: components["schemas"]["Decimal"];
+            exposure: components["schemas"]["Decimal"];
+            state: components["schemas"]["Identifier"];
+            active: boolean;
+            /** @enum {unknown} */
+            health: "READY" | "ATTENTION" | "FINDING";
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        CurrencyBalance: {
+            currency: components["schemas"]["Identifier"];
+            total: components["schemas"]["Decimal"];
+            free: components["schemas"]["Decimal"];
+            locked: components["schemas"]["Decimal"];
+        };
+        MetricState: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE";
+            reason_code: string | null;
+        };
+        AlphaFleetItem: {
+            alpha_id: components["schemas"]["Identifier"];
+            alpha_label: string;
+            version: components["schemas"]["Identifier"];
+            stage: components["schemas"]["Identifier"];
+            stages: ("RESEARCH" | "PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+            owner: string | null;
+            portfolios: components["schemas"]["Portfolio"][];
+            deployments: components["schemas"]["Deployment"][];
+            allocations: components["schemas"]["CurrencyValue"][];
+            balances: components["schemas"]["CurrencyBalance"][];
+            position_pnl: components["schemas"]["CurrencyPnl"][];
+            exposure: components["schemas"]["CurrencyValue"][];
+            /** @enum {unknown} */
+            health: "READY" | "ATTENTION" | "RESEARCH_ONLY";
+            attention_reasons: string[];
+            metrics_availability: {
+                account_balance: components["schemas"]["MetricState"];
+                current_position_pnl: components["schemas"]["MetricState"];
+                equity_series_30d: components["schemas"]["MetricState"];
+                max_drawdown_30d: components["schemas"]["MetricState"];
+            };
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        AlphaPage: {
+            rows: components["schemas"]["AlphaFleetItem"][];
+            total_count: number;
+            filtered_count: number;
+            next_cursor: string | null;
+            prev_cursor: string | null;
+            has_more: boolean;
+            has_previous: boolean;
+            applied_filters: unknown[];
+            applied_sort: unknown[];
+        };
+        AlphaFleetResponse: {
+            /** @constant */
+            schema_version: "execution.alpha-fleet-list.v2";
+            /** @constant */
+            record_authority: "PORTAL_PROJECTION";
+            /** @constant */
+            source_authority: "TRADING_SYSTEM";
+            /** @enum {unknown} */
+            delivery_profile: "ALL_EXECUTION_PROFILES" | "PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+            workspace_id: components["schemas"]["Identifier"];
+            /** @enum {unknown} */
+            environment: "all" | "paper" | "sandbox" | "live";
+            read_at: components["schemas"]["Timestamp"];
+            source_as_of: components["schemas"]["Timestamp"] | null;
+            /** @enum {unknown} */
+            freshness: "FRESH" | "STALE";
+            /** @enum {unknown} */
+            completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+            summary: components["schemas"]["Summary"];
+            page: components["schemas"]["AlphaPage"];
+        };
+        /** @enum {unknown} */
+        Environment: "paper" | "sandbox" | "live";
         /** @enum {unknown} */
         Freshness: "FRESH" | "STALE";
         /** @enum {unknown} */
@@ -80,17 +201,12 @@ export interface components {
             freshness: components["schemas"]["Freshness"];
             completeness: components["schemas"]["Completeness"];
         };
-        Deployment: {
-            deployment_id: components["schemas"]["Identifier"];
-            stage: components["schemas"]["Identifier"];
+        BindingItem: {
+            binding_id: components["schemas"]["Identifier"];
+            account_id: components["schemas"]["Identifier"];
             venue: components["schemas"]["Identifier"];
-        };
-        AlphaFleetItem: {
-            alpha_id: components["schemas"]["Identifier"];
-            alpha_label: string;
-            version: components["schemas"]["Identifier"];
-            stage: components["schemas"]["Identifier"];
-            deployments: components["schemas"]["Deployment"][];
+            state: components["schemas"]["Identifier"];
+            credential_state: components["schemas"]["Identifier"];
             updated_at: components["schemas"]["Timestamp"];
         };
         AppliedFilter: {
@@ -102,39 +218,6 @@ export interface components {
             field: string;
             /** @enum {unknown} */
             direction: "asc" | "desc";
-        };
-        AlphaPage: {
-            rows: components["schemas"]["AlphaFleetItem"][];
-            total_count: number;
-            filtered_count: number;
-            next_cursor: string | null;
-            prev_cursor: string | null;
-            has_more: boolean;
-            has_previous: boolean;
-            applied_filters: components["schemas"]["AppliedFilter"][];
-            applied_sort: components["schemas"]["AppliedSort"][];
-        };
-        AlphaFleetResponse: components["schemas"]["EnvelopeBase"] & {
-            /** @constant */
-            schema_version: "execution.alpha-fleet-list.v1";
-            record_authority: unknown;
-            source_authority: unknown;
-            delivery_profile: unknown;
-            workspace_id: unknown;
-            environment: unknown;
-            read_at: unknown;
-            source_as_of: unknown;
-            freshness: unknown;
-            completeness: unknown;
-            page: components["schemas"]["AlphaPage"];
-        };
-        BindingItem: {
-            binding_id: components["schemas"]["Identifier"];
-            account_id: components["schemas"]["Identifier"];
-            venue: components["schemas"]["Identifier"];
-            state: components["schemas"]["Identifier"];
-            credential_state: components["schemas"]["Identifier"];
-            updated_at: components["schemas"]["Timestamp"];
         };
         BindingPage: {
             rows: components["schemas"]["BindingItem"][];
@@ -181,6 +264,7 @@ export interface components {
     responses: never;
     parameters: {
         Workspace: string;
+        AlphaFleetEnvironment: "all" | "paper" | "sandbox" | "live";
         Environment: "paper" | "sandbox" | "live";
         After: string;
         Before: string;
@@ -197,13 +281,15 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: components["parameters"]["Workspace"];
-                environment?: components["parameters"]["Environment"];
+                environment?: components["parameters"]["AlphaFleetEnvironment"];
                 after?: components["parameters"]["After"];
                 before?: components["parameters"]["Before"];
                 limit?: components["parameters"]["Limit"];
                 sort?: components["parameters"]["Sort"];
                 search?: string;
                 stage?: string;
+                owner?: string;
+                health?: string;
             };
             header?: never;
             path?: never;
@@ -211,7 +297,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded Fleet page with exact counts. */
+            /** @description Bounded enriched Fleet page and fleet-wide current-fact summary with exact counts. */
             200: {
                 headers: {
                     [name: string]: unknown;

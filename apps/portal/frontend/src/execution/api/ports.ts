@@ -220,7 +220,7 @@ export interface WaiverQuery {
 }
 
 export interface ManagerListQuery {
-  environment?: "paper" | "sandbox" | "live";
+  environment?: "all" | "paper" | "sandbox" | "live";
   after?: string;
   before?: string;
   limit?: number;
@@ -230,9 +230,12 @@ export interface ManagerListQuery {
 export interface AlphaFleetQuery extends ManagerListQuery {
   search?: string;
   stage?: string;
+  owner?: string;
+  health?: string;
 }
 
 export interface BindingListQuery extends ManagerListQuery {
+  environment?: "paper" | "sandbox" | "live";
   search?: string;
   venue?: string;
   state?: string;
