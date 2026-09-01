@@ -11,6 +11,12 @@ source-attributed results in Rust. TypeScript only authenticates the Portal
 session, selects one of four fixed resources and forwards the canonical
 response. The browser must not recompute financial truth.
 
+Projection authorization is deliberately separate from N15B source
+read-through authorization. N25 revalidates the exact delegated screen
+resource, environment, Manager profile and canonical screen inventory, but it
+does not require or widen the N15B single-screen source-call permit because no
+N25 request reaches Trading System.
+
 One request executes one PostgreSQL statement. That statement binds the
 subject through `public.strategy_deployments`, reads only the ten allowlisted
 relations and caps the population at 20,001 so an oversized result fails

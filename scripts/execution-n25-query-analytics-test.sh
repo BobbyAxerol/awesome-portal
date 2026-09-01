@@ -84,6 +84,9 @@ for token in ("/deployments/:deploymentId/query-analytics", "/alphas/:alphaId/qu
     assert token in controller
 for token in ("managerQueryAnalyticsTarget", "FEATURE_EXECUTION_ANALYTICS_QUERY"):
     assert token in proxy
+edge_service = (root / "services/portal-execution-edge-rs/crates/edge-service/src/main.rs").read_text()
+assert "manager_projection_authorize(&state, &headers, subject_kind.source_screen_id())" in edge_service
+assert "current_source_authorize(&state, &headers, subject_kind.source_screen_id())" not in edge_service
 for overlay in (edge_overlay, bff_overlay):
     assert 'ANALYTICS_QUERY' in overlay
     assert 'REALTIME_SSE' in overlay

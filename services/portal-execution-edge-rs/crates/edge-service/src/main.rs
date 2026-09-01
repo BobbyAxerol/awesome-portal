@@ -1506,6 +1506,48 @@ fn current_source_authorize<'a>(
     Ok(binding)
 }
 
+/// Authorizes a read from the Portal-owned Manager projection.
+///
+/// Unlike `current_source_authorize`, this path never dispatches a source
+/// request and therefore must not inherit N15B's single-screen read-through
+/// permit. It still binds the exact delegated resource, environment, Manager
+/// profile and the canonical current-source screen inventory before the N25
+/// repository can be reached.
+fn manager_projection_authorize(
+    state: &AppState,
+    headers: &HeaderMap,
+    screen_id: &str,
+) -> Result<(), Response> {
+    let token = bearer(headers).ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
+    let resource = format!("{CURRENT_SOURCE_RESOURCE_PREFIX}{screen_id}:read");
+    let claims = state
+        .verifier
+        .verify_read(
+            token,
+            &RequiredRead {
+                environment: &state.environment,
+                resource: Some(&resource),
+            },
+        )
+        .map_err(|_| StatusCode::FORBIDDEN.into_response())?;
+    let profile = current_execution_profile(&state.environment)
+        .ok_or_else(|| StatusCode::FORBIDDEN.into_response())?;
+    let binding = state
+        .current_source_map
+        .profile(profile)
+        .map_err(|error| current_source_mapping_error(&error))?;
+    state
+        .current_source_map
+        .screen(screen_id)
+        .map_err(|error| current_source_mapping_error(&error))?;
+    if claims.profile_id.as_deref() != Some(binding.manager_profile_id.as_str())
+        || state.manager_v2_profile_id.as_deref() != Some(binding.manager_profile_id.as_str())
+    {
+        return Err(StatusCode::FORBIDDEN.into_response());
+    }
+    Ok(())
+}
+
 fn current_execution_profile(environment: &str) -> Option<ExecutionProfile> {
     match environment {
         "paper" => Some(ExecutionProfile::Paper),
@@ -2674,7 +2716,7 @@ async fn manager_query_analytics(
         }
     };
     if let Err(response) =
-        current_source_authorize(&state, &headers, subject_kind.source_screen_id())
+        manager_projection_authorize(&state, &headers, subject_kind.source_screen_id())
     {
         return response;
     }
@@ -4559,6 +4601,45 @@ mod tests {
             panic!("N15B must reject a mapped screen outside the accepted release");
         };
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[test]
+    fn manager_projection_gate_is_exact_without_source_read_through_authority() {
+        let signer = delegation_test_signer();
+        let verifier = DelegationVerifier::from_jwks_json(
+            &signer.jwks,
+            "portal-control-api",
+            "portal-execution-edge-paper",
+            60,
+            3,
+        )
+        .unwrap();
+        let state = disabled_manager_state(verifier);
+        let screen_id = "EXECUTION_ALPHA_360_SCREEN";
+        let resource = format!("{CURRENT_SOURCE_RESOURCE_PREFIX}{screen_id}:read");
+        let token =
+            signed_manager_claims(&signer, &manager_claims(Utc::now().timestamp(), &resource));
+        let mut headers = HeaderMap::new();
+        headers.insert(AUTHORIZATION, format!("Bearer {token}").parse().unwrap());
+
+        manager_projection_authorize(&state, &headers, screen_id).unwrap();
+
+        let Err(response) = current_source_authorize(&state, &headers, screen_id) else {
+            panic!("projection authorization must not widen N15B source read-through authority");
+        };
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let mut wrong_profile = manager_claims(Utc::now().timestamp(), &resource);
+        wrong_profile.profile_id = Some("SANDBOX_BINANCE_USDM".to_owned());
+        let wrong_profile = signed_manager_claims(&signer, &wrong_profile);
+        headers.insert(
+            AUTHORIZATION,
+            format!("Bearer {wrong_profile}").parse().unwrap(),
+        );
+        let Err(response) = manager_projection_authorize(&state, &headers, screen_id) else {
+            panic!("projection authorization must remain profile-bound");
+        };
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]
