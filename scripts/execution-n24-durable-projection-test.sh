@@ -117,6 +117,7 @@ do
   grep -Fq "EDGE_ENVIRONMENT: ${environment}" <<<"${rendered}"
   grep -Fq "EDGE_MANAGER_V2_PROFILE_ID: ${profile}" <<<"${rendered}"
   grep -Fq 'EDGE_MANAGER_PROJECTION_ENABLED: "true"' <<<"${rendered}"
+  grep -Fq 'EDGE_SOURCE_CA_FILE: /run/secrets/source-proxy-ca.crt' <<<"${rendered}"
   grep -Fq 'EDGE_MANAGER_PROJECTION_REBUILD_AUTHORIZED: "false"' <<<"${rendered}"
   grep -Fq 'EDGE_MANAGER_PROJECTION_ROLLBACK_AUTHORIZED: "false"' <<<"${rendered}"
   grep -Fq 'EDGE_COMMAND_RELAY_ENABLED: "false"' <<<"${rendered}"
