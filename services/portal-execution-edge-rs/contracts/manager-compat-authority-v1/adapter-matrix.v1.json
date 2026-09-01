@@ -2,7 +2,7 @@
   "schema_version": "portal.execution.manager-compat-authority.v1",
   "phase": "N19",
   "decision": "N19_RUST_MANAGER_COMPATIBILITY_AUTHORITY_ACCEPTED",
-  "n18_census_sha256": "sha256:9b0c58dfa1a3475434a618821991dd8f531db269fd49e285a757089f8d888b47",
+  "n18_census_sha256": "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3",
   "active_adapter_revision": "portal.execution.manager-adapter.runtime-v1",
   "adapters": [
     {

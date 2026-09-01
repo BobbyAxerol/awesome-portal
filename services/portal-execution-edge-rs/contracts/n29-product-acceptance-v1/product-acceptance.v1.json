@@ -54,8 +54,8 @@
     }
   },
   "evidence": {
-    "n18_census_sha256": "sha256:9b0c58dfa1a3475434a618821991dd8f531db269fd49e285a757089f8d888b47",
-    "n28_registry_sha256": "sha256:a307b1b78c1724b51790abaf9e8e3b2f375017b2881d6f396a5d0e20e4674812",
+    "n18_census_sha256": "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3",
+    "n28_registry_sha256": "sha256:a7e54821e2a54464a8e0271c50dc7971826e3ad10eb20759ca12fbba6f820fe7",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
     "screen_bff_catalogue_sha256": "sha256:e344f13c3737257fed40f55f5b1108b027f0e82cab9c0cec1f090963eb64496d",
     "frontend_product_route_sha256": "sha256:e72c477e73ade4e06f10113193c9e825afe846e63219980f843d067eaaa5c571",
