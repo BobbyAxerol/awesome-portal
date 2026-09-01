@@ -40,6 +40,7 @@ ADAPTER_FILES = (
     "deploy/compose.execution-current-source.yaml",
     "deploy/compose.execution-edge.yaml",
     "deploy/execution-manager-v2/compose.profile-read.yaml",
+    "deploy/execution-manager-v2/compose.profile-source-proxy.yaml",
     "services/portal-execution-edge-rs/Cargo.lock",
     "services/portal-execution-edge-rs/contracts/current-source-v1/capability-source-map.json",
     "services/portal-execution-edge-rs/crates/current-source-compat/Cargo.toml",

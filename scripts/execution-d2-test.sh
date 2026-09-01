@@ -18,6 +18,7 @@ env_example="${root_dir}/deploy/execution-d1/edge-source-proxy.env.example"
 compose_base="${root_dir}/deploy/compose.execution-edge.yaml"
 compose_dark="${root_dir}/deploy/execution-d1/compose.dark.yaml"
 manager_profile_compose="${root_dir}/deploy/execution-manager-v2/compose.profile-read.yaml"
+manager_proxy_profile_compose="${root_dir}/deploy/execution-manager-v2/compose.profile-source-proxy.yaml"
 manager_contract_dir="${root_dir}/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1"
 
 # The Manager-v2 handoff is an imported owner pack, not a loose collection of
@@ -530,6 +531,7 @@ sed -i \
   -e 's/^SOURCE_PROXY_MANAGER_PROFILE_ID=$/SOURCE_PROXY_MANAGER_PROFILE_ID=LIVE_BINANCE_USDM/' \
   -e 's/^SOURCE_PROXY_MANAGER_FACADE_PORT=$/SOURCE_PROXY_MANAGER_FACADE_PORT=8223/' \
   -e 's/^SOURCE_PROXY_MANAGER_ISSUER_PORT=$/SOURCE_PROXY_MANAGER_ISSUER_PORT=8224/' \
+  -e "s#^SOURCE_PROXY_MANAGER_LOCATIONS_FILE=.*#SOURCE_PROXY_MANAGER_LOCATIONS_FILE=${manager_locations}#" \
   "${manager_active_env}"
 chmod 0600 "${manager_active_env}"
 "${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
@@ -610,11 +612,14 @@ compose=("${docker_cli[@]}" compose --project-directory "${root_dir}" -f "${comp
 "${compose[@]}" --env-file "${tmp_dir}/candidate.env" config > "${tmp_dir}/candidate.yaml"
 "${compose[@]}" --env-file "${tmp_dir}/rollback.env" config > "${tmp_dir}/rollback.yaml"
 manager_profile_render=("${docker_cli[@]}" compose --project-directory "${root_dir}" \
-  -f "${compose_base}" -f "${compose_dark}" -f "${manager_profile_compose}")
+  -f "${compose_base}" -f "${compose_dark}" -f "${manager_profile_compose}" \
+  -f "${manager_proxy_profile_compose}")
 "${manager_profile_render[@]}" --env-file "${manager_active_env}" config --quiet
 "${manager_profile_render[@]}" --env-file "${manager_active_env}" config > "${tmp_dir}/manager-profile.yaml"
 grep -Fq 'EDGE_MANAGER_V2_READ_ENABLED: "true"' "${tmp_dir}/manager-profile.yaml"
 grep -Fq 'EDGE_MANAGER_V2_PROFILE_ID: LIVE_BINANCE_USDM' "${tmp_dir}/manager-profile.yaml"
+grep -Fq "source: ${manager_locations}" "${tmp_dir}/manager-profile.yaml"
+grep -Fq 'target: /run/secrets/manager-v2-locations.conf' "${tmp_dir}/manager-profile.yaml"
 for flag in EDGE_PROJECTION_INGESTION_ENABLED EDGE_SOURCE_PROBES_ENABLED \
   EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_COMMAND_RELAY_ENABLED; do
   grep -Fq "${flag}: \"false\"" "${tmp_dir}/manager-profile.yaml"

@@ -1,0 +1,14 @@
+# Profile-specific Source Proxy route selection without copying workload keys.
+#
+# The base D1 Source Proxy continues to mount the one shared, root-owned secret
+# directory read-only. This nested read-only bind replaces only the fixed
+# in-container Manager locations include with a profile-specific, non-secret
+# route file. Private keys, trust bundles and admission credentials therefore
+# keep one inode and one owner-controlled path across Paper/Sandbox/Live.
+services:
+  source-proxy:
+    volumes:
+      - type: bind
+        source: ${SOURCE_PROXY_MANAGER_LOCATIONS_FILE:?set the rendered profile-specific Manager locations file}
+        target: /run/secrets/manager-v2-locations.conf
+        read_only: true

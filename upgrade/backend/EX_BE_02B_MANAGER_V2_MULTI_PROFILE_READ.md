@@ -94,6 +94,11 @@ catalogue contract.
   requires `EDGE_MANAGER_V2_PROFILE_ID`; projection ingestion, source probes,
   realtime, analytics and command relay stay false. The historical Paper
   overlay now fixes `PAPER_BINANCE_USDM` explicitly.
+- Added `compose.profile-source-proxy.yaml` for concurrent profile instances.
+  It bind-mounts only the rendered non-secret Manager locations file over the
+  fixed include inside the existing shared read-only Source Proxy secret
+  mount. Sandbox and Live therefore do not duplicate the Manager mTLS key,
+  Source Proxy server key, CA bundle or admission credential.
 - Private Trading-System launch inputs now reserve distinct loopback pairs and
   Compose project names for concurrent profile instances: Sandbox `8123/8124`
   and Live `8223/8224`; the active historical Paper pair remains `8023/8024`.
