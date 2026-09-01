@@ -96,6 +96,14 @@ normal interval; it never forms an immediate retry storm. Paper, Sandbox and
 Live use distinct Compose projects, profiles, audiences, leases, epochs and
 rollback actions.
 
+Every catalogue, capability and paginated feed request also acquires the same
+profile-local PostgreSQL source-admission permit used by the serving Edge.
+The default is 8 requests/second, below the Source Proxy's 10 requests/second
+boundary. This prevents a finite or long-running projection cycle from using
+HTTP 429 as flow control or bypassing N21 when a feed spans many pages. An
+unexpected 429 is classified as source backpressure and fails the cycle once;
+it is not misreported as a contract-header drift and is never retried.
+
 Record bounds are enforced while pages are collected—not only after the cycle
 is built—so one process cannot temporarily retain more than 20,000 rows/feed
 or 80,000 rows/cycle in memory.
@@ -139,6 +147,7 @@ does not fabricate operational evidence.
 - full reducer duplicate/gap/out-of-order/replay corpus: pass;
 - six-month deterministic replay: pass;
 - static release/bounds/secret scan and three-profile Compose render: pass;
+- finite-worker shared admission and 429 classification negative gate: pass;
 - Rust workspace all targets, rustfmt and zero-warning Clippy: pass;
 - fresh PostgreSQL dump/restore signature including all N24 tables: pass.
 

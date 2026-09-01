@@ -250,6 +250,21 @@ async fn contract_header_redirect_and_body_limits_fail_closed() {
     let captured = Arc::new(Mutex::new(Vec::new()));
     let origin = one_response_server(
         captured,
+        "429 Too Many Requests",
+        "content-type: text/html\r\n",
+        String::new(),
+        Duration::ZERO,
+    )
+    .await;
+    let client = ManagerV2Client::new_for_test(&origin, ManagerV2ClientLimits::default()).unwrap();
+    assert!(matches!(
+        client.execute(&ManagerV2Request::catalogue()).await,
+        Err(ManagerV2ClientError::UnexpectedHttpStatus(429))
+    ));
+
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let origin = one_response_server(
+        captured,
         "200 OK",
         qualified_headers(),
         "x".repeat(2_048),

@@ -19,8 +19,9 @@ a cross-region database:
   dependency was introduced.
 
 Both authorities enforce a source-wide and profile-wide budget using
-PostgreSQL time and row locks. The Portal bounds are 15 requests/second, below
-the accepted Source Proxy ceiling, and 8 active requests by default. Expiring
+PostgreSQL time and row locks. The Portal default is 8 requests/second, below
+the profile Source Proxy's 10 requests/second enforcement boundary and the
+accepted owner ceiling, with 8 active requests by default. Expiring
 permits recover after process loss. No dispatch path retries an ambiguous
 source request.
 

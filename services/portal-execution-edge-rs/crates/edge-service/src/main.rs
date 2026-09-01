@@ -390,7 +390,7 @@ impl EdgeConfig {
             manager_projection_poll_interval,
             manager_shared_admission_maximum_rps: u16::try_from(bounded_usize(
                 "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS",
-                15,
+                8,
                 1,
                 15,
             )?)
@@ -4377,7 +4377,7 @@ mod tests {
             },
             manager_v2_client: None,
             manager_v2_profile_id: Some("PAPER_BINANCE_USDM".to_owned()),
-            manager_shared_admission_maximum_rps: 15,
+            manager_shared_admission_maximum_rps: 8,
             manager_shared_admission_maximum_concurrency: 8,
             manager_shared_admission_maximum_wait: Duration::from_secs(1),
             manager_shared_admission_lease_ttl: Duration::from_secs(7),

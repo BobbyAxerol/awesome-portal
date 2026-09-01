@@ -54,7 +54,7 @@ for token in [
 assert "retry_count: 0" in control_proxy
 assert ".execute(request)" in edge_service
 assert "tokio::time::sleep(lease.wait)" in edge_service
-assert "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS:-15" in compose
+assert "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS:-8" in compose
 assert "EDGE_MANAGER_SHARED_CACHE_TTL_MS:-750" in compose
 assert "maximum_page_rows\": 200" in (root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json").read_text()
 assert "maximum_response_bytes\": 1048576" in (root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json").read_text()

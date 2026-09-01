@@ -87,6 +87,8 @@ the three change windows.
 - encrypted backup/PITR restore RTO is 60 minutes;
 - every source cycle is capped at 100 pages/feed, 20,000 rows/feed and 80,000
   rows total;
+- every source request uses the N21 PostgreSQL permit at 8 requests/second by
+  default, below the profile Source Proxy's 10 requests/second boundary;
 - source loss waits for the next poll and never creates an immediate retry
   storm;
 - soft/hard storage limits are 70%/85% of an 18 GiB total N24 budget;

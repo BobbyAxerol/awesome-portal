@@ -203,6 +203,10 @@ impl ManagerV2Client {
         if response.status().is_redirection() {
             return Err(ManagerV2ClientError::RedirectDenied);
         }
+        let status = response.status().as_u16();
+        if !matches!(status, 200 | 503) {
+            return Err(ManagerV2ClientError::UnexpectedHttpStatus(status));
+        }
         validate_response_headers(response.headers())?;
         if response
             .content_length()
@@ -211,7 +215,6 @@ impl ManagerV2Client {
             return Err(ManagerV2ClientError::ResponseTooLarge);
         }
 
-        let status = response.status().as_u16();
         let mut stream = response.bytes_stream();
         let mut body = Vec::new();
         while let Some(chunk) = stream.next().await {

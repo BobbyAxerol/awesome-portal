@@ -14,12 +14,13 @@ use manager_projection::{
 use manager_v2_client::{ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError};
 use manager_v2_contract::{
     Completeness, ManagerCatalogue, ManagerMeta, ManagerPayload, ManagerRead, ManagerRecord,
-    OpaqueCursor, PageLimit, RUNTIME_CONTRACT_REVISION,
+    ManagerV2Request, OpaqueCursor, PageLimit, RUNTIME_CONTRACT_REVISION,
 };
 use projection_core::ProjectionEpochStatus;
 use projection_store_pg::{
     EpochMetadata, ManagerCycleCommitInput, ManagerProjectionLeaseAcquireOutcome,
-    ManagerSnapshotCommitInput, PgProjectionStore, StoreError,
+    ManagerSnapshotCommitInput, PgProjectionStore, SourceAdmissionOutcome, SourceAdmissionRequest,
+    StoreError,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -117,9 +118,23 @@ async fn run_once_mode(
         delegated_resource: DELEGATED_RESOURCE,
         owner_contract_revision: RUNTIME_CONTRACT_REVISION,
     })?;
-    let (catalogue, catalogue_digest) = load_catalogue(&client, bound).await?;
-    load_and_validate_capabilities(&client, bound, &catalogue_digest).await?;
+    let store = PgProjectionStore::connect(database_url.trim()).await?;
+    store.ping().await?;
+    let (catalogue, catalogue_digest) =
+        load_catalogue(&store, config, owner_digest, &client, bound).await?;
+    load_and_validate_capabilities(
+        &store,
+        config,
+        owner_digest,
+        &client,
+        bound,
+        &catalogue_digest,
+    )
+    .await?;
     let cycle = load_cycle(
+        &store,
+        config,
+        owner_digest,
         &client,
         bound,
         &catalogue,
@@ -130,8 +145,6 @@ async fn run_once_mode(
     .await?
     .build()?;
 
-    let store = PgProjectionStore::connect(database_url.trim()).await?;
-    store.ping().await?;
     let scope = projection_core::ProjectionScope::new(
         execution_contracts::CanonicalId::parse("workspace_execution_manager")?,
         profile.environment(),
@@ -326,10 +339,21 @@ pub async fn run_forever(config: &EdgeConfig) -> Result<(), ManagerProjectionCom
 }
 
 async fn load_catalogue(
+    store: &PgProjectionStore,
+    config: &EdgeConfig,
+    owner_digest: &str,
     client: &ManagerV2Client,
     authority: BoundManagerAuthority<'_>,
 ) -> Result<(ManagerCatalogue, String), ManagerProjectionCommandError> {
-    match client.execute(&authority.catalogue_request()).await? {
+    match admitted_projection_execute(
+        store,
+        config,
+        owner_digest,
+        client,
+        &authority.catalogue_request(),
+    )
+    .await?
+    {
         ManagerRead::Available(ManagerPayload::Catalogue(envelope)) => {
             authority.validate_catalogue(envelope.data())?;
             let digest = envelope.meta().catalogue_sha256().as_str().to_owned();
@@ -345,11 +369,22 @@ async fn load_catalogue(
 }
 
 async fn load_and_validate_capabilities(
+    store: &PgProjectionStore,
+    config: &EdgeConfig,
+    owner_digest: &str,
     client: &ManagerV2Client,
     authority: BoundManagerAuthority<'_>,
     catalogue_digest: &str,
 ) -> Result<(), ManagerProjectionCommandError> {
-    match client.execute(&authority.capabilities_request()).await? {
+    match admitted_projection_execute(
+        store,
+        config,
+        owner_digest,
+        client,
+        &authority.capabilities_request(),
+    )
+    .await?
+    {
         ManagerRead::Available(ManagerPayload::Capabilities(envelope)) => {
             if envelope.meta().catalogue_sha256().as_str() != catalogue_digest {
                 return Err(ManagerProjectionCommandError::CycleMetadataDrift);
@@ -362,7 +397,11 @@ async fn load_and_validate_capabilities(
     }
 }
 
+#[allow(clippy::too_many_arguments)] // Keep every immutable source/admission binding explicit.
 async fn load_cycle(
+    store: &PgProjectionStore,
+    config: &EdgeConfig,
+    owner_digest: &str,
     client: &ManagerV2Client,
     authority: BoundManagerAuthority<'_>,
     catalogue: &ManagerCatalogue,
@@ -379,7 +418,18 @@ async fn load_cycle(
         let remaining = MAXIMUM_CYCLE_RECORDS
             .checked_sub(record_count)
             .ok_or(ManagerProjectionCommandError::CycleBoundExceeded)?;
-        let snapshot = load_feed(client, authority, catalogue, profile, feed, remaining).await?;
+        let snapshot = load_feed(
+            store,
+            config,
+            owner_digest,
+            client,
+            authority,
+            catalogue,
+            profile,
+            feed,
+            remaining,
+        )
+        .await?;
         record_count = record_count
             .checked_add(snapshot.facts.len())
             .filter(|count| *count <= MAXIMUM_CYCLE_RECORDS)
@@ -394,7 +444,11 @@ async fn load_cycle(
     })
 }
 
+#[allow(clippy::too_many_arguments)] // Feed collection shares the exact cycle bindings above.
 async fn load_feed(
+    store: &PgProjectionStore,
+    config: &EdgeConfig,
+    owner_digest: &str,
     client: &ManagerV2Client,
     authority: BoundManagerAuthority<'_>,
     catalogue: &ManagerCatalogue,
@@ -426,7 +480,10 @@ async fn load_feed(
                 PageLimit::new(PAGE_LIMIT)?,
             )?,
         };
-        let (meta, records, next) = page_result(client.execute(&request).await?, feed)?;
+        let (meta, records, next) = page_result(
+            admitted_projection_execute(store, config, owner_digest, client, &request).await?,
+            feed,
+        )?;
         // Capture the read boundary after the response so a complete current
         // snapshot never claims to have been observed before its source as_of.
         let source_read_at = Utc::now();
@@ -467,6 +524,46 @@ async fn load_feed(
         previous_meta = Some(meta);
         cursor = Some(next);
     }
+}
+
+/// Routes every projection source call through the same `PostgreSQL` authority
+/// used by the serving Edge. This keeps finite and long-running workers inside
+/// the profile-wide Source Proxy budget instead of relying on an HTTP 429 as
+/// flow control. A denied permit fails the cycle without retrying the source.
+async fn admitted_projection_execute(
+    store: &PgProjectionStore,
+    config: &EdgeConfig,
+    owner_digest: &str,
+    client: &ManagerV2Client,
+    request: &ManagerV2Request,
+) -> Result<ManagerRead, ManagerProjectionCommandError> {
+    let profile_id = config
+        .manager_v2_profile_id
+        .as_deref()
+        .ok_or(ManagerProjectionCommandError::MissingProfile)?;
+    let admission = store
+        .acquire_source_admission(&SourceAdmissionRequest {
+            source_id: "manager-v2".to_owned(),
+            profile_id: profile_id.to_owned(),
+            owner_id: format!("projection:{owner_digest}:{}", Uuid::now_v7()),
+            maximum_requests_per_second: config.manager_shared_admission_maximum_rps,
+            maximum_concurrency: config.manager_shared_admission_maximum_concurrency,
+            maximum_wait: config.manager_shared_admission_maximum_wait,
+            lease_ttl: config.manager_shared_admission_lease_ttl,
+        })
+        .await?;
+    let lease = match admission {
+        SourceAdmissionOutcome::Accepted(lease) => lease,
+        SourceAdmissionOutcome::Denied(_) => {
+            return Err(ManagerProjectionCommandError::SourceAdmissionDenied);
+        }
+    };
+    if !lease.wait.is_zero() {
+        tokio::time::sleep(lease.wait).await;
+    }
+    let result = client.execute(request).await;
+    store.release_source_admission(&lease).await?;
+    result.map_err(Into::into)
 }
 
 fn page_result(
@@ -604,6 +701,8 @@ pub enum ManagerProjectionCommandError {
     InvalidPollInterval,
     #[error("N24 Manager source returned typed unavailability")]
     SourceUnavailable,
+    #[error("N24 Manager source admission budget denied the finite request")]
+    SourceAdmissionDenied,
     #[error("N24 Manager source returned an unexpected payload")]
     UnexpectedPayload,
     #[error("N24 Manager page metadata drifted within a cycle")]
