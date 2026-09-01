@@ -1517,3 +1517,13 @@ durable run/attempt events. Detailed evidence:
   plans, fixtures and documentation do not enter the runtime layer. No runtime
   flag, source connection, command authority, `main` or stable deployment is
   changed by this packaging closeout.
+
+## Backend state — 2026-09-01 (Paper current-source operational bridge)
+
+- `scripts/portal current-source-up` and `current-source-config` are the sole
+  monorepo entry points for composing the reviewed same-origin read overlay;
+  an ordinary `up` remains its explicit one-command rollback to source-dark.
+- The Control API receives the numeric `portal-runtime` supplementary group so
+  its non-root process can read the existing group-scoped SGP mTLS and
+  delegation files. The overlay still hard-disables command relay and leaves
+  Sandbox/Live/SSE dark unless each independent profile flag is supplied.

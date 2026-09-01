@@ -4,6 +4,8 @@
 # by Control API before startup.
 services:
   control-api:
+    group_add:
+      - "${PORTAL_RUNTIME_GID:?set the numeric portal-runtime group ID}"
     environment:
       FEATURE_EXECUTION_EDGE: "true"
       FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: ${CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:-false}

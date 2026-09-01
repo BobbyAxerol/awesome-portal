@@ -1751,6 +1751,13 @@ activation or the phase):**
   runtime layer remains the single non-root Edge binary and this change grants
   no source, command or stable-release authority.
 
+- **Paper same-origin operational bridge (2026-09-01):** the mother Portal
+  helper owns the exact `compose.execution-current-source.yaml` composition
+  through `current-source-up/config`; direct ad-hoc Compose is unnecessary.
+  The non-root Control API receives only the numeric `portal-runtime`
+  supplementary group required to read SGP mTLS/delegation files. Profile
+  flags remain independent and command relay is still forced false.
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and

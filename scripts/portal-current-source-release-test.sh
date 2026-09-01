@@ -16,6 +16,7 @@ mkdir -p "${TMP_DIR}/sgp-secrets" "${TMP_DIR}/edge-secrets"
 
 paper_control="$({
   CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY="${TMP_DIR}/sgp-secrets" \
+  PORTAL_RUNTIME_GID=991 \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER=true \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX=false \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_LIVE=false \
@@ -32,9 +33,11 @@ grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true"' <<<"${paper_control}"
 grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: "false"' <<<"${paper_control}"
 grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: "false"' <<<"${paper_control}"
 grep -Fq 'FEATURE_EXECUTION_COMMAND_RELAY: "false"' <<<"${paper_control}"
+grep -Fq -- '- "991"' <<<"${paper_control}"
 
 rollback_control="$({
   CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY="${TMP_DIR}/sgp-secrets" \
+  PORTAL_RUNTIME_GID=991 \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER=false \
   docker compose \
     --env-file "${ROOT_DIR}/deploy/.env.production.example" \

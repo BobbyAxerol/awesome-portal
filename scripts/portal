@@ -3,6 +3,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE=(docker compose --project-directory "${ROOT_DIR}" -f "${ROOT_DIR}/compose.yaml")
+CURRENT_SOURCE_COMPOSE=(
+  "${COMPOSE[@]}"
+  -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml"
+)
 
 usage() {
   cat <<'EOF'
@@ -19,6 +23,10 @@ Commands:
   hmd-doctor Validate the HMD mount, installed reader and release manifest.
   verify   Validate tracked source, source contracts and Compose config.
   smoke    Build, start, probe and tear down an isolated local portal stack.
+  current-source-up
+           Build/start the stack with the reviewed read-only Execution current-source overlay.
+  current-source-config
+           Render the stack with the reviewed read-only Execution current-source overlay.
 EOF
 }
 
@@ -90,6 +98,15 @@ case "${command}" in
   smoke)
     require_docker_access
     exec "${ROOT_DIR}/scripts/smoke-stack.sh" "$@"
+    ;;
+  current-source-up)
+    require_docker_access
+    validate_historical_data_mount
+    exec "${CURRENT_SOURCE_COMPOSE[@]}" up --detach --build "$@"
+    ;;
+  current-source-config)
+    require_docker_cli
+    exec "${CURRENT_SOURCE_COMPOSE[@]}" config "$@"
     ;;
   help|-h|--help)
     usage

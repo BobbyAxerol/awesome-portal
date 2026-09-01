@@ -1685,6 +1685,7 @@ docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.production.example" \
   -f "${ROOT_DIR}/deploy/compose.production.yaml" \
   -f "${ROOT_DIR}/deploy/compose.execution-shadow-query.yaml" config --quiet
+PORTAL_RUNTIME_GID=991 \
 CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY=/srv/primus/control-api/execution-edge-secrets \
 docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.production.example" \

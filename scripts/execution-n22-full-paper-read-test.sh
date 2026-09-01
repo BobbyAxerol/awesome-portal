@@ -38,6 +38,7 @@ PY
 mkdir -p "${TMP_DIR}/sgp-secrets"
 render="$({
   CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY="${TMP_DIR}/sgp-secrets" \
+  PORTAL_RUNTIME_GID=991 \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER=true \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX=false \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_LIVE=false \
@@ -52,14 +53,18 @@ grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true"' <<<"${render}"
 grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: "false"' <<<"${render}"
 grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: "false"' <<<"${render}"
 grep -Fq 'FEATURE_EXECUTION_COMMAND_RELAY: "false"' <<<"${render}"
+grep -Fq -- '- "991"' <<<"${render}"
 
 rollback="$({
   CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY="${TMP_DIR}/sgp-secrets" \
+  PORTAL_RUNTIME_GID=991 \
   CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER=false \
   docker compose --env-file "${ROOT_DIR}/deploy/.env.production.example" \
     -f "${ROOT_DIR}/deploy/compose.production.yaml" \
     -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" config
 } 2>/dev/null)"
 grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "false"' <<<"${rollback}"
+grep -Fq 'current-source-up)' "${ROOT_DIR}/scripts/portal"
+grep -Fq 'current-source-config)' "${ROOT_DIR}/scripts/portal"
 
 printf '%s\n' 'N22 full Paper read static, immutable release, Paper-only render and rollback gates passed.'
