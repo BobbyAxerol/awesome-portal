@@ -54,6 +54,23 @@ exact relation set. `venue_credentials` is explicitly forbidden. Empty source
 populations become honest empty projections; incomplete/invalid populations
 fail closed and never become partial browser truth.
 
+### Dev runtime hardening — 2026-09-01
+
+The first source-backed Alpha Fleet acceptance exposed a latency defect rather
+than a data gap: Bobby's Paper projection already contained 48 alphas and 43
+deployments, but an expired five-second refresh lease made the request wait for
+a complete AWS-HK population drain. Manager lists now use bounded
+stale-while-revalidate semantics. A committed atomic projection is returned
+immediately with its original `source_as_of`, freshness and completeness, while
+one in-flight refresh is coalesced per workspace/environment/kind. A first-ever
+read still waits for source truth and fails closed when none can be committed.
+
+Focused PostgreSQL coverage proves the stale response completes while the fake
+source is deliberately paused, retains the previous committed rows, and then
+atomically observes the refreshed population after the source is released.
+The real dev browser route subsequently passes with BFF `200`, 48/48 linked
+alpha rows, 43 deployments, no unavailable panel and no console warning.
+
 ## 4. Canonical fixture and registry revision
 
 `governance-live-review.valid.json` is now the single schema-validated fixture

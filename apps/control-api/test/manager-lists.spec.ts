@@ -23,6 +23,7 @@ type Scalar = string | number | boolean | null;
 
 class FakeSource {
   readonly calls: string[] = [];
+  pause: Promise<void> | null = null;
   readonly rows: Record<string, Array<Record<string, Scalar>>> = {
     strategies: [
       { strategy_id: "str_a", alpha_id: "alpha_a", label: "Carry A", version: "3.2", state: "READY", updated_at: "2026-08-31T09:00:00Z", secret_token: "never" },
@@ -47,6 +48,7 @@ class FakeSource {
     relation: string, query: { cursor?: string },
   ) {
     this.calls.push(`${environment}:${screenId}:${relation}`);
+    if (this.pause) await this.pause;
     const all = this.rows[relation] ?? [];
     const start = query.cursor ? Number(query.cursor) : 0;
     const slice = all.slice(start, start + 1);
@@ -155,6 +157,46 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     }) as Record<string, any>;
     expect(second.page.rows).toHaveLength(1);
     expect(second.page.total_count).toBe(2);
+  });
+
+  it("serves a committed Fleet snapshot immediately while one stale refresh is coalesced", async () => {
+    const initial = await service.fleet(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
+    expect(initial.page.rows.map((item: any) => item.alpha_label)).toContain("Carry A");
+    await pool.query(
+      `UPDATE execution_manager_projection_snapshots
+          SET refreshed_at = now() - interval '1 hour'
+        WHERE workspace_id = 'ws_primary' AND environment = 'paper'
+          AND projection_kind = 'ALPHA_FLEET'`,
+    );
+    source.rows.strategies[0] = { ...source.rows.strategies[0], label: "Carry A refreshed" };
+    let release!: () => void;
+    source.pause = new Promise<void>((resolve) => { release = resolve; });
+
+    let settled = false;
+    const staleRead = service.fleet(principal(), { environment: "paper", limit: 50 })
+      .then((value) => { settled = true; return value as Record<string, any>; });
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(settled).toBe(true);
+      const served = await staleRead;
+      expect(served.page.rows.map((item: any) => item.alpha_label)).toContain("Carry A");
+      expect(served.page.rows.map((item: any) => item.alpha_label)).not.toContain("Carry A refreshed");
+    } finally {
+      release();
+      source.pause = null;
+    }
+
+    let projectedLabel = "";
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      const projected = await pool.query<{ alpha_label: string }>(
+        `SELECT alpha_label FROM execution_alpha_fleet_projection
+          WHERE scope_id = 'ws_primary:paper' AND alpha_id = 'alpha_a'`,
+      );
+      projectedLabel = projected.rows[0]?.alpha_label ?? "";
+      if (projectedLabel === "Carry A refreshed") break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(projectedLabel).toBe("Carry A refreshed");
   });
 
   it("rejects page sizes above the published BR-EX-72 bound", () => {

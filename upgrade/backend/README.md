@@ -1527,6 +1527,11 @@ durable run/attempt events. Detailed evidence:
   [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md).
 - BR-EX-72 implementation detail:
   [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
+- Alpha Fleet dev runtime acceptance now serves an existing committed
+  projection immediately and performs one coalesced bounded refresh in the
+  background. The browser path passes with 48/48 real Paper alphas, 43
+  deployments, BFF `200`, no unavailable panel and no console warning; the
+  first-ever population remains fail-closed.
 
 ## Backend state — 2026-09-01 (product recomposition integration acceptance)
 

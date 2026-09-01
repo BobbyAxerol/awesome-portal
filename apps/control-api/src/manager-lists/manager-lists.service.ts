@@ -114,7 +114,14 @@ export class ManagerListsService {
     }
     const key = `${principal.workspaceId}:${environment}:${kind}`;
     const current = this.inFlight.get(key);
-    if (current) return current;
+    // A committed Portal projection is immediately usable even when its
+    // refresh lease has elapsed. Waiting for a complete dual-cell population
+    // drain here made an already-populated Alpha Fleet look unavailable for
+    // several seconds on every cold tab. Keep freshness/source_as_of honest,
+    // serve the atomic snapshot, and coalesce one bounded refresh in the
+    // background. The first-ever read still waits and fails closed because it
+    // has no committed truth to serve.
+    if (current) return existing ?? current;
     const task = (kind === "ALPHA_FLEET"
       ? this.refreshFleet(principal, environment)
       : this.refreshBindings(principal, environment))
@@ -124,7 +131,7 @@ export class ManagerListsService {
       })
       .finally(() => this.inFlight.delete(key));
     this.inFlight.set(key, task);
-    return task;
+    return existing ?? task;
   }
 
   private async refreshFleet(principal: ManagerListPrincipal, environment: ManagerListEnvironment) {
