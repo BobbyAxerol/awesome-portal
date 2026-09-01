@@ -56,6 +56,8 @@ sed -i \
   -e '/^SOURCE_PROXY_MANAGER_LOCATIONS_FILE=/d' \
   -e '/^EDGE_MANAGER_V2_READ_ENABLED=/d' \
   -e '/^EDGE_MANAGER_V2_PROFILE_ID=/d' \
+  -e '/^EDGE_SHADOW_QUERY_ENABLED=/d' \
+  -e '/^EDGE_PAPER_WORKBENCH_SHADOW_ENABLED=/d' \
   -e "s#^PORTAL_EXECUTION_EDGE_IMAGE=.*#PORTAL_EXECUTION_EDGE_IMAGE=${edge_image}#" \
   -e "s#^SOURCE_PROXY_CONFIG_FILE=.*#SOURCE_PROXY_CONFIG_FILE=${proxy_config}#" \
   -e "s#^PORTAL_BRIDGE_CIDR=.*#PORTAL_BRIDGE_CIDR=${bridge_cidr}#" \
@@ -73,6 +75,8 @@ sed -i \
   -e "\$a\\SOURCE_PROXY_MANAGER_LOCATIONS_FILE=${manager_locations}" \
   -e '$a\EDGE_MANAGER_V2_READ_ENABLED=true' \
   -e "\$a\\EDGE_MANAGER_V2_PROFILE_ID=${profile_id}" \
+  -e '$a\EDGE_SHADOW_QUERY_ENABLED=false' \
+  -e '$a\EDGE_PAPER_WORKBENCH_SHADOW_ENABLED=false' \
   "${output_env}"
 chown root:"${runtime_gid}" "${output_env}"
 chmod 0600 "${output_env}"
