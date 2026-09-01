@@ -1469,9 +1469,14 @@ durable run/attempt events. Detailed evidence:
 - Resume now carries the selected authority and reads the matching Manager or
   legacy journal. Focused regression, N26/N27 static checks, the complete Rust
   workspace, zero-warning Clippy, fresh PostgreSQL and restore gates pass.
-- Dev runtime remains fail-closed pending a new content-addressed image and
-  exact Paper/Sandbox/Live mTLS/JWT snapshot→resume qualification. Commands
-  and Live mutation remain disabled.
+- Commit `771715b` is now deployed as immutable dev image
+  `sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077`.
+  Paper/Sandbox/Live exact-profile snapshot→resume, no-JWT and no-client-cert
+  probes pass against 8,797/317/87 real projected facts respectively.
+- Paper same-origin BFF snapshot/stream pass and unauthenticated requests are
+  `401`. The BFF is intentionally Paper-bound; Sandbox/Live Edge streams keep
+  their independent audience/profile authority. Commands and Live mutation
+  remain disabled. Status is `THREE_PROFILE_DEV_SSE_ACCEPTED`.
 - Detail:
   [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 

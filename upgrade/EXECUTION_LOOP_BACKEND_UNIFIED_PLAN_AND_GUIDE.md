@@ -1723,8 +1723,8 @@ for Paper, Sandbox and Live.
 empty Live profile emits authenticated snapshot/heartbeat truth only; terminal
 errors cannot retry forever.
 
-**Closeout amended (2026-09-01):** `IMPLEMENTATION_COMPLETE /
-MANAGER_REPLAY_FIX_QUALIFIED / DEV_REALTIME_REQUALIFICATION_PENDING`.
+**Closeout amended (2026-09-01):** `COMPLETE /
+MANAGER_REPLAY_FIXED / THREE_PROFILE_DEV_SSE_ACCEPTED`.
 Migration `0014` assigns one contiguous cursor only when a complete
 Manager cycle seals, so partial per-feed writes never leak as realtime deltas.
 Rust Edge serves exact Paper/Sandbox/Live profile snapshots and resumes from a
@@ -1735,9 +1735,10 @@ grow memory without bound. Realtime rollback is independent from projection
 and Query. The first bounded Paper probe found and safely rolled back a legacy
 journal selection in the Manager resume path before the BFF flag was enabled.
 The authority-aware fix passes focused/static tests and the complete
-Rust/Clippy/fresh-PostgreSQL/restore suite. Runtime closeout now requires the
-fixed content-addressed image to pass exact Paper/Sandbox/Live mTLS/JWT
-snapshot→resume and rollback probes; command and Live mutation remain false.
+Rust/Clippy/fresh-PostgreSQL/restore suite. Fixed commit `771715b` then passed
+exact Paper/Sandbox/Live mTLS/JWT snapshot→resume plus negative-auth probes on
+the real dual-cell path; Paper same-origin BFF snapshot/stream also pass.
+Command and Live mutation remain false.
 Evidence and operations:
 [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 

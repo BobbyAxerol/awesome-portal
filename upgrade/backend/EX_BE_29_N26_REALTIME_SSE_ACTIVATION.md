@@ -1,10 +1,10 @@
 # EX-BE-29 — N26 Realtime SSE Activation
 
-**Status:** `IMPLEMENTATION_COMPLETE / MANAGER_REPLAY_FIX_QUALIFIED / DEV_REALTIME_REQUALIFICATION_PENDING`  
+**Status:** `COMPLETE / MANAGER_REPLAY_FIXED / THREE_PROFILE_DEV_SSE_ACCEPTED`  
 **Date:** 2026-09-01  
 **Branch:** `feat/execution-data-activation`  
-**Runtime effect:** the first Paper realtime probe was rolled back; projection,
-Query and analytics remain active while SSE, commands and Live mutation remain off
+**Runtime effect:** Paper/Sandbox/Live Edge SSE and analytics are active in dev;
+the same-origin Command Center BFF is Paper-bound; commands and Live mutation remain off
 
 ## 1. Result
 
@@ -103,10 +103,11 @@ back to analytics-only; Sandbox and Live SSE were never enabled.
 The replay path now carries the selected authority through
 `RealtimeResumePolicy` and calls the same authority-aware repository used by
 the poller. A focused lineage regression test, the N26/N27 static gate and the
-full Rust/fresh-PostgreSQL/Clippy/restore suite pass. The only remaining N26
-operation is deployment of this new content-addressed image followed by exact
-Paper, Sandbox and Live mTLS/JWT snapshot→resume probes. That operation must
-not widen command or Live mutation authority.
+full Rust/fresh-PostgreSQL/Clippy/restore suite pass. Commit `771715b` is
+deployed as content-addressed image
+`sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077`.
+All three exact-profile mTLS/JWT snapshot→resume probes pass without widening
+command or Live mutation authority. There is no remaining internal N26 debt.
 
 ## 7. Dev live-probe evidence and fail-closed result
 
@@ -124,6 +125,24 @@ the defect to the browser:
 
 Post-fix source verification is green: 31 Edge-service tests including
 `realtime_lineage_selects_its_own_replay_journal`, the complete Rust workspace,
-zero-warning Clippy, migration `0016` and PostgreSQL dump/restore. Runtime
-acceptance remains pending until the fixed image passes all three exact-profile
-probes and their independent rollback checks.
+zero-warning Clippy, migration `0016` and PostgreSQL dump/restore.
+
+The final dev acceptance used owner manifest SHA-256
+`97e5964c7f693f2731773d7f87c7108bfc4bdd875c3549a0494e03eeaab43d57`,
+which pins the exact Edge and Control API image digests, three profiles,
+catalogue revision and closed command-disabled authority set. Results:
+
+| Profile | Snapshot | Facts | Cursor | Resume first event | Negative auth |
+|---|---:|---:|---:|---|---|
+| Paper | `200 / AVAILABLE` | 8,797 | 47 | `projection.heartbeat` through TypeScript BFF | no JWT `401`; no client cert rejected |
+| Sandbox | `200 / AVAILABLE` | 317 | 46 | `projection.heartbeat` | no JWT `401`; no client cert rejected |
+| Live | `200 / AVAILABLE` | 87 | 1 | `projection.heartbeat` | no JWT `401`; no client cert rejected |
+
+The same-origin Paper snapshot and stream proxy both pass; unauthenticated
+snapshot and stream requests return `401`. The current BFF remains deliberately
+bound to one exact profile rather than accepting a browser-selected upstream;
+Sandbox and Live Edge streams are separately profile/audience bound. All three
+Edge services, projection workers, projection databases and Source Proxies are
+healthy with zero Edge restarts after the final manifest reload. Runtime envs
+have `.pre-771715b` rollback copies. Command relay, projection ingestion on the
+serving Edge and every Live mutation remain false.

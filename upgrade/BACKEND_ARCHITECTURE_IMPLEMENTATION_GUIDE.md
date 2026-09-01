@@ -1751,15 +1751,18 @@ activation or the phase):**
   only `N29-REL-01` remains. See
   [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
-- **N26 Manager replay selection hardened (2026-09-01):** the first bounded
+- **N26 Manager replay selection hardened and dev-accepted (2026-09-01):** the first bounded
   Paper SSE probe proved mTLS/JWT snapshot access but exposed that resume still
   read the legacy journal after Manager authority selection. The product BFF
   flag stayed false, Paper reverted to analytics-only and Sandbox/Live SSE were
   never opened. `RealtimeResumePolicy` now carries the selected authority into
   the repository read; focused/static tests plus full Rust, Clippy,
-  fresh-PostgreSQL and restore gates pass. A new content-addressed image and
-  exact three-profile snapshot→resume smoke remain the operational exit gate;
-  command relay and Live mutation remain false. See
+  fresh-PostgreSQL and restore gates pass. Commit `771715b` / image
+  `sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077`
+  then passed exact Paper/Sandbox/Live snapshot→resume, no-JWT and
+  no-client-certificate probes over the real dual-cell path. Paper same-origin
+  BFF stream is active; Sandbox/Live remain separately exact-bound at the Edge.
+  Command relay and Live mutation remain false. See
   [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 
 - **Execution Edge release image inputs closed (2026-09-01):** the pinned
