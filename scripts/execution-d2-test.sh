@@ -525,6 +525,7 @@ sed -i \
   -e 's/^SOURCE_PROXY_SOURCE_MODE=manager-paper-read$/SOURCE_PROXY_SOURCE_MODE=manager-profile-read/' \
   -e "s#^SOURCE_PROXY_CONFIG_FILE=.*#SOURCE_PROXY_CONFIG_FILE=${manager_active_config}#" \
   -e 's/^EDGE_ENVIRONMENT=paper$/EDGE_ENVIRONMENT=live/' \
+  -e 's/^EDGE_PRIVATE_PORT=8443$/EDGE_PRIVATE_PORT=8445/' \
   -e 's/^EDGE_DELEGATION_AUDIENCE=portal-execution-edge-paper$/EDGE_DELEGATION_AUDIENCE=portal-execution-edge-live/' \
   -e 's/^EDGE_MANAGER_V2_READ_ENABLED=false$/EDGE_MANAGER_V2_READ_ENABLED=true/' \
   -e 's/^EDGE_MANAGER_V2_PROFILE_ID=$/EDGE_MANAGER_V2_PROFILE_ID=LIVE_BINANCE_USDM/' \
