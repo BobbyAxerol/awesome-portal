@@ -43,6 +43,10 @@ Enable only the selected profile, in this order: Paper, Sandbox, Live. Set
 `EDGE_ANALYTICS_QUERY_ENABLED=true` on the Edge and
 `FEATURE_EXECUTION_ANALYTICS_QUERY=true` on the matching Control API only after
 the preconditions pass. Do not change another profile in the same window.
+Use `deploy/execution-manager-v2/compose.analytics.yaml` on AWS-HK and
+`deploy/compose.execution-manager-analytics.yaml` on SGP. Both overlays pin
+realtime and command flags false; the later N26 overlay may enable SSE without
+changing the independently accepted Query authority.
 
 Exercise all resource types that are valid for the selected profile:
 

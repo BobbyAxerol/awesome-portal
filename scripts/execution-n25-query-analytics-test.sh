@@ -69,6 +69,8 @@ mapper = (root / "services/portal-execution-edge-rs/crates/manager-projection/sr
 migration = (root / "services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0013_manager_query_analytics.sql").read_text()
 controller = (root / "apps/control-api/src/execution/analytics.controller.ts").read_text()
 proxy = (root / "apps/control-api/src/execution/analytics.proxy.ts").read_text()
+edge_overlay = (root / "deploy/execution-manager-v2/compose.analytics.yaml").read_text()
+bff_overlay = (root / "deploy/compose.execution-manager-analytics.yaml").read_text()
 
 for token in ("MAX_MANAGER_ANALYTICS_FACTS", "exact_partitions", "equity_and_contribution_series", "manager_correlation", "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED", "N25_CURRENT_SOURCE_HISTORY_NOT_INCREMENTAL", "N25_CURRENT_SOURCE_SESSIONS_NOT_INCREMENTAL"):
     assert token in analytics
@@ -82,6 +84,13 @@ for token in ("/deployments/:deploymentId/query-analytics", "/alphas/:alphaId/qu
     assert token in controller
 for token in ("managerQueryAnalyticsTarget", "FEATURE_EXECUTION_ANALYTICS_QUERY"):
     assert token in proxy
+for overlay in (edge_overlay, bff_overlay):
+    assert 'ANALYTICS_QUERY' in overlay
+    assert 'REALTIME_SSE' in overlay
+    assert 'COMMAND_RELAY' in overlay
+    assert 'ANALYTICS_QUERY_ENABLED: "true"' in overlay or 'FEATURE_EXECUTION_ANALYTICS_QUERY: "true"' in overlay
+    assert 'REALTIME_SSE_ENABLED: "false"' in overlay or 'FEATURE_EXECUTION_REALTIME_SSE: "false"' in overlay
+    assert 'COMMAND_RELAY_ENABLED: "false"' in overlay or 'FEATURE_EXECUTION_COMMAND_RELAY: "false"' in overlay
 
 serialized = json.dumps(manifest, sort_keys=True).lower()
 for forbidden in ("-----begin", "authorization: bearer", "private_key", "client_secret", "api_key", "password", "postgres://", "redis://"):

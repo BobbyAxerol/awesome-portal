@@ -1,0 +1,25 @@
+# N25 same-origin BFF overlay for one exact SGP profile.
+#
+# This activates projection-backed Query only. N26 SSE and N27 commands remain
+# independently disabled until their own profile acceptance succeeds.
+services:
+  control-api:
+    environment:
+      FEATURE_EXECUTION_EDGE: "true"
+      FEATURE_EXECUTION_ANALYTICS_QUERY: "true"
+      FEATURE_EXECUTION_REALTIME_SSE: "false"
+      EXECUTION_REALTIME_AUTHORITY_MODE: manager_projection
+      FEATURE_EXECUTION_COMMAND_RELAY: "false"
+      EXECUTION_EDGE_ORIGIN: ${EXECUTION_EDGE_ORIGIN:?set the exact private AWS Edge origin}
+      EXECUTION_EDGE_ENVIRONMENT: ${EXECUTION_EDGE_ENVIRONMENT:?paper, sandbox, or live}
+      EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: ${EXECUTION_EDGE_MANAGER_V2_PROFILE_ID:?set the exact Manager profile ID}
+      EXECUTION_EDGE_DELEGATION_AUDIENCE: ${EXECUTION_EDGE_DELEGATION_AUDIENCE:?set the matching profile audience}
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: /run/secrets/execution-edge/delegation-private-key.pem
+      EXECUTION_EDGE_CA_FILE: /run/secrets/execution-edge/edge-server-ca.crt
+      EXECUTION_EDGE_CLIENT_CERT_FILE: /run/secrets/execution-edge/sgp-client.crt
+      EXECUTION_EDGE_CLIENT_KEY_FILE: /run/secrets/execution-edge/sgp-client.key
+    volumes:
+      - type: bind
+        source: ${CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY:?set the root-owned SGP edge secret directory}
+        target: /run/secrets/execution-edge
+        read_only: true
