@@ -1505,3 +1505,15 @@ durable run/attempt events. Detailed evidence:
   race in the Admin Action Drawer without changing product code or baselines.
 - Runtime/stable authority is unchanged. Integration into `dev` and the
   isolated dev rebuild are deployment steps, not an N29 Product GO.
+
+## Backend state — 2026-09-01 (Execution Edge reproducible image input closeout)
+
+- The release Dockerfile now copies every repository-owned artifact embedded
+  by the Rust compatibility authority: shared contract fixtures, immutable
+  release manifests, D3 transport evidence and the Trading System contract
+  pack. A publication gate asserts those build-input boundaries so a full
+  checkout can no longer pass Rust tests while the release image fails later.
+- The final runtime remains the pinned non-root Distroless image; build-only
+  plans, fixtures and documentation do not enter the runtime layer. No runtime
+  flag, source connection, command authority, `main` or stable deployment is
+  changed by this packaging closeout.

@@ -35,6 +35,14 @@ expected_edge_runtime = (
 )
 if expected_edge_runtime not in edge_dockerfile:
     raise SystemExit("Execution Edge runtime must remain on the reviewed pinned Distroless digest.")
+for build_input in (
+    "COPY packages/contracts packages/contracts",
+    "COPY deploy/manifests deploy/manifests",
+    "COPY upgrade/backend upgrade/backend",
+    "COPY upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack",
+):
+    if build_input not in edge_dockerfile:
+        raise SystemExit(f"Execution Edge embedded build input is missing: {build_input}")
 expected_proxy_runtime = (
     "FROM nginxinc/nginx-unprivileged:1.31.4-alpine3.24-slim@sha256:"
     "021f32b23e2bfc8610ccdec499b709625dcee1369884d7a51bd8a23a3accb301"

@@ -2,6 +2,9 @@ FROM rust:1.85.1-slim-bookworm@sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e37
 
 WORKDIR /repo
 COPY services/portal-execution-edge-rs services/portal-execution-edge-rs
+COPY packages/contracts packages/contracts
+COPY deploy/manifests deploy/manifests
+COPY upgrade/backend upgrade/backend
 COPY upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/repo/services/portal-execution-edge-rs/target,sharing=locked \

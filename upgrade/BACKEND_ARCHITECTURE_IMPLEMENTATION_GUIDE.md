@@ -1743,6 +1743,14 @@ activation or the phase):**
   only `N29-REL-01` remains. See
   [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
+- **Execution Edge release image inputs closed (2026-09-01):** the pinned
+  Rust/Distroless release Dockerfile now carries every repository-owned input
+  embedded at compile time by the N13B–N29 authorities. The static publication
+  gate rejects omission of shared fixtures, release manifests, D3 evidence or
+  the Trading System contract pack. These are build-stage inputs only; the
+  runtime layer remains the single non-root Edge binary and this change grants
+  no source, command or stable-release authority.
+
 - **D2/D3/D4 AWS-HK lane:** only minimal Rust Edge/Source Proxy/projection
   PostgreSQL/migrator on the existing host; IAM isolation and signed-image/
   workload-identity/window gates precede D2, then authenticated transport and
