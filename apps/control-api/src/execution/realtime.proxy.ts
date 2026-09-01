@@ -8,12 +8,14 @@ import {
 import { OnApplicationShutdown } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { AuthSession, PortalUser } from "../domain";
-import { ExecutionDelegationService } from "./delegation";
+import {
+  ExecutionDelegationService,
+  MANAGER_REALTIME_RESOURCE,
+} from "./delegation";
 
 const CURSOR_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}:[0-9]+$/i;
 const DIGEST_PATTERN = /^sha256:[0-9a-f]{64}$/;
 const COMMAND_CENTER_RESOURCE = "execution:command-center";
-const MANAGER_REALTIME_RESOURCE = "execution:manager-realtime";
 const REALTIME_SNAPSHOT_MAX_BYTES = 64 * 1024;
 
 export interface RealtimePrincipal {
@@ -120,6 +122,7 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
         privateKeyFile: config.EXECUTION_EDGE_PRIVATE_KEY_FILE!,
         ttlSeconds: config.EXECUTION_EDGE_DELEGATION_TTL_SECONDS,
         environment: config.EXECUTION_EDGE_ENVIRONMENT,
+        profileId: config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID,
       }),
       readFile(config.EXECUTION_EDGE_CA_FILE!),
       readFile(config.EXECUTION_EDGE_CLIENT_CERT_FILE!),

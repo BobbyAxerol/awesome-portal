@@ -403,6 +403,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   ) {
     throw new Error("manager-projection realtime profile must match the edge environment");
   }
+  if (
+    config.FEATURE_EXECUTION_ANALYTICS_QUERY === "true" &&
+    config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID === undefined
+  ) {
+    throw new Error("manager-projection analytics requires an exact Manager-v2 profile binding");
+  }
+  if (
+    config.FEATURE_EXECUTION_ANALYTICS_QUERY === "true" &&
+    config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID !== undefined &&
+    !config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID.startsWith(
+      `${config.EXECUTION_EDGE_ENVIRONMENT.toUpperCase()}_`,
+    )
+  ) {
+    throw new Error("manager-projection analytics profile must match the edge environment");
+  }
   return config;
 }
 

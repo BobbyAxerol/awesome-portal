@@ -155,6 +155,28 @@ describe("EX-BE-07b analytics screen boundary", () => {
     })).toThrowError(/mTLS/);
   });
 
+  it("requires an environment-matched Manager profile for N25 analytics", () => {
+    const configured = {
+      ...base,
+      FEATURE_EXECUTION_EDGE: "true",
+      FEATURE_EXECUTION_ANALYTICS_QUERY: "true",
+      EXECUTION_EDGE_ORIGIN: "https://edge.internal:8443",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/delegation.key",
+      EXECUTION_EDGE_CA_FILE: "/run/secrets/ca.crt",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/run/secrets/client.crt",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/run/secrets/client.key",
+    };
+    expect(() => loadConfig(configured)).toThrowError(/exact Manager-v2 profile binding/);
+    expect(() => loadConfig({
+      ...configured,
+      EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: "LIVE_BINANCE_USDM",
+    })).toThrowError(/profile must match/);
+    expect(loadConfig({
+      ...configured,
+      EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: "PAPER_BINANCE_USDM",
+    }).FEATURE_EXECUTION_ANALYTICS_QUERY).toBe("true");
+  });
+
   it("binds capital preview to the immutable approval portfolio and currency", () => {
     const scope = {
       approvalId: "approval-1",

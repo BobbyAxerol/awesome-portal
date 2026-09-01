@@ -1,6 +1,9 @@
 import { exportJWK, exportPKCS8, generateKeyPair, jwtVerify } from "jose";
 import { describe, expect, it } from "vitest";
-import { ExecutionDelegationService } from "../src/execution/delegation";
+import {
+  ExecutionDelegationService,
+  MANAGER_REALTIME_RESOURCE,
+} from "../src/execution/delegation";
 
 async function fixture(ttlSeconds = 45) {
   const { privateKey, publicKey } = await generateKeyPair("RS256", { extractable: true });
@@ -121,6 +124,38 @@ describe("execution delegated read assertions", () => {
         workspaceId: "ws_research",
         roles: ["ADMIN"],
         resources: ["execution:manager-v2:*"],
+        authenticationTime: new Date(),
+        authenticationMethods: ["portal_session"],
+      }),
+    ).rejects.toThrow("principal is invalid");
+  });
+
+  it("supports only the exact profile-bound Manager realtime resource", async () => {
+    const { service, publicKey } = await fixture();
+    const token = await service.issueReadAssertion({
+      principalId: "usr_manager",
+      sessionId: "ses_manager_realtime",
+      workspaceId: "ws_research",
+      roles: ["ADMIN"],
+      resources: [MANAGER_REALTIME_RESOURCE],
+      authenticationTime: new Date(),
+      authenticationMethods: ["portal_session"],
+    });
+    const { payload } = await jwtVerify(token, publicKey, {
+      issuer: "portal-control-api",
+      audience: "portal-execution-edge-paper",
+      algorithms: ["RS256"],
+    });
+    expect(payload.resources).toEqual([MANAGER_REALTIME_RESOURCE]);
+    expect(payload.profile_id).toBe("PAPER_BINANCE_USDM");
+
+    await expect(
+      service.issueReadAssertion({
+        principalId: "usr_manager",
+        sessionId: "ses_manager_realtime",
+        workspaceId: "ws_research",
+        roles: ["ADMIN"],
+        resources: ["execution:manager-realtime:*"],
         authenticationTime: new Date(),
         authenticationMethods: ["portal_session"],
       }),

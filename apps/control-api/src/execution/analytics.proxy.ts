@@ -137,6 +137,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
         privateKeyFile: config.EXECUTION_EDGE_PRIVATE_KEY_FILE!,
         ttlSeconds: config.EXECUTION_EDGE_DELEGATION_TTL_SECONDS,
         environment: config.EXECUTION_EDGE_ENVIRONMENT,
+        profileId: config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID,
       }),
       readFile(config.EXECUTION_EDGE_CA_FILE!),
       readFile(config.EXECUTION_EDGE_CLIENT_CERT_FILE!),
