@@ -1476,7 +1476,11 @@ durable run/attempt events. Detailed evidence:
 - Paper same-origin BFF snapshot/stream pass and unauthenticated requests are
   `401`. The BFF is intentionally Paper-bound; Sandbox/Live Edge streams keep
   their independent audience/profile authority. Commands and Live mutation
-  remain disabled. Status is `THREE_PROFILE_DEV_SSE_ACCEPTED`.
+  remain disabled. `current-source-realtime-up/config` reproduce this exact
+  SGP composition and pin Control API image
+  `sha256:1c2da7b95e8c3e40a48631537cc5773ec9ae950b3a9adca10a5deb5b630424b5`;
+  `current-source-up` remains the explicit SSE rollback.
+  Status is `THREE_PROFILE_DEV_SSE_ACCEPTED`.
 - Detail:
   [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 

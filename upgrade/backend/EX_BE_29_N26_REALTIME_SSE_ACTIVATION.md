@@ -128,14 +128,18 @@ Post-fix source verification is green: 31 Edge-service tests including
 zero-warning Clippy, migration `0016` and PostgreSQL dump/restore.
 
 The final dev acceptance used owner manifest SHA-256
-`97e5964c7f693f2731773d7f87c7108bfc4bdd875c3549a0494e03eeaab43d57`,
-which pins the exact Edge and Control API image digests, three profiles,
-catalogue revision and closed command-disabled authority set. Results:
+`48d51e907f05a93139dd4c2bab6e0598586eec1b00df0c80b99a3368e6cc8277`,
+which pins Edge image
+`sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077`
+and the reproducibly composed Control API image
+`sha256:1c2da7b95e8c3e40a48631537cc5773ec9ae950b3a9adca10a5deb5b630424b5`,
+plus three profiles, catalogue revision and the closed command-disabled
+authority set. Results after repinning and reloading that manifest:
 
 | Profile | Snapshot | Facts | Cursor | Resume first event | Negative auth |
 |---|---:|---:|---:|---|---|
-| Paper | `200 / AVAILABLE` | 8,797 | 47 | `projection.heartbeat` through TypeScript BFF | no JWT `401`; no client cert rejected |
-| Sandbox | `200 / AVAILABLE` | 317 | 46 | `projection.heartbeat` | no JWT `401`; no client cert rejected |
+| Paper | `200 / AVAILABLE` | 8,797 | 57 | `projection.heartbeat`; BFF then observed `runtime.updated` at sequence 58 | no JWT `401`; no client cert rejected |
+| Sandbox | `200 / AVAILABLE` | 317 | 56 | `runtime.updated` | no JWT `401`; no client cert rejected |
 | Live | `200 / AVAILABLE` | 87 | 1 | `projection.heartbeat` | no JWT `401`; no client cert rejected |
 
 The same-origin Paper snapshot and stream proxy both pass; unauthenticated
@@ -146,3 +150,9 @@ Edge services, projection workers, projection databases and Source Proxies are
 healthy with zero Edge restarts after the final manifest reload. Runtime envs
 have `.pre-771715b` rollback copies. Command relay, projection ingestion on the
 serving Edge and every Live mutation remain false.
+
+`./scripts/portal current-source-realtime-up` is the reproducible SGP entry
+point for current-source reads plus the exact Paper Command Center SSE bridge;
+`current-source-realtime-config` renders the same composition. The existing
+`current-source-up` intentionally remains the one-command SGP realtime
+rollback and cannot accidentally keep the SSE overlay enabled.

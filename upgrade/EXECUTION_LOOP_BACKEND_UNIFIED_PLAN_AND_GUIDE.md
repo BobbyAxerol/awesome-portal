@@ -1738,7 +1738,9 @@ The authority-aware fix passes focused/static tests and the complete
 Rust/Clippy/fresh-PostgreSQL/restore suite. Fixed commit `771715b` then passed
 exact Paper/Sandbox/Live mTLS/JWT snapshot→resume plus negative-auth probes on
 the real dual-cell path; Paper same-origin BFF snapshot/stream also pass.
-Command and Live mutation remain false.
+`current-source-realtime-up/config` reproduces the exact Paper BFF composition
+and `current-source-up` remains the explicit SSE rollback. Command and Live
+mutation remain false.
 Evidence and operations:
 [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 

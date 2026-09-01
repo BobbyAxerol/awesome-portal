@@ -98,6 +98,23 @@ for relative, required in {
     for token in required:
         assert token in text, (relative, token)
 
+portal_helper = (root / "scripts/portal").read_text()
+for marker in (
+    "CURRENT_SOURCE_REALTIME_COMPOSE",
+    "current-source-realtime-up",
+    "current-source-realtime-config",
+):
+    assert marker in portal_helper, marker
+
+bff_overlay = (root / "deploy/compose.execution-manager-realtime.yaml").read_text()
+for marker in (
+    "EXECUTION_EDGE_PAPER_ORIGIN",
+    "EXECUTION_EDGE_PAPER_PROFILE_ID",
+    "EXECUTION_EDGE_PAPER_AUDIENCE",
+    'FEATURE_EXECUTION_COMMAND_RELAY: "false"',
+):
+    assert marker in bff_overlay, marker
+
 serialized = json.dumps({"realtime": realtime, "commands": commands}, sort_keys=True).lower()
 for forbidden in (
     "-----begin", "authorization: bearer", "private_key", "client_secret",

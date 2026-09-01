@@ -1762,7 +1762,9 @@ activation or the phase):**
   then passed exact Paper/Sandbox/Live snapshot→resume, no-JWT and
   no-client-certificate probes over the real dual-cell path. Paper same-origin
   BFF stream is active; Sandbox/Live remain separately exact-bound at the Edge.
-  Command relay and Live mutation remain false. See
+  `current-source-realtime-up/config` now makes the accepted SGP composition
+  reproducible; ordinary `current-source-up` remains its SSE rollback. Command
+  relay and Live mutation remain false. See
   [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 
 - **Execution Edge release image inputs closed (2026-09-01):** the pinned

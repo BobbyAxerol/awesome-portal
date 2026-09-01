@@ -7,6 +7,10 @@ CURRENT_SOURCE_COMPOSE=(
   "${COMPOSE[@]}"
   -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml"
 )
+CURRENT_SOURCE_REALTIME_COMPOSE=(
+  "${CURRENT_SOURCE_COMPOSE[@]}"
+  -f "${ROOT_DIR}/deploy/compose.execution-manager-realtime.yaml"
+)
 
 usage() {
   cat <<'EOF'
@@ -27,6 +31,10 @@ Commands:
            Build/start the stack with the reviewed read-only Execution current-source overlay.
   current-source-config
            Render the stack with the reviewed read-only Execution current-source overlay.
+  current-source-realtime-up
+           Build/start current-source reads plus the exact Paper Command Center SSE overlay.
+  current-source-realtime-config
+           Render current-source reads plus the exact Paper Command Center SSE overlay.
 EOF
 }
 
@@ -107,6 +115,15 @@ case "${command}" in
   current-source-config)
     require_docker_cli
     exec "${CURRENT_SOURCE_COMPOSE[@]}" config "$@"
+    ;;
+  current-source-realtime-up)
+    require_docker_access
+    validate_historical_data_mount
+    exec "${CURRENT_SOURCE_REALTIME_COMPOSE[@]}" up --detach --build "$@"
+    ;;
+  current-source-realtime-config)
+    require_docker_cli
+    exec "${CURRENT_SOURCE_REALTIME_COMPOSE[@]}" config "$@"
     ;;
   help|-h|--help)
     usage
