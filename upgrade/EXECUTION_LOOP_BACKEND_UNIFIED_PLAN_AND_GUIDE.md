@@ -1723,17 +1723,22 @@ for Paper, Sandbox and Live.
 empty Live profile emits authenticated snapshot/heartbeat truth only; terminal
 errors cannot retry forever.
 
-**Closeout (2026-08-30):** `COMPLETE /
-IMPLEMENTATION_AND_RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING /
-N27_READY`. Migration `0014` assigns one contiguous cursor only when a complete
+**Closeout amended (2026-09-01):** `IMPLEMENTATION_COMPLETE /
+MANAGER_REPLAY_FIX_QUALIFIED / DEV_REALTIME_REQUALIFICATION_PENDING`.
+Migration `0014` assigns one contiguous cursor only when a complete
 Manager cycle seals, so partial per-feed writes never leak as realtime deltas.
 Rust Edge serves exact Paper/Sandbox/Live profile snapshots and resumes from a
 shared PostgreSQL complete-cycle journal with bounded local fan-out. Empty
 Live emits `EMPTY_VALID` plus heartbeats. Session expiry and projection gaps
 are terminal and require browser `EventSource.close()`; slow consumers cannot
 grow memory without bound. Realtime rollback is independent from projection
-and Query. No source, command, dev/stable runtime or Trading System state
-changed. Evidence and operations:
+and Query. The first bounded Paper probe found and safely rolled back a legacy
+journal selection in the Manager resume path before the BFF flag was enabled.
+The authority-aware fix passes focused/static tests and the complete
+Rust/Clippy/fresh-PostgreSQL/restore suite. Runtime closeout now requires the
+fixed content-addressed image to pass exact Paper/Sandbox/Live mTLS/JWT
+snapshot→resume and rollback probes; command and Live mutation remain false.
+Evidence and operations:
 [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 
 #### N27 — Admin Action Drawer command plane

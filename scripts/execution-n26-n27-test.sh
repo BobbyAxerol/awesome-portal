@@ -82,7 +82,13 @@ for relative, required in {
     "services/portal-execution-edge-rs/crates/projection-store-pg/src/manager_projection.rs":
         ("PORTAL_PROJECTION_DELTA", "realtime_sequence", "poll_interval_ms"),
     "services/portal-execution-edge-rs/crates/edge-service/src/main.rs":
-        ("ManagerProjection", "active_manager_realtime_authority", "auth.expiring"),
+        (
+            "ManagerProjection",
+            "active_manager_realtime_authority",
+            "policy.authority_mode",
+            "load_manager_realtime_records",
+            "auth.expiring",
+        ),
     "apps/control-api/src/execution/realtime.controller.ts":
         ("auth.expired", "terminal: true", "response.end?.()"),
     "apps/control-api/src/operations/operations.service.ts":

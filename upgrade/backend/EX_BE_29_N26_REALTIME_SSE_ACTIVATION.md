@@ -1,9 +1,10 @@
 # EX-BE-29 — N26 Realtime SSE Activation
 
-**Status:** `COMPLETE / IMPLEMENTATION_AND_RELEASE_QUALIFIED / SIGNED_DEV_DEPLOYMENT_PENDING`  
-**Date:** 2026-08-30  
-**Branch:** `feat/execution-manager-campaign`  
-**Runtime effect:** no dev/stable deployment, source mutation or command activation
+**Status:** `IMPLEMENTATION_COMPLETE / MANAGER_REPLAY_FIX_QUALIFIED / DEV_REALTIME_REQUALIFICATION_PENDING`  
+**Date:** 2026-09-01  
+**Branch:** `feat/execution-data-activation`  
+**Runtime effect:** the first Paper realtime probe was rolled back; projection,
+Query and analytics remain active while SSE, commands and Live mutation remain off
 
 ## 1. Result
 
@@ -92,8 +93,37 @@ deploy or modify runtime.
 
 ## 6. Closeout
 
-There is no open internal N26 implementation debt. Signed dev deployment,
-browser consumer adoption and post-deploy latency/soak evidence are release
-operations, not hidden unfinished code. Claude must close terminal EventSource
-instances exactly as described in the N26/N27 handoff before realtime is
-enabled for a product profile.
+The original N26 implementation and browser lifecycle contract remain closed.
+During the first current-source Paper live probe, the snapshot route selected
+the Manager projection correctly but the resume path still read the legacy
+projection journal. The resulting terminal `projection.gap` was observed
+before the same-origin product flag was enabled. Paper was immediately rolled
+back to analytics-only; Sandbox and Live SSE were never enabled.
+
+The replay path now carries the selected authority through
+`RealtimeResumePolicy` and calls the same authority-aware repository used by
+the poller. A focused lineage regression test, the N26/N27 static gate and the
+full Rust/fresh-PostgreSQL/Clippy/restore suite pass. The only remaining N26
+operation is deployment of this new content-addressed image followed by exact
+Paper, Sandbox and Live mTLS/JWT snapshot→resume probes. That operation must
+not widen command or Live mutation authority.
+
+## 7. Dev live-probe evidence and fail-closed result
+
+The pre-fix Paper probe established the transport boundary without exposing
+the defect to the browser:
+
+- Manager snapshot returned HTTP/2 `200`, schema
+  `execution.manager-realtime-snapshot.v2`, profile
+  `PAPER_BINANCE_USDM`, `AVAILABLE`, `fact_count=8797`;
+- the same mTLS client without a delegated JWT returned `401`;
+- resume with the returned cursor produced a terminal `projection.gap`, which
+  identified the journal-selection defect; and
+- Control API `FEATURE_EXECUTION_REALTIME_SSE` stayed false throughout, then
+  the Edge Paper overlay was restored to analytics-only.
+
+Post-fix source verification is green: 31 Edge-service tests including
+`realtime_lineage_selects_its_own_replay_journal`, the complete Rust workspace,
+zero-warning Clippy, migration `0016` and PostgreSQL dump/restore. Runtime
+acceptance remains pending until the fixed image passes all three exact-profile
+probes and their independent rollback checks.

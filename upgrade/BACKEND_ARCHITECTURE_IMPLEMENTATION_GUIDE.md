@@ -1751,6 +1751,17 @@ activation or the phase):**
   only `N29-REL-01` remains. See
   [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
+- **N26 Manager replay selection hardened (2026-09-01):** the first bounded
+  Paper SSE probe proved mTLS/JWT snapshot access but exposed that resume still
+  read the legacy journal after Manager authority selection. The product BFF
+  flag stayed false, Paper reverted to analytics-only and Sandbox/Live SSE were
+  never opened. `RealtimeResumePolicy` now carries the selected authority into
+  the repository read; focused/static tests plus full Rust, Clippy,
+  fresh-PostgreSQL and restore gates pass. A new content-addressed image and
+  exact three-profile snapshot→resume smoke remain the operational exit gate;
+  command relay and Live mutation remain false. See
+  [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
+
 - **Execution Edge release image inputs closed (2026-09-01):** the pinned
   Rust/Distroless release Dockerfile now carries every repository-owned input
   embedded at compile time by the N13B–N29 authorities. The static publication

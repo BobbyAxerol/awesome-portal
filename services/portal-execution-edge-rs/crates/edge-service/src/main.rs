@@ -3214,6 +3214,7 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         Ok(authority) => authority,
         Err(status) => return status.into_response(),
     };
+    let authority_mode = authority.lineage.mode();
     let availability = &authority.availability;
     let mut subscription = hub.subscribe(
         request.claims.workspace_id.clone(),
@@ -3228,6 +3229,7 @@ async fn realtime_stream(State(state): State<AppState>, headers: HeaderMap) -> R
         &request,
         &mut subscription,
         RealtimeResumePolicy {
+            authority_mode,
             replay_limit: state.realtime_replay_limit,
             epoch_jitter: state.realtime_epoch_jitter,
             freshness: &state.realtime_freshness_policy,
@@ -3387,6 +3389,15 @@ enum RealtimeAuthorityLineage {
     },
 }
 
+impl RealtimeAuthorityLineage {
+    const fn mode(&self) -> RealtimeAuthorityMode {
+        match self {
+            Self::Legacy { .. } => RealtimeAuthorityMode::LegacyShadow,
+            Self::Manager { .. } => RealtimeAuthorityMode::ManagerProjection,
+        }
+    }
+}
+
 async fn realtime_authority(
     state: &AppState,
     store: &PgProjectionStore,
@@ -3479,6 +3490,7 @@ struct RealtimeRequest {
 
 #[derive(Clone, Copy)]
 struct RealtimeResumePolicy<'a> {
+    authority_mode: RealtimeAuthorityMode,
     replay_limit: usize,
     epoch_jitter: Duration,
     freshness: &'a FreshnessPolicy,
@@ -3553,16 +3565,7 @@ async fn prepare_resume(
     );
     match decision {
         ResumeDecision::Resume => {
-            prepare_replay(
-                store,
-                availability,
-                request.cursor,
-                subscription,
-                policy.replay_limit,
-                policy.freshness,
-                policy.venue_session,
-            )
-            .await
+            prepare_replay(store, availability, request.cursor, subscription, policy).await
         }
         ResumeDecision::Gap {
             earliest_available_sequence,
@@ -3600,14 +3603,17 @@ async fn prepare_replay(
     availability: &RealtimeScopeAvailability,
     cursor: ProjectionCursor,
     subscription: &mut RealtimeSubscription,
-    replay_limit: usize,
-    freshness_policy: &FreshnessPolicy,
-    venue_session: VenueSessionState,
+    policy: RealtimeResumePolicy<'_>,
 ) -> Result<(VecDeque<Event>, bool), StatusCode> {
-    let page = store
-        .load_realtime_records(cursor.epoch_id, cursor.sequence, replay_limit)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let page = load_realtime_records(
+        store,
+        policy.authority_mode,
+        cursor.epoch_id,
+        cursor.sequence,
+        policy.replay_limit,
+    )
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     if page.has_more {
         let mut gap = GapEnvelope::new(GapReason::ReplayWindowExceeded, Some(cursor));
         gap.active_epoch_id = Some(availability.active.epoch.epoch_id);
@@ -3632,8 +3638,9 @@ async fn prepare_replay(
             sequence: record.projection_sequence,
         };
         expected = expected.saturating_add(1);
-        let envelope = record_to_envelope(record, freshness_policy, venue_session, Utc::now())
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let envelope =
+            record_to_envelope(record, policy.freshness, policy.venue_session, Utc::now())
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         initial.push_back(projection_event(&envelope));
     }
     subscription.advance_after_replay(replay_cursor);
@@ -5092,6 +5099,24 @@ mod tests {
             projection_ingestion: DependencyReadiness::from_bool(true),
             realtime: DependencyReadiness::from_bool(false),
         }));
+    }
+
+    #[test]
+    fn realtime_lineage_selects_its_own_replay_journal() {
+        let legacy = RealtimeAuthorityLineage::Legacy {
+            capability_snapshot_id: "cap_legacy".to_owned(),
+            activation_manifest_digest: "sha256:legacy".to_owned(),
+        };
+        let manager = RealtimeAuthorityLineage::Manager {
+            profile_id: "PAPER_BINANCE_USDM".to_owned(),
+            fact_count: 0,
+            source_read_at: Utc::now(),
+            projection_state_digest: "sha256:manager".to_owned(),
+            activation_manifest_digest: "sha256:activation".to_owned(),
+        };
+
+        assert_eq!(legacy.mode(), RealtimeAuthorityMode::LegacyShadow);
+        assert_eq!(manager.mode(), RealtimeAuthorityMode::ManagerProjection);
     }
 
     #[test]

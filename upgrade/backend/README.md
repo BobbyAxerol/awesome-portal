@@ -1460,6 +1460,21 @@ durable run/attempt events. Detailed evidence:
 - Detail:
   [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
 
+## Backend state — 2026-09-01 (N26 Manager resume hardening)
+
+- A bounded Paper live probe found that Manager snapshot/poller authority was
+  correct while resume still selected the legacy journal. The first resume
+  therefore emitted a terminal `projection.gap`; the same-origin BFF flag was
+  never enabled and Paper was rolled back to analytics-only immediately.
+- Resume now carries the selected authority and reads the matching Manager or
+  legacy journal. Focused regression, N26/N27 static checks, the complete Rust
+  workspace, zero-warning Clippy, fresh PostgreSQL and restore gates pass.
+- Dev runtime remains fail-closed pending a new content-addressed image and
+  exact Paper/Sandbox/Live mTLS/JWT snapshot→resume qualification. Commands
+  and Live mutation remain disabled.
+- Detail:
+  [`EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md`](./EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md).
+
 ## Backend state — 2026-08-30 (N27 Admin Action Drawer)
 
 - N27 is `COMPLETE / CURRENT_SOURCE_CLASSIFIED / SOURCE_COMMAND_DARK /
