@@ -278,7 +278,7 @@ mod tests {
             compatibility: ManagerRealtimeCompatibility {
                 projection_schema_version: "portal.execution.manager-projection.v2".to_owned(),
                 projection_adapter_version:
-                    "portal.execution.manager-projection.manager-v2.runtime.v3".to_owned(),
+                    "portal.execution.manager-projection.manager-v2.runtime.v4".to_owned(),
                 realtime_contract_revision: "execution.realtime.v2".to_owned(),
                 edge_image_digest: digest('b'),
                 control_api_image_digest: digest('c'),

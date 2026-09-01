@@ -17,7 +17,7 @@ root = pathlib.Path(sys.argv[1])
 manifest = json.loads((root / "deploy/manifests/query-analytics-release-profile.v1.json").read_text())
 assert manifest["phase"] == "N25"
 assert manifest["projection_schema"] == "portal.execution.manager-projection.v2"
-assert manifest["projection_adapter"] == "portal.execution.manager-projection.manager-v2.runtime.v3"
+assert manifest["projection_adapter"] == "portal.execution.manager-projection.manager-v2.runtime.v4"
 assert manifest["required_new_feed_count"] == 13
 assert manifest["historical_receipt_feed_counts"] == [12, 13]
 assert len(manifest["required_relations"]) == 13

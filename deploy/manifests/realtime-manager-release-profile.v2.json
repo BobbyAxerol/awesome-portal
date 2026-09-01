@@ -5,7 +5,7 @@
   "event_contract": "execution.realtime.v1",
   "delivery_profile": "current_projection",
   "projection_schema": "portal.execution.manager-projection.v2",
-  "projection_adapter": "portal.execution.manager-projection.manager-v2.runtime.v3",
+  "projection_adapter": "portal.execution.manager-projection.manager-v2.runtime.v4",
   "profiles": {
     "paper": "PAPER_BINANCE_USDM",
     "sandbox": "SANDBOX_BINANCE_USDM",

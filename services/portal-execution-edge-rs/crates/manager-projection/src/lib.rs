@@ -12,7 +12,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
-use manager_v2_contract::{Completeness, ManagerMeta, ManagerRecord, ProjectionKind};
+use manager_v2_contract::{
+    CataloguedRelation, Completeness, ManagerMeta, ManagerRecord, ProjectionKind,
+};
 use projection_core::{
     canonical_digest, ProjectionEntityKey, ProjectionEntityKind, ProjectionObservation,
     ProjectionSnapshot, SnapshotCompleteness, SourceSequenceSemantics,
@@ -24,7 +26,7 @@ use thiserror::Error;
 
 pub const MANAGER_PROJECTION_SCHEMA_VERSION: &str = "portal.execution.manager-projection.v2";
 pub const MANAGER_PROJECTION_ADAPTER_VERSION: &str =
-    "portal.execution.manager-projection.manager-v2.runtime.v3";
+    "portal.execution.manager-projection.manager-v2.runtime.v4";
 pub const PORTAL_PROJECTION_DELTA: &str = "PORTAL_PROJECTION_DELTA";
 pub const DEFAULT_POLL_INTERVAL_MS: i64 = 2_000;
 pub const MAXIMUM_FEED_RECORDS: usize = 20_000;
@@ -166,7 +168,8 @@ pub const FEEDS: [ManagerProjectionFeed; 13] = [
 ];
 
 /// Redacted, stable projection fact derived from one Manager record. The
-/// source opaque key is represented only by a one-way digest.
+/// source opaque record token is deliberately ignored: Manager-v2 publishes
+/// it as a five-minute retrieval cursor, not a durable entity identifier.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ManagerProjectionFact {
     source_key_digest: String,
@@ -175,25 +178,46 @@ pub struct ManagerProjectionFact {
 }
 
 impl ManagerProjectionFact {
-    /// Converts one contract-validated Manager record without persisting its
-    /// opaque source key.
+    /// Converts one contract-validated Manager record using the exact key
+    /// columns published by its catalogue relation. No opaque retrieval token
+    /// is persisted or used as identity.
     ///
     /// # Errors
     ///
     /// Rejects serialization drift or an invalid relation identifier.
-    pub fn from_record(record: &ManagerRecord) -> Result<Self, ProjectionMapError> {
+    pub fn from_record(
+        record: &ManagerRecord,
+        relation: &CataloguedRelation,
+    ) -> Result<Self, ProjectionMapError> {
         let relation_id = format!(
             "{}.{}",
             record.relation().schema(),
             record.relation().relation()
         );
+        if relation.id() != record.relation() || relation.key().columns().is_empty() {
+            return Err(ProjectionMapError::RelationBindingMismatch);
+        }
         let fields =
             serde_json::to_value(record.fields()).map_err(|_| ProjectionMapError::Serialization)?;
-        Self::new(
-            &relation_id,
-            record.record_key().as_str().as_bytes(),
+        let field_object = fields
+            .as_object()
+            .ok_or(ProjectionMapError::FieldsMustBeObject)?;
+        let stable_key = relation
+            .key()
+            .columns()
+            .iter()
+            .map(|column| {
+                field_object
+                    .get(column)
+                    .map(|value| json!({"column": column, "value": value}))
+                    .ok_or(ProjectionMapError::RelationBindingMismatch)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self {
+            source_key_digest: canonical_digest(&(relation_id.as_str(), stable_key))?,
+            relation_id,
             fields,
-        )
+        })
     }
 
     /// Test/adapter constructor that still hashes the supplied source key.
@@ -533,6 +557,10 @@ pub enum ProjectionMapError {
 mod tests {
     use super::*;
     use chrono::TimeZone as _;
+    use manager_v2_contract::{
+        decode_success_for_profile, ManagerCatalogue, ManagerPayload, ManagerV2Request, PageLimit,
+        RUNTIME_CONTRACT_REVISION,
+    };
 
     fn at(seconds: i64) -> DateTime<Utc> {
         Utc.timestamp_opt(seconds, 0).single().unwrap()
@@ -577,6 +605,135 @@ mod tests {
                 })
                 .collect(),
         }
+    }
+
+    fn catalogue_and_order_record(
+        record_key: &str,
+        status: &str,
+    ) -> (ManagerCatalogue, ManagerRecord) {
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let envelope = |data: Value| {
+            json!({
+                "contract_version": RUNTIME_CONTRACT_REVISION,
+                "authority": "EXECUTION_CELL",
+                "profile_id": "PAPER_BINANCE_USDM",
+                "catalogue_sha256": digest,
+                "availability": "AVAILABLE",
+                "freshness": "FRESH",
+                "completeness": "COMPLETE",
+                "trace_id": "manager-projection-key-test",
+                "as_of": "2026-09-01T00:00:00Z",
+                "data": data,
+            })
+        };
+        let relation = |name: &str, key_column: &str| {
+            json!({
+                "id": {"schema": "public", "relation": name},
+                "kind": "TABLE",
+                "safe_columns": [
+                    {"name": key_column, "ordinal": 1, "data_type": "text", "nullable": false},
+                    {"name": "status", "ordinal": 2, "data_type": "text", "nullable": false}
+                ],
+                "secret_cell_excluded_column_count": 0,
+                "key": {"status": "PRIMARY_KEY", "name": null, "columns": [key_column]},
+                "profile_classification": "FIXED_PROFILE_CONTEXT",
+                "profile_columns": [],
+                "query_status": "QUALIFIED_TS_OC_03D1"
+            })
+        };
+        let catalogue_body = serde_json::to_vec(&envelope(json!({
+            "catalogue_revision": digest,
+            "relation_count": 2,
+            "relations": [
+                relation("orders", "order_id"),
+                relation("fills", "fill_id")
+            ]
+        })))
+        .unwrap();
+        let ManagerPayload::Catalogue(catalogue_envelope) = decode_success_for_profile(
+            &ManagerV2Request::catalogue(),
+            &catalogue_body,
+            "PAPER_BINANCE_USDM",
+        )
+        .unwrap() else {
+            panic!("expected catalogue");
+        };
+        let catalogue = catalogue_envelope.into_data();
+        let orders = catalogue.relation("public", "orders").unwrap();
+        let request =
+            ManagerV2Request::relation_records(orders, None, PageLimit::default()).unwrap();
+        let page_body = serde_json::to_vec(&envelope(json!({
+            "relation": {"schema": "public", "relation": "orders"},
+            "items": [{
+                "relation": {"schema": "public", "relation": "orders"},
+                "record_key": record_key,
+                "fields": {
+                    "order_id": {"kind": "TEXT", "value": "order-42"},
+                    "status": {"kind": "TEXT", "value": status}
+                }
+            }],
+            "next_cursor": null
+        })))
+        .unwrap();
+        let ManagerPayload::RelationRecords(records) =
+            decode_success_for_profile(&request, &page_body, "PAPER_BINANCE_USDM").unwrap()
+        else {
+            panic!("expected relation records");
+        };
+        let record = records.data().items()[0].clone();
+        (catalogue, record)
+    }
+
+    #[test]
+    fn catalogue_key_identity_ignores_rotating_record_cursor() {
+        let (first_catalogue, first_record) =
+            catalogue_and_order_record("rotating-token-iat-1-exp-2", "OPEN");
+        let (second_catalogue, second_record) =
+            catalogue_and_order_record("rotating-token-iat-2-exp-3", "OPEN");
+        let first = ManagerProjectionFact::from_record(
+            &first_record,
+            first_catalogue.relation("public", "orders").unwrap(),
+        )
+        .unwrap();
+        let second = ManagerProjectionFact::from_record(
+            &second_record,
+            second_catalogue.relation("public", "orders").unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(first.source_key_digest, second.source_key_digest);
+        assert_eq!(first.fields, second.fields);
+        assert!(!format!("{first:?}").contains("rotating-token"));
+    }
+
+    #[test]
+    fn business_change_preserves_entity_identity_but_changes_fact_state() {
+        let (first_catalogue, first_record) = catalogue_and_order_record("token-1", "OPEN");
+        let (second_catalogue, second_record) = catalogue_and_order_record("token-2", "FILLED");
+        let first = ManagerProjectionFact::from_record(
+            &first_record,
+            first_catalogue.relation("public", "orders").unwrap(),
+        )
+        .unwrap();
+        let second = ManagerProjectionFact::from_record(
+            &second_record,
+            second_catalogue.relation("public", "orders").unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!(first.source_key_digest, second.source_key_digest);
+        assert_ne!(first.fields, second.fields);
+    }
+
+    #[test]
+    fn catalogue_relation_mismatch_fails_closed() {
+        let (catalogue, record) = catalogue_and_order_record("token-1", "OPEN");
+        let error = ManagerProjectionFact::from_record(
+            &record,
+            catalogue.relation("public", "fills").unwrap(),
+        )
+        .unwrap_err();
+        assert!(matches!(error, ProjectionMapError::RelationBindingMismatch));
     }
 
     #[test]

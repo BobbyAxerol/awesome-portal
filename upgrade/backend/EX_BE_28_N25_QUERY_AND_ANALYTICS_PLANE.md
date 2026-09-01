@@ -24,10 +24,10 @@ ACTIVE profile-isolated N24 epoch
 
 ## 2. Projection and query boundary
 
-N25 consumes projection adapter `manager-v2.runtime.v3` with 13 current-state
+N25 consumes projection adapter `manager-v2.runtime.v4` with 13 current-state
 feeds. It retains deployment/alpha/portfolio lineage and adds current account,
 policy, allocation and risk facts without periodically scanning unbounded
-history. Historical v1/v2 receipts remain immutable evidence; every v3 writer
+history. Historical v1/v2 receipts remain immutable evidence; every v4 writer
 cycle still requires exactly all 13 declared feeds.
 
 The repository selects ACTIVE epoch, latest complete cycle, subject lineage and
@@ -57,7 +57,7 @@ From the current source, the Rust plane supplies:
 - deterministic extrema-preserving adaptive downsampling.
 
 The engine retains the tested historical formulas for compatibility with an
-explicit future incremental source. In runtime v3, stage equity, contribution,
+explicit future incremental source. In runtime v4, stage equity, contribution,
 drawdown overlap, portfolio correlation and execution-session quality are
 typed `UNAVAILABLE` with stable N25 reason codes. They are not rendered as
 zero/empty because Manager-v2 currently lacks a bounded incremental history

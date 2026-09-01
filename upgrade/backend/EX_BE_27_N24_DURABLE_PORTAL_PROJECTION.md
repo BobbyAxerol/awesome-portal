@@ -1,6 +1,6 @@
 # EX-BE-27 — N24 Durable Portal Projection
 
-**Status:** `COMPLETE / CURRENT_SOURCE_RUNTIME_V3_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED`  
+**Status:** `COMPLETE / CURRENT_SOURCE_RUNTIME_V4_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED`  
 **Date:** 2026-09-01  
 **Branch:** `feat/execution-data-activation`  
 **Runtime effect:** no stable runtime, Trading System, Query, SSE, analytics or command activation
@@ -33,7 +33,7 @@ endpoint in the worker. Every cycle is bounded to 100 pages/feed, 20,000
 records/feed and 80,000 records total.
 
 Manager-v2 publishes paginated relation reads with a new read-only transaction
-and `as_of` on every page. Adapter v3 therefore accepts only monotonically
+and `as_of` on every page. Adapter v4 therefore accepts only monotonically
 advancing `as_of`, requires every intermediate page to be `PARTIAL`, requires
 the terminal page to be `COMPLETE`, and pins profile/catalogue identity for the
 whole traversal. It no longer demands the impossible same-`as_of` invariant.
@@ -51,11 +51,17 @@ always emits all eight entity-kind snapshots, including valid empty snapshots;
 therefore a zero-row Live profile can activate truthfully and can also remove
 previously visible rows through explicit tombstones.
 
-Source opaque keys are one-way SHA-256 identifiers in Portal storage. Poll and
-snapshot changes carry `PORTAL_PROJECTION_DELTA`, `POLL_BOUNDED` and no source
-sequence. N24 does not relabel `domain_events` rows as an authoritative owner
-event stream because the current Manager contract publishes snapshot reads,
-not an event cursor contract.
+Durable entity identity is the canonical one-way digest of relation ID plus
+the exact key columns already validated and published in the Manager-v2
+catalogue. The source `record_key` is retained only by the Manager contract for
+point retrieval: it is a randomized five-minute Fernet cursor and is never
+persisted or treated as business identity. Key/relation drift fails closed.
+This keeps identity stable across polls without hard-coding owner relations and
+automatically follows a newly validated catalogue revision. Poll and snapshot
+changes carry `PORTAL_PROJECTION_DELTA`, `POLL_BOUNDED` and no source sequence.
+N24 does not relabel `domain_events` rows as an authoritative owner event
+stream because the current Manager contract publishes snapshot reads, not an
+event cursor contract.
 
 ## 3. Durable reducer and horizontal safety
 
@@ -133,7 +139,11 @@ does not fabricate operational evidence.
 
 - mapper determinism and complete snapshots across Paper/Sandbox/Live: pass;
 - Manager-v2 `PARTIAL* -> COMPLETE` pagination with monotonic `as_of`: pass;
-- same-version feed drift prevented by adapter v3; v1/v2 evidence immutable: pass;
+- same-version feed drift prevented by adapter v4; v1/v2 evidence immutable: pass;
+- rotating five-minute `record_key` tokens preserve catalogue-key entity
+  identity; real non-key field changes preserve identity and change state:
+  pass;
+- record/relation catalogue mismatch fails closed: pass;
 - unbounded oldest-first history excluded from periodic projection: pass;
 - valid zero-row Live cycle with all eight empty snapshots: pass;
 - partial/missing/duplicate/cross-profile/relation drift negative matrix: pass;
@@ -152,13 +162,14 @@ does not fabricate operational evidence.
 - fresh PostgreSQL dump/restore signature including all N24 tables: pass.
 
 Runtime hardening on 2026-09-01 additionally proved that source receipt-time
-drift is not a business delta. Semantic per-kind snapshot and observation IDs
-exclude receipt timestamps; one bounded heartbeat row carries current poll
-freshness; unchanged repeat polls preserve immutable cycle/journal counts.
-Writer lease TTL scales from 60 to 900 seconds only by the already capped
-record count, allowing the 8,797-row Paper snapshot to commit atomically while
-retaining the 80,000-record hard limit. Existing history remains immutable and
-is not manually compacted.
+drift and rotating retrieval cursors are not business deltas. Semantic
+per-kind snapshot and observation IDs exclude receipt timestamps and derive
+entity identity from validated catalogue keys; one bounded heartbeat row
+carries current poll freshness. Unchanged repeat polls preserve immutable
+cycle/journal counts. Writer lease TTL scales from 60 to 900 seconds only by
+the already capped record count, allowing the 8,797-row Paper snapshot to
+commit atomically while retaining the 80,000-record hard limit. Existing
+history remains immutable and is not manually compacted.
 
 The canonical Docker gate creates a fresh PostgreSQL instance and removes the
 temporary container/network after completion.
@@ -168,8 +179,8 @@ temporary container/network after completion.
 `TD-EX-05` is closed: the accepted query path now has a durable, versioned,
 profile-isolated projection source with replay, retention, restore and atomic
 rollback semantics. There is no open internal N24 implementation debt,
-including the runtime timestamp-amplification and fixed-lease findings closed
-above.
+including the runtime timestamp-amplification, rotating-record-token
+amplification and fixed-lease findings closed above.
 
 Publishing a signed dev image and supplying runtime backup/PITR evidence are
 release operations, not hidden implementation work. N25 is the next backend

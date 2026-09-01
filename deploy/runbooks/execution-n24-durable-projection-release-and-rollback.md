@@ -1,6 +1,6 @@
 # N24 Durable Manager Projection Release and Rollback
 
-Status: current-source runtime v3 qualified; content-addressed dev deployment
+Status: current-source runtime v4 qualified; content-addressed dev deployment
 is owner-authorized. This runbook does not authorize a stable or Trading
 System change.
 
@@ -16,12 +16,15 @@ labelled `PORTAL_PROJECTION_DELTA`; N24 never invents a Trading-System event
 sequence. The worker collects exactly 13 bounded current-state feeds and atomically seals
 eight entity-kind snapshots per cycle. A valid empty Live profile still seals
 all eight empty snapshots. Receipt timestamps are freshness evidence, not
-business identity: an unchanged poll advances one bounded epoch heartbeat and
-does not append another cycle or one journal row per source record.
+business identity. The source `record_key` is a short-lived point-retrieval
+cursor, not an entity ID; adapter v4 derives identity only from the exact
+catalogue key columns and relation ID. An unchanged poll advances one bounded
+epoch heartbeat and does not append another cycle or one journal row per
+source record.
 
 Historical session/snapshot relations are not periodic feeds because the
 current owner API exposes them oldest-first without an incremental watermark,
-latest-window selector or stable snapshot token. Adapter v3 requires
+latest-window selector or stable snapshot token. Adapter v4 requires
 `PARTIAL` on intermediate pages, `COMPLETE` on the terminal page, fixed
 profile/catalogue identity and monotonic page `as_of`.
 
@@ -90,6 +93,9 @@ the three change windows.
 - unchanged semantic cycles update only
   `manager_projection_heartbeats`; immutable cycle, commit, ingestion-key and
   journal counts must remain stable across two unchanged polls;
+- two reads with different source `record_key` tokens but identical catalogue
+  key fields must resolve to the same Portal entity; never log or persist the
+  opaque token;
 - steady-state RPO target is 10 seconds while the qualified source is healthy;
 - process restart RTO is 120 seconds; an expired database lease advances the
   fencing token and rejects a stale writer;

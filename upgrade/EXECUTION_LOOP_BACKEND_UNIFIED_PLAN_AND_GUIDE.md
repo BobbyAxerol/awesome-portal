@@ -1630,7 +1630,7 @@ rebuild, retention, restore, RPO/RTO and rollback across active profiles.
 profiles with declared RPO/RTO and bounded storage. `TD-EX-05` is closed.
 
 **Runtime amendment (2026-09-01):** `COMPLETE /
-CURRENT_SOURCE_RUNTIME_V3_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED /
+CURRENT_SOURCE_RUNTIME_V4_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED /
 N25_READY`. Rust collects exactly 13 bounded current-state Manager-v2 feeds
 into eight complete Portal-owned snapshots for each Paper/Sandbox/Live profile, including
 truthful empty Live. Database-time leases and fencing, idempotent immutable
@@ -1640,15 +1640,17 @@ previous-epoch rollback, retained cleanup gates and PostgreSQL dump/restore
 all pass. Page collection enforces the 20,000/feed and 80,000/cycle memory
 bounds before allocation growth. Poll-derived facts are labelled
 `PORTAL_PROJECTION_DELTA`; no Trading System event sequence was invented.
-Adapter v3 follows the owner pagination contract (`PARTIAL* -> COMPLETE`,
+Adapter v4 follows the owner pagination contract (`PARTIAL* -> COMPLETE`,
 monotonic per-page `as_of`) and deliberately excludes oldest-first historical
 tables that lack a snapshot token/latest-window/incremental watermark.
-The 2026-09-01 runtime hardening separates semantic source identity from
-transport receipt timestamps: repeat unchanged polls update one bounded
-per-epoch heartbeat and do not amplify immutable cycles/journal rows. Lease TTL
-scales from 60 to 900 seconds by the already bounded record count, and the
-large Paper dev profile polls every 60 seconds. Existing immutable history is
-preserved for audited retention rather than manually deleted.
+The 2026-09-01 runtime hardening separates semantic source identity from both
+transport receipt timestamps and the owner's randomized five-minute retrieval
+cursor. Entity IDs use the exact validated catalogue key columns plus relation
+ID; repeat unchanged polls update one bounded per-epoch heartbeat and do not
+amplify immutable cycles/journal rows. Lease TTL scales from 60 to 900 seconds
+by the already bounded record count, and the large Paper dev profile polls
+every 60 seconds. Existing immutable history is preserved for audited
+retention rather than manually deleted.
 Declared healthy-source objectives are RPO 10s, worker restart RTO 120s,
 local rebuild RTO 15m and encrypted backup/PITR restore RTO 60m. Query,
 analytics, SSE, commands, Trading System and stable runtime remain unchanged.
@@ -1684,7 +1686,7 @@ CURRENT_SOURCE_QUERY_ANALYTICS_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED /
 N26_READY`. The Rust plane now loads one ACTIVE subject snapshot with one
 PostgreSQL statement, enforces exact relation/currency partitions and bounded
 series/correlation/replay outputs, and exposes four strict session-guarded BFF
-routes. Projection adapter v3 requires the exact 13 current-state feeds;
+routes. Projection adapter v4 requires the exact 13 current-state feeds;
 historical v1/v2 receipts remain immutable evidence. Historical series and
 execution-session quality are typed unavailable under stable N25 source-gap
 codes rather than produced by an unbounded scan. Market candles, benchmark

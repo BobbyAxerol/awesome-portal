@@ -27,7 +27,7 @@
   ],
   "compatibility": {
     "projection_schema_version": "portal.execution.manager-projection.v2",
-    "projection_adapter_version": "portal.execution.manager-projection.manager-v2.runtime.v3",
+    "projection_adapter_version": "portal.execution.manager-projection.manager-v2.runtime.v4",
     "realtime_contract_revision": "execution.realtime.v2",
     "edge_image_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
     "control_api_image_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",

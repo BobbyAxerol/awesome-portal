@@ -509,7 +509,10 @@ async fn load_feed(
             return Err(ManagerProjectionCommandError::CycleBoundExceeded);
         }
         for record in &records {
-            facts.push(ManagerProjectionFact::from_record(record)?);
+            let relation = catalogue
+                .relation(record.relation().schema(), record.relation().relation())
+                .ok_or(ManagerProjectionCommandError::CatalogueDrift)?;
+            facts.push(ManagerProjectionFact::from_record(record, relation)?);
         }
         let Some(next) = next else {
             return ManagerFeedSnapshot::from_manager_meta(
@@ -723,6 +726,8 @@ pub enum ManagerProjectionCommandError {
     UnexpectedPayload,
     #[error("N24 Manager page metadata drifted within a cycle")]
     CycleMetadataDrift,
+    #[error("N24 Manager catalogue no longer contains a record relation")]
+    CatalogueDrift,
     #[error("N24 Manager pagination exceeded the bounded page limit")]
     PageBoundExceeded,
     #[error("N24 Manager feed exceeded the bounded record limit")]

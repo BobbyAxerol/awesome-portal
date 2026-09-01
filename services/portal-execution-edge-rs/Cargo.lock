@@ -1248,17 +1248,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "missing-capability-adapter"
-version = "0.1.0"
-dependencies = [
- "rust_decimal",
- "serde",
- "serde_json",
- "sha2",
- "thiserror",
-]
-
-[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1304,6 +1293,17 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "missing-capability-adapter"
+version = "0.1.0"
+dependencies = [
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
 ]
 
 [[package]]
