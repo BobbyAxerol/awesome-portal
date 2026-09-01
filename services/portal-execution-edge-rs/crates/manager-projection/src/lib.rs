@@ -343,7 +343,6 @@ impl ManagerProjectionCycle {
                 input_facts.push(json!({
                     "feed": feed.feed.feed_id,
                     "entity_id": entity_id,
-                    "as_of": feed.as_of,
                     "payload": payload,
                 }));
                 observations.entry(feed.feed.entity_kind).or_default().push(
@@ -387,10 +386,32 @@ impl ManagerProjectionCycle {
         let mut snapshots = Vec::new();
         for (kind, mut kind_observations) in observations {
             kind_observations.sort_by(|left, right| left.entity.cmp(&right.entity));
+            let kind_input_digest = canonical_digest(
+                &kind_observations
+                    .iter()
+                    .map(|observation| {
+                        json!({
+                            "entity": &observation.entity,
+                            "operation": observation.operation,
+                            "source_authority": observation.source_authority,
+                            "source_completeness": observation.source_completeness,
+                            "poll_interval_ms": observation.poll_interval_ms,
+                            "adapter_version": &observation.adapter_version,
+                            "capability_snapshot_id": &observation.capability_snapshot_id,
+                            "payload": &observation.payload,
+                        })
+                    })
+                    .collect::<Vec<_>>(),
+            )?;
             for observation in &mut kind_observations {
                 let observation_digest = canonical_digest(&json!({
-                    "cycle": cycle_id.as_str(),
                     "entity": &observation.entity,
+                    "operation": observation.operation,
+                    "source_authority": observation.source_authority,
+                    "source_completeness": observation.source_completeness,
+                    "poll_interval_ms": observation.poll_interval_ms,
+                    "adapter_version": &observation.adapter_version,
+                    "capability_snapshot_id": &observation.capability_snapshot_id,
                     "payload": &observation.payload,
                 }))?;
                 observation.ingestion_id = CanonicalId::parse(format!(
@@ -402,7 +423,7 @@ impl ManagerProjectionCycle {
             let snapshot_id = CanonicalId::parse(format!(
                 "n24-snapshot-{}-{}",
                 kind.as_str().to_ascii_lowercase(),
-                state_input_digest.trim_start_matches("sha256:")
+                kind_input_digest.trim_start_matches("sha256:")
             ))?;
             snapshots.push(ProjectionSnapshot::new(
                 snapshot_id,
@@ -581,6 +602,46 @@ mod tests {
                     })
             }));
         }
+    }
+
+    #[test]
+    fn observation_time_drift_does_not_create_a_false_semantic_delta() {
+        let first = cycle(ManagerProjectionProfile::Paper).build().unwrap();
+        let mut later = cycle(ManagerProjectionProfile::Paper);
+        for feed in &mut later.feeds {
+            feed.as_of = at(20);
+            feed.source_read_at = at(21);
+        }
+        let later = later.build().unwrap();
+
+        assert_eq!(later.state_input_digest, first.state_input_digest);
+        assert_eq!(later.cycle_id, first.cycle_id);
+        assert_eq!(
+            later
+                .snapshots
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.as_str())
+                .collect::<Vec<_>>(),
+            first
+                .snapshots
+                .iter()
+                .map(|snapshot| snapshot.snapshot_id.as_str())
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            later
+                .snapshots
+                .iter()
+                .flat_map(|snapshot| snapshot.observations.iter())
+                .map(|observation| observation.ingestion_id.as_str())
+                .collect::<Vec<_>>(),
+            first
+                .snapshots
+                .iter()
+                .flat_map(|snapshot| snapshot.observations.iter())
+                .map(|observation| observation.ingestion_id.as_str())
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]

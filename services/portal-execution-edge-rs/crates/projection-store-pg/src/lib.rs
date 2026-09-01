@@ -36,9 +36,10 @@ pub use d4_writer::{
     D4SnapshotLeaseInput, D4_CONTRACT_REVISION, D4_SCOPE_ID,
 };
 pub use manager_projection::{
-    ManagerCycleCommitInput, ManagerProjectionCycleReceipt, ManagerProjectionEpochSelection,
-    ManagerProjectionLeaseAcquireOutcome, ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof,
-    ManagerSnapshotCommitInput, ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
+    manager_snapshot_semantic_digest, ManagerCycleCommitInput, ManagerProjectionCycleReceipt,
+    ManagerProjectionEpochSelection, ManagerProjectionLeaseAcquireOutcome,
+    ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof, ManagerSnapshotCommitInput,
+    ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
 };
 pub use manager_query_analytics::{
     ManagerAnalyticsFact, ManagerAnalyticsSnapshot, ManagerAnalyticsSubject,
@@ -3879,7 +3880,11 @@ mod tests {
             .await
             .unwrap()
             .is_empty());
-        for table in ["manager_projection_commits", "manager_projection_cycles"] {
+        for table in [
+            "manager_projection_heartbeats",
+            "manager_projection_commits",
+            "manager_projection_cycles",
+        ] {
             let count: i64 = sqlx::query_scalar(&format!(
                 "SELECT count(*) FROM portal_projection.{table} WHERE epoch_id=$1"
             ))
@@ -4238,7 +4243,8 @@ mod tests {
                     vec![observation],
                 )
                 .unwrap();
-                let source_input_digest = canonical_digest(&snapshot.observations).unwrap();
+                let source_input_digest =
+                    manager_snapshot_semantic_digest(&snapshot.observations).unwrap();
                 let receipt = store
                     .commit_manager_projection_snapshot(
                         &scope,
@@ -4292,6 +4298,45 @@ mod tests {
                 .unwrap();
             assert!(repeated.already_durable);
             assert_eq!(repeated.state_digest, first_cycle.state_digest);
+            let refreshed_cycle_input = ManagerCycleCommitInput {
+                source_read_at: at(203),
+                ..cycle_input.clone()
+            };
+            let refreshed = store
+                .commit_manager_projection_cycle(
+                    &scope,
+                    epoch_id,
+                    first_lease.proof(),
+                    &refreshed_cycle_input,
+                    at(204),
+                )
+                .await
+                .unwrap();
+            assert!(refreshed.already_durable);
+            assert_eq!(refreshed.state_digest, first_cycle.state_digest);
+            assert_eq!(
+                sqlx::query_scalar::<_, DateTime<Utc>>(
+                    "SELECT source_read_at
+                     FROM portal_projection.manager_projection_heartbeats
+                     WHERE epoch_id=$1",
+                )
+                .bind(epoch_id)
+                .fetch_one(&store.pool)
+                .await
+                .unwrap(),
+                at(203)
+            );
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM portal_projection.manager_projection_cycles
+                     WHERE epoch_id=$1",
+                )
+                .bind(epoch_id)
+                .fetch_one(&store.pool)
+                .await
+                .unwrap(),
+                1
+            );
             let realtime = store
                 .load_manager_realtime_records(epoch_id, 0, 10)
                 .await
@@ -4311,7 +4356,7 @@ mod tests {
                     &scope,
                     epoch_id,
                     &first_cycle.state_digest,
-                    at(204),
+                    at(205),
                     Duration::from_secs(300),
                 )
                 .await
@@ -4364,7 +4409,8 @@ mod tests {
                 cycle_id: CanonicalId::parse(format!("n24-cycle-{environment}-2")).unwrap(),
                 profile_id: profile_id.to_owned(),
                 catalogue_digest: catalogue_digest.clone(),
-                source_input_digest: canonical_digest(&empty_order.observations).unwrap(),
+                source_input_digest: manager_snapshot_semantic_digest(&empty_order.observations)
+                    .unwrap(),
                 source_read_at: at(300),
                 poll_interval_ms: 2_000,
                 snapshot: empty_order,

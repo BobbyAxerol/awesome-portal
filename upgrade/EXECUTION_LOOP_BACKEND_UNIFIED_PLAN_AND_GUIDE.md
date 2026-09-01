@@ -1643,6 +1643,12 @@ bounds before allocation growth. Poll-derived facts are labelled
 Adapter v3 follows the owner pagination contract (`PARTIAL* -> COMPLETE`,
 monotonic per-page `as_of`) and deliberately excludes oldest-first historical
 tables that lack a snapshot token/latest-window/incremental watermark.
+The 2026-09-01 runtime hardening separates semantic source identity from
+transport receipt timestamps: repeat unchanged polls update one bounded
+per-epoch heartbeat and do not amplify immutable cycles/journal rows. Lease TTL
+scales from 60 to 900 seconds by the already bounded record count, and the
+large Paper dev profile polls every 60 seconds. Existing immutable history is
+preserved for audited retention rather than manually deleted.
 Declared healthy-source objectives are RPO 10s, worker restart RTO 120s,
 local rebuild RTO 15m and encrypted backup/PITR restore RTO 60m. Query,
 analytics, SSE, commands, Trading System and stable runtime remain unchanged.

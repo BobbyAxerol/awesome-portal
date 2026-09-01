@@ -16,6 +16,7 @@ const CLEANUP_STATEMENTS: &[&str] = &[
     "DELETE FROM portal_projection.d4_source_checkpoints WHERE epoch_id=$1",
     "DELETE FROM portal_projection.shared_consumer_leases WHERE epoch_id=$1",
     "DELETE FROM portal_projection.manager_projection_leases WHERE epoch_id=$1",
+    "DELETE FROM portal_projection.manager_projection_heartbeats WHERE epoch_id=$1",
     "DELETE FROM portal_projection.manager_projection_commits WHERE epoch_id=$1",
     "DELETE FROM portal_projection.manager_projection_cycles WHERE epoch_id=$1",
     "DELETE FROM portal_projection.series_points WHERE epoch_id=$1",

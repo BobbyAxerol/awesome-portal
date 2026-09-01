@@ -1417,8 +1417,13 @@ durable run/attempt events. Detailed evidence:
 - Retention blocks live leases, requires encrypted restore evidence and can
   compact immutable N24 rows only inside the existing audited RETIRED-epoch
   cleanup transaction.
+- Runtime hardening separates semantic state identity from transport receipt
+  timestamps. An unchanged poll advances a bounded per-epoch heartbeat without
+  appending another immutable cycle or one journal row per record; adaptive
+  60–900 second database leases remain tied to the 80,000-record hard bound.
 - Static three-profile Compose, Rust all-target tests, zero-warning Clippy,
-  fresh PostgreSQL migration/recovery and dump/restore gates pass.
+  fresh PostgreSQL migration through `0015`, heartbeat/idempotency recovery and
+  dump/restore gates pass.
 - No source, Trading System, Query, analytics, SSE, command or stable runtime
   flag changed. `TD-EX-05` is closed; N25 is next.
 - Detail:

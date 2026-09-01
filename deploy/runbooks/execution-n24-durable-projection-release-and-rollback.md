@@ -11,11 +11,13 @@ the existing TLS 1.3 mTLS and delegated profile boundary. It writes only the
 Portal-owned projection PostgreSQL. It never reads Trading System PostgreSQL,
 Redis, CLI, broker APIs or browser-selected relations.
 
-The source has snapshot/poll semantics. Every durable change is therefore
+The source has snapshot/poll semantics. Every durable semantic change is therefore
 labelled `PORTAL_PROJECTION_DELTA`; N24 never invents a Trading-System event
 sequence. The worker collects exactly 13 bounded current-state feeds and atomically seals
 eight entity-kind snapshots per cycle. A valid empty Live profile still seals
-all eight empty snapshots.
+all eight empty snapshots. Receipt timestamps are freshness evidence, not
+business identity: an unchanged poll advances one bounded epoch heartbeat and
+does not append another cycle or one journal row per source record.
 
 Historical session/snapshot relations are not periodic feeds because the
 current owner API exposes them oldest-first without an incremental watermark,
@@ -33,8 +35,10 @@ Stop unless all of these are true:
 4. a restore drill proves semantic state parity;
 5. database capacity is below the 70% soft limit and the 5,000,000-row journal
    limit;
-6. `projection-migrator` has applied migration `0012`; and
-7. Query, analytics, SSE and command flags remain false.
+6. `projection-migrator` has applied migrations through
+   `0015_manager_projection_heartbeat.sql`; and
+7. Query/analytics is either false or independently N25-qualified, while SSE
+   and command flags remain false.
 
 Use a stable, non-secret worker identity digest such as a digest of the
 profile-specific Compose project and workload name. Never use a password,
@@ -79,7 +83,13 @@ the three change windows.
 
 ## Runtime and recovery gates
 
-- default polling is 2 seconds, bounded to 250 ms–60 seconds;
+- default polling is 2 seconds, bounded to 250 ms–60 seconds; the larger Paper
+  profile uses 60 seconds in dev until measured load justifies a tighter bound;
+- the database-time writer lease scales from 60 to 900 seconds by the already
+  bounded cycle record count; this changes no retry or source-call budget;
+- unchanged semantic cycles update only
+  `manager_projection_heartbeats`; immutable cycle, commit, ingestion-key and
+  journal counts must remain stable across two unchanged polls;
 - steady-state RPO target is 10 seconds while the qualified source is healthy;
 - process restart RTO is 120 seconds; an expired database lease advances the
   fencing token and rejects a stale writer;
@@ -99,6 +109,10 @@ Before deleting any retired data, require the existing immutable lifecycle
 policy, encrypted archive digest, restored state parity and elapsed hot plus
 rollback windows. Cleanup is transaction-scoped and keeps the epoch,
 checkpoint and cleanup audit shells.
+
+Existing pre-`0015` immutable journal history is recovery evidence and must not
+be manually deleted. Apply normal audited RETIRED-epoch retention only after
+its restore and rollback gates pass.
 
 An operator-authorized same-identity rebuild is a finite command, never a
 long-running worker mode. Stop the affected worker, render with

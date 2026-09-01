@@ -18,9 +18,9 @@ use manager_v2_contract::{
 };
 use projection_core::ProjectionEpochStatus;
 use projection_store_pg::{
-    EpochMetadata, ManagerCycleCommitInput, ManagerProjectionLeaseAcquireOutcome,
-    ManagerSnapshotCommitInput, PgProjectionStore, SourceAdmissionOutcome, SourceAdmissionRequest,
-    StoreError,
+    manager_snapshot_semantic_digest, EpochMetadata, ManagerCycleCommitInput,
+    ManagerProjectionLeaseAcquireOutcome, ManagerSnapshotCommitInput, PgProjectionStore,
+    SourceAdmissionOutcome, SourceAdmissionRequest, StoreError,
 };
 use serde::Serialize;
 use thiserror::Error;
@@ -30,7 +30,10 @@ use uuid::Uuid;
 use super::EdgeConfig;
 
 const PAGE_LIMIT: u16 = 200;
-const LEASE_TTL: Duration = Duration::from_secs(60);
+const BASE_LEASE_TTL_SECONDS: u64 = 60;
+const LEASE_TTL_STEP_SECONDS: u64 = 30;
+const LEASE_TTL_RECORD_STEP: usize = 2_000;
+const MAXIMUM_LEASE_TTL_SECONDS: u64 = 900;
 const ROLLBACK_OVERLAP: Duration = Duration::from_secs(900);
 
 #[derive(Debug, Serialize)]
@@ -163,13 +166,14 @@ async fn run_once_mode(
             .ensure_manager_projection_epoch(&scope, &metadata, Utc::now())
             .await?
     };
+    let lease_ttl = manager_projection_lease_ttl(cycle.record_count);
     let lease = match store
         .acquire_manager_projection_lease(
             &scope,
             epoch.epoch_id,
             Uuid::now_v7(),
             owner_digest,
-            LEASE_TTL,
+            lease_ttl,
         )
         .await?
     {
@@ -660,7 +664,7 @@ async fn commit_cycle(
                     cycle_id: cycle.cycle_id.clone(),
                     profile_id: cycle.profile.profile_id().to_owned(),
                     catalogue_digest: cycle.catalogue_digest.clone(),
-                    source_input_digest: projection_core::canonical_digest(&snapshot.observations)?,
+                    source_input_digest: manager_snapshot_semantic_digest(&snapshot.observations)?,
                     source_read_at: cycle.source_read_at,
                     poll_interval_ms,
                     snapshot: snapshot.clone(),
@@ -670,6 +674,18 @@ async fn commit_cycle(
             .await?;
     }
     Ok(())
+}
+
+fn manager_projection_lease_ttl(record_count: usize) -> Duration {
+    let additional_steps = record_count.saturating_sub(1) / LEASE_TTL_RECORD_STEP;
+    let additional_seconds = u64::try_from(additional_steps)
+        .unwrap_or(u64::MAX)
+        .saturating_mul(LEASE_TTL_STEP_SECONDS);
+    Duration::from_secs(
+        BASE_LEASE_TTL_SECONDS
+            .saturating_add(additional_seconds)
+            .min(MAXIMUM_LEASE_TTL_SECONDS),
+    )
 }
 
 fn read_nonempty(path: &std::path::Path) -> Result<String, ManagerProjectionCommandError> {
@@ -783,5 +799,19 @@ mod tests {
         assert!(!valid_page_shape(None, at(1), Completeness::Complete, true));
         assert!(!valid_page_shape(None, at(1), Completeness::Partial, false));
         assert!(!valid_page_shape(None, at(1), Completeness::Unknown, false));
+    }
+
+    #[test]
+    fn lease_ttl_scales_with_bounded_snapshot_work() {
+        assert_eq!(manager_projection_lease_ttl(0), Duration::from_secs(60));
+        assert_eq!(manager_projection_lease_ttl(2_000), Duration::from_secs(60));
+        assert_eq!(
+            manager_projection_lease_ttl(8_797),
+            Duration::from_secs(180)
+        );
+        assert_eq!(
+            manager_projection_lease_ttl(80_000),
+            Duration::from_secs(900)
+        );
     }
 }

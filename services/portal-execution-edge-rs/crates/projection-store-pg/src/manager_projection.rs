@@ -17,7 +17,7 @@ use super::{
 
 pub const MANAGER_PROJECTION_SOURCE_SCOPE: &str = "MANAGER_V2";
 const MINIMUM_LEASE_TTL: Duration = Duration::from_secs(5);
-const MAXIMUM_LEASE_TTL: Duration = Duration::from_secs(60);
+const MAXIMUM_LEASE_TTL: Duration = Duration::from_secs(900);
 const REQUIRED_SNAPSHOT_KINDS: [&str; 8] = [
     "ACCOUNT",
     "EVENT",
@@ -28,6 +28,37 @@ const REQUIRED_SNAPSHOT_KINDS: [&str; 8] = [
     "RECONCILIATION",
     "RUNTIME",
 ];
+
+/// Computes the content identity of one Manager snapshot without transport
+/// receipt timestamps, cursors or ingestion identifiers. Those fields prove
+/// observation freshness, but they must not turn an unchanged full snapshot
+/// into thousands of false business deltas.
+///
+/// # Errors
+///
+/// Returns a projection serialization error for a non-canonical payload.
+pub fn manager_snapshot_semantic_digest(
+    observations: &[ProjectionObservation],
+) -> Result<String, StoreError> {
+    canonical_digest(
+        &observations
+            .iter()
+            .map(|observation| {
+                serde_json::json!({
+                    "entity": &observation.entity,
+                    "operation": observation.operation,
+                    "source_authority": observation.source_authority,
+                    "source_completeness": observation.source_completeness,
+                    "poll_interval_ms": observation.poll_interval_ms,
+                    "adapter_version": &observation.adapter_version,
+                    "capability_snapshot_id": &observation.capability_snapshot_id,
+                    "payload": &observation.payload,
+                })
+            })
+            .collect::<Vec<_>>(),
+    )
+    .map_err(StoreError::from)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ManagerProjectionLeaseProof {
@@ -482,7 +513,7 @@ impl PgProjectionStore {
             input.snapshot.expected_count,
             input.snapshot.observations.clone(),
         )?;
-        let source_input_digest = canonical_digest(&validated.observations)?;
+        let source_input_digest = manager_snapshot_semantic_digest(&validated.observations)?;
         if source_input_digest != input.source_input_digest {
             return Err(StoreError::ManagerProjectionInputDigestMismatch);
         }
@@ -668,93 +699,17 @@ impl PgProjectionStore {
             EpochWriteAuthority::BuildingOrActive,
         )
         .await?;
-        if let Some(row) = sqlx::query(
-            "SELECT source_input_digest,state_digest
-             FROM portal_projection.manager_projection_cycles
-             WHERE epoch_id=$1 AND cycle_id=$2",
-        )
-        .bind(epoch_id)
-        .bind(input.cycle_id.as_str())
-        .fetch_optional(&mut *transaction)
-        .await?
+        let receipt = if let Some(receipt) =
+            reuse_manager_projection_cycle_tx(&mut transaction, epoch_id, input, committed_at)
+                .await?
         {
-            if row.try_get::<String, _>("source_input_digest")? != input.source_input_digest {
-                return Err(StoreError::ManagerProjectionCommitCollision);
-            }
-            transaction.commit().await?;
-            return Ok(ManagerProjectionCycleReceipt {
-                cycle_id: input.cycle_id.clone(),
-                state_digest: row.try_get("state_digest")?,
-                already_durable: true,
-            });
-        }
-        let rows = sqlx::query(
-            "SELECT entity_kind,catalogue_digest,profile_id
-             FROM portal_projection.manager_projection_commits
-             WHERE epoch_id=$1 AND cycle_id=$2 ORDER BY entity_kind",
-        )
-        .bind(epoch_id)
-        .bind(input.cycle_id.as_str())
-        .fetch_all(&mut *transaction)
-        .await?;
-        let kinds = rows
-            .iter()
-            .map(|row| row.try_get::<String, _>("entity_kind"))
-            .collect::<Result<BTreeSet<_>, _>>()?;
-        if kinds
-            != REQUIRED_SNAPSHOT_KINDS
-                .into_iter()
-                .map(str::to_owned)
-                .collect()
-            || rows.iter().any(|row| {
-                row.try_get::<String, _>("catalogue_digest").ok().as_deref()
-                    != Some(input.catalogue_digest.as_str())
-                    || row.try_get::<String, _>("profile_id").ok().as_deref()
-                        != Some(input.profile_id.as_str())
-            })
-        {
-            return Err(StoreError::ManagerProjectionCycleIncomplete);
-        }
-        let entities = load_entities_tx(&mut transaction, epoch_id).await?;
-        let state_digest = semantic_state_digest(&entities)?;
-        let realtime_sequence: i64 = sqlx::query_scalar(
-            "SELECT COALESCE(MAX(realtime_sequence),0)+1
-               FROM portal_projection.manager_projection_cycles
-              WHERE epoch_id=$1",
-        )
-        .bind(epoch_id)
-        .fetch_one(&mut *transaction)
-        .await?;
-        let realtime_observation =
-            serde_json::to_value(manager_cycle_observation(input, &state_digest)?)
-                .map_err(|_| StoreError::Serialization)?;
-        sqlx::query(
-            "INSERT INTO portal_projection.manager_projection_cycles
-             (epoch_id,cycle_id,profile_id,catalogue_digest,source_input_digest,feed_count,
-              snapshot_count,record_count,source_read_at,committed_at,state_digest,
-              realtime_sequence,realtime_observation)
-             VALUES ($1,$2,$3,$4,$5,$6,8,$7,$8,$9,$10,$11,$12)",
-        )
-        .bind(epoch_id)
-        .bind(input.cycle_id.as_str())
-        .bind(&input.profile_id)
-        .bind(&input.catalogue_digest)
-        .bind(&input.source_input_digest)
-        .bind(i32::try_from(input.feed_count).map_err(|_| StoreError::NumericOverflow)?)
-        .bind(i64::try_from(input.record_count).map_err(|_| StoreError::NumericOverflow)?)
-        .bind(input.source_read_at)
-        .bind(committed_at)
-        .bind(&state_digest)
-        .bind(realtime_sequence)
-        .bind(realtime_observation)
-        .execute(&mut *transaction)
-        .await?;
+            receipt
+        } else {
+            seal_manager_projection_cycle_tx(&mut transaction, epoch_id, input, committed_at)
+                .await?
+        };
         transaction.commit().await?;
-        Ok(ManagerProjectionCycleReceipt {
-            cycle_id: input.cycle_id.clone(),
-            state_digest,
-            already_durable: false,
-        })
+        Ok(receipt)
     }
 
     /// Atomically activates a complete parity-matched N24 epoch and retains
@@ -939,6 +894,174 @@ impl PgProjectionStore {
             restored_state_digest,
         })
     }
+}
+
+async fn reuse_manager_projection_cycle_tx(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    input: &ManagerCycleCommitInput,
+    observed_at: DateTime<Utc>,
+) -> Result<Option<ManagerProjectionCycleReceipt>, StoreError> {
+    let Some(row) = sqlx::query(
+        "SELECT profile_id,catalogue_digest,source_input_digest,feed_count::bigint AS feed_count,
+                record_count,state_digest
+         FROM portal_projection.manager_projection_cycles
+         WHERE epoch_id=$1 AND cycle_id=$2",
+    )
+    .bind(epoch_id)
+    .bind(input.cycle_id.as_str())
+    .fetch_optional(&mut **transaction)
+    .await?
+    else {
+        return Ok(None);
+    };
+    if row.try_get::<String, _>("profile_id")? != input.profile_id
+        || row.try_get::<String, _>("catalogue_digest")? != input.catalogue_digest
+        || row.try_get::<String, _>("source_input_digest")? != input.source_input_digest
+        || required_usize(row.try_get("feed_count")?)? != input.feed_count
+        || required_usize(row.try_get("record_count")?)? != input.record_count
+    {
+        return Err(StoreError::ManagerProjectionCommitCollision);
+    }
+    let state_digest: String = row.try_get("state_digest")?;
+    upsert_manager_projection_heartbeat_tx(
+        transaction,
+        epoch_id,
+        input,
+        &state_digest,
+        observed_at,
+    )
+    .await?;
+    Ok(Some(ManagerProjectionCycleReceipt {
+        cycle_id: input.cycle_id.clone(),
+        state_digest,
+        already_durable: true,
+    }))
+}
+
+async fn seal_manager_projection_cycle_tx(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    input: &ManagerCycleCommitInput,
+    committed_at: DateTime<Utc>,
+) -> Result<ManagerProjectionCycleReceipt, StoreError> {
+    let rows = sqlx::query(
+        "SELECT entity_kind,catalogue_digest,profile_id
+         FROM portal_projection.manager_projection_commits
+         WHERE epoch_id=$1 AND cycle_id=$2 ORDER BY entity_kind",
+    )
+    .bind(epoch_id)
+    .bind(input.cycle_id.as_str())
+    .fetch_all(&mut **transaction)
+    .await?;
+    let kinds = rows
+        .iter()
+        .map(|row| row.try_get::<String, _>("entity_kind"))
+        .collect::<Result<BTreeSet<_>, _>>()?;
+    if kinds
+        != REQUIRED_SNAPSHOT_KINDS
+            .into_iter()
+            .map(str::to_owned)
+            .collect()
+        || rows.iter().any(|row| {
+            row.try_get::<String, _>("catalogue_digest").ok().as_deref()
+                != Some(input.catalogue_digest.as_str())
+                || row.try_get::<String, _>("profile_id").ok().as_deref()
+                    != Some(input.profile_id.as_str())
+        })
+    {
+        return Err(StoreError::ManagerProjectionCycleIncomplete);
+    }
+    let entities = load_entities_tx(transaction, epoch_id).await?;
+    let state_digest = semantic_state_digest(&entities)?;
+    let realtime_sequence: i64 = sqlx::query_scalar(
+        "SELECT COALESCE(MAX(realtime_sequence),0)+1
+           FROM portal_projection.manager_projection_cycles
+          WHERE epoch_id=$1",
+    )
+    .bind(epoch_id)
+    .fetch_one(&mut **transaction)
+    .await?;
+    let realtime_observation =
+        serde_json::to_value(manager_cycle_observation(input, &state_digest)?)
+            .map_err(|_| StoreError::Serialization)?;
+    sqlx::query(
+        "INSERT INTO portal_projection.manager_projection_cycles
+         (epoch_id,cycle_id,profile_id,catalogue_digest,source_input_digest,feed_count,
+          snapshot_count,record_count,source_read_at,committed_at,state_digest,
+          realtime_sequence,realtime_observation)
+         VALUES ($1,$2,$3,$4,$5,$6,8,$7,$8,$9,$10,$11,$12)",
+    )
+    .bind(epoch_id)
+    .bind(input.cycle_id.as_str())
+    .bind(&input.profile_id)
+    .bind(&input.catalogue_digest)
+    .bind(&input.source_input_digest)
+    .bind(i32::try_from(input.feed_count).map_err(|_| StoreError::NumericOverflow)?)
+    .bind(i64::try_from(input.record_count).map_err(|_| StoreError::NumericOverflow)?)
+    .bind(input.source_read_at)
+    .bind(committed_at)
+    .bind(&state_digest)
+    .bind(realtime_sequence)
+    .bind(realtime_observation)
+    .execute(&mut **transaction)
+    .await?;
+    upsert_manager_projection_heartbeat_tx(
+        transaction,
+        epoch_id,
+        input,
+        &state_digest,
+        committed_at,
+    )
+    .await?;
+    Ok(ManagerProjectionCycleReceipt {
+        cycle_id: input.cycle_id.clone(),
+        state_digest,
+        already_durable: false,
+    })
+}
+
+async fn upsert_manager_projection_heartbeat_tx(
+    transaction: &mut Transaction<'_, Postgres>,
+    epoch_id: Uuid,
+    input: &ManagerCycleCommitInput,
+    state_digest: &str,
+    observed_at: DateTime<Utc>,
+) -> Result<(), StoreError> {
+    let changed = sqlx::query(
+        "INSERT INTO portal_projection.manager_projection_heartbeats
+         (epoch_id,profile_id,catalogue_digest,state_digest,record_count,poll_interval_ms,
+          source_read_at,observed_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+         ON CONFLICT (epoch_id) DO UPDATE SET
+           state_digest=EXCLUDED.state_digest,
+           record_count=EXCLUDED.record_count,
+           poll_interval_ms=EXCLUDED.poll_interval_ms,
+           source_read_at=GREATEST(
+             portal_projection.manager_projection_heartbeats.source_read_at,
+             EXCLUDED.source_read_at
+           ),
+           observed_at=GREATEST(
+             portal_projection.manager_projection_heartbeats.observed_at,
+             EXCLUDED.observed_at
+           )
+         WHERE portal_projection.manager_projection_heartbeats.profile_id=EXCLUDED.profile_id
+           AND portal_projection.manager_projection_heartbeats.catalogue_digest=EXCLUDED.catalogue_digest",
+    )
+    .bind(epoch_id)
+    .bind(&input.profile_id)
+    .bind(&input.catalogue_digest)
+    .bind(state_digest)
+    .bind(i64::try_from(input.record_count).map_err(|_| StoreError::NumericOverflow)?)
+    .bind(input.poll_interval_ms)
+    .bind(input.source_read_at)
+    .bind(observed_at)
+    .execute(&mut **transaction)
+    .await?;
+    if changed.rows_affected() != 1 {
+        return Err(StoreError::ManagerProjectionCommitCollision);
+    }
+    Ok(())
 }
 
 async fn validate_lease_tx(

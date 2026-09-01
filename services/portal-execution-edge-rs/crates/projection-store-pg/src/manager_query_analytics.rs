@@ -84,8 +84,10 @@ impl PgProjectionStore {
                SELECT epoch_id FROM portal_projection.epochs
                WHERE workspace_id=$1 AND environment=$2 AND status='ACTIVE'
              ), cycle AS (
-               SELECT c.epoch_id,c.profile_id,c.catalogue_digest,c.state_digest,c.source_read_at
+               SELECT c.epoch_id,c.profile_id,c.catalogue_digest,c.state_digest,
+                      COALESCE(h.source_read_at,c.source_read_at) AS source_read_at
                FROM portal_projection.manager_projection_cycles c JOIN active a USING(epoch_id)
+               LEFT JOIN portal_projection.manager_projection_heartbeats h USING(epoch_id)
                ORDER BY c.committed_at DESC,c.cycle_id DESC LIMIT 1
              ), binding AS (
                SELECT

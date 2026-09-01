@@ -27,7 +27,7 @@ sort expression, SQL fragment, source URL or profile.
 
 Stop unless all of these are true:
 
-1. migration `0013_manager_query_analytics.sql` is applied;
+1. migrations through `0015_manager_projection_heartbeat.sql` are applied;
 2. the affected profile has an ACTIVE N24 adapter-v2 epoch sealed by a complete
    13-feed cycle and its state digest matches PostgreSQL;
 3. mTLS and the delegated JWT screen resource are accepted for the fixed
@@ -42,6 +42,11 @@ Stop unless all of these are true:
 Historical 12-feed N24 receipts remain immutable and readable for evidence;
 they do not qualify a new N25 cycle. Every new writer cycle requires the
 deployment-lineage feed and therefore exactly 13 feeds.
+
+N25 derives business state from the immutable ACTIVE cycle, but derives poll
+freshness from the one-row-per-epoch heartbeat. A timestamp-only poll can make
+the response fresh without changing its state/fact digest or amplifying the
+immutable journal.
 
 ## Candidate and acceptance
 

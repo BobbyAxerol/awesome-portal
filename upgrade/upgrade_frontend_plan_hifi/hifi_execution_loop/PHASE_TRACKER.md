@@ -3082,6 +3082,9 @@ Rust/PostgreSQL projection state now preserves epoch/cursor lineage,
 tombstones, freshness, gap/dead-letter blockers, deterministic rebuild and
 atomic rollback. Poll-derived changes remain labelled
 `PORTAL_PROJECTION_DELTA`; no Trading System event authority is invented.
+The 2026-09-01 runtime amendment also makes timestamp-only repeat polls
+heartbeat-only, prevents immutable journal amplification and uses bounded
+record-count-aware leases for the larger Paper snapshot.
 Detail: [`EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md`](../../backend/EX_BE_27_N24_DURABLE_PORTAL_PROJECTION.md).
 
 ### N25 backend — Query and analytics plane (2026-08-30)

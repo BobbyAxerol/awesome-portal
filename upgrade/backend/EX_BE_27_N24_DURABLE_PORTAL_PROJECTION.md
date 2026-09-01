@@ -151,6 +151,15 @@ does not fabricate operational evidence.
 - Rust workspace all targets, rustfmt and zero-warning Clippy: pass;
 - fresh PostgreSQL dump/restore signature including all N24 tables: pass.
 
+Runtime hardening on 2026-09-01 additionally proved that source receipt-time
+drift is not a business delta. Semantic per-kind snapshot and observation IDs
+exclude receipt timestamps; one bounded heartbeat row carries current poll
+freshness; unchanged repeat polls preserve immutable cycle/journal counts.
+Writer lease TTL scales from 60 to 900 seconds only by the already capped
+record count, allowing the 8,797-row Paper snapshot to commit atomically while
+retaining the 80,000-record hard limit. Existing history remains immutable and
+is not manually compacted.
+
 The canonical Docker gate creates a fresh PostgreSQL instance and removes the
 temporary container/network after completion.
 
@@ -158,7 +167,9 @@ temporary container/network after completion.
 
 `TD-EX-05` is closed: the accepted query path now has a durable, versioned,
 profile-isolated projection source with replay, retention, restore and atomic
-rollback semantics. There is no open internal N24 implementation debt.
+rollback semantics. There is no open internal N24 implementation debt,
+including the runtime timestamp-amplification and fixed-lease findings closed
+above.
 
 Publishing a signed dev image and supplying runtime backup/PITR evidence are
 release operations, not hidden implementation work. N25 is the next backend
