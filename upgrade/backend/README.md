@@ -1617,3 +1617,18 @@ durable run/attempt events. Detailed evidence:
   chart. Command, Live mutation, `main` and stable remain unchanged.
 - Detail:
   [`EX_BE_35_ALPHA_FLEET_CURRENT_SOURCE_V2.md`](./EX_BE_35_ALPHA_FLEET_CURRENT_SOURCE_V2.md).
+
+## Backend state — 2026-09-01 (Alpha 360 current-source composition)
+
+- The Alpha detail route now uses Fleet v2 as its identity/deployment spine and
+  treats N25 analytics as an additive branch. Analytics loss can no longer
+  replace Claude's reviewed rich composition with a whole-screen refusal.
+- The private Manager Query/SSE delegation uses one explicit, validated
+  execution-cell projection workspace. Portal session authorization and RBAC
+  remain bound to the user's Portal workspace; the browser cannot select or
+  widen the Edge scope.
+- The exact product journey passes from Alpha Fleet into
+  `adaptive_hma_cpp_00115m` with BFF 200 responses, 10 tabs, four deployment
+  controls, six KPI cells, 12 insight tiles and zero console issues.
+- Detail:
+  [`EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md`](./EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md).

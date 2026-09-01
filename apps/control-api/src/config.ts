@@ -107,6 +107,10 @@ const EnvSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().regex(/^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/).optional(),
   ),
+  EXECUTION_EDGE_PROJECTION_WORKSPACE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional(),
+  ),
   EXECUTION_EDGE_PRIVATE_KEY_FILE: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).optional(),
@@ -408,6 +412,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID === undefined
   ) {
     throw new Error("manager-projection analytics requires an exact Manager-v2 profile binding");
+  }
+  if (
+    config.FEATURE_EXECUTION_ANALYTICS_QUERY === "true" &&
+    config.EXECUTION_EDGE_PROJECTION_WORKSPACE_ID === undefined
+  ) {
+    throw new Error("manager-projection analytics requires an exact projection workspace binding");
   }
   if (
     config.FEATURE_EXECUTION_ANALYTICS_QUERY === "true" &&

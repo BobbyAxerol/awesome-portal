@@ -142,10 +142,11 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
     const cursor = resolveResumeCursor(request.lastEventId, request.snapshotCursor);
     const release = this.reserveStream(request.session.sessionId);
     try {
+      const projectionWorkspaceId = this.upstreamWorkspaceId(request.workspaceId);
       const assertion = await this.delegation.issueReadAssertion({
         principalId: request.user.userId,
         sessionId: request.session.sessionId,
-        workspaceId: request.workspaceId,
+        workspaceId: projectionWorkspaceId,
         roles: [request.user.role],
         resources: [this.realtimeResource()],
         authenticationTime: request.session.authenticationTime,
@@ -195,10 +196,11 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
     if (!this.delegation || !this.tls) {
       throw new RealtimeProxyError("REALTIME_DISABLED", 404);
     }
+    const projectionWorkspaceId = this.upstreamWorkspaceId(request.workspaceId);
     const assertion = await this.delegation.issueReadAssertion({
       principalId: request.user.userId,
       sessionId: request.session.sessionId,
-      workspaceId: request.workspaceId,
+      workspaceId: projectionWorkspaceId,
       roles: [request.user.role],
       resources: [this.realtimeResource()],
       authenticationTime: request.session.authenticationTime,
@@ -218,7 +220,7 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
     );
     return parseRealtimeSnapshot(
       body,
-      request.workspaceId,
+      projectionWorkspaceId,
       this.config.EXECUTION_EDGE_ENVIRONMENT,
       this.config.EXECUTION_REALTIME_AUTHORITY_MODE === "manager_projection"
         ? this.config.EXECUTION_EDGE_MANAGER_V2_PROFILE_ID
@@ -309,6 +311,18 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
     return this.config.EXECUTION_REALTIME_AUTHORITY_MODE === "manager_projection"
       ? MANAGER_REALTIME_RESOURCE
       : COMMAND_CENTER_RESOURCE;
+  }
+
+  /**
+   * Portal sessions remain authorized and isolated by their Portal workspace.
+   * Manager-v2 projection rows are owned by one explicit execution-cell scope,
+   * so only the delegated private Edge assertion is translated to that scope.
+   */
+  private upstreamWorkspaceId(portalWorkspaceId: string): string {
+    if (this.config.EXECUTION_REALTIME_AUTHORITY_MODE !== "manager_projection") {
+      return portalWorkspaceId;
+    }
+    return this.config.EXECUTION_EDGE_PROJECTION_WORKSPACE_ID!;
   }
 }
 

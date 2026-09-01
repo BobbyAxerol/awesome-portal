@@ -123,6 +123,7 @@ describe("EX-BE-06 same-origin realtime boundary", () => {
       EXECUTION_REALTIME_AUTHORITY_MODE: "manager_projection",
       FEATURE_EXECUTION_ANALYTICS_QUERY: "true",
       EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PROJECTION_WORKSPACE_ID: "workspace_execution_manager",
       EXECUTION_EDGE_ORIGIN: "https://edge.internal:8443",
       EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/delegation.key",
       EXECUTION_EDGE_CA_FILE: "/run/secrets/ca.crt",
@@ -134,6 +135,8 @@ describe("EX-BE-06 same-origin realtime boundary", () => {
       .toThrow(/manager-projection realtime requires/);
     expect(() => loadConfig({ ...base, EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: "" }))
       .toThrow(/manager-projection realtime requires/);
+    expect(() => loadConfig({ ...base, EXECUTION_EDGE_PROJECTION_WORKSPACE_ID: "" }))
+      .toThrow(/projection workspace binding/);
   });
 
   it("cancels the private stream when the downstream response closes", async () => {

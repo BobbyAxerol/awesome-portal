@@ -12,6 +12,7 @@ services:
       EXECUTION_EDGE_ORIGIN: ${EXECUTION_EDGE_PAPER_ORIGIN:?set the exact private Paper Edge origin}
       EXECUTION_EDGE_ENVIRONMENT: paper
       EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: ${EXECUTION_EDGE_PAPER_PROFILE_ID:?set the exact Paper profile ID}
+      EXECUTION_EDGE_PROJECTION_WORKSPACE_ID: ${EXECUTION_EDGE_PROJECTION_WORKSPACE_ID:?set the exact Manager projection workspace ID}
       EXECUTION_EDGE_DELEGATION_AUDIENCE: ${EXECUTION_EDGE_PAPER_AUDIENCE:?set the matching Paper audience}
       EXECUTION_EDGE_PRIVATE_KEY_FILE: /run/secrets/execution-edge/delegation-private-key.pem
       EXECUTION_EDGE_CA_FILE: /run/secrets/execution-edge/edge-server-ca.crt

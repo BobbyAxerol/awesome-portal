@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { MemoryRouter } from "react-router-dom";
 
 import ALPHA_FLEET from "../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.v2.valid.json";
 import BINDINGS_LIST from "../../../../../packages/contracts/fixtures/execution-bindings-list.valid.json";
@@ -9,7 +10,7 @@ import { createFixtureApi } from "./api/fixtureApi";
 import { createHttpApi } from "./api/httpApi";
 import { readAlphaFleet, readBindingDetail, readBindings, readLiveReview } from "./api/profileRead";
 import { AccountsBindingsContainer, AlphaFleetContainer } from "./screens/profileContainers";
-import { AlphaFleetRichContainer } from "./screens/recomposeContainers";
+import { AlphaFleetRichContainer, AlphaThreeSixtyRichContainer } from "./screens/recomposeContainers";
 import { AlphaFleet } from "./screens/AlphaFleet";
 
 const POLICY = {
@@ -90,5 +91,33 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
       page: { ...list.page, rows: [{ ...row, stage: "LIVE", stages: ["LIVE", "PAPER"] }] },
     }} />);
     expect(screen.getByRole("link", { name: "Carry A" })).toBeTruthy();
+  });
+
+  it("keeps Alpha 360 rich when its additive analytics branch is disabled", async () => {
+    const fixture = createFixtureApi();
+    const api = {
+      ...fixture,
+      getQueryAnalytics: async () => ({
+        ok: false as const,
+        status: "unavailable" as const,
+        reason: "ANALYTICS_DISABLED: the additive analytics branch is disabled",
+      }),
+    };
+    const { container } = render(
+      <MemoryRouter initialEntries={["/deployments/alphas/alpha_a"]}>
+        <AlphaThreeSixtyRichContainer api={api} alphaId="alpha_a" />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { name: /Carry A/ })).toBeTruthy();
+    expect(container.querySelector('[data-hifi-exact="alpha-360"]')).toBeTruthy();
+    expect(screen.getByText("owner Bobby-001")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "dep_a" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "acc_a" })).toBeTruthy();
+    expect(screen.getAllByText("123.19605").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Insight Charts" }));
+    await waitFor(() => expect(container.querySelectorAll(".exec-alpha-tiles > *")).toHaveLength(12));
+    expect(screen.getAllByText(/ANALYTICS_DISABLED/)).toHaveLength(12);
   });
 });

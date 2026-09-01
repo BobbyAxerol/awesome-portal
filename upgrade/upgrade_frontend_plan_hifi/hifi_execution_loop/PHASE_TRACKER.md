@@ -3210,3 +3210,18 @@ and
 > không còn ProfileEnvelopeScreen thay màn; fixture chỉ còn trong
 > `/execution/_fixtures`. Chi tiết: FRONTEND_HANDOFF §8.41 + prompt trả
 > codex CLAUDE_TO_CODEX_RECOMPOSITION_RETURN.md. Gates ghi ở đó.
+
+### BR-EX-74 integration — Alpha 360 current-source detail (2026-09-01)
+
+BR-EX-74 is `DEV_ACCEPTED / SOURCE_BACKED / RICH_COMPOSITION_PRESERVED`.
+Alpha Fleet v2 is now the detail screen's identity/deployment spine and N25
+analytics is additive; an analytics error produces panel-local typed states and
+never replaces the complete Alpha 360 screen. The Control API maps only its
+private Manager Query/SSE assertion to the explicit AWS-HK projection
+workspace while retaining the Portal workspace for session authorization.
+
+The exact browser journey opens Fleet, clicks
+`adaptive_hma_cpp_00115m`, receives HTTP 200 from both exact Fleet and analytics
+routes, and renders 10 tabs, four deployment controls, six KPI cells and 12
+insight tiles with no console issue. Detail:
+[`EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md`](../../backend/EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md).

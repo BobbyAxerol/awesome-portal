@@ -115,6 +115,16 @@ describe("EX-BE-07b analytics screen boundary", () => {
       true,
       502,
     )).toBeNull();
+    expect(typedUpstreamProblemCode(
+      Buffer.from(JSON.stringify({ error: { code: "N25_PROJECTION_CYCLE_NOT_FOUND", message: "not forwarded" } })),
+      true,
+      503,
+    )).toBe("N25_PROJECTION_CYCLE_NOT_FOUND");
+    expect(typedUpstreamProblemCode(
+      Buffer.from(JSON.stringify({ error: { code: "SOURCE_SECRET_DETAIL", message: "not forwarded" } })),
+      true,
+      503,
+    )).toBeNull();
   });
 
   it("bounds analytics concurrency and queue depth", async () => {
@@ -170,10 +180,16 @@ describe("EX-BE-07b analytics screen boundary", () => {
     expect(() => loadConfig({
       ...configured,
       EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: "LIVE_BINANCE_USDM",
+      EXECUTION_EDGE_PROJECTION_WORKSPACE_ID: "workspace_execution_manager",
     })).toThrowError(/profile must match/);
+    expect(() => loadConfig({
+      ...configured,
+      EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: "PAPER_BINANCE_USDM",
+    })).toThrowError(/projection workspace binding/);
     expect(loadConfig({
       ...configured,
       EXECUTION_EDGE_MANAGER_V2_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PROJECTION_WORKSPACE_ID: "workspace_execution_manager",
     }).FEATURE_EXECUTION_ANALYTICS_QUERY).toBe("true");
   });
 

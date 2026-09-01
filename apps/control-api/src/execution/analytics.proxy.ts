@@ -241,6 +241,8 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       "GET",
       target.path,
       target.resource,
+      undefined,
+      this.config.EXECUTION_EDGE_PROJECTION_WORKSPACE_ID,
     );
   }
 
@@ -265,6 +267,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
     path: string,
     resource: string,
     body?: unknown,
+    delegatedWorkspaceId: string = principal.workspaceId,
   ): Promise<unknown> {
     if (!this.delegation || !this.tls) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
     const release = await this.bulkhead.acquire();
@@ -272,7 +275,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       const assertion = await this.delegation.issueReadAssertion({
         principalId: principal.user.userId,
         sessionId: principal.session.sessionId,
-        workspaceId: principal.workspaceId,
+        workspaceId: delegatedWorkspaceId,
         roles: [principal.user.role],
         resources: [resource],
         authenticationTime: principal.session.authenticationTime,
@@ -435,17 +438,25 @@ export function typedUpstreamProblemCode(
   if (!responseIsJson || body.byteLength === 0) return null;
   try {
     const value = JSON.parse(body.toString("utf8")) as unknown;
-    if (
-      typeof value !== "object" ||
-      value === null ||
-      !("code" in value) ||
-      !("status" in value)
-    ) return null;
-    const code = (value as { code: unknown }).code;
-    const declaredStatus = (value as { status: unknown }).status;
-    return typeof code === "string" &&
-      TYPED_UPSTREAM_CODE.test(code) &&
-      declaredStatus === status
+    if (typeof value !== "object" || value === null) return null;
+
+    // Shadow-query v1 declared `{code,status}`. Manager-v2 uses the canonical
+    // Rust problem envelope `{error:{code,message}}`, with the HTTP/2 status as
+    // the status authority. Accept both bounded shapes and return only the
+    // allowlisted code; never forward an upstream message or payload.
+    if ("code" in value && "status" in value) {
+      const code = (value as { code: unknown }).code;
+      const declaredStatus = (value as { status: unknown }).status;
+      return typeof code === "string" &&
+        TYPED_UPSTREAM_CODE.test(code) &&
+        declaredStatus === status
+        ? code
+        : null;
+    }
+    const error = "error" in value ? (value as { error: unknown }).error : null;
+    if (typeof error !== "object" || error === null || !("code" in error)) return null;
+    const code = (error as { code: unknown }).code;
+    return status >= 400 && status <= 599 && typeof code === "string" && TYPED_UPSTREAM_CODE.test(code)
       ? code
       : null;
   } catch {

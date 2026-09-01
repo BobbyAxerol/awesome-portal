@@ -12,9 +12,15 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
-import type { BranchCapability, ProfileEnvelope, QueryAnalytics } from "../api/profileRead";
+import type {
+  AlphaFleetDeployment,
+  AlphaFleetItem,
+  BranchCapability,
+  ProfileEnvelope,
+  QueryAnalytics,
+} from "../api/profileRead";
 import { pageOf, workbenchFillRow, workbenchOrderRow, workbenchPositionRow, workbenchSessionRow } from "../api/profileRows";
-import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage } from "../contracts";
+import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
 import { useApiRead } from "./profileContainers";
 import { PaperOverview } from "./PaperOverview";
@@ -23,7 +29,16 @@ import { LiveOverview } from "./LiveOverview";
 import { PaperWorkbench, WORKBENCH_TABS, type WorkbenchTab } from "./PaperWorkbench";
 import { BLOTTER_FILTERS, FullBlotter, type BlotterRow } from "./FullBlotter";
 import type { BlotterFilter, OrderStatus } from "../contracts";
-import { ALPHA_TABS, AlphaThreeSixty, type AlphaScope, type AlphaTab, type InsightTile, type Kpi } from "./AlphaThreeSixty";
+import {
+  ALPHA_TABS,
+  AlphaThreeSixty,
+  type AlphaScope,
+  type AlphaTab,
+  type DeploymentRow,
+  type InsightTile,
+  type Kpi,
+  type VenueRow,
+} from "./AlphaThreeSixty";
 import { PORTFOLIO_TABS, PortfolioThreeSixty, type PortfolioTab } from "./PortfolioThreeSixty";
 import { AccountBroker360 } from "./AccountBroker360";
 import { AlphaFleet, type FleetFilter } from "./AlphaFleet";
@@ -298,45 +313,160 @@ function useAnalyticsScope(): [AlphaScope, (scope: AlphaScope) => void] {
   return [scope, setScope];
 }
 
+const SOURCE_STAGE: Readonly<Record<string, PromotionStage>> = {
+  PAPER: "PAPER_OBSERVATION",
+  PAPER_OBSERVATION: "PAPER_OBSERVATION",
+  SANDBOX: "SANDBOX_VALIDATION",
+  SANDBOX_VALIDATION: "SANDBOX_VALIDATION",
+  CANARY: "LIVE_CANARY",
+  LIVE_CANARY: "LIVE_CANARY",
+  LIVE: "LIVE_FULL",
+  LIVE_FULL: "LIVE_FULL",
+};
+
+function promotionStage(stage: string): PromotionStage {
+  return SOURCE_STAGE[stage.toUpperCase()] ?? "PAPER_OBSERVATION";
+}
+
+function readiness(deployment: AlphaFleetDeployment): Readiness {
+  const health = deployment.health.toUpperCase();
+  if (health === "READY" || health === "BLOCKED" || health === "NOT_READY") return health;
+  return deployment.active && deployment.state.toUpperCase() === "ACTIVE" ? "READY" : "UNKNOWN";
+}
+
+function fleetEnvelope(item: AlphaFleetItem, readAt: string, sourceAsOf: string | null, freshness: string): Envelope {
+  return {
+    authority: "EXECUTION",
+    asOf: sourceAsOf ?? item.updatedAt,
+    readAt,
+    freshness: FRESHNESS[freshness] ?? "UNKNOWN",
+  };
+}
+
+function unique(values: readonly string[]): readonly string[] {
+  return Array.from(new Set(values.filter((value) => value.length > 0)));
+}
+
+function fleetKpis(item: AlphaFleetItem): Kpi[] {
+  return [
+    ...item.allocations.map((row) => ({ label: `allocation · ${row.currency}`, value: row.value, unit: row.currency })),
+    ...item.balances.flatMap((row) => [
+      { label: `balance total · ${row.currency}`, value: row.total, unit: row.currency },
+      { label: `balance free · ${row.currency}`, value: row.free, unit: row.currency },
+      { label: `balance locked · ${row.currency}`, value: row.locked, unit: row.currency },
+    ]),
+    ...item.positionPnl.map((row) => ({ label: `current position PnL · ${row.currency}`, value: row.net, unit: row.currency })),
+    ...item.exposure.map((row) => ({ label: `current exposure · ${row.currency}`, value: row.value, unit: row.currency })),
+  ];
+}
+
+function fleetVenues(item: AlphaFleetItem): VenueRow[] {
+  const byVenue = new Map<string, VenueRow>();
+  for (const deployment of item.deployments) {
+    const current: VenueRow = byVenue.get(deployment.venue) ?? {
+      venue: deployment.venue,
+      stages: {},
+      brokerSync: "UNKNOWN" as const,
+      syncDetail: "broker sync is not published on execution.alpha-fleet-list.v2",
+    };
+    current.stages[promotionStage(deployment.stage)] = deployment.state;
+    current.note = deployment.health;
+    byVenue.set(deployment.venue, current);
+  }
+  return Array.from(byVenue.values());
+}
+
+function fleetDeployments(item: AlphaFleetItem): DeploymentRow[] {
+  return item.deployments.map((deployment) => ({
+    deploymentId: deployment.deploymentId,
+    venue: deployment.venue,
+    mode: deployment.stage.toLowerCase(),
+    stage: promotionStage(deployment.stage),
+    accountId: deployment.accountId,
+    allocation: deployment.allocation,
+    pnl: deployment.netPnl,
+    drawdown: null,
+    readiness: readiness(deployment),
+    currency: deployment.currency,
+  }));
+}
+
+function unavailableAnalyticsTiles(reason: string, envelope: Envelope): InsightTile[] {
+  return TILE_TITLES.map((title, index) => ({
+    index: index + 1,
+    title,
+    envelope: {
+      authority: "DERIVED",
+      asOf: envelope.asOf ?? "",
+      window: "30d",
+      interval: "—",
+      formulaVersion: null,
+    },
+    state: "unavailable",
+    reason,
+  }));
+}
+
+function deploymentHref(deployment: DeploymentRow): string {
+  if (deployment.stage === "PAPER_OBSERVATION") return `/deployments/paper/${encodeURIComponent(deployment.deploymentId)}`;
+  if (deployment.stage === "SANDBOX_VALIDATION") return `/deployments/sandbox/${encodeURIComponent(deployment.deploymentId)}`;
+  return `/deployments/live/${encodeURIComponent(deployment.deploymentId)}`;
+}
+
 export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionApi; alphaId: string }) {
-  const state = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId]);
+  // Fleet v2 is the current-source identity/deployment spine. Query analytics
+  // is an additive branch: disabling or losing it must never erase the alpha,
+  // its deployments, accounts or reviewed screen composition.
+  const fleetState = useApiRead(() => api.getAlphaFleet({ search: alphaId, limit: 50 }), [api, alphaId]);
+  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId]);
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   const [scope, setScope] = useAnalyticsScope();
   const navigate = useNavigate();
-  const analytics = state.value;
+  const analytics = analyticsState.value;
+  const fleet = fleetState.value;
+  const item = fleet?.page.rows.find((row) => row.alphaId === alphaId) ?? null;
   const envelope: Envelope = analytics
     ? { authority: AUTHORITY[analytics.authority ?? ""] ?? "DERIVED", asOf: analytics.asOf, freshness: "OK" }
-    : { authority: "PORTAL", asOf: null, freshness: "UNKNOWN" };
+    : item && fleet
+      ? fleetEnvelope(item, fleet.readAt, fleet.sourceAsOf, fleet.freshness)
+      : { authority: "PORTAL", asOf: null, freshness: "UNKNOWN" };
+  const analyticsReason = analyticsState.status === "loading"
+    ? "Analytics are loading; current-source identity and deployments remain available."
+    : analyticsState.reason ?? "This analytics branch is not published for this alpha.";
+  const rootStatus: PanelStatus = fleetState.status === "ok"
+    ? item ? "ok" : "empty"
+    : fleetState.status;
+  const deployments = item ? fleetDeployments(item) : [];
   return (
     <AlphaThreeSixty
-      researchStatus={null}
+      researchStatus={item?.health ?? null}
       alphaId={alphaId}
-      alphaName={alphaId}
-      artifactDigest="digest not published on this analytics envelope"
-      owner="owner not published"
+      alphaName={item?.alphaLabel ?? alphaId}
+      artifactDigest={item ? `version ${item.version}` : "not published"}
+      owner={item?.owner ?? "owner not published"}
       envelope={envelope}
-      venueOptions={["ALL"]}
-      portfolioOptions={["ALL"]}
-      modeOptions={["ALL"]}
+      venueOptions={["ALL", ...unique(item?.deployments.map((row) => row.venue) ?? [])]}
+      portfolioOptions={["ALL", ...unique(item?.portfolios.map((row) => row.portfolioId) ?? [])]}
+      modeOptions={["ALL", ...unique(item?.deployments.map((row) => row.stage) ?? [])]}
       windowOptions={["30d"]}
       scope={scope}
       onScopeChange={setScope}
       tab={tab}
       onTabChange={setTab}
-      venues={[]}
-      kpis={analytics ? analyticsKpis(analytics) : []}
+      venues={item ? fleetVenues(item) : []}
+      kpis={analytics ? analyticsKpis(analytics) : item ? fleetKpis(item) : []}
       contributions={[]}
       equity={null}
-      deployments={[]}
-      tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : []}
+      deployments={deployments}
+      tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
       positions={null}
       orders={null}
       audit={null}
       onLoadOlder={() => undefined}
-      onOpenDeployment={() => undefined}
+      onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
       onOpenAccount={(accountId) => navigate(`/deployments/accounts/${encodeURIComponent(accountId)}`)}
-      status={state.status}
-      reason={state.reason}
+      status={rootStatus}
+      reason={rootStatus === "empty" ? `Alpha ${alphaId} was not present in the current-source Fleet.` : fleetState.reason}
     />
   );
 }
