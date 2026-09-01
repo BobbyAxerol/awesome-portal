@@ -2,7 +2,7 @@
   "schema_version": "portal.execution.durable-manager-projection-release-profile.v1",
   "phase": "N24",
   "source_contract": "trading-system.portal-execution.manager-v2.runtime.v1",
-  "adapter_version": "portal.execution.manager-projection.manager-v2.runtime.v4",
+  "adapter_version": "portal.execution.manager-projection.manager-v2.runtime.v5",
   "change_semantics": "PORTAL_PROJECTION_DELTA",
   "source_sequence_semantics": "POLL_BOUNDED_NO_OWNER_SEQUENCE",
   "profiles": {

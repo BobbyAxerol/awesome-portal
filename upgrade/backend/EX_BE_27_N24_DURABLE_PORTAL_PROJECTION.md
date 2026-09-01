@@ -1,6 +1,6 @@
 # EX-BE-27 — N24 Durable Portal Projection
 
-**Status:** `COMPLETE / CURRENT_SOURCE_RUNTIME_V4_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED`  
+**Status:** `COMPLETE / CURRENT_SOURCE_RUNTIME_V5_QUALIFIED / CONTENT_ADDRESSED_DEV_AUTHORIZED`  
 **Date:** 2026-09-01  
 **Branch:** `feat/execution-data-activation`  
 **Runtime effect:** no stable runtime, Trading System, Query, SSE, analytics or command activation
@@ -33,7 +33,7 @@ endpoint in the worker. Every cycle is bounded to 100 pages/feed, 20,000
 records/feed and 80,000 records total.
 
 Manager-v2 publishes paginated relation reads with a new read-only transaction
-and `as_of` on every page. Adapter v4 therefore accepts only monotonically
+and `as_of` on every page. Adapter v5 therefore accepts only monotonically
 advancing `as_of`, requires every intermediate page to be `PARTIAL`, requires
 the terminal page to be `COMPLETE`, and pins profile/catalogue identity for the
 whole traversal. It no longer demands the impossible same-`as_of` invariant.
@@ -62,6 +62,14 @@ changes carry `PORTAL_PROJECTION_DELTA`, `POLL_BOUNDED` and no source sequence.
 N24 does not relabel `domain_events` rows as an authoritative owner event
 stream because the current Manager contract publishes snapshot reads, not an
 event cursor contract.
+
+The reducer's Manager-specific input digest is built from that same semantic
+fact value. It excludes `source_read_at`, `as_of` and the retrieval cursor;
+freshness is recorded once in the bounded epoch heartbeat. This is deliberately
+different from the generic/D4 reducer, whose full observation digest remains
+unchanged. Adapter v5 was required after a real second Paper v4 cycle proved
+that mixing stable semantic ingestion IDs with receipt-time-sensitive input
+digests correctly failed closed as `IDEMPOTENCY_COLLISION`.
 
 ## 3. Durable reducer and horizontal safety
 
@@ -139,7 +147,7 @@ does not fabricate operational evidence.
 
 - mapper determinism and complete snapshots across Paper/Sandbox/Live: pass;
 - Manager-v2 `PARTIAL* -> COMPLETE` pagination with monotonic `as_of`: pass;
-- same-version feed drift prevented by adapter v4; v1/v2 evidence immutable: pass;
+- same-version feed drift prevented by adapter v5; v1/v2 evidence immutable: pass;
 - rotating five-minute `record_key` tokens preserve catalogue-key entity
   identity; real non-key field changes preserve identity and change state:
   pass;
@@ -148,6 +156,9 @@ does not fabricate operational evidence.
 - valid zero-row Live cycle with all eight empty snapshots: pass;
 - partial/missing/duplicate/cross-profile/relation drift negative matrix: pass;
 - one-way source key and non-event-authority labeling: pass;
+- mixed snapshot replay (one changed fact plus unchanged siblings with newer
+  receipt metadata) appends only the changed fact and creates no dead letter:
+  pass;
 - fresh PostgreSQL migration and three-profile commit/parity/cutover: pass;
 - duplicate cycle restart/idempotency and stale-fence rejection: pass;
 - singleton same-identity rebuild and DB-clock atomic rollback: pass;

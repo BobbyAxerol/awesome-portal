@@ -352,6 +352,7 @@ impl PgProjectionStore {
             return Err(StoreError::D4BaselineEpochNotEmpty);
         }
         for write in &input.observations {
+            let input_digest = canonical_digest(&write.observation)?;
             let outcome = self
                 .apply_observation_locked_tx(
                     &mut transaction,
@@ -360,6 +361,7 @@ impl PgProjectionStore {
                     &mut sequence,
                     &write.stream_key,
                     &write.observation,
+                    &input_digest,
                     input.committed_at,
                 )
                 .await?;
@@ -507,6 +509,7 @@ impl PgProjectionStore {
             return Ok(D4CommitOutcome::RebuildRequired);
         }
         for write in &input.observations {
+            let input_digest = canonical_digest(&write.observation)?;
             let outcome = self
                 .apply_observation_locked_tx(
                     &mut transaction,
@@ -515,6 +518,7 @@ impl PgProjectionStore {
                     &mut sequence,
                     &write.stream_key,
                     &write.observation,
+                    &input_digest,
                     input.committed_at,
                 )
                 .await?;

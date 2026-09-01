@@ -57,7 +57,7 @@ From the current source, the Rust plane supplies:
 - deterministic extrema-preserving adaptive downsampling.
 
 The engine retains the tested historical formulas for compatibility with an
-explicit future incremental source. In runtime v4, stage equity, contribution,
+explicit future incremental source. In runtime v5, stage equity, contribution,
 drawdown overlap, portfolio correlation and execution-session quality are
 typed `UNAVAILABLE` with stable N25 reason codes. They are not rendered as
 zero/empty because Manager-v2 currently lacks a bounded incremental history

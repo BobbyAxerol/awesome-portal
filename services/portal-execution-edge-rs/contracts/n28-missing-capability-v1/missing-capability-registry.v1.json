@@ -6,7 +6,7 @@
   "source_evidence": {
     "n18_census_sha256": "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3",
     "current_source_map_sha256": "sha256:d269bcaa11a4985ab1121d15f0af4cf2f09dc49bfe8e2c60ab18d0b39bb2e3c9",
-    "n25_release_profile_sha256": "sha256:1d0e0b3e9b0cd0ef9b16d48186a029d2dd2bb7a7c57918f239503583b9138f20",
+    "n25_release_profile_sha256": "sha256:c33d71e2d46f075ced5244a3279657858bb330bf5de9b6d65eaf5ed29feef134",
     "n27_task_fixture_sha256": "sha256:5ff678f8ac4994ec74ad08589ef5397a51ec34aafea466ad0599e6a79fd16d81",
     "data_layer_contract_sha256": "sha256:4872c4161df2a1f28a77f2ff0fe5b184df304f6c574fcd96147050619e085410",
     "gateway_api_surface_sha256": "sha256:05463507eb2edf27882c97bb4f6d0ecaea1d22f175eef043d17e92e7df1459de",

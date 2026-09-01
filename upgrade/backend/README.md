@@ -1399,11 +1399,11 @@ durable run/attempt events. Detailed evidence:
 - Detail:
   [`EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md`](./EX_BE_26_N23_SANDBOX_LIVE_READ_PROFILES.md).
 
-## Backend state — 2026-09-01 (N24 current-source runtime v4 amendment)
+## Backend state — 2026-09-01 (N24 current-source runtime v5 amendment)
 
-- N24 is `COMPLETE / CURRENT_SOURCE_RUNTIME_V4_QUALIFIED /
+- N24 is `COMPLETE / CURRENT_SOURCE_RUNTIME_V5_QUALIFIED /
   CONTENT_ADDRESSED_DEV_AUTHORIZED / N25_READY`.
-- The exact 13-feed set is bounded current state. Adapter v4 accepts the owner
+- The exact 13-feed set is bounded current state. Adapter v5 accepts the owner
   `PARTIAL* -> COMPLETE` pagination contract with monotonic per-page `as_of`.
   Oldest-first historical tables without incremental semantics are excluded.
 - A profile-isolated Rust worker maps exactly 13 bounded current-state Manager-v2 feeds into
@@ -1419,10 +1419,12 @@ durable run/attempt events. Detailed evidence:
   cleanup transaction.
 - Runtime hardening separates semantic state identity from transport receipt
   timestamps and randomized five-minute source retrieval cursors. Durable IDs
-  use the validated catalogue relation/key columns. An unchanged poll advances
-  a bounded per-epoch heartbeat without appending another immutable cycle or
-  one journal row per record; adaptive 60–900 second database leases remain
-  tied to the 80,000-record hard bound.
+  use the validated catalogue relation/key columns. Per-fact idempotency uses
+  the same semantic value and excludes receipt timestamps/cursors; a mixed
+  snapshot appends only facts whose business state changed. An unchanged poll
+  advances a bounded per-epoch heartbeat without appending another immutable
+  cycle or one journal row per record; adaptive 60–900 second database leases
+  remain tied to the 80,000-record hard bound.
 - Static three-profile Compose, Rust all-target tests, zero-warning Clippy,
   fresh PostgreSQL migration through `0015`, heartbeat/idempotency recovery and
   dump/restore gates pass.

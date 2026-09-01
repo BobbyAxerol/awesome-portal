@@ -23,7 +23,7 @@ assert manifest["profiles"] == {
     "sandbox": "SANDBOX_BINANCE_USDM",
     "live": "LIVE_BINANCE_USDM",
 }
-assert manifest["adapter_version"] == "portal.execution.manager-projection.manager-v2.runtime.v4"
+assert manifest["adapter_version"] == "portal.execution.manager-projection.manager-v2.runtime.v5"
 assert len(manifest["required_feeds"]) == 13
 assert len(set(manifest["required_feeds"])) == 13
 assert set(manifest["required_feeds"]) == {

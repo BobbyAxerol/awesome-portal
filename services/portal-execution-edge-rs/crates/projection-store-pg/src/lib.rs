@@ -329,6 +329,7 @@ impl PgProjectionStore {
                 EpochWriteAuthority::BuildingOrActive,
             )
             .await?;
+        let input_digest = canonical_digest(observation)?;
         let outcome = self
             .apply_observation_locked_tx(
                 &mut transaction,
@@ -337,6 +338,7 @@ impl PgProjectionStore {
                 &mut current_sequence,
                 stream_key,
                 observation,
+                &input_digest,
                 projected_at,
             )
             .await?;
@@ -391,13 +393,13 @@ impl PgProjectionStore {
         current_sequence: &mut u64,
         stream_key: &str,
         observation: &ProjectionObservation,
+        input_digest: &str,
         projected_at: DateTime<Utc>,
     ) -> Result<StoreApplyOutcome, StoreError> {
         if stream_key.trim().is_empty() {
             return Err(StoreError::InvalidStreamKey);
         }
         observation.validate()?;
-        let input_digest = canonical_digest(observation)?;
         if let Some(row) = sqlx::query(
             "SELECT input_digest, projection_sequence
              FROM portal_projection.ingestion_keys
@@ -417,7 +419,7 @@ impl PgProjectionStore {
                 transaction,
                 epoch_id,
                 observation,
-                &input_digest,
+                input_digest,
                 "IDEMPOTENCY_COLLISION",
                 projected_at,
             )
@@ -437,7 +439,7 @@ impl PgProjectionStore {
                     transaction,
                     epoch_id,
                     observation,
-                    &input_digest,
+                    input_digest,
                     reason,
                     projected_at,
                 )
@@ -446,7 +448,7 @@ impl PgProjectionStore {
                     transaction,
                     epoch_id,
                     observation.ingestion_id.as_str(),
-                    &input_digest,
+                    input_digest,
                     "DEAD_LETTERED",
                     None,
                     projected_at,
@@ -467,7 +469,7 @@ impl PgProjectionStore {
             transaction,
             epoch_id,
             observation.ingestion_id.as_str(),
-            &input_digest,
+            input_digest,
             outcome_name,
             projection_sequence,
             projected_at,
@@ -477,7 +479,7 @@ impl PgProjectionStore {
             transaction,
             epoch_id,
             observation,
-            &input_digest,
+            input_digest,
             outcome_name,
             projection_sequence,
             projected_at,
@@ -3955,7 +3957,7 @@ mod tests {
         .bind(epoch_id)
         .bind(scope.workspace_id.as_str())
         .bind(&scope.environment)
-        .bind("portal.execution.manager-projection.manager-v2.runtime.v4")
+        .bind("portal.execution.manager-projection.manager-v2.runtime.v5")
         .bind(digest('f'))
         .bind(&catalogue)
         .bind(at(100))
@@ -4055,7 +4057,7 @@ mod tests {
             .bind(i64::try_from(index + 1).unwrap())
             .bind(at(120))
             .bind(at(200))
-            .bind("portal.execution.manager-projection.manager-v2.runtime.v4")
+            .bind("portal.execution.manager-projection.manager-v2.runtime.v5")
             .bind(&catalogue)
             .bind(digest(char::from(b'd' + u8::try_from(index).unwrap())))
             .bind(payload)
@@ -4116,7 +4118,7 @@ mod tests {
         .bind(epoch_id)
         .bind(at(120))
         .bind(at(200))
-        .bind("portal.execution.manager-projection.manager-v2.runtime.v4")
+        .bind("portal.execution.manager-projection.manager-v2.runtime.v5")
         .bind(&catalogue)
         .bind(digest('e'))
         .execute(&store.pool)
@@ -4397,6 +4399,123 @@ mod tests {
                 }
             };
             assert!(second_lease.fencing_token > first_lease.fencing_token);
+            let mixed_cycle_id =
+                CanonicalId::parse(format!("n24-cycle-{environment}-mixed")).unwrap();
+            let stable_order_id =
+                CanonicalId::parse(format!("n24:{environment}:order:entity-1")).unwrap();
+            let stable_order = ProjectionObservation {
+                ingestion_id: CanonicalId::parse(format!("n24-ingest-{environment}-3-1")).unwrap(),
+                entity: ProjectionEntityKey {
+                    kind: ProjectionEntityKind::Order,
+                    entity_id: stable_order_id,
+                },
+                source_authority: SourceAuthority::Execution,
+                as_of: Some(at(103)),
+                source_read_at: at(250),
+                source_cursor: Some(SourceCursor {
+                    event_ts: at(250),
+                    created_at: at(250),
+                    event_id: mixed_cycle_id.clone(),
+                }),
+                source_sequence: None,
+                source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+                operation: ProjectionOperation::Upsert,
+                source_completeness: SourceCompleteness::PollBounded,
+                poll_interval_ms: Some(2_000),
+                adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v1"
+                    .to_owned(),
+                capability_snapshot_id: catalogue_digest.clone(),
+                payload: serde_json::json!({
+                    "change_label": "PORTAL_PROJECTION_DELTA",
+                    "source_feed": "ORDER",
+                }),
+            };
+            let changed_order = ProjectionObservation {
+                ingestion_id: CanonicalId::parse(format!("n24-ingest-{environment}-order-2"))
+                    .unwrap(),
+                entity: ProjectionEntityKey {
+                    kind: ProjectionEntityKind::Order,
+                    entity_id: CanonicalId::parse(format!("n24:{environment}:order:entity-2"))
+                        .unwrap(),
+                },
+                source_authority: SourceAuthority::Execution,
+                as_of: Some(at(250)),
+                source_read_at: at(250),
+                source_cursor: Some(SourceCursor {
+                    event_ts: at(250),
+                    created_at: at(250),
+                    event_id: mixed_cycle_id.clone(),
+                }),
+                source_sequence: None,
+                source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
+                operation: ProjectionOperation::Upsert,
+                source_completeness: SourceCompleteness::PollBounded,
+                poll_interval_ms: Some(2_000),
+                adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v1"
+                    .to_owned(),
+                capability_snapshot_id: catalogue_digest.clone(),
+                payload: serde_json::json!({
+                    "change_label": "PORTAL_PROJECTION_DELTA",
+                    "source_feed": "ORDER",
+                    "state": "changed",
+                }),
+            };
+            let mixed_order = projection_core::ProjectionSnapshot::new(
+                CanonicalId::parse(format!("n24-snapshot-{environment}-order-mixed")).unwrap(),
+                ProjectionEntityKind::Order,
+                SnapshotCompleteness::Complete,
+                2,
+                vec![stable_order, changed_order],
+            )
+            .unwrap();
+            let journal_before: i64 = sqlx::query_scalar(
+                "SELECT count(*) FROM portal_projection.event_journal WHERE epoch_id=$1",
+            )
+            .bind(epoch_id)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap();
+            let mixed_receipt = store
+                .commit_manager_projection_snapshot(
+                    &scope,
+                    epoch_id,
+                    second_lease.proof(),
+                    &ManagerSnapshotCommitInput {
+                        cycle_id: mixed_cycle_id,
+                        profile_id: profile_id.to_owned(),
+                        catalogue_digest: catalogue_digest.clone(),
+                        source_input_digest: manager_snapshot_semantic_digest(
+                            &mixed_order.observations,
+                        )
+                        .unwrap(),
+                        source_read_at: at(250),
+                        poll_interval_ms: 2_000,
+                        snapshot: mixed_order,
+                    },
+                    at(251),
+                )
+                .await
+                .unwrap();
+            assert_eq!(mixed_receipt.applied_count, 1);
+            assert_eq!(mixed_receipt.removed_count, 0);
+            let journal_after: i64 = sqlx::query_scalar(
+                "SELECT count(*) FROM portal_projection.event_journal WHERE epoch_id=$1",
+            )
+            .bind(epoch_id)
+            .fetch_one(&store.pool)
+            .await
+            .unwrap();
+            assert_eq!(journal_after, journal_before + 1);
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>(
+                    "SELECT count(*) FROM portal_projection.dead_letters WHERE epoch_id=$1",
+                )
+                .bind(epoch_id)
+                .fetch_one(&store.pool)
+                .await
+                .unwrap(),
+                0
+            );
             let empty_order = projection_core::ProjectionSnapshot::new(
                 CanonicalId::parse(format!("n24-snapshot-{environment}-order-empty")).unwrap(),
                 ProjectionEntityKind::Order,
@@ -4437,7 +4556,7 @@ mod tests {
                 )
                 .await
                 .unwrap();
-            assert_eq!(tombstone.removed_count, 1);
+            assert_eq!(tombstone.removed_count, 2);
             assert!(store
                 .load_entity(
                     epoch_id,

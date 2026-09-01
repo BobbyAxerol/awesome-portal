@@ -1,6 +1,6 @@
 # N24 Durable Manager Projection Release and Rollback
 
-Status: current-source runtime v4 qualified; content-addressed dev deployment
+Status: current-source runtime v5 qualified; content-addressed dev deployment
 is owner-authorized. This runbook does not authorize a stable or Trading
 System change.
 
@@ -17,14 +17,16 @@ sequence. The worker collects exactly 13 bounded current-state feeds and atomica
 eight entity-kind snapshots per cycle. A valid empty Live profile still seals
 all eight empty snapshots. Receipt timestamps are freshness evidence, not
 business identity. The source `record_key` is a short-lived point-retrieval
-cursor, not an entity ID; adapter v4 derives identity only from the exact
+cursor, not an entity ID; adapter v5 derives identity only from the exact
 catalogue key columns and relation ID. An unchanged poll advances one bounded
 epoch heartbeat and does not append another cycle or one journal row per
-source record.
+source record. Per-fact idempotency uses the same semantic value as the
+snapshot identity; receipt timestamps, `as_of` and retrieval cursors are not
+part of its input digest.
 
 Historical session/snapshot relations are not periodic feeds because the
 current owner API exposes them oldest-first without an incremental watermark,
-latest-window selector or stable snapshot token. Adapter v4 requires
+latest-window selector or stable snapshot token. Adapter v5 requires
 `PARTIAL` on intermediate pages, `COMPLETE` on the terminal page, fixed
 profile/catalogue identity and monotonic page `as_of`.
 
@@ -96,6 +98,9 @@ the three change windows.
 - two reads with different source `record_key` tokens but identical catalogue
   key fields must resolve to the same Portal entity; never log or persist the
   opaque token;
+- a snapshot in which one fact changes and its siblings only receive newer
+  transport timestamps must append exactly the changed fact and no dead
+  letter; an idempotency collision is a hard stop;
 - steady-state RPO target is 10 seconds while the qualified source is healthy;
 - process restart RTO is 120 seconds; an expired database lease advances the
   fencing token and rejects a stale writer;

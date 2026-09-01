@@ -43,21 +43,32 @@ pub fn manager_snapshot_semantic_digest(
     canonical_digest(
         &observations
             .iter()
-            .map(|observation| {
-                serde_json::json!({
-                    "entity": &observation.entity,
-                    "operation": observation.operation,
-                    "source_authority": observation.source_authority,
-                    "source_completeness": observation.source_completeness,
-                    "poll_interval_ms": observation.poll_interval_ms,
-                    "adapter_version": &observation.adapter_version,
-                    "capability_snapshot_id": &observation.capability_snapshot_id,
-                    "payload": &observation.payload,
-                })
-            })
+            .map(manager_observation_semantic_value)
             .collect::<Vec<_>>(),
     )
     .map_err(StoreError::from)
+}
+
+/// Computes the idempotency identity for one Manager snapshot fact. Transport
+/// receipt timestamps and retrieval cursors are intentionally absent; poll
+/// liveness is persisted in the bounded epoch heartbeat instead.
+fn manager_observation_semantic_digest(
+    observation: &ProjectionObservation,
+) -> Result<String, StoreError> {
+    canonical_digest(&manager_observation_semantic_value(observation)).map_err(StoreError::from)
+}
+
+fn manager_observation_semantic_value(observation: &ProjectionObservation) -> serde_json::Value {
+    serde_json::json!({
+        "entity": &observation.entity,
+        "operation": observation.operation,
+        "source_authority": observation.source_authority,
+        "source_completeness": observation.source_completeness,
+        "poll_interval_ms": observation.poll_interval_ms,
+        "adapter_version": &observation.adapter_version,
+        "capability_snapshot_id": &observation.capability_snapshot_id,
+        "payload": &observation.payload,
+    })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -559,6 +570,7 @@ impl PgProjectionStore {
         );
         let mut applied_count = 0_usize;
         for observation in &validated.observations {
+            let input_digest = manager_observation_semantic_digest(observation)?;
             match self
                 .apply_observation_locked_tx(
                     &mut transaction,
@@ -567,6 +579,7 @@ impl PgProjectionStore {
                     &mut sequence,
                     &stream_key,
                     observation,
+                    &input_digest,
                     committed_at,
                 )
                 .await?
@@ -596,6 +609,7 @@ impl PgProjectionStore {
         let mut removed_count = 0_usize;
         for entity_id in existing.into_iter().filter(|id| !desired.contains(id)) {
             let tombstone = tombstone_observation(input, entity_id)?;
+            let input_digest = manager_observation_semantic_digest(&tombstone)?;
             match self
                 .apply_observation_locked_tx(
                     &mut transaction,
@@ -604,6 +618,7 @@ impl PgProjectionStore {
                     &mut sequence,
                     &stream_key,
                     &tombstone,
+                    &input_digest,
                     committed_at,
                 )
                 .await?
@@ -1173,7 +1188,7 @@ fn manager_cycle_observation(
         operation: ProjectionOperation::Upsert,
         source_completeness: SourceCompleteness::PollBounded,
         poll_interval_ms: Some(input.poll_interval_ms),
-        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v4".to_owned(),
+        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v5".to_owned(),
         capability_snapshot_id: input.catalogue_digest.clone(),
         payload: serde_json::json!({
             "delta_kind": "PORTAL_PROJECTION_DELTA",
@@ -1218,7 +1233,7 @@ fn tombstone_observation(
         operation: ProjectionOperation::Delete,
         source_completeness: SourceCompleteness::PollBounded,
         poll_interval_ms: Some(input.poll_interval_ms),
-        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v4".to_owned(),
+        adapter_version: "portal.execution.manager-projection.manager-v2.runtime.v5".to_owned(),
         capability_snapshot_id: input.catalogue_digest.clone(),
         payload: serde_json::json!({
             "change_label": "PORTAL_PROJECTION_DELTA",

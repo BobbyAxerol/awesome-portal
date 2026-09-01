@@ -26,7 +26,7 @@ use thiserror::Error;
 
 pub const MANAGER_PROJECTION_SCHEMA_VERSION: &str = "portal.execution.manager-projection.v2";
 pub const MANAGER_PROJECTION_ADAPTER_VERSION: &str =
-    "portal.execution.manager-projection.manager-v2.runtime.v4";
+    "portal.execution.manager-projection.manager-v2.runtime.v5";
 pub const PORTAL_PROJECTION_DELTA: &str = "PORTAL_PROJECTION_DELTA";
 pub const DEFAULT_POLL_INTERVAL_MS: i64 = 2_000;
 pub const MAXIMUM_FEED_RECORDS: usize = 20_000;
