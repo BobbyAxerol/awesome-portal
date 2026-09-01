@@ -582,9 +582,12 @@ struct RuntimeActivation {
 
 #[derive(Debug, Deserialize)]
 struct ActivationReleaseProfiles {
-    paper_sha256: String,
-    sandbox_live_sha256: String,
-    product_candidate_sha256: String,
+    #[serde(rename = "paper_sha256")]
+    paper: String,
+    #[serde(rename = "sandbox_live_sha256")]
+    sandbox_live: String,
+    #[serde(rename = "product_candidate_sha256")]
+    product_candidate: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -686,11 +689,11 @@ fn validate_runtime_activation(
                 })
             });
 
-    let release_profiles_are_bound = activation.release_profiles.paper_sha256
+    let release_profiles_are_bound = activation.release_profiles.paper
         == digest(PAPER_RELEASE_PROFILE_JSON.as_bytes())
-        && activation.release_profiles.sandbox_live_sha256
+        && activation.release_profiles.sandbox_live
             == digest(SANDBOX_LIVE_RELEASE_PROFILE_JSON.as_bytes())
-        && activation.release_profiles.product_candidate_sha256
+        && activation.release_profiles.product_candidate
             == digest(PRODUCT_RELEASE_PROFILE_JSON.as_bytes());
 
     let valid = activation.schema_version
