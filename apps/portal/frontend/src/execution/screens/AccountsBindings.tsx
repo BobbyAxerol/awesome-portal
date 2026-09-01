@@ -45,17 +45,13 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
   const { now, j } = demoTick ?? { now: new Date(0), j: 0, snaps: [] };
   const [filter, setFilter] = useState<BindingFilter>("all");
   const [open, setOpen] = useState<Record<string, boolean>>({ binance_main_01: true });
-  if (!smoke && status !== "ok" && status !== "partial") {
-    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status={status} reason={reason} /></ExecutionSurface>;
-  }
-  if (!smoke && !list) {
-    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status="unavailable" reason="No bindings list was published for this workspace." /></ExecutionSurface>;
-  }
   if (!smoke) {
     // Product: the reviewed bindings table over the BR-EX-72 projection.
     // `venue_credentials` is excluded server-side; the credential column
     // carries the published state word only, never a secret.
-    const items = list!.page.rows;
+    const items = list?.page.rows ?? [];
+    const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
+    const sourceReason = reason ?? (!list ? "No bindings list was published for this workspace." : undefined);
     const mute = <span className="exec-af-mute">—</span>;
     return (
       <ExecutionSurface kind="deployments" className="exec-ab exec-af" data-hifi-exact="accounts-bindings">
@@ -63,11 +59,12 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
           <div className="exec-af-page">
             <header className="exec-af-masthead">
               <h1 className="exec-af-h1">Accounts &amp; Bindings</h1>
-              <span className="exec-af-sum">{list!.page.filteredCount ?? items.length}/{list!.page.totalCount ?? "?"} bindings · {list!.environment.toUpperCase()}</span>
+              <span className="exec-af-sum">{list?.page.filteredCount ?? items.length}/{list?.page.totalCount ?? "?"} bindings · {(list?.environment ?? "unknown").toUpperCase()}</span>
               <span className="exec-af-wf">entry screen for WF 1g</span>
               <span className="exec-af-spacer" />
-              <span className="exec-af-source"><b>BROKER</b> · <StatusChip label={list!.freshness} tone={list!.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list!.sourceAsOf)}</span></span>
+              <span className="exec-af-source"><b>BROKER</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
             </header>
+            {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
                 <table className="exec-af-table exec-ab-table" aria-label="Bindings">
@@ -95,8 +92,8 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
               </footer>
             </div>
             <nav className="exec-table-pager" aria-label="Result pages">
-              <button type="button" disabled={!list!.page.prevCursor} onClick={() => list!.page.prevCursor && onPreviousPage?.(list!.page.prevCursor)}>Previous</button>
-              <button type="button" disabled={!list!.page.nextCursor} onClick={() => list!.page.nextCursor && onNextPage?.(list!.page.nextCursor)}>Next</button>
+              <button type="button" disabled={!list?.page.prevCursor} onClick={() => list?.page.prevCursor && onPreviousPage?.(list.page.prevCursor)}>Previous</button>
+              <button type="button" disabled={!list?.page.nextCursor} onClick={() => list?.page.nextCursor && onNextPage?.(list.page.nextCursor)}>Next</button>
             </nav>
           </div>
         </ExecutionWorkspace>

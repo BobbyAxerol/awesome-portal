@@ -50,16 +50,12 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
     return () => chrome?.setChrome({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [price, prev, smoke]);
-  if (!smoke && status !== "ok" && status !== "partial") {
-    return <ExecutionSurface kind="deployments" className="exec-lv"><PanelState status={status} reason={reason} /></ExecutionSurface>;
-  }
-  if (!smoke && !envelope) {
-    return <ExecutionSurface kind="deployments" className="exec-lv"><PanelState status="unavailable" reason="No live overview was published for this workspace." /></ExecutionSurface>;
-  }
   if (!smoke) {
     // Product: the reviewed layout over the published envelope. Live is empty
     // in this workspace today, and a valid empty Live renders as empty.
-    const deployments = envelope!.data.deployments ?? [];
+    const deployments = envelope?.data.deployments ?? [];
+    const sourceStatus = status !== "ok" && status !== "partial" ? status : !envelope ? "unavailable" : null;
+    const sourceReason = reason ?? (!envelope ? "No live overview was published for this workspace." : undefined);
     const notPublished = <span className="exec-gate-unverified">not published</span>;
     return (
       <ExecutionSurface kind="deployments" className="exec-lv exec-af" data-hifi-exact="live-overview">
@@ -70,13 +66,14 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
               <span className="exec-af-sum">{deployments.length} live deployment{deployments.length === 1 ? "" : "s"} published</span>
               <span className="exec-af-wf">entry screen for WF 1f/1e</span>
               <span className="exec-af-spacer" />
-              <span className="exec-af-source"><b>{envelope!.sourceAuthority ?? "authority not stated"}</b> · real capital · as_of <span className="exec-af-num">{utcStamp(envelope!.asOf)}</span> · {envelope!.state.toUpperCase()}</span>
+              <span className="exec-af-source"><b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · real capital · as_of <span className="exec-af-num">{utcStamp(envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()}</span>
             </header>
+            {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             <div className="exec-af-kpis exec-lv-kpis">
               <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Live capital Σ</div><div className="exec-af-kpival">{notPublished}</div><div className="exec-af-kpisub">account balances are published per deployment</div></div>
               <div className="exec-af-kpi"><div className="exec-af-kpilabel">Session PnL</div><div className="exec-af-kpival">{notPublished}</div></div>
               <div className="exec-af-kpi"><div className="exec-af-kpilabel">Gross exposure</div><div className="exec-af-kpival">{notPublished}</div></div>
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope!.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope!.completeness ?? "completeness not stated"}</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope?.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope?.completeness ?? "completeness not stated"}</div></div>
             </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">

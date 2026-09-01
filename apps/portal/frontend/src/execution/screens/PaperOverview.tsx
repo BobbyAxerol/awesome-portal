@@ -42,25 +42,12 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
   const now = demoTick?.now ?? new Date(0);
   const [venue, setVenue] = useState("All");
   const navigate = useNavigate();
-  if (!PO && status !== "ok" && status !== "partial") {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-po">
-        <PanelState status={status} reason={reason} />
-      </ExecutionSurface>
-    );
-  }
-  if (!PO && !envelope) {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-po">
-        <PanelState status="unavailable" reason="No paper overview was published for this workspace." />
-      </ExecutionSurface>
-    );
-  }
-
   if (!PO) {
     // Product: the reviewed layout over the published envelope, panel by panel.
-    const deployments = envelope!.data.deployments ?? [];
-    const insight = envelope!.capabilities.find((c) => c.capabilityId === "paper.derived-insights");
+    const deployments = envelope?.data.deployments ?? [];
+    const sourceStatus = status !== "ok" && status !== "partial" ? status : !envelope ? "unavailable" : null;
+    const sourceReason = reason ?? (!envelope ? "No paper overview was published for this workspace." : undefined);
+    const insight = envelope?.capabilities.find((c) => c.capabilityId === "paper.derived-insights");
     const insightReason = insight && insight.state !== "AVAILABLE"
       ? `${insight.capabilityId} is ${insight.state}${insight.reasonCode ? ` · ${insight.reasonCode}` : ""}`
       : "The derived-insight series are not published for this overview (BR-EX-62).";
@@ -72,10 +59,16 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
               <h1 className="exec-po-h1">Paper</h1>
               <span className="exec-po-spacer" />
               <span className="exec-po-source">
-                <b>{envelope!.sourceAuthority ?? "authority not stated"}</b> · as_of{" "}
-                <span className="exec-po-num">{utcStamp(envelope!.asOf)}</span> · {envelope!.state.toUpperCase()} · {envelope!.freshness ?? "freshness not stated"}
+                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of{" "}
+                <span className="exec-po-num">{utcStamp(envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()} · {envelope?.freshness ?? "freshness not stated"}
               </span>
             </header>
+
+            {sourceStatus ? (
+              <section className="exec-po-panel" aria-label="Paper source status">
+                <PanelState status={sourceStatus} reason={sourceReason} />
+              </section>
+            ) : null}
 
             <div className="exec-po-kpis">
               <div className="exec-po-kpi">

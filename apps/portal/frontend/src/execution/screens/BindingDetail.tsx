@@ -29,35 +29,32 @@ export interface BindingDetailProps {
 export function BindingDetail({ bindingId, detail = null, status = "ok", reason, demo, demoTick }: BindingDetailProps) {
   const smoke = demo && bindingId === demo.binding.id ? demo : null;
   const { now, j, snaps } = demoTick ?? { now: new Date(0), j: 0, snaps: [] };
-  if (!smoke && status !== "ok" && status !== "partial") {
-    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status={status} reason={reason} /></ExecutionSurface>;
-  }
-  if (!smoke && !detail) {
-    return <ExecutionSurface kind="deployments" className="exec-ab"><PanelState status="unavailable" reason={`No binding detail was published for ${bindingId}.`} /></ExecutionSurface>;
-  }
   if (!smoke) {
     // Product: the published, non-secret binding facts in the reviewed frame.
-    const d = detail!;
+    const sourceStatus = status !== "ok" && status !== "partial" ? status : !detail ? "unavailable" : null;
+    const sourceReason = reason ?? (!detail ? `No binding detail was published for ${bindingId}.` : undefined);
+    const d = detail;
     return (
       <ExecutionSurface kind="deployments" className="exec-ab exec-a3 exec-bd" data-hifi-exact="binding-detail">
         <ExecutionWorkspace layout="dense">
           <header className="exec-a3-masthead">
             <span className="exec-bd-kind">BINDING</span>
-            <h1 className="exec-a3-h1">{d.bindingId} <span className="exec-a3-id">— {d.venue}</span></h1>
+            <h1 className="exec-a3-h1">{d?.bindingId ?? bindingId} <span className="exec-a3-id">— {d?.venue ?? "venue not published"}</span></h1>
             <span className="exec-a3-spacer" />
-            <span className="exec-a3-source"><b>BROKER</b> · updated {utcStamp(d.updatedAt)}</span>
+            <span className="exec-a3-source"><b>BROKER</b> · updated {utcStamp(d?.updatedAt ?? null)}</span>
           </header>
+          {sourceStatus ? <section className="exec-pf2-panel"><PanelState status={sourceStatus} reason={sourceReason} /></section> : null}
           <section className="exec-pf2-panel" aria-label="Binding facts">
             <header className="exec-pf2-head"><span className="exec-pf2-title">Published binding facts</span></header>
             <div className="exec-gov-kv" data-flush="true">
               <span className="exec-gov-k">account</span>
-              <span className="exec-gov-v"><a href={`/deployments/accounts/${encodeURIComponent(d.accountId)}`}>{d.accountId}</a></span>
+              <span className="exec-gov-v">{d ? <a href={`/deployments/accounts/${encodeURIComponent(d.accountId)}`}>{d.accountId}</a> : "not published"}</span>
               <span className="exec-gov-k">venue</span>
-              <span className="exec-gov-v">{d.venue}</span>
+              <span className="exec-gov-v">{d?.venue ?? "not published"}</span>
               <span className="exec-gov-k">state</span>
-              <span className="exec-gov-v">{d.state.toUpperCase()}</span>
+              <span className="exec-gov-v">{d?.state.toUpperCase() ?? "NOT PUBLISHED"}</span>
               <span className="exec-gov-k">credential</span>
-              <span className="exec-gov-v">{d.credentialState.toUpperCase()} — state word only; credentials never leave the vault</span>
+              <span className="exec-gov-v">{d ? `${d.credentialState.toUpperCase()} — state word only; credentials never leave the vault` : "not published"}</span>
             </div>
           </section>
           <section className="exec-pf2-panel" aria-label="Capital invariant">

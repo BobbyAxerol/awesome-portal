@@ -66,23 +66,11 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
   const { now, orders, filled, ack, fill } = demoTick ?? { now: new Date(0), orders: 0, filled: 0, ack: 0, fill: 0 };
   const [filter, setFilter] = useState<SandboxFilter>("all");
   const navigate = useNavigate();
-  if (!smoke && status !== "ok" && status !== "partial") {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-sb">
-        <PanelState status={status} reason={reason} />
-      </ExecutionSurface>
-    );
-  }
-  if (!smoke && !envelope) {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-sb">
-        <PanelState status="unavailable" reason="No sandbox overview was published for this workspace." />
-      </ExecutionSurface>
-    );
-  }
   if (!smoke) {
     // Product: the reviewed layout over the published envelope, panel by panel.
-    const deployments = envelope!.data.deployments ?? [];
+    const deployments = envelope?.data.deployments ?? [];
+    const sourceStatus = status !== "ok" && status !== "partial" ? status : !envelope ? "unavailable" : null;
+    const sourceReason = reason ?? (!envelope ? "No sandbox overview was published for this workspace." : undefined);
     const notPublished = <span className="exec-gate-unverified">not published</span>;
     return (
       <ExecutionSurface kind="deployments" className="exec-sb exec-af" data-hifi-exact="sandbox-overview">
@@ -94,9 +82,10 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
               <span className="exec-af-wf">entry for WF 1d</span>
               <span className="exec-af-spacer" />
               <span className="exec-af-source">
-                <b>{envelope!.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope!.asOf)}</span> · {envelope!.state.toUpperCase()}
+                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()}
               </span>
             </header>
+            {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             <div className="exec-af-kpis exec-sb-kpis">
               <div className="exec-af-kpi">
                 <div className="exec-af-kpilabel">In certification</div>
@@ -106,7 +95,7 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
               <div className="exec-af-kpi"><div className="exec-af-kpilabel">Halted</div><div className="exec-af-kpival">{notPublished}</div></div>
               <div className="exec-af-kpi"><div className="exec-af-kpilabel">Open findings</div><div className="exec-af-kpival">{notPublished}</div></div>
               <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Test-fund equity</div><div className="exec-af-kpival">{notPublished}</div></div>
-              <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope!.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope!.completeness ?? "completeness not stated"}</div></div>
+              <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope?.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope?.completeness ?? "completeness not stated"}</div></div>
             </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">

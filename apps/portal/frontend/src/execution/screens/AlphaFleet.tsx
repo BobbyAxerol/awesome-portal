@@ -84,35 +84,24 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
   const [open, setOpen] = useState<Record<string, boolean>>({ av_2041: true });
   const filter = controlled ?? local;
   const setFilter = (f: FleetFilter) => { setLocal(f); onFilterChange?.(f); };
-  if (!smoke && status !== "ok" && status !== "partial") {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-fleet">
-        <PanelState status={status} reason={reason} />
-      </ExecutionSurface>
-    );
-  }
-  if (!smoke && !list) {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-fleet">
-        <PanelState status="unavailable" reason="No fleet list was published for this workspace." />
-      </ExecutionSurface>
-    );
-  }
   if (!smoke) {
     // Product: the reviewed fleet table over the BR-EX-72 projection —
     // published columns real, unpublished columns stated, never invented.
-    const items = list!.page.rows;
+    const items = list?.page.rows ?? [];
+    const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
+    const sourceReason = reason ?? (!list ? "No fleet list was published for this workspace." : undefined);
     return (
       <ExecutionSurface kind="deployments" className="exec-fleet exec-af" data-hifi-exact="alpha-fleet">
         <ExecutionWorkspace layout="dense">
           <div className="exec-af-page">
             <header className="exec-af-masthead">
               <h1 className="exec-af-h1">Alpha Fleet</h1>
-              <span className="exec-af-sum">{list!.page.filteredCount ?? items.length}/{list!.page.totalCount ?? "?"} alphas · {list!.environment.toUpperCase()}</span>
+              <span className="exec-af-sum">{list?.page.filteredCount ?? items.length}/{list?.page.totalCount ?? "?"} alphas · {(list?.environment ?? "unknown").toUpperCase()}</span>
               <span className="exec-af-wf">entry screen for WF 2a</span>
               <span className="exec-af-spacer" />
-              <span className="exec-af-source"><b>EXECUTION</b> · <StatusChip label={list!.freshness} tone={list!.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list!.sourceAsOf)}</span></span>
+              <span className="exec-af-source"><b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
             </header>
+            {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
                 <table className="exec-af-table" aria-label="Alpha fleet">
@@ -144,8 +133,8 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
               </footer>
             </div>
             <nav className="exec-table-pager" aria-label="Result pages">
-              <button type="button" disabled={!list!.page.prevCursor} onClick={() => list!.page.prevCursor && onPreviousPage?.(list!.page.prevCursor)}>Previous</button>
-              <button type="button" disabled={!list!.page.nextCursor} onClick={() => list!.page.nextCursor && onNextPage?.(list!.page.nextCursor)}>Next</button>
+              <button type="button" disabled={!list?.page.prevCursor} onClick={() => list?.page.prevCursor && onPreviousPage?.(list.page.prevCursor)}>Previous</button>
+              <button type="button" disabled={!list?.page.nextCursor} onClick={() => list?.page.nextCursor && onNextPage?.(list.page.nextCursor)}>Next</button>
             </nav>
           </div>
         </ExecutionWorkspace>
