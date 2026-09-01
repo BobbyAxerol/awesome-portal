@@ -5,9 +5,12 @@ binds the N18 census to one active owner/runtime adapter, three deployment
 profiles, five sealed GET primitives, seven owner projections and fixed
 transport limits.
 
-Only the Paper binding is transport-qualified in this revision. Sandbox and
-Live remain exact, versioned dormant bindings and fail closed until their
-independent qualification phases.
+This N19 revision intentionally remains historical: only Paper was
+transport-qualified when it was accepted. The later exact runtime decision is
+published separately in
+`../manager-profile-activation-v1/runtime-activation.v1.json`; Rust requires
+both documents, their immutable release inputs and the sanitized qualification
+evidence before binding Paper, Sandbox or Live.
 
 The authority is intentionally not a browser or generic database API. A
 caller cannot supply an origin, method, header, field, SQL fragment or

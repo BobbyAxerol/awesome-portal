@@ -22,11 +22,26 @@ const CENSUS_JSON: &str =
     include_str!("../../../contracts/manager-surface-census-v1/manager-surface-census.v1.json");
 const MATRIX_JSON: &str =
     include_str!("../../../contracts/manager-compat-authority-v1/adapter-matrix.v1.json");
+const ACTIVATION_JSON: &str =
+    include_str!("../../../contracts/manager-profile-activation-v1/runtime-activation.v1.json");
+const QUALIFICATION_EVIDENCE_JSON: &str =
+    include_str!("../../../contracts/manager-profile-activation-v1/qualification-evidence.v1.json");
+const PAPER_RELEASE_PROFILE_JSON: &str =
+    include_str!("../../../../../deploy/manifests/full-paper-read-release-profile.v1.json");
+const SANDBOX_LIVE_RELEASE_PROFILE_JSON: &str =
+    include_str!("../../../../../deploy/manifests/sandbox-live-read-release-profile.v1.json");
+const PRODUCT_RELEASE_PROFILE_JSON: &str = include_str!(
+    "../../../../../deploy/manifests/execution-manager-product-release-profile.v1.json"
+);
 
 pub const AUTHORITY_REVISION: &str = "portal.execution.manager-compat-authority.v1";
 pub const DELEGATED_RESOURCE: &str = "execution:manager-v2:read";
 const N18_CENSUS_DIGEST: &str =
     "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3";
+const N19_MATRIX_DIGEST: &str =
+    "sha256:51d971d7029ac6d3028f5b8168bafbf40f6cd58c0cdd24fe4fc262316c5e3102";
+const RUNTIME_ACTIVATION_DIGEST: &str =
+    "sha256:6f38c74ac1cbd42aa6b17755e584fafdc9a429dd64217ccb37da88a5b2b460fa";
 const REQUIRED_OPERATIONS: [&str; 5] = [
     "managerCapabilities",
     "managerCatalog",
@@ -96,6 +111,7 @@ pub struct AdapterSelection<'a> {
 #[derive(Debug)]
 pub struct ManagerCompatibilityAuthority {
     matrix: AdapterMatrix,
+    activation: RuntimeActivation,
     approved_relations: BTreeSet<String>,
     expected_operation_ids: BTreeSet<String>,
     expected_projection_kinds: BTreeSet<String>,
@@ -123,10 +139,19 @@ impl ManagerCompatibilityAuthority {
         }
         let census: Census = serde_json::from_str(CENSUS_JSON)?;
         let matrix: AdapterMatrix = serde_json::from_str(MATRIX_JSON)?;
+        if digest(MATRIX_JSON.as_bytes()) != N19_MATRIX_DIGEST {
+            return Err(AuthorityError::MatrixDigestDrift);
+        }
+        if digest(ACTIVATION_JSON.as_bytes()) != RUNTIME_ACTIVATION_DIGEST {
+            return Err(AuthorityError::ActivationDigestDrift);
+        }
+        let activation: RuntimeActivation = serde_json::from_str(ACTIVATION_JSON)?;
         validate_static_contract(&census, &matrix)?;
+        validate_runtime_activation(&matrix, &activation)?;
 
         Ok(Self {
             matrix,
+            activation,
             approved_relations: census
                 .relations
                 .into_iter()
@@ -148,6 +173,11 @@ impl ManagerCompatibilityAuthority {
     #[must_use]
     pub fn active_adapter_revision(&self) -> &str {
         &self.matrix.active_adapter_revision
+    }
+
+    #[must_use]
+    pub fn activation_revision(&self) -> &str {
+        &self.activation.activation_revision
     }
 
     /// Binds transport to the exact environment/profile/resource and current
@@ -173,8 +203,20 @@ impl ManagerCompatibilityAuthority {
         if binding.delegated_resource != context.delegated_resource {
             return Err(AuthorityError::ResourceDenied);
         }
-        if !binding.transport_qualified {
-            return Err(AuthorityError::TransportNotQualified);
+        let active_profile = self
+            .activation
+            .profiles
+            .iter()
+            .find(|profile| profile.environment == context.environment.as_str())
+            .ok_or(AuthorityError::EnvironmentDenied)?;
+        if active_profile.profile_id != context.profile_id {
+            return Err(AuthorityError::ProfileDenied);
+        }
+        if active_profile.delegated_resource != context.delegated_resource {
+            return Err(AuthorityError::ResourceDenied);
+        }
+        if !active_profile.transport_qualified || !active_profile.current_source_read_enabled {
+            return Err(AuthorityError::ProfileNotActive);
         }
         let adapter = self.adapter_for_owner_revision(context.owner_contract_revision)?;
         if !adapter.deployable || adapter.test_only {
@@ -396,6 +438,12 @@ impl BoundManagerAuthority<'_> {
 pub enum AuthorityError {
     #[error("N18 census digest drift")]
     CensusDigestDrift,
+    #[error("N19 compatibility matrix digest drift")]
+    MatrixDigestDrift,
+    #[error("runtime profile activation digest drift")]
+    ActivationDigestDrift,
+    #[error("runtime profile qualification evidence digest drift")]
+    QualificationEvidenceDigestDrift,
     #[error("invalid compatibility authority document")]
     InvalidAuthorityDocument,
     #[error("deployment environment is not approved")]
@@ -406,6 +454,8 @@ pub enum AuthorityError {
     ResourceDenied,
     #[error("deployment profile transport is not qualified")]
     TransportNotQualified,
+    #[error("deployment profile current-source read is not active")]
+    ProfileNotActive,
     #[error("owner contract revision is unsupported")]
     RevisionUnsupported,
     #[error("adapter is qualification-only and cannot be deployed")]
@@ -515,6 +565,60 @@ struct ProfileBinding {
 }
 
 #[derive(Debug, Deserialize)]
+struct RuntimeActivation {
+    schema_version: String,
+    activation_revision: String,
+    decision: String,
+    adapter_matrix_sha256: String,
+    qualification_evidence_sha256: String,
+    release_profiles: ActivationReleaseProfiles,
+    owner_contract_revision: String,
+    active_adapter_revision: String,
+    profiles: Vec<ActivationProfile>,
+    transport_requirements: ActivationTransportRequirements,
+    derived_planes: ActivationDerivedPlanes,
+    authority: ActivationAuthority,
+}
+
+#[derive(Debug, Deserialize)]
+struct ActivationReleaseProfiles {
+    paper_sha256: String,
+    sandbox_live_sha256: String,
+    product_candidate_sha256: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ActivationProfile {
+    environment: String,
+    profile_id: String,
+    delegation_audience: String,
+    delegated_resource: String,
+    transport_qualified: bool,
+    current_source_read_enabled: bool,
+    empty_result_semantics: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ActivationTransportRequirements {
+    origin_scheme: String,
+    minimum_tls: String,
+    #[serde(flatten)]
+    flags: BTreeMap<String, bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ActivationDerivedPlanes {
+    #[serde(flatten)]
+    flags: BTreeMap<String, bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ActivationAuthority {
+    #[serde(flatten)]
+    flags: BTreeMap<String, bool>,
+}
+
+#[derive(Debug, Deserialize)]
 struct TransportPolicy {
     origin_scheme: String,
     method: String,
@@ -540,6 +644,92 @@ fn validate_static_contract(census: &Census, matrix: &AdapterMatrix) -> Result<(
         && validate_bindings(matrix)
         && validate_transport(matrix)
     {
+        Ok(())
+    } else {
+        Err(AuthorityError::InvalidAuthorityDocument)
+    }
+}
+
+fn validate_runtime_activation(
+    matrix: &AdapterMatrix,
+    activation: &RuntimeActivation,
+) -> Result<(), AuthorityError> {
+    if activation.qualification_evidence_sha256 != digest(QUALIFICATION_EVIDENCE_JSON.as_bytes()) {
+        return Err(AuthorityError::QualificationEvidenceDigestDrift);
+    }
+
+    let profiles: BTreeMap<&str, &ActivationProfile> = activation
+        .profiles
+        .iter()
+        .map(|profile| (profile.environment.as_str(), profile))
+        .collect();
+    let expected_profiles = [
+        ("paper", "PAPER_BINANCE_USDM", "portal-execution-edge-paper"),
+        (
+            "sandbox",
+            "SANDBOX_BINANCE_USDM",
+            "portal-execution-edge-sandbox",
+        ),
+        ("live", "LIVE_BINANCE_USDM", "portal-execution-edge-live"),
+    ];
+    let profiles_are_exact = profiles.len() == expected_profiles.len()
+        && expected_profiles
+            .into_iter()
+            .all(|(environment, profile_id, audience)| {
+                profiles.get(environment).is_some_and(|profile| {
+                    profile.profile_id == profile_id
+                        && profile.delegation_audience == audience
+                        && profile.delegated_resource == DELEGATED_RESOURCE
+                        && profile.transport_qualified
+                        && profile.current_source_read_enabled
+                        && profile.empty_result_semantics == "AUTHORITATIVE_EMPTY"
+                })
+            });
+
+    let release_profiles_are_bound = activation.release_profiles.paper_sha256
+        == digest(PAPER_RELEASE_PROFILE_JSON.as_bytes())
+        && activation.release_profiles.sandbox_live_sha256
+            == digest(SANDBOX_LIVE_RELEASE_PROFILE_JSON.as_bytes())
+        && activation.release_profiles.product_candidate_sha256
+            == digest(PRODUCT_RELEASE_PROFILE_JSON.as_bytes());
+
+    let valid = activation.schema_version
+        == "portal.execution.manager-profile-runtime-activation.v1"
+        && activation.decision == "PAPER_SANDBOX_LIVE_CURRENT_SOURCE_READ_ACTIVE"
+        && activation.adapter_matrix_sha256 == N19_MATRIX_DIGEST
+        && activation.owner_contract_revision == RUNTIME_CONTRACT_REVISION
+        && activation.active_adapter_revision == matrix.active_adapter_revision
+        && release_profiles_are_bound
+        && profiles_are_exact
+        && activation.transport_requirements.origin_scheme == "https"
+        && activation.transport_requirements.minimum_tls == "TLS1.3"
+        && activation.transport_requirements.flags
+            == BTreeMap::from([
+                ("automatic_retries".to_owned(), false),
+                ("delegated_jwt_required".to_owned(), true),
+                ("mutual_tls_required".to_owned(), true),
+                ("redirects_allowed".to_owned(), false),
+            ])
+        && activation.derived_planes.flags
+            == BTreeMap::from([
+                ("analytics_requires_projection".to_owned(), true),
+                ("projection_requires_separate_runtime_gate".to_owned(), true),
+                ("sse_requires_complete_projection_epoch".to_owned(), true),
+            ])
+        && activation.authority.flags
+            == false_flags(&[
+                "browser_raw_manager_access",
+                "command_relay",
+                "live_mutation",
+                "database_access",
+                "redis_access",
+                "cli_access",
+                "caller_selected_origin",
+                "caller_selected_profile",
+                "trading_system_source_change",
+            ]);
+
+    if valid {
         Ok(())
     } else {
         Err(AuthorityError::InvalidAuthorityDocument)

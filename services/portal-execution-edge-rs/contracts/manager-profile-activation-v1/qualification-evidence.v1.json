@@ -1,0 +1,75 @@
+{
+  "schema_version": "portal.execution.manager-profile-qualification-evidence.v1",
+  "decision": "PAPER_SANDBOX_LIVE_READ_TRANSPORT_QUALIFIED",
+  "observed_at": "2026-09-01T05:43:00Z",
+  "owner_contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "wire_contract_revision": "trading-system.portal-execution.manager-v2.v1",
+  "transport": {
+    "minimum_tls": "TLS1.3",
+    "mutual_tls": true,
+    "delegated_jwt": true,
+    "source_proxy_certificate_sha256": "15ee5c1744d9eec0d14a25d14bb9cb355dd88868b8c4c45f7df640be90a67bc0",
+    "source_proxy_sans": [
+      "IP:172.23.0.1",
+      "IP:172.24.0.1",
+      "IP:172.25.0.1",
+      "URI:spiffe://primusspark/portal/source-proxy/execution"
+    ],
+    "source_proxy_health": "HEALTHY",
+    "source_proxy_restart_count": 0
+  },
+  "profiles": [
+    {
+      "environment": "paper",
+      "profile_id": "PAPER_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-paper",
+      "delegated_resource": "execution:manager-v2:read",
+      "route": "/portal/execution/v2/manager/records/public/strategy_deployments?limit=5",
+      "http_status": 200,
+      "availability": "AVAILABLE",
+      "freshness": "FRESH",
+      "result_semantics": "SOURCE_BACKED_ROWS",
+      "minimum_observed_items": 5,
+      "qualification_source": "N22_ACCEPTED_PAPER_READ_PLUS_CURRENT_MULTIPROFILE_PROXY_HEALTH"
+    },
+    {
+      "environment": "sandbox",
+      "profile_id": "SANDBOX_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-sandbox",
+      "delegated_resource": "execution:manager-v2:read",
+      "route": "/portal/execution/v2/manager/records/public/strategy_deployments?limit=5",
+      "http_status": 200,
+      "availability": "AVAILABLE",
+      "freshness": "FRESH",
+      "completeness": "PARTIAL",
+      "result_semantics": "SOURCE_BACKED_ROWS",
+      "observed_items": 5,
+      "sanitized_body_sha256": "b0221c4b547cb5939d270cb70511b3a7768b0dcc3f5ead09f2f3100c34e54ded",
+      "response_bytes": 8654
+    },
+    {
+      "environment": "live",
+      "profile_id": "LIVE_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-live",
+      "delegated_resource": "execution:manager-v2:read",
+      "route": "/portal/execution/v2/manager/records/public/strategy_deployments?limit=5",
+      "http_status": 200,
+      "availability": "AVAILABLE",
+      "freshness": "FRESH",
+      "completeness": "COMPLETE",
+      "result_semantics": "AUTHORITATIVE_EMPTY",
+      "observed_items": 0,
+      "sanitized_body_sha256": "aca8dd97249037b9c3f5abef12312f7b481596dfd91b20ef8292efa01c304306",
+      "response_bytes": 492
+    }
+  ],
+  "negative_authority": {
+    "browser_raw_manager_access": false,
+    "command_relay": false,
+    "live_mutation": false,
+    "database_access": false,
+    "redis_access": false,
+    "cli_access": false,
+    "trading_system_source_change": false
+  }
+}

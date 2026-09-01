@@ -1541,3 +1541,18 @@ durable run/attempt events. Detailed evidence:
   distinct qualified Edge origins, and SSE still lacks an accepted ACTIVE
   projection/realtime manifest. `main`, stable and their runtime were not
   touched; `N29-REL-01` remains the protected-main signed publication gate.
+
+## Backend state — 2026-09-01 (multi-profile current-source activation)
+
+- Paper, Sandbox and Live transport qualification is complete against the
+  current Trading System Manager-v2 runtime-v1 source. Sandbox returned real
+  rows; Live returned an authenticated fresh zero-row result and is therefore
+  typed empty, not unavailable.
+- The historical N19 matrix is preserved. An additive, digest-bound runtime
+  activation contract binds exact profile/audience/resource tuples to the
+  N22/N23/N29 release profiles and sanitized TLS/mTLS/JWT evidence.
+- Rust format, static authority/evidence gates and all eight compatibility
+  authority tests pass. Command relay, Live mutation and raw browser Manager
+  access remain false.
+- Detail:
+  [`EX_BE_34_MULTIPROFILE_CURRENT_SOURCE_RUNTIME_ACTIVATION.md`](./EX_BE_34_MULTIPROFILE_CURRENT_SOURCE_RUNTIME_ACTIVATION.md).

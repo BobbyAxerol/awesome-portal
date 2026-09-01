@@ -1970,3 +1970,17 @@ loading-to-content height race on Admin Action Drawer; no snapshot, component,
 fixture or product behavior was changed. Backend authority pins, isolated
 Control API/contracts cells, full Rust/Clippy and PostgreSQL restore were also
 requalified before the `dev` integration.
+
+### 8.48 Multi-profile real-source integration (2026-09-01)
+
+Codex preserved every reviewed rich product composition and moved honesty to
+the panel boundary. Paper, Sandbox and Live are now exact current-source read
+profiles in the additive Rust activation contract; Canary consumes the Live
+facts under Portal governance. Sandbox qualification returned source-backed
+rows. Live returned a valid fresh empty page, so its panels must render typed
+empty rather than generic unavailable or a whole-screen envelope.
+
+Projection/query/analytics and then SSE are activated in that order after the
+same immutable Edge image is accepted for all three profile runtimes. Command
+remains a separate exact-contract plane and must not be inferred from read
+availability.

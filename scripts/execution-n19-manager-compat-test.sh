@@ -4,12 +4,19 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACT_DIR="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1"
+ACTIVATION_DIR="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-profile-activation-v1"
 RUST_DIR="${ROOT_DIR}/services/portal-execution-edge-rs"
 
 python3 -m json.tool "${CONTRACT_DIR}/adapter-matrix.v1.json" >/dev/null
 python3 -m json.tool "${CONTRACT_DIR}/negative-matrix.v1.json" >/dev/null
+python3 -m json.tool "${ACTIVATION_DIR}/runtime-activation.v1.json" >/dev/null
+python3 -m json.tool "${ACTIVATION_DIR}/qualification-evidence.v1.json" >/dev/null
 (
   cd "${CONTRACT_DIR}"
+  sha256sum --quiet -c MANIFEST.sha256
+)
+(
+  cd "${ACTIVATION_DIR}"
   sha256sum --quiet -c MANIFEST.sha256
 )
 
@@ -23,6 +30,8 @@ root = pathlib.Path(sys.argv[1])
 census_path = root / "services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json"
 matrix_path = root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json"
 negative_path = root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/negative-matrix.v1.json"
+activation_path = root / "services/portal-execution-edge-rs/contracts/manager-profile-activation-v1/runtime-activation.v1.json"
+evidence_path = root / "services/portal-execution-edge-rs/contracts/manager-profile-activation-v1/qualification-evidence.v1.json"
 authority_source = (root / "services/portal-execution-edge-rs/crates/manager-compat-authority/src/lib.rs").read_text()
 authority_manifest = (root / "services/portal-execution-edge-rs/crates/manager-compat-authority/Cargo.toml").read_text()
 client_source = (root / "services/portal-execution-edge-rs/crates/manager-v2-client/src/lib.rs").read_text()
@@ -32,6 +41,9 @@ census_bytes = census_path.read_bytes()
 census = json.loads(census_bytes)
 matrix = json.loads(matrix_path.read_text())
 negative = json.loads(negative_path.read_text())
+activation = json.loads(activation_path.read_text())
+evidence_bytes = evidence_path.read_bytes()
+evidence = json.loads(evidence_bytes)
 
 expected_census_digest = "sha256:" + hashlib.sha256(census_bytes).hexdigest()
 assert matrix["n18_census_sha256"] == expected_census_digest
@@ -65,6 +77,27 @@ expected_bindings = {
 assert {(row["environment"], row["profile_id"]) for row in matrix["profile_bindings"]} == expected_bindings
 assert all(row["delegated_resource"] == "execution:manager-v2:read" for row in matrix["profile_bindings"])
 assert all(row["product_enabled"] is False for row in matrix["profile_bindings"])
+
+assert activation["adapter_matrix_sha256"] == "sha256:" + hashlib.sha256(matrix_path.read_bytes()).hexdigest()
+assert activation["qualification_evidence_sha256"] == "sha256:" + hashlib.sha256(evidence_bytes).hexdigest()
+assert activation["owner_contract_revision"] == active["owner_contract_revision"]
+assert activation["active_adapter_revision"] == active["adapter_revision"]
+assert {
+    (row["environment"], row["profile_id"], row["delegation_audience"])
+    for row in activation["profiles"]
+} == {
+    ("paper", "PAPER_BINANCE_USDM", "portal-execution-edge-paper"),
+    ("sandbox", "SANDBOX_BINANCE_USDM", "portal-execution-edge-sandbox"),
+    ("live", "LIVE_BINANCE_USDM", "portal-execution-edge-live"),
+}
+assert all(row["delegated_resource"] == "execution:manager-v2:read" for row in activation["profiles"])
+assert all(row["transport_qualified"] is True for row in activation["profiles"])
+assert all(row["current_source_read_enabled"] is True for row in activation["profiles"])
+assert all(row["empty_result_semantics"] == "AUTHORITATIVE_EMPTY" for row in activation["profiles"])
+assert len(evidence["profiles"]) == 3
+assert next(row for row in evidence["profiles"] if row["environment"] == "live")["result_semantics"] == "AUTHORITATIVE_EMPTY"
+assert not any(activation["authority"].values())
+assert not any(evidence["negative_authority"].values())
 
 policy = matrix["transport_policy"]
 assert policy == {
@@ -111,7 +144,7 @@ for forbidden in ["std::process", "std::env"]:
 PY
 
 if grep -Eiq '(-----BEGIN|postgres(ql)?://|redis://|authorization:[[:space:]]*bearer|x-admin-token:)' \
-  "${CONTRACT_DIR}"/*.json; then
+  "${CONTRACT_DIR}"/*.json "${ACTIVATION_DIR}"/*.json; then
   echo "N19 authority contract contains secret-shaped material" >&2
   exit 1
 fi
@@ -120,4 +153,4 @@ test -f "${RUST_DIR}/crates/manager-compat-authority/Cargo.toml"
 grep -Fq 'manager-compat-authority = { path = "../manager-compat-authority" }' \
   "${RUST_DIR}/crates/edge-service/Cargo.toml"
 
-printf 'N19 Manager-v2 compatibility authority static gate passed; Rust unit/load gates run in execution-edge-test.sh.\n'
+printf 'N19 compatibility plus Paper/Sandbox/Live runtime activation static gate passed; Rust unit/load gates run in execution-edge-test.sh.\n'

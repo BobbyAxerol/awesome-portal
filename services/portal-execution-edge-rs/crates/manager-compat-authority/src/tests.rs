@@ -78,12 +78,16 @@ fn context<'a>(
 }
 
 #[test]
-fn canonical_authority_is_digest_bound_and_source_dark() {
+fn canonical_authority_is_digest_bound_and_runtime_activated() {
     let authority = ManagerCompatibilityAuthority::canonical().unwrap();
     assert_eq!(authority.approved_relation_count(), 96);
     assert_eq!(
         authority.active_adapter_revision(),
         "portal.execution.manager-adapter.runtime-v1"
+    );
+    assert_eq!(
+        authority.activation_revision(),
+        "portal.execution.manager-profile-runtime-activation.2026-09-01.1"
     );
 
     let bound = authority
@@ -135,24 +139,21 @@ fn deployment_binding_rejects_wrong_environment_profile_resource_and_revision() 
         )),
         Err(AuthorityError::ResourceDenied)
     ));
-    assert!(matches!(
-        authority.bind(context(
-            DeploymentEnvironment::Sandbox,
-            "SANDBOX_BINANCE_USDM",
-            DELEGATED_RESOURCE,
-            RUNTIME_CONTRACT_REVISION,
-        )),
-        Err(AuthorityError::TransportNotQualified)
-    ));
-    assert!(matches!(
-        authority.bind(context(
-            DeploymentEnvironment::Live,
-            "LIVE_BINANCE_USDM",
-            DELEGATED_RESOURCE,
-            RUNTIME_CONTRACT_REVISION,
-        )),
-        Err(AuthorityError::TransportNotQualified)
-    ));
+    for (environment, profile_id) in [
+        (DeploymentEnvironment::Paper, "PAPER_BINANCE_USDM"),
+        (DeploymentEnvironment::Sandbox, "SANDBOX_BINANCE_USDM"),
+        (DeploymentEnvironment::Live, "LIVE_BINANCE_USDM"),
+    ] {
+        let bound = authority
+            .bind(context(
+                environment,
+                profile_id,
+                DELEGATED_RESOURCE,
+                RUNTIME_CONTRACT_REVISION,
+            ))
+            .unwrap();
+        assert_eq!(bound.profile_id(), profile_id);
+    }
     assert!(matches!(
         authority.bind(context(
             DeploymentEnvironment::Paper,

@@ -1,0 +1,67 @@
+{
+  "schema_version": "portal.execution.manager-profile-runtime-activation.v1",
+  "activation_revision": "portal.execution.manager-profile-runtime-activation.2026-09-01.1",
+  "decision": "PAPER_SANDBOX_LIVE_CURRENT_SOURCE_READ_ACTIVE",
+  "adapter_matrix_sha256": "sha256:51d971d7029ac6d3028f5b8168bafbf40f6cd58c0cdd24fe4fc262316c5e3102",
+  "qualification_evidence_sha256": "sha256:8bbd275039f0ff5aa1402c967a05c2f0f9ffe018c03fe53df6a2c45083d92017",
+  "release_profiles": {
+    "paper_sha256": "sha256:083d04a9b62320458fd95cf13804b82038ee122497e2a5e1e36f24b7db5be334",
+    "sandbox_live_sha256": "sha256:2c070de4afa29e48ae8d31cfb731bcdcadb373851a46242cfd658f28a1b0aea5",
+    "product_candidate_sha256": "sha256:c2ec6fd744e6b7910c5375f7a0379ec405f28760d3ad12d30031d841d18721fd"
+  },
+  "owner_contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+  "active_adapter_revision": "portal.execution.manager-adapter.runtime-v1",
+  "profiles": [
+    {
+      "environment": "paper",
+      "profile_id": "PAPER_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-paper",
+      "delegated_resource": "execution:manager-v2:read",
+      "transport_qualified": true,
+      "current_source_read_enabled": true,
+      "empty_result_semantics": "AUTHORITATIVE_EMPTY"
+    },
+    {
+      "environment": "sandbox",
+      "profile_id": "SANDBOX_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-sandbox",
+      "delegated_resource": "execution:manager-v2:read",
+      "transport_qualified": true,
+      "current_source_read_enabled": true,
+      "empty_result_semantics": "AUTHORITATIVE_EMPTY"
+    },
+    {
+      "environment": "live",
+      "profile_id": "LIVE_BINANCE_USDM",
+      "delegation_audience": "portal-execution-edge-live",
+      "delegated_resource": "execution:manager-v2:read",
+      "transport_qualified": true,
+      "current_source_read_enabled": true,
+      "empty_result_semantics": "AUTHORITATIVE_EMPTY"
+    }
+  ],
+  "transport_requirements": {
+    "origin_scheme": "https",
+    "minimum_tls": "TLS1.3",
+    "mutual_tls_required": true,
+    "delegated_jwt_required": true,
+    "redirects_allowed": false,
+    "automatic_retries": false
+  },
+  "derived_planes": {
+    "projection_requires_separate_runtime_gate": true,
+    "analytics_requires_projection": true,
+    "sse_requires_complete_projection_epoch": true
+  },
+  "authority": {
+    "browser_raw_manager_access": false,
+    "command_relay": false,
+    "live_mutation": false,
+    "database_access": false,
+    "redis_access": false,
+    "cli_access": false,
+    "caller_selected_origin": false,
+    "caller_selected_profile": false,
+    "trading_system_source_change": false
+  }
+}
