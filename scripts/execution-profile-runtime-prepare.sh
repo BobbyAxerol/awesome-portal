@@ -67,17 +67,19 @@ sed -i \
   -e "s#^EDGE_ENVIRONMENT=.*#EDGE_ENVIRONMENT=${profile}#" \
   -e "s#^EDGE_DELEGATION_AUDIENCE=.*#EDGE_DELEGATION_AUDIENCE=portal-execution-edge-${profile}#" \
   -e "s#^EDGE_SOURCE_ORIGIN=.*#EDGE_SOURCE_ORIGIN=https://${bridge_gateway}:8444#" \
-  -e '$a\EDGE_DEV_LOCAL_IMAGE_ALLOWED=true' \
-  -e "\$a\\EDGE_PRIVATE_PORT=${edge_port}" \
-  -e "\$a\\SOURCE_PROXY_MANAGER_PROFILE_ID=${profile_id}" \
-  -e "\$a\\SOURCE_PROXY_MANAGER_FACADE_PORT=${facade_port}" \
-  -e "\$a\\SOURCE_PROXY_MANAGER_ISSUER_PORT=${issuer_port}" \
-  -e "\$a\\SOURCE_PROXY_MANAGER_LOCATIONS_FILE=${manager_locations}" \
-  -e '$a\EDGE_MANAGER_V2_READ_ENABLED=true' \
-  -e "\$a\\EDGE_MANAGER_V2_PROFILE_ID=${profile_id}" \
-  -e '$a\EDGE_SHADOW_QUERY_ENABLED=false' \
-  -e '$a\EDGE_PAPER_WORKBENCH_SHADOW_ENABLED=false' \
   "${output_env}"
+printf '%s\n' \
+  'EDGE_DEV_LOCAL_IMAGE_ALLOWED=true' \
+  "EDGE_PRIVATE_PORT=${edge_port}" \
+  "SOURCE_PROXY_MANAGER_PROFILE_ID=${profile_id}" \
+  "SOURCE_PROXY_MANAGER_FACADE_PORT=${facade_port}" \
+  "SOURCE_PROXY_MANAGER_ISSUER_PORT=${issuer_port}" \
+  "SOURCE_PROXY_MANAGER_LOCATIONS_FILE=${manager_locations}" \
+  'EDGE_MANAGER_V2_READ_ENABLED=true' \
+  "EDGE_MANAGER_V2_PROFILE_ID=${profile_id}" \
+  'EDGE_SHADOW_QUERY_ENABLED=false' \
+  'EDGE_PAPER_WORKBENCH_SHADOW_ENABLED=false' \
+  >>"${output_env}"
 chown root:"${runtime_gid}" "${output_env}"
 chmod 0600 "${output_env}"
 
