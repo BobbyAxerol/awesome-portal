@@ -2241,6 +2241,24 @@ read adapters are active and bounded; the unified realtime stream preserves
 scope and continuity. Otherwise Phase 1 remains `IMPLEMENTATION_IN_PROGRESS`
 and Phase 2 must not start.
 
+##### Phase 1 implementation result — accepted 2026-09-02
+
+Status: `DATA_TRUTH_ACCEPTED / SGP_LOCAL_READ_MODEL_ACTIVE /
+CURRENT_SOURCE_READ_ADAPTERS_ACCEPTED / UNIFIED_REALTIME_ACCEPTED /
+PHASE_2_READY`.
+
+P1-A through P1-D and all nine evidence classes are closed. The implementation
+uses one lease-controlled ingestion cycle per exact Paper/Sandbox/Live profile,
+SGP PostgreSQL atomic snapshots and replay journal, local-only product BFF
+reads, four bounded present-source adapter families and one five-kind SSE
+contract. The real sanitized dev smoke checked 2,500 projected rows with zero
+lineage or embedded-mode mismatch; real projection ages were 0.1–5.0 seconds.
+One current Paper relation is truthfully typed unavailable by the source and
+does not block the other 18 Paper relations.
+
+Full implementation, runtime, test, image and rollback evidence:
+[Phase 1 closeout](backend/EX_BE_PHASE1_DATA_TRUTH_PROJECTION_REALTIME_FOUNDATION.md).
+
 ---
 
 ## 5. Definition of Ready and Definition of Done
@@ -3453,6 +3471,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | D4 finite acceptance | `backend/EX_BE_02_LIVE_D4_PAPER_READ_SHADOW_ACCEPTANCE.md` |
 | D4 runtime optimization | `backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md` |
 | Projection/Query/SSE/analytics | `backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`, `backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`, `backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`, `backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md` |
+| **Phase 1 data truth/projection/realtime closeout** | **`backend/EX_BE_PHASE1_DATA_TRUTH_PROJECTION_REALTIME_FOUNDATION.md`** |
 | Source qualification | `backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md` |
 | Retention/recovery/cleanup | `backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md` |
 | Real-source qualification/soak | `backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md` |
@@ -3466,6 +3485,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Accepted Phase 1 data truth, local projection and unified realtime foundation | real dev Paper/Sandbox/Live projection is active from one lease-controlled cadence; 2,500 real rows show zero lineage/mode mismatch; local BFF, four bounded adapters and five-kind SSE contract pass 272 tests plus PostgreSQL restore; one source-rejected Paper relation stays typed unavailable without disabling its profile; Phase 2 ready, commands/main/stable unchanged |
 | 2026-09-02 | Authorized and specified complete Phase 1 (N30–N32) | one data-first implementation phase now owns profile/lineage truth, SGP-local projection-only product reads, bounded activation of present-source read adapters and one five-kind realtime envelope; exact nine-class evidence gate recorded; UI/commands/main/stable unchanged |
 | 2026-09-02 | Added N29-RTA runtime truth reset and finite N30–N36 data-first closeout plan | supersedes the product interpretation—not the valid contract evidence—of N29; records real deployed screen/BFF states, 60 s source projection / 100 ms local journal / 750 ms direct cache behavior, Live profile leakage, remaining disabled/source-dark paths, projection-first dual-cell target and PostgreSQL-hot/Parquet-cold storage decision; `PRODUCT_NO_GO`, main/stable unchanged |
 | 2026-09-01 | Closed Alpha 360 current-source composition and projection-workspace integration | Fleet v2 remains the rich screen spine; N25 analytics is additive; private Query/SSE delegation maps to one exact execution-cell projection workspace without widening Portal RBAC; real Fleet click-through and both BFF reads pass; command/Live mutation/main/stable unchanged |
