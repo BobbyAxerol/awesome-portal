@@ -417,6 +417,31 @@ describe("N22 full Paper read product BFF", () => {
     expect(PaperBlotterQuerySchema.safeParse({ status: "NOT_A_REAL_STATUS" }).success).toBe(false);
   });
 
+  it("keeps the exact-query plane active when source rows need status normalization (P4-G / F14)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("orders", [
+      { order_id: "ord_ok", status: "FILLED", mode: "paper" },
+      { order_id: "ord_risk", status: "RISK_REJECTED", mode: "paper" },
+    ]);
+    source.exactTotals.set("orders", 364);
+    source.filteredTotals.set("orders", 2);
+    source.aggregates.set("orders", { status: { FILLED: 200, RISK_REJECTED: 30 } });
+
+    const result = await service(source).blotter(principal(), { limit: 50 }) as Record<string, any>;
+
+    // The dev finding F14: one RISK_REJECTED row used to fail the whole orders
+    // branch, erasing exact_total/aggregates. Normalization must keep them.
+    expect(result.data.orders).toHaveLength(2);
+    expect(result.data.orders[1]).toMatchObject({ status: "REJECTED", source_status: "RISK_REJECTED" });
+    expect(result.data.exact_total).toBe(364);
+    expect(result.data.aggregates.status.RISK_REJECTED).toBe(30);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "blotter.exact-query", state: "AVAILABLE", reason_code: null,
+    }));
+    const orders = result.capabilities.find((cap: any) => cap.capability_id === "source.orders");
+    expect(orders.state).not.toBe("UNAVAILABLE");
+  });
+
   it("keeps concurrent Paper overview load inside fixed fan-out and response bounds", async () => {
     const source = new FakeCurrentSource();
     const positionRows = Array.from({ length: 200 }, (_, index) => ({
