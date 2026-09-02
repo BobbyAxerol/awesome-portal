@@ -122,13 +122,14 @@ provenance. Stable remains untouched by this phase.
 
 ## 7. Dev runtime materialization
 
-The accepted source commits are `c542cf9` (rich UI/BFF integration) and
-`4472d3e` (bounded realtime handshake). The dev-only Compose stack was rebuilt
-from `/home/bobby/portal-dev` with the current-source, manager-realtime and
+The accepted source commits are `c542cf9` (rich UI/BFF integration),
+`4472d3e` (bounded realtime handshake) and `fe40f0b` (shared-flight race
+closeout). The dev-only Compose stack was rebuilt from
+`/home/bobby/portal-dev` with the current-source, manager-realtime and
 local-projection overlays:
 
 - Portal web image: `sha256:1cbc121d21927dda500039d1dc0176f36c5aff96b46e7dfa921389a556bd1bff`;
-- Control API image: `sha256:d487ebc83e4686e5cffb421b77591980a6d4ede9ba0a05325008f858d609de91`;
+- Control API image: `sha256:651c1909654d7a12c2fa4088633347ce12d46667d94690eeff541e0d67d74de6`;
 - both dev containers reported `healthy`;
 - `/`, `/execution` and `/api/control/readyz` returned HTTP 200 on loopback;
 - `https://dev-portal.primusspark.com/` and
