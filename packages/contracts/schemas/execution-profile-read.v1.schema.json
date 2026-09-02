@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
-  "title": "N23 Sandbox and Live Profile Reads",
-  "$ref": "#/$defs/ProfileRead",
+  "title": "Execution profile and Account/Broker 360 reads",
+  "oneOf": [{ "$ref": "#/$defs/ProfileRead" }, { "$ref": "#/$defs/AccountRead" }],
   "$defs": {
     "Timestamp": { "type": "string", "format": "date-time" },
     "Identifier": { "type": "string", "minLength": 1, "maxLength": 191 },
@@ -48,9 +48,51 @@
       "required": ["capability_id", "state", "reason_code", "retryable"],
       "properties": {
         "capability_id": { "type": "string", "minLength": 1, "maxLength": 128 },
-        "state": { "const": "UNAVAILABLE" },
+        "state": { "enum": ["EMPTY", "PARTIAL", "UNAVAILABLE"] },
         "reason_code": { "type": "string", "minLength": 1, "maxLength": 128 },
         "retryable": { "const": false }
+      }
+    },
+    "AccountRead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "record_authority", "source_authority", "delivery_profile",
+        "requested_environment", "selected_environment", "candidate_environments", "workspace_id",
+        "resource", "read_at", "as_of", "state", "freshness", "completeness", "actor",
+        "capabilities", "data", "unavailable_branches"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.account-broker-360.v1" },
+        "record_authority": { "const": "PORTAL_CONTROL" },
+        "source_authority": { "const": "TRADING_SYSTEM" },
+        "delivery_profile": { "oneOf": [{ "enum": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"] }, { "type": "null" }] },
+        "requested_environment": { "enum": ["auto", "paper", "sandbox", "live"] },
+        "selected_environment": { "oneOf": [{ "enum": ["paper", "sandbox", "live"] }, { "type": "null" }] },
+        "candidate_environments": { "type": "array", "maxItems": 3, "uniqueItems": true, "items": { "enum": ["paper", "sandbox", "live"] } },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "resource": {
+          "type": "object", "additionalProperties": false, "required": ["kind", "id"],
+          "properties": { "kind": { "const": "ACCOUNT" }, "id": { "$ref": "#/$defs/Identifier" } }
+        },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "state": { "enum": ["ready", "empty", "stale", "partial", "unavailable"] },
+        "freshness": { "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] },
+        "completeness": { "enum": ["COMPLETE", "PARTIAL"] },
+        "actor": {
+          "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"],
+          "properties": {
+            "user_id": { "$ref": "#/$defs/Identifier" }, "username": { "$ref": "#/$defs/Identifier" },
+            "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "enum": ["ADMIN", "USER"] } }
+          }
+        },
+        "capabilities": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/Capability" } },
+        "data": {
+          "type": "object", "minProperties": 1, "maxProperties": 20,
+          "additionalProperties": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/ManagerRecord" } }
+        },
+        "unavailable_branches": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/UnavailableBranch" } }
       }
     },
     "ProfileRead": {

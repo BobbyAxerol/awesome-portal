@@ -2414,8 +2414,8 @@ Full contract, runtime, test, image and rollback evidence:
 #### Phase 3 delivery specification — Rich UI integration, product acceptance & release
 
 **Start condition:** Phase 2 is accepted and Claude's approved rich
-composition/review packet is pinned by commit. This phase combines N35 and N36;
-it is not authorized for implementation by the Phase 2 instruction.
+composition/review packet is pinned by commit. Bobby authorized this phase on
+2026-09-02. This phase combines N35 and N36.
 
 **Target status:** `RICH_UI_BFF_INTEGRATION_ACCEPTED /
 AUTHENTICATED_PRODUCT_GO / DEV_RELEASE_ACCEPTED /
@@ -2468,6 +2468,11 @@ approved rich UI remains intact, dev provenance is singular and Bobby records
 Product GO. Missing Trading System capabilities remain versioned external
 requests; no Portal defect or UI/backend integration gap may be relabeled as
 an external dependency.
+
+Implementation and pre-release evidence:
+[Phase 3 closeout](backend/EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md).
+The implementation is `OWNER_UI_REVIEW_READY`; `AUTHENTICATED_PRODUCT_GO`
+remains intentionally pending until Bobby reviews the rebuilt dev runtime.
 
 ---
 
@@ -3637,23 +3642,17 @@ command commit.
 
 ## 11. Recommended next sequence
 
-Phase 1 and Phase 2 are accepted. Continue without reopening N13–N29 or
+Phase 1 and Phase 2 are accepted. Phase 3 implementation is integrated and its
+dev release candidate is ready. Continue without reopening N13–N29 or
 reintroducing the former direct-browser/source path:
 
-1. pin Claude's approved rich recomposition commit and review packet;
-2. execute Phase 3 P3-A panel-by-panel against the 23 canonical same-origin
-   Screen BFF contracts, keeping Fixture Lab physically separate;
-3. bind motion to the single local SSE contract and bind Admin Action Drawer
-   controls only to the four server-classified `CONNECTED` R0 tasks;
-4. run the complete authenticated browser matrix for real Paper/Sandbox/Live
-   populations, sparse/partial/stale/error states, session expiry and terminal
-   stream behavior;
-5. record Bobby's UI review findings, fix every Portal-owned defect and repeat
-   product acceptance from one commit;
-6. reconcile the reviewed feature head into protected `dev`, rebuild the one
-   canonical dev runtime and record Git/image/config/database provenance;
-7. only after Product GO, propose `dev -> protected main`; stable remains a
-   separate owner-approved release and rollback window.
+1. rebuild the canonical dev runtime from the reviewed Phase 3 commit;
+2. Bobby reviews the complete dev screen matrix and records Product GO or
+   concrete findings;
+3. fix any owner finding and repeat the same acceptance matrix from one commit;
+4. merge through protected `dev`, then propose `dev -> protected main` only
+   after Product GO; stable remains a separate owner-approved release and
+   rollback window.
 
 The exact Phase 3 start/exit conditions are §4 above. The historical N13–N17
 containment remains available in
@@ -3684,6 +3683,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Projection/Query/SSE/analytics | `backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`, `backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`, `backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`, `backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md` |
 | **Phase 1 data truth/projection/realtime closeout** | **`backend/EX_BE_PHASE1_DATA_TRUTH_PROJECTION_REALTIME_FOUNDATION.md`** |
 | **Phase 2 complete Screen BFF/controlled command closeout** | **`backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md`** |
+| **Phase 3 rich UI/product/dev-release closeout** | **`backend/EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md`** |
 | Source qualification | `backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md` |
 | Retention/recovery/cleanup | `backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md` |
 | Real-source qualification/soak | `backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md` |
@@ -3697,6 +3697,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Accepted Phase 3 rich UI/BFF implementation and pre-release gates | Claude's rich compositions remain mounted across 23 same-origin Screen BFF roots; real Paper/Sandbox/Live/profile/analytics facts, bounded SSE and four local R0 receipts are wired; 1,803 frontend + 281 Control API + 115 contract assertions, full Rust/Clippy, browser interaction/visual and dependency gates pass; canonical dev rebuild and Bobby Product GO are the remaining owner review step; main/stable unchanged |
 | 2026-09-02 | Accepted Phase 2 complete Screen BFF and controlled command plane | 23/23 same-origin screen roots, eight finite screen slices and four SGP-local R0 tasks pass 113 contract + 280 Control API tests, full monorepo verification and authenticated real dev smoke; command relay/main/stable/rich UI unchanged; Phase 3 ready |
 | 2026-09-02 | Accepted Phase 1 data truth, local projection and unified realtime foundation | real dev Paper/Sandbox/Live projection is active from one lease-controlled cadence; 2,500 real rows show zero lineage/mode mismatch; local BFF, four bounded adapters and five-kind SSE contract pass 272 tests plus PostgreSQL restore; one source-rejected Paper relation stays typed unavailable without disabling its profile; Phase 2 ready, commands/main/stable unchanged |
 | 2026-09-02 | Authorized and specified complete Phase 1 (N30–N32) | one data-first implementation phase now owns profile/lineage truth, SGP-local projection-only product reads, bounded activation of present-source read adapters and one five-kind realtime envelope; exact nine-class evidence gate recorded; UI/commands/main/stable unchanged |

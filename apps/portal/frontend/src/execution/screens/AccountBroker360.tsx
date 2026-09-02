@@ -95,6 +95,8 @@ export interface AggregateHeadroom {
   currency: string;
   verdict: "OK" | "EXCEEDED" | "UNKNOWN";
   envelope: Envelope;
+  virtualLabel?: string;
+  physicalLabel?: string;
 }
 
 export interface SyncRow {
@@ -123,7 +125,7 @@ export interface AccountBroker360Props {
   externalAccountRef: string;
   /** The alias only. The secret is never displayed, and never passed in. */
   credentialAlias: string;
-  credentialValid: boolean;
+  credentialValid: boolean | null;
   positionMode: string;
   linked: readonly LinkedAccount[];
   /** Read from the server. Null renders as an unavailable verdict, not an OK. */
@@ -271,26 +273,32 @@ export function HeadroomBanner({
     );
   }
   const partial = exposure ? !isFullPopulation(exposure) : false;
+  const accountHeadroom = aggregate.virtualLabel === "maintenance requirement" && aggregate.physicalLabel === "free balance";
   const tone =
     aggregate.verdict === "EXCEEDED" ? "bad" : aggregate.verdict === "OK" && !partial ? "good" : "warn";
   return (
     <div className="exec-360-headroom" data-tone={tone}>
       <div className="exec-360-headline">
-        {aggregate.verdict === "EXCEEDED"
+        {accountHeadroom && aggregate.verdict === "EXCEEDED"
+          ? "Maintenance requirement exceeds the published free account balance"
+          : accountHeadroom && aggregate.verdict === "OK"
+            ? "Published free account balance covers the maintenance requirement"
+            : aggregate.verdict === "EXCEEDED"
           ? "Aggregate virtual exposure exceeds physical broker headroom"
           : aggregate.verdict === "OK"
             ? "Aggregate virtual exposure is within physical broker headroom"
             : "Aggregate headroom could not be determined"}
       </div>
       <p className="exec-360-headroomline">
-        <span className="exec-num">Σ virtual {aggregate.virtualTotal}</span> vs{" "}
-        <span className="exec-num">physical {aggregate.physicalTotal}</span> (
+        <span className="exec-num">{aggregate.virtualLabel ?? "Σ virtual"} {aggregate.virtualTotal}</span> vs{" "}
+        <span className="exec-num">{aggregate.physicalLabel ?? "physical"} {aggregate.physicalTotal}</span> (
         <span className="exec-num">Δ {aggregate.headroom}</span> {aggregate.currency})
       </p>
       {aggregate.verdict === "EXCEEDED" ? (
         <p className="exec-360-note">
-          New orders across ALL linked accounts fail closed until allocation is reduced or
-          physical margin added. This check lives here — alpha screens never conclude it alone.
+          {accountHeadroom
+            ? "This source snapshot reports negative account headroom. Review the account and source reconciliation before any operator action."
+            : "New orders across ALL linked accounts fail closed until allocation is reduced or physical margin added. This check lives here — alpha screens never conclude it alone."}
         </p>
       ) : null}
       {partial && exposure ? (
@@ -428,7 +436,10 @@ export function AccountBroker360({
         </div>
         <div className="exec-360-colmeta">
           <span className="exec-num">credential alias {credentialAlias}</span>
-          <StatusChip label={credentialValid ? "VALID" : "INVALID"} tone={credentialValid ? "good" : "bad"} />
+          <StatusChip
+            label={credentialValid === null ? "NOT PUBLISHED" : credentialValid ? "VALID" : "INVALID"}
+            tone={credentialValid === null ? "warn" : credentialValid ? "good" : "bad"}
+          />
           {/* Stated on the screen, because a reader who cannot see the secret
               should know that is deliberate rather than a rendering failure. */}
           <span className="exec-360-note">secret never displayed</span>

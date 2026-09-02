@@ -36,6 +36,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/screens/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["executionAccountBroker360V1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/governance/approvals/{approval_id}/live": {
         parameters: {
             query?: never;
@@ -74,8 +90,8 @@ export interface components {
         };
         UnavailableBranch: {
             capability_id: string;
-            /** @constant */
-            state: "UNAVAILABLE";
+            /** @enum {unknown} */
+            state: "EMPTY" | "PARTIAL" | "UNAVAILABLE";
             reason_code: string;
             /** @constant */
             retryable: false;
@@ -127,6 +143,43 @@ export interface components {
             };
             unavailable_branches: components["schemas"]["UnavailableBranch"][];
         } & (unknown & unknown & unknown);
+        AccountRead: {
+            /** @constant */
+            schema_version: "execution.account-broker-360.v1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "TRADING_SYSTEM";
+            delivery_profile: ("PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM") | null;
+            /** @enum {unknown} */
+            requested_environment: "auto" | "paper" | "sandbox" | "live";
+            selected_environment: ("paper" | "sandbox" | "live") | null;
+            candidate_environments: ("paper" | "sandbox" | "live")[];
+            workspace_id: components["schemas"]["Identifier"];
+            resource: {
+                /** @constant */
+                kind: "ACCOUNT";
+                id: components["schemas"]["Identifier"];
+            };
+            read_at: components["schemas"]["Timestamp"];
+            as_of: components["schemas"]["Timestamp"] | null;
+            /** @enum {unknown} */
+            state: "ready" | "empty" | "stale" | "partial" | "unavailable";
+            /** @enum {unknown} */
+            freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+            /** @enum {unknown} */
+            completeness: "COMPLETE" | "PARTIAL";
+            actor: {
+                user_id: components["schemas"]["Identifier"];
+                username: components["schemas"]["Identifier"];
+                roles: ("ADMIN" | "USER")[];
+            };
+            capabilities: components["schemas"]["Capability"][];
+            data: {
+                [key: string]: components["schemas"]["ManagerRecord"][];
+            };
+            unavailable_branches: components["schemas"]["UnavailableBranch"][];
+        };
         identifier: string;
         portal_actor: {
             user_id: components["schemas"]["identifier"];
@@ -407,6 +460,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileRead"];
+                };
+            };
+        };
+    };
+    executionAccountBroker360V1: {
+        parameters: {
+            query?: {
+                environment?: "paper" | "sandbox" | "live";
+            };
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Exact Account/Broker 360 read across current profiles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountRead"];
                 };
             };
         };

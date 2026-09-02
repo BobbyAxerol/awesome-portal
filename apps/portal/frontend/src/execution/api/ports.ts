@@ -12,7 +12,7 @@
  */
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
-  OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics,
+  OperatorTaskCatalogue, OperatorTaskRunResult, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
@@ -241,6 +241,18 @@ export interface BindingListQuery extends ManagerListQuery {
   state?: string;
 }
 
+export interface BlotterQuery {
+  after?: string;
+  before?: string;
+  limit?: number;
+  status?: string;
+  status_bucket?: "FILLED" | "PARTIAL" | "REJECTED" | "OPEN";
+  venue?: string;
+  symbol?: string;
+  side?: "BUY" | "SELL";
+  sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
+}
+
 export interface ExecutionApi {
   /** `GET /api/v1/execution/governance/approvals` */
   listApprovals(query: InboxQuery): Promise<Result<InboxResult>>;
@@ -250,12 +262,16 @@ export interface ExecutionApi {
   getCommandCenterSnapshot(): Promise<Result<unknown>>;
   /** `GET /screens/{paper|sandbox|live|blotter}` — N22/N23 profile envelopes. */
   getScreenProfile(screen: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>>;
+  /** Exact, server-filtered Paper blotter page. */
+  getBlotterProfile(query?: BlotterQuery): Promise<Result<ProfileEnvelope>>;
   /** `GET /screens/paper/{id}[/vn-market]` — the workbench envelope. */
   getPaperWorkbenchProfile(deploymentId: string, variant?: "paper" | "vnm"): Promise<Result<ProfileEnvelope>>;
   /** `GET /{alphas|portfolios}/{id}/query-analytics` — N25 envelope. */
   getQueryAnalytics(subject: "alphas" | "portfolios", subjectId: string): Promise<Result<QueryAnalytics>>;
   /** `GET /commands/tasks` — the N27 operator task catalogue. */
   getOperatorTasks(): Promise<Result<OperatorTaskCatalogue>>;
+  /** Runs only a server-classified CONNECTED R0 task. */
+  runOperatorTask(taskId: string, params: Readonly<Record<string, string | number | boolean | null>>): Promise<Result<OperatorTaskRunResult>>;
   /** `GET /governance/approvals/{id}/live` — `governance.live-review.v1`. */
   getLiveReview(approvalId: string): Promise<Result<LiveReviewPayload>>;
   /** `GET /screens/accounts/{id}` — N28 typed unavailable until published. */

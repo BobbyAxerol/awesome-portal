@@ -55,7 +55,7 @@ cp -a \
   "${APP_DIR}/package-lock.json" \
   "${APP_DIR}/tsconfig.build.json" \
   "${APP_DIR}/tsconfig.json" \
-  "${APP_DIR}/vitest.config.ts" \
+  "${APP_DIR}/vitest.config.mts" \
   "${WORK_DIR}/"
 ln -s ../node_modules "${WORK_DIR}/node_modules"
 

@@ -10,6 +10,7 @@ export interface ManagerPage {
   nextCursor: string | null;
   previousCursor?: string | null;
   exactTotal?: number | null;
+  filteredTotal?: number | null;
   aggregates?: Record<string, Record<string, number>> | null;
   projection?: {
     epoch: string;
@@ -104,6 +105,10 @@ export function managerPage(
   if (exactTotal !== undefined && (!Number.isSafeInteger(exactTotal) || (exactTotal as number) < 0)) {
     throw contractError(`${context.errorPrefix}_MANAGER_TOTAL_INVALID`);
   }
+  const filteredTotal = data.filtered_total_items;
+  if (filteredTotal !== undefined && (!Number.isSafeInteger(filteredTotal) || (filteredTotal as number) < 0)) {
+    throw contractError(`${context.errorPrefix}_MANAGER_TOTAL_INVALID`);
+  }
   const aggregates = countAggregates(data.window_aggregates, context.errorPrefix);
   const freshness = typeof source.freshness === "string" && FRESHNESS.has(source.freshness)
     ? source.freshness as ManagerPage["freshness"]
@@ -120,6 +125,7 @@ export function managerPage(
     nextCursor,
     previousCursor: typeof previousCursor === "string" ? previousCursor : null,
     exactTotal: typeof exactTotal === "number" ? exactTotal : null,
+    filteredTotal: typeof filteredTotal === "number" ? filteredTotal : null,
     aggregates,
     projection,
   };

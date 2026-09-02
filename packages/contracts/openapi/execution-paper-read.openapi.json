@@ -33,9 +33,16 @@
         "parameters": [
           { "$ref": "#/components/parameters/WorkspaceId" },
           { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 } },
-          { "name": "cursor", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } }
+          { "name": "after", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "before", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED"] } },
+          { "name": "status_bucket", "in": "query", "required": false, "schema": { "type": "string", "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN"] } },
+          { "name": "venue", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 64 } },
+          { "name": "symbol", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "side", "in": "query", "required": false, "schema": { "type": "string", "enum": ["BUY", "SELL"] } },
+          { "name": "sort", "in": "query", "required": false, "schema": { "type": "string", "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"], "default": "submitted_at_desc" } }
         ],
-        "responses": { "200": { "description": "Current Paper blotter page; exact totals and aggregates remain typed unavailable until N25", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+        "responses": { "200": { "description": "Current Paper blotter page with bidirectional keyset, exact totals and bounded aggregates", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
       }
     }
   },
@@ -57,8 +64,13 @@
         "properties": {
           "deployment": { "oneOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "null" }] },
           "deployments": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "positions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "performance": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "account_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "portfolio_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "orders": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "fills": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "conditional_groups": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "conditional_legs": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "reconciliation": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } }, "command_journal": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
-          "page": { "type": "object", "additionalProperties": false, "required": ["limit", "next_cursor", "previous_cursor"], "properties": { "limit": { "type": "integer" }, "next_cursor": { "type": ["string", "null"] }, "previous_cursor": { "type": "null" } } },
-          "exact_total": { "type": "null" }, "aggregates": { "type": "null" }
+          "observation_gate": { "oneOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "null" }] },
+          "query_analytics": { "type": ["object", "null"], "additionalProperties": true },
+          "page": { "type": "object", "additionalProperties": false, "required": ["limit", "next_cursor", "previous_cursor"], "properties": { "limit": { "type": "integer" }, "next_cursor": { "type": ["string", "null"] }, "previous_cursor": { "type": ["string", "null"] } } },
+          "query": { "type": "object", "additionalProperties": false, "required": ["filters", "sort", "filter_allowlist", "sort_allowlist", "count_scope"], "properties": { "filters": { "type": "object", "additionalProperties": false, "required": ["status", "status_bucket", "venue", "symbol", "side"], "properties": { "status": { "type": ["string", "null"], "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED", null] }, "status_bucket": { "type": ["string", "null"], "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN", null] }, "venue": { "type": ["string", "null"] }, "symbol": { "type": ["string", "null"] }, "side": { "type": ["string", "null"], "enum": ["BUY", "SELL", null] } } }, "sort": { "type": "string", "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] }, "filter_allowlist": { "type": "array", "prefixItems": [{ "const": "status" }, { "const": "venue" }, { "const": "symbol" }, { "const": "side" }], "items": false }, "sort_allowlist": { "type": "array", "prefixItems": [{ "const": "submitted_at_desc" }, { "const": "submitted_at_asc" }, { "const": "updated_at_desc" }], "items": false }, "count_scope": { "type": "string", "const": "COMMITTED_HOT_PROJECTION" } } },
+          "exact_total": { "type": ["integer", "null"], "minimum": 0 },
+          "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
+          "aggregates": { "type": ["object", "null"], "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } } }
         }
       },
       "PaperReadResponse": {

@@ -4,9 +4,8 @@
  *
  * Runs on the preview build (chromium-preview project) against the controlled
  * same-origin BFF double (`bffDouble.ts`): every screen consumes the declared
- * routes through the product HTTP client. Screens whose published payload is
- * a sparse envelope are asserted AS envelopes — the reviewed rich
- * compositions live in the fixture lab, not on these routes.
+ * routes through the product HTTP client. The reviewed rich compositions stay
+ * mounted for populated, sparse and unavailable panel states alike.
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
@@ -24,7 +23,7 @@ async function open(page: Page, route: string) {
   // A mounted <main> is not enough to prove that the last panel has replaced
   // its loading state; taking a full-page screenshot during that replacement
   // made the Admin Action Drawer oscillate by one text line (16 px). The BFF
-  // double has no long-lived transport, so network-idle is the exact stable
+  // double emits one finite heartbeat, so network-idle is the exact stable
   // boundary for this controlled browser corpus.
   await page.waitForLoadState("networkidle");
   await settle(page);
@@ -43,7 +42,7 @@ test.describe("§8.2 journeys — recomposed product truth", () => {
     // The exit CTA is blocked and NAMES the unpublished gate — never a bare grey button.
     const cta = page.getByRole("button", { name: /Request Paper Exit Review/ });
     await expect(cta).toBeDisabled();
-    await expect(page.getByText(/observation gate is not published/).first()).toBeVisible();
+    await expect(page.getByText(/No promotion verdict was published/).first()).toBeVisible();
     // The unpublished equity series is that panel's own state, not a blank frame.
     await expect(page.getByText(/No equity series was published/).first()).toBeVisible();
   });
@@ -185,17 +184,20 @@ async function rawSnapshot(page: Page) {
       .map((n) => `${n.getAttribute("aria-pressed")}${n.getAttribute("aria-selected")}${n.getAttribute("aria-expanded")}`)
       .join(""),
     live: [...document.querySelectorAll("[role='status'],[aria-live]")].map((n) => n.textContent).join("|"),
+    // input/select values are DOM properties, not serialized attributes, so
+    // innerHTML alone cannot prove that a filter actually changed.
+    values: [...document.querySelectorAll("main input, main select, main textarea")]
+      .map((n) => `${(n as HTMLInputElement).type ?? n.tagName}:${(n as HTMLInputElement).value}`)
+      .join("|"),
     focus: document.activeElement?.tagName ?? "",
   }));
 }
 
-test("structural: no enabled control on any preview route is a no-op", async ({ page }) => {
-  test.setTimeout(900_000);
+async function auditRouteControls(page: Page, route: string): Promise<ControlRecord[]> {
   const records: ControlRecord[] = [];
-  for (const route of ROUTES) {
-    await open(page, route);
-    let i = 0;
-    while (true) {
+  await open(page, route);
+  let i = 0;
+  while (true) {
       // Fresh page per control. Clicking sequentially on one page let an
       // earlier click's in-flight decision walk swallow the next click (the
       // reducer refuses a second decision mid-walk), which the sweep then
@@ -259,8 +261,12 @@ test("structural: no enabled control on any preview route is a no-op", async ({ 
         continue;
       }
       if (meta.tag === "SELECT") {
-        const options = await el.locator("option").count();
-        if (options > 1) await el.selectOption({ index: 1 });
+        const current = await el.inputValue();
+        const values = await el.locator("option").evaluateAll((options) =>
+          options.map((option) => (option as HTMLOptionElement).value),
+        );
+        const alternate = values.find((value) => value !== current);
+        if (alternate !== undefined) await el.selectOption(alternate);
       } else {
         await el.click({ timeout: 3_000 }).catch(() => undefined);
       }
@@ -269,7 +275,8 @@ test("structural: no enabled control on any preview route is a no-op", async ({ 
       // to 1.5s; only silence for the whole window is a no-op.
       let after = await snapshot(page);
       const changed = (a: typeof before, b: typeof before) =>
-        a.url !== b.url || a.dom !== b.dom || a.text !== b.text || a.open !== b.open || a.pressed !== b.pressed || a.live !== b.live;
+        a.url !== b.url || a.dom !== b.dom || a.text !== b.text || a.open !== b.open ||
+        a.pressed !== b.pressed || a.live !== b.live || a.values !== b.values;
       for (let t = 0; t < 15 && !changed(before, after); t += 1) {
         await page.waitForTimeout(100);
         after = await snapshot(page);
@@ -282,6 +289,7 @@ test("structural: no enabled control on any preview route is a no-op", async ({ 
         after.open !== before.open ||
         after.pressed !== before.pressed ||
         after.live !== before.live ||
+        after.values !== before.values ||
         // Moving focus into a field IS the result of clicking a field.
         (meta.tag === "INPUT" && after.focus === "INPUT")
       ) {
@@ -289,9 +297,30 @@ test("structural: no enabled control on any preview route is a no-op", async ({ 
       } else {
         records.push({ ...base, verdict: "NO-OP" });
       }
-      i += 1;
-    }
+    i += 1;
   }
+  return records;
+}
+
+test("structural: no enabled control on any preview route is a no-op", async ({ page }) => {
+  test.setTimeout(900_000);
+  const records: ControlRecord[] = [];
+  // A route remains isolated per page/control as before, but four independent
+  // route audits can run together. This preserves the no-op guarantee while
+  // keeping the release gate bounded enough to run on every closeout.
+  const context = page.context();
+  for (let start = 0; start < ROUTES.length; start += 4) {
+    const batch = await Promise.all(ROUTES.slice(start, start + 4).map(async (route) => {
+      const auditPage = await context.newPage();
+      try {
+        return await auditRouteControls(auditPage, route);
+      } finally {
+        await auditPage.close();
+      }
+    }));
+    records.push(...batch.flat());
+  }
+  records.sort((left, right) => left.route.localeCompare(right.route) || left.index - right.index);
   mkdirSync("e2e/el-v2-03-evidence", { recursive: true });
   writeFileSync("e2e/el-v2-03-evidence/controls.json", JSON.stringify(records, null, 1));
   const noops = records.filter((r) => r.verdict === "NO-OP");
@@ -569,11 +598,11 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
     await expect(page.locator("tbody tr[role='button']").first()).toContainText("1.25");
   });
 
-  test("Account 360 renders its reviewed frame with the N28 refusal at every panel", async ({ page }) => {
+  test("Account 360 renders current account truth inside its reviewed frame", async ({ page }) => {
     await open(page, "/deployments/accounts/acct-live-grid-v21");
-    await expect(page.getByText(/full exposure population is not published/i).first()).toBeVisible();
-    // Absent facts render as absence, never as zeros about money.
-    expect(await page.getByText("not published").count()).toBeGreaterThan(2);
+    await expect(page.getByRole("heading", { name: /acct-live-grid-v21/ }).first()).toBeVisible();
+    await expect(page.getByText("1000.10").first()).toBeVisible();
+    await expect(page.getByText("750.05").first()).toBeVisible();
   });
 
   for (const [name, route] of [

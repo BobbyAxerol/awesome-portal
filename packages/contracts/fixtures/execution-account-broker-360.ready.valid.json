@@ -1,0 +1,32 @@
+{
+  "schema_version": "execution.account-broker-360.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "LIVE_BINANCE_USDM",
+  "requested_environment": "auto",
+  "selected_environment": "live",
+  "candidate_environments": ["live"],
+  "workspace_id": "ws_fixture",
+  "resource": { "kind": "ACCOUNT", "id": "acc_1" },
+  "read_at": "2026-09-02T12:00:01Z",
+  "as_of": "2026-09-02T12:00:00Z",
+  "state": "ready",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "capabilities": [
+    { "capability_id": "source.accounts", "state": "AVAILABLE", "relations": ["accounts"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.account_balances", "state": "AVAILABLE", "relations": ["account_balances"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.margin_balances", "state": "AVAILABLE", "relations": ["margin_balances"], "reason_code": null, "retryable": false },
+    { "capability_id": "source.broker_account_sync_effective", "state": "AVAILABLE", "relations": ["broker_account_sync_effective"], "reason_code": null, "retryable": false }
+  ],
+  "data": {
+    "accounts": [{ "account_id": "acc_1", "mode": "live", "venue": "BINANCE", "external_account_ref": "external_1" }],
+    "account_balances": [{ "account_id": "acc_1", "currency": "USDT", "total": "1000.10", "free": "800.10", "locked": "200.00" }],
+    "margin_balances": [{ "account_id": "acc_1", "currency": "USDT", "initial": "100.00", "maintenance": "50.05" }],
+    "broker_sync": [{ "sync_id": "broker_1", "external_account_ref": "external_1", "mode": "live", "venue": "BINANCE", "status": "SYNCED", "synced_at": "2026-09-02T12:00:00Z" }],
+    "differences": [{ "currency": "USDT", "portal_free": "800.10", "broker_buying_power": "799.90", "delta": "0.20", "in_sync": false }],
+    "exposure_headroom": [{ "currency": "USDT", "free": "800.10", "maintenance": "50.05", "headroom": "750.05", "verdict": "AVAILABLE" }]
+  },
+  "unavailable_branches": []
+}

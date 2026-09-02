@@ -1632,3 +1632,19 @@ durable run/attempt events. Detailed evidence:
   controls, six KPI cells, 12 insight tiles and zero console issues.
 - Detail:
   [`EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md`](./EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md).
+
+## Backend state — 2026-09-02 (Phase 3 rich UI/product integration)
+
+- All 23 commissioned product roots preserve Claude's rich composition while
+  consuming only authenticated same-origin BFF contracts. Empty, partial,
+  stale and unavailable source branches stay local to their panel.
+- Paper workbench, exact Full Blotter, Alpha/Fleet, Portfolio, Account/Broker
+  and Paper/Sandbox/Live profiles consume their canonical current facts;
+  four server-classified local R0 tasks emit no-source receipts.
+- Profile realtime now closes every terminal/error path and permits only one
+  gap resnapshot. The browser structural gate proves every enabled control has
+  an observable outcome.
+- Implementation is `OWNER_UI_REVIEW_READY`; protected-main publication and
+  stable remain unchanged pending Bobby's dev review.
+- Detail:
+  [`EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md`](./EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md).

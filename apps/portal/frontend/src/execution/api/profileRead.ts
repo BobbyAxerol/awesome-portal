@@ -26,6 +26,7 @@ export interface ProfileEnvelope {
   asOf: string | null;
   readAt: string | null;
   workspaceId: string | null;
+  selectedEnvironment: "paper" | "sandbox" | "live" | null;
   actor: string | null;
   recordAuthority: string | null;
   sourceAuthority: string | null;
@@ -34,6 +35,8 @@ export interface ProfileEnvelope {
   data: Readonly<Record<string, readonly Record<string, unknown>[]>>;
   /** Non-array data members (e.g. paper-workbench `deployment`, blotter `page`). */
   objects: Readonly<Record<string, Record<string, unknown>>>;
+  /** Scalar data members (e.g. exact server counts). Scalars are never coerced. */
+  scalars: Readonly<Record<string, string | number | boolean | null>>;
   unavailableBranches: readonly string[];
 }
 
@@ -53,9 +56,13 @@ export function readProfileEnvelope(raw: unknown): ProfileEnvelope | null {
   const dataRoot = obj(root.data) ?? {};
   const data: Record<string, readonly Record<string, unknown>[]> = {};
   const objects: Record<string, Record<string, unknown>> = {};
+  const scalars: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of Object.entries(dataRoot)) {
     if (Array.isArray(value)) data[key] = value.flatMap((v) => (obj(v) ? [obj(v)!] : []));
     else if (obj(value)) objects[key] = obj(value)!;
+    else if (value === null || ["string", "number", "boolean"].includes(typeof value)) {
+      scalars[key] = value as string | number | boolean | null;
+    }
   }
   const actor = obj(root.actor);
   return {
@@ -66,6 +73,7 @@ export function readProfileEnvelope(raw: unknown): ProfileEnvelope | null {
     asOf: str(root.as_of),
     readAt: str(root.read_at),
     workspaceId: str(root.workspace_id),
+    selectedEnvironment: (["paper", "sandbox", "live"] as const).find((item) => item === root.selected_environment) ?? null,
     actor: actor ? (str(actor.username) ?? str(actor.user_id)) : null,
     recordAuthority: str(root.record_authority),
     sourceAuthority: str(root.source_authority),
@@ -83,9 +91,12 @@ export function readProfileEnvelope(raw: unknown): ProfileEnvelope | null {
     }),
     data,
     objects,
-    unavailableBranches: (Array.isArray(root.unavailable_branches) ? root.unavailable_branches : []).flatMap((b) =>
-      typeof b === "string" ? [b] : [],
-    ),
+    scalars,
+    unavailableBranches: (Array.isArray(root.unavailable_branches) ? root.unavailable_branches : []).flatMap((branch) => {
+      if (typeof branch === "string") return [branch];
+      const item = obj(branch);
+      return item ? [str(item.reason_code) ?? str(item.capability_id) ?? "UNAVAILABLE"] : [];
+    }),
   };
 }
 
@@ -131,6 +142,35 @@ export interface OperatorTaskCatalogue {
   counts: { connected: number | null; inactive: number | null; incompatible: number | null };
   tasks: readonly OperatorTask[];
   actorRole: string | null;
+}
+
+export interface OperatorTaskRunResult {
+  taskId: string;
+  classification: "CONNECTED";
+  transport: "SGP_LOCAL_PROJECTION";
+  sourceRequestSent: false;
+  responseDigest: string;
+  result: Readonly<Record<string, unknown>>;
+}
+
+export function readOperatorTaskRunResult(raw: unknown): OperatorTaskRunResult | null {
+  const root = obj(raw);
+  const taskId = str(root?.task_id);
+  const responseDigest = str(root?.response_digest);
+  const result = obj(root?.result);
+  if (!root || root.schema_version !== "execution.command-run-result.v1" || !taskId ||
+      root.classification !== "CONNECTED" || root.transport !== "SGP_LOCAL_PROJECTION" ||
+      root.source_request_sent !== false || !responseDigest?.match(/^sha256:[0-9a-f]{64}$/) || !result) {
+    return null;
+  }
+  return {
+    taskId,
+    classification: "CONNECTED",
+    transport: "SGP_LOCAL_PROJECTION",
+    sourceRequestSent: false,
+    responseDigest,
+    result,
+  };
 }
 
 const TASK_STATES = new Set(["CONNECTED", "SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"]);

@@ -3225,3 +3225,21 @@ The exact browser journey opens Fleet, clicks
 routes, and renders 10 tabs, four deployment controls, six KPI cells and 12
 insight tiles with no console issue. Detail:
 [`EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md`](../../backend/EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md).
+
+### Phase 3 integration closeout — rich UI over real BFF (2026-09-02)
+
+Phase 3 implementation is `RICH_UI_BFF_INTEGRATION_ACCEPTED /
+OWNER_UI_REVIEW_READY`. The approved rich compositions remain mounted on all
+23 same-origin BFF roots. Paper/Sandbox/Live profiles, exact Blotter,
+Alpha/Fleet, Portfolio and Account/Broker facts now populate their existing
+panels; absent facts remain panel-local typed states. The Admin Action Drawer
+offers only the four server-classified `CONNECTED` local R0 reads and renders a
+receipt proving no source command was sent.
+
+Realtime preflights with an authenticated snapshot, closes EventSource on all
+terminal/error paths and permits one gap resnapshot only. Frontend build,
+1,803 unit assertions, warning guard, structural/visual browser gates, Control
+API, contract, Rust and dependency gates pass. Bobby's inspection of the
+rebuilt dev runtime is the remaining Product GO decision; protected `main` and
+stable have not changed. Detail:
+[`EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md`](../../backend/EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md).

@@ -98,7 +98,10 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         "/accepted_scope/screen_contracts/typed_unavailable_screen_ids",
     )?;
     let actual: BTreeSet<_> = unavailable.iter().filter_map(Value::as_str).collect();
-    let expected = BTreeSet::from(["EXECUTION_ACCOUNT_BROKER_360_SCREEN"]);
+    // Phase 2 promoted Account/Broker 360 to a real screen root while keeping
+    // the still-missing exposure population typed at branch level. A whole
+    // screen may no longer be classified unavailable here.
+    let expected = BTreeSet::new();
     if actual != expected || unavailable.len() != expected.len() {
         return Err(AcceptanceError::InventoryDrift);
     }
@@ -107,7 +110,7 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         .pointer("/evidence")
         .and_then(Value::as_object)
         .ok_or(AcceptanceError::Malformed)?;
-    if evidence.len() != 31
+    if evidence.len() != 35
         || evidence
             .values()
             .any(|value| !value.as_str().is_some_and(is_sha256))

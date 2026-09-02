@@ -41,6 +41,7 @@ const ALPHA_FLEET = canonical("execution-alpha-fleet-list.v2.valid.json") as Rec
 const BINDINGS_LIST = canonical("execution-bindings-list.valid.json") as Record<string, unknown>;
 const BINDING_DETAIL = canonical("execution-binding-detail.valid.json") as Record<string, unknown>;
 const LIVE_REVIEW = canonical("governance-live-review.valid.json") as Record<string, unknown>;
+const ACCOUNT_BROKER_READY = canonical("execution-account-broker-360.ready.valid.json") as Record<string, unknown>;
 
 
 import {
@@ -66,6 +67,7 @@ import { COMMAND_CATALOGUE_FIXTURE, COMMAND_PLAN_FIXTURE } from "../src/executio
 interface Answer {
   status: number;
   body: unknown;
+  contentType?: string;
 }
 
 const ok = (body: unknown): Answer => ({ status: 200, body });
@@ -152,6 +154,34 @@ const COMMAND_OPERATION_ID = String(
     "",
 );
 
+function alphaFleet(search: URLSearchParams): Answer {
+  const requested = search.get("search");
+  if (!requested) return ok(ALPHA_FLEET);
+  const page = ALPHA_FLEET.page as Record<string, unknown>;
+  const rows = Array.isArray(page.rows) ? page.rows as Record<string, unknown>[] : [];
+  return ok({
+    ...ALPHA_FLEET,
+    page: {
+      ...page,
+      rows: rows.map((row) => ({ ...row, alpha_id: requested, alpha_label: requested })),
+    },
+  });
+}
+
+function realtimeSnapshot(environment: string): Answer {
+  const epoch = `e2e-${environment}`;
+  return ok({
+    schema_version: "portal.execution.profile-realtime.v1",
+    event_type: "snapshot",
+    terminal: false,
+    reconnect_required: false,
+    cursor: `${epoch}:1`,
+    projection_epoch: epoch,
+    projection_sequence: 1,
+    payload: { environment },
+  });
+}
+
 export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams): Answer {
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
@@ -164,12 +194,40 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if (path === "/screens/blotter") return ok(FULL_BLOTTER_PARTIAL);
     if (seg[0] === "screens" && seg[1] === "paper" && seg.length === 4 && seg[3] === "vn-market") return ok(PAPER_WORKBENCH_VNM_PARTIAL);
     if (seg[0] === "screens" && seg[1] === "paper" && seg.length === 3) return ok(PAPER_WORKBENCH_PARTIAL);
-    if (seg[0] === "screens" && seg[1] === "accounts")
-      return problem(503, "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED", "The full exposure population is not published; the account 360 stays typed unavailable.");
+    if (seg[0] === "screens" && seg[1] === "accounts") {
+      return ok({
+        ...ACCOUNT_BROKER_READY,
+        resource: { kind: "ACCOUNT", id: seg[2] },
+        data: {
+          ...(ACCOUNT_BROKER_READY.data as Record<string, unknown>),
+          accounts: [
+            {
+              ...(((ACCOUNT_BROKER_READY.data as Record<string, unknown>).accounts as Record<string, unknown>[])[0] ?? {}),
+              account_id: seg[2],
+            },
+          ],
+        },
+      });
+    }
+    if (seg[0] === "profiles" && seg[2] === "realtime-snapshot") return realtimeSnapshot(seg[1]);
+    if (seg[0] === "profiles" && seg[2] === "stream") {
+      const epoch = `e2e-${seg[1]}`;
+      const event = JSON.stringify({
+        schema_version: "portal.execution.profile-realtime.v1",
+        event_type: "heartbeat",
+        terminal: true,
+        reconnect_required: false,
+        cursor: `${epoch}:1`,
+        projection_epoch: epoch,
+        projection_sequence: 1,
+        payload: { reason_code: "E2E_STREAM_COMPLETE" },
+      });
+      return { status: 200, contentType: "text/event-stream", body: `event: heartbeat\ndata: ${event}\n\n` };
+    }
     if ((seg[0] === "alphas" || seg[0] === "portfolios") && seg[2] === "query-analytics") return ok(QUERY_ANALYTICS_EMPTY);
     if (path === "/commands/tasks") return ok(COMMAND_TASKS);
     if (path === "/commands/catalog") return ok(COMMAND_CATALOGUE_FIXTURE);
-    if (path === "/alphas") return ok(ALPHA_FLEET);
+    if (path === "/alphas") return alphaFleet(search);
     if (path === "/broker-bindings") return ok(BINDINGS_LIST);
     if (seg[0] === "broker-bindings" && seg.length === 2) {
       return ok({ ...BINDING_DETAIL, item: { ...((BINDING_DETAIL.item as object) ?? {}), binding_id: seg[1] } });
@@ -213,7 +271,11 @@ export async function stubExecutionBff(page: Page): Promise<void> {
   await page.route("**/api/v1/execution/**", (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    const { status, body } = answerExecutionBff(request.method(), url.pathname, url.searchParams);
-    return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+    const { status, body, contentType = "application/json" } = answerExecutionBff(request.method(), url.pathname, url.searchParams);
+    return route.fulfill({
+      status,
+      contentType,
+      body: typeof body === "string" ? body : JSON.stringify(body),
+    });
   });
 }

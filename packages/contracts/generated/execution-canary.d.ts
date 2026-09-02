@@ -68,8 +68,8 @@ export interface components {
         };
         UnavailableBranch: {
             capability_id: string;
-            /** @constant */
-            state: "UNAVAILABLE";
+            /** @enum {unknown} */
+            state: "EMPTY" | "PARTIAL" | "UNAVAILABLE";
             reason_code: string;
             /** @constant */
             retryable: false;

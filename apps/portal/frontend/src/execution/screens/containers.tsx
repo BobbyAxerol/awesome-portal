@@ -983,6 +983,10 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
       initialCommand={cmd}
       operationRef={search.get("operation")}
       actionRef={search.get("action") ? { action: search.get("action")!, binding: search.get("binding") } : null}
+      onRunTask={async (taskId, params) => {
+        const result = await api.runOperatorTask(taskId, params);
+        return result.ok ? { ok: true as const, value: result.value } : { ok: false as const, reason: result.reason };
+      }}
     />
   );
 }

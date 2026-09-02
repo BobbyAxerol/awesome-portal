@@ -4,6 +4,7 @@ import { AuthSession, PortalUser } from "../src/domain";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ExecutionAnalyticsProxy } from "../src/execution/analytics.proxy";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
+import { PaperBlotterQuerySchema } from "../src/paper-read/contracts";
 
 const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
@@ -19,11 +20,15 @@ const session: AuthSession = {
 type RecordInput = Record<string, string | number | boolean | null>;
 
 class FakeCurrentSource {
-  readonly calls: Array<{ screenId: string; relation: string; query: { limit?: number; cursor?: string } }> = [];
+  readonly calls: Array<{ screenId: string; relation: string; query: { limit?: number; cursor?: string; statuses?: readonly string[] } }> = [];
   readonly rows = new Map<string, RecordInput[]>();
   readonly next = new Map<string, string | null>();
   readonly failures = new Set<string>();
   readonly stale = new Set<string>();
+  readonly exactTotals = new Map<string, number>();
+  readonly filteredTotals = new Map<string, number>();
+  readonly previous = new Map<string, string>();
+  readonly aggregates = new Map<string, Record<string, Record<string, number>>>();
 
   async relation(
     _principal: unknown,
@@ -40,6 +45,12 @@ class FakeCurrentSource {
       this.rows.get(relation) ?? [defaultRecord(relation)],
       this.next.get(relation) ?? null,
       this.stale.has(relation) ? "STALE" : "FRESH",
+      {
+        exactTotal: this.exactTotals.get(relation),
+        filteredTotal: this.filteredTotals.get(relation),
+        previousCursor: this.previous.get(relation),
+        aggregates: this.aggregates.get(relation),
+      },
     );
   }
 }
@@ -85,6 +96,12 @@ function managerResponse(
   rows: RecordInput[],
   nextCursor: string | null,
   freshness: "FRESH" | "STALE",
+  metadata: {
+    exactTotal?: number;
+    filteredTotal?: number;
+    previousCursor?: string;
+    aggregates?: Record<string, Record<string, number>>;
+  } = {},
 ) {
   return {
     schema_version: "portal.execution.current-source-bff.v2",
@@ -107,6 +124,10 @@ function managerResponse(
             .map(([name, value]) => [name, tagged(value)])),
         })),
         next_cursor: nextCursor,
+        ...(metadata.previousCursor ? { previous_cursor: metadata.previousCursor } : {}),
+        ...(metadata.exactTotal === undefined ? {} : { projected_total_items: metadata.exactTotal }),
+        ...(metadata.filteredTotal === undefined ? {} : { filtered_total_items: metadata.filteredTotal }),
+        ...(metadata.aggregates === undefined ? {} : { window_aggregates: metadata.aggregates }),
       },
     },
   };
@@ -297,6 +318,32 @@ describe("N22 full Paper read product BFF", () => {
       principal(),
       { limit: 26, cursor: first.data.page.next_cursor },
     )).rejects.toMatchObject({ code: "CURSOR_CONTEXT_MISMATCH" });
+  });
+
+  it("publishes exact population counts, server buckets and bidirectional cursors", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("orders", [{ order_id: 7, status: "FILLED", mode: "paper" }]);
+    source.exactTotals.set("orders", 12);
+    source.filteredTotals.set("orders", 1);
+    source.previous.set("orders", "manager-prev-cursor");
+    source.aggregates.set("orders", { status: { FILLED: 1, REJECTED: 3 }, venue: { BINANCE: 12 } });
+
+    const result = await service(source).blotter(principal(), {
+      limit: 50, status_bucket: "FILLED", sort: "submitted_at_desc",
+    }) as Record<string, any>;
+
+    expect(source.calls.find((call) => call.relation === "orders")?.query.statuses).toEqual(["FILLED"]);
+    expect(result.data).toMatchObject({
+      exact_total: 12,
+      filtered_total: 1,
+      aggregates: { status: { FILLED: 1, REJECTED: 3 }, venue: { BINANCE: 12 } },
+      query: { filters: { status_bucket: "FILLED" }, count_scope: "COMMITTED_HOT_PROJECTION" },
+    });
+    expect(result.data.page.previous_cursor).toMatch(/^kc1\./);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "blotter.exact-query", state: "AVAILABLE", reason_code: null,
+    }));
+    expect(PaperBlotterQuerySchema.safeParse({ status: "NOT_A_REAL_STATUS" }).success).toBe(false);
   });
 
   it("keeps concurrent Paper overview load inside fixed fan-out and response bounds", async () => {

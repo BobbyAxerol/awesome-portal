@@ -14,6 +14,16 @@
         "responses": { "200": { "description": "Live profile overview, including truthful empty", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-profile-read.v1.schema.json#/$defs/ProfileRead" } } } } }
       }
     },
+    "/api/v1/execution/screens/accounts/{account_id}": {
+      "get": {
+        "operationId": "executionAccountBroker360V1",
+        "parameters": [
+          { "name": "account_id", "in": "path", "required": true, "schema": { "type": "string", "minLength": 1, "maxLength": 191 } },
+          { "name": "environment", "in": "query", "required": false, "schema": { "type": "string", "enum": ["paper", "sandbox", "live"] } }
+        ],
+        "responses": { "200": { "description": "Exact Account/Broker 360 read across current profiles", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-profile-read.v1.schema.json#/$defs/AccountRead" } } } } }
+      }
+    },
     "/api/v1/execution/governance/approvals/{approval_id}/live": {
       "get": {
         "operationId": "executionGateLiveReviewV1",

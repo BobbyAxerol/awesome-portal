@@ -190,6 +190,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
   "execution-canary-live-facts.empty.valid.json":
     "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
+  "execution-account-broker-360.ready.valid.json":
+    "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
   "execution-query-analytics.empty.valid.json":
     "https://schemas.primusspark.com/portal/execution-query-analytics.v1.schema.json",
   "execution-analytics.equity-projection.valid.json":
@@ -346,6 +348,24 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(validate!({ ...canary, source_environment: "sandbox" })).toBe(false);
   });
 
+  it("keeps Account/Broker 360 exact, environment-aware and non-secret", () => {
+    const account = loadJson(
+      join(fixtureDir, "execution-account-broker-360.ready.valid.json"),
+    ) as Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
+    );
+    expect(validate!(account)).toBe(true);
+    expect(account).toMatchObject({
+      schema_version: "execution.account-broker-360.v1",
+      requested_environment: "auto",
+      selected_environment: "live",
+      resource: { kind: "ACCOUNT", id: "acc_1" },
+    });
+    expect(JSON.stringify(account)).not.toMatch(/password|token|credential|dsn/i);
+    expect(validate!({ ...account, selected_environment: "canary" })).toBe(false);
+  });
+
   it("keeps the N23 Live gate read-only over the existing R2 backbone", () => {
     const backbone = loadJson(
       join(fixtureDir, "execution-governance.r2-review.valid.json"),
@@ -391,6 +411,7 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     for (const operation of [
       "executionSandboxOverviewV1",
       "executionLiveOverviewV1",
+      "executionAccountBroker360V1",
       "executionGateLiveReviewV1",
     ]) expect(generated).toContain(operation);
     expect(generated).not.toMatch(/post:|put:|patch:|delete:/);

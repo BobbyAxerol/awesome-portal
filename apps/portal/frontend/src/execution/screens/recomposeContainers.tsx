@@ -8,7 +8,7 @@
  * screen is never swapped for a generic envelope view, and no fixture value
  * is reachable from this module.
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
@@ -19,6 +19,7 @@ import type {
   ProfileEnvelope,
   QueryAnalytics,
 } from "../api/profileRead";
+import { readQueryAnalytics } from "../api/profileRead";
 import { pageOf, workbenchFillRow, workbenchOrderRow, workbenchPositionRow, workbenchSessionRow } from "../api/profileRows";
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
@@ -45,6 +46,7 @@ import { AlphaFleet, type FleetFilter } from "./AlphaFleet";
 import { AccountsBindings } from "./AccountsBindings";
 import { BindingDetail } from "./BindingDetail";
 import type { OrderFunnel } from "../analytics";
+import { useProfileRealtime } from "../profileRealtime";
 
 /* ── envelope → screen-vocabulary mappers ─────────────────────────────── */
 
@@ -80,27 +82,66 @@ function capabilityReason(capabilities: readonly BranchCapability[], id: string)
   return `${cap.capabilityId} is ${cap.state}${cap.reasonCode ? ` · ${cap.reasonCode}` : ""}`;
 }
 
+const text = (value: unknown): string | null => {
+  if (typeof value === "string" && value.length > 0) return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return null;
+};
+const count = (value: unknown): number | null => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+const latest = (rows: readonly Record<string, unknown>[], ...fields: string[]) => [...rows].sort((left, right) => {
+  const stamp = (row: Record<string, unknown>) => fields.map((field) => text(row[field]) ?? "").find(Boolean) ?? "";
+  return stamp(right).localeCompare(stamp(left));
+})[0] ?? null;
+
+function profileEquity(profile: ProfileEnvelope) {
+  const rows = profile.data.account_equity ?? profile.data.performance ?? [];
+  const points = rows.flatMap((row) => {
+    const t = text(row.ts) ?? text(row.created_at);
+    const equity = text(row.equity);
+    return t && equity ? [{ t, equity, drawdown: text(row.drawdown) }] : [];
+  });
+  if (points.length === 0) return null;
+  return {
+    envelope: {
+      window: "available projection",
+      interval: "source snapshots",
+      currency: text(rows[0]?.currency),
+      asOf: profile.asOf ?? profile.readAt ?? new Date(0).toISOString(),
+      authority: "EXECUTION" as Authority,
+      formulaVersion: "source.account_equity_snapshots",
+      sourceRows: points.length,
+      returnedRows: points.length,
+    },
+    series: { label: "Account equity", points },
+  };
+}
+
 /* ── stage overviews ──────────────────────────────────────────────────── */
 
 export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api]);
+  const realtime = useProfileRealtime("paper");
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey]);
   return <PaperOverview envelope={state.value} status={state.status} reason={state.reason} />;
 }
 
 export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api]);
+  const realtime = useProfileRealtime("sandbox");
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api, realtime.refreshKey]);
   return <SandboxOverview envelope={state.value} status={state.status} reason={state.reason} />;
 }
 
 export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api]);
+  const realtime = useProfileRealtime("live");
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey]);
   return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} />;
 }
 
 /* ── paper workbench ──────────────────────────────────────────────────── */
 
 export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "paper" }: { api: ExecutionApi; deploymentId: string; variant?: "paper" | "vnm" }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getPaperWorkbenchProfile(deploymentId, variant), [api, deploymentId, variant]);
+  const realtime = useProfileRealtime("paper");
+  const state = useApiRead<ProfileEnvelope>(() => api.getPaperWorkbenchProfile(deploymentId, variant), [api, deploymentId, variant, realtime.refreshKey]);
   const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const navigate = useNavigate();
   const profile = state.value;
@@ -137,44 +178,72 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
   }
   const candlesReason = capabilityReason(profile.capabilities, "market.candles") ?? capabilityReason(profile.capabilities, "venue.calendar");
   const deployment = profile.objects.deployment ?? null;
-  const mode = deployment && typeof deployment.mode === "string" ? deployment.mode : "paper";
+  const mode = text(deployment?.mode) ?? "paper";
+  const sessions = profile.data.sessions ?? [];
+  const orders = profile.data.orders ?? [];
+  const fills = profile.data.fills ?? [];
+  const positions = profile.data.positions ?? [];
+  const performance = latest(profile.data.account_equity ?? profile.data.performance ?? [], "ts", "created_at");
+  const gate = profile.objects.observation_gate;
+  const observedDays = count(gate?.observed_days);
+  const tradeCount = count(gate?.trade_count);
+  const sessionCount = count(gate?.session_count);
+  const gateReason = text(gate?.reason_code) ?? capabilityReason(profile.capabilities, "workbench.observation-gate");
+  const accountId = text(deployment?.account_id) ?? "account not published";
+  const portfolioId = text(deployment?.portfolio_id);
+  const strategyId = text(deployment?.strategy_id) ?? deploymentId;
+  const venue = text(deployment?.venue) ?? "venue not published";
+  const analytics = profile.objects.query_analytics ? readQueryAnalytics(profile.objects.query_analytics) : null;
+  // Never derive a population KPI from the bounded rows rendered below. The
+  // Rust/SQL analytics envelope owns the denominator and exact decimal.
+  const quality = analytics?.executionQuality ?? null;
+  const fillRate = text(quality?.fill_rate);
+  const rejectRate = text(quality?.reject_rate);
+  const railParts = [observedDays === null ? null : `${observedDays} days`, tradeCount === null ? null : `${tradeCount} trades`].filter(Boolean);
+  const lineage = [
+    { label: "alpha", chip: { label: strategyId, href: `/deployments/alphas/${encodeURIComponent(strategyId)}` } },
+    ...(portfolioId ? [{ label: "portfolio", chip: { label: portfolioId, href: `/deployments/portfolios/${encodeURIComponent(portfolioId)}` } }] : []),
+    { label: "deployment", chip: { label: deploymentId, href: `/deployments/paper/${encodeURIComponent(deploymentId)}` } },
+    { label: "account", chip: { label: accountId, href: `/deployments/accounts/${encodeURIComponent(accountId)}` } },
+    { label: "venue", chip: { label: venue, href: "/deployments/accounts" } },
+  ];
   return (
     <PaperWorkbench
-      alphaLabel={deploymentId}
+      alphaLabel={strategyId}
       deploymentId={deploymentId}
-      accountId="account not published"
-      venue="venue not published"
+      accountId={accountId}
+      venue={venue}
       stage={STAGE_FOR_MODE[mode] ?? "PAPER_OBSERVATION"}
-      readiness="UNKNOWN"
+      readiness={gateReason ? "NOT_READY" : text(deployment?.active) === "true" ? "READY" : "UNKNOWN"}
       envelope={screenEnvelope(profile)}
-      lineage={[]}
-      railDetail={undefined}
+      lineage={lineage}
+      railDetail={railParts.length > 0 ? railParts.join(" · ") : undefined}
       kpis={[
-        { label: "Net PnL", value: null },
-        { label: "Max drawdown", value: null },
-        { label: "Fill rate", value: null },
-        { label: "Reject rate", value: null },
-        { label: "Projection age", value: null },
+        { label: "Equity", value: text(performance?.equity), unit: text(performance?.currency) },
+        { label: "Net PnL", value: text(performance?.net_pnl), unit: text(performance?.currency) },
+        { label: "Drawdown", value: text(performance?.drawdown) },
+        { label: "Fill rate", value: fillRate },
+        { label: "Reject rate", value: rejectRate },
       ]}
-      equity={null}
-      observation={{ items: [], met: false, rule: "the observation gate is not published on execution.paper-workbench.v1" }}
-      unmetCriteria={["the observation gate is not published on this contract — the exit review reads it server-side"]}
+      equity={profileEquity(profile)}
+      observation={{ items: [], met: false, rule: gateReason ?? "No promotion verdict was published." }}
+      unmetCriteria={gateReason ? [gateReason] : []}
       onRequestExit={() => navigate("/governance/exit-reviews")}
       drift={[]}
       driftNote={null}
-      runtime={[{ label: "envelope state", value: profile.state.toUpperCase() }, { label: "completeness", value: profile.completeness }, { label: "freshness", value: profile.freshness }]}
-      accounting={[{ label: "account equity rows", value: String((profile.data.account_equity ?? []).length) }, { label: "portfolio equity rows", value: String((profile.data.portfolio_equity ?? []).length) }]}
-      contribution={[]}
+      runtime={[{ label: "sessions", value: sessionCount === null ? String(sessions.length) : String(sessionCount) }, { label: "orders", value: String(orders.length) }, { label: "fills", value: String(fills.length) }, { label: "freshness", value: profile.freshness }]}
+      accounting={[{ label: "cash free", value: text(performance?.cash_free) }, { label: "cash locked", value: text(performance?.cash_locked) }, { label: "margin initial", value: text(performance?.margin_initial) }, { label: "margin maintenance", value: text(performance?.margin_maintenance) }]}
+      contribution={analytics?.executionQuality ? Object.entries(analytics.executionQuality).slice(0, 4).map(([label, value]) => ({ label: label.replace(/_/g, " "), value: text(value) })) : []}
       tab={tab}
       onTabChange={setTab}
-      orders={pageOf((profile.data.orders ?? []).map(workbenchOrderRow))}
-      fills={pageOf((profile.data.fills ?? []).map(workbenchFillRow))}
-      positions={pageOf((profile.data.positions ?? []).map(workbenchPositionRow))}
+      orders={pageOf(orders.map(workbenchOrderRow), null)}
+      fills={pageOf(fills.map(workbenchFillRow), null)}
+      positions={pageOf(positions.map(workbenchPositionRow), null)}
       onLoadOlder={() => undefined}
-      sessions={(profile.data.sessions ?? []).map(workbenchSessionRow)}
+      sessions={sessions.map(workbenchSessionRow)}
       calendar={null}
       operatorAdmin={false}
-      onAdminActions={() => undefined}
+      onAdminActions={() => navigate("/administration/actions")}
       onCopyProvenance={() => undefined}
       status={state.status}
       reason={state.reason}
@@ -185,14 +254,14 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
 
 /* ── full blotter ─────────────────────────────────────────────────────── */
 
-const BLOTTER_STATUS: readonly OrderStatus[] = ["INITIALIZED", "SUBMITTED", "ACKNOWLEDGED", "PARTIALLY_FILLED", "FILLED", "CANCELLED", "REJECTED", "EXPIRED"] as unknown as readonly OrderStatus[];
+const BLOTTER_STATUS: readonly OrderStatus[] = ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED"];
 
 function blotterRowOf(row: Record<string, unknown>): BlotterRow {
   const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
   const status = str(row.status);
   return {
     orderId: str(row.order_id) ?? "order id not published",
-    at: str(row.created_at) ?? str(row.at) ?? "",
+    at: str(row.submitted_at) ?? str(row.updated_at) ?? str(row.created_at) ?? str(row.at) ?? "",
     deployment: str(row.deployment_id) ?? "—",
     venue: str(row.venue) ?? "—",
     symbol: str(row.symbol) ?? "—",
@@ -202,14 +271,21 @@ function blotterRowOf(row: Record<string, unknown>): BlotterRow {
     price: str(row.price),
     status: (BLOTTER_STATUS as readonly string[]).includes(status ?? "") ? (status as OrderStatus) : "INITIALIZED",
     filledQuantity: str(row.filled_quantity),
-    fee: str(row.fee),
-    feeCurrency: str(row.fee_currency),
+    fee: str(row.commission) ?? str(row.fee),
+    feeCurrency: str(row.commission_currency) ?? str(row.fee_currency),
+    rejectReason: str(row.error_message) ?? str(row.error_code),
   };
 }
 
 export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("blotter"), [api]);
   const [filter, setFilter] = useParamState<BlotterFilter>("filter", BLOTTER_FILTERS, "ALL");
+  const [cursor, setCursor] = useState<string | null>(null);
+  const realtime = useProfileRealtime("paper");
+  const state = useApiRead<ProfileEnvelope>(() => api.getBlotterProfile({
+    limit: 50,
+    ...(cursor ? { after: cursor } : {}),
+    ...(filter === "ALL" ? {} : { status_bucket: filter }),
+  }), [api, cursor, filter, realtime.refreshKey]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [funnel, setFunnel] = useState<{ orderId: string; funnel: OrderFunnel | null; status: PanelStatus; reason?: string } | null>(null);
   const onExpand = useCallback(
@@ -232,7 +308,7 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
         envelope={{ authority: "PORTAL", asOf: null, freshness: "UNKNOWN" }}
         page={pageOf<BlotterRow>([])}
         filter={filter}
-        onFilterChange={setFilter}
+        onFilterChange={(next) => { setCursor(null); setFilter(next); }}
         onResetCrossFilter={() => undefined}
         onLoadOlder={() => undefined}
         onExpand={() => undefined}
@@ -243,20 +319,36 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   }
   const profile = state.value;
   const rows = (profile.data.orders ?? []).map(blotterRowOf);
+  const page = profile.objects.page ?? {};
+  const aggregates = profile.objects.aggregates ?? {};
+  const statusCounts = aggregates.status && typeof aggregates.status === "object"
+    ? Object.fromEntries(Object.entries(aggregates.status).flatMap(([key, value]) => typeof value === "number" ? [[key, value]] : []))
+    : null;
+  const nextCursor = text(page.next_cursor);
+  const previousCursor = text(page.previous_cursor);
   return (
     <FullBlotter
       envelope={screenEnvelope(profile)}
-      page={pageOf(rows)}
+      page={{
+        rows,
+        totalCount: count(profile.scalars.exact_total),
+        filteredCount: count(profile.scalars.filtered_total),
+        nextCursor,
+        prevCursor: previousCursor,
+        hasMore: nextCursor !== null,
+        hasPrevious: previousCursor !== null,
+      }}
       filter={filter}
-      onFilterChange={setFilter}
-      onResetCrossFilter={() => undefined}
-      onLoadOlder={() => undefined}
+      onFilterChange={(next) => { setCursor(null); setFilter(next); }}
+      onResetCrossFilter={() => setCursor(null)}
+      onLoadOlder={() => { if (nextCursor) setCursor(nextCursor); }}
       expandedOrderId={expanded}
       funnel={funnel && funnel.orderId === expanded ? funnel.funnel : null}
       funnelStatus={funnel && funnel.orderId === expanded ? funnel.status : undefined}
       funnelReason={funnel && funnel.orderId === expanded ? funnel.reason : undefined}
       onExpand={onExpand}
       aggregates={null}
+      statusCounts={statusCounts}
       status={state.status}
       reason={state.reason}
     />
@@ -518,51 +610,121 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
 /* ── account/broker 360 ───────────────────────────────────────────────── */
 
 export function AccountBroker360RichContainer({ api, accountId }: { api: ExecutionApi; accountId: string }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getAccountBroker360(accountId), [api, accountId]);
-  // The published contract for this screen IS a typed refusal (N28): every
-  // column renders the reviewed frame with that reason, and nothing invents a
-  // number about money.
+  const [realtimeEnvironment, setRealtimeEnvironment] = useState<"paper" | "sandbox" | "live" | null>(null);
+  const realtime = useProfileRealtime(realtimeEnvironment);
+  const state = useApiRead<ProfileEnvelope>(() => api.getAccountBroker360(accountId), [api, accountId, realtime.refreshKey]);
+  const profile = state.value;
+  useEffect(() => {
+    if (profile?.selectedEnvironment && profile.selectedEnvironment !== realtimeEnvironment) {
+      setRealtimeEnvironment(profile.selectedEnvironment);
+    }
+  }, [profile?.selectedEnvironment, realtimeEnvironment]);
+  const account = profile?.data.accounts?.[0] ?? null;
+  const balances = profile?.data.account_balances ?? [];
+  const margins = profile?.data.margin_balances ?? [];
+  const positions = profile?.data.positions ?? [];
+  const deployments = profile?.data.deployments ?? [];
+  const deployment = deployments.find((item) => text(item.account_id) === accountId) ?? deployments[0] ?? null;
+  const accountSync = latest(profile?.data.account_sync ?? [], "synced_at", "created_at");
+  const brokerSync = latest(profile?.data.broker_sync ?? [], "synced_at", "created_at");
+  const balance = latest(balances, "updated_at");
+  const margin = latest(margins, "updated_at");
+  const differenceRows = (profile?.data.differences ?? []).map((row) => ({
+    label: text(row.field) ?? "difference",
+    verdict: row.in_sync === true ? "MATCH" as const : row.in_sync === false ? "DIFFERS" as const : "UNKNOWN" as const,
+    delta: text(row.delta),
+    note: [text(row.internal_value), text(row.broker_value)].every((item) => item !== null)
+      ? `internal ${text(row.internal_value)} · broker ${text(row.broker_value)}` : null,
+    severity: row.in_sync === false ? "WARN" as const : "INFO" as const,
+  }));
+  const headroom = profile?.data.exposure_headroom?.[0] ?? null;
+  const environment = profile?.selectedEnvironment ?? "live";
+  const stage = STAGE_FOR_MODE[environment] ?? "LIVE_FULL";
+  const sourceEnvelope = profile ? screenEnvelope(profile) : { authority: "PORTAL" as Authority, asOf: null, freshness: "UNKNOWN" as FreshnessState };
+  const positionNotional = positions.map((row) => text(row.notional)).find((item) => item !== null) ?? "not published";
+  const syncRows = [...(profile?.data.account_sync ?? []), ...(profile?.data.broker_sync ?? [])]
+    .map((row) => {
+      const rawStatus = text(row.status)?.toUpperCase();
+      const syncStatus = rawStatus === "OK" || rawStatus === "SYNCED" ? "OK" as const
+        : rawStatus === "STALE" ? "STALE" as const : "FAILED" as const;
+      return {
+        at: text(row.synced_at) ?? text(row.created_at) ?? "time not published",
+        source: text(row.source) ?? (row.external_account_ref ? "BROKER" : "EXECUTION"),
+        status: syncStatus,
+        detail: rawStatus && !["OK", "SYNCED", "STALE", "FAILED"].includes(rawStatus) ? rawStatus : null,
+        digest: null,
+      };
+    })
+    .sort((left, right) => right.at.localeCompare(left.at));
+  const findings = profile?.data.reconciliation ?? [];
   const reason = state.status === "ok"
-    ? null
-    : state.reason ?? "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED: the full exposure population is not published.";
-  const emptyColumn = {
+    ? [...(profile?.unavailableBranches ?? []), ...(profile?.capabilities ?? []).flatMap((item) => item.reasonCode ? [item.reasonCode] : [])].join(" · ") || null
+    : state.reason ?? "ACCOUNT_PROFILE_READ_UNAVAILABLE";
+  const internal = {
+    positions: profile ? String(positions.length) : null,
+    openOrders: null,
+    headline: { label: "equity", value: text(balance?.total), currency: text(balance?.currency) },
+    extra: [
+      { label: "cash free", value: text(balance?.free) },
+      { label: "cash locked", value: text(balance?.locked) },
+      { label: "initial margin", value: text(margin?.initial) },
+      { label: "maintenance", value: text(margin?.maintenance) },
+      { label: "account sync", value: text(accountSync?.status) },
+    ],
+    envelope: { ...sourceEnvelope, authority: "EXECUTION" as Authority },
+  };
+  const broker = {
     positions: null,
     openOrders: null,
-    headline: { label: "equity", value: null, currency: null },
-    envelope: { authority: "PORTAL" as Authority, asOf: null, freshness: "UNKNOWN" as FreshnessState },
+    headline: { label: "buying power", value: text(brokerSync?.buying_power), currency: text(brokerSync?.currency) },
+    extra: [{ label: "sync status", value: text(brokerSync?.status) }],
+    envelope: { ...sourceEnvelope, authority: "BROKER" as Authority },
   };
   return (
     <AccountBroker360
       accountId={accountId}
-      alpha="not published"
-      deployment="not published"
-      portfolio="not published"
-      stage="LIVE_FULL"
-      venue="not published"
-      marginMode="not published"
-      settleCurrency="—"
-      accountRevision="—"
-      internal={emptyColumn}
-      broker={{ ...emptyColumn, headline: { label: "balance", value: null, currency: null } }}
-      difference={{ rows: [], envelope: { authority: "DERIVED", asOf: null, freshness: "UNKNOWN" } }}
-      externalAccountRef="not published"
+      alpha={text(account?.strategy_id) ?? text(deployment?.strategy_id) ?? "not published"}
+      deployment={text(deployment?.deployment_id) ?? "not published"}
+      portfolio={text(deployment?.portfolio_id) ?? "not published"}
+      stage={stage}
+      venue={text(account?.venue) ?? text(deployment?.venue) ?? "not published"}
+      marginMode={text(account?.account_type) ?? "not published"}
+      settleCurrency={text(account?.base_currency) ?? text(balance?.currency) ?? "—"}
+      accountRevision={text(account?.updated_at) ? `updated ${text(account?.updated_at)}` : "revision not published"}
+      internal={internal}
+      broker={broker}
+      difference={{ rows: differenceRows, envelope: { ...sourceEnvelope, authority: "DERIVED" } }}
+      externalAccountRef={text(account?.external_account_ref) ?? "not published"}
       credentialAlias="not published"
-      credentialValid={false}
+      credentialValid={null}
       positionMode="not published"
-      linked={[]}
-      aggregate={null}
-      exposure={null}
-      syncPolicy={reason ?? "policy not published"}
-      syncHistory={[]}
+      linked={profile ? [{
+        accountId,
+        alpha: text(account?.strategy_id) ?? text(deployment?.strategy_id) ?? "not published",
+        virtualExposure: positionNotional,
+        stage,
+        current: true,
+      }] : []}
+      aggregate={headroom ? {
+        virtualTotal: text(headroom.maintenance) ?? "not published",
+        physicalTotal: text(headroom.free) ?? "not published",
+        headroom: text(headroom.headroom) ?? "not published",
+        currency: text(headroom.currency) ?? text(balance?.currency) ?? "—",
+        verdict: text(headroom.verdict) === "AVAILABLE" ? "OK" : text(headroom.verdict) === "BREACHED" ? "EXCEEDED" : "UNKNOWN",
+        envelope: { ...sourceEnvelope, authority: "PORTAL" },
+        virtualLabel: "maintenance requirement",
+        physicalLabel: "free balance",
+      } : null}
+      exposure={profile ? { bindingId: text(profile.data.venue_accounts?.[0]?.binding_id) ?? accountId, aggregate: null, accountCount: 1, expectedAccountCount: 1, completeness: "COMPLETE", buckets: [] } : null}
+      syncPolicy={reason ?? `current-source ${environment} profile`}
+      syncHistory={syncRows}
       syncTotal={null}
-      openFindings={null}
+      openFindings={profile ? findings.filter((row) => !["RESOLVED", "CLOSED"].includes(text(row.status)?.toUpperCase() ?? "")).length : null}
+      resolvedFindings={profile ? findings.filter((row) => ["RESOLVED", "CLOSED"].includes(text(row.status)?.toUpperCase() ?? "")).length : null}
       operatorAdmin={false}
       onSyncNow={() => undefined}
       onDryRun={() => undefined}
-      // The refusal is a KNOWN typed reason: the reviewed frame renders and
-      // every panel carries the absence — a whole-screen swap is what the
-      // recomposition order forbids. Loading stays loading.
-      status={state.status === "loading" ? "loading" : "ok"}
+      status={state.status}
       reason={reason ?? undefined}
     />
   );

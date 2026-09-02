@@ -317,6 +317,8 @@ export interface FullBlotterProps {
   onExpand: (row: BlotterRow) => void;
   /** M7 totals per currency — server-published, three counts kept apart. */
   aggregates?: readonly CurrencyAggregate[] | null;  /** Reviewed hi-fi demo bundle — the lab passes it; the product never does. */
+  /** Exact counts over the whole server population, keyed by wire status. */
+  statusCounts?: Readonly<Record<string, number>> | null;
   demo?: BlotterDemo | null;
   demoTick?: BlotterTick;
 }
@@ -420,6 +422,7 @@ export function FullBlotter({
   funnelReason,
   onExpand,
   aggregates,
+  statusCounts = null,
   demo,
   demoTick,
 }: FullBlotterProps) {
@@ -462,7 +465,11 @@ export function FullBlotter({
         return true;
       })
     : [];
-  const counts = smoke ? { OPEN: 3, CONDITIONAL: 2, BRACKETS: 1 } : ({} as Record<string, number>);
+  const counts = smoke ? { OPEN: 3, CONDITIONAL: 2, BRACKETS: 1 } : statusCounts
+    ? Object.fromEntries(Object.entries(BLOTTER_BUCKET).map(([bucket, statuses]) => [
+        bucket, statuses.reduce((sum, item) => sum + (statusCounts[item] ?? 0), 0),
+      ])) as Record<string, number>
+    : ({} as Record<string, number>);
   const up = tick.price >= tick.prev;
   const leading = smoke
     ? smokeOrders.map((o) => (

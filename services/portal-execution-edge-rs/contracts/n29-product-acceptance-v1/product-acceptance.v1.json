@@ -69,7 +69,7 @@
     "frontend_product_boundary_test_sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
     "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",
-    "frontend_same_origin_bff_double_sha256": "sha256:198426ed1f713e233bc4bdd455a7b16c75858167bc114e313bcd3875d1ed9baa",
+    "frontend_same_origin_bff_double_sha256": "sha256:1786d9f6f50d33575e79b8ba056c9ffd744d7ca3e1e891e450d4f5b41c9b854a",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
     "release_workflow_sha256": "sha256:a38c0664b40737532fba09f8b97ddc5ce729f7e9826275673136df01beaabbcd",
     "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
@@ -94,7 +94,7 @@
     "br72_frontend_test_sha256": "sha256:77eeb02d47daee2c7338557d058a40242adb8d103bb119edfc931addaa18b100",
     "br72_frontend_containers_sha256": "sha256:f126bcb731f8c72d34d923ddc6fa8592ab16b5efbeb843d934a96e3cea157fb1",
     "br72_frontend_alpha_fleet_sha256": "sha256:1ef7ec592c47c852cbb58304ed7851cbc5b609101f449b30d3af130ebcdfe1fa",
-    "br72_frontend_recompose_sha256": "sha256:044d1fbfc03ee1f2557cab66caea241bb1f7bb16d37b1617822b266c0b44eeed",
+    "br72_frontend_recompose_sha256": "sha256:d3a8bd669baae3fa9d541c50f9214e554da0e7fecc570bb49a4b8304a3a1fce3",
     "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e"
   },
   "rehearsals": {

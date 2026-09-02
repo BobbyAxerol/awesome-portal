@@ -69,8 +69,42 @@
       "properties": {
         "limit": { "type": "integer", "minimum": 1, "maximum": 100 },
         "next_cursor": { "oneOf": [{ "type": "string", "pattern": "^kc1\\.", "maxLength": 4096 }, { "type": "null" }] },
-        "previous_cursor": { "type": "null" }
+        "previous_cursor": { "oneOf": [{ "type": "string", "pattern": "^kc1\\.", "maxLength": 4096 }, { "type": "null" }] }
       }
+    },
+    "Query": {
+      "type": "object", "additionalProperties": false,
+      "required": ["filters", "sort", "filter_allowlist", "sort_allowlist", "count_scope"],
+      "properties": {
+        "filters": {
+          "type": "object", "additionalProperties": false,
+          "required": ["status", "status_bucket", "venue", "symbol", "side"],
+          "properties": {
+            "status": { "oneOf": [{ "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED"] }, { "type": "null" }] },
+            "status_bucket": { "oneOf": [{ "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN"] }, { "type": "null" }] },
+            "venue": { "type": ["string", "null"], "maxLength": 64 },
+            "symbol": { "type": ["string", "null"], "maxLength": 128 },
+            "side": { "oneOf": [{ "enum": ["BUY", "SELL"] }, { "type": "null" }] }
+          }
+        },
+        "sort": { "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] },
+        "filter_allowlist": { "const": ["status", "venue", "symbol", "side"] },
+        "sort_allowlist": { "const": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] },
+        "count_scope": { "const": "COMMITTED_HOT_PROJECTION" }
+      }
+    },
+    "Aggregates": {
+      "type": "object", "maxProperties": 8,
+      "propertyNames": { "enum": ["status", "venue", "symbol", "side"] },
+      "additionalProperties": {
+        "type": "object", "maxProperties": 200,
+        "additionalProperties": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "QueryAnalytics": {
+      "type": "object", "minProperties": 1, "maxProperties": 40,
+      "propertyNames": { "pattern": "^(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$" },
+      "additionalProperties": true
     },
     "Data": {
       "type": "object", "additionalProperties": false, "minProperties": 1,
@@ -88,9 +122,13 @@
         "conditional_legs": { "$ref": "#/$defs/Records" },
         "reconciliation": { "$ref": "#/$defs/Records" },
         "command_journal": { "$ref": "#/$defs/Records" },
+        "observation_gate": { "oneOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "null" }] },
+        "query_analytics": { "oneOf": [{ "$ref": "#/$defs/QueryAnalytics" }, { "type": "null" }] },
         "page": { "$ref": "#/$defs/Page" },
-        "exact_total": { "type": "null" },
-        "aggregates": { "type": "null" }
+        "query": { "$ref": "#/$defs/Query" },
+        "exact_total": { "type": ["integer", "null"], "minimum": 0 },
+        "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
+        "aggregates": { "oneOf": [{ "$ref": "#/$defs/Aggregates" }, { "type": "null" }] }
       }
     }
   }

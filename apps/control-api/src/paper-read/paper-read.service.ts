@@ -27,6 +27,7 @@ interface RelationSpec {
   cursor?: string;
   localQuery?: {
     status?: string; venue?: string; symbol?: string; side?: "BUY" | "SELL";
+    statuses?: readonly string[];
     sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
   };
 }
@@ -116,6 +117,10 @@ const JOURNAL_FIELDS = [
   "client_order_id", "aggregate_key", "state", "outcome_class", "accepted_at", "dispatched_at",
   "acknowledged_at", "terminal_at", "updated_at", "engine_version",
 ] as const;
+const ORDER_STATUSES = new Set([
+  "INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE",
+  "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED",
+]);
 
 const OVERVIEW_SPECS: readonly RelationSpec[] = [
   spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),
@@ -251,6 +256,7 @@ export class PaperReadService {
         ...spec("orders", "manager.orders", "orders", ORDER_FIELDS, query.limit, sourceCursor),
         localQuery: {
           status: query.status,
+          statuses: statusBucket(query.status_bucket),
           venue: query.venue,
           symbol: query.symbol,
           side: query.side,
@@ -283,6 +289,7 @@ export class PaperReadService {
         query: {
           filters: {
             status: query.status ?? null,
+            status_bucket: query.status_bucket ?? null,
             venue: query.venue ?? null,
             symbol: query.symbol ?? null,
             side: query.side ?? null,
@@ -293,6 +300,7 @@ export class PaperReadService {
           count_scope: "COMMITTED_HOT_PROJECTION",
         },
         exact_total: orders?.page?.exactTotal ?? null,
+        filtered_total: orders?.page?.filteredTotal ?? orders?.page?.exactTotal ?? null,
         aggregates: orders?.page?.aggregates ?? null,
       },
       [
@@ -408,6 +416,12 @@ export class PaperReadService {
       if ("mode" in row && typeof row.mode === "string" && row.mode.toLowerCase() !== "paper") {
         throw new CurrentSourceProxyError("N22_CROSS_PROFILE_ROW_REJECTED", 502, {
           availability: "UNAVAILABLE", reason_code: "PROFILE_ISOLATION_VIOLATION", retryable: false,
+        });
+      }
+      if ("status" in row && typeof row.status === "string" &&
+          ("order_id" in row || "client_order_id" in row) && !ORDER_STATUSES.has(row.status)) {
+        throw new CurrentSourceProxyError("N22_ORDER_STATUS_NOT_ACCEPTED", 502, {
+          availability: "UNAVAILABLE", reason_code: "SOURCE_CONTRACT_REJECTED", retryable: false,
         });
       }
     }
@@ -535,9 +549,18 @@ function blotterFingerprint(query: PaperBlotterQuery): string {
     resource: "execution.full-blotter.paper.v1",
     limit: query.limit,
     status: query.status ?? null,
+    status_bucket: query.status_bucket ?? null,
     venue: query.venue ?? null,
     symbol: query.symbol ?? null,
     side: query.side ?? null,
     sort: query.sort,
   })).digest("base64url");
+}
+
+function statusBucket(bucket: PaperBlotterQuery["status_bucket"]): readonly string[] | undefined {
+  if (bucket === "FILLED") return ["FILLED"];
+  if (bucket === "PARTIAL") return ["PARTIALLY_FILLED"];
+  if (bucket === "REJECTED") return ["REJECTED", "DENIED"];
+  if (bucket === "OPEN") return ["INITIALIZED", "SUBMITTED", "ACCEPTED", "PENDING_UPDATE", "PENDING_CANCEL", "TRIGGERED"];
+  return undefined;
 }

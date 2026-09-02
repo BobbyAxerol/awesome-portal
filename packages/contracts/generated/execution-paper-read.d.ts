@@ -104,13 +104,49 @@ export interface components {
             conditional_legs?: components["schemas"]["NarrowRecord"][];
             reconciliation?: components["schemas"]["NarrowRecord"][];
             command_journal?: components["schemas"]["NarrowRecord"][];
+            observation_gate?: components["schemas"]["NarrowRecord"] | null;
+            query_analytics?: {
+                [key: string]: unknown;
+            } | null;
             page?: {
                 limit: number;
                 next_cursor: string | null;
-                previous_cursor: null;
+                previous_cursor: string | null;
             };
-            exact_total?: null;
-            aggregates?: null;
+            query?: {
+                filters: {
+                    /** @enum {string|null} */
+                    status: "INITIALIZED" | "SUBMITTED" | "ACCEPTED" | "REJECTED" | "DENIED" | "PENDING_UPDATE" | "PENDING_CANCEL" | "PARTIALLY_FILLED" | "FILLED" | "CANCELED" | "EXPIRED" | "TRIGGERED" | null;
+                    /** @enum {string|null} */
+                    status_bucket: "FILLED" | "PARTIAL" | "REJECTED" | "OPEN" | null;
+                    venue: string | null;
+                    symbol: string | null;
+                    /** @enum {string|null} */
+                    side: "BUY" | "SELL" | null;
+                };
+                /** @enum {string} */
+                sort: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
+                filter_allowlist: [
+                    "status",
+                    "venue",
+                    "symbol",
+                    "side"
+                ];
+                sort_allowlist: [
+                    "submitted_at_desc",
+                    "submitted_at_asc",
+                    "updated_at_desc"
+                ];
+                /** @constant */
+                count_scope: "COMMITTED_HOT_PROJECTION";
+            };
+            exact_total?: number | null;
+            filtered_total?: number | null;
+            aggregates?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
         };
         PaperReadResponse: {
             /** @enum {string} */
@@ -254,7 +290,14 @@ export interface operations {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
                 limit?: number;
-                cursor?: string;
+                after?: string;
+                before?: string;
+                status?: "INITIALIZED" | "SUBMITTED" | "ACCEPTED" | "REJECTED" | "DENIED" | "PENDING_UPDATE" | "PENDING_CANCEL" | "PARTIALLY_FILLED" | "FILLED" | "CANCELED" | "EXPIRED" | "TRIGGERED";
+                status_bucket?: "FILLED" | "PARTIAL" | "REJECTED" | "OPEN";
+                venue?: string;
+                symbol?: string;
+                side?: "BUY" | "SELL";
+                sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
             };
             header?: never;
             path?: never;
@@ -262,7 +305,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Current Paper blotter page; exact totals and aggregates remain typed unavailable until N25 */
+            /** @description Current Paper blotter page with bidirectional keyset, exact totals and bounded aggregates */
             200: {
                 headers: {
                     [name: string]: unknown;

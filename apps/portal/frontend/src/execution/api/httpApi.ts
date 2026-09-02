@@ -55,11 +55,11 @@ import type {
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
 import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
-import type { AlphaFleetQuery, BindingListQuery } from "./ports";
+import type { AlphaFleetQuery, BindingListQuery, BlotterQuery } from "./ports";
 import { readApprovalCreated, readConditionsPage } from "./rows";
 import {
   readAlphaFleet, readBindingDetail, readBindings, readLiveReview,
-  readOperatorTasks, readProfileEnvelope, readQueryAnalytics,
+  readOperatorTaskRunResult, readOperatorTasks, readProfileEnvelope, readQueryAnalytics,
 } from "./profileRead";
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
@@ -300,6 +300,29 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     }
     return params.size > 0 ? `?${params.toString()}` : "";
   };
+  const getBlotterProfile = (query: BlotterQuery = {}): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/screens/blotter${listParameters(query)}`, readProfileEnvelope, "The exact Paper blotter page");
+  const runOperatorTask = async (
+    taskId: string,
+    params: Readonly<Record<string, string | number | boolean | null>>,
+  ) => {
+    let response: Response;
+    try {
+      response = await post(`/commands/tasks/${encodeURIComponent(taskId)}/run`, {
+        schema_version: "execution.command-run-request.v1",
+        workspace_id: "primary",
+        request_key: crypto.randomUUID(),
+        params,
+      }, signal);
+    } catch {
+      return unavailable("The local R0 task never reached the Portal — network failure.");
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* reader fails closed below */ }
+    const result = readOperatorTaskRunResult(body);
+    return result ? { ok: true as const, value: result } : unavailable("The local R0 task receipt could not be read.");
+  };
   const getAlphaFleet = (query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> =>
     readGet(`/alphas${listParameters(query)}`, readAlphaFleet, "The Alpha Fleet");
   const getBindings = (query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> =>
@@ -358,9 +381,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getWaivers,
     getCommandCenterSnapshot,
     getScreenProfile,
+    getBlotterProfile,
     getPaperWorkbenchProfile,
     getQueryAnalytics,
     getOperatorTasks,
+    runOperatorTask,
     getLiveReview,
     getAccountBroker360,
     getAlphaFleet,

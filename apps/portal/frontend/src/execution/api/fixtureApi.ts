@@ -261,6 +261,11 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const raw = screenName === "paper" ? PAPER_OVERVIEW_READY : screenName === "sandbox" ? SANDBOX_OVERVIEW_READY : screenName === "live" ? LIVE_OVERVIEW_EMPTY : FULL_BLOTTER_PARTIAL;
       return fixtureRead(raw, readProfileEnvelope, `The ${screenName} overview`);
     },
+    async getBlotterProfile() {
+      const blocked = gate<ProfileEnvelope>("getBlotterProfile");
+      if (blocked) return blocked;
+      return fixtureRead(FULL_BLOTTER_PARTIAL, readProfileEnvelope, "The exact Paper blotter page");
+    },
     async getPaperWorkbenchProfile(_deploymentId: string, variant: "paper" | "vnm" = "paper") {
       const blocked = gate<ProfileEnvelope>("getPaperWorkbenchProfile");
       if (blocked) return blocked;
@@ -275,6 +280,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const blocked = gate<OperatorTaskCatalogue>("getOperatorTasks");
       if (blocked) return blocked;
       return fixtureRead(COMMAND_TASKS, readOperatorTasks, "The operator task catalogue");
+    },
+    async runOperatorTask(taskId: string) {
+      return unavailable(`Fixture Lab does not execute ${taskId}; product R0 reads use the same-origin Control API.`);
     },
     async getLiveReview(approvalId: string) {
       const blocked = gate<LiveReviewPayload>("getLiveReview");

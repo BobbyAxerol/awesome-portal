@@ -111,6 +111,7 @@ TRACKED = (
     "fixtures/execution-sandbox-overview.ready.valid.json",
     "fixtures/execution-live-overview.empty.valid.json",
     "fixtures/execution-canary-live-facts.empty.valid.json",
+    "fixtures/execution-account-broker-360.ready.valid.json",
     "fixtures/execution-query-analytics.empty.valid.json",
     "fixtures/execution-alpha-fleet-list.valid.json",
     "fixtures/execution-alpha-fleet-list.v2.valid.json",

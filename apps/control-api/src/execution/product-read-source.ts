@@ -145,9 +145,10 @@ export class ExecutionProductReadSource {
           })),
           next_cursor: next,
           previous_cursor: previous,
-          projected_total_items: filteredItems.length,
+          projected_total_items: projected.items.length,
+          filtered_total_items: filteredItems.length,
           window_aggregates: screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
-            ? countByDimensions(filteredItems) : null,
+            ? countByDimensions(projected.items) : null,
         },
       },
     };
@@ -156,6 +157,7 @@ export class ExecutionProductReadSource {
 
 interface LocalProductQuery {
   status?: string;
+  statuses?: readonly string[];
   venue?: string;
   symbol?: string;
   side?: "BUY" | "SELL";
@@ -163,7 +165,7 @@ interface LocalProductQuery {
 }
 
 function hasLocalQuery(query: LocalProductQuery): boolean {
-  return query.status !== undefined || query.venue !== undefined || query.symbol !== undefined ||
+  return query.status !== undefined || query.statuses !== undefined || query.venue !== undefined || query.symbol !== undefined ||
     query.side !== undefined || query.sort !== undefined;
 }
 
@@ -174,7 +176,9 @@ function filterAndSort(
   const equals = (value: ProjectionScalar | undefined, expected: string | undefined) =>
     expected === undefined || String(value ?? "").toUpperCase() === expected.toUpperCase();
   const selected = rows.filter((row) =>
-    equals(row.fields.status, query.status) && equals(row.fields.venue, query.venue) &&
+    equals(row.fields.status, query.status) &&
+    (query.statuses === undefined || query.statuses.some((status) => equals(row.fields.status, status))) &&
+    equals(row.fields.venue, query.venue) &&
     equals(row.fields.symbol, query.symbol) && equals(row.fields.side, query.side));
   const sort = query.sort ?? "submitted_at_desc";
   const field = sort === "updated_at_desc" ? "updated_at" : "submitted_at";

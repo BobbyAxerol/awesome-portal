@@ -228,7 +228,7 @@ for required in \
   "${ROOT_DIR}/apps/control-api/package.json" \
   "${ROOT_DIR}/apps/control-api/package-lock.json" \
   "${ROOT_DIR}/apps/control-api/tsconfig.json" \
-  "${ROOT_DIR}/apps/control-api/vitest.config.ts" \
+  "${ROOT_DIR}/apps/control-api/vitest.config.mts" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000000_init-identity.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000001_control-facade.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000002_execution-governance.sql" \
@@ -986,7 +986,7 @@ for tracked_source in \
   apps/control-api/package.json \
   apps/control-api/package-lock.json \
   apps/control-api/tsconfig.json \
-  apps/control-api/vitest.config.ts \
+  apps/control-api/vitest.config.mts \
   apps/control-api/migrations/1723680000000_init-identity.sql \
   apps/control-api/migrations/1723680000001_control-facade.sql \
   apps/control-api/migrations/1723680000002_execution-governance.sql \

@@ -4,8 +4,8 @@
  * Two truths share this screen and neither is allowed to blur the other:
  *
  *   1. The PUBLISHED truth (`execution.command-catalog` rev 2, EX-BE-05b/F0):
- *      sixty-four commands exist, every one is `portal_reachable: false`, and
- *      the relay capability is `DISABLED`. That catalogue is rendered in full
+ *      the Trading System command catalogue remains source-mutation dark.
+ *      That catalogue is rendered in full
  *      below the task catalog, with no plan/apply control anywhere near it —
  *      a disabled button would advertise a capability that does not exist.
  *
@@ -16,9 +16,9 @@
  *      `adminCli.smoke.ts` frames (BR-EX-68), labelled SMOKE at the point of
  *      interaction, so the composition is reviewable before the relay ships.
  *
- * The demo never claims a cell was touched: every transcript, preflight row
- * and timeline entry is a declared fixture, and the masthead quotes the live
- * catalogue's relay state right above the flow that will one day use it.
+ * Product mode additionally consumes the Portal-owned task catalogue. Only
+ * server-classified CONNECTED R0 reads receive a control; the receipt proves
+ * no source command was sent. The lab demo remains separately routed.
  */
 import { useMemo, useState, type ReactNode } from "react";
 
@@ -30,7 +30,7 @@ import {
   type CommandCatalogue,
 } from "../adminCatalog";
 import type { CliAction } from "../adminCli.smoke";
-import type { OperatorTask, OperatorTaskCatalogue } from "../api/profileRead";
+import type { OperatorTask, OperatorTaskCatalogue, OperatorTaskRunResult } from "../api/profileRead";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { planApplicable, planOutcomeText, type CommandPlan } from "../commandPlan";
@@ -212,8 +212,9 @@ export interface CliDemoInjection {
 
 /* ---------------------------------------------------------------------------
  * N27 operator tasks — the published truth (`command-tasks.v1`).
- * 24 tasks in 6 groups today; none is CONNECTED, and nothing renders a
- * run control unless the server says CONNECTED.
+ * The catalogue may contain local R0 CONNECTED tasks. Nothing renders a run
+ * control unless both the server says CONNECTED and the product container
+ * supplies the typed runner.
  * ------------------------------------------------------------------------ */
 
 const TASK_STATE_LABEL: Record<OperatorTask["state"], string> = {
@@ -258,7 +259,34 @@ function ceremonyLine(task: OperatorTask): string {
   return bits.length > 0 ? bits.join(" · ") : "no ceremony stated — treated as full ceremony, not as none";
 }
 
-function TaskDetail({ task, publishedEntry }: { task: OperatorTask; publishedEntry: CatalogEntry | null }) {
+type TaskRunOutcome = { ok: true; value: OperatorTaskRunResult } | { ok: false; reason: string };
+
+function TaskDetail({
+  task,
+  publishedEntry,
+  onRun,
+}: {
+  task: OperatorTask;
+  publishedEntry: CatalogEntry | null;
+  onRun?: (taskId: string, params: Readonly<Record<string, string>>) => Promise<TaskRunOutcome>;
+}) {
+  const [params, setParams] = useState<Record<string, string>>(() =>
+    Object.fromEntries(task.params.map((item) => [item.key, item.defaultValue ?? ""])),
+  );
+  const [running, setRunning] = useState(false);
+  const [receipt, setReceipt] = useState<OperatorTaskRunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+  const missingRequired = task.params.some((item) => item.required && !(params[item.key] ?? "").trim());
+  const run = async () => {
+    if (!onRun || running || missingRequired) return;
+    setRunning(true);
+    setRunError(null);
+    setReceipt(null);
+    const outcome = await onRun(task.taskId, Object.fromEntries(Object.entries(params).filter(([, value]) => value.trim().length > 0)));
+    if (outcome.ok) setReceipt(outcome.value);
+    else setRunError(outcome.reason);
+    setRunning(false);
+  };
   return (
     <div className="exec-cli-drawer" aria-label="Task detail">
       <div className="exec-cli-drawhead">
@@ -277,8 +305,8 @@ function TaskDetail({ task, publishedEntry }: { task: OperatorTask; publishedEnt
           </div>
         ) : (
           <div className="exec-cli-readbanner">
-            <b>CONNECTED</b> — the run flow itself ships with the command relay (BR-EX-68); this
-            revision publishes the task, not a runnable control.
+            <b>CONNECTED · LOCAL R0</b> — this read runs against the SGP projection. It never
+            dispatches a request to the Trading System command path.
           </div>
         )}
         {publishedEntry ? (
@@ -310,7 +338,19 @@ function TaskDetail({ task, publishedEntry }: { task: OperatorTask; publishedEnt
             <div className="exec-cli-paramhead">
               <span>Parameters — declared, validated against registries</span>
             </div>
-            {task.params.map((p) => (
+            {task.params.map((p) => task.state === "CONNECTED" && onRun ? (
+              <label className="exec-cli-paramrow" key={p.key}>
+                <span className="exec-cli-paramk">{p.key}{p.required ? " *" : ""}</span>
+                <input
+                  className="exec-cli-paramv"
+                  value={params[p.key] ?? ""}
+                  placeholder={p.defaultValue ?? "optional"}
+                  required={p.required}
+                  onChange={(event) => setParams((current) => ({ ...current, [p.key]: event.target.value }))}
+                />
+                <span className="exec-cli-paramsrc">{p.sourceRegistry ?? p.constraint ?? "source not stated"}</span>
+              </label>
+            ) : (
               <div className="exec-cli-paramrow" key={p.key}>
                 <span className="exec-cli-paramk">{p.key}{p.required ? " *" : ""}</span>
                 <span className="exec-cli-paramv">{p.defaultValue ?? "—"}</span>
@@ -319,10 +359,28 @@ function TaskDetail({ task, publishedEntry }: { task: OperatorTask; publishedEnt
             ))}
           </div>
         ) : null}
-        <p className="exec-admin-nofooter">
-          No plan or apply is offered: this task&apos;s state is {TASK_STATE_LABEL[task.state]}, and
-          only CONNECTED tasks may ever carry a control. Visibility ≠ authority.
-        </p>
+        {task.state === "CONNECTED" && onRun ? (
+          <div className="exec-cli-equiv">
+            <button type="button" className="exec-btn-primary" disabled={running || missingRequired} onClick={() => void run()}>
+              {running ? "Running local read…" : "Run local R0 read"}
+            </button>
+            {missingRequired ? <p className="exec-admin-nofooter">Complete the required parameters before running.</p> : null}
+            {runError ? <PanelState status="unavailable" reason={runError} /> : null}
+            {receipt ? (
+              <div className="exec-cli-receipt" role="status">
+                <b>Completed · {receipt.transport}</b>
+                <p>Source command sent: no · response is a bounded SGP projection receipt.</p>
+                <pre className="exec-cli-pre">{JSON.stringify(receipt.result, null, 2)}</pre>
+                <details><summary>Receipt integrity</summary><code>{receipt.responseDigest}</code></details>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="exec-admin-nofooter">
+            No run control is offered: this task&apos;s state is {TASK_STATE_LABEL[task.state]}.
+            Visibility ≠ authority.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -348,6 +406,7 @@ export function AdminActionDrawerScreen({
   operationRef = null,
   actionRef = null,
   demoCli = null,
+  onRunTask,
   children,
 }: {
   catalogue: CommandCatalogue | null;
@@ -370,6 +429,8 @@ export function AdminActionDrawerScreen({
   actionRef?: { action: string; binding: string | null } | null;
   /** The reviewed WF 1i machine — the lab passes it; the product never does. */
   demoCli?: CliDemoInjection | null;
+  /** Present only on the product route; the server still classifies authority. */
+  onRunTask?: (taskId: string, params: Readonly<Record<string, string>>) => Promise<TaskRunOutcome>;
   children?: ReactNode;
 }) {
   const [cliSelected, setCliSelected] = useState<string | null>(initialCommand);
@@ -564,6 +625,7 @@ export function AdminActionDrawerScreen({
               <TaskDetail
                 task={selectedTask}
                 publishedEntry={selectedTask.catalogKey ? publishedByKey.get(selectedTask.catalogKey) ?? null : null}
+                onRun={onRunTask}
               />
             ) : (
               <div className="exec-cli-drawer">
