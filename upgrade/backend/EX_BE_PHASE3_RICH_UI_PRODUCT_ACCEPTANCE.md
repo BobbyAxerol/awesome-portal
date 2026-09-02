@@ -75,6 +75,9 @@ screen contract exists; it never fabricates a missing branch or source row.
 - the N29 Rust product-acceptance authority now matches the already accepted
   23 available screen roots and 35 digest-bound evidence entries. The nine
   external capability gaps remain branch-local and non-release-blocking.
+- the N21 shared-read follower performs a final cache read after observing a
+  completed PostgreSQL flight, closing the commit-between-two-reads race that
+  could otherwise return a false cache miss under a source-read stampede.
 
 ## 5. Verification evidence
 
@@ -116,3 +119,35 @@ dev Portal and record Product GO or concrete screen findings. Only after that
 review may this feature be merged through protected `dev` and proposed to
 protected `main`; only the `main` workflow may create signed images, SBOM and
 provenance. Stable remains untouched by this phase.
+
+## 7. Dev runtime materialization
+
+The accepted source commits are `c542cf9` (rich UI/BFF integration) and
+`4472d3e` (bounded realtime handshake). The dev-only Compose stack was rebuilt
+from `/home/bobby/portal-dev` with the current-source, manager-realtime and
+local-projection overlays:
+
+- Portal web image: `sha256:1cbc121d21927dda500039d1dc0176f36c5aff96b46e7dfa921389a556bd1bff`;
+- Control API image: `sha256:d487ebc83e4686e5cffb421b77591980a6d4ede9ba0a05325008f858d609de91`;
+- both dev containers reported `healthy`;
+- `/`, `/execution` and `/api/control/readyz` returned HTTP 200 on loopback;
+- `https://dev-portal.primusspark.com/` and
+  `https://dev-portal.primusspark.com/execution` returned HTTP 200.
+
+An ephemeral Bobby dev session was created for loopback-only verification and
+deleted immediately afterwards (`temporary_sessions_remaining=0`). The
+authenticated response matrix returned HTTP 200 for Fleet, Paper, Sandbox,
+Live, Blotter, Bindings, command tasks and Paper realtime snapshot. The final
+realtime snapshot was 784 bytes, declared
+`portal.execution.profile-realtime.v1`, carried `CURSOR_ONLY`, and contained no
+projection document.
+
+The stable `v1.0.1` containers were not recreated: their web and Control API
+container/image identities remained respectively `938a745`/`8bf2dbd` and
+`aedc7f0`/`ee6bb8d`, with Compose working directory
+`/home/bobby/portal-stable-v1.0.1`.
+
+The source-owned `manager.performance:portfolio_equity_snapshots` relation is
+still truthfully represented as `MANAGER_V2_SOURCE_CONTRACT_REJECTED`; it is a
+panel-local external capability state already recorded by Phase 1, not hidden
+Portal technical debt and not a reason to erase any rich product screen.

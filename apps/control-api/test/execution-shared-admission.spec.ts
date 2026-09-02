@@ -74,32 +74,38 @@ describe("N21 PostgreSQL shared admission, coalescing and freshness", () => {
   it("coalesces a stampede across repository replicas and preserves provenance", async () => {
     const repositoryA = new ExecutionSharedReadRepository(pool, config());
     const repositoryB = new ExecutionSharedReadRepository(pool, config());
-    const leader = await repositoryA.begin(scope);
-    expect(leader.kind).toBe("LEADER");
-    if (leader.kind !== "LEADER") throw new Error("expected leader");
-    const follower = await repositoryB.begin(scope);
-    expect(follower).toMatchObject({ kind: "FOLLOWER", cacheKey: leader.cacheKey });
-    if (follower.kind !== "FOLLOWER") throw new Error("expected follower");
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const attemptScope = {
+        ...scope,
+        requestPath: `${scope.requestPath}&stampede_attempt=${attempt}`,
+      };
+      const leader = await repositoryA.begin(attemptScope);
+      expect(leader.kind).toBe("LEADER");
+      if (leader.kind !== "LEADER") throw new Error("expected leader");
+      const follower = await repositoryB.begin(attemptScope);
+      expect(follower).toMatchObject({ kind: "FOLLOWER", cacheKey: leader.cacheKey });
+      if (follower.kind !== "FOLLOWER") throw new Error("expected follower");
 
-    const waiting = repositoryB.waitForLeader(scope, follower.cacheKey);
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    const completed = await repositoryA.complete(scope, leader, envelope);
-    const coalesced = await waiting;
-    expect(coalesced).toEqual(completed);
-    expect(completed).toMatchObject({
-      etag: expect.stringMatching(/^"sha256-[0-9a-f]{64}"$/),
-      metadata: {
-        authority: "EXECUTION_CELL",
-        freshness: "FRESH",
-        completeness: "COMPLETE",
-        asOf: "2026-08-30T10:00:00.000Z",
-      },
-      body: envelope,
-    });
-    await expect(repositoryB.begin(scope)).resolves.toMatchObject({
-      kind: "CACHE_HIT",
-      cacheKey: leader.cacheKey,
-    });
+      const waiting = repositoryB.waitForLeader(attemptScope, follower.cacheKey);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      const completed = await repositoryA.complete(attemptScope, leader, envelope);
+      const coalesced = await waiting;
+      expect(coalesced).toEqual(completed);
+      expect(completed).toMatchObject({
+        etag: expect.stringMatching(/^"sha256-[0-9a-f]{64}"$/),
+        metadata: {
+          authority: "EXECUTION_CELL",
+          freshness: "FRESH",
+          completeness: "COMPLETE",
+          asOf: "2026-08-30T10:00:00.000Z",
+        },
+        body: envelope,
+      });
+      await expect(repositoryB.begin(attemptScope)).resolves.toMatchObject({
+        kind: "CACHE_HIT",
+        cacheKey: leader.cacheKey,
+      });
+    }
   });
 
   it("never shares cache or flights across workspace, principal, profile or request", () => {

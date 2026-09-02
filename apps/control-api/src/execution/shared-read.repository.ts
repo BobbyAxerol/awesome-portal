@@ -151,7 +151,13 @@ export class ExecutionSharedReadRepository {
          ) AS active`,
         [cacheKey],
       );
-      if (!active.rows[0]?.active) return null;
+      if (!active.rows[0]?.active) {
+        // The leader publishes the cache row and deletes its flight in one
+        // statement. That commit can land between the cache lookup above and
+        // this flight lookup. Re-read once after observing the flight gone so
+        // a follower cannot mistake a completed flight for a failed flight.
+        return this.cache(this.pool, scope, identity, false);
+      }
       await delay(Math.min(25, Math.max(1, deadline - Date.now())));
     }
     return null;
