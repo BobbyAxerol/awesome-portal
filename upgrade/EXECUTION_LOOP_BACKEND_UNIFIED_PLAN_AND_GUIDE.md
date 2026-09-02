@@ -2044,6 +2044,106 @@ BFF contract, field/freshness requirement and behavior for empty, partial,
 stale, denied and unavailable states. N35 begins only after N30–N33 establish
 the real data spine needed by the reviewed UI.
 
+##### Claude frontend-lead review — composition findings and backend asks (2026-09-02, appended in the reserved slot)
+
+Read-only assessment for the owner and Codex. I audited `feat/execution-data-activation`
+head against my recomposition tip (`c5dbbe8`), the approved UI/UX freeze
+(showcase worktree at `cb60d13`, running on :8081 for side-by-side review), and
+Codex's runtime facts above, which I accept as stated.
+
+**1. Frontend-code integrity — nothing was lost.** `git diff c5dbbe8..HEAD --
+apps/portal/frontend` is 13 files, +511/−151, and every hunk is additive or a
+correct strengthening: whole-screen early returns in the overview/fleet/bindings
+screens became in-frame `sourceStatus` panels (chrome preserved, state local —
+the exact recomposition doctrine); Alpha Fleet gained the v2 summary
+(per-currency exposure/PnL, stage counts, working stage filters); Alpha 360's
+container now joins the Fleet v2 identity spine with analytics as an additive
+branch, so an analytics failure can no longer blank the screen. The rich
+screens (PaperWorkbench, both 360s, Blotter, all governance/triage screens),
+the demo/lab layer, the boundary gate, the console guard and the journeys
+suite are untouched. I endorse all of it.
+
+One UI-authority note, accepted as interim rather than flagged as a defect:
+Fleet's columns changed from the approved hi-fi's *30d* aggregates
+(`net pnl · 30d`, `max dd`, `equity 30d` spark) to *current* facts
+(`position pnl · current`, `exposure · current`, `account balance`). Honest
+today; the approved design needs the 30d rollups back once N31's durable
+projection can serve them — listed in the asks below so it does not silently
+become the new normal.
+
+**2. Screen-by-screen: what 100% of the approved UI needs.** Reference for
+"100%" is the frozen showcase (`cb60d13`). Per screen: contract · missing
+fields/branches · motion (tính động) source · state notes. Every field below
+must arrive with `as_of`/`received_at` lineage and render empty/partial/stale/
+denied/unavailable per branch, never per screen.
+
+| Screen | Contract | Missing for 100% approved UI | Motion source | State notes |
+|---|---|---|---|---|
+| Paper Overview | `execution.paper-overview.v1` | per-deployment board row: alpha label/link, portfolio, account, allocation+ccy, observation gate (`met`, days/trades progress, per-day cells), drift verdict + spark series, win/rej/fees, net PnL, next-gate link; KPI strip (in-observation, gate-met, next-gate ETA, paper capital per-ccy, drift alerts); derived-insight series (cumulative return per deployment, order funnel 7d) | SSE deltas on deployment rows + funnel counters; poll fallback 5–15 s | 43 real deployments exist — board can be real now; gate/drift/insight branches each carry their own reason until published |
+| Paper Workbench (+VNM) | `execution.paper-workbench.v1` | scope normalization (deployment-scoped rows only — Codex's own finding); identity: alpha label, account, venue, stage/readiness; lineage chips (R1/R2/artifact digest/account); KPI strip; observation gate items + unmet criteria; equity series + research band (`equity_projection.v1`); drift rows (server verdicts); runtime/accounting/contribution facts; sessions; VNM: venue calendar + venue-local time; `market.candles` for the overlay | SSE order/fill/position deltas (0.1–2 s class); projection-age ticker from `as_of` | screen already renders every absence honestly; exit CTA must keep naming the unpublished gate until it ships |
+| Sandbox Overview | `execution.sandbox-overview.v1` | certification progress per row (7-step segments, status word, in-stage duration, next step), halted/findings KPIs, test-fund equity per-ccy, broker-sync age vs policy | poll 5–15 s; SSE optional | 35 deployments + recon rows already real; empty transactional panels stay panel-local (agreed) |
+| Sandbox Certification | certification contract | decouple from missing Portal-control record (`SANDBOX_CERTIFICATION_NOT_FOUND` today): compose source facts + governance truth so a real deployment always renders; step evidence, findings, recon streak, action plans | poll; step transitions via SSE later | N33 item — screen exists and is states-first, needs the composed read |
+| Live Overview | `execution.live-overview.v1` | **blocked on the Live profile-leakage fix (N30) before any field is trusted**; then: per-row stage chip (FULL/CANARY), session PnL, dd, health verdict, pulse spark, live tape events | SSE tape + row deltas (0.1–2 s class) | a valid empty Live must stay empty — leakage is the one defect that can fake it |
+| Live Full / Canary Control Room | live-full + canary contracts | real room documents for current-source deployments (today only `.unavailable` canonical exists): envelope caps + usage, positions/orders, recon streak, incidents, canary: trial timeline, gates vs policy, drift-vs-twin series, marginal contribution | SSE positions/PnL; countdowns client-side off server anchors | rooms are rich and states-first already; they need their documents |
+| Full Blotter | `execution.full-blotter.v1` | keyset `page` (cursor paging — today null), `exact_total`, per-ccy `aggregates` (M7), server-side filter application + counts, row fields (venue, deployment, times ms, type/side/status/fee), cross-filter contract | SSE append of new orders/fills; age ticks client-side | bounded real orders/fills exist per audit — wire them through the page shape; funnel-on-expand already real |
+| Alpha Fleet | `execution.alpha-fleet-list.v2` | 30d rollups per alpha (net PnL, max dd) + 30d equity spark series; owner; portfolio links; health→next-gate sentence | snapshot ≤5 s (already) + SSE row deltas later | v2 spine endorsed; keep exact decimals per currency, never FX-mix |
+| Alpha 360 | fleet spine + `execution.query-analytics-envelope.v1` | populate the 12 analytics branches from the durable projection (density heatmap, fill quality, slippage, reject taxonomy, latency, session PnL, exposure, turnover, paper-vs-live drift, fees, win profile, capacity); equity-by-stage series joined by artifact digest; per-venue scope queries (so the scope selects re-enable); positions/orders/audit pages; trade-replay candles (N28 `market.candles`) | SSE for positions/orders; analytics refresh per projection cycle | tiles already render one typed state per branch — each branch lights up independently as it ships |
+| Portfolio 360 | analytics + correlation + capital-ledger (both live) | holdings structure rows (alpha→deployment→account, alloc/exposure/%/stage/health + FX note), KPI strip, ρ-timeline + drawdown-overlap series (BR-EX-65 slots are drawn and waiting), leaders, insight sentence, approvals-touching-portfolio, incidents, audit journal | poll 5–15 s; SSE later | correlation matrix + ledger already bind — visible proof the pattern works |
+| Accounts & Bindings | `execution.bindings-list.v1` | per-binding physical equity, Σ virtual + headroom (invariant line), accounts count, sync age vs per-venue policy, health verdict, credential expiring detail (state word only); virtual-account child rows | ws/rest sync ages via SSE or 5 s poll | list is real today; the capital invariant is the screen's heart — needs N28 exposure population |
+| Binding Detail | `execution.binding-detail.v1` | capital-invariant bar segments (per-deployment virtual allocations), credential/session facts (alias, expiry, rate use), sync policy + history window, findings | poll 5 s | frame + facts render now; the bar is the missing centerpiece |
+| Account/Broker 360 | `execution.account-broker-360.v1` (typed-unavailable) | the whole composed read: internal vs broker columns + difference rows w/ envelope+digest, linked accounts, aggregate headroom verdict + exposure population, sync history (server-counted total), findings, dry-run/sync receipts | SSE sync ticks; poll fallback | today the reviewed frame renders all-absent (correct); this is N33's largest single item |
+| Command Center | `execution.command-center-snapshot.v1` | **activate the snapshot route** (`COMMAND_CENTER_SNAPSHOT_DISABLED`); needs-you ranked rows with server hrefs + SLA anchors, fleet matrix counts, pinned rows, today panel; then the realtime stream contract (snapshot→SSE, `auth.expired`/`projection.gap` terminal semantics — frontend already implements close+resnapshot) | SSE from SGP-local journal (the N26 machinery Codex just built) — this screen is the motion flagship | frontend passes no SSE factory today by design; I will wire it in N35 the moment the stream contract is served |
+| Operations Queue / Incident | queue + incident contracts | real operation/incident populations (routes are 200-empty today) with workflow versions, `filtered_count` probes, incident refs on rows (BR-EX-33) so the disabled "Open incident" link can become real | SSE queue deltas; elapsed clocks client-side off server `read_at` | triage acknowledge/resolve paths already consume the contract |
+| Approval Inbox / R1 / R2 / LIVE / Exit / Waivers | governance contracts | real create→decide→condition lifecycle evidence (routes 200-empty); R1 evidence series + policy chip (BR-EX-67), R2 portfolio-fit/criteria/stage-eligibility branches, LIVE's four derived canary branches + capital step (BR-EX-70), waiver state transitions feeding CC | inbox Mine/SLA tick off server anchors; SSE on decision/condition events later | every one of these panels already renders its typed gap with the right BR-EX id on screen |
+| Admin Action Drawer | `execution.command-tasks.v1` + catalogue | flip the exact supported subset to `CONNECTED` through approval/step-up/idempotency/verify (N34); relay receipts; plan/apply/verify walk per WF 1i | operation poll walk (202→verify) | UI already refuses to enable anything not CONNECTED — no change needed to stay safe |
+
+**3. Routes and links — verdict: chuẩn.** All 23 catalogue `uiRoute`s match the
+frontend router 1:1; registry revision 6 owns every reviewed route
+(`EXTRA_ROUTES` correctly empty); feature roots map to the right list screens
+(fleet, bindings) after Codex's requalify. Cross-screen links verified in code:
+fleet row→Alpha 360→workbench/account; bindings→binding detail→Account 360;
+workbench→exit review (`?from=` context return)→inbox; canary→gate LIVE;
+queue/incident→drawer (`?operation=` answered honestly); every internal href
+passes `canonicalHref`. Two small route asks: (a) add the two list roots
+(`/deployments/alphas`, `/deployments/accounts`) as first-class rows in the
+screen-bff catalogue so screen-contracts discovery is symmetric with the
+registry; (b) `/governance/exit-reviews` root still defaults to one review —
+an exit-review LIST contract remains the only unrouted approved surface.
+
+**4. Recommendations, in Codex's own phase order (I endorse data-first):**
+
+1. **N30 first, nothing before it**: the Live leakage row (Paper account
+   identity inside Live balances) is the only finding that can make the UI
+   *lie*; every other gap renders as an honest absence. Ship the
+   lineage/cache-key proof before widening any population.
+2. **N31 defines the motion contract once** — my ask: one SSE envelope shape
+   for all screens (`snapshot_cursor`, `delta`, `heartbeat`, terminal
+   `auth.expired`/`projection.gap`), served SGP-local. The frontend's
+   subscription machinery (gap→close→resnapshot, stale ceilings) already
+   exists and is tested; give me one contract, not per-screen dialects.
+   Publish per-class freshness budgets in each envelope so screens can print
+   honest age against policy instead of a constant.
+3. **N32/N33 sequencing by UI value**: (1) Command Center snapshot activation
+   — it is the daily entry screen and its motion is the product's heartbeat;
+   (2) Account/Broker 360 composed read — largest all-absent surface;
+   (3) workbench scope normalization + observation gate; (4) blotter page/
+   aggregates; (5) certification decoupling; (6) analytics branch population;
+   (7) Fleet 30d rollups (restore the approved columns). Governance lifecycle
+   evidence can run in parallel — it is write-path, not read-spine.
+4. **Keep every gap panel-local and versioned** (rule 7 above) — the frontend
+   is already structured so each branch lights up independently; deliver
+   branches in any order and the reviewed UI absorbs them without another
+   recomposition.
+5. **N35 protocol**: when a branch ships, hand me contract + canonical
+   fixture + one deployed sample read; I bind the panel, extend the BFF
+   double, and re-record only the touched baselines. No fixture ever
+   substitutes on a product route; the showcase (:8081, frozen `cb60d13`)
+   stays the visual acceptance reference for what "100%" means per panel.
+
+*Assessment only — no code changed in this pass. Appended by Claude
+(frontend lead) at the owner's request; runtime facts above are Codex's and
+were not edited.*
+
 ---
 
 ## 5. Definition of Ready and Definition of Done
