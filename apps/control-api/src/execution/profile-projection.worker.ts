@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Inject, Injectable, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
+import { Inject, Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -20,6 +20,7 @@ const SOURCE_PAGE_LIMIT = 200;
 
 @Injectable()
 export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap, OnApplicationShutdown {
+  private readonly logger = new Logger(ExecutionProfileProjectionWorker.name);
   private readonly ownerId = `control-api-${randomUUID()}`;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private stopped = false;
@@ -33,7 +34,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
 
   onApplicationBootstrap(): void {
     if (!this.enabled()) return;
-    this.running = this.runOnce().catch(() => undefined).finally(() => {
+    this.running = this.runOnce().catch((error: unknown) => this.logCycleFailure(error)).finally(() => {
       this.running = null;
       this.schedule();
     });
@@ -47,8 +48,23 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
 
   async runOnce(): Promise<void> {
     if (!this.enabled()) return;
+    const failures: string[] = [];
     for (const profile of enabledProfiles(this.config)) {
-      await this.refreshProfile(profile.environment, profile.profileId);
+      try {
+        await this.refreshProfile(profile.environment, profile.profileId);
+      } catch (error) {
+        const code = safeFailureCode(error);
+        failures.push(`${profile.environment}:${code}`);
+        this.logger.warn(JSON.stringify({
+          event: "execution_profile_projection_refresh_failed",
+          environment: profile.environment,
+          profile_id: profile.profileId,
+          error_code: code,
+        }));
+      }
+    }
+    if (failures.length > 0) {
+      throw new Error(`N31_PROFILE_PROJECTION_CYCLE_FAILED:${failures.join(",")}`);
     }
   }
 
@@ -159,12 +175,19 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
   private schedule(): void {
     if (this.stopped || !this.enabled()) return;
     this.timer = setTimeout(() => {
-      this.running = this.runOnce().catch(() => undefined).finally(() => {
+      this.running = this.runOnce().catch((error: unknown) => this.logCycleFailure(error)).finally(() => {
         this.running = null;
         this.schedule();
       });
     }, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS);
     this.timer.unref();
+  }
+
+  private logCycleFailure(error: unknown): void {
+    this.logger.warn(JSON.stringify({
+      event: "execution_profile_projection_cycle_failed",
+      error_code: safeFailureCode(error),
+    }));
   }
 }
 
@@ -191,4 +214,13 @@ function worseFreshness(left: ManagerPage["freshness"], right: ManagerPage["fres
 function worseCompleteness(left: ManagerPage["completeness"], right: ManagerPage["completeness"]): ManagerPage["completeness"] {
   const rank = { COMPLETE: 0, PARTIAL: 1, UNKNOWN: 2 };
   return rank[right] > rank[left] ? right : left;
+}
+
+function safeFailureCode(error: unknown): string {
+  const candidate = typeof error === "object" && error !== null && "code" in error
+    ? String((error as { code?: unknown }).code ?? "")
+    : error instanceof Error ? error.message.split(":", 1)[0] : "";
+  return /^[0-9A-Z]{5}$/.test(candidate)
+    ? `POSTGRES_${candidate}`
+    : /^[A-Z][A-Z0-9_]{1,95}$/.test(candidate) ? candidate : "N31_SOURCE_REFRESH_FAILED";
 }

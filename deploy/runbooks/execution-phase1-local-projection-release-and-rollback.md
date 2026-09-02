@@ -16,9 +16,12 @@ mutation remain disabled.
    journal tables exist; retain the pre-migration backup evidence.
 3. Include `compose.execution-current-source.yaml`, then
    `compose.execution-local-projection.yaml`. Pin the exact authenticated
-   shared, server-owned Execution workspace in
-   `EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID`; do not use a viewer's personal
-   workspace. Session/RBAC remains the viewer authorization boundary.
+   shared Execution workspace that already exists in the Portal `workspaces`
+   table in `EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID`. The workspace is the
+   source/projection scope for all viewers; each response separately preserves
+   the viewer workspace. Never use an invented identifier because the N21
+   shared-admission cache intentionally enforces its workspace foreign key.
+   Session/RBAC remains the viewer authorization boundary.
 4. Enable the already-qualified Paper/Sandbox/Live source flags. Keep command
    relay false. Set `CONTROL_API_FEATURE_EXECUTION_LOCAL_PROJECTION=true`.
 5. Start one Control API replica, wait for one committed snapshot per enabled
@@ -27,6 +30,10 @@ mutation remain disabled.
 6. Verify local snapshot/BFF/SSE routes, row lineage, source ages and truthful
    empty profile populations. Repeated browser refresh must not increment
    cross-cell source counters.
+7. Treat `execution_profile_projection_refresh_failed` or
+   `execution_profile_projection_cycle_failed` as a failed activation. Both
+   records contain only profile metadata and a bounded typed error code; the
+   worker never logs source payloads or credentials.
 
 ## Abort conditions
 

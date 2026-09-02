@@ -196,7 +196,9 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(before).not.toBeNull();
 
     failed = true;
-    await expect(worker.runOnce()).rejects.toThrow("simulated WAN loss");
+    await expect(worker.runOnce()).rejects.toThrow(
+      "N31_PROFILE_PROJECTION_CYCLE_FAILED:paper:N31_SOURCE_REFRESH_FAILED",
+    );
     const after = await repository.snapshot(workspaceId, "paper", profileId);
     expect(after?.projectionEpoch).toBe(before?.projectionEpoch);
     expect(after?.projectionSequence).toBe(before?.projectionSequence);
