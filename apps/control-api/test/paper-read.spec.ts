@@ -226,6 +226,47 @@ describe("N22 full Paper read product BFF", () => {
     }));
   });
 
+  it("maps versioned source order-status words and preserves provenance (P4-F)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    source.rows.set("orders", [
+      { order_id: "ord_ok", status: "FILLED", strategy_id: "str_1", account_id: "acc_1", mode: "paper" },
+      { order_id: "ord_risk", status: "RISK_REJECTED", strategy_id: "str_1", account_id: "acc_1", mode: "paper" },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    const risk = result.data.orders.find((item: any) => item.order_id === "ord_risk");
+    // The mapped word is canonical for every consumer; the source word stays.
+    expect(risk).toMatchObject({ status: "REJECTED", source_status: "RISK_REJECTED" });
+    expect(result.data.orders.find((item: any) => item.order_id === "ord_ok")).toMatchObject({ status: "FILLED" });
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "source.orders", state: "AVAILABLE",
+    }));
+  });
+
+  it("quarantines a genuinely unknown order-status row without failing the branch (P4-F)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    source.rows.set("orders", [
+      { order_id: "ord_ok", status: "FILLED", strategy_id: "str_1", account_id: "acc_1", mode: "paper" },
+      { order_id: "ord_alien", status: "TOTALLY_NEW_WORD", strategy_id: "str_1", account_id: "acc_1", mode: "paper" },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    // The surviving row renders; the quarantined row is a stated, counted gap.
+    expect(result.data.orders.map((item: any) => item.order_id)).toEqual(["ord_ok"]);
+    expect(JSON.stringify(result)).not.toContain("TOTALLY_NEW_WORD");
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "source.orders",
+      state: "PARTIAL",
+      reason_code: "N22_ORDER_STATUS_QUARANTINED",
+      quarantined_rows: 1,
+      status_map_version: "order-status-map.v1",
+    }));
+  });
+
   it("rejects cross-profile records at the product boundary without leaking them", async () => {
     const source = new FakeCurrentSource();
     source.rows.set("positions_v2", [{ position_id: "live-secret", mode: "live", venue: "BINANCE" }]);

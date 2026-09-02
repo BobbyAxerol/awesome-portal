@@ -37,6 +37,7 @@ interface RelationResult {
   page: ManagerPage | null;
   state: CapabilityState;
   reasonCode: string | null;
+  quarantinedRows?: number;
 }
 
 interface PaperPrincipal {
@@ -121,6 +122,21 @@ const ORDER_STATUSES = new Set([
   "INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE",
   "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED",
 ]);
+
+/**
+ * P4-F (finding F11) — versioned source→canonical order-status vocabulary.
+ *
+ * The Trading System publishes status words the canonical union does not
+ * spell (measured on 2026-09-02: `RISK_REJECTED` alongside FILLED/CANCELED).
+ * A mapped word is translated with its source word preserved in
+ * `source_status`; a genuinely unknown word quarantines THAT ROW with a
+ * counter — it never fail-closes the whole branch, and it never silently
+ * relabels without provenance.
+ */
+const ORDER_STATUS_SOURCE_MAP_VERSION = "order-status-map.v1";
+const ORDER_STATUS_SOURCE_MAP: Readonly<Record<string, string>> = {
+  RISK_REJECTED: "REJECTED",
+};
 
 const OVERVIEW_SPECS: readonly RelationSpec[] = [
   spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),
@@ -334,18 +350,24 @@ export class PaperReadService {
         },
       );
       const page = managerPage(response, item.relation, item.fields);
-      this.assertPaperRows(page.items);
-      return page;
+      const normalized = this.normalizePaperRows(page.items);
+      return { page: { ...page, items: normalized.items }, quarantinedOrderRows: normalized.quarantinedOrderRows };
     }));
     return enforceProfileLineage(results.map((result, index) => {
       const item = specs[index];
       if (result.status === "fulfilled") {
+        const { page, quarantinedOrderRows } = result.value;
+        // A quarantined row is a stated gap: the branch stays PARTIAL with its
+        // own reason and count, and every surviving row still renders.
+        const partial = page.completeness === "PARTIAL" || quarantinedOrderRows > 0;
         return {
           spec: item,
-          page: result.value,
-          state: result.value.items.length === 0 ? "EMPTY" :
-            result.value.completeness === "PARTIAL" ? "PARTIAL" : "AVAILABLE",
-          reasonCode: result.value.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
+          page,
+          state: page.items.length === 0 ? (quarantinedOrderRows > 0 ? "PARTIAL" : "EMPTY") :
+            partial ? "PARTIAL" : "AVAILABLE",
+          reasonCode: quarantinedOrderRows > 0 ? "N22_ORDER_STATUS_QUARANTINED" :
+            page.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
+          quarantinedRows: quarantinedOrderRows,
         };
       }
       return {
@@ -366,12 +388,10 @@ export class PaperReadService {
     extra: Record<string, unknown> = {},
   ) {
     const capabilities = [
-      ...relations.map((item) => capability(
-        `source.${item.spec.key}`,
-        item.state,
-        [item.spec.relation],
-        item.reasonCode,
-      )),
+      ...relations.map((item) => ({
+        ...capability(`source.${item.spec.key}`, item.state, [item.spec.relation], item.reasonCode),
+        ...(item.quarantinedRows ? { quarantined_rows: item.quarantinedRows, status_map_version: ORDER_STATUS_SOURCE_MAP_VERSION } : {}),
+      })),
       ...extraCapabilities,
     ];
     const state = productState(relations, extraCapabilities);
@@ -411,8 +431,14 @@ export class PaperReadService {
     )];
   }
 
-  private assertPaperRows(rows: readonly Record<string, unknown>[]): void {
+  private normalizePaperRows(
+    rows: ManagerPage["items"],
+  ): { items: ManagerPage["items"]; quarantinedOrderRows: number } {
+    const items: ManagerPage["items"] = [];
+    let quarantinedOrderRows = 0;
     for (const row of rows) {
+      // Profile isolation stays fail-closed and branch-wide: a cross-profile
+      // row is a security fact, not a vocabulary drift.
       if ("mode" in row && typeof row.mode === "string" && row.mode.toLowerCase() !== "paper") {
         throw new CurrentSourceProxyError("N22_CROSS_PROFILE_ROW_REJECTED", 502, {
           availability: "UNAVAILABLE", reason_code: "PROFILE_ISOLATION_VIOLATION", retryable: false,
@@ -420,11 +446,17 @@ export class PaperReadService {
       }
       if ("status" in row && typeof row.status === "string" &&
           ("order_id" in row || "client_order_id" in row) && !ORDER_STATUSES.has(row.status)) {
-        throw new CurrentSourceProxyError("N22_ORDER_STATUS_NOT_ACCEPTED", 502, {
-          availability: "UNAVAILABLE", reason_code: "SOURCE_CONTRACT_REJECTED", retryable: false,
-        });
+        const mapped = ORDER_STATUS_SOURCE_MAP[row.status];
+        if (mapped) {
+          items.push({ ...row, status: mapped, source_status: row.status });
+          continue;
+        }
+        quarantinedOrderRows += 1;
+        continue;
       }
+      items.push(row);
     }
+    return { items, quarantinedOrderRows };
   }
 
   private encodeCursor(
