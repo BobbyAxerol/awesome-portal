@@ -10,7 +10,7 @@ import { createFixtureApi } from "./api/fixtureApi";
 import { createHttpApi } from "./api/httpApi";
 import { readAlphaFleet, readBindingDetail, readBindings, readLiveReview } from "./api/profileRead";
 import { AccountsBindingsContainer, AlphaFleetContainer } from "./screens/profileContainers";
-import { AlphaFleetRichContainer, AlphaThreeSixtyRichContainer } from "./screens/recomposeContainers";
+import { AlphaFleetRichContainer, AlphaThreeSixtyRichContainer, PortfolioThreeSixtyRichContainer } from "./screens/recomposeContainers";
 import { AlphaFleet } from "./screens/AlphaFleet";
 
 const POLICY = {
@@ -119,5 +119,74 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Insight Charts" }));
     await waitFor(() => expect(container.querySelectorAll(".exec-alpha-tiles > *")).toHaveLength(12));
     expect(screen.getAllByText(/ANALYTICS_DISABLED/)).toHaveLength(12);
+  });
+
+  it("maps one local projection response into every source-backed Alpha 360 tab", async () => {
+    const fixture = createFixtureApi();
+    const api = {
+      ...fixture,
+      getQueryAnalytics: async () => ({
+        ok: true as const,
+        value: {
+          subjectKind: "ALPHA", subjectId: "alpha_a", asOf: "2026-09-02T06:00:00Z",
+          readAt: "2026-09-02T06:00:01Z", completeness: "COMPLETE", authority: "EXECUTION",
+          formulaVersion: "manager-query-analytics.v1",
+          capabilities: [
+            { capabilityId: "exact-query", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "position-exposure", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "stage-equity", state: "AVAILABLE", reasonCode: null, retryable: false },
+          ],
+          orderFunnel: { totalOrders: 1, statusCounts: { FILLED: 1 } },
+          executionQuality: { submitted_count: 1, filled_count: 1 },
+          chartSeries: [{ currency: "USDT", formula_version: "equity_projection.v1", points: [{ timestamp: "2026-09-02T06:00:00Z", value: "10123.45" }] }],
+          positions: [], correlation: null,
+          sourceFacts: {
+            deployments: [{ deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", venue: "BINANCE", currency: "USDT" }],
+            positions: [{ position_id: "pos_a", strategy_id: "alpha_a", account_id: "acc_a", venue: "BINANCE", symbol: "BTCUSDT", side: "LONG", quantity: "0.1", avg_px_open: "60000", mark_price: "61000", unrealized_pnl: "100", notional: "6100" }],
+            orders: [{ order_id: "ord_a", strategy_id: "alpha_a", account_id: "acc_a", venue: "BINANCE", symbol: "BTCUSDT", status: "FILLED", quantity: "0.1", price: "60000", submitted_at: "2026-09-02T05:00:00Z" }],
+            sessions: [{ execution_session_id: "ses_a", strategy_id: "alpha_a", account_id: "acc_a", state: "COMPLETED", accounting_recovered_count: 1, reconciliation_deferred_count: 0, reconciliation_actionable_count: 0, updated_at: "2026-09-02T05:01:00Z" }],
+            allocations: [{ account_id: "acc_a", currency: "USDT", allocated_capital: "20000" }],
+            accountEquity: [{ account_id: "acc_a", currency: "USDT", total_notional: "6100", realized_pnl: "12.5", fee_total: "0.5", equity: "20112", ts: "2026-09-02T05:02:00Z" }],
+            performance: [{ account_id: "acc_a", venue: "BINANCE", currency: "USDT", net_pnl: "112", ts: "2026-09-02T05:02:00Z" }],
+            reconciliation: [{ finding_id: "rec_a", venue: "BINANCE", finding_type: "POSITION", status: "RESOLVED", resolved_at: "2026-09-02T05:03:00Z" }],
+            journal: [{ command_id: "cmd_a", command_kind: "INSPECT", aggregate_key: "alpha_a", outcome_class: "SUCCESS", updated_at: "2026-09-02T05:04:00Z" }],
+          },
+          replay: { state: "AVAILABLE", reasonCode: null, candlesState: "UNAVAILABLE", candlesReasonCode: "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED", tradeLog: [{ timestamp: "2026-09-02T05:00:00Z", journal_id: "ord_a", event_type: "ORDER", order_id: "ord_a", fill_id: null, quantity: "0.1", price: "60000" }] },
+        },
+      }),
+    };
+    const { container } = render(<MemoryRouter><AlphaThreeSixtyRichContainer api={api} alphaId="alpha_a" /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: /Carry A/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Insight Charts" }));
+    expect(await screen.findByText(/3 · stage-equity/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Trade Replay" }));
+    expect((await screen.findAllByText("ord_a")).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("tab", { name: "Positions" }));
+    expect((await screen.findAllByText("BTCUSDT")).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("tab", { name: "Orders & Fills" }));
+    expect(await screen.findByText("FILLED")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Risk" }));
+    expect(await screen.findByText("BTCUSDT current notional")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Sessions" }));
+    expect(await screen.findByText("1 accounting recoveries")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Accounting" }));
+    expect(await screen.findByText("20000")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Reconciliation" }));
+    expect(await screen.findByText("POSITION")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Audit" }));
+    expect(await screen.findByText("INSPECT")).toBeTruthy();
+    expect(container.querySelector('[data-hifi-exact="alpha-360"]')).toBeTruthy();
+  });
+
+  it("keeps Portfolio 360 identity and holdings when derived analytics is disabled", async () => {
+    const fixture = createFixtureApi();
+    const api = { ...fixture, getQueryAnalytics: async () => ({ ok: false as const, status: "unavailable" as const, reason: "ANALYTICS_DISABLED" }) };
+    render(<MemoryRouter><PortfolioThreeSixtyRichContainer api={api} portfolioId="pf_main" /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: /pf_main/i })).toBeTruthy();
+    expect(screen.getByText("Main")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Structure & Correlation" }));
+    expect(await screen.findByRole("button", { name: "alpha_a" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "acc_a" })).toBeTruthy();
+    expect(screen.queryByText(/^ANALYTICS_DISABLED$/)).toBeNull();
   });
 });

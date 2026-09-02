@@ -2,8 +2,8 @@
 
 Date: 2026-09-02  
 Branch: `feat/execution-data-activation`  
-Implementation decision: `RICH_UI_BFF_INTEGRATION_ACCEPTED /
-DEV_RELEASE_CANDIDATE / OWNER_UI_REVIEW_READY`  
+Implementation decision: `OWNER_REVIEW_FINDING_CORRECTED_IN_SOURCE /
+FULL_GATE_ACCEPTED / DEV_RUNTIME_REVALIDATION_PENDING`  
 Product decision: `PRODUCT_GO_PENDING_BOBBY_UI_REVIEW /
 PROTECTED_MAIN_PROMOTION_NOT_AUTHORIZED`
 
@@ -37,8 +37,8 @@ fixture producer directly. Source mutation and Live mutation remain false.
 | Sandbox Overview and Certification | `GET /profiles/sandbox` and certification BFF; real sparse source truth stays inside the approved layout. |
 | Live Overview, Canary and Live Full | `GET /profiles/live` plus governance contracts; valid empty populations render as empty panels rather than generic unavailable screens. |
 | Full Blotter | `GET /screens/blotter`; server status buckets, exact total, filtered total, aggregates and bidirectional opaque cursors drive the rich table. |
-| Alpha Fleet and Alpha 360 | Fleet v2 is the current-source spine; analytics remains additive and cannot erase identity/deployment panels when unavailable. |
-| Portfolio 360 | Portfolio query/analytics BFF populates supported panels; missing series remain panel-local typed states. |
+| Alpha Fleet and Alpha 360 | Fleet v2 is the current-source spine. One atomic local-projection query now carries bounded deployments, accounts, balances, allocations, positions, orders/fills, sessions, accounting, reconciliation and journal facts into the ten reviewed tabs. Optional analytics cannot erase identity/deployments. |
+| Portfolio 360 | Fleet v2 supplies multi-profile identity and holdings; local query/analytics supplies exact current-source KPI/equity branches. Missing correlation, ledger history or incident capabilities remain panel-local typed states and never erase the rich screen. |
 | Accounts & Bindings and Account/Broker 360 | List/detail BFF plus canonical Account 360 profile; exact balance, margin, exposure-headroom, sync and reconciliation facts are preserved as strings. |
 | Admin Action Drawer | Server task catalogue is authoritative. Only four `CONNECTED` local R0 reads render a run control and every receipt proves `source_request_sent=false`. |
 
@@ -84,7 +84,7 @@ screen contract exists; it never fabricates a missing branch or source row.
 | Gate | Result |
 |---|---|
 | Frontend production build | PASS |
-| Frontend Vitest | 95 files, 1,803 passed, one deliberate inverse skip, zero failures and zero React/DOM warnings |
+| Frontend Vitest | Full suite PASS; 1,805 tests including a ten-tab source-backed Alpha 360 regression and Portfolio identity/holdings degradation regression; zero failures |
 | Entry bundle budget | PASS; eager entry graph below 140 KiB gzip and ECharts absent from first-paint graph |
 | Frontend production dependency audit | 0 vulnerabilities |
 | Control API | 31 suites, 281 tests, fresh PostgreSQL migration and dump/restore parity PASS |
@@ -113,16 +113,21 @@ Independent rollback switches remain:
    projection journal, governance, operation and audit evidence;
 5. keep `FEATURE_EXECUTION_COMMAND_RELAY=false` and Live mutation false.
 
-No Phase 3 in-scope Portal technical debt remains. The one remaining action is
-an owner product decision, not engineering debt: Bobby must inspect the rebuilt
-dev Portal and record Product GO or concrete screen findings. Only after that
-review may this feature be merged through protected `dev` and proposed to
-protected `main`; only the `main` workflow may create signed images, SBOM and
-provenance. Stable remains untouched by this phase.
+The first owner review rejected the candidate because the BFF had real facts
+but `AlphaThreeSixtyRichContainer` passed `null`/empty values to most child
+tabs, and Portfolio made optional analytics look like whole-screen authority.
+That was a Portal integration defect, not an external Trading System gap. It
+is now corrected in source and protected by contract, Control API and frontend
+regressions. Product GO remains pending until Bobby inspects the rebuilt dev
+runtime. Only after that review may this feature be merged through protected
+`dev` and proposed to protected `main`; only the `main` workflow may create
+signed images, SBOM and provenance. Stable remains untouched by this phase.
 
 ## 7. Dev runtime materialization
 
-The accepted source commits are `c542cf9` (rich UI/BFF integration),
+The following materialization is historical evidence for the rejected owner
+candidate and is superseded by the corrective rebuild recorded in §8. The
+accepted source commits were `c542cf9` (rich UI/BFF integration),
 `4472d3e` (bounded realtime handshake) and `fe40f0b` (shared-flight race
 closeout). The dev-only Compose stack was rebuilt from
 `/home/bobby/portal-dev` with the current-source, manager-realtime and
@@ -152,3 +157,28 @@ The source-owned `manager.performance:portfolio_equity_snapshots` relation is
 still truthfully represented as `MANAGER_V2_SOURCE_CONTRACT_REJECTED`; it is a
 panel-local external capability state already recorded by Phase 1, not hidden
 Portal technical debt and not a reason to erase any rich product screen.
+
+## 8. Owner finding corrective slice
+
+The corrective slice keeps Claude's reviewed components and CSS unchanged and
+repairs only the data/composition seam:
+
+- `execution.query-analytics-envelope.v1` gains backward-compatible bounded
+  `source_facts` selected from the same PostgreSQL snapshot as its aggregates;
+- the response remains one repository query, has a 1,000-row cap per relation,
+  and cannot trigger a browser or BFF read to AWS-HK;
+- Alpha 360 receives real current positions, orders/fills, replay journal,
+  sessions, accounting, reconciliation, risk and venue contribution; a
+  genuinely empty retained window renders `EMPTY`, not `UNAVAILABLE`;
+- the stage-equity series feeds the existing colored chart component; market
+  candles stay honestly unavailable while the exact order/fill replay remains
+  usable;
+- Portfolio identity and holdings come from all-profile Fleet v2 and survive
+  analytics loss. Capital ledger now shows its typed BFF state rather than a
+  permanent false `Loading` state.
+
+Evidence before runtime replacement: 115/115 contracts, 281/281 Control API
+tests with fresh PostgreSQL plus dump/restore, full frontend suite/build, and
+8/8 focused BFF regressions pass. Runtime image identities and authenticated
+owner review are recorded only after the dev-only rebuild; this section does
+not retroactively call the rejected build Product GO.

@@ -188,6 +188,8 @@ export interface AlphaThreeSixtyProps {
   risk?: readonly RiskRow[];
   status?: PanelStatus;
   reason?: string;  /** Reviewed demo series — the lab passes them; the product never does. */
+  /** Source-backed replay. Candles may be unavailable while the exact event log remains usable. */
+  replay?: ReactNode;
   demoStageSeries?: AlphaStageSeries | null;
   demoTiles?: AlphaDemoTiles | null;
   demoClock?: string | null;
@@ -564,7 +566,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         ) : null}
 
         {tab === "Insight Charts" ? <Tiles tiles={tiles} demoTiles={props.demoTiles ?? null} /> : null}
-        {tab === "Trade Replay" ? (props.demoReplay ?? <PanelState status="unavailable" reason="Trade replay draws market candles, which are not published (N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED)." />) : null}
+        {tab === "Trade Replay" ? (props.replay ?? props.demoReplay ?? <PanelState status="unavailable" reason="Trade replay draws market candles, which are not published (N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED)." />) : null}
         {tab === "Positions" ? <Positions {...props} /> : null}
         {tab === "Orders & Fills" ? <Orders {...props} /> : null}
         {tab === "Risk" ? <Risk rows={props.risk ?? []} /> : null}
@@ -750,7 +752,9 @@ function Positions({ positions, onLoadOlder }: AlphaThreeSixtyProps) {
     { key: "upnl", header: "uPnL", width: "9rem", render: (r) => <Num value={r.unrealised} absent="not published" /> },
     { key: "ccy", header: "ccy", width: "6rem", render: (r) => r.currency },
   ];
-  return positions ? (
+  return positions && positions.rows.length === 0 ? (
+    <PanelState status="empty" reason="No position row is present for this alpha in the retained projection window." />
+  ) : positions ? (
     <KeysetTable
       label="Positions across every deployment in scope"
       columns={columns}
@@ -773,7 +777,9 @@ function Orders({ orders, onLoadOlder }: AlphaThreeSixtyProps) {
     { key: "price", header: "price", width: "9rem", render: (r) => <Num value={r.price} absent="no limit price" /> },
     { key: "status", header: "status", width: "10rem", render: (r) => r.status },
   ];
-  return orders ? (
+  return orders && orders.rows.length === 0 ? (
+    <PanelState status="empty" reason="No order row is present for this alpha in the retained projection window." />
+  ) : orders ? (
     <KeysetTable
       label="Orders and fills in scope"
       columns={columns}
@@ -795,7 +801,9 @@ function Audit({ audit, onLoadOlder }: AlphaThreeSixtyProps) {
     { key: "target", header: "target", width: "12rem", render: (r) => r.target },
     { key: "outcome", header: "outcome", width: "10rem", render: (r) => r.outcome },
   ];
-  return audit ? (
+  return audit && audit.rows.length === 0 ? (
+    <PanelState status="empty" reason="No command-journal row is present for this alpha in the retained projection window." />
+  ) : audit ? (
     <KeysetTable
       label="Command journal for this alpha"
       columns={columns}
@@ -810,6 +818,7 @@ function Audit({ audit, onLoadOlder }: AlphaThreeSixtyProps) {
 }
 
 function Risk({ rows }: { rows: readonly RiskRow[] }) {
+  if (rows.length === 0) return <PanelState status="empty" reason="No current position-risk fact is present for this alpha." />;
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Risk utilization</div>
@@ -835,6 +844,7 @@ function Risk({ rows }: { rows: readonly RiskRow[] }) {
 }
 
 function Sessions({ rows }: { rows: readonly SessionRow[] }) {
+  if (rows.length === 0) return <PanelState status="empty" reason="No execution session is present for this alpha in the retained projection window." />;
   // An incomplete recovery always survives the cap. It is the only row in a
   // session log that changes what anyone does next.
   const shown = capPreserving(rows, SESSION_BUDGET, (row) => !row.complete);
@@ -876,6 +886,7 @@ function Sessions({ rows }: { rows: readonly SessionRow[] }) {
 }
 
 function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
+  if (rows.length === 0) return <PanelState status="empty" reason="No account-equity or performance snapshot is present for this alpha." />;
   // 85 accounts across a few currencies is the normal shape, not the four the
   // wireframe draws. Rows missing a figure survive: an account we could not
   // read is the one worth chasing.
@@ -918,6 +929,7 @@ function Accounting({ rows }: { rows: readonly AccountingRow[] }) {
 }
 
 function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
+  if (rows.length === 0) return <PanelState status="empty" reason="No reconciliation finding is present for this alpha; this is an empty source result, not an unavailable screen." />;
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Reconciliation — per venue policy freshness</div>

@@ -296,6 +296,15 @@ export interface QueryAnalytics {
   executionQuality: Readonly<Record<string, unknown>> | null;
   chartSeries: readonly Record<string, unknown>[];
   positions: readonly Record<string, unknown>[];
+  /** Bounded facts selected server-side from one atomic local projection. */
+  sourceFacts?: Readonly<Record<string, readonly Record<string, unknown>[]>>;
+  replay?: {
+    state: string | null;
+    reasonCode: string | null;
+    candlesState: string | null;
+    candlesReasonCode: string | null;
+    tradeLog: readonly Record<string, unknown>[];
+  } | null;
   correlation: { state: string | null; reasonCode: string | null } | null;
 }
 
@@ -305,6 +314,8 @@ export function readQueryAnalytics(raw: unknown): QueryAnalytics | null {
   if (!root || !a) return null;
   const funnel = typeof a.order_funnel === "object" && a.order_funnel !== null ? (a.order_funnel as Record<string, unknown>) : null;
   const corr = typeof a.correlation === "object" && a.correlation !== null ? (a.correlation as Record<string, unknown>) : null;
+  const facts = typeof a.source_facts === "object" && a.source_facts !== null ? (a.source_facts as Record<string, unknown>) : {};
+  const replay = typeof a.replay === "object" && a.replay !== null ? (a.replay as Record<string, unknown>) : null;
   const s = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
   return {
     subjectKind: s(a.subject_kind),
@@ -332,6 +343,18 @@ export function readQueryAnalytics(raw: unknown): QueryAnalytics | null {
     executionQuality: typeof a.execution_quality === "object" && a.execution_quality !== null ? (a.execution_quality as Record<string, unknown>) : null,
     chartSeries: (Array.isArray(a.chart_series) ? a.chart_series : []).flatMap((v) => (typeof v === "object" && v !== null ? [v as Record<string, unknown>] : [])),
     positions: (Array.isArray(a.positions) ? a.positions : []).flatMap((v) => (typeof v === "object" && v !== null ? [v as Record<string, unknown>] : [])),
+    sourceFacts: Object.fromEntries(Object.entries(facts).map(([key, value]) => [
+      key,
+      (Array.isArray(value) ? value : []).flatMap((row) => typeof row === "object" && row !== null ? [row as Record<string, unknown>] : []),
+    ])),
+    replay: replay ? {
+      state: s(replay.state),
+      reasonCode: s(replay.reason_code),
+      candlesState: s(replay.candles_state),
+      candlesReasonCode: s(replay.candles_reason_code),
+      tradeLog: (Array.isArray(replay.trade_log) ? replay.trade_log : []).flatMap((row) =>
+        typeof row === "object" && row !== null ? [row as Record<string, unknown>] : []),
+    } : null,
     correlation: corr ? { state: s(corr.state), reasonCode: s(corr.reasonCode ?? corr.reason_code) } : null,
   };
 }

@@ -20,8 +20,14 @@ const CATALOGUE = Object.freeze([
 ]);
 
 const SOURCE = Object.freeze({
+  strategies: "manager.strategies:strategies",
   deployments: "manager.deployments:strategy_deployments",
+  accounts: "manager.accounts:accounts",
+  balances: "manager.accounts:account_balances",
+  portfolios: "manager.portfolios:portfolios",
+  allocations: "manager.portfolios:portfolio_allocations",
   positions: "manager.positions:positions_v2",
+  reconciliation: "manager.reconciliation:reconciliation_findings",
   sessions: "manager.sessions:execution_sessions",
   orders: "manager.orders:orders",
   fills: "manager.fills:fills",
@@ -29,7 +35,6 @@ const SOURCE = Object.freeze({
   accountEquity: "manager.performance:account_equity_snapshots",
   portfolioEquity: "manager.performance:portfolio_equity_snapshots",
   journal: "manager.command-journal:command_journal",
-  strategies: "manager.strategies:strategies",
 } as const);
 
 /**
@@ -83,8 +88,14 @@ function composeAnalytics(
   // `equity` is a derived view over the three canonical equity relations. Keep
   // it out of source evidence so counts and digests never double-count facts.
   const sourceFacts = {
+    strategies: selected.strategies,
     deployments: selected.deployments,
+    accounts: selected.accounts,
+    balances: selected.balances,
+    portfolios: selected.portfolios,
+    allocations: selected.allocations,
     positions: selected.positions,
+    reconciliation: selected.reconciliation,
     sessions: selected.sessions,
     orders: selected.orders,
     fills: selected.fills,
@@ -176,6 +187,12 @@ function composeAnalytics(
         pairs: [],
       },
       positions: selected.positions.slice(0, 500),
+      // Screen-ready, bounded current-source facts. These rows come from the
+      // same atomic local projection read as the derived branches above; the
+      // browser must not open a second AWS-HK read or reconstruct lineage.
+      source_facts: Object.fromEntries(
+        Object.entries(sourceFacts).map(([key, rows]) => [key, rows.slice(0, 1_000)]),
+      ),
     },
   };
 }
@@ -220,8 +237,14 @@ function selectSubject(
   const accountEquity = choose(all.accountEquity);
   const portfolioEquity = choose(all.portfolioEquity);
   return {
+    strategies: choose(all.strategies),
     deployments: choose(all.deployments),
+    accounts: choose(all.accounts),
+    balances: choose(all.balances),
+    portfolios: choose(all.portfolios),
+    allocations: choose(all.allocations),
     positions: choose(all.positions),
+    reconciliation: choose(all.reconciliation),
     sessions: choose(all.sessions),
     orders: choose(all.orders),
     fills: choose(all.fills),

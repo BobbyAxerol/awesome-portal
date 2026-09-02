@@ -189,6 +189,8 @@ export interface PortfolioThreeSixtyProps {
   leaders: readonly LeaderList[];
   insight?: { code: string; grade: string; window: string; text: string } | null;
   ledger: CapitalLedger | null;
+  ledgerStatus?: PanelStatus;
+  ledgerReason?: string;
   ledgerTotals?: { allocated: string; max: string; free: string; currency: string } | null;
   approvals: readonly ApprovalRow[];
   /**
@@ -614,11 +616,20 @@ function Leaders({ lists }: { lists: readonly LeaderList[] }) {
 function Ledger({
   ledger,
   totals,
+  status,
+  reason,
 }: {
   ledger: CapitalLedger | null;
   totals: PortfolioThreeSixtyProps["ledgerTotals"];
+  status?: PanelStatus;
+  reason?: string;
 }) {
-  if (!ledger) return <PanelState status="loading" reason="Loading the capital ledger." />;
+  if (!ledger) return (
+    <PanelState
+      status={status ?? "unavailable"}
+      reason={reason ?? "The capital-ledger branch is not published for this portfolio."}
+    />
+  );
   return (
     <section className="exec-gate-panel">
       <div className="exec-tile-title">Capital ledger — append-only</div>
@@ -938,6 +949,9 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                   </tr>
                 </thead>
                 <tbody>
+                  {shownHoldings.shown.length === 0 ? (
+                    <tr><td colSpan={8} className="exec-gate-unverified">No deployment is currently bound to this portfolio in the selected source profiles.</td></tr>
+                  ) : null}
                   {shownHoldings.shown.map((row) => (
                     <tr
                       key={row.deploymentId}
@@ -1039,7 +1053,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         {tab === "Capital Ledger" ? (
           <>
             {demoPanels?.ledger ?? null}
-            <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract</summary><Ledger ledger={ledger} totals={ledgerTotals} /></details>
+            <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract</summary><Ledger ledger={ledger} totals={ledgerTotals} status={props.ledgerStatus} reason={props.ledgerReason} /></details>
           </>
         ) : null}
 

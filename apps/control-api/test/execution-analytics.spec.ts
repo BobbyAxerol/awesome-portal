@@ -158,6 +158,12 @@ describe("EX-BE-07b analytics screen boundary", () => {
         subject_kind: "ALPHA", subject_id: "alpha_a", source_fact_count: 6,
         order_funnel: { total_orders: 1, status_counts: { FILLED: 1 } },
         execution_quality: { submitted_count: 3, risk_rejected_count: 1, filled_count: 2 },
+        source_facts: {
+          deployments: [{ deployment_id: "dep_a" }],
+          positions: [{ position_id: "pos_a" }],
+          orders: [{ order_id: "ord_a" }],
+          fills: [{ fill_id: "fill_a" }],
+        },
       },
     });
     const analytics = response.analytics as Record<string, unknown>;

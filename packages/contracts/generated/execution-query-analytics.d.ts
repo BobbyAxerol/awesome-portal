@@ -211,6 +211,10 @@ export interface components {
             alpha_ids: components["schemas"]["Identifier"][];
             pairs: components["schemas"]["CorrelationPair"][];
         };
+        ProjectionScalar: string | number | boolean | null | (string | number | boolean | null)[];
+        SourceFactRows: {
+            [key: string]: components["schemas"]["ProjectionScalar"];
+        }[];
         ManagerAnalytics: {
             /** @constant */
             schema_version: "execution.query-analytics.v1";
@@ -256,6 +260,24 @@ export interface components {
             drawdown_overlap: components["schemas"]["DrawdownOverlap"] | null;
             correlation: components["schemas"]["ManagerCorrelation"];
             positions: Record<string, never>[];
+            /** @description Optional backward-compatible, screen-ready facts selected from the same atomic local projection read. It never triggers a browser or BFF source read. */
+            source_facts?: {
+                strategies?: components["schemas"]["SourceFactRows"];
+                deployments?: components["schemas"]["SourceFactRows"];
+                accounts?: components["schemas"]["SourceFactRows"];
+                balances?: components["schemas"]["SourceFactRows"];
+                portfolios?: components["schemas"]["SourceFactRows"];
+                allocations?: components["schemas"]["SourceFactRows"];
+                positions?: components["schemas"]["SourceFactRows"];
+                reconciliation?: components["schemas"]["SourceFactRows"];
+                sessions?: components["schemas"]["SourceFactRows"];
+                orders?: components["schemas"]["SourceFactRows"];
+                fills?: components["schemas"]["SourceFactRows"];
+                performance?: components["schemas"]["SourceFactRows"];
+                accountEquity?: components["schemas"]["SourceFactRows"];
+                portfolioEquity?: components["schemas"]["SourceFactRows"];
+                journal?: components["schemas"]["SourceFactRows"];
+            };
         };
         /** N25 Manager query and analytics envelope */
         "execution-query-analytics.v1.schema": {
@@ -455,7 +477,29 @@ export interface components {
                     drawdown_overlap: components["schemas"]["DrawdownOverlap"] | null;
                     correlation: components["schemas"]["ManagerCorrelation"];
                     positions: Record<string, never>[];
+                    /** @description Optional backward-compatible, screen-ready facts selected from the same atomic local projection read. It never triggers a browser or BFF source read. */
+                    source_facts?: {
+                        strategies?: components["schemas"]["SourceFactRows"];
+                        deployments?: components["schemas"]["SourceFactRows"];
+                        accounts?: components["schemas"]["SourceFactRows"];
+                        balances?: components["schemas"]["SourceFactRows"];
+                        portfolios?: components["schemas"]["SourceFactRows"];
+                        allocations?: components["schemas"]["SourceFactRows"];
+                        positions?: components["schemas"]["SourceFactRows"];
+                        reconciliation?: components["schemas"]["SourceFactRows"];
+                        sessions?: components["schemas"]["SourceFactRows"];
+                        orders?: components["schemas"]["SourceFactRows"];
+                        fills?: components["schemas"]["SourceFactRows"];
+                        performance?: components["schemas"]["SourceFactRows"];
+                        accountEquity?: components["schemas"]["SourceFactRows"];
+                        portfolioEquity?: components["schemas"]["SourceFactRows"];
+                        journal?: components["schemas"]["SourceFactRows"];
+                    };
                 };
+                SourceFactRows: {
+                    [key: string]: components["schemas"]["ProjectionScalar"];
+                }[];
+                ProjectionScalar: string | number | boolean | null | (string | number | boolean | null)[];
             };
         };
     };

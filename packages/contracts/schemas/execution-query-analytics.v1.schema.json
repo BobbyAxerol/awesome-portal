@@ -195,8 +195,59 @@
         "replay": { "$ref": "#/$defs/Replay" },
         "drawdown_overlap": { "oneOf": [{ "$ref": "#/$defs/DrawdownOverlap" }, { "type": "null" }] },
         "correlation": { "$ref": "#/$defs/ManagerCorrelation" },
-        "positions": { "type": "array", "maxItems": 500, "items": { "type": "object" } }
+        "positions": { "type": "array", "maxItems": 500, "items": { "type": "object" } },
+        "source_facts": {
+          "type": "object",
+          "description": "Optional backward-compatible, screen-ready facts selected from the same atomic local projection read. It never triggers a browser or BFF source read.",
+          "additionalProperties": false,
+          "properties": {
+            "strategies": { "$ref": "#/$defs/SourceFactRows" },
+            "deployments": { "$ref": "#/$defs/SourceFactRows" },
+            "accounts": { "$ref": "#/$defs/SourceFactRows" },
+            "balances": { "$ref": "#/$defs/SourceFactRows" },
+            "portfolios": { "$ref": "#/$defs/SourceFactRows" },
+            "allocations": { "$ref": "#/$defs/SourceFactRows" },
+            "positions": { "$ref": "#/$defs/SourceFactRows" },
+            "reconciliation": { "$ref": "#/$defs/SourceFactRows" },
+            "sessions": { "$ref": "#/$defs/SourceFactRows" },
+            "orders": { "$ref": "#/$defs/SourceFactRows" },
+            "fills": { "$ref": "#/$defs/SourceFactRows" },
+            "performance": { "$ref": "#/$defs/SourceFactRows" },
+            "accountEquity": { "$ref": "#/$defs/SourceFactRows" },
+            "portfolioEquity": { "$ref": "#/$defs/SourceFactRows" },
+            "journal": { "$ref": "#/$defs/SourceFactRows" }
+          }
+        }
       }
+    },
+    "SourceFactRows": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/ProjectionScalar"
+        }
+      }
+    },
+    "ProjectionScalar": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" },
+        {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "number" },
+              { "type": "boolean" },
+              { "type": "null" }
+            ]
+          }
+        }
+      ]
     }
   }
 }

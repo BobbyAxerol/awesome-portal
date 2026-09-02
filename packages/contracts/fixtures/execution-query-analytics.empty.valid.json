@@ -44,6 +44,23 @@
     "replay": { "state": "EMPTY", "reason_code": null, "markers": [], "trade_log": [], "candles_state": "UNAVAILABLE", "candles_reason_code": "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED" },
     "drawdown_overlap": null,
     "correlation": { "formula_version": "portfolio-correlation-returns.v1", "state": "EMPTY", "reason_code": "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY", "alpha_ids": [], "pairs": [] },
-    "positions": []
+    "positions": [],
+    "source_facts": {
+      "strategies": [],
+      "deployments": [],
+      "accounts": [],
+      "balances": [],
+      "portfolios": [],
+      "allocations": [],
+      "positions": [],
+      "reconciliation": [],
+      "sessions": [],
+      "orders": [],
+      "fills": [],
+      "performance": [],
+      "accountEquity": [],
+      "portfolioEquity": [],
+      "journal": []
+    }
   }
 }

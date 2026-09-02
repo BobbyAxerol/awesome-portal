@@ -35,12 +35,20 @@ import {
   AlphaThreeSixty,
   type AlphaScope,
   type AlphaTab,
+  type AccountingRow,
+  type AuditRow,
   type DeploymentRow,
   type InsightTile,
   type Kpi,
+  type OrderRow,
+  type PositionRow,
+  type ReconciliationRow,
+  type RiskRow,
+  type SessionRow,
+  type VenueContribution,
   type VenueRow,
 } from "./AlphaThreeSixty";
-import { PORTFOLIO_TABS, PortfolioThreeSixty, type PortfolioTab } from "./PortfolioThreeSixty";
+import { PORTFOLIO_TABS, PortfolioThreeSixty, type HoldingRow, type PortfolioTab } from "./PortfolioThreeSixty";
 import { AccountBroker360 } from "./AccountBroker360";
 import { AlphaFleet, type FleetFilter } from "./AlphaFleet";
 import { AccountsBindings } from "./AccountsBindings";
@@ -386,13 +394,17 @@ function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): Insight
   return TILE_TITLES.map((title, i) => {
     const cap = analytics.capabilities[i] ?? null;
     const available = cap ? cap.state === "AVAILABLE" || cap.state === "READY" : false;
+    const equity = cap?.capabilityId === "stage-equity" ? analyticsEquity(analytics) : null;
     return {
       index: i + 1,
       title: cap ? cap.capabilityId : title,
       envelope: { authority: "DERIVED", asOf: asOf ?? "", window: analytics.completeness ?? "window not stated", interval: "—", formulaVersion: analytics.formulaVersion },
-      state: available ? "insufficient_data" : "unavailable",
+      state: equity ? "ok" : available ? "insufficient_data" : "unavailable",
+      series: equity?.series ?? null,
       reason: cap
-        ? available
+        ? equity
+          ? null
+          : available
           ? "the branch answered with no series for this window"
           : `${cap.state}${cap.reasonCode ? ` · ${cap.reasonCode}` : ""}`
         : "this analytics branch is not published for this subject",
@@ -483,6 +495,207 @@ function fleetDeployments(item: AlphaFleetItem): DeploymentRow[] {
   }));
 }
 
+type SourceRow = Readonly<Record<string, unknown>>;
+
+function facts(analytics: QueryAnalytics | null | undefined, key: string): readonly SourceRow[] {
+  return analytics?.sourceFacts?.[key] ?? [];
+}
+
+function deploymentFor(row: SourceRow, deployments: readonly SourceRow[]): SourceRow | null {
+  const explicit = text(row.deployment_id);
+  if (explicit) return deployments.find((item) => text(item.deployment_id) === explicit) ?? null;
+  const strategy = text(row.strategy_id);
+  const account = text(row.account_id);
+  return deployments.find((item) =>
+    (strategy !== null && text(item.strategy_id) === strategy) ||
+    (account !== null && text(item.account_id) === account),
+  ) ?? null;
+}
+
+function alphaPositions(analytics: QueryAnalytics | null | undefined): PositionRow[] {
+  const deployments = facts(analytics, "deployments");
+  return facts(analytics, "positions").map((row) => {
+    const deployment = deploymentFor(row, deployments);
+    const signed = text(row.signed_qty) ?? text(row.quantity) ?? "";
+    const rawSide = text(row.side)?.toUpperCase();
+    return {
+      deploymentId: text(deployment?.deployment_id) ?? text(row.deployment_id) ?? "deployment not published",
+      venue: text(row.venue) ?? text(deployment?.venue) ?? "venue not published",
+      symbol: text(row.symbol) ?? text(row.instrument_id) ?? "instrument not published",
+      side: rawSide === "SHORT" || signed.startsWith("-") ? "SHORT" : "LONG",
+      quantity: signed,
+      entry: text(row.avg_px_open),
+      mark: text(row.mark_price),
+      unrealised: text(row.unrealized_pnl),
+      currency: text(row.currency) ?? text(deployment?.currency) ?? "currency not published",
+    };
+  });
+}
+
+function alphaOrders(analytics: QueryAnalytics | null | undefined): OrderRow[] {
+  const deployments = facts(analytics, "deployments");
+  return facts(analytics, "orders").map((row) => {
+    const deployment = deploymentFor(row, deployments);
+    return {
+      orderId: text(row.order_id) ?? "order id not published",
+      at: text(row.submitted_at) ?? text(row.updated_at) ?? "time not published",
+      deploymentId: text(deployment?.deployment_id) ?? text(row.deployment_id) ?? "deployment not published",
+      venue: text(row.venue) ?? text(deployment?.venue) ?? "venue not published",
+      symbol: text(row.symbol) ?? text(row.instrument_id) ?? "instrument not published",
+      status: text(row.status) ?? "status not published",
+      quantity: text(row.quantity) ?? "quantity not published",
+      price: text(row.price),
+    };
+  });
+}
+
+function alphaAudit(analytics: QueryAnalytics | null | undefined): AuditRow[] {
+  return facts(analytics, "journal").map((row) => ({
+    at: text(row.updated_at) ?? text(row.terminal_at) ?? text(row.accepted_at) ?? "time not published",
+    actor: text(row.actor) ?? "Execution System",
+    command: text(row.command_kind) ?? "command not published",
+    target: text(row.aggregate_key) ?? text(row.client_order_id) ?? text(row.command_id) ?? "target not published",
+    outcome: text(row.outcome_class) ?? text(row.state) ?? "outcome not published",
+  }));
+}
+
+function alphaSessions(analytics: QueryAnalytics | null | undefined): SessionRow[] {
+  const deployments = facts(analytics, "deployments");
+  return facts(analytics, "sessions").map((row) => {
+    const deployment = deploymentFor(row, deployments);
+    const deferred = Number(text(row.reconciliation_deferred_count) ?? "0");
+    const actionable = Number(text(row.reconciliation_actionable_count) ?? "0");
+    const recovered = text(row.accounting_recovered_count);
+    return {
+      at: text(row.updated_at) ?? text(row.completed_at) ?? text(row.started_at) ?? "time not published",
+      deploymentId: text(deployment?.deployment_id) ?? text(row.deployment_id) ?? "deployment not published",
+      event: text(row.state) ?? "session state not published",
+      recovered: recovered === null ? null : `${recovered} accounting recoveries`,
+      complete: Number.isFinite(deferred) && Number.isFinite(actionable) && deferred === 0 && actionable === 0,
+    };
+  });
+}
+
+function alphaAccounting(analytics: QueryAnalytics | null | undefined): AccountingRow[] {
+  const snapshots = [...facts(analytics, "accountEquity"), ...facts(analytics, "performance")];
+  const allocations = facts(analytics, "allocations");
+  const latestByAccountCurrency = new Map<string, SourceRow>();
+  for (const row of snapshots) {
+    const account = text(row.account_id);
+    const currency = text(row.currency);
+    if (!account || !currency) continue;
+    const key = `${account}\0${currency}`;
+    const current = latestByAccountCurrency.get(key);
+    const stamp = text(row.ts) ?? text(row.created_at) ?? "";
+    const currentStamp = current ? text(current.ts) ?? text(current.created_at) ?? "" : "";
+    if (!current || stamp >= currentStamp) latestByAccountCurrency.set(key, row);
+  }
+  return [...latestByAccountCurrency.values()].map((row) => {
+    const accountId = text(row.account_id)!;
+    const currency = text(row.currency)!;
+    const allocation = allocations.find((item) =>
+      text(item.account_id) === accountId && (text(item.currency) ?? currency) === currency,
+    );
+    return {
+      accountId,
+      currency,
+      allocated: text(allocation?.allocated_capital),
+      used: text(row.total_notional) ?? text(row.notional),
+      realised: text(row.realized_pnl),
+      fees: text(row.fee_total),
+    };
+  });
+}
+
+function alphaReconciliation(analytics: QueryAnalytics | null | undefined): ReconciliationRow[] {
+  return facts(analytics, "reconciliation").map((row) => ({
+    venue: text(row.venue) ?? "venue not published",
+    policy: text(row.finding_type) ?? "reconciliation finding",
+    lastRun: text(row.resolved_at) ?? text(row.created_at),
+    freshness: text(row.status) ?? "UNKNOWN",
+    findings: 1,
+  }));
+}
+
+function alphaRisk(analytics: QueryAnalytics | null | undefined): RiskRow[] {
+  return facts(analytics, "positions").flatMap((row) => {
+    const value = text(row.notional);
+    const instrument = text(row.symbol) ?? text(row.instrument_id);
+    return value && instrument ? [{ label: `${instrument} current notional`, value, limit: null }] : [];
+  });
+}
+
+function alphaContributions(analytics: QueryAnalytics | null | undefined): VenueContribution[] {
+  const latestByVenueCurrency = new Map<string, SourceRow>();
+  for (const row of facts(analytics, "performance")) {
+    const venue = text(row.venue);
+    const currency = text(row.currency);
+    if (!venue || !currency) continue;
+    const key = `${venue}\0${currency}`;
+    const current = latestByVenueCurrency.get(key);
+    if (!current || (text(row.ts) ?? "") >= (text(current.ts) ?? "")) latestByVenueCurrency.set(key, row);
+  }
+  return [...latestByVenueCurrency.values()].map((row) => ({
+    venue: text(row.venue)!,
+    currency: text(row.currency)!,
+    value: text(row.net_pnl),
+    note: "latest source performance snapshot; no browser aggregation",
+  }));
+}
+
+function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
+  const source = analytics?.chartSeries[0];
+  const points = Array.isArray(source?.points) ? source.points.flatMap((raw) => {
+    if (!raw || typeof raw !== "object") return [];
+    const row = raw as Record<string, unknown>;
+    const t = text(row.timestamp);
+    const equity = text(row.value);
+    return t && equity ? [{ t, equity, drawdown: null }] : [];
+  }) : [];
+  if (!source || points.length === 0) return null;
+  return {
+    envelope: {
+      window: analytics?.completeness ?? "published projection",
+      interval: "source snapshots",
+      currency: text(source.currency),
+      asOf: analytics?.asOf ?? new Date(0).toISOString(),
+      authority: "EXECUTION" as Authority,
+      formulaVersion: text(source.formula_version),
+      sourceRows: points.length,
+      returnedRows: points.length,
+    },
+    series: { label: "Execution equity", points },
+  };
+}
+
+function SourceTradeReplay({ analytics }: { analytics: QueryAnalytics | null | undefined }) {
+  const replay = analytics?.replay;
+  const rows = replay?.tradeLog ?? [];
+  return (
+    <div className="exec-rp-source">
+      <section className="exec-rp-panel" aria-label="Trade replay market context">
+        <header className="exec-rp-head"><span className="exec-rp-title">Trade replay — current-source events</span></header>
+        <div className="exec-pw-chartplot">
+          <div className="exec-gate-unverified">
+            Market candles are {replay?.candlesState?.toLowerCase() ?? "unavailable"} · {replay?.candlesReasonCode ?? "source not published"}.
+            The exact event journal remains available below.
+          </div>
+        </div>
+      </section>
+      <section className="exec-rp-panel" aria-label="Source-backed trade log">
+        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — orders and fills</span><span className="exec-rp-spacer" /><span className="exec-rp-win">{rows.length} source events</span></header>
+        {rows.length > 0 ? (
+          <div className="exec-scroll-x"><table className="exec-rp-table"><thead><tr><th>time (UTC)</th><th>event</th><th>journal</th><th>order</th><th>fill</th><th>qty</th><th>price</th></tr></thead><tbody>
+            {rows.map((row, index) => <tr key={`${text(row.timestamp)}-${text(row.journal_id)}-${index}`}>
+              <td className="exec-rp-dim">{text(row.timestamp) ?? "—"}</td><td>{text(row.event_type) ?? "—"}</td><td>{text(row.journal_id) ?? "—"}</td><td>{text(row.order_id) ?? "—"}</td><td>{text(row.fill_id) ?? "—"}</td><td data-numeric="true">{text(row.quantity) ?? "—"}</td><td data-numeric="true">{text(row.price) ?? "—"}</td>
+            </tr>)}
+          </tbody></table></div>
+        ) : <div className="exec-gate-unverified">No order or fill event is present for this alpha in the retained projection window.</div>}
+      </section>
+    </div>
+  );
+}
+
 function unavailableAnalyticsTiles(reason: string, envelope: Envelope): InsightTile[] {
   return TILE_TITLES.map((title, index) => ({
     index: index + 1,
@@ -529,6 +742,9 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
     ? item ? "ok" : "empty"
     : fleetState.status;
   const deployments = item ? fleetDeployments(item) : [];
+  const positions = analytics ? alphaPositions(analytics) : null;
+  const orders = analytics ? alphaOrders(analytics) : null;
+  const audit = analytics ? alphaAudit(analytics) : null;
   return (
     <AlphaThreeSixty
       researchStatus={item?.health ?? null}
@@ -547,13 +763,18 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       onTabChange={setTab}
       venues={item ? fleetVenues(item) : []}
       kpis={analytics ? analyticsKpis(analytics) : item ? fleetKpis(item) : []}
-      contributions={[]}
-      equity={null}
+      contributions={alphaContributions(analytics)}
+      equity={analyticsEquity(analytics)}
       deployments={deployments}
       tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      positions={null}
-      orders={null}
-      audit={null}
+      replay={analytics ? <SourceTradeReplay analytics={analytics} /> : undefined}
+      positions={positions ? pageOf(positions) : null}
+      orders={orders ? pageOf(orders) : null}
+      audit={audit ? pageOf(audit) : null}
+      risk={alphaRisk(analytics)}
+      sessions={alphaSessions(analytics)}
+      accounting={alphaAccounting(analytics)}
+      reconciliation={alphaReconciliation(analytics)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
       onOpenAccount={(accountId) => navigate(`/deployments/accounts/${encodeURIComponent(accountId)}`)}
@@ -565,7 +786,29 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
 
 /* ── portfolio 360 ────────────────────────────────────────────────────── */
 
+function portfolioHoldings(fleet: readonly AlphaFleetItem[], portfolioId: string): HoldingRow[] {
+  return fleet.flatMap((alpha) => alpha.deployments
+    .filter((deployment) => deployment.portfolioId === portfolioId)
+    .map((deployment) => ({
+      alpha: alpha.alphaId,
+      deploymentId: deployment.deploymentId,
+      accountId: deployment.accountId,
+      venue: deployment.venue,
+      mode: deployment.stage.toLowerCase(),
+      allocation: deployment.allocation,
+      exposure: deployment.exposure,
+      exposurePct: null,
+      currency: deployment.currency,
+      stage: promotionStage(deployment.stage),
+      readiness: readiness(deployment),
+    })));
+}
+
 export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: ExecutionApi; portfolioId: string }) {
+  // Fleet is the current-source portfolio/holding spine across Paper,
+  // Sandbox and Live. Analytics remains additive and cannot blank identity or
+  // holdings when a derived branch is disabled.
+  const fleetState = useApiRead(() => api.getAlphaFleet({ environment: "all", limit: 50 }), [api]);
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId]);
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
@@ -573,13 +816,23 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const [lens, setLens] = useState<number | null>(null);
   const navigate = useNavigate();
   const analytics = analyticsState.value;
+  const fleet = fleetState.value;
+  const fleetRows = fleet?.page.rows ?? [];
+  const portfolio = fleetRows.flatMap((alpha) => alpha.portfolios)
+    .find((item) => item.portfolioId === portfolioId) ?? null;
+  const holdings = portfolioHoldings(fleetRows, portfolioId);
   const envelope: Envelope = analytics
     ? { authority: AUTHORITY[analytics.authority ?? ""] ?? "DERIVED", asOf: analytics.asOf, freshness: "OK" }
-    : { authority: "PORTAL", asOf: null, freshness: "UNKNOWN" };
+    : fleetRows[0] && fleet
+      ? fleetEnvelope(fleetRows[0], fleet.readAt, fleet.sourceAsOf, fleet.freshness)
+      : { authority: "PORTAL", asOf: null, freshness: "UNKNOWN" };
+  const rootStatus: PanelStatus = fleetState.status === "ok"
+    ? portfolio ? "ok" : "empty"
+    : fleetState.status;
   return (
     <PortfolioThreeSixty
       portfolioId={portfolioId}
-      portfolioName={portfolioId}
+      portfolioName={portfolio?.name ?? portfolioId}
       envelope={envelope}
       scopeWindow={analytics?.completeness ?? "window not published"}
       benchmark="benchmark not published"
@@ -589,7 +842,7 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       onOpenAlpha={(alphaId) => navigate(`/deployments/alphas/${encodeURIComponent(alphaId)}`)}
       onOpenAccount={(accountId) => navigate(`/deployments/accounts/${encodeURIComponent(accountId)}`)}
       kpis={analytics ? analyticsKpis(analytics) : []}
-      holdings={[]}
+      holdings={holdings}
       fxNote={null}
       correlation={correlationState.value?.correlation ?? null}
       correlationEnvelope={correlationState.value ? { authority: "DERIVED", asOf: null, freshness: "OK" } : undefined}
@@ -598,11 +851,13 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       leaders={[]}
       insight={null}
       ledger={ledgerState.value?.ledger ?? null}
+      ledgerStatus={ledgerState.status}
+      ledgerReason={ledgerState.reason}
       ledgerTotals={null}
       approvals={[]}
       incidents={null}
-      status={analyticsState.status}
-      reason={analyticsState.reason}
+      status={rootStatus}
+      reason={rootStatus === "empty" ? `Portfolio ${portfolioId} was not present in the current-source Fleet.` : fleetState.reason}
     />
   );
 }
