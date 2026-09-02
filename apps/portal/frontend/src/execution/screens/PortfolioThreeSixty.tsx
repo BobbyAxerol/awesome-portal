@@ -621,7 +621,7 @@ function Ledger({
 }: {
   ledger: CapitalLedger | null;
   totals: PortfolioThreeSixtyProps["ledgerTotals"];
-  status?: PanelStatus;
+  status?: Exclude<PanelStatus, "ok">;
   reason?: string;
 }) {
   if (!ledger) return (
@@ -1053,7 +1053,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         {tab === "Capital Ledger" ? (
           <>
             {demoPanels?.ledger ?? null}
-            <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract</summary><Ledger ledger={ledger} totals={ledgerTotals} status={props.ledgerStatus} reason={props.ledgerReason} /></details>
+            <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract</summary><Ledger ledger={ledger} totals={ledgerTotals} status={props.ledgerStatus === "ok" ? "empty" : props.ledgerStatus} reason={props.ledgerReason} /></details>
           </>
         ) : null}
 

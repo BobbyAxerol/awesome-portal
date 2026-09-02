@@ -2,8 +2,8 @@
 
 Date: 2026-09-02  
 Branch: `feat/execution-data-activation`  
-Implementation decision: `OWNER_REVIEW_FINDING_CORRECTED_IN_SOURCE /
-FULL_GATE_ACCEPTED / DEV_RUNTIME_REVALIDATION_PENDING`  
+Implementation decision: `OWNER_REVIEW_FINDING_CORRECTED /
+FULL_GATE_ACCEPTED / DEV_RUNTIME_REBUILT`  
 Product decision: `PRODUCT_GO_PENDING_BOBBY_UI_REVIEW /
 PROTECTED_MAIN_PROMOTION_NOT_AUTHORIZED`
 
@@ -177,8 +177,22 @@ repairs only the data/composition seam:
   analytics loss. Capital ledger now shows its typed BFF state rather than a
   permanent false `Loading` state.
 
-Evidence before runtime replacement: 115/115 contracts, 281/281 Control API
-tests with fresh PostgreSQL plus dump/restore, full frontend suite/build, and
-8/8 focused BFF regressions pass. Runtime image identities and authenticated
-owner review are recorded only after the dev-only rebuild; this section does
-not retroactively call the rejected build Product GO.
+Evidence: 115/115 contracts, 281/281 Control API tests with fresh PostgreSQL
+plus dump/restore, 1,805 frontend tests and a clean Docker production build,
+including 8/8 focused BFF regressions. The canonical dev-only stack was then
+rebuilt from commit `0faeea8` and the Compose working directory
+`/home/bobby/portal-dev`:
+
+- Portal web image: `sha256:8696e64de134edb22f25e3a015651e2fd5ba36cc7e01e48efb7a30404b535646`;
+- Control API image: `sha256:5e1b0b0bb0c1badd5e50a433f02ca7d2acc7b4089ea65d8cbf7047905e9a7e12`;
+- both recreated dev containers reported `healthy`;
+- `/` and the Alpha 360 product route returned HTTP 200 through
+  `https://dev-portal.primusspark.com`;
+- Paper, Sandbox, Live, local projection, analytics and SSE flags remained
+  enabled while command relay remained false.
+
+The first clean Docker build additionally caught and closed a narrow ledger
+state type mismatch that an incremental host build had masked. Bobby's
+authenticated visual review remains the Product GO gate; this section does
+not call the rejected build—or this replacement before owner review—Product
+GO.
