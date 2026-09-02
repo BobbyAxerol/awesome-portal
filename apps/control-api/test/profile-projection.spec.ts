@@ -132,7 +132,17 @@ describe("Phase 1 SGP-local profile projection", () => {
     const first = await commit(document("alpha-1"), "cursor-1");
     await commit(document("alpha-2"), "cursor-2");
     const realtime = new ExecutionProfileRealtimeService(config, repository);
-    expect((await realtime.snapshot(workspaceId, "paper", profileId)).event_type).toBe("snapshot");
+    const handshake = await realtime.snapshot(workspaceId, "paper", profileId);
+    expect(handshake).toMatchObject({
+      event_type: "snapshot",
+      payload: {
+        snapshot_mode: "CURSOR_ONLY",
+        relation_count: 1,
+        source_contract_revision: "manager-v2.test.v1",
+      },
+    });
+    expect(handshake.payload).not.toHaveProperty("document");
+    expect(Buffer.byteLength(JSON.stringify(handshake))).toBeLessThan(2_048);
     expect(realtime.heartbeat(workspaceId, "paper", profileId)).toMatchObject({
       event_type: "heartbeat", terminal: false,
     });

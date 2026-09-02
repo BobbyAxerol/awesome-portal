@@ -70,9 +70,12 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     profileId: string,
   ): Promise<LocalRealtimeEnvelope> {
     const snapshot = await this.requiredSnapshot(workspaceId, environment, profileId);
-    return envelope("snapshot", snapshot, {
-      document: snapshot.document,
-    }, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS);
+    return envelope(
+      "snapshot",
+      snapshot,
+      cursorPayload(snapshot),
+      this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+    );
   }
 
   async subscribe(
@@ -90,8 +93,12 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
       return () => undefined;
     }
     if (!cursor) {
-      if (!emit(envelope("snapshot", snapshot, { document: snapshot.document },
-        this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS))) return () => undefined;
+      if (!emit(envelope(
+        "snapshot",
+        snapshot,
+        cursorPayload(snapshot),
+        this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+      ))) return () => undefined;
     } else if (cursor.sequence < snapshot.projectionSequence) {
       const replay = await this.repository.journalAfter(
         workspaceId, environment, profileId, cursor.epoch, cursor.sequence, REPLAY_LIMIT,
@@ -258,6 +265,20 @@ function delta(
     received_at: entry.receivedAt.toISOString(), last_successful_refresh_at: lastRefresh.toISOString(),
     freshness: ageFreshness(Date.now() - lastRefresh.valueOf(), pollIntervalMs),
     completeness: entry.completeness, payload: entry.payload,
+  };
+}
+
+/**
+ * The screen BFF already owns the data snapshot. Realtime bootstrap therefore
+ * returns only cursor/provenance metadata; copying the complete hot projection
+ * here would send the same multi-megabyte document a second time on every
+ * screen mount and recovery.
+ */
+function cursorPayload(snapshot: ProfileProjectionSnapshot): Record<string, unknown> {
+  return {
+    snapshot_mode: "CURSOR_ONLY",
+    relation_count: Object.keys(snapshot.document.relations).length,
+    source_contract_revision: snapshot.document.source_contract_revision,
   };
 }
 

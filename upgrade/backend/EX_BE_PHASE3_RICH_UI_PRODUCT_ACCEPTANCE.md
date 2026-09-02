@@ -49,6 +49,9 @@ screen contract exists; it never fabricates a missing branch or source row.
 
 - every profile screen performs one authenticated same-origin snapshot before
   opening EventSource;
+- that realtime handshake is cursor/provenance-only and bounded below 2 KiB;
+  the rich screen data remains in its canonical Screen BFF response, so a
+  page mount never downloads the complete hot projection twice;
 - native EventSource retry is disabled by `close()` on transport failure,
   session expiry, malformed frames and ordinary terminal frames;
 - an epoch/sequence/projection gap receives at most one delayed resnapshot;
@@ -113,4 +116,3 @@ dev Portal and record Product GO or concrete screen findings. Only after that
 review may this feature be merged through protected `dev` and proposed to
 protected `main`; only the `main` workflow may create signed images, SBOM and
 provenance. Stable remains untouched by this phase.
-
