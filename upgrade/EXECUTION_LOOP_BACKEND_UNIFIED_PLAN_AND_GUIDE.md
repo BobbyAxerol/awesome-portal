@@ -2474,6 +2474,146 @@ Implementation and pre-release evidence:
 The implementation is `OWNER_UI_REVIEW_READY`; `AUTHENTICATED_PRODUCT_GO`
 remains intentionally pending until Bobby reviews the rebuilt dev runtime.
 
+#### Phase 4 delivery specification — Owner-findings closeout and production streaming (2026-09-02)
+
+**Authorship note:** Bobby granted Claude backend scope on 2026-09-02; this
+phase is specified by Claude (frontend lead, now backend co-implementer) from
+a read-only investigation of the rebuilt Phase 3 dev runtime — projection
+PostgreSQL content, BFF/service source and the deployed configuration. It
+records Bobby's dev-review findings against the Phase 3 candidate and the
+finite corrective plan. Runtime facts below were measured, not inferred.
+
+**Owner authorization:** Bobby ordered on 2026-09-02: resolve every cause
+"triệt để", including configuration, and drive straight toward production
+streaming — no deferred debt.
+
+##### P4-0 — Measured findings register (root causes, verified)
+
+Projection truth at measurement time (dev, 2026-09-02 15:46 UTC): all three
+profiles refresh continuously (snapshot age 1–29 s); Paper holds 19 relations
+including 400-row bounded windows for `execution_sessions`,
+`performance_snapshots`, `account_equity_snapshots` and `command_journal`,
+364 orders, 55 fills, 48 strategies, 43 accounts/deployments, 42
+balances/allocations, 20 positions and **2 real portfolios**
+(`portfolio_types_pool`, `portfolio_types_pool_VN`). The data plane is rich;
+the losses are at the seam and in policy constants.
+
+| # | Finding (owner symptom) | Verified root cause | Layer |
+|---|---|---|---|
+| F1 | Portfolio 360 renders whole-screen "Nothing to show … PF-CRYPTO was not present in the current-source Fleet" | (a) frontend route defaults `params.portfolioId ?? "PF-CRYPTO"` — a hi-fi canonical-cast id that no real source contains (`ExecutionPreviewRoute.tsx:172,258`); (b) the container's identity spine is Fleet-only and never consults the projected `manager.portfolios:portfolios` relation (2 real rows exist); (c) no portfolio LIST surface exists, so the sidebar can only deep-link a guessed id | FE route + BFF spine |
+| F2 | Alpha 360 insight tiles show "Insufficient data — the branch answered with no series for this window" and "Unavailable — PARTIAL" over a projection that has 400-point equity/performance windows and 20 positions | the frontend tile mapper (recomposeContainers `analyticsTiles`) is a N29-era stopgap: it hardcodes AVAILABLE→`insufficient_data` and prints the capability STATE word as the reason; it never binds the per-capability `chart_series`/`source_facts` the local analytics BFF already returns (BR-EX-75). The BFF side is correct | FE tile binding |
+| F3 | Alpha Fleet header pinned `STALE` while data is seconds old | `SNAPSHOT_MAX_AGE_MS = 5_000` hardcoded in `manager-lists.service.ts` — a 5 s FRESH ceiling under a 15 s SGP poll (and stale-while-refresh) makes STALE the steady state. Freshness must be classified against the declared ingestion-class budget carried in the envelope, with an AGING tier, not a constant | BFF policy const |
+| F4 | Fleet/360/Blotter/Command Center "chưa đủ động" — static until reload | only the three profile overview containers subscribe to `useProfileRealtime`; Fleet, Alpha/Portfolio 360, Blotter and the Command Center container have no stream binding. The hook itself only bumps `refreshKey` (full refetch per delta) — correct at today's cadence, a refetch storm at production delta rates | FE realtime coverage + delta application |
+| F5 | Orders/fills/balances marked `PARTIAL · N30_PROFILE_LINEAGE_REJECTED` (364/55/42 rows survive) | `enforceProfileLineage` drops child rows whose parent (account/strategy/deployment) is not in the profile's accepted parent set. With a single `PAPER_BINANCE_USDM` profile, every non-BINANCE-USDM paper parent (e.g. the DNSE/VN market family) is structurally rejected — correct fail-closed behavior, wrong profile taxonomy. There is no rejected-row diagnostic, so nobody can see *which* parents are missing | Rust/TS profile taxonomy + observability |
+| F6 | History panels thin | time-series relations are hard-capped at 400 rows (`SOURCE_PARTIAL`) — a bounded snapshot window, no warm-history path; 30d rollups/sparks for Fleet remain typed-dark because no window aggregation exists | ingestion window policy |
+| F7 | `portfolio_equity_snapshots` = `MANAGER_V2_SOURCE_CONTRACT_REJECTED` | genuine owner-side contract gap (recorded); meanwhile portfolio equity is derivable server-side from `account_equity_snapshots` × allocations as a declared `DERIVED` formula | owner gap + DERIVED candidate |
+| F8 | Raw exact decimals rendered verbatim (`28,579.60574880000000` USDT; `0.002500000000000000` qty) | no display-precision rule exists. Exact strings are the correct wire/storage form; the UI lacks a single formatting authority | FE design system |
+| F9 | VNM workbench dark | no `PAPER_DNSE_VNM` (or equivalent) profile exists; venue calendar capability typed-dark — same taxonomy decision as F5 | profile taxonomy + owner |
+| F10 | Several relations truthfully empty (`venue_accounts`, `broker_account_sync_effective`, `reconciliation_findings`, all Live transactional rows) | must stay empty-as-fact; each screen must show the empty state with the relation's own name so an operator can distinguish "no findings" from "not consumed" | verification only |
+
+The unifying diagnosis for "màn không hiện hết dữ liệu Edge cung cấp": the
+Edge→SGP data plane already delivers; the losses are (i) two frontend binding
+seams (F1, F2), (ii) three policy constants/coverage gaps (F3, F4, F6) and
+(iii) one profile-taxonomy decision (F5/F9). Nothing requires a new
+Trading System capability except the already-recorded F7 owner gap.
+
+##### P4-A — Portfolio identity, list surface and route truth (TS BFF + FE)
+
+- extend the manager-lists (or profile-read) plane with a bounded
+  `portfolios` list read over the projected `manager.portfolios:portfolios`
+  relation (id, name, owner, state, base currency, per-profile membership,
+  allocation/deployment counts), all profiles combined like Fleet v2;
+- Portfolio 360 spine = `portfolios` relation ∪ Fleet allocations; an id
+  present in either renders the full rich screen; an id in neither renders
+  the existing typed empty with the real available ids listed;
+- frontend: `/deployments/portfolios` root becomes the real portfolio list in
+  the reviewed list grammar; the sidebar/route default derives from data,
+  never from a canonical-cast constant; remove every remaining `PF-CRYPTO`
+  route default (fixture ids stay lab-only).
+
+##### P4-B — Per-capability series/facts binding and display formatting (FE, Claude)
+
+- replace the stopgap tile mapper: each of the 12 analytics capabilities binds
+  its own `chart_series`/`source_facts` branch; state renders from the
+  capability's `state` + `reason_code` (never the state word as prose);
+  AVAILABLE with data draws the real chart; EMPTY/PARTIAL/UNAVAILABLE keep
+  the reviewed tile frame with the served reason;
+- Fleet gains its equity spark and PnL/exposure columns from the same
+  analytics facts where the projection window suffices (F6 ladder below);
+- one formatting authority in the design system (`formatExact` family):
+  exact decimal strings are never mutated; display precision is a per-unit
+  class (money: currency display scale, default 2 dp for USDT-class; qty:
+  instrument step precision; pct/ratio: 2–4 dp), trailing zeros trimmed to
+  the class floor, thousands grouped, full-precision original always
+  available on hover/copy, tabular mono everywhere, and blotter/ledger
+  columns keep the §8 no-abbreviation invariant.
+
+##### P4-C — Freshness truth and motion coverage (TS + FE)
+
+- replace the 5 s constant with envelope-declared freshness budgets per
+  ingestion class (transactional / account-state / metadata per the N29-RTA
+  budget table); classify FRESH/AGING/STALE against the budget and render the
+  age beside the class; the manager-lists envelope carries its budget;
+- extend the one profile-realtime contract to the remaining read surfaces
+  (Fleet, Alpha/Portfolio 360, Blotter, Command Center container) — one
+  subscription per screen, snapshot-then-SSE, existing terminal semantics;
+- upgrade delta handling from refetch-per-delta to bounded coalescing
+  (single in-flight refresh, ≥1 s coalesce window at current cadence) and,
+  once measured rates justify it, targeted branch refresh keyed by the
+  delta's relation set — never a per-event full-screen refetch at
+  production rates.
+
+##### P4-D — Profile taxonomy, lineage observability and window ladder (Rust + TS + owner)
+
+- owner decision (Bobby): the profile set. Recommendation: add
+  `PAPER_DNSE_VNM` (and future venue/settle families) so every real parent
+  has exactly one home; keep strict rejection for true cross-profile rows;
+- add rejected-row diagnostics: per relation, count rejects by missing-parent
+  key class, exported in the snapshot envelope + a bounded operator view, so
+  a lineage storm is visible instead of silently PARTIAL;
+- window ladder per relation class replacing the flat 400: transactional
+  relations move to delta/journal ingestion with reconciliation snapshots;
+  time-series relations get a declared window (e.g. 30 d @ 1 h + 48 h @ raw)
+  persisted in warm SGP tables so Fleet 30 d rollups and history charts are
+  computable locally; every window states itself in the envelope caption;
+- implement F7's `DERIVED` portfolio-equity formula (declared
+  `formula_version`, provenance) while the owner gap stays typed.
+
+##### P4-E — Production streaming configuration and promotion (config + release)
+
+- configuration matrix (dev measured → production target), each row a named
+  env with owner and rollback:
+  `EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS` 60000 → per-class (1–5 s
+  transactional delta poll, 5–15 s account-state, 30–60 s metadata);
+  `EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS` 15000 → replaced by edge
+  journal push/tail (SGP pull remains reconciliation fallback);
+  `EDGE_MANAGER_SHARED_CACHE_TTL_MS` 750 → validated under load;
+  manager-lists 5 s constant → envelope budget (P4-C);
+  `EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS` 300000 → per-class ceilings;
+  SSE heartbeat/queue/eviction bounds re-proven at target rates;
+- load/soak evidence per §8 (ingestion cadence, not tab count, drives source
+  traffic; SSE fan-out at N tabs; delta coalescing verified);
+- then the unchanged N36/Phase 3 release train: Bobby dev review → protected
+  `dev` merge → signed `main` images. No new release mechanism.
+
+##### Phase 4 evidence and exit gate
+
+Per §8 classes: contract parity for every new/changed envelope field
+(freshness budget, reject counters, portfolio list, per-capability series);
+fresh-PG migration/restore where warm-history tables land; negative tests for
+profile taxonomy (a DNSE parent must never enter `PAPER_BINANCE_USDM`);
+frontend unit + boundary + console gates; authenticated real-data browser
+journeys re-run for Portfolio (real id), Alpha 360 tiles (real charts),
+Fleet (FRESH within budget, motion on), Blotter and Command Center;
+formatting rule covered by unit tests and applied across screens in one pass.
+
+**Exit gate:** every F1–F10 row is closed or explicitly converted to a named
+owner gap with an id; a coverage test proves every projected relation is
+consumed by at least one screen or classified `AUDIT_ONLY/INTERNAL_ONLY`;
+freshness chips reflect declared budgets; production configuration matrix is
+applied on dev first with measured evidence. Phase 4 items follow §5
+vocabulary; no bare DONE.
+
 ---
 
 ## 5. Definition of Ready and Definition of Done
@@ -2685,7 +2825,10 @@ Append rows here. Do not create another active request file.
 | BR-EX-73 | 2026-09-01 | Alpha Fleet `/deployments/alphas` | The v1 Fleet contract populated only strategy/deployment identity, leaving the reviewed operational composition mostly empty; an initial all-profile refresh also exceeded the shared N21 15 r/s admission budget | Additive `execution.alpha-fleet-list.v2`: combine accepted Paper/Sandbox/Live profiles; current owner, portfolios, allocations, all balances, position PnL/exposure, reconciliation health and multi-stage membership; preserve the rich composition; batch profiles through shared source admission | source facts `TRADING_SYSTEM`; durable/query projection `PORTAL_PROJECTION` | read-only · medium; exact decimal values remain separated by currency, browser never aggregates capital | ≤50 rows/page; source pages bounded by existing BR-EX-72 drain; Paper → Sandbox → Live profile batches; stale committed snapshot served while one refresh is coalesced | BR-EX-72 base routes; N19 current-source compatibility; N21 shared admission; N24 durable projection | source row absent → typed empty; historical 30d selector absent → panel-local `SOURCE_LATEST_WINDOW_NOT_PUBLISHED`; admission exhaustion → fail closed, never relax limit | v2 schema/OpenAPI/generated fixture; 28-file/257-test fresh-PG + restore; 113 contract tests; 1,795 frontend tests + build; real BFF 48 alpha/78 deployment smoke; Chromium 48 rows, BFF 200, 0 console issues | Codex | post-N29 dev integration | `DEV_ACCEPTED` | `AlphaFleetRichContainer` + reviewed `AlphaFleet`; filter uses every `stages[]` member; drill-down normalizes stage case | dev read only; command and Live mutation unchanged | `EX_BE_35_ALPHA_FLEET_CURRENT_SOURCE_V2.md`; supersedes only the Fleet payload of BR-EX-72, not bindings/live-review |
 | BR-EX-74 | 2026-09-01 | Alpha 360 `/deployments/alphas/{id}` | Optional analytics was incorrectly used as the whole-screen status authority; the dev BFF also delegated the user's Portal workspace to a projection stored under the execution-cell workspace, producing `N25_PROJECTION_CYCLE_NOT_FOUND` over a healthy ACTIVE epoch | Keep Fleet v2 as the current-source identity/deployment spine; make N25 analytics additive; require one explicit validated projection workspace for only the private Manager Query/SSE assertion; accept both bounded Rust problem-envelope revisions without forwarding messages | Fleet facts `TRADING_SYSTEM`; analytics `PORTAL_PROJECTION`; session/RBAC `PORTAL_CONTROL` | read-only · medium; browser never selects Edge workspace and legacy shadow retains Portal-workspace scoping | exact Fleet search ≤50; analytics response ≤2 MiB; existing N25 bulkhead/timeout; one fixed projection workspace per Manager runtime | BR-EX-73 Fleet v2; N25 Query analytics; N26 Manager projection SSE; N21 admission | Fleet miss → whole-screen typed empty; analytics loss → 12 local unavailable tiles while identity/deployments remain; no invented series | 257/257 Control API fresh-PG + restore; 1,797 frontend tests + build; real browser Fleet click-through with exact Fleet/analytics HTTP 200, 10 tabs, 4 deployment controls, 6 KPI cells, 12 tiles, 0 console issues | Codex | post-N29 dev integration | `DEV_ACCEPTED` | `AlphaThreeSixtyRichContainer` preserves reviewed `AlphaThreeSixty`; no product fixture | dev read only; command, Live mutation, main and stable unchanged | `EX_BE_36_ALPHA_360_CURRENT_SOURCE_COMPOSITION.md` |
 | BR-EX-75 | 2026-09-02 | Alpha 360 `/deployments/alphas/:alphaId` · Portfolio 360 `/deployments/portfolios/:portfolioId` | Owner review found that real local-projection facts were discarded at the rich-screen composition seam: Alpha child tabs received `null`/empty props and Portfolio treated optional analytics as whole-screen authority | Add backward-compatible bounded `analytics.source_facts` from the same atomic local projection read; map positions, orders/fills, event replay, sessions, accounting, reconciliation, risk, contribution and equity into the reviewed Alpha tabs; keep Fleet v2 as multi-profile Portfolio identity/holdings spine; render typed empty/unavailable inside only the missing panel | facts `TRADING_SYSTEM` retained by `PORTAL_PROJECTION`; derived series `DERIVED`; UI composition `PORTAL` | read-only · medium; no new AWS-HK request and no browser aggregation of financial totals | one repository query; ≤1,000 facts/relation and existing 2 MiB BFF ceiling; current projection freshness ceiling; exact decimal strings preserved | Phase 1 projection, N25 query analytics, BR-EX-73 Fleet v2, Claude rich composition | no fact row → panel-local `EMPTY`; missing market candles/correlation/ledger history → typed panel-local unavailable; optional analytics loss never erases Alpha/Portfolio identity | 115 contract tests; 281 Control API fresh-PG + restore; 1,805 frontend tests and clean Docker build; regression clicks all ten Alpha tabs and proves Portfolio identity/holdings under analytics loss; dev images healthy on canonical Compose stack | Codex | Phase 3 owner-finding correction | `DEV_RUNTIME_REBUILT / OWNER_REVIEW_PENDING` | Existing `AlphaThreeSixty` and `PortfolioThreeSixty` visual components retained; only BFF reader/container props changed | dev read-only; command, Live mutation, main and stable unchanged | `backend/EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md` §8 |
-| _next: BR-EX-76_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+| BR-EX-76 | 2026-09-02 | Portfolio 360 + `/deployments/portfolios` root | Owner review: PF-CRYPTO default 404s the whole screen; no portfolio list exists; 2 real portfolios sit unconsumed in the projection | Bounded portfolios list read (all profiles) + Portfolio 360 spine = portfolios ∪ Fleet; route/sidebar defaults derive from data | facts `TRADING_SYSTEM` via `PORTAL_PROJECTION` | read-only · low | ≤100 portfolios; existing snapshot cadence | Phase 1 projection; Fleet v2 | unknown id → typed empty naming real ids | contract + fresh-PG + journey on real id | Claude (backend co-impl) | Phase 4 / P4-A | `RECEIVED` | Portfolio list + `PortfolioThreeSixtyRichContainer` | dev read only | Phase 4 §P4-A; finding F1 |
+| BR-EX-77 | 2026-09-02 | Fleet/lists freshness + realtime coverage | Fleet chip pinned STALE (5 s constant vs 15–60 s cadence); Fleet/360/Blotter/CC have no stream binding; delta handling is refetch-per-event | Envelope-declared freshness budgets per ingestion class with AGING tier; extend profile-realtime to remaining read screens; bounded delta coalescing | `PORTAL_PROJECTION` envelopes | read-only · low | existing SSE bounds; coalesce ≥1 s | Phase 1 five-kind contract | budget absent → UNKNOWN never fake-FRESH | unit + SSE + journey with motion assertions | Claude (backend co-impl) | Phase 4 / P4-C | `RECEIVED` | all rich read screens | dev read only | Phase 4 §P4-C; findings F3/F4 |
+| BR-EX-78 | 2026-09-02 | Profile taxonomy + lineage observability + window ladder | N30 lineage guard structurally rejects non-BINANCE paper parents (DNSE/VN) with no diagnostics; flat 400-row windows block 30 d rollups/history | Owner profile-set decision (recommend `PAPER_DNSE_VNM`); reject counters by missing-parent class in envelope; per-class ingestion windows + warm SGP history; DERIVED portfolio-equity while MC gap stays typed | `TRADING_SYSTEM` via `PORTAL_PROJECTION`; derived `DERIVED` | read-only · medium (taxonomy touches isolation proofs) | window ladder per N29-RTA budget table | Phase 1 lineage guard; owner decision | strict rejection retained; counters bounded | taxonomy negatives + migration/restore + parity | Codex + Claude | Phase 4 / P4-D | `OWNER_DECISION_PENDING` | VNM workbench, Fleet rollups, history charts | dev read only | Phase 4 §P4-D; findings F5/F6/F7/F9 |
+| _next: BR-EX-79_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
 
@@ -3700,6 +3843,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Claude (backend co-impl per owner grant): Phase 4 owner-findings closeout and production-streaming specification + measured findings register F1–F10 + BR-EX-76/77/78 | read-only investigation of the rebuilt dev runtime (projection SQL, BFF source, deployed env); root causes verified at the seam (route default, tile mapper, 5 s freshness constant, realtime coverage, lineage taxonomy, 400-row windows); no code, runtime, flag or schema changed by this entry |
 | 2026-09-02 | Corrected and rebuilt Phase 3 owner finding BR-EX-75 at the Alpha/Portfolio rich-screen composition seam | one atomic SGP projection response now carries bounded screen facts to all ten Alpha tabs; Portfolio keeps Fleet identity/holdings when optional analytics fails; contracts 115/115, Control API 281/281 plus restore, 1,805 frontend tests and clean Docker build pass; canonical dev images are healthy and owner review is pending, main/stable unchanged |
 | 2026-09-02 | Accepted Phase 3 rich UI/BFF implementation and pre-release gates | Claude's rich compositions remain mounted across 23 same-origin Screen BFF roots; real Paper/Sandbox/Live/profile/analytics facts, bounded SSE and four local R0 receipts are wired; 1,803 frontend + 281 Control API + 115 contract assertions, full Rust/Clippy, browser interaction/visual and dependency gates pass; canonical dev rebuild and Bobby Product GO are the remaining owner review step; main/stable unchanged |
 | 2026-09-02 | Accepted Phase 2 complete Screen BFF and controlled command plane | 23/23 same-origin screen roots, eight finite screen slices and four SGP-local R0 tasks pass 113 contract + 280 Control API tests, full monorepo verification and authenticated real dev smoke; command relay/main/stable/rich UI unchanged; Phase 3 ready |
