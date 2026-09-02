@@ -571,6 +571,75 @@ function readBindingItem(raw: unknown): BindingItem | null {
     ? { bindingId, accountId, venue, state, credentialState, updatedAt } : null;
 }
 
+/* ── BR-EX-76 portfolio identity list (P4-A) ───────────────────────────── */
+
+export interface PortfolioListItem {
+  portfolioId: string;
+  name: string;
+  owner: string | null;
+  state: string;
+  baseCurrency: string;
+  environments: readonly string[];
+  allocationCount: number;
+  deploymentCount: number;
+  allocatedByCurrency: readonly CurrencyValue[];
+  updatedAt: string;
+}
+
+export interface PortfolioListEnvelope {
+  environment: string;
+  freshness: string;
+  completeness: string;
+  sourceAsOf: string | null;
+  readAt: string;
+  environmentBranches: Readonly<Record<string, MetricState>>;
+  totalPortfolios: number;
+  truncated: boolean;
+  items: readonly PortfolioListItem[];
+}
+
+function readPortfolioItem(raw: unknown): PortfolioListItem | null {
+  const root = obj(raw);
+  if (!root || !Array.isArray(root.environments) || !Array.isArray(root.allocated_by_currency)) return null;
+  const portfolioId = str(root.portfolio_id); const name = str(root.name);
+  const state = str(root.state); const baseCurrency = str(root.base_currency);
+  const updatedAt = str(root.updated_at);
+  const count = (value: unknown) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+  const allocationCount = count(root.allocation_count); const deploymentCount = count(root.deployment_count);
+  const environments = root.environments.flatMap((value) => typeof value === "string" && value.length > 0 ? [value] : []);
+  const allocatedByCurrency = exactArray(root.allocated_by_currency, readCurrencyValue);
+  if (!portfolioId || !name || !state || !baseCurrency || !updatedAt
+    || allocationCount === null || deploymentCount === null || !allocatedByCurrency
+    || environments.length !== root.environments.length || environments.length === 0) return null;
+  return {
+    portfolioId, name, owner: str(root.owner), state, baseCurrency, environments,
+    allocationCount, deploymentCount, allocatedByCurrency, updatedAt,
+  };
+}
+
+export function readPortfolioList(raw: unknown): PortfolioListEnvelope | null {
+  const root = obj(raw);
+  if (!root || root.schema_version !== "execution.portfolio-list.v1"
+    || root.record_authority !== "PORTAL_PROJECTION" || !Array.isArray(root.items)) return null;
+  const environment = str(root.environment); const freshness = str(root.freshness);
+  const completeness = str(root.completeness); const readAt = str(root.read_at);
+  const branchesRaw = obj(root.environments);
+  const totalPortfolios = typeof root.total_portfolios === "number"
+    && Number.isSafeInteger(root.total_portfolios) && root.total_portfolios >= 0 ? root.total_portfolios : null;
+  const items = exactArray(root.items, readPortfolioItem);
+  if (!environment || !freshness || !completeness || !readAt || !branchesRaw
+    || totalPortfolios === null || !items || typeof root.truncated !== "boolean") return null;
+  const environmentBranches = Object.fromEntries(Object.entries(branchesRaw).flatMap(([key, value]) => {
+    const item = obj(value); const state = str(item?.state);
+    return item && state ? [[key, { state, reasonCode: str(item.reason_code) }] as const] : [];
+  }));
+  if (Object.keys(environmentBranches).length !== Object.keys(branchesRaw).length) return null;
+  return {
+    environment, freshness, completeness, sourceAsOf: str(root.source_as_of), readAt,
+    environmentBranches, totalPortfolios, truncated: root.truncated, items,
+  };
+}
+
 export const readAlphaFleet = (raw: unknown) =>
   readManagerEnvelope(raw, "execution.alpha-fleet-list.v2", readFleetItem, readFleetSummary);
 

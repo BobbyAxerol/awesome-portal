@@ -12,7 +12,7 @@
  */
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
-  OperatorTaskCatalogue, OperatorTaskRunResult, ProfileEnvelope, QueryAnalytics,
+  OperatorTaskCatalogue, OperatorTaskRunResult, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
@@ -278,6 +278,8 @@ export interface ExecutionApi {
   getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
+  /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */
+  listPortfolios(): Promise<Result<PortfolioListEnvelope>>;
   /** `GET /broker-bindings` — BR-EX-72 bounded binding projection. */
   getBindings(query?: BindingListQuery): Promise<Result<ManagerListEnvelope<BindingItem>>>;
   /** `GET /broker-bindings/{id}` — narrow, non-secret binding detail. */

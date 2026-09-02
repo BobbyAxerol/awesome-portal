@@ -59,11 +59,11 @@ import type { AlphaFleetQuery, BindingListQuery, BlotterQuery } from "./ports";
 import { readApprovalCreated, readConditionsPage } from "./rows";
 import {
   readAlphaFleet, readBindingDetail, readBindings, readLiveReview,
-  readOperatorTaskRunResult, readOperatorTasks, readProfileEnvelope, readQueryAnalytics,
+  readOperatorTaskRunResult, readOperatorTasks, readPortfolioList, readProfileEnvelope, readQueryAnalytics,
 } from "./profileRead";
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
-  OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics,
+  OperatorTaskCatalogue, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
@@ -325,6 +325,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
   };
   const getAlphaFleet = (query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> =>
     readGet(`/alphas${listParameters(query)}`, readAlphaFleet, "The Alpha Fleet");
+  const listPortfolios = (): Promise<Result<PortfolioListEnvelope>> =>
+    readGet("/portfolios", readPortfolioList, "The portfolio register");
   const getBindings = (query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> =>
     readGet(`/broker-bindings${listParameters(query)}`, readBindings, "The bindings register");
   const getBindingDetail = (bindingId: string, environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<BindingItem>> =>
@@ -389,6 +391,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getLiveReview,
     getAccountBroker360,
     getAlphaFleet,
+    listPortfolios,
     getBindings,
     getBindingDetail,
     async listApprovals(query: InboxQuery): Promise<Result<InboxResult>> {

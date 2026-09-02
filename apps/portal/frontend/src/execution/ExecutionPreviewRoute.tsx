@@ -20,6 +20,7 @@ import {
   LiveOverviewRichContainer,
   PaperOverviewRichContainer,
   PaperWorkbenchRichContainer,
+  PortfolioListRichContainer,
   PortfolioThreeSixtyRichContainer,
   SandboxOverviewRichContainer,
 } from "./screens/recomposeContainers";
@@ -169,7 +170,8 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       case "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN": return params.deploymentId ? `${params.deploymentId} · live full` : null;
       // List routes (no id) carry no entity; a 360 names the entity it resolved.
       case "EXECUTION_ALPHA_360_SCREEN": return params.alphaId ? (params.alphaId === "av_2041" ? "Grid v2.1" : params.alphaId) : null;
-      case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? "PF-CRYPTO";
+      // List route (no id) carries no entity; the id is never invented (P4-A).
+      case "EXECUTION_PORTFOLIO_360_SCREEN": return params.portfolioId ?? null;
       case "EXECUTION_ACCOUNT_BROKER_360_SCREEN": return params.accountId ?? search.get("binding") ?? null;
       case "EXECUTION_GATE_R1_REVIEW_SCREEN":
       case "EXECUTION_GATE_R2_REVIEW_SCREEN":
@@ -255,7 +257,12 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = params.alphaId ? <AlphaThreeSixtyRichContainer api={api} alphaId={params.alphaId} /> : <AlphaFleetRichContainer api={api} />;
       break;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
-      content = <PortfolioThreeSixtyRichContainer api={api} portfolioId={params.portfolioId ?? "PF-CRYPTO"} />;
+      // Feature canonical route (/deployments/portfolios) = the real portfolio
+      // register; /:portfolioId opens that portfolio's 360. The default derives
+      // from data, never from a canonical-cast constant (P4-A / BR-EX-76).
+      content = params.portfolioId
+        ? <PortfolioThreeSixtyRichContainer api={api} portfolioId={params.portfolioId} />
+        : <PortfolioListRichContainer api={api} />;
       break;
     case "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN":
       content = search.get("binding")

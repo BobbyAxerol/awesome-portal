@@ -52,6 +52,7 @@ import { PORTFOLIO_TABS, PortfolioThreeSixty, type HoldingRow, type PortfolioTab
 import { AccountBroker360 } from "./AccountBroker360";
 import { AlphaFleet, type FleetFilter } from "./AlphaFleet";
 import { AccountsBindings } from "./AccountsBindings";
+import { PortfolioList } from "./PortfolioList";
 import { BindingDetail } from "./BindingDetail";
 import type { OrderFunnel } from "../analytics";
 import { useProfileRealtime } from "../profileRealtime";
@@ -804,11 +805,32 @@ function portfolioHoldings(fleet: readonly AlphaFleetItem[], portfolioId: string
     })));
 }
 
+export function PortfolioListRichContainer({ api }: { api: ExecutionApi }) {
+  // P4-A / BR-EX-76: the /deployments/portfolios root is the real portfolio
+  // register. The default portfolio is whatever the data holds — the route
+  // never invents an id.
+  const state = useApiRead(() => api.listPortfolios(), [api]);
+  const navigate = useNavigate();
+  const status: PanelStatus = state.status === "ok" && state.value?.completeness === "PARTIAL" ? "partial" : state.status;
+  return (
+    <PortfolioList
+      list={state.value}
+      status={status}
+      reason={state.reason}
+      onOpenPortfolio={(portfolioId) => navigate(`/deployments/portfolios/${encodeURIComponent(portfolioId)}`)}
+    />
+  );
+}
+
 export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: ExecutionApi; portfolioId: string }) {
   // Fleet is the current-source portfolio/holding spine across Paper,
   // Sandbox and Live. Analytics remains additive and cannot blank identity or
   // holdings when a derived branch is disabled.
   const fleetState = useApiRead(() => api.getAlphaFleet({ environment: "all", limit: 50 }), [api]);
+  // P4-A: the portfolios relation is the identity authority — a portfolio
+  // with no fleet allocation (an unallocated register row) still renders its
+  // rich screen, and a genuinely unknown id names the real available ids.
+  const registerState = useApiRead(() => api.listPortfolios(), [api]);
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId]);
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
@@ -818,17 +840,27 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const analytics = analyticsState.value;
   const fleet = fleetState.value;
   const fleetRows = fleet?.page.rows ?? [];
+  const registerItem = registerState.value?.items.find((item) => item.portfolioId === portfolioId) ?? null;
   const portfolio = fleetRows.flatMap((alpha) => alpha.portfolios)
-    .find((item) => item.portfolioId === portfolioId) ?? null;
+    .find((item) => item.portfolioId === portfolioId)
+    ?? (registerItem
+      ? { portfolioId: registerItem.portfolioId, name: registerItem.name, baseCurrency: registerItem.baseCurrency }
+      : null);
   const holdings = portfolioHoldings(fleetRows, portfolioId);
   const envelope: Envelope = analytics
     ? { authority: AUTHORITY[analytics.authority ?? ""] ?? "DERIVED", asOf: analytics.asOf, freshness: "OK" }
     : fleetRows[0] && fleet
       ? fleetEnvelope(fleetRows[0], fleet.readAt, fleet.sourceAsOf, fleet.freshness)
       : { authority: "PORTAL", asOf: null, freshness: "UNKNOWN" };
-  const rootStatus: PanelStatus = fleetState.status === "ok"
-    ? portfolio ? "ok" : "empty"
-    : fleetState.status;
+  const rootStatus: PanelStatus = portfolio
+    ? "ok"
+    : fleetState.status === "ok" || registerState.status === "ok"
+      ? "empty"
+      : fleetState.status;
+  const availableIds = [...new Set([
+    ...(registerState.value?.items.map((item) => item.portfolioId) ?? []),
+    ...fleetRows.flatMap((alpha) => alpha.portfolios.map((item) => item.portfolioId)),
+  ])].sort();
   return (
     <PortfolioThreeSixty
       portfolioId={portfolioId}
@@ -857,7 +889,9 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       approvals={[]}
       incidents={null}
       status={rootStatus}
-      reason={rootStatus === "empty" ? `Portfolio ${portfolioId} was not present in the current-source Fleet.` : fleetState.reason}
+      reason={rootStatus === "empty"
+        ? `Portfolio ${portfolioId} is not present in the projected population${availableIds.length > 0 ? ` — available: ${availableIds.join(", ")}` : ""}.`
+        : fleetState.reason}
     />
   );
 }

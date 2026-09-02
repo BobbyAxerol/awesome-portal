@@ -10,7 +10,7 @@ import { createFixtureApi } from "./api/fixtureApi";
 import { createHttpApi } from "./api/httpApi";
 import { readAlphaFleet, readBindingDetail, readBindings, readLiveReview } from "./api/profileRead";
 import { AccountsBindingsContainer, AlphaFleetContainer } from "./screens/profileContainers";
-import { AlphaFleetRichContainer, AlphaThreeSixtyRichContainer, PortfolioThreeSixtyRichContainer } from "./screens/recomposeContainers";
+import { AlphaFleetRichContainer, AlphaThreeSixtyRichContainer, PortfolioListRichContainer, PortfolioThreeSixtyRichContainer } from "./screens/recomposeContainers";
 import { AlphaFleet } from "./screens/AlphaFleet";
 
 const POLICY = {
@@ -176,6 +176,31 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));
     expect(await screen.findByText("INSPECT")).toBeTruthy();
     expect(container.querySelector('[data-hifi-exact="alpha-360"]')).toBeTruthy();
+  });
+
+  it("renders the real portfolio register on the list root and opens a 360 from a row (P4-A / BR-EX-76)", async () => {
+    const api = createFixtureApi();
+    render(<MemoryRouter><PortfolioListRichContainer api={api} /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: "Portfolios" })).toBeTruthy();
+    // The canonical fixture: Carry Core carries counts and exact capital; the
+    // live branch is UNAVAILABLE, so the register labels itself PARTIAL.
+    expect(await screen.findByText("Carry Core")).toBeTruthy();
+    expect(screen.getByText("30000 USDT")).toBeTruthy();
+    expect(screen.getByText(/live: UNAVAILABLE · N31_PROJECTION_NOT_READY/)).toBeTruthy();
+    const row = screen.getByRole("link", { name: "Carry Core" });
+    expect(row.getAttribute("href")).toBe("/deployments/portfolios/pf_carry_core");
+  });
+
+  it("renders a register-only portfolio's 360 and names real ids for an unknown one (P4-A)", async () => {
+    const api = createFixtureApi();
+    // pf_unallocated exists only in the portfolios relation, not in any Fleet
+    // allocation: identity must still render the rich screen.
+    render(<MemoryRouter><PortfolioThreeSixtyRichContainer api={api} portfolioId="pf_unallocated" /></MemoryRouter>);
+    expect(await screen.findByRole("heading", { name: /pf_unallocated/i })).toBeTruthy();
+
+    const { unmount } = render(<MemoryRouter><PortfolioThreeSixtyRichContainer api={api} portfolioId="pf_ghost" /></MemoryRouter>);
+    expect(await screen.findByText(/available: pf_carry_core, pf_main, pf_unallocated/)).toBeTruthy();
+    unmount();
   });
 
   it("keeps Portfolio 360 identity and holdings when derived analytics is disabled", async () => {

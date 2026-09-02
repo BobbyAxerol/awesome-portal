@@ -21,18 +21,19 @@ import PAPER_WORKBENCH_VNM_PARTIAL from "../../../../../../packages/contracts/fi
 import QUERY_ANALYTICS_EMPTY from "../../../../../../packages/contracts/fixtures/execution-query-analytics.empty.valid.json";
 import COMMAND_TASKS from "../../../../../../packages/contracts/fixtures/execution-command-tasks.valid.json";
 import ALPHA_FLEET from "../../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.v2.valid.json";
+import PORTFOLIO_LIST from "../../../../../../packages/contracts/fixtures/execution-portfolio-list.valid.json";
 import BINDINGS_LIST from "../../../../../../packages/contracts/fixtures/execution-bindings-list.valid.json";
 import BINDING_DETAIL from "../../../../../../packages/contracts/fixtures/execution-binding-detail.valid.json";
 import LIVE_REVIEW from "../../../../../../packages/contracts/fixtures/governance-live-review.valid.json";
 import { readKeysetPage } from "../adapter";
 import { APPROVAL_ROWS, CONDITION_FIXTURES, EXIT_DETAIL, R1_DETAIL, R2_DETAIL, matchesView } from "./fixtureData";
 import {
-  readAlphaFleet, readBindingDetail, readBindings, readLiveReview,
+  readAlphaFleet, readBindingDetail, readBindings, readLiveReview, readPortfolioList,
   readOperatorTasks, readProfileEnvelope, readQueryAnalytics,
 } from "./profileRead";
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
-  OperatorTaskCatalogue, ProfileEnvelope, QueryAnalytics,
+  OperatorTaskCatalogue, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail, readDecidedRow, readApprovalCreated, readConditionsPage } from "./rows";
 import {
@@ -299,6 +300,10 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
       return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");
+    },
+    async listPortfolios(): Promise<Result<PortfolioListEnvelope>> {
+      const blocked = gate<PortfolioListEnvelope>("listPortfolios");
+      return blocked ?? fixtureRead(PORTFOLIO_LIST, readPortfolioList, "The portfolio register");
     },
     async getBindings(_query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> {
       const blocked = gate<ManagerListEnvelope<BindingItem>>("getBindings");
