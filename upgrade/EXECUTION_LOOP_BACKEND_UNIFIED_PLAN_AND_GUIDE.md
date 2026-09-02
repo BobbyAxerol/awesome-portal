@@ -2645,6 +2645,12 @@ per-row quarantine counter for unknown words surfaced in the envelope, branch
 state derived from surviving rows. Regression: Blotter table and Workbench
 Orders tab render the 364 real orders with exact decimals.
 
+Status 2026-09-02: `INTEGRATION_COMPLETE` — commits `92fd124` (normalize +
+quarantine + envelope counters) and `7a04443` (shared versioned map
+`order-status-map.v1`); verified on the rebuilt dev runtime: blotter serves
+the full 364-order population with `status=REJECTED` /
+`source_status=RISK_REJECTED` provenance.
+
 ##### P4-G — Seam activation set (closes F13, F14, F15)
 
 Fix the workbench analytics identifier normalization; activate the local
@@ -2652,6 +2658,17 @@ exact-query/keyset/aggregate blotter plane (cursors, `exact_total`, per-ccy
 aggregates over the committed projection); switch Paper overview insights to
 the local analytics series. Each lands with contract test + authenticated
 route test.
+
+Status 2026-09-02: `INTEGRATION_COMPLETE` — F13 composite analytics ids admit
+`:`-joined deployment identity (`7a04443`); F14 was a downstream casualty of
+F11 (one RISK_REJECTED row erased the whole orders branch and with it
+exact_total/aggregates) — closed by the same normalization and pinned by a
+dedicated regression (`6b972b8`); F15 Paper overview now serves a versioned
+`derived_insights` block (7-day order funnel + per-deployment cumulative
+return, additive contract) computed from already-fetched relations
+(`2f2ce9a`). Rebuilt dev runtime probe: `blotter.exact-query AVAILABLE`,
+`exact_total=364`, real per-status aggregates, `kc1.` keyset cursors, and
+`status_bucket=REJECTED` filters 316 rows through the canonical map.
 
 ##### P4-H — Command Center real composition (closes F12)
 
@@ -3917,6 +3934,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Claude: P4-F and P4-G closed (`INTEGRATION_COMPLETE`) — order-status normalization with quarantine counters, shared versioned status map, composite analytics ids, blotter exact-query plane active, Paper overview `derived_insights` (additive contract) | commits `92fd124`/`7a04443`/`2f2ce9a`/`6b972b8`; control-api gate 31 suites / 285 tests with fresh PostgreSQL + dump/restore parity; contracts workspace gate pass; dev control-api image rebuilt and probed authenticated: 364-order blotter with exact totals, real aggregates, bidirectional keyset cursors and canonical REJECTED filtering; no flag, profile or command change |
 | 2026-09-02 | Claude (backend co-impl per owner grant): Phase 4 owner-findings closeout and production-streaming specification + measured findings register F1–F10 + BR-EX-76/77/78 | read-only investigation of the rebuilt dev runtime (projection SQL, BFF source, deployed env); root causes verified at the seam (route default, tile mapper, 5 s freshness constant, realtime coverage, lineage taxonomy, 400-row windows); no code, runtime, flag or schema changed by this entry |
 | 2026-09-02 | Corrected and rebuilt Phase 3 owner finding BR-EX-75 at the Alpha/Portfolio rich-screen composition seam | one atomic SGP projection response now carries bounded screen facts to all ten Alpha tabs; Portfolio keeps Fleet identity/holdings when optional analytics fails; contracts 115/115, Control API 281/281 plus restore, 1,805 frontend tests and clean Docker build pass; canonical dev images are healthy and owner review is pending, main/stable unchanged |
 | 2026-09-02 | Accepted Phase 3 rich UI/BFF implementation and pre-release gates | Claude's rich compositions remain mounted across 23 same-origin Screen BFF roots; real Paper/Sandbox/Live/profile/analytics facts, bounded SSE and four local R0 receipts are wired; 1,803 frontend + 281 Control API + 115 contract assertions, full Rust/Clippy, browser interaction/visual and dependency gates pass; canonical dev rebuild and Bobby Product GO are the remaining owner review step; main/stable unchanged |
