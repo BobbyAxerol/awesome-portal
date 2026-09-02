@@ -716,6 +716,14 @@ function Tiles({ tiles, demoTiles }: { tiles: readonly InsightTile[]; demoTiles:
             <p className="exec-af-smoke">! SMOKE DATA — {demoTiles.drift.foot} · reference shape for the BR-EX-40 line-pair tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
             <EnvelopeCaption envelope={tile.envelope} compact />
           </section>
+        ) : tile.state === "ok" && tile.body && !tile.series ? (
+          /* P4-B: a capability whose branch publishes facts rather than a
+             series renders those facts — real numbers, not a state word. */
+          <section key={tile.index} className="exec-chart-tile" aria-label={`${tile.index} · ${tile.title}`} data-state="ok">
+            <div className="exec-chart-head"><h3 className="exec-section-title">{tile.index} · {tile.title}</h3></div>
+            {tile.body}
+            <EnvelopeCaption envelope={tile.envelope} compact />
+          </section>
         ) : tile.state === "ok" ? (
           <EquityChart
             key={tile.index}

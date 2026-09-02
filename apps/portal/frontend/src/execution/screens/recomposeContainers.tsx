@@ -8,7 +8,7 @@
  * screen is never swapped for a generic envelope view, and no fixture value
  * is reachable from this module.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
@@ -20,6 +20,7 @@ import type {
   QueryAnalytics,
 } from "../api/profileRead";
 import { readQueryAnalytics } from "../api/profileRead";
+import { formatExact } from "../formatExact";
 import { pageOf, workbenchFillRow, workbenchOrderRow, workbenchPositionRow, workbenchSessionRow } from "../api/profileRows";
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
@@ -390,25 +391,126 @@ function analyticsKpis(analytics: QueryAnalytics): Kpi[] {
   return kpis;
 }
 
+/** Reviewed titles for the twelve published analytics capabilities (P4-B). */
+const ANALYTICS_TILE_TITLES: Readonly<Record<string, string>> = {
+  "exact-query": "Exact query surface",
+  "position-exposure": "Exposure profile",
+  "stage-equity": "Stage equity",
+  "execution-quality": "Execution quality",
+  "contribution": "Venue contribution",
+  "order-funnel": "Order funnel",
+  "replay-journal": "Trade replay journal",
+  "market-candles": "Market candles",
+  "portfolio-drawdown-overlap": "Drawdown overlap",
+  "portfolio-correlation": "Correlation matrix",
+  "portfolio-rho-timeline": "\u03c1 vs benchmark timeline",
+  "canary-drift": "Paper vs live drift",
+};
+
+function factRows(rows: readonly (readonly [string, string])[], label: string): ReactNode {
+  return (
+    <div className="exec-scroll-x">
+      <table className="exec-rp-table" aria-label={label}>
+        <tbody>
+          {rows.map(([key, value]) => (
+            <tr key={key}><td className="exec-rp-dim">{key}</td><td data-numeric="true">{value}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * P4-B / F2: every capability binds its own published branch, keyed by
+ * capability id — never by array position. AVAILABLE with data renders real
+ * numbers or the real series; EMPTY/PARTIAL/UNAVAILABLE keep the reviewed
+ * frame with the served state and reason code.
+ */
 function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): InsightTile[] {
-  // One tile per reviewed slot; each carries the branch's own published state.
-  return TILE_TITLES.map((title, i) => {
-    const cap = analytics.capabilities[i] ?? null;
-    const available = cap ? cap.state === "AVAILABLE" || cap.state === "READY" : false;
-    const equity = cap?.capabilityId === "stage-equity" ? analyticsEquity(analytics) : null;
+  const factCount = (key: string) => analytics.sourceFacts?.[key]?.length ?? 0;
+  const body = (cap: BranchCapability): ReactNode => {
+    switch (cap.capabilityId) {
+      case "exact-query": {
+        const rows = (["orders", "fills", "positions", "sessions", "accountEquity", "journal"] as const)
+          .map((key) => [key, formatExact(String(factCount(key)), "count").display] as const)
+          .filter(([, count]) => count !== "0");
+        return rows.length > 0 ? factRows(rows, "Exact query fact counts in the committed window") : null;
+      }
+      case "position-exposure": {
+        const rows = analytics.positions.slice(0, 6).map((row) => [
+          `${text(row.instrument_id) ?? text(row.position_id) ?? "position"} ${text(row.side) ?? ""}`.trim(),
+          `${formatExact(text(row.signed_qty) ?? text(row.quantity) ?? "0", "qty").display} · uPnL ${formatExact(text(row.unrealized_pnl) ?? "0", "money").display}`,
+        ] as const);
+        return rows.length > 0 ? factRows(rows, "Current position exposure") : null;
+      }
+      case "execution-quality": {
+        const rows = Object.entries(analytics.executionQuality ?? {})
+          .filter(([key]) => key !== "formula_version")
+          .flatMap(([key, value]) => value === null || value === undefined ? [] : [[key.replace(/_/g, " "), formatExact(String(value), "qty").display] as const]);
+        return rows.length > 0 ? factRows(rows, "Execution quality measures") : null;
+      }
+      case "contribution": {
+        const contributions = alphaContributions(analytics).slice(0, 6);
+        const rows = contributions.map((row) => [
+          `${row.venue} · ${row.currency}`,
+          row.value !== null ? `net ${formatExact(row.value, "money").display}` : "net not published",
+        ] as const);
+        return rows.length > 0 ? factRows(rows, "Venue contribution from latest source performance") : null;
+      }
+      case "order-funnel": {
+        const funnel = analytics.orderFunnel;
+        if (!funnel || funnel.totalOrders === null) return null;
+        const rows = [
+          ["total orders", formatExact(String(funnel.totalOrders), "count").display] as const,
+          ...Object.entries(funnel.statusCounts).map(([status, count]) =>
+            [status.toLowerCase(), formatExact(String(count), "count").display] as const),
+        ];
+        return factRows(rows, "Server order funnel for the window");
+      }
+      case "replay-journal": {
+        const log = analytics.replay?.tradeLog ?? [];
+        if (log.length === 0) return null;
+        const first = text(log[0]?.timestamp);
+        const last = text(log[log.length - 1]?.timestamp);
+        return factRows([
+          ["journal events", formatExact(String(log.length), "count").display],
+          ["first", first ?? "—"],
+          ["last", last ?? "—"],
+        ], "Trade replay journal coverage");
+      }
+      default:
+        return null;
+    }
+  };
+  return analytics.capabilities.map((cap, i) => {
+    const title = ANALYTICS_TILE_TITLES[cap.capabilityId] ?? cap.capabilityId;
+    const available = cap.state === "AVAILABLE" || cap.state === "READY" || cap.state === "PARTIAL";
+    const envelope = {
+      authority: "DERIVED" as Authority,
+      asOf: asOf ?? "",
+      window: analytics.completeness ?? "window not stated",
+      interval: "—",
+      formulaVersion: analytics.formulaVersion,
+    };
+    if (cap.capabilityId === "stage-equity" && available) {
+      const equity = analyticsEquity(analytics);
+      if (equity) {
+        return { index: i + 1, title, envelope: equity.envelope, state: "ok" as const, series: equity.series, reason: null };
+      }
+    }
+    const factBody = available ? body(cap) : null;
     return {
       index: i + 1,
-      title: cap ? cap.capabilityId : title,
-      envelope: { authority: "DERIVED", asOf: asOf ?? "", window: analytics.completeness ?? "window not stated", interval: "—", formulaVersion: analytics.formulaVersion },
-      state: equity ? "ok" : available ? "insufficient_data" : "unavailable",
-      series: equity?.series ?? null,
-      reason: cap
-        ? equity
-          ? null
-          : available
-          ? "the branch answered with no series for this window"
-          : `${cap.state}${cap.reasonCode ? ` · ${cap.reasonCode}` : ""}`
-        : "this analytics branch is not published for this subject",
+      title,
+      envelope,
+      state: factBody ? "ok" as const : available ? "insufficient_data" as const : "unavailable" as const,
+      body: factBody,
+      reason: factBody
+        ? cap.state === "PARTIAL" ? `PARTIAL${cap.reasonCode ? ` · ${cap.reasonCode}` : ""}` : null
+        : available
+          ? "the branch answered with no rows for this window"
+          : `${cap.state}${cap.reasonCode ? ` · ${cap.reasonCode}` : ""}`,
     };
   });
 }

@@ -158,7 +158,7 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     const { container } = render(<MemoryRouter><AlphaThreeSixtyRichContainer api={api} alphaId="alpha_a" /></MemoryRouter>);
     expect(await screen.findByRole("heading", { name: /Carry A/ })).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Insight Charts" }));
-    expect(await screen.findByText(/3 · stage-equity/)).toBeTruthy();
+    expect(await screen.findByText(/3 · Stage equity/)).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Trade Replay" }));
     expect((await screen.findAllByText("ord_a")).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("tab", { name: "Positions" }));
@@ -178,6 +178,71 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     expect(container.querySelector('[data-hifi-exact="alpha-360"]')).toBeTruthy();
   });
 
+  it("binds each analytics capability to its own branch by id, never by position (P4-B / F2)", async () => {
+    const fixture = createFixtureApi();
+    const api = {
+      ...fixture,
+      getQueryAnalytics: async () => ({
+        ok: true as const,
+        value: {
+          subjectKind: "ALPHA", subjectId: "alpha_a", asOf: "2026-09-02T06:00:00Z",
+          readAt: "2026-09-02T06:00:01Z", completeness: "COMPLETE", authority: "EXECUTION",
+          formulaVersion: "manager-query-analytics.v1",
+          // The twelve capabilities exactly as the local analytics plane
+          // publishes them — including the honestly unavailable tail.
+          capabilities: [
+            { capabilityId: "exact-query", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "position-exposure", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "stage-equity", state: "EMPTY", reasonCode: null, retryable: false },
+            { capabilityId: "execution-quality", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "contribution", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "order-funnel", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "replay-journal", state: "AVAILABLE", reasonCode: null, retryable: false },
+            { capabilityId: "market-candles", state: "UNAVAILABLE", reasonCode: "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED", retryable: false },
+            { capabilityId: "portfolio-drawdown-overlap", state: "UNAVAILABLE", reasonCode: "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY", retryable: false },
+            { capabilityId: "portfolio-correlation", state: "EMPTY", reasonCode: "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY", retryable: false },
+            { capabilityId: "portfolio-rho-timeline", state: "UNAVAILABLE", reasonCode: "N28_BENCHMARK_SERIES_SOURCE_NOT_ACTIVATED", retryable: false },
+            { capabilityId: "canary-drift", state: "UNAVAILABLE", reasonCode: "N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED", retryable: false },
+          ],
+          orderFunnel: { totalOrders: 364, statusCounts: { FILLED: 32, REJECTED: 316, CANCELED: 16 } },
+          executionQuality: { submitted_count: 364, filled_count: 32 },
+          chartSeries: [], positions: [
+            { position_id: "pos_a", instrument_id: "BTCUSDT.BINANCE", side: "LONG", signed_qty: "0.1", unrealized_pnl: "100.5" },
+          ], correlation: null,
+          sourceFacts: {
+            orders: [{ order_id: "ord_a", status: "FILLED" }],
+            performance: [{ venue: "BINANCE", currency: "USDT", net_pnl: "112.25", ts: "2026-09-02T05:02:00Z" }],
+          },
+          replay: { state: "AVAILABLE", reasonCode: null, candlesState: "UNAVAILABLE", candlesReasonCode: "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED", tradeLog: [{ timestamp: "2026-09-02T05:00:00Z", journal_id: "j1", event_type: "ORDER", order_id: "ord_a", fill_id: null, quantity: "0.1", price: "60000" }] },
+        },
+      }),
+    };
+    const { container } = render(<MemoryRouter><AlphaThreeSixtyRichContainer api={api} alphaId="alpha_a" /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole("tab", { name: "Insight Charts" }));
+    await waitFor(() => expect(container.querySelectorAll(".exec-alpha-tiles > *")).toHaveLength(12));
+    // Real numbers from each capability's own branch, formatted by the one
+    // display authority (grouped, class floor) — not a state word as prose.
+    const funnelTile = screen.getByLabelText("6 · Order funnel");
+    expect(funnelTile.textContent).toContain("total orders");
+    expect(funnelTile.textContent).toContain("364");
+    const qualityTile = screen.getByLabelText("4 · Execution quality");
+    expect(qualityTile.textContent).toContain("submitted count");
+    const exposureTile = screen.getByLabelText("2 · Exposure profile");
+    expect(exposureTile.textContent).toContain("BTCUSDT.BINANCE LONG");
+    expect(exposureTile.textContent).toContain("100.50");
+    const contributionTile = screen.getByLabelText("5 · Venue contribution");
+    expect(contributionTile.textContent).toContain("BINANCE · USDT");
+    expect(contributionTile.textContent).toContain("112.25");
+    // The unavailable tail keeps its reviewed frame and the served reason.
+    const candlesTile = screen.getByLabelText("8 · Market candles");
+    expect(candlesTile.textContent).toContain("N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED");
+    const driftTile = screen.getByLabelText("12 · Paper vs live drift");
+    expect(driftTile.textContent).toContain("N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED");
+    // stage-equity EMPTY with no series stays honest, not a fake chart.
+    const equityTile = screen.getByLabelText("3 · Stage equity");
+    expect(equityTile.getAttribute("data-state")).not.toBe("ok");
+  });
+
   it("renders the real portfolio register on the list root and opens a 360 from a row (P4-A / BR-EX-76)", async () => {
     const api = createFixtureApi();
     render(<MemoryRouter><PortfolioListRichContainer api={api} /></MemoryRouter>);
@@ -185,7 +250,9 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     // The canonical fixture: Carry Core carries counts and exact capital; the
     // live branch is UNAVAILABLE, so the register labels itself PARTIAL.
     expect(await screen.findByText("Carry Core")).toBeTruthy();
-    expect(screen.getByText("30000 USDT")).toBeTruthy();
+    const capital = screen.getByText("30,000.00 USDT");
+    // The display groups and scales; the exact source decimal rides on hover.
+    expect(capital.getAttribute("title")).toBe("30000 USDT");
     expect(screen.getByText(/live: UNAVAILABLE · N31_PROJECTION_NOT_READY/)).toBeTruthy();
     const row = screen.getByRole("link", { name: "Carry Core" });
     expect(row.getAttribute("href")).toBe("/deployments/portfolios/pf_carry_core");

@@ -15,6 +15,8 @@ import { StatusChip } from "../components/badges";
 import { utcStamp } from "../time";
 import type { PortfolioListEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
+import { formatExactMoney } from "../formatExact";
+import type React from "react";
 
 export interface PortfolioListProps {
   list?: PortfolioListEnvelope | null;
@@ -74,7 +76,10 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
                       <td data-numeric="true">{item.allocationCount}</td>
                       <td data-numeric="true">{item.deploymentCount}</td>
                       <td data-numeric="true">{item.allocatedByCurrency.length > 0
-                        ? item.allocatedByCurrency.map((entry) => `${entry.value} ${entry.currency}`).join(" · ")
+                        ? item.allocatedByCurrency.map((entry) => {
+                          const money = formatExactMoney(entry.value, entry.currency);
+                          return <span key={entry.currency} title={money.full}>{money.display}</span>;
+                        }).reduce<React.ReactNode[]>((out, node, index) => index === 0 ? [node] : [...out, " · ", node], [])
                         : mute}</td>
                       <td className="exec-af-mute">{utcStamp(item.updatedAt)}</td>
                     </tr>

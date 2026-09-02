@@ -13,6 +13,7 @@ import { SparkLine } from "../components/marketChart";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
 import { fleetSparkSeries, fmt2 } from "../fleetFormat";
+import { formatExact } from "../formatExact";
 import type { FleetDemo, FleetDeployment, FleetRow, FleetTick, StageChip } from "../alphaFleet.smoke";
 import type { AlphaFleetItem, ManagerListEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
@@ -277,12 +278,9 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
 const STAGE_TONE: Record<string, StageChip["tone"]> = { live: "live", canary: "canary", sandbox: "sandbox", paper: "paper", research: "research" };
 const stageChip = (stage: string): StageChip => ({ label: stage.toUpperCase(), tone: STAGE_TONE[stage.toLowerCase()] ?? "research" });
 
+// P4-B / F8: one display authority — money class scaling, grouping, trim.
 function exactDisplay(value: string): string {
-  const [integer, fraction] = value.split(".");
-  const sign = integer.startsWith("-") ? "-" : "";
-  const digits = sign ? integer.slice(1) : integer;
-  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${sign}${grouped}${fraction ? `.${fraction}` : ""}`;
+  return formatExact(value, "money").display;
 }
 
 function ExactLines({ values, empty, tone }: { values: readonly { currency: string; value: string }[]; empty: string; tone?: "good" | "bad" }) {
