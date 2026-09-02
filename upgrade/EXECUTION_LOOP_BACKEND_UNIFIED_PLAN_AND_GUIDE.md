@@ -2259,6 +2259,199 @@ does not block the other 18 Paper relations.
 Full implementation, runtime, test, image and rollback evidence:
 [Phase 1 closeout](backend/EX_BE_PHASE1_DATA_TRUTH_PROJECTION_REALTIME_FOUNDATION.md).
 
+#### Phase 2 delivery specification — Complete Screen BFF & Controlled Command Plane
+
+**Owner authorization (2026-09-02):** Bobby approved immediate implementation
+of the complete Phase 2 scope, combining N33 and N34 on
+`feat/execution-data-activation`. Phase 2 must close every Portal-owned gap in
+the screen BFF and command-control boundary; it must not infer mutation
+authority from a CLI name, an observed HTTP route or an internal-only Portal
+decision. The approved rich frontend composition is read-only input to this
+phase and must not be rewritten.
+
+**Target status:** `COMPLETE_SCREEN_BFF_ACCEPTED /
+CURRENT_COMMAND_SET_CONTROLLED / R0_LOCAL_TASKS_CONNECTED /
+UNPUBLISHED_MUTATIONS_FAIL_CLOSED / PHASE_3_READY`.
+
+##### P2-A — Canonical screen composition over the SGP-local projection
+
+- make every commissioned product route use a stable, versioned, same-origin
+  BFF contract; a browser never sees Manager relation selectors, database
+  names, AWS-HK origins or source credentials;
+- compose source facts from the Phase 1 local snapshot only. Portal governance,
+  approval, condition, incident and user-owned records remain TypeScript /
+  Portal-control PostgreSQL authority and are joined server-side;
+- retain one identity spine whenever the requested resource is known. An
+  additive branch failure becomes a capability-local
+  `EMPTY/PARTIAL/STALE/DENIED/UNAVAILABLE` state and may never replace the
+  complete screen with a generic envelope;
+- publish complete per-screen metadata: `schema_version`, record/source
+  authority, profile/workspace/resource lineage, `read_at`, `as_of`, freshness,
+  completeness, branch capability state and stable reason code;
+- close the BFF catalogue asymmetry: list and detail roots, route templates,
+  operation IDs and response contracts must match the frontend router exactly.
+
+##### P2-B — Finite screen worklist and priority
+
+The worklist is finite and must close in this phase in the order below:
+
+1. activate Command Center snapshot composition from local projection plus
+   Portal governance/operations; keep needs-you ranking, fleet/today/pinned
+   panels and source status honest; bind its motion to the Phase 1 local SSE;
+2. deliver `execution.account-broker-360.v1` from bindings, account/balance,
+   venue-account and reconciliation facts, including truthful internal/broker
+   differences and headroom/availability branches;
+3. normalize Paper Workbench rows to the requested deployment and add the
+   observation-gate branch without cross-deployment fall-through;
+4. finish Full Blotter keyset navigation, exact total and bounded server-side
+   aggregates/filter/sort metadata over the committed hot projection;
+5. decouple Sandbox Certification identity/source facts from the optional
+   Portal-control certification record so a real deployment always renders;
+6. populate all analytically derivable branches that the hot projection can
+   prove; genuinely absent series/cold-history stays named per branch;
+7. restore Alpha Fleet 30-day columns only where the projection contains a
+   complete window; otherwise retain the current exact facts with a typed
+   rollup branch state;
+8. finish Canary/Live and governance/operations composition using real source
+   facts where rows exist and truthful empty states where they do not.
+
+No item may be declared complete by merely changing catalogue metadata or a
+feature flag. It needs a contract test, a local-projection sample and a
+same-origin route test. No fake fixture may substitute for a product response.
+
+##### P2-C — Controlled command plane for the exact current source set
+
+- classify the complete operator task catalogue from immutable current
+  evidence on every release. `CONNECTED` is capability authority, not route
+  discovery;
+- connect the bounded R0 inspect task subset to Phase 1 local adapters. These
+  reads run inside SGP, return bounded typed output and audit a digest; they do
+  not use the mutation relay or open an AWS-HK request per click;
+- preserve the TypeScript intent path for mutations:
+  `validate -> plan -> approval/step-up/SoD -> apply -> verify -> terminal
+  receipt`; bind request key, operation ID, actor, workspace, environment,
+  target version, payload hash, capability revision and expiry;
+- require session, workspace membership, ADMIN role, allowed Origin and CSRF
+  for every plan/apply mutation. R3/R4 also require an exact owner-published
+  capability, dedicated command identity, phishing-resistant step-up and the
+  capability's distinct-approver policy;
+- persist hash-only intent, immutable audit/outbox/operation state and
+  sanitized relay/verify receipts. Never persist a credential, raw CLI,
+  arbitrary URL, shell, SQL or free-form source command;
+- an HTTP 202 is `ACCEPTED`, never success. Ambiguous/timeout outcomes become
+  `UNCERTAIN`, are never automatically retried and require source
+  reconciliation before risk-increasing work on the same target;
+- while the owner publication has zero `portal_reachable=true` mutation
+  capabilities, all mutation tasks remain visibly
+  `SUPPORTED_BUT_INACTIVE/SEMANTICALLY_INCOMPATIBLE`; plan/apply sends zero
+  source requests. This is the accepted exact current set, not hidden Portal
+  debt. A later signed owner publication can activate one capability without
+  changing the browser contract or widening any other task.
+
+##### P2-D — Runtime, observability and rollback
+
+- separate screen-read, realtime, R0 local-task and mutation-relay flags;
+  rollback of one plane cannot disable or widen another;
+- publish bounded per-route concurrency, response bytes, page/row counts,
+  freshness ceiling and cache/profile keys; record sanitized latency, state,
+  reason code, projection age and command lifecycle counters;
+- preserve the last valid BFF document during source loss inside the declared
+  stale ceiling; commands always fail closed on capability, auth, version,
+  approval, step-up, target-state or verification uncertainty;
+- rollback is one prior content-addressed Control API image plus independent
+  feature flags. Projection, audit, operation and journal evidence is retained.
+
+##### Phase 2 required evidence and exit gate
+
+1. **Catalogue/contract:** every commissioned route maps to exactly one BFF
+   operation/contract; schema/OpenAPI/generated types/fixtures stay in parity.
+2. **Screen matrix:** real local-projection sample for every screen family;
+   identity and branch states prove ready, empty, partial, stale, denied and
+   unavailable without whole-screen loss.
+3. **Data isolation:** Paper/Sandbox/Live and workspace/resource filters,
+   cache keys, exact decimals and deployment/account joins pass negative tests.
+4. **Query:** blotter cursor/filter/sort/count/aggregate bounds and workbench
+   scoping pass replay, invalid-cursor and truncation tests.
+5. **Realtime:** Command Center snapshot/resume/gap/auth-expired behavior uses
+   the Phase 1 local journal and creates no cross-cell tab fan-out.
+6. **R0 tasks:** allowlist, bounds, local-only transport, audit digest,
+   sensitive-value rejection and role/workspace negatives pass.
+7. **Mutation safety:** request-key replay/conflict, expected-version conflict,
+   approval/step-up/SoD, expiry, 202/terminal/uncertain, kill switch and zero
+   dispatch for unpublished capabilities pass.
+8. **Fault/load:** concurrent screen reads, source outage, stale ceiling,
+   database restart and command ambiguity remain bounded and fail closed.
+9. **Runtime/restore:** fresh PostgreSQL migration, dump/restore signature,
+   rebuilt dev image, authenticated same-origin smoke and rollback rehearsal
+   pass; `main` and stable remain unchanged.
+10. **Debt audit:** every in-scope finding is fixed or explicitly proven to be
+    immutable external source truth with owner/evidence reference. No unnamed
+    Portal technical debt may cross the gate.
+
+**Phase 2 exit gate:** all ten evidence classes pass. Screen BFFs are complete
+for the current data population, R0 tasks are genuinely local and connected,
+and mutation controls are fully implemented but only owner-published exact
+capabilities can dispatch. Phase 3 must not begin while a Portal-owned screen
+or command-control defect remains.
+
+#### Phase 3 delivery specification — Rich UI integration, product acceptance & release
+
+**Start condition:** Phase 2 is accepted and Claude's approved rich
+composition/review packet is pinned by commit. This phase combines N35 and N36;
+it is not authorized for implementation by the Phase 2 instruction.
+
+**Target status:** `RICH_UI_BFF_INTEGRATION_ACCEPTED /
+AUTHENTICATED_PRODUCT_GO / DEV_RELEASE_ACCEPTED /
+PROTECTED_MAIN_PROMOTION_READY`.
+
+##### P3-A — Panel-by-panel rich UI binding
+
+- Claude retains visual/design-system authority; Codex owns BFF correctness,
+  runtime composition and release evidence;
+- bind every approved panel to its canonical same-origin BFF branch; preserve
+  layout/density in empty, partial, stale, denied and unavailable states;
+- remove product-route fixture/double substitution. Fixture Lab remains a
+  separately routed visual/e2e corpus and can never answer a product request;
+- wire the single realtime contract where motion is useful; terminal auth/gap
+  closes the stream and performs a bounded resnapshot, never an infinite
+  EventSource retry loop;
+- enable an Admin Action Drawer control only when the server catalogue returns
+  `CONNECTED`; render plan/apply/verify/uncertain receipts exactly as served.
+
+##### P3-B — Authenticated product acceptance
+
+- execute authenticated browser journeys for all catalogue routes and cross-
+  screen links using real dev BFF data, including truthful sparse Live/Sandbox
+  populations;
+- prove no browser request leaves same origin, no React/DOM warning appears,
+  no console/network error is hidden and no unavailable additive branch erases
+  its screen;
+- verify keyboard, focus, responsive density, reduced-motion, terminal stream,
+  session expiry, CSRF/role denial and stale/conflict operator journeys;
+- have Bobby review the resulting dev-portal screen matrix against the pinned
+  rich UI reference and record all findings before release promotion.
+
+##### P3-C — Product and release closeout
+
+- run full contract, TypeScript, Rust, frontend, browser, auth, load, fault,
+  replay, retention, restore and rollback gates from one reviewed commit;
+- reconcile feature head into protected `dev`, rebuild only the canonical dev
+  worktree/runtime and record Git/image/config/database provenance;
+- after owner UI acceptance, promote `dev -> protected main` through review;
+  only the main workflow may produce signed immutable images, SBOM and
+  provenance. Stable runtime is changed only by a separately approved release;
+- publish one closeout report containing screen/command acceptance, source
+  truth, known external gaps, exact rollback and the next version boundary.
+
+##### Phase 3 exit gate
+
+Phase 3 closes only when every commissioned route has an authenticated real-
+data journey, every connected command has a terminal/uncertain journey, the
+approved rich UI remains intact, dev provenance is singular and Bobby records
+Product GO. Missing Trading System capabilities remain versioned external
+requests; no Portal defect or UI/backend integration gap may be relabeled as
+an external dependency.
+
 ---
 
 ## 5. Definition of Ready and Definition of Done
