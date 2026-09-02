@@ -1864,6 +1864,186 @@ only for protected-main signed image evidence (`N29-REL-01`). Evidence:
 [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md)
 and [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
+### N29-RTA — Runtime truth reset and data-first product closeout (2026-09-02)
+
+**Current product verdict:** `PRODUCT_NO_GO / DATA_PLANE_PARTIAL /
+UI_INTEGRATION_BLOCKED / MAIN_AND_STABLE_UNCHANGED`.
+
+This audit supersedes the product interpretation of the historical N29
+closeout without erasing its valid contract, repository, security and test
+evidence. In particular:
+
+- `CONTRACT_COMPLETE`, `FOUNDATION_COMPLETE` and a green fixture suite do not
+  mean the commissioned product route is runtime-complete;
+- a commissioned screen is not complete when its primary product data remains
+  `TYPED_UNAVAILABLE`, `SOURCE_DARK`, disabled or supplied only by a test
+  double;
+- a fast local SSE fan-out does not make a 60-second source snapshot real-time;
+- product acceptance requires an authenticated deployed route, source-backed
+  data with correct profile lineage, the reviewed rich composition and a real
+  browser journey. Panel-local optional data may be empty or unavailable, but
+  it must not replace the whole screen.
+
+#### Runtime facts observed on 2026-09-02
+
+The audit was read-only. It retained no credentials or business rows.
+
+| Surface | Observed deployed truth | Product implication |
+|---|---|---|
+| Paper overview | HTTP 200 `partial`; 43 deployments, 20 positions and bounded non-empty session/performance/equity populations; two capabilities available, three partial, two unavailable | Useful source data exists, but the screen is not complete and must expose panel-local completeness/freshness |
+| Sandbox overview | HTTP 200 `ready`; 35 deployments, three reconciliation rows and honest empty positions/sessions | Sandbox can render a rich, sparse state; an empty transactional panel is not a whole-screen failure |
+| Live overview | HTTP 200 `ready`; no Live deployment/position/session/account rows, but 85 balances included a Paper-scoped account identity | **High-priority profile-isolation defect.** The response cannot be accepted as authoritative Live truth until lineage/filtering is corrected |
+| Blotter | HTTP 200 `partial`; bounded non-empty order/fill/session/command-journal populations; four partial, three empty and one unavailable capability | The current source can support a real rich Blotter, with explicit per-panel gaps |
+| Alpha Fleet | HTTP 200 with 48 rows | Fleet list is source-backed and should remain the rich navigation spine |
+| Alpha 360 | Fleet identity exists and analytics endpoint is HTTP 200 | Analytics is additive; failure/absence of one analytics branch must never replace the entire detail screen |
+| Accounts & Bindings | List HTTP 200 with 43 rows; binding detail HTTP 200 | List and binding drill-down are usable now |
+| Account/Broker 360 | Current narrow account route rejects the request; registry still classifies the full exposure population as unavailable | Screen BFF and truthful composition remain unfinished |
+| Paper Workbench | HTTP 200 `partial`; unscoped deployment population plus scoped position/fill facts, while several branches remain unavailable | Scope normalization and panel-level data contracts remain unfinished |
+| Sandbox Certification | A real current-source deployment returns `SANDBOX_CERTIFICATION_NOT_FOUND` | Certification is still coupled to missing Portal-control records instead of composing actual source facts plus governance truth |
+| Command Center | Snapshot route returns `COMMAND_CENTER_SNAPSHOT_DISABLED` | Command Center backend is not activated |
+| Admin Action Drawer | Catalogue/tasks return HTTP 200, relay is `DISABLED`, 24 tasks and zero connected commands | UI may show the catalogue, but no command may be presented as executable yet |
+| Operations / approvals / waivers | Routes return HTTP 200 with empty populations | Empty may be truthful, but workflows require real create/transition evidence before product acceptance |
+
+The rich UI source was not lost. Product routes still select the reviewed rich
+containers for the major Execution screens. Sparse or whole-screen unavailable
+output is primarily caused by incomplete/disabled BFF branches, bad profile
+truth and some frontend composition branches treating an additive error as the
+screen-level authority. This is a joint integration defect, not a reason to
+replace the rich composition with a generic envelope.
+
+#### Current refresh, persistence and stream behavior
+
+The runtime is currently a hybrid of two different read paths:
+
+| Layer | Current deployed interval/behavior | Consequence |
+|---|---|---|
+| AWS-HK Paper/Sandbox/Live projection workers | `EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS=60000`; one worker per profile | Trading System source truth can be up to about 60 seconds old before a new committed cycle |
+| Projection commit | Thirteen bounded feeds become eight semantic snapshots in profile-isolated PostgreSQL; unchanged state updates a bounded heartbeat instead of rewriting full facts/cycles/journal | Correct durable base and bounded write amplification |
+| AWS-HK realtime Edge | `EDGE_REALTIME_POLL_INTERVAL_MS=100`, `EDGE_REALTIME_SSE_ENABLED=true` | A newly committed projection cycle reaches local SSE quickly, but 100 ms journal polling does not improve 60-second source freshness |
+| Current-source shared cache | `EDGE_MANAGER_SHARED_CACHE_TTL_MS=750` with shared admission/coalescing | Repeated reads inside 750 ms coalesce; a later page refresh can still cause a new cross-cell source fan-out |
+| Fleet/Bindings Portal snapshot | committed Portal-control snapshot, five-second max age, stale-while-refresh | Better UI latency, but refresh still drains current source in the background |
+| TypeScript profile/Paper BFFs | several screens issue a fixed bounded relation fan-out on each HTTP request | A browser refresh can indirectly call AWS-HK/Trading System; bounded, but not the desired scalable product hot path |
+
+The desired invariant is therefore:
+
+> A browser refresh or new tab reads an SGP-local read model and never creates
+> a fresh Trading System fan-out. Cross-region source work is driven by a
+> bounded shared ingestion/projection service, independent of tab count.
+
+#### Data-first target architecture
+
+```text
+Trading System current contracts (AWS-HK)
+    -> Rust source adapter: initial snapshot + incremental/delta polling
+    -> profile-isolated operational PostgreSQL projection (AWS-HK)
+    -> atomic cursor/epoch + journal/outbox
+    -> authenticated bounded inter-cell delivery
+    -> Portal read-model PostgreSQL/cache (SGP)
+    -> TypeScript same-origin screen BFF
+    -> browser initial snapshot + SSE deltas
+```
+
+Rules:
+
+1. AWS-HK remains the Trading System compatibility/source boundary; Portal
+   never reads Trading System SQL, Redis, shell or arbitrary relations.
+2. SGP stores only sanitized Portal domain/read models needed by commissioned
+   screens, not a replica of all 96 raw relations.
+3. Each projection row carries profile, workspace, source revision, cursor or
+   epoch, `as_of`, `received_at`, completeness and lineage. Paper/Sandbox/Live
+   cannot share an unqualified cache key or result set.
+4. Bootstrap uses a bounded snapshot. Normal operation uses incremental
+   changes where the current contract supports them, plus periodic
+   reconciliation snapshots. A whole 13-feed snapshot every second is not an
+   acceptable substitute for a delta path.
+5. Cross-cell outage serves the last committed SGP read model with visible
+   `STALE` age until its bounded stale ceiling; it never invents freshness.
+6. Browser SSE subscribes to the SGP-local journal/fan-out. Browser tab count
+   affects only local fan-out capacity, not AWS-HK query volume.
+7. Direct cross-cell BFF reads remain an operator-only diagnostic/fallback and
+   are removed from normal product navigation after parity is proven.
+
+Initial freshness budgets to validate under load:
+
+| Data class | Target ingestion mode | Initial target |
+|---|---|---|
+| orders, fills, positions, execution/risk events | event/incremental feed when published; otherwise bounded delta poll | 0.1–2 s with events, 1–5 s with polling |
+| accounts, deployments, balances, reconciliation | changed-key/delta poll plus reconciliation snapshot | 5–15 s |
+| strategy/catalogue/config metadata | bounded batch | 30–60 s |
+| historical chart/report/archive data | asynchronous batches | minute/hour according to the screen SLA |
+
+These are target budgets, not claims about current runtime. The current source
+snapshot interval remains 60 seconds until N30/N31 produce measured load,
+change-rate and correctness evidence.
+
+#### Storage decision: PostgreSQL hot; Parquet/DuckDB cold
+
+- **Hot operational truth:** PostgreSQL remains the authority for projection
+  state, exact decimals, cursor/epoch, idempotency, outbox/journal, state
+  transitions and concurrent screen reads. Optional Redis or bounded in-memory
+  caches may accelerate derived views/fan-out, but are never the authority.
+- **Warm history:** time/range-partitioned PostgreSQL tables retain the recent
+  operational window required for replay, investigation and near-term charts.
+- **Cold history and heavy analytics:** append-only orders/fills/equity/events
+  may be compacted asynchronously into date/profile/venue-partitioned Parquet
+  in object storage. DuckDB is appropriate for offline/ad-hoc jobs and report
+  generation; Rust Arrow/DataFusion may serve bounded historical queries.
+- **Not allowed:** DuckDB as a shared concurrent hot service, Parquet rewrites
+  for every tick/state transition, or browser queries directly against files.
+
+Parquet/DuckDB therefore complement the architecture but do not solve the hot
+path. Using them for live operational screens would weaken transactional
+correctness, cursor continuity and small-update latency.
+
+#### Confirmed unfinished work
+
+1. Correct Live profile lineage/filtering and prove no Paper/Sandbox row can
+   cross into Live.
+2. Move normal Paper/Sandbox/Live product reads from request-time cross-cell
+   fan-out to the SGP-local projection/read model.
+3. Activate the read-only subset of the thirteen N28 existing adapters where
+   current sources already exist; retain genuinely absent capabilities as one
+   versioned owner gap. Mutation adapters remain separately gated.
+4. Complete Account/Broker 360, Sandbox Certification, Canary/Live detail,
+   Command Center and governance/workflow BFF composition.
+5. Populate query/analytics from the durable projection and activate SSE from
+   the local committed journal; prove snapshot/resume/gap/stale behavior.
+6. Connect only the exact currently supported Admin Action Drawer commands
+   through the existing approval/step-up/idempotency/verify boundary. All
+   unsupported or unapproved commands remain visibly disabled.
+7. Preserve rich compositions in every state. Missing additive data becomes a
+   panel-local empty/unavailable/stale state, never a generic whole-screen
+   replacement when the identity spine is available.
+8. Run authenticated, real-source, route-by-route browser acceptance without
+   fixture/double substitution for Product GO.
+9. Reconcile Git/runtime provenance: this campaign checkout is ahead of
+   `origin/dev`; dev deployment must be rebuilt only from the reviewed merged
+   `dev` commit. `main` and stable remain untouched until owner acceptance.
+
+#### Finite corrective campaign (data first, UI integration second)
+
+**Direction:** `APPROVED_DATA_FIRST_ORDER / INDIVIDUAL_PHASE_EXECUTION_REQUIRES_OWNER_NAMING`.
+No phase may close with a newly discovered in-scope debt deferred to an unnamed
+phase.
+
+| Phase | Goal and exit gate | Layer |
+|---|---|---|
+| N30 — Data truth and profile isolation | Freeze an exact relation/capability/screen population matrix from deployed data; fix Live leakage; prove profile/workspace/cache-key isolation and row lineage for Paper/Sandbox/Live | Rust + PostgreSQL |
+| N31 — Projection-first dual-cell read path | Deliver snapshot + incremental/reconciliation ingestion, atomic outbox/cursor and an SGP-local Portal read model; ordinary page refresh causes zero AWS-HK requests; pass WAN-loss, restart, replay, duplicate and stale-serving tests | Rust + PostgreSQL; TypeScript consumes local BFF only |
+| N32 — Existing-source adapter activation | Activate the semantically valid read-only N28 adapters already backed by present sources; exact bounds/auth/version negotiation and source-loss behavior pass; retain only genuinely absent owner gaps | Rust compatibility authority |
+| N33 — Screen BFF data completion | Complete Account/Broker 360, Certification, Canary/Live, Command Center and governance composition over N31/N32; each route has canonical schema, real-source evidence and truthful empty/partial states | TypeScript BFF + Portal-control PostgreSQL |
+| N34 — Exact command activation | Connect the supported Admin Action Drawer subset only; plan/apply/verify, approval, step-up, idempotency, audit and rollback pass. No arbitrary CLI/shell/raw command passthrough | TypeScript governance + Rust command relay |
+| N35 — Backend/UI rich integration acceptance | Claude retains design authority; bind every rich panel to the canonical BFF, keep additive failures local, remove fake-real product fixtures and pass real browser journeys for every commissioned route | Claude frontend + Codex backend integration |
+| N36 — Product/release closeout | Full auth/load/fault/replay/restore/rollback/retention evidence; reconcile feature head -> protected `dev`, rebuild one dev stack, owner UI acceptance, then separately promote signed images/SBOM/provenance through protected `main` | Release/operations |
+
+**Claude frontend-lead review slot:** Claude may append its screen-by-screen
+composition findings, density/state-machine concerns and proposed panel
+bindings under this subsection or in the linked frontend handoff. Claude must
+not rewrite the runtime facts above. Backend gaps must name the exact screen,
+BFF contract, field/freshness requirement and behavior for empty, partial,
+stale, denied and unavailable states. N35 begins only after N30–N33 establish
+the real data spine needed by the reviewed UI.
+
 ---
 
 ## 5. Definition of Ready and Definition of Done
@@ -3089,6 +3269,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Added N29-RTA runtime truth reset and finite N30–N36 data-first closeout plan | supersedes the product interpretation—not the valid contract evidence—of N29; records real deployed screen/BFF states, 60 s source projection / 100 ms local journal / 750 ms direct cache behavior, Live profile leakage, remaining disabled/source-dark paths, projection-first dual-cell target and PostgreSQL-hot/Parquet-cold storage decision; `PRODUCT_NO_GO`, main/stable unchanged |
 | 2026-09-01 | Closed Alpha 360 current-source composition and projection-workspace integration | Fleet v2 remains the rich screen spine; N25 analytics is additive; private Query/SSE delegation maps to one exact execution-cell projection workspace without widening Portal RBAC; real Fleet click-through and both BFF reads pass; command/Live mutation/main/stable unchanged |
 | 2026-09-01 | Closed Alpha Fleet current-source v2 implementation | expanded BR-EX-72 to the existing strategy/deployment/account/balance/portfolio/allocation/position/reconciliation source set; global multi-profile projection, exact decimals, multi-stage filter/drill-down and rich-screen regression gates pass; bounded 30-day source window remains typed unavailable; dev runtime acceptance is the only slice-local gate |
 | 2026-09-01 | Added exact Paper/Sandbox/Live current-source runtime activation authority | preserved historical N19; bound N22/N23/N29 release profiles and sanitized multi-profile mTLS evidence; Sandbox real rows and Live authoritative empty qualified; rich UI stays mounted with panel-local truth; command/Live mutation remain separate and false |
