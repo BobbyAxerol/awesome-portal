@@ -20,6 +20,8 @@ export interface ProjectionRow {
 export interface ProjectionRelation {
   source_id: string;
   relation: string;
+  availability: "AVAILABLE" | "UNAVAILABLE";
+  reason_code: string | null;
   as_of: string | null;
   freshness: ProjectionFreshness;
   completeness: ProjectionCompleteness;
@@ -325,6 +327,13 @@ function validateDocument(document: ProfileProjectionDocument): void {
     Object.keys(document.relations).length === 0 ||
     Object.entries(document.relations).some(([key, relation]) =>
       key !== `${relation.source_id}:${relation.relation}` ||
+      !["AVAILABLE", "UNAVAILABLE"].includes(relation.availability) ||
+      (relation.reason_code !== null && !/^[A-Z][A-Z0-9_]{1,95}$/.test(relation.reason_code)) ||
+      (relation.availability === "UNAVAILABLE" && (
+        relation.items.length !== 0 ||
+        typeof relation.reason_code !== "string" ||
+        relation.reason_code.length === 0
+      )) ||
       relation.items.length > 2_000 ||
       relation.items.some((row) =>
         row.lineage.workspace_id !== document.workspace_id ||

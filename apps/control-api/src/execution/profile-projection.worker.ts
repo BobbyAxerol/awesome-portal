@@ -15,7 +15,7 @@ import {
 } from "./profile-projection.repository";
 
 const SOURCE_CONTRACT_REVISION = "trading-system.portal-execution.manager-v2.runtime.v1";
-const MAXIMUM_SOURCE_PAGES = 10;
+const MAXIMUM_SOURCE_PAGES = 2;
 const SOURCE_PAGE_LIMIT = 200;
 
 @Injectable()
@@ -83,7 +83,29 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       };
       const results = [];
       for (const binding of profileProjectionCatalog(environment)) {
-        const page = await this.drain(workspaceId, environment, binding, context);
+        let page: ManagerPage;
+        try {
+          page = await this.drain(workspaceId, environment, binding, context);
+        } catch (error) {
+          this.logger.warn(JSON.stringify({
+            event: "execution_profile_projection_relation_failed",
+            environment,
+            profile_id: profileId,
+            source_id: binding.sourceId,
+            relation: binding.relation,
+            error_code: safeFailureCode(error),
+            source_reason_code: safeSourceReasonCode(error),
+          }));
+          if (isSourceContractUnavailable(error)) {
+            results.push({
+              spec: { key: binding.key, binding }, page: null,
+              state: "UNAVAILABLE" as const,
+              reasonCode: safeSourceReasonCode(error) ?? safeFailureCode(error),
+            });
+            continue;
+          }
+          throw error;
+        }
         results.push({
           spec: { key: binding.key, binding }, page,
           state: page.items.length === 0 ? "EMPTY" as const
@@ -98,10 +120,12 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         return [key, {
           source_id: binding.sourceId,
           relation: binding.relation,
-          as_of: item.page!.asOf,
-          freshness: item.page!.freshness,
-          completeness: item.page!.completeness,
-          items: item.page!.items.map((fields) => ({
+          availability: item.page ? "AVAILABLE" as const : "UNAVAILABLE" as const,
+          reason_code: item.reasonCode,
+          as_of: item.page?.asOf ?? null,
+          freshness: item.page?.freshness ?? "UNKNOWN" as const,
+          completeness: item.page?.completeness ?? "UNKNOWN" as const,
+          items: (item.page?.items ?? []).map((fields) => ({
             lineage: {
               workspace_id: workspaceId,
               profile_id: profileId,
@@ -119,11 +143,11 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         source_contract_revision: SOURCE_CONTRACT_REVISION,
         relations,
       };
-      const sourceAsOf = latestAsOf(isolated.map((item) => item.page!));
+      const sourceAsOf = latestAsOf(isolated.flatMap((item) => item.page ? [item.page] : []));
       const completeness: ProjectionCompleteness = isolated.some((item) =>
-        item.page!.completeness === "PARTIAL" || item.state === "PARTIAL")
+        item.page?.completeness === "PARTIAL" || item.state === "PARTIAL" || item.state === "UNAVAILABLE")
         ? "PARTIAL"
-        : isolated.some((item) => item.page!.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
+        : isolated.some((item) => item.page?.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
       const sourceCursor = projectionDigest(relations);
       await this.repository.commit(document, {
         sourceEpoch: `manager-v2:${profileId}:${SOURCE_CONTRACT_REVISION}`,
@@ -167,7 +191,13 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       cursors.add(page.nextCursor);
       cursor = page.nextCursor;
     }
-    throw new Error("N31_SOURCE_POPULATION_EXCEEDS_BOUND");
+    // A hot Portal projection is deliberately bounded. A larger source
+    // population is not a failed cycle: retain the newest accepted window and
+    // label it PARTIAL so product screens never confuse the window with an
+    // exact historical population. The next reconciliation starts again from
+    // the authoritative head; cold/full-history reads remain a later, explicit
+    // query-plane concern.
+    return { items, asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null };
   }
 
   private enabled(): boolean { return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true"; }
@@ -223,4 +253,19 @@ function safeFailureCode(error: unknown): string {
   return /^[0-9A-Z]{5}$/.test(candidate)
     ? `POSTGRES_${candidate}`
     : /^[A-Z][A-Z0-9_]{1,95}$/.test(candidate) ? candidate : "N31_SOURCE_REFRESH_FAILED";
+}
+
+function safeSourceReasonCode(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("details" in error)) return null;
+  const details = (error as { details?: unknown }).details;
+  if (typeof details !== "object" || details === null || !("reason_code" in details)) return null;
+  const reason = String((details as { reason_code?: unknown }).reason_code ?? "");
+  return /^[A-Z][A-Z0-9_]{1,95}$/.test(reason) ? reason : null;
+}
+
+function isSourceContractUnavailable(error: unknown): boolean {
+  const code = safeFailureCode(error);
+  const reason = safeSourceReasonCode(error);
+  return code === "N17B_SOURCE_RELATION_UNAVAILABLE" ||
+    (code === "N17B_SOURCE_REJECTED" && reason === "MANAGER_V2_SOURCE_CONTRACT_REJECTED");
 }

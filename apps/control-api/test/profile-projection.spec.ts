@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { buildPool } from "../src/db/pool";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
+import { CurrentSourceProxyError } from "../src/execution/current-source.proxy";
 import { ExecutionProfileRealtimeService } from "../src/execution/profile-realtime.service";
 import {
   acceptedProjectionAdapters,
@@ -204,6 +205,65 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(after?.projectionSequence).toBe(before?.projectionSequence);
     await worker.onApplicationShutdown();
   });
+
+  it("commits a truthful PARTIAL hot window when a source relation exceeds the page bound", async () => {
+    let calls = 0;
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        calls += 1;
+        return {
+          ...emptyManagerResponse(environment, relation),
+          source: {
+            ...(emptyManagerResponse(environment, relation) as any).source,
+            data: {
+              relation: { schema: "public", relation }, items: [],
+              next_cursor: relation === "strategies" ? `cursor-${calls}` : null,
+            },
+          },
+        };
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(calls).toBe(profileProjectionCatalog("paper").length + 1);
+    expect(snapshot?.completeness).toBe("PARTIAL");
+    expect(snapshot?.document.relations[relationKey].completeness).toBe("PARTIAL");
+    await worker.onApplicationShutdown();
+  });
+
+  it("keeps a source-as-is profile usable when one proven relation is contract-unavailable", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        if (relation === "portfolio_equity_snapshots") {
+          throw new CurrentSourceProxyError("N17B_SOURCE_REJECTED", 422, {
+            availability: "UNAVAILABLE",
+            reason_code: "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+            retryable: false,
+          });
+        }
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(snapshot?.completeness).toBe("PARTIAL");
+    expect(snapshot?.document.relations["manager.performance:portfolio_equity_snapshots"])
+      .toMatchObject({
+        availability: "UNAVAILABLE",
+        reason_code: "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+        completeness: "UNKNOWN",
+        items: [],
+      });
+    await worker.onApplicationShutdown();
+  });
 });
 
 function document(alphaId: string): ProfileProjectionDocument {
@@ -217,6 +277,8 @@ function document(alphaId: string): ProfileProjectionDocument {
       [relationKey]: {
         source_id: "manager.strategies",
         relation: "strategies",
+        availability: "AVAILABLE",
+        reason_code: null,
         as_of: "2026-09-02T00:00:00.000Z",
         freshness: "FRESH",
         completeness: "COMPLETE",

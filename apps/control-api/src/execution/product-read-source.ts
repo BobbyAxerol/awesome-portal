@@ -85,6 +85,11 @@ export class ExecutionProductReadSource {
     if (!projected) throw new CurrentSourceProxyError("N31_PROJECTED_RELATION_NOT_AVAILABLE", 503, {
       availability: "UNAVAILABLE", retryable: false,
     });
+    if (projected.availability === "UNAVAILABLE") {
+      throw new CurrentSourceProxyError("N31_PROJECTED_RELATION_UNAVAILABLE", 503, {
+        availability: "UNAVAILABLE", reason_code: projected.reason_code, retryable: false,
+      });
+    }
     const limit = query.limit ?? 100;
     const start = decodeCursor(query.cursor, snapshot.payloadDigest);
     if (start > projected.items.length) {
