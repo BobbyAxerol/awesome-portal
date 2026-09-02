@@ -46,13 +46,13 @@ class FakeCurrentSource {
 
 function defaultRecord(relation: string): RecordInput {
   const defaults: Record<string, RecordInput> = {
-    strategy_deployments: { deployment_id: "dep_default", mode: "paper" },
-    positions_v2: { position_id: "pos_default", mode: "paper" },
-    execution_sessions: { execution_session_id: "ses_default", mode: "paper" },
-    orders: { order_id: 1, mode: "paper" },
-    fills: { fill_id: 1, mode: "paper" },
-    performance_snapshots: { id: 1, mode: "paper" },
-    account_equity_snapshots: { id: 1, mode: "paper" },
+    strategy_deployments: { deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper" },
+    positions_v2: { position_id: "pos_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
+    execution_sessions: { execution_session_id: "ses_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
+    orders: { order_id: 1, strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
+    fills: { fill_id: 1, strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
+    performance_snapshots: { id: 1, deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
+    account_equity_snapshots: { id: 1, deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
     portfolio_equity_snapshots: { id: 1, portfolio_id: "pf_default" },
     conditional_order_groups: { group_id: "grp_default", mode: "paper" },
     conditional_order_group_legs: { group_id: "grp_default", leg_id: "leg_default" },
@@ -125,8 +125,8 @@ function tagged(value: string | number | boolean | null) {
 describe("N22 full Paper read product BFF", () => {
   it("composes the Paper overview with bounded fan-out and strips source internals", async () => {
     const source = new FakeCurrentSource();
-    source.rows.set("strategy_deployments", [{ deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" }]);
-    source.rows.set("positions_v2", [{ position_id: "pos_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE", quantity: "1.25" }]);
+    source.rows.set("strategy_deployments", [{ deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper", venue: "BINANCE" }]);
+    source.rows.set("positions_v2", [{ position_id: "pos_1", strategy_id: "str_default", account_id: "acc_default", mode: "paper", venue: "BINANCE", quantity: "1.25" }]);
     const result = await service(source).overview(principal()) as Record<string, any>;
     expect(result).toMatchObject({
       schema_version: "execution.paper-overview.v1",
@@ -137,7 +137,7 @@ describe("N22 full Paper read product BFF", () => {
       freshness: "FRESH",
     });
     expect(source.calls).toHaveLength(6);
-    expect(result.data.deployments[0]).toEqual(expect.objectContaining({ deployment_id: "dep_1" }));
+    expect(result.data.deployments[0]).toEqual(expect.objectContaining({ deployment_id: "dep_default" }));
     expect(JSON.stringify(result)).not.toContain("record_key");
     expect(JSON.stringify(result)).not.toContain("raw_response");
     expect(JSON.stringify(result)).not.toContain("opaque-strategy");

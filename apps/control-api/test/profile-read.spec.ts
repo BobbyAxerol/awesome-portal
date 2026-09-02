@@ -121,6 +121,32 @@ describe("N23 Sandbox and Live profile reads", () => {
     expect(Object.values(result.data).every((rows) => Array.isArray(rows) && rows.length === 0)).toBe(true);
   });
 
+  it("never relabels an unscoped Paper balance as Live truth", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("strategy_deployments", []);
+    source.rows.set("accounts", []);
+    source.rows.set("positions_v2", []);
+    source.rows.set("execution_sessions", []);
+    source.rows.set("account_balances", [
+      { account_id: "paper_account_only", currency: "USDT", total: "999999" },
+    ]);
+    source.rows.set("margin_balances", []);
+    source.rows.set("account_sync_effective", []);
+    source.rows.set("broker_account_sync_effective", []);
+
+    const result = await service(source).overview(principal(), "live") as Record<string, any>;
+
+    expect(result.state).toBe("partial");
+    expect(result.completeness).toBe("PARTIAL");
+    expect(result.data.account_balances).toEqual([]);
+    expect(JSON.stringify(result)).not.toContain("paper_account_only");
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "source.account_balances",
+      state: "PARTIAL",
+      reason_code: "N30_PROFILE_LINEAGE_REJECTED",
+    }));
+  });
+
   it("rejects cross-profile rows and never turns source failure into EMPTY", async () => {
     const cross = new FakeCurrentSource("sandbox");
     cross.rows.set("positions_v2", [{ position_id: "live-secret", mode: "live", venue: "BINANCE" }]);

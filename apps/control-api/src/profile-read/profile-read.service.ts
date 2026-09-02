@@ -6,6 +6,7 @@ import {
   ExecutionCurrentSourceProxy,
 } from "../execution/current-source.proxy";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
+import { enforceProfileLineage } from "../execution/profile-lineage";
 
 export type N23ReadEnvironment = "sandbox" | "live" | "canary";
 type SourceEnvironment = "sandbox" | "live";
@@ -134,13 +135,13 @@ export class ProfileReadService {
     const sourceEnvironment: SourceEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
     const profile = PROFILE[sourceEnvironment];
     const context: ManagerReadContext = { ...profile, errorPrefix: "N23" };
-    const relations = await this.fetch(
+    const relations = enforceProfileLineage(await this.fetch(
       principal,
       requestedEnvironment,
       screenId,
       SCREEN_SPECS[screenId],
       context,
-    );
+    ), "N30");
     const data = this.data(relations, deploymentId);
     const state = productState(relations);
     const freshness = relations.some((item) => item.page?.freshness === "STALE") ? "STALE"
@@ -242,7 +243,7 @@ function spec(
 }
 
 function safeReason(error: unknown): string {
-  if (error instanceof CurrentSourceProxyError && /^N(?:13B|17B|21|22|23)_[A-Z0-9_]+$/.test(error.code)) {
+  if (error instanceof CurrentSourceProxyError && /^N(?:13B|17B|21|22|23|30)_[A-Z0-9_]+$/.test(error.code)) {
     return error.code;
   }
   return "N23_SOURCE_UNAVAILABLE";

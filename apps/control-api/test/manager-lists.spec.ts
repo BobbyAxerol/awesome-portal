@@ -24,6 +24,7 @@ type Scalar = string | number | boolean | null;
 class FakeSource {
   readonly calls: string[] = [];
   pause: Promise<void> | null = null;
+  leakUnscopedChildren = false;
   readonly rows: Record<string, Array<Record<string, Scalar>>> = {
     strategies: [
       { strategy_id: "str_a", alpha_id: "alpha_a", label: "Carry A", version: "3.2", trader_id: "Bobby-001", state: "READY", active: true, updated_at: "2026-08-31T09:00:00Z", secret_token: "never" },
@@ -62,9 +63,22 @@ class FakeSource {
   ) {
     this.calls.push(`${environment}:${screenId}:${relation}`);
     if (this.pause) await this.pause;
-    const all = (this.rows[relation] ?? []).filter((row) =>
-      typeof row.mode !== "string" || row.mode.toLowerCase() === environment,
-    );
+    const acceptedAccounts = new Set(this.rows.accounts
+      .filter((row) => row.mode === environment)
+      .map((row) => String(row.account_id)));
+    const acceptedRefs = new Set(this.rows.accounts
+      .filter((row) => row.mode === environment)
+      .map((row) => String(row.external_account_ref ?? "")));
+    const all = (this.rows[relation] ?? []).filter((row) => {
+      if (typeof row.mode === "string") return row.mode.toLowerCase() === environment;
+      if (!this.leakUnscopedChildren && relation === "account_balances") {
+        return acceptedAccounts.has(String(row.account_id));
+      }
+      if (!this.leakUnscopedChildren && relation === "broker_account_sync_effective") {
+        return acceptedRefs.has(String(row.external_account_ref));
+      }
+      return true;
+    });
     const start = query.cursor ? Number(query.cursor) : 0;
     const slice = all.slice(start, start + 1);
     const next = start + 1 < all.length ? String(start + 1) : null;
@@ -221,6 +235,20 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     expect(other.page.rows.map((item: any) => item.account_id)).toEqual(["acc_other"]);
     const primaryAgain = await service.bindings(principal(), { environment: "paper", limit: 10 }) as Record<string, any>;
     expect(primaryAgain.page.rows.map((item: any) => item.account_id).sort()).toEqual(["acc_a", "acc_b"]);
+  });
+
+  it("drops unscoped foreign account children before a profile projection commit", async () => {
+    source.leakUnscopedChildren = true;
+    source.rows.account_balances.push({
+      account_id: "foreign_live_account", currency: "USDT", total: "999999",
+      locked: "0", free: "999999", updated_at: "2026-08-31T10:00:00Z",
+    });
+
+    const paper = await service.fleet(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
+
+    expect(JSON.stringify(paper)).not.toContain("foreign_live_account");
+    expect(JSON.stringify(paper)).not.toContain("999999");
+    expect(paper.completeness).toBe("PARTIAL");
   });
 
   it("keeps cursor pages pinned to the committed projection instead of refreshing mid-walk", async () => {

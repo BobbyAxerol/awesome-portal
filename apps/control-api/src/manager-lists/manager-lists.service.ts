@@ -5,6 +5,7 @@ import { ExecutionCurrentSourceProxy } from "../execution/current-source.proxy";
 import { ControlPlaneQueryService, KeysetCursorCodec } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
+import { enforceProfileLineage } from "../execution/profile-lineage";
 import {
   AlphaFleetEnvironment, AlphaFleetQuery, BindingItem, BindingsQuery,
   MANAGER_LIST_ENVIRONMENTS, ManagerListEnvironment,
@@ -183,7 +184,19 @@ export class ManagerListsService {
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.positions", "positions_v2", POSITION_FIELDS, context),
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.reconciliation", "reconciliation_findings", FINDING_FIELDS, context),
       ]);
-      reads.push({ strategies, deployments, accounts, balances, portfolios, allocations, positions, findings });
+      const isolated = enforceProfileLineage([
+        lineage("strategies", strategies), lineage("deployments", deployments),
+        lineage("accounts", accounts), lineage("account_balances", balances),
+        lineage("portfolios", portfolios), lineage("portfolio_allocations", allocations),
+        lineage("positions", positions), lineage("reconciliation", findings),
+      ], "N30");
+      const page = (key: string) => isolated.find((item) => item.spec.key === key)!.page!;
+      reads.push({
+        strategies: page("strategies"), deployments: page("deployments"),
+        accounts: page("accounts"), balances: page("account_balances"),
+        portfolios: page("portfolios"), allocations: page("portfolio_allocations"),
+        positions: page("positions"), findings: page("reconciliation"),
+      });
     }
     const strategies = combinePages(reads.map((read) => read.strategies), "strategy_id", "alpha_id");
     const deployments = combinePages(reads.map((read) => read.deployments), "deployment_id");
@@ -217,7 +230,16 @@ export class ManagerListsService {
       this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, context),
       this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, context),
     ]);
-    const rows = bindingRows(accounts.items, venueAccounts.items, brokerSync.items);
+    const isolated = enforceProfileLineage([
+      lineage("accounts", accounts), lineage("venue_accounts", venueAccounts),
+      lineage("broker_sync", brokerSync),
+    ], "N30");
+    const page = (key: string) => isolated.find((item) => item.spec.key === key)!.page!;
+    const rows = bindingRows(
+      page("accounts").items,
+      page("venue_accounts").items,
+      page("broker_sync").items,
+    );
     const sourceAsOf = latestDate(accounts.asOf, venueAccounts.asOf, brokerSync.asOf);
     await this.repository.replaceBindings({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
@@ -260,6 +282,14 @@ export class ManagerListsService {
     }
     throw new ManagerListsError("BR72_SOURCE_POPULATION_EXCEEDS_BOUND", 503);
   }
+}
+
+function lineage(key: string, page: ManagerPage) {
+  return {
+    spec: { key }, page,
+    state: page.items.length === 0 ? "EMPTY" as const : "AVAILABLE" as const,
+    reasonCode: null,
+  };
 }
 
 export class ManagerListsError extends Error {

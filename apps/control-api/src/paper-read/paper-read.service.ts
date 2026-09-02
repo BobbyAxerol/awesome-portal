@@ -12,6 +12,7 @@ import { KeysetCursorCodec, QueryContractError } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { PaperBlotterQuery } from "./contracts";
 import { ManagerPage, managerPage } from "./manager-records";
+import { enforceProfileLineage } from "../execution/profile-lineage";
 
 type ProductState = "ready" | "empty" | "stale" | "partial" | "unavailable";
 type CapabilityState = "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -266,7 +267,7 @@ export class PaperReadService {
       this.assertPaperRows(page.items);
       return page;
     }));
-    return results.map((result, index) => {
+    return enforceProfileLineage(results.map((result, index) => {
       const item = specs[index];
       if (result.status === "fulfilled") {
         return {
@@ -283,7 +284,7 @@ export class PaperReadService {
         state: "UNAVAILABLE",
         reasonCode: safeReason(result.reason),
       };
-    });
+    }), "N30");
   }
 
   private envelope(
@@ -398,7 +399,7 @@ function capability(
 }
 
 function safeReason(error: unknown): string {
-  if (error instanceof CurrentSourceProxyError && /^N(?:13B|17B|21|22)_[A-Z0-9_]+$/.test(error.code)) {
+  if (error instanceof CurrentSourceProxyError && /^N(?:13B|17B|21|22|30)_[A-Z0-9_]+$/.test(error.code)) {
     return error.code;
   }
   return "N22_SOURCE_UNAVAILABLE";
