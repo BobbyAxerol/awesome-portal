@@ -108,6 +108,41 @@
       "propertyNames": { "pattern": "^(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$" },
       "additionalProperties": true
     },
+    "DerivedInsights": {
+      "type": "object", "additionalProperties": false,
+      "required": ["formula_version", "as_of", "order_funnel_7d", "cumulative_return"],
+      "properties": {
+        "formula_version": { "type": "string", "pattern": "^[a-z0-9.-]{3,64}$" },
+        "as_of": { "$ref": "#/$defs/DateTime" },
+        "order_funnel_7d": {
+          "type": "object", "additionalProperties": false,
+          "required": ["total_orders", "status_counts"],
+          "properties": {
+            "total_orders": { "type": "integer", "minimum": 0 },
+            "status_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } }
+          }
+        },
+        "cumulative_return": {
+          "type": "array", "maxItems": 50,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["deployment_id", "currency", "points"],
+            "properties": {
+              "deployment_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+              "currency": { "oneOf": [{ "type": "string" }, { "type": "null" }] },
+              "points": {
+                "type": "array", "maxItems": 200,
+                "items": {
+                  "type": "object", "additionalProperties": false,
+                  "required": ["t", "return_pct"],
+                  "properties": { "t": { "$ref": "#/$defs/DateTime" }, "return_pct": { "type": "number" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Data": {
       "type": "object", "additionalProperties": false, "minProperties": 1,
       "properties": {
@@ -130,7 +165,8 @@
         "query": { "$ref": "#/$defs/Query" },
         "exact_total": { "type": ["integer", "null"], "minimum": 0 },
         "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
-        "aggregates": { "oneOf": [{ "$ref": "#/$defs/Aggregates" }, { "type": "null" }] }
+        "aggregates": { "oneOf": [{ "$ref": "#/$defs/Aggregates" }, { "type": "null" }] },
+        "derived_insights": { "oneOf": [{ "$ref": "#/$defs/DerivedInsights" }, { "type": "null" }] }
       }
     }
   }

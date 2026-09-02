@@ -166,12 +166,18 @@ export class PaperReadService {
 
   async overview(principal: PaperPrincipal) {
     const relations = await this.fetch(principal, "PAPER_TRADING_SCREEN", OVERVIEW_SPECS);
+    const derived = deriveOverviewInsights(relations);
     return this.envelope(
       "execution.paper-overview.v1",
       principal,
       relations,
-      this.data(relations),
-      this.unavailableBranches(),
+      { ...this.data(relations), derived_insights: derived.block },
+      [capability(
+        "paper.derived-insights",
+        derived.state,
+        ["risk_adjusted_metrics", "cross_source_verdicts"],
+        derived.reason,
+      )],
     );
   }
 
@@ -512,6 +518,85 @@ function spec(
   cursor?: string,
 ): RelationSpec {
   return { key, sourceId, relation, fields, limit, ...(cursor ? { cursor } : {}) };
+}
+
+
+/**
+ * P4-G (finding F15) — overview insights derived server-side from the
+ * already-fetched projection relations. No extra fan-out, no client math:
+ * the funnel aggregates session counters and the return series normalizes
+ * each deployment's account equity at its own window start. Declared by
+ * `formula_version`; an empty source stays an EMPTY branch, never zeros.
+ */
+const OVERVIEW_INSIGHTS_FORMULA = "paper-overview-insights.v1";
+
+function deriveOverviewInsights(relations: readonly RelationResult[]): {
+  block: Record<string, unknown> | null;
+  state: CapabilityState;
+  reason: string | null;
+} {
+  const rows = (key: string) => relations.find((item) => item.spec.key === key)?.page?.items ?? [];
+  const partial = (key: string) => relations.find((item) => item.spec.key === key)?.state === "PARTIAL";
+  const sessions = rows("sessions");
+  const equity = rows("account_equity");
+  if (sessions.length === 0 && equity.length === 0) {
+    return { block: null, state: "EMPTY", reason: null };
+  }
+  const asOf = latestAsOf(relations) ?? new Date().toISOString();
+  const windowStart = new Date(new Date(asOf).valueOf() - 7 * 86_400_000).toISOString();
+  const int = (value: unknown) => typeof value === "number" && Number.isFinite(value) ? value
+    : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : 0;
+  let submitted = 0; let filled = 0; let rejected = 0;
+  for (const row of sessions) {
+    const updated = typeof row.updated_at === "string" ? row.updated_at : null;
+    if (updated !== null && updated < windowStart) continue;
+    submitted += int(row.submitted_count);
+    filled += int(row.filled_count);
+    rejected += int(row.risk_rejected_count) + int(row.broker_rejected_count);
+  }
+  const working = Math.max(0, submitted - filled - rejected);
+  const byDeployment = new Map<string, { currency: string | null; points: Array<{ t: string; equity: number }> }>();
+  for (const row of equity) {
+    const deploymentId = typeof row.deployment_id === "string" && row.deployment_id.length > 0
+      ? row.deployment_id
+      : typeof row.account_id === "string" ? row.account_id : null;
+    const t = typeof row.ts === "string" ? row.ts : null;
+    const value = typeof row.equity === "string" ? Number(row.equity)
+      : typeof row.net_pnl === "string" ? Number(row.net_pnl) : Number.NaN;
+    if (!deploymentId || !t || !Number.isFinite(value)) continue;
+    const entry = byDeployment.get(deploymentId) ?? {
+      currency: typeof row.currency === "string" ? row.currency : null,
+      points: [],
+    };
+    entry.points.push({ t, equity: value });
+    byDeployment.set(deploymentId, entry);
+  }
+  const cumulative = [...byDeployment.entries()].slice(0, 50).map(([deploymentId, entry]) => {
+    const points = entry.points.sort((left, right) => left.t.localeCompare(right.t)).slice(-200);
+    const base = points.find((point) => point.equity !== 0)?.equity ?? null;
+    return {
+      deployment_id: deploymentId,
+      currency: entry.currency,
+      points: base === null ? [] : points.map((point) => ({
+        t: point.t,
+        return_pct: Math.round(((point.equity / base) - 1) * 1e6) / 1e4,
+      })),
+    };
+  }).filter((series) => series.points.length > 0);
+  const anyPartial = partial("sessions") || partial("account_equity");
+  return {
+    block: {
+      formula_version: OVERVIEW_INSIGHTS_FORMULA,
+      as_of: asOf,
+      order_funnel_7d: {
+        total_orders: submitted,
+        status_counts: { FILLED: filled, REJECTED: rejected, WORKING: working },
+      },
+      cumulative_return: cumulative,
+    },
+    state: anyPartial ? "PARTIAL" : "AVAILABLE",
+    reason: anyPartial ? "SOURCE_PARTIAL" : null,
+  };
 }
 
 function capability(

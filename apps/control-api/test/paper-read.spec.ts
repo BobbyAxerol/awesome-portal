@@ -210,7 +210,10 @@ describe("N22 full Paper read product BFF", () => {
     }
     const empty = await service(emptySource).overview(principal()) as Record<string, any>;
     expect(empty.state).toBe("empty");
-    expect(Object.values(empty.data).every((items) => Array.isArray(items) && items.length === 0)).toBe(true);
+    // P4-G: `derived_insights` is a derived block, null on an empty source.
+    expect(empty.data.derived_insights).toBeNull();
+    const { derived_insights: _ignored, ...relations } = empty.data;
+    expect(Object.values(relations).every((items) => Array.isArray(items) && items.length === 0)).toBe(true);
 
     const staleSource = new FakeCurrentSource();
     staleSource.stale.add("positions_v2");
@@ -224,6 +227,33 @@ describe("N22 full Paper read product BFF", () => {
     expect(partial.capabilities).toContainEqual(expect.objectContaining({
       capability_id: "source.positions", state: "UNAVAILABLE", reason_code: "N22_SOURCE_UNAVAILABLE",
     }));
+  });
+
+  it("derives overview insights from fetched relations without extra fan-out (P4-G / F15)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("execution_sessions", [
+      { execution_session_id: "ses_1", strategy_id: "str_default", account_id: "acc_default", mode: "paper",
+        submitted_count: 10, filled_count: 6, risk_rejected_count: 1, broker_rejected_count: 1,
+        updated_at: "2026-09-02T10:00:00Z" },
+    ]);
+    source.rows.set("account_equity_snapshots", [
+      { id: "eq1", deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper",
+        currency: "USDT", equity: "10000", ts: "2026-09-01T00:00:00Z" },
+      { id: "eq2", deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper",
+        currency: "USDT", equity: "10100", ts: "2026-09-02T00:00:00Z" },
+    ]);
+    const result = await service(source).overview(principal()) as Record<string, any>;
+    const insights = result.data.derived_insights;
+    expect(insights).toMatchObject({
+      formula_version: "paper-overview-insights.v1",
+      order_funnel_7d: { total_orders: 10, status_counts: { FILLED: 6, REJECTED: 2, WORKING: 2 } },
+    });
+    expect(insights.cumulative_return[0]).toMatchObject({ deployment_id: "dep_default", currency: "USDT" });
+    expect(insights.cumulative_return[0].points.at(-1).return_pct).toBeCloseTo(1, 3);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "paper.derived-insights", state: expect.stringMatching(/AVAILABLE|PARTIAL/),
+    }));
+    expect(source.calls.length).toBe(6);
   });
 
   it("maps versioned source order-status words and preserves provenance (P4-F)", async () => {

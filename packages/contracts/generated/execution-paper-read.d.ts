@@ -149,6 +149,27 @@ export interface components {
                     [key: string]: number;
                 };
             } | null;
+            derived_insights?: components["schemas"]["DerivedInsights"] | null;
+        };
+        DerivedInsights: {
+            formula_version: string;
+            /** Format: date-time */
+            as_of: string;
+            order_funnel_7d: {
+                total_orders: number;
+                status_counts: {
+                    [key: string]: number;
+                };
+            };
+            cumulative_return: {
+                deployment_id: string;
+                currency: string | null;
+                points: {
+                    /** Format: date-time */
+                    t: string;
+                    return_pct: number;
+                }[];
+            }[];
         };
         PaperReadResponse: {
             /** @enum {string} */

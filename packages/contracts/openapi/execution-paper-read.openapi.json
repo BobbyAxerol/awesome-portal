@@ -70,7 +70,18 @@
           "query": { "type": "object", "additionalProperties": false, "required": ["filters", "sort", "filter_allowlist", "sort_allowlist", "count_scope"], "properties": { "filters": { "type": "object", "additionalProperties": false, "required": ["status", "status_bucket", "venue", "symbol", "side"], "properties": { "status": { "type": ["string", "null"], "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED", null] }, "status_bucket": { "type": ["string", "null"], "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN", null] }, "venue": { "type": ["string", "null"] }, "symbol": { "type": ["string", "null"] }, "side": { "type": ["string", "null"], "enum": ["BUY", "SELL", null] } } }, "sort": { "type": "string", "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] }, "filter_allowlist": { "type": "array", "prefixItems": [{ "const": "status" }, { "const": "venue" }, { "const": "symbol" }, { "const": "side" }], "items": false }, "sort_allowlist": { "type": "array", "prefixItems": [{ "const": "submitted_at_desc" }, { "const": "submitted_at_asc" }, { "const": "updated_at_desc" }], "items": false }, "count_scope": { "type": "string", "const": "COMMITTED_HOT_PROJECTION" } } },
           "exact_total": { "type": ["integer", "null"], "minimum": 0 },
           "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
-          "aggregates": { "type": ["object", "null"], "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } } }
+          "aggregates": { "type": ["object", "null"], "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } } },
+          "derived_insights": { "oneOf": [{ "$ref": "#/components/schemas/DerivedInsights" }, { "type": "null" }] }
+        }
+      },
+      "DerivedInsights": {
+        "type": "object", "additionalProperties": false,
+        "required": ["formula_version", "as_of", "order_funnel_7d", "cumulative_return"],
+        "properties": {
+          "formula_version": { "type": "string" },
+          "as_of": { "type": "string", "format": "date-time" },
+          "order_funnel_7d": { "type": "object", "additionalProperties": false, "required": ["total_orders", "status_counts"], "properties": { "total_orders": { "type": "integer", "minimum": 0 }, "status_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } } } },
+          "cumulative_return": { "type": "array", "maxItems": 50, "items": { "type": "object", "additionalProperties": false, "required": ["deployment_id", "currency", "points"], "properties": { "deployment_id": { "type": "string" }, "currency": { "type": ["string", "null"] }, "points": { "type": "array", "maxItems": 200, "items": { "type": "object", "additionalProperties": false, "required": ["t", "return_pct"], "properties": { "t": { "type": "string", "format": "date-time" }, "return_pct": { "type": "number" } } } } } } }
         }
       },
       "PaperReadResponse": {
