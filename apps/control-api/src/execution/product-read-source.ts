@@ -1,3 +1,4 @@
+import { canonicalOrderStatus } from "../paper-read/order-status-map";
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -175,9 +176,16 @@ function filterAndSort(
 ) {
   const equals = (value: ProjectionScalar | undefined, expected: string | undefined) =>
     expected === undefined || String(value ?? "").toUpperCase() === expected.toUpperCase();
+  // A canonical query word must match the raw source word too (P4-F): the
+  // projection still holds e.g. RISK_REJECTED, which the map reads REJECTED.
+  const statusEquals = (value: ProjectionScalar | undefined, expected: string | undefined) => {
+    if (expected === undefined) return true;
+    const raw = String(value ?? "").toUpperCase();
+    return raw === expected.toUpperCase() || canonicalOrderStatus(raw) === expected.toUpperCase();
+  };
   const selected = rows.filter((row) =>
-    equals(row.fields.status, query.status) &&
-    (query.statuses === undefined || query.statuses.some((status) => equals(row.fields.status, status))) &&
+    statusEquals(row.fields.status, query.status) &&
+    (query.statuses === undefined || query.statuses.some((status) => statusEquals(row.fields.status, status))) &&
     equals(row.fields.venue, query.venue) &&
     equals(row.fields.symbol, query.symbol) && equals(row.fields.side, query.side));
   const sort = query.sort ?? "submitted_at_desc";

@@ -172,6 +172,38 @@ describe("EX-BE-07b analytics screen boundary", () => {
     expect(JSON.stringify(response)).toContain("10000.000000000000000001");
   });
 
+  it("admits the colon-joined composite deployment id as an analytics subject (P4-G / F13)", async () => {
+    const config = loadConfig({
+      ...base,
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      FEATURE_EXECUTION_EDGE: "true",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_SANDBOX_PROFILE_ID: "SANDBOX_BINANCE_USDM",
+      EXECUTION_EDGE_LIVE_PROFILE_ID: "LIVE_BINANCE_USDM",
+    });
+    const repository = {
+      async snapshot() { return null; },
+    } as unknown as ExecutionProfileProjectionRepository;
+    const service = new LocalQueryAnalyticsService(config, repository);
+    // The id is valid; the missing snapshot must surface as the projection
+    // state, never as an identifier rejection.
+    await expect(
+      service.query({
+        user: { userId: "usr_a" } as never,
+        session: { sessionId: "ses_a" } as never,
+        workspaceId: "ws_viewer",
+      }, "deployment", "adaptive_hma_cpp_00115m:paper:BINANCE:paper-binance-adaptive_hma_cpp_00115m"),
+    ).rejects.toMatchObject({ code: expect.not.stringMatching(/IDENTIFIER_INVALID/) });
+  });
+
   it("normalizes only bounded screen query fields and never accepts deployment scope", () => {
     expect(shadowQueryBody({
       limit: 50,

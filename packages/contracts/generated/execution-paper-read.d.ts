@@ -86,6 +86,8 @@ export interface components {
             reason_code: string | null;
             /** @constant */
             retryable: false;
+            quarantined_rows?: number;
+            status_map_version?: string;
         };
         NarrowRecord: {
             [key: string]: string | number | boolean | null | (string | number | boolean | null)[];

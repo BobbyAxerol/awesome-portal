@@ -53,7 +53,9 @@
         "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
         "relations": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,127}$" } },
         "reason_code": { "oneOf": [{ "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" }, { "type": "null" }] },
-        "retryable": { "const": false }
+        "retryable": { "const": false },
+        "quarantined_rows": { "type": "integer", "minimum": 1 },
+        "status_map_version": { "type": "string", "pattern": "^[a-z0-9.-]{3,64}$" }
       }
     },
     "Scalar": { "oneOf": [{ "type": "string", "maxLength": 8192 }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] },

@@ -118,25 +118,11 @@ const JOURNAL_FIELDS = [
   "client_order_id", "aggregate_key", "state", "outcome_class", "accepted_at", "dispatched_at",
   "acknowledged_at", "terminal_at", "updated_at", "engine_version",
 ] as const;
-const ORDER_STATUSES = new Set([
-  "INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE",
-  "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED",
-]);
-
-/**
- * P4-F (finding F11) — versioned source→canonical order-status vocabulary.
- *
- * The Trading System publishes status words the canonical union does not
- * spell (measured on 2026-09-02: `RISK_REJECTED` alongside FILLED/CANCELED).
- * A mapped word is translated with its source word preserved in
- * `source_status`; a genuinely unknown word quarantines THAT ROW with a
- * counter — it never fail-closes the whole branch, and it never silently
- * relabels without provenance.
- */
-const ORDER_STATUS_SOURCE_MAP_VERSION = "order-status-map.v1";
-const ORDER_STATUS_SOURCE_MAP: Readonly<Record<string, string>> = {
-  RISK_REJECTED: "REJECTED",
-};
+import {
+  CANONICAL_ORDER_STATUSES as ORDER_STATUSES,
+  ORDER_STATUS_MAP_VERSION as ORDER_STATUS_SOURCE_MAP_VERSION,
+  ORDER_STATUS_SOURCE_MAP,
+} from "./order-status-map";
 
 const OVERVIEW_SPECS: readonly RelationSpec[] = [
   spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),

@@ -57,7 +57,10 @@ export class LocalQueryAnalyticsService {
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
   ): Promise<Record<string, unknown>> {
-    if (!/^[A-Za-z0-9._-]{1,128}$/.test(subjectId)) {
+    // Composite deployment ids are colon-joined by the source
+    // (strategy:mode:venue:account — finding F13); the id never leaves this
+    // process, so the colon is admitted here and nowhere in a resource string.
+    if (!/^[A-Za-z0-9._:-]{1,192}$/.test(subjectId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
