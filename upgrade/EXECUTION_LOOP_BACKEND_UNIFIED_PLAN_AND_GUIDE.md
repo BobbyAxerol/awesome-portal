@@ -2559,6 +2559,19 @@ AVAILABLE profile branches, envelope COMPLETE/FRESH.
   available on hover/copy, tabular mono everywhere, and blotter/ledger
   columns keep the §8 no-abbreviation invariant.
 
+Status 2026-09-02: `INTEGRATION_COMPLETE` (Fleet spark deferred to the P4-D
+window ladder it depends on) — the stopgap index-mapped tile mapper is
+replaced by per-capability-id binding: every one of the twelve published
+analytics capabilities renders its own branch (stage-equity series;
+exact-query/position-exposure/execution-quality/contribution/order-funnel/
+replay-journal fact bodies with real numbers; the unavailable tail keeps the
+reviewed frame with the served state + reason code). `formatExact` is the one
+display authority (exact string in, half-up BigInt rounding, per-unit class
+floors, grouping, no abbreviation, full precision on hover); Fleet's local
+`exactDisplay` and the portfolio register delegate to it. Fleet PnL/exposure
+columns were already served by Fleet v2; its 30d equity spark honestly waits
+on the F6 window ladder (metricsAvailability already states the reason).
+
 ##### P4-C — Freshness truth and motion coverage (TS + FE)
 
 - replace the 5 s constant with envelope-declared freshness budgets per
@@ -3945,6 +3958,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Claude: P4-B closed (`INTEGRATION_COMPLETE`; Fleet equity spark deferred to the P4-D window ladder) — per-capability tile binding by id across all 12 analytics branches, `formatExact` display authority, Fleet/register formatting delegated | brEx72 spec 11/11 incl. a 12-capability binding regression; formatExact 6/6; full frontend Vitest suite green; frontend tsc clean; presentation-only — no contract, flag, profile or command change |
 | 2026-09-02 | Claude: P4-A closed (`INTEGRATION_COMPLETE`) — BR-EX-76 portfolio identity list (`execution.portfolio-list.v1`), portfolio register route truth (PF-CRYPTO defaults removed), Portfolio 360 spine = portfolios ∪ Fleet | manager-lists 10/10 fresh-PG incl. degraded-profile + lineage negatives; contracts gate pass; full frontend Vitest exit 0; N29 verifier extended (route set + BR-EX-76 pins) and green; authenticated dev journey returned 2 real portfolios with exact capital and three AVAILABLE profile branches; read-only, no flag/profile/command change |
 | 2026-09-02 | Claude: P4-F and P4-G closed (`INTEGRATION_COMPLETE`) — order-status normalization with quarantine counters, shared versioned status map, composite analytics ids, blotter exact-query plane active, Paper overview `derived_insights` (additive contract) | commits `92fd124`/`7a04443`/`2f2ce9a`/`6b972b8`; control-api gate 31 suites / 285 tests with fresh PostgreSQL + dump/restore parity; contracts workspace gate pass; dev control-api image rebuilt and probed authenticated: 364-order blotter with exact totals, real aggregates, bidirectional keyset cursors and canonical REJECTED filtering; no flag, profile or command change |
 | 2026-09-02 | Claude (backend co-impl per owner grant): Phase 4 owner-findings closeout and production-streaming specification + measured findings register F1–F10 + BR-EX-76/77/78 | read-only investigation of the rebuilt dev runtime (projection SQL, BFF source, deployed env); root causes verified at the seam (route default, tile mapper, 5 s freshness constant, realtime coverage, lineage taxonomy, 400-row windows); no code, runtime, flag or schema changed by this entry |
