@@ -28,6 +28,12 @@ import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
 import { ExecutionCurrentSourceController } from "./execution/current-source.controller";
 import { ExecutionCurrentSourceProxy } from "./execution/current-source.proxy";
 import { ExecutionSharedReadRepository } from "./execution/shared-read.repository";
+import { ExecutionProfileProjectionRepository } from "./execution/profile-projection.repository";
+import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
+import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
+import { ExecutionProductReadSource } from "./execution/product-read-source";
+import { ExecutionProfileReadAdapterController } from "./execution/profile-read-adapter.controller";
+import { ExecutionProfileReadAdapterService } from "./execution/profile-read-adapter.service";
 import { CommandCenterController } from "./command-center/command-center.controller";
 import { CommandCenterRepository } from "./command-center/command-center.repository";
 import { CommandCenterService } from "./command-center/command-center.service";
@@ -74,6 +80,7 @@ export class AppModule {
         ExecutionRealtimeController,
         ExecutionAnalyticsController,
         ExecutionCurrentSourceController,
+        ExecutionProfileReadAdapterController,
         CommandCenterController,
         IncidentController,
         SandboxCertificationController,
@@ -137,6 +144,11 @@ export class AppModule {
         ManagerListsRepository,
         ManagerListsService,
         ExecutionSharedReadRepository,
+        ExecutionProfileProjectionRepository,
+        ExecutionProfileProjectionWorker,
+        ExecutionProfileRealtimeService,
+        ExecutionProductReadSource,
+        ExecutionProfileReadAdapterService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

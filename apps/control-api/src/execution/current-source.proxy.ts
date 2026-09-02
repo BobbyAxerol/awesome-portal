@@ -316,6 +316,15 @@ export interface CurrentSourcePageQuery {
   cursor?: string;
 }
 
+interface CurrentSourceIdentity {
+  principalId: string;
+  sessionId: string;
+  workspaceId: string;
+  role: PortalUser["role"];
+  authenticationTime: Date;
+  authenticationMethods: string[];
+}
+
 interface ProfileTransport {
   environment: Exclude<CurrentSourceEnvironment, "canary">;
   origin: URL;
@@ -500,7 +509,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   ): Promise<unknown> {
     assertAcceptedProfileRead(environment, screenId);
     return this.request(
-      principal,
+      browserIdentity(principal),
       environment,
       screenId,
       acceptedManagerV2Path(environment, screenId),
@@ -517,7 +526,32 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   ): Promise<unknown> {
     assertAcceptedProfileRead(environment, screenId);
     const path = acceptedManagerV2Path(environment, screenId, sourceId, relation, query);
-    return this.request(principal, environment, screenId, path);
+    return this.request(browserIdentity(principal), environment, screenId, path);
+  }
+
+  /**
+   * Dedicated service-to-service read used only by the lease-controlled SGP
+   * projection worker. It carries no browser session and cannot request a
+   * command resource or arbitrary route.
+   */
+  relationForProjection(
+    workspaceId: string,
+    environment: Exclude<CurrentSourceEnvironment, "canary">,
+    screenId: string,
+    sourceId: string,
+    relation: string,
+    query: CurrentSourcePageQuery,
+  ): Promise<unknown> {
+    assertAcceptedProfileRead(environment, screenId);
+    const path = acceptedManagerV2Path(environment, screenId, sourceId, relation, query);
+    return this.request({
+      principalId: "portal-execution-projection-worker",
+      sessionId: `projection-${environment}`,
+      workspaceId,
+      role: "ADMIN",
+      authenticationTime: new Date(),
+      authenticationMethods: ["service_identity", "mtls"],
+    }, environment, screenId, path);
   }
 
   close(): void {
@@ -532,7 +566,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   }
 
   private async request(
-    principal: CurrentSourcePrincipal,
+    principal: CurrentSourceIdentity,
     requestedEnvironment: CurrentSourceEnvironment,
     screenId: string,
     path: string,
@@ -551,8 +585,8 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       sourceId: "manager-v2",
       profileId: profile.profileId,
       workspaceId: principal.workspaceId,
-      principalId: principal.user.userId,
-      principalRole: principal.user.role,
+      principalId: principal.principalId,
+      principalRole: principal.role,
       adapterRevision: requestedEnvironment === "paper"
         ? N22_PAPER_READ_ACCEPTANCE.adapter
         : N23_PROFILE_READ_ACCEPTANCE.adapter,
@@ -597,13 +631,13 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       }
       await rateLimiter.acquire();
       const assertion = await profile.delegation.issueReadAssertion({
-        principalId: principal.user.userId,
-        sessionId: principal.session.sessionId,
+        principalId: principal.principalId,
+        sessionId: principal.sessionId,
         workspaceId: principal.workspaceId,
-        roles: [principal.user.role],
+        roles: [principal.role],
         resources: [MANAGER_V2_READ_RESOURCE],
-        authenticationTime: principal.session.authenticationTime,
-        authenticationMethods: ["portal_session"],
+        authenticationTime: principal.authenticationTime,
+        authenticationMethods: principal.authenticationMethods,
       });
       const session = await this.getSession(profile);
       const source = await this.sendRequest(session, assertion, path);
@@ -1242,4 +1276,15 @@ function enabledProfileConfigurations(config: ControlApiConfig): Array<{
       profileId: candidate.profileId!,
       audience: candidate.audience!,
     }));
+}
+
+function browserIdentity(principal: CurrentSourcePrincipal): CurrentSourceIdentity {
+  return {
+    principalId: principal.user.userId,
+    sessionId: principal.session.sessionId,
+    workspaceId: principal.workspaceId,
+    role: principal.user.role,
+    authenticationTime: principal.session.authenticationTime,
+    authenticationMethods: ["portal_session"],
+  };
 }

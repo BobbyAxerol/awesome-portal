@@ -3,8 +3,8 @@ import { AuthSession, PortalUser } from "../domain";
 import {
   CurrentSourcePrincipal,
   CurrentSourceProxyError,
-  ExecutionCurrentSourceProxy,
 } from "../execution/current-source.proxy";
+import { ExecutionProductReadSource } from "../execution/product-read-source";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 
@@ -118,7 +118,7 @@ const PROFILE = Object.freeze({
 @Injectable()
 export class ProfileReadService {
   constructor(
-    @Inject(ExecutionCurrentSourceProxy) private readonly source: ExecutionCurrentSourceProxy,
+    @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
   ) {}
 
   overview(principal: ProfileReadPrincipal, environment: SourceEnvironment) {

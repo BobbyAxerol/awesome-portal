@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config";
 import { AuthSession, PortalUser } from "../src/domain";
-import { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
+import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ExecutionAnalyticsProxy } from "../src/execution/analytics.proxy";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
 
@@ -72,7 +72,7 @@ function service(
     AUTH_MODE: "dev",
   });
   return new PaperReadService(
-    source as unknown as ExecutionCurrentSourceProxy,
+    source as unknown as ExecutionProductReadSource,
     config,
     analytics as ExecutionAnalyticsProxy | undefined,
   );

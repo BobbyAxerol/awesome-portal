@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { AuthSession, PortalUser } from "../domain";
 import { ControlApiConfig, querySigningKeys } from "../config";
-import { ExecutionCurrentSourceProxy } from "../execution/current-source.proxy";
+import { ExecutionProductReadSource } from "../execution/product-read-source";
 import { ControlPlaneQueryService, KeysetCursorCodec } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
@@ -73,7 +73,7 @@ export class ManagerListsService {
 
   constructor(
     @Inject(ManagerListsRepository) private readonly repository: ManagerListsRepository,
-    @Inject(ExecutionCurrentSourceProxy) private readonly source: ExecutionCurrentSourceProxy,
+    @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
     @Inject(CONTROL_API_CONFIG) config: ControlApiConfig,
   ) {
     this.query = new ControlPlaneQueryService(

@@ -7,6 +7,9 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_profile_projection_journal",
+  "execution_profile_projection_snapshots",
+  "execution_profile_projection_leases",
   "execution_manager_projection_snapshots",
   "execution_alpha_fleet_projection",
   "execution_binding_projection",
@@ -52,6 +55,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_manager_projection_snapshots: boolean;
       has_alpha_fleet_projection: boolean;
       has_binding_projection: boolean;
+      has_profile_projection_leases: boolean;
+      has_profile_projection_snapshots: boolean;
+      has_profile_projection_journal: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -82,6 +88,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_manager_projection_snapshots') IS NOT NULL AS has_manager_projection_snapshots,
          to_regclass('public.execution_alpha_fleet_projection') IS NOT NULL AS has_alpha_fleet_projection,
          to_regclass('public.execution_binding_projection') IS NOT NULL AS has_binding_projection,
+         to_regclass('public.execution_profile_projection_leases') IS NOT NULL AS has_profile_projection_leases,
+         to_regclass('public.execution_profile_projection_snapshots') IS NOT NULL AS has_profile_projection_snapshots,
+         to_regclass('public.execution_profile_projection_journal') IS NOT NULL AS has_profile_projection_journal,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -111,6 +120,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_manager_projection_snapshots ||
       !row.has_alpha_fleet_projection ||
       !row.has_binding_projection ||
+      !row.has_profile_projection_leases ||
+      !row.has_profile_projection_snapshots ||
+      !row.has_profile_projection_journal ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
@@ -133,6 +145,9 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `manager_projection_snapshots=${row.has_manager_projection_snapshots}, ` +
         `alpha_fleet_projection=${row.has_alpha_fleet_projection}, ` +
         `binding_projection=${row.has_binding_projection}, ` +
+        `profile_projection_leases=${row.has_profile_projection_leases}, ` +
+        `profile_projection_snapshots=${row.has_profile_projection_snapshots}, ` +
+        `profile_projection_journal=${row.has_profile_projection_journal}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

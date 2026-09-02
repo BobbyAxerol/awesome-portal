@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { AuthSession, PortalUser } from "../src/domain";
-import { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
+import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ManagerListsRepository } from "../src/manager-lists/manager-lists.repository";
 import { ManagerListsService } from "../src/manager-lists/manager-lists.service";
 import { AlphaFleetQuerySchema, BindingsQuerySchema } from "../src/manager-lists/contracts";
@@ -125,7 +125,7 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     source = new FakeSource();
     service = new ManagerListsService(
       new ManagerListsRepository(pool),
-      source as unknown as ExecutionCurrentSourceProxy,
+      source as unknown as ExecutionProductReadSource,
       testConfig(),
     );
   });

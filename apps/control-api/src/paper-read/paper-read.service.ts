@@ -5,8 +5,8 @@ import { PortalUser, AuthSession } from "../domain";
 import {
   CurrentSourcePrincipal,
   CurrentSourceProxyError,
-  ExecutionCurrentSourceProxy,
 } from "../execution/current-source.proxy";
+import { ExecutionProductReadSource } from "../execution/product-read-source";
 import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "../execution/analytics.proxy";
 import { KeysetCursorCodec, QueryContractError } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -136,7 +136,7 @@ export class PaperReadService {
   private readonly cursors: KeysetCursorCodec;
 
   constructor(
-    @Inject(ExecutionCurrentSourceProxy) private readonly source: ExecutionCurrentSourceProxy,
+    @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
     @Inject(CONTROL_API_CONFIG) config: ControlApiConfig,
     @Optional()
     @Inject(ExecutionAnalyticsProxy)

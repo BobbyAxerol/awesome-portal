@@ -66,6 +66,28 @@ describe("N13B current-source BFF boundary", () => {
     })).toThrow();
   });
 
+  it("requires a server-owned workspace and an active source for local projection", () => {
+    const paper = {
+      ...base,
+      ...edgeIdentity,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper-edge.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+    };
+    expect(() => loadConfig(paper)).toThrow(/WORKSPACE_ID/);
+    expect(loadConfig({
+      ...paper,
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_execution_internal",
+    }).FEATURE_EXECUTION_LOCAL_PROJECTION).toBe("true");
+    expect(() => loadConfig({
+      ...base,
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_execution_internal",
+    })).toThrow(/at least one current-source profile/);
+  });
+
   it("fails closed on missing, non-TLS or drifted profile pins", () => {
     expect(() => loadConfig({
       ...base,

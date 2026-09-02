@@ -1,0 +1,25 @@
+{
+  "schema_version": "portal.execution.profile-adapter-activation.v1",
+  "phase": "DATA_TRUTH_PROJECTION_REALTIME_FOUNDATION",
+  "authority": "PORTAL_SGP_PROJECTION",
+  "browser_cross_cell_access": false,
+  "trading_system_mutation": false,
+  "maximum_rows_per_relation": 200,
+  "active": [
+    {"capability_id":"admin.inspect","adapter_revision":"portal.execution.local-admin-inspect.v1","profiles":["paper","sandbox","live"]},
+    {"capability_id":"admin.performance","adapter_revision":"portal.execution.local-performance-read.v1","profiles":["paper"]},
+    {"capability_id":"admin.broker-read","adapter_revision":"portal.execution.local-broker-read.v1","profiles":["sandbox","live"]},
+    {"capability_id":"event.order-lifecycle","adapter_revision":"portal.execution.local-order-lifecycle.v1","profiles":["paper","live"]}
+  ],
+  "retained_dark": [
+    "market.ticks",
+    "market.candles.crypto",
+    "market.candles.vnm",
+    "venues.calendar",
+    "benchmark.series",
+    "analytics.cross-profile-drift",
+    "admin.health",
+    "admin.portfolio-create",
+    "admin.risk-profile"
+  ]
+}

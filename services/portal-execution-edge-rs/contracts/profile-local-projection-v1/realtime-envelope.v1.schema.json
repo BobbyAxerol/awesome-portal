@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.profile-realtime.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version","event_type","terminal","reconnect_required","workspace_id","environment","profile_id","cursor","projection_epoch","projection_sequence","payload_digest","source_as_of","received_at","last_successful_refresh_at","freshness","completeness","payload"],
+  "properties": {
+    "schema_version": {"const":"portal.execution.profile-realtime.v1"},
+    "event_type": {"enum":["snapshot","delta","heartbeat","auth.expired","projection.gap"]},
+    "terminal": {"type":"boolean"},
+    "reconnect_required": {"type":"boolean"},
+    "workspace_id": {"type":"string","minLength":1},
+    "environment": {"enum":["paper","sandbox","live"]},
+    "profile_id": {"type":"string","pattern":"^(PAPER|SANDBOX|LIVE)_"},
+    "cursor": {"type":["string","null"]},
+    "projection_epoch": {"type":["string","null"]},
+    "projection_sequence": {"type":["integer","null"],"minimum":1},
+    "payload_digest": {"type":["string","null"],"pattern":"^sha256:[0-9a-f]{64}$"},
+    "source_as_of": {"type":["string","null"],"format":"date-time"},
+    "received_at": {"type":"string","format":"date-time"},
+    "last_successful_refresh_at": {"type":["string","null"],"format":"date-time"},
+    "freshness": {"enum":["FRESH","AGING","STALE","UNKNOWN"]},
+    "completeness": {"enum":["COMPLETE","PARTIAL","UNKNOWN"]},
+    "payload": {"type":"object"}
+  }
+}

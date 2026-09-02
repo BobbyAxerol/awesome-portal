@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { AuthSession, PortalUser } from "../src/domain";
-import { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
+import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ProfileReadController } from "../src/profile-read/profile-read.controller";
 import { ProfileReadService } from "../src/profile-read/profile-read.service";
 import { WorkspacesRepository } from "../src/repos/workspaces";
@@ -39,7 +39,7 @@ class FakeCurrentSource {
 }
 
 function service(source: FakeCurrentSource): ProfileReadService {
-  return new ProfileReadService(source as unknown as ExecutionCurrentSourceProxy);
+  return new ProfileReadService(source as unknown as ExecutionProductReadSource);
 }
 
 function principal(workspaceId = "ws_primary") { return { user, session, workspaceId }; }

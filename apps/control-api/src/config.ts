@@ -100,6 +100,16 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_LOCAL_PROJECTION: z.enum(["true", "false"]).default("false"),
+  EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional(),
+  ),
+  EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS: z.coerce.number().int().min(1_000).max(300_000).default(15_000),
+  EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS: z.coerce.number().int().min(5_000).max(600_000).default(120_000),
+  EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS: z.coerce.number().int().min(30_000).max(3_600_000).default(300_000),
+  EXECUTION_LOCAL_PROJECTION_JOURNAL_RETENTION_SECONDS: z.coerce.number().int().min(300).max(604_800).default(86_400),
+  EXECUTION_LOCAL_PROJECTION_MAXIMUM_JOURNAL_ENTRIES: z.coerce.number().int().min(32).max(100_000).default(10_000),
   COMMAND_CENTER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(128 * 1024),
   EXECUTION_EDGE_ORIGIN: ServiceOriginSchema.default("https://portal-execution-edge:8443"),
   EXECUTION_EDGE_ENVIRONMENT: z.enum(["paper", "sandbox", "live"]).default("paper"),
@@ -347,6 +357,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       throw new Error(
         `current-source ${profile.environment} profile and audience must match the N13B pins`,
       );
+    }
+  }
+  if (config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true") {
+    if (config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID === undefined) {
+      throw new Error(
+        "FEATURE_EXECUTION_LOCAL_PROJECTION=true requires EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID",
+      );
+    }
+    if (!currentSourceProfiles.some((profile) => profile.feature === "true")) {
+      throw new Error("local execution projection requires at least one current-source profile");
+    }
+    if (
+      config.EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS <=
+      config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS
+    ) {
+      throw new Error("local execution projection lease must exceed its poll interval");
     }
   }
   if (
