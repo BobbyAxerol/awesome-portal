@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/portfolios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listPortfolios"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/broker-bindings": {
         parameters: {
             query?: never;
@@ -180,8 +196,57 @@ export interface components {
             summary: components["schemas"]["Summary"];
             page: components["schemas"]["AlphaPage"];
         };
+        EnvironmentBranch: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+            reason_code: string | null;
+        };
         /** @enum {unknown} */
         Environment: "paper" | "sandbox" | "live";
+        "$defs-Decimal": string;
+        "$defs-CurrencyValue": {
+            currency: components["schemas"]["Identifier"];
+            value: components["schemas"]["$defs-Decimal"];
+        };
+        PortfolioListItem: {
+            portfolio_id: components["schemas"]["Identifier"];
+            name: string;
+            owner: string | null;
+            state: components["schemas"]["Identifier"];
+            base_currency: components["schemas"]["Identifier"];
+            environments: components["schemas"]["Environment"][];
+            allocation_count: number;
+            deployment_count: number;
+            allocated_by_currency: components["schemas"]["$defs-CurrencyValue"][];
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        PortfolioListResponse: {
+            /** @constant */
+            schema_version: "execution.portfolio-list.v1";
+            /** @constant */
+            record_authority: "PORTAL_PROJECTION";
+            /** @constant */
+            source_authority: "TRADING_SYSTEM";
+            /** @enum {unknown} */
+            delivery_profile: "ALL_EXECUTION_PROFILES" | "PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+            workspace_id: components["schemas"]["Identifier"];
+            /** @enum {unknown} */
+            environment: "all" | "paper" | "sandbox" | "live";
+            read_at: components["schemas"]["Timestamp"];
+            source_as_of: components["schemas"]["Timestamp"] | null;
+            /** @enum {unknown} */
+            freshness: "FRESH" | "STALE";
+            /** @enum {unknown} */
+            completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+            environments: {
+                paper?: components["schemas"]["EnvironmentBranch"];
+                sandbox?: components["schemas"]["EnvironmentBranch"];
+                live?: components["schemas"]["EnvironmentBranch"];
+            };
+            total_portfolios: number;
+            truncated: boolean;
+            items: components["schemas"]["PortfolioListItem"][];
+        };
         /** @enum {unknown} */
         Freshness: "FRESH" | "STALE";
         /** @enum {unknown} */
@@ -304,6 +369,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AlphaFleetResponse"];
+                };
+            };
+        };
+    };
+    listPortfolios: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["Workspace"];
+                environment?: components["parameters"]["AlphaFleetEnvironment"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Bounded all-profile portfolio identity list with per-environment branch states, membership and exact allocated capital. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioListResponse"];
                 };
             };
         };

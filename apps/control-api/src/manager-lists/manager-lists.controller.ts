@@ -5,6 +5,7 @@ import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
 import {
   AlphaFleetQuerySchema, BindingsQuerySchema, MANAGER_LIST_ENVIRONMENTS,
+  PortfolioListQuerySchema,
 } from "./contracts";
 import { ManagerListsError, ManagerListsService } from "./manager-lists.service";
 
@@ -28,6 +29,14 @@ export class ManagerListsController {
     if (!parsed.success) throw new ManagerListsError("BR72_FLEET_QUERY_INVALID", 400);
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
     return this.lists.fleet({ user: request.portalUser, session: request.portalSession, workspaceId }, parsed.data);
+  }
+
+  @Get("/portfolios")
+  async portfolios(@Req() request: ManagerListRequest, @Query() raw: unknown) {
+    const parsed = PortfolioListQuerySchema.safeParse(raw);
+    if (!parsed.success) throw new ManagerListsError("BR76_PORTFOLIO_QUERY_INVALID", 400);
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.lists.portfolios({ user: request.portalUser, session: request.portalSession, workspaceId }, parsed.data);
   }
 
   @Get("/broker-bindings")

@@ -302,6 +302,61 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     expect(projectedLabel).toBe("Carry A refreshed");
   });
 
+  it("serves the all-profile portfolio identity list with membership and exact capital (P4-A / BR-EX-76)", async () => {
+    const result = await service.portfolios(principal(), { environment: "all" }) as Record<string, any>;
+    expect(result).toMatchObject({
+      schema_version: "execution.portfolio-list.v1",
+      record_authority: "PORTAL_PROJECTION",
+      source_authority: "TRADING_SYSTEM",
+      delivery_profile: "ALL_EXECUTION_PROFILES",
+      environment: "all",
+      total_portfolios: 1,
+      truncated: false,
+    });
+    // pf_main identity row has no mode, so it projects in all three profiles;
+    // its allocations exist only in paper.
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      portfolio_id: "pf_main", name: "Main", owner: "bobby", state: "ACTIVE",
+      base_currency: "USDT", environments: ["paper", "sandbox", "live"],
+      allocation_count: 2, deployment_count: 2,
+      allocated_by_currency: [{ currency: "USDT", value: "30000" }],
+    });
+    expect(result.environments.paper).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(JSON.stringify(result)).not.toContain("opaque-source-key");
+  });
+
+  it("keeps the portfolio list serving when one profile read fails, labeled PARTIAL (P4-A)", async () => {
+    const original = source.relation.bind(source);
+    (source as unknown as { relation: unknown }).relation = async (
+      principal: unknown, environment: string, screenId: string, sourceId: string,
+      relation: string, query: { cursor?: string },
+    ) => {
+      if (environment === "live") throw new Error("live source down");
+      return original(principal, environment, screenId, sourceId, relation, query);
+    };
+    const result = await service.portfolios(principal(), { environment: "all" }) as Record<string, any>;
+    expect(result.completeness).toBe("PARTIAL");
+    expect(result.environments.live).toMatchObject({ state: "UNAVAILABLE" });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].environments).toEqual(["paper", "sandbox"]);
+  });
+
+  it("drops allocation rows whose portfolio parent is not an accepted identity row (P4-A / N30)", async () => {
+    source.rows.portfolio_allocations.push({
+      allocation_id: "alloc_orphan", portfolio_id: "pf_ghost", strategy_id: "str_a",
+      deployment_id: "dep_ghost", account_id: "acc_a", mode: "paper", venue: "BINANCE",
+      currency: "USDT", allocated_capital: "999999", max_capital: "999999", state: "ACTIVE",
+      updated_at: "2026-08-31T09:00:00Z",
+    });
+    const result = await service.portfolios(principal(), { environment: "paper" }) as Record<string, any>;
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].allocated_by_currency).toEqual([{ currency: "USDT", value: "30000" }]);
+    expect(result.environments.paper).toEqual({ state: "PARTIAL", reason_code: "N30_PROFILE_LINEAGE_REJECTED" });
+    expect(result.completeness).toBe("PARTIAL");
+    expect(JSON.stringify(result.items)).not.toContain("pf_ghost");
+  });
+
   it("rejects page sizes above the published BR-EX-72 bound", () => {
     expect(AlphaFleetQuerySchema.parse({}).environment).toBe("all");
     expect(AlphaFleetQuerySchema.safeParse({ limit: 51 }).success).toBe(false);

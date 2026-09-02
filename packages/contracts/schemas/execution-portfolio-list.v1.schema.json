@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-portfolio-list.v1.schema.json",
+  "$defs": {
+    "Identifier": { "type": "string", "minLength": 1, "maxLength": 191 },
+    "Timestamp": { "type": "string", "format": "date-time" },
+    "Decimal": { "type": "string", "pattern": "^-?\\d+(\\.\\d+)?$" },
+    "Environment": { "enum": ["paper", "sandbox", "live"] },
+    "CurrencyValue": {
+      "type": "object", "additionalProperties": false,
+      "required": ["currency", "value"],
+      "properties": { "currency": { "$ref": "#/$defs/Identifier" }, "value": { "$ref": "#/$defs/Decimal" } }
+    },
+    "EnvironmentBranch": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code"],
+      "properties": {
+        "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
+        "reason_code": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "null" }] }
+      }
+    },
+    "PortfolioListItem": {
+      "type": "object", "additionalProperties": false,
+      "required": ["portfolio_id", "name", "owner", "state", "base_currency", "environments", "allocation_count", "deployment_count", "allocated_by_currency", "updated_at"],
+      "properties": {
+        "portfolio_id": { "$ref": "#/$defs/Identifier" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "owner": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "null" }] },
+        "state": { "$ref": "#/$defs/Identifier" },
+        "base_currency": { "$ref": "#/$defs/Identifier" },
+        "environments": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "$ref": "#/$defs/Environment" } },
+        "allocation_count": { "type": "integer", "minimum": 0 },
+        "deployment_count": { "type": "integer", "minimum": 0 },
+        "allocated_by_currency": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/CurrencyValue" } },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "PortfolioListResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "environment", "read_at", "source_as_of", "freshness", "completeness", "environments", "total_portfolios", "truncated", "items"],
+      "properties": {
+        "schema_version": { "const": "execution.portfolio-list.v1" },
+        "record_authority": { "const": "PORTAL_PROJECTION" },
+        "source_authority": { "const": "TRADING_SYSTEM" },
+        "delivery_profile": { "enum": ["ALL_EXECUTION_PROFILES", "PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"] },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "environment": { "enum": ["all", "paper", "sandbox", "live"] },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "source_as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "freshness": { "enum": ["FRESH", "STALE"] },
+        "completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+        "environments": {
+          "type": "object", "additionalProperties": false, "minProperties": 1,
+          "properties": {
+            "paper": { "$ref": "#/$defs/EnvironmentBranch" },
+            "sandbox": { "$ref": "#/$defs/EnvironmentBranch" },
+            "live": { "$ref": "#/$defs/EnvironmentBranch" }
+          }
+        },
+        "total_portfolios": { "type": "integer", "minimum": 0 },
+        "truncated": { "type": "boolean" },
+        "items": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/PortfolioListItem" } }
+      }
+    }
+  },
+  "$ref": "#/$defs/PortfolioListResponse"
+}

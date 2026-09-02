@@ -40,6 +40,25 @@ export const BindingsQuerySchema = QuerySchema.omit({ stage: true, owner: true, 
 export type AlphaFleetQuery = z.infer<typeof AlphaFleetQuerySchema>;
 export type BindingsQuery = z.infer<typeof BindingsQuerySchema>;
 
+export const PortfolioListQuerySchema = z.object({
+  workspace_id: z.string().min(1).max(128).optional(),
+  environment: z.enum(ALPHA_FLEET_ENVIRONMENTS).default("all"),
+}).strict();
+export type PortfolioListQuery = z.infer<typeof PortfolioListQuerySchema>;
+
+export interface PortfolioListItem {
+  portfolio_id: string;
+  name: string;
+  owner: string | null;
+  state: string;
+  base_currency: string;
+  environments: readonly ManagerListEnvironment[];
+  allocation_count: number;
+  deployment_count: number;
+  allocated_by_currency: readonly { currency: string; value: string }[];
+  updated_at: string;
+}
+
 export interface AlphaFleetRow extends QueryResultRow {
   scope_id: string;
   alpha_id: string;

@@ -29,6 +29,21 @@
         }
       }
     },
+    "/api/v1/execution/portfolios": {
+      "get": {
+        "operationId": "listPortfolios",
+        "parameters": [
+          { "$ref": "#/components/parameters/Workspace" },
+          { "$ref": "#/components/parameters/AlphaFleetEnvironment" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded all-profile portfolio identity list with per-environment branch states, membership and exact allocated capital.",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-portfolio-list.v1.schema.json#/$defs/PortfolioListResponse" } } }
+          }
+        }
+      }
+    },
     "/api/v1/execution/broker-bindings": {
       "get": {
         "operationId": "listBrokerBindings",

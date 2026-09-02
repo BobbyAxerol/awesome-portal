@@ -51,6 +51,8 @@ EVIDENCE_PATHS = {
     "br72_controller_sha256": ROOT / "apps/control-api/src/manager-lists/manager-lists.controller.ts",
     "br72_test_sha256": ROOT / "apps/control-api/test/manager-lists.spec.ts",
     "br72_source_boundary_sha256": ROOT / "apps/control-api/src/execution/current-source.proxy.ts",
+    "br76_schema_sha256": ROOT / "packages/contracts/schemas/execution-portfolio-list.v1.schema.json",
+    "br76_fixture_sha256": ROOT / "packages/contracts/fixtures/execution-portfolio-list.valid.json",
     "br72_source_boundary_test_sha256": ROOT / "apps/control-api/test/execution-current-source.spec.ts",
     "br72_live_review_fixture_sha256": ROOT / "packages/contracts/fixtures/governance-live-review.valid.json",
     "br72_registry_source_sha256": ROOT / "apps/portal/registry/registry.json",
@@ -258,9 +260,10 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
     openapi = read_json(EVIDENCE_PATHS["br72_openapi_sha256"])
     require(set(openapi.get("paths", {})) == {
         "/api/v1/execution/alphas",
+        "/api/v1/execution/portfolios",
         "/api/v1/execution/broker-bindings",
         "/api/v1/execution/broker-bindings/{binding_id}",
-    }, "BR-EX-72 route set drifted")
+    }, "BR-EX-72/76 route set drifted")
     limit = openapi["components"]["parameters"]["Limit"]["schema"]
     require(limit == {"type": "integer", "minimum": 1, "maximum": 50, "default": 50}, "BR-EX-72 page bound drifted")
 
@@ -349,6 +352,28 @@ def validate_br_ex_72(acceptance: dict[str, Any], debt: dict[str, Any]) -> None:
     for token in ["getAlphaFleet(query)", 'useState<FleetFilter>("all")', "stage: next === \"all\" ? undefined"]:
         require(token in recompose, f"Alpha Fleet v2 product consumer missing: {token}")
     require("EXECUTION_ALPHA_FLEET_LIST_SCREEN" in frontend_registry and "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN" in frontend_registry, "BR-EX-72 frontend registry roots missing")
+    # BR-EX-76 (Phase 4 / P4-A): the portfolio identity list is part of the
+    # accepted manager-list surface — pin its authority and bounds.
+    portfolio_schema = read_json(EVIDENCE_PATHS["br76_schema_sha256"])
+    require(
+        portfolio_schema["$defs"]["PortfolioListResponse"]["properties"]["schema_version"]["const"]
+        == "execution.portfolio-list.v1",
+        "BR-EX-76 portfolio list schema authority drifted",
+    )
+    require(
+        portfolio_schema["$defs"]["PortfolioListResponse"]["properties"]["items"]["maxItems"] == 100,
+        "BR-EX-76 portfolio population bound drifted",
+    )
+    for token in [
+        "PORTFOLIO_LIST_MAX_ITEMS = 100",
+        "BR76_PORTFOLIO_SOURCE_UNAVAILABLE",
+        "execution.portfolio-list.v1",
+        'lineage("portfolio_allocations", allocations)',
+    ]:
+        require(token in service, f"BR-EX-76 portfolio service boundary missing: {token}")
+    require("PortfolioListQuerySchema" in controller, "BR-EX-76 portfolio route validation missing")
+    for token in ["PortfolioListRichContainer", "api.listPortfolios()"]:
+        require(token in recompose, f"BR-EX-76 portfolio register consumer missing: {token}")
     require(acceptance["accepted_scope"]["br_ex_72"]["status"] == "COMPLETE", "BR-EX-72 acceptance state drifted")
     require({item["blocker_id"] for item in debt["resolved_delivery_gates"]} == {"N29-FE-01", "N29-BE-72"}, "BR-EX-72 resolved gate missing")
 

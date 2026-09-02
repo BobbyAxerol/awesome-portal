@@ -6,9 +6,10 @@ import { ControlPlaneQueryService, KeysetCursorCodec } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import { CurrentSourceProxyError } from "../execution/current-source.proxy";
 import {
   AlphaFleetEnvironment, AlphaFleetQuery, BindingItem, BindingsQuery,
-  MANAGER_LIST_ENVIRONMENTS, ManagerListEnvironment,
+  MANAGER_LIST_ENVIRONMENTS, ManagerListEnvironment, PortfolioListItem, PortfolioListQuery,
   alphaFleetResource, bindingsRawQuery, bindingsResource, fleetRawQuery,
 } from "./contracts";
 import {
@@ -24,6 +25,9 @@ export interface ManagerListPrincipal {
 const MAX_SOURCE_PAGES = 10;
 const SOURCE_PAGE_LIMIT = 200;
 const SNAPSHOT_MAX_AGE_MS = 5_000;
+// BR-EX-76 bounds the portfolio population; a larger real population is
+// served capped and labeled truncated/PARTIAL, never silently trimmed.
+const PORTFOLIO_LIST_MAX_ITEMS = 100;
 
 const STRATEGY_FIELDS = [
   "strategy_id", "alpha_id", "name", "label", "version", "strategy_version",
@@ -128,6 +132,117 @@ export class ManagerListsService {
       source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
       freshness: freshness(snapshot),
       item: bindingItem(item),
+    };
+  }
+
+  /**
+   * All-profile portfolio identity surface (P4-A / BR-EX-76). The portfolios
+   * relation is the identity authority; allocations attach membership counts
+   * and exact allocated capital. The read is stateless: with Phase 1 local
+   * projection active every drain is a bounded SGP snapshot read, so no third
+   * projection kind or migration is needed for a <=100-row population.
+   */
+  async portfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
+    const sourceEnvironments: readonly ManagerListEnvironment[] = query.environment === "all"
+      ? MANAGER_LIST_ENVIRONMENTS : [query.environment];
+    const branches: Record<string, { state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE"; reason_code: string | null }> = {};
+    const identity = new Map<string, { row: Record<string, unknown>; environments: Set<ManagerListEnvironment> }>();
+    const allocationsByPortfolio = new Map<string, Array<Record<string, unknown>>>();
+    const pages: ManagerPage[] = [];
+    let firstError: unknown = null;
+    // Profile-sized batches for the same reason as refreshFleet: the shared
+    // source admission budget is global, so profiles run serially.
+    for (const sourceEnvironment of sourceEnvironments) {
+      const context = readContext(sourceEnvironment);
+      try {
+        const [portfolios, allocations] = await Promise.all([
+          this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.portfolios", "portfolios", PORTFOLIO_FIELDS, context),
+          this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.portfolios", "portfolio_allocations", ALLOCATION_FIELDS, context),
+        ]);
+        // With the portfolios parent present, the lineage guard drops any
+        // allocation whose portfolio_id is not an accepted identity row, so
+        // the merged population is exactly the portfolios relation.
+        const isolated = enforceProfileLineage([
+          lineage("portfolios", portfolios), lineage("portfolio_allocations", allocations),
+        ], "N30");
+        const acceptedPortfolios = isolated[0].page!;
+        const acceptedAllocations = isolated[1].page!;
+        pages.push(acceptedPortfolios, acceptedAllocations);
+        for (const row of acceptedPortfolios.items) {
+          const id = text(row, "portfolio_id");
+          if (!id) continue;
+          const existing = identity.get(id);
+          if (!existing) {
+            identity.set(id, { row, environments: new Set([sourceEnvironment]) });
+          } else {
+            existing.environments.add(sourceEnvironment);
+            if (date(row, "updated_at", "created_at") > date(existing.row, "updated_at", "created_at")) existing.row = row;
+          }
+        }
+        for (const row of acceptedAllocations.items) {
+          const id = text(row, "portfolio_id");
+          if (!id) continue;
+          allocationsByPortfolio.set(id, [...(allocationsByPortfolio.get(id) ?? []), row]);
+        }
+        const lineageRejected = isolated.some((item) => item.reasonCode === "N30_PROFILE_LINEAGE_REJECTED");
+        branches[sourceEnvironment] =
+          acceptedPortfolios.items.length === 0 && acceptedAllocations.items.length === 0
+            ? { state: "EMPTY", reason_code: null }
+            : lineageRejected || acceptedPortfolios.completeness === "PARTIAL" || acceptedAllocations.completeness === "PARTIAL"
+              ? { state: "PARTIAL", reason_code: lineageRejected ? "N30_PROFILE_LINEAGE_REJECTED" : "SOURCE_PARTIAL" }
+              : { state: "AVAILABLE", reason_code: null };
+      } catch (error) {
+        branches[sourceEnvironment] = { state: "UNAVAILABLE", reason_code: portfolioReadReason(error) };
+        firstError = firstError ?? error;
+      }
+    }
+    if (pages.length === 0) {
+      throw firstError instanceof Error ? firstError : new ManagerListsError("BR76_PORTFOLIO_SOURCE_UNAVAILABLE", 503);
+    }
+    const items: PortfolioListItem[] = [...identity.entries()].map(([id, entry]) => {
+      const rows = allocationsByPortfolio.get(id) ?? [];
+      const deployments = new Set(rows.flatMap((row) => {
+        const deploymentId = text(row, "deployment_id");
+        return deploymentId ? [deploymentId] : [];
+      }));
+      return {
+        portfolio_id: id,
+        name: text(entry.row, "name") ?? id,
+        owner: text(entry.row, "owner"),
+        state: normalized(text(entry.row, "state"), "UNKNOWN"),
+        base_currency: normalized(text(entry.row, "base_currency"), "UNKNOWN"),
+        environments: [...entry.environments]
+          .sort((left, right) => MANAGER_LIST_ENVIRONMENTS.indexOf(left) - MANAGER_LIST_ENVIRONMENTS.indexOf(right)),
+        allocation_count: rows.length,
+        deployment_count: deployments.size,
+        allocated_by_currency: aggregateCurrencyValues(rows.map((row) => ({
+          currency: normalized(text(row, "currency"), "UNKNOWN"),
+          value: exact(row, "allocated_capital"),
+        }))),
+        updated_at: latestRecordDate([entry.row, ...rows]).toISOString(),
+      };
+    }).sort((left, right) => left.portfolio_id.localeCompare(right.portfolio_id));
+    const truncated = items.length > PORTFOLIO_LIST_MAX_ITEMS;
+    const branchDegraded = Object.values(branches).some((branch) => branch.state === "UNAVAILABLE" || branch.state === "PARTIAL");
+    const pageFreshness = pages.reduce((state, page) => worstFreshness(state, page.freshness), "FRESH" as ManagerPage["freshness"]);
+    const pageCompleteness = pages.reduce((state, page) => worstCompleteness(state, page.completeness), "COMPLETE" as ManagerPage["completeness"]);
+    return {
+      schema_version: "execution.portfolio-list.v1",
+      record_authority: "PORTAL_PROJECTION",
+      source_authority: "TRADING_SYSTEM",
+      delivery_profile: profile(query.environment),
+      workspace_id: principal.workspaceId,
+      environment: query.environment,
+      read_at: new Date().toISOString(),
+      source_as_of: latestString(...pages.map((page) => page.asOf)),
+      freshness: pageFreshness === "FRESH" ? "FRESH" : "STALE",
+      completeness: truncated || branchDegraded
+        ? "PARTIAL"
+        : pageCompleteness === "UNKNOWN" ? "UNKNOWN" : pageCompleteness,
+      environments: branches,
+      total_portfolios: items.length,
+      truncated,
+      items: items.slice(0, PORTFOLIO_LIST_MAX_ITEMS),
     };
   }
 
@@ -296,6 +411,11 @@ export class ManagerListsService {
     }
     throw new ManagerListsError("BR72_SOURCE_POPULATION_EXCEEDS_BOUND", 503);
   }
+}
+
+function portfolioReadReason(error: unknown): string {
+  if (error instanceof ManagerListsError || error instanceof CurrentSourceProxyError) return error.code;
+  return "PORTFOLIO_SOURCE_READ_FAILED";
 }
 
 function lineage(key: string, page: ManagerPage) {
