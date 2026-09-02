@@ -9,12 +9,15 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { COMMAND_CENTER_STREAM, readCommandCenter, streamGate } from "./commandCenter";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
 import { jitterFor, useCommandCentreStream } from "./commandCenterStream";
 import { CommandCenterScreen } from "./screens/CommandCenter";
+import { MemoryRouter } from "react-router-dom";
+import { createFixtureApi } from "./api/fixtureApi";
+import { CommandCenterSnapshotContainer } from "./screens/profileContainers";
 
 afterEach(cleanup);
 
@@ -135,6 +138,46 @@ describe("the screen reads the gate's own sentence", () => {
   it("offers no live or connect control while dark", () => {
     render(<CommandCenterScreen onOpen={() => undefined} snapshot={snap("busy")} />);
     expect(screen.queryByRole("button", { name: /live|stream|connect/i })).toBeNull();
+  });
+});
+
+describe("the product container opens the stream once it is published (P4-H)", () => {
+  it("passes a live factory and connects with the snapshot cursor", async () => {
+    const { opened, factory } = spyFactory();
+    const published = JSON.parse(JSON.stringify(CC_FIXTURES.busy)) as Record<string, any>;
+    published.snapshot = {
+      ...published.snapshot,
+      stream_available: true,
+      cursor: "sha256:resume",
+      projection_epoch: "e1",
+      projection_sequence: 7,
+    };
+    const api = {
+      ...createFixtureApi(),
+      getCommandCenterSnapshot: async () => ({ ok: true as const, value: published as unknown }),
+    };
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({
+      schema_version: "execution.realtime-snapshot.v1",
+      cursor: "sha256:resume",
+      projection_epoch: "e1",
+      projection_sequence: 7,
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    render(<MemoryRouter><CommandCenterSnapshotContainer api={api} sseFactory={factory} /></MemoryRouter>);
+    await waitFor(() => expect(opened).toHaveLength(1));
+    expect(opened[0]).toContain(COMMAND_CENTER_STREAM);
+    expect(opened[0]).toContain("cursor=");
+    vi.unstubAllGlobals();
+  });
+
+  it("still refuses to open while stream_available is false", async () => {
+    const { opened, factory } = spyFactory();
+    const api = {
+      ...createFixtureApi(),
+      getCommandCenterSnapshot: async () => ({ ok: true as const, value: CC_FIXTURES.busy as unknown }),
+    };
+    render(<MemoryRouter><CommandCenterSnapshotContainer api={api} sseFactory={factory} /></MemoryRouter>);
+    await screen.findAllByText(/Command Center/i);
+    expect(opened).toHaveLength(0);
   });
 });
 

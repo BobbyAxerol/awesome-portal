@@ -50,11 +50,16 @@ export function jitterFor(seed: string, spreadMs = 5_000): number {
  * published, it must never be called. That assertion is the point of this hook
  * — everything else it does is only reachable after someone else flips a flag.
  */
+// Stable default: an inline `() => new Date()` default parameter is a fresh
+// function identity on every render, and it sits in the effect's dependency
+// list — the stream would close and reopen once per render, forever.
+const defaultNow = () => new Date();
+
 export function useCommandCentreStream({
   snapshot,
   factory,
   fetchSnapshot,
-  now = () => new Date(),
+  now = defaultNow,
 }: {
   snapshot: CommandCenter | null;
   factory: SseFactory | null;

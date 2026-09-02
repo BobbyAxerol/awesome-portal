@@ -66,7 +66,7 @@
       "additionalProperties": false,
       "required": ["source", "authority", "availability", "reason", "as_of", "source_cursor", "source_sequence", "projection_epoch", "projection_sequence", "source_completeness", "poll_interval_ms", "freshness_state", "age_seconds", "lag_ms", "capability_snapshot_id", "delivery_profile"],
       "properties": {
-        "source": { "enum": ["PORTAL_GOVERNANCE", "EXECUTION_INCIDENTS", "EXECUTION_OPERATIONS", "EXECUTION_FLEET"] },
+        "source": { "enum": ["PORTAL_GOVERNANCE", "EXECUTION_INCIDENTS", "EXECUTION_OPERATIONS", "EXECUTION_FLEET", "EXECUTION_RECONCILIATION", "EXECUTION_JOURNAL"] },
         "authority": { "$ref": "#/$defs/Authority" },
         "availability": { "enum": ["AVAILABLE", "UNAVAILABLE", "ERROR"] },
         "reason": { "type": ["string", "null"], "maxLength": 128 },
@@ -90,7 +90,7 @@
       "required": ["id", "kind", "title", "summary", "severity", "sla_state", "sla_due_at", "created_at", "updated_at", "authority", "as_of", "href", "action_label", "rank", "age_seconds"],
       "properties": {
         "id": { "$ref": "#/$defs/Identifier" },
-        "kind": { "enum": ["INCIDENT", "APPROVAL", "OPERATION"] },
+        "kind": { "enum": ["INCIDENT", "APPROVAL", "OPERATION", "RECONCILIATION"] },
         "title": { "type": "string", "minLength": 1, "maxLength": 200 },
         "summary": { "type": "string", "minLength": 1, "maxLength": 300 },
         "severity": { "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"] },
@@ -195,7 +195,7 @@
       "required": ["id", "kind", "label", "scheduled_at", "authority", "as_of", "href"],
       "properties": {
         "id": { "$ref": "#/$defs/Identifier" },
-        "kind": { "enum": ["REVIEW_DUE", "CONDITION_EXPIRY", "VERIFIED_OPERATION"] },
+        "kind": { "enum": ["REVIEW_DUE", "CONDITION_EXPIRY", "VERIFIED_OPERATION", "JOURNAL_COMMAND"] },
         "label": { "type": "string", "minLength": 1, "maxLength": 240 },
         "scheduled_at": { "$ref": "#/$defs/DateTime" },
         "authority": { "$ref": "#/$defs/Authority" },

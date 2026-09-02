@@ -412,9 +412,11 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
       snapshot: { cursor: null, stream_available: false },
       panels: {
         needs_you: {
-          panel_state: "ready",
-          exact_total: true,
-          total_count: 20000,
+          // P4-H: reconciliation joined needs_you; with the projection off the
+          // panel honestly reports partial coverage instead of a false green.
+          panel_state: "partial",
+          exact_total: false,
+          total_count: null,
           observed_total_count: 20000,
           returned_count: 10,
           limit: 10,
@@ -436,6 +438,85 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
     expect(elapsedMs).toBeLessThan(1_500);
     expect(JSON.stringify(body)).not.toContain("postgres://");
   }, 30_000);
+
+  it("joins reconciliation findings and the 24h journal window from the committed projections (P4-H / F12)", async () => {
+    const nowIso = new Date().toISOString();
+    const oldIso = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const document = {
+      schema_version: "portal.execution.profile-projection.v1",
+      environment: "paper",
+      profile_id: "PAPER_BINANCE_USDM",
+      source_contract_revision: "rev-cc-p4h",
+      relations: {
+        "manager.deployments:strategy_deployments": { availability: "AVAILABLE", items: [] },
+        "manager.reconciliation:reconciliation_findings": {
+          availability: "AVAILABLE",
+          items: [
+            { fields: { finding_id: "rec_1", finding_type: "POSITION", venue: "BINANCE", severity: "CRITICAL", status: "OPEN", created_at: nowIso } },
+            { fields: { finding_id: "rec_closed", finding_type: "BALANCE", venue: "BINANCE", severity: "WARNING", status: "RESOLVED", created_at: nowIso } },
+          ],
+        },
+        "manager.command-journal:command_journal": {
+          availability: "AVAILABLE",
+          items: [
+            { fields: { command_id: "cmd_1", command_kind: "INSPECT", aggregate_key: "dep_1", outcome_class: "SUCCESS", updated_at: nowIso } },
+            { fields: { command_id: "cmd_old", command_kind: "INSPECT", aggregate_key: "dep_1", outcome_class: "SUCCESS", updated_at: oldIso } },
+          ],
+        },
+      },
+    };
+    await ctx.pool.query(
+      `INSERT INTO execution_profile_projection_snapshots
+         (workspace_id, environment, profile_id, source_contract_revision, source_epoch,
+          source_cursor, source_as_of, received_at, last_successful_refresh_at, completeness,
+          projection_epoch, projection_sequence, payload_digest, payload)
+       VALUES ($1,'paper','PAPER_BINANCE_USDM','rev-cc-p4h','epoch','cursor',now(),now(),now(),
+               'COMPLETE','00000000-0000-4000-8000-0000000000cc',1,$2,$3::jsonb)
+       ON CONFLICT (workspace_id,environment,profile_id) DO UPDATE SET
+          last_successful_refresh_at=now(), payload=EXCLUDED.payload, payload_digest=EXCLUDED.payload_digest`,
+      [workspaceId, `sha256:${"c".repeat(64)}`, JSON.stringify(document)],
+    );
+    const repository = new CommandCenterRepository(ctx.pool, testConfig({
+      AUTH_MODE: "dev",
+      FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: "true",
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      FEATURE_EXECUTION_EDGE: "true",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: workspaceId,
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_SANDBOX_PROFILE_ID: "SANDBOX_BINANCE_USDM",
+      EXECUTION_EDGE_LIVE_PROFILE_ID: "LIVE_BINANCE_USDM",
+    }));
+    const inputs = await repository.read(workspaceId, actor, new Date());
+
+    const reconciliation = inputs.triageSources.find((source) => source.status.source === "EXECUTION_RECONCILIATION");
+    expect(reconciliation).toBeDefined();
+    // The resolved finding is excluded; the open CRITICAL one ranks as a real alert.
+    expect(reconciliation!.exact_total_count).toBe(1);
+    expect(reconciliation!.items[0]).toMatchObject({
+      kind: "RECONCILIATION",
+      severity: "CRITICAL",
+      title: "POSITION · BINANCE",
+      summary: "OPEN · paper profile",
+      authority: "EXECUTION",
+    });
+
+    const journal = inputs.todaySources.find((source) => source.status.source === "EXECUTION_JOURNAL");
+    expect(journal).toBeDefined();
+    // The three-day-old command sits outside the bounded 24h window.
+    expect(journal!.exact_total_count).toBe(1);
+    expect(journal!.items[0]).toMatchObject({
+      kind: "JOURNAL_COMMAND",
+      label: "INSPECT · dep_1 · SUCCESS",
+      href: "/deployments/blotter",
+    });
+  });
 
   it("enforces the five-slot, user-scoped watchlist in PostgreSQL", async () => {
     await expect(ctx.pool.query(

@@ -2702,6 +2702,18 @@ alerts as published), `fleet` (per-stage counts from the fleet summary),
 container to the Phase 1 journal SSE. An empty ranked list with real zero
 sources renders QUIET — as designed — but panels are never null.
 
+Status 2026-09-02: `INTEGRATION_COMPLETE` — one atomic projection read now
+feeds fleet health, a reconciliation-findings needs-you source and a bounded
+24 h command-journal Today window (additive enum widening:
+`EXECUTION_RECONCILIATION`/`EXECUTION_JOURNAL` sources, `RECONCILIATION`
+triage kind, `JOURNAL_COMMAND` today kind). With the projection off, needs_you
+honestly reports PARTIAL coverage instead of a false green. The product CC
+container now passes a live EventSource factory and the bounded
+`/command-center/realtime-snapshot` resume fetch, so the published stream
+actually opens; fixing that path surfaced and closed a latent hook bug (an
+inline `() => new Date()` default parameter in the effect dependency list
+cycled the stream once per render). Real zeroes still render QUIET.
+
 ##### P4-I — Governance and operations lifecycle realness (closes F16, F17)
 
 Publish the versioned observation policy (Portal-control record + gate
@@ -3958,6 +3970,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Claude: P4-H closed (`INTEGRATION_COMPLETE`) — CC needs_you gains reconciliation findings, Today gains the bounded 24 h journal window (one atomic projection read), product route opens the published CC stream; latent stream-cycling hook bug fixed | command-center spec 11/11 fresh-PG incl. the projection-join regression and honest-partial expectations; commandCenterStream spec 21/21 incl. container connect/refusal; contracts additive enum widening regenerated; full gates re-run green; read-only, no flag/profile/command change |
 | 2026-09-02 | Claude: P4-B closed (`INTEGRATION_COMPLETE`; Fleet equity spark deferred to the P4-D window ladder) — per-capability tile binding by id across all 12 analytics branches, `formatExact` display authority, Fleet/register formatting delegated | brEx72 spec 11/11 incl. a 12-capability binding regression; formatExact 6/6; full frontend Vitest suite green; frontend tsc clean; presentation-only — no contract, flag, profile or command change |
 | 2026-09-02 | Claude: P4-A closed (`INTEGRATION_COMPLETE`) — BR-EX-76 portfolio identity list (`execution.portfolio-list.v1`), portfolio register route truth (PF-CRYPTO defaults removed), Portfolio 360 spine = portfolios ∪ Fleet | manager-lists 10/10 fresh-PG incl. degraded-profile + lineage negatives; contracts gate pass; full frontend Vitest exit 0; N29 verifier extended (route set + BR-EX-76 pins) and green; authenticated dev journey returned 2 real portfolios with exact capital and three AVAILABLE profile branches; read-only, no flag/profile/command change |
 | 2026-09-02 | Claude: P4-F and P4-G closed (`INTEGRATION_COMPLETE`) — order-status normalization with quarantine counters, shared versioned status map, composite analytics ids, blotter exact-query plane active, Paper overview `derived_insights` (additive contract) | commits `92fd124`/`7a04443`/`2f2ce9a`/`6b972b8`; control-api gate 31 suites / 285 tests with fresh PostgreSQL + dump/restore parity; contracts workspace gate pass; dev control-api image rebuilt and probed authenticated: 364-order blotter with exact totals, real aggregates, bidirectional keyset cursors and canonical REJECTED filtering; no flag, profile or command change |

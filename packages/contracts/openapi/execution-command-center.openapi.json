@@ -61,7 +61,7 @@
         "additionalProperties": false,
         "required": ["source", "authority", "availability", "reason", "as_of", "source_cursor", "source_sequence", "projection_epoch", "projection_sequence", "source_completeness", "poll_interval_ms", "freshness_state", "age_seconds", "lag_ms", "capability_snapshot_id", "delivery_profile"],
         "properties": {
-          "source": { "type": "string", "enum": ["PORTAL_GOVERNANCE", "EXECUTION_INCIDENTS", "EXECUTION_OPERATIONS", "EXECUTION_FLEET"] },
+          "source": { "type": "string", "enum": ["PORTAL_GOVERNANCE", "EXECUTION_INCIDENTS", "EXECUTION_OPERATIONS", "EXECUTION_FLEET", "EXECUTION_RECONCILIATION", "EXECUTION_JOURNAL"] },
           "authority": { "$ref": "#/components/schemas/Authority" },
           "availability": { "type": "string", "enum": ["AVAILABLE", "UNAVAILABLE", "ERROR"] },
           "reason": { "type": ["string", "null"] },
@@ -85,7 +85,7 @@
         "required": ["id", "kind", "title", "summary", "severity", "sla_state", "sla_due_at", "created_at", "updated_at", "authority", "as_of", "href", "action_label", "rank", "age_seconds"],
         "properties": {
           "id": { "$ref": "#/components/schemas/Identifier" },
-          "kind": { "type": "string", "enum": ["INCIDENT", "APPROVAL", "OPERATION"] },
+          "kind": { "type": "string", "enum": ["INCIDENT", "APPROVAL", "OPERATION", "RECONCILIATION"] },
           "title": { "type": "string" },
           "summary": { "type": "string" },
           "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"] },
@@ -186,7 +186,7 @@
         "required": ["id", "kind", "label", "scheduled_at", "authority", "as_of", "href"],
         "properties": {
           "id": { "$ref": "#/components/schemas/Identifier" },
-          "kind": { "type": "string", "enum": ["REVIEW_DUE", "CONDITION_EXPIRY", "VERIFIED_OPERATION"] },
+          "kind": { "type": "string", "enum": ["REVIEW_DUE", "CONDITION_EXPIRY", "VERIFIED_OPERATION", "JOURNAL_COMMAND"] },
           "label": { "type": "string" },
           "scheduled_at": { "$ref": "#/components/schemas/DateTime" },
           "authority": { "$ref": "#/components/schemas/Authority" },

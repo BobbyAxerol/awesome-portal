@@ -132,7 +132,12 @@ export class CommandCenterRepository {
       const incidents = await this.incidentTriage(client, workspaceId, readAt);
       const operations = await this.operationTriage(client, workspaceId, readAt);
       const verifiedOperations = await this.verifiedOperationsToday(client, workspaceId, readAt);
-      const fleet = await this.projectionFleet(client, readAt);
+      // One projection read feeds fleet health, reconciliation triage and the
+      // journal window — the panels join what already exists, atomically.
+      const projection = await this.projectionState(client, readAt);
+      const fleet = this.projectionFleet(projection, readAt);
+      const reconciliation = this.reconciliationTriage(projection, readAt);
+      const journal = this.journalToday(projection, readAt);
       await client.query("COMMIT");
       return {
         workspaceId,
@@ -142,12 +147,14 @@ export class CommandCenterRepository {
           governance,
           incidents,
           operations,
+          reconciliation,
         ],
         fleet,
         pins,
         todaySources: [
           today,
           verifiedOperations,
+          journal,
         ],
       };
     } catch (error) {
@@ -279,13 +286,10 @@ export class CommandCenterRepository {
     };
   }
 
-  private async projectionFleet(
-    client: PoolClient,
-    readAt: Date,
-  ): Promise<ExactSourceSlice<FleetSnapshot>> {
+  private async projectionState(client: PoolClient, readAt: Date): Promise<ProjectionState> {
     const projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     if (!projectionWorkspaceId || this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
-      return unavailableSource("EXECUTION_FLEET", "EXECUTION", "PHASE2_LOCAL_PROJECTION_DISABLED");
+      return { rows: [], reason: "PHASE2_LOCAL_PROJECTION_DISABLED", ageMs: 0 };
     }
     const result = await client.query<ProjectionSnapshotRow>(
       `SELECT environment, profile_id, source_cursor, source_as_of, received_at,
@@ -297,14 +301,22 @@ export class CommandCenterRepository {
       [projectionWorkspaceId],
     );
     if (result.rows.length === 0) {
-      return unavailableSource("EXECUTION_FLEET", "EXECUTION", "PHASE2_PROJECTION_NOT_READY");
+      return { rows: [], reason: "PHASE2_PROJECTION_NOT_READY", ageMs: 0 };
     }
-    const staleCeiling = this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS;
     const newestRefresh = latestDate(result.rows.map((row) => row.last_successful_refresh_at));
-    const ageMs = newestRefresh ? Math.max(0, readAt.valueOf() - newestRefresh.valueOf()) : null;
-    if (ageMs === null || ageMs > staleCeiling) {
-      return unavailableSource("EXECUTION_FLEET", "EXECUTION", "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED");
+    const ageMs = newestRefresh ? Math.max(0, readAt.valueOf() - newestRefresh.valueOf()) : Number.MAX_SAFE_INTEGER;
+    if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+      return { rows: result.rows, reason: "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", ageMs };
     }
+    return { rows: result.rows, reason: null, ageMs };
+  }
+
+  private projectionFleet(projection: ProjectionState, readAt: Date): ExactSourceSlice<FleetSnapshot> {
+    if (projection.reason !== null) {
+      return unavailableSource("EXECUTION_FLEET", "EXECUTION", projection.reason);
+    }
+    const result = { rows: projection.rows };
+    const ageMs = projection.ageMs;
     const deployments = new Map<string, { environment: string; state: string; label: string }>();
     let brokerSyncIssues = 0;
     let openFindings = 0;
@@ -325,7 +337,7 @@ export class CommandCenterRepository {
     }
     const values = [...deployments.values()];
     const total = deployments.size;
-    const status = projectionSourceStatus(result.rows, readAt, ageMs);
+    const status = projectionSourceStatus("EXECUTION_FLEET", result.rows, readAt, ageMs);
     return {
       status,
       exact_total_count: total,
@@ -341,6 +353,98 @@ export class CommandCenterRepository {
         ],
         deployment_labels: Object.fromEntries([...deployments.entries()].map(([key, row]) => [key.split(":", 2)[1], row.label])),
       }],
+    };
+  }
+
+  /**
+   * P4-H / F12: open reconciliation findings from the committed profile
+   * projections are a needs-you source — published operational alerts, not a
+   * derived guess. A truthful zero keeps the panel QUIET.
+   */
+  private reconciliationTriage(projection: ProjectionState, readAt: Date): ExactSourceSlice<TriageCandidate> {
+    if (projection.reason !== null) {
+      return unavailableSource("EXECUTION_RECONCILIATION", "EXECUTION", projection.reason);
+    }
+    const open = projection.rows.flatMap((snapshot) =>
+      projectionRows(snapshot, "manager.reconciliation:reconciliation_findings")
+        .filter((row) => !["CLOSED", "RESOLVED", "CLEARED"].includes(String(row.status ?? "").toUpperCase()))
+        .map((row) => ({ snapshot, row })));
+    const severityRank = (severity: string) =>
+      ({ CRITICAL: 1, ERROR: 2, WARNING: 3 } as Record<string, number>)[severity] ?? 4;
+    const items = [...open]
+      .sort((left, right) =>
+        severityRank(String(left.row.severity ?? "").toUpperCase()) - severityRank(String(right.row.severity ?? "").toUpperCase())
+        || String(right.row.created_at ?? "").localeCompare(String(left.row.created_at ?? ""))
+        || String(left.row.finding_id ?? "").localeCompare(String(right.row.finding_id ?? "")))
+      .slice(0, 10)
+      .map(({ snapshot, row }) => {
+        const at = typeof row.created_at === "string" ? row.created_at : readAt.toISOString();
+        return {
+          id: `${snapshot.environment}:${String(row.finding_id ?? "finding")}`,
+          kind: "RECONCILIATION" as const,
+          title: `${String(row.finding_type ?? "RECONCILIATION")} · ${String(row.venue ?? snapshot.profile_id)}`,
+          summary: `${String(row.status ?? "OPEN")} · ${snapshot.environment} profile`,
+          severity: commandCenterSeverity(String(row.severity ?? "").toUpperCase() as IncidentTriageRow["severity"]),
+          sla_state: "NONE" as const,
+          sla_due_at: null,
+          created_at: at,
+          updated_at: at,
+          authority: "EXECUTION" as const,
+          as_of: at,
+          href: "/execution/operations?filter=findings",
+          action_label: "Reconcile",
+        };
+      });
+    return {
+      status: projectionSourceStatus("EXECUTION_RECONCILIATION", projection.rows, readAt, projection.ageMs),
+      exact_total_count: open.length,
+      items,
+    };
+  }
+
+  /**
+   * P4-H / F12: the Today rail carries the bounded command-journal window from
+   * the same committed projections — the real record of what the system did in
+   * the last 24 hours.
+   */
+  private journalToday(projection: ProjectionState, readAt: Date): ExactSourceSlice<TodayCandidate> {
+    if (projection.reason !== null) {
+      return unavailableSource("EXECUTION_JOURNAL", "EXECUTION", projection.reason);
+    }
+    const windowStart = readAt.valueOf() - 24 * 3_600_000;
+    const stamp = (row: Record<string, unknown>) => {
+      const value = typeof row.updated_at === "string" ? row.updated_at
+        : typeof row.created_at === "string" ? row.created_at : null;
+      const parsed = value ? Date.parse(value) : Number.NaN;
+      return Number.isNaN(parsed) ? null : { iso: new Date(parsed).toISOString(), at: parsed };
+    };
+    const windowed = projection.rows.flatMap((snapshot) =>
+      projectionRows(snapshot, "manager.command-journal:command_journal").flatMap((row) => {
+        const when = stamp(row);
+        return when && when.at >= windowStart && when.at <= readAt.valueOf()
+          ? [{ snapshot, row, when }] : [];
+      }));
+    const items = [...windowed]
+      .sort((left, right) => right.when.at - left.when.at
+        || String(left.row.command_id ?? "").localeCompare(String(right.row.command_id ?? "")))
+      .slice(0, 12)
+      .map(({ snapshot, row, when }) => ({
+        id: `journal:${snapshot.environment}:${String(row.command_id ?? when.iso)}`,
+        kind: "JOURNAL_COMMAND" as const,
+        label: [
+          String(row.command_kind ?? "COMMAND"),
+          String(row.aggregate_key ?? snapshot.profile_id),
+          String(row.outcome_class ?? row.status ?? "RECORDED"),
+        ].join(" · "),
+        scheduled_at: when.iso,
+        authority: "EXECUTION" as const,
+        as_of: when.iso,
+        href: "/deployments/blotter",
+      }));
+    return {
+      status: projectionSourceStatus("EXECUTION_JOURNAL", projection.rows, readAt, projection.ageMs),
+      exact_total_count: windowed.length,
+      items,
     };
   }
 
@@ -555,7 +659,14 @@ function localExecutionStatus(
   };
 }
 
+interface ProjectionState {
+  rows: ProjectionSnapshotRow[];
+  reason: string | null;
+  ageMs: number;
+}
+
 function projectionSourceStatus(
+  source: "EXECUTION_FLEET" | "EXECUTION_RECONCILIATION" | "EXECUTION_JOURNAL",
   rows: ProjectionSnapshotRow[],
   readAt: Date,
   ageMs: number,
@@ -564,7 +675,7 @@ function projectionSourceStatus(
     left.last_successful_refresh_at.valueOf() - right.last_successful_refresh_at.valueOf())[0];
   const newestSequence = Math.max(...rows.map((row) => Number(row.projection_sequence)));
   return {
-    source: "EXECUTION_FLEET",
+    source,
     authority: "EXECUTION",
     availability: "AVAILABLE",
     reason: rows.some((row) => row.completeness !== "COMPLETE") ? "PHASE2_HOT_WINDOW_PARTIAL" : null,

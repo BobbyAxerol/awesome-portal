@@ -45,7 +45,7 @@ export interface components {
         };
         SourceStatus: {
             /** @enum {string} */
-            source: "PORTAL_GOVERNANCE" | "EXECUTION_INCIDENTS" | "EXECUTION_OPERATIONS" | "EXECUTION_FLEET";
+            source: "PORTAL_GOVERNANCE" | "EXECUTION_INCIDENTS" | "EXECUTION_OPERATIONS" | "EXECUTION_FLEET" | "EXECUTION_RECONCILIATION" | "EXECUTION_JOURNAL";
             authority: components["schemas"]["Authority"];
             /** @enum {string} */
             availability: "AVAILABLE" | "UNAVAILABLE" | "ERROR";
@@ -71,7 +71,7 @@ export interface components {
         TriageItem: {
             id: components["schemas"]["Identifier"];
             /** @enum {string} */
-            kind: "INCIDENT" | "APPROVAL" | "OPERATION";
+            kind: "INCIDENT" | "APPROVAL" | "OPERATION" | "RECONCILIATION";
             title: string;
             summary: string;
             /** @enum {string} */
@@ -160,7 +160,7 @@ export interface components {
         TodayItem: {
             id: components["schemas"]["Identifier"];
             /** @enum {string} */
-            kind: "REVIEW_DUE" | "CONDITION_EXPIRY" | "VERIFIED_OPERATION";
+            kind: "REVIEW_DUE" | "CONDITION_EXPIRY" | "VERIFIED_OPERATION" | "JOURNAL_COMMAND";
             label: string;
             scheduled_at: components["schemas"]["DateTime"];
             authority: components["schemas"]["Authority"];

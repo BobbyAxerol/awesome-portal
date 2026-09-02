@@ -6,7 +6,7 @@
  * producer is reachable from here — that is the boundary the import-scan
  * test walks.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi, Result } from "../api/ports";
 import type {
@@ -15,6 +15,7 @@ import type {
 } from "../api/profileRead";
 import { readCommandCenter, type CommandCenter } from "../commandCenter";
 import { CommandCenterLive } from "./containers";
+import type { SseFactory } from "../sse";
 import { PanelState } from "../components/states";
 import { ProfileEnvelopeScreen, QueryAnalyticsScreen, TypedUnavailableScreen } from "./ProfileScreens";
 import type { PanelStatus } from "../contracts";
@@ -46,8 +47,36 @@ export function useApiRead<T>(run: () => Promise<Result<T>>, deps: readonly unkn
   return state;
 }
 
-export function CommandCenterSnapshotContainer({ api }: { api: ExecutionApi }) {
+const COMMAND_CENTER_REALTIME_SNAPSHOT = "/api/v1/execution/command-center/realtime-snapshot";
+
+/**
+ * P4-H: the bounded cursor/epoch/sequence resume point for the Command Centre
+ * stream. Same-origin, cookie-authenticated, and small by contract — the rich
+ * panel data stays in the canonical snapshot response.
+ */
+async function fetchCommandCenterResume(): Promise<{ cursor: string; epoch: string; sequence: number; asOf?: string | null }> {
+  const response = await fetch(COMMAND_CENTER_REALTIME_SNAPSHOT, {
+    credentials: "same-origin",
+    headers: { accept: "application/json" },
+  });
+  if (!response.ok) throw new Error(`realtime snapshot ${response.status}`);
+  const body = await response.json() as Record<string, unknown>;
+  const cursor = typeof body.cursor === "string" ? body.cursor : null;
+  const epoch = typeof body.projection_epoch === "string" ? body.projection_epoch : null;
+  const sequence = typeof body.projection_sequence === "number" ? body.projection_sequence : null;
+  if (!cursor || !epoch || sequence === null) throw new Error("realtime snapshot missing resume point");
+  return { cursor, epoch, sequence, asOf: typeof body.source_read_at === "string" ? body.source_read_at : null };
+}
+
+export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: ExecutionApi; sseFactory?: SseFactory | null }) {
   const state = useApiRead(() => api.getCommandCenterSnapshot(), [api]);
+  // P4-H: the product route passes a live factory; the hook still refuses to
+  // open anything unless the server publishes stream_available. Memoized —
+  // a fresh function identity per render would cycle the stream effect.
+  const factory = useMemo<SseFactory | null>(
+    () => sseFactory === undefined ? (url: string) => new EventSource(url) : sseFactory,
+    [sseFactory],
+  );
   if (state.status !== "ok") {
     return (
       <section className="exec-envelope" aria-label="Command Center">
@@ -65,7 +94,7 @@ export function CommandCenterSnapshotContainer({ api }: { api: ExecutionApi }) {
       </section>
     );
   }
-  return <CommandCenterLive snapshot={snapshot} />;
+  return <CommandCenterLive snapshot={snapshot} factory={factory} fetchSnapshot={fetchCommandCenterResume} />;
 }
 
 const OVERVIEW_TITLE = {

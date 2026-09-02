@@ -16,7 +16,9 @@ export type CommandCenterSourceName =
   | "PORTAL_GOVERNANCE"
   | "EXECUTION_INCIDENTS"
   | "EXECUTION_OPERATIONS"
-  | "EXECUTION_FLEET";
+  | "EXECUTION_FLEET"
+  | "EXECUTION_RECONCILIATION"
+  | "EXECUTION_JOURNAL";
 
 export interface SourceStatus {
   source: CommandCenterSourceName;
@@ -37,7 +39,7 @@ export interface SourceStatus {
   delivery_profile: DeliveryProfile;
 }
 
-export type TriageKind = "INCIDENT" | "APPROVAL" | "OPERATION";
+export type TriageKind = "INCIDENT" | "APPROVAL" | "OPERATION" | "RECONCILIATION";
 export type TriageSeverity = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO";
 
 export interface TriageCandidate {
@@ -99,7 +101,7 @@ export interface CommandCenterPin {
 
 export interface TodayCandidate {
   id: string;
-  kind: "REVIEW_DUE" | "CONDITION_EXPIRY" | "VERIFIED_OPERATION";
+  kind: "REVIEW_DUE" | "CONDITION_EXPIRY" | "VERIFIED_OPERATION" | "JOURNAL_COMMAND";
   label: string;
   scheduled_at: string;
   authority: SourceAuthority;
