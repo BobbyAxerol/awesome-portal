@@ -2144,6 +2144,103 @@ an exit-review LIST contract remains the only unrouted approved surface.
 (frontend lead) at the owner's request; runtime facts above are Codex's and
 were not edited.*
 
+#### Phase 1 delivery specification — Data Truth, Projection & Realtime Foundation
+
+**Owner authorization (2026-09-02):** Bobby approved immediate implementation
+of the complete Phase 1 scope, combining N30–N32. This is one coherent backend
+phase on `feat/execution-data-activation`; it must not be split into unnamed
+follow-ups. UI composition, commands, `main` and stable are outside this phase.
+
+**Target status:** `DATA_TRUTH_ACCEPTED / SGP_LOCAL_READ_MODEL_ACTIVE /
+CURRENT_SOURCE_READ_ADAPTERS_ACCEPTED / UNIFIED_REALTIME_ACCEPTED /
+PHASE_2_READY`.
+
+##### P1-A — Profile and lineage truth
+
+- derive Paper/Sandbox/Live scope from the authenticated accepted resource and
+  server-owned profile binding, never from an arbitrary browser field;
+- require profile/workspace/source-revision lineage on every normalized row,
+  cached document, projection cycle and realtime envelope;
+- partition uniqueness, cache keys, leases, cursors and reads by the complete
+  scope; reject a row whose embedded mode/profile conflicts with its accepted
+  profile;
+- reproduce and eliminate the observed Paper-balance-in-Live defect;
+- prove the same relation/key cannot be returned through another profile even
+  under concurrent refresh, stale cache, replay, restart or adapter rollback.
+
+##### P1-B — Projection-first SGP read path
+
+- retain the existing bounded Rust compatibility/projection authority at
+  AWS-HK and consume it through the accepted mTLS + delegated-JWT boundary;
+- add one shared, lease-controlled ingestion path independent of browser tab
+  count: initial bounded snapshot, changed-cycle refresh and periodic
+  reconciliation;
+- persist sanitized screen/domain documents in SGP PostgreSQL with profile,
+  workspace, source contract revision, source epoch/cursor, `as_of`,
+  `received_at`, completeness, payload digest and last successful refresh;
+- make the normal TypeScript screen BFF read SGP-local committed documents
+  only. A cache miss is typed and fail-closed; it must not trigger synchronous
+  cross-cell read-through;
+- serve the last committed document as `STALE` only inside its declared
+  ceiling. Refresh errors never erase the last valid document;
+- keep a separately authorized diagnostic path for bounded direct source
+  comparison and parity evidence; product navigation cannot call it.
+
+##### P1-C — Existing-source read adapter activation
+
+- activate only semantically valid read-only N28 alternatives whose present
+  source and exact bounds are proven (market ticks/candles, calendar,
+  benchmark, cross-profile comparison, partial lifecycle/health/inspect/
+  performance/broker-read families as applicable);
+- bind every adapter to a versioned source operation, profile, venue, symbol or
+  resource allowlist, row/body/time bounds and typed failure behavior;
+- keep mutation candidates and genuinely absent MC owner capabilities dark;
+- never expose arbitrary upstream URLs, headers, relations or payloads to
+  TypeScript or the browser.
+
+##### P1-D — One realtime contract
+
+- publish one versioned envelope for every screen topic with exactly these
+  semantic kinds: initial `snapshot`, ordered `delta`, bounded `heartbeat`,
+  terminal `auth.expired` and terminal `projection.gap`;
+- include profile/workspace, source epoch, cursor/sequence, `as_of`,
+  `received_at`, completeness, freshness class/budget and payload digest;
+- browser SSE is served from the SGP-local committed journal/fan-out. One new
+  tab creates no AWS-HK subscription or Trading System request;
+- reconnect resumes from a bounded cursor when continuity exists; gap or
+  retention loss closes the stream and requires a fresh local snapshot;
+- enforce bounded queues, replay pages, heartbeat cadence and slow-consumer
+  eviction without losing the durable cursor authority.
+
+##### Phase 1 required evidence and exit gate
+
+1. Schema/migration/restore tests for the SGP read model, lease, cursor,
+   idempotency, payload digest and retention boundary.
+2. Unit/contract tests for profile mismatch, cache-key isolation, row-lineage
+   rejection, exact decimals, adapter allowlists and typed errors.
+3. Integration proof that repeated and concurrent page refreshes create zero
+   AWS-HK requests while one shared ingestion cycle remains bounded.
+4. Snapshot/delta/reconciliation tests covering duplicate, out-of-order,
+   cursor-ahead, epoch replacement, restart, replay and stale retention.
+5. SSE tests for the five envelope kinds, resume, terminal close, backpressure,
+   authentication loss and profile isolation.
+6. Real sanitized Paper/Sandbox/Live smoke proving no cross-profile row,
+   correct source age and truthful empty populations.
+7. WAN/source-loss drill proving local stale service and clean recovery without
+   deleting or relabeling the last accepted document.
+8. Load evidence proving source traffic is determined by ingestion cadence and
+   profile count—not browser tabs or Control API replica count.
+9. Tracking/evidence report, generated contracts and rollback instructions
+   committed with the implementation. No source/runtime claim may rely on a
+   fixture-only result.
+
+**Phase 1 exit gate:** all nine evidence classes pass; normal product BFF reads
+are SGP-local; the direct source comparison path remains diagnostic-only; Live
+profile leakage is impossible by contract and storage constraint; accepted
+read adapters are active and bounded; the unified realtime stream preserves
+scope and continuity. Otherwise Phase 1 remains `IMPLEMENTATION_IN_PROGRESS`
+and Phase 2 must not start.
+
 ---
 
 ## 5. Definition of Ready and Definition of Done
@@ -3369,6 +3466,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Authorized and specified complete Phase 1 (N30–N32) | one data-first implementation phase now owns profile/lineage truth, SGP-local projection-only product reads, bounded activation of present-source read adapters and one five-kind realtime envelope; exact nine-class evidence gate recorded; UI/commands/main/stable unchanged |
 | 2026-09-02 | Added N29-RTA runtime truth reset and finite N30–N36 data-first closeout plan | supersedes the product interpretation—not the valid contract evidence—of N29; records real deployed screen/BFF states, 60 s source projection / 100 ms local journal / 750 ms direct cache behavior, Live profile leakage, remaining disabled/source-dark paths, projection-first dual-cell target and PostgreSQL-hot/Parquet-cold storage decision; `PRODUCT_NO_GO`, main/stable unchanged |
 | 2026-09-01 | Closed Alpha 360 current-source composition and projection-workspace integration | Fleet v2 remains the rich screen spine; N25 analytics is additive; private Query/SSE delegation maps to one exact execution-cell projection workspace without widening Portal RBAC; real Fleet click-through and both BFF reads pass; command/Live mutation/main/stable unchanged |
 | 2026-09-01 | Closed Alpha Fleet current-source v2 implementation | expanded BR-EX-72 to the existing strategy/deployment/account/balance/portfolio/allocation/position/reconciliation source set; global multi-profile projection, exact decimals, multi-stage filter/drill-down and rich-screen regression gates pass; bounded 30-day source window remains typed unavailable; dev runtime acceptance is the only slice-local gate |
