@@ -2614,6 +2614,80 @@ freshness chips reflect declared budgets; production configuration matrix is
 applied on dev first with measured evidence. Phase 4 items follow §5
 vocabulary; no bare DONE.
 
+##### P4-0b — Full-flow authenticated sweep addendum (2026-09-02, second pass)
+
+Bobby ordered a no-screen-left-behind sweep and, with Codex out of quota,
+assigned the complete Phase 4 execution to Claude. A loopback ephemeral ADMIN
+session (created and deleted inside one probe window, zero rows retained)
+exercised every sidebar flow against the live dev BFF. New verified findings:
+
+| # | Finding (flow) | Verified root cause | Layer |
+|---|---|---|---|
+| F11 | Orders are invisible EVERYWHERE (Blotter main table `orders:0`, Workbench Orders tab empty) while the projection holds 364 accepted orders | `source.orders` = `UNAVAILABLE · N22_ORDER_STATUS_NOT_ACCEPTED`: the real source vocabulary is `FILLED / CANCELED / RISK_REJECTED` (measured by SQL over the projection) while the Portal canonical union expects `CANCELLED / REJECTED`; the vocabulary guard fail-closes the whole branch on the first unknown word. Correct fix is adapter-level word mapping (`CANCELED→CANCELLED`, `RISK_REJECTED→REJECTED` with the source word preserved in a sub-field) and per-row quarantine for genuinely unknown words — never branch-wide refusal, never silent relabeling without provenance | TS adapter vocabulary |
+| F12 | Command Center renders an empty shell | authenticated snapshot returns `needs_you/fleet/pinned/today = null` — the Phase 2 "activated" composition emits the envelope but populates no panel (governance/ops sources are empty AND the fleet/today panels are not joined to the fleet summary/journal that already exist) | TS composition |
+| F13 | Workbench `workbench.analytics` = `UNAVAILABLE · ANALYTICS_IDENTIFIER_INVALID` | the workbench passes the composite deployment id in a form the analytics subject resolver rejects — identifier normalization bug at the BFF seam | TS |
+| F14 | Blotter `blotter.exact-query` = `UNAVAILABLE · PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE`; `page` cursors and `exact_total` null | the local exact-query/keyset/aggregate path is present but not activated on the dev runtime — flag/wiring gap despite the Phase 2 acceptance line | TS + config |
+| F15 | Paper overview `paper.derived-insights` = `N25_DERIVED_ANALYTICS_NOT_ACTIVE` | the overview never switched to the local analytics service that already computes these series (`FEATURE_EXECUTION_ANALYTICS_QUERY=true`) | TS wiring |
+| F16 | Workbench observation gate `PARTIAL · PHASE2_OBSERVATION_POLICY_NOT_PUBLISHED` | Portal-control owns this policy record and has simply never published one; a versioned observation policy (days/trades thresholds per stage) unlocks the gate panel and the exit-review criteria chain | Portal-control data |
+| F17 | Governance/operations flows all zero rows (Inbox, R1/R2/LIVE, Waivers, Exit Reviews, Operations Queue, Incidents) | truthful emptiness: no lifecycle records exist yet. The write path exists (`POST /governance/approvals` and the decision plane are live code); nothing has ever created real records on dev. Operations/incident records additionally need their declared feed (command journal, R0 receipts, reconciliation findings) joined into Portal ops records | lifecycle data + TS joins |
+
+Confirmed healthy in the same sweep (no action): Sandbox overview (35 real
+deployments), Live overview (truthful empty), Account/Broker 360 now returns a
+real composed `partial` document with 9 capability branches, Fleet/Bindings
+lists 200 with real rows, command tasks 24 = 4 `CONNECTED` + 13 inactive + 7
+incompatible, alpha analytics carries 15 `source_facts` families incl. 400-row
+sessions/performance/equity/journal and one real equity chart series.
+
+##### P4-F — Order-status vocabulary compatibility (closes F11)
+
+Versioned word-map in the order adapter (source→canonical, provenance kept),
+per-row quarantine counter for unknown words surfaced in the envelope, branch
+state derived from surviving rows. Regression: Blotter table and Workbench
+Orders tab render the 364 real orders with exact decimals.
+
+##### P4-G — Seam activation set (closes F13, F14, F15)
+
+Fix the workbench analytics identifier normalization; activate the local
+exact-query/keyset/aggregate blotter plane (cursors, `exact_total`, per-ccy
+aggregates over the committed projection); switch Paper overview insights to
+the local analytics series. Each lands with contract test + authenticated
+route test.
+
+##### P4-H — Command Center real composition (closes F12)
+
+Populate `needs_you` (governance SLA + reconciliation findings + operational
+alerts as published), `fleet` (per-stage counts from the fleet summary),
+`today` (bounded journal window), `pinned` (user-owned store); bind the CC
+container to the Phase 1 journal SSE. An empty ranked list with real zero
+sources renders QUIET — as designed — but panels are never null.
+
+##### P4-I — Governance and operations lifecycle realness (closes F16, F17)
+
+Publish the versioned observation policy (Portal-control record + gate
+computation); verify the real create→R1→R2→conditions→exit chain end-to-end
+on dev with Bobby's session (no seeded fakes — records created through the
+product write path are real governance facts); join command journal + R0
+receipts + reconciliation findings into the operations queue/incident records
+per their existing contracts.
+
+##### Phase 4 goal-execution order (owner may set as one goal)
+
+1. **P4-F + P4-G** — pure seam bugs; the fastest large data win (orders,
+   blotter plane, workbench analytics, overview insights);
+2. **P4-A + P4-B** — portfolio truth + per-capability tile binding + the
+   `formatExact` display rule;
+3. **P4-H** — Command Center composition + stream;
+4. **P4-C** — freshness budgets + SSE coverage + delta coalescing;
+5. **P4-I** — lifecycle realness for governance/operations flows;
+6. **P4-D** — profile taxonomy (needs Bobby's decision on `PAPER_DNSE_VNM`),
+   lineage counters, window ladder, DERIVED portfolio equity;
+7. **P4-E** — production streaming configuration matrix, load evidence, then
+   the unchanged release train.
+
+**Assignment note (2026-09-02):** Bobby assigned the whole Phase 4 to Claude
+(Codex quota exhausted); Claude follows this file's §5/§8/§9 discipline and
+the existing commit/verification gates unchanged.
+
 ---
 
 ## 5. Definition of Ready and Definition of Done
