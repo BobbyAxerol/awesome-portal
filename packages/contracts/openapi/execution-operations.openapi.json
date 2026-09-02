@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Operations API",
-    "version": "0.4.0-f1b-incident-detail",
-    "description": "EX-BE-05b/F1b: F0/F1a plus a Portal-owned Incident Detail workflow. Incident mutations are source-dark, evidence-gated, audited and never relay to the Trading System or resume a deployment."
+    "version": "0.6.0-phase2-controlled-commands",
+    "description": "Phase 2 controlled command plane: four bounded R0 tasks read the SGP projection; every mutation remains governed, hash-only and fail-closed unless an exact owner capability is published."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -32,7 +32,7 @@
     "/api/v1/execution/commands/tasks": {
       "get": {
         "operationId": "executionOperatorTaskCatalogue",
-        "description": "ADMIN-only exact 24-task Drawer catalogue. Every task and all 64 owner catalogue entries are classified; the current source command transport remains disabled.",
+        "description": "ADMIN-only exact 24-task Drawer catalogue. Four R0 tasks may be connected to the SGP-local projection; source mutation transport remains disabled.",
         "parameters": [
           { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } }
         ],
@@ -49,7 +49,7 @@
     "/api/v1/execution/commands/tasks/{task_id}/run": {
       "post": {
         "operationId": "runExecutionOperatorReadTask",
-        "description": "Runs only a typed R0 task after session/workspace/ADMIN checks. Until an exact source transport is active, rejects before dispatch and stores a hash-only audit record.",
+        "description": "Runs only a typed R0 task after session/workspace/ADMIN checks. Connected reads use the SGP-local projection, return bounded typed output and store a hash-only audit record without AWS-HK dispatch.",
         "parameters": [
           { "name": "task_id", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" } }
         ],
@@ -58,6 +58,10 @@
           "content": { "application/json": { "schema": { "$ref": "../schemas/execution-command-tasks.v1.schema.json#/$defs/RunRequest" } } }
         },
         "responses": {
+          "200": {
+            "description": "Bounded local projection result; source_request_sent=false",
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-command-tasks.v1.schema.json#/$defs/RunResult" } } }
+          },
           "409": { "description": "SUPPORTED_BUT_INACTIVE; source_request_sent=false" },
           "422": { "description": "SEMANTICALLY_INCOMPATIBLE; source_request_sent=false" }
         }

@@ -28,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ADMIN-only exact 24-task Drawer catalogue. Every task and all 64 owner catalogue entries are classified; the current source command transport remains disabled. */
+        /** @description ADMIN-only exact 24-task Drawer catalogue. Four R0 tasks may be connected to the SGP-local projection; source mutation transport remains disabled. */
         get: operations["executionOperatorTaskCatalogue"];
         put?: never;
         post?: never;
@@ -47,7 +47,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Runs only a typed R0 task after session/workspace/ADMIN checks. Until an exact source transport is active, rejects before dispatch and stores a hash-only audit record. */
+        /** @description Runs only a typed R0 task after session/workspace/ADMIN checks. Connected reads use the SGP-local projection, return bounded typed output and store a hash-only audit record without AWS-HK dispatch. */
         post: operations["runExecutionOperatorReadTask"];
         delete?: never;
         options?: never;
@@ -467,8 +467,8 @@ export interface components {
             catalogue_revision: 3;
             /** @constant */
             source_catalogue_revision: 2;
-            /** @constant */
-            relay_state: "DISABLED";
+            /** @enum {unknown} */
+            relay_state: "DISABLED" | "LOCAL_R0_ONLY";
             /** @constant */
             task_groups: [
                 "READ_INSPECT",
@@ -541,6 +541,38 @@ export interface components {
                     request_key: components["schemas"]["Identifier"];
                     params: components["schemas"]["OperatorParams"];
                 };
+                RunResult: {
+                    /** @constant */
+                    schema_version: "execution.command-run-result.v1";
+                    task_id: string;
+                    /** @constant */
+                    classification: "CONNECTED";
+                    /** @constant */
+                    transport: "SGP_LOCAL_PROJECTION";
+                    /** @constant */
+                    source_request_sent: false;
+                    response_digest: string;
+                    result: {
+                        /** @constant */
+                        schema_version: "portal.execution.profile-read-adapter.v1";
+                        /** @enum {unknown} */
+                        capability_id: "admin.inspect" | "admin.performance" | "admin.broker-read";
+                        adapter_revision: string;
+                        /** @constant */
+                        authority: "PORTAL_SGP_PROJECTION";
+                        workspace_id: components["schemas"]["Identifier"];
+                        viewer_workspace_id: components["schemas"]["Identifier"];
+                        /** @enum {unknown} */
+                        environment: "paper" | "sandbox" | "live";
+                        /** @enum {unknown} */
+                        profile_id: "PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+                        /** @enum {unknown} */
+                        state: "AVAILABLE" | "EMPTY" | "PARTIAL";
+                        projection: Record<string, never>;
+                        bounds: Record<string, never>;
+                        relations: Record<string, never>;
+                    };
+                };
                 PlanRequest: {
                     /** @constant */
                     schema_version: "execution.command-task-plan-request.v1";
@@ -590,6 +622,38 @@ export interface components {
             workspace_id: string;
             request_key: components["schemas"]["Identifier"];
             params: components["schemas"]["OperatorParams"];
+        };
+        RunResult: {
+            /** @constant */
+            schema_version: "execution.command-run-result.v1";
+            task_id: string;
+            /** @constant */
+            classification: "CONNECTED";
+            /** @constant */
+            transport: "SGP_LOCAL_PROJECTION";
+            /** @constant */
+            source_request_sent: false;
+            response_digest: string;
+            result: {
+                /** @constant */
+                schema_version: "portal.execution.profile-read-adapter.v1";
+                /** @enum {unknown} */
+                capability_id: "admin.inspect" | "admin.performance" | "admin.broker-read";
+                adapter_revision: string;
+                /** @constant */
+                authority: "PORTAL_SGP_PROJECTION";
+                workspace_id: components["schemas"]["Identifier"];
+                viewer_workspace_id: components["schemas"]["Identifier"];
+                /** @enum {unknown} */
+                environment: "paper" | "sandbox" | "live";
+                /** @enum {unknown} */
+                profile_id: "PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "EMPTY" | "PARTIAL";
+                projection: Record<string, never>;
+                bounds: Record<string, never>;
+                relations: Record<string, never>;
+            };
         };
         PlanRequest: {
             /** @constant */
@@ -1160,6 +1224,15 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Bounded local projection result; source_request_sent=false */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResult"];
+                };
+            };
             /** @description SUPPORTED_BUT_INACTIVE; source_request_sent=false */
             409: {
                 headers: {

@@ -39,7 +39,7 @@ const task = (
  */
 export const OPERATOR_TASKS: readonly OperatorTaskDefinition[] = [
   task("health", "READ_INSPECT", "System health", "READ", null, ["mode"]),
-  task("inspect", "READ_INSPECT", "Alpha / account inspect", "READ", "alpha/inspect", ["alpha_id", "account_id"]),
+  task("inspect", "READ_INSPECT", "Alpha / account inspect", "READ", "alpha/inspect", ["alpha_id", "account_id", "mode"]),
   task("capital", "READ_INSPECT", "Capital history", "READ", "capital/history", ["portfolio_id", "account_id", "limit"]),
   task("performance", "READ_INSPECT", "Performance & NAV", "READ", "performance/portfolio", ["portfolio_id", "alpha_id", "account_id"]),
   task("sizing", "READ_INSPECT", "Sizing explanations", "READ", "sizing/history", ["alpha_id", "symbol", "limit"]),
@@ -64,11 +64,31 @@ export const OPERATOR_TASKS: readonly OperatorTaskDefinition[] = [
   task("lab-reset", "EMERGENCY_DESTRUCTIVE", "Lab reset", "BLOCKED", null, [], null),
 ] as const;
 
-export function taskClassification(taskDefinition: OperatorTaskDefinition): {
+const LOCAL_R0_ADAPTER = Object.freeze({
+  inspect: "admin.inspect",
+  capital: "admin.performance",
+  performance: "admin.performance",
+  "broker-read": "admin.broker-read",
+} as const);
+
+export type LocalR0TaskId = keyof typeof LOCAL_R0_ADAPTER;
+
+export function localR0Adapter(taskId: string): string | null {
+  return taskId in LOCAL_R0_ADAPTER ? LOCAL_R0_ADAPTER[taskId as LocalR0TaskId] : null;
+}
+
+export function taskClassification(taskDefinition: OperatorTaskDefinition, localR0Enabled = false): {
   state: CommandConnectionState;
   reason_code: string;
   source_route: { method: string; path: string } | null;
 } {
+  if (localR0Enabled && localR0Adapter(taskDefinition.taskId) !== null) {
+    return {
+      state: "CONNECTED",
+      reason_code: "PHASE2_LOCAL_PROJECTION_TASK_ACTIVE",
+      source_route: null,
+    };
+  }
   if (taskDefinition.catalogKey === "ops/emergency-close") {
     return {
       state: "SUPPORTED_BUT_INACTIVE",
@@ -147,7 +167,7 @@ export function catalogueEntryClassification(entry: {
   };
 }
 
-export function operatorTaskCatalogue() {
+export function operatorTaskCatalogue(localR0Enabled = false) {
   const tasks = OPERATOR_TASKS.map((definition) => {
     const source = definition.catalogKey === null
       ? null
@@ -167,7 +187,8 @@ export function operatorTaskCatalogue() {
         key,
         source_registry: registryFor(key),
         constraint: constraintFor(key),
-        required: key !== "limit" && key !== "reason" && key !== "apply" && key !== "sync_first",
+        required: definition.mode === "READ"
+          ? false : key !== "limit" && key !== "reason" && key !== "apply" && key !== "sync_first",
         default: null,
       })),
       typed_confirm_word: definition.typedConfirmWord,
@@ -179,10 +200,11 @@ export function operatorTaskCatalogue() {
         plan_required: source?.plan_required ?? false,
         apply_required: source?.apply_required ?? false,
         verify_required: source?.verify_required ?? false,
-        runtime_active: source?.portal_reachable ?? false,
+        runtime_active: taskClassification(definition, localR0Enabled).state === "CONNECTED"
+          ? true : source?.portal_reachable ?? false,
       },
       unlisted_reason: definition.catalogKey === null ? "CATALOG_ENTRY_NOT_PUBLISHED" : null,
-      ...taskClassification(definition),
+      ...taskClassification(definition, localR0Enabled),
       source_request_sent: false,
     };
   });
@@ -197,7 +219,7 @@ export function operatorTaskCatalogue() {
     schema_version: "execution.command-tasks.v1",
     catalogue_revision: 3,
     source_catalogue_revision: EXECUTION_COMMAND_CATALOG.catalogue_revision,
-    relay_state: "DISABLED",
+    relay_state: localR0Enabled ? "LOCAL_R0_ONLY" : "DISABLED",
     task_groups: [...new Set(tasks.map((row) => row.task_group))],
     total_tasks: tasks.length,
     classification_counts: counts,
@@ -221,7 +243,7 @@ function registryFor(key: string): string {
 
 function constraintFor(key: string): string {
   if (key === "reason") return "8..2000 UTF-8 characters; credential-like assignments forbidden";
-  if (key === "limit") return "integer 1..500";
+  if (key === "limit") return "integer 1..200";
   if (key === "amount" || key.endsWith("capital")) return "exact decimal string; server policy bound";
   if (key === "expected_revision") return "positive integer; optimistic conflict required";
   return "selected from the named server registry/allowlist";

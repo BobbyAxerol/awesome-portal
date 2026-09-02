@@ -5,6 +5,7 @@ import {
   constants,
   connect,
 } from "node:http2";
+import { isIP } from "node:net";
 import { OnApplicationShutdown } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { AuthSession, PortalUser } from "../domain";
@@ -257,7 +258,7 @@ export class ExecutionRealtimeProxy implements OnApplicationShutdown {
         key: this.tls!.key,
         rejectUnauthorized: true,
         ALPNProtocols: ["h2"],
-        servername: origin.hostname,
+        servername: isIP(origin.hostname) === 0 ? origin.hostname : undefined,
       });
       const timeout = setTimeout(() => {
         session.destroy();

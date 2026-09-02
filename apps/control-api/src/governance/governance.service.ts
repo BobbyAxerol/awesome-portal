@@ -587,6 +587,11 @@ export class GovernanceService {
       "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
       subjectId,
     );
+    const sourceData = currentSource.data as Record<string, unknown>;
+    const sourceFacts = ["positions", "orders", "fills", "sessions"]
+      .reduce((count, key) => count + (Array.isArray(sourceData[key]) ? sourceData[key].length : 0), 0);
+    const liveKpiState = currentSource.state === "unavailable" ? "UNAVAILABLE"
+      : sourceFacts === 0 ? "EMPTY" : currentSource.completeness === "PARTIAL" ? "PARTIAL" : "AVAILABLE";
     return {
       schema_version: "governance.live-review.v1",
       record_authority: "PORTAL_CONTROL",
@@ -602,7 +607,8 @@ export class GovernanceService {
       governance_backbone: backbone,
       current_source: currentSource,
       derived_branches: [
-        { capability_id: "live-gate.kpis", state: "UNAVAILABLE", reason_code: "N25_LIVE_GATE_DERIVATIONS_NOT_ACTIVE" },
+        { capability_id: "live-gate.kpis", state: liveKpiState,
+          reason_code: liveKpiState === "UNAVAILABLE" ? "PHASE2_LIVE_GATE_SOURCE_UNAVAILABLE" : null },
         { capability_id: "live-gate.drift-series", state: "UNAVAILABLE", reason_code: "N25_LIVE_GATE_DERIVATIONS_NOT_ACTIVE" },
         { capability_id: "live-gate.criteria", state: "UNAVAILABLE", reason_code: "N24_GATE_POLICY_REGISTRY_NOT_ACTIVE" },
         { capability_id: "live-gate.capital-step", state: "UNAVAILABLE", reason_code: "N24_CAPITAL_LEDGER_NOT_ACTIVE" },

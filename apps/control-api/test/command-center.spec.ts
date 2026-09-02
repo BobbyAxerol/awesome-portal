@@ -407,14 +407,14 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
     const body = response.json();
     expect(body).toMatchObject({
       schema_version: "execution.command-center-snapshot.v1",
-      delivery_profile: "fixture",
+      delivery_profile: "portal_sgp_projection",
       mode: "DEGRADED",
       snapshot: { cursor: null, stream_available: false },
       panels: {
         needs_you: {
-          panel_state: "partial",
-          exact_total: false,
-          total_count: null,
+          panel_state: "ready",
+          exact_total: true,
+          total_count: 20000,
           observed_total_count: 20000,
           returned_count: 10,
           limit: 10,

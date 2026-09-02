@@ -156,8 +156,8 @@ def validate_inventory(acceptance: dict[str, Any]) -> None:
 def validate_screen_and_ui(acceptance: dict[str, Any]) -> None:
     catalogue = EVIDENCE_PATHS["screen_bff_catalogue_sha256"].read_text(encoding="utf-8")
     require(catalogue.count("screen({") == 23, "screen catalogue size drifted")
-    require(catalogue.count('status: "AVAILABLE"') == 22, "available screen count drifted")
-    require(catalogue.count('status: "TYPED_UNAVAILABLE"') == 1, "unavailable screen count drifted")
+    require(catalogue.count('status: "AVAILABLE"') == 23, "available screen count drifted")
+    require(catalogue.count('status: "TYPED_UNAVAILABLE"') == 0, "unavailable screen count drifted")
     request_ids = set(re.findall(r"BR-EX-\d{2}", catalogue))
     require({request_id for request_id in request_ids if 41 <= int(request_id[-2:]) <= 71} == {f"BR-EX-{n}" for n in range(41, 72)}, "screen request coverage drifted")
     expected_base_mapping = {
@@ -191,10 +191,14 @@ def validate_screen_and_ui(acceptance: dict[str, Any]) -> None:
         match = re.search(r"requestIds: \[([^]]*)\]", row)
         require(match is not None, f"screen request mapping malformed: {screen_id}")
         require(re.findall(r"BR-EX-\d{2}", match.group(1)) == expected, f"screen request mapping drifted: {screen_id}")
-    for reason in [
-        "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED",
-    ]:
-        require(reason in catalogue, f"missing typed unavailable reason: {reason}")
+    missing_capabilities = read_json(EVIDENCE_PATHS["n28_registry_sha256"])
+    require(
+        any(
+            row.get("reason_code") == "N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED"
+            for row in missing_capabilities["owner_contract_entries"]
+        ),
+        "branch-local full-exposure gap lost its owner classification",
+    )
     for promoted in [
         "executionAlphaQueryAnalyticsV1",
         "executionPortfolioQueryAnalyticsV1",

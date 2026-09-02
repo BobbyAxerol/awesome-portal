@@ -87,6 +87,13 @@ export interface components {
             freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
             /** @enum {unknown} */
             completeness: "COMPLETE" | "PARTIAL";
+            projection?: null | {
+                epoch: components["schemas"]["$defs-Identifier"];
+                sequence: number;
+                sourceCursor: string | null;
+                payloadDigest: string;
+                lastSuccessfulRefreshAt: components["schemas"]["Timestamp"];
+            };
             actor: {
                 user_id: components["schemas"]["$defs-Identifier"];
                 username: components["schemas"]["$defs-Identifier"];
@@ -108,32 +115,31 @@ export interface components {
             /** @enum {unknown} */
             source_authority: "EXECUTION" | "BROKER" | "DERIVED";
             /** @enum {unknown} */
-            panel_state: "unavailable" | "suppressed";
-            /** @constant */
-            freshness_state: "UNKNOWN";
-            /** @constant */
-            delivery_profile: "fixture";
-            /** @constant */
-            source_verification_state: "UNAVAILABLE";
-            as_of: null;
+            panel_state: "ready" | "empty" | "partial" | "stale" | "unavailable" | "suppressed";
+            /** @enum {unknown} */
+            freshness_state: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+            /** @enum {unknown} */
+            delivery_profile: "fixture" | "LIVE_BINANCE_USDM";
+            /** @enum {unknown} */
+            source_verification_state: "VERIFIED" | "PARTIAL" | "UNAVAILABLE";
+            as_of: components["schemas"]["Timestamp"] | null;
             read_at: components["schemas"]["Timestamp"];
-            age_seconds: null;
-            lag_ms: null;
-            source_cursor: null;
-            projection_epoch: null;
-            projection_sequence: null;
-            capability_snapshot_id: null;
-            data: null;
+            age_seconds: number | null;
+            lag_ms: number | null;
+            source_cursor: string | null;
+            projection_epoch: components["schemas"]["Identifier"] | null;
+            projection_sequence: number | null;
+            capability_snapshot_id: components["schemas"]["Hash"] | null;
+            data: Record<string, never> | null;
             warnings: components["schemas"]["Warning"][];
-        };
+        } & (unknown & unknown);
         UnavailableCollection: {
             envelope: components["schemas"]["SourceEnvelope"];
-            exact_total: null;
-            /** @constant */
-            returned_count: 0;
-            next_cursor: null;
-            previous_cursor: null;
-            rows: unknown[];
+            exact_total: number | null;
+            returned_count: number;
+            next_cursor: string | null;
+            previous_cursor: string | null;
+            rows: Record<string, never>[];
         };
         ActionPolicy: {
             /** @enum {unknown} */
@@ -162,8 +168,7 @@ export interface components {
             promotion_execution_requested: false;
             /** @constant */
             production_command_active: false;
-            /** @constant */
-            realtime_active: false;
+            realtime_active: boolean;
             read_at: components["schemas"]["Timestamp"];
             actor: {
                 user_id: components["schemas"]["Identifier"];
@@ -217,7 +222,7 @@ export interface components {
                 /** @enum {unknown} */
                 key: "capital" | "gross_notional" | "daily_pnl" | "open_orders" | "broker_equity";
                 label: string;
-                value: null;
+                value: string | null;
                 unit: string;
                 envelope: components["schemas"]["SourceEnvelope"];
             }[];
@@ -228,22 +233,21 @@ export interface components {
             };
             broker_consistency: {
                 /** @enum {unknown} */
-                state: "UNAVAILABLE" | "MISMATCH";
+                state: "UNAVAILABLE" | "MISMATCH" | "IN_SYNC";
                 /** @constant */
                 mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES";
-                /** @constant */
-                broker_values_visible: false;
-                finding_href: null;
-                dry_run_reconcile_href: null;
+                broker_values_visible: boolean;
+                finding_href: string | null;
+                dry_run_reconcile_href: string | null;
                 blocker_codes: string[];
             };
             projection_continuity: {
-                /** @constant */
-                state: "UNAVAILABLE";
-                epoch: null;
-                cursor: null;
-                sequence: null;
-                gap_detected: null;
+                /** @enum {unknown} */
+                state: "UNAVAILABLE" | "CONTIGUOUS" | "GAP";
+                epoch: string | null;
+                cursor: string | null;
+                sequence: number | null;
+                gap_detected: boolean | null;
                 affected_authorities: ("EXECUTION" | "BROKER" | "DERIVED")[];
                 blocker_codes: string[];
             };
@@ -252,7 +256,7 @@ export interface components {
             incidents: components["schemas"]["UnavailableCollection"];
             open_order_footer: {
                 envelope: components["schemas"]["SourceEnvelope"];
-                exact_open_order_count: null;
+                exact_open_order_count: number | null;
             };
             series: {
                 envelope: components["schemas"]["SourceEnvelope"];
@@ -267,10 +271,9 @@ export interface components {
                 blocker_codes: string[];
             };
             realtime: {
-                /** @constant */
-                active: false;
-                stream_url: null;
-                subscription_id: null;
+                active: boolean;
+                stream_url: string | null;
+                subscription_id: string | null;
                 blocker_codes: string[];
             };
             command_policy: {
@@ -281,7 +284,7 @@ export interface components {
                 protective: components["schemas"]["ActionPolicy"];
                 risk_increasing: components["schemas"]["ActionPolicy"];
             };
-        };
+        } & unknown;
     };
     responses: {
         /** @description Typed fail-closed problem. */
@@ -314,7 +317,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal predecessor facts plus explicit source-dark live panels. */
+            /** @description Portal predecessor facts plus bounded Live-profile panels and local projection continuity. */
             200: {
                 headers: {
                     [name: string]: unknown;

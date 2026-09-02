@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -16,6 +16,7 @@ export class CommandCenterError extends Error {
 }
 @Injectable()
 export class CommandCenterService {
+  private readonly logger = new Logger(CommandCenterService.name);
   constructor(
     @Inject(CommandCenterRepository) private readonly repository: CommandCenterRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
@@ -33,7 +34,13 @@ export class CommandCenterService {
     let inputs;
     try {
       inputs = await this.repository.read(workspaceId, actor, readAt);
-    } catch {
+    } catch (error) {
+      this.logger.warn(JSON.stringify({
+        event: "command_center_snapshot_read_failed",
+        error_code: safeErrorCode(error),
+        error_type: error instanceof Error ? error.name : typeof error,
+        error_message: safeErrorMessage(error),
+      }));
       throw new CommandCenterError(
         "COMMAND_CENTER_SNAPSHOT_UNAVAILABLE",
         "Command Center snapshot is unavailable.",
@@ -50,4 +57,17 @@ export class CommandCenterService {
     }
     return response;
   }
+}
+
+function safeErrorCode(error: unknown): string {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const value = String((error as { code?: unknown }).code ?? "");
+    if (/^[A-Z0-9_]{2,96}$/.test(value) || /^[0-9A-Z]{5}$/.test(value)) return value;
+  }
+  return "COMMAND_CENTER_REPOSITORY_FAILURE";
+}
+
+function safeErrorMessage(error: unknown): string {
+  const value = error instanceof Error ? error.message : "non-error failure";
+  return /^[A-Za-z0-9_ .:'-]{1,160}$/.test(value) ? value : "details redacted";
 }

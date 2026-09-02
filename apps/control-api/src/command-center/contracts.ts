@@ -10,7 +10,7 @@ export type SourceCompleteness = "EVENT_SOURCED" | "POLL_BOUNDED" | "UNKNOWN";
 export type FreshnessState = "OK" | "AGING" | "STALE" | "PAUSED" | "UNKNOWN";
 export type SourceAvailability = "AVAILABLE" | "UNAVAILABLE" | "ERROR";
 export type PanelState = "ready" | "empty" | "partial" | "stale" | "unavailable";
-export type DeliveryProfile = "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
+export type DeliveryProfile = "portal_sgp_projection" | "fixture" | "shadow" | "paper" | "sandbox" | "live_canary" | "live_full";
 
 export type CommandCenterSourceName =
   | "PORTAL_GOVERNANCE"
@@ -229,7 +229,7 @@ export function unavailableSource<T>(
       age_seconds: null,
       lag_ms: null,
       capability_snapshot_id: null,
-      delivery_profile: "fixture",
+      delivery_profile: "portal_sgp_projection",
     },
     exact_total_count: null,
     items: [],
@@ -322,7 +322,7 @@ export function composeCommandCenterSnapshot(input: CommandCenterInputs) {
   return {
     schema_version: COMMAND_CENTER_SCHEMA_VERSION,
     record_authority: "PORTAL" as const,
-    delivery_profile: "fixture" as const,
+    delivery_profile: fleetStatus.delivery_profile,
     workspace_id: input.workspaceId,
     read_at: readAt,
     actor: {
@@ -332,10 +332,10 @@ export function composeCommandCenterSnapshot(input: CommandCenterInputs) {
     },
     mode,
     snapshot: {
-      projection_epoch: null,
-      projection_sequence: null,
-      cursor: null,
-      stream_available: false,
+      projection_epoch: fleetStatus.projection_epoch,
+      projection_sequence: fleetStatus.projection_sequence,
+      cursor: fleetStatus.source_cursor,
+      stream_available: fleetStatus.availability === "AVAILABLE" && fleetStatus.projection_epoch !== null,
       resnapshot_not_before: null,
     },
     panels: {

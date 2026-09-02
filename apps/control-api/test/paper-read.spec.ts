@@ -283,7 +283,7 @@ describe("N22 full Paper read product BFF", () => {
     expect(first.data.page.next_cursor).toMatch(/^kc1\./);
     expect(first.data.exact_total).toBeNull();
     expect(first.capabilities).toContainEqual(expect.objectContaining({
-      capability_id: "blotter.exact-query", reason_code: "N25_EXACT_QUERY_NOT_ACTIVE",
+      capability_id: "blotter.exact-query", reason_code: "PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE",
     }));
 
     const reused = new FakeCurrentSource();

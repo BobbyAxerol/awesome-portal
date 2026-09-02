@@ -103,6 +103,13 @@ export interface components {
             freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
             /** @enum {unknown} */
             completeness: "COMPLETE" | "PARTIAL";
+            projection?: null | {
+                epoch: components["schemas"]["$defs-Identifier"];
+                sequence: number;
+                sourceCursor: string | null;
+                payloadDigest: string;
+                lastSuccessfulRefreshAt: components["schemas"]["Timestamp"];
+            };
             actor: {
                 user_id: components["schemas"]["$defs-Identifier"];
                 username: components["schemas"]["$defs-Identifier"];
@@ -127,33 +134,34 @@ export interface components {
             panel_id: string;
             /** @enum {unknown} */
             source_authority: "EXECUTION" | "BROKER" | "DERIVED";
-            /** @constant */
-            panel_state: "unavailable";
-            /** @constant */
-            freshness_state: "UNKNOWN";
-            /** @constant */
-            delivery_profile: "fixture";
-            /** @constant */
-            source_verification_state: "UNAVAILABLE";
-            as_of: null;
+            /** @enum {unknown} */
+            panel_state: "ready" | "empty" | "partial" | "stale" | "unavailable" | "suppressed";
+            /** @enum {unknown} */
+            freshness_state: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+            /** @enum {unknown} */
+            delivery_profile: "fixture" | "LIVE_BINANCE_USDM";
+            /** @enum {unknown} */
+            source_verification_state: "VERIFIED" | "PARTIAL" | "UNAVAILABLE";
+            as_of: components["schemas"]["Timestamp"] | null;
             read_at: components["schemas"]["Timestamp"];
-            age_seconds: null;
-            lag_ms: null;
-            source_cursor: null;
-            projection_epoch: null;
-            projection_sequence: null;
-            capability_snapshot_id: null;
-            data: null;
+            age_seconds: number | null;
+            lag_ms: number | null;
+            source_cursor: string | null;
+            projection_epoch: components["schemas"]["Identifier"] | null;
+            projection_sequence: number | null;
+            capability_snapshot_id: components["schemas"]["Hash"] | null;
+            data: Record<string, never> | null;
             warnings: {
                 code: string;
             }[];
-        };
+        } & (unknown & unknown);
         UnavailableCollection: {
             envelope: components["schemas"]["SourceEnvelope"];
-            exact_total: null;
-            /** @constant */
-            returned_count: 0;
-            rows: unknown[];
+            exact_total: number | null;
+            returned_count: number;
+            next_cursor?: string | null;
+            previous_cursor?: string | null;
+            rows: Record<string, never>[];
         };
         ActionPolicy: {
             /** @enum {unknown} */
@@ -233,7 +241,7 @@ export interface components {
                 /** @enum {unknown} */
                 key: "capital_consumed" | "gross_notional" | "daily_pnl" | "open_orders" | "broker_equity";
                 label: string;
-                value: null;
+                value: string | null;
                 unit: string;
                 envelope: components["schemas"]["SourceEnvelope"];
             }[];
@@ -245,8 +253,8 @@ export interface components {
                     daily_loss_cap: components["schemas"]["PositiveDecimal"];
                     max_open_orders: number;
                 };
-                consumed: null;
-                headroom: null;
+                consumed: Record<string, never> | null;
+                headroom: Record<string, never> | null;
                 /** @constant */
                 base_risk_profile_verified: false;
             };
@@ -322,7 +330,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Latest Portal envelope composed with explicit unavailable source panels. */
+            /** @description Latest Portal envelope composed with per-branch ready, empty, partial, stale or unavailable Live-profile facts. */
             200: {
                 headers: {
                     [name: string]: unknown;

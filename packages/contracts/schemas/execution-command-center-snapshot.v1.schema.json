@@ -8,7 +8,7 @@
   "properties": {
     "schema_version": { "const": "execution.command-center-snapshot.v1" },
     "record_authority": { "const": "PORTAL" },
-    "delivery_profile": { "const": "fixture" },
+    "delivery_profile": { "enum": ["portal_sgp_projection", "fixture"] },
     "workspace_id": { "$ref": "#/$defs/Identifier" },
     "read_at": { "$ref": "#/$defs/DateTime" },
     "actor": { "$ref": "#/$defs/Actor" },
@@ -81,7 +81,7 @@
         "age_seconds": { "type": ["integer", "null"], "minimum": 0, "maximum": 315360000 },
         "lag_ms": { "type": ["integer", "null"], "minimum": 0, "maximum": 315360000000 },
         "capability_snapshot_id": { "$ref": "#/$defs/NullableIdentifier" },
-        "delivery_profile": { "const": "fixture" }
+        "delivery_profile": { "enum": ["portal_sgp_projection", "fixture"] }
       }
     },
     "TriageItem": {

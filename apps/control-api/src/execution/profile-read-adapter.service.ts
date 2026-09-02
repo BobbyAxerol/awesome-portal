@@ -4,6 +4,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionProfileProjectionRepository,
   ProjectionEnvironment,
+  ProjectionScalar,
 } from "./profile-projection.repository";
 import { LocalRealtimeError } from "./profile-realtime.service";
 
@@ -49,6 +50,20 @@ const ADAPTERS = Object.freeze({
 
 type AdapterId = keyof typeof ADAPTERS;
 const MAXIMUM_ROWS_PER_RELATION = 200;
+const FILTER_FIELDS = Object.freeze({
+  "admin.inspect": Object.freeze(["alpha_id", "account_id"]),
+  "admin.performance": Object.freeze(["portfolio_id", "alpha_id", "account_id"]),
+  "admin.broker-read": Object.freeze(["external_account_ref", "venue"]),
+  "event.order-lifecycle": Object.freeze(["deployment_id", "alpha_id", "account_id"]),
+} satisfies Record<AdapterId, readonly string[]>);
+const FILTER_ALIASES = Object.freeze({
+  alpha_id: Object.freeze(["alpha_id", "strategy_id"]),
+  account_id: Object.freeze(["account_id"]),
+  portfolio_id: Object.freeze(["portfolio_id"]),
+  deployment_id: Object.freeze(["deployment_id"]),
+  external_account_ref: Object.freeze(["external_account_ref"]),
+  venue: Object.freeze(["venue"]),
+} as const);
 
 /** Bounded existing-source alternatives backed only by committed SGP projection rows. */
 @Injectable()
@@ -58,11 +73,19 @@ export class ExecutionProfileReadAdapterService {
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
   ) {}
 
-  async read(workspaceId: string, environment: ProjectionEnvironment, capabilityId: string) {
+  async read(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    capabilityId: string,
+    rawFilters: Record<string, unknown> = {},
+  ) {
     if (!(capabilityId in ADAPTERS)) {
       throw new ProjectionAdapterError("N32_ADAPTER_NOT_ACCEPTED", 404);
     }
-    const adapter = ADAPTERS[capabilityId as AdapterId];
+    const adapterId = capabilityId as AdapterId;
+    const adapter = ADAPTERS[adapterId];
+    const filters = projectionFilters(adapterId, rawFilters);
+    const limit = typeof rawFilters.limit === "number" ? rawFilters.limit : MAXIMUM_ROWS_PER_RELATION;
     if (!(adapter.profiles as readonly string[]).includes(environment)) {
       throw new ProjectionAdapterError("N32_ADAPTER_PROFILE_NOT_ACCEPTED", 404);
     }
@@ -77,16 +100,19 @@ export class ExecutionProfileReadAdapterService {
     }
     const relations = Object.fromEntries(adapter.relations.map((key) => {
       const relation = snapshot.document.relations[key];
+      const selected = relation?.items.filter((row) => matchesFilters(row.fields, filters)) ?? [];
       return [key, relation ? {
-        state: relation.items.length > 0 ? "AVAILABLE" : "EMPTY",
+        state: selected.length > 0 ? "AVAILABLE" : "EMPTY",
         freshness: relation.freshness,
         completeness: relation.completeness,
         as_of: relation.as_of,
-        items: relation.items.slice(0, MAXIMUM_ROWS_PER_RELATION).map((row) => row.fields),
-        truncated: relation.items.length > MAXIMUM_ROWS_PER_RELATION,
+        items: selected.slice(0, limit).map((row) => row.fields),
+        returned_count: Math.min(selected.length, limit),
+        truncated: selected.length > limit,
       } : {
         state: "UNAVAILABLE", freshness: "UNKNOWN", completeness: "UNKNOWN",
-        as_of: null, items: [], truncated: false, reason_code: "N32_RELATION_NOT_PROJECTED",
+        as_of: null, items: [], returned_count: 0, truncated: false,
+        reason_code: "N32_RELATION_NOT_PROJECTED",
       }];
     }));
     const states = Object.values(relations).map((relation) => relation.state);
@@ -116,6 +142,29 @@ export class ExecutionProfileReadAdapterService {
       relations,
     };
   }
+}
+
+function projectionFilters(adapterId: AdapterId, raw: Record<string, unknown>): Array<[keyof typeof FILTER_ALIASES, string]> {
+  const accepted = new Set(FILTER_FIELDS[adapterId]);
+  return Object.entries(raw).flatMap(([key, value]) => {
+    if (key === "mode" || key === "limit" || value === null || value === "") return [];
+    if (!accepted.has(key)) throw new ProjectionAdapterError("PHASE2_LOCAL_TASK_FILTER_NOT_ACCEPTED", 400);
+    if (typeof value !== "string") throw new ProjectionAdapterError("PHASE2_LOCAL_TASK_FILTER_INVALID", 400);
+    return [[key as keyof typeof FILTER_ALIASES, value]];
+  });
+}
+
+function matchesFilters(
+  row: Record<string, ProjectionScalar>,
+  filters: readonly [keyof typeof FILTER_ALIASES, string][],
+): boolean {
+  return filters.every(([filter, expected]) => FILTER_ALIASES[filter].some((field) => {
+    const value = row[field];
+    if (typeof value !== "string" && typeof value !== "number") return false;
+    return filter === "venue"
+      ? String(value).toUpperCase() === expected.toUpperCase()
+      : String(value) === expected;
+  }));
 }
 
 export class ProjectionAdapterError extends LocalRealtimeError {}

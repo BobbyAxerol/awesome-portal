@@ -2,6 +2,15 @@ import { Inject, Injectable } from "@nestjs/common";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "../canary/canary.repository";
 import { AuthSession, PortalUser } from "../domain";
 import { ProfileReadService } from "../profile-read/profile-read.service";
+import { ControlApiConfig } from "../config";
+import { CONTROL_API_CONFIG } from "../tokens";
+import {
+  decimalAbsoluteSum,
+  decimalSum,
+  latest,
+  openOrders,
+  ProfileScreenSource,
+} from "../execution/profile-screen-composer";
 
 function decimal(value: string): string {
   const [whole, fraction = ""] = value.split(".");
@@ -14,6 +23,7 @@ export class LiveOperationsService {
   constructor(
     @Inject(CanaryRepository) private readonly canaries: CanaryRepository,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
   async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
@@ -27,10 +37,10 @@ export class LiveOperationsService {
         deploymentId,
       ),
     ]);
-    return this.sourceDarkDetail(user, canary, lineage, currentSource);
+    return this.composeDetail(user, canary, lineage, currentSource);
   }
 
-  private sourceDarkDetail(
+  private composeDetail(
     user: PortalUser,
     canary: CanaryEnvelopeRow,
     lineage: CanaryLineage,
@@ -38,19 +48,39 @@ export class LiveOperationsService {
   ) {
     const readAt = new Date().toISOString();
     const certification = lineage.certification.certification;
-    const sourceUnavailable = currentSource.state === "unavailable";
-    const sourceConnected = !sourceUnavailable;
+    const source = new ProfileScreenSource(currentSource, readAt);
+    const sourceUnavailable = !source.connected;
+    const sourceConnected = source.connected;
+    const positions = source.rows("positions");
+    const orders = source.rows("orders");
+    const fills = source.rows("fills");
+    const balances = source.rows("account_balances");
+    const margins = source.rows("margin_balances");
+    const brokerSync = source.rows("broker_sync");
+    const reconciliation = source.rows("reconciliation");
+    const activeFindings = reconciliation.filter((row) => !["RESOLVED", "CLOSED"].includes(String(row.status ?? "").toUpperCase()));
+    const brokerRecord = latest(brokerSync, "synced_at");
+    const brokerHealthy = brokerRecord !== null && ["SYNCED", "CURRENT", "OK", "HEALTHY"]
+      .includes(String(brokerRecord.status ?? "").toUpperCase());
+    const brokerVisible = sourceConnected && brokerHealthy && activeFindings.length === 0;
+    const open = openOrders(orders);
+    const capital = decimalSum(balances, ["total"]);
+    const grossNotional = decimalAbsoluteSum(positions, "notional");
+    const dailyPnl = decimalSum(positions, ["realized_pnl", "unrealized_pnl"]);
+    const brokerEquity = typeof brokerRecord?.buying_power === "string" ? brokerRecord.buying_power : null;
+    const realtimeActive = sourceConnected && source.projection !== null &&
+      this.config.FEATURE_EXECUTION_REALTIME_SSE === "true";
     const blockers = [
       "PRODUCTION_COMMAND_INACTIVE",
       "LIVE_FULL_ACTIVATION_NOT_APPROVED",
       "CANARY_EXIT_EVIDENCE_UNAVAILABLE",
       ...(sourceUnavailable ? ["LIVE_SOURCE_UNAVAILABLE"] : []),
-      "SOURCE_CONTINUITY_UNAVAILABLE",
-      "BROKER_STATE_UNAVAILABLE",
+      ...(!source.projection ? ["SOURCE_CONTINUITY_UNAVAILABLE"] : []),
+      ...(!brokerVisible ? [activeFindings.length > 0 ? "BROKER_RECONCILIATION_MISMATCH" : "BROKER_STATE_UNAVAILABLE"] : []),
       "ROLLBACK_EVIDENCE_UNAVAILABLE",
       "EX_BE_08_PENDING",
     ];
-    const panel = (
+    const unavailablePanel = (
       panelId: string,
       authority: "EXECUTION" | "BROKER" | "DERIVED",
       state: "unavailable" | "suppressed" = "unavailable",
@@ -72,20 +102,32 @@ export class LiveOperationsService {
       data: null,
       warnings: [{ code: `LIVE_FULL_${panelId.toUpperCase().replaceAll("-", "_")}_UNAVAILABLE` }],
     });
-    const collection = (panelId: string, authority: "EXECUTION" | "BROKER") => ({
-      envelope: panel(panelId, authority),
+    const unavailableCollection = (panelId: string, authority: "EXECUTION" | "BROKER") => ({
+      envelope: unavailablePanel(panelId, authority),
       exact_total: null,
       returned_count: 0,
       next_cursor: null,
       previous_cursor: null,
       rows: [],
     });
-    const kpi = (
+    const unavailableKpi = (
       key: string,
       label: string,
       authority: "EXECUTION" | "BROKER" | "DERIVED",
       unit: string,
-    ) => ({ key, label, value: null, unit, envelope: panel(`kpi-${key}`, authority) });
+    ) => ({ key, label, value: null, unit, envelope: unavailablePanel(`kpi-${key}`, authority) });
+    const valueKpi = (
+      key: string,
+      label: string,
+      authority: "EXECUTION" | "BROKER" | "DERIVED",
+      unit: string,
+      value: string | null,
+      keys: readonly string[],
+      suppress = false,
+    ) => ({ key, label, value: suppress ? null : value, unit,
+      envelope: source.panel(`kpi-${key}`, authority, keys, value === null ? {} : { value }, suppress) });
+    const sourcePositions = source.collection("positions", "EXECUTION", "positions");
+    const sourceOrders = source.collection("orders", "EXECUTION", "orders");
 
     return {
       schema_version: "execution.live-full-operations.v1",
@@ -96,7 +138,7 @@ export class LiveOperationsService {
       runtime_activation_requested: false,
       promotion_execution_requested: false,
       production_command_active: false,
-      realtime_active: false,
+      realtime_active: realtimeActive,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
       current_source: currentSource,
@@ -140,57 +182,72 @@ export class LiveOperationsService {
         active_for_live_full: false,
       },
       kpis: [
-        kpi("capital", "Capital", "EXECUTION", canary.currency),
-        kpi("gross_notional", "Gross notional", "EXECUTION", canary.currency),
-        kpi("daily_pnl", "Daily P&L", "DERIVED", canary.currency),
-        kpi("open_orders", "Open orders", "EXECUTION", "COUNT"),
-        kpi("broker_equity", "Broker equity", "BROKER", canary.currency),
+        ...(sourceConnected ? [
+          valueKpi("capital", "Capital", "EXECUTION", canary.currency, capital, ["account_balances"]),
+          valueKpi("gross_notional", "Gross notional", "EXECUTION", canary.currency, grossNotional, ["positions"]),
+          valueKpi("daily_pnl", "Daily P&L", "DERIVED", canary.currency, dailyPnl, ["positions"]),
+          valueKpi("open_orders", "Open orders", "EXECUTION", "COUNT", String(open.length), ["orders"]),
+          valueKpi("broker_equity", "Broker equity", "BROKER", canary.currency, brokerEquity, ["broker_sync"], !brokerVisible),
+        ] : [
+          unavailableKpi("capital", "Capital", "EXECUTION", canary.currency),
+          unavailableKpi("gross_notional", "Gross notional", "EXECUTION", canary.currency),
+          unavailableKpi("daily_pnl", "Daily P&L", "DERIVED", canary.currency),
+          unavailableKpi("open_orders", "Open orders", "EXECUTION", "COUNT"),
+          unavailableKpi("broker_equity", "Broker equity", "BROKER", canary.currency),
+        ]),
       ],
       source_panels: {
-        internal: panel("internal", "EXECUTION"),
-        broker: panel("broker", "BROKER", "suppressed"),
-        difference: panel("difference", "DERIVED"),
+        internal: sourceConnected
+          ? source.panel("internal", "EXECUTION", ["positions", "orders", "fills", "account_balances", "margin_balances"], { positions, orders, fills, account_balances: balances, margin_balances: margins })
+          : unavailablePanel("internal", "EXECUTION"),
+        broker: sourceConnected
+          ? source.panel("broker", "BROKER", ["broker_sync"], { broker_sync: brokerSync }, !brokerVisible)
+          : unavailablePanel("broker", "BROKER", "suppressed"),
+        difference: sourceConnected
+          ? source.panel("difference", "DERIVED", ["reconciliation"], { reconciliation })
+          : unavailablePanel("difference", "DERIVED"),
       },
       broker_consistency: {
-        state: "UNAVAILABLE",
+        state: !sourceConnected || !brokerHealthy ? "UNAVAILABLE" : activeFindings.length > 0 ? "MISMATCH" : "IN_SYNC",
         mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES",
-        broker_values_visible: false,
-        finding_href: null,
+        broker_values_visible: brokerVisible,
+        finding_href: activeFindings.length > 0 ? `/operations/reconciliation/${String(activeFindings[0].finding_id ?? "current")}` : null,
         dry_run_reconcile_href: null,
-        blocker_codes: ["BROKER_STATE_UNAVAILABLE", "LIVE_SOURCE_UNAVAILABLE"],
+        blocker_codes: brokerVisible ? [] : activeFindings.length > 0 ? ["BROKER_RECONCILIATION_MISMATCH"]
+          : ["BROKER_STATE_UNAVAILABLE", ...(sourceUnavailable ? ["LIVE_SOURCE_UNAVAILABLE"] : [])],
       },
       projection_continuity: {
-        state: "UNAVAILABLE",
-        epoch: null,
-        cursor: null,
-        sequence: null,
-        gap_detected: null,
-        affected_authorities: ["EXECUTION", "BROKER", "DERIVED"],
-        blocker_codes: ["SOURCE_CONTINUITY_UNAVAILABLE", "EX_BE_08_PENDING"],
+        state: source.projection ? "CONTIGUOUS" : "UNAVAILABLE",
+        epoch: source.projection?.epoch ?? null,
+        cursor: source.projection?.sourceCursor ?? null,
+        sequence: source.projection?.sequence ?? null,
+        gap_detected: source.projection ? false : null,
+        affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],
+        blocker_codes: source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE", "EX_BE_08_PENDING"],
       },
-      positions: collection("positions", "EXECUTION"),
-      orders: collection("orders", "EXECUTION"),
+      positions: sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION"),
+      orders: sourceConnected ? sourceOrders : unavailableCollection("orders", "EXECUTION"),
       open_order_footer: {
-        envelope: panel("open-order-footer", "EXECUTION"),
-        exact_open_order_count: null,
+        envelope: sourceConnected ? source.panel("open-order-footer", "EXECUTION", ["orders"], { exact_open_order_count: open.length }) : unavailablePanel("open-order-footer", "EXECUTION"),
+        exact_open_order_count: sourceConnected ? open.length : null,
       },
-      incidents: collection("incidents", "EXECUTION"),
+      incidents: unavailableCollection("incidents", "EXECUTION"),
       series: {
-        envelope: panel("series", "DERIVED"),
+        envelope: unavailablePanel("series", "DERIVED"),
         resolution: null,
         points: [],
       },
       rollback_readiness: {
-        envelope: panel("rollback-readiness", "EXECUTION"),
+        envelope: unavailablePanel("rollback-readiness", "EXECUTION"),
         ready: false,
         evidence_hash: null,
         blocker_codes: ["ROLLBACK_EVIDENCE_UNAVAILABLE", "EX_BE_08_PENDING"],
       },
       realtime: {
-        active: false,
-        stream_url: null,
-        subscription_id: null,
-        blocker_codes: ["REALTIME_INACTIVE", "SOURCE_CONTINUITY_UNAVAILABLE"],
+        active: realtimeActive,
+        stream_url: realtimeActive ? "/api/v1/execution/realtime/stream" : null,
+        subscription_id: realtimeActive ? `live:${canary.deployment_id}` : null,
+        blocker_codes: realtimeActive ? [] : ["REALTIME_INACTIVE", ...(source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE"])],
       },
       command_policy: {
         production_command_active: false,

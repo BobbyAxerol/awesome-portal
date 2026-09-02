@@ -1,6 +1,7 @@
 # Phase 1 / N30-N32: one lease-controlled cross-cell ingestion loop per
 # profile and SGP-local product reads/realtime. Include after
-# compose.execution-current-source.yaml. This overlay never enables commands.
+# compose.execution-current-source.yaml. This overlay may expose Portal-local
+# read-only R0 tasks and Command Center reads; source command relay stays dark.
 services:
   control-api:
     environment:
@@ -11,4 +12,6 @@ services:
       EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS: ${EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS:-300000}
       EXECUTION_LOCAL_PROJECTION_JOURNAL_RETENTION_SECONDS: ${EXECUTION_LOCAL_PROJECTION_JOURNAL_RETENTION_SECONDS:-86400}
       EXECUTION_LOCAL_PROJECTION_MAXIMUM_JOURNAL_ENTRIES: ${EXECUTION_LOCAL_PROJECTION_MAXIMUM_JOURNAL_ENTRIES:-10000}
+      FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: ${CONTROL_API_FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT:-false}
+      FEATURE_EXECUTION_LOCAL_R0_TASKS: ${CONTROL_API_FEATURE_EXECUTION_LOCAL_R0_TASKS:-false}
       FEATURE_EXECUTION_COMMAND_RELAY: "false"

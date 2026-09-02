@@ -9,7 +9,7 @@
     "schema_version": { "const": "execution.command-tasks.v1" },
     "catalogue_revision": { "const": 3 },
     "source_catalogue_revision": { "const": 2 },
-    "relay_state": { "const": "DISABLED" },
+    "relay_state": { "enum": ["DISABLED", "LOCAL_R0_ONLY"] },
     "task_groups": {
       "const": ["READ_INSPECT", "PORTFOLIO_CAPITAL", "DEPLOYMENT_RISK", "ACCOUNT", "BROKER_SYNC_RECONCILIATION", "EMERGENCY_DESTRUCTIVE"]
     },
@@ -98,6 +98,37 @@
         "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
         "request_key": { "$ref": "#/$defs/Identifier" },
         "params": { "$ref": "#/$defs/OperatorParams" }
+      }
+    },
+    "RunResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "task_id", "classification", "transport", "source_request_sent", "response_digest", "result"],
+      "properties": {
+        "schema_version": { "const": "execution.command-run-result.v1" },
+        "task_id": { "type": "string", "pattern": "^(inspect|capital|performance|broker-read)$" },
+        "classification": { "const": "CONNECTED" },
+        "transport": { "const": "SGP_LOCAL_PROJECTION" },
+        "source_request_sent": { "const": false },
+        "response_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "result": {
+          "type": "object", "additionalProperties": false,
+          "required": ["schema_version", "capability_id", "adapter_revision", "authority", "workspace_id", "viewer_workspace_id", "environment", "profile_id", "state", "projection", "bounds", "relations"],
+          "properties": {
+            "schema_version": { "const": "portal.execution.profile-read-adapter.v1" },
+            "capability_id": { "enum": ["admin.inspect", "admin.performance", "admin.broker-read"] },
+            "adapter_revision": { "type": "string", "pattern": "^portal\\.execution\\.local-[a-z-]+\\.v1$" },
+            "authority": { "const": "PORTAL_SGP_PROJECTION" },
+            "workspace_id": { "$ref": "#/$defs/Identifier" },
+            "viewer_workspace_id": { "$ref": "#/$defs/Identifier" },
+            "environment": { "enum": ["paper", "sandbox", "live"] },
+            "profile_id": { "enum": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"] },
+            "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL"] },
+            "projection": { "type": "object", "maxProperties": 12 },
+            "bounds": { "type": "object", "maxProperties": 8 },
+            "relations": { "type": "object", "maxProperties": 12 }
+          }
+        }
       }
     },
     "PlanRequest": {

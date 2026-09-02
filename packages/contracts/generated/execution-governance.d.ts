@@ -1076,6 +1076,13 @@ export interface components {
             freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
             /** @enum {unknown} */
             completeness: "COMPLETE" | "PARTIAL";
+            projection?: null | {
+                epoch: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
+                sequence: number;
+                sourceCursor: string | null;
+                payloadDigest: string;
+                lastSuccessfulRefreshAt: components["schemas"]["Timestamp"];
+            };
             actor: {
                 user_id: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];
                 username: components["schemas"]["execution-profile-read.v1.schema_$defs-Identifier"];

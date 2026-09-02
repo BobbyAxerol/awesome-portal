@@ -145,16 +145,21 @@ export class SandboxCertificationService {
   ) {}
 
   async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
-    const [detail, currentSource] = await Promise.all([
-      this.repository.detailByDeployment(workspaceId, deploymentId),
-      this.profileReads.snapshot(
-        { user, session, workspaceId },
-        "sandbox",
-        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
-        deploymentId,
-      ),
-    ]);
-    return this.publicDetail(detail, user, false, currentSource);
+    const currentSource = await this.profileReads.snapshot(
+      { user, session, workspaceId },
+      "sandbox",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      deploymentId,
+    );
+    try {
+      const detail = await this.repository.detailByDeployment(workspaceId, deploymentId);
+      return this.publicDetail(detail, user, false, currentSource);
+    } catch (error) {
+      if (error instanceof GovernanceError && error.code === "SANDBOX_CERTIFICATION_NOT_FOUND") {
+        return this.sourceOnlyDetail(user, deploymentId, currentSource);
+      }
+      throw error;
+    }
   }
 
   async create(user: PortalUser, input: SandboxCertificationCreateRequest, requestId: string) {
@@ -478,6 +483,109 @@ export class SandboxCertificationService {
         source_side_effect_requested: false,
         created_at: item.created_at.toISOString(),
       })),
+    };
+  }
+
+  private sourceOnlyDetail(
+    user: PortalUser,
+    deploymentId: string,
+    currentSource: Record<string, any>,
+  ) {
+    const deployment = Array.isArray(currentSource.data?.deployments)
+      ? currentSource.data.deployments.find((row: Record<string, unknown>) => row.deployment_id === deploymentId)
+      : null;
+    if (!deployment && currentSource.state !== "unavailable" && currentSource.state !== "partial") {
+      throw new GovernanceError("SANDBOX_DEPLOYMENT_NOT_FOUND", "Sandbox deployment not found.", 404);
+    }
+    const readAt = new Date().toISOString();
+    const reason = "PHASE2_CERTIFICATION_RECORD_NOT_CREATED";
+    return {
+      schema_version: "governance.sandbox-certification.v1",
+      record_authority: "PORTAL",
+      delivery_profile: currentSource.delivery_profile ?? "SANDBOX_BINANCE_USDM",
+      source_integration_state: currentSource.state === "unavailable" ? "UNAVAILABLE" : "SOURCE_BACKED",
+      source_side_effect_requested: false,
+      runtime_activation_requested: false,
+      promotion_execution_requested: false,
+      replayed: false,
+      read_at: readAt,
+      actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      current_source: currentSource,
+      certification: {
+        certification_id: `uncommissioned:${deploymentId}`,
+        deployment_id: deploymentId,
+        portfolio_id: deployment?.portfolio_id ?? null,
+        venue: deployment?.venue ?? null,
+        environment: "SANDBOX",
+        workflow_state: "NOT_COMMISSIONED",
+        workflow_version: null,
+        runtime_state: deployment?.state ?? null,
+        account_binding: {
+          account_id: deployment?.account_id ?? null,
+          external_account_ref: null,
+          source_authority: "TRADING_SYSTEM",
+        },
+        policy_version: null,
+        formula_version: null,
+        submitted_at: null,
+        submitted_by_user_id: null,
+        submitted_evidence_set_hash: null,
+        decided_at: null,
+        decided_by_user_id: null,
+        decided_evidence_set_hash: null,
+        decision_reason: null,
+        created_by_user_id: null,
+        created_at: null,
+        updated_at: null,
+      },
+      lineage: [],
+      progress: {
+        passed_count: 0,
+        total_count: SANDBOX_CERTIFICATION_STEPS.length,
+        eligible: false,
+        evidence_set_hash: null,
+        blocker_codes: [reason],
+      },
+      steps: SANDBOX_CERTIFICATION_STEPS.map((stepKey, ordinal) => ({
+        step_key: stepKey,
+        ordinal,
+        label: STEP_LABEL[stepKey],
+        strip_state: ordinal === 0 ? "CURRENT" : "PENDING",
+        evaluation_state: "UNAVAILABLE",
+        source_authority: STEP_AUTHORITY[stepKey],
+        evidence_hash: null,
+        evidence_schema_version: null,
+        source_verification_state: "UNAVAILABLE",
+        summary: "Portal certification evidence has not been commissioned for this source deployment.",
+        as_of: currentSource.as_of ?? null,
+        expires_at: null,
+        blocker_code: reason,
+      })),
+      source_panels: ["internal", "broker", "difference"].map((panelId) => ({
+        panel_id: panelId,
+        source_authority: panelId === "internal" ? "EXECUTION" : panelId === "broker" ? "BROKER" : "DERIVED",
+        as_of: currentSource.as_of ?? null,
+        read_at: readAt,
+        source_cursor: null,
+        source_sequence: null,
+        projection_epoch: null,
+        projection_sequence: null,
+        source_completeness: currentSource.completeness ?? "UNKNOWN",
+        poll_interval_ms: null,
+        panel_state: currentSource.state === "unavailable" ? "unavailable" : "partial",
+        freshness_state: currentSource.freshness ?? "UNKNOWN",
+        age_seconds: null,
+        lag_ms: null,
+        formula_version: null,
+        capability_snapshot_id: null,
+        delivery_profile: currentSource.delivery_profile ?? "SANDBOX_BINANCE_USDM",
+        source_verification_state: "UNAVAILABLE",
+        data: panelId === "internal" ? currentSource.data ?? null : null,
+        warnings: [{ code: reason }],
+      })),
+      findings: { total_count: 0, returned_count: 0, truncated: false, rows: [] },
+      timeline: { total_count: 0, returned_count: 0, truncated: false, rows: [] },
+      promotion_plans: [],
     };
   }
 

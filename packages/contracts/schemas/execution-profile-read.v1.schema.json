@@ -86,6 +86,22 @@
         "state": { "enum": ["ready", "empty", "stale", "partial", "unavailable"] },
         "freshness": { "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] },
         "completeness": { "enum": ["COMPLETE", "PARTIAL"] },
+        "projection": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["epoch", "sequence", "sourceCursor", "payloadDigest", "lastSuccessfulRefreshAt"],
+              "properties": {
+                "epoch": { "$ref": "#/$defs/Identifier" },
+                "sequence": { "type": "integer", "minimum": 0 },
+                "sourceCursor": { "type": ["string", "null"], "maxLength": 4096 },
+                "payloadDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+                "lastSuccessfulRefreshAt": { "$ref": "#/$defs/Timestamp" }
+              }
+            }
+          ]
+        },
         "actor": {
           "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"],
           "properties": {

@@ -11,6 +11,8 @@ import {
   bindCapitalPreviewRequest,
   shadowQueryBody,
 } from "../src/execution/analytics.controller";
+import { LocalQueryAnalyticsService } from "../src/execution/local-query-analytics.service";
+import { ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
 
 describe("EX-BE-07b analytics screen boundary", () => {
   const base = {
@@ -70,6 +72,98 @@ describe("EX-BE-07b analytics screen boundary", () => {
       ...base,
       FEATURE_EXECUTION_SHADOW_QUERY: "true",
     })).toThrowError(/FEATURE_EXECUTION_EDGE/);
+  });
+
+  it("composes bounded exact analytics from one local projection read without cross-subject leakage", async () => {
+    const config = loadConfig({
+      ...base,
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      FEATURE_EXECUTION_EDGE: "true",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_SANDBOX_PROFILE_ID: "SANDBOX_BINANCE_USDM",
+      EXECUTION_EDGE_LIVE_PROFILE_ID: "LIVE_BINANCE_USDM",
+    });
+    let reads = 0;
+    const row = (fields: Record<string, string | number | boolean | null>) => ({
+      lineage: {
+        workspace_id: "ws_projection", profile_id: "PAPER_BINANCE_USDM",
+        source_contract_revision: "manager-v2",
+      },
+      fields,
+    });
+    const relation = (source_id: string, name: string, items: ReturnType<typeof row>[]) => ({
+      source_id, relation: name, availability: "AVAILABLE" as const, reason_code: null,
+      as_of: "2026-09-02T06:00:00.000Z", freshness: "FRESH" as const,
+      completeness: "COMPLETE" as const, items,
+    });
+    const repository = {
+      async snapshot() {
+        reads += 1;
+        return {
+          document: {
+            schema_version: "portal.execution.profile-projection.v1" as const,
+            workspace_id: "ws_projection", environment: "paper" as const,
+            profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "manager-v2",
+            relations: {
+              "manager.deployments:strategy_deployments": relation("manager.deployments", "strategy_deployments", [
+                row({ deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", portfolio_id: "pf_a", currency: "USDT", mode: "paper" }),
+                row({ deployment_id: "dep_b", strategy_id: "alpha_b", account_id: "acc_b", portfolio_id: "pf_b", currency: "USDT", mode: "paper" }),
+              ]),
+              "manager.sessions:execution_sessions": relation("manager.sessions", "execution_sessions", [
+                row({ execution_session_id: "ses_a", strategy_id: "alpha_a", account_id: "acc_a", submitted_count: 3, risk_rejected_count: 1, broker_rejected_count: 0, filled_count: 2, updated_at: "2026-09-02T06:00:00Z" }),
+              ]),
+              "manager.orders:orders": relation("manager.orders", "orders", [
+                row({ order_id: "ord_a", client_order_id: "client_a", strategy_id: "alpha_a", account_id: "acc_a", status: "FILLED", quantity: "0.100000000000000001", submitted_at: "2026-09-02T05:00:00Z" }),
+                row({ order_id: "ord_b", client_order_id: "client_b", strategy_id: "alpha_b", account_id: "acc_b", status: "OPEN", quantity: "99", submitted_at: "2026-09-02T05:00:00Z" }),
+              ]),
+              "manager.fills:fills": relation("manager.fills", "fills", [
+                row({ fill_id: "fill_a", client_order_id: "client_a", strategy_id: "alpha_a", account_id: "acc_a", quantity: "0.100000000000000001", price: "60000.123456789012345678", realized_pnl: "1.000000000000000001", trade_time: "2026-09-02T05:01:00Z" }),
+              ]),
+              "manager.positions:positions_v2": relation("manager.positions", "positions_v2", [
+                row({ position_id: "pos_a", strategy_id: "alpha_a", account_id: "acc_a", quantity: "0.1", notional: "6000.012345678901234568", realized_pnl: "1.000000000000000001", updated_at: "2026-09-02T05:02:00Z" }),
+              ]),
+              "manager.performance:account_equity_snapshots": relation("manager.performance", "account_equity_snapshots", [
+                row({ id: "eq_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", currency: "USDT", equity: "10000.000000000000000001", ts: "2026-09-02T05:03:00Z" }),
+              ]),
+            },
+          },
+          sourceEpoch: "source-epoch", sourceCursor: "source-cursor",
+          sourceAsOf: new Date("2026-09-02T06:00:00Z"),
+          receivedAt: new Date(), lastSuccessfulRefreshAt: new Date(), completeness: "COMPLETE" as const,
+          projectionEpoch: "3b2d15c5-e36f-4a2f-91bf-18bb58ba76f4",
+          projectionSequence: 7, payloadDigest: `sha256:${"2".repeat(64)}`,
+        };
+      },
+    } as unknown as ExecutionProfileProjectionRepository;
+    const service = new LocalQueryAnalyticsService(config, repository);
+    const response = await service.query({
+      user: { userId: "usr_a" } as never,
+      session: { sessionId: "ses_a" } as never,
+      workspaceId: "ws_viewer",
+    }, "alpha", "alpha_a");
+    expect(reads).toBe(1);
+    expect(response).toMatchObject({
+      schema_version: "execution.query-analytics-envelope.v1",
+      source_side_effect_requested: false,
+      repository_query_count: 1,
+      analytics: {
+        subject_kind: "ALPHA", subject_id: "alpha_a", source_fact_count: 6,
+        order_funnel: { total_orders: 1, status_counts: { FILLED: 1 } },
+        execution_quality: { submitted_count: 3, risk_rejected_count: 1, filled_count: 2 },
+      },
+    });
+    const analytics = response.analytics as Record<string, unknown>;
+    expect((analytics.capabilities as unknown[])).toHaveLength(12);
+    expect(JSON.stringify(response)).not.toContain("ord_b");
+    expect(JSON.stringify(response)).toContain("10000.000000000000000001");
   });
 
   it("normalizes only bounded screen query fields and never accepts deployment scope", () => {

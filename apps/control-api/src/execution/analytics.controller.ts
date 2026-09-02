@@ -13,6 +13,7 @@ import {
   ExecutionAnalyticsProxy,
   type QueryAnalyticsSubjectKind,
 } from "./analytics.proxy";
+import { LocalQueryAnalyticsService } from "./local-query-analytics.service";
 
 interface AnalyticsRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -26,6 +27,7 @@ export class ExecutionAnalyticsController {
   constructor(
     @Inject(ExecutionAnalyticsProxy) private readonly proxy: ExecutionAnalyticsProxy,
     @Inject(GovernanceRepository) private readonly governance: GovernanceRepository,
+    @Inject(LocalQueryAnalyticsService) private readonly localAnalytics: LocalQueryAnalyticsService,
   ) {}
 
   @Post("/approvals/:approvalId/capital-preview")
@@ -136,6 +138,9 @@ export class ExecutionAnalyticsController {
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
   ) {
+    if (this.localAnalytics.enabled()) {
+      return this.invoke(() => this.localAnalytics.query(principal(request), subjectKind, subjectId));
+    }
     return this.invoke(() =>
       this.proxy.managerQueryAnalytics(principal(request), subjectKind, subjectId),
     );

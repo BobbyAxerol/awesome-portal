@@ -28,7 +28,8 @@ service = (root / "apps/control-api/src/paper-read/paper-read.service.ts").read_
 controller = (root / "apps/control-api/src/paper-read/paper-read.controller.ts").read_text()
 assert "N22_FULL_PAPER_READ_ACCEPTED" in proxy
 assert "N22_CROSS_PROFILE_ROW_REJECTED" in service
-assert "N25_EXACT_QUERY_NOT_ACTIVE" in service
+assert "LocalQueryAnalyticsService" in service
+assert "localAnalytics.query" in service
 assert "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED" in service
 assert '/api/v1/execution/screens' in controller
 assert "record_key" not in service

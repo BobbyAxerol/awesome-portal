@@ -2394,6 +2394,23 @@ and mutation controls are fully implemented but only owner-published exact
 capabilities can dispatch. Phase 3 must not begin while a Portal-owned screen
 or command-control defect remains.
 
+##### Phase 2 implementation result — accepted 2026-09-02
+
+Status: `COMPLETE_SCREEN_BFF_ACCEPTED / CURRENT_COMMAND_SET_CONTROLLED /
+R0_LOCAL_TASKS_CONNECTED / UNPUBLISHED_MUTATIONS_FAIL_CLOSED /
+PHASE_3_READY`.
+
+All eight finite screen slices and all ten evidence classes are closed. The
+catalogue has 23/23 available same-origin Screen BFF roots. Four exact R0 tasks
+run only against the SGP projection and emit digest-bound audit evidence; all
+source mutation paths remain fail-closed. The rebuilt dev Control API passed an
+authenticated real-projection smoke over Paper, Sandbox, Live, Alpha Fleet,
+Command Center and R0 inspect. `main`, stable and the approved rich UI source
+were not changed.
+
+Full contract, runtime, test, image and rollback evidence:
+[Phase 2 closeout](backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md).
+
 #### Phase 3 delivery specification — Rich UI integration, product acceptance & release
 
 **Start condition:** Phase 2 is accepted and Claude's approved rich
@@ -3620,27 +3637,28 @@ command commit.
 
 ## 11. Recommended next sequence
 
-N13A–N17A and the exact current-source N13B–N17B campaign are closed. Continue
-without reopening those phase labels:
+Phase 1 and Phase 2 are accepted. Continue without reopening N13–N29 or
+reintroducing the former direct-browser/source path:
 
-1. review and merge the N13B–N17B branch into `dev`; do not promote
-   `main`/stable;
-2. integrate Claude's UI branch against the updated `dev` and resolve the
-   shared tracker deliberately;
-3. start a new backend campaign from updated `dev`, beginning with the
-   canonical workspace/resource-scoped Paper screen API (`TD-EX-01`);
-4. move current-source compatibility ownership to the canonical Rust Edge
-   route and enforce an Edge-global/per-profile source quota before any
-   multi-replica rollout (`TD-EX-02`/`TD-EX-03`);
-5. publish a signed dev image and activate one Paper screen/profile in a
-   bounded dev window, leaving stable, Sandbox, Live and Command dark;
-6. run product-path auth/load/fault/rollback/soak evidence and claim an SLO
-   only from that deployed result;
-7. deliver BR-EX-41…67 in deduplicated screen slices, then widen reads Paper →
-   Sandbox → Live; keep Event/Artifact and every command independently gated.
+1. pin Claude's approved rich recomposition commit and review packet;
+2. execute Phase 3 P3-A panel-by-panel against the 23 canonical same-origin
+   Screen BFF contracts, keeping Fixture Lab physically separate;
+3. bind motion to the single local SSE contract and bind Admin Action Drawer
+   controls only to the four server-classified `CONNECTED` R0 tasks;
+4. run the complete authenticated browser matrix for real Paper/Sandbox/Live
+   populations, sparse/partial/stale/error states, session expiry and terminal
+   stream behavior;
+5. record Bobby's UI review findings, fix every Portal-owned defect and repeat
+   product acceptance from one commit;
+6. reconcile the reviewed feature head into protected `dev`, rebuild the one
+   canonical dev runtime and record Git/image/config/database provenance;
+7. only after Product GO, propose `dev -> protected main`; stable remains a
+   separate owner-approved release and rollback window.
 
-The exact open gates, owners and containment are authoritative in
-[`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md).
+The exact Phase 3 start/exit conditions are §4 above. The historical N13–N17
+containment remains available in
+[`EX_BE_N13_N17_DEBT_CLOSEOUT.md`](./backend/EX_BE_N13_N17_DEBT_CLOSEOUT.md)
+but no longer describes the current next implementation step.
 
 ---
 
@@ -3665,6 +3683,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | D4 runtime optimization | `backend/EX_BE_02_D4_SOURCE_FACADE_RUNTIME_OPTIMIZATION.md` |
 | Projection/Query/SSE/analytics | `backend/EX_BE_03_PROJECTION_REDUCER_REPLAY_FRESHNESS.md`, `backend/EX_BE_04B_RUST_PROJECTION_QUERY_PRIMITIVES.md`, `backend/EX_BE_06_MULTIPLEXED_SSE_RESUME_BACKPRESSURE.md`, `backend/EX_BE_07B_SOURCE_BACKED_PROJECTION_REPOSITORIES_AND_SCREEN_APIS.md` |
 | **Phase 1 data truth/projection/realtime closeout** | **`backend/EX_BE_PHASE1_DATA_TRUTH_PROJECTION_REALTIME_FOUNDATION.md`** |
+| **Phase 2 complete Screen BFF/controlled command closeout** | **`backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md`** |
 | Source qualification | `backend/EX_BE_08A_OFFLINE_SOURCE_QUALIFICATION.md` |
 | Retention/recovery/cleanup | `backend/EX_BE_03_N05_RETENTION_RECOVERY_CLEANUP.md` |
 | Real-source qualification/soak | `backend/EX_BE_03_N06_REAL_SOURCE_QUALIFICATION_AND_SOAK.md` |
@@ -3678,6 +3697,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Accepted Phase 2 complete Screen BFF and controlled command plane | 23/23 same-origin screen roots, eight finite screen slices and four SGP-local R0 tasks pass 113 contract + 280 Control API tests, full monorepo verification and authenticated real dev smoke; command relay/main/stable/rich UI unchanged; Phase 3 ready |
 | 2026-09-02 | Accepted Phase 1 data truth, local projection and unified realtime foundation | real dev Paper/Sandbox/Live projection is active from one lease-controlled cadence; 2,500 real rows show zero lineage/mode mismatch; local BFF, four bounded adapters and five-kind SSE contract pass 272 tests plus PostgreSQL restore; one source-rejected Paper relation stays typed unavailable without disabling its profile; Phase 2 ready, commands/main/stable unchanged |
 | 2026-09-02 | Authorized and specified complete Phase 1 (N30–N32) | one data-first implementation phase now owns profile/lineage truth, SGP-local projection-only product reads, bounded activation of present-source read adapters and one five-kind realtime envelope; exact nine-class evidence gate recorded; UI/commands/main/stable unchanged |
 | 2026-09-02 | Added N29-RTA runtime truth reset and finite N30–N36 data-first closeout plan | supersedes the product interpretation—not the valid contract evidence—of N29; records real deployed screen/BFF states, 60 s source projection / 100 ms local journal / 750 ms direct cache behavior, Live profile leakage, remaining disabled/source-dark paths, projection-first dual-cell target and PostgreSQL-hot/Parquet-cold storage decision; `PRODUCT_NO_GO`, main/stable unchanged |

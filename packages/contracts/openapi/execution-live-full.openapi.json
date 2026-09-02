@@ -3,7 +3,7 @@
   "info": {
     "title": "Primus Portal Execution Live Full API",
     "version": "1.0.0",
-    "description": "SGP source-dark Phase 12 contract. No source read, realtime, command or activation capability is exposed."
+    "description": "SGP Live Full read contract composed from the local Live projection. Broker values remain suppressed on missing or mismatched reconciliation; production commands remain inactive."
   },
   "paths": {
     "/api/v1/execution/deployments/{deployment_id}/live": {
@@ -15,7 +15,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Portal predecessor facts plus explicit source-dark live panels.",
+            "description": "Portal predecessor facts plus bounded Live-profile panels and local projection continuity.",
             "content": { "application/json": { "schema": { "$ref": "../schemas/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations" } } }
           },
           "404": { "$ref": "#/components/responses/Problem" }

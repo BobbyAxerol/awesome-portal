@@ -29,8 +29,8 @@ assert catalogue.count("screen({") == 23
 # N20 established the immutable 23-screen catalogue. Later read-profile phases
 # may promote only their named rows without changing its shape or request set:
 # N22 owns four Paper products and N23 owns six Sandbox/Live compositions.
-assert catalogue.count('status: "AVAILABLE"') == 22
-assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 1
+assert catalogue.count('status: "AVAILABLE"') == 23
+assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 0
 assert catalogue.count('deliveryPhase: "N22"') == 4
 for screen_id in [
     "PAPER_TRADING_SCREEN",

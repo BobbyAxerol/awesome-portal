@@ -1,10 +1,11 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { SANDBOX_CERTIFICATION_STEPS } from "../src/sandbox/contracts";
 import { SandboxCertificationRepository } from "../src/sandbox/sandbox-certification.repository";
 import { evaluateSandboxCertification } from "../src/sandbox/sandbox-certification.service";
+import { ProfileReadService } from "../src/profile-read/profile-read.service";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL ??
@@ -376,6 +377,83 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
          (SELECT count(*)::text FROM outbox_messages) AS outbox`,
     );
     expect(counts.rows[0]).toEqual({ audit: "1", outbox: "0" });
+  });
+
+  it("composes Canary and Live same-origin routes from bounded local-profile facts", async () => {
+    const lineage = await seedApprovedLineage("source-backed");
+    const created = await mutation(bobby, payload(lineage, "source-backed-canary-predecessor"));
+    expect(created.statusCode).toBe(201);
+    const profileReads = ctx.app.get(ProfileReadService);
+    const profile = (brokerStatus: string) => ({
+      schema_version: "execution.profile-read.v1",
+      screen_id: "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      environment: "live",
+      profile_id: "LIVE_BINANCE_USDM",
+      delivery_profile: "LIVE_BINANCE_USDM",
+      state: "ready",
+      freshness: "FRESH",
+      completeness: "COMPLETE",
+      as_of: "2026-09-02T08:00:00.000Z",
+      read_at: "2026-09-02T08:00:01.000Z",
+      source_side_effect_requested: false,
+      capabilities: [
+        "positions", "orders", "fills", "sessions", "account_balances",
+        "margin_balances", "account_sync", "broker_sync", "reconciliation",
+      ].map((key) => ({ capability_id: `source.${key}`, state: "AVAILABLE", reason_code: null })),
+      unavailable_branches: [],
+      data: {
+        deployments: [{ deployment_id: lineage.deploymentId, account_id: "account_alpha", mode: "live" }],
+        positions: [{ position_id: "pos_live", deployment_id: lineage.deploymentId, account_id: "account_alpha", notional: "6123.000000000000000001", realized_pnl: "5.1", unrealized_pnl: "0.000000000000000009" }],
+        orders: [{ order_id: "ord_live", deployment_id: lineage.deploymentId, account_id: "account_alpha", status: "OPEN" }],
+        fills: [{ fill_id: "fill_live", deployment_id: lineage.deploymentId, account_id: "account_alpha" }],
+        sessions: [{ execution_session_id: "session_live", deployment_id: lineage.deploymentId, account_id: "account_alpha" }],
+        account_balances: [{ account_id: "account_alpha", total: "10000.000000000000000001" }],
+        margin_balances: [{ account_id: "account_alpha", initial: "500.000000000000000001" }],
+        account_sync: [{ account_id: "account_alpha", status: "CURRENT" }],
+        broker_sync: [{ account_id: "account_alpha", status: brokerStatus, buying_power: "9999.5", synced_at: "2026-09-02T08:00:00.000Z" }],
+        reconciliation: [],
+      },
+      projection: {
+        epoch: "epoch-live", sequence: 9, sourceCursor: "cursor-live",
+        payloadDigest: `sha256:${"c".repeat(64)}`,
+        lastSuccessfulRefreshAt: "2026-09-02T08:00:00.000Z",
+      },
+    });
+
+    vi.spyOn(profileReads, "snapshot").mockResolvedValueOnce(profile("SYNCED") as never);
+    const canary = await inject(
+      reader,
+      `/api/v1/execution/deployments/${lineage.deploymentId}/canary?workspace_id=${workspaceId}`,
+    );
+    expect(canary.statusCode).toBe(200);
+    expect(canary.json()).toMatchObject({
+      source_integration_state: "SOURCE_BACKED",
+      positions: { exact_total: 1, returned_count: 1 },
+      blotter: { exact_total: 1, returned_count: 1 },
+      envelope_compliance: {
+        consumed: { capital: "500.000000000000000001", gross_notional: "6123.000000000000000001", open_orders: 1 },
+      },
+    });
+
+    vi.spyOn(profileReads, "snapshot").mockResolvedValueOnce(profile("STALE") as never);
+    const live = await inject(
+      reader,
+      `/api/v1/execution/deployments/${lineage.deploymentId}/live?workspace_id=${workspaceId}`,
+    );
+    expect(live.statusCode).toBe(200);
+    expect(live.json()).toMatchObject({
+      source_integration_state: "SOURCE_BACKED",
+      positions: { exact_total: 1, returned_count: 1 },
+      orders: { exact_total: 1, returned_count: 1 },
+      broker_consistency: {
+        state: "UNAVAILABLE",
+        broker_values_visible: false,
+        blocker_codes: ["BROKER_STATE_UNAVAILABLE"],
+      },
+      projection_continuity: { state: "CONTIGUOUS", epoch: "epoch-live", sequence: 9 },
+    });
+    expect(live.json().kpis.find((item: { key: string }) => item.key === "broker_equity").value)
+      .toBeNull();
   });
 
   it("rejects Live Full Operations without a canary predecessor or workspace access", async () => {

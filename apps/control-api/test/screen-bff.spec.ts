@@ -217,21 +217,21 @@ describe("N20 session, RBAC, workspace and resource boundary", () => {
     expect(denied.json().error.code).toBe("N20_SCREEN_ACCESS_DENIED");
   });
 
-  it("binds resource screens and returns honest ready or typed-unavailable contracts", async () => {
+  it("binds resource screens and advertises the commissioned Phase 2 Account BFF", async () => {
     const missing = await inject(admin,
       `/api/v1/execution/screen-contracts/EXECUTION_ALPHA_360_SCREEN?workspace_id=${workspaceId}`,
     );
     expect(missing.statusCode).toBe(400);
     expect(missing.json().error.code).toBe("N20_RESOURCE_REQUIRED");
 
-    const unavailable = await inject(admin,
+    const account = await inject(admin,
       `/api/v1/execution/screen-contracts/EXECUTION_ACCOUNT_BROKER_360_SCREEN?workspace_id=${workspaceId}&resource_id=account_42`,
     );
-    expect(unavailable.statusCode).toBe(200);
-    expect(unavailable.json()).toMatchObject({
+    expect(account.statusCode).toBe(200);
+    expect(account.json()).toMatchObject({
       resource: { kind: "ACCOUNT", id: "account_42" },
-      screen: { data_api: { status: "TYPED_UNAVAILABLE", delivery_phase: "N28" } },
-      delivery: { state: "unavailable", payload: null, retryable: false },
+      screen: { data_api: { status: "AVAILABLE", delivery_phase: "PHASE_2" } },
+      delivery: { state: "ready", payload: null, retryable: false },
     });
 
     const ready = await inject(admin,

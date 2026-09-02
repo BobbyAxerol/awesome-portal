@@ -42,7 +42,14 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
   beforeAll(async () => {
     await migrateTestDatabase(DATABASE_URL);
-    ctx = await setupApp({ AUTH_MODE: "dev" });
+    ctx = await setupApp({
+      AUTH_MODE: "dev",
+      FEATURE_EXECUTION_LOCAL_R0_TASKS: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_phase2_projection",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_SANDBOX_PROFILE_ID: "SANDBOX_BINANCE_USDM",
+      EXECUTION_EDGE_LIVE_PROFILE_ID: "LIVE_BINANCE_USDM",
+    });
     auth = new AuthService(
       ctx.pool,
       ctx.config,
@@ -200,10 +207,15 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
   it("keeps relay feature flags dark and rejects an attempted activation", () => {
     expect(testConfig({ AUTH_MODE: "dev" }).FEATURE_EXECUTION_COMMAND_RELAY).toBe("false");
+    expect(testConfig({ AUTH_MODE: "dev" }).FEATURE_EXECUTION_LOCAL_R0_TASKS).toBe("false");
     expect(() => testConfig({
       AUTH_MODE: "dev",
       FEATURE_EXECUTION_COMMAND_RELAY: "true",
     })).toThrowError(/not commissioned/);
+    expect(() => testConfig({
+      AUTH_MODE: "dev",
+      FEATURE_EXECUTION_LOCAL_R0_TASKS: "true",
+    })).toThrowError(/local R0 tasks require/);
   });
 
   it("serves an ADMIN-only, workspace-bound and filterable unreachable catalogue", async () => {
@@ -281,12 +293,12 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       schema_version: "execution.command-tasks.v1",
       catalogue_revision: 3,
       source_catalogue_revision: 2,
-      relay_state: "DISABLED",
+      relay_state: "LOCAL_R0_ONLY",
       total_tasks: 24,
       classification_counts: {
-        CONNECTED: 0,
-        SUPPORTED_BUT_INACTIVE: 14,
-        SEMANTICALLY_INCOMPATIBLE: 10,
+        CONNECTED: 4,
+        SUPPORTED_BUT_INACTIVE: 13,
+        SEMANTICALLY_INCOMPATIBLE: 7,
       },
       scope: {
         workspace_id: workspaceId,
@@ -309,8 +321,16 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     ]);
     expect(response.json().tasks.every(
       (task: { params: unknown[]; authority: { runtime_active: boolean }; source_request_sent: boolean }) =>
-        task.params.length <= 8 && !task.authority.runtime_active && !task.source_request_sent,
+        task.params.length <= 8 && !task.source_request_sent,
     )).toBe(true);
+    expect(response.json().tasks.filter(
+      (task: { state: string }) => task.state === "CONNECTED",
+    ).map((task: { task_id: string }) => task.task_id)).toEqual([
+      "inspect", "capital", "performance", "broker-read",
+    ]);
+    expect(response.json().tasks.filter(
+      (task: { state: string; authority: { runtime_active: boolean } }) => task.state === "CONNECTED",
+    ).every((task: { authority: { runtime_active: boolean } }) => task.authority.runtime_active)).toBe(true);
     expect(response.json().tasks.find((task: { task_id: string }) => task.task_id === "health"))
       .toMatchObject({
         key: null,
@@ -430,6 +450,87 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       "SELECT 1 FROM product_audit_events WHERE event_type='execution.command.run_rejected' " +
       "AND reason_code='TYPED_SOURCE_OPERATION_NOT_PUBLISHED'",
     )).rowCount).toBe(1);
+  });
+
+  it("runs only the connected R0 subset from the bounded SGP projection and audits its digest", async () => {
+    const sourceWorkspace = "ws_phase2_projection";
+    const document = {
+      schema_version: "portal.execution.profile-projection.v1",
+      workspace_id: sourceWorkspace,
+      environment: "paper",
+      profile_id: "PAPER_BINANCE_USDM",
+      source_contract_revision: "trading-system.portal-execution.manager-v2.runtime.v1",
+      relations: {
+        "manager.strategies:strategies": {
+          source_id: "manager.strategies",
+          relation: "strategies",
+          availability: "AVAILABLE",
+          reason_code: null,
+          as_of: new Date().toISOString(),
+          freshness: "FRESH",
+          completeness: "COMPLETE",
+          items: [{
+            lineage: { workspace_id: sourceWorkspace, profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "trading-system.portal-execution.manager-v2.runtime.v1" },
+            fields: { strategy_id: "alpha_42", alpha_id: "alpha_42", mode: "paper", name: "Bounded alpha" },
+          }, {
+            lineage: { workspace_id: sourceWorkspace, profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "trading-system.portal-execution.manager-v2.runtime.v1" },
+            fields: { strategy_id: "alpha_other", alpha_id: "alpha_other", mode: "paper", name: "Must not leak" },
+          }],
+        },
+      },
+    };
+    await ctx.pool.query(
+      `INSERT INTO execution_profile_projection_snapshots
+         (workspace_id, environment, profile_id, source_contract_revision, source_epoch,
+          source_cursor, source_as_of, received_at, last_successful_refresh_at, completeness,
+          projection_epoch, projection_sequence, payload_digest, payload)
+       VALUES ($1,'paper','PAPER_BINANCE_USDM',$2,'epoch','cursor',now(),now(),now(),
+               'COMPLETE',$3,1,$4,$5::jsonb)
+       ON CONFLICT (workspace_id,environment,profile_id) DO UPDATE SET
+          last_successful_refresh_at=now(), payload=EXCLUDED.payload, payload_digest=EXCLUDED.payload_digest`,
+      [sourceWorkspace, document.source_contract_revision, "00000000-0000-4000-8000-000000000042",
+        `sha256:${"4".repeat(64)}`, JSON.stringify(document)],
+    );
+    const response = await mutation(
+      bobby,
+      "/api/v1/execution/commands/tasks/inspect/run",
+      {
+        schema_version: "execution.command-run-request.v1",
+        workspace_id: workspaceId,
+        request_key: "phase2:inspect:1",
+        params: { mode: "paper", alpha_id: "alpha_42" },
+      },
+    );
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      schema_version: "execution.command-run-result.v1",
+      task_id: "inspect",
+      classification: "CONNECTED",
+      transport: "SGP_LOCAL_PROJECTION",
+      source_request_sent: false,
+      result: {
+        viewer_workspace_id: workspaceId,
+        environment: "paper",
+        relations: {
+          "manager.strategies:strategies": {
+            state: "AVAILABLE",
+            returned_count: 1,
+            items: [{ strategy_id: "alpha_42" }],
+          },
+        },
+      },
+    });
+    expect(JSON.stringify(response.json())).not.toContain("alpha_other");
+    expect(response.json().response_digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    const audit = await ctx.pool.query(
+      `SELECT result, reason_code, metadata_json
+         FROM product_audit_events WHERE idempotency_key='phase2:inspect:1'`,
+    );
+    expect(audit.rows[0]).toMatchObject({
+      result: "SUCCESS",
+      reason_code: "PHASE2_LOCAL_PROJECTION_TASK_ACTIVE",
+      metadata_json: expect.objectContaining({ source_request_sent: false, transport: "SGP_LOCAL_PROJECTION" }),
+    });
   });
 
   it("classifies only the exact N16B current emergency-close primitive and keeps it dark", async () => {

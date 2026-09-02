@@ -3,7 +3,7 @@
   "info": {
     "title": "Primus Portal Execution Canary API",
     "version": "1.0.0",
-    "description": "SGP Portal-owned source-dark Canary envelope and control-room contract. No production command or runtime activation is exposed."
+    "description": "SGP Portal-owned Canary governance envelope composed with bounded Live-profile facts from the local projection. No production command or runtime activation is exposed."
   },
   "paths": {
     "/api/v1/execution/deployments/{deployment_id}/canary": {
@@ -15,7 +15,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Latest Portal envelope composed with explicit unavailable source panels.",
+            "description": "Latest Portal envelope composed with per-branch ready, empty, partial, stale or unavailable Live-profile facts.",
             "content": { "application/json": { "schema": { "$ref": "../schemas/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom" } } }
           },
           "404": { "$ref": "#/components/responses/Problem" }

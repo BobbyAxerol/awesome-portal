@@ -354,13 +354,14 @@ describe("N17B exact current-set production acceptance", () => {
 });
 
 describe("N22 full Paper read acceptance", () => {
-  it("widens only the four canonical Paper BFF screens", () => {
+  it("keeps the four N22 screens and adds only the Phase 2 Account 360 read", () => {
     expect(N22_PAPER_READ_ACCEPTANCE).toMatchObject({
       decision: "N22_FULL_PAPER_READ_ACCEPTED",
       lineageDecision: "N17B_EXACT_CURRENT_SET_ACCEPTED",
       environment: "paper",
       profileId: "PAPER_BINANCE_USDM",
       screenIds: [
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
         "EXECUTION_FULL_BLOTTER_SCREEN",
         "EXECUTION_PAPER_WORKBENCH_SCREEN",
         "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",

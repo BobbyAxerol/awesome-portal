@@ -22,6 +22,7 @@ x-control-api-environment: &control-api-environment
   FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: "false"
   # PRE-IAM-03 remains dark in production until registry/source activation.
   FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: "false"
+  FEATURE_EXECUTION_LOCAL_R0_TASKS: "false"
   # EX-BE-05b/F0 publishes contracts only. Relay is not commissioned.
   FEATURE_EXECUTION_COMMAND_RELAY: "false"
   # N13B profiles are independent; the opt-in current-source overlay owns

@@ -148,6 +148,7 @@ export class GovernanceController {
   }
 
   @Post("/commands/tasks/:task_id/run")
+  @HttpCode(200)
   async runCommandTask(
     @Req() request: GovernanceRequest,
     @Param("task_id") taskId: string,

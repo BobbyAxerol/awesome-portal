@@ -48,9 +48,14 @@ export class ExecutionProductReadSource {
     screenId: string,
     sourceId: string,
     relation: string,
-    query: CurrentSourcePageQuery,
+    query: CurrentSourcePageQuery & LocalProductQuery,
   ): Promise<unknown> {
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
+      if (hasLocalQuery(query)) {
+        throw new CurrentSourceProxyError("PHASE2_LOCAL_QUERY_REQUIRED", 503, {
+          availability: "UNAVAILABLE", retryable: false,
+        });
+      }
       return this.direct.relation(principal, environment, screenId, sourceId, relation, query);
     }
     return this.localRelation(principal, environment, screenId, sourceId, relation, query);
@@ -62,9 +67,12 @@ export class ExecutionProductReadSource {
     screenId: string,
     sourceId: string,
     relation: string,
-    query: CurrentSourcePageQuery,
+    query: CurrentSourcePageQuery & LocalProductQuery,
   ): Promise<unknown> {
-    validateBinding(requestedEnvironment, screenId, sourceId, relation, query);
+    validateBinding(requestedEnvironment, screenId, sourceId, relation, {
+      limit: query.limit,
+      ...(query.cursor ? { cursor: query.cursor } : {}),
+    });
     const environment: ProjectionEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
     const profileId = profile(this.config, environment);
     const projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
@@ -90,16 +98,20 @@ export class ExecutionProductReadSource {
         availability: "UNAVAILABLE", reason_code: projected.reason_code, retryable: false,
       });
     }
+    const filteredItems = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
+      ? filterAndSort(projected.items, query) : projected.items;
     const limit = query.limit ?? 100;
     const start = decodeCursor(query.cursor, snapshot.payloadDigest);
-    if (start > projected.items.length) {
+    if (start > filteredItems.length) {
       throw new CurrentSourceProxyError("N31_PROJECTION_CURSOR_AHEAD", 409, {
         availability: "DEGRADED", retryable: false,
       });
     }
-    const rows = projected.items.slice(start, start + limit);
-    const next = start + rows.length < projected.items.length
+    const rows = filteredItems.slice(start, start + limit);
+    const next = start + rows.length < filteredItems.length
       ? encodeCursor(start + rows.length, snapshot.payloadDigest) : null;
+    const previous = start > 0
+      ? encodeCursor(Math.max(0, start - limit), snapshot.payloadDigest) : null;
     return {
       schema_version: "portal.execution.local-projection-bff.v1",
       authority: "PORTAL_CONTROL_API",
@@ -132,10 +144,54 @@ export class ExecutionProductReadSource {
             fields: Object.fromEntries(Object.entries(row.fields).map(([name, value]) => [name, tagged(name, value)])),
           })),
           next_cursor: next,
+          previous_cursor: previous,
+          projected_total_items: filteredItems.length,
+          window_aggregates: screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
+            ? countByDimensions(filteredItems) : null,
         },
       },
     };
   }
+}
+
+interface LocalProductQuery {
+  status?: string;
+  venue?: string;
+  symbol?: string;
+  side?: "BUY" | "SELL";
+  sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
+}
+
+function hasLocalQuery(query: LocalProductQuery): boolean {
+  return query.status !== undefined || query.venue !== undefined || query.symbol !== undefined ||
+    query.side !== undefined || query.sort !== undefined;
+}
+
+function filterAndSort(
+  rows: readonly { fields: Record<string, ProjectionScalar> }[],
+  query: LocalProductQuery,
+) {
+  const equals = (value: ProjectionScalar | undefined, expected: string | undefined) =>
+    expected === undefined || String(value ?? "").toUpperCase() === expected.toUpperCase();
+  const selected = rows.filter((row) =>
+    equals(row.fields.status, query.status) && equals(row.fields.venue, query.venue) &&
+    equals(row.fields.symbol, query.symbol) && equals(row.fields.side, query.side));
+  const sort = query.sort ?? "submitted_at_desc";
+  const field = sort === "updated_at_desc" ? "updated_at" : "submitted_at";
+  const direction = sort === "submitted_at_asc" ? 1 : -1;
+  return [...selected].sort((left, right) => direction * (
+    String(left.fields[field] ?? "").localeCompare(String(right.fields[field] ?? "")) ||
+    String(left.fields.order_id ?? "").localeCompare(String(right.fields.order_id ?? ""))
+  ));
+}
+
+function countByDimensions(rows: readonly { fields: Record<string, ProjectionScalar> }[]) {
+  const dimensions = ["status", "venue", "side"] as const;
+  return Object.fromEntries(dimensions.map((dimension) => [dimension, rows.reduce<Record<string, number>>((counts, row) => {
+    const value = String(row.fields[dimension] ?? "UNKNOWN");
+    counts[value] = (counts[value] ?? 0) + 1;
+    return counts;
+  }, {})]));
 }
 
 function validateBinding(

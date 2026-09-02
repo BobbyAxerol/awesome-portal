@@ -64,27 +64,49 @@
       "properties": {
         "panel_id": { "type": "string", "minLength": 1, "maxLength": 128 },
         "source_authority": { "enum": ["EXECUTION", "BROKER", "DERIVED"] },
-        "panel_state": { "const": "unavailable" },
-        "freshness_state": { "const": "UNKNOWN" },
-        "delivery_profile": { "const": "fixture" },
-        "source_verification_state": { "const": "UNAVAILABLE" },
-        "as_of": { "type": "null" },
+        "panel_state": { "enum": ["ready", "empty", "partial", "stale", "unavailable", "suppressed"] },
+        "freshness_state": { "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] },
+        "delivery_profile": { "enum": ["fixture", "LIVE_BINANCE_USDM"] },
+        "source_verification_state": { "enum": ["VERIFIED", "PARTIAL", "UNAVAILABLE"] },
+        "as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
         "read_at": { "$ref": "#/$defs/Timestamp" },
-        "age_seconds": { "type": "null" },
-        "lag_ms": { "type": "null" },
-        "source_cursor": { "type": "null" },
-        "projection_epoch": { "type": "null" },
-        "projection_sequence": { "type": "null" },
-        "capability_snapshot_id": { "type": "null" },
-        "data": { "type": "null" },
+        "age_seconds": { "type": ["integer", "null"], "minimum": 0 },
+        "lag_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "source_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "projection_epoch": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "projection_sequence": { "type": ["integer", "null"], "minimum": 0 },
+        "capability_snapshot_id": { "oneOf": [{ "$ref": "#/$defs/Hash" }, { "type": "null" }] },
+        "data": { "type": ["object", "null"], "maxProperties": 16 },
         "warnings": {
-          "type": "array", "minItems": 1, "maxItems": 8,
+          "type": "array", "maxItems": 8,
           "items": {
             "type": "object", "additionalProperties": false, "required": ["code"],
             "properties": { "code": { "type": "string", "minLength": 1, "maxLength": 191 } }
           }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "panel_state": { "enum": ["unavailable", "suppressed"] } } },
+          "then": {
+            "properties": {
+              "source_verification_state": { "const": "UNAVAILABLE" },
+              "data": { "type": "null" },
+              "warnings": { "type": "array", "minItems": 1 }
+            }
+          },
+          "else": {
+            "properties": {
+              "source_verification_state": { "enum": ["VERIFIED", "PARTIAL"] },
+              "data": { "type": "object" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "panel_state": { "enum": ["ready", "partial", "stale"] } } },
+          "then": { "properties": { "as_of": { "$ref": "#/$defs/Timestamp" } } }
+        }
+      ]
     },
     "UnavailableCollection": {
       "type": "object",
@@ -92,9 +114,11 @@
       "required": ["envelope", "exact_total", "returned_count", "rows"],
       "properties": {
         "envelope": { "$ref": "#/$defs/SourceEnvelope" },
-        "exact_total": { "type": "null" },
-        "returned_count": { "const": 0 },
-        "rows": { "type": "array", "maxItems": 0 }
+        "exact_total": { "type": ["integer", "null"], "minimum": 0 },
+        "returned_count": { "type": "integer", "minimum": 0, "maximum": 200 },
+        "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "previous_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "rows": { "type": "array", "maxItems": 200, "items": { "type": "object", "maxProperties": 80 } }
       }
     },
     "ActionPolicy": {
@@ -207,7 +231,7 @@
             "properties": {
               "key": { "enum": ["capital_consumed", "gross_notional", "daily_pnl", "open_orders", "broker_equity"] },
               "label": { "type": "string", "minLength": 1, "maxLength": 96 },
-              "value": { "type": "null" },
+              "value": { "type": ["string", "null"], "maxLength": 57 },
               "unit": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" },
               "envelope": { "$ref": "#/$defs/SourceEnvelope" }
             }
@@ -228,8 +252,8 @@
                 "max_open_orders": { "type": "integer", "minimum": 1 }
               }
             },
-            "consumed": { "type": "null" },
-            "headroom": { "type": "null" },
+            "consumed": { "type": ["object", "null"], "maxProperties": 8 },
+            "headroom": { "type": ["object", "null"], "maxProperties": 8 },
             "base_risk_profile_verified": { "const": false }
           }
         },

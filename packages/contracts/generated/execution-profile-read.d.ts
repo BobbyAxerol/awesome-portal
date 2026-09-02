@@ -109,6 +109,13 @@ export interface components {
             freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
             /** @enum {unknown} */
             completeness: "COMPLETE" | "PARTIAL";
+            projection?: null | {
+                epoch: components["schemas"]["Identifier"];
+                sequence: number;
+                sourceCursor: string | null;
+                payloadDigest: string;
+                lastSuccessfulRefreshAt: components["schemas"]["Timestamp"];
+            };
             actor: {
                 user_id: components["schemas"]["Identifier"];
                 username: components["schemas"]["Identifier"];
@@ -346,9 +353,9 @@ export interface components {
             current_source: components["schemas"]["ProfileRead"];
             derived_branches: {
                 capability_id: string;
-                /** @constant */
-                state: "UNAVAILABLE";
-                reason_code: string;
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+                reason_code: string | null;
             }[];
             /** @constant */
             source_side_effect_requested: false;

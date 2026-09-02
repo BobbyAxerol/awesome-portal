@@ -34,6 +34,7 @@ import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.se
 import { ExecutionProductReadSource } from "./execution/product-read-source";
 import { ExecutionProfileReadAdapterController } from "./execution/profile-read-adapter.controller";
 import { ExecutionProfileReadAdapterService } from "./execution/profile-read-adapter.service";
+import { LocalQueryAnalyticsService } from "./execution/local-query-analytics.service";
 import { CommandCenterController } from "./command-center/command-center.controller";
 import { CommandCenterRepository } from "./command-center/command-center.repository";
 import { CommandCenterService } from "./command-center/command-center.service";
@@ -149,6 +150,7 @@ export class AppModule {
         ExecutionProfileRealtimeService,
         ExecutionProductReadSource,
         ExecutionProfileReadAdapterService,
+        LocalQueryAnalyticsService,
         {
           provide: ExecutionRealtimeProxy,
           useFactory: (cfg: ControlApiConfig) => ExecutionRealtimeProxy.create(cfg),

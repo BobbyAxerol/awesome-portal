@@ -1,10 +1,17 @@
 import { createHash } from "crypto";
 import { Inject, Injectable } from "@nestjs/common";
+import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
+import {
+  ExecutionProfileReadAdapterService,
+  ProjectionAdapterError,
+} from "../execution/profile-read-adapter.service";
+import { ProjectionEnvironment } from "../execution/profile-projection.repository";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProductAuditRepository } from "../repos/outbox";
 import { EXECUTION_COMMAND_CATALOG } from "./catalog.generated";
+import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionCommandCatalogueQuery,
   ExecutionCommandPlanRequest,
@@ -23,6 +30,7 @@ import {
   operatorTask,
   operatorTaskCatalogue,
   catalogueEntryClassification,
+  localR0Adapter,
   taskClassification,
 } from "./operator-tasks";
 
@@ -76,6 +84,8 @@ export class ExecutionOperationsService {
   constructor(
     @Inject(ExecutionOperationsRepository) private readonly repository: ExecutionOperationsRepository,
     @Inject(ProductAuditRepository) private readonly audit: ProductAuditRepository,
+    @Inject(ExecutionProfileReadAdapterService) private readonly localReads: ExecutionProfileReadAdapterService,
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
   catalogue(
@@ -120,7 +130,7 @@ export class ExecutionOperationsService {
       throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
     }
     return {
-      ...operatorTaskCatalogue(),
+      ...operatorTaskCatalogue(this.config.FEATURE_EXECUTION_LOCAL_R0_TASKS === "true"),
       scope: {
         workspace_id: workspaceId,
         actor_user_id: user.userId,
@@ -134,7 +144,7 @@ export class ExecutionOperationsService {
     taskId: string,
     input: OperatorTaskRunRequest,
     requestId: string,
-  ): Promise<never> {
+  ) {
     if (user.role !== "ADMIN") {
       throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
     }
@@ -142,7 +152,57 @@ export class ExecutionOperationsService {
     if (task.mode !== "READ") {
       throw new GovernanceError("COMMAND_RUN_READ_ONLY", "Run is available only for R0 tasks.", 409);
     }
-    const classification = taskClassification(task);
+    const classification = taskClassification(task, this.config.FEATURE_EXECUTION_LOCAL_R0_TASKS === "true");
+    const adapter = localR0Adapter(task.taskId);
+    if (classification.state === "CONNECTED" && adapter !== null) {
+      const environment = localTaskEnvironment(task.taskId, input.params);
+      try {
+        const result = await this.localReads.read(input.workspace_id, environment, adapter, input.params);
+        const resultDigest = digest(result);
+        await this.audit.record({
+          eventId: newUlid("audit"),
+          eventType: "execution.command.local_read_completed",
+          actorUserId: user.userId,
+          workspaceId: input.workspace_id,
+          requestId,
+          idempotencyKey: input.request_key,
+          aggregateType: "execution_command_task",
+          aggregateId: task.taskId,
+          aggregateVersion: 1,
+          result: "SUCCESS",
+          reasonCode: "PHASE2_LOCAL_PROJECTION_TASK_ACTIVE",
+          metadata: {
+            classification: classification.state,
+            transport: "SGP_LOCAL_PROJECTION",
+            source_request_sent: false,
+            params_digest: digest(input.params),
+            response_digest: resultDigest,
+          },
+        });
+        return {
+          schema_version: "execution.command-run-result.v1",
+          task_id: task.taskId,
+          classification: "CONNECTED",
+          transport: "SGP_LOCAL_PROJECTION",
+          source_request_sent: false,
+          response_digest: resultDigest,
+          result,
+        };
+      } catch (error) {
+        const code = error instanceof ProjectionAdapterError ? error.code : "PHASE2_LOCAL_TASK_FAILED";
+        const status = error instanceof ProjectionAdapterError ? error.status : 503;
+        await this.audit.record({
+          eventId: newUlid("audit"), eventType: "execution.command.local_read_failed",
+          actorUserId: user.userId, workspaceId: input.workspace_id, requestId,
+          idempotencyKey: input.request_key, aggregateType: "execution_command_task",
+          aggregateId: task.taskId, aggregateVersion: 1, result: "FAILURE", reasonCode: code,
+          metadata: { classification: classification.state, source_request_sent: false, params_digest: digest(input.params) },
+        });
+        throw new GovernanceError(code, "The local projection task is unavailable.", status, {
+          task_id: task.taskId, source_request_sent: false,
+        });
+      }
+    }
     await this.audit.record({
       eventId: newUlid("audit"),
       eventType: "execution.command.run_rejected",
@@ -181,7 +241,7 @@ export class ExecutionOperationsService {
     }
     const task = this.validatedTask(taskId, input.params);
     if (task.mode === "READ" || task.mode === "BLOCKED" || task.catalogKey === null) {
-      const classification = taskClassification(task);
+      const classification = taskClassification(task, this.config.FEATURE_EXECUTION_LOCAL_R0_TASKS === "true");
       throw new GovernanceError(
         classification.reason_code,
         "This task has no governed mutation plan path.",
@@ -374,6 +434,34 @@ export class ExecutionOperationsService {
         400,
       );
     }
+    for (const [key, value] of Object.entries(params)) {
+      if (typeof value === "string" && /(?:bearer\s|password|secret|token|api[_-]?key)\s*[:=]/i.test(value)) {
+        throw new GovernanceError("COMMAND_SENSITIVE_VALUE_REJECTED", "Credential-like input is forbidden.", 400);
+      }
+      if (task.mode === "READ" && key === "limit") {
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 200) {
+          throw new GovernanceError("COMMAND_PARAM_INVALID", "Task limit must be an integer from 1 to 200.", 400);
+        }
+      } else if (task.mode === "READ" && value !== null && typeof value !== "boolean" &&
+          (typeof value !== "string" || !/^[A-Za-z0-9._:-]{1,128}$/.test(value))) {
+        throw new GovernanceError("COMMAND_PARAM_INVALID", "Task input is outside the typed identifier allowlist.", 400);
+      }
+    }
     return task;
   }
+}
+
+function localTaskEnvironment(taskId: string, params: Record<string, unknown>): ProjectionEnvironment {
+  if (taskId === "capital" || taskId === "performance") return "paper";
+  const raw = typeof params.mode === "string" ? params.mode.toLowerCase() : null;
+  if (raw === "paper" || raw === "sandbox" || raw === "live") {
+    if (taskId === "broker-read" && raw === "paper") {
+      throw new GovernanceError("PHASE2_BROKER_READ_PROFILE_INVALID", "Broker read accepts Sandbox or Live.", 400);
+    }
+    return raw;
+  }
+  if (raw !== null && raw !== "all") {
+    throw new GovernanceError("PHASE2_LOCAL_TASK_MODE_INVALID", "Task mode is outside the accepted profile set.", 400);
+  }
+  return taskId === "broker-read" ? "sandbox" : "paper";
 }

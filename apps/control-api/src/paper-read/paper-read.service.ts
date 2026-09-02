@@ -13,6 +13,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { PaperBlotterQuery } from "./contracts";
 import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 
 type ProductState = "ready" | "empty" | "stale" | "partial" | "unavailable";
 type CapabilityState = "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -24,6 +25,10 @@ interface RelationSpec {
   fields: readonly string[];
   limit: number;
   cursor?: string;
+  localQuery?: {
+    status?: string; venue?: string; symbol?: string; side?: "BUY" | "SELL";
+    sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
+  };
 }
 
 interface RelationResult {
@@ -141,6 +146,9 @@ export class PaperReadService {
     @Optional()
     @Inject(ExecutionAnalyticsProxy)
     private readonly analytics?: ExecutionAnalyticsProxy,
+    @Optional()
+    @Inject(LocalQueryAnalyticsService)
+    private readonly localAnalytics?: LocalQueryAnalyticsService,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -173,11 +181,22 @@ export class PaperReadService {
     }
     const scoped = Object.fromEntries(relations.map((item) => [
       item.spec.key,
-      item.page?.items.filter((row) => item.spec.key === "deployments" || matchesDeployment(row, deploymentId, deployment)) ?? [],
+      item.page?.items.filter((row) => item.spec.key === "deployments"
+        ? row.deployment_id === deploymentId
+        : matchesDeployment(row, deploymentId, deployment)) ?? [],
     ]));
+    const observationGate = paperObservationGate(scoped, deployment);
     let queryAnalytics: unknown = null;
     let analyticsReason = "N25_DERIVED_ANALYTICS_NOT_ACTIVE";
-    if (this.analytics) {
+    if (this.localAnalytics?.enabled()) {
+      try {
+        queryAnalytics = await this.localAnalytics.query(principal, "deployment", deploymentId);
+      } catch (error) {
+        analyticsReason = error instanceof AnalyticsProxyError
+          ? error.code
+          : "ANALYTICS_LOCAL_PROJECTION_UNAVAILABLE";
+      }
+    } else if (this.analytics) {
       try {
         queryAnalytics = await this.analytics.managerQueryAnalytics(
           principal,
@@ -205,21 +224,39 @@ export class PaperReadService {
       ...(!deployment && !deploymentPageComplete
         ? [capability("deployment.lookup", "PARTIAL", ["strategy_deployments"], "N22_DEPLOYMENT_OUTSIDE_BOUNDED_SOURCE_PAGE")]
         : []),
+      capability(
+        "workbench.observation-gate",
+        deployment ? "PARTIAL" : "UNAVAILABLE",
+        ["observation_gate"],
+        deployment ? "PHASE2_OBSERVATION_POLICY_NOT_PUBLISHED" : "N22_DEPLOYMENT_NOT_AVAILABLE",
+      ),
     ];
     return this.envelope(
       vnm ? "execution.paper-workbench-vnm.v1" : "execution.paper-workbench.v1",
       principal,
       relations,
-      { deployment: deployment ?? null, query_analytics: queryAnalytics, ...scoped },
+      { deployment: deployment ?? null, observation_gate: observationGate, query_analytics: queryAnalytics, ...scoped },
       branches,
       { resource: { kind: "DEPLOYMENT", id: deploymentId } },
     );
   }
 
   async blotter(principal: PaperPrincipal, query: PaperBlotterQuery) {
-    const sourceCursor = query.cursor ? this.decodeCursor(query.cursor, principal.workspaceId, query.limit) : undefined;
+    const opaqueCursor = query.before ?? query.after ?? query.cursor;
+    const direction = query.before ? "before" as const : "after" as const;
+    const sourceCursor = opaqueCursor
+      ? this.decodeCursor(opaqueCursor, principal.workspaceId, query, direction) : undefined;
     const specs: readonly RelationSpec[] = [
-      spec("orders", "manager.orders", "orders", ORDER_FIELDS, query.limit, sourceCursor),
+      {
+        ...spec("orders", "manager.orders", "orders", ORDER_FIELDS, query.limit, sourceCursor),
+        localQuery: {
+          status: query.status,
+          venue: query.venue,
+          symbol: query.symbol,
+          side: query.side,
+          sort: query.sort ?? "submitted_at_desc",
+        },
+      },
       spec("fills", "manager.fills", "fills", FILL_FIELDS, 100),
       spec("conditional_groups", "manager.conditional-orders", "conditional_order_groups", GROUP_FIELDS, 100),
       spec("conditional_legs", "manager.conditional-orders", "conditional_order_group_legs", LEG_FIELDS, 200),
@@ -230,20 +267,41 @@ export class PaperReadService {
     const relations = await this.fetch(principal, "EXECUTION_FULL_BLOTTER_SCREEN", specs);
     const orders = relations.find((item) => item.spec.key === "orders");
     const nextCursor = orders?.page?.nextCursor
-      ? this.encodeCursor(orders.page.nextCursor, principal.workspaceId, query.limit)
+      ? this.encodeCursor(orders.page.nextCursor, principal.workspaceId, query, "after")
       : null;
+    const previousCursor = orders?.page?.previousCursor
+      ? this.encodeCursor(orders.page.previousCursor, principal.workspaceId, query, "before")
+      : null;
+    const exactQueryAvailable = orders?.page?.exactTotal !== null && orders?.page?.exactTotal !== undefined;
     return this.envelope(
       "execution.full-blotter.v1",
       principal,
       relations,
       {
         ...this.data(relations),
-        page: { limit: query.limit, next_cursor: nextCursor, previous_cursor: null },
-        exact_total: null,
-        aggregates: null,
+        page: { limit: query.limit, next_cursor: nextCursor, previous_cursor: previousCursor },
+        query: {
+          filters: {
+            status: query.status ?? null,
+            venue: query.venue ?? null,
+            symbol: query.symbol ?? null,
+            side: query.side ?? null,
+          },
+          sort: query.sort ?? "submitted_at_desc",
+          filter_allowlist: ["status", "venue", "symbol", "side"],
+          sort_allowlist: ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"],
+          count_scope: "COMMITTED_HOT_PROJECTION",
+        },
+        exact_total: orders?.page?.exactTotal ?? null,
+        aggregates: orders?.page?.aggregates ?? null,
       },
       [
-        capability("blotter.exact-query", "UNAVAILABLE", ["exact_total", "filters", "sort", "aggregates"], "N25_EXACT_QUERY_NOT_ACTIVE"),
+        capability(
+          "blotter.exact-query",
+          exactQueryAvailable ? "AVAILABLE" : "UNAVAILABLE",
+          ["exact_total", "filters", "sort", "aggregates"],
+          exactQueryAvailable ? null : "PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE",
+        ),
       ],
     );
   }
@@ -261,7 +319,11 @@ export class PaperReadService {
         screenId,
         item.sourceId,
         item.relation,
-        { limit: item.limit, ...(item.cursor ? { cursor: item.cursor } : {}) },
+        {
+          limit: item.limit,
+          ...(item.cursor ? { cursor: item.cursor } : {}),
+          ...(item.localQuery ?? {}),
+        },
       );
       const page = managerPage(response, item.relation, item.fields);
       this.assertPaperRows(page.items);
@@ -351,27 +413,58 @@ export class PaperReadService {
     }
   }
 
-  private encodeCursor(sourceCursor: string, workspaceId: string, limit: number): string {
+  private encodeCursor(
+    sourceCursor: string,
+    workspaceId: string,
+    query: PaperBlotterQuery,
+    direction: "after" | "before",
+  ): string {
     return this.cursors.encode({
       resource_id: "execution.full-blotter.paper.v1",
       workspace_id: workspaceId,
-      direction: "after",
-      query_fingerprint: blotterFingerprint(limit),
+      direction,
+      query_fingerprint: blotterFingerprint(query),
       boundary: [sourceCursor],
     });
   }
 
-  private decodeCursor(cursor: string, workspaceId: string, limit: number): string {
+  private decodeCursor(
+    cursor: string,
+    workspaceId: string,
+    query: PaperBlotterQuery,
+    direction: "after" | "before",
+  ): string {
     const boundary = this.cursors.decode(cursor, {
       resourceId: "execution.full-blotter.paper.v1",
       workspaceId,
-      direction: "after",
-      queryFingerprint: blotterFingerprint(limit),
+      direction,
+      queryFingerprint: blotterFingerprint(query),
       boundarySize: 1,
     });
     if (typeof boundary[0] !== "string") throw new QueryContractError("INVALID_CURSOR", "Invalid query cursor.");
     return boundary[0];
   }
+}
+
+function paperObservationGate(
+  scoped: Record<string, Array<Record<string, unknown>>>,
+  deployment?: Record<string, unknown>,
+) {
+  if (!deployment) return null;
+  const timestamps = [deployment.created_at, deployment.updated_at,
+    ...(scoped.sessions ?? []).flatMap((row) => [row.started_at, row.updated_at, row.completed_at]),
+    ...(scoped.fills ?? []).map((row) => row.trade_time)]
+    .filter((value): value is string => typeof value === "string" && !Number.isNaN(Date.parse(value)));
+  const first = timestamps.map(Date.parse).sort((left, right) => left - right)[0] ?? null;
+  const last = timestamps.map(Date.parse).sort((left, right) => right - left)[0] ?? null;
+  return {
+    state: "PARTIAL",
+    observed_days: first === null || last === null ? null : Math.max(0, Math.floor((last - first) / 86_400_000)),
+    trade_count: (scoped.fills ?? []).length,
+    session_count: (scoped.sessions ?? []).length,
+    policy: null,
+    reason_code: "PHASE2_OBSERVATION_POLICY_NOT_PUBLISHED",
+  };
 }
 
 export class PaperReadError extends Error {
@@ -437,6 +530,14 @@ function matchesDeployment(
   return comparable.length >= 2 && comparable.every((name) => row[name] === deployment[name]);
 }
 
-function blotterFingerprint(limit: number): string {
-  return createHash("sha256").update(`execution.full-blotter.paper.v1\0${limit}`).digest("base64url");
+function blotterFingerprint(query: PaperBlotterQuery): string {
+  return createHash("sha256").update(JSON.stringify({
+    resource: "execution.full-blotter.paper.v1",
+    limit: query.limit,
+    status: query.status ?? null,
+    venue: query.venue ?? null,
+    symbol: query.symbol ?? null,
+    side: query.side ?? null,
+    sort: query.sort,
+  })).digest("base64url");
 }

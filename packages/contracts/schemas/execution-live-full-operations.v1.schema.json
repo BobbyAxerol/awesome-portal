@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json",
-  "title": "Execution Live Full Operations v1 source-dark",
+  "title": "Execution Live Full Operations v1",
   "$ref": "#/$defs/LiveFullOperations",
   "$defs": {
     "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
@@ -19,25 +19,47 @@
       "properties": {
         "panel_id": { "type": "string", "minLength": 1, "maxLength": 128 },
         "source_authority": { "enum": ["EXECUTION", "BROKER", "DERIVED"] },
-        "panel_state": { "enum": ["unavailable", "suppressed"] },
-        "freshness_state": { "const": "UNKNOWN" },
-        "delivery_profile": { "const": "fixture" },
-        "source_verification_state": { "const": "UNAVAILABLE" },
-        "as_of": { "type": "null" }, "read_at": { "$ref": "#/$defs/Timestamp" },
-        "age_seconds": { "type": "null" }, "lag_ms": { "type": "null" },
-        "source_cursor": { "type": "null" }, "projection_epoch": { "type": "null" },
-        "projection_sequence": { "type": "null" }, "capability_snapshot_id": { "type": "null" },
-        "data": { "type": "null" },
-        "warnings": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/$defs/Warning" } }
-      }
+        "panel_state": { "enum": ["ready", "empty", "partial", "stale", "unavailable", "suppressed"] },
+        "freshness_state": { "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] },
+        "delivery_profile": { "enum": ["fixture", "LIVE_BINANCE_USDM"] },
+        "source_verification_state": { "enum": ["VERIFIED", "PARTIAL", "UNAVAILABLE"] },
+        "as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] }, "read_at": { "$ref": "#/$defs/Timestamp" },
+        "age_seconds": { "type": ["integer", "null"], "minimum": 0 }, "lag_ms": { "type": ["integer", "null"], "minimum": 0 },
+        "source_cursor": { "type": ["string", "null"], "maxLength": 4096 }, "projection_epoch": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+        "projection_sequence": { "type": ["integer", "null"], "minimum": 0 }, "capability_snapshot_id": { "oneOf": [{ "$ref": "#/$defs/Hash" }, { "type": "null" }] },
+        "data": { "type": ["object", "null"], "maxProperties": 16 },
+        "warnings": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/Warning" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "panel_state": { "enum": ["unavailable", "suppressed"] } } },
+          "then": {
+            "properties": {
+              "source_verification_state": { "const": "UNAVAILABLE" },
+              "data": { "type": "null" },
+              "warnings": { "type": "array", "minItems": 1 }
+            }
+          },
+          "else": {
+            "properties": {
+              "source_verification_state": { "enum": ["VERIFIED", "PARTIAL"] },
+              "data": { "type": "object" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "panel_state": { "enum": ["ready", "partial", "stale"] } } },
+          "then": { "properties": { "as_of": { "$ref": "#/$defs/Timestamp" } } }
+        }
+      ]
     },
     "UnavailableCollection": {
       "type": "object", "additionalProperties": false,
       "required": ["envelope", "exact_total", "returned_count", "next_cursor", "previous_cursor", "rows"],
       "properties": {
-        "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_total": { "type": "null" },
-        "returned_count": { "const": 0 }, "next_cursor": { "type": "null" },
-        "previous_cursor": { "type": "null" }, "rows": { "type": "array", "maxItems": 0 }
+        "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_total": { "type": ["integer", "null"], "minimum": 0 },
+        "returned_count": { "type": "integer", "minimum": 0, "maximum": 200 }, "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "previous_cursor": { "type": ["string", "null"], "maxLength": 4096 }, "rows": { "type": "array", "maxItems": 200, "items": { "type": "object", "maxProperties": 80 } }
       }
     },
     "ActionPolicy": {
@@ -59,7 +81,7 @@
         "source_integration_state": { "enum": ["UNAVAILABLE", "SOURCE_BACKED"] },
         "source_side_effect_requested": { "const": false }, "runtime_activation_requested": { "const": false },
         "promotion_execution_requested": { "const": false }, "production_command_active": { "const": false },
-        "realtime_active": { "const": false }, "read_at": { "$ref": "#/$defs/Timestamp" },
+        "realtime_active": { "type": "boolean" }, "read_at": { "$ref": "#/$defs/Timestamp" },
         "actor": {
           "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"],
           "properties": { "user_id": { "$ref": "#/$defs/Identifier" }, "username": { "type": "string", "minLength": 1, "maxLength": 191 }, "roles": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "enum": ["ADMIN", "USER"] } } }
@@ -79,7 +101,7 @@
         },
         "lifecycle": {
           "type": "object", "additionalProperties": false, "required": ["declared_stage", "runtime_state", "activated_at", "blocker_codes"],
-          "properties": { "declared_stage": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 8, "maxItems": 16, "uniqueItems": true, "items": { "type": "string" } } }
+          "properties": { "declared_stage": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "type": "string" } } }
         },
         "predecessor_canary_envelope": {
           "type": "object", "additionalProperties": false,
@@ -93,7 +115,7 @@
         },
         "kpis": {
           "type": "array", "minItems": 5, "maxItems": 5,
-          "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "value", "unit", "envelope"], "properties": { "key": { "enum": ["capital", "gross_notional", "daily_pnl", "open_orders", "broker_equity"] }, "label": { "type": "string", "minLength": 1, "maxLength": 96 }, "value": { "type": "null" }, "unit": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" }, "envelope": { "$ref": "#/$defs/SourceEnvelope" } } }
+          "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "value", "unit", "envelope"], "properties": { "key": { "enum": ["capital", "gross_notional", "daily_pnl", "open_orders", "broker_equity"] }, "label": { "type": "string", "minLength": 1, "maxLength": 96 }, "value": { "type": ["string", "null"], "maxLength": 57 }, "unit": { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" }, "envelope": { "$ref": "#/$defs/SourceEnvelope" } } }
         },
         "source_panels": {
           "type": "object", "additionalProperties": false, "required": ["internal", "broker", "difference"],
@@ -101,22 +123,29 @@
         },
         "broker_consistency": {
           "type": "object", "additionalProperties": false, "required": ["state", "mismatch_behavior", "broker_values_visible", "finding_href", "dry_run_reconcile_href", "blocker_codes"],
-          "properties": { "state": { "enum": ["UNAVAILABLE", "MISMATCH"] }, "mismatch_behavior": { "const": "SUPPRESS_ALL_BROKER_VALUES" }, "broker_values_visible": { "const": false }, "finding_href": { "type": "null" }, "dry_run_reconcile_href": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } }
+          "properties": { "state": { "enum": ["UNAVAILABLE", "MISMATCH", "IN_SYNC"] }, "mismatch_behavior": { "const": "SUPPRESS_ALL_BROKER_VALUES" }, "broker_values_visible": { "type": "boolean" }, "finding_href": { "type": ["string", "null"], "maxLength": 512 }, "dry_run_reconcile_href": { "type": ["string", "null"], "maxLength": 512 }, "blocker_codes": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } }
         },
         "projection_continuity": {
           "type": "object", "additionalProperties": false, "required": ["state", "epoch", "cursor", "sequence", "gap_detected", "affected_authorities", "blocker_codes"],
-          "properties": { "state": { "const": "UNAVAILABLE" }, "epoch": { "type": "null" }, "cursor": { "type": "null" }, "sequence": { "type": "null" }, "gap_detected": { "type": "null" }, "affected_authorities": { "type": "array", "minItems": 3, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["EXECUTION", "BROKER", "DERIVED"] } }, "blocker_codes": { "type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } }
+          "properties": { "state": { "enum": ["UNAVAILABLE", "CONTIGUOUS", "GAP"] }, "epoch": { "type": ["string", "null"], "maxLength": 191 }, "cursor": { "type": ["string", "null"], "maxLength": 4096 }, "sequence": { "type": ["integer", "null"], "minimum": 0 }, "gap_detected": { "type": ["boolean", "null"] }, "affected_authorities": { "type": "array", "maxItems": 3, "uniqueItems": true, "items": { "enum": ["EXECUTION", "BROKER", "DERIVED"] } }, "blocker_codes": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } }
         },
         "positions": { "$ref": "#/$defs/UnavailableCollection" }, "orders": { "$ref": "#/$defs/UnavailableCollection" }, "incidents": { "$ref": "#/$defs/UnavailableCollection" },
-        "open_order_footer": { "type": "object", "additionalProperties": false, "required": ["envelope", "exact_open_order_count"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_open_order_count": { "type": "null" } } },
+        "open_order_footer": { "type": "object", "additionalProperties": false, "required": ["envelope", "exact_open_order_count"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_open_order_count": { "type": ["integer", "null"], "minimum": 0 } } },
         "series": { "type": "object", "additionalProperties": false, "required": ["envelope", "resolution", "points"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "resolution": { "type": "null" }, "points": { "type": "array", "maxItems": 0 } } },
         "rollback_readiness": { "type": "object", "additionalProperties": false, "required": ["envelope", "ready", "evidence_hash", "blocker_codes"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "ready": { "const": false }, "evidence_hash": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } } },
-        "realtime": { "type": "object", "additionalProperties": false, "required": ["active", "stream_url", "subscription_id", "blocker_codes"], "properties": { "active": { "const": false }, "stream_url": { "type": "null" }, "subscription_id": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } } },
+        "realtime": { "type": "object", "additionalProperties": false, "required": ["active", "stream_url", "subscription_id", "blocker_codes"], "properties": { "active": { "type": "boolean" }, "stream_url": { "type": ["string", "null"], "maxLength": 512 }, "subscription_id": { "type": ["string", "null"], "maxLength": 191 }, "blocker_codes": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } } },
         "command_policy": {
           "type": "object", "additionalProperties": false, "required": ["production_command_active", "guard_semantics", "protective", "risk_increasing"],
           "properties": { "production_command_active": { "const": false }, "guard_semantics": { "const": "BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4" }, "protective": { "$ref": "#/$defs/ActionPolicy" }, "risk_increasing": { "$ref": "#/$defs/ActionPolicy" } }
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "realtime_active": { "const": true } } },
+          "then": { "properties": { "realtime": { "type": "object", "properties": { "active": { "const": true } } } } },
+          "else": { "properties": { "realtime": { "type": "object", "properties": { "active": { "const": false } } } } }
+        }
+      ]
     }
   }
 }

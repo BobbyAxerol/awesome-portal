@@ -96,6 +96,7 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_SHADOW_QUERY: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_LOCAL_R0_TASKS: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_RELAY: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
@@ -297,6 +298,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.FEATURE_EXECUTION_COMMAND_RELAY === "true") {
     throw new Error("FEATURE_EXECUTION_COMMAND_RELAY is not commissioned in EX-BE-05b/F0");
+  }
+  if (config.FEATURE_EXECUTION_LOCAL_R0_TASKS === "true") {
+    const missing = [
+      ["EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID", config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID],
+      ["EXECUTION_EDGE_PAPER_PROFILE_ID", config.EXECUTION_EDGE_PAPER_PROFILE_ID],
+      ["EXECUTION_EDGE_SANDBOX_PROFILE_ID", config.EXECUTION_EDGE_SANDBOX_PROFILE_ID],
+      ["EXECUTION_EDGE_LIVE_PROFILE_ID", config.EXECUTION_EDGE_LIVE_PROFILE_ID],
+    ].filter(([, value]) => value === undefined).map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`local R0 tasks require: ${missing.join(", ")}`);
+    }
   }
   const currentSourceProfiles = [
     {

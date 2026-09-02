@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { ClientHttp2Session, connect } from "node:http2";
+import { isIP } from "node:net";
 import { OnApplicationShutdown } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { AuthSession, PortalUser } from "../domain";
@@ -111,6 +112,22 @@ const N22_PAPER_SCREEN_BINDINGS = Object.freeze({
       "manager.command-journal": Object.freeze(["command_journal"]),
     }),
   }),
+  EXECUTION_ACCOUNT_BROKER_360_SCREEN: Object.freeze({
+    capabilityIds: Object.freeze([
+      "bindings.snapshot", "bindings.exposure-verdict", "accounts.current",
+      "reconciliation.current", "deployments.positions",
+    ]),
+    relations: Object.freeze({
+      "manager.accounts": Object.freeze([
+        "accounts", "account_balances", "margin_balances",
+        "account_sync_effective", "broker_account_sync_effective",
+      ]),
+      "manager.venue-accounts": Object.freeze(["venue_accounts"]),
+      "manager.deployments": Object.freeze(["strategy_deployments"]),
+      "manager.positions": Object.freeze(["positions_v2"]),
+      "manager.reconciliation": Object.freeze(["reconciliation_findings"]),
+    }),
+  }),
 } as const);
 
 type N22PaperScreenId = keyof typeof N22_PAPER_SCREEN_BINDINGS;
@@ -143,6 +160,22 @@ const N23_PROFILE_SCREEN_BINDINGS = Object.freeze({
         ]),
       }),
     }),
+    EXECUTION_ACCOUNT_BROKER_360_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze([
+        "bindings.snapshot", "bindings.exposure-verdict", "accounts.current",
+        "reconciliation.current", "deployments.positions",
+      ]),
+      relations: Object.freeze({
+        "manager.accounts": Object.freeze([
+          "accounts", "account_balances", "margin_balances",
+          "account_sync_effective", "broker_account_sync_effective",
+        ]),
+        "manager.venue-accounts": Object.freeze(["venue_accounts"]),
+        "manager.deployments": Object.freeze(["strategy_deployments"]),
+        "manager.positions": Object.freeze(["positions_v2"]),
+        "manager.reconciliation": Object.freeze(["reconciliation_findings"]),
+      }),
+    }),
   }),
   live: Object.freeze({
     LIVE_OPERATIONS_SCREEN: Object.freeze({
@@ -162,11 +195,14 @@ const N23_PROFILE_SCREEN_BINDINGS = Object.freeze({
     EXECUTION_CANARY_CONTROL_ROOM_SCREEN: Object.freeze({
       capabilityIds: Object.freeze([
         "portal.activation", "portal.governance", "deployments.positions",
-        "accounts.current", "ops.alerts",
+        "sessions.current", "orders.list", "orders.fills", "accounts.current", "ops.alerts",
       ]),
       relations: Object.freeze({
         "manager.deployments": Object.freeze(["strategy_deployments"]),
         "manager.positions": Object.freeze(["positions_v2"]),
+        "manager.sessions": Object.freeze(["execution_sessions"]),
+        "manager.orders": Object.freeze(["orders"]),
+        "manager.fills": Object.freeze(["fills"]),
         "manager.accounts": Object.freeze([
           "accounts", "account_balances", "margin_balances",
           "account_sync_effective", "broker_account_sync_effective",
@@ -189,6 +225,22 @@ const N23_PROFILE_SCREEN_BINDINGS = Object.freeze({
           "accounts", "account_balances", "margin_balances",
           "account_sync_effective", "broker_account_sync_effective",
         ]),
+        "manager.reconciliation": Object.freeze(["reconciliation_findings"]),
+      }),
+    }),
+    EXECUTION_ACCOUNT_BROKER_360_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze([
+        "bindings.snapshot", "bindings.exposure-verdict", "accounts.current",
+        "reconciliation.current", "deployments.positions",
+      ]),
+      relations: Object.freeze({
+        "manager.accounts": Object.freeze([
+          "accounts", "account_balances", "margin_balances",
+          "account_sync_effective", "broker_account_sync_effective",
+        ]),
+        "manager.venue-accounts": Object.freeze(["venue_accounts"]),
+        "manager.deployments": Object.freeze(["strategy_deployments"]),
+        "manager.positions": Object.freeze(["positions_v2"]),
         "manager.reconciliation": Object.freeze(["reconciliation_findings"]),
       }),
     }),
@@ -800,7 +852,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         key: this.tls!.key,
         rejectUnauthorized: true,
         ALPNProtocols: ["h2"],
-        servername: profile.origin.hostname,
+        servername: isIP(profile.origin.hostname) === 0 ? profile.origin.hostname : undefined,
       });
       let settled = false;
       const timeout = setTimeout(() => {

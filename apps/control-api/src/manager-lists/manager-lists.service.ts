@@ -65,6 +65,10 @@ const VENUE_ACCOUNT_FIELDS = [
 const BROKER_SYNC_FIELDS = [
   "sync_id", "external_account_ref", "mode", "venue", "status", "synced_at", "created_at",
 ] as const;
+const PERFORMANCE_FIELDS = [
+  "id", "ts", "deployment_id", "strategy_id", "account_id", "mode", "venue",
+  "currency", "net_pnl", "equity", "created_at",
+] as const;
 
 @Injectable()
 export class ManagerListsService {
@@ -166,6 +170,7 @@ export class ManagerListsService {
     const reads: Array<{
       strategies: ManagerPage; deployments: ManagerPage; accounts: ManagerPage; balances: ManagerPage;
       portfolios: ManagerPage; allocations: ManagerPage; positions: ManagerPage; findings: ManagerPage;
+      performance: ManagerPage;
     }> = [];
     // The shared N21 source authority is 15 r/s across every profile. Eight
     // relations may run together inside one profile, but starting all three
@@ -184,6 +189,12 @@ export class ManagerListsService {
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.positions", "positions_v2", POSITION_FIELDS, context),
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.reconciliation", "reconciliation_findings", FINDING_FIELDS, context),
       ]);
+      const performance = sourceEnvironment === "paper"
+        ? await this.drain(
+          principal, sourceEnvironment, "PAPER_TRADING_SCREEN", "manager.performance",
+          "performance_snapshots", PERFORMANCE_FIELDS, context,
+        )
+        : emptyPage();
       const isolated = enforceProfileLineage([
         lineage("strategies", strategies), lineage("deployments", deployments),
         lineage("accounts", accounts), lineage("account_balances", balances),
@@ -195,7 +206,7 @@ export class ManagerListsService {
         strategies: page("strategies"), deployments: page("deployments"),
         accounts: page("accounts"), balances: page("account_balances"),
         portfolios: page("portfolios"), allocations: page("portfolio_allocations"),
-        positions: page("positions"), findings: page("reconciliation"),
+        positions: page("positions"), findings: page("reconciliation"), performance,
       });
     }
     const strategies = combinePages(reads.map((read) => read.strategies), "strategy_id", "alpha_id");
@@ -206,14 +217,17 @@ export class ManagerListsService {
     const allocations = combinePages(reads.map((read) => read.allocations), "allocation_id");
     const positions = combinePages(reads.map((read) => read.positions), "position_id");
     const findings = combinePages(reads.map((read) => read.findings), "finding_id");
+    const performance = combinePages(reads.map((read) => read.performance), "id", "ts", "strategy_id");
     const rows = fleetRows({
       strategies: strategies.items, deployments: deployments.items, accounts: accounts.items,
       balances: balances.items, portfolios: portfolios.items, allocations: allocations.items,
-      positions: positions.items, findings: findings.items, environment,
+      positions: positions.items, findings: findings.items, performance: performance.items,
+      performanceComplete: performance.completeness === "COMPLETE" && performance.nextCursor === null,
+      environment,
     });
     const pages = reads.flatMap((read) => [
       read.strategies, read.deployments, read.accounts, read.balances,
-      read.portfolios, read.allocations, read.positions, read.findings,
+      read.portfolios, read.allocations, read.positions, read.findings, read.performance,
     ]);
     const sourceAsOf = latestDate(...pages.map((page) => page.asOf));
     await this.repository.replaceAlphaFleet({
@@ -330,6 +344,8 @@ function fleetRows(input: {
   allocations: readonly Record<string, unknown>[];
   positions: readonly Record<string, unknown>[];
   findings: readonly Record<string, unknown>[];
+  performance: readonly Record<string, unknown>[];
+  performanceComplete: boolean;
   environment: AlphaFleetEnvironment;
 }): AlphaProjectionRecord[] {
   const strategyById = keyed(input.strategies, "strategy_id", "alpha_id");
@@ -339,6 +355,7 @@ function fleetRows(input: {
   const balancesByAccount = groupedBy(input.balances, "account_id");
   const positionsByStrategy = groupedBy(input.positions, "strategy_id");
   const findingsByStrategy = groupedBy(input.findings, "strategy_id");
+  const performanceByStrategy = groupedBy(input.performance, "strategy_id");
   const allocationsByDeployment = groupedBy(input.allocations, "deployment_id");
   const allocationsByStrategy = groupedBy(input.allocations, "strategy_id");
   const ids = new Set<string>([
@@ -420,6 +437,8 @@ function fleetRows(input: {
     const accountBalanceRows = accountIds.flatMap((accountId) => balancesByAccount.get(accountId) ?? []);
     const positionRows = positionsByStrategy.get(strategyId) ?? [];
     const allFindings = unresolvedFindings(findingsByStrategy.get(strategyId) ?? []);
+    const performanceRows = performanceByStrategy.get(strategyId) ?? [];
+    const rollup30d = completeThirtyDayWindow(performanceRows, input.performanceComplete);
     const attentionReasons = [
       ...(bool(strategy, "active") === false ? ["STRATEGY_INACTIVE"] : []),
       ...deploymentRecords.filter((row) => row.health !== "READY").map((row) => `DEPLOYMENT_${row.health}`),
@@ -449,8 +468,16 @@ function fleetRows(input: {
       metricsAvailability: {
         account_balance: { state: balanceCount > 0 ? "AVAILABLE" : "EMPTY", reason_code: balanceCount > 0 ? null : "NO_ACCOUNT_BALANCE_ROWS" },
         current_position_pnl: { state: positionCount > 0 ? "AVAILABLE" : "EMPTY", reason_code: positionCount > 0 ? null : "NO_CURRENT_POSITION_FACTS" },
-        equity_series_30d: { state: "UNAVAILABLE", reason_code: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" },
-        max_drawdown_30d: { state: "UNAVAILABLE", reason_code: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" },
+        equity_series_30d: {
+          state: rollup30d ? "AVAILABLE" : performanceRows.length > 0 ? "PARTIAL" : "UNAVAILABLE",
+          reason_code: rollup30d ? null : performanceRows.length > 0
+            ? "SOURCE_30D_WINDOW_INCOMPLETE" : "SOURCE_LATEST_WINDOW_NOT_PUBLISHED",
+        },
+        max_drawdown_30d: {
+          state: rollup30d ? "AVAILABLE" : performanceRows.length > 0 ? "PARTIAL" : "UNAVAILABLE",
+          reason_code: rollup30d ? null : performanceRows.length > 0
+            ? "SOURCE_30D_WINDOW_INCOMPLETE" : "SOURCE_LATEST_WINDOW_NOT_PUBLISHED",
+        },
       },
       updatedAt: latestRecordDate([
         strategy, ...sourceDeployments, ...accountRows, ...accountBalanceRows,
@@ -458,6 +485,17 @@ function fleetRows(input: {
       ]),
     };
   }).sort((left, right) => left.alphaId.localeCompare(right.alphaId));
+}
+
+function completeThirtyDayWindow(rows: readonly Record<string, unknown>[], sourceComplete: boolean): boolean {
+  if (!sourceComplete || rows.length < 2) return false;
+  const values = rows.map((row) => date(row, "ts", "created_at").valueOf()).filter((value) => value > 0);
+  if (values.length < 2) return false;
+  return Math.max(...values) - Math.min(...values) >= 30 * 86_400_000;
+}
+
+function emptyPage(): ManagerPage {
+  return { items: [], nextCursor: null, asOf: null, freshness: "FRESH", completeness: "COMPLETE" };
 }
 
 function fleetSummary(rows: readonly AlphaProjectionRecord[]): Record<string, unknown> {

@@ -580,7 +580,9 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
+  "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md" \
+  "${ROOT_DIR}/upgrade/backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md" \
   "${ROOT_DIR}/deploy/manifests/execution-manager-product-release-profile.v1.json" \
   "${ROOT_DIR}/deploy/execution-manager-v2/product-dashboard.v1.json" \
@@ -1408,7 +1410,9 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs \
   scripts/execution-n29-product-acceptance.py \
   scripts/execution-n29-product-acceptance-test.sh \
+  scripts/execution-phase2-screen-command-test.sh \
   upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md \
+  upgrade/backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N29_PRODUCT_ACCEPTANCE_HANDOFF.md \
   deploy/manifests/execution-manager-product-release-profile.v1.json \
   deploy/execution-manager-v2/product-dashboard.v1.json \
@@ -1600,6 +1604,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
   "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
+  "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
   "${ROOT_DIR}/apps/portal/scripts/smoke_quantbt_pypi.sh" \
@@ -1710,5 +1715,6 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n26-n27-test.sh"
 "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh"
 "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh"
+"${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

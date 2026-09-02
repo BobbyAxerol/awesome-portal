@@ -38,8 +38,8 @@
         "type": "object", "additionalProperties": false, "required": ["capability_id", "state", "reason_code"],
         "properties": {
           "capability_id": { "type": "string", "minLength": 1, "maxLength": 128 },
-          "state": { "const": "UNAVAILABLE" },
-          "reason_code": { "type": "string", "minLength": 1, "maxLength": 128 }
+          "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
+          "reason_code": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 }
         }
       }
     },

@@ -31,11 +31,9 @@
     },
     "screen_contracts": {
       "total": 23,
-      "available_backend_api": 22,
-      "typed_unavailable": 1,
-      "typed_unavailable_screen_ids": [
-        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
-      ]
+      "available_backend_api": 23,
+      "typed_unavailable": 0,
+      "typed_unavailable_screen_ids": []
     },
     "n28": {
       "current_source_adapters": 13,
@@ -53,13 +51,20 @@
       "registry_revision": 6,
       "canonical_live_review_fixture": true,
       "frontend_consumer_parity": true
+    },
+    "phase_2_amendment": {
+      "status": "COMPLETE_SCREEN_BFF_IMPLEMENTED",
+      "account_broker_360_current_facts": true,
+      "full_exposure_gap_behavior": "BRANCH_LOCAL_TYPED_UNAVAILABLE",
+      "local_r0_task_count": 4,
+      "mutation_source_dispatch_count": 0
     }
   },
   "evidence": {
     "n18_census_sha256": "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3",
     "n28_registry_sha256": "sha256:93b6e3f4cae8709b4e7ed0c2f34d798076802a3026c155acc90e0f03437010b8",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
-    "screen_bff_catalogue_sha256": "sha256:e344f13c3737257fed40f55f5b1108b027f0e82cab9c0cec1f090963eb64496d",
+    "screen_bff_catalogue_sha256": "sha256:637d526bbc3f53159ff31481f0771f3a964cd2f650da036bde07436cb080880e",
     "frontend_product_route_sha256": "sha256:e72c477e73ade4e06f10113193c9e825afe846e63219980f843d067eaaa5c571",
     "frontend_product_boundary_test_sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
@@ -77,12 +82,12 @@
     "br72_openapi_sha256": "sha256:3a276c5fae45e61daeccfc0dfa315cceabed2e6b7e9372f67af3793a6948139b",
     "br72_migration_sha256": "sha256:387de443953be329d38b84c9244677bd8b696b0a5e71caf40aaab688b31d9ff5",
     "br72_fleet_v2_migration_sha256": "sha256:8ee4b42bf85fffdad6f6becce4432a71fe04c555a4f47322044c1c16d09f4cbd",
-    "br72_service_sha256": "sha256:884faf7d0a7db2579a85773d97fd65bd9ed0d3b29a3139c91988381149fe1337",
+    "br72_service_sha256": "sha256:e054a3ec109db32976b2101aebfc90e4c0fd485a73ae8967a3110385ba5811c4",
     "br72_repository_sha256": "sha256:03e42acb0730125abc93d65cbf2b665a7c107fa819f1f5049c38e1ced2ed4f03",
     "br72_controller_sha256": "sha256:0698e0cf20cc3a50d45e0d5c29d66b3df86e80ad8bf63a7b6292b3af772001ad",
     "br72_test_sha256": "sha256:0ed3b64d6dd9cb2cc045b893e03c8b74ff9eee81d670a3dab3263b8b7238413c",
-    "br72_source_boundary_sha256": "sha256:9ff6ed709cd0ae7a08bb896ab49fdfa316876f2e5d3b41e4bdb6a2d1e1f43557",
-    "br72_source_boundary_test_sha256": "sha256:cc9149868219647514e88a86d109fe6fcda9b053f51b90395ac1e96ce45ac4bc",
+    "br72_source_boundary_sha256": "sha256:93383afa160bf0a0560702bb0283fb98c8df6a98069efb75188b6d2acfe86b2f",
+    "br72_source_boundary_test_sha256": "sha256:7bc55a6c181d1ce25b4f29718c98f88babab218459c870dcb3fab3f904b03aa3",
     "br72_live_review_fixture_sha256": "sha256:9fc9fddd082533e02d1b856492d0f80513e19726598bcb7a3978ab6ad68ae15e",
     "br72_registry_source_sha256": "sha256:8fdc342c79a8ad6a48830b860fbcc4206866c7afbe195d14d9e3d5fbe561df57",
     "br72_registry_public_sha256": "sha256:585462ec5856b0d82e7d6930d3c441c1d595f1aef3a53afcadc8df0e412f2a7e",

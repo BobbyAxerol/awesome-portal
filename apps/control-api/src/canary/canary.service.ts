@@ -4,6 +4,14 @@ import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProfileReadService } from "../profile-read/profile-read.service";
+import {
+  decimalAbsoluteSum,
+  decimalSubtract,
+  decimalSum,
+  latest,
+  openOrders,
+  ProfileScreenSource,
+} from "../execution/profile-screen-composer";
 import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.service";
 import { CanaryEnvelopeCreateRequest } from "./contracts";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "./canary.repository";
@@ -136,7 +144,8 @@ export class CanaryService {
   ) {
     const certification = lineage.certification.certification;
     const readAt = new Date().toISOString();
-    const sourceConnected = currentSource !== undefined && currentSource.state !== "unavailable";
+    const source = new ProfileScreenSource(currentSource ?? {}, readAt);
+    const sourceConnected = source.connected;
     const unavailablePanel = (panelId: string, authority: "EXECUTION" | "BROKER" | "DERIVED") => ({
       panel_id: panelId,
       source_authority: authority,
@@ -168,6 +177,46 @@ export class CanaryService {
       unit: envelope.currency,
       envelope: unavailablePanel(`kpi-${key}`, authority),
     });
+    const positions = source.rows("positions");
+    const orders = source.rows("orders");
+    const fills = source.rows("fills");
+    const sessions = source.rows("sessions");
+    const balances = source.rows("account_balances");
+    const margins = source.rows("margin_balances");
+    const accountSync = source.rows("account_sync");
+    const brokerSync = source.rows("broker_sync");
+    const reconciliation = source.rows("reconciliation");
+    const open = openOrders(orders);
+    const capitalConsumed = decimalSum(margins, ["initial"]);
+    const grossNotional = decimalAbsoluteSum(positions, "notional");
+    const dailyPnl = decimalSum(positions, ["realized_pnl", "unrealized_pnl"]);
+    const broker = latest(brokerSync, "synced_at");
+    const brokerEquity = typeof broker?.buying_power === "string" ? broker.buying_power : null;
+    const valueKpi = (
+      key: string,
+      label: string,
+      authority: "EXECUTION" | "BROKER" | "DERIVED",
+      value: string | null,
+      keys: readonly string[],
+      unit = envelope.currency,
+    ) => ({ key, label, value, unit, envelope: source.panel(`kpi-${key}`, authority, keys, value === null ? {} : { value }) });
+    const sourcePositions = source.collection("positions", "EXECUTION", "positions");
+    const sourceBlotter = source.collection("blotter", "EXECUTION", "orders");
+    const internalData = { positions, orders, fills, sessions, account_balances: balances, margin_balances: margins, account_sync: accountSync };
+    const brokerData = { broker_sync: brokerSync };
+    const differenceData = { reconciliation };
+    const consumed = sourceConnected ? {
+      capital: capitalConsumed,
+      gross_notional: grossNotional,
+      daily_pnl: dailyPnl,
+      open_orders: open.length,
+    } : null;
+    const headroom = sourceConnected ? {
+      capital: capitalConsumed === null ? null : decimalSubtract(decimal(envelope.capital_cap), capitalConsumed),
+      gross_notional: grossNotional === null ? null : decimalSubtract(decimal(envelope.gross_notional_cap), grossNotional),
+      daily_loss: dailyPnl === null ? null : decimalSubtract(decimal(envelope.daily_loss_cap), dailyPnl.startsWith("-") ? dailyPnl.slice(1) : "0"),
+      open_orders: envelope.max_open_orders - open.length,
+    } : null;
     return {
       schema_version: "execution.canary-control-room.v1",
       record_authority: "PORTAL",
@@ -225,31 +274,47 @@ export class CanaryService {
         blocker_codes: envelope.blocker_codes,
       },
       kpis: [
-        unavailableKpi("capital_consumed", "Capital consumed", "EXECUTION"),
-        unavailableKpi("gross_notional", "Gross notional", "EXECUTION"),
-        unavailableKpi("daily_pnl", "Daily P&L", "DERIVED"),
-        unavailableKpi("open_orders", "Open orders", "EXECUTION"),
-        unavailableKpi("broker_equity", "Broker equity", "BROKER"),
+        ...(sourceConnected ? [
+          valueKpi("capital_consumed", "Capital consumed", "EXECUTION", capitalConsumed, ["margin_balances"]),
+          valueKpi("gross_notional", "Gross notional", "EXECUTION", grossNotional, ["positions"]),
+          valueKpi("daily_pnl", "Daily P&L", "DERIVED", dailyPnl, ["positions"]),
+          valueKpi("open_orders", "Open orders", "EXECUTION", String(open.length), ["orders"], "COUNT"),
+          valueKpi("broker_equity", "Broker equity", "BROKER", brokerEquity, ["broker_sync"]),
+        ] : [
+          unavailableKpi("capital_consumed", "Capital consumed", "EXECUTION"),
+          unavailableKpi("gross_notional", "Gross notional", "EXECUTION"),
+          unavailableKpi("daily_pnl", "Daily P&L", "DERIVED"),
+          unavailableKpi("open_orders", "Open orders", "EXECUTION"),
+          unavailableKpi("broker_equity", "Broker equity", "BROKER"),
+        ]),
       ],
       envelope_compliance: {
-        envelope: unavailablePanel("envelope-compliance", "DERIVED"),
+        envelope: sourceConnected
+          ? source.panel("envelope-compliance", "DERIVED", ["positions", "orders", "margin_balances"], { consumed, headroom })
+          : unavailablePanel("envelope-compliance", "DERIVED"),
         limits: {
           capital_cap: decimal(envelope.capital_cap),
           gross_notional_cap: decimal(envelope.gross_notional_cap),
           daily_loss_cap: decimal(envelope.daily_loss_cap),
           max_open_orders: envelope.max_open_orders,
         },
-        consumed: null,
-        headroom: null,
+        consumed,
+        headroom,
         base_risk_profile_verified: false,
       },
       source_panels: [
-        unavailablePanel("internal", "EXECUTION"),
-        unavailablePanel("broker", "BROKER"),
-        unavailablePanel("difference", "DERIVED"),
+        ...(sourceConnected ? [
+          source.panel("internal", "EXECUTION", ["positions", "orders", "fills", "sessions", "account_balances", "margin_balances", "account_sync"], internalData),
+          source.panel("broker", "BROKER", ["broker_sync"], brokerData),
+          source.panel("difference", "DERIVED", ["reconciliation"], differenceData),
+        ] : [
+          unavailablePanel("internal", "EXECUTION"),
+          unavailablePanel("broker", "BROKER"),
+          unavailablePanel("difference", "DERIVED"),
+        ]),
       ],
-      positions: unavailableCollection("positions", "EXECUTION"),
-      blotter: unavailableCollection("blotter", "EXECUTION"),
+      positions: sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION"),
+      blotter: sourceConnected ? sourceBlotter : unavailableCollection("blotter", "EXECUTION"),
       series: {
         envelope: unavailablePanel("series", "DERIVED"),
         resolution: null,
@@ -279,8 +344,8 @@ export class CanaryService {
           blocker_codes: [
             "PRODUCTION_COMMAND_INACTIVE",
             "CANARY_OWNER_GATE_REQUIRED",
-            "BROKER_SYNC_UNAVAILABLE",
-            "LIVE_SOURCE_UNAVAILABLE",
+            ...(broker ? [] : ["BROKER_SYNC_UNAVAILABLE"]),
+            ...(sourceConnected ? [] : ["LIVE_SOURCE_UNAVAILABLE"]),
           ],
         },
       },

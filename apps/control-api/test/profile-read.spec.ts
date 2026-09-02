@@ -90,6 +90,52 @@ function tagged(value: string | number | boolean | null) {
 }
 
 describe("N23 Sandbox and Live profile reads", () => {
+  it("composes Account/Broker 360 for one exact account without cross-account rows", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("accounts", [
+      { account_id: "acc_1", strategy_id: "str_1", mode: "live", venue: "BINANCE", external_account_ref: "external_1" },
+      { account_id: "acc_other", strategy_id: "str_other", mode: "live", venue: "BINANCE", external_account_ref: "external_other" },
+    ]);
+    source.rows.set("account_balances", [
+      { account_id: "acc_1", currency: "USDT", total: "1000.10", free: "800.10", locked: "200" },
+      { account_id: "acc_other", currency: "USDT", total: "999999", free: "999999" },
+    ]);
+    source.rows.set("margin_balances", [
+      { account_id: "acc_1", currency: "USDT", initial: "100", maintenance: "50.05" },
+    ]);
+    source.rows.set("broker_account_sync_effective", [
+      { sync_id: "broker_1", external_account_ref: "external_1", mode: "live", venue: "BINANCE", status: "SYNCED", currency: "USDT", buying_power: "799.90", synced_at: "2026-08-30T12:00:00Z" },
+      { sync_id: "broker_other", external_account_ref: "external_other", mode: "live", venue: "BINANCE", status: "SYNCED", currency: "USDT", buying_power: "1" },
+    ]);
+    source.rows.set("venue_accounts", [
+      { venue_account_id: "venue_1", binding_id: "bind_1", account_id: "acc_1", mode: "live", venue: "BINANCE" },
+      { venue_account_id: "venue_other", binding_id: "bind_other", account_id: "acc_other", mode: "live", venue: "BINANCE" },
+    ]);
+
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result).toMatchObject({
+      schema_version: "execution.account-broker-360.v1",
+      selected_environment: "live",
+      resource: { kind: "ACCOUNT", id: "acc_1" },
+      state: "ready",
+    });
+    expect(result.data.accounts).toHaveLength(1);
+    expect(result.data.venue_accounts).toHaveLength(1);
+    expect(result.data.differences).toEqual([expect.objectContaining({ delta: "0.2", in_sync: false })]);
+    expect(result.data.exposure_headroom).toEqual([expect.objectContaining({ headroom: "750.05", verdict: "AVAILABLE" })]);
+    expect(JSON.stringify(result)).not.toContain("acc_other");
+  });
+
+  it("returns a typed empty Account 360 rather than borrowing another account", async () => {
+    const source = new FakeCurrentSource("sandbox");
+    source.rows.set("accounts", []);
+    const result = await service(source).accountBroker(principal(), "missing", "sandbox") as Record<string, any>;
+    expect(result.state).toBe("empty");
+    expect(result.unavailable_branches).toContainEqual(expect.objectContaining({
+      reason_code: "PHASE2_ACCOUNT_NOT_FOUND",
+    }));
+  });
+
   it("serves bounded Sandbox source facts through the exact Sandbox profile", async () => {
     const source = new FakeCurrentSource("sandbox");
     const result = await service(source).overview(principal(), "sandbox") as Record<string, any>;
@@ -223,7 +269,7 @@ describe("N23 Sandbox and Live profile reads", () => {
   });
 
   it("rejects unknown query fields and foreign workspaces before source access", async () => {
-    const reads = { overview: vi.fn() };
+    const reads = { overview: vi.fn(), accountBroker: vi.fn() };
     const memberships = { isMember: vi.fn().mockResolvedValue(false) };
     const controller = new ProfileReadController(
       reads as unknown as ProfileReadService,
@@ -238,6 +284,9 @@ describe("N23 Sandbox and Live profile reads", () => {
       .rejects.toMatchObject({ code: "N23_QUERY_INVALID", status: 400 });
     await expect(controller.live(request, { workspace_id: "ws_foreign" }))
       .rejects.toMatchObject({ code: "WORKSPACE_NOT_FOUND", status: 404 });
+    await expect(controller.account(request, "bad/account", {}))
+      .rejects.toMatchObject({ code: "PHASE2_ACCOUNT_QUERY_INVALID", status: 400 });
     expect(reads.overview).not.toHaveBeenCalled();
+    expect(reads.accountBroker).not.toHaveBeenCalled();
   });
 });
