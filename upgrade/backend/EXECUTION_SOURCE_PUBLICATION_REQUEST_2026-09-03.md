@@ -130,11 +130,18 @@ are source-side inconsistencies, not Portal bugs:
 3. Sandbox `reconciliation_findings` reference parents absent from the
    sandbox set — same rule, same fix.
 
-Question Q — **sharpened 2026-09-03**: beyond the 87 % reject rate
-(316/364), the system's last fill anywhere was 17/08 04:24Z and the last
-order submission 30/08 12:20. Owner: confirm the intended state of the
-paper runner and risk configuration; this single answer now covers item 2
-(performance depth) as well.
+Question Q — **ANSWERED 2026-09-03 (investigated on-host, owner-granted)**:
+the halt is a deliberate operator kill-switch, not a defect. Redis
+`system:trading_state:{paper,sandbox}:{BINANCE,DNSE}` = `HALTED`
+(persistent; only writer is the gateway admin endpoint
+`/v1/admin/ops/trading-state`). Timeline: last fills 17/08 04:24Z → quiet
+sessions → 30/08 12:20 order denied `TRADING_HALTED` → 13:46 session
+generation stops → ~23:54 host powered off → 03/09 06:27 host boots.
+Item 1.2 (instrument performance depth) is a downstream consequence.
+**Owner decision remaining**: when to un-halt (set the three keys ACTIVE
+via the same admin endpoint), then re-verify `paper_execution_service`
+(boot-time Redis-loading loop error, silent since) and the
+`market_data` heartbeat that monitor flags BAD.
 
 **VERIFIED at source 2026-09-03 (items 4-5):** one root cause —
 `account_balances` (85 rows) carries no `mode`/`venue` columns while
