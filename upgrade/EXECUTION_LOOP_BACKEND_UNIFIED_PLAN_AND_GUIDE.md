@@ -2744,6 +2744,21 @@ PARTIAL (`N22_OBSERVATION_WINDOW_BOUNDED`) while the flat projection cap
 truncates fills — the bound lifts with the P4-D window ladder. The panel
 renders real progress against real targets. F17 continues below.
 
+Status 2026-09-02 (F17): write-path liveness `VERIFIED / chain
+EXTERNAL_EVIDENCE_PENDING` — the authenticated product write path is live on
+dev end-to-end: origin policy, CSRF double-submit, session auth and payload
+schema all passed, and `POST /governance/approvals` then refused the only
+real research run with a typed 422 (`EVIDENCE_RUN_NOT_FOUND`/eligibility —
+the run is QUEUED with no methodology claim and no artifact creator), with
+zero rows persisted. Inbox/queue/waivers/history serve 200 with exact zero
+totals — truthful emptiness, no seeded fakes. The end-to-end
+create→R1→R2→conditions→exit chain closes the day a real COMPLETED evidence
+run with a methodology claim exists; that external research-cell dependency
+is the named remaining gate, carried into the P4-E release-evidence run.
+The journal/receipt/finding joins landed at the Command Center (P4-H);
+receipts already ride the operation contract (`relay_receipt`), and a
+findings→incident feed stays a named non-blocking residual under P4-D/E.
+
 ##### Phase 4 goal-execution order (owner may set as one goal)
 
 1. **P4-F + P4-G** — pure seam bugs; the fastest large data win (orders,
@@ -3991,6 +4006,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-03 | Claude: P4-I/F17 — dev write-path liveness verified (typed fail-closed 422 on the only real, ineligible research run; zero rows persisted; honest-empty governance/ops reads), end-to-end chain waits on a real eligible evidence run (named external gate → P4-E evidence run) | authenticated probes through the gateway with full mutation security; no record seeded, no flag/profile/command change |
 | 2026-09-02 | Claude: P4-C closed (F3 freshness budgets + AGING tier + envelope-declared budget; F4 realtime coverage for Fleet/360s/register + ≤1 s delta coalescing + in-place revalidation) and P4-I/F16 closed (versioned observation policy + honest gate verdict) | profileIntegration 8/8, manager-lists 11/11 fresh-PG, paper-read 15/15, contracts gate pass, control-api 291/291 + restore parity, frontend 96 files green; additive schema widening only; no flag/profile/command change |
 | 2026-09-02 | Claude: P4-H closed (`INTEGRATION_COMPLETE`) — CC needs_you gains reconciliation findings, Today gains the bounded 24 h journal window (one atomic projection read), product route opens the published CC stream; latent stream-cycling hook bug fixed | command-center spec 11/11 fresh-PG incl. the projection-join regression and honest-partial expectations; commandCenterStream spec 21/21 incl. container connect/refusal; contracts additive enum widening regenerated; full gates re-run green; read-only, no flag/profile/command change |
 | 2026-09-02 | Claude: P4-B closed (`INTEGRATION_COMPLETE`; Fleet equity spark deferred to the P4-D window ladder) — per-capability tile binding by id across all 12 analytics branches, `formatExact` display authority, Fleet/register formatting delegated | brEx72 spec 11/11 incl. a 12-capability binding regression; formatExact 6/6; full frontend Vitest suite green; frontend tsc clean; presentation-only — no contract, flag, profile or command change |
