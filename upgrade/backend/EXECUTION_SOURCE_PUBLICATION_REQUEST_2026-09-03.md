@@ -26,8 +26,10 @@ N28 registry — not inferred from documentation. Portal-side seams are done
 | 9 | P1 | Benchmark series activation | `N28_BENCHMARK_SERIES_SOURCE_NOT_ACTIVATED` | Portfolio ρ-vs-benchmark timeline |
 | 10 | P1 | Paper↔Live twin-profile join | `N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED` | Canary drift tile |
 | 11 | P1 | Time-series retention floor ≥ 30 d (or MC-01 events) | flat hot window only | 30 d rollups, history charts (SGP ladder ready and waiting) |
-| 12 | P2 | The nine N28 owner requests MC-01…MC-09 | typed unavailable until verified | see §7 |
-| 13 | P2 · deferred by owner | `PAPER_DNSE_VNM` N13B publication | not published | VN market family home (Portal groundwork landed flag-off; owner says later) |
+| 12 | P1 | Market ticks activation | `N28_MARKET_TICKS_NOT_ACTIVATED` | Live Full Operations mark/tick panel |
+| 13 | P1 | Venue calendar publication | `N28_VENUE_CALENDAR_NOT_ACTIVE` | VNM workbench session shading (VN trading hours/holidays) |
+| 14 | P2 | The nine N28 owner requests MC-01…MC-09 | typed unavailable until verified | see §7 |
+| 15 | P2 · deferred by owner | `PAPER_DNSE_VNM` N13B publication | not published | VN market family home (Portal groundwork landed flag-off; owner says later) |
 | Q | question | 316/364 paper orders are `RISK_REJECTED` (87 %) | rendered truthfully | confirm intended risk config vs paper-runner defect |
 
 ## 1. P0 — resume the equity/performance publications
@@ -47,6 +49,10 @@ they are empty because the source currently publishes empty pages.
   realized_pnl, unrealized_pnl, fee_total, funding_pnl, gross_pnl, net_pnl,
   equity, drawdown, total_notional, total_fills, source, created_at`.
   Money = exact decimal strings; `mode` must equal the profile's mode.
+- Cadence/resolution floor: declare the snapshot cut cadence explicitly; the
+  minimum usable resolution for the 30 d windows is one row per active
+  account per 15 minutes during trading hours (denser is welcome and rides
+  the accepted pacing budget unchanged).
 - Acceptance: rows visible in the SGP projection
   (`manager.performance:account_equity_snapshots` items > 0), Paper/Alpha 360
   equity chart renders, and the SGP 30-day ladder begins accumulating
@@ -104,6 +110,7 @@ intended risk configuration or a paper-runner defect on your side.
 | `manager.accounts:account_sync_effective` | 0 rows | Account 360 sync panel | publish per sync cycle |
 | `manager.accounts:broker_account_sync_effective` | paper 0 · sandbox 1 · live 0 | bindings credential/sync column | confirm cadence; paper shows none |
 | `manager.conditional-orders:*` | 0 rows | Blotter legs/groups | confirm true zero (no conditional orders yet) |
+| `manager.reconciliation:reconciliation_findings` | 0 rows | Operations, CC needs-you, workbench | confirm publication semantics: findings are published whenever they exist, with `status`/`severity`/`resolved_at` lifecycle |
 
 ## 4. P1 — analytics source activations (one each)
 
@@ -117,11 +124,21 @@ intended risk configuration or a paper-runner defect on your side.
 3. **Twin-profile join** (`N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED`): paper and
    live series joined by artifact digest for the same alpha (equal windows).
    Consumer: canary drift tile.
+4. **Market ticks** (`N28_MARKET_TICKS_NOT_ACTIVATED`): bounded latest
+   tick/mark read per instrument (exact decimal price, venue timestamp,
+   clock authority). Consumer: Live Full Operations mark/tick panel
+   (`market.ticks` capability on `EXECUTION_LIVE_FULL_OPERATIONS_SCREEN`).
+5. **Venue calendar** (`N28_VENUE_CALENDAR_NOT_ACTIVE`): trading
+   sessions/holidays per venue and market (effective_from, session windows,
+   timezone authority). Consumer: VNM workbench session shading; pairs with
+   MC-06 (`venue.vnm-order-types`).
 
 ## 5. P1 — history depth and streaming cadence
 
-- Today every relation is a flat hot window; 30-day rollups and history
-  charts need either (a) a **retention floor ≥ 30 d** on the three
+- Today every relation is a flat hot window; 30-day rollups, history charts
+  and the multi-alpha derivations
+  (`N25_INSUFFICIENT_MULTI_ALPHA_HISTORY`: portfolio drawdown-overlap and
+  correlation) need either (a) a **retention floor ≥ 30 d** on the three
   time-series relations with keyset continuation, or (b) the **MC-01
   incremental event stream** (already formally requested — §7), which the SGP
   ladder then folds locally.
@@ -139,7 +156,7 @@ intended risk configuration or a paper-runner defect on your side.
 
 | Request | Capability | Operation asked |
 |---|---|---|
-| MC-01 | `event.full-incremental` | `GET /portal/execution/v3/events` — ordered cursor, UPSERT/DELETE, retention floor, typed gap/resync |
+| MC-01 | `event.full-incremental` | `GET /portal/execution/v3/events` — ordered cursor, UPSERT/DELETE, retention floor, typed gap/resync. Additional named consumers since v3: the SGP history ladder (§5) and the Portfolio capital-ledger timeline (allocation change events) |
 | MC-02 | `artifact.reference` | artifact metadata + signed read (sha256, retention, access policy) |
 | MC-03 | `execution.broker-ack-timestamps` | per-order submit/ack/terminal timestamps with clock authority |
 | MC-04 | `execution.signal-intent-funnel` | per-deployment windowed funnel counts |
@@ -158,7 +175,30 @@ qualification manifest, and the VN-family relations scoped to it. Portal-side
 config/lineage groundwork is already landed flag-off; activation is one env
 set on each side after your publication.
 
-## 8. Verification protocol
+## 8. Common contract terms for every item above
+
+All new or changed publications inherit the terms already accepted in
+`owner-request.v3.json` `common_contract` unchanged: TLS 1.3 mTLS transport;
+short-lived delegated JWT bound to the exact capability/resource/profile;
+read and command identities distinct; no browser-direct access; additive
+compatibility required (`X-Trading-Contract-Revision`); bounds
+`maximum_page_rows 5000`, `maximum_response_bytes 8 MiB`,
+`maximum_concurrency_per_identity 2`; no automatic retry; and
+`portal_activation_on_publication false` — Portal activates each delivery
+deliberately after verification, never implicitly.
+
+Additionally, per the contract-pack process every new/changed relation ships
+with canonical fixtures (at minimum `empty` and one populated page) and a
+redaction pass, and the shared source-admission budget (15 r/s across every
+profile) is unchanged — publications must fit inside it, not widen it.
+
+## 9. Deliberately NOT requested
+
+For completeness, the three intentional exclusions stand (recorded in the
+N29 debt register, non-blocking, do not build them for Portal):
+`redis-inspect`, `testnet-hard-reset`, `lab-reset`.
+
+## 10. Verification protocol
 
 For every delivered item Portal verifies with the same live inventory used to
 write this request (relation availability/reason/rows per profile in the SGP
