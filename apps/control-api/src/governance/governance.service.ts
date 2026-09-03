@@ -1,5 +1,6 @@
+import { ResearchRunSyncService } from "../facade/run-sync.service";
 import { createHash } from "crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
 import {
   ControlApiConfig,
@@ -153,6 +154,7 @@ export class GovernanceService {
     @Inject(GovernanceRepository) private readonly repository: GovernanceRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+    @Optional() @Inject(ResearchRunSyncService) private readonly runSync?: ResearchRunSyncService,
   ) {
     const keys = querySigningKeys(config);
     this.query = new ControlPlaneQueryService(
@@ -253,6 +255,11 @@ export class GovernanceService {
       };
     }
 
+    // P4-I / F17: the run read model is refreshed from the research service
+    // before the eligibility check, so completion, the frozen artifact pin and
+    // the methodology claims reach governance. A failed refresh changes
+    // nothing — the check below still decides, fail-closed.
+    await this.runSync?.refresh(user, input.workspaceId, input.evidenceRunId);
     const run = await this.repository.approvalEvidenceRun(input.workspaceId, input.evidenceRunId);
     if (!run) {
       throw new GovernanceError("EVIDENCE_RUN_NOT_FOUND", "Evidence run was not found.", 422);

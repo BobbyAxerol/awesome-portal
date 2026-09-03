@@ -1,3 +1,4 @@
+import { ResearchRunSyncService } from "./facade/run-sync.service";
 import { DynamicModule, Module } from "@nestjs/common";
 import { Pool } from "pg";
 import { AuthController } from "./auth/auth.controller";
@@ -121,6 +122,7 @@ export class AppModule {
         OutboxRepository,
         ProductAuditRepository,
         GovernanceRepository,
+        ResearchRunSyncService,
         GovernanceService,
         PaperExitRepository,
         PaperExitService,
