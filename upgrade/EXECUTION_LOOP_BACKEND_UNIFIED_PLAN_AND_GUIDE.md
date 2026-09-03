@@ -2587,6 +2587,18 @@ on the F6 window ladder (metricsAvailability already states the reason).
   delta's relation set — never a per-event full-screen refetch at
   production rates.
 
+
+Status 2026-09-02: `INTEGRATION_COMPLETE` (delta payload application stays
+snapshot-revalidate by design; true in-place delta merge remains a P4-E
+refinement) — F3: manager-list freshness follows the ingestion-class budget
+(FRESH ≤ 2× poll, AGING ≤ 4×, STALE beyond) and every envelope declares
+`freshness_budget_ms`; additive AGING tier across manager-lists v1 / fleet
+v2 / portfolio-list v1. F4: Fleet, Alpha 360, Portfolio 360 and the
+portfolio register bind the union of the three profile streams; bursts
+coalesce to ≤1 re-read/s with a trailing edge, heartbeats never re-read, and
+revalidation keeps the rich tree mounted (no loading flash). Dev runtime
+serves SSE enabled (`FEATURE_EXECUTION_REALTIME_SSE=true` effective).
+
 ##### P4-D — Profile taxonomy, lineage observability and window ladder (Rust + TS + owner)
 
 - owner decision (Bobby): the profile set. Recommendation: add
@@ -2722,6 +2734,15 @@ on dev with Bobby's session (no seeded fakes — records created through the
 product write path are real governance facts); join command journal + R0
 receipts + reconciliation findings into the operations queue/incident records
 per their existing contracts.
+
+
+Status 2026-09-02 (F16): `INTEGRATION_COMPLETE` — Portal-control publishes
+`execution.observation-policy.v1` (Paper: 30 observed days / 300 trades, the
+reviewed hi-fi cast; 14 d is the canary trial's window, a different stage);
+the workbench gate computes MET/NOT_MET on an unbounded window and an honest
+PARTIAL (`N22_OBSERVATION_WINDOW_BOUNDED`) while the flat projection cap
+truncates fills — the bound lifts with the P4-D window ladder. The panel
+renders real progress against real targets. F17 continues below.
 
 ##### Phase 4 goal-execution order (owner may set as one goal)
 
@@ -3970,6 +3991,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-02 | Claude: P4-C closed (F3 freshness budgets + AGING tier + envelope-declared budget; F4 realtime coverage for Fleet/360s/register + ≤1 s delta coalescing + in-place revalidation) and P4-I/F16 closed (versioned observation policy + honest gate verdict) | profileIntegration 8/8, manager-lists 11/11 fresh-PG, paper-read 15/15, contracts gate pass, control-api 291/291 + restore parity, frontend 96 files green; additive schema widening only; no flag/profile/command change |
 | 2026-09-02 | Claude: P4-H closed (`INTEGRATION_COMPLETE`) — CC needs_you gains reconciliation findings, Today gains the bounded 24 h journal window (one atomic projection read), product route opens the published CC stream; latent stream-cycling hook bug fixed | command-center spec 11/11 fresh-PG incl. the projection-join regression and honest-partial expectations; commandCenterStream spec 21/21 incl. container connect/refusal; contracts additive enum widening regenerated; full gates re-run green; read-only, no flag/profile/command change |
 | 2026-09-02 | Claude: P4-B closed (`INTEGRATION_COMPLETE`; Fleet equity spark deferred to the P4-D window ladder) — per-capability tile binding by id across all 12 analytics branches, `formatExact` display authority, Fleet/register formatting delegated | brEx72 spec 11/11 incl. a 12-capability binding regression; formatExact 6/6; full frontend Vitest suite green; frontend tsc clean; presentation-only — no contract, flag, profile or command change |
 | 2026-09-02 | Claude: P4-A closed (`INTEGRATION_COMPLETE`) — BR-EX-76 portfolio identity list (`execution.portfolio-list.v1`), portfolio register route truth (PF-CRYPTO defaults removed), Portfolio 360 spine = portfolios ∪ Fleet | manager-lists 10/10 fresh-PG incl. degraded-profile + lineage negatives; contracts gate pass; full frontend Vitest exit 0; N29 verifier extended (route set + BR-EX-76 pins) and green; authenticated dev journey returned 2 real portfolios with exact capital and three AVAILABLE profile branches; read-only, no flag/profile/command change |
