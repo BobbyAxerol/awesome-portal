@@ -105,13 +105,11 @@ they are empty because the source currently publishes empty pages.
   `MANAGER_V2_SOURCE_CONTRACT_REJECTED` -> the Portal restarts an
   oldest-first re-walk of ~600k rows every few minutes (observed live 09:01Z,
   paper `performance_snapshots`).
-- **Nothing is blocked on you**: Portal ships a client-side workaround
-  (re-reading the final page with `limit K−1` each cycle forces a fresh
-  cursor issue) plus no-wipe carry-forward. Optionally, branch
-  `fix/manager-cursor-ttl-tail-follow` (commit `99515e8`) already sits in
-  your worktree raising the codec TTL to 48 h — a cursor is a sealed keyset
-  position, not a grant — which would remove the extra request; deploying it
-  is a rule-12 recreate (rollback = image sha `2e80ad38`). See also §5.1.
+- **RESOLVED 2026-09-03 (owner-approved deploy)**: the 48 h TTL image
+  (`99515e8`, image `28ea3958…`) is LIVE on the paper read plane, catalogue
+  digest unchanged. The Portal client-side workaround (K−1 refresh +
+  carry-forward) stays as defense in depth. One expected one-time wave of
+  old 5-minute cursors expiring at the recreate self-healed. See also §5.1.
 
 ## 2. P0 — parent-set integrity in the published feeds
 
@@ -142,10 +140,15 @@ paper runner and risk configuration; this single answer now covers item 2
 `account_balances` (85 rows) carries no `mode`/`venue` columns while
 `accounts` holds paper 51 + sandbox 35 + **live 0**, so balances publish
 unscoped into every profile and the lineage guard rightly drops
-orphans/cross-family rows. Prepared (not applied) fix in the findings file:
-`portal_account_balances_scoped` view joining `accounts` + qualified policy
-entry; needs the catalogue/policy regeneration ceremony + rule-12 restart,
-and one cursor-digest rotation on deploy.
+orphans/cross-family rows. Status 2026-09-03: the ceremony was ATTEMPTED under owner approval and
+ROLLED BACK after ~8 minutes — the Edge pins the exact relation set in its
+compiled binary (N18 census + digest const), so ANY catalogue set change
+fails every relation with `MANAGER_V2_AUTHORITY_REJECTED` until the edge
+itself is rebuilt. A complete release kit now sits ready on the source side
+(inert scoped view live in the DB; validated catalogue/policy regeneration
+tool + staged `.new` files — 96/96 existing relations proven byte-identical;
+journaled): one coordinated deploy window must ship edge census+digest bump,
+edge image, facade files, and the SGP rebind together.
 
 ## 3. P1 — zero-row publications product screens already bind
 
