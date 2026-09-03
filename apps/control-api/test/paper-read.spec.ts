@@ -256,6 +256,60 @@ describe("N22 full Paper read product BFF", () => {
     expect(source.calls.length).toBe(6);
   });
 
+  it("publishes the versioned observation policy and an honest gate verdict (P4-I / F16)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper",
+        venue: "BINANCE", created_at: "2026-08-01T00:00:00Z", updated_at: "2026-09-02T00:00:00Z" },
+    ]);
+    source.rows.set("fills", [
+      { fill_id: "fill_1", order_id: "ord_1", strategy_id: "str_1", account_id: "acc_1",
+        mode: "paper", trade_time: "2026-08-05T10:00:00Z" },
+      { fill_id: "fill_2", order_id: "ord_2", strategy_id: "str_1", account_id: "acc_1",
+        mode: "paper", trade_time: "2026-09-01T10:00:00Z" },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    const gate = result.data.observation_gate;
+    // The policy is published — the old NOT_PUBLISHED placeholder is gone.
+    expect(gate).toMatchObject({
+      policy_version: "execution.observation-policy.v1",
+      policy_minimum_observed_days: 30,
+      policy_minimum_trade_count: 300,
+      observed_days: 32,
+      trade_count: 2,
+      window_bounded: false,
+      state: "NOT_MET",
+      reason_code: null,
+    });
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "workbench.observation-gate", state: "AVAILABLE", reason_code: null,
+    }));
+    expect(JSON.stringify(result)).not.toContain("PHASE2_OBSERVATION_POLICY_NOT_PUBLISHED");
+  });
+
+  it("labels a truncated fills window PARTIAL instead of faking a gate verdict (P4-I / F16)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper",
+        venue: "BINANCE", created_at: "2026-08-01T00:00:00Z", updated_at: "2026-09-02T00:00:00Z" },
+    ]);
+    source.rows.set("fills", [
+      { fill_id: "fill_1", order_id: "ord_1", strategy_id: "str_1", account_id: "acc_1",
+        mode: "paper", trade_time: "2026-08-05T10:00:00Z" },
+    ]);
+    source.next.set("fills", "more-fills-beyond-the-window");
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    expect(result.data.observation_gate).toMatchObject({
+      state: "PARTIAL",
+      window_bounded: true,
+      reason_code: "N22_OBSERVATION_WINDOW_BOUNDED",
+    });
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "workbench.observation-gate", state: "PARTIAL",
+      reason_code: "N22_OBSERVATION_WINDOW_BOUNDED",
+    }));
+  });
+
   it("maps versioned source order-status words and preserves provenance (P4-F)", async () => {
     const source = new FakeCurrentSource();
     source.rows.set("strategy_deployments", [

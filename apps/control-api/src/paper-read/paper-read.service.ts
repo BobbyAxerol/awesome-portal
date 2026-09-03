@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { PAPER_OBSERVATION_POLICY } from "./observation-policy";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { PortalUser, AuthSession } from "../domain";
@@ -198,7 +199,7 @@ export class PaperReadService {
         ? row.deployment_id === deploymentId
         : matchesDeployment(row, deploymentId, deployment)) ?? [],
     ]));
-    const observationGate = paperObservationGate(scoped, deployment);
+    const observationGate = paperObservationGate(relations, scoped, deployment);
     let queryAnalytics: unknown = null;
     let analyticsReason = "N25_DERIVED_ANALYTICS_NOT_ACTIVE";
     if (this.localAnalytics?.enabled()) {
@@ -239,9 +240,11 @@ export class PaperReadService {
         : []),
       capability(
         "workbench.observation-gate",
-        deployment ? "PARTIAL" : "UNAVAILABLE",
+        deployment ? (observationGate?.state === "PARTIAL" ? "PARTIAL" : "AVAILABLE") : "UNAVAILABLE",
         ["observation_gate"],
-        deployment ? "PHASE2_OBSERVATION_POLICY_NOT_PUBLISHED" : "N22_DEPLOYMENT_NOT_AVAILABLE",
+        deployment
+          ? (typeof observationGate?.reason_code === "string" ? observationGate.reason_code : null)
+          : "N22_DEPLOYMENT_NOT_AVAILABLE",
       ),
     ];
     return this.envelope(
@@ -484,7 +487,14 @@ export class PaperReadService {
   }
 }
 
+/**
+ * P4-I / F16: the observation gate computed against the published
+ * Portal-control policy. The verdict is honest about its basis — a fills
+ * window truncated by the flat projection cap yields PARTIAL, never a fake
+ * MET or NOT_MET; the bounded-window limit lifts with the P4-D window ladder.
+ */
 function paperObservationGate(
+  relations: readonly RelationResult[],
   scoped: Record<string, Array<Record<string, unknown>>>,
   deployment?: Record<string, unknown>,
 ) {
@@ -495,13 +505,29 @@ function paperObservationGate(
     .filter((value): value is string => typeof value === "string" && !Number.isNaN(Date.parse(value)));
   const first = timestamps.map(Date.parse).sort((left, right) => left - right)[0] ?? null;
   const last = timestamps.map(Date.parse).sort((left, right) => right - left)[0] ?? null;
+  const observedDays = first === null || last === null
+    ? null : Math.max(0, Math.floor((last - first) / 86_400_000));
+  const tradeCount = (scoped.fills ?? []).length;
+  const fills = relations.find((item) => item.spec.key === "fills");
+  const windowBounded = fills?.page ? fills.page.nextCursor !== null || fills.page.completeness === "PARTIAL" : true;
+  const state = observedDays === null || windowBounded
+    ? "PARTIAL"
+    : observedDays >= PAPER_OBSERVATION_POLICY.minimum_observed_days
+      && tradeCount >= PAPER_OBSERVATION_POLICY.minimum_trade_count
+      ? "MET" : "NOT_MET";
   return {
-    state: "PARTIAL",
-    observed_days: first === null || last === null ? null : Math.max(0, Math.floor((last - first) / 86_400_000)),
-    trade_count: (scoped.fills ?? []).length,
+    state,
+    observed_days: observedDays,
+    trade_count: tradeCount,
     session_count: (scoped.sessions ?? []).length,
-    policy: null,
-    reason_code: "PHASE2_OBSERVATION_POLICY_NOT_PUBLISHED",
+    window_bounded: windowBounded,
+    policy_version: PAPER_OBSERVATION_POLICY.policy_version,
+    policy_stage: PAPER_OBSERVATION_POLICY.stage,
+    policy_minimum_observed_days: PAPER_OBSERVATION_POLICY.minimum_observed_days,
+    policy_minimum_trade_count: PAPER_OBSERVATION_POLICY.minimum_trade_count,
+    reason_code: observedDays === null
+      ? "N22_OBSERVATION_WINDOW_UNBOUNDED"
+      : windowBounded ? "N22_OBSERVATION_WINDOW_BOUNDED" : null,
   };
 }
 
