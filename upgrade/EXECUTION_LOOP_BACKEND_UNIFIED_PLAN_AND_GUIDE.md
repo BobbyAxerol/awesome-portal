@@ -4039,6 +4039,90 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 ---
 
+## 14. P4-G — Data-exploitation plan (owner request 2026-09-03: "xử lý hết vấn đề hiện tại, khai thác hết dữ liệu")
+
+Written after a full-screen investigation on the live dev runtime at
+2026-09-03 ~15:30Z. Every state below was measured (snapshot envelopes,
+history-mirror counts, capability reason codes), not inferred. This section
+is the plan of record for closing the remaining data gaps; the change log
+tracks execution.
+
+### 14.1 Measured residual problems, screen by screen
+
+| Screen | What is wrong today | Root cause (verified) | Fixable where |
+|---|---|---|---|
+| Alpha/Deployment 360 — insight charts | Of 12 declared capabilities, 4 are dead tiles: `market-candles` UNAVAILABLE (N28), `portfolio-drawdown-overlap` UNAVAILABLE (N25), `portfolio-correlation` EMPTY (N25), `portfolio-rho-timeline` UNAVAILABLE (benchmark), `canary-drift` UNAVAILABLE (twin join). `contribution` uses fills only (no time dimension). `stage-equity`/workbench now serve full range (fixed today) but performance series data ends 2026-08-17 (halt) | N25 reason codes predate the history mirror — the mirror now holds 8+ alphas × ~50k equity points over 65 days, which is exactly the "multi-alpha history" N25 says is missing. Candles/benchmark/twin-join are genuinely source-side (N28/MC-01..09) | **SGP, now** (N25 pair + contribution); source later (candles/benchmark/twin) |
+| Paper Trading / Workbench | Charts good after today's fixes; performance (per-instrument) series frozen at 17/08 | Trading halted 30/08 (kill-switch), no fills since 17/08 — producer idle by design | Owner un-halt |
+| Full Blotter | Orders 364 / fills 55 / journal 400 rows = the bounded snapshot page only; scale target is 10^5-10^7 rows with keyset paging | orders/fills/command_journal are NOT ladder relations — no mirror, no resume; every cycle re-reads the newest bounded page | **SGP, now** (extend mirror to transactional relations) |
+| Accounts/Bindings | balances rejected per lineage on live (orphans) and cross-family rows on paper; venue_accounts/margin/sync all 0 | Verified at source: `account_balances` has no mode/venue; live `accounts` don't exist; the three zero tables are genuinely empty | Release kit (staged, HK) + trading features |
+| Sandbox Certification | sessions 0, margin 0, sync 0 — screen is skeleton-only | Sessions exist only in the shared table with mode scoping — sandbox never ran sessions; margin/sync empty at source | Trading side (run sandbox cycles) |
+| Live Full Operations | Everything 0 except strategies/portfolios | No live accounts/deployments exist; live intentionally HALTED at risk gate | By design until live activation |
+| Portfolio 360 | equity = DERIVED sum (correct); rho-timeline dead | portfolio_equity unscopeable (verified: portfolios span modes/venues); benchmark source not activated | DERIVED stays; benchmark = MC |
+| Command Center | Healthy | — | — |
+
+### 14.2 The plan — four lanes in priority order
+
+**Lane E1 — exploit the mirror for insight charts (SGP-only, no dependencies, do first)**
+1. `portfolio-correlation` (formula `portfolio-correlation-returns.v1`): compute
+   pairwise correlation of daily returns across all alphas from the equity
+   mirror (per-strategy forward-filled daily closes over the mirror span, not
+   just 30 d); serve matrix + per-pair sample counts; state EMPTY→AVAILABLE
+   with declared window and row counts. Kill reason code N25 where the mirror
+   depth suffices; keep it only when a pair has <10 overlapping days.
+2. `portfolio-drawdown-overlap` (`drawdown_overlap.v1`): per-alpha drawdown
+   series from the same daily closes; overlap = co-drawdown windows across
+   alphas; serve as chart series + summary stats.
+3. `contribution` upgrade: time-dimension contribution from the equity mirror
+   (per-deployment share of summed equity over the window) alongside the
+   existing fills-based exact totals.
+4. Per-alpha insight extras now free from the mirror: rolling 7d/30d return,
+   max drawdown + date, equity high-water mark, per-account series option
+   (series per account, honestly labeled, instead of only the DERIVED sum).
+   Every new series declares formula_version + window + downsample envelope.
+   Gate: analytics spec regressions per formula with exact-decimal fixtures.
+
+**Lane E2 — extend the history mirror to transactional relations (SGP-only)**
+1. Add `orders`, `fills`, `command_journal`, `execution_sessions` to the
+   mirror classes (append-only, id-keyed, same resumable drain; serving keys
+   verified against the manager catalogue before enabling each).
+2. Blotter/workbench read keyset pages from the mirror (10^5+ rows scale per
+   §8 scale-refine), snapshot page stays the hot fallback.
+3. Retention policy: mirror is append-only forever for time-series; for
+   transactional relations declare a retention floor (e.g. 180 d) in the
+   envelope; add the pg index budget note to the perf matrix.
+   Gate: fresh-PG regressions (resume, idempotency, keyset pages) + control gate.
+
+**Lane E3 — unlocks that need the owner or the HK release window (queued, not blocked on code)**
+1. Owner: un-halt paper/sandbox (3 Redis keys) → performance producer resumes
+   within one open-exposure cycle; then re-verify `paper_execution_service`
+   (boot loop error) and `market_data` heartbeat.
+2. HK release window: ship the staged scoped-balances kit (edge N18 census +
+   digest bump + edge image + facade catalogue/policy `.new` files + SGP
+   rebind) — closes items 4+5 (balances lineage rejects on all profiles).
+3. Source activations MC-01..09 (candles, benchmark, ticks, calendar,
+   twin-join) — the four remaining dead insight tiles light up here;
+   BR-EX-79 already carries the exact asks.
+4. DNSE family activation when the owner schedules it (groundwork landed).
+
+**Lane E4 — hygiene and scale evidence**
+1. Soak the per-class poll targets + re-run the §3 load table (P4-E matrix)
+   including mirror-backed chart routes and downsampled reads.
+2. Visual baseline re-run after E1 series land (46 operations-theme
+   snapshots).
+3. History-mirror observability: per-relation coverage row (rows, span,
+   tail age) on the operator/CC view so backfill state is a glance, not a
+   psql query.
+
+### 14.3 Order and closure conditions
+
+E1 closes when: correlation + drawdown-overlap + contribution serve AVAILABLE
+with declared formulas on the live dev runtime for at least 3 alphas, N25
+reason codes appear only on genuinely thin pairs, and the control gate is
+green with the new regressions. E2 closes when the blotter pages 10^5 rows
+from the mirror under the §8 budgets. E3 items close on the owner's two
+decisions plus the HK window (each already fully staged). E4 closes with the
+soak + visual baseline evidence rows in this file.
+
 ## 13. Change log
 
 | Date | Change | Evidence/status effect |
