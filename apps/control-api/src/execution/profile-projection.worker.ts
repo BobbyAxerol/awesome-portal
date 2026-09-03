@@ -92,7 +92,11 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         mode: environment,
         errorPrefix: environment === "paper" ? "N22" : "N23",
       };
-      const results = [];
+      const previousRelations = previous?.document.relations ?? {};
+      const results: Array<Parameters<typeof enforceProfileLineage>[0][number] & {
+        spec: { key: string; binding: ProfileProjectionBinding };
+        carryForward?: ProfileProjectionDocument["relations"][string];
+      }> = [];
       for (const binding of profileProjectionCatalog(environment)) {
         let page: ManagerPage;
         let resumePoint: string | null = null;
@@ -122,6 +126,23 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             error_code: safeFailureCode(error),
             source_reason_code: safeSourceReasonCode(error),
           }));
+          // An accumulated time-series window is a local mirror of rows the
+          // source already accepted — one failed refresh (cursor expiry,
+          // transient rejection) must defer the refresh, never erase the
+          // mirror. A relation that never delivered rows keeps its honest
+          // UNAVAILABLE envelope.
+          const carried = binding.ladder
+            ? previousRelations[`${binding.sourceId}:${binding.relation}`]
+            : undefined;
+          if (carried && carried.items.length > 0) {
+            results.push({
+              spec: { key: binding.key, binding }, page: null,
+              state: "PARTIAL" as const,
+              reasonCode: "N31_LADDER_REFRESH_DEFERRED",
+              carryForward: carried,
+            });
+            continue;
+          }
           if (isSourceContractUnavailable(error)) {
             results.push({
               spec: { key: binding.key, binding }, page: null,
@@ -160,7 +181,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           reasonCode: page.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
         });
       }
-      const isolated = enforceProfileLineage(results, "N30");
+      // The lineage guard passes every entry through by spread, so the
+      // carry-forward association survives it at runtime; its signature just
+      // does not model extra fields.
+      const isolated = enforceProfileLineage(results, "N30") as typeof results;
       // Owner directive 2026-09-03: every lineage-accepted time-series row is
       // kept at full depth in the history store — the snapshot window bounds
       // what screens embed, never what analysis can read back.
@@ -193,6 +217,14 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       const relations = Object.fromEntries(isolated.map((item) => {
         const binding = item.spec.binding;
         const key = `${binding.sourceId}:${binding.relation}`;
+        const carried = item.carryForward;
+        if (carried) {
+          return [key, {
+            ...carried,
+            reason_code: "N31_LADDER_REFRESH_DEFERRED",
+            completeness: "PARTIAL" as const,
+          }];
+        }
         const fresh = (item.page?.items ?? []).map((fields) => ({
           lineage: {
             workspace_id: workspaceId,
@@ -285,9 +317,28 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       freshness = worseFreshness(freshness, page.freshness);
       completeness = worseCompleteness(completeness, page.completeness);
       if (!page.nextCursor) {
+        // Tail dwell: the source's cursors expire five minutes after issue,
+        // and a tail page issues none — so a held position would age out and
+        // force a full head re-walk. When the final page carries K > 1 rows,
+        // re-reading the same position with limit K-1 forces has_more and a
+        // freshly issued cursor, keeping the held position young forever at
+        // the cost of one extra bounded request per cycle.
+        let tailCursor = lastHeldCursor;
+        if (binding.ladder && cursor && page.items.length > 1) {
+          try {
+            const refresh = await this.source.relationForProjection(
+              workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
+              { limit: page.items.length - 1, cursor },
+            );
+            const refreshed = managerPage(refresh, binding.relation, binding.fields, context);
+            if (refreshed.nextCursor) tailCursor = refreshed.nextCursor;
+          } catch {
+            // The dwell keeps the older cursor; recovery handles expiry.
+          }
+        }
         return {
           page: { items, asOf, freshness, completeness, nextCursor: null },
-          resumePoint: lastHeldCursor,
+          resumePoint: tailCursor,
         };
       }
       if (cursors.has(page.nextCursor)) throw new Error("N31_SOURCE_CURSOR_CYCLE");

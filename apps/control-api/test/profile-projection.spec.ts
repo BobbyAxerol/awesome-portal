@@ -382,6 +382,107 @@ describe("P4-D follow-on: resumable time-series drains", () => {
     await worker.onApplicationShutdown();
   });
 
+  it("keeps the tail cursor young by forcing a fresh issue from the final overlap page", async () => {
+    // The source's opaque cursors expire five minutes after issue and a tail
+    // page issues none — the drain must trade one bounded re-read (limit K-1)
+    // for a freshly issued cursor, or the dwell would decay into a full
+    // head re-walk every TTL.
+    const calls: Array<{ cursor?: string; limit?: number }> = [];
+    const tailRow = (n: number) => ({
+      relation: { schema: "public", relation: "account_equity_snapshots" }, record_key: "opaque",
+      fields: {
+        id: { kind: "INTEGER", value: n },
+        ts: { kind: "TIMESTAMP", value: new Date().toISOString() },
+        account_id: { kind: "TEXT", value: "acc_a" },
+        mode: { kind: "TEXT", value: "paper" },
+      },
+    });
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string, query: { cursor?: string; limit?: number },
+      ) => {
+        const response = emptyManagerResponse(environment, relation) as Record<string, any>;
+        if (relation !== "account_equity_snapshots") return response;
+        calls.push({ cursor: query.cursor, limit: query.limit });
+        if (!query.cursor) {
+          response.source.data.items = [tailRow(1)];
+          response.source.data.next_cursor = "held";
+        } else if (query.cursor === "held" && query.limit === 200) {
+          response.source.data.items = [tailRow(2), tailRow(3)];
+          response.source.data.next_cursor = null;
+        } else if (query.cursor === "held" && query.limit === 1) {
+          response.source.data.items = [tailRow(2)];
+          response.source.data.next_cursor = "held_fresh";
+        }
+        return response;
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    expect(calls.some((call) => call.cursor === "held" && call.limit === 1)).toBe(true);
+    expect(await repository.relationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots"))
+      .toBe("held_fresh");
+    await worker.onApplicationShutdown();
+  });
+
+  it("defers a failed ladder refresh instead of erasing the accumulated window", async () => {
+    const equityKey = "manager.performance:account_equity_snapshots";
+    let failEquity = false;
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        const response = emptyManagerResponse(environment, relation) as Record<string, any>;
+        if (relation === "accounts") {
+          response.source.data.items = [{
+            relation: { schema: "public", relation }, record_key: "opaque",
+            fields: { account_id: { kind: "TEXT", value: "acc_a" }, mode: { kind: "TEXT", value: environment } },
+          }];
+        }
+        if (relation === "account_equity_snapshots") {
+          if (failEquity) {
+            throw new CurrentSourceProxyError("N17B_SOURCE_REJECTED", 422, {
+              availability: "UNAVAILABLE",
+              reason_code: "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+              retryable: false,
+            });
+          }
+          response.source.data.items = [{
+            relation: { schema: "public", relation }, record_key: "opaque",
+            fields: {
+              id: { kind: "INTEGER", value: 7 },
+              ts: { kind: "TIMESTAMP", value: new Date().toISOString() },
+              account_id: { kind: "TEXT", value: "acc_a" },
+              equity: { kind: "DECIMAL", value: "100" },
+              mode: { kind: "TEXT", value: environment },
+            },
+          }];
+        }
+        return response;
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    expect((await repository.snapshot(workspaceId, "paper", profileId))
+      ?.document.relations[equityKey].items).toHaveLength(1);
+
+    failEquity = true;
+    await repository.saveRelationCursor(workspaceId, "paper", profileId, equityKey, "about_to_expire");
+    await worker.runOnce();
+    const relation = (await repository.snapshot(workspaceId, "paper", profileId))?.document.relations[equityKey];
+    expect(relation).toMatchObject({
+      availability: "AVAILABLE",
+      reason_code: "N31_LADDER_REFRESH_DEFERRED",
+      completeness: "PARTIAL",
+    });
+    expect(relation?.items).toHaveLength(1);
+    // The rejected cursor is still dropped so the next cycle can re-seek.
+    expect(await repository.relationCursor(workspaceId, "paper", profileId, equityKey)).toBeNull();
+    await worker.onApplicationShutdown();
+  });
+
   it("drops a persisted cursor the source refuses instead of failing forever", async () => {
     await repository.saveRelationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots", "rotted_cursor");
     const source = {

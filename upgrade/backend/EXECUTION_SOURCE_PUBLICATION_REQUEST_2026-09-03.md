@@ -87,6 +87,19 @@ they are empty because the source currently publishes empty pages.
 - Until then Portal serves `portfolio-equity-derived.v1` (exact forward-filled
   sum of member-account equity, authority DERIVED) — it also needs 1.1.
 
+### 1.4 NEW (found 2026-09-03, fix ready on your side): page-cursor TTL vs tail-follow
+- The facade mints page cursors with `exp = iat + 5 minutes`. At the tail of
+  an append-only relation no fresh cursor is minted, so the Portal's held
+  tail cursor always expires -> `CURSOR_EXPIRED` ->
+  `MANAGER_V2_SOURCE_CONTRACT_REJECTED` -> the Portal restarts an
+  oldest-first re-walk of ~600k rows every few minutes (observed live 09:01Z,
+  paper `performance_snapshots`).
+- Fix is committed on your side already, awaiting deploy approval:
+  branch `fix/manager-cursor-ttl-tail-follow`, commit `99515e8` — TTL 48 h
+  (a cursor is a sealed keyset position, not a grant; identity stays
+  mTLS/JWT). Deploy = image rebuild + recreate of the paper manager-read
+  container (rule 12; rollback = image sha `2e80ad38`).
+
 ## 2. P0 — parent-set integrity in the published feeds
 
 The Portal lineage guard is strict by design: a child row whose parent is not
