@@ -3,7 +3,10 @@
 Date: 2026-09-03
 From: Portal SGP control plane (Claude, backend co-impl per owner grant 2026-09-02; owner: Bobby)
 To: the agent operating the Execution Cell (AWS-HK) — Portal Execution Edge deployment + Trading System / Manager v2 source
-Status: `REQUEST_PUBLISHED / AWAITING_SOURCE_OWNER`
+Status: `SOURCE_SIDE_VERIFIED_2026-09-03 / OWNER_DECISIONS_PENDING`
+Source-side verification pass (Claude, on-host, owner-directed): every P0/P1
+item measured live; companion findings file committed in the trading worktree:
+`portal-execution-campaign/BR_EX_79_SOURCE_FINDINGS_2026-09-03.md`.
 Ledger: BR-EX-79 in `upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §7.2
 
 Every item below was verified live on 2026-09-03 against the committed SGP
@@ -62,11 +65,13 @@ they are empty because the source currently publishes empty pages.
   (`window {days:30, basis:MERGED_SNAPSHOT_LADDER}` already declared).
 
 ### 1.2 `manager.performance:performance_snapshots`
-- **Diagnosis upgraded 2026-09-03 (verified):** the table holds 136,724 rows
-  but the **newest is 2026-08-17** — `performance_service` logs
-  `instrument_snapshots=0` every cycle since. This one IS yours: the
-  instrument-level producer stopped on 2026-08-17; please restore it (the
-  account/portfolio producers in the same service still cut hourly).
+- **VERIFIED at source 2026-09-03 — not a producer defect.** The producer is
+  healthy (86 deployments/cycle; account+portfolio cuts hourly). Instrument
+  cadence only cuts with open exposure, and the system's **last fill anywhere
+  was 2026-08-17 04:24Z** (open positions now: 0; last order submitted
+  2026-08-30 12:20, none filled after 17/08). The item collapses into
+  question Q: confirm the intended state of the paper runner + risk config.
+  Nothing to "restore" on the publication path.
 
 ### 1.3 `manager.performance:portfolio_equity_snapshots`
 - **Diagnosis upgraded 2026-09-03 (exact, verified in your serving policy):**
@@ -75,8 +80,14 @@ they are empty because the source currently publishes empty pages.
   declares `["mode", "venue"]` — an unqualified read violates the fixed
   qualified-read contract and the edge fail-closes with
   `MANAGER_V2_SOURCE_CONTRACT_REJECTED`. Root: the table has no
-  `mode`/`venue` columns to scope by. Fix on your side: add the scoping
-  columns (or serve a scoped view) and qualify the policy entry.
+  `mode`/`venue` columns to scope by.
+- **VERIFIED deeper 2026-09-03 — unscopeable by data reality, not by
+  omission**: `portfolio_allocations` shows `portfolio_types_pool` spans
+  paper/BINANCE + sandbox/BINANCE + paper/DNSE, so a portfolio-grain row has
+  no single (mode, venue). The Portal's declared DERIVED per-profile sum
+  (live today) is the semantically correct serving; the source relation
+  stays deliberately unserved at profile grain unless a per-scope producer
+  is ever commissioned.
 - Ask: publish the relation matching the catalogued contract
   (`id, ts, portfolio_id, currency, allocated_capital, account_count,
   cash_total, cash_free, cash_locked, margin_initial, margin_maintenance,
@@ -121,17 +132,28 @@ are source-side inconsistencies, not Portal bugs:
 3. Sandbox `reconciliation_findings` reference parents absent from the
    sandbox set — same rule, same fix.
 
-Question Q: 87 % of paper orders (316/364) are `RISK_REJECTED`. Portal maps
-and renders this truthfully; please confirm whether this reject rate is the
-intended risk configuration or a paper-runner defect on your side.
+Question Q — **sharpened 2026-09-03**: beyond the 87 % reject rate
+(316/364), the system's last fill anywhere was 17/08 04:24Z and the last
+order submission 30/08 12:20. Owner: confirm the intended state of the
+paper runner and risk configuration; this single answer now covers item 2
+(performance depth) as well.
+
+**VERIFIED at source 2026-09-03 (items 4-5):** one root cause —
+`account_balances` (85 rows) carries no `mode`/`venue` columns while
+`accounts` holds paper 51 + sandbox 35 + **live 0**, so balances publish
+unscoped into every profile and the lineage guard rightly drops
+orphans/cross-family rows. Prepared (not applied) fix in the findings file:
+`portal_account_balances_scoped` view joining `accounts` + qualified policy
+entry; needs the catalogue/policy regeneration ceremony + rule-12 restart,
+and one cursor-digest rotation on deploy.
 
 ## 3. P1 — zero-row publications product screens already bind
 
 | Relation | All-profile state | Consuming screen | Ask |
 |---|---|---|---|
-| `manager.venue-accounts:venue_accounts` | 0 rows everywhere | Bindings register (binding_id spine), Account/Broker 360 | publish, or declare intentionally absent so the screen states that reason |
-| `manager.accounts:margin_balances` | 0 rows (sandbox/live) | Account 360 margin panel | publish for margin-enabled accounts |
-| `manager.accounts:account_sync_effective` | 0 rows | Account 360 sync panel | publish per sync cycle |
+| `manager.venue-accounts:venue_accounts` | 0 rows everywhere — **VERIFIED 2026-09-03: source table is genuinely empty** | Bindings register (binding_id spine), Account/Broker 360 | feature not yet producing rows; Portal "none exist" states are correct |
+| `manager.accounts:margin_balances` | 0 rows — **VERIFIED: source empty** | Account 360 margin panel | no margin rows exist yet |
+| `manager.accounts:account_sync_effective` | 0 rows — **VERIFIED: source empty** | Account 360 sync panel | no sync rows exist yet |
 | `manager.accounts:broker_account_sync_effective` | paper 0 · sandbox 1 · live 0 | bindings credential/sync column | confirm cadence; paper shows none |
 | `manager.conditional-orders:*` | 0 rows | Blotter legs/groups | confirm true zero (no conditional orders yet) |
 | `manager.reconciliation:reconciliation_findings` | 0 rows | Operations, CC needs-you, workbench | confirm publication semantics: findings are published whenever they exist, with `status`/`severity`/`resolved_at` lifecycle |
