@@ -117,7 +117,7 @@
         "source_authority": { "const": "TRADING_SYSTEM" }, "delivery_profile": { "enum": ["ALL_EXECUTION_PROFILES", "PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"] },
         "workspace_id": { "$ref": "#/$defs/Identifier" }, "environment": { "enum": ["all", "paper", "sandbox", "live"] },
         "read_at": { "$ref": "#/$defs/Timestamp" }, "source_as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
-        "freshness": { "enum": ["FRESH", "STALE"] }, "completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+        "freshness": { "enum": ["FRESH", "AGING", "STALE"] }, "freshness_budget_ms": { "type": "object", "additionalProperties": false, "required": ["fresh", "stale"], "properties": { "fresh": { "type": "integer", "minimum": 1 }, "stale": { "type": "integer", "minimum": 1 } } }, "completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
         "summary": { "$ref": "#/$defs/Summary" }, "page": { "$ref": "#/$defs/AlphaPage" }
       }
     }

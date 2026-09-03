@@ -47,7 +47,8 @@
         "environment": { "enum": ["all", "paper", "sandbox", "live"] },
         "read_at": { "$ref": "#/$defs/Timestamp" },
         "source_as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
-        "freshness": { "enum": ["FRESH", "STALE"] },
+        "freshness": { "enum": ["FRESH", "AGING", "STALE"] },
+        "freshness_budget_ms": { "type": "object", "additionalProperties": false, "required": ["fresh", "stale"], "properties": { "fresh": { "type": "integer", "minimum": 1 }, "stale": { "type": "integer", "minimum": 1 } } },
         "completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
         "environments": {
           "type": "object", "additionalProperties": false, "minProperties": 1,

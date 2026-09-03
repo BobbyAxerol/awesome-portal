@@ -56,7 +56,7 @@ import { AccountsBindings } from "./AccountsBindings";
 import { PortfolioList } from "./PortfolioList";
 import { BindingDetail } from "./BindingDetail";
 import type { OrderFunnel } from "../analytics";
-import { useProfileRealtime } from "../profileRealtime";
+import { useProfileRealtime, useProfilesRealtime } from "../profileRealtime";
 
 /* ── envelope → screen-vocabulary mappers ─────────────────────────────── */
 
@@ -210,6 +210,28 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
   const fillRate = text(quality?.fill_rate);
   const rejectRate = text(quality?.reject_rate);
   const railParts = [observedDays === null ? null : `${observedDays} days`, tradeCount === null ? null : `${tradeCount} trades`].filter(Boolean);
+  // P4-I / F16: the server publishes the versioned observation policy inside
+  // the gate record; the panel renders real progress against real targets.
+  const policyVersion = text(gate?.policy_version);
+  const minDays = count(gate?.policy_minimum_observed_days);
+  const minTrades = count(gate?.policy_minimum_trade_count);
+  const gateState = text(gate?.state);
+  const observationPanel = policyVersion
+    ? {
+      items: [
+        ...(observedDays !== null && minDays !== null ? [{ label: "days observed", current: observedDays, target: minDays, unit: "days" }] : []),
+        ...(tradeCount !== null && minTrades !== null ? [{ label: "trades", current: tradeCount, target: minTrades, unit: "trades" }] : []),
+      ],
+      met: gateState === "MET",
+      rule: `policy ${policyVersion} · ${minDays ?? "?"}d · ${minTrades ?? "?"} trades${gateState === "PARTIAL" && gateReason ? ` · ${gateReason}` : ""}`,
+    }
+    : { items: [], met: false, rule: gateReason ?? "No promotion verdict was published." };
+  const unmetCriteria = gateState === "NOT_MET"
+    ? [
+      ...(observedDays !== null && minDays !== null && observedDays < minDays ? [`observed ${observedDays}/${minDays} days`] : []),
+      ...(tradeCount !== null && minTrades !== null && tradeCount < minTrades ? [`trades ${tradeCount}/${minTrades}`] : []),
+    ]
+    : gateState === "MET" ? [] : gateReason ? [gateReason] : [];
   const lineage = [
     { label: "alpha", chip: { label: strategyId, href: `/deployments/alphas/${encodeURIComponent(strategyId)}` } },
     ...(portfolioId ? [{ label: "portfolio", chip: { label: portfolioId, href: `/deployments/portfolios/${encodeURIComponent(portfolioId)}` } }] : []),
@@ -236,8 +258,8 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
         { label: "Reject rate", value: rejectRate },
       ]}
       equity={profileEquity(profile)}
-      observation={{ items: [], met: false, rule: gateReason ?? "No promotion verdict was published." }}
-      unmetCriteria={gateReason ? [gateReason] : []}
+      observation={observationPanel}
+      unmetCriteria={unmetCriteria}
       onRequestExit={() => navigate("/governance/exit-reviews")}
       drift={[]}
       driftNote={null}
@@ -825,8 +847,11 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   // Fleet v2 is the current-source identity/deployment spine. Query analytics
   // is an additive branch: disabling or losing it must never erase the alpha,
   // its deployments, accounts or reviewed screen composition.
-  const fleetState = useApiRead(() => api.getAlphaFleet({ search: alphaId, limit: 50 }), [api, alphaId]);
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId]);
+  // P4-C: an alpha spans every profile it holds a deployment in; its realtime
+  // truth is the union of the three published projection streams, coalesced.
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
+  const fleetState = useApiRead(() => api.getAlphaFleet({ search: alphaId, limit: 50 }), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   const [scope, setScope] = useAnalyticsScope();
   const navigate = useNavigate();
@@ -911,7 +936,8 @@ export function PortfolioListRichContainer({ api }: { api: ExecutionApi }) {
   // P4-A / BR-EX-76: the /deployments/portfolios root is the real portfolio
   // register. The default portfolio is whatever the data holds — the route
   // never invents an id.
-  const state = useApiRead(() => api.listPortfolios(), [api]);
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
+  const state = useApiRead(() => api.listPortfolios(), [api, realtime.refreshKey], { keepValue: true });
   const navigate = useNavigate();
   const status: PanelStatus = state.status === "ok" && state.value?.completeness === "PARTIAL" ? "partial" : state.status;
   return (
@@ -928,12 +954,13 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   // Fleet is the current-source portfolio/holding spine across Paper,
   // Sandbox and Live. Analytics remains additive and cannot blank identity or
   // holdings when a derived branch is disabled.
-  const fleetState = useApiRead(() => api.getAlphaFleet({ environment: "all", limit: 50 }), [api]);
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
+  const fleetState = useApiRead(() => api.getAlphaFleet({ environment: "all", limit: 50 }), [api, realtime.refreshKey], { keepValue: true });
   // P4-A: the portfolios relation is the identity authority — a portfolio
   // with no fleet allocation (an unallocated register row) still renders its
   // rich screen, and a genuinely unknown id names the real available ids.
-  const registerState = useApiRead(() => api.listPortfolios(), [api]);
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId]);
+  const registerState = useApiRead(() => api.listPortfolios(), [api, realtime.refreshKey], { keepValue: true });
+  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
   const [tab, setTab] = useParamState<PortfolioTab>("tab", PORTFOLIO_TABS, "Overview");
@@ -1126,7 +1153,10 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
 export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
   const [query, setQuery] = useState<AlphaFleetQuery>({ limit: 50 });
   const [filter, setFilter] = useState<FleetFilter>("all");
-  const state = useApiRead(() => api.getAlphaFleet(query), [api, query]);
+  // P4-C: the Fleet spans all three profiles; any projection delta revalidates
+  // the list in place (coalesced to at most one re-read per second).
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
+  const state = useApiRead(() => api.getAlphaFleet(query), [api, query, realtime.refreshKey], { keepValue: true });
   return (
     <AlphaFleet
       filter={filter}

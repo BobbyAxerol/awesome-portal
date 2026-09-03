@@ -8,6 +8,7 @@
   "read_at": "2026-09-01T15:00:01Z",
   "source_as_of": "2026-09-01T15:00:00Z",
   "freshness": "FRESH",
+  "freshness_budget_ms": { "fresh": 30000, "stale": 60000 },
   "completeness": "COMPLETE",
   "summary": {
     "alpha_count": 1,

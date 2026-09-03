@@ -82,7 +82,7 @@ export class ManagerListsService {
   constructor(
     @Inject(ManagerListsRepository) private readonly repository: ManagerListsRepository,
     @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
-    @Inject(CONTROL_API_CONFIG) config: ControlApiConfig,
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {
     this.query = new ControlPlaneQueryService(
       repository.pool,
@@ -102,7 +102,7 @@ export class ManagerListsService {
       fleetRawQuery(query),
     );
     return {
-      ...envelope("execution.alpha-fleet-list.v2", principal, query.environment, snapshot, page),
+      ...envelope("execution.alpha-fleet-list.v2", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config)),
       summary: snapshot.summary,
     };
   }
@@ -114,7 +114,7 @@ export class ManagerListsService {
       { actorId: principal.user.userId, workspaceId: scope(principal.workspaceId, query.environment), role: principal.user.role },
       bindingsRawQuery(query),
     );
-    return envelope("execution.bindings-list.v1", principal, query.environment, snapshot, page);
+    return envelope("execution.bindings-list.v1", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config));
   }
 
   async binding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
@@ -130,7 +130,7 @@ export class ManagerListsService {
       environment,
       read_at: new Date().toISOString(),
       source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
-      freshness: freshness(snapshot),
+      freshness: freshness(snapshot, projectionFreshnessBudget(this.config)),
       item: bindingItem(item),
     };
   }
@@ -235,7 +235,9 @@ export class ManagerListsService {
       environment: query.environment,
       read_at: new Date().toISOString(),
       source_as_of: latestString(...pages.map((page) => page.asOf)),
-      freshness: pageFreshness === "FRESH" ? "FRESH" : "STALE",
+      // Source-declared tiers pass through; UNKNOWN is never promoted.
+      freshness: pageFreshness === "UNKNOWN" ? "STALE" : pageFreshness,
+      freshness_budget_ms: projectionFreshnessBudget(this.config),
       completeness: truncated || branchDegraded
         ? "PARTIAL"
         : pageCompleteness === "UNKNOWN" ? "UNKNOWN" : pageCompleteness,
@@ -818,8 +820,28 @@ async function requiredSnapshot(
   if (!snapshot) throw new ManagerListsError("BR72_PROJECTION_COMMIT_FAILED", 500);
   return snapshot;
 }
-function freshness(snapshot: ProjectionSnapshot) {
-  const age = Date.now() - snapshot.refreshedAt.valueOf(); return age <= SNAPSHOT_MAX_AGE_MS ? "FRESH" : "STALE";
+/**
+ * P4-C / F3: the freshness label follows the ingestion-class budget, not the
+ * 5 s refresh trigger. The manager-list plane rides the local projection
+ * (15-60 s cadence), so its tiers mirror product-read-source: FRESH within
+ * two poll intervals, AGING within four, STALE beyond. The budget itself is
+ * declared on the envelope so no consumer has to guess the cadence.
+ */
+export interface FreshnessBudgetMs {
+  fresh: number;
+  stale: number;
+}
+
+export function projectionFreshnessBudget(config: ControlApiConfig): FreshnessBudgetMs {
+  const poll = config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS;
+  return { fresh: poll * 2, stale: poll * 4 };
+}
+
+function freshness(snapshot: ProjectionSnapshot, budget: FreshnessBudgetMs): "FRESH" | "AGING" | "STALE" {
+  const age = Date.now() - snapshot.refreshedAt.valueOf();
+  if (age <= budget.fresh) return "FRESH";
+  if (age <= budget.stale) return "AGING";
+  return "STALE";
 }
 function bindingItem(item: BindingProjectionRecord): BindingItem {
   return { binding_id: item.bindingId, account_id: item.accountId, venue: item.venue,
@@ -827,7 +849,7 @@ function bindingItem(item: BindingProjectionRecord): BindingItem {
 }
 function envelope(
   schemaVersion: string, principal: ManagerListPrincipal, environment: AlphaFleetEnvironment,
-  snapshot: ProjectionSnapshot, page: unknown,
+  snapshot: ProjectionSnapshot, page: unknown, budget: FreshnessBudgetMs,
 ) {
   return {
     schema_version: schemaVersion,
@@ -838,7 +860,8 @@ function envelope(
     environment,
     read_at: new Date().toISOString(),
     source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
-    freshness: freshness(snapshot),
+    freshness: freshness(snapshot, budget),
+    freshness_budget_ms: budget,
     completeness: snapshot.sourceCompleteness,
     page,
   };

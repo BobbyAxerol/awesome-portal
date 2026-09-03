@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import ACCOUNT from "../../../../../packages/contracts/fixtures/execution-account-broker-360.ready.valid.json";
 import BLOTTER from "../../../../../packages/contracts/fixtures/execution-full-blotter.partial.valid.json";
 import { readProfileEnvelope, type OperatorTaskCatalogue } from "./api/profileRead";
-import { useProfileRealtime } from "./profileRealtime";
+import { useProfileRealtime, useProfilesRealtime } from "./profileRealtime";
 import { AdminActionDrawerScreen } from "./screens/AdminActionDrawer";
 
 class FakeEventSource {
@@ -106,6 +106,51 @@ describe("Phase 3 rich-profile adapters", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
     expect(FakeEventSource.instances).toHaveLength(2);
     expect(FakeEventSource.instances[1].closed).toBe(true);
+  });
+});
+
+describe("P4-C bounded delta coalescing", () => {
+  it("folds a delta burst into at most one re-read per window, heartbeats into none", async () => {
+    vi.useFakeTimers();
+    render(<RealtimeProbe />);
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); });
+    expect(FakeEventSource.instances).toHaveLength(1);
+    const stream = FakeEventSource.instances[0];
+    // The snapshot itself was the first bump of its window: refreshKey 1.
+    expect(screen.getByText(/live:1:/)).toBeTruthy();
+    // A burst of three deltas inside the window: nothing immediate…
+    stream.emit("delta", frame("delta", 2));
+    stream.emit("delta", frame("delta", 3));
+    stream.emit("delta", frame("delta", 4));
+    expect(screen.getByText(/live:1:/)).toBeTruthy();
+    // …then exactly one trailing re-read for the whole burst.
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.getByText(/live:2:/)).toBeTruthy();
+    // Heartbeats prove liveness but never trigger a data reread.
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    stream.emit("heartbeat", frame("heartbeat", 4));
+    stream.emit("heartbeat", frame("heartbeat", 4));
+    expect(screen.getByText(/live:2:/)).toBeTruthy();
+    // A lone delta in a fresh window refreshes immediately (leading edge).
+    stream.emit("delta", frame("delta", 5));
+    expect(screen.getByText(/live:3:/)).toBeTruthy();
+  });
+
+  it("combines the three profile streams into one union refresh key", async () => {
+    function UnionProbe() {
+      const union = useProfilesRealtime(["paper", "sandbox", "live"]);
+      return <output>{union.refreshKey}:{union.states.paper.phase}:{union.states.sandbox.phase}:{union.states.live.phase}</output>;
+    }
+    render(<UnionProbe />);
+    await waitFor(() => expect(FakeEventSource.instances).toHaveLength(3));
+    const urls = FakeEventSource.instances.map((instance) => instance.url).sort();
+    expect(urls).toEqual([
+      "/api/v1/execution/profiles/live/stream?cursor=pc1.fixture",
+      "/api/v1/execution/profiles/paper/stream?cursor=pc1.fixture",
+      "/api/v1/execution/profiles/sandbox/stream?cursor=pc1.fixture",
+    ]);
+    // Three snapshots = three first-window bumps summed.
+    await waitFor(() => expect(screen.getByText(/^3:live:live:live$/)).toBeTruthy());
   });
 });
 

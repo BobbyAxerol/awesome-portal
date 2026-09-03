@@ -190,7 +190,11 @@ export interface components {
             read_at: components["schemas"]["Timestamp"];
             source_as_of: components["schemas"]["Timestamp"] | null;
             /** @enum {unknown} */
-            freshness: "FRESH" | "STALE";
+            freshness: "FRESH" | "AGING" | "STALE";
+            freshness_budget_ms?: {
+                fresh: number;
+                stale: number;
+            };
             /** @enum {unknown} */
             completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
             summary: components["schemas"]["Summary"];
@@ -235,7 +239,11 @@ export interface components {
             read_at: components["schemas"]["Timestamp"];
             source_as_of: components["schemas"]["Timestamp"] | null;
             /** @enum {unknown} */
-            freshness: "FRESH" | "STALE";
+            freshness: "FRESH" | "AGING" | "STALE";
+            freshness_budget_ms?: {
+                fresh: number;
+                stale: number;
+            };
             /** @enum {unknown} */
             completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
             environments: {
@@ -248,7 +256,11 @@ export interface components {
             items: components["schemas"]["PortfolioListItem"][];
         };
         /** @enum {unknown} */
-        Freshness: "FRESH" | "STALE";
+        Freshness: "FRESH" | "AGING" | "STALE";
+        FreshnessBudgetMs: {
+            fresh: number;
+            stale: number;
+        };
         /** @enum {unknown} */
         Completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
         EnvelopeBase: {
@@ -264,6 +276,7 @@ export interface components {
             read_at: components["schemas"]["Timestamp"];
             source_as_of: components["schemas"]["Timestamp"] | null;
             freshness: components["schemas"]["Freshness"];
+            freshness_budget_ms?: components["schemas"]["FreshnessBudgetMs"];
             completeness: components["schemas"]["Completeness"];
         };
         BindingItem: {

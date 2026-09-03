@@ -357,6 +357,29 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     expect(JSON.stringify(result.items)).not.toContain("pf_ghost");
   });
 
+  it("labels freshness by the ingestion-class budget and declares it on the envelope (P4-C / F3)", async () => {
+    const fresh = await service.fleet(principal(), { environment: "all", limit: 10 }) as Record<string, any>;
+    // Default projection poll is 15 s: FRESH within 30 s, AGING within 60 s.
+    expect(fresh.freshness).toBe("FRESH");
+    expect(fresh.freshness_budget_ms).toEqual({ fresh: 30_000, stale: 60_000 });
+
+    await pool.query(
+      `UPDATE execution_manager_projection_snapshots
+          SET refreshed_at = now() - interval '45 seconds'
+        WHERE projection_kind = 'ALPHA_FLEET'`,
+    );
+    const aging = await service.fleet(principal(), { environment: "all", limit: 10 }) as Record<string, any>;
+    expect(aging.freshness).toBe("AGING");
+
+    await pool.query(
+      `UPDATE execution_manager_projection_snapshots
+          SET refreshed_at = now() - interval '90 seconds'
+        WHERE projection_kind = 'ALPHA_FLEET'`,
+    );
+    const stale = await service.fleet(principal(), { environment: "all", limit: 10 }) as Record<string, any>;
+    expect(stale.freshness).toBe("STALE");
+  });
+
   it("rejects page sizes above the published BR-EX-72 bound", () => {
     expect(AlphaFleetQuerySchema.parse({}).environment).toBe("all");
     expect(AlphaFleetQuerySchema.safeParse({ limit: 51 }).success).toBe(false);

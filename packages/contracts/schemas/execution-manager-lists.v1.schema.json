@@ -5,7 +5,12 @@
     "Identifier": { "type": "string", "minLength": 1, "maxLength": 191 },
     "Timestamp": { "type": "string", "format": "date-time" },
     "Environment": { "enum": ["paper", "sandbox", "live"] },
-    "Freshness": { "enum": ["FRESH", "STALE"] },
+    "Freshness": { "enum": ["FRESH", "AGING", "STALE"] },
+    "FreshnessBudgetMs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fresh", "stale"],
+      "properties": { "fresh": { "type": "integer", "minimum": 1 }, "stale": { "type": "integer", "minimum": 1 } }
+    },
     "Completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
     "Deployment": {
       "type": "object",
@@ -98,6 +103,7 @@
         "read_at": { "$ref": "#/$defs/Timestamp" },
         "source_as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
         "freshness": { "$ref": "#/$defs/Freshness" },
+        "freshness_budget_ms": { "$ref": "#/$defs/FreshnessBudgetMs" },
         "completeness": { "$ref": "#/$defs/Completeness" }
       }
     },

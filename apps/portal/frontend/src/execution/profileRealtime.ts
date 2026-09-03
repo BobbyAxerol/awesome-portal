@@ -63,20 +63,43 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
     let recoveryUsed = false;
     let epoch: string | null = null;
     let sequence: number | null = null;
+    // P4-C: bounded delta coalescing. Every event still reaches the sequence
+    // guard, but the screen is asked to re-read at most once per window — the
+    // first event of a burst refreshes immediately, the rest fold into one
+    // trailing refresh. Dropping an event would fabricate quiet; refetching
+    // per event under a burst is a self-inflicted stampede.
+    let lastBumpAtMs = 0;
+    let bumpTimer: ReturnType<typeof setTimeout> | null = null;
 
     const close = () => {
       source?.close();
       source = null;
+    };
+    const bumpRefresh = () => {
+      const elapsed = Date.now() - lastBumpAtMs;
+      if (elapsed >= REALTIME_COALESCE_MS) {
+        lastBumpAtMs = Date.now();
+        setState((current) => ({ ...current, refreshKey: current.refreshKey + 1 }));
+        return;
+      }
+      if (bumpTimer) return;
+      bumpTimer = setTimeout(() => {
+        bumpTimer = null;
+        lastBumpAtMs = Date.now();
+        if (!disposed) setState((current) => ({ ...current, refreshKey: current.refreshKey + 1 }));
+      }, REALTIME_COALESCE_MS - elapsed);
     };
     const updateFrom = (event: RealtimeEnvelope) => {
       if (event.projection_epoch !== null) epoch = event.projection_epoch;
       if (event.projection_sequence !== null) sequence = event.projection_sequence;
       setState((current) => ({
         phase: "live",
-        refreshKey: event.event_type === "heartbeat" ? current.refreshKey : current.refreshKey + 1,
+        refreshKey: current.refreshKey,
         cursor: event.cursor ?? current.cursor,
         reason: null,
       }));
+      // A heartbeat proves liveness; it never triggers a full data reread.
+      if (event.event_type !== "heartbeat") bumpRefresh();
     };
     const decode = (message: MessageEvent<string>): RealtimeEnvelope | null => {
       try { return readProfileRealtime(JSON.parse(message.data)); } catch { return null; }
@@ -174,8 +197,36 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
       disposed = true;
       close();
       if (recoveryTimer) clearTimeout(recoveryTimer);
+      if (bumpTimer) clearTimeout(bumpTimer);
     };
   }, [environment]);
 
   return state;
+}
+
+/** One re-read per second is the ceiling a delta burst can ask of a screen. */
+export const REALTIME_COALESCE_MS = 1_000;
+
+export interface ProfilesRealtimeState {
+  /** Sum of the member refresh keys — any profile's delta advances it. */
+  refreshKey: number;
+  states: Readonly<Record<"paper" | "sandbox" | "live", ProfileRealtimeState>>;
+}
+
+/**
+ * P4-C: multi-profile screens (Fleet, the 360s, the portfolio register) span
+ * all three projections, so their realtime truth is the union of the three
+ * published streams. Three fixed hook calls — the rules of hooks forbid a
+ * dynamic loop, and there are exactly three profiles by contract.
+ */
+export function useProfilesRealtime(
+  environments: readonly ("paper" | "sandbox" | "live")[],
+): ProfilesRealtimeState {
+  const paper = useProfileRealtime(environments.includes("paper") ? "paper" : null);
+  const sandbox = useProfileRealtime(environments.includes("sandbox") ? "sandbox" : null);
+  const live = useProfileRealtime(environments.includes("live") ? "live" : null);
+  return {
+    refreshKey: paper.refreshKey + sandbox.refreshKey + live.refreshKey,
+    states: { paper, sandbox, live },
+  };
 }

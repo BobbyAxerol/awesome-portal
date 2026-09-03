@@ -26,11 +26,19 @@ type Loaded<T> =
   | { status: "ok"; reason?: undefined; value: T }
   | { status: Exclude<PanelStatus, "ok">; reason?: string; value: null };
 
-export function useApiRead<T>(run: () => Promise<Result<T>>, deps: readonly unknown[]): Loaded<T> {
+export function useApiRead<T>(
+  run: () => Promise<Result<T>>,
+  deps: readonly unknown[],
+  options?: { keepValue?: boolean },
+): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ status: "loading", value: null });
+  const keepValue = options?.keepValue === true;
   useEffect(() => {
     let cancelled = false;
-    setState({ status: "loading", value: null });
+    // P4-C: a realtime revalidation refreshes the existing rich panel tree in
+    // place — flashing the whole screen to loading once per delta would make
+    // live data feel broken. Only the very first read shows loading.
+    setState((current) => keepValue && current.value !== null ? current : { status: "loading", value: null });
     void run().then((result) => {
       if (cancelled) return;
       setState(
