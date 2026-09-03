@@ -15,6 +15,11 @@ import {
 
 const SOURCE_CONTRACT_REVISION = "trading-system.portal-execution.manager-v2.runtime.v1";
 const MAXIMUM_SOURCE_PAGES = 2;
+// P4-D follow-on: time-series (ladder) relations resume from a persisted
+// cursor and may take a deeper page budget per cycle — that is what lets a
+// 600k-row append-only relation actually reach its recent rows. The page
+// budget stays inside the shared 15 r/s source admission.
+const LADDER_MAXIMUM_SOURCE_PAGES = 10;
 const SOURCE_PAGE_LIMIT = 200;
 
 @Injectable()
@@ -87,9 +92,24 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       const results = [];
       for (const binding of profileProjectionCatalog(environment)) {
         let page: ManagerPage;
+        let resumePoint: string | null = null;
+        const resumeCursor = binding.ladder
+          ? await this.repository.relationCursor(workspaceId, environment, profileId, `${binding.sourceId}:${binding.relation}`)
+          : null;
         try {
-          page = await this.drain(workspaceId, environment, binding, context);
+          const drained = await this.drain(workspaceId, environment, binding, context, resumeCursor);
+          page = drained.page;
+          resumePoint = drained.resumePoint;
         } catch (error) {
+          if (resumeCursor !== null) {
+            // A persisted cursor can outlive its signature (catalogue digest
+            // rotation, TTL). Clear it so the next cycle restarts a clean
+            // pass instead of failing this relation forever.
+            await this.repository.saveRelationCursor(
+              workspaceId, environment, profileId,
+              `${binding.sourceId}:${binding.relation}`, null,
+            ).catch(() => undefined);
+          }
           this.logger.warn(JSON.stringify({
             event: "execution_profile_projection_relation_failed",
             environment,
@@ -108,6 +128,16 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             continue;
           }
           throw error;
+        }
+        if (binding.ladder) {
+          // Mid-pass: the source cursor continues next cycle. Tail: keep the
+          // last held cursor and follow the (ts, id)-ordered stream forward —
+          // new rows land strictly after it, and the final page's overlap is
+          // deduplicated by the ladder merge.
+          await this.repository.saveRelationCursor(
+            workspaceId, environment, profileId,
+            `${binding.sourceId}:${binding.relation}`, page.nextCursor ?? resumePoint,
+          ).catch(() => undefined);
         }
         results.push({
           spec: { key: binding.key, binding }, page,
@@ -188,14 +218,20 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     environment: ProjectionEnvironment,
     binding: ReturnType<typeof profileProjectionCatalog>[number],
     context: ManagerReadContext,
-  ): Promise<ManagerPage> {
+    resumeCursor: string | null = null,
+  ): Promise<{ page: ManagerPage; resumePoint: string | null }> {
     const items: ManagerPage["items"] = [];
     const cursors = new Set<string>();
-    let cursor: string | undefined;
+    let cursor: string | undefined = resumeCursor ?? undefined;
+    // Time-series relations page by (ts, id) ascending, so the last cursor we
+    // ever held IS the tail position: keeping it lets the next cycle follow
+    // new rows incrementally instead of re-walking the whole history.
+    let lastHeldCursor: string | null = resumeCursor;
     let asOf: string | null = null;
     let freshness: ManagerPage["freshness"] = "FRESH";
     let completeness: ManagerPage["completeness"] = "COMPLETE";
-    for (let pageNumber = 0; pageNumber < MAXIMUM_SOURCE_PAGES; pageNumber += 1) {
+    const pageBudget = binding.ladder ? LADDER_MAXIMUM_SOURCE_PAGES : MAXIMUM_SOURCE_PAGES;
+    for (let pageNumber = 0; pageNumber < pageBudget; pageNumber += 1) {
       const response = await this.source.relationForProjection(
         workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
         { limit: SOURCE_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
@@ -205,10 +241,16 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       asOf = [asOf, page.asOf].filter((value): value is string => value !== null).sort().at(-1) ?? null;
       freshness = worseFreshness(freshness, page.freshness);
       completeness = worseCompleteness(completeness, page.completeness);
-      if (!page.nextCursor) return { items, asOf, freshness, completeness, nextCursor: null };
+      if (!page.nextCursor) {
+        return {
+          page: { items, asOf, freshness, completeness, nextCursor: null },
+          resumePoint: lastHeldCursor,
+        };
+      }
       if (cursors.has(page.nextCursor)) throw new Error("N31_SOURCE_CURSOR_CYCLE");
       cursors.add(page.nextCursor);
       cursor = page.nextCursor;
+      lastHeldCursor = page.nextCursor;
     }
     // A hot Portal projection is deliberately bounded. A larger source
     // population is not a failed cycle: retain the newest accepted window and
@@ -216,7 +258,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     // exact historical population. The next reconciliation starts again from
     // the authoritative head; cold/full-history reads remain a later, explicit
     // query-plane concern.
-    return { items, asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null };
+    return {
+      page: { items, asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null },
+      resumePoint: lastHeldCursor,
+    };
   }
 
   private enabled(): boolean { return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true"; }

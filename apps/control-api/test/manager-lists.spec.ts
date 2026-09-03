@@ -358,17 +358,20 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
   });
 
   it("labels freshness by the ingestion-class budget and declares it on the envelope (P4-C / F3)", async () => {
-    const fresh = await service.fleet(principal(), { environment: "all", limit: 10 }) as Record<string, any>;
+    const fresh = await service.fleet(principal(), { environment: "all", limit: 1 }) as Record<string, any>;
     // Default projection poll is 15 s: FRESH within 30 s, AGING within 60 s.
     expect(fresh.freshness).toBe("FRESH");
     expect(fresh.freshness_budget_ms).toEqual({ fresh: 30_000, stale: 60_000 });
+    const cursor = fresh.page.next_cursor as string;
 
+    // A cursor-paged read never triggers the coalesced background refresh, so
+    // the backdated timestamp cannot race a concurrent snapshot commit.
     await pool.query(
       `UPDATE execution_manager_projection_snapshots
           SET refreshed_at = now() - interval '45 seconds'
         WHERE projection_kind = 'ALPHA_FLEET'`,
     );
-    const aging = await service.fleet(principal(), { environment: "all", limit: 10 }) as Record<string, any>;
+    const aging = await service.fleet(principal(), { environment: "all", limit: 1, after: cursor }) as Record<string, any>;
     expect(aging.freshness).toBe("AGING");
 
     await pool.query(
@@ -376,7 +379,7 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
           SET refreshed_at = now() - interval '90 seconds'
         WHERE projection_kind = 'ALPHA_FLEET'`,
     );
-    const stale = await service.fleet(principal(), { environment: "all", limit: 10 }) as Record<string, any>;
+    const stale = await service.fleet(principal(), { environment: "all", limit: 1, after: cursor }) as Record<string, any>;
     expect(stale.freshness).toBe("STALE");
   });
 

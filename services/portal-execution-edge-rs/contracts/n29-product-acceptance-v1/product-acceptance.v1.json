@@ -85,7 +85,7 @@
     "br72_service_sha256": "sha256:b9a2967d2b7253fff3821216191fb4c8c850c1f3933dc767420eb221653b19ff",
     "br72_repository_sha256": "sha256:03e42acb0730125abc93d65cbf2b665a7c107fa819f1f5049c38e1ced2ed4f03",
     "br72_controller_sha256": "sha256:b59109c8eacefc740900194ab8531733ec01e34d337ffbb1febc8ebf84cc11b9",
-    "br72_test_sha256": "sha256:85fb12d9eb6a683af6e827af68f07f292760e2c8e0c202c9f02cccc54c39d9b4",
+    "br72_test_sha256": "sha256:00e4b42c26b2d04b1c826a184a7a0f63e3032cbc44abb69efbfcea839fea285c",
     "br72_source_boundary_sha256": "sha256:93383afa160bf0a0560702bb0283fb98c8df6a98069efb75188b6d2acfe86b2f",
     "br72_source_boundary_test_sha256": "sha256:7bc55a6c181d1ce25b4f29718c98f88babab218459c870dcb3fab3f904b03aa3",
     "br72_live_review_fixture_sha256": "sha256:9fc9fddd082533e02d1b856492d0f80513e19726598bcb7a3978ab6ad68ae15e",

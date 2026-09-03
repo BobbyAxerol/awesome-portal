@@ -114,6 +114,45 @@ export class ExecutionProfileProjectionRepository {
     );
   }
 
+  /**
+   * P4-D follow-on: the persisted resume point for one relation's source
+   * drain. Null cursor = the next cycle starts a fresh full pass.
+   */
+  async relationCursor(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+  ): Promise<string | null> {
+    const result = await this.pool.query<{ source_cursor: string | null }>(
+      `SELECT source_cursor FROM execution_profile_relation_cursors
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4`,
+      [workspaceId, environment, profileId, relationKey],
+    );
+    return result.rows[0]?.source_cursor ?? null;
+  }
+
+  async saveRelationCursor(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+    sourceCursor: string | null,
+  ): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO execution_profile_relation_cursors
+         (workspace_id, environment, profile_id, relation_key, source_cursor)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (workspace_id, environment, profile_id, relation_key) DO UPDATE SET
+         source_cursor = EXCLUDED.source_cursor,
+         pass_started_at = CASE WHEN EXCLUDED.source_cursor IS NULL
+                                THEN clock_timestamp()
+                                ELSE execution_profile_relation_cursors.pass_started_at END,
+         updated_at = clock_timestamp()`,
+      [workspaceId, environment, profileId, relationKey, sourceCursor],
+    );
+  }
+
   async commit(
     document: ProfileProjectionDocument,
     input: {

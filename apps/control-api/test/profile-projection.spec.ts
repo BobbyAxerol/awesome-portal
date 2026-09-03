@@ -331,6 +331,80 @@ function emptyManagerResponse(environment: string, relation: string) {
   };
 }
 
+describe("P4-D follow-on: resumable time-series drains", () => {
+  it("persists the drain cursor, resumes from it next cycle and clears it at the tail", async () => {
+    const equityCursors: Array<string | undefined> = [];
+    let tail = false;
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string, query: { cursor?: string },
+      ) => {
+        if (relation !== "account_equity_snapshots") return emptyManagerResponse(environment, relation);
+        equityCursors.push(query.cursor);
+        const ordinal = equityCursors.length;
+        const response = emptyManagerResponse(environment, relation) as Record<string, any>;
+        response.source.data.items = [{
+          relation: { schema: "public", relation }, record_key: "opaque",
+          fields: {
+            id: { kind: "TEXT", value: `eq_${ordinal}` },
+            ts: { kind: "TIMESTAMP", value: new Date().toISOString() },
+            account_id: { kind: "TEXT", value: "acc_a" },
+            equity: { kind: "DECIMAL", value: "100" },
+            mode: { kind: "TEXT", value: environment },
+          },
+        }];
+        response.source.data.next_cursor = tail ? null : `cursor_${ordinal}`;
+        return response;
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+
+    // Cycle 1: no persisted cursor — the drain starts from the beginning and
+    // exhausts its ladder page budget; the last next_cursor is persisted.
+    await worker.runOnce();
+    expect(equityCursors[0]).toBeUndefined();
+    const afterFirst = await repository.relationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots");
+    expect(afterFirst).toBe(`cursor_${equityCursors.length}`);
+
+    // Cycle 2: the drain RESUMES exactly where cycle 1 stopped.
+    const resumePoint = afterFirst;
+    await worker.runOnce();
+    expect(equityCursors.filter((cursor) => cursor === resumePoint).length).toBe(1);
+
+    // Tail: the source stops issuing cursors — the drain KEEPS the last held
+    // cursor and follows the (ts, id)-ordered stream forward from there; new
+    // rows land strictly after it and the overlap page dedups in the ladder.
+    tail = true;
+    const beforeTail = await repository.relationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots");
+    await worker.runOnce();
+    expect(await repository.relationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots")).toBe(beforeTail);
+    await worker.onApplicationShutdown();
+  });
+
+  it("drops a persisted cursor the source refuses instead of failing forever", async () => {
+    await repository.saveRelationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots", "rotted_cursor");
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string, query: { cursor?: string },
+      ) => {
+        if (relation === "account_equity_snapshots" && query.cursor === "rotted_cursor") {
+          const error = new Error("cursor rejected") as Error & { code: string; details: Record<string, unknown> };
+          error.code = "N17B_SOURCE_REJECTED";
+          error.details = { availability: "UNAVAILABLE", reason_code: "CURSOR_REJECTED", retryable: false };
+          throw error;
+        }
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce().catch(() => undefined);
+    expect(await repository.relationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots")).toBeNull();
+    await worker.onApplicationShutdown();
+  });
+});
+
 describe("P4-D window ladder merge", () => {
   const row = (id: string, ts: string, entity = "acc_a") => ({
     lineage: { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" },
