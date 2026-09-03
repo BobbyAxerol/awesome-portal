@@ -94,11 +94,13 @@ they are empty because the source currently publishes empty pages.
   `MANAGER_V2_SOURCE_CONTRACT_REJECTED` -> the Portal restarts an
   oldest-first re-walk of ~600k rows every few minutes (observed live 09:01Z,
   paper `performance_snapshots`).
-- Fix is committed on your side already, awaiting deploy approval:
-  branch `fix/manager-cursor-ttl-tail-follow`, commit `99515e8` — TTL 48 h
-  (a cursor is a sealed keyset position, not a grant; identity stays
-  mTLS/JWT). Deploy = image rebuild + recreate of the paper manager-read
-  container (rule 12; rollback = image sha `2e80ad38`).
+- **Nothing is blocked on you**: Portal ships a client-side workaround
+  (re-reading the final page with `limit K−1` each cycle forces a fresh
+  cursor issue) plus no-wipe carry-forward. Optionally, branch
+  `fix/manager-cursor-ttl-tail-follow` (commit `99515e8`) already sits in
+  your worktree raising the codec TTL to 48 h — a cursor is a sealed keyset
+  position, not a grant — which would remove the extra request; deploying it
+  is a rule-12 recreate (rollback = image sha `2e80ad38`). See also §5.1.
 
 ## 2. P0 — parent-set integrity in the published feeds
 
@@ -171,6 +173,16 @@ intended risk configuration or a paper-runner defect on your side.
   single cadence) and waits on your deploy window. Journal push/tail remains
   the target transport per the P4-E matrix
   (`deploy/execution-phase4/production-streaming-config.md`).
+
+### 5.1 Note for your side: manager cursor TTL vs pull consumers (FYI, worked around)
+
+Your facade's page cursors expire five minutes after issue, and a tail page
+issues no cursor. A pull consumer that follows the (ts, id) tail therefore
+cannot legally hold its position; Portal now forces a fresh issue each cycle
+by re-reading the final page with `limit K-1`. This works and stays inside
+the read contract, but costs one extra bounded request per relation per
+cycle. If you ever revisit the codec, a longer TTL (or a tail cursor on the
+final page) removes that workaround; nothing is blocked on it.
 
 ## 6. P2 — the nine standing N28 owner requests (unchanged, still open)
 
