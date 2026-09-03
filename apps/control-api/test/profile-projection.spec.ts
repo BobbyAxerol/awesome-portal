@@ -667,6 +667,35 @@ describe("Full-range downsampled history read (owner directive 2026-09-03)", () 
   });
 });
 
+describe("Daily closes for cross-alpha statistics (§14 E1)", () => {
+  const equityKey = "manager.performance:account_equity_snapshots";
+  it("returns one real last-close row per strategy/account/day", async () => {
+    const rows = [];
+    for (const [account, base] of [["acc_a", 100], ["acc_b", 500]] as const) {
+      for (let day = 0; day < 2; day += 1) {
+        for (let sample = 0; sample < 3; sample += 1) {
+          const ts = new Date(Date.UTC(2026, 8, 1 + day, 4 + sample * 8)).toISOString();
+          const id = `${account}_${day}_${sample}`;
+          rows.push({ rowId: id, ts, fields: {
+            id, ts, strategy_id: "alpha_x", account_id: account,
+            equity: String(base + day * 10 + sample),
+          }});
+        }
+      }
+    }
+    await repository.appendTimeSeriesHistory(workspaceId, "paper", profileId, equityKey, rows as never);
+    const closes = await repository.timeSeriesDailyCloses(workspaceId, "paper", profileId, equityKey, {
+      from: "2026-08-31T00:00:00.000Z", valueField: "equity",
+    });
+    expect(closes).toEqual([
+      { strategyId: "alpha_x", accountId: "acc_a", day: "2026-09-01", value: "102" },
+      { strategyId: "alpha_x", accountId: "acc_a", day: "2026-09-02", value: "112" },
+      { strategyId: "alpha_x", accountId: "acc_b", day: "2026-09-01", value: "502" },
+      { strategyId: "alpha_x", accountId: "acc_b", day: "2026-09-02", value: "512" },
+    ]);
+  });
+});
+
 describe("P4-D window ladder merge", () => {
   const row = (id: string, ts: string, entity = "acc_a") => ({
     lineage: { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" },

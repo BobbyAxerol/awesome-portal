@@ -11,7 +11,7 @@ import {
   bindCapitalPreviewRequest,
   shadowQueryBody,
 } from "../src/execution/analytics.controller";
-import { LocalQueryAnalyticsService } from "../src/execution/local-query-analytics.service";
+import { computePortfolioStatistics, LocalQueryAnalyticsService } from "../src/execution/local-query-analytics.service";
 import { ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
 
 describe("EX-BE-07b analytics screen boundary", () => {
@@ -611,5 +611,46 @@ describe("EX-BE-07b analytics screen boundary", () => {
       requested_amount: 1,
       currency: "USDT",
     }, scope)).toThrowError(AnalyticsProxyError);
+  });
+});
+
+describe("cross-alpha statistics from the mirror (§14 E1)", () => {
+  it("computes correlation pairs and drawdown overlap from daily closes", () => {
+    const closes: Array<{ strategyId: string; accountId: string; day: string; value: string }> = [];
+    const day = (index: number) => `2026-08-${String(10 + index).padStart(2, "0")}`;
+    // Anti-phase zig-zags: on odd days alpha_up gains 2% while alpha_down
+    // loses 2%; even days are flat for both. Returns therefore deviate in
+    // exact opposition (a monotone falling LINE would still correlate
+    // positively — correlation measures co-variation, not trend direction).
+    let levelUp = 100;
+    let levelDown = 100;
+    for (let index = 0; index < 12; index += 1) {
+      if (index > 0 && index % 2 === 1) { levelUp *= 1.02; levelDown *= 0.98; }
+      closes.push({ strategyId: "alpha_up", accountId: "acc_1", day: day(index), value: levelUp.toFixed(6) });
+      closes.push({ strategyId: "alpha_twin", accountId: "acc_2", day: day(index), value: (2 * levelUp).toFixed(6) });
+      closes.push({ strategyId: "alpha_down", accountId: "acc_3", day: day(index), value: levelDown.toFixed(6) });
+    }
+    const statistics = computePortfolioStatistics(closes)!;
+    expect(statistics.window).toMatchObject({ days: 12, basis: "PORTAL_SGP_HISTORY_MIRROR" });
+    const pair = (left: string, right: string) =>
+      statistics.correlation.pairs.find((entry) => entry.left_alpha === left && entry.right_alpha === right)!;
+    // Monotone rising twins correlate to +1; the falling alpha correlates
+    // negatively (returns on different bases are not exactly -1).
+    expect(pair("alpha_twin", "alpha_up").correlation).toBeCloseTo(1, 3);
+    expect(pair("alpha_twin", "alpha_up").overlapping_days).toBe(11);
+    expect(pair("alpha_down", "alpha_up").correlation).toBeLessThan(-0.99);
+    // Drawdown: rising alphas never draw down; the falling one bottoms at
+    // (100/111 - 1) and stays counted from its running peak.
+    const down = statistics.drawdownOverlap.alphas.find((entry) => entry.alpha_id === "alpha_down")!;
+    expect(down.max_drawdown).toBeCloseTo(0.98 ** 6 - 1, 4);
+    expect(down.max_drawdown_at).toBe(day(11));
+    const up = statistics.drawdownOverlap.alphas.find((entry) => entry.alpha_id === "alpha_up")!;
+    expect(up.max_drawdown).toBe(0);
+    // Only one alpha is ever in drawdown, so no overlap window exists.
+    expect(statistics.drawdownOverlap.overlaps).toEqual([]);
+  });
+
+  it("returns null when the mirror has no usable closes", () => {
+    expect(computePortfolioStatistics([])).toBeNull();
   });
 });

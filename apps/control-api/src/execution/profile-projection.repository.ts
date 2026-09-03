@@ -313,6 +313,37 @@ export class ExecutionProfileProjectionRepository {
     };
   }
 
+  /**
+   * §14 E1: per-(strategy, account) daily closes from the mirror — the
+   * bounded statistical feed for cross-alpha correlation and drawdown
+   * analytics. One real row per account per day (the last of the day).
+   */
+  async timeSeriesDailyCloses(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+    query: { from: string; valueField: string },
+  ): Promise<Array<{ strategyId: string; accountId: string; day: string; value: string }>> {
+    const result = await this.pool.query<{ strategy_id: string; account_id: string; day: string; value: string }>(
+      `SELECT DISTINCT ON (fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts))
+              fields->>'strategy_id' AS strategy_id,
+              fields->>'account_id' AS account_id,
+              to_char(date_trunc('day', ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day,
+              fields->>($6) AS value
+         FROM execution_timeseries_history
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
+          AND ts >= $5::timestamptz
+          AND fields->>'strategy_id' IS NOT NULL AND fields->>'account_id' IS NOT NULL
+          AND fields->>($6) ~ '^-?[0-9]+(\\.[0-9]+)?$'
+        ORDER BY fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts), ts DESC, row_id DESC`,
+      [workspaceId, environment, profileId, relationKey, query.from, query.valueField],
+    );
+    return result.rows.map((row) => ({
+      strategyId: row.strategy_id, accountId: row.account_id, day: row.day, value: row.value,
+    }));
+  }
+
   async timeSeriesHistoryCoverage(
     workspaceId: string,
     environment: ProjectionEnvironment,

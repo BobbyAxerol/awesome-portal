@@ -76,7 +76,9 @@ export class LocalQueryAnalyticsService {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", 503);
     }
     const depth = await this.subjectDepth(snapshot, workspaceId, environment, profileId, subjectKind, subjectId);
-    return composeAnalytics(snapshot, principal.workspaceId, subjectKind, subjectId, depth);
+    const statistics = await this.portfolioStatistics(workspaceId, environment, profileId);
+    if (statistics && depth) depth.queries += 1;
+    return composeAnalytics(snapshot, principal.workspaceId, subjectKind, subjectId, depth, statistics);
   }
 
   /**
@@ -134,6 +136,29 @@ export class LocalQueryAnalyticsService {
     }
     return depth;
   }
+
+  /**
+   * §14 E1: cross-alpha statistics from the history mirror. The mirror holds
+   * every accepted equity point, so the N25 "insufficient multi-alpha
+   * history" tiles compute locally the moment two alphas overlap ten days.
+   */
+  private async portfolioStatistics(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+  ): Promise<PortfolioStatistics | null> {
+    if (typeof this.repository.timeSeriesDailyCloses !== "function") return null;
+    try {
+      const closes = await this.repository.timeSeriesDailyCloses(
+        workspaceId, environment, profileId,
+        "manager.performance:account_equity_snapshots",
+        { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity" },
+      );
+      return computePortfolioStatistics(closes);
+    } catch {
+      return null;
+    }
+  }
 }
 
 interface SubjectDepth {
@@ -159,6 +184,7 @@ function composeAnalytics(
   subjectKind: QueryAnalyticsSubjectKind,
   subjectId: string,
   depth: SubjectDepth | null = null,
+  statistics: PortfolioStatistics | null = null,
 ): Record<string, unknown> {
   const all = Object.fromEntries(Object.entries(SOURCE).map(([name, key]) => [name, facts(snapshot, key)])) as
     Record<keyof typeof SOURCE, Fact[]>;
@@ -219,10 +245,14 @@ function composeAnalytics(
     capability("replay-journal", replay.trade_log.length > 0 ? factsState([...selected.orders, ...selected.fills]) : "EMPTY",
       "EXECUTION", "replay.v1", ["public.orders", "public.fills"]),
     capability("market-candles", "UNAVAILABLE", "EXECUTION", null, [], "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED"),
-    capability("portfolio-drawdown-overlap", "UNAVAILABLE", "DERIVED", "drawdown_overlap.v1",
-      ["public.performance_snapshots"], "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY"),
-    capability("portfolio-correlation", "EMPTY", "DERIVED", "portfolio-correlation-returns.v1",
-      ["public.performance_snapshots"], "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY"),
+    capability("portfolio-drawdown-overlap",
+      statistics && statistics.drawdownOverlap.alphas.length > 0 ? "AVAILABLE" : "UNAVAILABLE",
+      "DERIVED", "drawdown_overlap.v1", ["public.account_equity_snapshots"],
+      statistics && statistics.drawdownOverlap.alphas.length > 0 ? null : "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY"),
+    capability("portfolio-correlation",
+      statistics && statistics.correlation.pairs.length > 0 ? "AVAILABLE" : "EMPTY",
+      "DERIVED", "portfolio-correlation-returns.v1", ["public.account_equity_snapshots"],
+      statistics && statistics.correlation.pairs.length > 0 ? null : "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY"),
     capability("portfolio-rho-timeline", "UNAVAILABLE", "DERIVED", "corr.v1",
       ["public.portfolio_equity_snapshots"], "N28_BENCHMARK_SERIES_SOURCE_NOT_ACTIVATED"),
     capability("canary-drift", "UNAVAILABLE", "DERIVED", "drift.v1", [], "N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED"),
@@ -262,8 +292,21 @@ function composeAnalytics(
       chart_series: chartSeries,
       ...(depth && Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
       replay,
-      drawdown_overlap: null,
-      correlation: {
+      drawdown_overlap: statistics && statistics.drawdownOverlap.alphas.length > 0 ? {
+        formula_version: "drawdown_overlap.v1",
+        state: "AVAILABLE",
+        window: statistics.window,
+        alphas: statistics.drawdownOverlap.alphas,
+        overlaps: statistics.drawdownOverlap.overlaps,
+      } : null,
+      correlation: statistics && statistics.correlation.pairs.length > 0 ? {
+        formula_version: "portfolio-correlation-returns.v1",
+        state: "AVAILABLE",
+        reason_code: null,
+        window: statistics.window,
+        alpha_ids: statistics.correlation.alphaIds,
+        pairs: statistics.correlation.pairs,
+      } : {
         formula_version: "portfolio-correlation-returns.v1",
         state: "EMPTY",
         reason_code: "N25_INSUFFICIENT_MULTI_ALPHA_HISTORY",
@@ -694,4 +737,173 @@ function divideInteger(numerator: number, denominator: number): string {
   const scaled = BigInt(numerator) * 1_000_000n / BigInt(denominator);
   const digits = scaled.toString().padStart(7, "0");
   return `${digits.slice(0, -6)}.${digits.slice(-6)}`.replace(/\.0+$/, "").replace(/(\.\d*?)0+$/, "$1");
+}
+
+/**
+ * §14 E1 — cross-alpha statistics over the mirror's daily closes.
+ *
+ * Per strategy: each account's last close of the day, forward-filled from the
+ * day every member account exists (the same start rule the DERIVED portfolio
+ * sum uses, so early membership changes never fake a return), summed exactly.
+ * Correlation is Pearson over overlapping simple daily returns; drawdown is
+ * the distance from the running peak. Ratios are dimensionless statistics and
+ * are served as numbers; money never leaves exact-decimal form.
+ */
+export interface PortfolioStatistics {
+  window: { days: number; basis: "PORTAL_SGP_HISTORY_MIRROR"; daily_basis: "LAST_CLOSE_FORWARD_FILLED_SUM" };
+  correlation: {
+    alphaIds: string[];
+    pairs: Array<{ left_alpha: string; right_alpha: string; correlation: number; overlapping_days: number }>;
+  };
+  drawdownOverlap: {
+    alphas: Array<{
+      alpha_id: string;
+      max_drawdown: number;
+      max_drawdown_at: string | null;
+      series: Array<{ timestamp: string; drawdown: number }>;
+    }>;
+    overlaps: Array<{ from: string; to: string; alpha_ids: string[] }>;
+  };
+}
+
+const MINIMUM_OVERLAPPING_DAYS = 10;
+const OVERLAP_DRAWDOWN_FLOOR = -0.005;
+
+export function computePortfolioStatistics(
+  closes: ReadonlyArray<{ strategyId: string; accountId: string; day: string; value: string }>,
+): PortfolioStatistics | null {
+  const byStrategy = new Map<string, Map<string, Map<string, string>>>();
+  for (const close of closes) {
+    const accounts = byStrategy.get(close.strategyId) ?? new Map<string, Map<string, string>>();
+    const days = accounts.get(close.accountId) ?? new Map<string, string>();
+    days.set(close.day, close.value);
+    accounts.set(close.accountId, days);
+    byStrategy.set(close.strategyId, accounts);
+  }
+  const daily = new Map<string, Array<{ day: string; value: number }>>();
+  let spanStart: string | null = null;
+  let spanEnd: string | null = null;
+  for (const [strategyId, accounts] of byStrategy) {
+    const perAccount = [...accounts.values()].map((days) =>
+      [...days.entries()].sort(([left], [right]) => left.localeCompare(right)));
+    if (perAccount.some((entries) => entries.length === 0)) continue;
+    const start = perAccount.map((entries) => entries[0][0])
+      .sort((left, right) => right.localeCompare(left))[0];
+    const allDays = [...new Set(perAccount.flat().map(([day]) => day))]
+      .filter((day) => day >= start)
+      .sort((left, right) => left.localeCompare(right));
+    const series: Array<{ day: string; value: number }> = [];
+    for (const day of allDays) {
+      const total = sumExactDecimals(perAccount.map((entries) => {
+        let latest = entries[0][1];
+        for (const [entryDay, value] of entries) {
+          if (entryDay > day) break;
+          latest = value;
+        }
+        return latest;
+      }));
+      const numeric = Number(total);
+      if (Number.isFinite(numeric)) series.push({ day, value: numeric });
+    }
+    if (series.length >= 2) {
+      daily.set(strategyId, series);
+      const first = series[0].day;
+      const last = series.at(-1)!.day;
+      if (spanStart === null || first < spanStart) spanStart = first;
+      if (spanEnd === null || last > spanEnd) spanEnd = last;
+    }
+  }
+  if (daily.size === 0 || spanStart === null || spanEnd === null) return null;
+  const windowDays = Math.max(1,
+    Math.round((Date.parse(spanEnd) - Date.parse(spanStart)) / 86_400_000) + 1);
+
+  const returns = new Map<string, Map<string, number>>();
+  for (const [strategyId, series] of daily) {
+    const byDay = new Map<string, number>();
+    for (let index = 1; index < series.length; index += 1) {
+      const previous = series[index - 1].value;
+      if (previous > 0) byDay.set(series[index].day, series[index].value / previous - 1);
+    }
+    if (byDay.size > 0) returns.set(strategyId, byDay);
+  }
+  const alphaIds = [...returns.keys()].sort();
+  const pairs: PortfolioStatistics["correlation"]["pairs"] = [];
+  for (let left = 0; left < alphaIds.length; left += 1) {
+    for (let right = left + 1; right < alphaIds.length; right += 1) {
+      const leftReturns = returns.get(alphaIds[left])!;
+      const rightReturns = returns.get(alphaIds[right])!;
+      const shared = [...leftReturns.keys()].filter((day) => rightReturns.has(day));
+      if (shared.length < MINIMUM_OVERLAPPING_DAYS) continue;
+      const xs = shared.map((day) => leftReturns.get(day)!);
+      const ys = shared.map((day) => rightReturns.get(day)!);
+      const correlation = pearson(xs, ys);
+      if (correlation === null) continue;
+      pairs.push({
+        left_alpha: alphaIds[left],
+        right_alpha: alphaIds[right],
+        correlation: Number(correlation.toFixed(6)),
+        overlapping_days: shared.length,
+      });
+    }
+  }
+
+  const alphas: PortfolioStatistics["drawdownOverlap"]["alphas"] = [];
+  const inDrawdownByDay = new Map<string, string[]>();
+  for (const [strategyId, series] of daily) {
+    let peak = series[0].value;
+    let maxDrawdown = 0;
+    let maxDrawdownAt: string | null = null;
+    const drawdownSeries: Array<{ timestamp: string; drawdown: number }> = [];
+    for (const point of series) {
+      if (point.value > peak) peak = point.value;
+      const drawdown = peak > 0 ? Number((point.value / peak - 1).toFixed(6)) : 0;
+      drawdownSeries.push({ timestamp: point.day, drawdown });
+      if (drawdown < maxDrawdown) { maxDrawdown = drawdown; maxDrawdownAt = point.day; }
+      if (drawdown < OVERLAP_DRAWDOWN_FLOOR) {
+        inDrawdownByDay.set(point.day, [...(inDrawdownByDay.get(point.day) ?? []), strategyId]);
+      }
+    }
+    alphas.push({
+      alpha_id: strategyId, max_drawdown: maxDrawdown, max_drawdown_at: maxDrawdownAt,
+      series: drawdownSeries,
+    });
+  }
+  alphas.sort((left, right) => left.alpha_id.localeCompare(right.alpha_id));
+  const overlapDays = [...inDrawdownByDay.entries()]
+    .filter(([, ids]) => ids.length >= 2)
+    .sort(([left], [right]) => left.localeCompare(right));
+  const overlaps: PortfolioStatistics["drawdownOverlap"]["overlaps"] = [];
+  for (const [day, ids] of overlapDays) {
+    const previous = overlaps.at(-1);
+    if (previous && Date.parse(day) - Date.parse(previous.to) <= 86_400_000) {
+      previous.to = day;
+      previous.alpha_ids = [...new Set([...previous.alpha_ids, ...ids])].sort();
+    } else {
+      overlaps.push({ from: day, to: day, alpha_ids: [...ids].sort() });
+    }
+  }
+  return {
+    window: { days: windowDays, basis: "PORTAL_SGP_HISTORY_MIRROR", daily_basis: "LAST_CLOSE_FORWARD_FILLED_SUM" },
+    correlation: { alphaIds, pairs },
+    drawdownOverlap: { alphas, overlaps },
+  };
+}
+
+function pearson(xs: readonly number[], ys: readonly number[]): number | null {
+  const count = xs.length;
+  if (count < 2) return null;
+  const meanX = xs.reduce((sum, value) => sum + value, 0) / count;
+  const meanY = ys.reduce((sum, value) => sum + value, 0) / count;
+  let covariance = 0;
+  let varianceX = 0;
+  let varianceY = 0;
+  for (let index = 0; index < count; index += 1) {
+    const dx = xs[index] - meanX;
+    const dy = ys[index] - meanY;
+    covariance += dx * dy;
+    varianceX += dx * dx;
+    varianceY += dy * dy;
+  }
+  if (varianceX === 0 || varianceY === 0) return null;
+  return covariance / Math.sqrt(varianceX * varianceY);
 }
