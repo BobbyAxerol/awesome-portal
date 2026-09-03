@@ -276,6 +276,10 @@ export function mergeTimeSeriesWindow(
 function enabledProfiles(config: ControlApiConfig): Array<{ environment: ProjectionEnvironment; profileId: string }> {
   return [
     { environment: "paper" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER, profileId: config.EXECUTION_EDGE_PAPER_PROFILE_ID },
+    // P4-D taxonomy: the DNSE/VN paper family projects under its own profile.
+    // Inert until the Edge publishes the origin and the flag turns on; its
+    // transport activation is the named follow-on slice.
+    { environment: "paper" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE, profileId: config.EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID },
     { environment: "sandbox" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX, profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID },
     { environment: "live" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE, profileId: config.EXECUTION_EDGE_LIVE_PROFILE_ID },
   ].filter((item) => item.enabled === "true").map((item) => ({

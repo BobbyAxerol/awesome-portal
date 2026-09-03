@@ -22,13 +22,24 @@ export interface ManagerPage {
 }
 
 export interface ManagerReadContext {
-  profileId: "PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+  profileId: "PAPER_BINANCE_USDM" | "PAPER_DNSE_VNM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
   mode: "paper" | "sandbox" | "live";
   errorPrefix: "N22" | "N23";
 }
 
 const PAPER_CONTEXT: ManagerReadContext = {
   profileId: "PAPER_BINANCE_USDM",
+  mode: "paper",
+  errorPrefix: "N22",
+};
+
+/**
+ * P4-D taxonomy (owner-approved): the DNSE/VN paper family reads under its
+ * own profile context. A row published for one paper profile can never pass
+ * the other's context check — PROFILE_CONTEXT_MISMATCH stays the wall.
+ */
+export const PAPER_DNSE_CONTEXT: ManagerReadContext = {
+  profileId: "PAPER_DNSE_VNM",
   mode: "paper",
   errorPrefix: "N22",
 };

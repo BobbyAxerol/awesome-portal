@@ -115,3 +115,53 @@ describe("Execution realtime feature dependencies", () => {
     expect(config.FEATURE_EXECUTION_REALTIME_SSE).toBe("true");
   });
 });
+
+describe("P4-D DNSE paper-profile taxonomy config (owner-approved 2026-09-03)", () => {
+  const edgeCommon = {
+    QUERY_CURSOR_KEYS_JSON:
+      '{"query-k1":"query-taxonomy-test-key-that-is-longer-than-thirty-two-bytes"}',
+    GOVERNANCE_APPLY_KEYS_JSON:
+      '{"governance-k1":"governance-taxonomy-test-key-longer-than-thirty-two-b"}',
+    FEATURE_EXECUTION_EDGE: "true",
+    EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+    EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+    EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+    EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+  };
+
+  it("fails closed when the DNSE flag is on without its own origin, profile and audience", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: "true",
+    })).toThrow(/EXECUTION_EDGE_PAPER_DNSE_ORIGIN.*EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID.*EXECUTION_EDGE_PAPER_DNSE_AUDIENCE/);
+  });
+
+  it("pins the DNSE profile and audience to the published taxonomy words", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: "true",
+      EXECUTION_EDGE_PAPER_DNSE_ORIGIN: "https://paper-dnse.execution.internal",
+      EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID: "PAPER_DNSE_OTHER",
+      EXECUTION_EDGE_PAPER_DNSE_AUDIENCE: "portal-execution-edge-paper-dnse",
+    })).toThrow(/profile and audience must match the N13B pins/);
+  });
+
+  it("loads a complete DNSE profile configuration beside the BINANCE paper profile", () => {
+    const config = loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: "true",
+      EXECUTION_EDGE_PAPER_DNSE_ORIGIN: "https://paper-dnse.execution.internal",
+      EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID: "PAPER_DNSE_VNM",
+      EXECUTION_EDGE_PAPER_DNSE_AUDIENCE: "portal-execution-edge-paper-dnse",
+    });
+    expect(config.EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID).toBe("PAPER_DNSE_VNM");
+    expect(config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE).toBe("true");
+  });
+
+  it("stays inert by default — the flag defaults off", () => {
+    expect(loadConfig({ ...baseEnv(), ...edgeCommon, FEATURE_EXECUTION_EDGE: "false" }).FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE).toBe("false");
+  });
+});

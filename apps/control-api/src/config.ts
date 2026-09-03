@@ -99,6 +99,9 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_LOCAL_R0_TASKS: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_RELAY: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: z.enum(["true", "false"]).default("false"),
+  // P4-D taxonomy (Bobby approved 2026-09-03): the DNSE/VN paper family gets
+  // its own profile home. Off until the Edge publishes the N13B origin.
+  FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_LOCAL_PROJECTION: z.enum(["true", "false"]).default("false"),
@@ -135,6 +138,15 @@ const EnvSchema = z.object({
     z.string().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
   ),
   EXECUTION_EDGE_PAPER_AUDIENCE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).max(160).optional(),
+  ),
+  EXECUTION_EDGE_PAPER_DNSE_ORIGIN: OptionalServiceOriginSchema,
+  EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
+  ),
+  EXECUTION_EDGE_PAPER_DNSE_AUDIENCE: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).max(160).optional(),
   ),
@@ -313,6 +325,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   const currentSourceProfiles = [
     {
       environment: "paper",
+      keyPrefix: "PAPER",
       feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER,
       origin: config.EXECUTION_EDGE_PAPER_ORIGIN,
       profileId: config.EXECUTION_EDGE_PAPER_PROFILE_ID,
@@ -321,7 +334,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       expectedAudience: "portal-execution-edge-paper",
     },
     {
+      environment: "paper",
+      keyPrefix: "PAPER_DNSE",
+      feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE,
+      origin: config.EXECUTION_EDGE_PAPER_DNSE_ORIGIN,
+      profileId: config.EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID,
+      audience: config.EXECUTION_EDGE_PAPER_DNSE_AUDIENCE,
+      expectedProfileId: "PAPER_DNSE_VNM",
+      expectedAudience: "portal-execution-edge-paper-dnse",
+    },
+    {
       environment: "sandbox",
+      keyPrefix: "SANDBOX",
       feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX,
       origin: config.EXECUTION_EDGE_SANDBOX_ORIGIN,
       profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID,
@@ -331,6 +355,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     },
     {
       environment: "live",
+      keyPrefix: "LIVE",
       feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE,
       origin: config.EXECUTION_EDGE_LIVE_ORIGIN,
       profileId: config.EXECUTION_EDGE_LIVE_PROFILE_ID,
@@ -350,9 +375,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       ["EXECUTION_EDGE_CA_FILE", config.EXECUTION_EDGE_CA_FILE],
       ["EXECUTION_EDGE_CLIENT_CERT_FILE", config.EXECUTION_EDGE_CLIENT_CERT_FILE],
       ["EXECUTION_EDGE_CLIENT_KEY_FILE", config.EXECUTION_EDGE_CLIENT_KEY_FILE],
-      [`EXECUTION_EDGE_${profile.environment.toUpperCase()}_ORIGIN`, profile.origin],
-      [`EXECUTION_EDGE_${profile.environment.toUpperCase()}_PROFILE_ID`, profile.profileId],
-      [`EXECUTION_EDGE_${profile.environment.toUpperCase()}_AUDIENCE`, profile.audience],
+      [`EXECUTION_EDGE_${profile.keyPrefix}_ORIGIN`, profile.origin],
+      [`EXECUTION_EDGE_${profile.keyPrefix}_PROFILE_ID`, profile.profileId],
+      [`EXECUTION_EDGE_${profile.keyPrefix}_AUDIENCE`, profile.audience],
     ].filter(([, value]) => value === undefined).map(([name]) => name);
     if (missing.length > 0) {
       throw new Error(

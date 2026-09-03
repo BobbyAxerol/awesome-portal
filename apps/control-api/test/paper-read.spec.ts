@@ -256,6 +256,32 @@ describe("N22 full Paper read product BFF", () => {
     expect(source.calls.length).toBe(6);
   });
 
+  it("never admits a DNSE-profile envelope into a BINANCE paper read (P4-D taxonomy negative)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    const original = source.relation.bind(source);
+    (source as unknown as { relation: unknown }).relation = async (
+      principal: unknown, environment: string, screenId: string, sourceId: string,
+      relation: string, query: Record<string, unknown>,
+    ) => {
+      const response = await original(principal, environment, screenId, sourceId, relation, query) as Record<string, any>;
+      if (relation === "positions_v2") {
+        // A source answering with the DNSE paper profile on a BINANCE read:
+        // the wall must hold at the context check, whole branch refused.
+        response.profile_id = "PAPER_DNSE_VNM";
+        response.source.profile_id = "PAPER_DNSE_VNM";
+      }
+      return response;
+    };
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    const positions = result.capabilities.find((cap: any) => cap.capability_id === "source.positions");
+    expect(positions).toMatchObject({ state: "UNAVAILABLE", reason_code: "N22_PROFILE_CONTEXT_MISMATCH" });
+    expect(result.data.positions).toEqual([]);
+    expect(JSON.stringify(result.data)).not.toContain("PAPER_DNSE_VNM");
+  });
+
   it("counts lineage rejects by missing-parent class on the capability (P4-D)", async () => {
     const source = new FakeCurrentSource();
     source.rows.set("strategy_deployments", [
