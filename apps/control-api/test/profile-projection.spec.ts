@@ -13,7 +13,8 @@ import {
   ProfileProjectionDocument,
 } from "../src/execution/profile-projection.repository";
 import { profileProjectionCatalog } from "../src/execution/profile-projection.catalog";
-import { ExecutionProfileProjectionWorker } from "../src/execution/profile-projection.worker";
+import { ExecutionProfileProjectionWorker, mergeTimeSeriesWindow } from "../src/execution/profile-projection.worker";
+import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
 
 const workspaceId = "ws_projection_test";
@@ -329,3 +330,37 @@ function emptyManagerResponse(environment: string, relation: string) {
     },
   };
 }
+
+describe("P4-D window ladder merge", () => {
+  const row = (id: string, ts: string, entity = "acc_a") => ({
+    lineage: { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" },
+    fields: { id, ts, account_id: entity, equity: "1" },
+  });
+  const ladder = { class: "TIME_SERIES" as const, idField: "id", timestampField: "ts" };
+
+  it("accumulates history across refreshes, dedups by id and drops beyond the window", () => {
+    const now = Date.now();
+    const iso = (deltaMs: number) => new Date(now - deltaMs).toISOString();
+    const previous = [
+      row("old", iso(31 * 86_400_000)),
+      row("kept", iso(2 * 86_400_000)),
+      row("dup", iso(1 * 86_400_000)),
+    ];
+    const fresh = [row("dup", iso(1 * 86_400_000)), row("new", iso(0))];
+    const merged = mergeTimeSeriesWindow(fresh, previous, ladder);
+    expect(merged.truncated).toBe(false);
+    expect(merged.items.map((item) => item.fields.id)).toEqual(["kept", "dup", "new"]);
+  });
+
+  it("keeps the newest rows and flags truncation when the cap bites", () => {
+    const now = Date.now();
+    const previous = Array.from({ length: WARM_WINDOW_MAX_ROWS }, (_, index) =>
+      row(`p${index}`, new Date(now - (WARM_WINDOW_MAX_ROWS - index) * 60_000).toISOString()));
+    const fresh = [row("newest", new Date(now).toISOString())];
+    const merged = mergeTimeSeriesWindow(fresh, previous, ladder);
+    expect(merged.truncated).toBe(true);
+    expect(merged.items).toHaveLength(WARM_WINDOW_MAX_ROWS);
+    expect(merged.items.at(-1)?.fields.id).toBe("newest");
+    expect(merged.items[0]?.fields.id).toBe("p1");
+  });
+});

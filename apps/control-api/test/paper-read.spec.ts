@@ -256,6 +256,26 @@ describe("N22 full Paper read product BFF", () => {
     expect(source.calls.length).toBe(6);
   });
 
+  it("counts lineage rejects by missing-parent class on the capability (P4-D)", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    source.rows.set("positions_v2", [
+      { position_id: "pos_ok", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+      { position_id: "pos_orphan_acct", strategy_id: "str_1", account_id: "acc_ghost", mode: "paper", venue: "BINANCE" },
+      { position_id: "pos_orphan_both", strategy_id: "str_ghost", account_id: "acc_ghost", mode: "paper", venue: "BINANCE" },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    const positions = result.capabilities.find((cap: any) => cap.capability_id === "source.positions");
+    // Two rows dropped; the storm is counted by parent class, not silent.
+    expect(positions).toMatchObject({
+      state: "PARTIAL",
+      reason_code: "N30_PROFILE_LINEAGE_REJECTED",
+      lineage_rejects: { account: 2, strategy: 1 },
+    });
+  });
+
   it("publishes the versioned observation policy and an honest gate verdict (P4-I / F16)", async () => {
     const source = new FakeCurrentSource();
     source.rows.set("strategy_deployments", [

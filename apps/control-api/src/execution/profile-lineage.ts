@@ -7,6 +7,12 @@ export interface LineageRelationResult<TSpec extends { key: string } = { key: st
   page: ManagerPage | null;
   state: LineageCapabilityState;
   reasonCode: string | null;
+  /**
+   * P4-D: rejected-row diagnostics by missing-parent class. Present only on a
+   * relation that actually lost rows, so a lineage storm is visible instead of
+   * silently PARTIAL. Keys are the parent classes of `acceptedReference`.
+   */
+  lineageRejects?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -42,23 +48,36 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
     group: hasAny(relations, "conditional_groups"),
   };
 
+  const checks = [
+    { class: "account", field: "account_id", accepted: accountIds, present: rootsPresent.account },
+    { class: "external_account", field: "external_account_ref", accepted: externalAccountRefs, present: rootsPresent.externalAccount },
+    { class: "deployment", field: "deployment_id", accepted: deploymentIds, present: rootsPresent.deployment },
+    { class: "strategy", field: "strategy_id", accepted: strategyIds, present: rootsPresent.strategy },
+    { class: "portfolio", field: "portfolio_id", accepted: portfolioIds, present: rootsPresent.portfolio },
+    { class: "session", field: "execution_session_id", accepted: sessionIds, present: rootsPresent.session },
+    { class: "group", field: "group_id", accepted: groupIds, present: rootsPresent.group },
+  ] as const;
+
   return relations.map((relation) => {
     if (!relation.page) return relation;
-    const accepted = relation.page.items.filter((row) =>
-      acceptedReference(row, "account_id", accountIds, rootsPresent.account) &&
-      acceptedReference(row, "external_account_ref", externalAccountRefs, rootsPresent.externalAccount) &&
-      acceptedReference(row, "deployment_id", deploymentIds, rootsPresent.deployment) &&
-      acceptedReference(row, "strategy_id", strategyIds, rootsPresent.strategy) &&
-      acceptedReference(row, "portfolio_id", portfolioIds, rootsPresent.portfolio) &&
-      acceptedReference(row, "execution_session_id", sessionIds, rootsPresent.session) &&
-      acceptedReference(row, "group_id", groupIds, rootsPresent.group)
-    );
+    const rejects: Record<string, number> = {};
+    const accepted = relation.page.items.filter((row) => {
+      let ok = true;
+      for (const check of checks) {
+        if (!acceptedReference(row, check.field, check.accepted, check.present)) {
+          rejects[check.class] = (rejects[check.class] ?? 0) + 1;
+          ok = false;
+        }
+      }
+      return ok;
+    });
     if (accepted.length === relation.page.items.length) return relation;
     return {
       ...relation,
       page: { ...relation.page, items: accepted, completeness: "PARTIAL" },
       state: "PARTIAL",
       reasonCode: `${errorPrefix}_PROFILE_LINEAGE_REJECTED`,
+      lineageRejects: rejects,
     };
   });
 }

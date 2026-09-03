@@ -55,7 +55,12 @@
         "reason_code": { "oneOf": [{ "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" }, { "type": "null" }] },
         "retryable": { "const": false },
         "quarantined_rows": { "type": "integer", "minimum": 1 },
-        "status_map_version": { "type": "string", "pattern": "^[a-z0-9.-]{3,64}$" }
+        "status_map_version": { "type": "string", "pattern": "^[a-z0-9.-]{3,64}$" },
+        "lineage_rejects": {
+          "type": "object", "minProperties": 1, "maxProperties": 7,
+          "propertyNames": { "enum": ["account", "external_account", "deployment", "strategy", "portfolio", "session", "group"] },
+          "additionalProperties": { "type": "integer", "minimum": 1 }
+        }
       }
     },
     "Scalar": { "oneOf": [{ "type": "string", "maxLength": 8192 }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] },

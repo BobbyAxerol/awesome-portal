@@ -39,6 +39,8 @@ interface RelationResult {
   state: CapabilityState;
   reasonCode: string | null;
   quarantinedRows?: number;
+  /** P4-D: rejected-row diagnostics by missing-parent class (lineage guard). */
+  lineageRejects?: Readonly<Record<string, number>>;
 }
 
 interface PaperPrincipal {
@@ -386,6 +388,9 @@ export class PaperReadService {
       ...relations.map((item) => ({
         ...capability(`source.${item.spec.key}`, item.state, [item.spec.relation], item.reasonCode),
         ...(item.quarantinedRows ? { quarantined_rows: item.quarantinedRows, status_map_version: ORDER_STATUS_SOURCE_MAP_VERSION } : {}),
+        // P4-D: a lineage storm is a visible, counted fact — never a silent PARTIAL.
+        ...(item.lineageRejects && Object.keys(item.lineageRejects).length > 0
+          ? { lineage_rejects: item.lineageRejects } : {}),
       })),
       ...extraCapabilities,
     ];

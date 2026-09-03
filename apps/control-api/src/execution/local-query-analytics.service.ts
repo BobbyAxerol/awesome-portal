@@ -112,7 +112,7 @@ function composeAnalytics(
     ?? snapshot.lastSuccessfulRefreshAt.toISOString();
   const orderFunnel = counts(selected.orders, "status");
   const quality = executionQuality(selected.sessions);
-  const chartSeries = equitySeries(selected, asOf, snapshot.completeness);
+  const chartSeries = equitySeries(selected, asOf, snapshot.completeness, subjectKind);
   const replay = replayFacts(selected.orders, selected.fills, selected.journal);
   const capability = (
     capabilityId: string,
@@ -299,7 +299,14 @@ function equitySeries(
   rows: { performance: Fact[]; accountEquity: Fact[]; portfolioEquity: Fact[]; equity: Fact[] },
   asOf: string,
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN",
+  subjectKind?: QueryAnalyticsSubjectKind,
 ) {
+  // P4-D / F7: the source-owned portfolio_equity relation stays typed
+  // rejected; a portfolio subject gets a declared DERIVED series instead of
+  // interleaving many accounts' raw points into one dishonest line.
+  if (subjectKind === "portfolio" && rows.portfolioEquity.length === 0 && rows.accountEquity.length > 0) {
+    return derivedPortfolioEquitySeries(rows.accountEquity, asOf, completeness);
+  }
   const source = rows.portfolioEquity.length > 0 ? rows.portfolioEquity
     : rows.accountEquity.length > 0 ? rows.accountEquity : rows.performance;
   const points = source.flatMap((row) => {
@@ -334,6 +341,98 @@ function equitySeries(
       input_maximum: decimalMaximum(values),
     },
   }];
+}
+
+/**
+ * P4-D / F7 — `portfolio-equity-derived.v1`: per timestamp, each member
+ * account's latest equity at or before that time (forward fill), summed as
+ * exact decimals. Points begin only once every member account has reported —
+ * a sum over half the members is a fabricated drawdown. One currency only:
+ * mixed-currency members refuse derivation rather than FX-mix.
+ */
+function derivedPortfolioEquitySeries(
+  accountEquity: readonly Fact[],
+  asOf: string,
+  completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN",
+) {
+  const currencies = new Set(accountEquity.flatMap((row) => {
+    const currency = text(row, "currency"); return currency ? [currency] : [];
+  }));
+  if (currencies.size !== 1) return [];
+  const byAccount = new Map<string, Array<{ t: string; v: string }>>();
+  for (const row of accountEquity) {
+    const account = text(row, "account_id");
+    const t = timestampOf(row);
+    const v = decimal(row.equity);
+    if (!account || !t || v === null) continue;
+    byAccount.set(account, [...(byAccount.get(account) ?? []), { t, v }]);
+  }
+  if (byAccount.size === 0) return [];
+  for (const series of byAccount.values()) series.sort((left, right) => left.t.localeCompare(right.t));
+  const start = [...byAccount.values()]
+    .map((series) => series[0].t)
+    .sort((left, right) => right.localeCompare(left))[0];
+  const stamps = [...new Set([...byAccount.values()].flat().map((point) => point.t))]
+    .filter((t) => t >= start)
+    .sort((left, right) => left.localeCompare(right))
+    .slice(-5_000);
+  const points = stamps.map((t) => ({
+    timestamp: t,
+    value: sumExactDecimals([...byAccount.values()].map((series) => {
+      let latest = series[0].v;
+      for (const point of series) {
+        if (point.t > t) break;
+        latest = point.v;
+      }
+      return latest;
+    })),
+  }));
+  if (points.length === 0) return [];
+  const values = points.map((point) => point.value);
+  return [{
+    schema_version: "chart-series.rules.v1",
+    series_id: "portfolio_equity_derived",
+    kind: "LINE",
+    unit: "MONEY",
+    currency: [...currencies][0],
+    authority: "DERIVED",
+    as_of: asOf,
+    formula_version: "portfolio-equity-derived.v1",
+    completeness,
+    join_digest: projectionDigest(points),
+    ohlc_owner: null,
+    points,
+    gaps: [],
+    markers: [],
+    annotations: [],
+    declared_total: values.at(-1) ?? null,
+    downsample: {
+      method: "none",
+      input_points: points.length,
+      output_points: points.length,
+      input_minimum: decimalMinimum(values),
+      input_maximum: decimalMaximum(values),
+    },
+  }];
+}
+
+function sumExactDecimals(values: readonly string[]): string {
+  if (values.length === 0) return "0";
+  const parsed = values.map((value) => {
+    const negative = value.startsWith("-");
+    const [integer, fraction = ""] = (negative ? value.slice(1) : value).split(".");
+    return { negative, integer, fraction };
+  });
+  const scale = Math.max(...parsed.map((value) => value.fraction.length));
+  const total = parsed.reduce((sum, value) => {
+    const units = BigInt(`${value.integer}${value.fraction.padEnd(scale, "0")}`);
+    return sum + (value.negative ? -units : units);
+  }, 0n);
+  const negative = total < 0n;
+  const digits = (negative ? -total : total).toString().padStart(scale + 1, "0");
+  const raw = scale === 0 ? digits : `${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
+  const trimmed = raw.includes(".") ? raw.replace(/0+$/, "").replace(/\.$/, "") : raw;
+  return `${negative && trimmed !== "0" ? "-" : ""}${trimmed}`;
 }
 
 function replayFacts(orders: readonly Fact[], fills: readonly Fact[], journal: readonly Fact[]) {

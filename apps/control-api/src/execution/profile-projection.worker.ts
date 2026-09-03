@@ -5,14 +5,13 @@ import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/mana
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import { enforceProfileLineage } from "./profile-lineage";
-import { profileProjectionCatalog } from "./profile-projection.catalog";
+import { profileProjectionCatalog, ProfileProjectionBinding, WARM_WINDOW_DAYS, WARM_WINDOW_MAX_ROWS } from "./profile-projection.catalog";
 import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
   ProjectionCompleteness,
   ProjectionEnvironment,
-  projectionDigest,
-} from "./profile-projection.repository";
+  projectionDigest, ProjectionRow } from "./profile-projection.repository";
 
 const SOURCE_CONTRACT_REVISION = "trading-system.portal-execution.manager-v2.runtime.v1";
 const MAXIMUM_SOURCE_PAGES = 2;
@@ -76,6 +75,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     );
     if (!acquired) return;
     try {
+      // P4-D window ladder: the previous committed snapshot seeds the merged
+      // time-series windows, so history accumulates locally without a second
+      // request-side read — the served snapshot stays one atomic row.
+      const previous = await this.repository.snapshot(workspaceId, environment, profileId).catch(() => null);
       const context: ManagerReadContext = {
         profileId: profileId as ManagerReadContext["profileId"],
         mode: environment,
@@ -117,6 +120,17 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       const relations = Object.fromEntries(isolated.map((item) => {
         const binding = item.spec.binding;
         const key = `${binding.sourceId}:${binding.relation}`;
+        const fresh = (item.page?.items ?? []).map((fields) => ({
+          lineage: {
+            workspace_id: workspaceId,
+            profile_id: profileId,
+            source_contract_revision: SOURCE_CONTRACT_REVISION,
+          },
+          fields,
+        }));
+        const merged = binding.ladder && item.page
+          ? mergeTimeSeriesWindow(fresh, previous?.document.relations[key]?.items ?? [], binding.ladder)
+          : { items: fresh, truncated: false };
         return [key, {
           source_id: binding.sourceId,
           relation: binding.relation,
@@ -125,14 +139,19 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           as_of: item.page?.asOf ?? null,
           freshness: item.page?.freshness ?? "UNKNOWN" as const,
           completeness: item.page?.completeness ?? "UNKNOWN" as const,
-          items: (item.page?.items ?? []).map((fields) => ({
-            lineage: {
-              workspace_id: workspaceId,
-              profile_id: profileId,
-              source_contract_revision: SOURCE_CONTRACT_REVISION,
+          items: merged.items,
+          ...(binding.ladder && item.page ? {
+            window: {
+              days: WARM_WINDOW_DAYS,
+              max_rows: WARM_WINDOW_MAX_ROWS,
+              basis: "MERGED_SNAPSHOT_LADDER" as const,
+              truncated: merged.truncated,
             },
-            fields,
-          })),
+          } : {}),
+          // P4-D lineage observability: exported on the snapshot envelope so a
+          // lineage storm is a counted, visible fact for the operator view.
+          ...(item.lineageRejects && Object.keys(item.lineageRejects).length > 0
+            ? { lineage_rejects: item.lineageRejects } : {}),
         }];
       }));
       const document: ProfileProjectionDocument = {
@@ -219,6 +238,39 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       error_code: safeFailureCode(error),
     }));
   }
+}
+
+/**
+ * P4-D: merge the fresh time-series page with the previously committed
+ * window — dedup by the relation's id field (timestamp+entity as fallback),
+ * drop points older than the declared window, keep the newest rows when the
+ * cap bites, ascending by timestamp. The window declares its own truncation.
+ */
+export function mergeTimeSeriesWindow(
+  fresh: ProjectionRow[],
+  previous: readonly ProjectionRow[],
+  ladder: NonNullable<ProfileProjectionBinding["ladder"]>,
+): { items: ProjectionRow[]; truncated: boolean } {
+  const horizon = Date.now() - WARM_WINDOW_DAYS * 86_400_000;
+  const keyOf = (row: { fields: Record<string, unknown> }) => {
+    const id = row.fields[ladder.idField];
+    if (typeof id === "string" && id.length > 0) return `id:${id}`;
+    return `ts:${String(row.fields[ladder.timestampField] ?? "")}:${String(row.fields.account_id ?? row.fields.portfolio_id ?? row.fields.deployment_id ?? "")}`;
+  };
+  const stampOf = (row: { fields: Record<string, unknown> }) => {
+    const value = row.fields[ladder.timestampField];
+    const parsed = typeof value === "string" ? Date.parse(value) : Number.NaN;
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+  const byKey = new Map<string, { row: typeof fresh[number]; at: number }>();
+  for (const row of [...previous, ...fresh]) {
+    const at = stampOf(row);
+    if (at === null || at < horizon) continue;
+    byKey.set(keyOf(row), { row, at });
+  }
+  const ordered = [...byKey.values()].sort((left, right) => left.at - right.at);
+  const truncated = ordered.length > WARM_WINDOW_MAX_ROWS;
+  return { items: ordered.slice(-WARM_WINDOW_MAX_ROWS).map((entry) => entry.row), truncated };
 }
 
 function enabledProfiles(config: ControlApiConfig): Array<{ environment: ProjectionEnvironment; profileId: string }> {

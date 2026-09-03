@@ -172,6 +172,92 @@ describe("EX-BE-07b analytics screen boundary", () => {
     expect(JSON.stringify(response)).toContain("10000.000000000000000001");
   });
 
+  it("derives an exact portfolio equity series while the source relation stays rejected (P4-D / F7)", async () => {
+    const config = loadConfig({
+      ...base,
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      FEATURE_EXECUTION_EDGE: "true",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_SANDBOX_PROFILE_ID: "SANDBOX_BINANCE_USDM",
+      EXECUTION_EDGE_LIVE_PROFILE_ID: "LIVE_BINANCE_USDM",
+    });
+    const row = (fields: Record<string, string | number | boolean | null>) => ({
+      lineage: {
+        workspace_id: "ws_projection", profile_id: "PAPER_BINANCE_USDM",
+        source_contract_revision: "manager-v2",
+      },
+      fields,
+    });
+    const relation = (source_id: string, name: string, items: ReturnType<typeof row>[]) => ({
+      source_id, relation: name, availability: "AVAILABLE" as const, reason_code: null,
+      as_of: "2026-09-02T06:00:00.000Z", freshness: "FRESH" as const,
+      completeness: "COMPLETE" as const, items,
+    });
+    const repository = {
+      async snapshot() {
+        return {
+          document: {
+            schema_version: "portal.execution.profile-projection.v1" as const,
+            workspace_id: "ws_projection", environment: "paper" as const,
+            profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "manager-v2",
+            relations: {
+              "manager.portfolios:portfolios": relation("manager.portfolios", "portfolios", [
+                row({ portfolio_id: "pf_a", name: "Pf A", base_currency: "USDT" }),
+              ]),
+              "manager.portfolios:portfolio_allocations": relation("manager.portfolios", "portfolio_allocations", [
+                row({ allocation_id: "al_a", portfolio_id: "pf_a", strategy_id: "alpha_a", deployment_id: "dep_a", account_id: "acc_a", currency: "USDT", allocated_capital: "1000" }),
+                row({ allocation_id: "al_b", portfolio_id: "pf_a", strategy_id: "alpha_b", deployment_id: "dep_b", account_id: "acc_b", currency: "USDT", allocated_capital: "1000" }),
+              ]),
+              "manager.deployments:strategy_deployments": relation("manager.deployments", "strategy_deployments", [
+                row({ deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", portfolio_id: "pf_a", currency: "USDT", mode: "paper" }),
+                row({ deployment_id: "dep_b", strategy_id: "alpha_b", account_id: "acc_b", portfolio_id: "pf_a", currency: "USDT", mode: "paper" }),
+              ]),
+              "manager.performance:account_equity_snapshots": relation("manager.performance", "account_equity_snapshots", [
+                row({ id: "eq_a1", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", currency: "USDT", equity: "10000.000000000000000001", ts: "2026-09-02T05:00:00Z" }),
+                row({ id: "eq_b1", deployment_id: "dep_b", strategy_id: "alpha_b", account_id: "acc_b", currency: "USDT", equity: "5000.5", ts: "2026-09-02T05:10:00Z" }),
+                row({ id: "eq_a2", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", currency: "USDT", equity: "10100", ts: "2026-09-02T05:20:00Z" }),
+              ]),
+            },
+          },
+          sourceEpoch: "source-epoch", sourceCursor: "source-cursor",
+          sourceAsOf: new Date("2026-09-02T06:00:00Z"),
+          receivedAt: new Date(), lastSuccessfulRefreshAt: new Date(), completeness: "COMPLETE" as const,
+          projectionEpoch: "3b2d15c5-e36f-4a2f-91bf-18bb58ba76f4",
+          projectionSequence: 8, payloadDigest: `sha256:${"3".repeat(64)}`,
+        };
+      },
+    } as unknown as ExecutionProfileProjectionRepository;
+    const service = new LocalQueryAnalyticsService(config, repository);
+    const response = await service.query({
+      user: { userId: "usr_a" } as never,
+      session: { sessionId: "ses_a" } as never,
+      workspaceId: "ws_viewer",
+    }, "portfolio", "pf_a") as Record<string, any>;
+    const series = response.analytics.chart_series;
+    expect(series).toHaveLength(1);
+    expect(series[0]).toMatchObject({
+      series_id: "portfolio_equity_derived",
+      authority: "DERIVED",
+      formula_version: "portfolio-equity-derived.v1",
+      currency: "USDT",
+    });
+    // Points begin only once BOTH member accounts have reported (05:10), and
+    // every sum is exact-decimal: 10000.000000000000000001 + 5000.5, then the
+    // forward-filled 10100 + 5000.5.
+    expect(series[0].points).toEqual([
+      { timestamp: "2026-09-02T05:10:00.000Z", value: "15000.500000000000000001" },
+      { timestamp: "2026-09-02T05:20:00.000Z", value: "15100.5" },
+    ]);
+  });
+
   it("admits the colon-joined composite deployment id as an analytics subject (P4-G / F13)", async () => {
     const config = loadConfig({
       ...base,

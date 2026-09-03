@@ -88,6 +88,9 @@ export interface components {
             retryable: false;
             quarantined_rows?: number;
             status_map_version?: string;
+            lineage_rejects?: {
+                [key: string]: number;
+            };
         };
         NarrowRecord: {
             [key: string]: string | number | boolean | null | (string | number | boolean | null)[];

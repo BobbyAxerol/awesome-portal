@@ -26,6 +26,10 @@ export interface ProjectionRelation {
   freshness: ProjectionFreshness;
   completeness: ProjectionCompleteness;
   items: ProjectionRow[];
+  /** P4-D window ladder: a time-series relation states its merged window. */
+  window?: { days: number; max_rows: number; basis: "MERGED_SNAPSHOT_LADDER"; truncated: boolean };
+  /** P4-D lineage observability: rejects by missing-parent class, when any. */
+  lineage_rejects?: Readonly<Record<string, number>>;
 }
 
 export interface ProfileProjectionDocument {

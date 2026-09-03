@@ -6,7 +6,23 @@ export interface ProfileProjectionBinding {
   sourceId: string;
   relation: string;
   fields: readonly string[];
+  /**
+   * P4-D window ladder class. Time-series relations keep a merged 30-day
+   * window inside the committed snapshot (dedup by `idField`, bounded rows);
+   * everything else stays the source's fresh page.
+   */
+  ladder?: { class: "TIME_SERIES"; idField: string; timestampField: string };
 }
+
+/** The declared time-series window: 30 days of raw points, bounded. */
+export const WARM_WINDOW_DAYS = 30;
+export const WARM_WINDOW_MAX_ROWS = 5_000;
+
+const TIME_SERIES_LADDER: Readonly<Record<string, ProfileProjectionBinding["ladder"]>> = {
+  performance_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
+  account_equity_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
+  portfolio_equity_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
+};
 
 const STRATEGY = [
   "strategy_id", "alpha_id", "name", "label", "version", "strategy_version",
@@ -160,5 +176,6 @@ function bind(
   relation: string,
   fields: readonly string[],
 ): ProfileProjectionBinding {
-  return { key, screenId, sourceId, relation, fields };
+  const ladder = TIME_SERIES_LADDER[relation];
+  return { key, screenId, sourceId, relation, fields, ...(ladder ? { ladder } : {}) };
 }
