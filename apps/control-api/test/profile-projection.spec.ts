@@ -240,7 +240,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
     await worker.runOnce();
     const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
-    expect(calls).toBe(profileProjectionCatalog("paper").length + 1);
+    expect(calls).toBe(profileProjectionCatalog("paper").length + 9);
     expect(snapshot?.completeness).toBe("PARTIAL");
     expect(snapshot?.document.relations[relationKey].completeness).toBe("PARTIAL");
     await worker.onApplicationShutdown();

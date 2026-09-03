@@ -14,7 +14,11 @@ import {
   projectionDigest, ProjectionRow } from "./profile-projection.repository";
 
 const SOURCE_CONTRACT_REVISION = "trading-system.portal-execution.manager-v2.runtime.v1";
-const MAXIMUM_SOURCE_PAGES = 2;
+// Owner directive 2026-09-03 ("call hết dữ liệu có thể"): every relation
+// drains to the snapshot document's own 2,000-row invariant — ten pages of
+// two hundred — inside the unchanged paced source admission. Larger source
+// populations stay declared PARTIAL hot windows, exactly as before.
+const MAXIMUM_SOURCE_PAGES = 10;
 // P4-D follow-on: time-series (ladder) relations resume from a persisted
 // cursor and may take a deeper page budget per cycle — that is what lets a
 // 600k-row append-only relation actually reach its recent rows. The page
