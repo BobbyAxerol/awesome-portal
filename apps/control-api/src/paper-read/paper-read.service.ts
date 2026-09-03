@@ -8,6 +8,7 @@ import {
   CurrentSourceProxyError,
 } from "../execution/current-source.proxy";
 import { ExecutionProductReadSource } from "../execution/product-read-source";
+import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
 import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "../execution/analytics.proxy";
 import { KeysetCursorCodec, QueryContractError } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -131,8 +132,8 @@ const OVERVIEW_SPECS: readonly RelationSpec[] = [
   spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),
   spec("positions", "manager.positions", "positions_v2", POSITION_FIELDS, 200),
   spec("sessions", "manager.sessions", "execution_sessions", SESSION_FIELDS, 100),
-  spec("performance", "manager.performance", "performance_snapshots", PERFORMANCE_FIELDS, 100),
-  spec("account_equity", "manager.performance", "account_equity_snapshots", ACCOUNT_EQUITY_FIELDS, 100),
+  spec("performance", "manager.performance", "performance_snapshots", PERFORMANCE_FIELDS, 200),
+  spec("account_equity", "manager.performance", "account_equity_snapshots", ACCOUNT_EQUITY_FIELDS, 200),
   spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 100),
 ];
 
@@ -150,6 +151,9 @@ const WORKBENCH_SPECS: readonly RelationSpec[] = [
 export class PaperReadService {
   private readonly cursors: KeysetCursorCodec;
 
+  private readonly projectionWorkspaceId: string | undefined;
+  private readonly paperProfileId: string | undefined;
+
   constructor(
     @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
     @Inject(CONTROL_API_CONFIG) config: ControlApiConfig,
@@ -159,12 +163,60 @@ export class PaperReadService {
     @Optional()
     @Inject(LocalQueryAnalyticsService)
     private readonly localAnalytics?: LocalQueryAnalyticsService,
+    @Optional()
+    @Inject(ExecutionProfileProjectionRepository)
+    private readonly projection?: ExecutionProfileProjectionRepository,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
       keys: querySigningKeys(config),
       ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS,
     });
+    this.projectionWorkspaceId = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? undefined;
+    this.paperProfileId = config.EXECUTION_EDGE_PAPER_PROFILE_ID ?? undefined;
+  }
+
+  /**
+   * Owner directive 2026-09-03: analysis screens show the deepest truthful
+   * series available. The bounded snapshot rows stay the fallback; when the
+   * SGP history mirror holds the deployment's 30-day window, the workbench
+   * serves that full depth instead — exact rows, declared basis, no extra
+   * source fan-out (the mirror is local).
+   */
+  private async timeSeriesDepth(deploymentId: string): Promise<{
+    rows: Record<string, Record<string, unknown>[]>;
+    windows: Record<string, unknown>;
+  }> {
+    const depth: { rows: Record<string, Record<string, unknown>[]>; windows: Record<string, unknown> } =
+      { rows: {}, windows: {} };
+    if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return depth;
+    const from = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const bindings = [
+      ["account_equity", "account_equity_snapshots"],
+      ["performance", "performance_snapshots"],
+    ] as const;
+    for (const [key, relation] of bindings) {
+      try {
+        const page = await this.projection.timeSeriesHistory(
+          this.projectionWorkspaceId, "paper", this.paperProfileId,
+          `manager.performance:${relation}`,
+          { from, entity: { field: "deployment_id", value: deploymentId }, limit: 2_000 },
+        );
+        if (page.rows.length > 0) {
+          depth.rows[key] = page.rows.map((row) => row.fields);
+          depth.windows[key] = {
+            days: 30,
+            basis: "PORTAL_SGP_HISTORY_MIRROR",
+            returned_rows: page.rows.length,
+            truncated: page.hasMore,
+          };
+        }
+      } catch {
+        // Depth is additive: on any history failure the bounded snapshot
+        // rows below still serve, exactly as before this existed.
+      }
+    }
+    return depth;
   }
 
   async overview(principal: PaperPrincipal) {
@@ -249,11 +301,19 @@ export class PaperReadService {
           : "N22_DEPLOYMENT_NOT_AVAILABLE",
       ),
     ];
+    const depth = await this.timeSeriesDepth(deploymentId);
     return this.envelope(
       vnm ? "execution.paper-workbench-vnm.v1" : "execution.paper-workbench.v1",
       principal,
       relations,
-      { deployment: deployment ?? null, observation_gate: observationGate, query_analytics: queryAnalytics, ...scoped },
+      {
+        deployment: deployment ?? null,
+        observation_gate: observationGate,
+        query_analytics: queryAnalytics,
+        ...scoped,
+        ...depth.rows,
+        ...(Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
+      },
       branches,
       { resource: { kind: "DEPLOYMENT", id: deploymentId } },
     );

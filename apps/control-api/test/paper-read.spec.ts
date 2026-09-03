@@ -76,16 +76,23 @@ function defaultRecord(relation: string): RecordInput {
 function service(
   source: FakeCurrentSource,
   analytics?: Pick<ExecutionAnalyticsProxy, "managerQueryAnalytics">,
+  projection?: { timeSeriesHistory: (...args: unknown[]) => Promise<unknown> },
 ): PaperReadService {
   const config = loadConfig({
     DATABASE_URL: "postgres://portal:portal@localhost/portal",
     PORTAL_ENV: "local",
     AUTH_MODE: "dev",
+    ...(projection ? {
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+    } : {}),
   });
   return new PaperReadService(
     source as unknown as ExecutionProductReadSource,
     config,
     analytics as ExecutionAnalyticsProxy | undefined,
+    undefined,
+    projection as never,
   );
 }
 
@@ -280,6 +287,51 @@ describe("N22 full Paper read product BFF", () => {
     expect(positions).toMatchObject({ state: "UNAVAILABLE", reason_code: "N22_PROFILE_CONTEXT_MISMATCH" });
     expect(result.data.positions).toEqual([]);
     expect(JSON.stringify(result.data)).not.toContain("PAPER_DNSE_VNM");
+  });
+
+  it("serves the deployment's 30-day history depth on the workbench, snapshot rows as fallback", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    source.rows.set("account_equity_snapshots", [
+      { id: 900, ts: "2026-09-03T00:00:00.000Z", deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", equity: "105" },
+    ]);
+    const historyCalls: unknown[][] = [];
+    const projection = {
+      timeSeriesHistory: async (...args: unknown[]) => {
+        historyCalls.push(args);
+        const query = args[4] as { entity?: { field: string; value: string }; limit: number };
+        const relationKey = args[3] as string;
+        if (relationKey !== "manager.performance:account_equity_snapshots") return { rows: [], hasMore: false };
+        expect(query.entity).toEqual({ field: "deployment_id", value: "dep_1" });
+        return {
+          hasMore: false,
+          rows: Array.from({ length: 720 }, (_, index) => ({
+            rowId: String(index),
+            ts: new Date(Date.UTC(2026, 7, 4) + index * 3_600_000).toISOString(),
+            fields: {
+              id: index, ts: new Date(Date.UTC(2026, 7, 4) + index * 3_600_000).toISOString(),
+              deployment_id: "dep_1", account_id: "acc_1", mode: "paper", equity: "100",
+            },
+          })),
+        };
+      },
+    };
+    const result = await service(source, undefined, projection).workbench(principal(), "dep_1", false) as Record<string, any>;
+    // Full 30-day depth from the local mirror, declared as such.
+    expect(result.data.account_equity).toHaveLength(720);
+    expect(result.data.history_windows.account_equity).toMatchObject({
+      days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 720, truncated: false,
+    });
+    // performance had no mirrored rows: the bounded snapshot fallback serves.
+    expect(result.data.history_windows.performance).toBeUndefined();
+    expect(historyCalls).toHaveLength(2);
+
+    // Without a mirror at all, the envelope is exactly the pre-depth shape.
+    const bare = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    expect(bare.data.history_windows).toBeUndefined();
+    expect(bare.data.account_equity).toHaveLength(1);
   });
 
   it("counts lineage rejects by missing-parent class on the capability (P4-D)", async () => {
