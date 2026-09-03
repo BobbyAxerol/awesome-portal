@@ -39,10 +39,13 @@ relations end-to-end (charts, ladders, derived series all wired and tested);
 they are empty because the source currently publishes empty pages.
 
 ### 1.1 `manager.performance:account_equity_snapshots`
-- Live state: page answers `AVAILABLE`, completeness `SOURCE_PARTIAL`, zero
-  items, all profiles.
-- Ask: resume row publication for every active paper deployment/account, and
-  state why the page is PARTIAL when it is.
+- **Diagnosis upgraded 2026-09-03 (verified on your DB):** publication was
+  never broken — the table holds **690,254 rows, newest at 07:00Z today**,
+  cut hourly. The starvation was Portal-side: the read plane pages by
+  `(ts, id)` ascending from the very first row and the Portal drain restarted
+  from the beginning each cycle, so only the oldest rows were ever read.
+  **Fixed on the Portal side** (resumable cursor drains, deployed 2026-09-03);
+  no action needed from you on this item beyond keeping the hourly cut alive.
 - Expected columns (Portal reads exactly these; extras ignored):
   `id, ts, deployment_id, strategy_id, account_id, mode, venue, currency,
   cash_total, cash_free, cash_locked, margin_initial, margin_maintenance,
@@ -59,15 +62,21 @@ they are empty because the source currently publishes empty pages.
   (`window {days:30, basis:MERGED_SNAPSHOT_LADDER}` already declared).
 
 ### 1.2 `manager.performance:performance_snapshots`
-- Same live state and same ask/acceptance as 1.1; columns per the published
-  catalogue (`id, ts, deployment_id, strategy_id, account_id, mode, venue,
-  instrument_id, symbol, currency, position_*, avg_px_open, mark_price,
-  notional, exposure_long, exposure_short, cash_*, realized_pnl,
-  unrealized_pnl, net_pnl, equity, ...`).
+- **Diagnosis upgraded 2026-09-03 (verified):** the table holds 136,724 rows
+  but the **newest is 2026-08-17** — `performance_service` logs
+  `instrument_snapshots=0` every cycle since. This one IS yours: the
+  instrument-level producer stopped on 2026-08-17; please restore it (the
+  account/portfolio producers in the same service still cut hourly).
 
 ### 1.3 `manager.performance:portfolio_equity_snapshots`
-- Live state: `UNAVAILABLE · MANAGER_V2_SOURCE_CONTRACT_REJECTED` — the edge
-  adapter rejects the source shape; typed since Phase 1 and never delivered.
+- **Diagnosis upgraded 2026-09-03 (exact, verified in your serving policy):**
+  the table holds 5,121 rows (newest today), but the serving-policy entry
+  declares **`profile_columns: []`** while every other served relation
+  declares `["mode", "venue"]` — an unqualified read violates the fixed
+  qualified-read contract and the edge fail-closes with
+  `MANAGER_V2_SOURCE_CONTRACT_REJECTED`. Root: the table has no
+  `mode`/`venue` columns to scope by. Fix on your side: add the scoping
+  columns (or serve a scoped view) and qualify the policy entry.
 - Ask: publish the relation matching the catalogued contract
   (`id, ts, portfolio_id, currency, allocated_capital, account_count,
   cash_total, cash_free, cash_locked, margin_initial, margin_maintenance,
