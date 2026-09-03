@@ -2615,6 +2615,24 @@ serves SSE enabled (`FEATURE_EXECUTION_REALTIME_SSE=true` effective).
 - implement F7's `DERIVED` portfolio-equity formula (declared
   `formula_version`, provenance) while the owner gap stays typed.
 
+Status 2026-09-03: `INTEGRATION_COMPLETE` except the owner decision —
+`PAPER_DNSE_VNM` taxonomy remains `OWNER_DECISION_PENDING` (Bobby), with
+strict cross-profile rejection retained and pinned by the lineage negatives.
+Delivered: (1) lineage observability — the guard counts rejects by
+missing-parent class; the counts ride the paper-read capability
+(`lineage_rejects`, additive) and the projection snapshot envelope, so the
+R0 projection-inspect operator view sees them; (2) the window ladder for
+time-series relations — each refresh merges the previous committed window
+(dedup by row id, 30 d horizon, 5,000-row cap, ascending), the relation
+envelope declares `window {days, max_rows, basis, truncated}`, and the
+served snapshot stays one atomic read (no second table, no restore-parity
+delta); transactional delta/journal ingestion stays a P4-E edge item;
+(3) F7 — `portfolio-equity-derived.v1`: a portfolio subject's equity series
+is the exact-decimal forward-filled sum of member-account equity, points
+begin only when every member has reported, single-currency only (no FX
+mixing), authority `DERIVED`, while `manager.portfolio_equity` stays typed
+rejected.
+
 ##### P4-E — Production streaming configuration and promotion (config + release)
 
 - configuration matrix (dev measured → production target), each row a named
@@ -2631,6 +2649,24 @@ serves SSE enabled (`FEATURE_EXECUTION_REALTIME_SSE=true` effective).
   traffic; SSE fan-out at N tabs; delta coalescing verified);
 - then the unchanged N36/Phase 3 release train: Bobby dev review → protected
   `dev` merge → signed `main` images. No new release mechanism.
+
+Status 2026-09-03: `CONFIG_MATRIX_PUBLISHED / PRODUCTION_ACTIVATION_NOT_
+AUTHORIZED` — the full matrix (dev measured → production target, owner,
+rollback per row), the P4-C client budgets and the measured dev load table
+(20-way concurrency per route + 10-stream SSE fan-out hold) are published in
+`deploy/execution-phase4/production-streaming-config.md`. Remaining before
+GO, named there: Rust per-class poll ceilings + journal push/tail, a soak at
+target cadence, the F17 chain on a real eligible evidence run, and Bobby's
+taxonomy decision + visual review + release train. Production flags remain
+untouched; command relay and Live mutation stay false.
+
+New finding F18 (named, non-blocking): under heavy host load, two concurrent
+`POST /governance/approvals` with the same request key can race the
+unique-violation re-read before the winner commits and return a typed 409
+(`REQUEST_KEY_PAYLOAD_CONFLICT`) instead of the replayed 201 — fail-closed
+and retry-safe, observed once in a loaded gate run and unreproducible in
+three unloaded rounds (4/4 each). Fix direction: retry the replay lookup
+once after a short backoff inside the 23505/40001 branch.
 
 ##### Phase 4 evidence and exit gate
 
@@ -4006,6 +4042,8 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-03 | Claude: P4-E published — production streaming configuration matrix (per-row owner/rollback), client delta budgets, measured dev load + SSE fan-out evidence (`deploy/execution-phase4/production-streaming-config.md`); named the remaining pre-GO items; recorded F18 (same-key concurrent create can 409 instead of replay under load — fail-closed, retry-safe) | load probe measured on the rebuilt dev runtime (table in the doc); FE production build exit 0; full control gate re-run; no flag, profile or command change; production activation stays with the unchanged release train |
+| 2026-09-03 | Claude: P4-D closed except the owner taxonomy decision (`PAPER_DNSE_VNM` → `OWNER_DECISION_PENDING`) — lineage reject counters on capability + snapshot envelope, merged-snapshot 30 d window ladder with declared truncation, exact DERIVED portfolio equity (`portfolio-equity-derived.v1`) | paper-read 16/16, execution-analytics 14/14, profile-projection 11/11 incl. ladder merge regressions; additive contract widening (`lineage_rejects`); full control gate re-run; one-atomic-read invariant preserved |
 | 2026-09-03 | Claude: P4-I/F17 — dev write-path liveness verified (typed fail-closed 422 on the only real, ineligible research run; zero rows persisted; honest-empty governance/ops reads), end-to-end chain waits on a real eligible evidence run (named external gate → P4-E evidence run) | authenticated probes through the gateway with full mutation security; no record seeded, no flag/profile/command change |
 | 2026-09-02 | Claude: P4-C closed (F3 freshness budgets + AGING tier + envelope-declared budget; F4 realtime coverage for Fleet/360s/register + ≤1 s delta coalescing + in-place revalidation) and P4-I/F16 closed (versioned observation policy + honest gate verdict) | profileIntegration 8/8, manager-lists 11/11 fresh-PG, paper-read 15/15, contracts gate pass, control-api 291/291 + restore parity, frontend 96 files green; additive schema widening only; no flag/profile/command change |
 | 2026-09-02 | Claude: P4-H closed (`INTEGRATION_COMPLETE`) — CC needs_you gains reconciliation findings, Today gains the bounded 24 h journal window (one atomic projection read), product route opens the published CC stream; latent stream-cycling hook bug fixed | command-center spec 11/11 fresh-PG incl. the projection-join regression and honest-partial expectations; commandCenterStream spec 21/21 incl. container connect/refusal; contracts additive enum widening regenerated; full gates re-run green; read-only, no flag/profile/command change |
