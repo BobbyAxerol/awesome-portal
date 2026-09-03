@@ -511,7 +511,8 @@ for token in \
     "BR-EX-76" \
     "BR-EX-77" \
     "BR-EX-78" \
-    "_next: BR-EX-79_" \
+    "BR-EX-79" \
+    "_next: BR-EX-80_" \
     "EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
