@@ -19,7 +19,10 @@ const MAXIMUM_SOURCE_PAGES = 2;
 // cursor and may take a deeper page budget per cycle — that is what lets a
 // 600k-row append-only relation actually reach its recent rows. The page
 // budget stays inside the shared 15 r/s source admission.
-const LADDER_MAXIMUM_SOURCE_PAGES = 10;
+// 50 pages/cycle: a backfill over a ~600k-row scoped stream completes in
+// under an hour instead of days, while every page still rides the shared
+// paced source admission — the budget is spent, never widened.
+const LADDER_MAXIMUM_SOURCE_PAGES = 50;
 const SOURCE_PAGE_LIMIT = 200;
 
 @Injectable()
@@ -130,6 +133,17 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           throw error;
         }
         if (binding.ladder) {
+          // Drain observability: rows-per-pass is the one number that says
+          // whether a backfill is actually moving or just walking cursors.
+          this.logger.log(JSON.stringify({
+            event: "execution_profile_projection_ladder_drained",
+            environment,
+            profile_id: profileId,
+            relation: binding.relation,
+            items: page.items.length,
+            resumed: resumeCursor !== null,
+            next_cursor_present: page.nextCursor !== null,
+          }));
           // Mid-pass: the source cursor continues next cycle. Tail: keep the
           // last held cursor and follow the (ts, id)-ordered stream forward —
           // new rows land strictly after it, and the final page's overlap is
@@ -154,10 +168,13 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         const binding = item.spec.binding;
         if (!binding.ladder || !item.page) continue;
         const rows = item.page.items.flatMap((fields) => {
-          const rowId = fields[binding.ladder!.idField];
+          // Source ids are TEXT in some relations and INTEGER sequences in the
+          // time-series ones — both are identities, both must persist.
+          const rawId = fields[binding.ladder!.idField];
+          const rowId = typeof rawId === "string" && rawId.length > 0 ? rawId
+            : typeof rawId === "number" && Number.isSafeInteger(rawId) ? String(rawId) : null;
           const ts = fields[binding.ladder!.timestampField];
-          return typeof rowId === "string" && rowId.length > 0 &&
-            typeof ts === "string" && !Number.isNaN(Date.parse(ts))
+          return rowId !== null && typeof ts === "string" && !Number.isNaN(Date.parse(ts))
             ? [{ rowId, ts, fields }] : [];
         });
         await this.repository.appendTimeSeriesHistory(
@@ -326,6 +343,7 @@ export function mergeTimeSeriesWindow(
   const keyOf = (row: { fields: Record<string, unknown> }) => {
     const id = row.fields[ladder.idField];
     if (typeof id === "string" && id.length > 0) return `id:${id}`;
+    if (typeof id === "number" && Number.isSafeInteger(id)) return `id:${id}`;
     return `ts:${String(row.fields[ladder.timestampField] ?? "")}:${String(row.fields.account_id ?? row.fields.portfolio_id ?? row.fields.deployment_id ?? "")}`;
   };
   const stampOf = (row: { fields: Record<string, unknown> }) => {

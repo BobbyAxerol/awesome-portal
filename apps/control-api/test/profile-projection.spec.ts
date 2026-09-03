@@ -407,10 +407,12 @@ describe("P4-D follow-on: resumable time-series drains", () => {
 
 describe("Full-depth time-series history store (owner directive 2026-09-03)", () => {
   const equityKey = "manager.performance:account_equity_snapshots";
-  const typedRow = (id: string, ts: string, accountId: string) => ({
+  // The live source serves INTEGER sequence ids for the time-series
+  // relations — the store must keep them, not just TEXT ids.
+  const typedRow = (id: number, ts: string, accountId: string) => ({
     relation: { schema: "public", relation: "account_equity_snapshots" }, record_key: "opaque",
     fields: {
-      id: { kind: "TEXT", value: id },
+      id: { kind: "INTEGER", value: id },
       ts: { kind: "TIMESTAMP", value: ts },
       account_id: { kind: "TEXT", value: accountId },
       equity: { kind: "DECIMAL", value: "100" },
@@ -433,9 +435,9 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
         }
         if (relation === "account_equity_snapshots") {
           response.source.data.items = [
-            typedRow("eq_1", "2026-06-30T00:00:00.000Z", "acc_a"),
-            typedRow("eq_2", "2026-09-03T00:00:00.000Z", "acc_a"),
-            typedRow("eq_ghost", "2026-09-03T01:00:00.000Z", "acc_ghost"),
+            typedRow(101, "2026-06-30T00:00:00.000Z", "acc_a"),
+            typedRow(102, "2026-09-03T00:00:00.000Z", "acc_a"),
+            typedRow(103, "2026-09-03T01:00:00.000Z", "acc_ghost"),
           ];
         }
         return response;
@@ -455,11 +457,11 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
     });
     const page = await repository.timeSeriesHistory(workspaceId, "paper", profileId, equityKey, { limit: 10 });
     expect(page.hasMore).toBe(false);
-    expect(page.rows.map((row) => row.rowId)).toEqual(["eq_1", "eq_2"]);
+    expect(page.rows.map((row) => row.rowId)).toEqual(["101", "102"]);
     // The snapshot ladder still applies its declared window: the June row is
     // outside it, so screens embed only the recent point.
     const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
-    expect(snapshot?.document.relations[equityKey].items.map((row) => row.fields.id)).toEqual(["eq_2"]);
+    expect(snapshot?.document.relations[equityKey].items.map((row) => row.fields.id)).toEqual([102]);
     await worker.onApplicationShutdown();
   });
 
