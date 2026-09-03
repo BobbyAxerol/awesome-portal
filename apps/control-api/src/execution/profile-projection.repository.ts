@@ -219,6 +219,100 @@ export class ExecutionProfileProjectionRepository {
     };
   }
 
+  /**
+   * Full-range chart read (owner directive 2026-09-03): when the range holds
+   * more rows than a chart can carry, return per-series bucket extrema plus
+   * the bucket-closing row — every returned row is a REAL source row, the
+   * whole range is covered, and minima/maxima survive by construction. Small
+   * ranges return exact rows with no downsampling at all.
+   */
+  async timeSeriesHistoryDownsampled(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+    query: {
+      from: string;
+      to?: string | null;
+      entity?: { field: string; value: string } | null;
+      seriesField: string;
+      valueField: string;
+      targetPoints: number;
+    },
+  ): Promise<{
+    rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>;
+    sourceRows: number;
+    downsample: {
+      method: "PER_SERIES_BUCKET_EXTREMA";
+      bucket_seconds: number;
+      series_count: number;
+      input_rows: number;
+      output_rows: number;
+    } | null;
+  }> {
+    const base = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4", "ts >= $5::timestamptz"];
+    const values: unknown[] = [workspaceId, environment, profileId, relationKey, query.from];
+    if (query.to) { values.push(query.to); base.push(`ts <= $${values.length}::timestamptz`); }
+    if (query.entity) {
+      values.push(query.entity.field, query.entity.value);
+      base.push(`fields->>($${values.length - 1}) = $${values.length}`);
+    }
+    values.push(query.valueField);
+    base.push(`fields->>($${values.length}) ~ '^-?[0-9]+(\\.[0-9]+)?$'`);
+    const valueParam = values.length;
+    values.push(query.seriesField);
+    const seriesParam = values.length;
+    const meta = await this.pool.query<{ n: string; k: string; t0: string | null; t1: string | null }>(
+      `SELECT count(*)::text AS n,
+              count(DISTINCT fields->>($${seriesParam}))::text AS k,
+              to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS t0,
+              to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS t1
+         FROM execution_timeseries_history WHERE ${base.join(" AND ")}`,
+      values,
+    );
+    const inputRows = Number(meta.rows[0]?.n ?? 0);
+    const seriesCount = Math.max(1, Number(meta.rows[0]?.k ?? 0));
+    if (inputRows === 0) return { rows: [], sourceRows: 0, downsample: null };
+    if (inputRows <= query.targetPoints) {
+      const exact = await this.timeSeriesHistory(workspaceId, environment, profileId, relationKey, {
+        from: query.from, to: query.to ?? null, entity: query.entity ?? null, limit: query.targetPoints,
+      });
+      return { rows: exact.rows, sourceRows: inputRows, downsample: null };
+    }
+    const spanSeconds = Math.max(1,
+      (Date.parse(meta.rows[0]!.t1!) - Date.parse(meta.rows[0]!.t0!)) / 1000);
+    const bucketsPerSeries = Math.max(1, Math.floor(query.targetPoints / (3 * seriesCount)));
+    const bucketSeconds = Math.max(1, Math.ceil(spanSeconds / bucketsPerSeries));
+    values.push(bucketSeconds);
+    const bucketParam = values.length;
+    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
+      `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields FROM (
+         SELECT row_id, ts, fields,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY (fields->>($${valueParam}))::numeric ASC, ts, row_id) AS rn_min,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY (fields->>($${valueParam}))::numeric DESC, ts, row_id) AS rn_max,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY ts DESC, row_id DESC) AS rn_last
+           FROM execution_timeseries_history WHERE ${base.join(" AND ")}
+       ) ranked
+       WHERE rn_min = 1 OR rn_max = 1 OR rn_last = 1
+       ORDER BY ts ASC, row_id ASC`,
+      values,
+    );
+    return {
+      rows: result.rows.map((row) => ({ rowId: row.row_id, ts: row.ts, fields: row.fields })),
+      sourceRows: inputRows,
+      downsample: {
+        method: "PER_SERIES_BUCKET_EXTREMA",
+        bucket_seconds: bucketSeconds,
+        series_count: seriesCount,
+        input_rows: inputRows,
+        output_rows: result.rows.length,
+      },
+    };
+  }
+
   async timeSeriesHistoryCoverage(
     workspaceId: string,
     environment: ProjectionEnvironment,

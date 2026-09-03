@@ -611,6 +611,62 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
   });
 });
 
+describe("Full-range downsampled history read (owner directive 2026-09-03)", () => {
+  const equityKey = "manager.performance:account_equity_snapshots";
+  const seed = async () => {
+    const rows: Array<{ rowId: string; ts: string; fields: Record<string, string | number> }> = [];
+    const start = Date.UTC(2026, 7, 1);
+    for (const account of ["acc_a", "acc_b"]) {
+      for (let hour = 0; hour < 240; hour += 1) {
+        const ts = new Date(start + hour * 3_600_000).toISOString();
+        const id = `${account}_${hour}`;
+        const equity = account === "acc_a" && hour === 120 ? "1"
+          : account === "acc_a" && hour === 168 ? "99999"
+            : "1000";
+        rows.push({ rowId: id, ts, fields: { id, ts, account_id: account, deployment_id: "dep_1", equity } });
+      }
+    }
+    await repository.appendTimeSeriesHistory(workspaceId, "paper", profileId, equityKey, rows as never);
+    return { start, total: rows.length };
+  };
+
+  it("covers the whole range and preserves per-bucket extrema with real rows only", async () => {
+    const { start, total } = await seed();
+    const page = await repository.timeSeriesHistoryDownsampled(workspaceId, "paper", profileId, equityKey, {
+      from: new Date(start - 1000).toISOString(),
+      seriesField: "account_id", valueField: "equity", targetPoints: 60,
+    });
+    expect(page.sourceRows).toBe(total);
+    expect(page.downsample).toMatchObject({ method: "PER_SERIES_BUCKET_EXTREMA", series_count: 2 });
+    expect(page.rows.length).toBeLessThanOrEqual(60);
+    // Whole range: first and last day are both represented.
+    expect(Date.parse(page.rows[0].ts)).toBeLessThan(start + 86_400_000);
+    expect(Date.parse(page.rows.at(-1)!.ts)).toBeGreaterThan(start + 9 * 86_400_000);
+    // Extrema survive by construction; every row is a real seeded row.
+    const ids = page.rows.map((row) => row.rowId);
+    expect(ids).toContain("acc_a_120");
+    expect(ids).toContain("acc_a_168");
+    expect(ids.every((id) => /^acc_[ab]_\d+$/.test(id))).toBe(true);
+
+    // A small range needs no downsampling: exact rows come back declared so.
+    const exact = await repository.timeSeriesHistoryDownsampled(workspaceId, "paper", profileId, equityKey, {
+      from: new Date(start - 1000).toISOString(),
+      seriesField: "account_id", valueField: "equity", targetPoints: 1_000,
+    });
+    expect(exact.downsample).toBeNull();
+    expect(exact.rows).toHaveLength(total);
+
+    // Entity filtering narrows before bucketing.
+    const filtered = await repository.timeSeriesHistoryDownsampled(workspaceId, "paper", profileId, equityKey, {
+      from: new Date(start - 1000).toISOString(),
+      entity: { field: "account_id", value: "acc_b" },
+      seriesField: "account_id", valueField: "equity", targetPoints: 30,
+    });
+    expect(filtered.sourceRows).toBe(240);
+    expect(filtered.rows.every((row) => row.rowId.startsWith("acc_b_"))).toBe(true);
+  });
+});
+
 describe("P4-D window ladder merge", () => {
   const row = (id: string, ts: string, entity = "acc_a") => ({
     lineage: { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" },

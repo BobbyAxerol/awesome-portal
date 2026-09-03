@@ -96,23 +96,26 @@ export class LocalQueryAnalyticsService {
     subjectId: string,
   ): Promise<SubjectDepth | null> {
     if (subjectKind !== "deployment" && subjectKind !== "alpha") return null;
-    if (typeof this.repository.timeSeriesHistory !== "function") return null;
+    if (typeof this.repository.timeSeriesHistoryDownsampled !== "function") return null;
     const entity = subjectKind === "deployment"
       ? { field: "deployment_id", value: subjectId }
       : { field: "strategy_id", value: resolveStrategyId(snapshot, subjectId) };
     const from = new Date(Date.now() - 30 * 86_400_000).toISOString();
     const depth: SubjectDepth = { accountEquity: [], performance: [], windows: {}, queries: 0 };
     const bindings = [
-      ["accountEquity", "account_equity_snapshots"],
-      ["performance", "performance_snapshots"],
+      ["accountEquity", "account_equity_snapshots", "account_id"],
+      ["performance", "performance_snapshots", "instrument_id"],
     ] as const;
-    for (const [name, relation] of bindings) {
+    for (const [name, relation, seriesField] of bindings) {
       try {
-        depth.queries += 1;
-        const page = await this.repository.timeSeriesHistory(
+        depth.queries += 2;
+        // Full-range read: bucket extrema + closing row per series when the
+        // range is dense — never the oldest slice of the window (that once
+        // rendered a "30D" chart holding two days).
+        const page = await this.repository.timeSeriesHistoryDownsampled(
           workspaceId, environment, profileId,
           `manager.performance:${relation}`,
-          { from, entity, limit: 2_000 },
+          { from, entity, seriesField, valueField: "equity", targetPoints: 2_000 },
         );
         if (page.rows.length > 0) {
           depth[name] = page.rows.map((row) => row.fields);
@@ -120,7 +123,9 @@ export class LocalQueryAnalyticsService {
             days: 30,
             basis: "PORTAL_SGP_HISTORY_MIRROR",
             returned_rows: page.rows.length,
-            truncated: page.hasMore,
+            source_rows: page.sourceRows,
+            truncated: false,
+            ...(page.downsample ? { downsample: page.downsample } : {}),
           };
         }
       } catch {
@@ -383,6 +388,19 @@ function equitySeries(
   if (subjectKind === "portfolio" && rows.portfolioEquity.length === 0 && rows.accountEquity.length > 0) {
     return derivedPortfolioEquitySeries(rows.accountEquity, asOf, completeness);
   }
+  // The same interleaving lie applies to ANY multi-account subject: raw
+  // points from different accounts zig-zag between unrelated equity levels
+  // (the needle-spike chart). One honest line = the forward-filled exact
+  // decimal sum, declared DERIVED.
+  if (rows.portfolioEquity.length === 0 && rows.accountEquity.length > 0) {
+    const accounts = new Set(rows.accountEquity.flatMap((row) => {
+      const account = text(row, "account_id"); return account ? [account] : [];
+    }));
+    if (accounts.size > 1) {
+      return derivedPortfolioEquitySeries(rows.accountEquity, asOf, completeness,
+        "equity", "equity-account-sum.v1");
+    }
+  }
   const source = rows.portfolioEquity.length > 0 ? rows.portfolioEquity
     : rows.accountEquity.length > 0 ? rows.accountEquity : rows.performance;
   const points = source.flatMap((row) => {
@@ -430,6 +448,8 @@ function derivedPortfolioEquitySeries(
   accountEquity: readonly Fact[],
   asOf: string,
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN",
+  seriesId = "portfolio_equity_derived",
+  formulaVersion = "portfolio-equity-derived.v1",
 ) {
   const currencies = new Set(accountEquity.flatMap((row) => {
     const currency = text(row, "currency"); return currency ? [currency] : [];
@@ -467,13 +487,13 @@ function derivedPortfolioEquitySeries(
   const values = points.map((point) => point.value);
   return [{
     schema_version: "chart-series.rules.v1",
-    series_id: "portfolio_equity_derived",
+    series_id: seriesId,
     kind: "LINE",
     unit: "MONEY",
     currency: [...currencies][0],
     authority: "DERIVED",
     as_of: asOf,
-    formula_version: "portfolio-equity-derived.v1",
+    formula_version: formulaVersion,
     completeness,
     join_digest: projectionDigest(points),
     ohlc_owner: null,

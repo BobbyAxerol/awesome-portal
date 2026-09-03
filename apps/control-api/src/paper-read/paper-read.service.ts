@@ -192,15 +192,20 @@ export class PaperReadService {
     if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return depth;
     const from = new Date(Date.now() - 30 * 86_400_000).toISOString();
     const bindings = [
-      ["account_equity", "account_equity_snapshots"],
-      ["performance", "performance_snapshots"],
+      ["account_equity", "account_equity_snapshots", "account_id"],
+      ["performance", "performance_snapshots", "instrument_id"],
     ] as const;
-    for (const [key, relation] of bindings) {
+    for (const [key, relation, seriesField] of bindings) {
       try {
-        const page = await this.projection.timeSeriesHistory(
+        // Full-range read: bucket extrema + closing row per series on dense
+        // ranges — the whole 30 days always render, never the oldest slice.
+        const page = await this.projection.timeSeriesHistoryDownsampled(
           this.projectionWorkspaceId, "paper", this.paperProfileId,
           `manager.performance:${relation}`,
-          { from, entity: { field: "deployment_id", value: deploymentId }, limit: 2_000 },
+          {
+            from, entity: { field: "deployment_id", value: deploymentId },
+            seriesField, valueField: "equity", targetPoints: 2_000,
+          },
         );
         if (page.rows.length > 0) {
           depth.rows[key] = page.rows.map((row) => row.fields);
@@ -208,7 +213,9 @@ export class PaperReadService {
             days: 30,
             basis: "PORTAL_SGP_HISTORY_MIRROR",
             returned_rows: page.rows.length,
-            truncated: page.hasMore,
+            source_rows: page.sourceRows,
+            truncated: false,
+            ...(page.downsample ? { downsample: page.downsample } : {}),
           };
         }
       } catch {

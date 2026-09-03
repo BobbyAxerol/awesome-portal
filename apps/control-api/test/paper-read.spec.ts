@@ -76,7 +76,7 @@ function defaultRecord(relation: string): RecordInput {
 function service(
   source: FakeCurrentSource,
   analytics?: Pick<ExecutionAnalyticsProxy, "managerQueryAnalytics">,
-  projection?: { timeSeriesHistory: (...args: unknown[]) => Promise<unknown> },
+  projection?: { timeSeriesHistoryDownsampled: (...args: unknown[]) => Promise<unknown> },
 ): PaperReadService {
   const config = loadConfig({
     DATABASE_URL: "postgres://portal:portal@localhost/portal",
@@ -299,14 +299,15 @@ describe("N22 full Paper read product BFF", () => {
     ]);
     const historyCalls: unknown[][] = [];
     const projection = {
-      timeSeriesHistory: async (...args: unknown[]) => {
+      timeSeriesHistoryDownsampled: async (...args: unknown[]) => {
         historyCalls.push(args);
-        const query = args[4] as { entity?: { field: string; value: string }; limit: number };
+        const query = args[4] as { entity?: { field: string; value: string }; targetPoints: number };
         const relationKey = args[3] as string;
-        if (relationKey !== "manager.performance:account_equity_snapshots") return { rows: [], hasMore: false };
+        if (relationKey !== "manager.performance:account_equity_snapshots") return { rows: [], sourceRows: 0, downsample: null };
         expect(query.entity).toEqual({ field: "deployment_id", value: "dep_1" });
         return {
-          hasMore: false,
+          sourceRows: 720,
+          downsample: null,
           rows: Array.from({ length: 720 }, (_, index) => ({
             rowId: String(index),
             ts: new Date(Date.UTC(2026, 7, 4) + index * 3_600_000).toISOString(),
@@ -322,7 +323,8 @@ describe("N22 full Paper read product BFF", () => {
     // Full 30-day depth from the local mirror, declared as such.
     expect(result.data.account_equity).toHaveLength(720);
     expect(result.data.history_windows.account_equity).toMatchObject({
-      days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 720, truncated: false,
+      days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 720,
+      source_rows: 720, truncated: false,
     });
     // performance had no mirrored rows: the bounded snapshot fallback serves.
     expect(result.data.history_windows.performance).toBeUndefined();
