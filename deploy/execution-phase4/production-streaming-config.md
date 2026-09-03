@@ -23,7 +23,7 @@ N36/Phase 3 release train (Bobby dev review → protected `dev` merge → signed
 | `EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS` | 120000 | 120000 | Control API | 120000 |
 | manager-lists refresh trigger (`SNAPSHOT_MAX_AGE_MS`, code constant) | 5000 | 5000 — label truth now follows the envelope-declared budget (P4-C), so the trigger no longer masquerades as freshness | Control API | n/a (constant) |
 | manager-lists freshness budget (`freshness_budget_ms`, envelope-declared) | fresh 30000 / stale 60000 (2×/4× poll) | recomputed automatically from the poll interval per environment | Control API | follows poll interval |
-| Time-series window ladder (`WARM_WINDOW_DAYS` / `WARM_WINDOW_MAX_ROWS`) | 30 d / 5000 rows, merged in-snapshot, truncation declared | same; revisit cap only with measured payload growth (§3 sizes) | Control API | flat source page (remove ladder merge) |
+| Time-series window ladder (`WARM_WINDOW_DAYS` / `WARM_WINDOW_MAX_ROWS`) | 30 d / 2000 rows, merged in-snapshot, truncation declared (2026-09-03: cap aligned to the snapshot document's own 2,000-row relation invariant — 5000 could never commit) | same; the window bounds what screens embed, never what analysis reads | Control API | flat source page (remove ladder merge) |
 | `FEATURE_EXECUTION_REALTIME_SSE` | true (dev effective) | true | Compose overlay | false (screens fall back to bounded snapshot reads, layout unchanged) |
 | `FEATURE_EXECUTION_COMMAND_RELAY` | false | false — unchanged by this phase | Owner | n/a |
 | Live mutation | false | false — unchanged by this phase | Owner | n/a |
@@ -31,6 +31,17 @@ N36/Phase 3 release train (Bobby dev review → protected `dev` merge → signed
 Per-class ceilings and the journal push/tail replacement are Rust edge work
 items; until they land, the single-value dev settings remain the active
 configuration everywhere and this matrix is the published target, not a claim.
+
+### 1.1 Full-depth history store (owner directive 2026-09-03)
+
+The bounded window above is the screen embed only. Every lineage-accepted
+time-series row the resumable drain reads is also kept exactly, append-only,
+in `execution_timeseries_history`, and served by
+`GET /api/v1/execution/history/:environment/:relationKey` (keyset (ts, id)
+pages up to 2,000 rows, `from`/`to` range, one entity filter, declared
+coverage `{row_count, oldest_ts, newest_ts}`, authority
+`PORTAL_SGP_HISTORY_MIRROR`). Analysis reads full depth here; nothing is cut
+at 30 days.
 
 ## 2. Delta coalescing and client budgets (P4-C, verified)
 

@@ -153,6 +153,90 @@ export class ExecutionProfileProjectionRepository {
     );
   }
 
+  /**
+   * Full-depth time-series store (owner directive 2026-09-03): every accepted
+   * drained row is kept exactly, append-only, keyed by the relation's own id.
+   * Conflict-ignore keeps the write idempotent across overlapping tail pages.
+   */
+  async appendTimeSeriesHistory(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+    rows: ReadonlyArray<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>,
+  ): Promise<number> {
+    if (rows.length === 0) return 0;
+    const result = await this.pool.query(
+      `INSERT INTO execution_timeseries_history
+         (workspace_id, environment, profile_id, relation_key, row_id, ts, fields)
+       SELECT $1, $2, $3, $4, entry.row_id, entry.ts::timestamptz, entry.fields
+         FROM jsonb_to_recordset($5::jsonb) AS entry(row_id text, ts text, fields jsonb)
+       ON CONFLICT (workspace_id, environment, profile_id, relation_key, row_id) DO NOTHING`,
+      [workspaceId, environment, profileId, relationKey,
+        JSON.stringify(rows.map((row) => ({ row_id: row.rowId, ts: row.ts, fields: row.fields })))],
+    );
+    return result.rowCount ?? 0;
+  }
+
+  async timeSeriesHistory(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+    query: {
+      from?: string | null;
+      to?: string | null;
+      after?: { ts: string; rowId: string } | null;
+      entity?: { field: string; value: string } | null;
+      limit: number;
+    },
+  ): Promise<{ rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>; hasMore: boolean }> {
+    const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
+    const values: unknown[] = [workspaceId, environment, profileId, relationKey];
+    if (query.from) { values.push(query.from); conditions.push(`ts >= $${values.length}::timestamptz`); }
+    if (query.to) { values.push(query.to); conditions.push(`ts <= $${values.length}::timestamptz`); }
+    if (query.after) {
+      values.push(query.after.ts, query.after.rowId);
+      conditions.push(`(ts, row_id) > ($${values.length - 1}::timestamptz, $${values.length})`);
+    }
+    if (query.entity) {
+      values.push(query.entity.field, query.entity.value);
+      conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
+    }
+    values.push(query.limit + 1);
+    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
+      `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields
+         FROM execution_timeseries_history
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY ts ASC, row_id ASC
+        LIMIT $${values.length}`,
+      values,
+    );
+    const hasMore = result.rows.length > query.limit;
+    return {
+      rows: result.rows.slice(0, query.limit).map((row) => ({ rowId: row.row_id, ts: row.ts, fields: row.fields })),
+      hasMore,
+    };
+  }
+
+  async timeSeriesHistoryCoverage(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+  ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
+    const result = await this.pool.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
+      `SELECT count(*)::text AS row_count,
+              to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
+              to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
+         FROM execution_timeseries_history
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4`,
+      [workspaceId, environment, profileId, relationKey],
+    );
+    const row = result.rows[0];
+    return { rowCount: Number(row?.row_count ?? 0), oldestTs: row?.oldest_ts ?? null, newestTs: row?.newest_ts ?? null };
+  }
+
   async commit(
     document: ProfileProjectionDocument,
     input: {

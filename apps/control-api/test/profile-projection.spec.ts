@@ -405,6 +405,109 @@ describe("P4-D follow-on: resumable time-series drains", () => {
   });
 });
 
+describe("Full-depth time-series history store (owner directive 2026-09-03)", () => {
+  const equityKey = "manager.performance:account_equity_snapshots";
+  const typedRow = (id: string, ts: string, accountId: string) => ({
+    relation: { schema: "public", relation: "account_equity_snapshots" }, record_key: "opaque",
+    fields: {
+      id: { kind: "TEXT", value: id },
+      ts: { kind: "TIMESTAMP", value: ts },
+      account_id: { kind: "TEXT", value: accountId },
+      equity: { kind: "DECIMAL", value: "100" },
+      mode: { kind: "TEXT", value: "paper" },
+    },
+  });
+
+  it("persists every lineage-accepted drained row exactly once, at full depth", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        const response = emptyManagerResponse(environment, relation) as Record<string, any>;
+        if (relation === "accounts") {
+          response.source.data.items = [{
+            relation: { schema: "public", relation }, record_key: "opaque",
+            fields: { account_id: { kind: "TEXT", value: "acc_a" }, mode: { kind: "TEXT", value: environment } },
+          }];
+        }
+        if (relation === "account_equity_snapshots") {
+          response.source.data.items = [
+            typedRow("eq_1", "2026-06-30T00:00:00.000Z", "acc_a"),
+            typedRow("eq_2", "2026-09-03T00:00:00.000Z", "acc_a"),
+            typedRow("eq_ghost", "2026-09-03T01:00:00.000Z", "acc_ghost"),
+          ];
+        }
+        return response;
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    await worker.runOnce(); // overlapping tail pages must stay idempotent
+
+    const coverage = await repository.timeSeriesHistoryCoverage(workspaceId, "paper", profileId, equityKey);
+    // eq_ghost is lineage-rejected (no acc_ghost parent) and must NOT reach
+    // the store; eq_1 predates the hot window yet IS kept — full depth.
+    expect(coverage).toEqual({
+      rowCount: 2,
+      oldestTs: "2026-06-30T00:00:00.000Z",
+      newestTs: "2026-09-03T00:00:00.000Z",
+    });
+    const page = await repository.timeSeriesHistory(workspaceId, "paper", profileId, equityKey, { limit: 10 });
+    expect(page.hasMore).toBe(false);
+    expect(page.rows.map((row) => row.rowId)).toEqual(["eq_1", "eq_2"]);
+    // The snapshot ladder still applies its declared window: the June row is
+    // outside it, so screens embed only the recent point.
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(snapshot?.document.relations[equityKey].items.map((row) => row.fields.id)).toEqual(["eq_2"]);
+    await worker.onApplicationShutdown();
+  });
+
+  it("serves the history read: keyset pages, range and entity filters, honest coverage", async () => {
+    const { ExecutionProfileHistoryService } = await import("../src/execution/profile-history.service");
+    const service = new ExecutionProfileHistoryService(config, repository);
+
+    const empty = await service.read("paper", equityKey, {});
+    expect(empty).toMatchObject({
+      authority: "PORTAL_SGP_HISTORY_MIRROR",
+      state: "EMPTY",
+      coverage: { row_count: 0, oldest_ts: null, newest_ts: null },
+      items: [],
+    });
+
+    await repository.appendTimeSeriesHistory(workspaceId, "paper", profileId, equityKey, [
+      { rowId: "eq_1", ts: "2026-07-01T00:00:00.000Z", fields: { id: "eq_1", ts: "2026-07-01T00:00:00.000Z", account_id: "acc_a", equity: "1" } },
+      { rowId: "eq_2", ts: "2026-08-01T00:00:00.000Z", fields: { id: "eq_2", ts: "2026-08-01T00:00:00.000Z", account_id: "acc_b", equity: "2" } },
+      { rowId: "eq_3", ts: "2026-09-01T00:00:00.000Z", fields: { id: "eq_3", ts: "2026-09-01T00:00:00.000Z", account_id: "acc_a", equity: "3" } },
+    ]);
+
+    const first = await service.read("paper", equityKey, { limit: 2 });
+    expect(first.state).toBe("AVAILABLE");
+    expect(first.coverage.row_count).toBe(3);
+    expect(first.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_1", "eq_2"]);
+    expect(first.page).toMatchObject({ has_more: true, next_after_id: "eq_2" });
+
+    const second = await service.read("paper", equityKey, {
+      limit: 2, after_ts: first.page.next_after_ts, after_id: first.page.next_after_id,
+    });
+    expect(second.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_3"]);
+    expect(second.page.has_more).toBe(false);
+
+    const ranged = await service.read("paper", equityKey, { from: "2026-07-15T00:00:00.000Z", to: "2026-08-15T00:00:00.000Z" });
+    expect(ranged.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_2"]);
+
+    const filtered = await service.read("paper", equityKey, { account_id: "acc_a" });
+    expect(filtered.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_1", "eq_3"]);
+
+    await expect(service.read("paper", "manager.orders:orders", {}))
+      .rejects.toMatchObject({ code: "N33_HISTORY_RELATION_NOT_ACCEPTED" });
+    await expect(service.read("paper", equityKey, { limit: 999_999 }))
+      .rejects.toMatchObject({ code: "N33_HISTORY_LIMIT_INVALID" });
+    await expect(service.read("paper", equityKey, { after_ts: "2026-08-01T00:00:00.000Z" }))
+      .rejects.toMatchObject({ code: "N33_HISTORY_CURSOR_INVALID" });
+  });
+});
+
 describe("P4-D window ladder merge", () => {
   const row = (id: string, ts: string, entity = "acc_a") => ({
     lineage: { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" },

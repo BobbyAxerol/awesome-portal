@@ -10,6 +10,8 @@ export const TEST_TABLES = [
   "execution_profile_projection_journal",
   "execution_profile_projection_snapshots",
   "execution_profile_projection_leases",
+  "execution_profile_relation_cursors",
+  "execution_timeseries_history",
   "execution_manager_projection_snapshots",
   "execution_alpha_fleet_projection",
   "execution_binding_projection",

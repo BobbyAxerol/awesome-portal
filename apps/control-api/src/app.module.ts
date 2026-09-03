@@ -33,6 +33,8 @@ import { ExecutionProfileProjectionRepository } from "./execution/profile-projec
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
 import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
 import { ExecutionProductReadSource } from "./execution/product-read-source";
+import { ExecutionProfileHistoryController } from "./execution/profile-history.controller";
+import { ExecutionProfileHistoryService } from "./execution/profile-history.service";
 import { ExecutionProfileReadAdapterController } from "./execution/profile-read-adapter.controller";
 import { ExecutionProfileReadAdapterService } from "./execution/profile-read-adapter.service";
 import { LocalQueryAnalyticsService } from "./execution/local-query-analytics.service";
@@ -82,6 +84,7 @@ export class AppModule {
         ExecutionRealtimeController,
         ExecutionAnalyticsController,
         ExecutionCurrentSourceController,
+        ExecutionProfileHistoryController,
         ExecutionProfileReadAdapterController,
         CommandCenterController,
         IncidentController,
@@ -151,6 +154,7 @@ export class AppModule {
         ExecutionProfileProjectionWorker,
         ExecutionProfileRealtimeService,
         ExecutionProductReadSource,
+        ExecutionProfileHistoryService,
         ExecutionProfileReadAdapterService,
         LocalQueryAnalyticsService,
         {

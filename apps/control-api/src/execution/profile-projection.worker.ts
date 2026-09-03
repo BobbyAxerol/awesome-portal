@@ -147,6 +147,32 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         });
       }
       const isolated = enforceProfileLineage(results, "N30");
+      // Owner directive 2026-09-03: every lineage-accepted time-series row is
+      // kept at full depth in the history store — the snapshot window bounds
+      // what screens embed, never what analysis can read back.
+      for (const item of isolated) {
+        const binding = item.spec.binding;
+        if (!binding.ladder || !item.page) continue;
+        const rows = item.page.items.flatMap((fields) => {
+          const rowId = fields[binding.ladder!.idField];
+          const ts = fields[binding.ladder!.timestampField];
+          return typeof rowId === "string" && rowId.length > 0 &&
+            typeof ts === "string" && !Number.isNaN(Date.parse(ts))
+            ? [{ rowId, ts, fields }] : [];
+        });
+        await this.repository.appendTimeSeriesHistory(
+          workspaceId, environment, profileId,
+          `${binding.sourceId}:${binding.relation}`, rows,
+        ).catch((error: unknown) => {
+          this.logger.warn(JSON.stringify({
+            event: "execution_profile_projection_history_append_failed",
+            environment,
+            profile_id: profileId,
+            relation: binding.relation,
+            error_code: safeFailureCode(error),
+          }));
+        });
+      }
       const relations = Object.fromEntries(isolated.map((item) => {
         const binding = item.spec.binding;
         const key = `${binding.sourceId}:${binding.relation}`;

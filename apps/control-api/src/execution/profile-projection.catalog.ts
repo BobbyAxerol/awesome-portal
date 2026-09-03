@@ -14,9 +14,15 @@ export interface ProfileProjectionBinding {
   ladder?: { class: "TIME_SERIES"; idField: string; timestampField: string };
 }
 
-/** The declared time-series window: 30 days of raw points, bounded. */
+/**
+ * The declared hot window screens embed: 30 days of raw points, bounded to
+ * the snapshot document's own 2,000-row relation invariant (a larger cap
+ * would make the ladder commit an invalid document once it filled). Full
+ * depth lives in `execution_timeseries_history` behind the history read —
+ * the window bounds what screens embed, never what analysis can read back.
+ */
 export const WARM_WINDOW_DAYS = 30;
-export const WARM_WINDOW_MAX_ROWS = 5_000;
+export const WARM_WINDOW_MAX_ROWS = 2_000;
 
 const TIME_SERIES_LADDER: Readonly<Record<string, ProfileProjectionBinding["ladder"]>> = {
   performance_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
