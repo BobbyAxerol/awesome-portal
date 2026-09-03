@@ -75,8 +75,77 @@ export class LocalQueryAnalyticsService {
     if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", 503);
     }
-    return composeAnalytics(snapshot, principal.workspaceId, subjectKind, subjectId);
+    const depth = await this.subjectDepth(snapshot, workspaceId, environment, profileId, subjectKind, subjectId);
+    return composeAnalytics(snapshot, principal.workspaceId, subjectKind, subjectId, depth);
   }
+
+  /**
+   * Owner directive 2026-09-03: insight charts show the deepest truthful
+   * series available. For a deployment or alpha subject the two time-series
+   * inputs come from the local SGP history mirror — the subject's full
+   * 30-day window at source resolution — instead of the bounded snapshot's
+   * mixed newest page. Local reads only; the snapshot rows remain both the
+   * fallback and the lineage/selection authority.
+   */
+  private async subjectDepth(
+    snapshot: ProfileProjectionSnapshot,
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    subjectKind: QueryAnalyticsSubjectKind,
+    subjectId: string,
+  ): Promise<SubjectDepth | null> {
+    if (subjectKind !== "deployment" && subjectKind !== "alpha") return null;
+    if (typeof this.repository.timeSeriesHistory !== "function") return null;
+    const entity = subjectKind === "deployment"
+      ? { field: "deployment_id", value: subjectId }
+      : { field: "strategy_id", value: resolveStrategyId(snapshot, subjectId) };
+    const from = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    const depth: SubjectDepth = { accountEquity: [], performance: [], windows: {}, queries: 0 };
+    const bindings = [
+      ["accountEquity", "account_equity_snapshots"],
+      ["performance", "performance_snapshots"],
+    ] as const;
+    for (const [name, relation] of bindings) {
+      try {
+        depth.queries += 1;
+        const page = await this.repository.timeSeriesHistory(
+          workspaceId, environment, profileId,
+          `manager.performance:${relation}`,
+          { from, entity, limit: 2_000 },
+        );
+        if (page.rows.length > 0) {
+          depth[name] = page.rows.map((row) => row.fields);
+          depth.windows[name] = {
+            days: 30,
+            basis: "PORTAL_SGP_HISTORY_MIRROR",
+            returned_rows: page.rows.length,
+            truncated: page.hasMore,
+          };
+        }
+      } catch {
+        // Depth is additive: on any mirror failure the snapshot rows serve.
+      }
+    }
+    return depth;
+  }
+}
+
+interface SubjectDepth {
+  accountEquity: Fact[];
+  performance: Fact[];
+  windows: Record<string, unknown>;
+  queries: number;
+}
+
+function resolveStrategyId(snapshot: ProfileProjectionSnapshot, alphaId: string): string {
+  for (const row of snapshot.document.relations["manager.strategies:strategies"]?.items ?? []) {
+    if (row.fields.alpha_id === alphaId || row.fields.strategy_id === alphaId) {
+      const strategyId = row.fields.strategy_id;
+      if (typeof strategyId === "string" && strategyId.length > 0) return strategyId;
+    }
+  }
+  return alphaId;
 }
 
 function composeAnalytics(
@@ -84,9 +153,15 @@ function composeAnalytics(
   viewerWorkspaceId: string,
   subjectKind: QueryAnalyticsSubjectKind,
   subjectId: string,
+  depth: SubjectDepth | null = null,
 ): Record<string, unknown> {
   const all = Object.fromEntries(Object.entries(SOURCE).map(([name, key]) => [name, facts(snapshot, key)])) as
     Record<keyof typeof SOURCE, Fact[]>;
+  // The mirror rows carry the same ids the snapshot rows do, so the subject
+  // selection below filters them identically — depth changes resolution,
+  // never membership.
+  if (depth && depth.accountEquity.length > 0) all.accountEquity = depth.accountEquity;
+  if (depth && depth.performance.length > 0) all.performance = depth.performance;
   const selected = selectSubject(all, subjectKind, subjectId);
   // `equity` is a derived view over the three canonical equity relations. Keep
   // it out of source evidence so counts and digests never double-count facts.
@@ -159,7 +234,7 @@ function composeAnalytics(
     projection_state_digest: projectionDigestValue,
     source_fact_digest: projectionDigest({ viewer_workspace_id: viewerWorkspaceId, subject_kind: kind, subject_id: subjectId, facts: sourceFacts }),
     source_fact_count: flat.length,
-    repository_query_count: 1,
+    repository_query_count: 1 + (depth?.queries ?? 0),
     source_read_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
     read_at: readAt,
     analytics: {
@@ -180,6 +255,7 @@ function composeAnalytics(
       order_funnel: { formula_version: "order_funnel.v1", total_orders: selected.orders.length, status_counts: orderFunnel },
       execution_quality: quality,
       chart_series: chartSeries,
+      ...(depth && Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
       replay,
       drawdown_overlap: null,
       correlation: {

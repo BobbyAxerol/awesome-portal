@@ -172,6 +172,100 @@ describe("EX-BE-07b analytics screen boundary", () => {
     expect(JSON.stringify(response)).toContain("10000.000000000000000001");
   });
 
+  it("serves the subject's 30-day mirror depth in the stage-equity series (owner directive 2026-09-03)", async () => {
+    const config = loadConfig({
+      ...base,
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      FEATURE_EXECUTION_EDGE: "true",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_SANDBOX_PROFILE_ID: "SANDBOX_BINANCE_USDM",
+      EXECUTION_EDGE_LIVE_PROFILE_ID: "LIVE_BINANCE_USDM",
+    });
+    const row = (fields: Record<string, string | number | boolean | null>) => ({
+      lineage: {
+        workspace_id: "ws_projection", profile_id: "PAPER_BINANCE_USDM",
+        source_contract_revision: "manager-v2",
+      },
+      fields,
+    });
+    const relation = (source_id: string, name: string, items: ReturnType<typeof row>[]) => ({
+      source_id, relation: name, availability: "AVAILABLE" as const, reason_code: null,
+      as_of: "2026-09-02T06:00:00.000Z", freshness: "FRESH" as const,
+      completeness: "COMPLETE" as const, items,
+    });
+    const historyCalls: unknown[][] = [];
+    const now = Date.now();
+    const iso = (hoursAgo: number) => new Date(now - hoursAgo * 3_600_000).toISOString();
+    const repository = {
+      async snapshot() {
+        return {
+          document: {
+            schema_version: "portal.execution.profile-projection.v1" as const,
+            workspace_id: "ws_projection", environment: "paper" as const,
+            profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "manager-v2",
+            relations: {
+              "manager.strategies:strategies": relation("manager.strategies", "strategies", [
+                row({ strategy_id: "alpha_a", alpha_id: "alpha_display_a" }),
+              ]),
+              "manager.deployments:strategy_deployments": relation("manager.deployments", "strategy_deployments", [
+                row({ deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", currency: "USDT", mode: "paper" }),
+              ]),
+              // The bounded snapshot window holds ONE newest point.
+              "manager.performance:account_equity_snapshots": relation("manager.performance", "account_equity_snapshots", [
+                row({ id: 900, deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", currency: "USDT", equity: "10100", ts: iso(1) }),
+              ]),
+            },
+          },
+          sourceEpoch: "source-epoch", sourceCursor: "source-cursor",
+          sourceAsOf: new Date(), receivedAt: new Date(), lastSuccessfulRefreshAt: new Date(),
+          completeness: "COMPLETE" as const,
+          projectionEpoch: "3b2d15c5-e36f-4a2f-91bf-18bb58ba76f4",
+          projectionSequence: 9, payloadDigest: `sha256:${"4".repeat(64)}`,
+        };
+      },
+      async timeSeriesHistory(...args: unknown[]) {
+        historyCalls.push(args);
+        const relationKey = args[3] as string;
+        const query = args[4] as { entity?: { field: string; value: string } };
+        if (relationKey !== "manager.performance:account_equity_snapshots") return { rows: [], hasMore: false };
+        // The alpha subject resolves through the strategies relation.
+        expect(query.entity).toEqual({ field: "strategy_id", value: "alpha_a" });
+        return {
+          hasMore: false,
+          rows: Array.from({ length: 720 }, (_, index) => ({
+            rowId: String(index),
+            ts: iso(720 - index),
+            fields: {
+              id: index, deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a",
+              currency: "USDT", equity: "10000", ts: iso(720 - index),
+            },
+          })),
+        };
+      },
+    } as unknown as ExecutionProfileProjectionRepository;
+    const service = new LocalQueryAnalyticsService(config, repository);
+    const response = await service.query({
+      user: { userId: "usr_a" } as never,
+      session: { sessionId: "ses_a" } as never,
+      workspaceId: "ws_viewer",
+    }, "alpha", "alpha_display_a") as Record<string, any>;
+    // The stage-equity series carries the full 30-day mirror depth, declared.
+    expect(response.analytics.chart_series[0].points).toHaveLength(720);
+    expect(response.analytics.history_windows.accountEquity).toMatchObject({
+      days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 720, truncated: false,
+    });
+    expect(response.repository_query_count).toBe(3);
+    expect(historyCalls).toHaveLength(2);
+  });
+
   it("derives an exact portfolio equity series while the source relation stays rejected (P4-D / F7)", async () => {
     const config = loadConfig({
       ...base,
