@@ -653,6 +653,20 @@ deep-dive → ADR → slice → evidence discipline documented above.
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
 
+- **EX-DP-05/E5 existing-data adapter and publication closed
+  (2026-09-04, source-dark):** the additive Rust
+  `maximum-data-adapter` has a digest-bound 34-field registry: four existing
+  Portal contracts, 19 fixed Manager relation-page adapters, four named
+  Portal-derived delegates, one Canary typed-unavailable result and six typed
+  source-owner gaps. It accepts only a fixed E4 operation with an
+  N19-bound catalogue/profile and opaque cursor, then redacts every non-E3
+  field and rejects source/profile/relation/key drift. It has no generic
+  relation/SQL path, direct DB/Redis/client credential, route, cache,
+  command, listener or runtime activation. Rust adapter 6/6, frozen contract
+  9/9, registry validator and TypeScript publication 2/2 passed. See
+  EX-DP-05 in the Unified Plan for the hash-bound schemas/fixtures and the
+  distinct E6 runtime acceptance boundary.
+
 - **EX-DP-01/E2 deployed truth, census and semantic audit closed
   (2026-09-04):** E0/E1 has a private digest-bound deployed runtime tuple and
   a source-owned Rust catalog census, not a Portal direct-DB path: 99 current

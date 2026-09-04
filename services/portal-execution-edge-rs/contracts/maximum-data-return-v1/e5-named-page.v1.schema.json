@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e5.named-page.schema.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "publication_revision",
+    "logical_operation_id",
+    "field_id",
+    "profile_id",
+    "source_contract_revision",
+    "source_catalogue_sha256",
+    "source_history_semantics",
+    "source_health",
+    "page",
+    "state",
+    "records"
+  ],
+  "properties": {
+    "schema_version": { "const": "portal.execution.maximum-data.e5.named-page.v1" },
+    "publication_revision": { "const": "portal.execution.maximum-data.e5.existing-data-publication.v1" },
+    "logical_operation_id": { "type": "string", "minLength": 1 },
+    "field_id": { "type": "string", "minLength": 1 },
+    "profile_id": { "type": "string", "minLength": 1 },
+    "source_contract_revision": { "type": "string", "minLength": 1 },
+    "source_catalogue_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "source_history_semantics": { "type": "string", "minLength": 1 },
+    "source_health": { "$ref": "#/$defs/sourceHealth" },
+    "page": { "$ref": "#/$defs/page" },
+    "state": { "enum": ["POPULATED", "EMPTY", "PARTIAL", "STALE"] },
+    "records": {
+      "type": "array",
+      "maxItems": 200,
+      "items": { "$ref": "#/$defs/record" }
+    }
+  },
+  "$defs": {
+    "sourceHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "freshness",
+        "completeness",
+        "as_of_ms",
+        "trace_id",
+        "global_sequence",
+        "retention_floor_ms",
+        "retention_floor_status",
+        "correction_observability",
+        "replay_eligible"
+      ],
+      "properties": {
+        "freshness": { "enum": ["FRESH", "DEGRADED", "STALE", "UNAVAILABLE", "UNKNOWN"] },
+        "completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+        "as_of_ms": { "type": "integer" },
+        "trace_id": { "type": "string", "minLength": 1 },
+        "global_sequence": { "const": null },
+        "retention_floor_ms": { "const": null },
+        "retention_floor_status": { "const": "UNDECLARED_BY_MANAGER_ENVELOPE" },
+        "correction_observability": { "const": "NOT_OBSERVABLE_FROM_MANAGER_PAGE" },
+        "replay_eligible": { "const": false }
+      }
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "next_cursor",
+        "has_more",
+        "total_unknown",
+        "maximum_page_rows",
+        "truncated"
+      ],
+      "properties": {
+        "next_cursor": {
+          "oneOf": [
+            { "const": null },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["token"],
+              "properties": { "token": { "type": "string", "minLength": 1, "maxLength": 4096 } }
+            }
+          ]
+        },
+        "has_more": { "type": "boolean" },
+        "total_unknown": { "const": true },
+        "maximum_page_rows": { "maximum": 200, "minimum": 1 },
+        "truncated": { "const": false }
+      }
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields"],
+      "properties": {
+        "fields": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "$ref": "#/$defs/managerValue" }
+        }
+      }
+    },
+    "managerValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "enum": ["NULL", "BOOLEAN", "INTEGER", "DECIMAL", "TEXT", "TIMESTAMP", "ARRAY", "OBJECT"] },
+        "value": {}
+      }
+    }
+  }
+}

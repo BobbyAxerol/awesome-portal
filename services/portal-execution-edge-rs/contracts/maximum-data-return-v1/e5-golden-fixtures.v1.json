@@ -1,0 +1,14 @@
+{
+  "schema_version": "portal.execution.maximum-data.e5.golden-fixtures.v1",
+  "provenance": "SYNTHETIC_SOURCE_TO_CONTRACT_NO_BUSINESS_ROWS",
+  "fixtures": [
+    { "fixture_id": "e5-manager-populated", "state": "POPULATED", "logical_operation_id": "maximumDataOrderPageV1", "expected_outcome": "NAMED_PAGE" },
+    { "fixture_id": "e5-manager-empty", "state": "EMPTY", "logical_operation_id": "maximumDataPositionPageV1", "expected_outcome": "NAMED_PAGE" },
+    { "fixture_id": "e5-manager-partial", "state": "PARTIAL", "logical_operation_id": "maximumDataFillPageV1", "expected_outcome": "NAMED_PAGE" },
+    { "fixture_id": "e5-manager-stale", "state": "STALE", "logical_operation_id": "maximumDataAccountPageV1", "expected_outcome": "NAMED_PAGE" },
+    { "fixture_id": "e5-manager-duplicate", "state": "DUPLICATE", "logical_operation_id": "maximumDataOrderPageV1", "expected_outcome": "TYPED_SOURCE_REJECTION" },
+    { "fixture_id": "e5-manager-gap", "state": "GAP", "logical_operation_id": "maximumDataFillPageV1", "expected_outcome": "NOT_OBSERVABLE_FROM_MANAGER_PAGE" },
+    { "fixture_id": "e5-manager-correction", "state": "CORRECTION", "logical_operation_id": "maximumDataAccountEquityHistoryV1", "expected_outcome": "NOT_OBSERVABLE_FROM_MANAGER_PAGE" },
+    { "fixture_id": "e5-manager-continuation", "state": "CONTINUATION", "logical_operation_id": "maximumDataCommandJournalPageV1", "expected_outcome": "NAMED_PAGE" }
+  ]
+}

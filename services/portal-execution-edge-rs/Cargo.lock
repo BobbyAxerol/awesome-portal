@@ -1263,6 +1263,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e7465ac9959cc2b1404e8e2367b43684a6d13790fe23056cc8c6c5a6b7bcb94"
 
 [[package]]
+name = "maximum-data-adapter"
+version = "0.1.0"
+dependencies = [
+ "current-source-compat",
+ "manager-compat-authority",
+ "manager-v2-contract",
+ "maximum-data-contract",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
 name = "maximum-data-contract"
 version = "0.1.0"
 dependencies = [

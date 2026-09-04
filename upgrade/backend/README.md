@@ -31,6 +31,15 @@ Chúng không thay thế phase hoặc exit gate trong
   its no-role negative failed closed. It remains neither a Portal DB client nor
   an activation; EX-DP-03 must select the exact screen/resource/cursor shape
   before a typed return contract can freeze.
+  **EX-DP-05/E5 is now complete as a source-dark implementation:** the
+  `maximum-data-adapter` publishes every frozen E3 field only through named
+  existing contracts, fixed Manager catalogue-bound pages, named Portal
+  delegates or explicit typed source gaps. It has no direct DB/SQL/Redis,
+  route, listener, credential, command or deployment authority. Paper,
+  Sandbox and Live are fixed-profile Manager bindings; Canary remains a
+  Portal-composed typed boundary. Its registry, page schema and synthetic
+  fixtures are digest-bound; EX-DP-06 remains the separate real-domain/runtime
+  qualification gate. See [EX-DP-05 in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-05--e5-existing-data-adapter-and-publication-delta).
   The mandatory journal is
   [EX-BE-02C in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
 

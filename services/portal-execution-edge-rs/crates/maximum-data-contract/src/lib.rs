@@ -1227,9 +1227,10 @@ fn sha256(bytes: &[u8]) -> String {
 
 mod e4;
 pub use e4::{
-    BoundContinuation, Completeness, E4Contract, E4ContractError, EventCoverageStatus,
-    ExactDecimal, FixtureState, FreshnessStatus, OpaqueContinuation, ProfileMode, ReadEnvelope,
-    SourceHealth, SourceLineage, SourceStatus, UtcEpochMs,
+    BindingStatus, BoundContinuation, Completeness, E4Contract, E4ContractError,
+    E4FieldOperationBinding, EventCoverageStatus, ExactDecimal, FixtureState, FreshnessStatus,
+    OpaqueContinuation, ProfileMode, ReadEnvelope, SourceHealth, SourceLineage, SourceStatus,
+    UtcEpochMs, E4_CONTRACT_MANIFEST_JSON,
 };
 
 #[cfg(test)]

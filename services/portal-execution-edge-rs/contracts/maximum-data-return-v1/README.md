@@ -77,3 +77,44 @@ Validate E4 with the Rust `maximum-data-contract` tests, the Control API
 TypeScript fixture decoder, and `tools/validate_maximum_data_e4.py`. The
 Python verifier is dependency-free and intentionally cannot contact a source
 or runtime.
+
+## E5 implemented, source-dark
+
+`e5-publication.manifest.json` is the additive E5 publication delta. It does
+not rewrite the frozen E4 source catalogue: E4 remains a historical
+Paper-only contract freeze, while E5 pins the existing N19/N13B
+Paper/Sandbox/Live Manager current-source authority for the adapters it can
+actually construct. Canary remains a Portal composition over Live facts, not
+a fourth Manager profile.
+
+- `e5-existing-data-publication.v1.json` maps all 34 E3 fields to exactly one
+  named outcome: four existing Portal/envelope contracts, 19 fixed
+  Manager-relation page adapters, four existing named Portal delegates, one
+  typed Canary comparison unavailability, or six genuine typed source-owner
+  gaps.
+- `e5-named-page.v1.schema.json` defines the manager-adapter wire DTO. It
+  retains only the E3 allowlisted fields, hides Manager record keys, preserves
+  source-issued opaque continuation and `has_more`, and states
+  `total_unknown=true` rather than imposing a total-history ceiling.
+- A Manager page has only the semantics actually present in its envelope:
+  source freshness/completeness/as-of/trace. It does not invent a global
+  sequence, retention floor, correction journal, event stream or replay.
+- `canary_drift` is explicitly `TYPED_UNAVAILABLE` until the already-known
+  twin comparison inputs are qualified; market, calendar, VNM, replay and
+  research-artifact sources remain their existing typed owner gaps.
+
+The Rust `maximum-data-adapter` crate is a server-side pure request/response
+adapter. It accepts only a fixed logical operation plus a deployment-bound
+Manager authority/catalogue/cursor; it owns no HTTP client, direct database
+connection, credential, SQL selector, cache, listener, command or runtime
+activation. A later E6 gate qualifies a running source/domain; it is not
+permission to expose raw Manager relations to a browser or introduce a
+generic `/portal/execution/v4` route.
+
+Append these E5 artifacts to the reading order:
+
+10. `e5-publication.manifest.json`
+11. `e5-existing-data-publication.v1.json`
+12. `e5-existing-data-publication.v1.schema.json` and
+    `e5-named-page.v1.schema.json`
+13. `e5-golden-fixtures.v1.json`

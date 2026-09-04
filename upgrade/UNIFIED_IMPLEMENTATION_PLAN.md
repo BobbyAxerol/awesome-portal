@@ -2785,7 +2785,52 @@ input gates for E5/E6, not hidden work left in this phase.
 
 #### EX-DP-05 — E5 existing-data adapter and publication delta
 
-**Status:** **NOT_APPROVED**.
+**Status:** **COMPLETE — edge implementation / source-dark (2026-09-04)**.
+
+**E5 execution preflight (2026-09-04).** The approved implementation is an
+additive Rust `maximum-data-adapter` boundary in
+`services/portal-execution-edge-rs`, plus a digest-bound E5 publication
+registry and synthetic source-to-contract fixtures in the existing
+`maximum-data-return-v1` pack.  It will consume only the already-established
+server-side boundaries: E3/E4, the authenticated N19
+`ManagerCompatibilityAuthority`, the N13B current-source profile map, and
+named existing Portal-control/projection/analytics capabilities.  It will not
+open a Trading-System database connection, add a generic relation/SQL route,
+change an existing Manager-v2/current-source route, mint identity, deploy an
+image, or enable any runtime traffic.
+
+The registry will resolve every one of the 34 frozen E3 fields through one of
+four explicit outcomes: (1) four pre-existing Portal/envelope contracts, (2)
+named Manager-v2 relation-page adapters for the verified current/retained
+relations, (3) named Portal-derived delegate descriptors with their exact
+provenance boundary, or (4) the six already-frozen typed source-owner gaps.
+The available current-source plane is profile-bound for Paper, Sandbox and
+Live; Canary is deliberately composed from Live facts plus Portal governance,
+never a fourth Manager profile.  A retained relation whose Manager envelope
+does not prove a global event sequence, correction journal or retention floor
+will publish only its proven page/current-or-retained-snapshot semantics.  It
+will not be relabelled Event/replay.  `canary_drift` will retain an explicit
+typed unavailable result until the existing twin-comparison inputs are
+qualified, rather than fabricating drift from one profile.
+
+The adapter will accept only a selected logical operation, a deployment-bound
+authenticated Manager catalogue and an already-bound opaque cursor.  It will
+construct the existing authority's relation request, filter records to the
+E3 field allowlist, preserve source `has_more`/opaque continuation without a
+total-history ceiling, require the named primary key fields, and expose no
+Manager opaque record key, raw relation selector, credential, SQL or command
+surface.  E5 tests will cover every registry binding; source-page field
+redaction, identity/profile/cursor rejection and multi-frame continuation;
+typed direct/delegate/unavailable outcomes; current-versus-replay truth; and
+static absence of database/SQL/transport authority.  E6 remains the separate
+runtime/domain-acceptance gate; it is not a deferred E5 implementation defect.
+
+**Rollback and decision boundary:** removal is limited to the new E5 crate,
+publication assets and exact disposable test resources. Existing Manager-v2,
+current-source, projection, analytics, control-plane and running containers
+remain untouched. Any source behaviour not evidenced by the passed synthetic
+contract tests is represented as a typed status in the E5 registry, not as an
+unstated fallback or technical debt.
 
 **Goal:** implement only the missing, verified existing-data adapters selected
 by the EX-DP-03 map, preserving the established Manager-v2/current-source,
@@ -2816,6 +2861,73 @@ semantics without the EX-DP-04 contract.
 test resources. Existing active Manager-v2/current-source planes remain
 unchanged. Missing existing-source implementation keeps this phase open;
 genuine producer absence is a typed external gap, not phase debt.
+
+**E5 implementation and acceptance (2026-09-04).** The additive Rust crate
+`services/portal-execution-edge-rs/crates/maximum-data-adapter` now loads a
+digest-pinned publication registry and has no HTTP server/client, database,
+Redis, credential, cache, listener, command or deployment capability. It
+binds a Manager page only through the existing authenticated N19
+`BoundManagerAuthority`, an already-validated deployment catalogue, a fixed
+E4 logical operation and a source-issued opaque cursor. It never accepts a
+caller-chosen relation, field list, profile, URL, SQL fragment or source
+record key. Before return it enforces the source profile/relation/page bound,
+requires non-null non-duplicate E3 resource keys and strips every field not
+on the frozen E3 allowlist. Continuation remains source-opaque and traversable
+without a synthetic total-history cap; the output explicitly preserves that
+the Manager envelope does not prove a global sequence, retention floor,
+correction journal or replay eligibility.
+
+`maximum-data-return-v1/e5-existing-data-publication.v1.json` closes all 34
+frozen E3 fields with exact named outcomes: four existing Portal contracts,
+19 fixed Manager relation-page adapters, four named Portal-derived delegates,
+one Canary-only typed unavailability and six all-profile source-owner gaps.
+Paper, Sandbox and Live are bound only to their existing qualified Manager
+profiles. Canary never opens a Manager read directly: it remains a named
+Portal composition boundary. The companion publication/page schemas, synthetic
+no-business-row fixture pack and manifest are hash-pinned; the manifest
+records every runtime mutation as `NOT_APPLIED`.
+
+**Evidence actually run:** `python3
+services/portal-execution-edge-rs/tools/validate_maximum_data_e5.py` passed
+with `34 fields, 19 Manager adapters, 4 delegates, 6 source gaps`.
+In a fresh isolated Rust container, `cargo fmt --check`, `cargo clippy
+--locked -p maximum-data-adapter --all-targets -- -D warnings`, `cargo test
+--locked -p maximum-data-adapter` (**6/6**) and `cargo test --locked -p
+maximum-data-contract` (**9/9**) all passed. In a disposable Node copy,
+`vitest run test/maximum-data-e5-publication.spec.ts --maxWorkers=1
+--no-file-parallelism` (**2/2**) and the strict targeted `tsc --noEmit`
+check passed. The registry validation rechecked all four asset hashes:
+`608ae536…a585c`, `e127c346…b0d8`, `332a1e9a…6e69` and
+`1464a189…1a90` respectively. No source/runtime request, direct database
+read, identity change, route, listener, cache/projection, command port,
+deployment or existing plane was changed.
+
+**Exit and debt ruling:** E5 is complete as the requested existing-data
+adapter/publication implementation. It has no internal implementation debt.
+The six `SOURCE_OWNER_GAP` results, Canary twin-comparison absence and lack of
+authoritative Event/replay metadata are explicit upstream facts carried in the
+typed contract, not hidden E5 work. EX-DP-06 is the separate owner-approved
+domain/runtime acceptance step; it may qualify a real source path only in its
+own change window and cannot be implied by this source-dark closure.
+
+**Rollback:** remove only this new crate and the versioned E5 registry,
+schemas, fixtures, validator and contract test. Since no runtime registration
+or source state changed, no service restart, data rollback or producer action
+is required.
+
+**Artifact cleanup (2026-09-04):** before cleanup, the exact disposable E5
+Rust target cache was **550 MiB**, the disposable Node test copy was **151
+MiB**, and Docker held two unreferenced test images (`rust:1.85.1-slim` and
+`node:22.14.0-bookworm-slim`). Both exact `/tmp/portal-e5-*` directories and
+both image digests were removed. The cache files were root-owned by the test
+containers, so deletion was performed through the same isolated container
+with only those two exact paths mounted; no broad host cleanup was used.
+Docker moved from 25 images / 56 containers (52 active) / 47 volumes (13
+active) / 12.95 GiB images / 15.71 GiB Build Cache to 23 images / the same 56
+containers (52 active) / the same 47 volumes (13 active) / 11.50 GiB images /
+the same 15.71 GiB Build Cache. E5 created no BuildKit cache; the retained
+shared cache predated this slice and no broad prune was authorized. No running
+container, volume, network, source identity or runtime configuration changed.
 
 #### EX-DP-06 — E6 domain acceptance and source-health qualification
 
