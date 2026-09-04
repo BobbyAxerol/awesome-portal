@@ -4196,6 +4196,62 @@ lần nào, nhưng đó là may + tốn công đối soát — không phải quy
 Thứ tự đề nghị nếu Bobby duyệt cả gói: R1 ngay lập tức → R2 (kèm đo lại
 P4-E làm bằng chứng trước/sau) → R4 → R3 → R5 áp cho mọi màn từ E2 trở đi.
 
+## 16. Audit gap 3 chiều: yêu cầu showcase ↔ dữ liệu thật ↔ render hiện tại (owner order 2026-09-03 tối)
+
+Một lượt điều tra trọn vẹn theo yêu cầu Bobby. **Mọi ô "đang render" đều đo
+bằng session đăng nhập thật** (user probe `claude-probe`/USER, curl từng
+route, kích thước byte thật) — không suy đoán từ code. "Yêu cầu showcase" =
+hi-fi cluster D1-D6 + fixture dàn dựng của nhánh showcase; "dữ liệu thật" =
+đo trên mirror SGP + bảng nguồn HK hôm nay.
+
+### 16.1 Bảng gap từng màn
+
+| Màn | Showcase yêu cầu | Dữ liệu thật có | Đang render (đo byte thật) | GAP + phía sửa |
+|---|---|---|---|---|
+| **Paper Overview** (`/screens/paper`) | Equity band 30d theo stage, funnel, freshness dot thở, staged reveal | Mirror equity ĐỦ 30d+ (572k rows, 43 account, bám đuôi giờ) | **200 rows THÔ** (cap 200/relation BFF; ≈5 điểm/account trộn lẫn) → chart vỡ; 539KB; PARTIAL | **GAP LỚN NHẤT** — overview chưa hề đọc mirror. Fix A (SGP): server build DERIVED-sum series full-range như alpha 360 đã có. Lane E1 |
+| **Paper Workbench** (`/screens/paper/:dep`) | Chart equity+performance full depth per deployment, tabs orders/fills, VNM shading | Mirror per-deployment 10,119 rows equity | **1.540 + 1.699 điểm, windows+downsample khai báo ĐÚNG** ✅ nhưng payload **5,9MB** (rows đủ fields thay vì series (t,v)); orders/fills=0 (trang nóng 400 không chứa dep này); VNM shading chờ calendar N28 | Chart OK; Fix R2 ép series gọn (SGP); orders/fills → Lane E2 mirror; calendar → MC-06 nguồn |
+| **Alpha 360 insight** (`/alphas/:id/query-analytics`) | 12 tile: equity, funnel, quality, contribution, replay+candles, correlation, drawdown… | Mirror đủ cho 9/12; candles/benchmark/twin chưa activate (N28); fills ít (trading gần idle) | **equity 1.540 điểm phủ đúng 05/08→04/09** ✅; **correlation AVAILABLE 66 cặp/43 alpha** ✅; **drawdown 43 alpha + 6 overlap** ✅; contribution EMPTY (fills không khớp trang nóng); 3 tile UNAVAILABLE (N28) đúng sự thật; payload 2,4MB | Còn: contribution đọc mirror (E1 slice 2) + ép payload (R2). 3 tile chết = việc nguồn MC-01..09 |
+| **Full Blotter** (`/screens/blotter`) | 10⁵-10⁷ dòng keyset, virtualized, số exact | Nguồn: orders ~1.2k, fills 79 từ 17/08 (trading gần idle + halt 30/08) — population thật NHỎ | 93 orders + 63 fills + 100 sessions + 100 journal (240KB, PARTIAL) — trang nóng bounded ĐÚNG thiết kế | Gap kiến trúc (E2 mirror transactional + keyset) nhưng **không phải gap dữ liệu hôm nay** — population thật đang nhỏ vì trading halt/idle (owner un-halt) |
+| **Portfolio 360** | Equity nguồn, rho-benchmark, correlation, capital-ledger timeline | portfolio_equity KHÔNG THỂ scope (§BR-EX-79 1.3, đã chứng minh); benchmark chưa activate; allocations có | DERIVED sum đúng đắn ✅; correlation giờ AVAILABLE (dùng chung); rho UNAVAILABLE trung thực | rho/benchmark = MC; ledger timeline = MC-01 event stream. Phía nguồn |
+| **Account/Broker 360 + Bindings** | Balances/margin/sync/venue accounts | balances 85 (không mode/venue → lineage reject); margin/sync/venue = **0 rows THẬT ở nguồn** | Reject + empty trung thực | Balances → release-kit đã staged; 3 bảng rỗng → trading chưa sản xuất dữ liệu. Phía nguồn |
+| **Sandbox Certification** | Sessions + margin + sync evidence | Sandbox CHƯA TỪNG chạy session; margin/sync rỗng nguồn | `ready/COMPLETE` 35 deployments, 0 sessions (15KB) — khung đúng, ruột chờ | Trading chạy sandbox cycles. Phía nguồn/owner |
+| **Live Full Operations** | Orders/fills live, tick panel | live accounts = 0 (chưa activate), HALTED by design | `empty/COMPLETE` trung thực (2KB) | Đúng thiết kế tới khi live activation. Owner |
+| **Command Center** | Tick flash realtime, funnel grow, SLA pulse | Có sessions/journal; KHÔNG có delta thật (halt → không fills) | 5,7KB compact ✅; flash im vì không có tick thật | Un-halt là hết. Owner |
+| **Canary** | Drift tile paper-vs-live | twin join chưa activate + không có live | UNAVAILABLE trung thực | MC nguồn + live activation |
+
+### 16.2 Gap "hiệu ứng động" (đã điều tra riêng, tóm tắt)
+
+Code hiệu ứng KHÔNG bị xoá (HEAD 287 match > showcase 279; showcase ⊂ HEAD;
+bundle build sau commit FE cuối). 51 rule đều gate theo state đúng hi-fi D4.
+Showcase nổ hiệu ứng vì fixture DÀN DỰNG đủ trạng thái (CRITICAL, overdue,
+FRESH, remount mỗi điều hướng); dev im vì (i) dữ liệu thật không có
+incident/overdue (im ĐÚNG), (ii) P4-C giữ cây mounted (grow chỉ chạy lần
+đầu — chủ đích chống loading-flash), (iii) PARTIAL toàn cục ghìm polish
+'ready' (xem 16.3). Không sửa gating; sửa nguồn trạng thái.
+
+### 16.3 Gap ngữ nghĩa completeness — vì sao "không bao giờ đóng"
+
+Equity/performance đã COMPLETE. Kéo PARTIAL toàn cục là 5 relation
+transactional (trang nóng 400-row *by design* nhưng nhãn mô tả population
+nguồn) + portfolio_equity typed-rejected (đã có DERIVED chính thức). Nhãn
+đang trộn "đã giao đủ SERVING khai báo" với "đã chứa TOÀN BỘ nguồn".
+**Fix C**: tách `serving completeness` (COMPLETE khi mọi relation giao đủ
+window khai báo, `truncated` vẫn khai trung thực) khỏi population; relation
+có substitute DERIVED khai báo không kéo tụt rollup. FE gate chrome theo
+serving completeness. Không nói dối — window truncated vẫn hiện.
+
+### 16.4 Tổng kết gap theo phía chịu trách nhiệm
+
+- **SGP làm được ngay (map vào §14)**: Fix A overview-series-từ-mirror (E1);
+  Fix C completeness semantics; R2 payload (5,9MB→~chục KB bằng series
+  (t,v)); contribution từ mirror (E1); E2 mirror transactional.
+- **Đã staged chờ cửa sổ deploy HK**: scoped-balances release kit.
+- **Phía trading/nguồn**: un-halt (mở CC flash + performance + blotter
+  population); sandbox cycles; live activation; MC-01..09 (candles,
+  benchmark, ticks, calendar, twin); marking oscillation (1.5);
+  3 bảng rỗng (venue/margin/sync).
+- **Bobby quyết**: un-halt; cửa sổ release-kit; restructure §15 (R1-R5).
+
 ## 13. Change log
 
 | Date | Change | Evidence/status effect |
