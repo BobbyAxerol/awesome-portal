@@ -3,8 +3,10 @@
 > **Backend owner:** Codex  
 > **Frontend owner:** Claude  
 > **Product/release owner:** Bobby  
-> **Baseline:** `dev` at `06c658f`; N13B–N17B phase head `7f67068`, 2026-08-30  
-> **Document status:** `COORDINATION_AUTHORITY_ACTIVE / IMPLEMENTATION_NOT_AUTHORIZED_BY_THIS_FILE`  
+> **Baseline:** `feat/execution-data-activation` at `6f6503e`, 2026-09-04; the
+> accepted E7 return pack is pinned by `maximum-data-return-v1/MANIFEST.sha256`  
+> **Document status:** `COORDINATION_AUTHORITY_ACTIVE / EDS_BACKEND_CAMPAIGN_PLANNED /
+> IMPLEMENTATION_NOT_AUTHORIZED_BY_THIS_FILE`  
 > **Scope:** Portal Execution Loop backend, Paper read integration, Trading System compatibility,
 > activation, hardening and every current/future Claude backend request.
 
@@ -4310,3 +4312,624 @@ serving completeness. Không nói dối — window truncated vẫn hiện.
   3 bảng rỗng (venue/margin/sync).
 - **Bobby quyết**: un-halt; cửa sổ release-kit; restructure §15 (R1-R5).
 
+## 17. EDS campaign — Maximum-data BFF, durable mirror, streaming and frozen-frontend delivery (2026-09-04)
+
+### 17.1 Authority, inputs and supersession rule
+
+This section is the active backend sequence for the next Execution Portal
+campaign. It applies the architecture and product rules in
+[`EXECUTION_DURABLE_STREAMING_FROZEN_FRONTEND_INTEGRATION_AND_FINANCIAL_CHART_PLAN_v1.1.md`](./EXECUTION_DURABLE_STREAMING_FROZEN_FRONTEND_INTEGRATION_AND_FINANCIAL_CHART_PLAN_v1.1.md)
+to the source facts returned by
+[`PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_HANDOFF.md`](../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_HANDOFF.md).
+It does not copy those documents. Agents must read them and the accepted
+`services/portal-execution-edge-rs/contracts/maximum-data-return-v1/` pack
+before changing code.
+
+Where older N/P4/BR-EX prose conflicts with the accepted E7 pack, the order is:
+
+```text
+runtime evidence
+→ E7 machine contract and manifest
+→ source code/tests at the named commit
+→ durable-streaming v1.1 guide
+→ this section's execution order
+→ older status notes
+```
+
+The first implementation branch must start from the accepted feature head or
+its later reviewed merge base. Do not fold unrelated dirty P4-E cadence work
+into an EDS commit. The five locally modified P4-E files observed during this
+planning pass are protected work-in-progress until their owner commits or
+withdraws them.
+
+### 17.2 Accepted source truth at campaign start
+
+The following is fact, not a target claim:
+
+| Item | Accepted truth |
+|---|---|
+| Portal source head | `6f6503ea21327bc39946f48c697b4287c673f12c` |
+| Execution Edge image | `sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077` |
+| Source contract | `trading-system.portal-execution.manager-v2.runtime.v1` |
+| Profiles | `PAPER_BINANCE_USDM`, `SANDBOX_BINANCE_USDM`, `LIVE_BINANCE_USDM` |
+| Private resource | GET-only `execution:manager-v2:read` |
+| Catalogue | 96 readable relations; census covers 99 relations / 1,387 columns |
+| Frozen field map | 34: 22 direct, 5 Portal-derived, 6 field-level owner gaps, 1 Canary incompatibility |
+| Detailed source gaps | 18 typed gaps, retained exactly as E7 facts |
+| Page bounds | 1–200 rows, at most 1 MiB, opaque relation/profile-bound source continuation |
+| Measured concurrency | Paper 1, Sandbox 1, Live 2 named pages until requalified |
+| Availability semantics | `AVAILABLE+COMPLETE+0 rows` is authoritative empty; 503 is not empty |
+| History semantics | current/range pages only; no global event sequence, correction journal, replay cursor or retention-floor proof |
+| Runtime status | Manager-v2 read active on the three profiles; Edge projection remains intentionally disabled/read-through |
+
+The source can immediately support fixed server-side current/range reads for
+deployments, positions, sessions, orders, fills, accounts, balances, margin,
+account/broker sync, venue bindings, reconciliation, command-journal metadata,
+dead-letter summaries, risk grants, sizing decisions, account equity,
+performance and instrument reference. The Portal can immediately derive the
+named source-health, execution-quality, conditional-leg, portfolio-capital and
+alpha-activity operations when all required inputs are present.
+
+These remain typed, never fabricated: market candles/latest observations,
+venue session calendar, VNM constraints, authoritative trade replay, signed
+research-artifact linkage and Canary twin/drift comparison. A detailed gap can
+also limit otherwise available current data, such as mark provenance,
+acknowledgement clocks or correction history.
+
+### 17.3 Target runtime and the no-amplification rule
+
+```text
+Browser
+  → same-origin TypeScript Screen BFF (session/RBAC/CSRF; named operation only)
+  → SGP local read model when a committed compatible revision exists
+  → bounded shared server read-through only during bootstrap/degradation
+  → private AWS-HK Rust Edge /internal/v2/manager/*
+  → Edge-owned Source Proxy boundary
+  → Trading System authority
+```
+
+The TypeScript Control API already owns HTTP/2 transport, TLS 1.3 mTLS,
+deployment-bound environment/profile/audience, short-lived delegated JWT,
+bulkheads, pacing, coalescing and typed upstream errors. EDS reuses and seals
+that path; it does not create a second generic client.
+
+The Rust Edge already owns Manager-v2 validation and the digest-bound E5
+adapter. Rust becomes the SGP ingest/query/realtime authority only after the
+corresponding EDS phase passes. Python is not part of this path.
+
+One browser request must never become one AWS-HK source read indefinitely.
+Before the durable mirror is active, the existing shared-read lease/cache and
+profile concurrency limits are mandatory. After mirror cutover, browsers read
+only a committed SGP revision. A source continuation is never returned to the
+browser; a public BFF cursor is Portal-owned, operation/resource/profile bound,
+and resolves server-side to source or local continuation state.
+
+PostgreSQL is the hot/current/history authority for Portal reads. Parquet is a
+later cold/archive format and DuckDB an offline/research query tool only after
+measured retention/storage pressure justifies archival; neither sits in the
+interactive or realtime request path.
+
+### 17.4 Campaign-wide rules and closure gates
+
+1. Adapt what Manager-v2 publishes now before commissioning a new Trading
+   System capability.
+2. Browser routes expose one named product operation/DTO, never a relation,
+   SQL fragment, source URL, profile selector, JWT, certificate or source
+   cursor.
+3. Preserve `availability`, `freshness`, `completeness`, `as_of_ms`, profile,
+   catalogue/contract revision, exact decimal strings and typed error class.
+4. Preserve 400/401/403/404/502/503 faithfully. No automatic retry hides a
+   source failure; only an explicitly budgeted background coordinator may
+   retry with jitter and a visible stale state.
+5. Current rows are current rows. Retained snapshots are snapshots. Neither is
+   relabelled as an event journal or full replay.
+6. `READY + null`, partial-as-exact, missing-as-zero and heuristic financial
+   joins are release blockers.
+7. Canary consumes the Live source profile plus Portal-owned Canary control
+   state; it is not invented as a fourth Trading System profile.
+8. Read and command authority remain separate. This campaign may display the
+   redacted command journal; it does not activate or widen commands.
+9. Every phase uses the frozen product screen composition. Missing data changes
+   the relevant panel state, not the whole screen layout.
+10. Every phase commits its implementation, tests and journal update together.
+    A source-only or backend-only result is not product-complete.
+
+Every implementation phase closes only after these gates:
+
+| Gate | Required evidence |
+|---|---|
+| G0 Source | E7/E5 operation or one explicit typed external gap |
+| G1 Contract | schema, DTO, decoder and digest agree |
+| G2 Security | session/RBAC plus private mTLS/delegation/profile negatives |
+| G3 Data | identity, precision, freshness, completeness and cursor tests |
+| G4 Runtime | immutable candidate with exact config/image/contract pins |
+| G5 Consumer | existing frozen screen consumes the real BFF payload |
+| G6 Browser | authenticated route/network/visual evidence on deployed image |
+| G7 Operations | metrics, rollback and cleanup evidence |
+
+Status ladder is mandatory:
+
+```text
+PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
+→ FRONTEND_CONSUMED → DEPLOYED_IMAGE_VERIFIED → PHASE_ACCEPTED
+```
+
+### 17.5 Phase summary and dependency graph
+
+| Phase | Result | Depends on | Can close with current source? |
+|---|---|---|---|
+| EDS-00 | intake, hashes and frozen baseline | E7 handoff | yes; planning gate complete |
+| EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | yes |
+| EDS-02 | generated screen/action/panel/time contracts | EDS-01 | yes |
+| EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | yes, with typed gaps |
+| EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | yes, with typed gaps |
+| EDS-05 | governance/operations and five Portal derivations | EDS-04 | yes, with typed gaps |
+| EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | yes for observed pages; no replay claim |
+| EDS-07 | equity/performance/risk/chart query plane | EDS-06 | yes for retained source range |
+| EDS-08 | authoritative event/continuity acquisition | EDS-00; external source work | no, external gate |
+| EDS-09 | Rust snapshot+tail append store and reducers | EDS-08 | no |
+| EDS-10 | full lifecycle replay and market-context chart plane | EDS-09 + typed market source | no |
+| EDS-11 | complete screen BFF/action graph and local SSE | EDS-03–10 as applicable | partial before EDS-08/10; exact typed state required |
+| EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
+
+EDS-03 through EDS-07 must not wait for EDS-08. This is the key
+adapt-first decision: current source delivers the maximum honest product now;
+event/replay work advances in a separate dependency lane.
+
+### EDS-00 — Return-pack intake and immutable baseline
+
+**Status:** `PLANNING_GATE_COMPLETE` on 2026-09-04; no product/runtime change.
+
+**Goal:** establish one reproducible authority before implementation.
+
+**Work completed for planning:**
+
+- fast-forwarded `feat/execution-data-activation` to `6f6503e` without
+  overwriting the existing P4-E worktree changes;
+- read the handoff, EX-DP-07 closure, E5/E6, owner response, event-continuity
+  ruling, Manager profile activation and the v1.1 frozen-frontend plan;
+- ran the dependency-free E7 validator: 34 capabilities, 18 genuine gaps,
+  three measured profiles;
+- verified every entry in `maximum-data-return-v1/MANIFEST.sha256`;
+- repaired the isolated Control API test-cell packaging so the newly received
+  EX-DP contract suites can read that sanitized pack through one narrow,
+  read-only mount rather than a repository-wide or runtime mount;
+- inspected the existing Control API transport/BFF/projection/realtime paths,
+  Rust Manager-v2 client/adapter and frozen frontend consumers.
+
+**Implementation entry gate:** create the campaign branch from the reviewed
+baseline; record source/Edge/contract/manifest digests in a runtime manifest;
+generate a screen/panel/action inventory from code and compare it with E3.
+
+**Tests:** E7 validator, full manifest check, isolated Control API/EX-DP
+contract suites, link check, dirty-worktree guard, screen inventory drift test
+and secret/path redaction scan.
+
+**Exit:** no unknown authority or unclassified frozen field; all later phase
+dependencies reference one digest-bound matrix.
+
+**Next:** EDS-01.
+
+### EDS-01 — Sealed Manager-v2 consumer and fixed E5 operation authority
+
+**Goal:** make the existing private source callable only through stable named
+Portal operations.
+
+**Backend work:**
+
+- reuse `ExecutionCurrentSourceProxy`; do not introduce another generic
+  transport;
+- pin each profile to its exact origin, audience and profile ID; issue only
+  short-lived `execution:manager-v2:read` assertions;
+- implement a compile-time/frozen `MaximumDataOperationRegistry` mapping each
+  accepted E5 logical operation to its private relation and allowed fields;
+- expose server-only clients for catalogue, capabilities, projections and
+  relation pages; no user-controlled relation/schema/path;
+- enforce Paper/Sandbox concurrency 1 and Live concurrency 2, page <=200,
+  body <=1 MiB, cursor <=4 KiB, no redirects and no automatic retries;
+- translate source envelopes without flattening their semantics;
+- store/bind source continuation server-side and issue only Portal opaque
+  operation cursors externally;
+- use the Rust E5 fixtures/operation descriptors as compatibility evidence;
+  do not make browser-visible Rust/source DTOs the product DTO.
+
+**Initial vertical proof:** `maximumDataDeploymentPageV1` behind one
+same-origin operation, consumed by the existing Paper overview/list location.
+
+**Tests:** positive Paper/Sandbox/Live empty/populated/partial cases; wrong
+audience/profile/resource; expired JWT; absent/bad certificate; relation/path
+injection; cursor rebind; 400/401/403/404/502/503; body/row/concurrency bounds;
+one/ten/one-hundred browser coalescing with constant upstream requests.
+
+**Exit:** no browser-accessible raw Manager route; first real deployment slice
+is `FRONTEND_CONSUMED` and verified on an immutable dev image; rollback selects
+the previous BFF operation without changing Edge/source.
+
+**Next:** EDS-02.
+
+### EDS-02 — Generated screen, panel, action and UTC/exact-value contracts
+
+**Goal:** give Control API and the frozen frontend one generated contract
+authority.
+
+**Backend work:**
+
+- generate Screen Data Manifest and Action Manifest from E3 coverage plus the
+  current `SCREEN_BFF_CATALOGUE`;
+- define `UtcEpochMs` on v2 wires and separate event/source/ingest/as-of/read
+  clocks;
+- keep sequence/large IDs as strings and financial values as exact decimal
+  strings with currency/precision;
+- define panel envelope states `READY/EMPTY/PARTIAL/STALE/UNAVAILABLE/DENIED/ERROR`;
+- add multidimensional coverage, source history semantics, formula/input
+  revision and composite read revision;
+- separate contract readiness, source readiness and runtime delivery;
+- generate OpenAPI/JSON Schema/TS types/runtime decoders and Rust DTOs where
+  they cross the Rust boundary;
+- define semantic actions; frontend route registry owns URLs.
+
+**Frontend handoff:** replace handwritten duplicated shapes and native/ISO
+display logic internally, with no approved layout change.
+
+**Tests:** generator reproducibility, digest equality, epoch-ms/DST/browser
+timezone matrix, decimal round-trip, large-ID coercion, every panel state,
+route/action graph and a bundle guard against production fixture imports.
+
+**Exit:** every frozen field/action is classified; no `READY+null`; generated
+digest is visible in runtime evidence; authenticated browser shows UTC through
+the existing formatter locations.
+
+**Next:** EDS-03.
+
+### EDS-03 — Maximum current truth for Paper, Sandbox and Live stage screens
+
+**Goal:** fill stage overview/workbench screens with all current Manager data
+that already exists, while preserving honest gaps.
+
+**Named operations:** deployment, position, session, order, fill, account,
+balance, margin, sync, broker-sync, venue-account, reconciliation, equity,
+performance and source-health reads.
+
+**Backend work:**
+
+- compose exact profile-bound operations for Paper Overview/Workbench/VNM,
+  Sandbox Overview/Certification and Live Overview/Full Operations;
+- resolve resource identity server-side; never fetch a bounded global page and
+  filter it for detail;
+- preserve current-state versus retained-range meaning per branch;
+- serve Live complete zero-row source as typed `EMPTY`, not unavailable;
+- bind Canary requests to the declared Live source profile but keep Canary
+  comparison typed incompatible until EDS-05 qualifies it;
+- do not activate commands, candles/latest/calendar/VNM constraints.
+
+**Frontend proof:** each rich screen stays mounted; each populated branch uses
+real data and only the missing panel shows a typed state/reason.
+
+**Tests:** out-of-first-page deployment, cross-profile and cross-resource
+isolation, authoritative empty, source partial/stale/unavailable, exact
+decimal/time mapping, all tabs, direct-source network prohibition and
+authenticated screenshot/network evidence for six stage routes.
+
+**Exit:** every accepted direct current/range field used by these screens is
+visible; no generic unavailable whole-screen replacement; every remaining gap
+has the exact E7 reason.
+
+**Next:** EDS-04.
+
+### EDS-04 — Alpha, Portfolio, Account and Binding resource BFFs
+
+**Goal:** make all 360/list/detail screens exact-resource operations rather
+than thin envelopes or client-side joins.
+
+**Backend work:**
+
+- implement named Alpha Fleet/list, Alpha 360, Portfolio list/360, Account 360,
+  Accounts & Bindings list and Binding detail DTOs;
+- use explicit strategy/deployment/portfolio/account/binding keys from the
+  source census; forbid `portfolio_id`-only and “two of four” heuristics;
+- compose positions, account/balance/margin/sync/binding, equity/performance,
+  risk/sizing and reconciliation branches;
+- paginate with Portal cursors and exact local/source coverage metadata;
+- use owner-approved entity-name registry for display labels, never expose
+  source handles/hashes as primary UI labels;
+- preserve mark/valuation provenance limitations as panel warnings.
+
+**Frontend proof:** current rich tabs/components remain intact; Alpha/Fleet,
+Portfolio and Account/Binding routes render real branches and typed gaps at
+panel granularity.
+
+**Tests:** identity property tests, parent/orphan checks, duplicate resource
+keys, deep-page lookup, mixed currency fail-closed, empty binding/margin/sync,
+all resource tabs and authenticated browser traversal.
+
+**Exit:** no detail screen filters a global bounded page; field coverage for
+these screens is 100% direct/derived/typed-gap and visible on the deployed dev
+image.
+
+**Next:** EDS-05.
+
+### EDS-05 — Portal derivations, governance and operational composition
+
+**Goal:** activate all five permitted Portal derivations and join operational
+truth without inventing source history.
+
+**Backend work:**
+
+- implement the named `source_health`, `execution_quality`,
+  `conditional_legs`, `portfolio_capital` and `alpha_activity` operations;
+- publish formula version, source inputs, population/completeness, input
+  revision/digest and exact currency policy;
+- compose Approval, R1/R2/Live Review, Exit Review, Waivers, Operations Queue,
+  Incident Detail, Command Center and Admin Drawer read surfaces from
+  Portal-owned workflow plus accepted Manager facts;
+- show redacted command-journal metadata only; do not widen N27 command
+  authority;
+- qualify Canary control-over-Live comparison only if exact inputs produce a
+  named DTO; otherwise preserve `E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED`;
+- do not infer candles/replay/research linkage.
+
+**Tests:** formula golden vectors, partial/stale propagation, exact denominator,
+currency mismatch, cross-workspace isolation, redaction, governance revision
+consistency and browser proof for every governance/operations route.
+
+**Exit:** all five derivations are source-backed and reproducible or a phase
+test fails; governance/operations screens consume one composite revision;
+commands remain unchanged and fail closed.
+
+**Next:** EDS-06.
+
+### EDS-06 — Durable SGP current/range mirror and exact resource indexes
+
+**Goal:** remove browser-driven cross-cell amplification and giant JSONB
+snapshots using only semantics the current source actually proves.
+
+**Approval boundary:** requires a separate owner-approved storage/migration and
+runtime activation window. It does not require a Trading System code change.
+
+**Backend/Rust/storage work:**
+
+- create typed PostgreSQL tables for source observations, retained fill/equity/
+  performance snapshots, current entities, source continuations, batches,
+  gaps and read-model revisions;
+- label periodically observed mutable pages as Portal observations, not source
+  lifecycle events;
+- ingest all accepted pages through one lease-aware coordinator per profile;
+  use server-side cursors and the measured concurrency limits;
+- commit rows, continuation/checkpoint and revision atomically; dedupe by exact
+  source keys/digest and quarantine key/digest conflicts;
+- build exact indexes by resource/time and Portal-owned keyset cursors;
+- dual-read/compare against the current projection, then cut one screen at a
+  time;
+- remove raw ladder arrays from giant per-profile JSONB responses; keep the
+  old projection only as a bounded compatibility path during observation;
+- define retention by data class from measured storage growth. No magic total
+  history cap; no Parquet/DuckDB activation without an archival decision.
+
+**Tests:** fresh-PostgreSQL migration, idempotency, crash between row/offset,
+resume, duplicate/different digest incident, lease loss, stale cursor,
+partition/profile isolation, query plans, payload budgets, backup/restore and
+old/new browser parity.
+
+**Exit:** browser concurrency causes zero additional AWS-HK reads; migrated
+screens read one committed local revision; rollback selects the previous real
+read path without deleting mirror data.
+
+**Next:** EDS-07; EDS-08 may run in parallel.
+
+### EDS-07 — Retained equity/performance/risk queries and financial chart API
+
+**Goal:** use all honestly retained source range to power fast financial views,
+without claiming an unknown retention floor as total history.
+
+**Backend/Rust work:**
+
+- exact range/keyset queries for account/deployment/portfolio equity,
+  performance, risk grants and sizing decisions;
+- server-side subject scoping, aggregation, drawdown, execution quality and
+  contribution with exact formula/currency/input coverage;
+- viewport-aware min/max/last downsampling that preserves gaps/extrema/markers;
+- chart DTO with `UtcEpochMs`, decimal strings, source/returned counts,
+  sampling algorithm, scale decision and visible coverage boundary;
+- benchmark series stays typed unavailable until a named market authority is
+  published; frontend must not synthesize it;
+- optional range cache is revision-keyed and may be enabled only after a
+  measured invalidation test.
+
+**Frontend handoff:** `PrimusFinancialChart`/approved renderer consumes this
+DTO in the existing chart shell; backend does not alter the visual design.
+
+**Tests:** raw-versus-downsample population, extrema/gap/marker properties,
+log/linear rules, large range, per-account/all-account scope, no float-derived
+business result, payload/render budget and browser chart evidence on Alpha,
+Portfolio, Account and stage screens.
+
+**Exit:** no 2,000-row total-history presentation cap; every chart states the
+actual available range and completeness; real chart payload is consumed on
+the deployed image.
+
+**Next:** EDS-09 for streaming-enabled source classes; EDS-11 for local
+current-revision SSE.
+
+### EDS-08 — Source continuity and authoritative event contract lane
+
+**Goal:** obtain only the missing semantics required for true replay and
+append-all source history.
+
+**Portal work now:**
+
+- translate the 18 E7 gaps into one deduplicated owner packet, grouped by
+  event, market, valuation, operations, command, artifact and research owner;
+- define required event envelope, epoch/sequence, snapshot high-watermark,
+  correction/tombstone, retention floor, resnapshot and causal identifiers;
+- provide machine validation, fixtures and compatibility tests to the source
+  owner; do not prescribe Trading System internals;
+- keep product panels typed while the owner task is open.
+
+**External completion needed:** a source-owned journal/outbox/CDC/exact tail
+that proves ordering and retention for each activated class. Current
+`domain_events` without `source_sequence` is not accepted as that authority.
+
+**Tests:** schema/digest compatibility, duplicate/gap/correction/tombstone,
+epoch reset, retention boundary, cross-profile rejection and snapshot+tail
+fixtures supplied by the owner.
+
+**Exit:** each history-bearing class is either `EVENT_SOURCE_ACCEPTED` or
+remains a named external gap. EDS-08 may close contract preparation without
+falsely unblocking EDS-09; runtime source acceptance is recorded separately.
+
+**Next:** EDS-09 only for accepted classes.
+
+### EDS-09 — Rust snapshot+tail, append store, reducers and durable ACK
+
+**Goal:** make Rust the authoritative Portal ingest path for source classes
+accepted in EDS-08.
+
+**Backend/Rust/storage work:**
+
+- implement bounded H2+mTLS frames with checksum/compression and separate
+  live/current/history lanes;
+- snapshot at high watermark, backfill `<=W`, tail from `W+1`;
+- commit append facts/events and offsets atomically, then ACK;
+- dedupe, detect gaps, quarantine integrity mismatch and request explicit
+  resnapshot;
+- maintain typed current reducers and replay checkpoints;
+- enforce bounded queues/unacked bytes/spool, backpressure and live-lane
+  priority over backfill;
+- publish local durable journal entries only after committed revision.
+
+**Tests:** 2x measured peak, live+backfill, 1/5/30-minute partition, process/DB
+restart, slow consumer, spool/disk pressure, corrupt frame, epoch change,
+duplicate and late correction; zero accepted-event loss and zero visible
+duplicates.
+
+**Exit:** Rust path is active per accepted relation/profile, old polling is
+disabled only for that exact scope, and a source event reaches a frozen screen
+with one trace and committed revision.
+
+**Next:** EDS-10 and EDS-11.
+
+### EDS-10 — Full lifecycle replay and market-context query plane
+
+**Goal:** activate Trade Replay and complete chart context only when the
+authoritative sources exist.
+
+**Backend/Rust work:**
+
+- append signal/sizing/risk/command/order/fill/accounting/reconciliation
+  lifecycle events and causal edges;
+- exact trace/order/deployment/session cursors plus checkpoint seek and state
+  digest;
+- expose pre-capture/retention limits, gaps, corrections and late arrivals;
+- bind typed candle/latest/calendar/VNM/benchmark sources by venue,
+  instrument, interval, revision and UTC clock;
+- produce viewport-sized candle/marker windows and an export cursor, never an
+  unbounded response;
+- keep each unavailable market or lifecycle branch typed independently.
+
+**Tests:** partial fill, cancel/replace/reject, out-of-order receipt, correction,
+checkpoint determinism, deep pagination, market revision mismatch, VNM session
+boundary and browser seek/virtualization.
+
+**Exit:** Trade Replay has no `.slice(-200)` total cap, no synthetic history
+and no smoke fallback; available lifecycle is replayable and unavailable
+pre-capture history is visibly bounded.
+
+**Next:** EDS-11.
+
+### EDS-11 — Complete screen BFF/action graph and local realtime activation
+
+**Goal:** finish every frozen screen, tab, panel, filter and button using local
+committed revisions and one resumable realtime channel.
+
+**Backend work:**
+
+- complete named screen operations for the full E3 screen inventory;
+- server-side filter/sort/count/aggregate and resource composition;
+- emit semantic action states/resources/reasons, never arbitrary hrefs;
+- local snapshot → ordered deltas → Last-Event-ID resume → gap/resync SSE;
+- one journal tail fans out to many browsers; source reads remain constant;
+- panel deltas carry operation/resource/revision and never source cursor;
+- a stale/gap/source-error changes only affected panel/read revision;
+- preserve command activation as the separate N27 authority.
+
+**Frontend proof:** all existing rich compositions remain; large tables and
+replay timelines are virtualized; charts update incrementally without
+recreating the renderer; every route/button is traversed.
+
+**Tests:** screen-field/action coverage 100%, dead route 0, product fixture
+import 0, 1/10/100 SSE clients, auth expiry terminal frame, reconnect/resume,
+gap/resync, slow client, no React/DOM warnings, visual snapshots and browser
+performance traces.
+
+**Exit:** every screen is real-data or exact typed-gap at panel level; every
+available action resolves correctly; no browser-driven source amplification;
+deployed image passes the complete route graph.
+
+**Next:** EDS-12.
+
+### EDS-12 — Failure/DR, product acceptance and immutable release
+
+**Goal:** qualify the exact capability set as an operable release, without
+waiting for unrelated external gaps.
+
+**Backend/release work:**
+
+- freeze accepted operations, external gaps and profile matrix;
+- run source/network/Edge/SGP DB/disk/cursor/epoch/schema/failure matrix;
+- prove backup/restore, reader rollback, projection rebuild and source-dark
+  degradation;
+- publish commit, image, SBOM/provenance, contract/manifest, migration,
+  frontend bundle and source compatibility digests;
+- stage per operation/screen/profile: Paper, Sandbox, Canary-over-Live, Live;
+- remove expired adapters only after zero-use observation;
+- record any remaining external capability as a versioned next-campaign input,
+  not hidden technical debt.
+
+**Tests:** full contracts/Rust/TypeScript/frontend gates; authenticated browser
+matrix for ready/empty/partial/stale/unavailable/denied/error; performance and
+memory soak; rollback/restore rehearsal; security/redaction/profile isolation;
+exact deployed-image verification.
+
+**Exit:** all accepted-source scope is `PRODUCT_ACTIVE` and
+`OPERATIONS_QUALIFIED`; zero P0/P1 integrity issues; rollback evidence exists;
+owner signs visual/data/action parity. Protected-main merge and stable release
+remain explicit Bobby actions.
+
+### 17.6 Frontend collaboration lanes
+
+Claude can work in parallel without source/runtime authority:
+
+| Backend phase | Claude-safe parallel work |
+|---|---|
+| EDS-01 | consumer fixture/decoder for one named deployment operation; error-state visuals |
+| EDS-02 | generated-type migration, UTC formatter, semantic route registry, no visual redesign |
+| EDS-03 | panel-level loading/empty/partial/stale/unavailable states on stage screens |
+| EDS-04 | preserve and bind rich Alpha/Portfolio/Account/Binding components |
+| EDS-05 | display derivation lineage/completeness and governance/ops states |
+| EDS-06 | old/new revision diagnostics and local-mirror parity test harness |
+| EDS-07 | `PrimusFinancialChart`, accessible table and exact tooltip display |
+| EDS-08/09 | event fixtures only from frozen contract; no synthetic product replay |
+| EDS-10 | virtualized replay/candlestick renderer after contract acceptance |
+| EDS-11 | incremental updates, virtualization, full route/action Playwright |
+| EDS-12 | visual regression, browser failure matrix and owner review packet |
+
+Claude must not replace a rich screen with an envelope page, derive business
+truth in React or import smoke fixtures as runtime fallback. Codex must not
+change approved screen hierarchy/visual composition while implementing the
+server path.
+
+### 17.7 Next approved implementation order
+
+Unless Bobby changes priority, execute one campaign branch in this order:
+
+```text
+EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
+                              ↘ EDS-08 → EDS-09 → EDS-10 ↗
+                                                   EDS-11 → EDS-12
+```
+
+The immediate next phase is **EDS-01 — Sealed Manager-v2 consumer and fixed
+E5 operation authority**. It is deliberately small enough to close fully: one
+operation, one real frozen-frontend vertical, complete negative/security
+matrix and immutable dev-image proof before widening to the remaining
+operations.

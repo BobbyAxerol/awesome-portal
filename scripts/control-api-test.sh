@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${ROOT_DIR}/apps/control-api"
+MAXIMUM_DATA_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v1"
 NETWORK="control-api-test-net"
 PG_CONTAINER="control-api-test-postgres"
 NODE_CONTAINER="control-api-test-node"
@@ -41,6 +42,7 @@ cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
   -w /deps -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
   "${NODE_IMAGE}" npm ci --no-audit --no-fund
 test -x "${DEPS_DIR}/node_modules/.bin/tsc"
+test -f "${MAXIMUM_DATA_PACK}/MANIFEST.sha256"
 
 # Docker/containerd cannot create a nested tmpfs or bind mount below a
 # read-only bind destination on every supported host. Build a non-secret,
@@ -87,6 +89,7 @@ fi
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
   -u "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
   -v "${DEPS_DIR}:/cell" \
+  -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
   --tmpfs /tmp:rw,exec,mode=1777,size=512m \
   -w /cell/work \
   -e HOME=/tmp \

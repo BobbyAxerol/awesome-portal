@@ -3322,3 +3322,35 @@ change is a separate immutable Portal BFF release that selects named
 catalogue-bound operations. There is no implementation or cleanup debt in this
 publication. The typed source/replay/independent-cell requirements already
 recorded by E7 remain external facts, not handoff debt.
+
+#### EX-DP downstream journal — Portal EDS backend campaign plan
+
+**Status:** **PORTAL_DOWNSTREAM_EDS_PLAN_COMPLETE / NO_RUNTIME_MUTATION**
+(2026-09-04).
+
+The receiving Portal worktree was fast-forwarded to the published
+`feat/execution-data-activation` head
+`6f6503ea21327bc39946f48c697b4287c673f12c` before planning. The E7 validator
+passed again (`34` capabilities, `18` genuine source gaps and `3` measured
+profiles), and every entry in
+`services/portal-execution-edge-rs/contracts/maximum-data-return-v1/MANIFEST.sha256`
+verified before any document was edited.
+
+The executable downstream sequence is now indexed at
+[`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §17](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#17-eds-campaign--maximum-data-bff-durable-mirror-streaming-and-frozen-frontend-delivery-2026-09-04).
+It applies
+[`EXECUTION_DURABLE_STREAMING_FROZEN_FRONTEND_INTEGRATION_AND_FINANCIAL_CHART_PLAN_v1.1.md`](./EXECUTION_DURABLE_STREAMING_FROZEN_FRONTEND_INTEGRATION_AND_FINANCIAL_CHART_PLAN_v1.1.md)
+without changing the accepted E7 pack. EDS-00 records the immutable intake;
+EDS-01 through EDS-07 deliver the maximum honest Manager-v2 current/range
+product now; EDS-08 through EDS-10 form the separately gated authoritative
+event, replay and market-context lane; EDS-11 and EDS-12 complete consumer,
+operations, resilience and release acceptance.
+
+This planning slice did not change product/runtime code, dependencies,
+source/profile activation, cache, command authority, runtime containers,
+Trading System, Source Proxy, database or network. It only corrects the
+isolated Control API test cell to mount the sanitized E7 pack read-only at the
+repo-relative path required by the newly received EX-DP tests. The five
+pre-existing local P4-E cadence files remain protected and intentionally
+excluded from this plan commit. The next implementation phase is **EDS-01 —
+Sealed Manager-v2 consumer and fixed E5 operation authority**.
