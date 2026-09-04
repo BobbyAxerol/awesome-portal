@@ -2427,7 +2427,7 @@ E0/E1 technical debt.
 
 #### EX-DP-02 — E2 domain semantics and authority audit
 
-**Status:** **IN_PROGRESS / BOBBY_APPROVED / READ_ONLY_ALL_CURRENT_APPLICATION_RELATIONS / NO_SERVICE_RUNTIME_MUTATION**.
+**Status:** **COMPLETE / SEMANTICS_DISCOVERY_COMPLETE_FOR_OBSERVED_RUNTIME_TUPLE / BOBBY_APPROVED / READ_ONLY_ALL_CURRENT_APPLICATION_RELATIONS / NO_SERVICE_RUNTIME_MUTATION / NO_PORTAL_ACTIVATION**.
 
 **Approval, implementation and decision boundary (2026-09-04):** Bobby
 approved the semantic/authority/retention/correction/query-plan work named in
@@ -2489,6 +2489,48 @@ Manager catalogue; and every unresolved item has a typed status/reason/owner.
 **Rollback/debt:** additive semantic evidence only. A failed or incomplete
 semantic proof blocks the phase; a proven absent producer becomes one typed
 external owner action rather than Portal/Edge technical debt.
+
+**Completion record (2026-09-04).** Trading System implemented the owner-only
+`portal-source-semantics` Rust CLI and compile-time E2 registry: **11**
+request-minimum domains, **48** named semantic relations and **18** typed
+source-owner-gap triggers. In one bounded `REPEATABLE READ READ ONLY`
+transaction, the final private positive package
+`/home/bobby/secure/portal-execution-data-discovery/ex-dp-02/live-semantic-audit-003`
+returned `SEMANTICS_AUDIT_COMPLETE_CANDIDATE`: **99/99** current application
+relations readable, **11/11** domains classified, **99** semantic relation
+records and **48/48** fixed query-plan captures, with zero identity,
+ownership, required-field, time/decimal or planner-capture failure. Its
+manifest SHA-256 is
+`b2fd7f9e60d28d01279f2283c62028beaeb166a1eb95291388059a80cb46d94b`;
+registry SHA-256 is
+`c1886540c91e8e96219a12684e0b42651a061236128ab92f51442d0f56493477` and
+the frozen semantic contract digest is
+`fa93683ed7c7cf1298b6e6943e93383a707f3beefe377df745fd909884f6dcac`.
+
+The companion no-local-read-role package
+`identity-negative-002` correctly returned `INCOMPLETE_SOURCE_IDENTITY_SCOPE`
+(99 inaccessible relations and 48 scope-skipped plans), manifest SHA-256
+`9ad73e8ba092eaa23a2830e99471d2e58f33a7335f82565341101b48f6125c59`.
+Neither package retains DSNs, business rows or payloads. E2 establishes
+authority, identity/tie-break, source clock, decimal/currency, empty,
+retention and correction semantics without converting a current table into
+history or an absent policy into an infinite-retention claim. Its actual
+planner evidence is **5** index-backed and **43** sequential-on-observed-stats
+fixed shapes. That blocks a generic/unscoped read shape; EX-DP-03 must choose
+the exact screen/resource/cursor shape, and any selected sequential shape is
+`UNSAFE` until separately resolved by a source-owner query/index/view/key
+decision. The 18 typed gaps are visible external source-owner actions, not
+hidden Portal technical debt.
+
+Focused Rust tests passed **10/10**, strict format/Clippy passed and the full
+locked Rust workspace passed **28/28**. The isolated fixture covered
+populated/empty/corrected/gap/index-plan conditions but was deliberately
+incomplete and never treated as live evidence. Phase cleanup removed only its
+fixture container/network/automatic test volume, test image, exact temporary
+paths and superseded diagnostic packages; no source/Portal service, data,
+grant, route, cache/projection, Event/SSE, command or deployment changed.
+E2 is therefore complete for the observed runtime tuple, but does not activate
+a Portal consumer or freeze the typed return contract; that remains EX-DP-03.
 
 #### EX-DP-03 — E3 frozen screen, field and action coverage
 

@@ -25,8 +25,12 @@ Chúng không thay thế phase hoặc exit gate trong
   census proved 99 current relations / 1,387 columns, reconciled 96 source
   objects plus three deployed overlays and closed every classification gate.
   It created no Portal DB client, route, cache, listener or business-row
-  export. **E2 semantic/authority proof is now owner-approved and in progress;**
-  it remains a source-owned read-only audit, not an activation.
+  export. **EX-DP-02/E2 semantic/authority proof is complete for the observed
+  runtime tuple:** a separate source-owned read-only audit classified 11/11
+  domains across all 99 relations and captured 48 fixed planner shapes, while
+  its no-role negative failed closed. It remains neither a Portal DB client nor
+  an activation; EX-DP-03 must select the exact screen/resource/cursor shape
+  before a typed return contract can freeze.
   The mandatory journal is
   [EX-BE-02C in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
 
