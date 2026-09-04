@@ -1751,6 +1751,20 @@ activation or the phase):**
   only `N29-REL-01` remains. See
   [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
+- **EX-DP maximum-data program aligned to the data-activation branch
+  (2026-09-04):** the governing owner request is now tracked at the Portal
+  root and its seven approval phases are journaled in the Unified Plan as
+  EX-DP-01 through EX-DP-07. This is a delta program over N18–N29, the current
+  Manager-v2 multi-profile read plane, N24/N25/N26 and the measured
+  2026-09-03 data-activation state — not a duplicate or replacement campaign.
+  It begins only with an owner-approved read-only E0/E1 deployed-truth and
+  maximum source census. Existing source-publication and §16 files are
+  evidence inputs; no generic SQL/DB endpoint, route expansion, command,
+  source activation, runtime restart or deployment is authorized by this
+  planning alignment. The complete per-phase goal/test/exit/rollback
+  boundaries are in
+  [EX-BE-02C](./UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
+
 - **N26 Manager replay selection hardened and dev-accepted (2026-09-01):** the first bounded
   Paper SSE probe proved mTLS/JWT snapshot access but exposed that resume still
   read the legacy journal after Manager authority selection. The product BFF

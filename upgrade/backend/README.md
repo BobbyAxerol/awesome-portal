@@ -17,6 +17,13 @@ Chúng không thay thế phase hoặc exit gate trong
   records the completed N13–N17 `A` (Portal-owned/source-dark) and `B`
   (current-source acceptance) lanes. Phase acceptance never implies product
   activation.
+- [Maximum Data Discovery, Publication & Return Request v1](../../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md)
+  — **governing delta-discovery request, seven owner-approved EX-DP phases.**
+  It uses N18–N29, the current Manager-v2 plane and data-activation evidence
+  as baseline rather than replacing them. EX-DP-01 is not started: it awaits
+  an explicit owner approval for read-only deployed-truth/source census.
+  The mandatory journal is
+  [EX-BE-02C in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
 
 - [N18 — Manager Relation & Capability Census](./EX_BE_21_N18_MANAGER_RELATION_CAPABILITY_CENSUS.md)
 - [N19 — Rust Manager-v2 Compatibility Authority](./EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md)

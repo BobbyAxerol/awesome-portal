@@ -2134,3 +2134,378 @@ rejects a malformed private profile identifier before issuance, verification or
 source binding, using the same uppercase ASCII grammar as Edge and Control API.
 The focused owner Manager suite reran at 44/44 with scoped Ruff clean; this
 does not change Portal runtime configuration, routes or deployment state.
+
+### EX-BE-02C — Maximum Data Discovery, Publication & Return (2026-09-04)
+
+**Status:** **PRE_PHASE_ALIGNMENT_COMPLETE / EX_DP_01_AWAITS_EXPLICIT_OWNER_APPROVAL / NO_RUNTIME_MUTATION**.
+
+**Governing request:** [Portal Execution Edge — Maximum Data Discovery,
+Publication & Return Request v1](../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md).
+This is the execution journal for that request. The request has eight named
+stages (E0 through E7); the owner asked for seven approvals. E0 is the
+deployed-truth prerequisite of E1, not an independent capability, so
+EX-DP-01 = E0 + E1 and EX-DP-02…07 = E2…E7. No required request stage is
+omitted.
+
+#### EX-BE-02C pre-phase alignment and implementation location
+
+The approved implementation branch is the remote-derived Portal worktree
+/home/bobby/.worktrees/portal-execution-data-activation on
+**feat/execution-data-activation**, initially pinned at
+dcf580c826250537001f15ccba6d04e42bdef98f. It already contains the
+Portal-side data-activation work; it is not a blank Manager-v2 branch.
+This journal, the return pack, Portal adapters and Portal tests belong here.
+Any Trading System source inspection or source-owned adapter belongs in a
+separate Trading System feature worktree at the time its phase is approved;
+its exact commit, read identity and evidence reference must be recorded in the
+corresponding return artifact. Neither worktree identifies a deployed runtime;
+E0 records the release/image/config tuple independently.
+
+The initial plan from the older Manager worktree was corrected before any
+EX-DP implementation:
+
+1. [Source publication request 2026-09-03](./backend/EXECUTION_SOURCE_PUBLICATION_REQUEST_2026-09-03.md),
+   [data-activation status](./backend/DATA_ACTIVATION_STATUS_2026-09-03.md),
+   and [Execution Loop §16](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+   are present on this branch and are evidence inputs, not missing documents.
+2. The N18 96-relation census, N19–N29 contracts, N24 bounded current-state
+   projection, N25 analytics, N26 realtime and deployed Portal data-activation
+   work are reusable baselines. EX-DP does a runtime-verified **delta census**
+   over every useful authoritative surface; it does not recreate them or
+   pretend that the existing census proves unexamined Trading System sources.
+3. No arbitrary version-4 route is pre-authorized. EX-DP-04 freezes a
+   versioned return-pack/capability contract and reuses Manager-v2/current
+   Portal contracts where semantically sufficient. A new named source route is
+   considered only in EX-DP-05 after its source, profile, identity, pagination
+   and semantics are proven.
+4. The currently accepted transport limits remain per request/frame, not a
+   hidden total-history limit: current source terms are at most 5,000 rows,
+   8 MiB and two concurrent requests per identity. Opaque continuation must
+   traverse the complete retained population when the source actually retains
+   it. Existing tighter Portal fan-out limits remain in force unless a later
+   measured change is separately approved.
+
+This alignment is documentation only: no source query, runtime config, image,
+identity, database/schema, route, cache, command, deployment, process or data
+was changed.
+
+#### EX-BE-02C global scope, invariants, and closure rules
+
+**Outcome:** one digest-bound, sanitized
+portal-execution-edge-maximum-data-return-v1 pack. It enables the Portal team
+to build a storage/read-model/BFF/consumer work order without guessing a
+source, join, formula, retention, empty-state or authority. It is not a
+generic SQL/table browser, raw-data export, credential delivery mechanism or
+implicit activation of a screen, profile or command.
+
+- Trading System and approved producer services retain source authority.
+  Portal receives only typed, allowlisted HTTPS capabilities through its
+  existing server-side trust boundary; no browser-direct database/Redis/broker,
+  raw SQL, DSN, issuer key, CLI credential or arbitrary source selection.
+- “Maximum” means exhaustive useful-source classification, including
+  relations/views, journals/outboxes/audits/ledgers, producer read models,
+  source APIs, retained history, artifacts and market sources where they are
+  authoritative. It never means unbounded response payloads or a promise that
+  every source is currently publishable.
+- Profile, mode, venue, account, deployment, portfolio, workspace and
+  permission lineage are explicit. Financial numbers remain exact decimal
+  strings; time uses named UtcEpochMs or an explicitly named source clock;
+  mutable snapshots are never relabelled as append-only Event/replay history.
+- Existing Manager-v2, N18 catalogue, N24 projection, N25/N26 read paths and
+  current product APIs remain backward-compatible. Reuse a current semantic
+  source before proposing a new adapter; never widen V1/D4, direct DB
+  transport, raw relation browsing, browser-to-AWS-HK traffic or duplicate
+  Data Layer market authority.
+- A genuine absent producer, insufficient retention, inaccessible source or
+  unresolved source authority becomes one typed SOURCE_OWNER_GAP with
+  evidence, owner and requested decision. It is never fabricated as zero,
+  empty, complete history or deterministic replay. Such an external fact is
+  not technical debt; an unclassified accessible source keeps its phase open.
+- Each approved phase uses bounded read-only/isolated fixtures and records
+  only aliases, aggregate counts, schemas and digests in Git. It cleans only
+  its exact temporary namespace. At phase closure inventory images and
+  BuildKit cache, retain the active image set and explicitly named rollback
+  image only, and record disk evidence; no broad prune, volume/network/source
+  removal or runtime restart is implied.
+
+| Plan phase | Request stage(s) | Result it may claim |
+| --- | --- | --- |
+| EX-DP-01 | E0 + E1 | DISCOVERY_COMPLETE for the observed runtime tuple and source delta census |
+| EX-DP-02 | E2 | SOURCE_SEMANTICS_CONFIRMED by domain |
+| EX-DP-03 | E3 | SCREEN_COVERAGE_COMPLETE |
+| EX-DP-04 | E4 | CONTRACT_PUBLISHED for frozen capability/return-pack semantics, not runtime |
+| EX-DP-05 | E5 | EDGE_IMPLEMENTED only for verified existing-data adapters |
+| EX-DP-06 | E6 | EDGE_SHADOW_VERIFIED per accepted domain |
+| EX-DP-07 | E7 | RETURN_PACK_ACCEPTED, or an explicitly lower truthful state |
+
+#### EX-DP pre-phase alignment journal (2026-09-04)
+
+Completed before EX-DP-01 approval:
+
+- fetched the exact remote branch and created the dedicated data-activation
+  worktree at dcf580c826250537001f15ccba6d04e42bdef98f;
+- reviewed the N18 census, N19–N29/N24–N26 implementation, source-publication
+  request, data-activation status, current Portal contracts and release
+  manifests; the plan was changed to a delta program accordingly;
+- tracked the governing request byte-for-byte from the prior approved source:
+  SHA-256 is
+  2f66002be69ee90a507029acf37d744cbb134fdd53840a53d087b67e28604310;
+- validation passed: git diff --check; seven of seven EX-DP headings each
+  contain Goal, Work, Tests/evidence, Exit gate and Rollback/debt; all
+  referenced local evidence paths exist; 98 Markdown fences are balanced.
+
+No code, image, container, database, identity, runtime or source operation was
+run in this documentation-only alignment. No disposable build artifact exists,
+so Docker/BuildKit cleanup is not applicable and no cleanup was performed.
+
+#### EX-DP-01 — E0/E1 deployed truth and maximum source delta census
+
+**Status:** **READY_FOR_OWNER_APPROVAL**.
+
+**Goal:** bind later conclusions to the actually deployed release tuple, then
+perform a read-only maximum-source census that starts from — but is not limited
+to — the N18 census and current data-activation inventory.
+
+**Work:**
+
+1. Capture a sanitized DEPLOYED_RUNTIME_MANIFEST.json: Edge/Source
+   Proxy/Control API/worker image digests and release revisions, source
+   catalogue and serving-policy digests, active profile bindings, enabled
+   read/history/event/SSE/command flags, DB migration revisions, evidence
+   capture time and any authority-published high-watermark/retention facts.
+   Release evidence, not a checkout branch, is the runtime authority.
+2. Seed SOURCE_SYSTEM_INVENTORY.json from N18, the 13 N24 feeds, N25/N26
+   consumers, SGP history mirror, known source-publication request and the
+   current 96-relation catalogue. Mark every inherited item VERIFIED_CURRENT,
+   NEEDS_RUNTIME_RECHECK, OUTSIDE_SOURCE_SCOPE or NOT_YET_CENSUSED; do not
+   silently downgrade existing working data.
+3. Under a separately recorded, read-only Trading System/source identity,
+   census all useful source surfaces: application schemas, tables, views and
+   materialized views; history/audit/journal/outbox/ledger candidates; producer
+   APIs/read models; artifact metadata; source-service/market-service
+   capabilities; and only documented Redis/queue facts that carry authority.
+   Record source owner/kind, stable keys/order, clocks/units, profile and
+   lineage columns, sensitivity, population/retention, correction semantics,
+   keyset/index viability, existing publication and candidate consumers.
+4. Emit sanitized relation/column/lineage/profile artifacts and reconcile
+   their counts/digests with N18 and the 2026-09-03 evidence. The Portal
+   branch stores metadata and digests only; raw rows and private references
+   remain with the owner evidence store.
+
+**Tests/evidence:** deterministic manifest/digest validation; schema validation
+of every generated artifact; read-only transaction/identity proof; metadata
+reconciliation and duplicate/unknown relation checks; timestamp/unit/keyset
+classification checks; redaction/secret-shape scan; and a negative test that
+an unlisted source cannot be queried or exposed.
+
+**Exit gate:** the deployed tuple is exact rather than inferred; every
+discovered relevant source/relation/operation and time-bearing column has a
+classification; all baseline discrepancies have evidence and an owner; every
+inaccessible candidate has an explicit source/identity decision; and no raw
+business row or secret enters Git.
+
+**Rollback/debt:** remove only exact EX-DP-01 temporary scan artifacts on a
+failed validation. No runtime/data mutation exists to roll back. There is no
+internal debt on closure; an external producer/permission absence is one typed
+source-owner gap, while an accessible unclassified source blocks closure.
+
+#### EX-DP-02 — E2 domain semantics and authority audit
+
+**Status:** **NOT_APPROVED**.
+
+**Goal:** prove which censused facts can truthfully power each execution
+domain, including current/history/event distinctions, lineage, retention,
+corrections, quality and authoritative derivation.
+
+**Work:** audit strategy/deployment/artifact; portfolio/allocation/capital;
+account/binding/balance/margin/sync; positions/exposure; order/fill/conditional
+lifecycle; session/cycle; signal/sizing/risk; accounting/equity/performance;
+reconciliation/operations; command terminal evidence; and market context.
+For each fact freeze authority, identity/tie-break, source/effective clock,
+scope/join cardinality, decimal/currency units, retention, mutation/tombstone
+semantics, empty meaning and disposition: DIRECT, EDGE_DERIVED,
+PORTAL_DERIVED, UNSAFE or SOURCE_OWNER_GAP. Reconcile the already measured
+balance lineage, portfolio-equity derivation, cursor lifecycle, marking
+oscillation, empty tables, halted activity and N28 alternatives as evidence —
+not as assumptions.
+
+**Tests/evidence:** complete domain matrix; deterministic lineage and
+join-cardinality checks; fixtures for current/mutable, immutable/corrected,
+empty, inactive, partial and unavailable states; decimal/clock policy tests;
+exact derivation oracles; and sanitized source probes that distinguish
+source-empty from source-unavailable.
+
+**Exit gate:** every required domain has an evidenced disposition; no current
+row is claimed as history; every derivation lists authoritative inputs and
+provenance; no domain is omitted merely because it is outside the existing
+Manager catalogue; and every unresolved item has a typed status/reason/owner.
+
+**Rollback/debt:** additive semantic evidence only. A failed or incomplete
+semantic proof blocks the phase; a proven absent producer becomes one typed
+external owner action rather than Portal/Edge technical debt.
+
+#### EX-DP-03 — E3 frozen screen, field and action coverage
+
+**Status:** **NOT_APPROVED**.
+
+**Goal:** make every frozen Portal Execution screen/panel/field/action
+traceable to a direct source, an authoritative derivation or truthful typed
+absence, without forcing the browser or Portal team to infer joins/formulas.
+
+**Work:** freeze the exact screen/action registry digest, including
+Paper/Sandbox/Canary/Live, fleet/360, blotter, workbench/Trade Replay,
+operations/incidents, command and VNM lanes. Produce
+SCREEN_FIELD_SOURCE_COVERAGE, ACTION_CAPABILITY_COVERAGE,
+DERIVED_METRIC_FEASIBILITY and PORTAL_DOWNSTREAM_WORK_ORDERS. Each mapping
+declares semantic field, source/capability, profile/lineage, response shape,
+pagination/stream, cursor/sequence/correction/retention behavior, recommended
+SGP storage/reducer, empty/stale/gap semantics and delivery class. Existing
+N20 screen contracts are input, not a ceiling.
+
+**Tests/evidence:** referential-integrity tests against frozen screen/action
+registries; delivery-class enum validation; schema checks; negative tests for
+blank/TBD/missing owner and read identity driving an action; and populated,
+empty, partial, stale, gap, duplicate, correction and next-page fixtures.
+
+**Exit gate:** all required fields and actions are mapped or explicitly have a
+typed absence; optional fields are deliberately classified; every absence has
+consumer semantics; and each downstream work order is buildable without a
+Portal-side source/formula guess.
+
+**Rollback/debt:** remove only the exact generated mapping pack on failure.
+Mapping gaps keep the phase open; proven source absence is carried as an
+external owner action, not hidden technical debt.
+
+#### EX-DP-04 — E4 versioned capability and return-pack contract freeze
+
+**Status:** **NOT_APPROVED**.
+
+**Goal:** publish the cross-language contract pack for all confirmed facts,
+history/snapshot/event semantics, source health and downstream work orders
+before any new route claims those semantics.
+
+**Work:** define versioned schemas for source catalogue, domain capability,
+history/continuation, source-health and coverage artifacts; enforce exact
+decimal strings, named clocks, profile/lineage, empty/status and cursor
+semantics; provide fixtures for populated, empty, partial, stale, gap,
+duplicate, correction and continuation. Reuse stable Manager-v2/current
+schemas where they already match the fact. Do not silently mutate V1/V2 or
+predeclare a generic version-4 route. For Event/Trade Replay, publish an
+explicit coverage matrix; if an authoritative journal lacks
+sequence/retention/corrective events, state CURRENT_STATE_ONLY,
+HISTORY_NOT_RETAINED or SOURCE_OWNER_GAP rather than simulate replay.
+
+**Tests/evidence:** JSON-schema/meta-schema validation; Rust/TypeScript/Python
+golden decoding; decimal/epoch/cursor/lineage/status rejection cases;
+backward-compatibility diff against existing Manager-v2 contracts; fixture
+coverage, manifest digest and redaction scans.
+
+**Exit gate:** each EX-DP-03 row references a validated versioned schema and
+typed operation or absence; all fixtures validate; event coverage is explicit
+by entity/event kind; and no timestamp, float, identity or empty-state
+ambiguity remains.
+
+**Rollback/debt:** additive manifest-bound contracts only; no route, source,
+identity, database or deployment change. A missing producer remains a
+published owner action, never unfinished Edge code.
+
+#### EX-DP-05 — E5 existing-data adapter and publication delta
+
+**Status:** **NOT_APPROVED**.
+
+**Goal:** implement only the missing, verified existing-data adapters selected
+by the EX-DP-03 map, preserving the established Manager-v2/current-source,
+projection, analytics and BFF boundaries.
+
+**Work:** choose in this order: existing Manager publication; compatible
+existing Portal projection/analytics/Data Layer capability; a typed extension
+of an existing contract; one named allowlisted source adapter; exact
+source-local derivation with provenance; then one source-owner request after
+absence is proven. Register only named capability/resource/profile bindings,
+never generic relation/SQL access. History must be page-bounded yet traversable
+over all retained data with opaque keyset continuation, has_more, retention
+floor and typed expiry/gap behavior. Commands, shell/CLI execution, Redis
+inspection and source activation remain outside this read/data phase.
+
+**Tests/evidence:** isolated source-to-contract integration fixtures; keyset
+continuation beyond one frame; no-hidden-total-cap test; profile/delegated
+identity denials; allowlist and field-redaction tests; current-versus-event
+semantic tests; derivation oracles/provenance; unavailable/empty/partial/gap/
+correction cases; and static proof that no DB credential or SQL reaches Portal.
+
+**Exit gate:** every DIRECT or EDGE_DERIVED EX-DP-03 item is served by a typed,
+bounded adapter or reclassified with evidence; every EXISTS_NOT_PUBLISHED item
+is published or has an owner decision; and no route claims Event/replay
+semantics without the EX-DP-04 contract.
+
+**Rollback/debt:** disable only newly registered versioned adapters and exact
+test resources. Existing active Manager-v2/current-source planes remain
+unchanged. Missing existing-source implementation keeps this phase open;
+genuine producer absence is a typed external gap, not phase debt.
+
+#### EX-DP-06 — E6 domain acceptance and source-health qualification
+
+**Status:** **NOT_APPROVED**.
+
+**Goal:** show that the accepted capabilities are useful and truthful for their
+actual business domains, not merely reachable.
+
+**Work:** run the request acceptance matrix for accounting/equity, risk,
+orders/fills/replay, accounts/bindings/exposure, operations/reconciliation/
+commands and market context. Validate retained-range traversal,
+scope/lineage, raw-plus-derived provenance, clock/currency/formula/correction
+semantics, complete empty states and source health. Use existing active
+read-only path only when it is qualified; any new runtime route/profile
+activation requires its own explicitly approved change window and rollback
+evidence.
+
+**Tests/evidence:** domain goldens and source-oracle parity; parent-set/orphan
+and cross-profile isolation; lifecycle/replay determinism only where an
+authoritative event source exists; stale/empty/inactive/partial/gap/correction
+matrices; read-versus-command identity denials; and release-compatibility
+checks. Same-host/rehearsal evidence is labelled accordingly and never
+presented as production authority.
+
+**Exit gate:** each requested acceptance is evidence-verified or has a
+prescribed typed status with one owner action; reports/fixtures are complete;
+and no consumer can confuse unavailable, current-only, empty or stale with
+zero or history.
+
+**Rollback/debt:** no independent runtime mutation is allowed without a
+change-window decision. Failed parity/lineage/replay tests block closure;
+only genuine source-owner work is carried forward explicitly.
+
+#### EX-DP-07 — E7 resilience, capacity and complete owner return
+
+**Status:** **NOT_APPROVED**.
+
+**Goal:** harden the accepted return-pack/adapters under bounded failure and
+load, then hand the Portal team one complete, digest-bound result.
+
+**Work:** measure bounded source/Portal resource use, profile isolation,
+identity denials, cursor expiry/recovery, source unavailability, partial
+coverage, restart/rebuild/rollback compatibility and retention behavior for
+the capabilities that EX-DP-05 actually implements. Generate the final
+portal-execution-edge-maximum-data-return-v1 manifest containing deployed
+truth, source/column/lineage census, domain semantics, screen/action mapping,
+schemas/fixtures, capability matrix, health/acceptance reports, owner gaps,
+downstream work orders, evidence digests and exact rollback notes.
+
+**Tests/evidence:** bounded concurrency/row/byte/latency and memory tests;
+profile/identity isolation; fault/reconnect/cursor recovery; contract and
+release compatibility; manifest completeness/digest/redaction verification;
+and a final trace from every mapped Portal requirement to source or typed
+absence. Inventory Docker/BuildKit before and after any isolated build/test,
+clean only disposable artifacts and record retained active/rollback images.
+
+**Exit gate:** the return pack validates and is reproducible from its manifest;
+all EX-DP-03 mappings reach an accepted adapter, authoritative derivation or
+typed source-owner gap; measured bounds have evidence; no raw data/secret is
+committed; and the handoff states exactly which capabilities are usable now,
+which await owner publication and which require a separate runtime window.
+
+**Rollback/debt:** remove only EX-DP-07 isolated benchmark/test artifacts and
+inactive registrations. No broad cleanup or runtime rollback is implied.
+Internal technical debt must be zero at closure; missing authoritative source,
+retention or owner window remains an explicit external gate, never a concealed
+completion claim.
