@@ -3,7 +3,7 @@
 Date: 2026-09-03
 From: Portal SGP control plane (Claude, backend co-impl per owner grant 2026-09-02; owner: Bobby)
 To: the agent operating the Execution Cell (AWS-HK) — Portal Execution Edge deployment + Trading System / Manager v2 source
-Status: `SOURCE_SIDE_VERIFIED_2026-09-03 / OWNER_DECISIONS_PENDING`
+Status: `FINAL_CONSOLIDATED_2026-09-03 / FIVE_ASKS_OPEN (A-E in §0)`
 Source-side verification pass (Claude, on-host, owner-directed): every P0/P1
 item measured live; companion findings file committed in the trading worktree:
 `portal-execution-campaign/BR_EX_79_SOURCE_FINDINGS_2026-09-03.md`.
@@ -14,26 +14,37 @@ projection snapshots (three profiles), the projection worker logs and the
 N28 registry — not inferred from documentation. Portal-side seams are done
 (Phase 4): once the source publishes, screens fill with **no Portal deploy**.
 
-## 0. One-page summary (priority ordered)
+## 0. FINAL CONSOLIDATED SUMMARY (rewritten 2026-09-03 end-of-day — the one table to act on)
 
-| # | Priority | Item | Current live state | Consuming surface |
-|---|---|---|---|---|
-| 1 | **P0** | `account_equity_snapshots` publication | AVAILABLE · `SOURCE_PARTIAL` · **0 rows** (paper) | equity charts (Paper, Alpha 360), derived portfolio equity, Fleet 30 d rollup |
-| 2 | **P0** | `performance_snapshots` publication | AVAILABLE · `SOURCE_PARTIAL` · **0 rows** (paper) | venue contribution, 30 d windows, exit-review evidence |
-| 3 | **P0** | `portfolio_equity_snapshots` contract | **UNAVAILABLE · `MANAGER_V2_SOURCE_CONTRACT_REJECTED`** (since Phase 1) | Portfolio 360 equity (until then Portal serves a declared DERIVED sum) |
-| 4 | **P0** | LIVE parent-set integrity | live `account_balances` published **without any live `accounts`** → 100 % lineage-rejected | Account/Broker 360, bindings |
-| 5 | **P0** | Cross-family rows in the BINANCE paper feed | paper `orders`/`fills`/`account_balances` carry rows whose parents are outside `PAPER_BINANCE_USDM` → rejected (counted per class in the snapshot envelope, `lineage_rejects`) | data completeness everywhere |
-| 6 | P1 | `venue_accounts` | 0 rows, all profiles | Bindings register, Account/Broker 360 |
-| 7 | P1 | `margin_balances`, `account_sync_effective`, `broker_account_sync_effective` cadence | 0 / 0 / paper 0 · sandbox 1 | Account 360 margin + sync panels |
-| 8 | P1 | Market candles activation | `N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED` | Alpha 360 trade-replay context |
-| 9 | P1 | Benchmark series activation | `N28_BENCHMARK_SERIES_SOURCE_NOT_ACTIVATED` | Portfolio ρ-vs-benchmark timeline |
-| 10 | P1 | Paper↔Live twin-profile join | `N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED` | Canary drift tile |
-| 11 | P1 | Time-series retention floor ≥ 30 d (or MC-01 events) | flat hot window only | 30 d rollups, history charts (SGP ladder ready and waiting) |
-| 12 | P1 | Market ticks activation | `N28_MARKET_TICKS_NOT_ACTIVATED` | Live Full Operations mark/tick panel |
-| 13 | P1 | Venue calendar publication | `N28_VENUE_CALENDAR_NOT_ACTIVE` | VNM workbench session shading (VN trading hours/holidays) |
-| 14 | P2 | The nine N28 owner requests MC-01…MC-09 | typed unavailable until verified | see §7 |
-| 15 | P2 · deferred by owner | `PAPER_DNSE_VNM` N13B publication | not published | VN market family home (Portal groundwork landed flag-off; owner says later) |
-| Q | question | 316/364 paper orders are `RISK_REJECTED` (87 %) | rendered truthfully | confirm intended risk config vs paper-runner defect |
+After the on-host verification pass, most original items RESOLVED or moved.
+**Everything still asked of the Execution Edge / Trading side collapses to
+five asks (A-E).** Rows below give the final state of every original item.
+
+### The five remaining asks
+
+| Ask | What | Fixes items | Size |
+|---|---|---|---|
+| **A** | **One coordinated paper read-plane release window**: edge N18 census + digest bump + edge image rebuild/redeploy + install the staged facade catalogue/policy (`*.json.new`, validated 96/96 invariant) + Portal rebinds balances. Kit fully staged both sides; tool committed (`regen-catalogue-scoped-balances.py`) | 4, 5 (balances lineage rejects on every profile) | one deploy window |
+| **B** | **MC-01..09 activations** (unchanged, `owner-request.v3.json` authoritative): candles, benchmark, twin-join, ticks, VNM calendar, plus the seven others | 8-13, three dead insight tiles, VNM shading | per-capability |
+| **C** | **Marking-path investigation**: `unrealized_pnl` flips between two mark levels on consecutive ~90s cuts (`signalcombine00230m` ±1.5-2%, ids 3790924-3791526 quoted; `combine_weight_*` ±10-20%) — confirm intended vs defect | new item 1.5 (chart spikes are real data) | investigation |
+| **D** | **Confirmations only**: venue_accounts / margin_balances / account_sync_effective are genuinely empty at source — confirm intentional-until-feature-lands (or give a date); run sandbox execution cycles when ready | 6, 7, sandbox screen | one reply |
+| **E** | Nothing — listed to be explicit: **performance depth needs NO publication fix**; it resumes by itself the moment the owner un-halts (kill-switch keys) and exposure reopens | 2, Q | owner action, not yours |
+
+### Final state of every original item
+
+| # | Item | Final state |
+|---|---|---|
+| 1 | account_equity publication | **RESOLVED Portal-side** (was never broken at source) |
+| 2 | performance_snapshots depth | **Collapses into E** (producer healthy; trading halted 30/08 by kill-switch) |
+| 3 | portfolio_equity contract | **CLOSED — unscopeable by data reality** (portfolios span modes/venues); Portal DERIVED sum is the official serving; optional future per-scope producer only if ever wanted |
+| 4+5 | LIVE orphan balances + cross-family rows | **One root cause, fix staged → Ask A** |
+| 6-7 | venue_accounts / margin / sync zero rows | **Verified genuinely empty at source → Ask D** |
+| 8-13 | Candles / benchmark / twin / ticks / calendar / retention | **→ Ask B** (retention floor made non-urgent by the Portal mirror, MC-01 still preferred long-term) |
+| 14 | MC-01..09 | **→ Ask B** |
+| 15 | PAPER_DNSE_VNM | Owner-deferred; Portal groundwork landed flag-off |
+| 1.4 | Cursor TTL 5 min | **RESOLVED — 48h deployed live** on the paper read plane |
+| 1.5 | Marking oscillation | **NEW → Ask C** |
+| Q | 17-day trading silence | **ANSWERED — deliberate operator kill-switch**; un-halt is an owner decision (3 Redis keys) |
 
 ## 1. P0 — resume the equity/performance publications
 
