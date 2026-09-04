@@ -3354,3 +3354,30 @@ repo-relative path required by the newly received EX-DP tests. The five
 pre-existing local P4-E cadence files remain protected and intentionally
 excluded from this plan commit. The next implementation phase is **EDS-01 —
 Sealed Manager-v2 consumer and fixed E5 operation authority**.
+
+#### EDS-00 downstream closure — return-pack intake and immutable Portal baseline
+
+**Status:** **CONTRACT_LOCKED / SERVER_BASELINE_COMPLETE / NO_RUNTIME_MUTATION**
+(2026-09-04).
+
+The Portal consumer branch adds one authenticated, workspace-bound metadata
+endpoint: `GET /api/v1/execution/runtime-manifest`. It compiles the accepted
+E7 source/Edge/catalogue/serving-policy/E5/E6 pins, profile capacity, page
+bounds and explicit external gates into a sanitized in-image baseline. It does
+not read a URL, source configuration, private route, raw row, cursor, token,
+certificate, database, Redis or Source Proxy at request time.
+
+The endpoint truthfully reports `EDS_00_BASELINE_ONLY` and
+`named_portal_operation=NOT_YET_PUBLISHED`; it cannot imply that an Edge
+profile was activated or a product BFF has already queried the source. A
+focused contract test verifies every pinned value against the accepted owner,
+deployed, E5 and E7 artifacts, confirms session/workspace access enforcement
+and rejects source/secret leakage. The existing E3 drift suite remains the
+single generated 23-screen inventory comparison.
+
+EDS-00 has no implementation or cleanup debt. The retained global-sequence,
+replay/correction, cross-cell ingest and outage requirements are explicit
+external owner gates in E7. The next change is EDS-01 only: publish the fixed
+`maximumDataDeploymentPageV1` server-side BFF operation using the existing
+deployment-bound mTLS and `execution:manager-v2:read` assertion, without
+changing the accepted return pack or any runtime configuration.

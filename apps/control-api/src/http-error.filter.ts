@@ -13,6 +13,7 @@ import { QueryContractError } from "./query";
 import { AnalyticsProxyError } from "./execution/analytics.proxy";
 import { CommandCenterError } from "./command-center/command-center.service";
 import { CurrentSourceProxyError } from "./execution/current-source.proxy";
+import { ExecutionRuntimeManifestError } from "./execution/runtime-manifest.controller";
 import { ScreenBffError } from "./screen-bff/screen-bff.service";
 import { PaperReadError } from "./paper-read/paper-read.service";
 import { ProfileReadError } from "./profile-read/profile-read.controller";
@@ -36,6 +37,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof QueryContractError ||
       exception instanceof AnalyticsProxyError ||
       exception instanceof CurrentSourceProxyError ||
+      exception instanceof ExecutionRuntimeManifestError ||
       exception instanceof CommandCenterError ||
       exception instanceof ScreenBffError ||
       exception instanceof PaperReadError ||

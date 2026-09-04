@@ -28,6 +28,8 @@ import { ExecutionAnalyticsController } from "./execution/analytics.controller";
 import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
 import { ExecutionCurrentSourceController } from "./execution/current-source.controller";
 import { ExecutionCurrentSourceProxy } from "./execution/current-source.proxy";
+import { ExecutionRuntimeManifestController } from "./execution/runtime-manifest.controller";
+import { ExecutionRuntimeManifestService } from "./execution/runtime-manifest.service";
 import { ExecutionSharedReadRepository } from "./execution/shared-read.repository";
 import { ExecutionProfileProjectionRepository } from "./execution/profile-projection.repository";
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
@@ -84,6 +86,7 @@ export class AppModule {
         ExecutionRealtimeController,
         ExecutionAnalyticsController,
         ExecutionCurrentSourceController,
+        ExecutionRuntimeManifestController,
         ExecutionProfileHistoryController,
         ExecutionProfileReadAdapterController,
         CommandCenterController,
@@ -150,6 +153,7 @@ export class AppModule {
         ManagerListsRepository,
         ManagerListsService,
         ExecutionSharedReadRepository,
+        ExecutionRuntimeManifestService,
         ExecutionProfileProjectionRepository,
         ExecutionProfileProjectionWorker,
         ExecutionProfileRealtimeService,

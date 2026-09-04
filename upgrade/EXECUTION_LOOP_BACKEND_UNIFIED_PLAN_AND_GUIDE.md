@@ -4478,7 +4478,8 @@ event/replay work advances in a separate dependency lane.
 
 ### EDS-00 — Return-pack intake and immutable baseline
 
-**Status:** `PLANNING_GATE_COMPLETE` on 2026-09-04; no product/runtime change.
+**Status:** `CONTRACT_LOCKED / SERVER_BASELINE_COMPLETE / NO_RUNTIME_MUTATION`
+on 2026-09-04.
 
 **Goal:** establish one reproducible authority before implementation.
 
@@ -4497,16 +4498,38 @@ event/replay work advances in a separate dependency lane.
 - inspected the existing Control API transport/BFF/projection/realtime paths,
   Rust Manager-v2 client/adapter and frozen frontend consumers.
 
-**Implementation entry gate:** create the campaign branch from the reviewed
-baseline; record source/Edge/contract/manifest digests in a runtime manifest;
-generate a screen/panel/action inventory from code and compare it with E3.
+**Implemented closure:**
+
+- created the isolated consumer branch `feat/eds-current-bff`, leaving the
+  dirty P4-E worktree untouched;
+- added the authenticated, workspace-bound
+  `GET /api/v1/execution/runtime-manifest` Control API endpoint;
+- compiled the E7 source/Edge/catalogue/serving-policy/E5/E6 pins, profile
+  capacity, page bounds and explicit external gates into a sanitized
+  in-image baseline (`maximum-data-intake.ts`), which cannot infer runtime
+  truth from a URL or current configuration;
+- made the endpoint state `EDS_00_BASELINE_ONLY` and
+  `named_portal_operation=NOT_YET_PUBLISHED`, so intake cannot claim that a
+  source query or product release happened;
+- added a focused contract test that compares the baseline against the
+  accepted E5/E7/owner/deployed-return artifacts, verifies session/workspace
+  enforcement, and scans the emitted metadata for raw source/secret material;
+- recorded the phase evidence and retained boundary in
+  [`EDS_00_RETURN_PACK_INTAKE_AND_IMMUTABLE_BASELINE.md`](./backend/EDS_00_RETURN_PACK_INTAKE_AND_IMMUTABLE_BASELINE.md).
+
+The pre-existing E3 contract test remains the generated inventory drift gate:
+it compares all 23 frozen screens, operations and capabilities to the return
+pack rather than duplicating a second mutable inventory.
 
 **Tests:** E7 validator, full manifest check, isolated Control API/EX-DP
 contract suites, link check, dirty-worktree guard, screen inventory drift test
 and secret/path redaction scan.
 
 **Exit:** no unknown authority or unclassified frozen field; all later phase
-dependencies reference one digest-bound matrix.
+dependencies reference one digest-bound matrix. The runtime-manifest is
+metadata-only, authenticated, workspace-bound and explicitly non-probing.
+There is no EDS-00 implementation debt. The four E7 owner gates remain
+machine-readable external requirements, not a deferred Portal task.
 
 **Next:** EDS-01.
 
