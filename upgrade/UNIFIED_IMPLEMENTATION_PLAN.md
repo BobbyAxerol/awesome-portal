@@ -2534,7 +2534,30 @@ a Portal consumer or freeze the typed return contract; that remains EX-DP-03.
 
 #### EX-DP-03 — E3 frozen screen, field and action coverage
 
-**Status:** **NOT_APPROVED**.
+**Status:** **COMPLETE (2026-09-04)**.
+
+**Execution preflight (2026-09-04).** Owner approved E3 followed by E4 in
+one additive contract transaction, with E4 prohibited from starting until E3
+has passed its unmapped-field/action gate. The implementation boundary is the
+existing `services/portal-execution-edge-rs` Rust workspace and the checked-in
+Portal screen-BFF catalogue; it adds no database client, source credential,
+runtime route, listener, projection/cache, command execution, or deployment.
+The E2 source-owner evidence pinned for this work is the positive semantic
+audit manifest
+`sha256:b2fd7f9e60d28d01279f2283c62028beaeb166a1eb95291388059a80cb46d94b`,
+semantic registry
+`sha256:c1886540c91e8e96219a12684e0b42651a061236128ab92f51442d0f56493477`,
+and semantic contract digest
+`sha256:fa93683ed7c7cf1298b6e6943e93383a707f3beefe377df745fd909884f6dcac`.
+The E3 registry must bind only named screen/capability/source operations,
+carry the fixed 200-row/1-MiB upstream Manager-v2 bound where applicable,
+and fail closed for blank/TBD fields, unknown screen/catalogue drift,
+unqualified relation shapes, a missing owner on an absence, or a read mapping
+that drives an action. The acceptance suite will validate all frozen
+screen/action inventory, every required field/action disposition, mapping
+integrity, status semantics, and the eight required state fixtures. Rollback
+is deletion of this additive, manifest-bound pack only; no active read plane
+changes during this phase.
 
 **Goal:** make every frozen Portal Execution screen/panel/field/action
 traceable to a direct source, an authoritative derivation or truthful typed
@@ -2564,9 +2587,84 @@ Portal-side source/formula guess.
 Mapping gaps keep the phase open; proven source absence is carried as an
 external owner action, not hidden technical debt.
 
+**Completion record (2026-09-04).** E3 is closed as a contract-only additive
+pack at
+`services/portal-execution-edge-rs/contracts/maximum-data-return-v1/`.
+`e3-coverage.manifest.json` SHA-256 is
+`4df8a5438efc2878b95847dd0212ab619b888da37cbd69df459be982f9e864e6`.
+It locks the E2 positive audit, semantic registry and semantic contract pins;
+the exact existing 23 Screen-BFF entries; all 22 request demand surfaces; 34
+field definitions expanded into **126** screen/field rows; **12** action
+records; **10** metric feasibility rulings; **14** downstream work orders;
+and **8** no-business-row state fixtures (populated, empty, partial, stale,
+gap, duplicate, correction and next-page). The generated CSV line counts are
+127, 13, 11 and 15 respectively including headers. The exit counts are
+`unmapped_required_frontend_fields = 0` and
+`unmapped_execution_actions = 0`.
+
+The new Rust `maximum-data-contract` crate validates the complete registry,
+manifest digests, no-placeholder/no-generic-read boundary, N20 catalogue
+drift, source/delivery truthfulness, command separation, all eight state
+fixtures and downstream-work-order coverage. `cargo fmt --check`, strict
+`cargo clippy --locked -p maximum-data-contract --all-targets -- -D warnings`,
+and `cargo test --locked -p maximum-data-contract` passed (5/5 unit tests,
+binary and doctests). The isolated TypeScript check
+`npx vitest run test/maximum-data-e3-contract.spec.ts --maxWorkers=1
+--no-file-parallelism` passed 2/2; it compares every frozen screen operation,
+response contract and read-capability list to the actual Control API
+catalogue. JSON parsing and `git diff --check` also passed.
+
+No route, listener, database client, source credential, source identity,
+projection/cache, command port, runtime config, deployment, service restart
+or data mutation occurred. The 43 sequential observed E2 shapes remain
+truthfully `EXISTS_BUT_NOT_SAFE_TO_EXPOSE`; Market, artifact and authoritative
+event-journal absence remain named external owner actions in the CSV/work-order
+pack, not E3 technical debt. The purpose-built test cache directories
+(`429 MiB` Cargo and `148 MiB` Node) and the two unreferenced test images
+(`rust:1.85.1-slim`, `node:22.14.0-bookworm-slim`) were removed after verifying
+no container referenced them. Docker post-cleanup inventory was 19 images / 57
+containers / 47 volumes; no broad BuildKit prune was run (14.38 GiB cache is
+outside this phase's exact cleanup scope).
+
 #### EX-DP-04 — E4 versioned capability and return-pack contract freeze
 
-**Status:** **NOT_APPROVED**.
+**Status:** **IN_PROGRESS (2026-09-04; E3 exit passed)**.
+
+**Execution boundary precommitted (2026-09-04).** E4 starts only after the
+E3 validation record proves `unmapped_required_frontend_fields = 0` and
+`unmapped_execution_actions = 0`. It will publish an additive, versioned
+cross-language contract/fixture/manifest pack in the same Rust Edge workspace,
+reusing Manager-v2 and bounded-query conventions where semantically valid. It
+must use `UtcEpochMs` newtypes and exact `{value,currency,scale}` decimals;
+must bind lineage/cursor/status to named operations; and must classify missing
+authoritative event history honestly rather than introduce a generic V4
+endpoint, direct database access, synthetic replay, a new cache, or runtime
+activation. E4 acceptance includes Rust/TypeScript/Python fixture decoding,
+schema/inventory/manifest validation, negative decimal/epoch/cursor/lineage/
+status cases, compatibility checks against the frozen Manager-v2 surface and
+redaction scans. Its rollback remains removal of the additive contract pack
+only; no runtime configuration or source authority changes are authorized.
+
+**E4 execution preflight (2026-09-04).** E3 now records zero unmapped
+required fields/actions, so E4 may begin in the same additive pack. The
+implementation will extend `maximum-data-contract` with validated Rust
+newtypes for `UtcEpochMs`, exact `{value,currency,scale}` decimal values,
+lineage, source health, bounded continuation and typed source status. It will
+add JSON Schema documents for source catalogue, domain capability, history
+continuation, source health, coverage and read envelope; an operation/field
+binding registry that covers all E3 fields; the mandatory event-kind coverage
+matrix; and synthetic/no-business-row golden fixtures for populated, empty,
+partial, stale, gap, duplicate, correction and continuation. A TypeScript
+test and Python standard-library verifier will independently decode the same
+fixtures and reject float timestamps/decimals, raw/ambiguous cursors, missing
+profile lineage and invented event sequence. E4 will prove that it neither
+changes any existing Manager-v2 file nor declares a V4 route; it only names
+logical bounded operations for E5. A current source without a global ordered
+journal must remain `CURRENT_STATE_ONLY`, `NOT_RETAINED` or
+`SOURCE_OWNER_GAP` as appropriate. Tests must pass schema-meta validation,
+Rust/TypeScript/Python golden decode, negative boundary cases, manifest
+digest/redaction scans and an explicit Manager-v2 compatibility guard before
+the phase can close.
 
 **Goal:** publish the cross-language contract pack for all confirmed facts,
 history/snapshot/event semantics, source health and downstream work orders

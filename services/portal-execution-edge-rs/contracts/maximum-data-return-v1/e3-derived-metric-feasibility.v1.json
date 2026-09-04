@@ -1,0 +1,125 @@
+{
+  "schema_version": "portal.execution.maximum-data.e3-derived-metric-feasibility.v1",
+  "metrics": [
+    {
+      "metric_id": "source_health_envelope",
+      "target_field_id": "source_health",
+      "authoritative_inputs": ["manager-v2.envelope"],
+      "formula_id": "source_health_envelope",
+      "formula_version": "v1",
+      "delivery_class": "AVAILABLE_DERIVED_AT_PORTAL",
+      "current_status": "CURRENT_SCREEN_ENVELOPE_AVAILABLE",
+      "feasibility_reason": "uses only named envelope fields and does not infer source authority",
+      "required_next_action": "NONE",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "metric_id": "deployment_execution_quality",
+      "target_field_id": "execution_quality",
+      "authoritative_inputs": ["public.execution_sessions", "public.orders", "public.fills"],
+      "formula_id": "deployment_execution_quality",
+      "formula_version": "v1",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "current_status": "INPUTS_EXIST_WITHOUT_NAMED_BOUND_QUERY_SHAPES",
+      "feasibility_reason": "declared session, order and fill identities can support a provenance-carrying rollup after source-local bounded reads are qualified",
+      "required_next_action": "E5_NAMED_INPUT_QUERY_PLAN_AND_ORACLE",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "metric_id": "portfolio_capital_contribution",
+      "target_field_id": "portfolio_capital",
+      "authoritative_inputs": ["public.portfolios", "public.portfolio_allocations", "public.portfolio_capital_ledger", "public.account_reservations"],
+      "formula_id": "portfolio_capital_contribution",
+      "formula_version": "v1",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "current_status": "E2_EDGE_DERIVABLE_WITHOUT_PROFILE_SCOPED_PORTFOLIO_SNAPSHOT",
+      "feasibility_reason": "exact ledger and allocation inputs exist; profile scope must be carried from declared account/deployment inputs rather than inferred from an unscoped portfolio snapshot",
+      "required_next_action": "E5_BOUND_INPUT_READS_AND_FORMULA_ORACLE",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "metric_id": "alpha_activity_rollup",
+      "target_field_id": "alpha_activity",
+      "authoritative_inputs": ["public.strategy_deployments", "public.execution_sessions", "public.orders", "public.fills"],
+      "formula_id": "alpha_activity_rollup",
+      "formula_version": "v1",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "current_status": "TRADING_INPUTS_EXIST_PORTAL_ALPHA_MAPPING_MUST_BE_DECLARED",
+      "feasibility_reason": "the Portal owns alpha identity; Trading-System joins must use its declared strategy/deployment mapping and never heuristic matching",
+      "required_next_action": "E5_ALPHA_MAPPING_AND_BOUND_INPUT_READS",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "metric_id": "canary_live_fact_comparison",
+      "target_field_id": "canary_drift",
+      "authoritative_inputs": ["portal-control:profile-activation", "manager-v2.envelope"],
+      "formula_id": "canary_live_fact_comparison",
+      "formula_version": "v1",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "current_status": "CURRENT_CANARY_GOVERNANCE_OVER_LIVE_FACTS_EXISTS",
+      "feasibility_reason": "Canary has no fourth Trading-System profile and can only compare Portal control with the declared Live source profile",
+      "required_next_action": "E5_TYPED_COMPARISON_CONTRACT",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "metric_id": "dead_letter_safe_summary",
+      "target_field_id": "dead_letter_summary",
+      "authoritative_inputs": ["public.dead_letters"],
+      "formula_id": "dead_letter_safe_summary",
+      "formula_version": "v1",
+      "delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "current_status": "RAW_DEAD_LETTER_PAYLOAD_IS_UNSAFE",
+      "feasibility_reason": "safe counts and metadata require a field allowlist; raw payload must never cross the boundary",
+      "required_next_action": "E5_TYPED_REDACTION_ALLOWLIST",
+      "owner": "trading_system_operations_owner"
+    },
+    {
+      "metric_id": "deterministic_order_trace",
+      "target_field_id": "trade_replay",
+      "authoritative_inputs": ["authoritative-change-journal:required"],
+      "formula_id": "deterministic_order_trace",
+      "formula_version": "v1",
+      "delivery_class": "OWNER_ACTION_REQUIRED",
+      "current_status": "NO_GLOBAL_SEQUENCE_RETENTION_OR_CORRECTION_CONTRACT",
+      "feasibility_reason": "current order and fill rows cannot be transformed honestly into causal replay",
+      "required_next_action": "AUTHORITATIVE_CHANGE_JOURNAL",
+      "owner": "trading_system_event_owner"
+    },
+    {
+      "metric_id": "account_equity_chart",
+      "target_field_id": "account_equity_history",
+      "authoritative_inputs": ["public.account_equity_snapshots"],
+      "formula_id": "identity_series",
+      "formula_version": "v1",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "current_status": "INDEX_BACKED_TIME_KEYSET_AVAILABLE_WITHOUT_PUBLISHED_SCOPE_CONTRACT",
+      "feasibility_reason": "the source is a periodic snapshot history, so it can back a chart only with restate, profile and cursor semantics explicit",
+      "required_next_action": "E5_NAMED_SCOPE_CURSOR_AND_RESTATE_CONTRACT",
+      "owner": "trading_system_performance_owner"
+    },
+    {
+      "metric_id": "market_benchmark",
+      "target_field_id": "market_candles",
+      "authoritative_inputs": ["market-data:canonical-candle-history", "market-data:benchmark-series"],
+      "formula_id": "benchmark_from_declared_series",
+      "formula_version": "v1",
+      "delivery_class": "OWNER_ACTION_REQUIRED",
+      "current_status": "TYPED_CANDLE_AND_BENCHMARK_SOURCES_NOT_PUBLISHED_BY_TRADING_SYSTEM",
+      "feasibility_reason": "no benchmark identity, source clock or retained candle contract is proven in the Trading-System data surface",
+      "required_next_action": "MARKET_DATA_TYPED_ADAPTER",
+      "owner": "trading_system_market_owner"
+    },
+    {
+      "metric_id": "binding_exposure_verdict",
+      "target_field_id": "venue_accounts",
+      "authoritative_inputs": ["public.venue_accounts", "public.positions_v2", "public.order_pending_exposure"],
+      "formula_id": "binding_exposure_verdict",
+      "formula_version": "v1",
+      "delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "current_status": "CURRENT_INPUTS_EXIST_WITHOUT_VERSIONED_POSITION_HISTORY",
+      "feasibility_reason": "a current exposure verdict can be derived from declared binding and position inputs but must not claim historical exposure replay",
+      "required_next_action": "E5_NAMED_INPUT_QUERY_PLANS_AND_CURRENT_STATE_CONTRACT",
+      "owner": "portal_execution_edge_owner"
+    }
+  ]
+}

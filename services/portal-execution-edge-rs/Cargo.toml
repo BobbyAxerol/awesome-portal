@@ -30,6 +30,7 @@ members = [
   "crates/production-readiness",
   "crates/missing-capability-adapter",
   "crates/product-acceptance",
+  "crates/maximum-data-contract",
 ]
 resolver = "2"
 

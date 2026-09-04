@@ -1,0 +1,173 @@
+{
+  "schema_version": "portal.execution.maximum-data.e3-portal-downstream-work-orders.v1",
+  "work_orders": [
+    {
+      "work_order_id": "E5_DEPLOYMENT_POSITION_SESSION_READ",
+      "field_ids": ["deployment_current", "position_current", "session_current"],
+      "source_operation": "maximumDataDeploymentPageV1+maximumDataPositionPageV1+maximumDataExecutionSessionPageV1",
+      "resource_identity": "profile_id plus deployment_id/account_id/strategy_id as declared by the source relation",
+      "continuation_policy": "opaque named keyset continuation; no total-history cap; max upstream page 200 rows and 1 MiB",
+      "portal_storage_reducer": "current-state upsert by source primary key with profile lineage",
+      "empty_stale_gap_semantics": "empty means no recorded current row; stale or unavailable must remain visible; no event gap claim",
+      "delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "required_next_action": "qualify named profile/resource query plans and publish typed current-state DTOs",
+      "owner": "trading_system_read_path_owner"
+    },
+    {
+      "work_order_id": "E5_ORDER_FILL_CONDITIONAL_READ",
+      "field_ids": ["order_current", "fill_history", "conditional_legs"],
+      "source_operation": "maximumDataOrderPageV1+maximumDataFillPageV1+maximumDataConditionalOrderLegsV1",
+      "resource_identity": "profile_id plus order_id/group_id or declared time-keyset scope",
+      "continuation_policy": "opaque named keyset continuation; fill range traverses all retained rows; no replay claim",
+      "portal_storage_reducer": "orders current-state upsert; fills append by fill_id; conditional structure current-state upsert",
+      "empty_stale_gap_semantics": "empty means no recorded relation rows; correction and event gap remain typed unavailable until source journal exists",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "required_next_action": "publish named resource/time query contracts with correction boundary explicit",
+      "owner": "trading_system_read_path_owner"
+    },
+    {
+      "work_order_id": "E5_ACCOUNT_BINDING_CURRENT_READ",
+      "field_ids": ["account_current", "account_balances", "margin_balances", "account_sync", "broker_sync", "venue_accounts"],
+      "source_operation": "maximumDataAccountPageV1+maximumDataAccountBalancePageV1+maximumDataMarginBalancePageV1+maximumDataAccountSyncPageV1+maximumDataBrokerSyncPageV1+maximumDataVenueAccountPageV1",
+      "resource_identity": "profile_id plus account_id/binding_id/venue_account_id and source currency or instrument key",
+      "continuation_policy": "opaque named keyset continuation; bounded current-state pages; max upstream page 200 rows and 1 MiB",
+      "portal_storage_reducer": "current-state upsert by declared source composite key with account-parent integrity check",
+      "empty_stale_gap_semantics": "empty means no currently recorded balance, margin, sync or binding row; never infer zero or absent account",
+      "delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "required_next_action": "qualify named account/binding query plans and publish exact-decimal DTOs",
+      "owner": "trading_system_read_path_owner"
+    },
+    {
+      "work_order_id": "E5_RECONCILIATION_OPERATIONAL_READ",
+      "field_ids": ["reconciliation_findings", "dead_letter_summary"],
+      "source_operation": "maximumDataReconciliationFindingPageV1+maximumDataDeadLetterSummaryV1",
+      "resource_identity": "profile_id plus finding_id or dead-letter id",
+      "continuation_policy": "opaque named keyset continuation; dead-letter payload never crosses the contract boundary",
+      "portal_storage_reducer": "current lifecycle upsert by finding_id; redacted operational summary only",
+      "empty_stale_gap_semantics": "empty means no recorded finding or safe dead-letter metadata; acknowledgement evidence remains explicitly unavailable",
+      "delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "required_next_action": "qualify finding query plan and freeze dead-letter redaction allowlist",
+      "owner": "trading_system_operations_owner"
+    },
+    {
+      "work_order_id": "E5_COMMAND_TERMINAL_EVIDENCE_READ",
+      "field_ids": ["command_journal"],
+      "source_operation": "maximumDataCommandJournalPageV1",
+      "resource_identity": "profile_id plus command_id or accepted-at keyset",
+      "continuation_policy": "opaque named keyset continuation; max upstream page 200 rows and 1 MiB",
+      "portal_storage_reducer": "append terminal metadata by command_id with terminal evidence reference only",
+      "empty_stale_gap_semantics": "empty means no recorded command; it does not prove command authorization or successful execution",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "required_next_action": "freeze field allowlist and named command-scope DTO before publication",
+      "owner": "trading_system_command_owner"
+    },
+    {
+      "work_order_id": "E5_RISK_SIZING_EVIDENCE_READ",
+      "field_ids": ["risk_grants", "sizing_decisions"],
+      "source_operation": "maximumDataRiskGrantPageV1+maximumDataSizingDecisionPageV1",
+      "resource_identity": "profile_id plus risk_grant_id/sizing_decision_id and declared account/strategy scope",
+      "continuation_policy": "opaque named keyset continuation; no inferred signal-intent or correction stream",
+      "portal_storage_reducer": "append retained decision evidence by immutable source identifier when source semantics permit",
+      "empty_stale_gap_semantics": "empty means no recorded decision; no decision is not evidence that risk was bypassed",
+      "delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "required_next_action": "qualify named decision query plans and preserve source-owner event gaps",
+      "owner": "trading_system_read_path_owner"
+    },
+    {
+      "work_order_id": "E5_PERFORMANCE_HISTORY_READ",
+      "field_ids": ["account_equity_history", "performance_snapshot"],
+      "source_operation": "maximumDataAccountEquityHistoryV1+maximumDataPerformanceSnapshotHistoryV1",
+      "resource_identity": "profile_id plus account_id/deployment_id/instrument_id and timestamp keyset",
+      "continuation_policy": "opaque time keyset continuation across retained snapshots; restate semantics required",
+      "portal_storage_reducer": "append snapshots by id and timestamp; replace only with explicit restate lineage",
+      "empty_stale_gap_semantics": "empty means no recorded snapshot; snapshot history is not an event/replay stream",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "required_next_action": "publish scope-qualified cursor and valuation-mark provenance contract",
+      "owner": "trading_system_performance_owner"
+    },
+    {
+      "work_order_id": "E5_PORTFOLIO_CAPITAL_DERIVATION",
+      "field_ids": ["portfolio_capital"],
+      "source_operation": "maximumDataPortfolioCapitalV1",
+      "resource_identity": "profile_id plus portfolio_id and declared allocation/ledger/account inputs",
+      "continuation_policy": "bounded named input reads; no direct unscoped portfolio-equity snapshot",
+      "portal_storage_reducer": "derived current view with raw input lineage and formula revision retained",
+      "empty_stale_gap_semantics": "empty means no recorded capital movement or allocation; stale input yields typed partial result",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "required_next_action": "qualify named inputs and validate formula against source-owner oracle",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "work_order_id": "E5_ALPHA_ACTIVITY_DERIVATION",
+      "field_ids": ["alpha_activity", "execution_quality"],
+      "source_operation": "maximumDataAlphaActivityV1+maximumDataDeploymentExecutionQualityV1",
+      "resource_identity": "Portal alpha_id mapped explicitly to declared Trading-System strategy/deployment identities",
+      "continuation_policy": "bounded named source reads; no heuristic alpha-to-order matching",
+      "portal_storage_reducer": "derived view keyed by alpha_id with source lineage and formula revision",
+      "empty_stale_gap_semantics": "empty means no observed activity; partial/stale input propagates to the derived result",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "required_next_action": "freeze Portal alpha mapping and source-local derivation oracle",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "work_order_id": "E5_INSTRUMENT_MASTER_READ",
+      "field_ids": ["instrument_master"],
+      "source_operation": "maximumDataInstrumentMasterPageV1",
+      "resource_identity": "venue plus instrument_id",
+      "continuation_policy": "opaque named keyset continuation for reference data",
+      "portal_storage_reducer": "current reference upsert by instrument_id with source revision",
+      "empty_stale_gap_semantics": "empty means no recorded instrument master row; no symbol heuristic fallback",
+      "delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "required_next_action": "qualify named instrument query plan and exact-decimal metadata DTO",
+      "owner": "trading_system_read_path_owner"
+    },
+    {
+      "work_order_id": "E5_MARKET_CONTEXT_ADAPTER",
+      "field_ids": ["market_candles", "market_latest", "venue_calendar", "vnm_constraints"],
+      "source_operation": "maximumDataMarketCandleHistoryV1+maximumDataMarketLatestV1+maximumDataVenueCalendarV1+maximumDataVnmConstraintsV1",
+      "resource_identity": "venue, instrument_id, interval or effective session/constraint key",
+      "continuation_policy": "source-owned bounded history continuation and current observation cadence",
+      "portal_storage_reducer": "append candles by venue/instrument/interval/open time; current latest by observation key; effective-dated calendar and constraint views",
+      "empty_stale_gap_semantics": "source absence remains explicit and does not become zero market data or a synthetic venue session",
+      "delivery_class": "OWNER_ACTION_REQUIRED",
+      "required_next_action": "adapt typed Data Layer or market-service capabilities with clock, completeness and revision semantics",
+      "owner": "trading_system_market_owner"
+    },
+    {
+      "work_order_id": "E4_AUTHORITATIVE_EVENT_JOURNAL",
+      "field_ids": ["trade_replay"],
+      "source_operation": "maximumDataTradeReplayV1",
+      "resource_identity": "stream_id plus event_id/source_sequence and declared causal identities",
+      "continuation_policy": "snapshot high watermark plus durable tail resume only after source-owned global sequence and retention floor exist",
+      "portal_storage_reducer": "event append/dedupe by event_id with typed correction/delete and resnapshot behavior",
+      "empty_stale_gap_semantics": "current rows cannot be relabeled as replay; gap requires typed resnapshot",
+      "delivery_class": "OWNER_ACTION_REQUIRED",
+      "required_next_action": "publish authoritative change journal with global sequence, retention, correction and coverage",
+      "owner": "trading_system_event_owner"
+    },
+    {
+      "work_order_id": "E5_CANARY_DRIFT_CONTRACT",
+      "field_ids": ["canary_drift"],
+      "source_operation": "maximumDataCanaryDriftV1",
+      "resource_identity": "deployment_id plus declared Canary governance and Live source-profile binding",
+      "continuation_policy": "current comparison only; no fourth Trading-System profile and no event drift history claim",
+      "portal_storage_reducer": "current comparison upsert with both source timestamps and profile lineage",
+      "empty_stale_gap_semantics": "missing control or source facts remains typed partial/unavailable",
+      "delivery_class": "EXISTS_NOT_PUBLISHED",
+      "required_next_action": "freeze comparison DTO and all input source contracts",
+      "owner": "portal_execution_edge_owner"
+    },
+    {
+      "work_order_id": "E5_RESEARCH_ARTIFACT_LINKAGE",
+      "field_ids": ["research_artifact"],
+      "source_operation": "maximumDataResearchArtifactV1",
+      "resource_identity": "deployment_id plus immutable research_run_id/artifact_id",
+      "continuation_policy": "immutable typed reference only; never storage path or arbitrary artifact retrieve",
+      "portal_storage_reducer": "immutable reference append by artifact digest and deployment linkage",
+      "empty_stale_gap_semantics": "absence means linkage is not published, not that research does not exist",
+      "delivery_class": "OWNER_ACTION_REQUIRED",
+      "required_next_action": "publish signed artifact metadata and immutable deployment-to-research-run linkage",
+      "owner": "trading_system_artifact_owner"
+    }
+  ]
+}

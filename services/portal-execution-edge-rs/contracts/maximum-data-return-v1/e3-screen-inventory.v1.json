@@ -1,0 +1,169 @@
+{
+  "schema_version": "portal.execution.maximum-data.e3-screen-inventory.v1",
+  "screen_catalogue_contract": "portal.execution.screen-bff.v1",
+  "e2_semantic_registry_sha256": "sha256:c1886540c91e8e96219a12684e0b42651a061236128ab92f51442d0f56493477",
+  "e2_semantic_contract_sha256": "sha256:fa93683ed7c7cf1298b6e6943e93383a707f3beefe377df745fd909884f6dcac",
+  "screens": [
+    {
+      "screen_id": "PAPER_TRADING_SCREEN",
+      "operation_id": "executionPaperOverviewV1",
+      "response_contract": "execution.paper-overview.v1",
+      "read_capabilities": ["deployments.positions", "deployments.execution-quality", "sessions.current", "portal.entity-names"],
+      "required_surfaces": ["paper_overview"]
+    },
+    {
+      "screen_id": "SANDBOX_TRADING_SCREEN",
+      "operation_id": "executionSandboxOverviewV1",
+      "response_contract": "execution.sandbox-overview.v1",
+      "read_capabilities": ["deployments.positions", "reconciliation.current", "sessions.current", "portal.entity-names"],
+      "required_surfaces": ["sandbox_execution_loop"]
+    },
+    {
+      "screen_id": "LIVE_OPERATIONS_SCREEN",
+      "operation_id": "executionLiveOverviewV1",
+      "response_contract": "execution.live-overview.v1",
+      "read_capabilities": ["deployments.positions", "accounts.current", "sessions.current", "portal.entity-names"],
+      "required_surfaces": ["live_execution_loop"]
+    },
+    {
+      "screen_id": "EXECUTION_COMMAND_CENTER_SCREEN",
+      "operation_id": "executionCommandCenterSnapshot",
+      "response_contract": "execution.command-center-snapshot.v1",
+      "read_capabilities": ["ops.alerts", "ops.streams", "ops.redis-retention", "portal.activation", "portal.entity-names"],
+      "required_surfaces": ["command_center"]
+    },
+    {
+      "screen_id": "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+      "operation_id": "executionOperationsQueue",
+      "response_contract": "execution.operations-queue.v1",
+      "read_capabilities": ["portal.operations-workflow", "ops.findings", "ops.dead-letters", "portal.entity-names"],
+      "required_surfaces": ["operations_queue"]
+    },
+    {
+      "screen_id": "EXECUTION_INCIDENT_DETAIL_SCREEN",
+      "operation_id": "executionIncidentDetail",
+      "response_contract": "execution.incident-detail.v1",
+      "read_capabilities": ["portal.operations-workflow", "ops.trace-order", "ops.findings", "portal.entity-names"],
+      "required_surfaces": ["incident_detail"]
+    },
+    {
+      "screen_id": "EXECUTION_APPROVAL_INBOX_SCREEN",
+      "operation_id": "executionApprovalInbox",
+      "response_contract": "governance.approval-inbox.v1",
+      "read_capabilities": ["portal.governance", "portal.entity-names"],
+      "required_surfaces": ["approval_inbox"]
+    },
+    {
+      "screen_id": "EXECUTION_GATE_R1_REVIEW_SCREEN",
+      "operation_id": "executionGateR1Review",
+      "response_contract": "governance.r1-review.v1",
+      "read_capabilities": ["portal.governance", "deployments.execution-quality", "portal.entity-names"],
+      "required_surfaces": ["gate_r1"]
+    },
+    {
+      "screen_id": "EXECUTION_GATE_R2_REVIEW_SCREEN",
+      "operation_id": "executionGateR2Review",
+      "response_contract": "governance.r2-review.v1",
+      "read_capabilities": ["portal.governance", "accounts.current", "deployments.positions", "portal.entity-names"],
+      "required_surfaces": ["gate_r2"]
+    },
+    {
+      "screen_id": "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+      "operation_id": "executionPaperExitReview",
+      "response_contract": "governance.paper-exit-review.v1",
+      "read_capabilities": ["portal.governance", "deployments.execution-quality", "reconciliation.current", "portal.entity-names"],
+      "required_surfaces": ["paper_exit_review"]
+    },
+    {
+      "screen_id": "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "operation_id": "executionPaperWorkbenchV1",
+      "response_contract": "execution.paper-workbench.v1",
+      "read_capabilities": ["deployments.positions", "deployments.execution-quality", "orders.list", "orders.fills", "market.candles", "portal.entity-names", "portal.blocker-catalog"],
+      "required_surfaces": ["paper_workbench"]
+    },
+    {
+      "screen_id": "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+      "operation_id": "executionPaperWorkbenchVnmV1",
+      "response_contract": "execution.paper-workbench-vnm.v1",
+      "read_capabilities": ["deployments.positions", "deployments.execution-quality", "orders.list", "orders.fills", "market.candles", "portal.entity-names", "portal.blocker-catalog"],
+      "required_surfaces": ["vnm_execution_workbench"]
+    },
+    {
+      "screen_id": "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "operation_id": "executionSandboxCertification",
+      "response_contract": "execution.sandbox-certification.v1",
+      "read_capabilities": ["deployments.positions", "reconciliation.current", "accounts.current", "sessions.current", "portal.entity-names", "portal.blocker-catalog"],
+      "required_surfaces": ["sandbox_execution_loop"]
+    },
+    {
+      "screen_id": "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "operation_id": "executionCanaryControlRoom",
+      "response_contract": "execution.canary-control-room.v1",
+      "read_capabilities": ["portal.activation", "portal.governance", "deployments.positions", "accounts.current", "ops.alerts", "portal.entity-names", "portal.blocker-catalog"],
+      "required_surfaces": ["canary_execution_loop"]
+    },
+    {
+      "screen_id": "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "operation_id": "executionLiveFullOperations",
+      "response_contract": "execution.live-full-operations.v1",
+      "read_capabilities": ["deployments.positions", "orders.list", "orders.fills", "accounts.current", "reconciliation.current", "market.ticks", "portal.entity-names", "portal.blocker-catalog"],
+      "required_surfaces": ["live_execution_loop"]
+    },
+    {
+      "screen_id": "EXECUTION_FULL_BLOTTER_SCREEN",
+      "operation_id": "executionFullBlotterV1",
+      "response_contract": "execution.full-blotter.v1",
+      "read_capabilities": ["orders.list", "orders.fills", "orders.legs", "orders.trace", "portal.entity-names"],
+      "required_surfaces": ["full_blotter", "trade_replay"]
+    },
+    {
+      "screen_id": "EXECUTION_ALPHA_360_SCREEN",
+      "operation_id": "executionAlphaQueryAnalyticsV1",
+      "response_contract": "execution.query-analytics-envelope.v1",
+      "read_capabilities": ["ops.alpha-activity", "deployments.execution-quality", "deployments.contribution", "market.candles", "portal.entity-names"],
+      "required_surfaces": ["alpha_fleet", "alpha_360"]
+    },
+    {
+      "screen_id": "EXECUTION_PORTFOLIO_360_SCREEN",
+      "operation_id": "executionPortfolioQueryAnalyticsV1",
+      "response_contract": "execution.query-analytics-envelope.v1",
+      "read_capabilities": ["deployments.contribution", "portfolios.correlation-samples", "deployments.positions", "portal.entity-names"],
+      "required_surfaces": ["portfolio_360"]
+    },
+    {
+      "screen_id": "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+      "operation_id": "executionAccountBroker360V1",
+      "response_contract": "execution.account-broker-360.v1",
+      "read_capabilities": ["bindings.snapshot", "bindings.exposure-verdict", "accounts.current", "reconciliation.current", "portal.entity-names"],
+      "required_surfaces": ["account_360", "accounts_and_bindings"]
+    },
+    {
+      "screen_id": "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
+      "operation_id": "executionOperatorTaskCatalogue",
+      "response_contract": "execution.command-tasks.v1",
+      "read_capabilities": ["ops.command-journal", "portal.activation", "portal.entity-names"],
+      "required_surfaces": ["shell_registry"]
+    },
+    {
+      "screen_id": "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+      "operation_id": "executionNewApprovalRequestV1",
+      "response_contract": "governance.approval-create.v1",
+      "read_capabilities": ["portal.governance", "portal.entity-names"],
+      "required_surfaces": ["approval_create"]
+    },
+    {
+      "screen_id": "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+      "operation_id": "executionGateLiveReviewV1",
+      "response_contract": "governance.live-review.v1",
+      "read_capabilities": ["portal.governance", "deployments.execution-quality", "accounts.current", "portal.entity-names"],
+      "required_surfaces": ["live_gate_review"]
+    },
+    {
+      "screen_id": "EXECUTION_WAIVERS_REGISTER_SCREEN",
+      "operation_id": "executionWaiversRegisterV1",
+      "response_contract": "governance.conditions-register.v1",
+      "read_capabilities": ["portal.governance", "portal.entity-names"],
+      "required_surfaces": ["conditions_waivers"]
+    }
+  ]
+}

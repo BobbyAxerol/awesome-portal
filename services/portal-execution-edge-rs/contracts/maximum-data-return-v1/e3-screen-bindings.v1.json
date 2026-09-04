@@ -1,0 +1,28 @@
+{
+  "schema_version": "portal.execution.maximum-data.e3-screen-bindings.v1",
+  "bindings": [
+    {"screen_id": "PAPER_TRADING_SCREEN", "field_ids": ["source_health", "deployment_current", "position_current", "session_current", "execution_quality"]},
+    {"screen_id": "SANDBOX_TRADING_SCREEN", "field_ids": ["source_health", "deployment_current", "position_current", "session_current", "reconciliation_findings"]},
+    {"screen_id": "LIVE_OPERATIONS_SCREEN", "field_ids": ["source_health", "deployment_current", "position_current", "session_current", "account_current"]},
+    {"screen_id": "EXECUTION_COMMAND_CENTER_SCREEN", "field_ids": ["source_health", "portal_activation", "command_journal", "dead_letter_summary", "reconciliation_findings", "canary_drift"]},
+    {"screen_id": "EXECUTION_OPERATIONS_QUEUE_SCREEN", "field_ids": ["portal_governance", "reconciliation_findings", "dead_letter_summary", "command_journal"]},
+    {"screen_id": "EXECUTION_INCIDENT_DETAIL_SCREEN", "field_ids": ["portal_governance", "reconciliation_findings", "order_current", "command_journal", "trade_replay"]},
+    {"screen_id": "EXECUTION_APPROVAL_INBOX_SCREEN", "field_ids": ["portal_governance", "source_health"]},
+    {"screen_id": "EXECUTION_GATE_R1_REVIEW_SCREEN", "field_ids": ["portal_governance", "execution_quality", "sizing_decisions", "research_artifact"]},
+    {"screen_id": "EXECUTION_GATE_R2_REVIEW_SCREEN", "field_ids": ["portal_governance", "risk_grants", "account_current", "position_current"]},
+    {"screen_id": "EXECUTION_PAPER_EXIT_REVIEW_SCREEN", "field_ids": ["portal_governance", "execution_quality", "reconciliation_findings", "account_equity_history"]},
+    {"screen_id": "EXECUTION_PAPER_WORKBENCH_SCREEN", "field_ids": ["source_health", "deployment_current", "position_current", "order_current", "fill_history", "execution_quality", "account_equity_history", "performance_snapshot", "instrument_master", "market_candles"]},
+    {"screen_id": "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN", "field_ids": ["source_health", "deployment_current", "position_current", "order_current", "fill_history", "execution_quality", "instrument_master", "market_candles", "venue_calendar", "vnm_constraints"]},
+    {"screen_id": "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "field_ids": ["source_health", "deployment_current", "position_current", "session_current", "reconciliation_findings", "account_current", "account_balances", "account_sync"]},
+    {"screen_id": "EXECUTION_CANARY_CONTROL_ROOM_SCREEN", "field_ids": ["source_health", "portal_activation", "portal_governance", "deployment_current", "position_current", "account_current", "market_latest", "canary_drift"]},
+    {"screen_id": "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "field_ids": ["source_health", "deployment_current", "position_current", "order_current", "fill_history", "account_current", "account_balances", "reconciliation_findings", "market_latest"]},
+    {"screen_id": "EXECUTION_FULL_BLOTTER_SCREEN", "field_ids": ["source_health", "order_current", "fill_history", "conditional_legs", "trade_replay"]},
+    {"screen_id": "EXECUTION_ALPHA_360_SCREEN", "field_ids": ["source_health", "alpha_activity", "execution_quality", "performance_snapshot", "account_equity_history", "market_candles", "research_artifact"]},
+    {"screen_id": "EXECUTION_PORTFOLIO_360_SCREEN", "field_ids": ["source_health", "portfolio_capital", "account_equity_history", "position_current", "instrument_master"]},
+    {"screen_id": "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "field_ids": ["source_health", "account_current", "account_balances", "margin_balances", "account_sync", "broker_sync", "venue_accounts", "position_current", "reconciliation_findings"]},
+    {"screen_id": "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN", "field_ids": ["portal_activation", "command_journal", "source_health"]},
+    {"screen_id": "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN", "field_ids": ["portal_governance", "source_health"]},
+    {"screen_id": "EXECUTION_GATE_LIVE_REVIEW_SCREEN", "field_ids": ["portal_governance", "execution_quality", "account_current", "risk_grants"]},
+    {"screen_id": "EXECUTION_WAIVERS_REGISTER_SCREEN", "field_ids": ["portal_conditions", "portal_governance"]}
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema_version": "portal.execution.maximum-data.e3-state-fixtures.v1",
+  "fixtures": [
+    {
+      "fixture_id": "populated-source-health",
+      "state": "POPULATED",
+      "screen_id": "PAPER_TRADING_SCREEN",
+      "field_id": "source_health",
+      "expected_delivery_class": "AVAILABLE_DERIVED_AT_PORTAL",
+      "expected_source_status": "AVAILABLE",
+      "expected_consumer_semantics": "render named as-of and freshness metadata without inferring history"
+    },
+    {
+      "fixture_id": "empty-account-balance",
+      "state": "EMPTY",
+      "screen_id": "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+      "field_id": "account_balances",
+      "expected_delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "expected_source_status": "SOURCE_EMPTY_COMPLETE",
+      "expected_consumer_semantics": "show no currently recorded balance row and never synthesize a zero balance"
+    },
+    {
+      "fixture_id": "partial-execution-quality",
+      "state": "PARTIAL",
+      "screen_id": "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "field_id": "execution_quality",
+      "expected_delivery_class": "EXISTS_NOT_PUBLISHED",
+      "expected_source_status": "PARTIAL",
+      "expected_consumer_semantics": "withhold derived rollup until every named input is fresh or return typed partial provenance"
+    },
+    {
+      "fixture_id": "stale-source-health",
+      "state": "STALE",
+      "screen_id": "LIVE_OPERATIONS_SCREEN",
+      "field_id": "source_health",
+      "expected_delivery_class": "AVAILABLE_DERIVED_AT_PORTAL",
+      "expected_source_status": "STALE",
+      "expected_consumer_semantics": "render stale state with source clock; do not replace it with last known healthy status"
+    },
+    {
+      "fixture_id": "gap-trade-replay",
+      "state": "GAP",
+      "screen_id": "EXECUTION_FULL_BLOTTER_SCREEN",
+      "field_id": "trade_replay",
+      "expected_delivery_class": "OWNER_ACTION_REQUIRED",
+      "expected_source_status": "SOURCE_OWNER_GAP",
+      "expected_consumer_semantics": "do not reconstruct replay from current rows; surface the authoritative journal owner action"
+    },
+    {
+      "fixture_id": "duplicate-fill",
+      "state": "DUPLICATE",
+      "screen_id": "EXECUTION_FULL_BLOTTER_SCREEN",
+      "field_id": "fill_history",
+      "expected_delivery_class": "EXISTS_NOT_PUBLISHED",
+      "expected_source_status": "DEDUPLICATE_BY_FILL_ID_REQUIRED",
+      "expected_consumer_semantics": "future projection appends at most one retained fill per fill_id and preserves duplicate evidence"
+    },
+    {
+      "fixture_id": "correction-performance-snapshot",
+      "state": "CORRECTION",
+      "screen_id": "EXECUTION_ALPHA_360_SCREEN",
+      "field_id": "performance_snapshot",
+      "expected_delivery_class": "EXISTS_BUT_NOT_SAFE_TO_EXPOSE",
+      "expected_source_status": "RESTATE_LINEAGE_REQUIRED",
+      "expected_consumer_semantics": "a corrected snapshot needs explicit restate lineage; current E2 evidence cannot silently overwrite history"
+    },
+    {
+      "fixture_id": "next-page-fill-history",
+      "state": "NEXT_PAGE",
+      "screen_id": "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "field_id": "fill_history",
+      "expected_delivery_class": "EXISTS_NOT_PUBLISHED",
+      "expected_source_status": "OPAQUE_KEYSET_CONTINUATION_REQUIRED",
+      "expected_consumer_semantics": "continue through source-issued opaque keysets with no total-history cap"
+    }
+  ]
+}
