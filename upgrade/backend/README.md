@@ -25,7 +25,8 @@ Chúng không thay thế phase hoặc exit gate trong
   census proved 99 current relations / 1,387 columns, reconciled 96 source
   objects plus three deployed overlays and closed every classification gate.
   It created no Portal DB client, route, cache, listener or business-row
-  export. The next phase is E2 semantic/authority proof, not an activation.
+  export. **E2 semantic/authority proof is now owner-approved and in progress;**
+  it remains a source-owned read-only audit, not an activation.
   The mandatory journal is
   [EX-BE-02C in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
 

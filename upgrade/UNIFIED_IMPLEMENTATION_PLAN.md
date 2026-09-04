@@ -2137,7 +2137,7 @@ does not change Portal runtime configuration, routes or deployment state.
 
 ### EX-BE-02C — Maximum Data Discovery, Publication & Return (2026-09-04)
 
-**Status:** **EX_DP_01_COMPLETE / DISCOVERY_COMPLETE_FOR_OBSERVED_RUNTIME_TUPLE / OWNER_APPROVED_READ_ONLY_ALL_APPLICATION_TABLES / EXACT_READ_SCOPE_GRANT_APPLIED / NO_SERVICE_RUNTIME_MUTATION**.
+**Status:** **EX_DP_01_COMPLETE / EX_DP_02_IN_PROGRESS / OWNER_APPROVED_READ_ONLY_ALL_APPLICATION_TABLES / EXACT_READ_SCOPE_GRANT_APPLIED / NO_SERVICE_RUNTIME_MUTATION**.
 
 **Governing request:** [Portal Execution Edge — Maximum Data Discovery,
 Publication & Return Request v1](../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md).
@@ -2416,19 +2416,48 @@ with exit 3 / 99 inaccessible. Its temporary output, isolated DB container,
 two Rust test images and exact temporary directories were removed. Docker
 inventory moved from 29 images / 18.33 GB / 58 containers to 27 images /
 16.10 GB / 57 containers; shared unscoped BuildKit cache was intentionally not
-broad-pruned. The full Trading-System workspace suite still has a pre-existing
-missing `contracts/golden/phase5` fixture before this adapter; that baseline
-issue is reported, not relabelled as EX-DP-01 debt.
+broad-pruned. The subsequent full-workspace fixture check corrected an earlier
+mount mistake: both `contracts/golden/phase5` inputs already existed, and the
+correct repository-root Rust 1.83 invocation passed **18/18**. No fixture was
+created or changed.
 
 No Portal route, cache/projection, UI/BFF data call, source facade deployment,
-command, Event/SSE, Redis/broker or business data changed. E2 is the next
-separate approval: it must establish semantic authority, retention,
-corrections, value/profile coverage and business query-plan evidence before a
-typed return contract is frozen. There is no internal E0/E1 technical debt.
+command, Event/SSE, Redis/broker or business data changed. There is no internal
+E0/E1 technical debt.
 
 #### EX-DP-02 — E2 domain semantics and authority audit
 
-**Status:** **NOT_APPROVED**.
+**Status:** **IN_PROGRESS / BOBBY_APPROVED / READ_ONLY_ALL_CURRENT_APPLICATION_RELATIONS / NO_SERVICE_RUNTIME_MUTATION**.
+
+**Approval, implementation and decision boundary (2026-09-04):** Bobby
+approved the semantic/authority/retention/correction/query-plan work named in
+this stage. It is not a prerequisite outside E2; it is E2 itself. Source work
+continues in the isolated Trading-System
+`feat/portal-execution-data-discovery` worktree. It adds a separate
+owner-only Rust `portal-source-semantics` CLI beside the completed E1 census,
+not a Portal database client, public route or source listener.
+
+The CLI accepts only a private read-only DSN file reference and existing local
+read group. It runs a compiled domain/relation/query registry inside one
+bounded `REPEATABLE READ READ ONLY` transaction. Allowed reads are fixed
+catalog metadata, fixed aggregate-only semantic probes and fixed
+`EXPLAIN (FORMAT JSON)` planner probes for named keyset shapes. It does not
+accept caller SQL/relation/filter/profile input, return a business row, run
+`EXPLAIN ANALYZE`, write data, alter a grant, query broker/Redis payloads or
+start a listener. All result artifacts stay in the private owner store:
+`DOMAIN_SEMANTICS_MATRIX.json`, `RELATION_SEMANTICS_CATALOG.csv`,
+`QUERY_PLAN_EVIDENCE.json`, `SOURCE_OWNER_GAPS.json` and a digest manifest.
+
+**E2 invariants and evidence plan:** every request-minimum domain must receive
+an explicit `DIRECT`, `EDGE_DERIVED`, `PORTAL_DERIVED`, `CURRENT_STATE_ONLY`,
+`UNSAFE` or `SOURCE_OWNER_GAP` disposition with authority, identity/tie-break,
+source/effective clock, decimal/currency policy, profile/lineage, retention,
+empty, mutation and correction semantics. The Rust registry/fixed-query/
+redaction/time-decimal tests, isolated populated/empty/corrected/gap fixture,
+live transaction/identity proof, aggregate-only scan and each named planner
+probe must pass. A semantic gap blocks E2; a proven absent source is one
+typed owner action. No event/replay contract, route, deployment or Portal
+consumer can be activated here.
 
 **Goal:** prove which censused facts can truthfully power each execution
 domain, including current/history/event distinctions, lineage, retention,

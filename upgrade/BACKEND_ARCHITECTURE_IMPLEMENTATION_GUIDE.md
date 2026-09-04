@@ -660,8 +660,9 @@ deep-dive → ADR → slice → evidence discipline documented above.
   plus three deployed runtime overlays and closed all E1 classification gates.
   The single bounded full-scope capture took 265 ms; no row export, route,
   cache, command, Event/SSE or deployment was activated. See EX-BE-02C in the
-  Unified Plan for the private evidence digests, reversible two-relation read
-  ACL and E2 semantic boundary.
+  Unified Plan for the private evidence digests and reversible two-relation
+  read ACL. E2 semantic/authority audit is now owner-approved and in progress;
+  it still creates no Portal route or runtime activation.
 
 - Backend requests R1–R15 from `apps/portal/registry/FRONTEND_HANDOFF.md`
   §8.3 are **all closed** — the authoritative list lives there. Highlights:
