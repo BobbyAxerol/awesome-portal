@@ -2137,7 +2137,7 @@ does not change Portal runtime configuration, routes or deployment state.
 
 ### EX-BE-02C — Maximum Data Discovery, Publication & Return (2026-09-04)
 
-**Status:** **PRE_PHASE_ALIGNMENT_COMPLETE / EX_DP_01_AWAITS_EXPLICIT_OWNER_APPROVAL / NO_RUNTIME_MUTATION**.
+**Status:** **EX_DP_01_COMPLETE / DISCOVERY_COMPLETE_FOR_OBSERVED_RUNTIME_TUPLE / OWNER_APPROVED_READ_ONLY_ALL_APPLICATION_TABLES / EXACT_READ_SCOPE_GRANT_APPLIED / NO_SERVICE_RUNTIME_MUTATION**.
 
 **Governing request:** [Portal Execution Edge — Maximum Data Discovery,
 Publication & Return Request v1](../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md).
@@ -2260,7 +2260,56 @@ so Docker/BuildKit cleanup is not applicable and no cleanup was performed.
 
 #### EX-DP-01 — E0/E1 deployed truth and maximum source delta census
 
-**Status:** **READY_FOR_OWNER_APPROVAL**.
+**Status:** **COMPLETE / DISCOVERY_COMPLETE_FOR_OBSERVED_RUNTIME_TUPLE / OWNER_APPROVED_READ_ONLY_ALL_APPLICATION_TABLES / EXACT_READ_SCOPE_GRANT_APPLIED / NO_SERVICE_RUNTIME_MUTATION**.
+
+**Approval, implementation geography and decision boundary (2026-09-04):**
+Bobby approved E0/E1, including read-only inspection of every Trading System
+application table and view. Portal implementation/evidence work remains on
+this branch. Trading System source work is isolated at
+/home/bobby/.worktrees/trading-system-portal-execution-data-discovery on
+feat/portal-execution-data-discovery, forked from the clean local dev revision
+ed32039b3ec4d9eb9605a09e1d24279aa26760ed. The detached canonical Trading
+System checkout and the existing Manager-facade campaign worktree are not
+modified.
+
+The new collector is a Trading-System-owned Rust adapter/one-shot CLI, not a
+Portal Edge database client and not a new listener. It takes a private
+read-only DSN through a secret file reference (the process environment carries
+only the file path, never the credential value), opens one REPEATABLE
+READ READ ONLY transaction with explicit statement/lock/idle bounds, executes
+only compiled pg_catalog/information_schema/statistics queries, and writes
+sanitized metadata/count/estimate/digest artifacts. It has no generic SQL
+argument, no row export, no credential logging, no DDL/DML, no broker/Redis
+payload access and no network listener. The pure trading-core crate remains
+database-free; the adapter lives beside it in the Rust workspace and may reuse
+canonical digest primitives only.
+
+E0 captures actual release/image/config evidence separately from source
+checkout state. E1 may use the dedicated read-only role to cover all current
+application schemas, tables, views and materialized views, but expensive
+full-table scans, raw rows and data-quality aggregation are deferred to their
+named E2 semantic/quality probes. Relation size and cardinality use catalog
+statistics/estimates first, so the census remains bounded and does not compete
+with the trading workload. Future Portal calls remain a typed, source-owned
+capability decision in EX-DP-04/05; this phase creates no Portal route.
+
+**Test gates:** unit/golden tests for deterministic classification, redaction,
+query allowlist and manifest digest; a negative no-DSN/no-unsafe-argument
+matrix; live read-only role/transaction/privilege proof; actual catalog
+reconciliation against the checked-in ownership baseline; artifact schema,
+secret-shape and no-raw-row scans; measured bounded catalog-transaction
+latency (not a business-row query plan); and source/Portal release-manifest
+capture. Any failed read-only, redaction, classification or reconciliation
+test blocks E1 closure.
+
+**Rollback:** remove only the new unpublished Rust collector, isolated test
+output and exact secure evidence directory. There is no migration, runtime
+route, image, source-data mutation or container restart to roll back. The only
+authorization mutation is the exact current-schema read extension recorded in
+the Trading-System evidence; it rolls back with `REVOKE SELECT` on its two
+relations followed by `REVOKE USAGE` on `portal_command`. A truly inaccessible
+source is a typed owner/identity item; an accessible but unclassified source
+keeps E1 open.
 
 **Goal:** bind later conclusions to the actually deployed release tuple, then
 perform a read-only maximum-source census that starts from — but is not limited
@@ -2305,9 +2354,77 @@ inaccessible candidate has an explicit source/identity decision; and no raw
 business row or secret enters Git.
 
 **Rollback/debt:** remove only exact EX-DP-01 temporary scan artifacts on a
-failed validation. No runtime/data mutation exists to roll back. There is no
-internal debt on closure; an external producer/permission absence is one typed
-source-owner gap, while an accessible unclassified source blocks closure.
+failed validation. The only authorization mutation is the recorded,
+current-schema two-relation read extension; its exact rollback is two
+`REVOKE SELECT` statements followed by `REVOKE USAGE` on `portal_command`.
+There is no internal debt on closure; an external producer/permission absence
+is one typed source-owner gap, while an accessible unclassified source blocks
+closure.
+
+**Incremental E0/E1 evidence (2026-09-04, metadata-only):** the configured
+Manager facade login/group was proved inside `REPEATABLE READ READ ONLY` with
+97 selectable `public` relations, but has neither `USAGE` nor `SELECT`
+coverage for the discovered `portal_command` application schema. This is a
+typed `SOURCE_IDENTITY_SCOPE_MISMATCH`, not a claim that the schema is empty
+or out of scope. No business row, DSN, secret or runtime mutation was involved.
+EX-DP-01 continues with the source-owned Rust collector, but cannot close
+until an all-application-schema read-only identity is supplied or a separately
+recorded reversible extension of the read group has been performed. It will
+not substitute a command-capable or superuser identity.
+
+**Closure record (2026-09-04):** EX-DP-01 is **DISCOVERY_COMPLETE for the
+observed runtime tuple**. E0 is captured in the private Trading-System
+`DEPLOYED_RUNTIME_MANIFEST.json` (SHA-256
+`49f8a7121cb4a3e8da5b644769e8c31497b56b31c460f694d3df8ac320471dc9`): the
+actual Trading System executor/database, Manager-v2 Paper/Sandbox/Live
+facades, Portal Edge, Source Proxy and projection-store image/config tuple is
+recorded separately from either checkout. The manifest deliberately labels
+event/high-watermark/retention, canonical migration ledger and Control API
+facts it did not observe as unasserted rather than guessing them.
+
+E1 used the isolated Trading-System Rust `portal-source-census` owner CLI on
+`feat/portal-execution-data-discovery`, never a Portal DB client or network
+listener. It performs only fixed PostgreSQL catalog/statistics reads in one
+bounded `REPEATABLE READ READ ONLY` transaction. The canonical private
+evidence package is `all-schema-census-002`: collector manifest SHA-256
+`1a13355a28e8ec40c83b74cb53e54b1916b755b67fdc45696b7304473d3a10cf`, overall
+evidence manifest SHA-256
+`0b198ad475fdbd3b1cdea275f1f36016971be1e267792ce1b0151e5e6e3c06e1`.
+The source implementation is pinned at Trading-System commit
+`c44e7adb57d09cfce4ac0973101545643bfd5b0a` on that branch.
+It contains only metadata/digests and proves 99 current application relations,
+1,387 columns and 255 source-operation references. Reconciliation is 96
+source-baseline objects plus three hash-bound deployed runtime overlays; there
+are zero baseline-missing, unowned or kind-mismatch relations. Every E1
+classification gate is zero, including inaccessible relation and identity
+scope gap.
+
+The all-current-relation read proof uses the existing facade login with its
+intended local read group. The only authorization change was the exact,
+reversible current-schema extension for the two `portal_command` relations;
+it has zero INSERT/UPDATE/DELETE/TRUNCATE privilege, no default privilege, no
+role membership, DDL/DML, runtime restart or route activation. Its rollback is
+the recorded two-table `REVOKE SELECT` followed by `REVOKE USAGE` on
+`portal_command`.
+
+Verification passed: Rust 1.83 focused tests **7/7**, strict Clippy, format
+check, ownership generator byte-for-byte regeneration at 96 objects, isolated Timescale
+integration, artifact JSON/permission/redaction scans and live full-scope
+catalog capture. The live bounded transaction completed in **265 ms** with
+99/99 readable; a no-local-role negative completed in 322 ms and failed closed
+with exit 3 / 99 inaccessible. Its temporary output, isolated DB container,
+two Rust test images and exact temporary directories were removed. Docker
+inventory moved from 29 images / 18.33 GB / 58 containers to 27 images /
+16.10 GB / 57 containers; shared unscoped BuildKit cache was intentionally not
+broad-pruned. The full Trading-System workspace suite still has a pre-existing
+missing `contracts/golden/phase5` fixture before this adapter; that baseline
+issue is reported, not relabelled as EX-DP-01 debt.
+
+No Portal route, cache/projection, UI/BFF data call, source facade deployment,
+command, Event/SSE, Redis/broker or business data changed. E2 is the next
+separate approval: it must establish semantic authority, retention,
+corrections, value/profile coverage and business query-plan evidence before a
+typed return contract is frozen. There is no internal E0/E1 technical debt.
 
 #### EX-DP-02 — E2 domain semantics and authority audit
 

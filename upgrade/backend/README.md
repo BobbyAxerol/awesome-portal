@@ -20,8 +20,12 @@ Chúng không thay thế phase hoặc exit gate trong
 - [Maximum Data Discovery, Publication & Return Request v1](../../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md)
   — **governing delta-discovery request, seven owner-approved EX-DP phases.**
   It uses N18–N29, the current Manager-v2 plane and data-activation evidence
-  as baseline rather than replacing them. EX-DP-01 is not started: it awaits
-  an explicit owner approval for read-only deployed-truth/source census.
+  as baseline rather than replacing them. **EX-DP-01/E0–E1 is complete for the
+  observed runtime tuple:** the Trading-System-owned Rust metadata-only
+  census proved 99 current relations / 1,387 columns, reconciled 96 source
+  objects plus three deployed overlays and closed every classification gate.
+  It created no Portal DB client, route, cache, listener or business-row
+  export. The next phase is E2 semantic/authority proof, not an activation.
   The mandatory journal is
   [EX-BE-02C in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
 

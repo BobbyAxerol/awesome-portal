@@ -653,6 +653,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
 
+- **EX-DP-01 deployed truth and source census closed (2026-09-04):** E0/E1
+  now has a private digest-bound deployed runtime tuple and a source-owned Rust
+  catalog census, not a Portal direct-DB path. It captured 99 current
+  application relations / 1,387 columns, reconciled 96 source-baseline objects
+  plus three deployed runtime overlays and closed all E1 classification gates.
+  The single bounded full-scope capture took 265 ms; no row export, route,
+  cache, command, Event/SSE or deployment was activated. See EX-BE-02C in the
+  Unified Plan for the private evidence digests, reversible two-relation read
+  ACL and E2 semantic boundary.
+
 - Backend requests R1–R15 from `apps/portal/registry/FRONTEND_HANDOFF.md`
   §8.3 are **all closed** — the authoritative list lives there. Highlights:
   typed alpha/capabilities schemas; series envelope (`source_rows`,
