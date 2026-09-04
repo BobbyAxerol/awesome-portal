@@ -22,6 +22,15 @@ export interface SharedReadScope {
   principalRole: string;
   adapterRevision: string;
   requestPath: string;
+  /**
+   * A named, source-qualified operation may be stricter than the cell-wide
+   * defaults.  These values are part of the server-owned scope and never come
+   * from a browser query.  Omitting them preserves the existing N21 policy.
+   */
+  admission?: Readonly<{
+    sourceMaximumConcurrency: number;
+    profileMaximumConcurrency: number;
+  }>;
 }
 
 export interface SharedReadMetadata {
@@ -229,12 +238,14 @@ export class ExecutionSharedReadRepository {
     ownerId: string,
   ): Promise<{ kind: "ACCEPTED"; waitMs: number } | { kind: "DENIED"; reasonCode: "N21_SHARED_CONCURRENCY_EXHAUSTED" | "N21_SHARED_RATE_BUDGET_EXHAUSTED" }> {
     const maximumRps = this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND;
-    const maximumConcurrency = this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY;
-    const scopes: Array<["SOURCE" | "PROFILE", string]> = [
-      ["SOURCE", scope.sourceId],
-      ["PROFILE", `${scope.sourceId}:${scope.profileId}`],
+    const defaultMaximumConcurrency = this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY;
+    const sourceMaximumConcurrency = scope.admission?.sourceMaximumConcurrency ?? defaultMaximumConcurrency;
+    const profileMaximumConcurrency = scope.admission?.profileMaximumConcurrency ?? defaultMaximumConcurrency;
+    const scopes: Array<["SOURCE" | "PROFILE", string, number]> = [
+      ["SOURCE", scope.sourceId, sourceMaximumConcurrency],
+      ["PROFILE", `${scope.sourceId}:${scope.profileId}`, profileMaximumConcurrency],
     ];
-    for (const [kind, key] of scopes) {
+    for (const [kind, key, maximumConcurrency] of scopes) {
       await client.query(
         `INSERT INTO execution_shared_admission_state
            (scope_kind,scope_key,maximum_rps,maximum_concurrency,next_permit_at,updated_at)
@@ -266,8 +277,8 @@ export class ExecutionSharedReadRepository {
       [scope.sourceId, scope.profileId],
     );
     if (
-      counts.rows[0].source_count >= maximumConcurrency ||
-      counts.rows[0].profile_count >= maximumConcurrency
+      counts.rows[0].source_count >= sourceMaximumConcurrency ||
+      counts.rows[0].profile_count >= profileMaximumConcurrency
     ) {
       return { kind: "DENIED", reasonCode: "N21_SHARED_CONCURRENCY_EXHAUSTED" };
     }
@@ -352,7 +363,15 @@ function validateScope(scope: SharedReadScope): void {
     !SOURCE_ID.test(scope.sourceId) || !PROFILE_ID.test(scope.profileId) ||
     !IDENTIFIER.test(scope.workspaceId) || !IDENTIFIER.test(scope.principalId) ||
     !IDENTIFIER.test(scope.principalRole) || !IDENTIFIER.test(scope.adapterRevision) ||
-    scope.requestPath.length < 1 || Buffer.byteLength(scope.requestPath, "utf8") > 8_192
+    scope.requestPath.length < 1 || Buffer.byteLength(scope.requestPath, "utf8") > 8_192 ||
+    (scope.admission !== undefined && (
+      !Number.isInteger(scope.admission.sourceMaximumConcurrency) ||
+      !Number.isInteger(scope.admission.profileMaximumConcurrency) ||
+      scope.admission.sourceMaximumConcurrency < 1 ||
+      scope.admission.profileMaximumConcurrency < 1 ||
+      scope.admission.sourceMaximumConcurrency > 512 ||
+      scope.admission.profileMaximumConcurrency > 512
+    ))
   ) throw new Error("N21 shared-read scope is invalid");
 }
 

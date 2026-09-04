@@ -10,8 +10,8 @@ EDS-00 turns the accepted EX-DP-07 return pack into one audited, sanitized
 Portal baseline without treating it as a live data query. The Control API now
 serves `GET /api/v1/execution/runtime-manifest` behind the normal Portal
 session/workspace boundary. The endpoint returns only build/source readiness
-metadata; it does not call the Edge, activate a profile, or assert that a
-named product BFF operation is already live.
+metadata; it does not call the Edge or activate a profile. At this baseline
+commit it did not assert that a named product BFF operation was already live.
 
 The immutable baseline pins:
 
@@ -24,10 +24,11 @@ The immutable baseline pins:
 - measured read policy: Paper=1, Sandbox=1, Live=2 concurrent named pages;
 - current-page-only semantics and the four explicit external evidence gates.
 
-`runtime_delivery.state=EDS_00_BASELINE_ONLY` and every profile declares
-`portal_bff_delivery=NOT_YET_PUBLISHED`. This is intentional: it prevents a
-metadata endpoint from accidentally claiming a deployed product or refreshing
-the remote service on page load.
+At EDS-00, `runtime_delivery.state=EDS_00_BASELINE_ONLY` and every profile
+declared `portal_bff_delivery=NOT_YET_PUBLISHED`. EDS-01 subsequently changes
+only that truthful publication metadata to its fixed E5 operation; the
+endpoint remains non-probing and never refreshes the remote service on page
+load.
 
 ## Boundary retained
 
@@ -60,8 +61,9 @@ gates already present in the accepted E7 pack, not deferred implementation.
 
 ## Next phase
 
-**EDS-01** replaces only `named_portal_operation=NOT_YET_PUBLISHED` for the
-first E5 operation, `maximumDataDeploymentPageV1`. It must reuse the existing
-deployment-bound mTLS and short-lived `execution:manager-v2:read` assertion,
-with a fixed server-owned relation/field map. It must not modify the intake
-baseline or activate a runtime profile.
+**EDS-01** subsequently closed that exact change for
+`maximumDataDeploymentPageV1`, reusing deployment-bound mTLS and the
+short-lived `execution:manager-v2:read` assertion with a fixed server-owned
+relation/field map. It did not modify the intake baseline or activate a
+runtime profile. The next planned phase is **EDS-02**; see
+[`EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md`](./EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md).

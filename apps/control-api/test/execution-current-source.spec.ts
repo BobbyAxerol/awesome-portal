@@ -204,7 +204,11 @@ describe("N13B current-source BFF boundary", () => {
     })), true, 403);
     expect(rejected).toMatchObject({
       code: "N13B_DELEGATED_IDENTITY_REJECTED",
-      status: 502,
+      status: 403,
+    });
+    expect(currentSourceUpstreamError(Buffer.from("{}"), true, 401)).toMatchObject({
+      code: "N13B_DELEGATED_IDENTITY_REJECTED",
+      status: 401,
     });
   });
 

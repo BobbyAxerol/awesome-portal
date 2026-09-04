@@ -2,9 +2,10 @@ import { Injectable } from "@nestjs/common";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
 
 /**
- * The browser-visible boundary for EDS-00 is intentionally metadata-only.
- * It says what was verified and what has not been deployed; it never probes a
- * source, infers availability from configuration, or leaks a private target.
+ * The browser-visible boundary is intentionally metadata-only.  It records
+ * the immutable return-pack intake and the server-side BFF operations that
+ * have been published from it; it never probes a source, infers availability
+ * from configuration, or leaks a private target.
  */
 @Injectable()
 export class ExecutionRuntimeManifestService {
@@ -32,15 +33,18 @@ export class ExecutionRuntimeManifestService {
         genuine_source_gap_count: intake.returnPack.genuineSourceGapCount,
       },
       runtime_delivery: {
-        state: "EDS_00_BASELINE_ONLY",
-        named_portal_operation: "NOT_YET_PUBLISHED",
+        // EDS-01 publishes exactly one fixed, server-side operation.  This
+        // does not assert that a profile is activated or that this manifest
+        // request has contacted the Execution Edge.
+        state: "EDS_01_FIXED_E5_OPERATION_PUBLISHED",
+        named_portal_operation: "maximumDataDeploymentPageV1",
         source_probe_performed_by_this_request: false,
         profiles: intake.profiles.map((profile) => ({
           environment: profile.environment,
           profile_id: profile.profileId,
           qualified_delivery: profile.observedDelivery,
           maximum_observed_concurrency: profile.maximumObservedConcurrency,
-          portal_bff_delivery: "NOT_YET_PUBLISHED",
+          portal_bff_delivery: "PUBLISHED_FIXED_E5_OPERATION",
         })),
       },
       source_semantics: {

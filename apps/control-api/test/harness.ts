@@ -11,6 +11,7 @@ export const TEST_TABLES = [
   "execution_profile_projection_snapshots",
   "execution_profile_projection_leases",
   "execution_profile_relation_cursors",
+  "execution_manager_operation_continuations",
   "execution_timeseries_history",
   "execution_manager_projection_snapshots",
   "execution_alpha_fleet_projection",
@@ -60,6 +61,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_profile_projection_leases: boolean;
       has_profile_projection_snapshots: boolean;
       has_profile_projection_journal: boolean;
+      has_manager_operation_continuations: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -93,6 +95,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_profile_projection_leases') IS NOT NULL AS has_profile_projection_leases,
          to_regclass('public.execution_profile_projection_snapshots') IS NOT NULL AS has_profile_projection_snapshots,
          to_regclass('public.execution_profile_projection_journal') IS NOT NULL AS has_profile_projection_journal,
+         to_regclass('public.execution_manager_operation_continuations') IS NOT NULL AS has_manager_operation_continuations,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -103,7 +106,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 13 ||
+      row.migration_count < 21 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -125,6 +128,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_profile_projection_leases ||
       !row.has_profile_projection_snapshots ||
       !row.has_profile_projection_journal ||
+      !row.has_manager_operation_continuations ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
@@ -150,6 +154,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `profile_projection_leases=${row.has_profile_projection_leases}, ` +
         `profile_projection_snapshots=${row.has_profile_projection_snapshots}, ` +
         `profile_projection_journal=${row.has_profile_projection_journal}, ` +
+        `manager_operation_continuations=${row.has_manager_operation_continuations}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

@@ -368,6 +368,21 @@ export interface CurrentSourcePageQuery {
   cursor?: string;
 }
 
+/**
+ * Server-owned tightening for one frozen product operation.  The general
+ * current-source proxy deliberately remains reusable, but an E5 operation
+ * must be able to carry its own immutable cache/admission/body boundary.
+ * Nothing in this structure is decoded from a browser request.
+ */
+export interface CurrentSourceOperationPolicy {
+  operationId: string;
+  sourceId: string;
+  adapterRevision: string;
+  maximumResponseBytes: number;
+  sourceMaximumConcurrency: number;
+  profileMaximumConcurrency: number;
+}
+
 interface CurrentSourceIdentity {
   principalId: string;
   sessionId: string;
@@ -582,6 +597,28 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   }
 
   /**
+   * Fixed-operation path for a Portal-owned BFF.  Unlike `relation`, callers
+   * must supply a compile-time operation policy and cannot inherit the broad
+   * shared cache/admission identity used by a screen aggregate.  The source
+   * relation is still checked against the existing accepted screen map before
+   * a request is issued.
+   */
+  relationForNamedOperation(
+    principal: CurrentSourcePrincipal,
+    environment: Exclude<CurrentSourceEnvironment, "canary">,
+    screenId: string,
+    sourceId: string,
+    relation: string,
+    query: CurrentSourcePageQuery,
+    policy: CurrentSourceOperationPolicy,
+  ): Promise<unknown> {
+    assertAcceptedProfileRead(environment, screenId);
+    assertNamedOperationPolicy(policy, sourceId, this.config);
+    const path = acceptedManagerV2Path(environment, screenId, sourceId, relation, query);
+    return this.request(browserIdentity(principal), environment, screenId, path, policy);
+  }
+
+  /**
    * Dedicated service-to-service read used only by the lease-controlled SGP
    * projection worker. It carries no browser session and cannot request a
    * command resource or arbitrary route.
@@ -622,6 +659,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     requestedEnvironment: CurrentSourceEnvironment,
     screenId: string,
     path: string,
+    operationPolicy?: CurrentSourceOperationPolicy,
   ): Promise<unknown> {
     const sourceEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
     const profile = this.profiles.get(sourceEnvironment);
@@ -634,15 +672,21 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       });
     }
     const scope: SharedReadScope = {
-      sourceId: "manager-v2",
+      sourceId: operationPolicy?.sourceId ?? "manager-v2",
       profileId: profile.profileId,
       workspaceId: principal.workspaceId,
       principalId: principal.principalId,
       principalRole: principal.role,
-      adapterRevision: requestedEnvironment === "paper"
+      adapterRevision: operationPolicy?.adapterRevision ?? (requestedEnvironment === "paper"
         ? N22_PAPER_READ_ACCEPTANCE.adapter
-        : N23_PROFILE_READ_ACCEPTANCE.adapter,
+        : N23_PROFILE_READ_ACCEPTANCE.adapter),
       requestPath: path,
+      ...(operationPolicy ? {
+        admission: {
+          sourceMaximumConcurrency: operationPolicy.sourceMaximumConcurrency,
+          profileMaximumConcurrency: operationPolicy.profileMaximumConcurrency,
+        },
+      } : {}),
     };
     const shared = await this.sharedReads.begin(scope);
     if (shared.kind === "CACHE_HIT") {
@@ -692,7 +736,13 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         authenticationMethods: principal.authenticationMethods,
       });
       const session = await this.getSession(profile);
-      const source = await this.sendRequest(session, assertion, path);
+      const source = await this.sendRequest(
+        session,
+        assertion,
+        path,
+        operationPolicy?.maximumResponseBytes,
+        operationPolicy ? "EDS01_RESPONSE_TOO_LARGE" : "N13B_RESPONSE_TOO_LARGE",
+      );
       const value = await this.sharedReads.complete(scope, shared, source);
       sharedCompleted = true;
       return this.composedResponse(
@@ -762,6 +812,8 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     session: ClientHttp2Session,
     assertion: string,
     path: string,
+    maximumResponseBytes = this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES,
+    responseTooLargeCode = "N13B_RESPONSE_TOO_LARGE",
   ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const stream = session.request({
@@ -793,17 +845,17 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         const contentLength = Number(headers["content-length"] ?? 0);
         if (
           Number.isFinite(contentLength) &&
-          contentLength > this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES
+          contentLength > maximumResponseBytes
         ) {
-          settle(new CurrentSourceProxyError("N13B_RESPONSE_TOO_LARGE", 502));
+          settle(new CurrentSourceProxyError(responseTooLargeCode, 502));
           stream.close();
         }
       });
       stream.on("data", (chunk: Buffer) => {
         if (settled) return;
         size += chunk.byteLength;
-        if (size > this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES) {
-          settle(new CurrentSourceProxyError("N13B_RESPONSE_TOO_LARGE", 502));
+        if (size > maximumResponseBytes) {
+          settle(new CurrentSourceProxyError(responseTooLargeCode, 502));
           stream.close();
           return;
         }
@@ -884,6 +936,28 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         if (profile.session === session) profile.session = null;
       });
     });
+  }
+}
+
+function assertNamedOperationPolicy(
+  policy: CurrentSourceOperationPolicy,
+  sourceId: string,
+  config: ControlApiConfig,
+): void {
+  if (
+    !/^[A-Za-z][A-Za-z0-9]{2,127}$/.test(policy.operationId) ||
+    policy.sourceId !== sourceId ||
+    !SOURCE_ID.test(policy.sourceId) ||
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{2,190}$/.test(policy.adapterRevision) ||
+    !Number.isInteger(policy.maximumResponseBytes) ||
+    policy.maximumResponseBytes < 64 * 1024 ||
+    policy.maximumResponseBytes > config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES ||
+    !Number.isInteger(policy.sourceMaximumConcurrency) ||
+    !Number.isInteger(policy.profileMaximumConcurrency) ||
+    policy.sourceMaximumConcurrency < 1 || policy.sourceMaximumConcurrency > 512 ||
+    policy.profileMaximumConcurrency < 1 || policy.profileMaximumConcurrency > 512
+  ) {
+    throw new CurrentSourceProxyError("EDS01_OPERATION_POLICY_INVALID", 500);
   }
 }
 
@@ -1227,7 +1301,7 @@ export function currentSourceUpstreamError(
   responseIsJson: boolean,
   upstreamStatus: number,
 ): CurrentSourceProxyError {
-  const safeStatus = [400, 404, 409, 422, 429, 503, 504].includes(upstreamStatus)
+  const safeStatus = [400, 401, 403, 404, 409, 422, 429, 503, 504].includes(upstreamStatus)
     ? upstreamStatus
     : 502;
   if (responseIsJson && body.byteLength <= 64 * 1024) {

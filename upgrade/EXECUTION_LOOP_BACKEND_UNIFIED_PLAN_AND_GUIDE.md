@@ -6,7 +6,7 @@
 > **Baseline:** `feat/execution-data-activation` at `6f6503e`, 2026-09-04; the
 > accepted E7 return pack is pinned by `maximum-data-return-v1/MANIFEST.sha256`  
 > **Document status:** `COORDINATION_AUTHORITY_ACTIVE / EDS_BACKEND_CAMPAIGN_PLANNED /
-> IMPLEMENTATION_NOT_AUTHORIZED_BY_THIS_FILE`  
+> EDS_00_AND_EDS_01_COMPLETE`  
 > **Scope:** Portal Execution Loop backend, Paper read integration, Trading System compatibility,
 > activation, hardening and every current/future Claude backend request.
 
@@ -4458,8 +4458,8 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 
 | Phase | Result | Depends on | Can close with current source? |
 |---|---|---|---|
-| EDS-00 | intake, hashes and frozen baseline | E7 handoff | yes; planning gate complete |
-| EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | yes |
+| EDS-00 | intake, hashes and frozen baseline | E7 handoff | complete; immutable planning gate closed |
+| EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | complete; fixed E5 deployment BFF authority closed |
 | EDS-02 | generated screen/action/panel/time contracts | EDS-01 | yes |
 | EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | yes, with typed gaps |
 | EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | yes, with typed gaps |
@@ -4535,6 +4535,9 @@ machine-readable external requirements, not a deferred Portal task.
 
 ### EDS-01 — Sealed Manager-v2 consumer and fixed E5 operation authority
 
+**Status:** `BFF_AUTHORITY_COMPLETE / CONTRACT_FAIL_CLOSED / NO_RUNTIME_MUTATION`
+on 2026-09-04.
+
 **Goal:** make the existing private source callable only through stable named
 Portal operations.
 
@@ -4556,17 +4559,42 @@ Portal operations.
 - use the Rust E5 fixtures/operation descriptors as compatibility evidence;
   do not make browser-visible Rust/source DTOs the product DTO.
 
-**Initial vertical proof:** `maximumDataDeploymentPageV1` behind one
-same-origin operation, consumed by the existing Paper overview/list location.
+**Implemented vertical:** `maximumDataDeploymentPageV1` is now the fixed,
+authenticated same-origin `GET /api/v1/execution/manager/deployments`
+operation. It uses a server-only frozen registry for
+`manager.deployments/public.strategy_deployments`, exact Paper/Sandbox/Live
+profile binding, the existing mTLS/delegated-JWT proxy, and Portal-bound
+opaque `mdc1.*` continuations. It emits normalized, allowlisted deployment
+records with availability/freshness/completeness/as-of metadata, UTC epoch
+milliseconds and truthful empty/partial/stale states. Raw Manager relation,
+cursor, trace and record keys cannot cross the browser boundary.
+
+The implementation adds no runtime activation or frontend composition.
+EDS-02 owns generated product contracts and EDS-03 owns rich screen
+composition; that deliberate layering is not deferred EDS-01 debt. The
+runtime-manifest was updated from `EDS_00_BASELINE_ONLY` to
+`EDS_01_FIXED_E5_OPERATION_PUBLISHED` so it cannot claim the operation is
+absent, while remaining source-non-probing.
 
 **Tests:** positive Paper/Sandbox/Live empty/populated/partial cases; wrong
 audience/profile/resource; expired JWT; absent/bad certificate; relation/path
 injection; cursor rebind; 400/401/403/404/502/503; body/row/concurrency bounds;
 one/ten/one-hundred browser coalescing with constant upstream requests.
 
-**Exit:** no browser-accessible raw Manager route; first real deployment slice
-is `FRONTEND_CONSUMED` and verified on an immutable dev image; rollback selects
-the previous BFF operation without changing Edge/source.
+**Verification completed:** E7 validator and return-pack manifest verification;
+full isolated Control API fresh-PG/migration/restore gate (**39 test files /
+341 tests**); focused fixed E5
+Paper/Sandbox/Live, source contract, continuation, injection, refusal and
+shared-admission/coalescing tests. The detailed evidence is
+[`EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md`](./backend/EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md).
+The N29 acceptance source-boundary pin and its manifest are regenerated for
+this intentional tightening; N29's release decision and authority stay
+unchanged.
+
+**Exit:** no browser-accessible raw Manager route; the server-side E5
+deployment operation is closed and fail-closed. Immutable dev-image/browser
+composition is an EDS-03 delivery proof, not falsely claimed by this
+server-side-only phase.
 
 **Next:** EDS-02.
 
@@ -4951,8 +4979,8 @@ EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                    EDS-11 → EDS-12
 ```
 
-The immediate next phase is **EDS-01 — Sealed Manager-v2 consumer and fixed
-E5 operation authority**. It is deliberately small enough to close fully: one
-operation, one real frozen-frontend vertical, complete negative/security
-matrix and immutable dev-image proof before widening to the remaining
-operations.
+The immediate next phase is **EDS-02 — Generated screen, panel, action and
+UTC/exact-value contracts**. EDS-01 is closed with one sealed E5 deployment
+BFF operation, complete negative/security/admission tests and no runtime
+mutation; EDS-02 turns that DTO into the single generated product authority
+before widening to rich stage composition.

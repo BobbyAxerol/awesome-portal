@@ -151,6 +151,70 @@ describe("N21 PostgreSQL shared admission, coalescing and freshness", () => {
     });
   });
 
+  it("honors the EDS-01 named-operation profile caps and coalesces one, ten and one hundred callers", async () => {
+    const repository = new ExecutionSharedReadRepository(pool, config());
+    const operationScope: SharedReadScope = {
+      ...scope,
+      sourceId: "manager.deployments",
+      adapterRevision: "PORTAL_E5_DEPLOYMENT_PAGE_V1",
+      requestPath: "/internal/v2/manager/relations/public/strategy_deployments?limit=100",
+      admission: { sourceMaximumConcurrency: 4, profileMaximumConcurrency: 1 },
+    };
+    const paperLeader = await repository.begin(operationScope);
+    expect(paperLeader.kind).toBe("LEADER");
+    const paperSecond = await repository.begin({
+      ...operationScope,
+      requestPath: `${operationScope.requestPath}&cursor=next-page`,
+    });
+    expect(paperSecond).toMatchObject({
+      kind: "DENIED",
+      reasonCode: "N21_SHARED_CONCURRENCY_EXHAUSTED",
+    });
+    if (paperLeader.kind === "LEADER") await repository.fail(paperLeader);
+
+    await pool.query(`TRUNCATE execution_shared_read_flights,
+      execution_shared_admission_leases,execution_shared_admission_state,execution_shared_read_cache`);
+    const liveScope: SharedReadScope = {
+      ...operationScope,
+      profileId: "LIVE_BINANCE_USDM",
+      admission: { sourceMaximumConcurrency: 4, profileMaximumConcurrency: 2 },
+    };
+    const liveOne = await repository.begin(liveScope);
+    const liveTwo = await repository.begin({ ...liveScope, requestPath: `${liveScope.requestPath}&cursor=one` });
+    const liveThree = await repository.begin({ ...liveScope, requestPath: `${liveScope.requestPath}&cursor=two` });
+    expect(liveOne.kind).toBe("LEADER");
+    expect(liveTwo.kind).toBe("LEADER");
+    expect(liveThree).toMatchObject({
+      kind: "DENIED",
+      reasonCode: "N21_SHARED_CONCURRENCY_EXHAUSTED",
+    });
+    if (liveOne.kind === "LEADER") await repository.fail(liveOne);
+    if (liveTwo.kind === "LEADER") await repository.fail(liveTwo);
+
+    await pool.query(`TRUNCATE execution_shared_read_flights,
+      execution_shared_admission_leases,execution_shared_admission_state,execution_shared_read_cache`);
+    for (const callers of [1, 10, 100]) {
+      const admissions = await Promise.all(Array.from({ length: callers }, () => repository.begin(operationScope)));
+      const leaders = admissions.filter((admission) => admission.kind === "LEADER");
+      const followers = admissions.filter((admission) => admission.kind === "FOLLOWER");
+      expect(leaders).toHaveLength(1);
+      expect(followers).toHaveLength(callers - 1);
+      const leader = leaders[0];
+      if (leader.kind !== "LEADER") throw new Error("expected one operation leader");
+      const waiting = followers.map((follower) => {
+        if (follower.kind !== "FOLLOWER") throw new Error("expected follower");
+        return repository.waitForLeader(operationScope, follower.cacheKey);
+      });
+      const completed = await repository.complete(operationScope, leader, envelope);
+      expect(await Promise.all(waiting)).toEqual(Array.from({ length: callers - 1 }, () => completed));
+      // A real named operation has exactly one upstream leader for this cache
+      // key; all 1/10/100 same-browser arrivals now observe the cached result.
+      await expect(repository.begin(operationScope)).resolves.toMatchObject({ kind: "CACHE_HIT" });
+      await pool.query(`TRUNCATE execution_shared_read_flights,
+        execution_shared_admission_leases,execution_shared_admission_state,execution_shared_read_cache`);
+    }
+  });
+
   it("recovers an abandoned leader and permit only after bounded lease expiry", async () => {
     const repositoryA = new ExecutionSharedReadRepository(pool, config({
       EXECUTION_EDGE_CURRENT_SOURCE_LEASE_TTL_MS: "500",

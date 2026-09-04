@@ -3367,9 +3367,11 @@ bounds and explicit external gates into a sanitized in-image baseline. It does
 not read a URL, source configuration, private route, raw row, cursor, token,
 certificate, database, Redis or Source Proxy at request time.
 
-The endpoint truthfully reports `EDS_00_BASELINE_ONLY` and
-`named_portal_operation=NOT_YET_PUBLISHED`; it cannot imply that an Edge
-profile was activated or a product BFF has already queried the source. A
+At EDS-00, the endpoint truthfully reported `EDS_00_BASELINE_ONLY` and
+`named_portal_operation=NOT_YET_PUBLISHED`; it could not imply that an Edge
+profile was activated or a product BFF had already queried the source. EDS-01
+subsequently publishes exactly one fixed server-side E5 deployment operation
+and updates that metadata without making this endpoint probe a source. A
 focused contract test verifies every pinned value against the accepted owner,
 deployed, E5 and E7 artifacts, confirms session/workspace access enforcement
 and rejects source/secret leakage. The existing E3 drift suite remains the
@@ -3381,3 +3383,32 @@ external owner gates in E7. The next change is EDS-01 only: publish the fixed
 `maximumDataDeploymentPageV1` server-side BFF operation using the existing
 deployment-bound mTLS and `execution:manager-v2:read` assertion, without
 changing the accepted return pack or any runtime configuration.
+
+#### EDS-01 downstream closure — sealed E5 Manager-v2 deployment BFF
+
+**Status:** **BFF_AUTHORITY_COMPLETE / CONTRACT_FAIL_CLOSED /
+NO_RUNTIME_MUTATION** (2026-09-04).
+
+`GET /api/v1/execution/manager/deployments` is now the sole first E5
+same-origin operation. Its server-owned frozen registry fixes
+`manager.deployments/public.strategy_deployments`, the accepted field map,
+contract/catalogue pins, exact Paper/Sandbox/Live profile/audience/screen
+binding, 200-row/1-MiB/4-KiB bounds and source/profile admission capacities.
+It reuses the existing deployment-bound mTLS and short-lived
+`execution:manager-v2:read` assertion; no browser request may choose a
+relation/schema/source/profile/origin or see a source cursor, trace, record
+key, JWT or certificate.
+
+Portal PostgreSQL holds only short-lived, identity/workspace/profile/contract
+bound opaque continuations. Source `200` empty/partial/stale semantics and
+typed `400/401/403/404/502/503` refusals remain truthful. Fresh-PG,
+migration/restore, E7/hash, contract drift, P/S/L, continuation, injection and
+1/10/100 coalescing/admission tests are required evidence; the final gate
+passed TypeScript build, 39 test files / 341 tests and the PostgreSQL restore
+drill. The detailed record is
+[`EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md`](./backend/EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md).
+
+EDS-01 does not activate a profile, deploy a runtime image, alter Edge/Source
+Proxy/Trading System/DB/Redis/broker/CLI or change command authority. Rich
+screen composition is explicitly EDS-03 after EDS-02 generated product
+contracts; this is planned layer sequencing rather than hidden EDS-01 debt.

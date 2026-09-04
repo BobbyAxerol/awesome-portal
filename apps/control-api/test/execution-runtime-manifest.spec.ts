@@ -39,22 +39,22 @@ describe("EDS-00 runtime manifest intake", () => {
     ]);
   });
 
-  it("returns only sanitized baseline metadata and does not manufacture an active BFF", () => {
+  it("returns only sanitized intake and named-operation metadata without manufacturing a source probe", () => {
     const manifest = new ExecutionRuntimeManifestService().manifest("ws_primary") as Record<string, any>;
     expect(manifest).toMatchObject({
       schema_version: "portal.execution.runtime-manifest.v1",
       workspace_id: "ws_primary",
       contract_status: { state: "RETURN_PACK_ACCEPTED" },
       runtime_delivery: {
-        state: "EDS_00_BASELINE_ONLY",
-        named_portal_operation: "NOT_YET_PUBLISHED",
+        state: "EDS_01_FIXED_E5_OPERATION_PUBLISHED",
+        named_portal_operation: "maximumDataDeploymentPageV1",
         source_probe_performed_by_this_request: false,
       },
       bounds: { maximum_page_rows: 200, maximum_response_bytes: 1_048_576, maximum_cursor_bytes: 4_096 },
     });
     expect(manifest.read_at_ms).toEqual(expect.any(Number));
     expect(manifest.runtime_delivery.profiles.map((profile: Record<string, unknown>) => profile.portal_bff_delivery))
-      .toEqual(["NOT_YET_PUBLISHED", "NOT_YET_PUBLISHED", "NOT_YET_PUBLISHED"]);
+      .toEqual(["PUBLISHED_FIXED_E5_OPERATION", "PUBLISHED_FIXED_E5_OPERATION", "PUBLISHED_FIXED_E5_OPERATION"]);
     const serialized = JSON.stringify(manifest).toLowerCase();
     // Redaction keys are intentionally visible so a client can tell what is
     // absent. Reject concrete private values/locations instead of rejecting
