@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e4.history-continuation.schema.v1",
+  "title": "Maximum-data E4 source-bound continuation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_contract_revision", "source_id", "logical_operation_id", "profile_id", "next_cursor", "has_more", "total_unknown", "earliest_available_time_ms", "newest_available_time_ms", "retention_floor_ms", "completeness", "resnapshot_required", "truncated"],
+  "properties": {
+    "source_contract_revision": { "type": "string", "minLength": 1 },
+    "source_id": { "type": "string", "minLength": 1 },
+    "logical_operation_id": { "type": "string", "minLength": 1 },
+    "profile_id": { "type": "string", "minLength": 1 },
+    "next_cursor": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["token"],
+      "properties": { "token": { "type": "string", "minLength": 1, "maxLength": 4096 } }
+    },
+    "has_more": { "type": "boolean" },
+    "total_unknown": { "type": "boolean" },
+    "earliest_available_time_ms": { "type": ["integer", "null"] },
+    "newest_available_time_ms": { "type": ["integer", "null"] },
+    "retention_floor_ms": { "type": ["integer", "null"] },
+    "completeness": { "enum": ["COMPLETE", "PARTIAL", "GAP"] },
+    "resnapshot_required": { "type": "boolean" },
+    "truncated": { "type": "boolean" }
+  }
+}

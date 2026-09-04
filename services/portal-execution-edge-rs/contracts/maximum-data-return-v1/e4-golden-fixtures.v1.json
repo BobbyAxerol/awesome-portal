@@ -1,0 +1,134 @@
+{
+  "schema_version": "portal.execution.maximum-data.e4.golden-fixtures.v1",
+  "provenance": "SYNTHETIC_NO_BUSINESS_ROWS",
+  "fixtures": [
+    {
+      "fixture_id": "e4-populated-current-state",
+      "state": "POPULATED",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1",
+        "logical_operation_id": "maximumDataOrderPageV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": "BINANCE_USDM", "deployment_id": "fixture-deployment-001", "strategy_id": "fixture-strategy-001", "alpha_id": "fixture-alpha-001", "portfolio_id": "fixture-portfolio-001", "account_id": "fixture-account-001", "binding_id": "fixture-binding-001", "execution_session_id": "fixture-session-001", "command_id": null, "order_id": "fixture-order-001", "fill_id": null, "instrument_id": "fixture-instrument-001", "trace_id": "fixture-trace-001", "correlation_id": "fixture-correlation-001", "causation_id": null, "lineage_limitations": ["SYNTHETIC_FIXTURE_ONLY"] },
+        "source_health": { "source_id": "TRADING_SYSTEM_MANAGER_V2_PAPER", "source_status": "AVAILABLE_CURRENT_STATE_ONLY", "freshness": "FRESH", "observed_at_ms": 1760000000123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "NO_GLOBAL_CORRECTION_JOURNAL_PROVEN", "reason_code": "FIXTURE_CURRENT_STATE_ONLY" },
+        "page": { "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1", "source_id": "TRADING_SYSTEM_MANAGER_V2_PAPER", "logical_operation_id": "maximumDataOrderPageV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": null, "has_more": false, "total_unknown": true, "earliest_available_time_ms": null, "newest_available_time_ms": 1760000000123, "retention_floor_ms": null, "completeness": "COMPLETE", "resnapshot_required": false, "truncated": false },
+        "state": "POPULATED",
+        "duplicate_records_suppressed": 0,
+        "records": [ { "fixture_record_id": "fixture-order-current-001", "amount": { "value": "123.45000000", "currency": "USDT", "scale": 8 }, "effective_at_ms": 1760000000000, "observed_at_ms": 1760000000123, "correction_of_fixture_record_id": null } ]
+      }
+    },
+    {
+      "fixture_id": "e4-empty-current-state",
+      "state": "EMPTY",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1",
+        "logical_operation_id": "maximumDataPositionPageV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": "BINANCE_USDM", "deployment_id": null, "strategy_id": null, "alpha_id": null, "portfolio_id": null, "account_id": "fixture-account-002", "binding_id": null, "execution_session_id": null, "command_id": null, "order_id": null, "fill_id": null, "instrument_id": null, "trace_id": "fixture-trace-002", "correlation_id": null, "causation_id": null, "lineage_limitations": ["EMPTY_MEANS_NO_ROWS_IN_NAMED_SCOPE"] },
+        "source_health": { "source_id": "TRADING_SYSTEM_MANAGER_V2_PAPER", "source_status": "AVAILABLE_CURRENT_STATE_ONLY", "freshness": "FRESH", "observed_at_ms": 1760000001123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "NO_GLOBAL_CORRECTION_JOURNAL_PROVEN", "reason_code": "FIXTURE_EMPTY_NAMED_SCOPE" },
+        "page": { "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1", "source_id": "TRADING_SYSTEM_MANAGER_V2_PAPER", "logical_operation_id": "maximumDataPositionPageV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": null, "has_more": false, "total_unknown": true, "earliest_available_time_ms": null, "newest_available_time_ms": null, "retention_floor_ms": null, "completeness": "COMPLETE", "resnapshot_required": false, "truncated": false },
+        "state": "EMPTY",
+        "duplicate_records_suppressed": 0,
+        "records": []
+      }
+    },
+    {
+      "fixture_id": "e4-partial-unpublished",
+      "state": "PARTIAL",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1",
+        "logical_operation_id": "maximumDataFillPageV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": "BINANCE_USDM", "deployment_id": null, "strategy_id": null, "alpha_id": null, "portfolio_id": null, "account_id": "fixture-account-003", "binding_id": null, "execution_session_id": null, "command_id": null, "order_id": "fixture-order-003", "fill_id": null, "instrument_id": "fixture-instrument-003", "trace_id": "fixture-trace-003", "correlation_id": null, "causation_id": null, "lineage_limitations": ["E5_NAMED_SOURCE_QUALIFICATION_REQUIRED"] },
+        "source_health": { "source_id": "TRADING_SYSTEM_E2_RELATION_CENSUS", "source_status": "EXISTS_NOT_PUBLISHED", "freshness": "UNKNOWN", "observed_at_ms": 1760000002123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "CORRECTION_CONTRACT_PENDING", "reason_code": "FIXTURE_PARTIAL_SOURCE_COVERAGE" },
+        "page": { "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1", "source_id": "TRADING_SYSTEM_E2_RELATION_CENSUS", "logical_operation_id": "maximumDataFillPageV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": null, "has_more": false, "total_unknown": true, "earliest_available_time_ms": null, "newest_available_time_ms": 1760000002123, "retention_floor_ms": null, "completeness": "PARTIAL", "resnapshot_required": false, "truncated": false },
+        "state": "PARTIAL",
+        "duplicate_records_suppressed": 0,
+        "records": [ { "fixture_record_id": "fixture-fill-003", "amount": { "value": "0.01000000", "currency": "BTC", "scale": 8 }, "effective_at_ms": 1760000002000, "observed_at_ms": 1760000002123, "correction_of_fixture_record_id": null } ]
+      }
+    },
+    {
+      "fixture_id": "e4-stale-current-state",
+      "state": "STALE",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1",
+        "logical_operation_id": "maximumDataAccountPageV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": "BINANCE_USDM", "deployment_id": null, "strategy_id": null, "alpha_id": null, "portfolio_id": null, "account_id": "fixture-account-004", "binding_id": null, "execution_session_id": null, "command_id": null, "order_id": null, "fill_id": null, "instrument_id": null, "trace_id": "fixture-trace-004", "correlation_id": null, "causation_id": null, "lineage_limitations": ["STALE_DOES_NOT_MEAN_EMPTY"] },
+        "source_health": { "source_id": "TRADING_SYSTEM_MANAGER_V2_PAPER", "source_status": "AVAILABLE_CURRENT_STATE_ONLY", "freshness": "STALE", "observed_at_ms": 1760000003123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "NO_GLOBAL_CORRECTION_JOURNAL_PROVEN", "reason_code": "FIXTURE_STALE_SOURCE" },
+        "page": { "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1", "source_id": "TRADING_SYSTEM_MANAGER_V2_PAPER", "logical_operation_id": "maximumDataAccountPageV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": null, "has_more": false, "total_unknown": true, "earliest_available_time_ms": null, "newest_available_time_ms": 1760000003123, "retention_floor_ms": null, "completeness": "COMPLETE", "resnapshot_required": false, "truncated": false },
+        "state": "STALE",
+        "duplicate_records_suppressed": 0,
+        "records": [ { "fixture_record_id": "fixture-account-current-004", "amount": { "value": "10.00000000", "currency": "USDT", "scale": 8 }, "effective_at_ms": 1760000003000, "observed_at_ms": 1760000003123, "correction_of_fixture_record_id": null } ]
+      }
+    },
+    {
+      "fixture_id": "e4-gap-owner-source",
+      "state": "GAP",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "owner-action.fill-correction-replay.v1",
+        "logical_operation_id": "maximumDataTradeReplayV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": "BINANCE_USDM", "deployment_id": null, "strategy_id": null, "alpha_id": null, "portfolio_id": null, "account_id": null, "binding_id": null, "execution_session_id": null, "command_id": null, "order_id": "fixture-order-005", "fill_id": null, "instrument_id": null, "trace_id": "fixture-trace-005", "correlation_id": null, "causation_id": null, "lineage_limitations": ["NO_AUTHORITATIVE_CHANGE_JOURNAL"] },
+        "source_health": { "source_id": "AUTHORITATIVE_CHANGE_JOURNAL_REQUIRED", "source_status": "SOURCE_OWNER_GAP", "freshness": "UNKNOWN", "observed_at_ms": 1760000004123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "SOURCE_OWNER_GAP", "reason_code": "E2_NO_GLOBAL_SEQUENCE_RETENTION_OR_CORRECTION" },
+        "page": { "source_contract_revision": "owner-action.fill-correction-replay.v1", "source_id": "AUTHORITATIVE_CHANGE_JOURNAL_REQUIRED", "logical_operation_id": "maximumDataTradeReplayV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": null, "has_more": false, "total_unknown": true, "earliest_available_time_ms": null, "newest_available_time_ms": null, "retention_floor_ms": null, "completeness": "GAP", "resnapshot_required": true, "truncated": false },
+        "state": "GAP",
+        "duplicate_records_suppressed": 0,
+        "records": []
+      }
+    },
+    {
+      "fixture_id": "e4-duplicate-suppressed",
+      "state": "DUPLICATE",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1",
+        "logical_operation_id": "maximumDataCommandJournalPageV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": null, "deployment_id": null, "strategy_id": null, "alpha_id": null, "portfolio_id": null, "account_id": null, "binding_id": null, "execution_session_id": null, "command_id": "fixture-command-006", "order_id": null, "fill_id": null, "instrument_id": null, "trace_id": "fixture-trace-006", "correlation_id": "fixture-correlation-006", "causation_id": null, "lineage_limitations": ["DEDUPLICATION_ONLY_AFTER_NAMED_IDENTITY"] },
+        "source_health": { "source_id": "TRADING_SYSTEM_E2_RELATION_CENSUS", "source_status": "EXISTS_NOT_PUBLISHED", "freshness": "UNKNOWN", "observed_at_ms": 1760000005123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "NO_GLOBAL_CORRECTION_JOURNAL_PROVEN", "reason_code": "FIXTURE_DUPLICATE_SUPPRESSED" },
+        "page": { "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1", "source_id": "TRADING_SYSTEM_E2_RELATION_CENSUS", "logical_operation_id": "maximumDataCommandJournalPageV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": null, "has_more": false, "total_unknown": true, "earliest_available_time_ms": null, "newest_available_time_ms": 1760000005123, "retention_floor_ms": null, "completeness": "COMPLETE", "resnapshot_required": false, "truncated": false },
+        "state": "DUPLICATE",
+        "duplicate_records_suppressed": 1,
+        "records": []
+      }
+    },
+    {
+      "fixture_id": "e4-correction-source-gap",
+      "state": "CORRECTION",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "owner-action.fill-correction-replay.v1",
+        "logical_operation_id": "maximumDataFillPageV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": "BINANCE_USDM", "deployment_id": null, "strategy_id": null, "alpha_id": null, "portfolio_id": null, "account_id": "fixture-account-007", "binding_id": null, "execution_session_id": null, "command_id": null, "order_id": "fixture-order-007", "fill_id": "fixture-fill-007", "instrument_id": "fixture-instrument-007", "trace_id": "fixture-trace-007", "correlation_id": null, "causation_id": "fixture-causation-007", "lineage_limitations": ["CORRECTION_SHAPE_ONLY_NOT_PUBLISHED_SOURCE"] },
+        "source_health": { "source_id": "AUTHORITATIVE_CHANGE_JOURNAL_REQUIRED", "source_status": "SOURCE_OWNER_GAP", "freshness": "UNKNOWN", "observed_at_ms": 1760000006123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "SOURCE_OWNER_GAP", "reason_code": "E2_FILL_CORRECTION_REPLAY_REQUIRED" },
+        "page": { "source_contract_revision": "owner-action.fill-correction-replay.v1", "source_id": "AUTHORITATIVE_CHANGE_JOURNAL_REQUIRED", "logical_operation_id": "maximumDataFillPageV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": null, "has_more": false, "total_unknown": true, "earliest_available_time_ms": null, "newest_available_time_ms": null, "retention_floor_ms": null, "completeness": "GAP", "resnapshot_required": true, "truncated": false },
+        "state": "CORRECTION",
+        "duplicate_records_suppressed": 0,
+        "records": [ { "fixture_record_id": "fixture-fill-correction-007", "amount": { "value": "0.02000000", "currency": "BTC", "scale": 8 }, "effective_at_ms": 1760000006000, "observed_at_ms": 1760000006123, "correction_of_fixture_record_id": "fixture-fill-original-007" } ]
+      }
+    },
+    {
+      "fixture_id": "e4-continuation-bound",
+      "state": "CONTINUATION",
+      "synthetic_no_business_row": true,
+      "envelope": {
+        "schema_version": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+        "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1",
+        "logical_operation_id": "maximumDataAccountEquityHistoryV1",
+        "lineage": { "profile_id": "PAPER_BINANCE_USDM", "mode": "PAPER", "venue": "BINANCE_USDM", "deployment_id": null, "strategy_id": null, "alpha_id": null, "portfolio_id": null, "account_id": "fixture-account-008", "binding_id": null, "execution_session_id": null, "command_id": null, "order_id": null, "fill_id": null, "instrument_id": null, "trace_id": "fixture-trace-008", "correlation_id": null, "causation_id": null, "lineage_limitations": ["CONTINUATION_IS_BOUND_TO_SOURCE_OPERATION_AND_PROFILE"] },
+        "source_health": { "source_id": "TRADING_SYSTEM_E2_RELATION_CENSUS", "source_status": "EXISTS_NOT_PUBLISHED", "freshness": "UNKNOWN", "observed_at_ms": 1760000007123, "source_epoch": null, "global_sequence": null, "retention_floor_ms": null, "correction_status": "RESTATE_CONTRACT_PENDING", "reason_code": "FIXTURE_BOUND_CONTINUATION" },
+        "page": { "source_contract_revision": "portal.execution.maximum-data.e4.fixture.v1", "source_id": "TRADING_SYSTEM_E2_RELATION_CENSUS", "logical_operation_id": "maximumDataAccountEquityHistoryV1", "profile_id": "PAPER_BINANCE_USDM", "next_cursor": { "token": "fixture-account-equity-page-2" }, "has_more": true, "total_unknown": true, "earliest_available_time_ms": 1760000000000, "newest_available_time_ms": 1760000007123, "retention_floor_ms": null, "completeness": "COMPLETE", "resnapshot_required": false, "truncated": false },
+        "state": "CONTINUATION",
+        "duplicate_records_suppressed": 0,
+        "records": [ { "fixture_record_id": "fixture-equity-snapshot-008", "amount": { "value": "1000.00000000", "currency": "USDT", "scale": 8 }, "effective_at_ms": 1760000007000, "observed_at_ms": 1760000007123, "correction_of_fixture_record_id": null } ]
+      }
+    }
+  ]
+}

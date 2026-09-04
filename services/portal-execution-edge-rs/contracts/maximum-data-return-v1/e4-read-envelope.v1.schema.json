@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e4.read-envelope.schema.v1",
+  "title": "Maximum-data E4 typed read envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_contract_revision", "logical_operation_id", "lineage", "source_health", "page", "state", "duplicate_records_suppressed", "records"],
+  "properties": {
+    "schema_version": { "const": "portal.execution.maximum-data.e4.read-envelope.schema.v1" },
+    "source_contract_revision": { "$ref": "#/$defs/text" },
+    "logical_operation_id": { "$ref": "#/$defs/text" },
+    "lineage": { "$ref": "#/$defs/lineage" },
+    "source_health": { "$ref": "#/$defs/source_health" },
+    "page": { "$ref": "#/$defs/continuation" },
+    "state": { "enum": ["POPULATED", "EMPTY", "PARTIAL", "STALE", "GAP", "DUPLICATE", "CORRECTION", "CONTINUATION"] },
+    "duplicate_records_suppressed": { "type": "integer", "minimum": 0 },
+    "records": { "type": "array", "items": { "$ref": "#/$defs/fact" } }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1 },
+    "id_or_null": { "type": ["string", "null"], "minLength": 1 },
+    "utc_epoch_ms": { "type": "integer", "format": "int64" },
+    "exact_decimal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "currency", "scale"],
+      "properties": {
+        "value": { "type": "string", "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3,12}$" },
+        "scale": { "type": "integer", "minimum": 0, "maximum": 28 }
+      }
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "mode", "venue", "deployment_id", "strategy_id", "alpha_id", "portfolio_id", "account_id", "binding_id", "execution_session_id", "command_id", "order_id", "fill_id", "instrument_id", "trace_id", "correlation_id", "causation_id", "lineage_limitations"],
+      "properties": {
+        "profile_id": { "$ref": "#/$defs/text" },
+        "mode": { "enum": ["PAPER", "SANDBOX", "LIVE"] },
+        "venue": { "$ref": "#/$defs/id_or_null" },
+        "deployment_id": { "$ref": "#/$defs/id_or_null" },
+        "strategy_id": { "$ref": "#/$defs/id_or_null" },
+        "alpha_id": { "$ref": "#/$defs/id_or_null" },
+        "portfolio_id": { "$ref": "#/$defs/id_or_null" },
+        "account_id": { "$ref": "#/$defs/id_or_null" },
+        "binding_id": { "$ref": "#/$defs/id_or_null" },
+        "execution_session_id": { "$ref": "#/$defs/id_or_null" },
+        "command_id": { "$ref": "#/$defs/id_or_null" },
+        "order_id": { "$ref": "#/$defs/id_or_null" },
+        "fill_id": { "$ref": "#/$defs/id_or_null" },
+        "instrument_id": { "$ref": "#/$defs/id_or_null" },
+        "trace_id": { "$ref": "#/$defs/id_or_null" },
+        "correlation_id": { "$ref": "#/$defs/id_or_null" },
+        "causation_id": { "$ref": "#/$defs/id_or_null" },
+        "lineage_limitations": { "type": "array", "items": { "$ref": "#/$defs/text" } }
+      }
+    },
+    "source_health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "source_status", "freshness", "observed_at_ms", "source_epoch", "global_sequence", "retention_floor_ms", "correction_status", "reason_code"],
+      "properties": {
+        "source_id": { "$ref": "#/$defs/text" },
+        "source_status": { "enum": ["AVAILABLE_CURRENT_STATE_ONLY", "AVAILABLE_RETAINED_HISTORY", "EXISTS_NOT_PUBLISHED", "SOURCE_OWNER_GAP"] },
+        "freshness": { "enum": ["FRESH", "STALE", "UNKNOWN"] },
+        "observed_at_ms": { "$ref": "#/$defs/utc_epoch_ms" },
+        "source_epoch": { "$ref": "#/$defs/id_or_null" },
+        "global_sequence": { "$ref": "#/$defs/id_or_null" },
+        "retention_floor_ms": { "type": ["integer", "null"] },
+        "correction_status": { "$ref": "#/$defs/text" },
+        "reason_code": { "$ref": "#/$defs/text" }
+      }
+    },
+    "continuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_contract_revision", "source_id", "logical_operation_id", "profile_id", "next_cursor", "has_more", "total_unknown", "earliest_available_time_ms", "newest_available_time_ms", "retention_floor_ms", "completeness", "resnapshot_required", "truncated"],
+      "properties": {
+        "source_contract_revision": { "$ref": "#/$defs/text" },
+        "source_id": { "$ref": "#/$defs/text" },
+        "logical_operation_id": { "$ref": "#/$defs/text" },
+        "profile_id": { "$ref": "#/$defs/text" },
+        "next_cursor": { "type": ["object", "null"], "additionalProperties": false, "required": ["token"], "properties": { "token": { "$ref": "#/$defs/text", "maxLength": 4096 } } },
+        "has_more": { "type": "boolean" },
+        "total_unknown": { "type": "boolean" },
+        "earliest_available_time_ms": { "type": ["integer", "null"] },
+        "newest_available_time_ms": { "type": ["integer", "null"] },
+        "retention_floor_ms": { "type": ["integer", "null"] },
+        "completeness": { "enum": ["COMPLETE", "PARTIAL", "GAP"] },
+        "resnapshot_required": { "type": "boolean" },
+        "truncated": { "type": "boolean" }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixture_record_id", "amount", "effective_at_ms", "observed_at_ms", "correction_of_fixture_record_id"],
+      "properties": {
+        "fixture_record_id": { "$ref": "#/$defs/text" },
+        "amount": { "$ref": "#/$defs/exact_decimal" },
+        "effective_at_ms": { "$ref": "#/$defs/utc_epoch_ms" },
+        "observed_at_ms": { "$ref": "#/$defs/utc_epoch_ms" },
+        "correction_of_fixture_record_id": { "$ref": "#/$defs/id_or_null" }
+      }
+    }
+  }
+}

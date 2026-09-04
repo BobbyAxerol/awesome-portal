@@ -1225,5 +1225,12 @@ fn sha256(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
 }
 
+mod e4;
+pub use e4::{
+    BoundContinuation, Completeness, E4Contract, E4ContractError, EventCoverageStatus,
+    ExactDecimal, FixtureState, FreshnessStatus, OpaqueContinuation, ProfileMode, ReadEnvelope,
+    SourceHealth, SourceLineage, SourceStatus, UtcEpochMs,
+};
+
 #[cfg(test)]
 mod tests;

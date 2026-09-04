@@ -2628,7 +2628,7 @@ outside this phase's exact cleanup scope).
 
 #### EX-DP-04 — E4 versioned capability and return-pack contract freeze
 
-**Status:** **IN_PROGRESS (2026-09-04; E3 exit passed)**.
+**Status:** **COMPLETE (2026-09-04)**.
 
 **Execution boundary precommitted (2026-09-04).** E4 starts only after the
 E3 validation record proves `unmapped_required_frontend_fields = 0` and
@@ -2666,6 +2666,48 @@ Rust/TypeScript/Python golden decode, negative boundary cases, manifest
 digest/redaction scans and an explicit Manager-v2 compatibility guard before
 the phase can close.
 
+**E4 implementation and cross-language validation slice (2026-09-04).** The
+additive `maximum-data-contract` crate now owns the E4 contract-only DTOs:
+`UtcEpochMs` serializes/deserializes only JSON integers; `ExactDecimal`
+requires an exact decimal string plus uppercase currency and declared source
+scale; profile/mode lineage is mandatory; and an opaque continuation is bounded
+to 4,096 bytes and carried with its source/operation/profile binding. The
+static pack contains seven Draft 2020-12 schemas, six source rulings, all 11 E2
+domains, exactly 34 E3 field bindings, all **36** requested event kinds (the
+governing request lists 36, not 34) and eight explicitly synthetic/no-business
+row fixtures. No event is marked `AVAILABLE` or replay-eligible because E2 did
+not prove a global ordered journal, retention floor and correction semantics.
+The existing Manager-v2 entry is explicitly `PAPER_BINANCE_USDM` / `PAPER`;
+this contract did not widen it to Sandbox/Canary/Live.
+
+The E4 binding registry references either the read-envelope schema plus its
+exact E3 logical operation, or the domain-capability schema plus a typed owner
+absence. It never names a route, raw relation, SQL selector or credential.
+Its schema manifest pins every E4 asset and the E2/E3/Manager-v2 identities;
+all runtime mutation fields are `NOT_APPLIED`. The dependency-free
+`tools/validate_maximum_data_e4.py`, Rust negative tests, and a new Control API
+TypeScript decoder independently reject float/string timestamps, float
+decimals, missing profile lineage, unbound cursor and invented replay.
+
+Commands run for this slice and their results:
+
+- `python3 services/portal-execution-edge-rs/tools/validate_maximum_data_e4.py`
+  — PASS: 7 schemas / 34 field bindings / 36 event rulings / 8 fixtures.
+- Draft 2020-12 validator over all seven schemas and 28 pack/fixture instances
+  — PASS.
+- `cargo fmt --check && cargo test --locked -p maximum-data-contract && cargo
+  clippy --locked -p maximum-data-contract --all-targets -- -D warnings` in a
+  temporary Rust 1.85.1 container — PASS: 9 Rust tests, 0 failures, Clippy
+  clean.
+- `npx vitest run test/maximum-data-e4-contract.spec.ts --maxWorkers=1
+  --no-file-parallelism` in a temporary Node 22.14 container copy — PASS: 2/2.
+  Targeted strict `tsc --noEmit` for that E4 test — PASS.
+- The full existing Control API `npm run typecheck` remains red before E4 due to
+  unrelated old failures in `command-center.spec.ts`, `execution-realtime.spec.ts`,
+  `harness.ts` and `profile-projection.spec.ts`; the E4 test is absent from that
+  error set. This is recorded baseline outside the approved E4 contract scope,
+  not an E4 defect and was not changed.
+
 **Goal:** publish the cross-language contract pack for all confirmed facts,
 history/snapshot/event semantics, source health and downstream work orders
 before any new route claims those semantics.
@@ -2694,6 +2736,52 @@ ambiguity remains.
 **Rollback/debt:** additive manifest-bound contracts only; no route, source,
 identity, database or deployment change. A missing producer remains a
 published owner action, never unfinished Edge code.
+
+**E4 completion record (2026-09-04).** The checked-in return-pack boundary is
+`services/portal-execution-edge-rs/contracts/maximum-data-return-v1/`; its
+E4 manifest digest is
+`sha256:87c3edf13b93d7393f66deaa7d043240e0768ce4fe495ff2318da4996cb46406`.
+It has 7 Draft 2020-12 schemas, 6 source catalogue rulings, 11 domain rulings,
+34/34 E3 field bindings, 36/36 request-listed event coverage rulings and eight
+synthetic fixture states. The Rust contract has no database/HTTP/cache/listener
+dependency; the only dependency delta is reuse of the existing workspace
+`execution-contracts` exact decimal/identifier type. E4 has no active route or
+runtime consumer, which is intentional: it is `CONTRACT_PUBLISHED`, not E5
+adapter publication.
+
+Final acceptance evidence: Rust 1.85.1 `cargo fmt --check`, `cargo test
+--locked -p maximum-data-contract` (9 passed, 0 failed) and `cargo clippy
+--locked -p maximum-data-contract --all-targets -- -D warnings` all passed;
+the TypeScript E4 decoder passed 2/2 and its targeted strict `tsc --noEmit`
+passed; the dependency-free Python verifier passed; and an independent Draft
+2020-12 validation passed all 7 schemas against 28 pack/fixture instances.
+`git diff --check` passed. E4 JSON redaction/transport scan found no secret,
+DSN, SQL selector, Redis URL or V4 route string. The changed-file audit found
+no Manager-v2 source or contract file changed.
+
+Disposable test cleanup was completed before close: temporary Cargo/Node test
+caches were exactly 4 KiB + 471 MiB + 191 MiB + 191 MiB + 191 MiB before
+removal (about 1.02 GiB total); all five exact `/tmp/portal-e4-*` directories
+were removed. No container referenced the temporary Rust/Node images, then
+only `rust:1.85.1-slim` and `node:22.14.0-bookworm-slim` were removed. Docker
+inventory changed from 22 images / 56 containers / 47 volumes / 15.04 GiB
+Build Cache to 20 images / 56 containers / 47 volumes / 15.04 GiB Build Cache;
+no broad cache prune, runtime restart, volume/network/data cleanup or deploy
+occurred. The unrelated pre-existing full Control API typecheck failures named
+in the implementation slice remain outside E4 and were untouched.
+
+After final read-envelope schema hardening, the manifest was re-hashed to the
+digest above and the focused Rust format/test gate was re-run successfully in
+one fresh temporary 383 MiB Cargo cache. That exact cache and its only Rust
+test image were removed again. Final Docker inventory was 20 images / 56
+containers (52 active at the post-check) / 47 volumes / 15.04 GiB Build Cache;
+no container referenced the test image and this phase neither restarted nor
+changed any runtime container. No broad cache prune was authorized or run.
+
+There is no E4 implementation debt. The classified source-owner gaps,
+unqualified named query shapes and absence of a global journal are explicit
+external/source facts already represented in the frozen contract; they become
+input gates for E5/E6, not hidden work left in this phase.
 
 #### EX-DP-05 — E5 existing-data adapter and publication delta
 

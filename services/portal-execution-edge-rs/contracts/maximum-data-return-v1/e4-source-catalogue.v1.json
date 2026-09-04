@@ -1,0 +1,79 @@
+{
+  "schema_version": "portal.execution.maximum-data.e4.source-catalogue.v1",
+  "e2_semantic_registry_sha256": "sha256:c1886540c91e8e96219a12684e0b42651a061236128ab92f51442d0f56493477",
+  "e2_semantic_contract_sha256": "sha256:fa93683ed7c7cf1298b6e6943e93383a707f3beefe377df745fd909884f6dcac",
+  "sources": [
+    {
+      "source_id": "TRADING_SYSTEM_MANAGER_V2_PAPER",
+      "source_kind": "OWNER_QUALIFIED_READ_FACADE",
+      "source_contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "source_status": "AVAILABLE_CURRENT_STATE_ONLY",
+      "supported_profile_ids": ["PAPER_BINANCE_USDM"],
+      "supported_modes": ["PAPER"],
+      "history_semantics": "CURRENT_MANAGER_READS_ONLY_NO_EVENT_OR_REPLAY_CLAIM",
+      "correction_semantics": "NO_GLOBAL_CORRECTION_JOURNAL_PROVEN",
+      "runtime_binding": "EXISTING_MANAGER_V2_CONTRACT_ONLY",
+      "owner": "trading_system_owner"
+    },
+    {
+      "source_id": "PORTAL_CONTROL_SCREEN_BFF",
+      "source_kind": "PORTAL_OWNED_CONTROL_READ_CONTRACT",
+      "source_contract_revision": "portal.execution.screen-bff.v1",
+      "source_status": "AVAILABLE_CURRENT_STATE_ONLY",
+      "supported_profile_ids": ["PAPER_BINANCE_USDM"],
+      "supported_modes": ["PAPER"],
+      "history_semantics": "PER_EXISTING_PORTAL_CONTROL_CONTRACT",
+      "correction_semantics": "PER_EXISTING_PORTAL_CONTROL_CONTRACT",
+      "runtime_binding": "EXISTING_PORTAL_CONTRACT_NO_E4_ROUTE",
+      "owner": "portal_control_owner"
+    },
+    {
+      "source_id": "TRADING_SYSTEM_E2_RELATION_CENSUS",
+      "source_kind": "OWNER_AUDITED_RELATION_SOURCE",
+      "source_contract_revision": "portal.execution.trading-system.semantic-audit.v1",
+      "source_status": "EXISTS_NOT_PUBLISHED",
+      "supported_profile_ids": ["PAPER_BINANCE_USDM"],
+      "supported_modes": ["PAPER"],
+      "history_semantics": "PER_NAMED_RELATION_ONLY_NO_GENERIC_READ",
+      "correction_semantics": "PER_NAMED_SOURCE_OWNER_RULING",
+      "runtime_binding": "CONTRACT_ONLY_PENDING_E5_NAMED_ADAPTER",
+      "owner": "trading_system_read_path_owner"
+    },
+    {
+      "source_id": "AUTHORITATIVE_CHANGE_JOURNAL_REQUIRED",
+      "source_kind": "SOURCE_OWNER_GAP",
+      "source_contract_revision": "owner-action.fill-correction-replay.v1",
+      "source_status": "SOURCE_OWNER_GAP",
+      "supported_profile_ids": [],
+      "supported_modes": [],
+      "history_semantics": "NO_GLOBAL_SEQUENCE_RETENTION_OR_REPLAY_SOURCE_PROVEN",
+      "correction_semantics": "NO_AUTHORITATIVE_CORRECTION_STREAM_PROVEN",
+      "runtime_binding": "NOT_APPLIED",
+      "owner": "trading_system_event_owner"
+    },
+    {
+      "source_id": "MARKET_TYPED_SOURCE_REQUIRED",
+      "source_kind": "SOURCE_OWNER_GAP",
+      "source_contract_revision": "owner-action.market-context.v1",
+      "source_status": "SOURCE_OWNER_GAP",
+      "supported_profile_ids": [],
+      "supported_modes": [],
+      "history_semantics": "NO_TYPED_TICK_CANDLE_BENCHMARK_OR_SESSION_SOURCE_PROVEN",
+      "correction_semantics": "NO_TYPED_MARKET_CORRECTION_SOURCE_PROVEN",
+      "runtime_binding": "NOT_APPLIED",
+      "owner": "trading_system_market_owner"
+    },
+    {
+      "source_id": "ARTIFACT_RESEARCH_TYPED_SOURCE_REQUIRED",
+      "source_kind": "SOURCE_OWNER_GAP",
+      "source_contract_revision": "owner-action.artifact-research-linkage.v1",
+      "source_status": "SOURCE_OWNER_GAP",
+      "supported_profile_ids": [],
+      "supported_modes": [],
+      "history_semantics": "NO_SIGNED_ARTIFACT_REFERENCE_OR_RESEARCH_RUN_LINKAGE_PROVEN",
+      "correction_semantics": "NO_VERSIONED_ARTIFACT_LINKAGE_SOURCE_PROVEN",
+      "runtime_binding": "NOT_APPLIED",
+      "owner": "trading_system_artifact_owner"
+    }
+  ]
+}

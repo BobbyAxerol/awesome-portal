@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e4.domain-capability.schema.v1",
+  "title": "Maximum-data E4 domain capability rulings",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "e2_semantic_registry_sha256", "domains"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "e2_semantic_registry_sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["domain_id", "disposition", "coverage_status", "current_state_semantics", "history_semantics", "event_semantics", "source_owner_gap_ids"],
+        "properties": {
+          "domain_id": { "type": "string", "minLength": 1 },
+          "disposition": { "type": "string", "minLength": 1 },
+          "coverage_status": { "type": "string", "minLength": 1 },
+          "current_state_semantics": { "type": "string", "minLength": 1 },
+          "history_semantics": { "type": "string", "minLength": 1 },
+          "event_semantics": { "type": "string", "minLength": 1 },
+          "source_owner_gap_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    }
+  }
+}

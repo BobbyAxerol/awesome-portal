@@ -1,0 +1,105 @@
+{
+  "schema_version": "portal.execution.maximum-data.e4.domain-capabilities.v1",
+  "e2_semantic_registry_sha256": "sha256:c1886540c91e8e96219a12684e0b42651a061236128ab92f51442d0f56493477",
+  "domains": [
+    {
+      "domain_id": "alpha_strategy_deployment_artifact",
+      "disposition": "DIRECT",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "STRATEGY_AND_DEPLOYMENT_CURRENT_ROWS_ONLY",
+      "history_semantics": "NO_INDEPENDENT_DEPLOYMENT_SUPERSESSION_JOURNAL_PROVEN",
+      "event_semantics": "NO_ARTIFACT_OR_RESEARCH_LINKAGE_EVENT_INFERRED",
+      "source_owner_gap_ids": ["artifact-signed-reference", "research-run-linkage"]
+    },
+    {
+      "domain_id": "portfolio_allocation_capital",
+      "disposition": "EDGE_DERIVED",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "PROFILE_SCOPED_DERIVATION_REQUIRES_NAMED_INPUTS",
+      "history_semantics": "LEDGER_RETENTION_REQUIRES_POLICY_EVIDENCE",
+      "event_semantics": "NO_PORTFOLIO_CHANGE_STREAM_PROVEN",
+      "source_owner_gap_ids": ["portfolio-profile-equity-direct"]
+    },
+    {
+      "domain_id": "accounts_balances_margin_bindings_sync",
+      "disposition": "DIRECT",
+      "coverage_status": "COMPLETE_WITHIN_CURRENT_SOURCE_BOUNDARY",
+      "current_state_semantics": "ACCOUNT_AND_DECLARED_SYNC_PROJECTIONS_CURRENT_ONLY",
+      "history_semantics": "CURRENT_STATE_IS_NOT_BALANCE_OR_SYNC_HISTORY",
+      "event_semantics": "NO_GLOBAL_ACCOUNT_EVENT_STREAM_PROVEN",
+      "source_owner_gap_ids": []
+    },
+    {
+      "domain_id": "positions_exposure",
+      "disposition": "CURRENT_STATE_ONLY",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "CANONICAL_POSITION_CURRENT_STATE",
+      "history_semantics": "NO_POSITION_VERSION_HISTORY_PROVEN",
+      "event_semantics": "POSITION_UPDATES_ARE_NOT_REPLAY_EVENTS",
+      "source_owner_gap_ids": ["position-mark-provenance", "position-version-history"]
+    },
+    {
+      "domain_id": "orders_fills_conditional_lifecycle",
+      "disposition": "DIRECT",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "ORDER_PROJECTION_MUTABLE_AND_FILL_FACTS_SCOPED",
+      "history_semantics": "FILL_RANGE_MAY_BE_RETAINED_BUT_NO_REPLAY_FLOOR_IS_CLAIMED",
+      "event_semantics": "NO_GLOBAL_ORDER_ACK_OR_FILL_CORRECTION_STREAM_PROVEN",
+      "source_owner_gap_ids": ["order-broker-ack-clocks", "fill-correction-replay"]
+    },
+    {
+      "domain_id": "execution_sessions_cycles",
+      "disposition": "DIRECT",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "EXECUTION_SESSION_CONTROL_RECORD",
+      "history_semantics": "NO_RETAINED_SESSION_TRANSITION_HISTORY_PROVEN",
+      "event_semantics": "NO_SESSION_FUNNEL_OR_PRODUCER_VERSION_STREAM_PROVEN",
+      "source_owner_gap_ids": ["session-funnel-and-producer-version"]
+    },
+    {
+      "domain_id": "signal_sizing_risk",
+      "disposition": "DIRECT",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "SIZING_DECISION_AND_RISK_GRANT_RECORDS",
+      "history_semantics": "RETENTION_REQUIRES_EXPLICIT_STORAGE_POLICY",
+      "event_semantics": "NO_SIGNAL_FUNNEL_OR_RISK_CORRECTION_REPLAY_PROVEN",
+      "source_owner_gap_ids": ["signal-intent-funnel", "risk-event-correction"]
+    },
+    {
+      "domain_id": "accounting_equity_performance_valuation",
+      "disposition": "EDGE_DERIVED",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "LEDGER_AND_SNAPSHOT_FACTS_WITH_EXPLICIT_PROVENANCE_REQUIRED",
+      "history_semantics": "SNAPSHOT_RANGE_NOT_EVENT_REPLAY",
+      "event_semantics": "NO_VALUATION_CORRECTION_STREAM_PROVEN",
+      "source_owner_gap_ids": ["valuation-mark-provenance"]
+    },
+    {
+      "domain_id": "reconciliation_incidents_operational_truth",
+      "disposition": "DIRECT",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "RECONCILIATION_AND_OPERATIONAL_AUDIT_CURRENT_LIFECYCLE",
+      "history_semantics": "ACKNOWLEDGEMENT_EVIDENCE_NOT_PROVEN",
+      "event_semantics": "NO_IMMUTABLE_RECONCILIATION_EVENT_STREAM_PROVEN",
+      "source_owner_gap_ids": ["reconciliation-ack-evidence"]
+    },
+    {
+      "domain_id": "commands_terminal_verification",
+      "disposition": "DIRECT",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "DURABLE_COMMAND_JOURNAL_WITH_REDACTED_PAYLOAD_BOUNDARY",
+      "history_semantics": "TERMINAL_EVIDENCE_RETENTION_REQUIRES_TYPED_ALLOWLIST",
+      "event_semantics": "COMMAND_FACTS_ARE_NOT_GLOBAL_REPLAY_EVENTS",
+      "source_owner_gap_ids": ["command-safe-reference-payload-contract"]
+    },
+    {
+      "domain_id": "market_context",
+      "disposition": "SOURCE_OWNER_GAP",
+      "coverage_status": "PARTIAL_WITH_TYPED_SOURCE_OWNER_GAPS",
+      "current_state_semantics": "INSTRUMENT_REFERENCE_ONLY",
+      "history_semantics": "NO_TYPED_MARKET_OR_CALENDAR_HISTORY_PROVEN",
+      "event_semantics": "NO_MARKET_OBSERVATION_EVENT_SOURCE_PROVEN",
+      "source_owner_gap_ids": ["market-latest-ticks", "market-ohlcv", "market-benchmark", "market-session-calendar", "market-vnm-constraints"]
+    }
+  ]
+}

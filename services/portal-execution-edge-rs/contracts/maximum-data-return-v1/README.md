@@ -41,6 +41,39 @@ represented as active.
 4. `DERIVED_METRIC_FEASIBILITY.csv`
 5. `PORTAL_DOWNSTREAM_WORK_ORDERS.csv`
 
-E4 adds versioned cross-language DTO/schema/fixture contracts to this same
-pack. It cannot make an unavailable source, unsafe query shape or missing
-authoritative event journal appear available.
+## E4 complete
+
+`e4-contract.manifest.json` locks the additive canonical return contract:
+
+- seven JSON Schema 2020-12 documents for source catalogue, domain
+  capability, source-bound continuation, source health, field coverage, typed
+  read envelope and event coverage;
+- six source rulings and all 11 E2 semantic domains, with the existing
+  Manager-v2 source explicitly limited to `PAPER_BINANCE_USDM` / `PAPER`;
+- an exact one-to-one binding for all 34 E3 fields: a named logical operation
+  for an existing/qualified future source, or a typed source-owner absence;
+- all 36 requested replay event kinds classified without claiming an available
+  global ordered replay journal;
+- Rust `UtcEpochMs` and exact `{value,currency,scale}` DTOs, source/profile
+  lineage and operation-bound opaque continuation semantics;
+- eight synthetic, no-business-row fixtures for populated, empty, partial,
+  stale, gap, duplicate, correction and continuation states.
+
+E4 is a compile-time/cross-language compatibility boundary only. It creates no
+`/portal/execution/v4` route, database access, source identity, cache,
+listener, command port or deployment. It does not widen Manager-v2 beyond its
+already frozen Paper source scope. A later E5 adapter can implement only a
+named operation after its query, identity, profile and source semantics have
+been qualified.
+
+Append these E4 artifacts to the reading order:
+
+6. `e4-contract.manifest.json`
+7. `e4-source-catalogue.v1.json` and `e4-domain-capabilities.v1.json`
+8. `e4-operation-bindings.v1.json` and `e4-event-coverage.v1.json`
+9. `e4-read-envelope.v1.schema.json` and `e4-golden-fixtures.v1.json`
+
+Validate E4 with the Rust `maximum-data-contract` tests, the Control API
+TypeScript fixture decoder, and `tools/validate_maximum_data_e4.py`. The
+Python verifier is dependency-free and intentionally cannot contact a source
+or runtime.

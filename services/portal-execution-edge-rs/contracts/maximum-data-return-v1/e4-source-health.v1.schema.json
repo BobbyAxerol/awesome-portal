@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e4.source-health.schema.v1",
+  "title": "Maximum-data E4 source health",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_id", "source_status", "freshness", "observed_at_ms", "source_epoch", "global_sequence", "retention_floor_ms", "correction_status", "reason_code"],
+  "properties": {
+    "source_id": { "type": "string", "minLength": 1 },
+    "source_status": { "enum": ["AVAILABLE_CURRENT_STATE_ONLY", "AVAILABLE_RETAINED_HISTORY", "EXISTS_NOT_PUBLISHED", "SOURCE_OWNER_GAP"] },
+    "freshness": { "enum": ["FRESH", "STALE", "UNKNOWN"] },
+    "observed_at_ms": { "type": "integer" },
+    "source_epoch": { "type": ["string", "null"] },
+    "global_sequence": { "type": ["string", "null"] },
+    "retention_floor_ms": { "type": ["integer", "null"] },
+    "correction_status": { "type": "string", "minLength": 1 },
+    "reason_code": { "type": "string", "minLength": 1 }
+  }
+}
