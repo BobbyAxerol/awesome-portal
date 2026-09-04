@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e6.runtime-evidence.schema.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "status",
+    "capture_method",
+    "raw_data_persisted",
+    "e3_coverage_manifest_sha256",
+    "e4_contract_manifest_sha256",
+    "e5_publication_manifest_sha256",
+    "captures"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.maximum-data.e6.runtime-evidence.v1"
+    },
+    "phase": { "const": "EX-DP-06" },
+    "status": { "const": "SAME_HOST_READ_ONLY_QUALIFIED" },
+    "capture_method": {
+      "const": "SAME_HOST_EXISTING_EDGE_MTLS_READ_ONLY"
+    },
+    "raw_data_persisted": { "const": false },
+    "e3_coverage_manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "e4_contract_manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "e5_publication_manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "captures": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "capture_method",
+          "profile",
+          "captured_at_utc",
+          "request_bounds",
+          "catalogue",
+          "relation_observations",
+          "negative_checks"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.maximum-data.e6.runtime-evidence.v1"
+          },
+          "capture_method": {
+            "const": "SAME_HOST_EXISTING_EDGE_MTLS_READ_ONLY"
+          },
+          "profile": {
+            "enum": ["PAPER", "SANDBOX", "LIVE"]
+          },
+          "captured_at_utc": {
+            "type": "string",
+            "minLength": 20
+          },
+          "request_bounds": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["relation_page_limit", "maximum_response_bytes"],
+            "properties": {
+              "relation_page_limit": { "const": 1 },
+              "maximum_response_bytes": { "const": 1048576 }
+            }
+          },
+          "catalogue": { "type": "object" },
+          "relation_observations": {
+            "type": "array",
+            "minItems": 19,
+            "items": { "type": "object" }
+          },
+          "negative_checks": { "type": "object" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

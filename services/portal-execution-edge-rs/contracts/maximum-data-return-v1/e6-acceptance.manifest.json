@@ -1,0 +1,29 @@
+{
+  "schema_version": "portal.execution.maximum-data.e6.acceptance-manifest.v1",
+  "phase": "EX-DP-06",
+  "status": "EDGE_SHADOW_VERIFIED",
+  "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
+  "e4_contract_manifest_sha256": "sha256:abc4dcfe1f94f69099dc241f2f07c95c6976d919a8e1b7f68bd9fe88873d8984",
+  "e5_publication_manifest_sha256": "sha256:57a36804838d341b6f67d4abbf15b64878743b3b58141b0af1d6934e6f189909",
+  "counts": {
+    "domain_count": 11,
+    "profile_capture_count": 3,
+    "manager_relation_observation_count": 57,
+    "negative_check_count": 6
+  },
+  "runtime_mutations": {
+    "database": "NOT_APPLIED",
+    "source_identity": "NOT_APPLIED",
+    "route": "NOT_APPLIED",
+    "listener": "NOT_APPLIED",
+    "projection_or_cache": "NOT_APPLIED",
+    "command_port": "NOT_APPLIED",
+    "deployment": "NOT_APPLIED"
+  },
+  "files": {
+    "e6-domain-acceptance.v1.schema.json": "sha256:42bd78041f109ca47e8b58e7b478fcd5e2540353d49691e62e70fa0f5ee69145",
+    "e6-runtime-evidence.v1.schema.json": "sha256:d2649703ed37dfff8bfbd76723fe7f835946a66610edfe319697a46f19532b35",
+    "e6-domain-acceptance.v1.json": "sha256:7789a0e9b1cacb50489a4eb198cecae825a61bbad61696e538930f622a238c3b",
+    "e6-runtime-evidence.v1.json": "sha256:4adbc6e730763f498e3001db7c1b6a7c2c083bd286cf75e965d7b72dfc1b011c"
+  }
+}

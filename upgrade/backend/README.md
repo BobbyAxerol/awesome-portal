@@ -38,8 +38,15 @@ Chúng không thay thế phase hoặc exit gate trong
   route, listener, credential, command or deployment authority. Paper,
   Sandbox and Live are fixed-profile Manager bindings; Canary remains a
   Portal-composed typed boundary. Its registry, page schema and synthetic
-  fixtures are digest-bound; EX-DP-06 remains the separate real-domain/runtime
-  qualification gate. See [EX-DP-05 in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-05--e5-existing-data-adapter-and-publication-delta).
+  fixtures are digest-bound. **EX-DP-06/E6 is complete as a same-host,
+  existing-Manager read-only qualification:** all 11 domains are explicit,
+  Paper/Sandbox/Live each passed the bounded 96-relation catalogue plus 19
+  named relation-page observations, and mTLS/method denials failed closed.
+  The committed evidence is sanitized and does not deploy E5, add a route,
+  create a direct source path or claim independent production/HA authority.
+  See [EX-DP-05](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-05--e5-existing-data-adapter-and-publication-delta)
+  and [EX-DP-06](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-06--e6-domain-acceptance-and-source-health-qualification)
+  in the Unified Plan.
   The mandatory journal is
   [EX-BE-02C in the Unified Plan](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
 

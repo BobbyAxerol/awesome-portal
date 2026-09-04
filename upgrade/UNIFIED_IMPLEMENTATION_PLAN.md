@@ -2931,7 +2931,50 @@ container, volume, network, source identity or runtime configuration changed.
 
 #### EX-DP-06 — E6 domain acceptance and source-health qualification
 
-**Status:** **NOT_APPROVED**.
+**Status:** **COMPLETE / EDGE_SHADOW_VERIFIED / SAME_HOST_READ_ONLY_QUALIFIED / NO_RUNTIME_MUTATION** (2026-09-04).
+
+**Approval, preflight and decision boundary (2026-09-04):** Bobby approved the
+complete E6 slice. This is a qualification of the already active,
+profile-bound Manager read plane only: one bounded catalogue read and one
+`limit=1` named relation read for each of the 19 E5 Manager operations in each
+of Paper, Sandbox and Live. The probes run serially below the Source Proxy
+limit through each existing Edge container's own UID, supplementary mTLS group
+and read-only secret mount. They persist only HTTP/contract metadata, bounded
+byte counts, booleans/counts and SHA-256 body digests; no row, cursor, trace
+identifier, JWT, certificate or connection value is written to Git, evidence
+or terminal output. The first Paper catalogue preflight returned `200`, 96
+relations and 130,537 bytes under the 1 MiB contract bound.
+
+The implementation is an additive, offline Rust domain-acceptance verifier
+and digest-bound E6 registry/evidence pack. It cross-checks all eleven E4
+business domains against the frozen E5 publication map, validates the
+sanitized per-profile runtime observations, and forces every unsupported
+history/replay/correction/market/artifact property to remain an explicit typed
+source fact with exactly one source-owner action. It has no network client,
+database, credential, listener, cache, projection, command or runtime
+activation authority. E5 remains source-dark in this checkout: this phase
+does **not** deploy it, register an Edge route, alter a profile, mint a new
+identity, perform direct DB/Redis access, execute a command or mutate source
+data.
+
+**Declared gates:** (1) catalogue/profile/19-relation runtime observation for
+each active profile, with bounded envelope, relation identity, field/key and
+empty/partial/freshness checks; (2) mTLS-required and method-denial negative
+checks at the existing Source Proxy boundary; (3) deterministic offline domain
+acceptance, source-health and malformed-evidence negative fixtures; (4) E3/E4/
+E5 compatibility plus JSON/schema/manifest/redaction checks; and (5) targeted
+Rust and TypeScript contract tests. A full retained-range, event/replay,
+correction or business-row assertion is accepted only where the existing
+authoritative E2/E4 source fact proves it; a one-row source probe never
+pretends to prove it. Same-host runtime evidence is labelled as such and is
+not represented as independent production/HA evidence.
+
+**Rollback and closure rule:** no independent runtime mutation exists to
+rollback. If an active profile, envelope, named relation, key, profile
+isolation, read/command boundary or evidence redaction check fails, E6 stays
+open and the only cleanup is its exact disposable test artifact. Otherwise
+every E6 request closes as accepted current/retained bounded data or as a
+prescribed typed source-owner fact; there is no internal E6 technical debt.
 
 **Goal:** show that the accepted capabilities are useful and truthful for their
 actual business domains, not merely reachable.
@@ -2960,6 +3003,97 @@ zero or history.
 **Rollback/debt:** no independent runtime mutation is allowed without a
 change-window decision. Failed parity/lineage/replay tests block closure;
 only genuine source-owner work is carried forward explicitly.
+
+**Implementation and evidence slice (2026-09-04):** the additive offline Rust crate
+maximum-data-acceptance, two E6 JSON Schemas, domain-acceptance registry,
+sanitized runtime-evidence registry, digest manifest, dependency-free Python
+validator and Control-API contract test are now present. The source file
+maximum-data-contract/src/e4.rs was updated only to pin the corrected E3
+manifest. No transport, client, DB/Redis path, route, listener, cache,
+projection, command port, profile flag, source identity, deployment or data
+mutation was added.
+
+The qualification found and fixed one in-scope frozen-contract defect rather
+than weakening the gate: public.sizing_decisions exposes decision_id as its
+actual immutable primary key, while E3 had named a non-existent
+sizing_decision_id. Metadata-only runtime inspection confirmed the field name
+and non-null key without retaining a value. E3 source columns/resource
+identity and generated CSV/work-order wording were corrected, then the
+E3→E4→E5 digest chain was regenerated and revalidated. The old E3/E4 pins
+4df8a543…864e6 and 87c3edf1…46406 are superseded by
+f9ba8afb…bd310 and abc4dcfe…d8984 respectively; this is a closed E6
+defect correction, not residual debt.
+
+The committed E6 evidence is a same-host, disposable-container capture using
+only each already-running Edge profile's own mTLS UID/supplementary group and
+read-only secret mount. It records three catalogue requests and 57 fixed
+limit=1 relation requests: every catalogue was 200/AVAILABLE/FRESH/COMPLETE
+with 96 relations, all 19 named E5 relations existed and bound correctly in
+each profile, and all response frames were at or below 1 MiB. Observed state
+counts were Paper 13 PARTIAL + 6 AUTHORITATIVE_EMPTY, Sandbox 7 PARTIAL + 1
+POPULATED + 11 AUTHORITATIVE_EMPTY, and Live 3 PARTIAL + 16
+AUTHORITATIVE_EMPTY. These are source-envelope states, never zero/history/
+replay claims. All three no-client-certificate probes denied; all three
+read-identity POST probes returned 405 before a command path. The evidence
+stores hashes, counts, booleans and bounded contract metadata only—no row,
+cursor, trace ID, token, certificate or secret.
+
+Validated: E4/E5/E6 dependency-free validators passed; focused Rust
+contract/adapter/acceptance tests passed 19/19; the E6 crate passed strict
+Clippy with warnings denied; the new Control-API E6 Vitest passed 2/2; and
+the new TypeScript test passed its standalone strict typecheck. The full
+Control-API typecheck reports eight diagnostics in unchanged
+command-center/execution-realtime/profile-projection tests and the existing
+test harness module-resolution setup; it is recorded honestly but is neither
+caused by nor used to waive an E6 assertion. Focused verification,
+documentation, scoped artifact cleanup and commit are recorded in the closure
+below.
+
+**Closure (2026-09-04):** E6 is complete. The checked-in E6 return pack is
+`maximum-data-acceptance` plus `e6-domain-acceptance.v1.{schema,json}`,
+`e6-runtime-evidence.v1.{schema,json}` and `e6-acceptance.manifest.json`.
+It is digest-pinned to the corrected E3 manifest
+`sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310`,
+E4 manifest
+`sha256:abc4dcfe1f94f69099dc241f2f07c95c6976d919a8e1b7f68bd9fe88873d8984`
+and E5 manifest
+`sha256:57a36804838d341b6f67d4abbf15b64878743b3b58141b0af1d6934e6f189909`.
+The independent `validate_maximum_data_e4.py`, E5 and E6 validators passed;
+the full root-read-only Rust workspace run passed 19/19 focused tests; strict
+`cargo fmt --check` and `cargo clippy -p maximum-data-acceptance --all-targets
+-- -D warnings` passed; focused Control-API Vitest passed 2/2; and its
+standalone strict TypeScript check passed. The full Control-API `npm run
+typecheck` still reports exactly eight pre-existing, out-of-scope diagnostics
+in `command-center`, `execution-realtime`, `profile-projection` and the
+`node-pg-migrate` harness resolution. No E6 assertion relies on that failing
+aggregate check, and no unrelated test was changed.
+
+The only real runtime observations were the documented serial existing-Edge
+mTLS reads: three catalogue responses and 57 one-row page responses across
+Paper/Sandbox/Live, plus six denial checks. No runtime profile, Edge image,
+Source Proxy route, database, Redis, credential, source data, command port or
+deployment was changed; the active three-profile Edge/Source-Proxy/worker/
+projection-Postgres service set remained up for the same 33-hour uptime after
+the tests. Evidence is same-host only and must not be represented as
+independent failure-domain or production-authoritative proof.
+
+**Artifact hygiene:** pre-cleanup exact disposable caches were 680 MiB Cargo
+target, 68 MiB Cargo home and 191 MiB Node workspace (939 MiB total). They
+were deleted by exact path after verification. The unreferenced test-only
+`rust:1.85.1-slim` and `node:22.14.0-bookworm-slim` images were removed; the
+operational `qdl-v2-python:2.0.12-0843d2d` image was retained. Docker changed
+from 23 images / 18 active / 11.7 GB to 21 images / 18 active / 10.26 GB; no
+broad prune, volume/network removal or runtime restart occurred. Post-cleanup
+BuildKit was 45 records / 15 active / 3.65 GB / 0 B reclaimable, so no
+disposable cache remained to remove.
+
+**Debt ruling and next boundary:** E6 leaves no internal implementation,
+contract or cleanup debt. Missing global sequence, retention floor,
+event/replay and correction observability remain explicit source-owner facts
+in the accepted contract—not invented semantics or hidden E6 work—and only
+govern a future event/replay surface. The next permitted work is the separately
+unapproved EX-DP-07 resilience/capacity/complete-return slice; it requires new
+owner approval and must not be inferred from this read-only qualification.
 
 #### EX-DP-07 — E7 resilience, capacity and complete owner return
 

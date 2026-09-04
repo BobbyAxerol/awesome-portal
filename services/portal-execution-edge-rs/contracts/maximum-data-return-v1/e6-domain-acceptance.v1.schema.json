@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e6.domain-acceptance.schema.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "status",
+    "e3_coverage_manifest_sha256",
+    "e4_contract_manifest_sha256",
+    "e5_publication_manifest_sha256",
+    "global_source_health",
+    "domains",
+    "authority"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.maximum-data.e6.domain-acceptance.v1"
+    },
+    "phase": { "const": "EX-DP-06" },
+    "status": { "const": "EDGE_SHADOW_VERIFIED" },
+    "e3_coverage_manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "e4_contract_manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "e5_publication_manifest_sha256": { "$ref": "#/$defs/sha256" },
+    "global_source_health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manager_envelope",
+        "global_sequence",
+        "retention_floor",
+        "event_replay",
+        "correction",
+        "empty"
+      ],
+      "properties": {
+        "manager_envelope": { "type": "string", "minLength": 1 },
+        "global_sequence": { "type": "string", "minLength": 1 },
+        "retention_floor": { "type": "string", "minLength": 1 },
+        "event_replay": { "type": "string", "minLength": 1 },
+        "correction": { "type": "string", "minLength": 1 },
+        "empty": { "type": "string", "minLength": 1 }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "minItems": 11,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "domain_id",
+          "acceptance_status",
+          "field_ids",
+          "accepted_semantics",
+          "typed_source_owner_gap_ids",
+          "owner_action"
+        ],
+        "properties": {
+          "domain_id": { "type": "string", "minLength": 1 },
+          "acceptance_status": { "type": "string", "minLength": 1 },
+          "field_ids": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "accepted_semantics": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "typed_source_owner_gap_ids": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "owner_action": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "direct_database_access",
+        "direct_redis_access",
+        "raw_relation_or_sql_selection",
+        "source_identity_or_credential",
+        "source_network_change",
+        "command_or_cli_execution",
+        "runtime_activation"
+      ],
+      "properties": {
+        "direct_database_access": { "const": false },
+        "direct_redis_access": { "const": false },
+        "raw_relation_or_sql_selection": { "const": false },
+        "source_identity_or_credential": { "const": false },
+        "source_network_change": { "const": false },
+        "command_or_cli_execution": { "const": false },
+        "runtime_activation": { "const": false }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

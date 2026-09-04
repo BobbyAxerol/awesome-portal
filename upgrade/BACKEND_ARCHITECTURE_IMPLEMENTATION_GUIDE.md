@@ -667,6 +667,23 @@ deep-dive → ADR → slice → evidence discipline documented above.
   EX-DP-05 in the Unified Plan for the hash-bound schemas/fixtures and the
   distinct E6 runtime acceptance boundary.
 
+- **EX-DP-06/E6 domain acceptance and source-health qualification closed
+  (2026-09-04, same-host read-only):** the additive offline Rust
+  `maximum-data-acceptance` pack binds all 11 E4 domains to the frozen E5
+  publication map, rejects authority widening and records source limitations
+  as typed owner facts. Existing Manager mTLS paths were observed without any
+  deployment or source mutation: Paper, Sandbox and Live each returned a
+  200/AVAILABLE/FRESH/COMPLETE 96-relation catalogue, all 19 fixed named
+  relation pages (57 total) stayed within the 1 MiB bound, and six mTLS/method
+  denial checks failed closed. The evidence contains only hashes, counts and
+  bounded envelope metadata; it retains no source row, cursor, trace or
+  credential. The frozen `public.sizing_decisions` key was corrected to the
+  actual `decision_id` and the E3→E4→E5 digest chain was repinned. Rust
+  19/19, strict formatter/Clippy, E4/E5/E6 validators and focused TypeScript
+  2/2 passed. This is not independent HA/production-authority evidence and
+  does not deploy E5, add a route or grant a direct data path. See
+  [EX-DP-06 in the Unified Plan](./UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-06--e6-domain-acceptance-and-source-health-qualification).
+
 - **EX-DP-01/E2 deployed truth, census and semantic audit closed
   (2026-09-04):** E0/E1 has a private digest-bound deployed runtime tuple and
   a source-owned Rust catalog census, not a Portal direct-DB path: 99 current

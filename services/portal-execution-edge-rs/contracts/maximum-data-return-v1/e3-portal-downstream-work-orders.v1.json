@@ -65,7 +65,7 @@
       "work_order_id": "E5_RISK_SIZING_EVIDENCE_READ",
       "field_ids": ["risk_grants", "sizing_decisions"],
       "source_operation": "maximumDataRiskGrantPageV1+maximumDataSizingDecisionPageV1",
-      "resource_identity": "profile_id plus risk_grant_id/sizing_decision_id and declared account/strategy scope",
+      "resource_identity": "profile_id plus risk_grant_id/decision_id and declared account/strategy scope",
       "continuation_policy": "opaque named keyset continuation; no inferred signal-intent or correction stream",
       "portal_storage_reducer": "append retained decision evidence by immutable source identifier when source semantics permit",
       "empty_stale_gap_semantics": "empty means no recorded decision; no decision is not evidence that risk was bypassed",

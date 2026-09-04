@@ -1,0 +1,115 @@
+{
+  "schema_version": "portal.execution.maximum-data.e6.domain-acceptance.v1",
+  "phase": "EX-DP-06",
+  "status": "EDGE_SHADOW_VERIFIED",
+  "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
+  "e4_contract_manifest_sha256": "sha256:abc4dcfe1f94f69099dc241f2f07c95c6976d919a8e1b7f68bd9fe88873d8984",
+  "e5_publication_manifest_sha256": "sha256:57a36804838d341b6f67d4abbf15b64878743b3b58141b0af1d6934e6f189909",
+  "global_source_health": {
+    "manager_envelope": "PROFILE_BOUND_AVAILABLE_FRESH_COMPLETENESS_EXPLICIT",
+    "global_sequence": "NOT_PROVEN",
+    "retention_floor": "UNDECLARED_BY_MANAGER_ENVELOPE",
+    "event_replay": "NOT_ACCEPTED",
+    "correction": "NOT_OBSERVABLE_FROM_MANAGER_PAGE",
+    "empty": "AUTHORITATIVE_EMPTY_ONLY_WHEN_AVAILABLE_COMPLETE_AND_ZERO_ITEMS"
+  },
+  "domains": [
+    {
+      "domain_id": "alpha_strategy_deployment_artifact",
+      "acceptance_status": "ACCEPTED_CURRENT_STATE_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["deployment_current", "alpha_activity", "research_artifact"],
+      "accepted_semantics": ["profile-bound deployment current page", "named alpha-activity delegate only"],
+      "typed_source_owner_gap_ids": ["artifact-signed-reference", "research-run-linkage"],
+      "owner_action": "trading_system_artifact_owner: publish immutable deployment-to-artifact and research-run linkage"
+    },
+    {
+      "domain_id": "portfolio_allocation_capital",
+      "acceptance_status": "ACCEPTED_NAMED_DERIVATION_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["portfolio_capital", "account_equity_history", "performance_snapshot"],
+      "accepted_semantics": ["named profile-scoped capital derivation", "bounded snapshot inputs only"],
+      "typed_source_owner_gap_ids": ["portfolio-profile-equity-direct"],
+      "owner_action": "trading_system_portfolio_owner: publish profile-scoped allocation, ledger retention and valuation policy"
+    },
+    {
+      "domain_id": "accounts_balances_margin_bindings_sync",
+      "acceptance_status": "ACCEPTED_CURRENT_STATE_ONLY",
+      "field_ids": ["account_current", "account_balances", "margin_balances", "account_sync", "broker_sync", "venue_accounts"],
+      "accepted_semantics": ["profile-bound account, balance, margin, binding and sync current pages"],
+      "typed_source_owner_gap_ids": [],
+      "owner_action": "NOT_REQUIRED_CURRENT_SOURCE_BOUNDARY"
+    },
+    {
+      "domain_id": "positions_exposure",
+      "acceptance_status": "ACCEPTED_CURRENT_STATE_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["position_current"],
+      "accepted_semantics": ["profile-bound canonical current position page"],
+      "typed_source_owner_gap_ids": ["position-mark-provenance", "position-version-history"],
+      "owner_action": "trading_system_position_owner: publish mark provenance and version-history authority"
+    },
+    {
+      "domain_id": "orders_fills_conditional_lifecycle",
+      "acceptance_status": "ACCEPTED_BOUNDED_READ_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["order_current", "fill_history", "conditional_legs", "trade_replay"],
+      "accepted_semantics": ["current orders", "bounded fill page with opaque continuation", "named conditional delegate"],
+      "typed_source_owner_gap_ids": ["order-broker-ack-clocks", "fill-correction-replay"],
+      "owner_action": "trading_system_event_owner: publish authoritative lifecycle, correction and replay journal"
+    },
+    {
+      "domain_id": "execution_sessions_cycles",
+      "acceptance_status": "ACCEPTED_CURRENT_STATE_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["session_current"],
+      "accepted_semantics": ["profile-bound execution-session control row page"],
+      "typed_source_owner_gap_ids": ["session-funnel-and-producer-version"],
+      "owner_action": "trading_system_execution_owner: publish retained session transition and producer-version authority"
+    },
+    {
+      "domain_id": "signal_sizing_risk",
+      "acceptance_status": "ACCEPTED_BOUNDED_READ_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["risk_grants", "sizing_decisions"],
+      "accepted_semantics": ["named retained decision record pages", "decision_id is the sizing primary key"],
+      "typed_source_owner_gap_ids": ["signal-intent-funnel", "risk-event-correction"],
+      "owner_action": "trading_system_risk_owner: publish signal funnel and risk correction event authority"
+    },
+    {
+      "domain_id": "accounting_equity_performance_valuation",
+      "acceptance_status": "ACCEPTED_BOUNDED_SNAPSHOT_READ_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["account_equity_history", "performance_snapshot", "portfolio_capital"],
+      "accepted_semantics": ["bounded retained snapshot pages", "named capital derivation"],
+      "typed_source_owner_gap_ids": ["valuation-mark-provenance"],
+      "owner_action": "trading_system_performance_owner: publish mark provenance, capital-flow, formula revision and correction semantics"
+    },
+    {
+      "domain_id": "reconciliation_incidents_operational_truth",
+      "acceptance_status": "ACCEPTED_CURRENT_STATE_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["reconciliation_findings", "dead_letter_summary", "source_health"],
+      "accepted_semantics": ["current reconciliation lifecycle", "redacted operational summary", "Manager envelope health"],
+      "typed_source_owner_gap_ids": ["reconciliation-ack-evidence"],
+      "owner_action": "trading_system_ops_owner: publish immutable reconciliation acknowledgement evidence"
+    },
+    {
+      "domain_id": "commands_terminal_verification",
+      "acceptance_status": "ACCEPTED_READ_ONLY_JOURNAL_WITH_TYPED_LIMITATIONS",
+      "field_ids": ["command_journal", "portal_activation", "portal_governance"],
+      "accepted_semantics": ["retained redacted command journal read", "read identity has no command method"],
+      "typed_source_owner_gap_ids": ["command-safe-reference-payload-contract"],
+      "owner_action": "trading_system_command_owner: publish safe terminal-reference and payload allowlist contract"
+    },
+    {
+      "domain_id": "market_context",
+      "acceptance_status": "TYPED_SOURCE_OWNER_GAP_WITH_INSTRUMENT_REFERENCE",
+      "field_ids": ["instrument_master", "market_candles", "market_latest", "venue_calendar", "vnm_constraints"],
+      "accepted_semantics": ["profile-bound current instrument reference page only"],
+      "typed_source_owner_gap_ids": ["market-latest-ticks", "market-ohlcv", "market-benchmark", "market-session-calendar", "market-vnm-constraints"],
+      "owner_action": "trading_system_market_owner: publish Data Layer-owned typed market, calendar and benchmark capabilities"
+    }
+  ],
+  "authority": {
+    "direct_database_access": false,
+    "direct_redis_access": false,
+    "raw_relation_or_sql_selection": false,
+    "source_identity_or_credential": false,
+    "source_network_change": false,
+    "command_or_cli_execution": false,
+    "runtime_activation": false
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": "portal.execution.maximum-data.e4.operation-bindings.v1",
-  "e3_coverage_manifest_sha256": "sha256:4df8a5438efc2878b95847dd0212ab619b888da37cbd69df459be982f9e864e6",
+  "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
   "bindings": [
     { "field_id": "source_health", "schema_ref": "portal.execution.maximum-data.e4.read-envelope.schema.v1", "binding_status": "EXISTING_CONTRACT_COMPATIBLE", "logical_operation_id": "maximumDataSourceHealthV1", "typed_absence_id": null, "snapshot_semantics": "CURRENT_OBSERVATION_ONLY", "continuation_semantics": "NOT_APPLICABLE_CURRENT_CONTRACT", "source_status": "AVAILABLE_CURRENT_STATE_ONLY" },
     { "field_id": "portal_governance", "schema_ref": "portal.execution.maximum-data.e4.read-envelope.schema.v1", "binding_status": "EXISTING_CONTRACT_COMPATIBLE", "logical_operation_id": "maximumDataGovernanceRecordV1", "typed_absence_id": null, "snapshot_semantics": "PORTAL_CONTROL_RECORD", "continuation_semantics": "PER_EXISTING_PORTAL_CONTROL_CONTRACT", "source_status": "AVAILABLE_CURRENT_STATE_ONLY" },

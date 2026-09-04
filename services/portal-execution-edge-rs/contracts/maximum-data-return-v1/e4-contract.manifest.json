@@ -4,7 +4,7 @@
   "status": "COMPLETE",
   "e2_semantic_registry_sha256": "sha256:c1886540c91e8e96219a12684e0b42651a061236128ab92f51442d0f56493477",
   "e2_semantic_contract_sha256": "sha256:fa93683ed7c7cf1298b6e6943e93383a707f3beefe377df745fd909884f6dcac",
-  "e3_coverage_manifest_sha256": "sha256:4df8a5438efc2878b95847dd0212ab619b888da37cbd69df459be982f9e864e6",
+  "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
   "manager_v2_contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
   "counts": {
     "schema_count": 7,
@@ -33,7 +33,7 @@
     "e4-event-coverage.v1.schema.json": "sha256:eaee1259c6b900c0a043dec3eafb3b04cce00ab43e320766fdff544cc28b4432",
     "e4-golden-fixtures.v1.json": "sha256:ae2b21ac35b7dcb412bafaf93f4c737019d658b3c90d19f426856c43206b83c0",
     "e4-history-continuation.v1.schema.json": "sha256:0d4e1c85356f03e74ac858af38865f8e4c1f587991ec8604fd4ba68a3f0bcf6a",
-    "e4-operation-bindings.v1.json": "sha256:35139898eb6078b74b75cc9cd4bae3d0cc9824b6655c8839598826d1e3830b2f",
+    "e4-operation-bindings.v1.json": "sha256:c8bba4a42fc3cbbc6ed3f9ee8d28b9b4bcfc5dcef7b7db4f6a9890934ea7e878",
     "e4-read-envelope.v1.schema.json": "sha256:302ac6145f2f70795fa6c07d12dcfcefc520fabdc562d5f3f47dcf8655fdb48b",
     "e4-source-catalogue.v1.json": "sha256:d579eddd94d5b5d1c2a1861103959168f170cb1e8cfb7894ff98ab6bb5b93e86",
     "e4-source-catalogue.v1.schema.json": "sha256:c6ad7dd1a5dc4316b4e398a2a32a1672efb8cc793675f417acada6086c2fa347",

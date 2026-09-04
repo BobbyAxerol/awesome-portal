@@ -118,3 +118,44 @@ Append these E5 artifacts to the reading order:
 12. `e5-existing-data-publication.v1.schema.json` and
     `e5-named-page.v1.schema.json`
 13. `e5-golden-fixtures.v1.json`
+
+## E6 complete, same-host source qualification
+
+e6-acceptance.manifest.json locks the E6 domain-acceptance result. It is
+runtime evidence for the **existing private read plane**, not an E5 deployment
+or a new Portal endpoint.
+
+- e6-domain-acceptance.v1.json maps all 11 E4 domains to the bounded
+  capability that is actually accepted now and carries every unproven
+  history/replay/correction/market/artifact property as a typed source-owner
+  limitation with one named action.
+- e6-runtime-evidence.v1.json contains a sanitized same-host capture:
+  a 200/fresh/complete 96-relation catalogue and one limit=1 page for
+  each of the 19 fixed Manager relations in Paper, Sandbox and Live
+  (57 page observations total). It retains only contract metadata, bounded
+  counts/booleans and body/field-shape hashes—not rows, record keys, cursors,
+  trace IDs, tokens or certificates.
+- Empty is accepted only when the owner envelope says
+  AVAILABLE + COMPLETE with zero items. Partial remains partial; it is
+  never rendered as a zero, full history, replay or correction claim. Live's
+  observed empties are therefore authoritative empty snapshots, not a claim
+  that Live has no historical activity.
+- Missing-client-certificate denial and POST method denial were both
+  verified independently for Paper, Sandbox and Live. The read identity never
+  gained a command capability.
+
+The offline maximum-data-acceptance Rust crate and
+tools/validate_maximum_data_e6.py validate the E3/E4/E5 pins, every domain
+ruling, profile/relation/key binding, page bound, redaction boundary and all
+artifact hashes. They have no transport or source credential. E6 does not
+create a route, direct database/Redis path, cache, projection, command
+execution, profile activation or deployment. Canary remains the explicit
+Portal-composed E5 boundary, rather than a fourth direct Manager profile.
+
+Append these E6 artifacts to the reading order:
+
+14. e6-acceptance.manifest.json
+15. e6-domain-acceptance.v1.json
+16. e6-runtime-evidence.v1.json
+17. e6-domain-acceptance.v1.schema.json and
+    e6-runtime-evidence.v1.schema.json

@@ -96,7 +96,7 @@ pub const E4_GOLDEN_FIXTURES_VERSION: &str = "portal.execution.maximum-data.e4.g
 pub const E4_CONTRACT_MANIFEST_VERSION: &str =
     "portal.execution.maximum-data.e4.contract-manifest.v1";
 pub const E3_COVERAGE_MANIFEST_SHA256: &str =
-    "sha256:4df8a5438efc2878b95847dd0212ab619b888da37cbd69df459be982f9e864e6";
+    "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310";
 
 const EXPECTED_DOMAIN_IDS: [&str; 11] = [
     "alpha_strategy_deployment_artifact",

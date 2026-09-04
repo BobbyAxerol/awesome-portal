@@ -2,8 +2,8 @@
   "schema_version": "portal.execution.maximum-data.e5.publication-manifest.v1",
   "phase": "EX-DP-05",
   "status": "EDGE_IMPLEMENTED_SOURCE_DARK",
-  "e3_coverage_manifest_sha256": "sha256:4df8a5438efc2878b95847dd0212ab619b888da37cbd69df459be982f9e864e6",
-  "e4_contract_manifest_sha256": "sha256:87c3edf13b93d7393f66deaa7d043240e0768ce4fe495ff2318da4996cb46406",
+  "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
+  "e4_contract_manifest_sha256": "sha256:abc4dcfe1f94f69099dc241f2f07c95c6976d919a8e1b7f68bd9fe88873d8984",
   "counts": {
     "field_count": 34,
     "manager_relation_adapter_count": 19,
@@ -24,7 +24,7 @@
   "files": {
     "e5-existing-data-publication.v1.schema.json": "sha256:608ae53636b92d461030a8ffbb1691c16b23d67b2d5131755caed55d5bda585c",
     "e5-named-page.v1.schema.json": "sha256:e127c3460d7d67da1bac6af2ced1a289b1a8718bbe595d46db040c0f3d08b0d8",
-    "e5-existing-data-publication.v1.json": "sha256:332a1e9af2dc42576c7ae00862bc10b85ca9ed15a9ad108bcf55f47a0c096e69",
+    "e5-existing-data-publication.v1.json": "sha256:72afcfc1972f3a12a8577d30eacc2bee7ed17c445e7ef6475731707674805df0",
     "e5-golden-fixtures.v1.json": "sha256:1464a1896a016d82d812a76e459e4d4e6daa759a369231d57be3cfc296251a90"
   }
 }
