@@ -3265,3 +3265,60 @@ independent-cell SGP ingest and controlled 1/5/30-minute source outage
 recovery. The next permitted runtime work is a separately approved immutable
 Portal BFF/Edge release binding one named E5 operation; it is not required to
 accept this offline/current-read return pack.
+
+#### EX-DP post-closure — Portal implementer handoff and runtime-readiness publication
+
+**Status:** **COMPLETE / PULLABLE_PORTAL_HANDOFF / RUNTIME_ALREADY_READY / NO_RUNTIME_MUTATION** (2026-09-04).
+
+**Approval and scope:** Bobby approved one concise, pullable handoff for the
+Portal Execution Edge implementer and asked that the already-qualified service
+be reported as ready. This slice may add one root-level Markdown handoff,
+cross-link it from this plan, validate the existing portable E7 pack and push
+the current feature branch. It may inspect the running Edge containers only to
+report their health, immutable image digest and boolean Manager-read gates. It
+must not alter routes, images, containers, ports, identities, tokens,
+certificates, Source Proxy, Trading System, database, cache, command plane or
+profile configuration.
+
+**Invariants and exit gate:** the handoff must distinguish the private Edge
+route from the Source Proxy route; direct DB/SQL/browser access remains
+prohibited; the only delegated resource remains GET-only
+`execution:manager-v2:read`; profile, audience and mTLS stay deployment-bound;
+and E7's current-page/replay distinction and typed source absence must remain
+intact. Before publication, validate the E7 manifest/return pack, verify the
+new document's links and redaction boundary, run `git diff --check`, commit the
+plan and handoff together, then push only `feat/execution-data-activation`.
+No runtime mutation is a permitted or required part of this publication.
+
+**Rollback:** source-only: revert the single handoff commit from the feature
+branch if its documentation is inaccurate. There is no runtime rollback because
+this slice does not deploy or reconfigure anything.
+
+**Implementation and evidence (2026-09-04):** added the root-level
+`PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_HANDOFF.md`. It gives the receiving agent a
+copy/paste implementation prompt, exact read order, product-binding boundary,
+current multi-profile service truth and the four private Edge GET routes. The
+document deliberately sits outside the immutable `maximum-data-return-v1`
+directory, so its `MANIFEST.sha256` continues to pin the accepted portable E7
+return pack unchanged. It records that the BFF calls Edge
+`/internal/v2/manager/...`, while Edge—not the BFF—calls the Source Proxy's
+`/portal/execution/v2/manager/...` path.
+
+Read-only Docker reconciliation found all three `execution-edge` containers
+healthy on immutable image
+`sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077`;
+all three Source Proxy containers healthy; all three projection PostgreSQL
+containers running; and `EDGE_MANAGER_V2_READ_ENABLED=true` for Paper,
+Sandbox and Live. `EDGE_MANAGER_PROJECTION_ENABLED=false` in each profile is
+intentional read-through operation, not a missing readiness configuration. No
+container, image, route, port, secret, identity, source or database was
+changed.
+
+The E7 validator passed again (`34` capabilities, `18` genuine source gaps,
+`3` measured profiles); `MANIFEST.sha256` verified; every local relative link
+in the new handoff resolved; and `git diff --check` passed. The coherent source
+commit is published only to `feat/execution-data-activation`; the next product
+change is a separate immutable Portal BFF release that selects named
+catalogue-bound operations. There is no implementation or cleanup debt in this
+publication. The typed source/replay/independent-cell requirements already
+recorded by E7 remain external facts, not handoff debt.
