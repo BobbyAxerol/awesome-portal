@@ -111,6 +111,24 @@ they are empty because the source currently publishes empty pages.
   carry-forward) stays as defense in depth. One expected one-time wave of
   old 5-minute cursors expiring at the recreate self-healed. See also §5.1.
 
+### 1.5 NEW data-quality finding (verified at source 2026-09-03): unrealized-PnL mark flapping
+- In `account_equity_snapshots`, account `paper-binance-signalcombine00230m`
+  oscillates between two equity levels (~994.3k ↔ ~1009.7k, ±1.5-2%) on
+  consecutive ~90-second cuts, driven entirely by `unrealized_pnl` flipping
+  (−5,727 → +9,742 → … → +15,385), reason `SCHEDULED_ACTIVE`. Verified
+  identical in your table (ids 3790924-3791526, 2026-08-05 20:24-20:37Z) —
+  the Portal mirror reproduces the source exactly (no duplicates, no
+  Portal-side distortion; cross-checked row-for-row).
+- Smaller-base accounts `combine_weight_sl_tp_0011h/4h` show the same
+  two-level pattern at ±10-20% of their 20k base. Other accounts are smooth
+  (p99 consecutive jump ≤ 0.13%).
+- This looks like the marking path alternating between two mark/index
+  sources for the affected instruments, not real PnL. Portal renders data
+  truthfully, so these swings will appear on charts as genuine volatility —
+  please confirm whether this is intended marking behavior or a
+  performance_service defect. (Independent of, and older than, the 17/08
+  halt.)
+
 ## 2. P0 — parent-set integrity in the published feeds
 
 The Portal lineage guard is strict by design: a child row whose parent is not
