@@ -4123,6 +4123,79 @@ from the mirror under the §8 budgets. E3 items close on the owner's two
 decisions plus the HK window (each already fully staged). E4 closes with the
 soak + visual baseline evidence rows in this file.
 
+## 15. Toàn cảnh trạng thái 2026-09-03 tối + đề xuất restructure cách làm (owner yêu cầu)
+
+Viết theo yêu cầu Bobby: "báo cáo toàn bộ trạng thái để tôi restructure lại
+cách làm". Mọi con số đo lúc ~17:00Z. Phần A-C là sự thật; phần D là nhận
+định thẳng về cách làm; phần E là phương án — Bobby chọn, không tự áp.
+
+### 15.A Backend — cái gì ĐANG CHẠY, cái gì CHƯA
+
+ĐANG CHẠY trên dev (nhánh `feat/execution-data-activation`, đã push origin):
+- Data plane: cursor-resume + tail-follow + carry-forward + K−1 refresh;
+  history mirror 572k+ rows equity (đủ 30/06→hôm nay, bám đuôi theo giờ),
+  129k rows performance (đủ tới 17/08 — nơi trading halt).
+- Serving: chart full-range downsample giữ extrema; đường tổng multi-account
+  DERIVED; correlation + drawdown-overlap tính từ mirror (10 alphas × 48-66
+  ngày); endpoint history full-depth cho phân tích.
+- HK: TTL cursor 48h live; restart-policy fix; 2 nhánh đã sẵn (chờ Bobby push
+  vì classifier chặn push remote).
+- Gates hôm nay: 310→312→314→318→321/321, không lần nào đỏ khi commit.
+
+CHƯA XONG (đúng như Bobby cảm nhận — liệt kê thẳng):
+1. **Perf — lý do chính "chưa mượt"**: snapshot Paper phình **974 kB** (2×2000
+   rows ladder trong payload) → mọi read /screens/paper compose từ đó; số đo
+   P4-E cũ đã 2.5s p50 / 4s p95 ở 315KB — giờ nặng hơn ~3×, CHƯA đo lại,
+   CHƯA có gate perf. Root: kiến trúc "một document lớn cho cả màn" + ladder
+   items nhúng thẳng vào snapshot thay vì chart series đã ép mỏng.
+2. Blotter vẫn 400 rows snapshot (Lane E2 chưa làm).
+3. 3 tile insight còn chết chờ nguồn (candles/benchmark/twin — MC-01..09).
+4. Bug được phát hiện bằng MẮT BOBBY (chart 30D/2 ngày, gai kim) — nghĩa là
+   thiếu lớp gate tự động trên dữ liệu thật; cái sửa hôm nay là sửa ĐUỔI.
+5. Trading halted (chủ đích) + release-kit scoped-balances chờ cửa sổ deploy.
+
+### 15.B Frontend — KHÔNG mất gì
+
+Kiểm bằng git: 7 ngày qua chỉ 2 file FE bị xoá, đều chính đáng (probe spec
+cũ; `PaperList.tsx` được thay bằng Paper Overview hi-fi mới trong `0b82a56`).
+Working tree FE sạch. Toàn bộ code FE của Claude còn nguyên và nằm trong
+nhánh đã push. FE không được đụng tới từ 09-01 (commit FE gần nhất `b8fa8f7`
+P4-C) — mọi việc từ đó là backend.
+
+### 15.C Vận hành song song — nguồn hỗn loạn có thật
+
+Hôm nay có lúc **3 agent cùng sửa repo** (2 phiên Claude + codex): đụng nhau
+ở `profile-projection.worker.ts`, hook commit kẹt/va nhau, changelog trùng
+mục phải hợp nhất tay, và nguy cơ deploy dính WIP chưa commit của người
+khác (edge Rust WIP vẫn đang treo trong working tree). Không mất dữ liệu
+lần nào, nhưng đó là may + tốn công đối soát — không phải quy trình.
+
+### 15.D Chẩn đoán thẳng về CÁCH LÀM hiện tại
+
+1. **Không có single-writer**: nhiều phiên cùng goal, cùng file, không phân
+   làn → race, trùng việc, khó truy vết ai làm gì.
+2. **Thiếu gate nhìn-thấy-được**: unit/contract gate dày (321 test xanh)
+   nhưng KHÔNG có gate "màn hình đúng trên dữ liệu thật" (visual/e2e chạy
+   với mirror thật) và KHÔNG có gate perf (p95/payload budget) → bug chỉ lộ
+   khi owner nhìn, perf tụt không ai chặn.
+3. **Dev runtime vừa là chỗ agent deploy liên tục vừa là chỗ owner review**
+   → owner đang nhìn thì bên dưới đổi.
+4. **Fix đuổi theo triệu chứng từng màn** thay vì chốt data-contract per
+   screen trước (màn này cần series gì, độ phân giải nào, budget bao nhiêu).
+
+### 15.E Phương án restructure (Bobby chọn từng dòng)
+
+| # | Đề xuất | Chi phí | Hiệu quả |
+|---|---|---|---|
+| R1 | **Một phiên agent / một làn**: Claude(1 phiên duy nhất)=control-api+FE, codex=edge Rust+trading; giao tiếp qua CODEX_TO_CLAUDE/BR-EX files như rule sẵn có. Bobby tắt các phiên thừa | 0 | Hết race, hết trùng |
+| R2 | **Perf budget thành gate**: đo lại bảng P4-E ngay (trước/sau), cap payload /screens/* (vd ≤300KB), snapshot KHÔNG nhúng ladder items thô — composer ép thành chart series mỏng ngay trong worker; route nào vượt budget = gate đỏ | 1-2 ngày | Trực tiếp vào "mượt + nhanh" |
+| R3 | **Visual/e2e gate trên dữ liệu thật**: mỗi màn 1 e2e screenshot chạy với mirror seeded thật (không fixture bịa), chạy trong control gate; bug thấy bằng mắt = viết test đỏ TRƯỚC khi fix | 2-3 ngày dựng nền | Bug kiểu "30D/2 ngày" không tái diễn |
+| R4 | **Tách review khỏi dev**: runtime `review` (compose project thứ 2, image pin theo tag Bobby chọn) — agent chỉ deploy `dev`, Bobby duyệt trên `review` | nửa ngày | Owner review không bị đổi dưới chân |
+| R5 | **Data-contract per screen trước khi code**: mỗi màn 1 bảng (relation → series → resolution → budget) trong EXECUTION_SCALE_AND_REFINE.md, code chỉ chạy sau khi bảng chốt | quy trình | Hết fix đuổi |
+
+Thứ tự đề nghị nếu Bobby duyệt cả gói: R1 ngay lập tức → R2 (kèm đo lại
+P4-E làm bằng chứng trước/sau) → R4 → R3 → R5 áp cho mọi màn từ E2 trở đi.
+
 ## 13. Change log
 
 | Date | Change | Evidence/status effect |
