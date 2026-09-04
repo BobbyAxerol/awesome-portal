@@ -33,6 +33,7 @@ members = [
   "crates/maximum-data-contract",
   "crates/maximum-data-adapter",
   "crates/maximum-data-acceptance",
+  "crates/maximum-data-return",
 ]
 resolver = "2"
 

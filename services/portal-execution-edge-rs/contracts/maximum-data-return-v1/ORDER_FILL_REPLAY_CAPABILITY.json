@@ -1,0 +1,50 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.domain-capability.v1",
+  "domain_id": "orders_fills_conditional_lifecycle",
+  "status": "CURRENT_STATE_ONLY",
+  "as_of_ms": 1788516000000,
+  "current_qualified_operations": [
+    {
+      "field_id": "order_current",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataOrderPageV1",
+      "source_relation": "public.orders",
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "semantics": "CURRENT_ORDER_STATE_NOT_LIFECYCLE_REPLAY"
+    },
+    {
+      "field_id": "fill_history",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataFillPageV1",
+      "source_relation": "public.fills",
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "semantics": "RETAINED_FILL_RANGE_WITHOUT_REPLAY_OR_CORRECTION_CLAIM"
+    },
+    {
+      "field_id": "conditional_legs",
+      "status": "AVAILABLE_DERIVED_AT_PORTAL",
+      "operation": "maximumDataConditionalOrderLegsV1",
+      "semantics": "CURRENT_STRUCTURE_ONLY"
+    }
+  ],
+  "replay": {
+    "field_id": "trade_replay",
+    "status": "OWNER_ACTION_REQUIRED",
+    "reason_code": "NO_AUTHORITATIVE_GLOBAL_SEQUENCE_RETENTION_OR_CORRECTION_JOURNAL",
+    "required_source_contract": "snapshot-plus-tail event.full-incremental with global sequence, retention floor, correction/retraction and opaque resume cursor",
+    "source_owner_gap_ids": ["order-broker-ack-clocks", "fill-correction-replay"],
+    "portal_can_proceed_with_current_pages": true
+  },
+  "wire_contract": {
+    "timestamp_contract": "UTC_EPOCH_MS",
+    "decimal_contract": "EXACT_DECIMAL_STRING",
+    "page_bound": {"rows": 200, "bytes": 1048576},
+    "continuation": "SOURCE_ISSUED_OPAQUE_CURSOR_ONLY"
+  },
+  "evidence_references": [
+    "e4-event-coverage.v1.json",
+    "e5-existing-data-publication.v1.json",
+    "e6-domain-acceptance.v1.json",
+    "SOURCE_OWNER_GAPS.json"
+  ]
+}

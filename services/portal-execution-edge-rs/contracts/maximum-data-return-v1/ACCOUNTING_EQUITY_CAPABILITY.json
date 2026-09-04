@@ -1,0 +1,54 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.domain-capability.v1",
+  "domain_id": "accounting_equity_performance_valuation",
+  "status": "AVAILABLE_DIRECT",
+  "as_of_ms": 1788516000000,
+  "current_qualified_operations": [
+    {
+      "field_id": "account_equity_history",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataAccountEquityHistoryV1",
+      "source_relation": "public.account_equity_snapshots",
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "semantics": "RETAINED_SNAPSHOT_HISTORY_NOT_EVENT_REPLAY"
+    },
+    {
+      "field_id": "performance_snapshot",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataPerformanceSnapshotHistoryV1",
+      "source_relation": "public.performance_snapshots",
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "semantics": "RETAINED_SNAPSHOT_HISTORY_NOT_EVENT_REPLAY"
+    },
+    {
+      "field_id": "portfolio_capital",
+      "status": "AVAILABLE_DERIVED_AT_PORTAL",
+      "operation": "maximumDataPortfolioCapitalV1",
+      "semantics": "PROFILE_SCOPED_DERIVATION_ONLY_NO_UNSCOPED_PORTFOLIO_SNAPSHOT"
+    }
+  ],
+  "portfolio_equity_decision": {
+    "status": "DERIVED_ACCOUNT_SUM_REQUIRED",
+    "reason_code": "PORTFOLIO_PROFILE_EQUITY_DIRECT_NOT_EVIDENCED",
+    "required_inputs": ["effective-dated membership", "currency policy", "capital flow policy", "formula revision", "input completeness"],
+    "source_owner_gap_id": "portfolio-profile-equity-direct"
+  },
+  "typed_limitations": [
+    {
+      "gap_id": "valuation-mark-provenance",
+      "status": "OWNER_ACTION_REQUIRED",
+      "reason_code": "MARK_PRICE_PROVENANCE_AND_CORRECTION_NOT_PROVEN"
+    }
+  ],
+  "wire_contract": {
+    "timestamp_contract": "UTC_EPOCH_MS",
+    "decimal_contract": "EXACT_DECIMAL_STRING",
+    "continuation": "SOURCE_ISSUED_OPAQUE_CURSOR_ONLY"
+  },
+  "evidence_references": [
+    "e3-derived-metric-feasibility.v1.json",
+    "e5-existing-data-publication.v1.json",
+    "e6-domain-acceptance.v1.json",
+    "SOURCE_OWNER_GAPS.json"
+  ]
+}

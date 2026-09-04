@@ -1,0 +1,80 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.return-pack.v1",
+  "phase": "EX-DP-07",
+  "status": "RETURN_PACK_ACCEPTED_FOR_CURRENT_QUALIFIED_READS_AND_TYPED_EXTERNAL_GATES",
+  "pins": {
+    "e1_evidence_manifest_sha256": "sha256:1a13355a28e8ec40c83b74cb53e54b1916b755b67fdc45696b7304473d3a10cf",
+    "e2_positive_semantic_audit_manifest_sha256": "sha256:b2fd7f9e60d28d01279f2283c62028beaeb166a1eb95291388059a80cb46d94b",
+    "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
+    "e4_contract_manifest_sha256": "sha256:abc4dcfe1f94f69099dc241f2f07c95c6976d919a8e1b7f68bd9fe88873d8984",
+    "e5_publication_manifest_sha256": "sha256:57a36804838d341b6f67d4abbf15b64878743b3b58141b0af1d6934e6f189909",
+    "e6_acceptance_manifest_sha256": "sha256:5081befce2c7d62a0a33abd95607e3caf02b7659448b39473e0208640a9e0ef5"
+  },
+  "required_paths": [
+    "MASTER_RESPONSE.md",
+    "owner-response.v2.json",
+    "DEPLOYED_RUNTIME_MANIFEST.json",
+    "SOURCE_SYSTEM_INVENTORY.json",
+    "DATABASE_RELATION_CENSUS.csv",
+    "COLUMN_SEMANTICS_CATALOG.csv",
+    "SOURCE_LINEAGE_GRAPH.json",
+    "PROFILE_MODE_VENUE_COVERAGE.json",
+    "SCREEN_FIELD_SOURCE_COVERAGE.csv",
+    "ACTION_CAPABILITY_COVERAGE.csv",
+    "DERIVED_METRIC_FEASIBILITY.csv",
+    "EVENT_CONTINUITY_REPORT.md",
+    "ORDER_FILL_REPLAY_CAPABILITY.json",
+    "RISK_DATA_CAPABILITY.json",
+    "ACCOUNTING_EQUITY_CAPABILITY.json",
+    "ACCOUNT_BINDING_CAPABILITY.json",
+    "MARKET_CONTEXT_CAPABILITY.json",
+    "PUBLICATION_HEALTH_CAPABILITY.json",
+    "SOURCE_PUBLICATION_PLAN.json",
+    "SOURCE_OWNER_GAPS.json",
+    "RELEASE_COMPATIBILITY_MATRIX.json",
+    "schemas/source-catalog.v1.schema.json",
+    "schemas/relation-history.v1.schema.json",
+    "schemas/incremental-events.v2.schema.json",
+    "schemas/source-health.v1.schema.json",
+    "benchmarks/SOURCE_RATE_WINDOWS.csv",
+    "benchmarks/EDGE_STREAM_BENCHMARK.json",
+    "benchmarks/CROSS_CELL_BENCHMARK.json",
+    "benchmarks/FAILURE_RECOVERY_REPORT.md",
+    "evidence/EVIDENCE_INDEX.md"
+  ],
+  "manifest_scope": "MANIFEST.sha256 covers every portable return-pack file except itself. owner-response.v2.json return_pack_digest identifies this manifest; this manifest therefore does not recursively hash the owner response.",
+  "authority": {
+    "direct_database": false,
+    "direct_redis": false,
+    "generic_relation_or_sql": false,
+    "source_credentials": false,
+    "runtime_activation": false,
+    "command_execution": false
+  },
+  "external_evidence_requirements": [
+    {
+      "requirement_id": "GLOBAL_SEQUENCE_AND_GAP_RATE",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "trading_system_event_owner",
+      "required_window": "authoritative event journal publication"
+    },
+    {
+      "requirement_id": "RETAINED_EVENT_REPLAY_AND_CORRECTION",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "trading_system_event_owner",
+      "required_window": "replay and correction qualification"
+    },
+    {
+      "requirement_id": "CROSS_CELL_SGP_INGEST",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "portal_execution_edge_owner",
+      "required_window": "independent-cell ingest exercise"
+    },
+    {
+      "requirement_id": "ONE_FIVE_THIRTY_MINUTE_SOURCE_OUTAGE",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "source_proxy_and_trading_system_owner",
+      "required_window": "approved failure exercise"
+    }
+  ]
+}

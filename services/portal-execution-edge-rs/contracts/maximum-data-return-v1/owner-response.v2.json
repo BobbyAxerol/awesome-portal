@@ -1,0 +1,1627 @@
+{
+  "schema_version": "portal.execution.edge-owner-response.v2",
+  "request_revision": "portal.execution.edge-maximum-data-request.v1",
+  "captured_at_ms": 1788540677303,
+  "source_commit": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+  "edge_commit": "9266a6843d1863395e15b563ac53de32780e0f25",
+  "image_digest": "sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077",
+  "catalogue_digest": "sha256:9040f0897d8f452a486e51ce35abb7f3165b2238d07221b6b0e684d9829b012e",
+  "serving_policy_digest": "sha256:b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3",
+  "pins": {
+    "e1_evidence_manifest_sha256": "sha256:1a13355a28e8ec40c83b74cb53e54b1916b755b67fdc45696b7304473d3a10cf",
+    "e2_positive_semantic_audit_manifest_sha256": "sha256:b2fd7f9e60d28d01279f2283c62028beaeb166a1eb95291388059a80cb46d94b",
+    "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
+    "e4_contract_manifest_sha256": "sha256:abc4dcfe1f94f69099dc241f2f07c95c6976d919a8e1b7f68bd9fe88873d8984",
+    "e5_publication_manifest_sha256": "sha256:57a36804838d341b6f67d4abbf15b64878743b3b58141b0af1d6934e6f189909",
+    "e6_acceptance_manifest_sha256": "sha256:5081befce2c7d62a0a33abd95607e3caf02b7659448b39473e0208640a9e0ef5"
+  },
+  "capabilities": [
+    {
+      "capability_id": "metadata.source-health",
+      "field_id": "source_health",
+      "status": "AVAILABLE_DERIVED_AT_PORTAL",
+      "operation": "maximumDataSourceHealthV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_OBSERVATION_ONLY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "EXISTING_SCREEN_ENVELOPE_COMPOSES_NAMED_SOURCE_STATUS"
+      ],
+      "reason_code": "EXISTING_PORTAL_CONTRACT_REUSE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "portal-control-or-existing-envelope-v1",
+      "impacted_screens": [
+        "PAPER_TRADING_SCREEN",
+        "SANDBOX_TRADING_SCREEN",
+        "LIVE_OPERATIONS_SCREEN",
+        "EXECUTION_COMMAND_CENTER_SCREEN",
+        "EXECUTION_APPROVAL_INBOX_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_FULL_BLOTTER_SCREEN",
+        "EXECUTION_ALPHA_360_SCREEN",
+        "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+        "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "manager-v2.envelope",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "portal.governance",
+      "field_id": "portal_governance",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataGovernanceRecordV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "PORTAL_WORKFLOW_HISTORY_PER_CONTROL_CONTRACT",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "CURRENT_PORTAL_BFF_AVAILABLE"
+      ],
+      "reason_code": "EXISTING_PORTAL_CONTRACT_REUSE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "portal-control-or-existing-envelope-v1",
+      "impacted_screens": [
+        "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+        "EXECUTION_INCIDENT_DETAIL_SCREEN",
+        "EXECUTION_APPROVAL_INBOX_SCREEN",
+        "EXECUTION_GATE_R1_REVIEW_SCREEN",
+        "EXECUTION_GATE_R2_REVIEW_SCREEN",
+        "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
+        "EXECUTION_WAIVERS_REGISTER_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "portal-control:governance-record",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "portal.governance",
+      "field_id": "portal_conditions",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataConditionsRegisterV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "PORTAL_WORKFLOW_HISTORY_PER_CONTROL_CONTRACT",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "CURRENT_PORTAL_BFF_AVAILABLE"
+      ],
+      "reason_code": "EXISTING_PORTAL_CONTRACT_REUSE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "portal-control-or-existing-envelope-v1",
+      "impacted_screens": [
+        "EXECUTION_WAIVERS_REGISTER_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "portal-control:conditions-register",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "portal.activation",
+      "field_id": "portal_activation",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataProfileActivationV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_CONTROL_STATE_ONLY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "CURRENT_PORTAL_BFF_AVAILABLE"
+      ],
+      "reason_code": "EXISTING_PORTAL_CONTRACT_REUSE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "portal-control-or-existing-envelope-v1",
+      "impacted_screens": [
+        "EXECUTION_COMMAND_CENTER_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "portal-control:profile-activation",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "deployments.positions",
+      "field_id": "deployment_current",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataDeploymentPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_STATE_ONLY_NO_SUPERSESSION_JOURNAL",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "PAPER_TRADING_SCREEN",
+        "SANDBOX_TRADING_SCREEN",
+        "LIVE_OPERATIONS_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.strategy_deployments",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "deployments.positions",
+      "field_id": "position_current",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataPositionPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_STATE_ONLY_NO_POSITION_VERSION_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_CURRENT_STATE_ONLY_AND_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "PAPER_TRADING_SCREEN",
+        "SANDBOX_TRADING_SCREEN",
+        "LIVE_OPERATIONS_SCREEN",
+        "EXECUTION_GATE_R2_REVIEW_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.positions_v2",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "sessions.current",
+      "field_id": "session_current",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataExecutionSessionPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_CONTROL_ROW_NO_TRANSITION_EVENT_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "PAPER_TRADING_SCREEN",
+        "SANDBOX_TRADING_SCREEN",
+        "LIVE_OPERATIONS_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.execution_sessions",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "deployments.execution-quality",
+      "field_id": "execution_quality",
+      "status": "AVAILABLE_DERIVED_AT_PORTAL",
+      "operation": "maximumDataDeploymentExecutionQualityV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_ROLLUP_WITH_EXPLICIT_INPUT_RETENTION",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_INPUTS_EXIST_BUT_NAMED_INPUT_QUERY_PLANS_REQUIRED"
+      ],
+      "reason_code": "E5_NAMED_PORTAL_DERIVATION",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "PAPER_TRADING_SCREEN",
+        "EXECUTION_GATE_R1_REVIEW_SCREEN",
+        "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_ALPHA_360_SCREEN",
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN"
+      ],
+      "next_owner_action": "PORTAL_BFF_BIND_NAMED_DERIVATION",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.execution_sessions+public.orders+public.fills",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "orders.list",
+      "field_id": "order_current",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataOrderPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_ORDER_STATE_NOT_LIFECYCLE_REPLAY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_INCIDENT_DETAIL_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_FULL_BLOTTER_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.orders",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "orders.fills",
+      "field_id": "fill_history",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataFillPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "RETAINED_FILL_RANGE_WITHOUT_REPLAY_OR_CORRECTION_CLAIM",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_INDEX_BACKED_TIME_KEYSET_ONLY",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_FULL_BLOTTER_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.fills",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "orders.legs",
+      "field_id": "conditional_legs",
+      "status": "AVAILABLE_DERIVED_AT_PORTAL",
+      "operation": "maximumDataConditionalOrderLegsV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_STRUCTURE_ONLY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPES_UNQUALIFIED"
+      ],
+      "reason_code": "E5_NAMED_PORTAL_DERIVATION",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_FULL_BLOTTER_SCREEN"
+      ],
+      "next_owner_action": "PORTAL_BFF_BIND_NAMED_DERIVATION",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.conditional_order_groups+public.conditional_order_group_legs",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "accounts.current",
+      "field_id": "account_current",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataAccountPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_ACCOUNT_STATE_ONLY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "LIVE_OPERATIONS_SCREEN",
+        "EXECUTION_GATE_R2_REVIEW_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.accounts",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "accounts.current",
+      "field_id": "account_balances",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataAccountBalancePageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_BALANCE_NOT_LEDGER_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.account_balances",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "accounts.current",
+      "field_id": "margin_balances",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataMarginBalancePageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_MARGIN_NOT_LEDGER_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.margin_balances",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "accounts.current",
+      "field_id": "account_sync",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataAccountSyncPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_SYNC_STATE_NOT_SYNC_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.account_sync_current_state",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "accounts.current",
+      "field_id": "broker_sync",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataBrokerSyncPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_SYNC_STATE_NOT_SYNC_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.broker_account_sync_current_state",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "bindings.snapshot",
+      "field_id": "venue_accounts",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataVenueAccountPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_BINDING_STATE_ONLY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.venue_accounts",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "reconciliation.current",
+      "field_id": "reconciliation_findings",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataReconciliationFindingPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_LIFECYCLE_WITHOUT_IMMUTABLE_ACK_EVIDENCE",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "SANDBOX_TRADING_SCREEN",
+        "EXECUTION_COMMAND_CENTER_SCREEN",
+        "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+        "EXECUTION_INCIDENT_DETAIL_SCREEN",
+        "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+        "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+        "EXECUTION_ACCOUNT_BROKER_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.reconciliation_findings",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "ops.command-journal",
+      "field_id": "command_journal",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataCommandJournalPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "RETAINED_COMMAND_LIFECYCLE_WITH_TYPED_PAYLOAD_REDACTION",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_INDEX_BACKED_TIME_KEYSET_ONLY",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_COMMAND_CENTER_SCREEN",
+        "EXECUTION_OPERATIONS_QUEUE_SCREEN",
+        "EXECUTION_INCIDENT_DETAIL_SCREEN",
+        "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.command_journal",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "ops.dead-letters",
+      "field_id": "dead_letter_summary",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataDeadLetterSummaryV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "OPERATIONAL_EVIDENCE_WITH_PAYLOAD_REDACTION",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_UNSAFE_RAW_PAYLOAD",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_COMMAND_CENTER_SCREEN",
+        "EXECUTION_OPERATIONS_QUEUE_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.dead_letters",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.risk-grants",
+      "field_id": "risk_grants",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataRiskGrantPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "AVAILABLE_DECISION_RECORDS_NOT_FULL_RISK_EVENT_REPLAY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_GATE_R2_REVIEW_SCREEN",
+        "EXECUTION_GATE_LIVE_REVIEW_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.risk_grants",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.sizing-decisions",
+      "field_id": "sizing_decisions",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataSizingDecisionPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "AVAILABLE_DECISION_RECORDS_NOT_SIGNAL_INTENT_FUNNEL",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_GATE_R1_REVIEW_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.sizing_decisions",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.account-equity-history",
+      "field_id": "account_equity_history",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataAccountEquityHistoryV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "RETAINED_SNAPSHOT_HISTORY_NOT_EVENT_REPLAY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_INDEX_BACKED_TIME_KEYSET_ONLY",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_PAPER_EXIT_REVIEW_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_ALPHA_360_SCREEN",
+        "EXECUTION_PORTFOLIO_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.account_equity_snapshots",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.performance-snapshot",
+      "field_id": "performance_snapshot",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataPerformanceSnapshotHistoryV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "RETAINED_SNAPSHOT_HISTORY_NOT_EVENT_REPLAY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_AND_MARK_PROVENANCE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_ALPHA_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.performance_snapshots",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "deployments.contribution",
+      "field_id": "portfolio_capital",
+      "status": "AVAILABLE_DERIVED_AT_PORTAL",
+      "operation": "maximumDataPortfolioCapitalV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "PROFILE_SCOPED_DERIVATION_ONLY_NO_UNSCOPED_PORTFOLIO_SNAPSHOT",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_EDGE_DERIVABLE_INPUTS_EXIST"
+      ],
+      "reason_code": "E5_NAMED_PORTAL_DERIVATION",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_PORTFOLIO_360_SCREEN"
+      ],
+      "next_owner_action": "PORTAL_BFF_BIND_NAMED_DERIVATION",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.portfolios+public.portfolio_allocations+public.portfolio_capital_ledger+public.account_reservations",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "ops.alpha-activity",
+      "field_id": "alpha_activity",
+      "status": "AVAILABLE_DERIVED_AT_PORTAL",
+      "operation": "maximumDataAlphaActivityV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "RETAINED_INPUT_RANGE_WITHOUT_EVENT_REPLAY_CLAIM",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_INPUTS_EXIST_BUT_QUERY_SHAPES_UNQUALIFIED"
+      ],
+      "reason_code": "E5_NAMED_PORTAL_DERIVATION",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_ALPHA_360_SCREEN"
+      ],
+      "next_owner_action": "PORTAL_BFF_BIND_NAMED_DERIVATION",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.strategy_deployments+public.execution_sessions+public.orders+public.fills",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.instrument-master",
+      "field_id": "instrument_master",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataInstrumentMasterPageV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_REFERENCE_MASTER_NO_VERSIONED_METADATA_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SEQUENTIAL_SHAPE_UNQUALIFIED",
+        "CURRENT_MANAGER_PAGE_HAS_NO_GLOBAL_SEQUENCE_OR_CORRECTION_JOURNAL"
+      ],
+      "reason_code": "E5_NAMED_MANAGER_CURRENT_PAGE",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+      "impacted_screens": [
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_PORTFOLIO_360_SCREEN"
+      ],
+      "next_owner_action": "NONE",
+      "portal_can_proceed": true,
+      "source_relation_or_operation": "public.instruments",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "market.candles",
+      "field_id": "market_candles",
+      "status": "OWNER_ACTION_REQUIRED",
+      "operation": "maximumDataMarketCandleHistoryV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "FULL_RETAINED_RANGE_WITH_KEYSET_CONTINUATION",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_TRADING_SYSTEM_TYPED_CANDLE_SOURCE_ABSENT",
+        "TYPED_ABSENCE:market-ohlcv"
+      ],
+      "reason_code": "E2_GENUINE_SOURCE_OWNER_GAP",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_PAPER_WORKBENCH_SCREEN",
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+        "EXECUTION_ALPHA_360_SCREEN"
+      ],
+      "next_owner_action": "TRADING_SYSTEM_OWNER_PUBLISH_TYPED_SOURCE_CONTRACT",
+      "portal_can_proceed": false,
+      "source_relation_or_operation": "market-data:canonical-candle-history",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "market.ticks",
+      "field_id": "market_latest",
+      "status": "OWNER_ACTION_REQUIRED",
+      "operation": "maximumDataMarketLatestV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_OBSERVATION_ONLY_UNTIL_TYPED_HISTORY_PUBLISHED",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_TRADING_SYSTEM_TYPED_LATEST_OBSERVATION_ABSENT",
+        "TYPED_ABSENCE:market-latest-ticks"
+      ],
+      "reason_code": "E2_GENUINE_SOURCE_OWNER_GAP",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+        "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"
+      ],
+      "next_owner_action": "TRADING_SYSTEM_OWNER_PUBLISH_TYPED_SOURCE_CONTRACT",
+      "portal_can_proceed": false,
+      "source_relation_or_operation": "market-data:latest-observation",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.venue-calendar",
+      "field_id": "venue_calendar",
+      "status": "OWNER_ACTION_REQUIRED",
+      "operation": "maximumDataVenueCalendarV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "RETAINED_CALENDAR_VERSION_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_SETTLEMENT_CALENDAR_IS_NOT_INTRADAY_SESSION_CALENDAR",
+        "TYPED_ABSENCE:market-session-calendar"
+      ],
+      "reason_code": "E2_GENUINE_SOURCE_OWNER_GAP",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN"
+      ],
+      "next_owner_action": "TRADING_SYSTEM_OWNER_PUBLISH_TYPED_SOURCE_CONTRACT",
+      "portal_can_proceed": false,
+      "source_relation_or_operation": "market-data:venue-session-calendar",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.vnm-constraints",
+      "field_id": "vnm_constraints",
+      "status": "OWNER_ACTION_REQUIRED",
+      "operation": "maximumDataVnmConstraintsV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "EFFECTIVE_DATED_CONSTRAINT_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_TYPED_VNM_CONSTRAINT_SOURCE_ABSENT",
+        "TYPED_ABSENCE:market-vnm-constraints"
+      ],
+      "reason_code": "E2_GENUINE_SOURCE_OWNER_GAP",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN"
+      ],
+      "next_owner_action": "TRADING_SYSTEM_OWNER_PUBLISH_TYPED_SOURCE_CONTRACT",
+      "portal_can_proceed": false,
+      "source_relation_or_operation": "market-data:vnm-order-session-constraints",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.trade-replay",
+      "field_id": "trade_replay",
+      "status": "OWNER_ACTION_REQUIRED",
+      "operation": "maximumDataTradeReplayV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "FULL_REPLAY_WITH_RETENTION_FLOOR_AND_RESUME",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_GLOBAL_SEQUENCE_RETENTION_AND_CORRECTION_NOT_PROVEN",
+        "TYPED_ABSENCE:fill-correction-replay"
+      ],
+      "reason_code": "E2_GENUINE_SOURCE_OWNER_GAP",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_INCIDENT_DETAIL_SCREEN",
+        "EXECUTION_FULL_BLOTTER_SCREEN"
+      ],
+      "next_owner_action": "TRADING_SYSTEM_OWNER_PUBLISH_TYPED_SOURCE_CONTRACT",
+      "portal_can_proceed": false,
+      "source_relation_or_operation": "authoritative-change-journal:required",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "ops.alerts",
+      "field_id": "canary_drift",
+      "status": "CONTRACT_INCOMPATIBLE",
+      "operation": "maximumDataCanaryDriftV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "CURRENT_COMPARISON_NOT_EVENT_DRIFT_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "CURRENT_PORTAL_CANARY_COMPOSITION_EXISTS_WITHOUT_TYPED_DRIFT_CONTRACT"
+      ],
+      "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_COMMAND_CENTER_SCREEN",
+        "EXECUTION_CANARY_CONTROL_ROOM_SCREEN"
+      ],
+      "next_owner_action": "PORTAL_OWNER_QUALIFY_NAMED_CANARY_COMPARISON",
+      "portal_can_proceed": false,
+      "source_relation_or_operation": "portal-control:profile-activation+manager-v2.envelope",
+      "as_of_ms": 1788540677303
+    },
+    {
+      "capability_id": "e3.research-artifact",
+      "field_id": "research_artifact",
+      "status": "OWNER_ACTION_REQUIRED",
+      "operation": "maximumDataResearchArtifactV1",
+      "schema_revision": "portal.execution.maximum-data.e5.named-page.v1",
+      "profiles": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE",
+        "CANARY"
+      ],
+      "earliest_available_ms": null,
+      "latest_available_ms": null,
+      "retention_floor_ms": null,
+      "population_exact": false,
+      "source_total": null,
+      "history_semantics": "RETAINED_SIGNED_REFERENCE_HISTORY",
+      "timestamp_contract": "UTC_EPOCH_MS",
+      "decimal_contract": "EXACT_DECIMAL_STRING",
+      "known_limitations": [
+        "E2_ARTIFACT_AND_RESEARCH_LINKAGE_ABSENT",
+        "TYPED_ABSENCE:artifact-signed-reference"
+      ],
+      "reason_code": "E2_GENUINE_SOURCE_OWNER_GAP",
+      "evidence_references": [
+        "e3-coverage.manifest.json",
+        "e4-contract.manifest.json",
+        "e5-publication.manifest.json",
+        "e6-acceptance.manifest.json"
+      ],
+      "source_revision": "frozen-e5-publication-v1",
+      "impacted_screens": [
+        "EXECUTION_GATE_R1_REVIEW_SCREEN",
+        "EXECUTION_ALPHA_360_SCREEN"
+      ],
+      "next_owner_action": "TRADING_SYSTEM_OWNER_PUBLISH_TYPED_SOURCE_CONTRACT",
+      "portal_can_proceed": false,
+      "source_relation_or_operation": "typed-artifact-and-research-run-linkage:required",
+      "as_of_ms": 1788540677303
+    }
+  ],
+  "genuine_source_gaps": [
+    {
+      "gap_id": "artifact-signed-reference",
+      "domain_id": "alpha_strategy_deployment_artifact",
+      "trigger": "RELATION_ABSENT:public.artifacts",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_artifact_owner",
+      "reason": "No current application relation/capability proves artifact digest, retention and signed read reference.",
+      "required_action": "Publish a typed artifact metadata/signed-reference capability; do not expose storage paths or arbitrary artifact reads."
+    },
+    {
+      "gap_id": "research-run-linkage",
+      "domain_id": "alpha_strategy_deployment_artifact",
+      "trigger": "RELATION_ABSENT:public.research_runs",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_research_owner",
+      "reason": "No current relation proves deployment-to-research-run linkage.",
+      "required_action": "Publish immutable research-run linkage only if the producer owns a stable identifier."
+    },
+    {
+      "gap_id": "portfolio-profile-equity-direct",
+      "domain_id": "portfolio_allocation_capital",
+      "trigger": "COLUMNS_MISSING:public.portfolio_equity_snapshots:mode,venue",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:mode|venue",
+      "owner": "trading_system_performance_owner",
+      "reason": "Portfolio snapshot grain can span profile/venue; direct profile-scoped serving is not evidenced.",
+      "required_action": "Keep profile-scoped portfolio equity as an explicit account-input derivation or publish a scope-qualified producer."
+    },
+    {
+      "gap_id": "position-mark-provenance",
+      "domain_id": "positions_exposure",
+      "trigger": "COLUMNS_MISSING:public.positions_v2:mark_source",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:mark_source",
+      "owner": "trading_system_performance_owner",
+      "reason": "Position mark value/time has no proven source lineage field.",
+      "required_action": "Publish mark/index/last provenance and source timestamp in a typed valuation contract."
+    },
+    {
+      "gap_id": "position-version-history",
+      "domain_id": "positions_exposure",
+      "trigger": "COLUMNS_MISSING:public.positions_v2:position_version",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:position_version",
+      "owner": "trading_system_execution_owner",
+      "reason": "Mutable current position rows do not prove a retained lifecycle/version history.",
+      "required_action": "Publish an authoritative change journal or retain a versioned position history."
+    },
+    {
+      "gap_id": "order-broker-ack-clocks",
+      "domain_id": "orders_fills_conditional_lifecycle",
+      "trigger": "COLUMNS_MISSING:public.orders:source_ack_at,broker_ack_at",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:source_ack_at|broker_ack_at",
+      "owner": "trading_system_execution_owner",
+      "reason": "Current order projection lacks distinct source and broker acknowledgement clocks.",
+      "required_action": "Publish durable acknowledgement timestamps with clock authority."
+    },
+    {
+      "gap_id": "fill-correction-replay",
+      "domain_id": "orders_fills_conditional_lifecycle",
+      "trigger": "COLUMNS_MISSING:public.domain_events:source_sequence",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:source_sequence",
+      "owner": "trading_system_event_owner",
+      "reason": "No global sequence/retention/correction event contract is proven for fill replay.",
+      "required_action": "Publish an authoritative change journal before offering incremental replay."
+    },
+    {
+      "gap_id": "session-funnel-and-producer-version",
+      "domain_id": "execution_sessions_cycles",
+      "trigger": "COLUMNS_MISSING:public.execution_sessions:producer_version",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:producer_version",
+      "owner": "trading_system_execution_owner",
+      "reason": "Session control rows do not by themselves prove full funnel counts or producer version.",
+      "required_action": "Publish named session funnel/version fields or a source-owned aggregate capability."
+    },
+    {
+      "gap_id": "signal-intent-funnel",
+      "domain_id": "signal_sizing_risk",
+      "trigger": "RELATION_ABSENT:public.signal_intents",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_risk_owner",
+      "reason": "Sizing/risk records do not prove the complete signal-intent funnel.",
+      "required_action": "Publish a durable signal-intent source or a named bounded funnel capability."
+    },
+    {
+      "gap_id": "risk-event-correction",
+      "domain_id": "signal_sizing_risk",
+      "trigger": "COLUMNS_MISSING:public.domain_events:source_sequence",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:source_sequence",
+      "owner": "trading_system_event_owner",
+      "reason": "Risk replay/correction needs global ordered event semantics not present in the current audit table.",
+      "required_action": "Publish an authoritative ordered change journal before event-level risk replay."
+    },
+    {
+      "gap_id": "valuation-mark-provenance",
+      "domain_id": "accounting_equity_performance_valuation",
+      "trigger": "COLUMNS_MISSING:public.performance_snapshots:mark_source",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:mark_source",
+      "owner": "trading_system_performance_owner",
+      "reason": "Snapshot mark values lack a direct source/clock provenance field.",
+      "required_action": "Publish mark source, source timestamp and valuation formula revision with snapshots."
+    },
+    {
+      "gap_id": "reconciliation-ack-evidence",
+      "domain_id": "reconciliation_incidents_operational_truth",
+      "trigger": "COLUMNS_MISSING:public.reconciliation_findings:acknowledged_at,acknowledged_by",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:acknowledged_at|acknowledged_by",
+      "owner": "trading_system_operations_owner",
+      "reason": "ACKED status lacks immutable acknowledgement time/actor evidence.",
+      "required_action": "Publish safe acknowledgement evidence or classify lifecycle as current-status-only."
+    },
+    {
+      "gap_id": "command-safe-reference-payload-contract",
+      "domain_id": "commands_terminal_verification",
+      "trigger": "ALWAYS",
+      "evidence_status": "DECLARED_SAFETY_BOUNDARY",
+      "owner": "trading_system_command_owner",
+      "reason": "Command payloads/receipts can contain sensitive structured data and are not a typed manager-read contract.",
+      "required_action": "Publish a field-allowlisted terminal evidence DTO with payload digests and safe references."
+    },
+    {
+      "gap_id": "market-latest-ticks",
+      "domain_id": "market_context",
+      "trigger": "RELATION_ABSENT:public.market_ticks",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_market_owner",
+      "reason": "No current Trading-System relation proves latest tick/mark/index/last observations.",
+      "required_action": "Adapt the existing market source through a typed latest-observation capability."
+    },
+    {
+      "gap_id": "market-ohlcv",
+      "domain_id": "market_context",
+      "trigger": "RELATION_ABSENT:public.ohlcv_candles",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_market_owner",
+      "reason": "No current Trading-System relation proves bounded OHLCV history/candle completeness.",
+      "required_action": "Adapt the existing Data Layer/market source through a typed bounded candle capability."
+    },
+    {
+      "gap_id": "market-benchmark",
+      "domain_id": "market_context",
+      "trigger": "RELATION_ABSENT:public.benchmark_series",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_market_owner",
+      "reason": "No current Trading-System relation proves benchmark series identity, clock and retention.",
+      "required_action": "Publish a typed benchmark series or exact derivation inputs."
+    },
+    {
+      "gap_id": "market-session-calendar",
+      "domain_id": "market_context",
+      "trigger": "COLUMNS_MISSING:public.settlement_calendars:session_open_at,session_close_at",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:session_open_at|session_close_at",
+      "owner": "trading_system_market_owner",
+      "reason": "Settlement dates are not an intraday trading/auction calendar.",
+      "required_action": "Publish typed venue session/holiday windows with venue timezone."
+    },
+    {
+      "gap_id": "market-vnm-constraints",
+      "domain_id": "market_context",
+      "trigger": "ALWAYS",
+      "evidence_status": "DECLARED_SAFETY_BOUNDARY",
+      "owner": "trading_system_market_owner",
+      "reason": "Raw metadata/trading session JSON is not a safe typed VNM order/session constraint contract.",
+      "required_action": "Publish typed VNM order type and session constraint capability."
+    }
+  ],
+  "portal_adapter_work": [
+    {
+      "work_id": "PORTAL_BFF_FIXED_E5_BINDING",
+      "status": "OWNER_ACTION_REQUIRED",
+      "reason_code": "E7_DOES_NOT_DEPLOY_OR_BIND_A_NEW_PORTAL_ROUTE",
+      "next_action": "bind a selected frozen E5 operation server-side and release only in an approved immutable-image window"
+    },
+    {
+      "work_id": "PORTAL_CANARY_TWIN_COMPARISON",
+      "status": "CONTRACT_INCOMPATIBLE",
+      "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED",
+      "next_action": "qualify named Paper/Live comparison inputs before exposing canary_drift"
+    }
+  ],
+  "runtime_activation_required": [
+    {
+      "activation_id": "MAXIMUM_DATA_E5_ADAPTER_RELEASE",
+      "status": "OWNER_ACTION_REQUIRED",
+      "boundary": "a separately approved immutable Edge image/config deployment; E7 made no runtime mutation",
+      "rollback": "retain prior named image and revert only the selected BFF binding"
+    }
+  ],
+  "return_pack_digest": "sha256:d031134c4d49e741286948f62992ca334e7f7bc81d3bb8d546faf7180d9243bb"
+}

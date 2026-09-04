@@ -1,0 +1,168 @@
+{
+  "schema_version": "portal-source-semantics-v1",
+  "capture_utc_epoch_ms": 1788520938330,
+  "gaps": [
+    {
+      "gap_id": "artifact-signed-reference",
+      "domain_id": "alpha_strategy_deployment_artifact",
+      "trigger": "RELATION_ABSENT:public.artifacts",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_artifact_owner",
+      "reason": "No current application relation/capability proves artifact digest, retention and signed read reference.",
+      "required_action": "Publish a typed artifact metadata/signed-reference capability; do not expose storage paths or arbitrary artifact reads."
+    },
+    {
+      "gap_id": "research-run-linkage",
+      "domain_id": "alpha_strategy_deployment_artifact",
+      "trigger": "RELATION_ABSENT:public.research_runs",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_research_owner",
+      "reason": "No current relation proves deployment-to-research-run linkage.",
+      "required_action": "Publish immutable research-run linkage only if the producer owns a stable identifier."
+    },
+    {
+      "gap_id": "portfolio-profile-equity-direct",
+      "domain_id": "portfolio_allocation_capital",
+      "trigger": "COLUMNS_MISSING:public.portfolio_equity_snapshots:mode,venue",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:mode|venue",
+      "owner": "trading_system_performance_owner",
+      "reason": "Portfolio snapshot grain can span profile/venue; direct profile-scoped serving is not evidenced.",
+      "required_action": "Keep profile-scoped portfolio equity as an explicit account-input derivation or publish a scope-qualified producer."
+    },
+    {
+      "gap_id": "position-mark-provenance",
+      "domain_id": "positions_exposure",
+      "trigger": "COLUMNS_MISSING:public.positions_v2:mark_source",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:mark_source",
+      "owner": "trading_system_performance_owner",
+      "reason": "Position mark value/time has no proven source lineage field.",
+      "required_action": "Publish mark/index/last provenance and source timestamp in a typed valuation contract."
+    },
+    {
+      "gap_id": "position-version-history",
+      "domain_id": "positions_exposure",
+      "trigger": "COLUMNS_MISSING:public.positions_v2:position_version",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:position_version",
+      "owner": "trading_system_execution_owner",
+      "reason": "Mutable current position rows do not prove a retained lifecycle/version history.",
+      "required_action": "Publish an authoritative change journal or retain a versioned position history."
+    },
+    {
+      "gap_id": "order-broker-ack-clocks",
+      "domain_id": "orders_fills_conditional_lifecycle",
+      "trigger": "COLUMNS_MISSING:public.orders:source_ack_at,broker_ack_at",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:source_ack_at|broker_ack_at",
+      "owner": "trading_system_execution_owner",
+      "reason": "Current order projection lacks distinct source and broker acknowledgement clocks.",
+      "required_action": "Publish durable acknowledgement timestamps with clock authority."
+    },
+    {
+      "gap_id": "fill-correction-replay",
+      "domain_id": "orders_fills_conditional_lifecycle",
+      "trigger": "COLUMNS_MISSING:public.domain_events:source_sequence",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:source_sequence",
+      "owner": "trading_system_event_owner",
+      "reason": "No global sequence/retention/correction event contract is proven for fill replay.",
+      "required_action": "Publish an authoritative change journal before offering incremental replay."
+    },
+    {
+      "gap_id": "session-funnel-and-producer-version",
+      "domain_id": "execution_sessions_cycles",
+      "trigger": "COLUMNS_MISSING:public.execution_sessions:producer_version",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:producer_version",
+      "owner": "trading_system_execution_owner",
+      "reason": "Session control rows do not by themselves prove full funnel counts or producer version.",
+      "required_action": "Publish named session funnel/version fields or a source-owned aggregate capability."
+    },
+    {
+      "gap_id": "signal-intent-funnel",
+      "domain_id": "signal_sizing_risk",
+      "trigger": "RELATION_ABSENT:public.signal_intents",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_risk_owner",
+      "reason": "Sizing/risk records do not prove the complete signal-intent funnel.",
+      "required_action": "Publish a durable signal-intent source or a named bounded funnel capability."
+    },
+    {
+      "gap_id": "risk-event-correction",
+      "domain_id": "signal_sizing_risk",
+      "trigger": "COLUMNS_MISSING:public.domain_events:source_sequence",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:source_sequence",
+      "owner": "trading_system_event_owner",
+      "reason": "Risk replay/correction needs global ordered event semantics not present in the current audit table.",
+      "required_action": "Publish an authoritative ordered change journal before event-level risk replay."
+    },
+    {
+      "gap_id": "valuation-mark-provenance",
+      "domain_id": "accounting_equity_performance_valuation",
+      "trigger": "COLUMNS_MISSING:public.performance_snapshots:mark_source",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:mark_source",
+      "owner": "trading_system_performance_owner",
+      "reason": "Snapshot mark values lack a direct source/clock provenance field.",
+      "required_action": "Publish mark source, source timestamp and valuation formula revision with snapshots."
+    },
+    {
+      "gap_id": "reconciliation-ack-evidence",
+      "domain_id": "reconciliation_incidents_operational_truth",
+      "trigger": "COLUMNS_MISSING:public.reconciliation_findings:acknowledged_at,acknowledged_by",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:acknowledged_at|acknowledged_by",
+      "owner": "trading_system_operations_owner",
+      "reason": "ACKED status lacks immutable acknowledgement time/actor evidence.",
+      "required_action": "Publish safe acknowledgement evidence or classify lifecycle as current-status-only."
+    },
+    {
+      "gap_id": "command-safe-reference-payload-contract",
+      "domain_id": "commands_terminal_verification",
+      "trigger": "ALWAYS",
+      "evidence_status": "DECLARED_SAFETY_BOUNDARY",
+      "owner": "trading_system_command_owner",
+      "reason": "Command payloads/receipts can contain sensitive structured data and are not a typed manager-read contract.",
+      "required_action": "Publish a field-allowlisted terminal evidence DTO with payload digests and safe references."
+    },
+    {
+      "gap_id": "market-latest-ticks",
+      "domain_id": "market_context",
+      "trigger": "RELATION_ABSENT:public.market_ticks",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_market_owner",
+      "reason": "No current Trading-System relation proves latest tick/mark/index/last observations.",
+      "required_action": "Adapt the existing market source through a typed latest-observation capability."
+    },
+    {
+      "gap_id": "market-ohlcv",
+      "domain_id": "market_context",
+      "trigger": "RELATION_ABSENT:public.ohlcv_candles",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_market_owner",
+      "reason": "No current Trading-System relation proves bounded OHLCV history/candle completeness.",
+      "required_action": "Adapt the existing Data Layer/market source through a typed bounded candle capability."
+    },
+    {
+      "gap_id": "market-benchmark",
+      "domain_id": "market_context",
+      "trigger": "RELATION_ABSENT:public.benchmark_series",
+      "evidence_status": "CATALOG_RELATION_ABSENT",
+      "owner": "trading_system_market_owner",
+      "reason": "No current Trading-System relation proves benchmark series identity, clock and retention.",
+      "required_action": "Publish a typed benchmark series or exact derivation inputs."
+    },
+    {
+      "gap_id": "market-session-calendar",
+      "domain_id": "market_context",
+      "trigger": "COLUMNS_MISSING:public.settlement_calendars:session_open_at,session_close_at",
+      "evidence_status": "CATALOG_COLUMNS_MISSING:session_open_at|session_close_at",
+      "owner": "trading_system_market_owner",
+      "reason": "Settlement dates are not an intraday trading/auction calendar.",
+      "required_action": "Publish typed venue session/holiday windows with venue timezone."
+    },
+    {
+      "gap_id": "market-vnm-constraints",
+      "domain_id": "market_context",
+      "trigger": "ALWAYS",
+      "evidence_status": "DECLARED_SAFETY_BOUNDARY",
+      "owner": "trading_system_market_owner",
+      "reason": "Raw metadata/trading session JSON is not a safe typed VNM order/session constraint contract.",
+      "required_action": "Publish typed VNM order type and session constraint capability."
+    }
+  ]
+}

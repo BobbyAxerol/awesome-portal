@@ -1,0 +1,20 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.domain-capability.v1",
+  "domain_id": "account_binding_and_sync",
+  "status": "CURRENT_STATE_ONLY",
+  "as_of_ms": 1788516000000,
+  "current_qualified_operations": [
+    {"field_id": "account_current", "status": "AVAILABLE_DIRECT", "operation": "maximumDataAccountPageV1", "source_relation": "public.accounts", "semantics": "CURRENT_ACCOUNT_STATE_ONLY"},
+    {"field_id": "account_balances", "status": "AVAILABLE_DIRECT", "operation": "maximumDataAccountBalancePageV1", "source_relation": "public.account_balances", "semantics": "CURRENT_BALANCE_NOT_LEDGER_HISTORY"},
+    {"field_id": "margin_balances", "status": "AVAILABLE_DIRECT", "operation": "maximumDataMarginBalancePageV1", "source_relation": "public.margin_balances", "semantics": "CURRENT_MARGIN_NOT_LEDGER_HISTORY"},
+    {"field_id": "account_sync", "status": "AVAILABLE_DIRECT", "operation": "maximumDataAccountSyncPageV1", "source_relation": "public.account_sync_current_state", "semantics": "CURRENT_SYNC_STATE_NOT_SYNC_HISTORY"},
+    {"field_id": "broker_sync", "status": "AVAILABLE_DIRECT", "operation": "maximumDataBrokerSyncPageV1", "source_relation": "public.broker_sync_current_state", "semantics": "CURRENT_SYNC_STATE_NOT_SYNC_HISTORY"},
+    {"field_id": "venue_accounts", "status": "AVAILABLE_DIRECT", "operation": "maximumDataVenueAccountPageV1", "source_relation": "public.venue_accounts", "semantics": "CURRENT_BINDING_STATE_ONLY"}
+  ],
+  "empty_publication_interpretation": "zero rows is source-authoritative only when envelope says AVAILABLE plus COMPLETE; otherwise retain the typed freshness/completeness status",
+  "typed_limitations": [
+    {"gap_id": "reconciliation-ack-evidence", "status": "OWNER_ACTION_REQUIRED", "reason_code": "IMMUTABLE_ACK_EVIDENCE_NOT_PROVEN"}
+  ],
+  "wire_contract": {"timestamp_contract": "UTC_EPOCH_MS", "decimal_contract": "EXACT_DECIMAL_STRING", "continuation": "SOURCE_ISSUED_OPAQUE_CURSOR_ONLY"},
+  "evidence_references": ["e5-existing-data-publication.v1.json", "e6-domain-acceptance.v1.json", "SOURCE_OWNER_GAPS.json"]
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.edge-stream-benchmark.v1",
+  "status": "NO_MANAGER_CURRENT_PAGE_STREAM_CLAIM",
+  "current_manager_read": "bounded request/response page only",
+  "existing_rust_mechanism_evidence": {
+    "manager_v2_client": [
+      "bounded in-flight queue",
+      "typed HTTP 503 without automatic retry",
+      "bounded response frame and redirect failure"
+    ],
+    "realtime_sse": {
+      "scope": "separate Projection/SSE component",
+      "local_contract_cases": ["fanout_bound", "slow_consumer_gap", "duplicate_and_gap", "epoch_restart"],
+      "not_evidence_for": "current Manager-v2 event/replay stream"
+    }
+  },
+  "capacity_conclusion": "use the per-profile bounded-page client policy in e7-resilience-capacity.v1.json; no source stream throughput or production SLO is established"
+}

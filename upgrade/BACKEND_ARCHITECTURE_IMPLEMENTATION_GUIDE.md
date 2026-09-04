@@ -1812,6 +1812,25 @@ activation or the phase):**
   boundaries are in
   [EX-BE-02C](./UNIFIED_IMPLEMENTATION_PLAN.md#ex-be-02c--maximum-data-discovery-publication--return-2026-09-04).
 
+- **EX-DP-07 complete portable owner return (2026-09-04):** the seven-stage
+  maximum-data program now has a digest-bound
+  `maximum-data-return-v1` handoff. The offline Rust
+  `maximum-data-return` authority, Python verifier and Control-API fixture
+  test pin the E3--E6 manifests, 34 frozen field mappings, 18 genuine source
+  gaps, sanitized E1 census metadata, complete file integrity index and the
+  exact current Manager capacity evidence. Paper/Sandbox observed one safe
+  concurrent named page in the bounded sample after a typed peer 503; Live
+  observed two. A separate Live order page 503 is published as typed source
+  unavailability, never silently retried or rendered empty. This is a
+  current-page read return, not a global event/replay or SLO certification:
+  sequence, retention, correction, independent-cell ingest and controlled
+  outage evidence remain exact external owner requirements. E7 changed no
+  running image, route, identity, source, database, cache, command or
+  deployment. See
+  [EX-DP-07](./UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-07--e7-resilience-capacity-and-complete-owner-return)
+  and the checked-in
+  [`MASTER_RESPONSE.md`](../services/portal-execution-edge-rs/contracts/maximum-data-return-v1/MASTER_RESPONSE.md).
+
 - **N26 Manager replay selection hardened and dev-accepted (2026-09-01):** the first bounded
   Paper SSE probe proved mTLS/JWT snapshot access but exposed that resume still
   read the legacy journal after Manager authority selection. The product BFF

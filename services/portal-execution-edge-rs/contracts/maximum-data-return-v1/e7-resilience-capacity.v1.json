@@ -1,0 +1,213 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.resilience-capacity.v1",
+  "phase": "EX-DP-07",
+  "status": "MEASURED_BOUNDED_CURRENT_PAGE_EVIDENCE_WITH_TYPED_EXTERNAL_REQUIREMENTS",
+  "capture_method": "SAME_HOST_EXISTING_EDGE_MTLS_BOUNDED_READ_ONLY",
+  "captured_on_utc_date": "2026-09-04",
+  "raw_rows_persisted": false,
+  "production_slo_established": false,
+  "scope": {
+    "fixed_catalogue_request": true,
+    "fixed_e5_relation_page": "public.strategy_deployments",
+    "field_id": "deployment_current",
+    "page_limit": 1,
+    "maximum_response_bytes": 1048576,
+    "source_admission_limit": 2,
+    "generic_relation_selection": false,
+    "direct_database": false,
+    "source_mutation": false
+  },
+  "reused_rust_boundaries": {
+    "manager_v2_client": {
+      "mTLS": "TLS_1_3_PROFILE_BOUND",
+      "queue_and_in_flight_bound": 2,
+      "source_503_behavior": "TYPED_UNAVAILABLE_NO_AUTOMATIC_RETRY",
+      "oversize_or_redirect_behavior": "FAIL_CLOSED"
+    },
+    "maximum_data_adapter": {
+      "operation_selection": "FIXED_E5_ALLOWLIST_ONLY",
+      "row_bound": 200,
+      "frame_bound_bytes": 1048576,
+      "current_manager_semantics": "CURRENT_PAGE_NOT_GLOBAL_EVENT_JOURNAL"
+    },
+    "realtime_sse": {
+      "applicability": "SEPARATE_PROJECTION_SSE_COMPONENT_ONLY",
+      "bounded_fanout_and_gap_tests": "LOCAL_CONTRACT_TESTED",
+      "manager_current_page_event_stream": "NOT_IMPLEMENTED_OR_CLAIMED"
+    },
+    "paper_source_ingestor": {
+      "applicability": "D4_PAPER_EVENT_SOURCE_ONLY",
+      "checkpoint_restart": "NOT_EVIDENCE_FOR_CURRENT_MANAGER_PAGE"
+    }
+  },
+  "profiles": [
+    {
+      "profile": "PAPER",
+      "profile_id": "PAPER_BINANCE_USDM",
+      "catalogue": {
+        "http_status": 200,
+        "availability": "AVAILABLE",
+        "freshness": "FRESH",
+        "completeness": "COMPLETE",
+        "relation_count": 96,
+        "response_bytes_per_sample": 130537,
+        "latency_ms": {
+          "p50": 26.088,
+          "p95": 31.666,
+          "p99": 31.666
+        }
+      },
+      "relation_page": {
+        "relation_id": "public.strategy_deployments",
+        "field_id": "deployment_current",
+        "availability": "AVAILABLE",
+        "freshness": "FRESH",
+        "completeness": "PARTIAL",
+        "item_count_per_serial_page": 1,
+        "continuation_after_client_reconnect": "PROVEN_SAME_RELATION_AFTER_CLIENT_RECONNECT"
+      },
+      "tested_concurrency": 2,
+      "maximum_safe_concurrency_observed": 1,
+      "source_error_count": 1,
+      "source_error_status": 503,
+      "page_limit": 1,
+      "maximum_response_bytes": 1048576,
+      "request_count": 8,
+      "successful_request_count": 7,
+      "response_bytes_total": 401883,
+      "response_items_total": 4,
+      "elapsed_seconds": 0.249469,
+      "bounded_response_bytes_per_second": 1610954.376,
+      "bounded_page_items_per_second": 16.034,
+      "probe_client_cpu_seconds": 0.072435,
+      "probe_client_max_rss_kib": 29396,
+      "source_gap_rate": "NOT_MEASURABLE_NO_GLOBAL_SEQUENCE_ON_CURRENT_MANAGER_PAGE",
+      "client_policy_until_new_measurement": "MAX_ONE_CONCURRENT_NAMED_PAGE_PER_PROFILE"
+    },
+    {
+      "profile": "SANDBOX",
+      "profile_id": "SANDBOX_BINANCE_USDM",
+      "catalogue": {
+        "http_status": 200,
+        "availability": "AVAILABLE",
+        "freshness": "FRESH",
+        "completeness": "COMPLETE",
+        "relation_count": 96,
+        "response_bytes_per_sample": 130539,
+        "latency_ms": {
+          "p50": 28.132,
+          "p95": 34.376,
+          "p99": 34.376
+        }
+      },
+      "relation_page": {
+        "relation_id": "public.strategy_deployments",
+        "field_id": "deployment_current",
+        "availability": "AVAILABLE",
+        "freshness": "FRESH",
+        "completeness": "PARTIAL",
+        "item_count_per_serial_page": 1,
+        "continuation_after_client_reconnect": "PROVEN_SAME_RELATION_AFTER_CLIENT_RECONNECT"
+      },
+      "tested_concurrency": 2,
+      "maximum_safe_concurrency_observed": 1,
+      "source_error_count": 1,
+      "source_error_status": 503,
+      "page_limit": 1,
+      "maximum_response_bytes": 1048576,
+      "request_count": 8,
+      "successful_request_count": 7,
+      "response_bytes_total": 402105,
+      "response_items_total": 4,
+      "elapsed_seconds": 0.276977,
+      "bounded_response_bytes_per_second": 1451764.804,
+      "bounded_page_items_per_second": 14.442,
+      "probe_client_cpu_seconds": 0.076872,
+      "probe_client_max_rss_kib": 29416,
+      "source_gap_rate": "NOT_MEASURABLE_NO_GLOBAL_SEQUENCE_ON_CURRENT_MANAGER_PAGE",
+      "client_policy_until_new_measurement": "MAX_ONE_CONCURRENT_NAMED_PAGE_PER_PROFILE"
+    },
+    {
+      "profile": "LIVE",
+      "profile_id": "LIVE_BINANCE_USDM",
+      "catalogue": {
+        "http_status": 200,
+        "availability": "AVAILABLE",
+        "freshness": "FRESH",
+        "completeness": "COMPLETE",
+        "relation_count": 96,
+        "response_bytes_per_sample": 130536,
+        "latency_ms": {
+          "p50": 26.851,
+          "p95": 73.117,
+          "p99": 73.117
+        }
+      },
+      "relation_page": {
+        "relation_id": "public.strategy_deployments",
+        "field_id": "deployment_current",
+        "availability": "AVAILABLE",
+        "freshness": "FRESH",
+        "completeness": "COMPLETE",
+        "item_count_per_serial_page": 0,
+        "continuation_after_client_reconnect": "NOT_EXERCISED_SOURCE_DID_NOT_ISSUE_A_CONTINUATION_ON_BOUNDED_PAGE"
+      },
+      "tested_concurrency": 2,
+      "maximum_safe_concurrency_observed": 2,
+      "source_error_count": 0,
+      "source_error_status": null,
+      "page_limit": 1,
+      "maximum_response_bytes": 1048576,
+      "request_count": 8,
+      "successful_request_count": 8,
+      "response_bytes_total": 394068,
+      "response_items_total": 0,
+      "elapsed_seconds": 0.264251,
+      "bounded_response_bytes_per_second": 1491262.289,
+      "bounded_page_items_per_second": 0,
+      "probe_client_cpu_seconds": 0.075661,
+      "probe_client_max_rss_kib": 29520,
+      "source_gap_rate": "NOT_MEASURABLE_NO_GLOBAL_SEQUENCE_ON_CURRENT_MANAGER_PAGE",
+      "client_policy_until_new_measurement": "MAX_TWO_CONCURRENT_NAMED_PAGES_PER_PROFILE"
+    }
+  ],
+  "additional_typed_source_unavailability_observations": [
+    {
+      "profile": "LIVE",
+      "profile_id": "LIVE_BINANCE_USDM",
+      "field_id": "order_current",
+      "relation_id": "public.orders",
+      "page_limit": 1,
+      "http_status": 503,
+      "status": "SOURCE_UNAVAILABLE_OBSERVED",
+      "consumer_behavior": "TYPED_UNAVAILABLE_NO_AUTOMATIC_RETRY",
+      "measurement_role": "availability observation only; it does not replace the bounded deployment-page concurrency measurement"
+    }
+  ],
+  "external_evidence_requirements": [
+    {
+      "requirement_id": "GLOBAL_SEQUENCE_AND_GAP_RATE",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "trading_system_event_owner",
+      "required_window": "authoritative change-journal design and qualified source publication"
+    },
+    {
+      "requirement_id": "RETAINED_EVENT_REPLAY_AND_CORRECTION",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "trading_system_event_owner",
+      "required_window": "retention, correction and replay qualification window"
+    },
+    {
+      "requirement_id": "CROSS_CELL_SGP_INGEST",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "portal_execution_edge_owner",
+      "required_window": "independent-cell SGP ingest test window"
+    },
+    {
+      "requirement_id": "ONE_FIVE_THIRTY_MINUTE_SOURCE_OUTAGE",
+      "status": "OWNER_ACTION_REQUIRED",
+      "owner": "source_proxy_and_trading_system_owner",
+      "required_window": "approved isolated failure and recovery exercise"
+    }
+  ]
+}

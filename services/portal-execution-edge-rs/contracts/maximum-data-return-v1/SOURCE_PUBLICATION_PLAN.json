@@ -1,0 +1,26 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.source-publication-plan.v1",
+  "phase": "EX-DP-07",
+  "current_safe_publication": {
+    "mechanism": "existing profile-bound Manager-v2 source proxy plus fixed E5 operation adapter",
+    "allowed_profiles": ["PAPER", "SANDBOX", "LIVE"],
+    "canary": "Portal composition over Live facts; no direct Manager Canary profile",
+    "request_bounds": {"rows": 200, "bytes": 1048576},
+    "continuation": "source-issued opaque cursor, bound to named relation and profile",
+    "forbidden": ["arbitrary SQL", "direct database", "direct Redis", "generic relation selector", "browser-to-source access", "source credential propagation"]
+  },
+  "publication_order": [
+    "Portal BFF selects exactly one frozen E5 field operation",
+    "Edge binds the profile-bound Manager authority and verifies the current catalogue relation",
+    "Manager-v2 returns one bounded current/range page with source envelope",
+    "Edge reduces only the frozen allowlisted response fields and preserves source freshness/completeness/as-of",
+    "Portal renders the typed result or source-owner gap without inferring replay/history"
+  ],
+  "source_owner_work": {
+    "authoritative_event_journal": "required before event.full-incremental, durable replay, global sequence, retention floor or correction capability",
+    "market_context": "requires typed bounded Data Layer/market contracts for each currently absent market capability",
+    "artifact_and_research": "requires signed-reference and stable research-linkage contract, never arbitrary storage access",
+    "command": "separate command activation and terminal-evidence exercise; not enabled by this read return pack"
+  },
+  "release_boundary": "E7 is contract/evidence-only. Binding the E5 adapter to a deployed Portal BFF is a separately approved immutable-image/change-window release, with the compatibility matrix and rollback procedure in this pack."
+}

@@ -1,0 +1,66 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.deployed-runtime-manifest.v1",
+  "captured_at_utc": "2026-09-04T10:16:45Z",
+  "capture_authority": "E1 read-only deployed tuple plus E7 bounded existing-Edge mTLS probe; no environment, credential, raw row, cursor, trace identifier, configuration path or source mutation was captured",
+  "runtime_tuple": {
+    "trading_system": {
+      "executor_image_digest": "sha256:ab4e36aab9ef254b498edb75de25a3e4c19f50eb6eb23509c6483b0fed9b5a11",
+      "executor_source_revision": "9081397de9e981c43b4e0f67fabe747e7ed964c7",
+      "database_image_digest": "sha256:6343bdc87ca132c6b53acb26113a6bad1821d188fa39975a745f32ddd9757634",
+      "application_relation_count": 99,
+      "application_column_count": 1387,
+      "authoritative_change_journal": "NOT_ASSERTED"
+    },
+    "manager_v2": {
+      "paper_image_digest": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+      "sandbox_image_digest": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "live_image_digest": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "catalogue_digest": "sha256:9040f0897d8f452a486e51ce35abb7f3165b2238d07221b6b0e684d9829b012e",
+      "serving_policy_digest": "sha256:b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3",
+      "catalogue_relation_count": 96,
+      "route_boundary": "CATALOGUE_BOUND_GET_ONLY"
+    },
+    "portal_execution_edge": {
+      "edge_image_digest": "sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077",
+      "source_proxy_image_digest": "sha256:dafa9e70a3d90cd079147d149dbbaa8ac8a3a9db079b0cf8099892a7f1d5fbe7",
+      "projection_store_image_digest": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "healthy_profiles": [
+        "PAPER_BINANCE_USDM",
+        "SANDBOX_BINANCE_USDM",
+        "LIVE_BINANCE_USDM"
+      ],
+      "release_locations": "REDACTED; image digest and compose digests are the portable release identity"
+    }
+  },
+  "surface_status": {
+    "manager_v2_current_page_read": "RUNNING_PROFILE_BOUND_SOURCE_PROXY",
+    "maximum_data_e5_adapter": "IMPLEMENTED_LIBRARY_NOT_NEWLY_DEPLOYED_BY_E7",
+    "history_event_sse_for_manager_current_pages": "NOT_ASSERTED",
+    "command": "NOT_ACTIVATED_BY_E7",
+    "generic_sql_or_direct_database": "NOT_PRESENT"
+  },
+  "evidence_pins": {
+    "e1_evidence_manifest_sha256": "sha256:1a13355a28e8ec40c83b74cb53e54b1916b755b67fdc45696b7304473d3a10cf",
+    "e2_positive_semantic_audit_manifest_sha256": "sha256:b2fd7f9e60d28d01279f2283c62028beaeb166a1eb95291388059a80cb46d94b",
+    "e3_coverage_manifest_sha256": "sha256:f9ba8afb8acdf1f863c4de15758fa6e8b63cfd97b69ee0b43d4fc91f3bdbd310",
+    "e4_contract_manifest_sha256": "sha256:abc4dcfe1f94f69099dc241f2f07c95c6976d919a8e1b7f68bd9fe88873d8984",
+    "e5_publication_manifest_sha256": "sha256:57a36804838d341b6f67d4abbf15b64878743b3b58141b0af1d6934e6f189909",
+    "e6_acceptance_manifest_sha256": "sha256:5081befce2c7d62a0a33abd95607e3caf02b7659448b39473e0208640a9e0ef5"
+  },
+  "runtime_mutations": {
+    "database": "NOT_APPLIED",
+    "source_identity": "NOT_APPLIED",
+    "route": "NOT_APPLIED",
+    "listener": "NOT_APPLIED",
+    "projection_or_cache": "NOT_APPLIED",
+    "command_port": "NOT_APPLIED",
+    "deployment": "NOT_APPLIED"
+  },
+  "sanitization": {
+    "raw_rows_persisted": false,
+    "cursor_persisted": false,
+    "trace_identifier_persisted": false,
+    "credential_or_certificate_persisted": false,
+    "private_runtime_path_persisted": false
+  }
+}

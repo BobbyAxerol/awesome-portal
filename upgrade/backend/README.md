@@ -1680,3 +1680,27 @@ durable run/attempt events. Detailed evidence:
   stable remain unchanged pending Bobby's dev review.
 - Detail:
   [`EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md`](./EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md).
+
+## Backend state — 2026-09-04 (EX-DP-07 maximum-data owner return)
+
+- EX-DP-01 through EX-DP-07 now return one portable,
+  digest-bound `maximum-data-return-v1` pack. It maps every frozen Portal
+  field once (22 direct, 5 named Portal derivations, 6 genuine source-owner
+  gaps and 1 Canary incompatibility), carries the full sanitized 99-relation /
+  1,387-column census and preserves the exact E3--E6 compatibility chain.
+- The Manager-v2 source remains catalogue-bound, mTLS profile-bound and
+  current-page only. E7 measured a fixed `limit=1` named page through the
+  existing Paper/Sandbox/Live Edge path: Paper and Sandbox admit one safe
+  concurrent page in the sample because a concurrent peer returned typed 503;
+  Live admitted two. A separate Live order page's typed 503 is preserved as
+  unavailability, not retried or mapped to empty. No production SLO, replay,
+  global sequence, retention, correction or independent-cell claim is made.
+- `maximum-data-return`, `validate_maximum_data_e7.py`, the Control API E7
+  fixture and `MANIFEST.sha256` reject pin/coverage/redaction/capacity drift.
+  No image, route, source identity, direct DB/Redis path, command path or
+  runtime deployment changed. The only next runtime action is a separately
+  approved immutable Portal BFF/Edge release binding one selected E5 operation.
+- Detail:
+  [`MASTER_RESPONSE.md`](../../services/portal-execution-edge-rs/contracts/maximum-data-return-v1/MASTER_RESPONSE.md)
+  and
+  [`UNIFIED_IMPLEMENTATION_PLAN.md`](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-07--e7-resilience-capacity-and-complete-owner-return).

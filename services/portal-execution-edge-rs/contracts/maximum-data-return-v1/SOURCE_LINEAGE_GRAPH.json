@@ -1,0 +1,2118 @@
+{
+  "schema_version": "portal-source-census-v1",
+  "capture_utc_epoch_ms": 1788516694266,
+  "nodes": [
+    {
+      "identifier": "portal_command.operations",
+      "kind": "TABLE",
+      "owner_service": "portal_execution_owner",
+      "baseline_status": "DEPLOYED_RUNTIME_OVERLAY_MATCHED"
+    },
+    {
+      "identifier": "portal_command.paper_target_allowlist",
+      "kind": "TABLE",
+      "owner_service": "portal_execution_owner",
+      "baseline_status": "DEPLOYED_RUNTIME_OVERLAY_MATCHED"
+    },
+    {
+      "identifier": "public.account_balances",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.account_equity_snapshots",
+      "kind": "TABLE",
+      "owner_service": "performance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.account_policies",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.account_reservations",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.account_sync_current_state",
+      "kind": "TABLE",
+      "owner_service": "domain_projection",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.account_sync_effective",
+      "kind": "VIEW",
+      "owner_service": "domain_projection",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.account_sync_snapshots",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.accounts",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.alpha_ledger",
+      "kind": "TABLE",
+      "owner_service": "legacy_compatibility",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.alpha_positions",
+      "kind": "TABLE",
+      "owner_service": "legacy_compatibility",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.alpha_risk_config",
+      "kind": "TABLE",
+      "owner_service": "legacy_compatibility",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.alphas",
+      "kind": "TABLE",
+      "owner_service": "legacy_compatibility",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.arb_order_packages",
+      "kind": "TABLE",
+      "owner_service": "gateway",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.audit_log",
+      "kind": "TABLE",
+      "owner_service": "monitor",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.binance_fills",
+      "kind": "TABLE",
+      "owner_service": "legacy_compatibility",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.broker_account_sync_current_state",
+      "kind": "TABLE",
+      "owner_service": "domain_projection",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.broker_account_sync_effective",
+      "kind": "VIEW",
+      "owner_service": "domain_projection",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.broker_account_sync_snapshots",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.broker_sync_raw_hot",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.broker_sync_state_history",
+      "kind": "TABLE",
+      "owner_service": "domain_projection",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.broker_sync_valuation_current_state",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.broker_sync_valuation_history",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.cash_ledger",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.command_ack_evidence",
+      "kind": "TABLE",
+      "owner_service": "command_journal",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.command_broker_attempts",
+      "kind": "TABLE",
+      "owner_service": "command_journal",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.command_delivery_attempts",
+      "kind": "TABLE",
+      "owner_service": "command_journal",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.command_dispatch_outbox",
+      "kind": "TABLE",
+      "owner_service": "command_journal",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.command_journal",
+      "kind": "TABLE",
+      "owner_service": "command_journal",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.command_stream_trim_audit",
+      "kind": "TABLE",
+      "owner_service": "command_journal",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.compatibility_surface_registry",
+      "kind": "TABLE",
+      "owner_service": "platform_governance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.compatibility_usage_daily",
+      "kind": "TABLE",
+      "owner_service": "platform_governance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.conditional_order_group_legs",
+      "kind": "TABLE",
+      "owner_service": "order_groups",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.conditional_order_groups",
+      "kind": "TABLE",
+      "owner_service": "order_groups",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.copy_event_dead_letters",
+      "kind": "TABLE",
+      "owner_service": "copy_outbox",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.copy_event_outbox",
+      "kind": "TABLE",
+      "owner_service": "copy_outbox",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.copy_publish_policies",
+      "kind": "TABLE",
+      "owner_service": "copy_outbox",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.dead_letters",
+      "kind": "TABLE",
+      "owner_service": "monitor",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.dnse_trading_tokens",
+      "kind": "TABLE",
+      "owner_service": "venue_adapters",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.domain_events",
+      "kind": "TABLE",
+      "owner_service": "event_store",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.engine_authority_decisions",
+      "kind": "TABLE",
+      "owner_service": "engine_authority",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.engine_authority_scopes",
+      "kind": "TABLE",
+      "owner_service": "engine_authority",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.engine_authority_transitions",
+      "kind": "TABLE",
+      "owner_service": "engine_authority",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.engine_shadow_comparisons",
+      "kind": "TABLE",
+      "owner_service": "shadow",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.event_idempotency",
+      "kind": "TABLE",
+      "owner_service": "event_store",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.execution_command_outbox",
+      "kind": "TABLE",
+      "owner_service": "order_groups",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.execution_replay_jobs",
+      "kind": "TABLE",
+      "owner_service": "replay",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.execution_sessions",
+      "kind": "TABLE",
+      "owner_service": "gateway",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.fills",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.funding_accruals",
+      "kind": "TABLE",
+      "owner_service": "performance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.funding_rates",
+      "kind": "TABLE",
+      "owner_service": "legacy_compatibility",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.instrument_aliases",
+      "kind": "TABLE",
+      "owner_service": "instruments",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.instrument_metadata_history",
+      "kind": "TABLE",
+      "owner_service": "instruments",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.instruments",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.maintenance_policy_registry",
+      "kind": "TABLE",
+      "owner_service": "platform_governance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.margin_balances",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.margin_ledger",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.operator_operations",
+      "kind": "TABLE",
+      "owner_service": "performance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.order_bracket_legs",
+      "kind": "TABLE",
+      "owner_service": "order_groups",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.order_brackets",
+      "kind": "TABLE",
+      "owner_service": "order_groups",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.order_group_event_inbox",
+      "kind": "TABLE",
+      "owner_service": "order_groups",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.order_pending_exposure",
+      "kind": "TABLE",
+      "owner_service": "risk_engine",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.orders",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.paper_account_seed",
+      "kind": "TABLE",
+      "owner_service": "paper_execution",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.paper_matcher_config",
+      "kind": "TABLE",
+      "owner_service": "paper_execution",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.paper_open_orders",
+      "kind": "TABLE",
+      "owner_service": "paper_execution",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.performance_events",
+      "kind": "TABLE",
+      "owner_service": "performance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.performance_projection_current_state",
+      "kind": "TABLE",
+      "owner_service": "domain_projection",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.performance_snapshots",
+      "kind": "TABLE",
+      "owner_service": "performance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.portal_account_balances_scoped",
+      "kind": "VIEW",
+      "owner_service": "portal_manager_read_facade",
+      "baseline_status": "DEPLOYED_RUNTIME_OVERLAY_MATCHED"
+    },
+    {
+      "identifier": "public.portfolio_allocations",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.portfolio_audit_current_state",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.portfolio_audit_log",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.portfolio_capital_ledger",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.portfolio_equity_snapshots",
+      "kind": "TABLE",
+      "owner_service": "performance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.portfolios",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.positions_v2",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.projection_storage_policies",
+      "kind": "TABLE",
+      "owner_service": "domain_projection",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.reconciliation_findings",
+      "kind": "TABLE",
+      "owner_service": "monitor",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.reconciliation_observation_buckets",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.redis_transport_epochs",
+      "kind": "TABLE",
+      "owner_service": "platform_governance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.risk_grants",
+      "kind": "TABLE",
+      "owner_service": "risk_engine",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.risk_profiles",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.schema_migration_ledger",
+      "kind": "TABLE",
+      "owner_service": "platform_governance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.schema_object_ownership",
+      "kind": "TABLE",
+      "owner_service": "platform_governance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.service_heartbeats",
+      "kind": "TABLE",
+      "owner_service": "monitor",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.settlement_buckets",
+      "kind": "TABLE",
+      "owner_service": "settlement",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.settlement_calendars",
+      "kind": "TABLE",
+      "owner_service": "settlement",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.settlements",
+      "kind": "TABLE",
+      "owner_service": "settlement",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.sizing_decisions",
+      "kind": "TABLE",
+      "owner_service": "gateway",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.storage_archive_manifests",
+      "kind": "TABLE",
+      "owner_service": "portfolio_management",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.strategies",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.strategy_deployments",
+      "kind": "TABLE",
+      "owner_service": "performance",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.traders",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.venue_accounts",
+      "kind": "TABLE",
+      "owner_service": "venue_adapters",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.venue_credentials",
+      "kind": "TABLE",
+      "owner_service": "venue_adapters",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.venue_rate_limits",
+      "kind": "TABLE",
+      "owner_service": "venue_adapters",
+      "baseline_status": "BASELINE_MATCHED"
+    },
+    {
+      "identifier": "public.venues",
+      "kind": "TABLE",
+      "owner_service": "domain_core",
+      "baseline_status": "BASELINE_MATCHED"
+    }
+  ],
+  "edges": [
+    {
+      "identifier": "public.account_balances:account_balances_account_id_fkey",
+      "from_relation": "public.account_balances",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_equity_snapshots:account_equity_snapshots_account_id_fkey",
+      "from_relation": "public.account_equity_snapshots",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_equity_snapshots:account_equity_snapshots_deployment_id_fkey",
+      "from_relation": "public.account_equity_snapshots",
+      "from_columns": [
+        "deployment_id"
+      ],
+      "to_relation": "public.strategy_deployments",
+      "to_columns": [
+        "deployment_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_equity_snapshots:account_equity_snapshots_strategy_id_fkey",
+      "from_relation": "public.account_equity_snapshots",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_equity_snapshots:account_equity_snapshots_venue_fkey",
+      "from_relation": "public.account_equity_snapshots",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_policies:account_policies_account_id_fkey",
+      "from_relation": "public.account_policies",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_policies:account_policies_venue_fkey",
+      "from_relation": "public.account_policies",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_reservations:account_reservations_account_id_fkey",
+      "from_relation": "public.account_reservations",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_reservations:account_reservations_strategy_id_fkey",
+      "from_relation": "public.account_reservations",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_reservations:account_reservations_venue_fkey",
+      "from_relation": "public.account_reservations",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_sync_current_state:account_sync_current_state_account_id_fkey",
+      "from_relation": "public.account_sync_current_state",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_sync_current_state:account_sync_current_state_venue_fkey",
+      "from_relation": "public.account_sync_current_state",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_sync_snapshots:account_sync_snapshots_account_id_fkey",
+      "from_relation": "public.account_sync_snapshots",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.account_sync_snapshots:account_sync_snapshots_venue_fkey",
+      "from_relation": "public.account_sync_snapshots",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.accounts:accounts_strategy_id_fkey",
+      "from_relation": "public.accounts",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.accounts:accounts_trader_id_fkey",
+      "from_relation": "public.accounts",
+      "from_columns": [
+        "trader_id"
+      ],
+      "to_relation": "public.traders",
+      "to_columns": [
+        "trader_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.accounts:accounts_venue_fkey",
+      "from_relation": "public.accounts",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.alpha_ledger:alpha_ledger_alpha_id_fkey",
+      "from_relation": "public.alpha_ledger",
+      "from_columns": [
+        "alpha_id"
+      ],
+      "to_relation": "public.alphas",
+      "to_columns": [
+        "alpha_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.alpha_positions:alpha_positions_alpha_id_fkey",
+      "from_relation": "public.alpha_positions",
+      "from_columns": [
+        "alpha_id"
+      ],
+      "to_relation": "public.alphas",
+      "to_columns": [
+        "alpha_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.alpha_risk_config:alpha_risk_config_alpha_id_fkey",
+      "from_relation": "public.alpha_risk_config",
+      "from_columns": [
+        "alpha_id"
+      ],
+      "to_relation": "public.alphas",
+      "to_columns": [
+        "alpha_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.arb_order_packages:arb_order_packages_account_id_fkey",
+      "from_relation": "public.arb_order_packages",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.arb_order_packages:arb_order_packages_execution_session_id_fkey",
+      "from_relation": "public.arb_order_packages",
+      "from_columns": [
+        "execution_session_id"
+      ],
+      "to_relation": "public.execution_sessions",
+      "to_columns": [
+        "execution_session_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.arb_order_packages:arb_order_packages_risk_grant_id_fkey",
+      "from_relation": "public.arb_order_packages",
+      "from_columns": [
+        "risk_grant_id"
+      ],
+      "to_relation": "public.risk_grants",
+      "to_columns": [
+        "risk_grant_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.arb_order_packages:arb_order_packages_strategy_id_fkey",
+      "from_relation": "public.arb_order_packages",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.arb_order_packages:arb_order_packages_venue_fkey",
+      "from_relation": "public.arb_order_packages",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.binance_fills:binance_fills_alpha_id_fkey",
+      "from_relation": "public.binance_fills",
+      "from_columns": [
+        "alpha_id"
+      ],
+      "to_relation": "public.alphas",
+      "to_columns": [
+        "alpha_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.broker_account_sync_current_state:broker_account_sync_current_state_venue_fkey",
+      "from_relation": "public.broker_account_sync_current_state",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.broker_account_sync_snapshots:broker_account_sync_snapshots_venue_fkey",
+      "from_relation": "public.broker_account_sync_snapshots",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.broker_sync_valuation_current_state:broker_sync_valuation_current_state_venue_fkey",
+      "from_relation": "public.broker_sync_valuation_current_state",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.cash_ledger:cash_ledger_account_id_fkey",
+      "from_relation": "public.cash_ledger",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.cash_ledger:cash_ledger_strategy_id_fkey",
+      "from_relation": "public.cash_ledger",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.cash_ledger:cash_ledger_venue_fkey",
+      "from_relation": "public.cash_ledger",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.command_ack_evidence:command_ack_evidence_command_id_fkey",
+      "from_relation": "public.command_ack_evidence",
+      "from_columns": [
+        "command_id"
+      ],
+      "to_relation": "public.command_journal",
+      "to_columns": [
+        "command_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.command_broker_attempts:command_broker_attempts_command_id_fkey",
+      "from_relation": "public.command_broker_attempts",
+      "from_columns": [
+        "command_id"
+      ],
+      "to_relation": "public.command_journal",
+      "to_columns": [
+        "command_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.command_delivery_attempts:command_delivery_attempts_command_id_fkey",
+      "from_relation": "public.command_delivery_attempts",
+      "from_columns": [
+        "command_id"
+      ],
+      "to_relation": "public.command_journal",
+      "to_columns": [
+        "command_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.command_delivery_attempts:command_delivery_attempts_outbox_id_fkey",
+      "from_relation": "public.command_delivery_attempts",
+      "from_columns": [
+        "outbox_id"
+      ],
+      "to_relation": "public.command_dispatch_outbox",
+      "to_columns": [
+        "outbox_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.command_dispatch_outbox:command_dispatch_outbox_command_id_fkey",
+      "from_relation": "public.command_dispatch_outbox",
+      "from_columns": [
+        "command_id"
+      ],
+      "to_relation": "public.command_journal",
+      "to_columns": [
+        "command_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.compatibility_usage_daily:compatibility_usage_daily_surface_id_fkey",
+      "from_relation": "public.compatibility_usage_daily",
+      "from_columns": [
+        "surface_id"
+      ],
+      "to_relation": "public.compatibility_surface_registry",
+      "to_columns": [
+        "surface_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.conditional_order_group_legs:conditional_order_group_legs_group_id_fkey",
+      "from_relation": "public.conditional_order_group_legs",
+      "from_columns": [
+        "group_id"
+      ],
+      "to_relation": "public.conditional_order_groups",
+      "to_columns": [
+        "group_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.dnse_trading_tokens:dnse_trading_tokens_account_id_fkey",
+      "from_relation": "public.dnse_trading_tokens",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.engine_authority_decisions:engine_authority_decisions_scope_id_fkey",
+      "from_relation": "public.engine_authority_decisions",
+      "from_columns": [
+        "scope_id"
+      ],
+      "to_relation": "public.engine_authority_scopes",
+      "to_columns": [
+        "scope_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.engine_authority_transitions:engine_authority_transitions_scope_id_fkey",
+      "from_relation": "public.engine_authority_transitions",
+      "from_columns": [
+        "scope_id"
+      ],
+      "to_relation": "public.engine_authority_scopes",
+      "to_columns": [
+        "scope_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.execution_command_outbox:execution_command_outbox_group_id_fkey",
+      "from_relation": "public.execution_command_outbox",
+      "from_columns": [
+        "group_id"
+      ],
+      "to_relation": "public.conditional_order_groups",
+      "to_columns": [
+        "group_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.execution_command_outbox:execution_command_outbox_group_id_leg_id_fkey",
+      "from_relation": "public.execution_command_outbox",
+      "from_columns": [
+        "group_id",
+        "leg_id"
+      ],
+      "to_relation": "public.conditional_order_group_legs",
+      "to_columns": [
+        "group_id",
+        "leg_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.execution_sessions:execution_sessions_account_id_fkey",
+      "from_relation": "public.execution_sessions",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.execution_sessions:execution_sessions_strategy_id_fkey",
+      "from_relation": "public.execution_sessions",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.execution_sessions:execution_sessions_venue_fkey",
+      "from_relation": "public.execution_sessions",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.fills:fills_account_id_fkey",
+      "from_relation": "public.fills",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.fills:fills_execution_session_id_fkey",
+      "from_relation": "public.fills",
+      "from_columns": [
+        "execution_session_id"
+      ],
+      "to_relation": "public.execution_sessions",
+      "to_columns": [
+        "execution_session_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.fills:fills_instrument_id_fkey",
+      "from_relation": "public.fills",
+      "from_columns": [
+        "instrument_id"
+      ],
+      "to_relation": "public.instruments",
+      "to_columns": [
+        "instrument_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.fills:fills_strategy_id_fkey",
+      "from_relation": "public.fills",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.fills:fills_venue_fkey",
+      "from_relation": "public.fills",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.funding_accruals:funding_accruals_account_id_fkey",
+      "from_relation": "public.funding_accruals",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.funding_accruals:funding_accruals_deployment_id_fkey",
+      "from_relation": "public.funding_accruals",
+      "from_columns": [
+        "deployment_id"
+      ],
+      "to_relation": "public.strategy_deployments",
+      "to_columns": [
+        "deployment_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.funding_accruals:funding_accruals_strategy_id_fkey",
+      "from_relation": "public.funding_accruals",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.funding_accruals:funding_accruals_venue_fkey",
+      "from_relation": "public.funding_accruals",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.instrument_aliases:instrument_aliases_canonical_instrument_id_fkey",
+      "from_relation": "public.instrument_aliases",
+      "from_columns": [
+        "canonical_instrument_id"
+      ],
+      "to_relation": "public.instruments",
+      "to_columns": [
+        "canonical_instrument_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.instrument_aliases:instrument_aliases_venue_fkey",
+      "from_relation": "public.instrument_aliases",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.instruments:instruments_venue_fkey",
+      "from_relation": "public.instruments",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.margin_balances:margin_balances_account_id_fkey",
+      "from_relation": "public.margin_balances",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.margin_ledger:margin_ledger_account_id_fkey",
+      "from_relation": "public.margin_ledger",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.margin_ledger:margin_ledger_strategy_id_fkey",
+      "from_relation": "public.margin_ledger",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.margin_ledger:margin_ledger_venue_fkey",
+      "from_relation": "public.margin_ledger",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.order_bracket_legs:order_bracket_legs_bracket_group_id_fkey",
+      "from_relation": "public.order_bracket_legs",
+      "from_columns": [
+        "bracket_group_id"
+      ],
+      "to_relation": "public.order_brackets",
+      "to_columns": [
+        "bracket_group_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.order_brackets:order_brackets_account_id_fkey",
+      "from_relation": "public.order_brackets",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.order_brackets:order_brackets_strategy_id_fkey",
+      "from_relation": "public.order_brackets",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.order_brackets:order_brackets_venue_fkey",
+      "from_relation": "public.order_brackets",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.order_group_event_inbox:order_group_event_inbox_group_id_fkey",
+      "from_relation": "public.order_group_event_inbox",
+      "from_columns": [
+        "group_id"
+      ],
+      "to_relation": "public.conditional_order_groups",
+      "to_columns": [
+        "group_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.order_group_event_inbox:order_group_event_inbox_group_id_leg_id_fkey",
+      "from_relation": "public.order_group_event_inbox",
+      "from_columns": [
+        "group_id",
+        "leg_id"
+      ],
+      "to_relation": "public.conditional_order_group_legs",
+      "to_columns": [
+        "group_id",
+        "leg_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.orders:orders_account_id_fkey",
+      "from_relation": "public.orders",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.orders:orders_execution_session_id_fkey",
+      "from_relation": "public.orders",
+      "from_columns": [
+        "execution_session_id"
+      ],
+      "to_relation": "public.execution_sessions",
+      "to_columns": [
+        "execution_session_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.orders:orders_instrument_id_fkey",
+      "from_relation": "public.orders",
+      "from_columns": [
+        "instrument_id"
+      ],
+      "to_relation": "public.instruments",
+      "to_columns": [
+        "instrument_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.orders:orders_risk_grant_id_fkey",
+      "from_relation": "public.orders",
+      "from_columns": [
+        "risk_grant_id"
+      ],
+      "to_relation": "public.risk_grants",
+      "to_columns": [
+        "risk_grant_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.orders:orders_strategy_id_fkey",
+      "from_relation": "public.orders",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.orders:orders_trader_id_fkey",
+      "from_relation": "public.orders",
+      "from_columns": [
+        "trader_id"
+      ],
+      "to_relation": "public.traders",
+      "to_columns": [
+        "trader_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.orders:orders_venue_fkey",
+      "from_relation": "public.orders",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.paper_account_seed:paper_account_seed_account_id_fkey",
+      "from_relation": "public.paper_account_seed",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.paper_matcher_config:paper_matcher_config_venue_fkey",
+      "from_relation": "public.paper_matcher_config",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.paper_open_orders:paper_open_orders_account_id_fkey",
+      "from_relation": "public.paper_open_orders",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.paper_open_orders:paper_open_orders_instrument_id_fkey",
+      "from_relation": "public.paper_open_orders",
+      "from_columns": [
+        "instrument_id"
+      ],
+      "to_relation": "public.instruments",
+      "to_columns": [
+        "instrument_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.paper_open_orders:paper_open_orders_strategy_id_fkey",
+      "from_relation": "public.paper_open_orders",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.paper_open_orders:paper_open_orders_venue_fkey",
+      "from_relation": "public.paper_open_orders",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.performance_events:performance_events_account_id_fkey",
+      "from_relation": "public.performance_events",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.performance_events:performance_events_deployment_id_fkey",
+      "from_relation": "public.performance_events",
+      "from_columns": [
+        "deployment_id"
+      ],
+      "to_relation": "public.strategy_deployments",
+      "to_columns": [
+        "deployment_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.performance_events:performance_events_strategy_id_fkey",
+      "from_relation": "public.performance_events",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.performance_snapshots:performance_snapshots_account_id_fkey",
+      "from_relation": "public.performance_snapshots",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.performance_snapshots:performance_snapshots_deployment_id_fkey",
+      "from_relation": "public.performance_snapshots",
+      "from_columns": [
+        "deployment_id"
+      ],
+      "to_relation": "public.strategy_deployments",
+      "to_columns": [
+        "deployment_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.performance_snapshots:performance_snapshots_strategy_id_fkey",
+      "from_relation": "public.performance_snapshots",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.performance_snapshots:performance_snapshots_venue_fkey",
+      "from_relation": "public.performance_snapshots",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_allocations:portfolio_allocations_account_id_fkey",
+      "from_relation": "public.portfolio_allocations",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_allocations:portfolio_allocations_deployment_id_fkey",
+      "from_relation": "public.portfolio_allocations",
+      "from_columns": [
+        "deployment_id"
+      ],
+      "to_relation": "public.strategy_deployments",
+      "to_columns": [
+        "deployment_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_allocations:portfolio_allocations_portfolio_id_fkey",
+      "from_relation": "public.portfolio_allocations",
+      "from_columns": [
+        "portfolio_id"
+      ],
+      "to_relation": "public.portfolios",
+      "to_columns": [
+        "portfolio_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_allocations:portfolio_allocations_strategy_id_fkey",
+      "from_relation": "public.portfolio_allocations",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_allocations:portfolio_allocations_venue_fkey",
+      "from_relation": "public.portfolio_allocations",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_audit_current_state:portfolio_audit_current_state_last_audit_id_fkey",
+      "from_relation": "public.portfolio_audit_current_state",
+      "from_columns": [
+        "last_audit_id"
+      ],
+      "to_relation": "public.portfolio_audit_log",
+      "to_columns": [
+        "audit_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_capital_ledger:portfolio_capital_ledger_account_id_fkey",
+      "from_relation": "public.portfolio_capital_ledger",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_capital_ledger:portfolio_capital_ledger_allocation_id_fkey",
+      "from_relation": "public.portfolio_capital_ledger",
+      "from_columns": [
+        "allocation_id"
+      ],
+      "to_relation": "public.portfolio_allocations",
+      "to_columns": [
+        "allocation_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_capital_ledger:portfolio_capital_ledger_portfolio_id_fkey",
+      "from_relation": "public.portfolio_capital_ledger",
+      "from_columns": [
+        "portfolio_id"
+      ],
+      "to_relation": "public.portfolios",
+      "to_columns": [
+        "portfolio_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_capital_ledger:portfolio_capital_ledger_strategy_id_fkey",
+      "from_relation": "public.portfolio_capital_ledger",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_capital_ledger:portfolio_capital_ledger_venue_fkey",
+      "from_relation": "public.portfolio_capital_ledger",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.portfolio_equity_snapshots:portfolio_equity_snapshots_portfolio_id_fkey",
+      "from_relation": "public.portfolio_equity_snapshots",
+      "from_columns": [
+        "portfolio_id"
+      ],
+      "to_relation": "public.portfolios",
+      "to_columns": [
+        "portfolio_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.positions_v2:positions_v2_account_id_fkey",
+      "from_relation": "public.positions_v2",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.positions_v2:positions_v2_instrument_id_fkey",
+      "from_relation": "public.positions_v2",
+      "from_columns": [
+        "instrument_id"
+      ],
+      "to_relation": "public.instruments",
+      "to_columns": [
+        "instrument_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.positions_v2:positions_v2_strategy_id_fkey",
+      "from_relation": "public.positions_v2",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.positions_v2:positions_v2_venue_fkey",
+      "from_relation": "public.positions_v2",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.reconciliation_findings:reconciliation_findings_execution_session_id_fkey",
+      "from_relation": "public.reconciliation_findings",
+      "from_columns": [
+        "execution_session_id"
+      ],
+      "to_relation": "public.execution_sessions",
+      "to_columns": [
+        "execution_session_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.risk_grants:risk_grants_account_id_fkey",
+      "from_relation": "public.risk_grants",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.risk_grants:risk_grants_execution_session_id_fkey",
+      "from_relation": "public.risk_grants",
+      "from_columns": [
+        "execution_session_id"
+      ],
+      "to_relation": "public.execution_sessions",
+      "to_columns": [
+        "execution_session_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.risk_profiles:risk_profiles_strategy_id_fkey",
+      "from_relation": "public.risk_profiles",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.risk_profiles:risk_profiles_venue_fkey",
+      "from_relation": "public.risk_profiles",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.settlement_buckets:settlement_buckets_account_id_fkey",
+      "from_relation": "public.settlement_buckets",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.settlement_calendars:settlement_calendars_venue_fkey",
+      "from_relation": "public.settlement_calendars",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.settlements:settlements_account_id_fkey",
+      "from_relation": "public.settlements",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.settlements:settlements_instrument_id_fkey",
+      "from_relation": "public.settlements",
+      "from_columns": [
+        "instrument_id"
+      ],
+      "to_relation": "public.instruments",
+      "to_columns": [
+        "instrument_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.settlements:settlements_strategy_id_fkey",
+      "from_relation": "public.settlements",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.settlements:settlements_venue_fkey",
+      "from_relation": "public.settlements",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.strategies:strategies_trader_id_fkey",
+      "from_relation": "public.strategies",
+      "from_columns": [
+        "trader_id"
+      ],
+      "to_relation": "public.traders",
+      "to_columns": [
+        "trader_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.strategy_deployments:strategy_deployments_account_id_fkey",
+      "from_relation": "public.strategy_deployments",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.strategy_deployments:strategy_deployments_portfolio_id_fkey",
+      "from_relation": "public.strategy_deployments",
+      "from_columns": [
+        "portfolio_id"
+      ],
+      "to_relation": "public.portfolios",
+      "to_columns": [
+        "portfolio_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.strategy_deployments:strategy_deployments_strategy_id_fkey",
+      "from_relation": "public.strategy_deployments",
+      "from_columns": [
+        "strategy_id"
+      ],
+      "to_relation": "public.strategies",
+      "to_columns": [
+        "strategy_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.strategy_deployments:strategy_deployments_venue_fkey",
+      "from_relation": "public.strategy_deployments",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.venue_accounts:venue_accounts_account_id_fkey",
+      "from_relation": "public.venue_accounts",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.venue_accounts:venue_accounts_venue_fkey",
+      "from_relation": "public.venue_accounts",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.venue_credentials:venue_credentials_account_id_fkey",
+      "from_relation": "public.venue_credentials",
+      "from_columns": [
+        "account_id"
+      ],
+      "to_relation": "public.accounts",
+      "to_columns": [
+        "account_id"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.venue_credentials:venue_credentials_venue_fkey",
+      "from_relation": "public.venue_credentials",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    },
+    {
+      "identifier": "public.venue_rate_limits:venue_rate_limits_venue_fkey",
+      "from_relation": "public.venue_rate_limits",
+      "from_columns": [
+        "venue"
+      ],
+      "to_relation": "public.venues",
+      "to_columns": [
+        "venue"
+      ],
+      "cardinality_disposition": "FK_DECLARED_CARDINALITY_E2_REQUIRED"
+    }
+  ]
+}

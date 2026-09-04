@@ -1,0 +1,47 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.domain-capability.v1",
+  "domain_id": "signal_sizing_risk",
+  "status": "CURRENT_STATE_ONLY",
+  "as_of_ms": 1788516000000,
+  "current_qualified_operations": [
+    {
+      "field_id": "risk_grants",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataRiskGrantPageV1",
+      "source_relation": "public.risk_grants",
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "semantics": "AVAILABLE_DECISION_RECORDS_NOT_FULL_RISK_EVENT_REPLAY"
+    },
+    {
+      "field_id": "sizing_decisions",
+      "status": "AVAILABLE_DIRECT",
+      "operation": "maximumDataSizingDecisionPageV1",
+      "source_relation": "public.sizing_decisions",
+      "profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "semantics": "AVAILABLE_DECISION_RECORDS_NOT_SIGNAL_INTENT_FUNNEL"
+    }
+  ],
+  "typed_limitations": [
+    {
+      "gap_id": "signal-intent-funnel",
+      "status": "OWNER_ACTION_REQUIRED",
+      "reason_code": "NO_STABLE_SOURCE_PROVES_SIGNAL_TO_INTENT_FUNNEL"
+    },
+    {
+      "gap_id": "risk-event-correction",
+      "status": "OWNER_ACTION_REQUIRED",
+      "reason_code": "NO_AUTHORITATIVE_CORRECTION_EVENT_JOURNAL"
+    }
+  ],
+  "wire_contract": {
+    "timestamp_contract": "UTC_EPOCH_MS",
+    "decimal_contract": "EXACT_DECIMAL_STRING",
+    "continuation": "SOURCE_ISSUED_OPAQUE_CURSOR_ONLY"
+  },
+  "evidence_references": [
+    "e4-domain-capabilities.v1.json",
+    "e5-existing-data-publication.v1.json",
+    "e6-domain-acceptance.v1.json",
+    "SOURCE_OWNER_GAPS.json"
+  ]
+}

@@ -1302,6 +1302,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "maximum-data-return"
+version = "0.1.0"
+dependencies = [
+ "maximum-data-acceptance",
+ "maximum-data-adapter",
+ "maximum-data-contract",
+ "serde_json",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
 name = "md-5"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

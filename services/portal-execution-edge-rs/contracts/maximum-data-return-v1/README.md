@@ -159,3 +159,43 @@ Append these E6 artifacts to the reading order:
 16. e6-runtime-evidence.v1.json
 17. e6-domain-acceptance.v1.schema.json and
     e6-runtime-evidence.v1.schema.json
+
+## E7 complete portable owner return
+
+E7 completes the requested directory structure and makes its state
+machine-readable without widening the qualified read surface.
+
+- `MASTER_RESPONSE.md` and `owner-response.v2.json` are the Portal handoff
+  entry points. The response maps all 34 frozen fields and all 18 genuine
+  source gaps; it distinguishes direct reads, Portal derivations, typed gaps
+  and the Canary contract incompatibility.
+- The E1 census files are metadata-only copies: 99 relations, 1,387 columns,
+  lineage and profile coverage. The E7 runtime manifest removes private release
+  locations and preserves only portable image/config/evidence digests.
+- `e7-resilience-capacity.v1.json` and `benchmarks/` record a narrow actual
+  current-page probe. Paper/Sandbox observed a safe named-page concurrency of
+  one due to one typed 503 each in the two-request sample; Live observed two.
+  This is a measured bound, not a production SLO.
+- The current Manager surface remains a profile-bound current-page read plane.
+  `EVENT_CONTINUITY_REPORT.md` and the future `incremental-events.v2` schema
+  make replay/global-sequence/retention/correction requirements explicit rather
+  than pretending that current rows are events.
+- `maximum-data-return`, `validate_maximum_data_e7.py` and the Control API E7
+  fixture test validate the frozen E3--E6 pins, complete portable file index,
+  34 capability mappings, 18 source gaps, measured profile bounds and redaction
+  boundary without making a source connection.
+
+Read E7 in this order:
+
+18. `MASTER_RESPONSE.md`
+19. `owner-response.v2.json`
+20. `e7-return-pack.manifest.json` and `MANIFEST.sha256`
+21. `DEPLOYED_RUNTIME_MANIFEST.json`, `SOURCE_OWNER_GAPS.json` and the six
+    domain capability rulings
+22. `e7-resilience-capacity.v1.json` and `benchmarks/`
+23. `schemas/`, `fixtures/` and `evidence/EVIDENCE_INDEX.md`
+
+The only permitted next runtime action is a separately approved immutable
+Portal BFF/Edge release that binds one fixed E5 operation. E7 never grants
+browser access, generic relation/SQL access, direct database access, source
+credentials, command execution or source activation.

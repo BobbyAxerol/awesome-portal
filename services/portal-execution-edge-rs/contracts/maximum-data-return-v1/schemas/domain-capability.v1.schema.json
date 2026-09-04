@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.return.domain-capability.v1",
+  "title": "Portable alias of the frozen E4 domain-capability contract",
+  "$ref": "../e4-domain-capability.v1.schema.json"
+}

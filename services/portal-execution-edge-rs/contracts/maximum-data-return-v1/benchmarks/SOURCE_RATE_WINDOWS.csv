@@ -1,0 +1,4 @@
+profile,profile_id,operation,page_limit,tested_concurrency,maximum_safe_concurrency_observed,successful_requests,attempted_requests,source_503_count,elapsed_seconds,response_bytes_total,response_items_total,response_bytes_per_second,page_items_per_second,p50_ms,p95_ms,p99_ms,probe_cpu_seconds,probe_max_rss_kib,authority
+PAPER,PAPER_BINANCE_USDM,maximumDataDeploymentPageV1,1,2,1,7,8,1,0.249469,401883,4,1610954.376,16.034,24.099,31.666,31.666,0.072435,29396,SAME_HOST_EXISTING_EDGE_MTLS_BOUNDED_READ_ONLY
+SANDBOX,SANDBOX_BINANCE_USDM,maximumDataDeploymentPageV1,1,2,1,7,8,1,0.276977,402105,4,1451764.804,14.442,28.132,34.376,34.376,0.076872,29416,SAME_HOST_EXISTING_EDGE_MTLS_BOUNDED_READ_ONLY
+LIVE,LIVE_BINANCE_USDM,maximumDataDeploymentPageV1,1,2,2,8,8,0,0.264251,394068,0,1491262.289,0,26.851,73.117,73.117,0.075661,29520,SAME_HOST_EXISTING_EDGE_MTLS_BOUNDED_READ_ONLY

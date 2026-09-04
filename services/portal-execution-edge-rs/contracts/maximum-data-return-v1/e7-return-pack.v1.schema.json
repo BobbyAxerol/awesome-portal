@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.e7.return-pack.v1",
+  "title": "Portal Execution Edge E7 complete owner-return pack",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "phase",
+    "status",
+    "pins",
+    "required_paths",
+    "external_evidence_requirements"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.maximum-data.e7.return-pack.v1"
+    },
+    "phase": {
+      "const": "EX-DP-07"
+    },
+    "status": {
+      "const": "RETURN_PACK_ACCEPTED_FOR_CURRENT_QUALIFIED_READS_AND_TYPED_EXTERNAL_GATES"
+    },
+    "pins": {
+      "type": "object",
+      "required": [
+        "e3_coverage_manifest_sha256",
+        "e4_contract_manifest_sha256",
+        "e5_publication_manifest_sha256",
+        "e6_acceptance_manifest_sha256"
+      ],
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      }
+    },
+    "required_paths": {
+      "type": "array",
+      "minItems": 30,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "external_evidence_requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "requirement_id",
+          "status",
+          "owner",
+          "required_window"
+        ],
+        "properties": {
+          "requirement_id": {
+            "type": "string"
+          },
+          "status": {
+            "const": "OWNER_ACTION_REQUIRED"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "required_window": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "manifest_scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority": {
+      "type": "object",
+      "required": [
+        "direct_database",
+        "direct_redis",
+        "generic_relation_or_sql",
+        "source_credentials",
+        "runtime_activation",
+        "command_execution"
+      ],
+      "additionalProperties": {
+        "const": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

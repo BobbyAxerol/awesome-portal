@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.return.incremental-events.v2",
+  "title": "Future producer-owned full incremental event contract declaration",
+  "description": "This schema records the required future contract only. No current Manager-v2 page satisfies it.",
+  "type": "object",
+  "required": [
+    "status",
+    "reason_code",
+    "required_owner_action",
+    "required_properties"
+  ],
+  "properties": {
+    "status": {
+      "const": "OWNER_ACTION_REQUIRED"
+    },
+    "reason_code": {
+      "const": "NO_AUTHORITATIVE_GLOBAL_EVENT_JOURNAL"
+    },
+    "required_owner_action": {
+      "const": "PUBLISH_EVENT_FULL_INCREMENTAL_V4"
+    },
+    "required_properties": {
+      "type": "array",
+      "minItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "GLOBAL_SEQUENCE",
+          "RETENTION_FLOOR",
+          "CORRECTION_RETRACTION",
+          "SNAPSHOT_PLUS_TAIL",
+          "OPAQUE_RESUME_CURSOR",
+          "UTC_EPOCH_MS",
+          "EXACT_DECIMAL_STRING"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

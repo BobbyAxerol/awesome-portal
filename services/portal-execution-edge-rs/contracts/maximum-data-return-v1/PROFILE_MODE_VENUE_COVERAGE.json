@@ -1,0 +1,1782 @@
+{
+  "schema_version": "portal-source-census-v1",
+  "capture_utc_epoch_ms": 1788516694266,
+  "coverage_basis": "CATALOG_COLUMN_PRESENCE_ONLY",
+  "value_enumeration": "NOT_QUERIED_E1_NO_BUSINESS_ROW_ACCESS",
+  "relations": [
+    {
+      "relation": "portal_command.operations",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "portal_command.paper_target_allowlist",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "profile"
+      ],
+      "scope_columns": {
+        "profile": [
+          "profile_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.account_balances",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.account_equity_snapshots",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "deployment",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "deployment": [
+          "deployment_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.account_policies",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "margin_mode",
+          "mode",
+          "position_accounting_mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.account_reservations",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "margin_mode",
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.account_sync_current_state",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.account_sync_effective",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.account_sync_snapshots",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.accounts",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.alpha_ledger",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "strategy"
+      ],
+      "scope_columns": {
+        "strategy": [
+          "alpha_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.alpha_positions",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "alpha_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.alpha_risk_config",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "strategy"
+      ],
+      "scope_columns": {
+        "strategy": [
+          "alpha_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.alphas",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "strategy"
+      ],
+      "scope_columns": {
+        "strategy": [
+          "alpha_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.arb_order_packages",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.audit_log",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.binance_fills",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "alpha_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.broker_account_sync_current_state",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.broker_account_sync_effective",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.broker_account_sync_snapshots",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.broker_sync_raw_hot",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.broker_sync_state_history",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.broker_sync_valuation_current_state",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.broker_sync_valuation_history",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.cash_ledger",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.command_ack_evidence",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.command_broker_attempts",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.command_delivery_attempts",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.command_dispatch_outbox",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.command_journal",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "alpha_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.command_stream_trim_audit",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.compatibility_surface_registry",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.compatibility_usage_daily",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.conditional_order_group_legs",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.conditional_order_groups",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id",
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.copy_event_dead_letters",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.copy_event_outbox",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id",
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "alpha_id",
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.copy_publish_policies",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.dead_letters",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.dnse_trading_tokens",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.domain_events",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.engine_authority_decisions",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.engine_authority_scopes",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.engine_authority_transitions",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.engine_shadow_comparisons",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.event_idempotency",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.execution_command_outbox",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.execution_replay_jobs",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.execution_sessions",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.fills",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.funding_accruals",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "deployment",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "deployment": [
+          "deployment_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.funding_rates",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "instrument"
+      ],
+      "scope_columns": {
+        "instrument": [
+          "symbol"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.instrument_aliases",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "instrument",
+        "venue"
+      ],
+      "scope_columns": {
+        "instrument": [
+          "canonical_instrument_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.instrument_metadata_history",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "instrument"
+      ],
+      "scope_columns": {
+        "instrument": [
+          "canonical_instrument_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.instruments",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "instrument",
+        "venue"
+      ],
+      "scope_columns": {
+        "instrument": [
+          "canonical_instrument_id",
+          "instrument_id",
+          "symbol"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.maintenance_policy_registry",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.margin_balances",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.margin_ledger",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "margin_mode",
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.operator_operations",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.order_bracket_legs",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.order_brackets",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id",
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.order_group_event_inbox",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.order_pending_exposure",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.orders",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id",
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.paper_account_seed",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.paper_matcher_config",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "instrument",
+        "venue"
+      ],
+      "scope_columns": {
+        "instrument": [
+          "instrument_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.paper_open_orders",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.performance_events",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "deployment",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "deployment": [
+          "deployment_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.performance_projection_current_state",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.performance_snapshots",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "deployment",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "deployment": [
+          "deployment_id"
+        ],
+        "instrument": [
+          "instrument_id",
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.portal_account_balances_scoped",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.portfolio_allocations",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "deployment",
+        "mode",
+        "portfolio",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "deployment": [
+          "deployment_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "portfolio": [
+          "portfolio_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.portfolio_audit_current_state",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.portfolio_audit_log",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.portfolio_capital_ledger",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "portfolio",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "portfolio": [
+          "portfolio_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.portfolio_equity_snapshots",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "portfolio"
+      ],
+      "scope_columns": {
+        "portfolio": [
+          "portfolio_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.portfolios",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "portfolio"
+      ],
+      "scope_columns": {
+        "portfolio": [
+          "portfolio_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.positions_v2",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.projection_storage_policies",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.reconciliation_findings",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.reconciliation_observation_buckets",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.redis_transport_epochs",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.risk_grants",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "session",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "session": [
+          "execution_session_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.risk_profiles",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.schema_migration_ledger",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "mode"
+      ],
+      "scope_columns": {
+        "mode": [
+          "apply_mode"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.schema_object_ownership",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.service_heartbeats",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.settlement_buckets",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.settlement_calendars",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "venue"
+      ],
+      "scope_columns": {
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.settlements",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "instrument_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.sizing_decisions",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "instrument",
+        "mode",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "instrument": [
+          "symbol"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.storage_archive_manifests",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.strategies",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "strategy"
+      ],
+      "scope_columns": {
+        "strategy": [
+          "strategy_id"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.strategy_deployments",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "deployment",
+        "mode",
+        "portfolio",
+        "profile",
+        "strategy",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "deployment": [
+          "deployment_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "portfolio": [
+          "portfolio_id"
+        ],
+        "profile": [
+          "risk_profile_id"
+        ],
+        "strategy": [
+          "strategy_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.traders",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [],
+      "scope_columns": {},
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.venue_accounts",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id",
+          "venue_account_id"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.venue_credentials",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "account",
+        "mode",
+        "venue"
+      ],
+      "scope_columns": {
+        "account": [
+          "account_id"
+        ],
+        "mode": [
+          "mode"
+        ],
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.venue_rate_limits",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "venue"
+      ],
+      "scope_columns": {
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    },
+    {
+      "relation": "public.venues",
+      "access_status": "METADATA_READABLE_WITH_SELECT",
+      "scope_dimensions": [
+        "venue"
+      ],
+      "scope_columns": {
+        "venue": [
+          "venue"
+        ]
+      },
+      "coverage_disposition": "COLUMN_PRESENCE_ONLY_E1_NO_VALUE_ENUMERATION"
+    }
+  ]
+}

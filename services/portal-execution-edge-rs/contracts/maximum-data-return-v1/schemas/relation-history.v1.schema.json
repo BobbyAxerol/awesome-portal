@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.return.relation-history.v1",
+  "title": "Portable alias of the frozen E4 opaque history-continuation contract",
+  "$ref": "../e4-history-continuation.v1.schema.json"
+}

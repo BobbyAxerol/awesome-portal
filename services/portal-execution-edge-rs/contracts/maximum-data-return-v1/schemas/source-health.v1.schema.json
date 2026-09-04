@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "portal.execution.maximum-data.return.source-health.v1",
+  "title": "Portable alias of the frozen E4 source-health contract",
+  "$ref": "../e4-source-health.v1.schema.json"
+}

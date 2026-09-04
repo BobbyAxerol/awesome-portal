@@ -1,0 +1,9 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.cross-cell-benchmark.v1",
+  "status": "OWNER_ACTION_REQUIRED",
+  "measurement": "NOT_MEASURED",
+  "reason_code": "E7_PERMITTED_ONLY_SAME_HOST_EXISTING_EDGE_MTLS_PROBE",
+  "not_claimed": ["SGP durable ingest", "independent failure domain", "cross-cell latency SLO", "cross-cell recovery SLO"],
+  "required_next_window": "deploy an immutable qualified Edge image in an independent cell, use a producer-owned durable source, then capture bounded latency/lag/recovery metrics without raw rows or credentials",
+  "owner": "portal_execution_edge_owner"
+}

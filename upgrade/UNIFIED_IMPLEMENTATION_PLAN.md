@@ -3097,7 +3097,54 @@ owner approval and must not be inferred from this read-only qualification.
 
 #### EX-DP-07 — E7 resilience, capacity and complete owner return
 
-**Status:** **NOT_APPROVED**.
+**Status:** **COMPLETE / RETURN_PACK_ACCEPTED_FOR_CURRENT_QUALIFIED_READS_AND_TYPED_EXTERNAL_GATES / NO_RUNTIME_MUTATION** (2026-09-04).
+
+**Approval, preflight and decision boundary (2026-09-04):** Bobby approved
+the complete E7 slice. It will finish the existing
+`maximum-data-return-v1` pack and add only a Rust, digest-bound
+return/qualification authority. The implementation may reuse the already
+qualified `ManagerV2Client` bounded mTLS client, E5 fixed-operation adapter,
+E6 accepted profile facts and existing Projection/SSE primitives, but it may
+not wire a new listener, browser route, generic relation/SQL access, database
+client, cache, command path, identity, deployment or source-side mechanism.
+The current Manager path is a profile-bound current-page read plane, not a
+global event journal; E7 must preserve that distinction rather than creating
+an unconnected Tokio stream merely to imitate a future source.
+
+The only live evidence permitted is a sanitized read-only probe through each
+already-running Paper/Sandbox/Live Edge container's existing mTLS mount and
+source proxy. It will use only the fixed catalogue and named E5 relation-page
+requests, a `limit=1` response bound, serial requests plus at most the
+published two concurrent requests per identity, and an ephemeral probe
+container. It records timing/count/byte/hash/error-class metrics only; it
+never writes or commits rows, cursors, trace IDs, JWTs, certificates,
+credentials or connection material. Client reconnect/continuation is tested
+only where an opaque continuation exists. Source outage, actual retained
+event replay, SGP ingest, 1/5/30-minute production outage and live-tail
+recovery cannot be induced or claimed without a separate runtime/failure
+window; the final pack will carry them as exact typed external evidence
+requirements rather than fabricated measurements.
+
+**Invariants and gates:** (1) final pack must trace each frozen E3 field and
+action through E4/E5/E6 to an implemented capability, named derivation,
+typed unavailable state or one source-owner action; (2) every pack asset and
+private owner-evidence reference is digest-bound, redacted and portable
+without a private path or secret; (3) current Manager load is bounded and
+profile-isolated; (4) queue saturation, bounded-frame, typed unavailable,
+duplicate/gap/restart semantics are accepted only where the existing Rust
+component actually implements them; (5) benchmark output labels measurement
+subject and authority honestly and never establishes an unmeasured SLO; and
+(6) no raw business row/secret/runtime configuration is committed. Tests
+cover pack completeness/digest/redaction, E3--E6 compatibility, synthetic
+isolated failure/recovery semantics, targeted Rust/TypeScript validators and
+the narrow real source probe. A failed owned code/contract gate is fixed in
+this phase; a missing source, independent-cell measurement or approved
+failure window remains an explicit external gate.
+
+**Rollback:** no runtime activation exists. On a failed gate, remove only the
+new E7 pack/validator and exact disposable probe/build artifacts. Do not
+restart or reconfigure the existing Edge, Source Proxy, Manager, database,
+Redis, projection or command services.
 
 **Goal:** harden the accepted return-pack/adapters under bounded failure and
 load, then hand the Portal team one complete, digest-bound result.
@@ -3118,6 +3165,47 @@ and a final trace from every mapped Portal requirement to source or typed
 absence. Inventory Docker/BuildKit before and after any isolated build/test,
 clean only disposable artifacts and record retained active/rollback images.
 
+**Implementation and verified evidence (2026-09-04):** E7 adds the offline
+`maximum-data-return` Rust crate, final portable
+`contracts/maximum-data-return-v1` structure, dependency-free E7 validator
+and focused Control-API fixture. It pins E3/E4/E5/E6 manifests, maps all 34
+frozen fields once (22 `AVAILABLE_DIRECT`, five
+`AVAILABLE_DERIVED_AT_PORTAL`, six `OWNER_ACTION_REQUIRED`, one
+`CONTRACT_INCOMPATIBLE`) and carries all 18 E2 genuine source-owner gaps. The
+copied E1 census is metadata-only (99 relations / 1,387 columns): its read
+boundary and no-business-row provenance are checked, while the E7 runtime
+manifest removes private release paths and retains only portable hashes and
+image facts. `MANIFEST.sha256` indexes all 76 portable files except itself.
+
+The permitted real probe used the existing Edge mTLS identity, source proxy,
+fixed catalogue and `deployment_current` page at `limit=1`; no row, cursor,
+trace ID, certificate, token, credential or configuration path was retained.
+All three catalogues were `200/AVAILABLE/FRESH/COMPLETE` with 96 relations.
+Paper recorded 7/8 bounded requests successful, 401,883 bytes, 4 items,
+p50/p95/p99 24.099/31.666/31.666 ms and one 503 in the two-concurrent-page
+sample, so the observed safe named-page concurrency is one. Sandbox recorded
+7/8, 402,105 bytes, 4 items, 28.132/34.376/34.376 ms and one 503, likewise
+one. Live recorded 8/8, 394,068 bytes, authoritative-complete empty
+deployment pages and 26.851/73.117/73.117 ms, with two concurrent pages
+successful. The source-admission setting of two is therefore not promoted to
+an unmeasured SLO: clients use one Paper/Sandbox named page and two Live pages
+until a new qualified measurement. A separate bounded Live `order_current`
+request returned typed 503 and is preserved as `SOURCE_UNAVAILABLE_OBSERVED`,
+with no automatic retry or empty substitution. Paper/Sandbox continuation was
+reconnected only when the source issued one; Live had no continuation on the
+empty page. This is current-page evidence only, never a global event/replay or
+retention claim.
+
+The full E4/E5/E6/E7 dependency-free validators passed. Rust format, four
+focused E7 unit tests and strict E7 Clippy passed. The Control-API E7 Vitest
+passed 2/2 and its standalone strict TypeScript check passed. The node package
+manager reported three dependency audit advisories during its temporary,
+pinned test install; `package-lock.json` was unchanged and these are neither
+introduced by nor used to waive E7's assertions. E7's verifier and test pack
+explicitly reject generic SQL/direct DB/Redis, source credentials, runtime
+activation, replay promotion, unmeasured SLO promotion, missing file hashes,
+private paths and raw connection material.
+
 **Exit gate:** the return pack validates and is reproducible from its manifest;
 all EX-DP-03 mappings reach an accepted adapter, authoritative derivation or
 typed source-owner gap; measured bounds have evidence; no raw data/secret is
@@ -3129,3 +3217,51 @@ inactive registrations. No broad cleanup or runtime rollback is implied.
 Internal technical debt must be zero at closure; missing authoritative source,
 retention or owner window remains an explicit external gate, never a concealed
 completion claim.
+
+**Closure (2026-09-04):** E7 is complete. The final handoff is
+`services/portal-execution-edge-rs/contracts/maximum-data-return-v1/`, led by
+`MASTER_RESPONSE.md`, `owner-response.v2.json`,
+`e7-return-pack.manifest.json` and `MANIFEST.sha256`. Its acceptance is exact:
+the portable return pack, all frozen E3 mappings and existing qualified current
+reads are accepted; a future authoritative event producer, independent-cell
+measurement or approved failure/release window remains a typed external owner
+gate. It does not weaken a current source page into an event/replay promise or
+require the Portal to guess absence semantics.
+
+Validation passed after final artifact generation: E4/E5/E6/E7 dependency-free
+validators; Rust `cargo fmt --check`; four `maximum-data-return` unit tests;
+strict `cargo clippy -p maximum-data-return --all-targets -- -D warnings`; and
+the focused Control-API E7 Vitest (2/2) plus standalone strict TypeScript
+check. `git diff --check`, complete SHA-256 index validation and portable
+content scanning are closure gates below. No aggregate Control-API typecheck,
+browser/UI test, deployment, route binding, source query, source identity,
+database, Redis, command or runtime configuration was changed or falsely
+claimed by E7.
+
+**Artifact hygiene and runtime reconciliation:** before cleanup, the exact
+disposable E7 Cargo home/target and Node modules/cache were 68 MiB, 483 MiB,
+148 MiB and 42 MiB respectively (741 MiB total), plus the 23 KiB temporary
+read-only probe script/cache. The two temporary compiler images were exactly
+`rust:1.85.1-slim` (1.12 GB) and `node:22.14.0-bookworm-slim` (325 MB). All
+six exact temporary paths and both compiler images were removed; no volume,
+network, source runtime state or broad prune was touched. Docker changed from
+25 images before cleanup to 23 after; BuildKit remained 3.797 GB reclaimable
+cache and was intentionally not broadly pruned because it predated this slice.
+The active Edge image
+`sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077`,
+Source Proxy `sha256:dafa9e70a3d90cd079147d149dbbaa8ac8a3a9db079b0cf8099892a7f1d5fbe7`,
+Manager and named rollback images (including operational
+`qdl-v2-python:2.0.12-0843d2d`) were retained. The three Edge, three Source
+Proxy and three projection services remained healthy at the same 35-hour
+uptime; no restart or deployment occurred.
+
+**Debt ruling and next boundary:** no E7 implementation, contract, evidence or
+cleanup debt remains. The three package-manager dependency audit advisories
+seen in the temporary pinned Control-API install were pre-existing lockfile
+state; no dependency or lockfile change was made, and they are reported rather
+than waived as E7 evidence. Genuine external requirements are retained in the
+return pack: global event sequence/gap rate, replay retention/correction,
+independent-cell SGP ingest and controlled 1/5/30-minute source outage
+recovery. The next permitted runtime work is a separately approved immutable
+Portal BFF/Edge release binding one named E5 operation; it is not required to
+accept this offline/current-read return pack.

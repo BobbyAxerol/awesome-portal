@@ -1,0 +1,25 @@
+{
+  "schema_version": "portal.execution.maximum-data.e7.domain-capability.v1",
+  "domain_id": "source_health_and_publication",
+  "status": "AVAILABLE_DIRECT",
+  "as_of_ms": 1788516000000,
+  "operation": "maximumDataSourceHealthV1",
+  "source": "manager-v2 envelope and fixed catalogue",
+  "profiles": ["PAPER", "SANDBOX", "LIVE", "CANARY"],
+  "current_semantics": {
+    "availability": "SOURCE_REPORTED_PER_RESPONSE",
+    "freshness": "SOURCE_REPORTED_PER_RESPONSE",
+    "completeness": "SOURCE_REPORTED_PER_RESPONSE",
+    "as_of": "UTC_EPOCH_MS",
+    "catalogue": "96-relation catalogue-bound read-only surface",
+    "zero_rows": "SOURCE_EMPTY_COMPLETE only when availability=AVAILABLE and completeness=COMPLETE"
+  },
+  "E7_observed_current_page_capacity": {
+    "paper": "one named page concurrently observed safe; one concurrent peer returned typed HTTP 503",
+    "sandbox": "one named page concurrently observed safe; one concurrent peer returned typed HTTP 503",
+    "live": "two named pages concurrently observed safe; the bounded deployment page was source-empty complete"
+  },
+  "additional_typed_availability_observation": "a separate bounded Live order_current request received HTTP 503 and remained typed SOURCE_UNAVAILABLE with no automatic retry; it is evidence of dynamic source availability, not a capacity conclusion",
+  "not_claimed": ["global sequence", "retention floor", "event replay", "correction journal", "independent-cell SLO"],
+  "evidence_references": ["e6-runtime-evidence.v1.json", "e7-resilience-capacity.v1.json", "benchmarks/SOURCE_RATE_WINDOWS.csv"]
+}
