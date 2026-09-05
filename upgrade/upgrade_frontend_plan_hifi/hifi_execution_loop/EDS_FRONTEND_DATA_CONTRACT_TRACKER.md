@@ -238,6 +238,54 @@ Kết luận phản biện: đến thời điểm này chiến dịch EDS **chư
 nào cho frontend**; giá trị mục tiêu đang được gánh bởi luồng §14. DR-11/DR-12
 là hai điều chỉnh tối thiểu để EDS bắt đầu trả sản phẩm thay vì hạ tầng chờ.
 
+## OR-2 (PROPOSED ⚖) — Phân vai sản xuất / nghiệm thu
+
+codex = SẢN XUẤT (EDS backend, nguồn/mirror/named ops — không ai chen).
+Claude = NGHIỆM THU KỸ THUẬT G5+G6 từng phase bằng harness đã chứng minh
+(probe user thật, đo byte payload, screenshot, cập nhật ma trận §2) — *phase
+chưa có chữ ký consumer = chưa DONE*; grant backend của Claude chỉ dùng cho
+hotfix đường-nối kiểu DR-09 và xây acceptance-harness thành gate. Bobby =
+nghiệm thu sản phẩm cuối (EDS-12). Lý do khách quan: 100% bug lọt lưới hôm
+03-09 do người sản xuất tự nghiệm thu; người tiêu thụ contract là người duy
+nhất thấy contract sai cho mình.
+
+## OR-3 — Quyết định chart renderer (owner đã duyệt qua artifact 04-09)
+
+| Loại | Renderer | Ai làm |
+|---|---|---|
+| Time-series tài chính (equity/performance/drawdown/risk/sparkline) | **uPlot** trong `PrimusFinancialChart` (visual như artifact đã duyệt) | Claude (lane §17.6 EDS-07); `chartTheme.ts` token chung khởi công được NGAY |
+| Bar/funnel · heatmap · graph · parallel | **ECharts giữ nguyên, reskin bằng cùng token** (đã demo cạnh nhau trong artifact) | Claude |
+| Candlestick market-context (EDS-10) | đề xuất `lightweight-charts` (Apache-2.0, cần ⚖ attribution TradingView) | chờ Bobby |
+| Trade replay hiện tại | GIỮ NGUYÊN (owner chốt) | — |
+
+## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
+
+Chính sách nghiệm thu 2 lớp: **Lớp 1 = contract đầu vào** (chấm được ngay vì
+E1→E7 đã code + pack máy 126 dòng field×màn có sẵn `SCREEN_FIELD_SOURCE_
+COVERAGE.csv`); **Lớp 2 = payload đầu ra** G5/G6 chấm THEO TỪNG VERTICAL ngay
+khi codex mở lane FE — tuyệt đối không dồn cuối chiến dịch.
+
+Kết quả lớp 1 trên 126 dòng (100% REQUIRED):
+
+| Bucket | Số dòng | Bản chất | Phán quyết nghiệm thu |
+|---|---|---|---|
+| A · Chỉ thiếu NAMED QUERY PLAN (`E2_SEQUENTIAL_SHAPE_UNQUALIFIED` + họ `E5_NAMED_*_REQUIRED`) | **~67** | Dữ liệu CÓ THẬT ở trading, manager-v2 đang serve dạng trang bounded (probe 03-09 chứng thực) — chỉ thiếu named per-resource op | **ACCEPT-READY cho codex làm ngay, 0 phụ thuộc nguồn** — đúng OR-1. Đây là ruột EDS-01/03/04 |
+| B · Time-keyset/history (equity_history, fills, command_journal — 12) | 12 | Cần cursor + restate contract | Mirror ĐÃ đáp ứng nhu cầu sản phẩm hôm nay (alpha 360 serve 1.540 điểm) — EDS-06/07 chỉ việc absorb (tăng lực cho DR-01) |
+| C · Nguồn thật sự vắng (candles 3 · ticks 2 · VNM 2 · artifact 2 · drift 2 · replay-sequence 2 · mark-provenance dính kèm) | ~13 | Trading chưa có | Theo OR-1: thay thế DERIVED/observation có nhãn (mark-context, replay xấp xỉ) nơi làm được; còn lại typed — khớp cột ○ ma trận §2 + Ask B |
+| D · Redaction (dead_letter UNSAFE_RAW 2) | 2 | Edge allowlist nhỏ | codex-lane, gộp vào EDS-05 |
+| E · Portal đã có (BFF_AVAILABLE 14 · envelope-composes 16 · derived-at-portal) | ~32 | Đang chạy | ● |
+
+Phát hiện bổ sung cho ma trận §2 (thiếu 3 nhóm phần tử, đã nhận nợ cập nhật):
+`instrument_master` (workbench/portfolio), `sizing_decisions`+`risk_grants`
+(màn Gate R1/R2/Live), `research_artifact` linkage (Alpha 360/R1). Pack cũng
+xác nhận thiết kế đúng của tracker: mọi màn đều có hàng `source_health` —
+khớp yêu cầu freshness/motion §2.1.
+
+Kết luận lớp 1: **không có lý do chờ** — 67/126 dòng mở khoá thuần bằng công
+việc codex-lane; 12 dòng đã được mirror gánh tạm; chỉ ~13 dòng thật sự thuộc
+nguồn và đã có phương án OR-1. Con đường "mọi màn có số" nằm trọn trong tay
+đội, đúng chỉ đạo owner.
+
 ## 6. Định nghĩa HOÀN THÀNH của cả chiến dịch (theo owner order)
 
 Mọi ô §2 phải là `●` hoặc `○-typed-có-lý-do-nguồn`; không còn `✗`; mọi `⏳` đã
