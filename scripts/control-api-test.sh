@@ -56,6 +56,7 @@ cp -a \
   "${APP_DIR}/migrations" \
   "${APP_DIR}/src" \
   "${APP_DIR}/test" \
+  "${APP_DIR}/tooling" \
   "${APP_DIR}/package.json" \
   "${APP_DIR}/package-lock.json" \
   "${APP_DIR}/tsconfig.build.json" \
@@ -98,6 +99,7 @@ fi
   -e HOME=/tmp \
   -e npm_config_cache=/tmp/.npm \
   -e TEST_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_control_test" \
+  -e EDS02_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
   "${NODE_IMAGE}" sh -c '
     set -e
     npm run build

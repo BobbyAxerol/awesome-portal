@@ -1,0 +1,46 @@
+{
+  "schema_version": "portal.execution.contract-authority.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "workspace_id": "ws_primary",
+  "read_at_ms": 1788540677303,
+  "actor": { "user_id": "user_admin", "username": "admin", "roles": ["ADMIN"] },
+  "page_bounds": { "maximum_page_rows": 200, "maximum_response_bytes": 1048576, "maximum_cursor_bytes": 4096, "total_history_cap": false },
+  "clock_contract": { "wire_type": "UTC_EPOCH_MS", "fields": ["event_time_ms", "source_published_at_ms", "received_at_ms", "ingested_at_ms", "processed_at_ms", "as_of_ms", "read_at_ms"], "display_policy": "FRONTEND_UTC_FORMATTER_ONLY" },
+  "exact_value_contract": { "identifier": "OPAQUE_STRING_ONLY", "sequence_and_large_identifier": "STRING_ONLY", "monetary_and_financial_value": "EXACT_DECIMAL_STRING_WITH_CURRENCY_AND_SCALE" },
+  "panel_envelope_contract": { "states": ["READY", "EMPTY", "PARTIAL", "STALE", "UNAVAILABLE", "DENIED", "ERROR"], "ready_requires_non_null_data": true, "partial_and_stale_require_non_null_data": true, "terminal_absence_requires_null_data": true },
+  "screen_data_manifest": {
+    "schema_version": "portal.execution.screen-data-manifest.v1",
+    "input_digests": { "fieldDefinitions": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    "screen_count": 1,
+    "field_definition_count": 34,
+    "screens": [{
+      "screen_id": "EXECUTION_GATE_R1_REVIEW_SCREEN",
+      "resource": { "kind": "APPROVAL", "required": true },
+      "operation": { "operation_id": "executionGateR1Review", "method": "GET", "response_contract": "governance.r1-review.v1" },
+      "required_surfaces": ["r1_review"],
+      "contract_readiness": "CLASSIFIED",
+      "panel_count": 1,
+      "action_count": 0,
+      "panels": [{
+        "panel_id": "source_health",
+        "field_id": "source_health",
+        "frontend_field_path": "source_health",
+        "visible_meaning": "bounded source freshness",
+        "required": true,
+        "source_authority": "PORTAL_EDGE",
+        "contract_readiness": "CLASSIFIED",
+        "source_readiness": { "state": "AVAILABLE_DERIVED_AT_PORTAL", "reason_code": "EXISTING_PORTAL_CONTRACT_REUSE", "history_semantics": "CURRENT_OBSERVATION_ONLY", "timestamp_contract": "UTC_EPOCH_MS", "decimal_contract": "EXACT_DECIMAL_STRING", "source_revision": "portal-control-or-existing-envelope-v1", "profiles": ["PAPER", "SANDBOX", "LIVE", "CANARY"], "portal_can_proceed": true },
+        "runtime_delivery": { "state": "IMPLEMENTED_REUSE", "implementation": "EXISTING_PORTAL_CONTRACT", "typed_status_code": null, "typed_absence_id": null, "profiles": ["PAPER", "SANDBOX", "LIVE", "CANARY"], "source_probe_performed_by_this_request": false },
+        "source_history_semantics": "CURRENT_OBSERVATION_ONLY",
+        "freshness_requirement": "RETURN_SOURCE_FRESHNESS_AND_AS_OF",
+        "value_contract": { "utc_epoch_ms_fields": ["as_of_ms", "read_at_ms"], "opaque_identifier": "STRING_ONLY", "exact_decimal_policy": "NOT_APPLICABLE" },
+        "coverage_contract": { "dimensions": ["from_ms", "to_ms", "source_total", "filtered_total", "returned_count", "truncated", "downsampled", "has_more", "next_cursor", "gaps"] },
+        "formula_lineage": { "formula_id": "source_health_envelope", "formula_version": "v1", "input_revision_field": "input_revision", "input_digest_field": "input_digest", "composite_read_revision_field": "composite_read_revision" }
+      }],
+      "actions": [{ "action_id": "approval.review.r1", "capability_id": "portal.governance", "action_kind": "PORTAL_WORKFLOW", "required_resource_identity": ["workspace_id", "approval_id"], "source_preconditions": ["approval_exists"], "availability": "AVAILABLE", "reason_code": null, "plan_apply_verify_contract": "portal-control:approval-review-r1-v1", "terminal_evidence_kind": "SOURCE_OR_PORTAL_EVIDENCE", "owner": "portal_control_owner" }]
+    }]
+  },
+  "action_manifest": { "schema_version": "portal.execution.action-manifest.v1", "action_count": 1, "actions": [{ "action_id": "approval.review.r1", "capability_id": "portal.governance", "action_kind": "PORTAL_WORKFLOW", "required_resource_identity": ["workspace_id", "approval_id"], "source_preconditions": ["approval_exists"], "availability": "AVAILABLE", "reason_code": null, "plan_apply_verify_contract": "portal-control:approval-review-r1-v1", "terminal_evidence_kind": "SOURCE_OR_PORTAL_EVIDENCE", "owner": "portal_control_owner", "source_screen_id": "EXECUTION_GATE_R1_REVIEW_SCREEN" }] },
+  "generated_digests": { "screen_data_manifest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "action_manifest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "composite": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "authorized_screen_data_manifest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "authorized_action_manifest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" },
+  "redaction": { "raw_source_relation": false, "source_cursor": false, "upstream_origin": false, "credential_or_certificate": false, "browser_direct_source_access": false, "semantic_action_contains_url": false }
+}

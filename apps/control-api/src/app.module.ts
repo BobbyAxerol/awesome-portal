@@ -30,6 +30,8 @@ import { ExecutionCurrentSourceController } from "./execution/current-source.con
 import { ExecutionCurrentSourceProxy } from "./execution/current-source.proxy";
 import { ExecutionRuntimeManifestController } from "./execution/runtime-manifest.controller";
 import { ExecutionRuntimeManifestService } from "./execution/runtime-manifest.service";
+import { ExecutionContractAuthorityController } from "./execution/contract-authority.controller";
+import { ExecutionContractAuthorityService } from "./execution/contract-authority.service";
 import { MaximumDataOperationController } from "./execution/maximum-data-operation.controller";
 import { MaximumDataOperationService } from "./execution/maximum-data-operation.service";
 import { MaximumDataContinuationRepository } from "./execution/maximum-data-continuation.repository";
@@ -90,6 +92,7 @@ export class AppModule {
         ExecutionAnalyticsController,
         ExecutionCurrentSourceController,
         ExecutionRuntimeManifestController,
+        ExecutionContractAuthorityController,
         MaximumDataOperationController,
         ExecutionProfileHistoryController,
         ExecutionProfileReadAdapterController,
@@ -158,6 +161,7 @@ export class AppModule {
         ManagerListsService,
         ExecutionSharedReadRepository,
         ExecutionRuntimeManifestService,
+        ExecutionContractAuthorityService,
         MaximumDataContinuationRepository,
         MaximumDataOperationService,
         ExecutionProfileProjectionRepository,

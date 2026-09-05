@@ -170,6 +170,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json#/$defs/UiStateCorpus",
   "execution-screen-bff.unavailable.valid.json":
     "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json#/$defs/DetailResponse",
+  "execution-contract-authority.valid.json":
+    "https://schemas.primusspark.com/portal/execution-contract-authority.v1.schema.json#/$defs/ContractAuthorityResponse",
   "execution-paper-overview.ready.valid.json":
     "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
   "execution-paper-overview.empty.valid.json":

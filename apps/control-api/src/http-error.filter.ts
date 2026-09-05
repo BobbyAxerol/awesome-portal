@@ -14,6 +14,7 @@ import { AnalyticsProxyError } from "./execution/analytics.proxy";
 import { CommandCenterError } from "./command-center/command-center.service";
 import { CurrentSourceProxyError } from "./execution/current-source.proxy";
 import { ExecutionRuntimeManifestError } from "./execution/runtime-manifest.controller";
+import { ExecutionContractAuthorityHttpError } from "./execution/contract-authority.controller";
 import { MaximumDataOperationError } from "./execution/maximum-data-operation.service";
 import { MaximumDataContinuationError } from "./execution/maximum-data-continuation.repository";
 import { ScreenBffError } from "./screen-bff/screen-bff.service";
@@ -40,6 +41,7 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof AnalyticsProxyError ||
       exception instanceof CurrentSourceProxyError ||
       exception instanceof ExecutionRuntimeManifestError ||
+      exception instanceof ExecutionContractAuthorityHttpError ||
       exception instanceof MaximumDataOperationError ||
       exception instanceof MaximumDataContinuationError ||
       exception instanceof CommandCenterError ||

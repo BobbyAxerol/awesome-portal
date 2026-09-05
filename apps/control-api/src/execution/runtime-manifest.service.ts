@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { executionContractAuthorityEvidence } from "./contract-authority";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
 
 /**
@@ -47,6 +48,7 @@ export class ExecutionRuntimeManifestService {
           portal_bff_delivery: "PUBLISHED_FIXED_E5_OPERATION",
         })),
       },
+      contract_authority: executionContractAuthorityEvidence(),
       source_semantics: {
         manager_read: intake.semantics.managerRead,
         global_event_ordering: intake.semantics.globalEventOrdering,

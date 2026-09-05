@@ -53,7 +53,7 @@ function inventory(): E3Inventory {
 }
 
 describe("EX-DP-03 maximum-data E3 screen inventory", () => {
-  it("is an exact, drift-detecting projection of the frozen N20 screen catalogue", () => {
+  it("is an exact, drift-detecting projection of the frozen E3 portion of the catalogue", () => {
     const frozen = inventory();
     expect(frozen.schema_version).toBe("portal.execution.maximum-data.e3-screen-inventory.v1");
     expect(frozen.screen_catalogue_contract).toBe("portal.execution.screen-bff.v1");
@@ -62,12 +62,17 @@ describe("EX-DP-03 maximum-data E3 screen inventory", () => {
     expect(frozen.screens).toHaveLength(23);
     expect(new Set(frozen.screens.map((screen) => screen.screen_id)).size).toBe(23);
 
-    const actual = SCREEN_BFF_CATALOGUE.map((screen) => ({
+    const actual = SCREEN_BFF_CATALOGUE
+      .filter((screen) => ![
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+      ].includes(screen.screenId))
+      .map((screen) => ({
       screen_id: screen.screenId,
       operation_id: screen.dataApi.operationId,
       response_contract: screen.dataApi.responseContract,
       read_capabilities: [...screen.readCapabilities],
-    }));
+      }));
     const expected = frozen.screens.map((screen) => ({
       screen_id: screen.screen_id,
       operation_id: screen.operation_id,
@@ -75,6 +80,18 @@ describe("EX-DP-03 maximum-data E3 screen inventory", () => {
       read_capabilities: [...screen.read_capabilities],
     }));
     expect(actual).toEqual(expected);
+  });
+
+  it("keeps post-E3 BR-EX-72 list routes explicit rather than treating them as detail aliases", () => {
+    const current = Object.fromEntries(SCREEN_BFF_CATALOGUE.map((screen) => [screen.screenId, screen]));
+    expect(current.EXECUTION_ALPHA_FLEET_LIST_SCREEN.dataApi).toMatchObject({
+      operationId: "executionAlphaFleetListV2",
+      responseContract: "execution.alpha-fleet-list.v2",
+    });
+    expect(current.EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN.dataApi).toMatchObject({
+      operationId: "executionBindingsListV1",
+      responseContract: "execution.bindings-list.v1",
+    });
   });
 
   it("covers every required E3 demand surface without inventing another browser source", () => {

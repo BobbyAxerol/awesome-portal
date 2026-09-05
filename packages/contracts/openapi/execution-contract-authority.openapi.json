@@ -1,0 +1,29 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal EDS-02 contract authority API",
+    "version": "1.0.0",
+    "description": "Session-guarded generated screen/panel/action metadata. This endpoint exposes no raw relation, cursor, source origin, credential or browser route."
+  },
+  "paths": {
+    "/api/v1/execution/contract-authority": {
+      "get": {
+        "operationId": "executionContractAuthorityV1",
+        "parameters": [{ "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } }],
+        "responses": {
+          "200": { "description": "Role-filtered generated EDS-02 authority", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContractAuthorityResponse" } } } },
+          "400": { "description": "Invalid query" },
+          "401": { "description": "Session required" },
+          "404": { "description": "Workspace not found" }
+        }
+      }
+    }
+  },
+  "components": { "schemas": {
+    "Identifier": { "$ref": "../schemas/execution-contract-authority.v1.schema.json#/$defs/Identifier" },
+    "UtcEpochMs": { "$ref": "../schemas/execution-contract-authority.v1.schema.json#/$defs/UtcEpochMs" },
+    "ExactDecimal": { "$ref": "../schemas/execution-contract-authority.v1.schema.json#/$defs/ExactDecimal" },
+    "PanelEnvelope": { "$ref": "../schemas/execution-contract-authority.v1.schema.json#/$defs/PanelEnvelope" },
+    "ContractAuthorityResponse": { "$ref": "../schemas/execution-contract-authority.v1.schema.json#/$defs/ContractAuthorityResponse" }
+  } }
+}

@@ -11,6 +11,10 @@ describe("utcStamp — datetime64[ms] display, UTC anchor (owner 2026-08-30)", (
     expect(utcStamp("2026-08-23T11:55:00.417Z")).toBe("2026-08-23 11:55:00.417 UTC");
   });
 
+  it("renders v2 UTC epoch milliseconds through the same formatter", () => {
+    expect(utcStamp(Date.UTC(2026, 7, 22, 12, 0, 20, 417))).toBe("2026-08-22 12:00:20.417 UTC");
+  });
+
   it("leaves an offset-less venue-local instant without a zone label", () => {
     // VN session clock publishes no zone; inventing one would be a lie.
     expect(utcStamp("2026-08-21T14:45:00")).toBe("2026-08-21 14:45:00.000");

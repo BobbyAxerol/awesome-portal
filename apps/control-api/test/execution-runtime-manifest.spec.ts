@@ -51,6 +51,13 @@ describe("EDS-00 runtime manifest intake", () => {
         source_probe_performed_by_this_request: false,
       },
       bounds: { maximum_page_rows: 200, maximum_response_bytes: 1_048_576, maximum_cursor_bytes: 4_096 },
+      contract_authority: {
+        schema_version: "portal.execution.contract-authority.v1",
+        generated_digests: { composite: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) },
+        screen_count: 25,
+        field_definition_count: 34,
+        action_count: 12,
+      },
     });
     expect(manifest.read_at_ms).toEqual(expect.any(Number));
     expect(manifest.runtime_delivery.profiles.map((profile: Record<string, unknown>) => profile.portal_bff_delivery))

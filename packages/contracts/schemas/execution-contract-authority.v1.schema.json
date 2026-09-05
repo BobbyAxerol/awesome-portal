@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-contract-authority.v1.schema.json",
+  "title": "Portal EDS-02 generated screen, panel and action contract authority",
+  "$defs": {
+    "Identifier": { "type": "string", "minLength": 1, "maxLength": 191 },
+    "Digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "UtcEpochMs": { "type": "integer", "minimum": -8640000000000000, "maximum": 8640000000000000 },
+    "ExactDecimal": {
+      "type": "object", "additionalProperties": false,
+      "required": ["value", "currency", "scale"],
+      "properties": {
+        "value": { "type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3,12}$" },
+        "scale": { "type": "integer", "minimum": 0, "maximum": 28 }
+      }
+    },
+    "Actor": {
+      "type": "object", "additionalProperties": false,
+      "required": ["user_id", "username", "roles"],
+      "properties": {
+        "user_id": { "$ref": "#/$defs/Identifier" },
+        "username": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "enum": ["ADMIN", "USER"] } }
+      }
+    },
+    "SourceReadiness": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "history_semantics", "timestamp_contract", "decimal_contract", "source_revision", "profiles", "portal_can_proceed"],
+      "properties": {
+        "state": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "reason_code": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "history_semantics": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "timestamp_contract": { "const": "UTC_EPOCH_MS" },
+        "decimal_contract": { "const": "EXACT_DECIMAL_STRING" },
+        "source_revision": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "profiles": { "type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": { "enum": ["PAPER", "SANDBOX", "LIVE", "CANARY"] } },
+        "portal_can_proceed": { "type": "boolean" }
+      }
+    },
+    "SourceAuthority": {
+      "type": "string",
+      "enum": [
+        "DATA_LAYER_OR_MARKET_SERVICE",
+        "MARKET_SERVICE",
+        "PORTAL_CONTROL",
+        "PORTAL_EDGE",
+        "TRADING_SYSTEM",
+        "TRADING_SYSTEM_OR_RESEARCH"
+      ]
+    },
+    "RuntimeDelivery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "implementation", "typed_status_code", "typed_absence_id", "profiles", "source_probe_performed_by_this_request"],
+      "properties": {
+        "state": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "implementation": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "typed_status_code": { "type": ["string", "null"], "maxLength": 128 },
+        "typed_absence_id": { "type": ["string", "null"], "maxLength": 128 },
+        "profiles": { "type": "array", "minItems": 1, "maxItems": 4, "uniqueItems": true, "items": { "enum": ["PAPER", "SANDBOX", "LIVE", "CANARY"] } },
+        "source_probe_performed_by_this_request": { "const": false }
+      }
+    },
+    "PanelDefinition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["panel_id", "field_id", "frontend_field_path", "visible_meaning", "required", "source_authority", "contract_readiness", "source_readiness", "runtime_delivery", "source_history_semantics", "freshness_requirement", "value_contract", "coverage_contract", "formula_lineage"],
+      "properties": {
+        "panel_id": { "$ref": "#/$defs/Identifier" },
+        "field_id": { "$ref": "#/$defs/Identifier" },
+        "frontend_field_path": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "visible_meaning": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "required": { "type": "boolean" },
+        "source_authority": { "$ref": "#/$defs/SourceAuthority" },
+        "contract_readiness": { "const": "CLASSIFIED" },
+        "source_readiness": { "$ref": "#/$defs/SourceReadiness" },
+        "runtime_delivery": { "$ref": "#/$defs/RuntimeDelivery" },
+        "source_history_semantics": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "freshness_requirement": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "value_contract": {
+          "type": "object", "additionalProperties": false,
+          "required": ["utc_epoch_ms_fields", "opaque_identifier", "exact_decimal_policy"],
+          "properties": {
+            "utc_epoch_ms_fields": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string", "pattern": "_ms$" } },
+            "opaque_identifier": { "const": "STRING_ONLY" },
+            "exact_decimal_policy": { "type": "string", "minLength": 1, "maxLength": 256 }
+          }
+        },
+        "coverage_contract": {
+          "type": "object", "additionalProperties": false, "required": ["dimensions"],
+          "properties": { "dimensions": { "type": "array", "minItems": 10, "maxItems": 10, "uniqueItems": true, "items": { "type": "string" } } }
+        },
+        "formula_lineage": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object", "additionalProperties": false,
+              "required": ["formula_id", "formula_version", "input_revision_field", "input_digest_field", "composite_read_revision_field"],
+              "properties": {
+                "formula_id": { "$ref": "#/$defs/Identifier" }, "formula_version": { "$ref": "#/$defs/Identifier" },
+                "input_revision_field": { "const": "input_revision" }, "input_digest_field": { "const": "input_digest" }, "composite_read_revision_field": { "const": "composite_read_revision" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "SemanticAction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["action_id", "capability_id", "action_kind", "required_resource_identity", "source_preconditions", "availability", "reason_code", "plan_apply_verify_contract", "terminal_evidence_kind", "owner"],
+      "properties": {
+        "action_id": { "$ref": "#/$defs/Identifier" },
+        "capability_id": { "$ref": "#/$defs/Identifier" },
+        "action_kind": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "required_resource_identity": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "source_preconditions": { "type": "array", "maxItems": 12, "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "availability": { "enum": ["AVAILABLE", "DISABLED", "OWNER_ACTION_REQUIRED", "TYPED_UNAVAILABLE"] },
+        "reason_code": { "type": ["string", "null"], "maxLength": 128 },
+        "plan_apply_verify_contract": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "terminal_evidence_kind": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "owner": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "source_screen_id": { "type": "string", "maxLength": 128 }
+      }
+    },
+    "ScreenManifest": {
+      "type": "object", "additionalProperties": false,
+      "required": ["screen_id", "resource", "operation", "required_surfaces", "contract_readiness", "panel_count", "action_count", "panels", "actions"],
+      "properties": {
+        "screen_id": { "type": "string", "maxLength": 128 },
+        "resource": { "type": "object", "additionalProperties": false, "required": ["kind", "required"], "properties": { "kind": { "type": "string", "maxLength": 64 }, "required": { "type": "boolean" } } },
+        "operation": { "type": "object", "additionalProperties": false, "required": ["operation_id", "method", "response_contract"], "properties": { "operation_id": { "$ref": "#/$defs/Identifier" }, "method": { "enum": ["GET", "POST"] }, "response_contract": { "$ref": "#/$defs/Identifier" } } },
+        "required_surfaces": { "type": "array", "minItems": 1, "maxItems": 6, "uniqueItems": true, "items": { "$ref": "#/$defs/Identifier" } },
+        "contract_readiness": { "const": "CLASSIFIED" },
+        "panel_count": { "type": "integer", "minimum": 0, "maximum": 34 },
+        "action_count": { "type": "integer", "minimum": 0, "maximum": 12 },
+        "panels": { "type": "array", "maxItems": 34, "items": { "$ref": "#/$defs/PanelDefinition" } },
+        "actions": { "type": "array", "maxItems": 12, "items": { "$ref": "#/$defs/SemanticAction" } }
+      }
+    },
+    "PanelCoverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["from_ms", "to_ms", "source_total", "filtered_total", "returned_count", "truncated", "downsampled", "has_more", "next_cursor", "gaps"],
+      "properties": {
+        "from_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] }, "to_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] },
+        "source_total": { "type": ["string", "null"], "pattern": "^[0-9]+$" }, "filtered_total": { "type": ["string", "null"], "pattern": "^[0-9]+$" },
+        "returned_count": { "type": "integer", "minimum": 0, "maximum": 200 }, "truncated": { "type": "boolean" }, "downsampled": { "type": "boolean" }, "has_more": { "type": "boolean" }, "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "gaps": { "type": "array", "maxItems": 200, "items": { "type": "object", "additionalProperties": false, "required": ["from_ms", "to_ms", "reason_code"], "properties": { "from_ms": { "$ref": "#/$defs/UtcEpochMs" }, "to_ms": { "$ref": "#/$defs/UtcEpochMs" }, "reason_code": { "$ref": "#/$defs/Identifier" } } } }
+      }
+    },
+    "PanelEnvelope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "data", "clocks", "coverage", "source_history_semantics", "formula", "reason_code", "retryable"],
+      "properties": {
+        "state": { "enum": ["READY", "EMPTY", "PARTIAL", "STALE", "UNAVAILABLE", "DENIED", "ERROR"] },
+        "data": {},
+        "clocks": { "type": "object", "additionalProperties": false, "required": ["event_time_ms", "source_published_at_ms", "received_at_ms", "ingested_at_ms", "processed_at_ms", "as_of_ms", "read_at_ms"], "properties": { "event_time_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] }, "source_published_at_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] }, "received_at_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] }, "ingested_at_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] }, "processed_at_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] }, "as_of_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] }, "read_at_ms": { "$ref": "#/$defs/UtcEpochMs" } } },
+        "coverage": { "$ref": "#/$defs/PanelCoverage" }, "source_history_semantics": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "formula": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["formula_id", "formula_version", "input_revision", "input_digest", "composite_read_revision"], "properties": { "formula_id": { "$ref": "#/$defs/Identifier" }, "formula_version": { "$ref": "#/$defs/Identifier" }, "input_revision": { "type": ["string", "null"], "maxLength": 256 }, "input_digest": { "oneOf": [{ "$ref": "#/$defs/Digest" }, { "type": "null" }] }, "composite_read_revision": { "type": ["string", "null"], "maxLength": 256 } } }] },
+        "reason_code": { "type": ["string", "null"], "maxLength": 128 }, "retryable": { "type": "boolean" }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "enum": ["READY", "PARTIAL", "STALE"] } }, "required": ["state"] }, "then": { "properties": { "data": { "not": { "type": "null" } } } } },
+        { "if": { "properties": { "state": { "enum": ["EMPTY", "UNAVAILABLE", "DENIED", "ERROR"] } }, "required": ["state"] }, "then": { "properties": { "data": { "type": "null" } } } }
+      ]
+    },
+    "ContractAuthorityResponse": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "workspace_id", "read_at_ms", "actor", "page_bounds", "clock_contract", "exact_value_contract", "panel_envelope_contract", "screen_data_manifest", "action_manifest", "generated_digests", "redaction"],
+      "properties": {
+        "schema_version": { "const": "portal.execution.contract-authority.v1" }, "record_authority": { "const": "PORTAL_CONTROL" }, "workspace_id": { "$ref": "#/$defs/Identifier" }, "read_at_ms": { "$ref": "#/$defs/UtcEpochMs" }, "actor": { "$ref": "#/$defs/Actor" },
+        "page_bounds": { "type": "object", "additionalProperties": false, "required": ["maximum_page_rows", "maximum_response_bytes", "maximum_cursor_bytes", "total_history_cap"], "properties": { "maximum_page_rows": { "const": 200 }, "maximum_response_bytes": { "const": 1048576 }, "maximum_cursor_bytes": { "const": 4096 }, "total_history_cap": { "const": false } } },
+        "clock_contract": { "type": "object", "additionalProperties": false, "required": ["wire_type", "fields", "display_policy"], "properties": { "wire_type": { "const": "UTC_EPOCH_MS" }, "fields": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "type": "string", "pattern": "_ms$" } }, "display_policy": { "const": "FRONTEND_UTC_FORMATTER_ONLY" } } },
+        "exact_value_contract": { "type": "object", "additionalProperties": false, "required": ["identifier", "sequence_and_large_identifier", "monetary_and_financial_value"], "properties": { "identifier": { "const": "OPAQUE_STRING_ONLY" }, "sequence_and_large_identifier": { "const": "STRING_ONLY" }, "monetary_and_financial_value": { "const": "EXACT_DECIMAL_STRING_WITH_CURRENCY_AND_SCALE" } } },
+        "panel_envelope_contract": { "type": "object", "additionalProperties": false, "required": ["states", "ready_requires_non_null_data", "partial_and_stale_require_non_null_data", "terminal_absence_requires_null_data"], "properties": { "states": { "type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": { "enum": ["READY", "EMPTY", "PARTIAL", "STALE", "UNAVAILABLE", "DENIED", "ERROR"] } }, "ready_requires_non_null_data": { "const": true }, "partial_and_stale_require_non_null_data": { "const": true }, "terminal_absence_requires_null_data": { "const": true } } },
+        "screen_data_manifest": { "type": "object", "additionalProperties": false, "required": ["schema_version", "input_digests", "screen_count", "field_definition_count", "screens"], "properties": { "schema_version": { "const": "portal.execution.screen-data-manifest.v1" }, "input_digests": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/Digest" } }, "screen_count": { "type": "integer", "minimum": 1, "maximum": 25 }, "field_definition_count": { "const": 34 }, "screens": { "type": "array", "minItems": 1, "maxItems": 25, "items": { "$ref": "#/$defs/ScreenManifest" } } } },
+        "action_manifest": { "type": "object", "additionalProperties": false, "required": ["schema_version", "action_count", "actions"], "properties": { "schema_version": { "const": "portal.execution.action-manifest.v1" }, "action_count": { "type": "integer", "minimum": 0, "maximum": 12 }, "actions": { "type": "array", "maxItems": 12, "items": { "allOf": [{ "$ref": "#/$defs/SemanticAction" }, { "type": "object", "required": ["source_screen_id"], "properties": { "source_screen_id": { "type": "string", "maxLength": 128 } } }] } } } },
+        "generated_digests": { "type": "object", "additionalProperties": false, "required": ["screen_data_manifest", "action_manifest", "composite", "authorized_screen_data_manifest", "authorized_action_manifest"], "properties": { "screen_data_manifest": { "$ref": "#/$defs/Digest" }, "action_manifest": { "$ref": "#/$defs/Digest" }, "composite": { "$ref": "#/$defs/Digest" }, "authorized_screen_data_manifest": { "$ref": "#/$defs/Digest" }, "authorized_action_manifest": { "$ref": "#/$defs/Digest" } } },
+        "redaction": { "type": "object", "additionalProperties": false, "required": ["raw_source_relation", "source_cursor", "upstream_origin", "credential_or_certificate", "browser_direct_source_access", "semantic_action_contains_url"], "properties": { "raw_source_relation": { "const": false }, "source_cursor": { "const": false }, "upstream_origin": { "const": false }, "credential_or_certificate": { "const": false }, "browser_direct_source_access": { "const": false }, "semantic_action_contains_url": { "const": false } } }
+      }
+    }
+  }
+}

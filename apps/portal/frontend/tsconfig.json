@@ -34,6 +34,9 @@
       "@portal/contracts-screen-bff": [
         "../../../packages/contracts/generated/execution-screen-bff.d.ts"
       ],
+      "@portal/contracts-screen-data": [
+        "../../../packages/contracts/generated/execution-contract-authority.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

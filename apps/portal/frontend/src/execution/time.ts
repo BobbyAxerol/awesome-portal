@@ -15,7 +15,13 @@
  *     with no suffix — inventing a zone label the data does not declare
  *     would be a lie.
  */
-export function utcStamp(iso: string | null | undefined): string {
+import { formatUtcEpochMs, readUtcEpochMs } from "./screenDataContract";
+
+export function utcStamp(iso: string | number | null | undefined): string {
+  if (typeof iso === "number") {
+    const epoch = readUtcEpochMs(iso);
+    return epoch === null ? "—" : formatUtcEpochMs(epoch);
+  }
   if (!iso) return "—";
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?(?:\.(\d{1,3})\d*)?(Z)?$/.exec(iso.trim());
   if (!m) return iso;

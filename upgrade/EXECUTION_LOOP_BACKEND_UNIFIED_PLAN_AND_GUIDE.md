@@ -4460,7 +4460,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 |---|---|---|---|
 | EDS-00 | intake, hashes and frozen baseline | E7 handoff | complete; immutable planning gate closed |
 | EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | complete; fixed E5 deployment BFF authority closed |
-| EDS-02 | generated screen/action/panel/time contracts | EDS-01 | yes |
+| EDS-02 | generated screen/action/panel/time contracts | EDS-01 | complete; 25 classified screens, 34 fields and 12 actions; no runtime mutation |
 | EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | yes, with typed gaps |
 | EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | yes, with typed gaps |
 | EDS-05 | governance/operations and five Portal derivations | EDS-04 | yes, with typed gaps |
@@ -4603,32 +4603,55 @@ server-side-only phase.
 **Goal:** give Control API and the frozen frontend one generated contract
 authority.
 
-**Backend work:**
+**Status:** `CONTRACT_AUTHORITY_COMPLETE / FRONTEND_COMPATIBLE /
+NO_RUNTIME_MUTATION` on 2026-09-05.
 
-- generate Screen Data Manifest and Action Manifest from E3 coverage plus the
-  current `SCREEN_BFF_CATALOGUE`;
-- define `UtcEpochMs` on v2 wires and separate event/source/ingest/as-of/read
-  clocks;
-- keep sequence/large IDs as strings and financial values as exact decimal
-  strings with currency/precision;
-- define panel envelope states `READY/EMPTY/PARTIAL/STALE/UNAVAILABLE/DENIED/ERROR`;
-- add multidimensional coverage, source history semantics, formula/input
-  revision and composite read revision;
-- separate contract readiness, source readiness and runtime delivery;
-- generate OpenAPI/JSON Schema/TS types/runtime decoders and Rust DTOs where
-  they cross the Rust boundary;
-- define semantic actions; frontend route registry owns URLs.
+**Implemented closure:**
 
-**Frontend handoff:** replace handwritten duplicated shapes and native/ISO
-display logic internally, with no approved layout change.
+- added a deterministic E3/E5 source compiler, generated source authority,
+  generated Screen Data Manifest/Action Manifest, public evidence digest and
+  authenticated workspace-scoped
+  `GET /api/v1/execution/contract-authority`;
+- retained the immutable 23-screen E3 inventory and registered two explicit
+  BR-EX-72 Portal list extensions, making the current authority 25 screens,
+  34 field definitions and 12 semantic actions without hiding the inventory
+  distinction;
+- defined browser-renderable `UtcEpochMs` wires and separate
+  event/source-published/received/ingested/processed/as-of/read clocks;
+- sealed opaque strings for identifiers and sequence values and exact decimal
+  strings with currency/scale validation; no floating-point coercion occurs;
+- defined and runtime-validated
+  `READY/EMPTY/PARTIAL/STALE/UNAVAILABLE/DENIED/ERROR`, complete coverage,
+  history semantics, readiness/delivery separation and formula lineage;
+- generated JSON Schema, OpenAPI and TypeScript types, and reused the existing
+  Rust E4 `UtcEpochMs(i64)`/`ExactDecimal` inter-cell DTOs because this
+  metadata-only phase adds no Rust boundary; the Portal BFF explicitly clamps
+  values to the browser `Date` range instead of silently narrowing them;
+- defined semantic actions only, while the frozen frontend route registry owns
+  all URL/rendering choices and rejects any source/URL leakage.
 
-**Tests:** generator reproducibility, digest equality, epoch-ms/DST/browser
-timezone matrix, decimal round-trip, large-ID coercion, every panel state,
-route/action graph and a bundle guard against production fixture imports.
+**Frontend closure:** generated contract types are available through
+`@portal/contracts-screen-data`. UTC display and runtime decoders now reject
+malformed clocks, coverage, formula lineage, action graph and raw-source
+leakage, with no approved layout or rich-screen composition changed.
 
-**Exit:** every frozen field/action is classified; no `READY+null`; generated
-digest is visible in runtime evidence; authenticated browser shows UTC through
-the existing formatter locations.
+**Verification completed:** E7 validation passed (**34 capabilities, 18
+genuine source gaps, three measured profiles**); every return-pack manifest
+entry verified; generator reproducibility/digest equality passed; contract
+workspace passed **117/117**; fresh PostgreSQL Control API build/test/restore
+passed **40 files / 348 tests**; and the clean Portal-plus-embedded-Planning
+frontend gate passed **590 suites, 1,826 passed, 0 failed, 3 skipped** followed
+by a production build. Focused coverage includes epoch-ms/DST/browser-timezone
+semantics, exact decimals, large ID coercion, every panel state, route/action
+graph and production fixture-import guard. Detailed evidence is
+[`EDS_02_GENERATED_SCREEN_PANEL_ACTION_CONTRACTS.md`](./backend/EDS_02_GENERATED_SCREEN_PANEL_ACTION_CONTRACTS.md).
+
+**Exit:** every frozen field/action is classified; `READY + null` is rejected;
+the generated digest is visible in runtime evidence; authenticated frontend
+code formats only UTC milliseconds; and the public contract cannot expose raw
+source access. There is no EDS-02 implementation debt. Runtime/source/profile/
+command activation, Edge changes, containers and network remain intentionally
+out of scope rather than deferred work.
 
 **Next:** EDS-03.
 
@@ -4979,8 +5002,8 @@ EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                    EDS-11 → EDS-12
 ```
 
-The immediate next phase is **EDS-02 — Generated screen, panel, action and
-UTC/exact-value contracts**. EDS-01 is closed with one sealed E5 deployment
-BFF operation, complete negative/security/admission tests and no runtime
-mutation; EDS-02 turns that DTO into the single generated product authority
-before widening to rich stage composition.
+The immediate next phase is **EDS-03 — Maximum current truth for Paper,
+Sandbox and Live stage screens**. EDS-02 is closed with one generated,
+role/workspace-scoped product authority shared by Control API and the frozen
+frontend; EDS-03 may now widen only named, server-side BFF DTOs into the
+already-approved rich stage panels.

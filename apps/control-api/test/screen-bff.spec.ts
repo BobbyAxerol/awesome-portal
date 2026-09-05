@@ -28,22 +28,24 @@ function csrfCookie(response: { headers: Record<string, unknown> }): string {
 }
 
 describe("N20 canonical screen BFF catalogue", () => {
-  it("covers the exact 20 Manager-bound screens plus BR-EX-69/70/71 additions", () => {
-    expect(SCREEN_BFF_CATALOGUE).toHaveLength(23);
-    expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.screenId)).size).toBe(23);
-    expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.dataApi.operationId)).size).toBe(23);
+  it("covers the frozen E3 inventory plus the two classified BR-EX-72 list surfaces", () => {
+    expect(SCREEN_BFF_CATALOGUE).toHaveLength(25);
+    expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.screenId)).size).toBe(25);
+    expect(new Set(SCREEN_BFF_CATALOGUE.map((item) => item.dataApi.operationId)).size).toBe(25);
     const commissioned = new Set(
       SCREEN_BFF_CATALOGUE.flatMap((item) => item.requestIds)
-        .filter((requestId) => /^BR-EX-(?:4[1-9]|5[0-9]|6[0-9]|7[01])$/.test(requestId)),
+        .filter((requestId) => /^BR-EX-(?:4[1-9]|5[0-9]|6[0-9]|7[0-2])$/.test(requestId)),
     );
     expect([...commissioned].sort()).toEqual(
-      Array.from({ length: 31 }, (_, index) => `BR-EX-${index + 41}`),
+      Array.from({ length: 32 }, (_, index) => `BR-EX-${index + 41}`),
     );
     expect(SCREEN_BFF_CATALOGUE.map((item) => item.screenId)).toEqual(
       expect.arrayContaining([
         "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN",
         "EXECUTION_GATE_LIVE_REVIEW_SCREEN",
         "EXECUTION_WAIVERS_REGISTER_SCREEN",
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
       ]),
     );
     const sandbox = SCREEN_BFF_CATALOGUE.find(
@@ -75,8 +77,10 @@ describe("N20 canonical screen BFF catalogue", () => {
       EXECUTION_CANARY_CONTROL_ROOM_SCREEN: ["BR-EX-59", "BR-EX-55", "BR-EX-58"],
       EXECUTION_LIVE_FULL_OPERATIONS_SCREEN: ["BR-EX-57", "BR-EX-55", "BR-EX-58"],
       EXECUTION_FULL_BLOTTER_SCREEN: ["BR-EX-48", "BR-EX-55"],
+      EXECUTION_ALPHA_FLEET_LIST_SCREEN: ["BR-EX-72", "BR-EX-55"],
       EXECUTION_ALPHA_360_SCREEN: ["BR-EX-49", "BR-EX-50", "BR-EX-64", "BR-EX-55"],
       EXECUTION_PORTFOLIO_360_SCREEN: ["BR-EX-51", "BR-EX-65", "BR-EX-66", "BR-EX-55"],
+      EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN: ["BR-EX-72", "BR-EX-55"],
       EXECUTION_ACCOUNT_BROKER_360_SCREEN: ["BR-EX-52", "BR-EX-53", "BR-EX-54", "BR-EX-55"],
       EXECUTION_ADMIN_ACTION_DRAWER_SCREEN: ["BR-EX-68", "BR-EX-55"],
       EXECUTION_NEW_APPROVAL_REQUEST_SCREEN: ["BR-EX-69", "BR-EX-55"],
@@ -90,7 +94,7 @@ describe("N20 canonical screen BFF catalogue", () => {
     const identifier = /^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$/;
     for (const item of SCREEN_BFF_CATALOGUE) {
       expect(item.dataApi.pathTemplate).toMatch(/^\/api\/v1\/execution\//);
-      expect(item.dataApi.responseContract).toMatch(/\.v1$/);
+      expect(item.dataApi.responseContract).toMatch(/\.v[12]$/);
       expect(item.dataApi.operationId).toMatch(identifier);
       expect(item.dataApi.responseContract).toMatch(identifier);
       expect(item.dataApi.deliveryPhase).toMatch(identifier);
@@ -198,15 +202,30 @@ describe("N20 session, RBAC, workspace and resource boundary", () => {
     expect(denied.json().error.code).toBe("WORKSPACE_NOT_FOUND");
   });
 
+  it("publishes the EDS-02 metadata authority only to an authenticated workspace member", async () => {
+    expect((await rawInject("/api/v1/execution/contract-authority", { headers: {} })).statusCode).toBe(401);
+    const response = await inject(admin, `/api/v1/execution/contract-authority?workspace_id=${workspaceId}`);
+    expect(response.statusCode).toBe(200);
+    const document = response.json();
+    expect(document).toMatchObject({
+      schema_version: "portal.execution.contract-authority.v1",
+      workspace_id: workspaceId,
+      generated_digests: { composite: expect.stringMatching(/^sha256:[a-f0-9]{64}$/) },
+      redaction: { raw_source_relation: false, source_cursor: false, semantic_action_contains_url: false },
+    });
+    expect(document.screen_data_manifest.screen_count).toBe(25);
+    expect(Buffer.byteLength(response.body, "utf8")).toBeLessThan(256 * 1024);
+  });
+
   it("returns an exact role-filtered catalogue and enforces screen RBAC", async () => {
     const adminCatalogue = await inject(admin, `/api/v1/execution/screen-contracts?workspace_id=${workspaceId}`);
     expect(adminCatalogue.statusCode).toBe(200);
-    expect(adminCatalogue.json()).toMatchObject({ exact_total: true, total_count: 23 });
+    expect(adminCatalogue.json()).toMatchObject({ exact_total: true, total_count: 25 });
     expect(Buffer.byteLength(adminCatalogue.body, "utf8")).toBeLessThan(96 * 1024);
 
     const readerCatalogue = await inject(reader, `/api/v1/execution/screen-contracts?workspace_id=${workspaceId}`);
     expect(readerCatalogue.statusCode).toBe(200);
-    expect(readerCatalogue.json()).toMatchObject({ exact_total: true, total_count: 22 });
+    expect(readerCatalogue.json()).toMatchObject({ exact_total: true, total_count: 24 });
     expect(readerCatalogue.json().screens.some(
       (item: { screen_id: string }) => item.screen_id === "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
     )).toBe(false);
