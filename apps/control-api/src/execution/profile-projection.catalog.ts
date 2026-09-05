@@ -28,6 +28,11 @@ const TIME_SERIES_LADDER: Readonly<Record<string, ProfileProjectionBinding["ladd
   performance_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
   account_equity_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
   portfolio_equity_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
+  // EDS-07 retains the source's decision records exactly as records.  They
+  // are not promoted to an event/replay authority: the current Manager-v2
+  // contract does not publish ordering, correction, or full-history claims.
+  risk_grants: { class: "TIME_SERIES", idField: "risk_grant_id", timestampField: "created_at" },
+  sizing_decisions: { class: "TIME_SERIES", idField: "decision_id", timestampField: "created_at" },
 };
 
 const STRATEGY = [
@@ -131,6 +136,12 @@ const JOURNAL = [
   "client_order_id", "aggregate_key", "state", "outcome_class", "accepted_at", "dispatched_at",
   "acknowledged_at", "terminal_at", "updated_at", "engine_version",
 ] as const;
+const RISK_GRANT = [
+  "risk_grant_id", "strategy_id", "account_id", "mode", "venue", "created_at",
+] as const;
+const SIZING_DECISION = [
+  "decision_id", "strategy_id", "account_id", "mode", "venue", "created_at",
+] as const;
 
 const FLEET: readonly ProfileProjectionBinding[] = [
   bind("strategies", "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies", STRATEGY),
@@ -155,12 +166,16 @@ const PAPER: readonly ProfileProjectionBinding[] = [
   bind("conditional_groups", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.conditional-orders", "conditional_order_groups", GROUP),
   bind("conditional_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.conditional-orders", "conditional_order_group_legs", LEG),
   bind("command_journal", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.command-journal", "command_journal", JOURNAL),
+  bind("sizing_decisions", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", SIZING_DECISION),
+  bind("risk_grants", "EXECUTION_GATE_R2_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
 ];
 
 const SANDBOX: readonly ProfileProjectionBinding[] = [
   bind("sessions", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "manager.sessions", "execution_sessions", SESSION),
   bind("margin_balances", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "manager.accounts", "margin_balances", MARGIN),
   bind("account_sync", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC),
+  bind("sizing_decisions", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", SIZING_DECISION),
+  bind("risk_grants", "EXECUTION_GATE_LIVE_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
 ];
 
 const LIVE: readonly ProfileProjectionBinding[] = [
@@ -169,6 +184,8 @@ const LIVE: readonly ProfileProjectionBinding[] = [
   bind("account_sync", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC),
   bind("orders", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "manager.orders", "orders", ORDER),
   bind("fills", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "manager.fills", "fills", FILL),
+  bind("sizing_decisions", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", SIZING_DECISION),
+  bind("risk_grants", "EXECUTION_GATE_LIVE_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
 ];
 
 export function profileProjectionCatalog(environment: ProjectionEnvironment): readonly ProfileProjectionBinding[] {

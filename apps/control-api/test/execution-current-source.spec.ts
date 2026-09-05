@@ -12,16 +12,19 @@ import {
   CurrentSourceProxyError,
   CurrentSourceRateLimiter,
   BR72_MANAGER_LIST_ACCEPTANCE,
+  EDS07_RETAINED_FINANCIAL_READ_ACCEPTANCE,
   N15B_CURRENT_QUERY_ACCEPTANCE,
   N17B_CURRENT_EXACT_QUERY_ACCEPTANCE,
   N22_PAPER_READ_ACCEPTANCE,
   N23_PROFILE_READ_ACCEPTANCE,
+  assertEds07RetainedFinancialReadAccepted,
   assertN22PaperReadAccepted,
   assertN23ProfileReadAccepted,
   currentManagerV2Path,
   managerListManagerV2Path,
   paperManagerV2Path,
   profileManagerV2Path,
+  retainedFinancialManagerV2Path,
   currentSourcePath,
   currentSourceUpstreamError,
 } from "../src/execution/current-source.proxy";
@@ -358,7 +361,7 @@ describe("N17B exact current-set production acceptance", () => {
 });
 
 describe("N22 full Paper read acceptance", () => {
-  it("keeps the four N22 screens and adds only the Phase 2 Account 360 read", () => {
+  it("preserves the frozen N22 Paper set plus the Phase 2 Account 360 read", () => {
     expect(N22_PAPER_READ_ACCEPTANCE).toMatchObject({
       decision: "N22_FULL_PAPER_READ_ACCEPTED",
       lineageDecision: "N17B_EXACT_CURRENT_SET_ACCEPTED",
@@ -405,6 +408,47 @@ describe("N22 full Paper read acceptance", () => {
       "orders",
       { limit: 201 },
     )).toThrowError(expect.objectContaining({ code: "N22_PAPER_PAGE_INVALID" }));
+  });
+});
+
+describe("EDS-07 retained financial read acceptance", () => {
+  it("adds only published risk/sizing decision records without rewriting N22/N23 release scope", () => {
+    expect(EDS07_RETAINED_FINANCIAL_READ_ACCEPTANCE).toMatchObject({
+      decision: "EDS07_RETAINED_FINANCIAL_READ_ACCEPTED",
+      lineageDecision: "EDS06_DURABLE_MIRROR_READY",
+      profiles: {
+        paper: {
+          profileId: "PAPER_BINANCE_USDM",
+          screenIds: ["EXECUTION_GATE_R1_REVIEW_SCREEN", "EXECUTION_GATE_R2_REVIEW_SCREEN"],
+        },
+        sandbox: {
+          profileId: "SANDBOX_BINANCE_USDM",
+          screenIds: ["EXECUTION_GATE_R1_REVIEW_SCREEN", "EXECUTION_GATE_R2_REVIEW_SCREEN"],
+        },
+        live: {
+          profileId: "LIVE_BINANCE_USDM",
+          screenIds: ["EXECUTION_GATE_LIVE_REVIEW_SCREEN", "EXECUTION_GATE_R1_REVIEW_SCREEN"],
+        },
+      },
+    });
+    expect(N22_PAPER_READ_ACCEPTANCE.screenIds).not.toContain("EXECUTION_GATE_R1_REVIEW_SCREEN");
+    expect(N23_PROFILE_READ_ACCEPTANCE.profiles.sandbox.screenIds).not.toContain("EXECUTION_GATE_R1_REVIEW_SCREEN");
+    expect(() => assertEds07RetainedFinancialReadAccepted("paper", "EXECUTION_GATE_R1_REVIEW_SCREEN"))
+      .not.toThrow();
+    expect(() => assertEds07RetainedFinancialReadAccepted("canary", "EXECUTION_GATE_LIVE_REVIEW_SCREEN"))
+      .toThrowError(expect.objectContaining({ code: "EDS07_RETAINED_FINANCIAL_READ_NOT_ACCEPTED" }));
+  });
+
+  it("keeps EDS-07 relation selection server-owned and bounded", () => {
+    expect(retainedFinancialManagerV2Path(
+      "paper", "EXECUTION_GATE_R2_REVIEW_SCREEN", "manager.risk", "risk_grants", { limit: 200 },
+    )).toBe("/internal/v2/manager/relations/public/risk_grants?limit=200");
+    expect(() => retainedFinancialManagerV2Path(
+      "live", "EXECUTION_GATE_LIVE_REVIEW_SCREEN", "manager.risk", "sizing_decisions",
+    )).toThrowError(expect.objectContaining({ code: "EDS07_BINDING_NOT_ACCEPTED" }));
+    expect(() => retainedFinancialManagerV2Path(
+      "sandbox", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", { limit: 201 },
+    )).toThrowError(expect.objectContaining({ code: "EDS07_PAGE_INVALID" }));
   });
 });
 

@@ -38,6 +38,10 @@ import { MaximumDataContinuationRepository } from "./execution/maximum-data-cont
 import { ExecutionSharedReadRepository } from "./execution/shared-read.repository";
 import { ExecutionProfileProjectionRepository } from "./execution/profile-projection.repository";
 import { ExecutionDurableMirrorRepository } from "./execution/durable-mirror.repository";
+import { ExecutionDurableFinancialRepository } from "./execution/durable-financial.repository";
+import { ExecutionFinancialQueryCursorRepository } from "./execution/financial-query-cursor.repository";
+import { ExecutionFinancialChartService } from "./execution/financial-chart.service";
+import { ExecutionFinancialChartController } from "./execution/financial-chart.controller";
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
 import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
 import { ExecutionProductReadSource } from "./execution/product-read-source";
@@ -116,6 +120,7 @@ export class AppModule {
         ResourceReadController,
         PortalDerivationsController,
         OperationalCompositionController,
+        ExecutionFinancialChartController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -178,6 +183,9 @@ export class AppModule {
         MaximumDataContinuationRepository,
         MaximumDataOperationService,
         ExecutionDurableMirrorRepository,
+        ExecutionDurableFinancialRepository,
+        ExecutionFinancialQueryCursorRepository,
+        ExecutionFinancialChartService,
         { provide: EXECUTION_DURABLE_MIRROR_WRITER, useExisting: ExecutionDurableMirrorRepository },
         ExecutionProfileProjectionRepository,
         ExecutionProfileProjectionWorker,

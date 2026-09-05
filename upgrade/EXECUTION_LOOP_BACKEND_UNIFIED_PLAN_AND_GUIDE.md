@@ -4466,7 +4466,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
 | EDS-05 | governance/operations and five Portal derivations | EDS-04 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
 | EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | **COMPLETE_SOURCE_DARK / VERIFIED** on 2026-09-05; yes for observed pages; no replay claim |
-| EDS-07 | equity/performance/risk/chart query plane | EDS-06 | yes for retained source range |
+| EDS-07 | equity/performance/risk/chart query plane | EDS-06 | **CODE_COMPLETE / SOURCE_DARK** on 2026-09-05; yes for retained source range |
 | EDS-08 | authoritative event/continuity acquisition | EDS-00; external source work | no, external gate |
 | EDS-09 | Rust snapshot+tail append store and reducers | EDS-08 | no |
 | EDS-10 | full lifecycle replay and market-context chart plane | EDS-09 + typed market source | no |
@@ -4901,34 +4901,63 @@ command route changed.
 
 ### EDS-07 — Retained equity/performance/risk queries and financial chart API
 
+**Status:** `CODE_COMPLETE / SOURCE_DARK / BFF_READY_WHEN_DURABLE_MIRROR_IS_ACTIVATED`
+on 2026-09-05. The default runtime flags remain false; this is not a browser,
+AWS-HK, command, or deployment activation.
+
 **Goal:** use all honestly retained source range to power fast financial views,
 without claiming an unknown retention floor as total history.
 
-**Backend/Rust work:**
+**Completed backend work:**
 
 - exact range/keyset queries for account/deployment/portfolio equity,
-  performance, risk grants and sizing decisions;
-- server-side subject scoping, aggregation, drawdown, execution quality and
-  contribution with exact formula/currency/input coverage;
-- viewport-aware min/max/last downsampling that preserves gaps/extrema/markers;
+  performance, risk grants and sizing decisions, with named Portal cursor
+  handles rather than browser-visible relation keysets;
+- server-side subject scope and direct retained values only. No cross-currency
+  aggregate, synthetic drawdown, execution-quality or contribution formula is
+  claimed where the current source does not publish its exact inputs;
+- viewport-aware min/max/last downsampling preserving first/last and extrema.
+  Source gap intervals and markers are explicitly absent rather than inferred;
 - chart DTO with `UtcEpochMs`, decimal strings, source/returned counts,
   sampling algorithm, scale decision and visible coverage boundary;
 - benchmark series stays typed unavailable until a named market authority is
   published; frontend must not synthesize it;
-- optional range cache is revision-keyed and may be enabled only after a
-  measured invalidation test.
+- no range cache until a measured invalidation test can prove it preserves the
+  committed-revision contract;
+- versioned `EDS07` source-acceptance overlay for `risk_grants` and
+  `sizing_decisions` on Paper/Sandbox/Live. This does not rewrite frozen
+  N22/N23 acceptance records.
 
 **Frontend handoff:** `PrimusFinancialChart`/approved renderer consumes this
 DTO in the existing chart shell; backend does not alter the visual design.
 
-**Tests:** raw-versus-downsample population, extrema/gap/marker properties,
-log/linear rules, large range, per-account/all-account scope, no float-derived
-business result, payload/render budget and browser chart evidence on Alpha,
-Portfolio, Account and stage screens.
+**Tests:** source-dark/no source read, raw-versus-downsample population,
+first/last/extrema bound, exact-decimal and UTC output, log/linear rule,
+typed benchmark/gap/marker semantics, principal-bound opaque cursor, strict
+route/workspace rejection, per-profile ladder map, response budget, full
+fresh-PostgreSQL migration and backup/restore parity.
 
-**Exit:** no 2,000-row total-history presentation cap; every chart states the
-actual available range and completeness; real chart payload is consumed on
-the deployed image.
+**Exit achieved for this phase:** retained BFF reads only a repeatable local
+durable-mirror snapshot, has no 2,000-row presentation cap, and returns actual
+available range/completeness without exposing source relation/cursor/JWT/mTLS
+inputs. Product/browser acceptance still requires a separately approved mirror
+activation and frontend consumption; those are explicit operational gates, not
+deferred EDS-07 implementation.
+
+**Completion record (2026-09-05):** added migration
+`1723680000023_execution-financial-query-cursors.sql`, durable financial
+repository, financial chart/decision service and controller, strict
+same-origin routes, opaque `fqc1` server cursor storage, source acceptance
+overlay, risk/sizing retention ladders and focused EDS-07 tests. Exact values
+remain strings; UTC stays epoch milliseconds; a requested benchmark is typed
+unavailable; direct source decision records remain distinct from replay.
+Final clean evidence passed: E7 return validation (`34` capabilities, `18`
+genuine source gaps, three measured profiles), every return-pack manifest
+hash, and `./scripts/control-api-test.sh` (`44` test files / `379` tests) with
+the fresh PostgreSQL migration and backup/restore drill. No EDS-07 code
+follow-up remains; source activation and browser consumption are deliberately
+separate operational/product gates.
+See [EDS-07 retained financial chart API](backend/EDS_07_RETAINED_FINANCIAL_CHART_API.md).
 
 **Next:** EDS-09 for streaming-enabled source classes; EDS-11 for local
 current-revision SSE.
@@ -5111,8 +5140,8 @@ EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                    EDS-11 → EDS-12
 ```
 
-The immediate next phase is **EDS-07 — retained equity/performance/risk query
-and financial-chart API**. EDS-05 and EDS-06 are closed in source-dark form:
-the next phase must consume only one committed Portal revision and retain the
-server-side boundary rather than returning to bounded global-page filtering or
-client-side business joins.
+EDS-07 is closed in source-dark form. The next approved implementation choice
+is **EDS-08** (the external authoritative event/continuity contract lane), or
+after its prerequisite is accepted **EDS-09** (durable append/reducer work).
+Neither may replace the committed local, server-side range boundary with
+bounded global-page filtering or client-side business joins.

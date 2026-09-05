@@ -7,6 +7,7 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_financial_query_cursors",
   "execution_durable_mirror_conflicts",
   "execution_durable_mirror_gaps",
   "execution_durable_mirror_continuations",
@@ -78,6 +79,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_durable_continuations: boolean;
       has_durable_gaps: boolean;
       has_durable_conflicts: boolean;
+      has_financial_query_cursors: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -120,6 +122,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_durable_mirror_continuations') IS NOT NULL AS has_durable_continuations,
          to_regclass('public.execution_durable_mirror_gaps') IS NOT NULL AS has_durable_gaps,
          to_regclass('public.execution_durable_mirror_conflicts') IS NOT NULL AS has_durable_conflicts,
+         to_regclass('public.execution_financial_query_cursors') IS NOT NULL AS has_financial_query_cursors,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -130,7 +133,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 22 ||
+      row.migration_count < 23 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -161,10 +164,11 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_durable_continuations ||
       !row.has_durable_gaps ||
       !row.has_durable_conflicts ||
+      !row.has_financial_query_cursors ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
-        `Control API test migration gate did not reach EDS-06 durable mirror ` +
+        `Control API test migration gate did not reach EDS-07 financial query plane ` +
         `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
         `hash_only_policy=${row.has_hash_only_policy}, ` +
         `hash_only_constraint=${row.has_hash_only_constraint}, ` +
@@ -195,6 +199,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `durable_continuations=${row.has_durable_continuations}, ` +
         `durable_gaps=${row.has_durable_gaps}, ` +
         `durable_conflicts=${row.has_durable_conflicts}, ` +
+        `financial_query_cursors=${row.has_financial_query_cursors}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

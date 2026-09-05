@@ -137,7 +137,7 @@ Khi các nguồn mâu thuẫn, dùng thứ tự sau:
 | ID | Vấn đề | Evidence trên nhánh hiện tại | Hậu quả | Confidence | Phase xử lý |
 |---|---|---|---|---|---|
 | RC-01 | Hot projection cap 2.000 rows/relation | `apps/control-api/src/execution/profile-projection.catalog.ts` có `WARM_WINDOW_MAX_ROWS = 2_000` | Relation không thuộc history ladder bị giới hạn population | `CODE_CONFIRMED` | 3–5 |
-| RC-02 | Full-depth history chỉ áp dụng cho ba relation | Chỉ `performance_snapshots`, `account_equity_snapshots`, `portfolio_equity_snapshots` được đánh dấu ladder | Orders, fills, sessions, risk, reconciliation chưa append-all | `CODE_CONFIRMED` | 3–8 |
+| RC-02 | Retained-range ladder chỉ phủ năm relation, không phải toàn bộ lịch sử | `performance_snapshots`, `account_equity_snapshots`, `portfolio_equity_snapshots`, `risk_grants`, `sizing_decisions` được đánh dấu ladder | Orders, fills, sessions và reconciliation chưa append-all; hai decision relation không phải full risk-event replay | `CODE_CONFIRMED` | 3–8 |
 | RC-03 | Non-ladder ingestion tối đa 10×200 rows/cycle/profile | `profile-projection.worker.ts` | Snapshot không đại diện full history; dễ `PARTIAL` hoặc mất older rows khỏi mirror | `CODE_CONFIRMED` | 4–5 |
 | RC-04 | Workbench fetch bounded global pages rồi filter in memory | `paper-read.service.ts`: deployments 100; positions/orders/fills 200; history 100–200 | Detail screen phụ thuộc resource có nằm trong page đầu; có `N22_DEPLOYMENT_OUTSIDE_BOUNDED_SOURCE_PAGE` | `CODE_CONFIRMED` | 9 |
 | RC-05 | Deployment matching có heuristic rộng | Match bằng `portfolio_id` hoặc ít nhất hai dimension | Cross-deployment attribution, sai PnL/exposure/risk | `CODE_CONFIRMED` | 9 |

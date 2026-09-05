@@ -23,6 +23,9 @@ import { ProfileReadError } from "./profile-read/profile-read.controller";
 import { ManagerListsError } from "./manager-lists/manager-lists.service";
 import { ResourceReadError } from "./resource-read/resource-read.controller";
 import { PortalDerivationError } from "./execution/portal-derivations.service";
+import { DurableFinancialReadError } from "./execution/durable-financial.repository";
+import { FinancialQueryCursorError } from "./execution/financial-query-cursor.repository";
+import { FinancialChartError } from "./execution/financial-chart.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -52,7 +55,10 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof ProfileReadError ||
       exception instanceof ManagerListsError ||
       exception instanceof ResourceReadError ||
-      exception instanceof PortalDerivationError
+      exception instanceof PortalDerivationError ||
+      exception instanceof DurableFinancialReadError ||
+      exception instanceof FinancialQueryCursorError ||
+      exception instanceof FinancialChartError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

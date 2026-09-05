@@ -286,6 +286,60 @@ type ScreenBinding = {
   readonly relations: Readonly<Record<string, readonly string[]>>;
 };
 
+/**
+ * EDS-07 is an additive retained-financial-read acceptance.  It must remain
+ * separate from the historical N22/N23 stage acceptance records: otherwise a
+ * later phase silently rewrites what those frozen releases actually accepted.
+ * These two relations contain decision records only; they are not a signal,
+ * replay, correction, command, or broker authority.
+ */
+const EDS07_PROFILE_SCREEN_BINDINGS = Object.freeze({
+  paper: Object.freeze({
+    EXECUTION_GATE_R1_REVIEW_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze(["e3.sizing-decisions"]),
+      relations: Object.freeze({
+        "manager.risk": Object.freeze(["sizing_decisions"]),
+      }),
+    }),
+    EXECUTION_GATE_R2_REVIEW_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze(["e3.risk-grants"]),
+      relations: Object.freeze({
+        "manager.risk": Object.freeze(["risk_grants"]),
+      }),
+    }),
+  }),
+  sandbox: Object.freeze({
+    EXECUTION_GATE_R1_REVIEW_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze(["e3.sizing-decisions"]),
+      relations: Object.freeze({
+        "manager.risk": Object.freeze(["sizing_decisions"]),
+      }),
+    }),
+    EXECUTION_GATE_R2_REVIEW_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze(["e3.risk-grants"]),
+      relations: Object.freeze({
+        "manager.risk": Object.freeze(["risk_grants"]),
+      }),
+    }),
+  }),
+  live: Object.freeze({
+    EXECUTION_GATE_R1_REVIEW_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze(["e3.sizing-decisions"]),
+      relations: Object.freeze({
+        "manager.risk": Object.freeze(["sizing_decisions"]),
+      }),
+    }),
+    EXECUTION_GATE_LIVE_REVIEW_SCREEN: Object.freeze({
+      capabilityIds: Object.freeze(["e3.risk-grants"]),
+      relations: Object.freeze({
+        "manager.risk": Object.freeze(["risk_grants"]),
+      }),
+    }),
+  }),
+} as const);
+
+type Eds07ProfileEnvironment = keyof typeof EDS07_PROFILE_SCREEN_BINDINGS;
+
 export const N22_PAPER_READ_ACCEPTANCE = Object.freeze({
   schemaVersion: "portal.execution.paper-read-acceptance.v1",
   decision: "N22_FULL_PAPER_READ_ACCEPTED",
@@ -317,6 +371,29 @@ export const N23_PROFILE_READ_ACCEPTANCE = Object.freeze({
     }),
   }),
   canaryComposition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
+  sourceMaximumRequestsPerSecond: 20,
+});
+
+export const EDS07_RETAINED_FINANCIAL_READ_ACCEPTANCE = Object.freeze({
+  schemaVersion: "portal.execution.retained-financial-read-acceptance.v1",
+  decision: "EDS07_RETAINED_FINANCIAL_READ_ACCEPTED",
+  lineageDecision: "EDS06_DURABLE_MIRROR_READY",
+  adapter: "MANAGER_V2_CURRENT_AS_IS",
+  sourceContract: "trading-system.portal-execution.manager-v2.runtime.v1",
+  profiles: Object.freeze({
+    paper: Object.freeze({
+      profileId: "PAPER_BINANCE_USDM",
+      screenIds: Object.freeze(Object.keys(EDS07_PROFILE_SCREEN_BINDINGS.paper).sort()),
+    }),
+    sandbox: Object.freeze({
+      profileId: "SANDBOX_BINANCE_USDM",
+      screenIds: Object.freeze(Object.keys(EDS07_PROFILE_SCREEN_BINDINGS.sandbox).sort()),
+    }),
+    live: Object.freeze({
+      profileId: "LIVE_BINANCE_USDM",
+      screenIds: Object.freeze(Object.keys(EDS07_PROFILE_SCREEN_BINDINGS.live).sort()),
+    }),
+  }),
   sourceMaximumRequestsPerSecond: 20,
 });
 
@@ -986,6 +1063,48 @@ function n22PaperScreenBinding(screenId: string) {
   return N22_PAPER_SCREEN_BINDINGS[screenId];
 }
 
+function eds07BindingIfAccepted(
+  environment: CurrentSourceEnvironment,
+  screenId: string,
+): ScreenBinding | null {
+  if (environment === "canary" || !(environment in EDS07_PROFILE_SCREEN_BINDINGS)) return null;
+  const bindings = EDS07_PROFILE_SCREEN_BINDINGS[environment as Eds07ProfileEnvironment] as Readonly<
+    Record<string, ScreenBinding>
+  >;
+  return bindings[screenId] ?? null;
+}
+
+export function assertEds07RetainedFinancialReadAccepted(
+  environment: CurrentSourceEnvironment,
+  screenId: string,
+): void {
+  const binding = eds07BindingIfAccepted(environment, screenId);
+  if (!binding) {
+    throw new CurrentSourceProxyError("EDS07_RETAINED_FINANCIAL_READ_NOT_ACCEPTED", 404, {
+      classification: "SUPPORTED_BUT_NOT_ACTIVATED",
+      availability: "UNAVAILABLE",
+      reason_code: "EDS07_SCREEN_OR_PROFILE_OUTSIDE_RETAINED_FINANCIAL_SET",
+      requested_environment: environment,
+      requested_screen_id: screenId,
+    });
+  }
+}
+
+export function retainedFinancialManagerV2Path(
+  environment: Exclude<CurrentSourceEnvironment, "canary">,
+  screenId: string,
+  sourceId?: string,
+  relation?: string,
+  query: CurrentSourcePageQuery = {},
+): string {
+  assertEds07RetainedFinancialReadAccepted(environment, screenId);
+  const binding = eds07BindingIfAccepted(environment, screenId);
+  // The preceding assertion makes this unreachable; retain the guard so a
+  // future map edit cannot produce an undefined relation binding.
+  if (!binding) throw new CurrentSourceProxyError("EDS07_RETAINED_FINANCIAL_READ_NOT_ACCEPTED", 404);
+  return managerV2Path(binding, "EDS07", sourceId, relation, query);
+}
+
 export function assertN23ProfileReadAccepted(
   environment: CurrentSourceEnvironment,
   screenId: string,
@@ -1025,6 +1144,10 @@ function assertAcceptedProfileRead(
     assertBr72ManagerListAccepted(environment, screenId);
     return;
   }
+  if (eds07BindingIfAccepted(environment, screenId)) {
+    assertEds07RetainedFinancialReadAccepted(environment, screenId);
+    return;
+  }
   if (environment === "paper") {
     assertN22PaperReadAccepted(environment, screenId);
     return;
@@ -1050,6 +1173,11 @@ function acceptedScreenBinding(
       binding: BR72_MANAGER_LIST_SCREEN_BINDINGS[screenId as Br72ManagerListScreenId],
       acceptance: BR72_MANAGER_LIST_ACCEPTANCE,
     };
+  }
+  const eds07 = eds07BindingIfAccepted(environment, screenId);
+  if (eds07) {
+    assertEds07RetainedFinancialReadAccepted(environment, screenId);
+    return { binding: eds07, acceptance: EDS07_RETAINED_FINANCIAL_READ_ACCEPTANCE };
   }
   if (environment === "paper") {
     return { binding: n22PaperScreenBinding(screenId), acceptance: N22_PAPER_READ_ACCEPTANCE };
@@ -1120,14 +1248,8 @@ function acceptedManagerV2Path(
   relation?: string,
   query: CurrentSourcePageQuery = {},
 ): string {
-  if (screenId in BR72_MANAGER_LIST_SCREEN_BINDINGS) {
-    assertBr72ManagerListAccepted(environment, screenId);
-    return managerListManagerV2Path(environment, screenId, sourceId, relation, query);
-  }
-  if (environment === "paper") {
-    return paperManagerV2Path(screenId, sourceId, relation, query);
-  }
-  return profileManagerV2Path(environment, screenId, sourceId, relation, query);
+  const { binding, acceptance } = acceptedScreenBinding(environment, screenId);
+  return managerV2Path(binding, managerV2ErrorPrefix(acceptance.decision), sourceId, relation, query);
 }
 
 /**
@@ -1147,7 +1269,7 @@ export function paperManagerV2Path(
 
 function managerV2Path(
   binding: ScreenBinding,
-  errorPrefix: "N22_PAPER" | "N23" | "BR72",
+  errorPrefix: "N22_PAPER" | "N23" | "BR72" | "EDS07",
   sourceId?: string,
   relation?: string,
   query: CurrentSourcePageQuery = {},
@@ -1172,7 +1294,9 @@ function managerV2Path(
         ? "RELATION_OUTSIDE_N22_PAPER_SET"
         : errorPrefix === "BR72"
           ? "RELATION_OUTSIDE_BR72_MANAGER_LIST_SET"
-          : "RELATION_OUTSIDE_N23_PROFILE_SET",
+          : errorPrefix === "EDS07"
+            ? "RELATION_OUTSIDE_EDS07_RETAINED_FINANCIAL_SET"
+            : "RELATION_OUTSIDE_N23_PROFILE_SET",
     });
   }
   if (
@@ -1188,6 +1312,15 @@ function managerV2Path(
   if (query.cursor !== undefined) parameters.set("cursor", query.cursor);
   const suffix = parameters.size > 0 ? `?${parameters.toString()}` : "";
   return `/internal/v2/manager/relations/public/${encodeURIComponent(relation)}${suffix}`;
+}
+
+function managerV2ErrorPrefix(
+  decision: string,
+): "N22_PAPER" | "N23" | "BR72" | "EDS07" {
+  if (decision === BR72_MANAGER_LIST_ACCEPTANCE.decision) return "BR72";
+  if (decision === EDS07_RETAINED_FINANCIAL_READ_ACCEPTANCE.decision) return "EDS07";
+  if (decision === N22_PAPER_READ_ACCEPTANCE.decision) return "N22_PAPER";
+  return "N23";
 }
 
 export function assertN15bCurrentQueryAccepted(

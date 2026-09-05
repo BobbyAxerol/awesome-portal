@@ -40,7 +40,13 @@ export interface DurableMirrorCurrentPage {
   schema_version: "portal.execution.durable-mirror-current.v1";
   state: MirrorState;
   reason_code: string | null;
-  revision: { read_model_revision: string; projection_epoch: string; projection_sequence: number } | null;
+  revision: {
+    read_model_revision: string;
+    projection_epoch: string;
+    projection_sequence: number;
+    payload_digest: string;
+    received_at: string;
+  } | null;
   observation: {
     availability: "AVAILABLE" | "UNAVAILABLE";
     completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
@@ -55,13 +61,29 @@ export interface DurableMirrorRangePage {
   schema_version: "portal.execution.durable-mirror-range.v1";
   state: MirrorState;
   reason_code: string | null;
-  revision: { read_model_revision: string; projection_epoch: string; projection_sequence: number } | null;
+  revision: {
+    read_model_revision: string;
+    projection_epoch: string;
+    projection_sequence: number;
+    payload_digest: string;
+    received_at: string;
+  } | null;
   observation: {
     availability: "AVAILABLE" | "UNAVAILABLE";
     completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
     freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
     as_of: string | null;
   } | null;
+  /**
+   * Exact Portal-retained coverage for the accepted scope.  This is not a
+   * source-total or an event-history claim: Manager-v2 only proves bounded
+   * retained decision/snapshot pages.
+   */
+  coverage: {
+    retained_total: string | null;
+    oldest_available_at: string | null;
+    newest_available_at: string | null;
+  };
   rows: Array<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>;
   next_cursor: string | null;
 }
@@ -71,6 +93,8 @@ const RANGE_RELATIONS: Readonly<Record<string, { idField: string; timestampField
   "manager.performance:account_equity_snapshots": { idField: "id", timestampField: "ts" },
   "manager.performance:portfolio_equity_snapshots": { idField: "id", timestampField: "ts" },
   "manager.fills:fills": { idField: "fill_id", timestampField: "trade_time" },
+  "manager.risk:risk_grants": { idField: "risk_grant_id", timestampField: "created_at" },
+  "manager.risk:sizing_decisions": { idField: "decision_id", timestampField: "created_at" },
 };
 
 const CURRENT_KEY_FIELDS: Readonly<Record<string, readonly string[]>> = {
@@ -284,6 +308,16 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     if (range.from) { values.push(range.from); where.push(`ts >= $${values.length}::timestamptz`); }
     if (range.to) { values.push(range.to); where.push(`ts <= $${values.length}::timestamptz`); }
     if (resource) { values.push(resource.id); where.push(`${resource.column}=$${values.length}`); }
+    const coverage = await client.query<{
+      retained_total: string;
+      oldest_available_at: Date | null;
+      newest_available_at: Date | null;
+    }>(
+      `SELECT count(*)::text AS retained_total,min(ts) AS oldest_available_at,max(ts) AS newest_available_at
+         FROM execution_durable_mirror_range_rows
+        WHERE ${where.join(" AND ")}`,
+      values,
+    );
     if (boundary) {
       values.push(String(boundary[0]), String(boundary[1]));
       where.push(`(ts, row_id) > ($${values.length - 1}::timestamptz, $${values.length})`);
@@ -317,6 +351,11 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       reason_code: observation.completeness === "PARTIAL" ? "EDS06_RANGE_RELATION_PARTIAL" : null,
       revision,
       observation,
+      coverage: {
+        retained_total: coverage.rows[0]?.retained_total ?? "0",
+        oldest_available_at: coverage.rows[0]?.oldest_available_at?.toISOString() ?? null,
+        newest_available_at: coverage.rows[0]?.newest_available_at?.toISOString() ?? null,
+      },
       rows,
       next_cursor: nextCursor,
     };
@@ -547,10 +586,18 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     client: PoolClient,
     scope: DurableMirrorScope,
   ): Promise<DurableMirrorCurrentPage["revision"]> {
-    const result = await client.query<{ read_model_revision: string; projection_epoch: string; projection_sequence: string }>(
-      `SELECT read_model_revision::text, projection_epoch::text, projection_sequence::text
-         FROM execution_durable_mirror_revisions
-        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND is_current=true`,
+    const result = await client.query<{
+      read_model_revision: string;
+      projection_epoch: string;
+      projection_sequence: string;
+      payload_digest: string;
+      received_at: Date;
+    }>(
+      `SELECT r.read_model_revision::text,r.projection_epoch::text,r.projection_sequence::text,
+              b.payload_digest,b.received_at
+         FROM execution_durable_mirror_revisions r
+         JOIN execution_durable_mirror_batches b ON b.batch_id=r.batch_id
+        WHERE r.workspace_id=$1 AND r.environment=$2 AND r.profile_id=$3 AND r.is_current=true`,
       [scope.workspaceId, scope.environment, scope.profileId],
     );
     const row = result.rows[0];
@@ -558,6 +605,8 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       read_model_revision: row.read_model_revision,
       projection_epoch: row.projection_epoch,
       projection_sequence: Number(row.projection_sequence),
+      payload_digest: row.payload_digest,
+      received_at: row.received_at.toISOString(),
     } : null;
   }
 
@@ -811,6 +860,7 @@ function emptyRange(
     reason_code: reasonCode,
     revision,
     observation,
+    coverage: { retained_total: null, oldest_available_at: null, newest_available_at: null },
     rows: [],
     next_cursor: null,
   };
