@@ -163,7 +163,7 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | 05 | 5 derivation + governance/ops named ops, formula/version hiển thị được | ⏳ | |
 | 06 | tuyên bố absorb/replace với mirror hiện hành (DR-01); index resource cho workbench/blotter; parity old/new để FE diff | ⏳ | |
 | 07 | chart DTO đúng **một từ vựng downsample** (DR-05) đủ nuôi PrimusFinancialChart + sparkline fleet + contribution time-dim; chartTheme.ts chung uPlot+ECharts (quyết định owner 04-09) | ⏳ | |
-| 08 ⏸CHƯA MỞ | owner packet HỢP NHẤT với BR-EX-79 A–E (DR-07) | ⏳ | |
+| 08 ⏸CHƯA MỞ | owner packet HỢP NHẤT với BR-EX-79 A–E (DR-07) — **theo OR-1: không còn là blocker, chỉ là asks-nâng-cấp** | ⏳ | |
 | 09 | không yêu cầu FE; FE chỉ cần event fixtures từ contract đã freeze | **WIP chưa commit** (+264/−21, 5 file edge, đo 04-09) — và bị khoá bởi EDS-08 `EVENT_SOURCE_ACCEPTED` chưa có → chưa thể yield gì cho màn hình | |
 | 10 | candle DTO + quyết định renderer candle (lightweight-charts, chờ ⚖ attribution) | ⏳ | |
 | 11 | SSE resume + **revision-tick attribute per panel cho motion** (DR-06); action graph semantic | ⏳ | |
@@ -185,7 +185,7 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | DR-08 | §17.2 chưa ghi fact: cursor TTL read-plane paper = 48h (đã deploy) | THẤP | 17.2 | OPEN | |
 | DR-09 | Paper Overview cap 200 rows làm chart hero vỡ NGAY HÔM NAY — không được đợi tới EDS-06/07; vá theo §14-FixA (DERIVED-sum series từ mirror) rồi EDS thay sau | CAO | ngay | OPEN — Claude nhận làm | |
 | DR-10 | Payload budget chưa là con số per-phase (5.9MB workbench, 2.4MB alpha đo thật) | TB | 07/12 | OPEN | |
-| DR-11 | **Đảo thứ tự adapt-first (đo 04-09)**: codex đang code EDS-09 (5 file WIP edge +264/−21) trong khi EDS-01→08 chưa mở phase nào theo ladder; EDS-09 lại bị chặn bởi EDS-08 `EVENT_SOURCE_ACCEPTED` (external, chưa có — domain_events bị chính plan từ chối) → công sức này KHÔNG tạo ra dữ liệu nhìn thấy nào trên màn cho tới khi nguồn giao event contract, ngược mục tiêu owner "mọi màn có số" và ngược chính doctrine §17.5 "EDS-03..07 must not wait". Đề nghị: (a) đổi thứ tự sang 01→03 vertical đầu tiên, hoặc (b) nếu giữ EDS-09 thì tuyên bố rõ đây là contract-prep offline và mở song song EDS-01 | **CAO** | thứ tự chiến dịch | OPEN | |
+| DR-11 | **Đảo thứ tự adapt-first (đo 04-09)**: codex đang code EDS-09 (5 file WIP edge +264/−21) trong khi EDS-01→08 chưa mở phase nào theo ladder; EDS-09 lại bị chặn bởi EDS-08 `EVENT_SOURCE_ACCEPTED` (external, chưa có — domain_events bị chính plan từ chối) → công sức này KHÔNG tạo ra dữ liệu nhìn thấy nào trên màn cho tới khi nguồn giao event contract, ngược mục tiêu owner "mọi màn có số" và ngược chính doctrine §17.5 "EDS-03..07 must not wait". Đề nghị: (a) đổi thứ tự sang 01→03 vertical đầu tiên, hoặc (b) nếu giữ EDS-09 thì tuyên bố rõ đây là contract-prep offline và mở song song EDS-01. **Cập nhật theo OR-1 (04-09): vế event-journal đã được owner gỡ — EDS-09 chạy trên observation lane là hợp lệ; DR-11 chỉ còn yêu cầu mở song song lane FE 01→03** | **CAO** | thứ tự chiến dịch | OPEN-THU HẸP | |
 | DR-12 | **Status ladder không được ghi**: chỉ EDS-00 có dòng Status; 01→12 không có `PLANNED/CONTRACT_LOCKED/...` trong §17 → không ai track được tiến độ bằng văn bản, vi phạm luật "mỗi phase commit implementation+tests+journal cùng lúc" của chính plan | TB | §17 bookkeeping | OPEN | |
 
 Luật sổ: codex trả lời từng DR trong cột của mình (ACCEPT+phase / REJECT+lý do);
@@ -195,6 +195,33 @@ giao mà §2 còn ô `✗`.
 
 ---
 
+## OR — Phán quyết owner (Bobby, 2026-09-04) — codex đọc và áp dụng ngay
+
+**OR-1 — BỎ CHỜ event-journal phía Trading System.** Nguyên văn chỉ đạo: "cái
+journal bên system bỏ đi, thay bằng cách khác — đợi bên kia upgrade lâu lắm;
+tận dụng tối đa những gì portal-execution-edge + trading system ĐÃ giao, tìm
+phương án khác nếu nguồn chưa có, để hoàn thành 100% frontend yêu cầu; không
+cố chấp vào một yêu cầu phải đợi lâu."
+
+Hệ quả áp lên chiến dịch:
+- EDS-08 thu nhỏ thành "gửi asks hợp nhất (BR-EX-79 A–E) như CƠ HỘI nâng cấp
+  sau" — **không còn là cổng chặn** của bất kỳ phase nào.
+- EDS-09/10 đổi đầu vào từ "source event journal" sang **observation lane**:
+
+| Thay thế | Cách làm bằng thứ ĐÃ có | Nhãn trung thực |
+|---|---|---|
+| OR-1a Pseudo-tail | Resumable drain + mirror (đang chạy prod-dev) chính là tail quan sát: dedupe khóa+digest, ordered theo (ts,id) Portal-observed | `PORTAL_OBSERVATION`, không phải source event — khái niệm này §EDS-06 đã định nghĩa sẵn |
+| OR-1b Lifecycle replay xấp xỉ | Dựng timeline per order từ orders+fills+sessions+journal metadata ĐÃ giao (submitted_at/updated_at/trade_time) | ô thiếu ack-clock → typed gap Ô ĐÓ, phần còn lại replay bình thường |
+| OR-1c Market context | Chưa có candles thì dùng mark_price/equity series ĐÃ có làm price-context line DERIVED có nhãn — TUYỆT ĐỐI không bịa OHLC | `DERIVED · mark-context` |
+| OR-1d Retention | Mirror append-only của Portal LÀ retention floor — không cần floor từ nguồn | window khai báo như hiện tại |
+
+- DR-11 cập nhật theo OR-1: EDS-09 re-aim lên observation-lane là HỢP LỆ và
+  được khuyến khích; yêu cầu còn lại của DR-11 chỉ còn một vế: **mở song song
+  lane FE (EDS-01→03)** để mọi thứ nguồn-side E1→E7 + observation chảy được
+  lên màn hình.
+- DR-07 hạ mức: packet asks vẫn hợp nhất một kênh nhưng là opportunity,
+  không blocker.
+
 ## 5bis. Chốt đo tiến độ tới EDS-09 (04-09, bằng chứng máy)
 
 Theo đúng thước đo của chính chiến dịch (status ladder + gates G0–G7):
@@ -202,7 +229,8 @@ Theo đúng thước đo của chính chiến dịch (status ladder + gates G0�
 | Nhóm | Đạt |
 |---|---|
 | EDS-00 planning | ✅ `PLANNING_GATE_COMPLETE` |
-| EDS-01→08 implementation | **0/8 phase mở** — không ladder entry, không named op, không generated contract, không fixture giao FE |
+| Nền nguồn E1→E7 (tiền-EDS) | ✅ **ĐÃ CODE XONG** (commit chuỗi `c1e7149→81a8870`: E5 implement existing-data publication, E7 maximum data return — 34 capabilities, edge adapt trọn những gì Trading System đang giao). *Đính chính 04-09: chốt đo trước đó của Claude nói "codex chưa code" là SAI về tổng thể — chỉ đúng cho lane FE* |
+| EDS-01→08 lane FE (contract/API/BFF giao frontend) | **0/8 phase mở** — chưa named op, chưa generated contract, chưa fixture/field-map nào giao FE. Đây mới là khoảng thiếu thật |
 | EDS-09 | ~264 dòng WIP **chưa commit, chưa test, chưa gate**, và bị chặn bởi EDS-08 external → đóng góp cho "màn có số" hôm nay = **0** |
 | Mục tiêu owner "chart/bảng có dữ liệu mọi màn" | phần đang SỐNG đến từ các fix ngoài-EDS (mirror, resumable drain, chart serving, correlation/drawdown — §14/§16 unified plan): ma trận §2 hiện ● 17 · ◐ 6 · ✗ 5 · ○-typed 14 · ⏳ 2 — tức ~77% yếu tố khả-thi-local đã sống, phần ✗ còn lại là DR-09 + serving, phần ○ chờ Asks A–E/un-halt, KHÔNG phụ thuộc EDS-09 |
 
