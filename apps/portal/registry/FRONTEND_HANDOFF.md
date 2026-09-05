@@ -2042,3 +2042,54 @@ This does not turn missing source capabilities into unavailable whole screens.
 Authoritative replay/corrections/ACK and missing market artifacts remain
 `Soon · SOURCE_GAP_CONFIRMED`; EDS-10b will add observed/derived panel data and
 EDS-11 will complete route-level hydration using this local revision lane.
+
+### 8.51 EDS-10b observed timeline and mark-context consumer contract (2026-09-05)
+
+Backend has delivered the following **named same-origin** operation; it is
+available only when the corresponding local profile read is enabled:
+
+```text
+GET /api/v1/execution/views/observed-timeline
+  ?environment=paper|sandbox|live
+  &subject_kind=deployment|alpha|portfolio|account
+  &subject_id=<id>
+  &[limit=1..200]
+  &[after=<Portal opaque continuation>]
+```
+
+Operation: `executionObservedTimelineV1`  
+Contract: `portal.execution.observed-timeline-bff.v1`
+
+Use it for the existing rich Alpha 360, Portfolio 360, Account/Broker,
+Workbench, Blotter and stage-screen timeline/context **panels only**. Do not
+replace the screen shell with this envelope.
+
+`observed_timeline` is a panel envelope whose visible heading must be
+**Observed timeline** (not Trade Replay). When provenance is visible, render
+`PORTAL_OBSERVATION`; its order is a display-only
+`OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1` ordering of
+current-page order/fill/session/journal observations. `observed_at_ms` is the
+canonical UTC timestamp and decimals are exact strings. The `after` token is a
+Portal cursor: pass it back unchanged, never decode/reconstruct it and never
+expect a source cursor/relation/JWT/mTLS input in browser code.
+
+`mark_context` is separately labelled **DERIVED · mark-context**. It contains
+only published current `mark_price` observations with `mark_price_at` plus an
+equity-context availability marker. It is not an OHLCV/candle/benchmark chart.
+
+Required panel behavior:
+
+| Backend state | Keep the rich panel composition | Copy/provenance |
+| --- | --- | --- |
+| `READY` | render rows/marks incrementally | `Observed timeline` / `PORTAL_OBSERVATION` |
+| `PARTIAL` | render returned rows and the panel-local reason | do not infer omitted history |
+| `STALE` | retain last valid panel, display freshness | do not retry source from the browser |
+| `EMPTY` | retain layout with honest current-page empty state | not a replay absence claim |
+| `UNAVAILABLE` | retain layout with typed reason | `Soon · SOURCE_GAP_CONFIRMED` only where applicable |
+
+The old `analytics.replay` branch is now deliberately empty:
+`EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED`. Migrate consumers away from
+that field rather than rendering it as true replay. Broker ACK,
+correction/tombstone, global Event ordering and market OHLCV stay typed
+panel-local gaps. React must not derive causality, synthesize candles, turn
+numeric values into money, or import fixture fallback data.

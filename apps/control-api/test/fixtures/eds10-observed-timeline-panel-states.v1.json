@@ -1,0 +1,36 @@
+{
+  "schema_version": "portal.execution.observed-timeline-panel-state-corpus.v1",
+  "logical_operation_id": "executionObservedTimelineV1",
+  "observation_authority": "PORTAL_OBSERVATION",
+  "panels": [
+    {
+      "panel": "observed_timeline",
+      "label": "OBSERVED_TIMELINE",
+      "states": [
+        { "state": "READY", "data_visible": true, "reason_code": null, "retryable": false },
+        { "state": "EMPTY", "data_visible": false, "reason_code": null, "retryable": false },
+        { "state": "PARTIAL", "data_visible": true, "reason_code": "EDS10_OBSERVED_TIMELINE_CURRENT_PAGE_PARTIAL", "retryable": false },
+        { "state": "STALE", "data_visible": true, "reason_code": "EDS10_OBSERVED_TIMELINE_CURRENT_PAGE_STALE", "retryable": true },
+        { "state": "UNAVAILABLE", "data_visible": false, "reason_code": "EDS10_OBSERVED_TIMELINE_RELATIONS_UNAVAILABLE", "retryable": true }
+      ]
+    },
+    {
+      "panel": "mark_context",
+      "label": "DERIVED · mark-context",
+      "states": [
+        { "state": "READY", "data_visible": true, "reason_code": null, "retryable": false },
+        { "state": "EMPTY", "data_visible": false, "reason_code": null, "retryable": false },
+        { "state": "PARTIAL", "data_visible": true, "reason_code": "EDS10_MARK_CONTEXT_CURRENT_PAGE_PARTIAL", "retryable": false },
+        { "state": "STALE", "data_visible": true, "reason_code": "EDS10_MARK_CONTEXT_CURRENT_PAGE_STALE", "retryable": true },
+        { "state": "UNAVAILABLE", "data_visible": false, "reason_code": "EDS10_MARK_CONTEXT_RELATIONS_UNAVAILABLE", "retryable": true }
+      ]
+    }
+  ],
+  "source_gaps": [
+    "EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED",
+    "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED",
+    "EDS10_BROKER_ACK_CLOCK_SOURCE_GAP_CONFIRMED",
+    "EDS10_CORRECTION_TOMBSTONE_SOURCE_GAP_CONFIRMED",
+    "EDS10_GLOBAL_EVENT_SEQUENCE_SOURCE_GAP_CONFIRMED"
+  ]
+}

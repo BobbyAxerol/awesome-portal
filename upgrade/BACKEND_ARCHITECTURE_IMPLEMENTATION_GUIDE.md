@@ -691,6 +691,23 @@ deep-dive → ADR → slice → evidence discipline documented above.
   replay claim and does not activate runtime source transport. See
   [EDS-09b observation journal](backend/EDS_09B_PORTAL_OBSERVATION_JOURNAL.md).
 
+- **EDS-10b observed timeline and mark-context BFF closed (2026-09-05):**
+  `executionObservedTimelineV1` is a fixed authenticated same-origin,
+  profile-isolated Control API operation over the already-admitted local
+  projection. It provides a 200-row/1-MiB, Portal-signed continuation for
+  `OBSERVED_TIMELINE` rows from current orders/fills/sessions/journal data and
+  `DERIVED · mark-context` from current exact mark prices/equity context.
+  Output carries only named product identifiers, exact decimal strings,
+  UTC milliseconds, coverage/freshness/completeness and an explicit
+  `PORTAL_OBSERVATION` provenance; it cannot expose a Manager relation/cursor,
+  source credential or cross-cell path. The reducer deliberately does not
+  infer causal joins, lifecycle Event/replay, broker ACK, global sequence,
+  correction/tombstone or OHLCV. Those branches remain independent typed
+  source gaps, and legacy replay is an empty compatibility shell rather than a
+  false current-page replay. No runtime flag, container, source transport or
+  command authority changed. See
+  [EDS-10b observed timeline](backend/EDS_10B_OBSERVED_TIMELINE_AND_MARK_CONTEXT.md).
+
 - **EX-DP-05/E5 existing-data adapter and publication closed
   (2026-09-04, source-dark):** the additive Rust
   `maximum-data-adapter` has a digest-bound 34-field registry: four existing

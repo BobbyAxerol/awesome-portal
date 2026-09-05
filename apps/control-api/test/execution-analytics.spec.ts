@@ -13,6 +13,7 @@ import {
 } from "../src/execution/analytics.controller";
 import { computePortfolioStatistics, LocalQueryAnalyticsService } from "../src/execution/local-query-analytics.service";
 import { ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
+import observedTimelinePanelStates from "./fixtures/eds10-observed-timeline-panel-states.v1.json";
 
 describe("EX-BE-07b analytics screen boundary", () => {
   const base = {
@@ -72,6 +73,30 @@ describe("EX-BE-07b analytics screen boundary", () => {
       ...base,
       FEATURE_EXECUTION_SHADOW_QUERY: "true",
     })).toThrowError(/FEATURE_EXECUTION_EDGE/);
+  });
+
+  it("pins every frontend-visible EDS-10b panel state without promoting a source gap", () => {
+    expect(observedTimelinePanelStates).toMatchObject({
+      schema_version: "portal.execution.observed-timeline-panel-state-corpus.v1",
+      logical_operation_id: "executionObservedTimelineV1",
+      observation_authority: "PORTAL_OBSERVATION",
+    });
+    expect(observedTimelinePanelStates.panels).toHaveLength(2);
+    for (const panel of observedTimelinePanelStates.panels) {
+      expect(panel.states.map((state) => state.state)).toEqual([
+        "READY", "EMPTY", "PARTIAL", "STALE", "UNAVAILABLE",
+      ]);
+      expect(panel.states.find((state) => state.state === "READY")).toMatchObject({
+        data_visible: true, reason_code: null, retryable: false,
+      });
+      expect(panel.states.find((state) => state.state === "UNAVAILABLE")).toMatchObject({
+        data_visible: false, retryable: true,
+      });
+    }
+    expect(observedTimelinePanelStates.source_gaps).toEqual(expect.arrayContaining([
+      "EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED",
+      "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED",
+    ]));
   });
 
   it("composes bounded exact analytics from one local projection read without cross-subject leakage", async () => {
@@ -167,9 +192,172 @@ describe("EX-BE-07b analytics screen boundary", () => {
       },
     });
     const analytics = response.analytics as Record<string, unknown>;
-    expect((analytics.capabilities as unknown[])).toHaveLength(12);
+    expect((analytics.capabilities as unknown[])).toHaveLength(14);
+    expect((analytics.capabilities as Array<{ capability_id: string; state: string }>)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          capability_id: "replay-journal",
+          state: "UNAVAILABLE",
+          reason_code: "EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED",
+        }),
+        expect.objectContaining({ capability_id: "observed-timeline" }),
+        expect.objectContaining({ capability_id: "derived-mark-context" }),
+      ]),
+    );
+    expect(analytics.replay).toMatchObject({
+      state: "UNAVAILABLE",
+      trade_log: [],
+      reason_code: "EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED",
+    });
     expect(JSON.stringify(response)).not.toContain("ord_b");
     expect(JSON.stringify(response)).toContain("10000.000000000000000001");
+  });
+
+  it("serves a bounded, exact, non-causal observed timeline through one named local BFF", async () => {
+    const config = loadConfig({
+      ...base,
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      FEATURE_EXECUTION_EDGE: "true",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+    });
+    const row = (fields: Record<string, string | number | boolean | null>) => ({
+      lineage: {
+        workspace_id: "ws_projection", profile_id: "PAPER_BINANCE_USDM",
+        source_contract_revision: "manager-v2-current-page-v1",
+      },
+      fields,
+    });
+    const relation = (source_id: string, name: string, items: ReturnType<typeof row>[]) => ({
+      source_id, relation: name, availability: "AVAILABLE" as const, reason_code: null,
+      as_of: "2026-09-02T12:00:00.000Z", freshness: "FRESH" as const,
+      completeness: "COMPLETE" as const, items,
+    });
+    const snapshot = {
+      document: {
+        schema_version: "portal.execution.profile-projection.v1" as const,
+        workspace_id: "ws_projection", environment: "paper" as const,
+        profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "manager-v2-current-page-v1",
+        relations: {
+          "manager.deployments:strategy_deployments": relation("manager.deployments", "strategy_deployments", [
+            row({ deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", portfolio_id: "pf_a" }),
+            row({ deployment_id: "dep_b", strategy_id: "alpha_b", account_id: "acc_b", portfolio_id: "pf_b" }),
+          ]),
+          "manager.orders:orders": relation("manager.orders", "orders", [
+            row({ order_id: "ord_a", strategy_id: "alpha_a", account_id: "acc_a", deployment_id: "dep_a", submitted_at: "2026-09-02T10:00:00.000Z", updated_at: "2026-09-02T11:00:00.000Z", price: 60000, quantity: "0.100000000000000001" }),
+            row({ order_id: "ord_b", strategy_id: "alpha_b", account_id: "acc_b", deployment_id: "dep_b", submitted_at: "2026-09-02T10:00:00.000Z", quantity: "99" }),
+          ]),
+          "manager.fills:fills": relation("manager.fills", "fills", [
+            row({ fill_id: "fill_a", strategy_id: "alpha_a", account_id: "acc_a", deployment_id: "dep_a", trade_time: "2026-09-02T11:00:00.000Z", price: "60000.123456789012345678", quantity: "0.100000000000000001" }),
+          ]),
+          "manager.sessions:execution_sessions": relation("manager.sessions", "execution_sessions", [
+            row({ execution_session_id: "ses_a", strategy_id: "alpha_a", account_id: "acc_a", deployment_id: "dep_a", started_at: "2026-09-02T09:00:00.000Z", completed_at: "2026-09-02T11:30:00.000Z" }),
+          ]),
+          "manager.command-journal:command_journal": relation("manager.command-journal", "command_journal", [
+            row({ command_id: "cmd_a", strategy_id: "alpha_a", account_id: "acc_a", deployment_id: "dep_a", created_at: "2026-09-02T08:00:00.000Z", updated_at: "2026-09-02T08:10:00.000Z" }),
+          ]),
+          "manager.positions:positions_v2": relation("manager.positions", "positions_v2", [
+            row({ position_id: "pos_a", strategy_id: "alpha_a", account_id: "acc_a", deployment_id: "dep_a", instrument_id: "BTCUSDT", mark_price: "60001.123456789012345678", mark_price_at: "2026-09-02T12:00:00.000Z", currency: "USDT" }),
+          ]),
+          "manager.performance:account_equity_snapshots": relation("manager.performance", "account_equity_snapshots", [
+            row({ id: "equity_a", strategy_id: "alpha_a", account_id: "acc_a", deployment_id: "dep_a", equity: "10001.000000000000000001", ts: "2026-09-02T12:00:00.000Z" }),
+          ]),
+        },
+      },
+      sourceEpoch: "source-epoch", sourceCursor: "never-browser-visible",
+      sourceAsOf: new Date("2026-09-02T12:00:00.000Z"),
+      receivedAt: new Date("2026-09-02T12:00:01.000Z"),
+      lastSuccessfulRefreshAt: new Date(),
+      completeness: "COMPLETE" as const,
+      projectionEpoch: "3b2d15c5-e36f-4a2f-91bf-18bb58ba76f4",
+      projectionSequence: 11, payloadDigest: `sha256:${"7".repeat(64)}`,
+    };
+    const repository = { async snapshot() { return snapshot; } } as unknown as ExecutionProfileProjectionRepository;
+    const service = new LocalQueryAnalyticsService(config, repository);
+    const principal = {
+      user: { userId: "usr_a" } as never,
+      session: { sessionId: "session_a" } as never,
+      workspaceId: "ws_viewer",
+    };
+    const first = await service.observedTimeline(principal, {
+      environment: "paper", subjectKind: "alpha", subjectId: "alpha_a", limit: 3,
+    }) as Record<string, any>;
+    expect(first).toMatchObject({
+      logical_operation_id: "executionObservedTimelineV1",
+      observation_authority: "PORTAL_OBSERVATION",
+      observation_semantics: "BOUNDED_CURRENT_PAGE",
+      resource: { kind: "ALPHA", id: "alpha_a" },
+      observed_timeline: {
+        state: "READY",
+        source_history_semantics: "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
+        data: {
+          label: "OBSERVED_TIMELINE",
+          ordering_rule: "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1",
+          entries: expect.arrayContaining([expect.objectContaining({
+            observation_type: "COMMAND_JOURNAL_ROW_OBSERVED",
+            source_record: { kind: "COMMAND_JOURNAL", id: "cmd_a" },
+          })]),
+          unavailable_segments: expect.arrayContaining([
+            expect.objectContaining({ segment: "BROKER_ACKNOWLEDGEMENT", state: "UNAVAILABLE" }),
+            expect.objectContaining({ segment: "AUTHORITATIVE_CORRECTION_TOMBSTONE", state: "UNAVAILABLE" }),
+          ]),
+        },
+      },
+      mark_context: {
+        state: "READY",
+        data: {
+          label: "DERIVED · mark-context",
+          marks: [expect.objectContaining({ mark_price: "60001.123456789012345678" })],
+          unavailable_market_context: {
+            state: "UNAVAILABLE",
+            reason_code: "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED",
+          },
+        },
+      },
+    });
+    expect(first.page.has_more).toBe(true);
+    expect(first.page.next_cursor).toMatch(/^kc1\./);
+    const decodedCursor = Buffer.from(first.page.next_cursor.split(".")[2], "base64url").toString("utf8");
+    expect(decodedCursor).toContain("execution:observed-timeline:paper:alpha:alpha_a");
+    expect(decodedCursor).not.toContain("manager.");
+    expect(JSON.stringify(first)).not.toContain("never-browser-visible");
+    expect(JSON.stringify(first)).not.toContain("ord_b");
+    expect(JSON.stringify(first)).not.toContain("client_order_id");
+
+    const second = await service.observedTimeline(principal, {
+      environment: "paper", subjectKind: "alpha", subjectId: "alpha_a", limit: 3, after: first.page.next_cursor,
+    }) as Record<string, any>;
+    const entries = second.observed_timeline.data.entries as Array<Record<string, any>>;
+    // The first bounded page consumed command/session/order-submitted.  This
+    // second page must resume deterministically at order-updated rather than
+    // infering a synthetic event sequence or duplicating the prior page.
+    expect(entries.map((entry) => entry.source_record.id)).toEqual(["ord_a", "ord_a", "fill_a"]);
+    const order = entries.find((entry) => entry.source_record.id === "ord_a");
+    expect(order.values).toMatchObject({ price: null, quantity: "0.100000000000000001" });
+    expect(order.rejected_exact_value_fields).toContain("price");
+    expect(entries.every((entry) => entry.observation_type !== "EVENT")).toBe(true);
+    expect(entries.every((entry) => entry.journal_id === undefined)).toBe(true);
+    expect(entries.map((entry) => [entry.source_record.id, entry.source_clock])).toEqual([
+      ["ord_a", "ORDER_SUBMITTED_AT"],
+      ["ord_a", "ORDER_UPDATED_AT"],
+      ["fill_a", "FILL_TRADE_TIME"],
+    ]);
+
+    const account = await service.observedTimeline(principal, {
+      environment: "paper", subjectKind: "account", subjectId: "acc_a",
+    }) as Record<string, any>;
+    expect(account.observed_timeline.data.entries.every((entry: Record<string, any>) =>
+      entry.resource.account_id === "acc_a")).toBe(true);
+    await expect(service.observedTimeline(principal, {
+      environment: "sandbox", subjectKind: "alpha", subjectId: "alpha_a",
+    })).rejects.toMatchObject({ code: "EDS10_PROFILE_READ_DISABLED", status: 404 });
   });
 
   it("serves the subject's 30-day mirror depth in the stage-equity series (owner directive 2026-09-03)", async () => {

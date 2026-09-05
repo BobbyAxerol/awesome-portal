@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-05 | **EDS-10b observed timeline and derived mark-context closed at the contract gate**: Portal replaces the misleading current-page `replay-journal` presentation with a named bounded same-origin `executionObservedTimelineV1` BFF. It serves only `PORTAL_OBSERVATION` rows with exact decimal strings, UTC milliseconds, profile/freshness/coverage metadata and a Portal-signed projection-bound continuation; `DERIVED · mark-context` uses only published mark/equity context. True replay/Event/ACK/correction/global sequence/OHLCV remain separate typed source gaps | focused resource-isolation, stable mixed-clock order, cursor/redaction, exact-decimal, mark-context and disabled-profile regressions plus fresh-PostgreSQL Control API gate; no source transport, direct source path, command, runtime flag, container or profile activation |
 | 2026-09-05 | **EDS-09b Portal observation bridge closed source-dark**: current Manager-page data continues through the existing server-only lease/coalescer and durable mirror, while the local revision journal/SSE now carries only `PORTAL_OBSERVATION` provenance plus named affected screen IDs. A retained-range digest conflict is forensic-quarantined before the compatibility snapshot, source checkpoint or visible revision can advance | additive migration `1723680000024`; focused provenance/redaction/replay and quarantine regressions plus full fresh-PostgreSQL Control API **45 files / 384 tests** + restore gate; no Edge route, source transport, runtime flag, container, direct DB/Redis/broker/CLI or command change |
 | 2026-09-05 | **EDS-09 owner return accepted as source-as-is, current-product route replanned**: Portal verified the immutable owner-return manifest and EDS-08 validator. All 18 gaps and all three Event classes remain `SOURCE_GAP_CONFIRMED`; no current Manager page is allowed into `authoritative-event-core`. The binding decision is `EDS-09b` Portal observation journal → `EDS-10b` observed/derived panel plane → `EDS-11` local BFF/SSE. True Event/replay/market requirements are consolidated into one visible `Soon` source-upgrade backlog, never a blocker for existing Paper/Sandbox/Live current data | manifest **12/12** + EDS-08 owner-return validator passed (`18` gaps, `7` owner lanes, `3` Event classes, `8` synthetic cases); documentation only, no source/runtime/container/credential/command change |
 | 2026-09-05 | **EDS-03 maximum current truth closed at the code/contract gate**: exact deployment scope is resolved from the local, profile-bound projection before pagination; Paper/Sandbox/Live rich panels receive named current relation DTOs and generated UTC/panel envelopes; absent Canary governance can no longer hide a readable Live source; no-currency/no-mark position aggregates are typed-null rather than invented | E7 **34/18/3** + full manifest verified; read-only generator check; contracts **117/117**; fresh-PG Control API **40 files / 354 tests** + restore; Node 22 frontend **98 files / 1,826 tests / 3 skipped** + production build. No runtime/container/Edge/source/command mutation; detailed evidence `backend/EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md` |
@@ -4479,7 +4480,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-09 | authoritative source snapshot+tail append store | EDS-08 | **CODE_COMPLETE_SOURCE_DARK / PARKED_FOR_FUTURE_SOURCE_UPGRADE**; no current source class is eligible |
 | EDS-09b | Portal observation bridge, local observation journal and revision ticks | EDS-03–07 current source | **IMPLEMENTED / VERIFIED_SOURCE_DARK / RUNTIME_INACTIVE**; bounded/resumable current pages only, without Event claims |
 | EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
-| EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | planned; **yes**, with `PORTAL_OBSERVATION` / `DERIVED` labels |
+| EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE**; yes, with `PORTAL_OBSERVATION` / `DERIVED` labels |
 | EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | planned; **yes**, panel by panel with typed gaps |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
 
@@ -5185,7 +5186,8 @@ remain a separate future-source lane.
 
 ### EDS-10b — Observed timeline and derived mark-context plane
 
-**Status:** `PLANNED / CURRENT_SOURCE_ONLY / PANEL-LEVEL_TRUTH`.
+**Status:** `IMPLEMENTED / CONTRACT_VERIFIED / CURRENT_SOURCE_ONLY / RUNTIME_INACTIVE`
+on 2026-09-05.
 
 **Goal:** give Alpha 360, Portfolio 360, Account/Broker, Workbench, Blotter and
 stage screens the maximum useful timelines/charts from current orders, fills,
@@ -5213,6 +5215,30 @@ first/last/extrema downsampling; mark-context provenance label; profile/venue
 negative cases; and one frontend contract fixture for each panel state. The
 phase closes when all usable current-source panels have data or an honest
 typed-empty state on the frozen product routes.
+
+**Completion record (2026-09-05):** `executionObservedTimelineV1` is now a
+named authenticated same-origin BFF at
+`GET /api/v1/execution/views/observed-timeline`. It admits only the fixed
+`paper|sandbox|live` and `deployment|alpha|portfolio|account` vocabulary,
+uses the existing profile-bound local projection and issues only a Portal
+query-keyring-signed continuation. It never receives or returns a Manager
+relation/cursor, source credential, raw source path or generic selector. The
+timeline is visibly `OBSERVED_TIMELINE` / `PORTAL_OBSERVATION`, sorted by a
+declared display-only mixed-clock rule; it neither links current rows causally
+nor represents a lifecycle Event/replay, ACK, correction/tombstone, global
+sequence or total history. Current mark price plus equity context is exposed
+only as `DERIVED · mark-context`; OHLCV/candle remains independently typed
+unavailable. Legacy `analytics.replay` is deliberately an empty
+`SOURCE_GAP_CONFIRMED` compatibility shell so an existing consumer cannot
+accidentally claim current rows are a replay. The additive slice is bounded to
+200 rows/1 MiB, preserves exact source decimal strings and UTC milliseconds,
+and leaves flags, runtime containers, source routes and command authority
+unchanged. Detailed DTO/consumer rules and evidence are in
+[`EDS_10B_OBSERVED_TIMELINE_AND_MARK_CONTEXT.md`](backend/EDS_10B_OBSERVED_TIMELINE_AND_MARK_CONTEXT.md).
+
+**Next:** EDS-11 consumes this named panel alongside the existing local
+revision stream. The future-source EDS-10 Event/replay lane remains parked
+until the source owner publishes an independently accepted Event class.
 
 ### EDS-11 — Current-data screen BFF hydration and local realtime
 

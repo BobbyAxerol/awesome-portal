@@ -1,7 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, querySigningKeys } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import { AnalyticsPrincipal, AnalyticsProxyError, QueryAnalyticsSubjectKind } from "./analytics.proxy";
+import { panelEnvelope, utcEpochMs, type PanelEnvelope } from "./contract-authority";
 import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionSnapshot,
@@ -12,9 +14,39 @@ import {
 
 type Fact = Record<string, ProjectionScalar>;
 
+/**
+ * EDS-10b deliberately has a narrower subject vocabulary than the legacy
+ * query-analytics proxy.  `account` is a first-class product need for the
+ * Account/Broker 360 screen, but it has no generic Manager query endpoint and
+ * is therefore served only from the already-admitted local projection.
+ */
+export type ObservedTimelineSubjectKind = Exclude<QueryAnalyticsSubjectKind, "live-gate"> | "account";
+
+export interface ObservedTimelineRequest {
+  readonly environment: ProjectionEnvironment;
+  readonly subjectKind: ObservedTimelineSubjectKind;
+  readonly subjectId: string;
+  readonly limit?: number;
+  /** Portal-signed continuation only; never an Edge or Manager cursor. */
+  readonly after?: string;
+}
+
+interface LocalAnalyticsContext {
+  readonly snapshot: ProfileProjectionSnapshot;
+  readonly environment: ProjectionEnvironment;
+  readonly workspaceId: string;
+  readonly profileId: string;
+}
+
+const OBSERVED_TIMELINE_MAXIMUM_ROWS = 200;
+const OBSERVED_TIMELINE_MAXIMUM_BYTES = 1 * 1024 * 1024;
+const OBSERVED_TIMELINE_HISTORY_SEMANTICS =
+  "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY";
+
 const CATALOGUE = Object.freeze([
   "exact-query", "position-exposure", "stage-equity", "execution-quality",
-  "contribution", "order-funnel", "replay-journal", "market-candles",
+  "contribution", "order-funnel", "replay-journal", "observed-timeline",
+  "derived-mark-context", "market-candles",
   "portfolio-drawdown-overlap", "portfolio-correlation", "portfolio-rho-timeline",
   "canary-drift",
 ]);
@@ -43,10 +75,18 @@ const SOURCE = Object.freeze({
  */
 @Injectable()
 export class LocalQueryAnalyticsService {
+  private readonly observedTimelineCursors: KeysetCursorCodec;
+
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
-  ) {}
+  ) {
+    this.observedTimelineCursors = new KeysetCursorCodec({
+      activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
+      keys: querySigningKeys(config),
+      ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS,
+    });
+  }
 
   enabled(): boolean {
     return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true";
@@ -65,6 +105,91 @@ export class LocalQueryAnalyticsService {
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
     const environment: ProjectionEnvironment = subjectKind === "live-gate" ? "live" : "paper";
+    const context = await this.localContext(environment);
+    const depth = await this.subjectDepth(
+      context.snapshot, context.workspaceId, environment, context.profileId, subjectKind, subjectId,
+    );
+    const statistics = await this.portfolioStatistics(context.workspaceId, environment, context.profileId);
+    if (statistics && depth) depth.queries += 1;
+    return composeAnalytics(context.snapshot, principal.workspaceId, subjectKind, subjectId, depth, statistics);
+  }
+
+  /**
+   * Named, local-only product operation for EDS-10b.  It is intentionally
+   * separate from `query()` so rich screens can hydrate the timeline panel
+   * without downloading the broad analytics payload or learning any Manager
+   * relation/cursor vocabulary.
+   */
+  async observedTimeline(
+    principal: AnalyticsPrincipal,
+    request: ObservedTimelineRequest,
+  ): Promise<Record<string, unknown>> {
+    if (!/^[A-Za-z0-9._:-]{1,192}$/.test(request.subjectId)) {
+      throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
+    }
+    if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
+    if (!profileFeatureEnabled(this.config, request.environment)) {
+      throw new AnalyticsProxyError("EDS10_PROFILE_READ_DISABLED", 404);
+    }
+    const limit = request.limit ?? OBSERVED_TIMELINE_MAXIMUM_ROWS;
+    if (!Number.isInteger(limit) || limit < 1 || limit > OBSERVED_TIMELINE_MAXIMUM_ROWS) {
+      throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_LIMIT_INVALID", 400);
+    }
+    const context = await this.localContext(request.environment);
+    const selected = selectSubject(sourceFacts(context.snapshot), request.subjectKind, request.subjectId);
+    const timeline = composeObservedTimeline(
+      context.snapshot,
+      request.subjectKind,
+      request.subjectId,
+      selected,
+      limit,
+      this.pageOffset(principal, request, context.snapshot, limit),
+    );
+    const nextCursor = timeline.nextOffset === null ? null : this.encodeNextPage(
+      principal, request, context.snapshot, limit, timeline.nextOffset,
+    );
+    const response = {
+      schema_version: "portal.execution.observed-timeline-bff.v1",
+      logical_operation_id: "executionObservedTimelineV1",
+      record_authority: "PORTAL_CONTROL",
+      source_authority: "TRADING_SYSTEM_CURRENT_STATE",
+      observation_authority: "PORTAL_OBSERVATION",
+      observation_semantics: "BOUNDED_CURRENT_PAGE",
+      environment: request.environment,
+      profile_id: context.profileId,
+      workspace_id: principal.workspaceId,
+      resource: {
+        kind: observedSubjectKind(request.subjectKind),
+        id: request.subjectId,
+      },
+      projection: {
+        epoch_id: context.snapshot.projectionEpoch,
+        sequence: context.snapshot.projectionSequence,
+        payload_digest: context.snapshot.payloadDigest,
+        source_contract_revision: context.snapshot.document.source_contract_revision,
+        source_as_of_ms: epochMs(context.snapshot.sourceAsOf),
+        received_at_ms: epochMs(context.snapshot.receivedAt),
+        last_successful_refresh_at_ms: epochMs(context.snapshot.lastSuccessfulRefreshAt),
+        completeness: context.snapshot.completeness,
+      },
+      observed_timeline: timeline.panel,
+      mark_context: composeMarkContext(
+        context.snapshot,
+        request.subjectKind,
+        request.subjectId,
+        selected,
+      ),
+      page: {
+        limit,
+        next_cursor: nextCursor,
+        has_more: nextCursor !== null,
+      },
+    };
+    assertObservedTimelineBytes(response);
+    return response;
+  }
+
+  private async localContext(environment: ProjectionEnvironment): Promise<LocalAnalyticsContext> {
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     const profileId = profile(this.config, environment);
     if (!workspaceId || !profileId) {
@@ -75,10 +200,57 @@ export class LocalQueryAnalyticsService {
     if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", 503);
     }
-    const depth = await this.subjectDepth(snapshot, workspaceId, environment, profileId, subjectKind, subjectId);
-    const statistics = await this.portfolioStatistics(workspaceId, environment, profileId);
-    if (statistics && depth) depth.queries += 1;
-    return composeAnalytics(snapshot, principal.workspaceId, subjectKind, subjectId, depth, statistics);
+    return { snapshot, environment, workspaceId, profileId };
+  }
+
+  private pageOffset(
+    principal: AnalyticsPrincipal,
+    request: ObservedTimelineRequest,
+    snapshot: ProfileProjectionSnapshot,
+    limit: number,
+  ): number {
+    if (!request.after) return 0;
+    const resourceId = observedTimelineResourceId(request);
+    const fingerprint = observedTimelineFingerprint(resourceId, limit);
+    try {
+      const [payloadDigest, offset] = this.observedTimelineCursors.decode(request.after, {
+        resourceId,
+        workspaceId: principal.workspaceId,
+        direction: "after",
+        queryFingerprint: fingerprint,
+        boundarySize: 2,
+      });
+      if (payloadDigest !== snapshot.payloadDigest) {
+        throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_CURSOR_STALE", 409);
+      }
+      if (typeof offset !== "number" || !Number.isSafeInteger(offset) || offset < 0) {
+        throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_CURSOR_INVALID", 400);
+      }
+      return offset;
+    } catch (error) {
+      if (error instanceof AnalyticsProxyError) throw error;
+      if (error instanceof QueryContractError) {
+        throw new AnalyticsProxyError(`EDS10_OBSERVED_TIMELINE_${error.code}`, error.status);
+      }
+      throw error;
+    }
+  }
+
+  private encodeNextPage(
+    principal: AnalyticsPrincipal,
+    request: ObservedTimelineRequest,
+    snapshot: ProfileProjectionSnapshot,
+    limit: number,
+    nextOffset: number,
+  ): string {
+    const resourceId = observedTimelineResourceId(request);
+    return this.observedTimelineCursors.encode({
+      resource_id: resourceId,
+      workspace_id: principal.workspaceId,
+      direction: "after",
+      query_fingerprint: observedTimelineFingerprint(resourceId, limit),
+      boundary: [snapshot.payloadDigest, nextOffset],
+    });
   }
 
   /**
@@ -186,8 +358,7 @@ function composeAnalytics(
   depth: SubjectDepth | null = null,
   statistics: PortfolioStatistics | null = null,
 ): Record<string, unknown> {
-  const all = Object.fromEntries(Object.entries(SOURCE).map(([name, key]) => [name, facts(snapshot, key)])) as
-    Record<keyof typeof SOURCE, Fact[]>;
+  const all = sourceFacts(snapshot);
   // The mirror rows carry the same ids the snapshot rows do, so the subject
   // selection below filters them identically — depth changes resolution,
   // never membership.
@@ -196,7 +367,7 @@ function composeAnalytics(
   const selected = selectSubject(all, subjectKind, subjectId);
   // `equity` is a derived view over the three canonical equity relations. Keep
   // it out of source evidence so counts and digests never double-count facts.
-  const sourceFacts = {
+  const sourceFactGroups = {
     strategies: selected.strategies,
     deployments: selected.deployments,
     accounts: selected.accounts,
@@ -213,13 +384,12 @@ function composeAnalytics(
     portfolioEquity: selected.portfolioEquity,
     journal: selected.journal,
   };
-  const flat = Object.values(sourceFacts).flat().slice(0, 20_000);
+  const flat = Object.values(sourceFactGroups).flat().slice(0, 20_000);
   const asOf = latestTimestamp(flat) ?? snapshot.sourceAsOf?.toISOString()
     ?? snapshot.lastSuccessfulRefreshAt.toISOString();
   const orderFunnel = counts(selected.orders, "status");
   const quality = executionQuality(selected.sessions);
   const chartSeries = equitySeries(selected, asOf, snapshot.completeness, subjectKind);
-  const replay = replayFacts(selected.orders, selected.fills, selected.journal);
   const capability = (
     capabilityId: string,
     state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE",
@@ -242,9 +412,19 @@ function composeAnalytics(
     capability("execution-quality", "AVAILABLE", "DERIVED", "execution_quality.v1", ["public.execution_sessions"]),
     capability("contribution", factsState(selected.fills), "DERIVED", "contribution.v1", ["public.fills"]),
     capability("order-funnel", factsState(selected.orders), "DERIVED", "order_funnel.v1", ["public.orders"]),
-    capability("replay-journal", replay.trade_log.length > 0 ? factsState([...selected.orders, ...selected.fills]) : "EMPTY",
-      "EXECUTION", "replay.v1", ["public.orders", "public.fills"]),
-    capability("market-candles", "UNAVAILABLE", "EXECUTION", null, [], "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED"),
+    // EDS-09 owner return confirms that neither a lifecycle Event stream nor
+    // a replayable journal exists.  A bounded current page may still be
+    // useful as an EDS-10b observed timeline, but it must never light this
+    // authoritative replay capability.
+    capability("replay-journal", "UNAVAILABLE", "EXECUTION", null, [],
+      "EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED"),
+    capability("observed-timeline", selected.orders.length + selected.fills.length + selected.sessions.length + selected.journal.length > 0
+      ? factsState([...selected.orders, ...selected.fills, ...selected.sessions, ...selected.journal]) : "EMPTY",
+    "DERIVED", "observed-timeline.v1", ["public.orders", "public.fills", "public.execution_sessions", "public.command_journal"]),
+    capability("derived-mark-context", selected.positions.length + selected.equity.length > 0
+      ? factsState([...selected.positions, ...selected.equity]) : "EMPTY",
+    "DERIVED", "derived-mark-context.v1", ["public.positions_v2", "public.account_equity_snapshots", "public.performance_snapshots"]),
+    capability("market-candles", "UNAVAILABLE", "EXECUTION", null, [], "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED"),
     capability("portfolio-drawdown-overlap",
       statistics && statistics.drawdownOverlap.alphas.length > 0 ? "AVAILABLE" : "UNAVAILABLE",
       "DERIVED", "drawdown_overlap.v1", ["public.account_equity_snapshots"],
@@ -267,7 +447,7 @@ function composeAnalytics(
     epoch_id: snapshot.projectionEpoch,
     catalogue_digest: projectionDigest(CATALOGUE),
     projection_state_digest: projectionDigestValue,
-    source_fact_digest: projectionDigest({ viewer_workspace_id: viewerWorkspaceId, subject_kind: kind, subject_id: subjectId, facts: sourceFacts }),
+    source_fact_digest: projectionDigest({ viewer_workspace_id: viewerWorkspaceId, subject_kind: kind, subject_id: subjectId, facts: sourceFactGroups }),
     source_fact_count: flat.length,
     repository_query_count: 1 + (depth?.queries ?? 0),
     source_read_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
@@ -291,7 +471,10 @@ function composeAnalytics(
       execution_quality: quality,
       chart_series: chartSeries,
       ...(depth && Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
-      replay,
+      // Kept only as an explicit compatibility-shaped gap while frontend
+      // consumers migrate to the named EDS-10b observed-timeline BFF.  It
+      // intentionally contains no fabricated journal, event or trade rows.
+      replay: unavailableReplay(),
       drawdown_overlap: statistics && statistics.drawdownOverlap.alphas.length > 0 ? {
         formula_version: "drawdown_overlap.v1",
         state: "AVAILABLE",
@@ -318,15 +501,20 @@ function composeAnalytics(
       // same atomic local projection read as the derived branches above; the
       // browser must not open a second AWS-HK read or reconstruct lineage.
       source_facts: Object.fromEntries(
-        Object.entries(sourceFacts).map(([key, rows]) => [key, rows.slice(0, 1_000)]),
+        Object.entries(sourceFactGroups).map(([key, rows]) => [key, rows.slice(0, 1_000)]),
       ),
     },
   };
 }
 
+function sourceFacts(snapshot: ProfileProjectionSnapshot) {
+  return Object.fromEntries(Object.entries(SOURCE).map(([name, key]) => [name, facts(snapshot, key)])) as
+    Record<keyof typeof SOURCE, Fact[]>;
+}
+
 function selectSubject(
   all: Record<keyof typeof SOURCE, Fact[]>,
-  kind: QueryAnalyticsSubjectKind,
+  kind: QueryAnalyticsSubjectKind | ObservedTimelineSubjectKind,
   id: string,
 ) {
   const strategyIds = new Set<string>();
@@ -343,16 +531,19 @@ function selectSubject(
   }
   if (kind === "deployment") deploymentIds.add(id);
   if (kind === "portfolio") portfolioIds.add(id);
+  if (kind === "account") accountIds.add(id);
   for (const deployment of all.deployments) {
     const deploymentId = text(deployment, "deployment_id");
     const strategyId = text(deployment, "strategy_id");
     const portfolioId = text(deployment, "portfolio_id");
-    const selected = deploymentIds.has(deploymentId ?? "") || strategyIds.has(strategyId ?? "") || portfolioIds.has(portfolioId ?? "");
+    const accountId = text(deployment, "account_id");
+    const selected = deploymentIds.has(deploymentId ?? "") || strategyIds.has(strategyId ?? "") ||
+      portfolioIds.has(portfolioId ?? "") || accountIds.has(accountId ?? "");
     if (!selected) continue;
     if (deploymentId) deploymentIds.add(deploymentId);
     if (strategyId) strategyIds.add(strategyId);
     if (portfolioId) portfolioIds.add(portfolioId);
-    const accountId = text(deployment, "account_id"); if (accountId) accountIds.add(accountId);
+    if (accountId) accountIds.add(accountId);
   }
   const matches = (row: Fact) =>
     deploymentIds.has(text(row, "deployment_id") ?? "") ||
@@ -574,45 +765,453 @@ function sumExactDecimals(values: readonly string[]): string {
   return `${negative && trimmed !== "0" ? "-" : ""}${trimmed}`;
 }
 
-function replayFacts(orders: readonly Fact[], fills: readonly Fact[], journal: readonly Fact[]) {
-  const journalByClient = new Map(journal.flatMap((row) => {
-    const client = text(row, "client_order_id"); return client ? [[client, text(row, "command_id")]] : [];
-  }));
-  const entries = [
-    ...orders.flatMap((row) => replayRow(row, "ORDER", text(row, "order_id"), null, journalByClient)),
-    ...fills.flatMap((row) => replayRow(row, "FILL", null, text(row, "fill_id"), journalByClient)),
-  ].sort((left, right) => left.timestamp.localeCompare(right.timestamp)).slice(-200);
+/**
+ * Compatibility shell for the old frontend field.  This must stay empty: the
+ * owner-return proves that current orders/fills are neither an immutable
+ * lifecycle journal nor a replay.  Rich consumers move to the separately
+ * named `executionObservedTimelineV1` operation below.
+ */
+function unavailableReplay() {
   return {
-    state: entries.length > 0 ? "AVAILABLE" : "EMPTY",
-    reason_code: null,
+    state: "UNAVAILABLE",
+    reason_code: "EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED",
     markers: [],
-    trade_log: entries,
+    trade_log: [],
     candles_state: "UNAVAILABLE",
-    candles_reason_code: "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED",
+    candles_reason_code: "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED",
   };
 }
 
-function replayRow(
+type SelectedFacts = ReturnType<typeof selectSubject>;
+
+type ObservedClock =
+  | "ORDER_SUBMITTED_AT"
+  | "ORDER_UPDATED_AT"
+  | "ORDER_CREATED_AT"
+  | "FILL_TRADE_TIME"
+  | "FILL_RECORDED_AT"
+  | "SESSION_STARTED_AT"
+  | "SESSION_COMPLETED_AT"
+  | "SESSION_UPDATED_AT"
+  | "COMMAND_JOURNAL_CREATED_AT"
+  | "COMMAND_JOURNAL_UPDATED_AT";
+
+interface ObservedTimelineEntry {
+  readonly observed_at_ms: number;
+  readonly source_clock: ObservedClock;
+  readonly observation_type:
+    | "ORDER_OBSERVED"
+    | "FILL_OBSERVED"
+    | "SESSION_OBSERVED"
+    | "COMMAND_JOURNAL_ROW_OBSERVED";
+  readonly source_record: {
+    readonly kind: "ORDER" | "FILL" | "SESSION" | "COMMAND_JOURNAL";
+    readonly id: string;
+  };
+  readonly resource: {
+    readonly deployment_id: string | null;
+    readonly strategy_id: string | null;
+    readonly account_id: string | null;
+    readonly portfolio_id: string | null;
+    readonly execution_session_id: string | null;
+    readonly instrument_id: string | null;
+  };
+  readonly values: {
+    readonly price: string | null;
+    readonly quantity: string | null;
+    readonly realized_pnl: string | null;
+  };
+  /** Field names only; malformed source numerics never cross the BFF wire. */
+  readonly rejected_exact_value_fields: readonly string[];
+}
+
+interface ObservedTimelineComposition {
+  readonly panel: PanelEnvelope<{
+    label: "OBSERVED_TIMELINE";
+    observation_authority: "PORTAL_OBSERVATION";
+    observation_semantics: "BOUNDED_CURRENT_PAGE";
+    source_history_semantics: typeof OBSERVED_TIMELINE_HISTORY_SEMANTICS;
+    ordering_rule: "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1";
+    source_current_page_row_count: number;
+    observed_entry_count: number;
+    entries: readonly ObservedTimelineEntry[];
+    unavailable_segments: readonly {
+      segment: "BROKER_ACKNOWLEDGEMENT" | "AUTHORITATIVE_CORRECTION_TOMBSTONE" | "GLOBAL_EVENT_SEQUENCE";
+      state: "UNAVAILABLE";
+      reason_code: string;
+    }[];
+  }>;
+  readonly nextOffset: number | null;
+}
+
+/**
+ * EDS-10b is a local presentation reducer.  It deliberately never joins an
+ * order to a fill or a command by client id: same-key rows can be useful to
+ * display beside one another, but the current source does not prove causal
+ * linkage, global sequence, acknowledgements or corrections.
+ */
+function composeObservedTimeline(
+  snapshot: ProfileProjectionSnapshot,
+  subjectKind: ObservedTimelineSubjectKind,
+  subjectId: string,
+  selected: SelectedFacts,
+  limit: number,
+  offset: number,
+): ObservedTimelineComposition {
+  const relationRows = [selected.orders, selected.fills, selected.sessions, selected.journal];
+  const allEntries = [
+    ...selected.orders.flatMap((row) => observedOrderEntries(row)),
+    ...selected.fills.flatMap((row) => observedFillEntries(row)),
+    ...selected.sessions.flatMap((row) => observedSessionEntries(row)),
+    ...selected.journal.flatMap((row) => observedJournalEntries(row)),
+  ].sort(compareObservedEntries);
+  if (offset > allEntries.length) {
+    throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_CURSOR_AHEAD", 409);
+  }
+  const entries = allEntries.slice(offset, offset + limit);
+  const hasMore = offset + entries.length < allEntries.length;
+  const relevantRelations = [SOURCE.orders, SOURCE.fills, SOURCE.sessions, SOURCE.journal]
+    .map((key) => snapshot.document.relations[key])
+    .filter((relation): relation is NonNullable<typeof relation> => relation !== undefined);
+  const unavailableRelationCount = relevantRelations.filter((relation) => relation.availability === "UNAVAILABLE").length;
+  const stale = relevantRelations.some((relation) => relation.freshness === "STALE");
+  const partial = snapshot.completeness !== "COMPLETE" || unavailableRelationCount > 0 ||
+    relevantRelations.some((relation) => relation.completeness !== "COMPLETE");
+  const allUnavailable = relevantRelations.length === 0 || unavailableRelationCount === relevantRelations.length;
+  const panelState = allUnavailable ? "UNAVAILABLE" as const
+    : entries.length === 0 ? "EMPTY" as const
+      : stale ? "STALE" as const
+        : partial ? "PARTIAL" as const : "READY" as const;
+  const fromMs = entries.length > 0 ? utcEpochMs(entries[0].observed_at_ms) : null;
+  const toMs = entries.length > 0 ? utcEpochMs(entries.at(-1)!.observed_at_ms) : null;
+  const sourceAsOfMs = epochMs(snapshot.sourceAsOf);
+  const readAtMs = utcEpochMs(Date.now());
+  const reasonCode = panelState === "UNAVAILABLE" ? "EDS10_OBSERVED_TIMELINE_RELATIONS_UNAVAILABLE"
+    : panelState === "PARTIAL" ? "EDS10_OBSERVED_TIMELINE_CURRENT_PAGE_PARTIAL"
+      : panelState === "STALE" ? "EDS10_OBSERVED_TIMELINE_CURRENT_PAGE_STALE" : null;
+  return {
+    panel: panelEnvelope({
+      state: panelState,
+      data: panelState === "READY" || panelState === "PARTIAL" || panelState === "STALE" ? {
+        label: "OBSERVED_TIMELINE",
+        observation_authority: "PORTAL_OBSERVATION",
+        observation_semantics: "BOUNDED_CURRENT_PAGE",
+        source_history_semantics: OBSERVED_TIMELINE_HISTORY_SEMANTICS,
+        ordering_rule: "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1",
+        source_current_page_row_count: relationRows.reduce((total, rows) => total + rows.length, 0),
+        observed_entry_count: allEntries.length,
+        entries,
+        unavailable_segments: [
+          {
+            segment: "BROKER_ACKNOWLEDGEMENT",
+            state: "UNAVAILABLE",
+            reason_code: "EDS10_BROKER_ACK_CLOCK_SOURCE_GAP_CONFIRMED",
+          },
+          {
+            segment: "AUTHORITATIVE_CORRECTION_TOMBSTONE",
+            state: "UNAVAILABLE",
+            reason_code: "EDS10_CORRECTION_TOMBSTONE_SOURCE_GAP_CONFIRMED",
+          },
+          {
+            segment: "GLOBAL_EVENT_SEQUENCE",
+            state: "UNAVAILABLE",
+            reason_code: "EDS10_GLOBAL_EVENT_SEQUENCE_SOURCE_GAP_CONFIRMED",
+          },
+        ],
+      } : null,
+      clocks: {
+        event_time_ms: null,
+        source_published_at_ms: sourceAsOfMs,
+        received_at_ms: epochMs(snapshot.receivedAt),
+        ingested_at_ms: epochMs(snapshot.receivedAt),
+        processed_at_ms: epochMs(snapshot.lastSuccessfulRefreshAt),
+        as_of_ms: sourceAsOfMs,
+        read_at_ms: readAtMs,
+      },
+      coverage: {
+        from_ms: fromMs,
+        to_ms: toMs,
+        // This is a count of rows in the selected current projection page,
+        // never a source-wide total or retained historical population.
+        source_total: String(relationRows.reduce((total, rows) => total + rows.length, 0)),
+        filtered_total: String(allEntries.length),
+        returned_count: entries.length,
+        truncated: hasMore,
+        downsampled: false,
+        has_more: hasMore,
+        next_cursor: null,
+        gaps: [],
+      },
+      source_history_semantics: OBSERVED_TIMELINE_HISTORY_SEMANTICS,
+      formula: {
+        formula_id: "observed-timeline.v1",
+        formula_version: "1",
+        input_revision: snapshot.document.source_contract_revision,
+        input_digest: snapshot.payloadDigest,
+        composite_read_revision: `${snapshot.projectionEpoch}:${snapshot.projectionSequence}`,
+      },
+      reason_code: reasonCode,
+      retryable: panelState === "UNAVAILABLE" || panelState === "STALE",
+    }),
+    nextOffset: hasMore ? offset + entries.length : null,
+  };
+}
+
+function composeMarkContext(
+  snapshot: ProfileProjectionSnapshot,
+  subjectKind: ObservedTimelineSubjectKind,
+  subjectId: string,
+  selected: SelectedFacts,
+): PanelEnvelope<{
+  label: "DERIVED · mark-context";
+  authority: "DERIVED";
+  source_history_semantics: "CURRENT_MARKS_AND_RETAINED_EQUITY_NOT_OHLCV";
+  marks: readonly {
+    position_id: string;
+    instrument_id: string | null;
+    account_id: string | null;
+    observed_at_ms: number;
+    mark_price: string;
+    currency: string | null;
+  }[];
+  equity_context: {
+    state: "AVAILABLE" | "EMPTY";
+    relation_count: number;
+    label: "CURRENT_OR_RETAINED_EQUITY_CONTEXT";
+  };
+  unavailable_market_context: {
+    state: "UNAVAILABLE";
+    reason_code: "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED";
+  };
+}> {
+  const marks = selected.positions.flatMap((row) => {
+    const positionId = opaqueRowId(row, "position_id");
+    const markPrice = strictDecimal(row.mark_price);
+    const observedAtMs = fieldEpochMs(row, "mark_price_at");
+    if (!positionId || markPrice === null || observedAtMs === null) return [];
+    return [{
+      position_id: positionId,
+      instrument_id: safeText(row.instrument_id),
+      account_id: safeText(row.account_id),
+      observed_at_ms: observedAtMs,
+      mark_price: markPrice,
+      currency: safeText(row.currency),
+    }];
+  }).sort((left, right) => left.observed_at_ms - right.observed_at_ms || left.position_id.localeCompare(right.position_id))
+    .slice(-OBSERVED_TIMELINE_MAXIMUM_ROWS);
+  const equityCount = selected.equity.filter((row) =>
+    fieldEpochMs(row, "ts") !== null && strictDecimal(row.equity) !== null).length;
+  const positionsRelation = snapshot.document.relations[SOURCE.positions];
+  const equityRelations = [SOURCE.performance, SOURCE.accountEquity, SOURCE.portfolioEquity]
+    .map((key) => snapshot.document.relations[key]).filter((relation) => relation !== undefined);
+  const unavailable = (positionsRelation === undefined || positionsRelation.availability === "UNAVAILABLE") &&
+    (equityRelations.length === 0 || equityRelations.every((relation) => relation.availability === "UNAVAILABLE"));
+  const partial = snapshot.completeness !== "COMPLETE" || positionsRelation?.availability === "UNAVAILABLE" ||
+    equityRelations.some((relation) => relation.availability === "UNAVAILABLE" || relation.completeness !== "COMPLETE");
+  const stale = positionsRelation?.freshness === "STALE" || equityRelations.some((relation) => relation.freshness === "STALE");
+  const state = unavailable ? "UNAVAILABLE" as const
+    : marks.length === 0 && equityCount === 0 ? "EMPTY" as const
+      : stale ? "STALE" as const
+        : partial ? "PARTIAL" as const : "READY" as const;
+  const asOfMs = epochMs(snapshot.sourceAsOf);
+  return panelEnvelope({
+    state,
+    data: state === "READY" || state === "PARTIAL" || state === "STALE" ? {
+      label: "DERIVED · mark-context",
+      authority: "DERIVED",
+      source_history_semantics: "CURRENT_MARKS_AND_RETAINED_EQUITY_NOT_OHLCV",
+      marks,
+      equity_context: {
+        state: equityCount > 0 ? "AVAILABLE" : "EMPTY",
+        relation_count: equityCount,
+        label: "CURRENT_OR_RETAINED_EQUITY_CONTEXT",
+      },
+      unavailable_market_context: {
+        state: "UNAVAILABLE",
+        reason_code: "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED",
+      },
+    } : null,
+    clocks: {
+      event_time_ms: null,
+      source_published_at_ms: asOfMs,
+      received_at_ms: epochMs(snapshot.receivedAt),
+      ingested_at_ms: epochMs(snapshot.receivedAt),
+      processed_at_ms: epochMs(snapshot.lastSuccessfulRefreshAt),
+      as_of_ms: asOfMs,
+      read_at_ms: utcEpochMs(Date.now()),
+    },
+    coverage: {
+      from_ms: marks.length > 0 ? utcEpochMs(marks[0].observed_at_ms) : null,
+      to_ms: marks.length > 0 ? utcEpochMs(marks.at(-1)!.observed_at_ms) : null,
+      source_total: String(selected.positions.length + selected.equity.length),
+      filtered_total: String(marks.length + equityCount),
+      returned_count: marks.length,
+      // The marks are themselves a bounded current page.  Do not claim a
+      // browser continuation or a historical total that the source did not
+      // publish for this product operation.
+      truncated: false,
+      downsampled: false,
+      has_more: false,
+      next_cursor: null,
+      gaps: [],
+    },
+    source_history_semantics: "CURRENT_MARKS_AND_RETAINED_EQUITY_NOT_OHLCV",
+    formula: {
+      formula_id: "derived-mark-context.v1",
+      formula_version: "1",
+      input_revision: snapshot.document.source_contract_revision,
+      input_digest: snapshot.payloadDigest,
+      composite_read_revision: `${snapshot.projectionEpoch}:${snapshot.projectionSequence}`,
+    },
+    reason_code: state === "UNAVAILABLE" ? "EDS10_MARK_CONTEXT_RELATIONS_UNAVAILABLE"
+      : state === "PARTIAL" ? "EDS10_MARK_CONTEXT_CURRENT_PAGE_PARTIAL"
+        : state === "STALE" ? "EDS10_MARK_CONTEXT_CURRENT_PAGE_STALE" : null,
+    retryable: state === "UNAVAILABLE" || state === "STALE",
+  });
+}
+
+function observedOrderEntries(row: Fact): ObservedTimelineEntry[] {
+  return observedEntries(row, "ORDER", "ORDER_OBSERVED", "order_id", [
+    ["submitted_at", "ORDER_SUBMITTED_AT"],
+    ["updated_at", "ORDER_UPDATED_AT"],
+    ["created_at", "ORDER_CREATED_AT"],
+  ]);
+}
+
+function observedFillEntries(row: Fact): ObservedTimelineEntry[] {
+  return observedEntries(row, "FILL", "FILL_OBSERVED", "fill_id", [
+    ["trade_time", "FILL_TRADE_TIME"],
+    ["created_at", "FILL_RECORDED_AT"],
+  ]);
+}
+
+function observedSessionEntries(row: Fact): ObservedTimelineEntry[] {
+  return observedEntries(row, "SESSION", "SESSION_OBSERVED", "execution_session_id", [
+    ["started_at", "SESSION_STARTED_AT"],
+    ["completed_at", "SESSION_COMPLETED_AT"],
+    ["updated_at", "SESSION_UPDATED_AT"],
+  ]);
+}
+
+function observedJournalEntries(row: Fact): ObservedTimelineEntry[] {
+  return observedEntries(row, "COMMAND_JOURNAL", "COMMAND_JOURNAL_ROW_OBSERVED", "command_id", [
+    ["created_at", "COMMAND_JOURNAL_CREATED_AT"],
+    ["updated_at", "COMMAND_JOURNAL_UPDATED_AT"],
+  ]);
+}
+
+function observedEntries(
   row: Fact,
-  eventType: string,
-  orderId: string | null,
-  fillId: string | null,
-  journalByClient: Map<string, string | null>,
-) {
-  const timestamp = timestampOf(row);
-  if (!timestamp) return [];
-  const client = text(row, "client_order_id");
-  const journalId = (client ? journalByClient.get(client) : undefined) ?? orderId ?? fillId;
-  if (!journalId || !/^[A-Za-z0-9._-]{1,128}$/.test(journalId)) return [];
-  return [{
-    timestamp,
-    journal_id: journalId,
-    event_type: eventType,
-    order_id: orderId,
-    fill_id: fillId,
-    price: decimal(row.price),
-    quantity: decimal(row.quantity),
-  }];
+  kind: ObservedTimelineEntry["source_record"]["kind"],
+  observationType: ObservedTimelineEntry["observation_type"],
+  identifierField: string,
+  clocks: readonly (readonly [string, ObservedClock])[],
+): ObservedTimelineEntry[] {
+  const id = opaqueRowId(row, identifierField);
+  if (!id) return [];
+  const rejectedExactValueFields = ["price", "quantity", "realized_pnl"].filter((field) =>
+    row[field] !== undefined && row[field] !== null && strictDecimal(row[field]) === null);
+  const values = {
+    price: strictDecimal(row.price),
+    quantity: strictDecimal(row.quantity),
+    realized_pnl: strictDecimal(row.realized_pnl),
+  };
+  return clocks.flatMap(([field, sourceClock]) => {
+    const observedAtMs = fieldEpochMs(row, field);
+    if (observedAtMs === null) return [];
+    return [{
+      observed_at_ms: observedAtMs,
+      source_clock: sourceClock,
+      observation_type: observationType,
+      source_record: { kind, id },
+      resource: {
+        deployment_id: safeText(row.deployment_id),
+        strategy_id: safeText(row.strategy_id),
+        account_id: safeText(row.account_id),
+        portfolio_id: safeText(row.portfolio_id),
+        execution_session_id: safeText(row.execution_session_id),
+        instrument_id: safeText(row.instrument_id),
+      },
+      values,
+      rejected_exact_value_fields: rejectedExactValueFields,
+    } satisfies ObservedTimelineEntry];
+  });
+}
+
+function compareObservedEntries(left: ObservedTimelineEntry, right: ObservedTimelineEntry): number {
+  return left.observed_at_ms - right.observed_at_ms ||
+    observedClockRank(left.source_clock) - observedClockRank(right.source_clock) ||
+    left.source_record.kind.localeCompare(right.source_record.kind) ||
+    left.source_record.id.localeCompare(right.source_record.id);
+}
+
+function observedClockRank(clock: ObservedClock): number {
+  return [
+    "ORDER_CREATED_AT", "ORDER_SUBMITTED_AT", "ORDER_UPDATED_AT",
+    "FILL_RECORDED_AT", "FILL_TRADE_TIME",
+    "SESSION_STARTED_AT", "SESSION_UPDATED_AT", "SESSION_COMPLETED_AT",
+    "COMMAND_JOURNAL_CREATED_AT", "COMMAND_JOURNAL_UPDATED_AT",
+  ].indexOf(clock);
+}
+
+function observedTimelineResourceId(request: ObservedTimelineRequest): string {
+  return `execution:observed-timeline:${request.environment}:${request.subjectKind}:${request.subjectId}`;
+}
+
+function observedTimelineFingerprint(resourceId: string, limit: number): string {
+  return queryFingerprint({
+    resourceId,
+    limit,
+    filters: [],
+    sort: [{ field: "observed_at_ms", direction: "asc" }],
+  });
+}
+
+function observedSubjectKind(kind: ObservedTimelineSubjectKind): "DEPLOYMENT" | "ALPHA" | "PORTFOLIO" | "ACCOUNT" {
+  switch (kind) {
+    case "deployment": return "DEPLOYMENT";
+    case "alpha": return "ALPHA";
+    case "portfolio": return "PORTFOLIO";
+    case "account": return "ACCOUNT";
+  }
+}
+
+function profileFeatureEnabled(config: ControlApiConfig, environment: ProjectionEnvironment): boolean {
+  return environment === "paper" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER === "true"
+    : environment === "sandbox" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX === "true"
+      : config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE === "true";
+}
+
+function fieldEpochMs(row: Fact, field: string): number | null {
+  const value = row[field];
+  if (typeof value !== "string") return null;
+  const milliseconds = Date.parse(value);
+  return Number.isSafeInteger(milliseconds) ? milliseconds : null;
+}
+
+function epochMs(value: Date | null): ReturnType<typeof utcEpochMs> | null {
+  return value !== null && Number.isSafeInteger(value.valueOf()) ? utcEpochMs(value.valueOf()) : null;
+}
+
+function opaqueRowId(row: Fact, field: string): string | null {
+  const value = row[field];
+  return typeof value === "string" && /^[A-Za-z0-9._:-]{1,191}$/.test(value) ? value : null;
+}
+
+function safeText(value: ProjectionScalar | undefined): string | null {
+  return typeof value === "string" && value.length > 0 && value.length <= 191 && !/[\u0000-\u001f]/.test(value)
+    ? value : null;
+}
+
+/** Exact values are source strings; JS numbers are intentionally rejected. */
+function strictDecimal(value: ProjectionScalar | undefined): string | null {
+  return typeof value === "string" && /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value) ? value : null;
+}
+
+function assertObservedTimelineBytes(value: unknown): void {
+  if (Buffer.byteLength(JSON.stringify(value), "utf8") > OBSERVED_TIMELINE_MAXIMUM_BYTES) {
+    throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_RESPONSE_TOO_LARGE", 413);
+  }
 }
 
 function currencyPartitions(

@@ -31,6 +31,15 @@ Chúng không thay thế phase hoặc exit gate trong
   declared source revision/profile freshness, and quarantines a durable-range
   conflict before any snapshot or local revision can advance. It is not an
   authoritative Event, replay or source transport.
+- [EDS-10b — Observed timeline and derived mark context](./EDS_10B_OBSERVED_TIMELINE_AND_MARK_CONTEXT.md)
+  — **implemented / contract verified / runtime inactive:** a fixed,
+  same-origin `executionObservedTimelineV1` BFF serves bounded current
+  orders/fills/sessions/journal observations with exact decimals, UTC
+  milliseconds and a Portal-signed continuation. It preserves
+  `PORTAL_OBSERVATION` and `DERIVED · mark-context` provenance, while true
+  Event replay, ACK/correction/global sequence and OHLCV remain independently
+  typed `SOURCE_GAP_CONFIRMED`; no source route, direct DB/cache/broker/CLI,
+  credential, container, profile or command authority changes.
 - [EDS-09 Trading System event-source implementation addendum](./EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md)
   — **the only incremental owner handoff for MC-01 / durable event replay.**
   It consolidates the three event classes, source-as-is implementation choice,
@@ -1739,7 +1748,8 @@ durable run/attempt events. Detailed evidence:
   image, service, profile or command authority was added.
 - Portal work continues on maximum current-data screens and the explicitly
   labelled observation lane: **EDS-09b local observation revisions is
-  implemented source-dark**, and EDS-10b observed/derived panels then EDS-11
-  same-origin local SSE are the current product sequence. Authoritative EDS-09
+  implemented source-dark**, **EDS-10b observed/derived panels is now
+  contract-verified**, and EDS-11 same-origin local SSE is the next current
+  product slice. Authoritative EDS-09
   Event ingestion remains source-dark until a later owner return contains a
   verified accepted class.

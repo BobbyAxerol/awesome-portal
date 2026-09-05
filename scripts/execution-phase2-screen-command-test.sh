@@ -69,8 +69,13 @@ assert 'source_request_sent: false' in operations
 assert 'transport: "SGP_LOCAL_PROJECTION"' in operations
 assert "matchesFilters(row.fields, filters)" in adapter
 assert "selected.slice(0, limit)" in adapter
-assert "facts: sourceFacts" in analytics
-assert "Object.values(sourceFacts).flat()" in analytics
+# The analytics implementation may name its local fact groups independently
+# from the sourceFacts(snapshot) extractor.  Keep this guard focused on the
+# privacy/correctness invariant: facts are assembled from the selected source
+# groups and the digest is calculated from those exact groups.
+assert "source_fact_digest:" in analytics
+assert "facts: sourceFactGroups" in analytics
+assert "Object.values(sourceFactGroups).flat()" in analytics
 
 for proxy in (
     root / "apps/control-api/src/execution/current-source.proxy.ts",

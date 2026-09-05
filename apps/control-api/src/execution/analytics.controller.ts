@@ -13,7 +13,10 @@ import {
   ExecutionAnalyticsProxy,
   type QueryAnalyticsSubjectKind,
 } from "./analytics.proxy";
-import { LocalQueryAnalyticsService } from "./local-query-analytics.service";
+import {
+  LocalQueryAnalyticsService,
+  type ObservedTimelineRequest,
+} from "./local-query-analytics.service";
 
 interface AnalyticsRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -102,6 +105,26 @@ export class ExecutionAnalyticsController {
     return this.queryAnalytics(request, "live-gate", id);
   }
 
+  /**
+   * EDS-10b's named panel BFF.  It deliberately accepts a small fixed
+   * resource vocabulary instead of a Manager relation/schema/path selector.
+   * Its optional continuation is Portal-signed and projection-bound; a browser
+   * can never receive or submit a source cursor.
+   */
+  @Get("/views/observed-timeline")
+  observedTimeline(@Req() request: AnalyticsRequest, @Query() rawQuery: unknown) {
+    const parsed = ObservedTimelineQuerySchema.safeParse(rawQuery);
+    if (!parsed.success) throw new AnalyticsProxyError("EDS10_OBSERVED_TIMELINE_QUERY_INVALID", 400);
+    const query: ObservedTimelineRequest = {
+      environment: parsed.data.environment,
+      subjectKind: parsed.data.subject_kind,
+      subjectId: parsed.data.subject_id,
+      ...(parsed.data.limit === undefined ? {} : { limit: parsed.data.limit }),
+      ...(parsed.data.after === undefined ? {} : { after: parsed.data.after }),
+    };
+    return this.invoke(() => this.localAnalytics.observedTimeline(principal(request), query));
+  }
+
   @Get("/deployments/paper/:deploymentId/projection/:panel")
   paperWorkbenchPanel(
     @Req() request: AnalyticsRequest,
@@ -154,6 +177,13 @@ const CapitalPreviewRequestSchema = z.object({
 }).strict();
 
 const ShadowPanelSchema = z.enum(["orders", "positions"]);
+const ObservedTimelineQuerySchema = z.object({
+  environment: z.enum(["paper", "sandbox", "live"]),
+  subject_kind: z.enum(["deployment", "alpha", "portfolio", "account"]),
+  subject_id: z.string().regex(/^[A-Za-z0-9._:-]{1,192}$/),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  after: z.string().min(1).max(4096).optional(),
+}).strict();
 const ShadowPanelQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(250).default(100),
   status: z.string().trim().min(1).max(512).optional(),
