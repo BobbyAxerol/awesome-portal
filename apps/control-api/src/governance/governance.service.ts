@@ -329,10 +329,11 @@ export class GovernanceService {
       if (typed.governanceCode) {
         throw new GovernanceError(typed.governanceCode, "Approval request could not be created.", typed.status ?? 422);
       }
-      if (
-        (typed.code === "23505" && typed.constraint === "governance_approval_request_key_idx") ||
-        typed.code === "40001"
-      ) {
+      // A concurrent duplicate can violate either unique index first.  Always
+      // settle request-key idempotency before classifying the distinct
+      // alpha/run conflict, otherwise two byte-identical retries can
+      // nondeterministically receive 409 instead of the canonical replay.
+      if (typed.code === "23505" || typed.code === "40001") {
         const raced = await this.repository.findCreatedApproval(input.workspaceId, user.userId, input.requestKey);
         if (raced?.payloadHash === payloadHash) {
           return {
