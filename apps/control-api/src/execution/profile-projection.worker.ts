@@ -484,6 +484,11 @@ function safeSourceReasonCode(error: unknown): string | null {
 function isSourceContractUnavailable(error: unknown): boolean {
   const code = safeFailureCode(error);
   const reason = safeSourceReasonCode(error);
+  // DR-16: a relation the proxy/edge does not accept for this screen yet is a
+  // per-relation typed gap, never a whole-profile failure — a newly added
+  // catalog binding must not stale-out every other relation of the profile.
   return code === "N17B_SOURCE_RELATION_UNAVAILABLE" ||
+    code === "N22_PROFILE_READ_NOT_ACCEPTED" ||
+    code === "N23_PROFILE_READ_NOT_ACCEPTED" ||
     (code === "N17B_SOURCE_REJECTED" && reason === "MANAGER_V2_SOURCE_CONTRACT_REJECTED");
 }

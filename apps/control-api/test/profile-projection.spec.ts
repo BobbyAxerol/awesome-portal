@@ -573,6 +573,31 @@ describe("P4-D follow-on: resumable time-series drains", () => {
     await worker.onApplicationShutdown();
   });
 
+  it("isolates a relation the proxy does not accept instead of failing the whole profile (DR-16)", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        if (relation === "risk_grants") {
+          const error = new Error("not accepted") as Error & { code: string };
+          error.code = "N23_PROFILE_READ_NOT_ACCEPTED";
+          throw error;
+        }
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(snapshot).not.toBeNull();
+    const rejected = Object.entries(snapshot!.document.relations)
+      .filter(([, relation]) => relation.availability === "UNAVAILABLE");
+    expect(rejected.map(([key]) => key)).toEqual(
+      expect.arrayContaining([expect.stringContaining("risk_grants")]));
+    await worker.onApplicationShutdown();
+  });
+
   it("drops a persisted cursor the source refuses instead of failing forever", async () => {
     await repository.saveRelationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots", "rotted_cursor");
     const source = {
