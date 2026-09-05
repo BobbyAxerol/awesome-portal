@@ -46,9 +46,9 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | Yếu tố động | Dữ liệu cần | Nguồn | EDS | Hôm nay | Thiếu để active |
 |---|---|---|---|---|---|
 | KPI strip (fleet/sessions/incidents) | counts theo profile | sessions+deployments+findings | 03/05 | ● (5.7KB, compact) | — |
-| Funnel bars grow-in | order_funnel counts | orders hot page → EDS-11 revision | 05 | ● | — |
+| Funnel bars grow-in | order_funnel counts | orders hot page → EDS-11 revision | 05 ⏸CHƯA MỞ | ● | — |
 | Tick-flash ô số (data-tick) | delta thật khi có fill/order mới | SSE revision delta | 11 | ○ im — ĐÚNG vì halt | ⚖ un-halt |
-| Freshness dot thở (FRESH) | freshness từ envelope | serving completeness | 02 | ✗ PARTIAL toàn cục ghìm | DR-04 |
+| Freshness dot thở (FRESH) | freshness từ envelope | serving completeness | 02 ⏸CHƯA MỞ | ✗ PARTIAL toàn cục ghìm | DR-04 |
 | SLA pulse (overdue) | approvals + sla clock | Portal workflow | 05 | ○ chưa có approval thật | dữ liệu governance |
 | Needs-you rows | findings/dead-letter/waivers | reconciliation + Portal | 05 | ○ nguồn 0 rows — đúng | Ask D |
 
@@ -56,7 +56,7 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | Yếu tố | Dữ liệu | Nguồn | EDS | Hôm nay | Thiếu |
 |---|---|---|---|---|---|
 | Equity by stage chart (hero) | series (t,v) 30d DERIVED-sum + band | mirror → chart DTO | **07** | ✗ đang 200 rows thô (cap BFF) — chart vỡ | **DR-09: không đợi 07, vá ngay theo §14-FixA** |
-| Stage ladder / deployment tiles | deployments 43 + state | strategy_deployments | 03 | ● | — |
+| Stage ladder / deployment tiles | deployments 43 + state | strategy_deployments | 03 ⏸CHƯA MỞ | ● | — |
 | Contribution by venue | latest performance per venue | performance snapshots | 03 | ◐ số có, dừng 17/08 | un-halt |
 | Sessions table | execution_sessions trang nóng | sessions | 03 | ● 100 rows | — |
 | Freshness/completeness chrome | serving completeness | envelope v2 | 02 | ✗ PARTIAL vĩnh viễn | DR-04 |
@@ -64,8 +64,8 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 ### 2.3 Paper Workbench (+ VNM variant)
 | Yếu tố | Dữ liệu | Nguồn | EDS | Hôm nay | Thiếu |
 |---|---|---|---|---|---|
-| Equity/performance charts per-deployment | full 30d series downsample khai báo | mirror | 07 | ● 1.540+1.699 điểm ĐÚNG dải | payload 5.9MB → DTO (t,v) DR-05 |
-| Orders/Fills tabs | trang theo deployment | orders/fills mirror-index | 06 | ✗ 0 rows (trang nóng 400 không chứa dep) | EDS-06 resource index |
+| Equity/performance charts per-deployment | full 30d series downsample khai báo | mirror | 07 ⏸CHƯA MỞ | ● 1.540+1.699 điểm ĐÚNG dải | payload 5.9MB → DTO (t,v) DR-05 |
+| Orders/Fills tabs | trang theo deployment | orders/fills mirror-index | 06 ⏸CHƯA MỞ | ✗ 0 rows (trang nóng 400 không chứa dep) | EDS-06 resource index |
 | Position/risk tiles | positions + risk grants | positions_v2, risk_grants | 03/04 | ◐ 2 positions | — |
 | VNM session shading | venue calendar | MC-06/Ask B | — | ○ typed | nguồn |
 | Observation gate panel | Portal workflow | Portal | 05 | ● | — |
@@ -80,7 +80,7 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 ### 2.5 Alpha Fleet List
 | Yếu tố | Dữ liệu | Nguồn | EDS | Hôm nay | Thiếu |
 |---|---|---|---|---|---|
-| Bảng fleet 43 dòng + state chips | strategies+deployments join server | EDS-04 op | 04 | ● từ snapshot | chuyển named op |
+| Bảng fleet 43 dòng + state chips | strategies+deployments join server | EDS-04 op | 04 ⏸CHƯA MỞ | ● từ snapshot | chuyển named op |
 | Sparkline 7d mỗi dòng | mini series per alpha | mirror daily/hourly | 07 | ✗ chưa serve | chart DTO nhỏ (đã demo artifact) |
 | Lineage/reject counters | lineage_rejects envelope | worker | 03 | ● | — |
 
@@ -156,15 +156,15 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 
 | Phase | FE phải NHẬN được (điều kiện G5 từ phía FE) | Trạng thái | [CODEX] |
 |---|---|---|---|
-| 01 | 1 named op + fixture + bảng field-map cũ→mới cho vertical đầu | ⏳ | |
+| 01 | 1 named op + fixture + bảng field-map cũ→mới cho vertical đầu | **CHƯA MỞ** (04-09: không ladder entry, không `MaximumDataOperationRegistry` trong code) | |
 | 02 | generated TS types vào packages/contracts; **bảng map enum panel-state ↔ U02** (READY/ERROR ↔ ready/terminal…); envelope tách serving/population completeness (DR-04) | ⏳ | |
 | 03 | mỗi màn stage: field-map + fixtures + lý do typed cho từng ô §2; **Paper Overview hết cap 200** (DR-09) | ⏳ | |
 | 04 | resource ops + entity-name registry + khóa chuẩn theo §1 | ⏳ | |
 | 05 | 5 derivation + governance/ops named ops, formula/version hiển thị được | ⏳ | |
 | 06 | tuyên bố absorb/replace với mirror hiện hành (DR-01); index resource cho workbench/blotter; parity old/new để FE diff | ⏳ | |
 | 07 | chart DTO đúng **một từ vựng downsample** (DR-05) đủ nuôi PrimusFinancialChart + sparkline fleet + contribution time-dim; chartTheme.ts chung uPlot+ECharts (quyết định owner 04-09) | ⏳ | |
-| 08 | owner packet HỢP NHẤT với BR-EX-79 A–E (DR-07) | ⏳ | |
-| 09 | không yêu cầu FE; FE chỉ cần event fixtures từ contract đã freeze | codex đang làm | |
+| 08 ⏸CHƯA MỞ | owner packet HỢP NHẤT với BR-EX-79 A–E (DR-07) | ⏳ | |
+| 09 | không yêu cầu FE; FE chỉ cần event fixtures từ contract đã freeze | **WIP chưa commit** (+264/−21, 5 file edge, đo 04-09) — và bị khoá bởi EDS-08 `EVENT_SOURCE_ACCEPTED` chưa có → chưa thể yield gì cho màn hình | |
 | 10 | candle DTO + quyết định renderer candle (lightweight-charts, chờ ⚖ attribution) | ⏳ | |
 | 11 | SSE resume + **revision-tick attribute per panel cho motion** (DR-06); action graph semantic | ⏳ | |
 | 12 | budget số cụ thể per route (≤300KB, p95…) trong gate; gói review owner | ⏳ | |
@@ -177,7 +177,7 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 |---|---|---|---|---|---|
 | DR-01 | EDS-06 xây mirror mới trong khi `execution_timeseries_history` + downsampled read + history endpoint + N25 stats ĐANG chạy prod-dev — chưa có tuyên bố absorb/replace → nguy cơ 2 kho lệch | CAO | 06 | OPEN | |
 | DR-02 | ~~Baseline lệch~~ **ĐÃ TỰ KIỂM VÀ RÚT LẠI 04-09**: `dcf580c ⊂ 6f6503e` — codex đã fast-forward đúng, baseline CHỨA trọn công việc 03-09 (E1..E7 là chuỗi commit mới phía trên). DR đóng, ghi lại để minh bạch | — | — | **CLOSED-RETRACTED** | |
-| DR-03 | 5 file WIP edge nằm working tree chung >1 ngày — vi phạm single-writer, chặn build sạch | TB | codex commit/tách nhánh | OPEN | |
+| DR-03 | 5 file WIP edge nằm working tree chung >1 ngày — vi phạm single-writer, chặn build sạch. **Cập nhật 04-09: WIP đã phình +264/−21 và là chính nội dung EDS-09 (xem DR-11) — càng cần commit lên nhánh phụ ngay** | TB | codex commit/tách nhánh | OPEN | |
 | DR-04 | Completeness trộn serving/population → PARTIAL vĩnh viễn, ghìm polish + motion mọi màn (đo 03-09) | CAO | 02 | OPEN | |
 | DR-05 | Hai từ vựng downsample (đã ship vs §11.7) — FE chỉ được học một | TB | 07 | OPEN | |
 | DR-06 | EDS-11 thiếu cơ chế motion khi kept-mounted (revision-tick per panel) — không có thì showcase-motion không bao giờ nổ lại | TB | 11 | OPEN | |
@@ -185,6 +185,8 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | DR-08 | §17.2 chưa ghi fact: cursor TTL read-plane paper = 48h (đã deploy) | THẤP | 17.2 | OPEN | |
 | DR-09 | Paper Overview cap 200 rows làm chart hero vỡ NGAY HÔM NAY — không được đợi tới EDS-06/07; vá theo §14-FixA (DERIVED-sum series từ mirror) rồi EDS thay sau | CAO | ngay | OPEN — Claude nhận làm | |
 | DR-10 | Payload budget chưa là con số per-phase (5.9MB workbench, 2.4MB alpha đo thật) | TB | 07/12 | OPEN | |
+| DR-11 | **Đảo thứ tự adapt-first (đo 04-09)**: codex đang code EDS-09 (5 file WIP edge +264/−21) trong khi EDS-01→08 chưa mở phase nào theo ladder; EDS-09 lại bị chặn bởi EDS-08 `EVENT_SOURCE_ACCEPTED` (external, chưa có — domain_events bị chính plan từ chối) → công sức này KHÔNG tạo ra dữ liệu nhìn thấy nào trên màn cho tới khi nguồn giao event contract, ngược mục tiêu owner "mọi màn có số" và ngược chính doctrine §17.5 "EDS-03..07 must not wait". Đề nghị: (a) đổi thứ tự sang 01→03 vertical đầu tiên, hoặc (b) nếu giữ EDS-09 thì tuyên bố rõ đây là contract-prep offline và mở song song EDS-01 | **CAO** | thứ tự chiến dịch | OPEN | |
+| DR-12 | **Status ladder không được ghi**: chỉ EDS-00 có dòng Status; 01→12 không có `PLANNED/CONTRACT_LOCKED/...` trong §17 → không ai track được tiến độ bằng văn bản, vi phạm luật "mỗi phase commit implementation+tests+journal cùng lúc" của chính plan | TB | §17 bookkeeping | OPEN | |
 
 Luật sổ: codex trả lời từng DR trong cột của mình (ACCEPT+phase / REJECT+lý do);
 DR nào ACCEPT thì thành mục kiểm tra exit của phase tương ứng; mỗi tuần Bobby
@@ -192,6 +194,21 @@ duyệt các DR REJECT còn tranh chấp. FE có quyền thêm DR mới mỗi kh
 giao mà §2 còn ô `✗`.
 
 ---
+
+## 5bis. Chốt đo tiến độ tới EDS-09 (04-09, bằng chứng máy)
+
+Theo đúng thước đo của chính chiến dịch (status ladder + gates G0–G7):
+
+| Nhóm | Đạt |
+|---|---|
+| EDS-00 planning | ✅ `PLANNING_GATE_COMPLETE` |
+| EDS-01→08 implementation | **0/8 phase mở** — không ladder entry, không named op, không generated contract, không fixture giao FE |
+| EDS-09 | ~264 dòng WIP **chưa commit, chưa test, chưa gate**, và bị chặn bởi EDS-08 external → đóng góp cho "màn có số" hôm nay = **0** |
+| Mục tiêu owner "chart/bảng có dữ liệu mọi màn" | phần đang SỐNG đến từ các fix ngoài-EDS (mirror, resumable drain, chart serving, correlation/drawdown — §14/§16 unified plan): ma trận §2 hiện ● 17 · ◐ 6 · ✗ 5 · ○-typed 14 · ⏳ 2 — tức ~77% yếu tố khả-thi-local đã sống, phần ✗ còn lại là DR-09 + serving, phần ○ chờ Asks A–E/un-halt, KHÔNG phụ thuộc EDS-09 |
+
+Kết luận phản biện: đến thời điểm này chiến dịch EDS **chưa giao được deliverable
+nào cho frontend**; giá trị mục tiêu đang được gánh bởi luồng §14. DR-11/DR-12
+là hai điều chỉnh tối thiểu để EDS bắt đầu trả sản phẩm thay vì hạ tầng chờ.
 
 ## 6. Định nghĩa HOÀN THÀNH của cả chiến dịch (theo owner order)
 
