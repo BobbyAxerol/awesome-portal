@@ -183,12 +183,14 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | DR-04 | Completeness trộn serving/population → PARTIAL vĩnh viễn, ghìm polish + motion mọi màn (đo 03-09) | CAO | 02 | OPEN | |
 | DR-05 | Hai từ vựng downsample (đã ship vs §11.7) — FE chỉ được học một | TB | 07 | OPEN | |
 | DR-06 | EDS-11 thiếu cơ chế motion khi kept-mounted (revision-tick per panel) — không có thì showcase-motion không bao giờ nổ lại | TB | 11 | OPEN | |
-| DR-07 | EDS-08 packet và BR-EX-79 FINAL (A–E) đang là 2 kênh tới cùng source owner | TB | 08 | OPEN | |
+| DR-07 | EDS-08 packet và BR-EX-79 FINAL (A–E) đang là 2 kênh tới cùng source owner | TB | 08 | **ĐÓNG 05-09** — addendum EDS-09 ghi parent MC-01, tự tuyên bố không cạnh tranh; đã kiểm | |
 | DR-08 | §17.2 chưa ghi fact: cursor TTL read-plane paper = 48h (đã deploy) | THẤP | 17.2 | OPEN | |
 | DR-09 | Paper Overview cap 200 rows làm chart hero vỡ NGAY HÔM NAY — không được đợi tới EDS-06/07; vá theo §14-FixA (DERIVED-sum series từ mirror) rồi EDS thay sau | CAO | ngay | OPEN — Claude nhận làm | |
 | DR-10 | Payload budget chưa là con số per-phase (5.9MB workbench, 2.4MB alpha đo thật) | TB | 07/12 | OPEN | |
 | DR-11 | **Đảo thứ tự adapt-first (đo 04-09)**: codex đang code EDS-09 (5 file WIP edge +264/−21) trong khi EDS-01→08 chưa mở phase nào theo ladder; EDS-09 lại bị chặn bởi EDS-08 `EVENT_SOURCE_ACCEPTED` (external, chưa có — domain_events bị chính plan từ chối) → công sức này KHÔNG tạo ra dữ liệu nhìn thấy nào trên màn cho tới khi nguồn giao event contract, ngược mục tiêu owner "mọi màn có số" và ngược chính doctrine §17.5 "EDS-03..07 must not wait". Đề nghị: (a) đổi thứ tự sang 01→03 vertical đầu tiên, hoặc (b) nếu giữ EDS-09 thì tuyên bố rõ đây là contract-prep offline và mở song song EDS-01. **Cập nhật theo OR-1 (04-09): vế event-journal đã được owner gỡ — EDS-09 chạy trên observation lane là hợp lệ; DR-11 chỉ còn yêu cầu mở song song lane FE 01→03** | **CAO** | thứ tự chiến dịch | OPEN-THU HẸP | |
-| DR-12 | **Status ladder không được ghi**: chỉ EDS-00 có dòng Status; 01→12 không có `PLANNED/CONTRACT_LOCKED/...` trong §17 → không ai track được tiến độ bằng văn bản, vi phạm luật "mỗi phase commit implementation+tests+journal cùng lúc" của chính plan | TB | §17 bookkeeping | OPEN | |
+| DR-13 | **OR-1 gap của EDS-09**: core chờ external acceptance, không có observation adapter → giá trị màn hình = 0 tới khi trading giao MC-01. Yêu cầu phase nhỏ **EDS-09b**: adapter map mirror/drain observations vào CHÍNH core này (stream class riêng, nhãn `PORTAL_OBSERVATION`, admission facts do Portal tự phát hành) — mở reducer/journal/EDS-11 fan-out NGAY. Core generic sẵn nên đây là việc nhỏ | **CAO** | EDS-09b | OPEN | |
+| DR-14 | Test trực tiếp EDS-09 đếm được 7 (5 core + 2 store) so với 10 vùng khai trong report — cần bảng map test↔claim (hoặc chỉ rõ spec TS 306 dòng gánh vùng nào) để nghiệm thu chặt | THẤP | EDS-09 docs | OPEN | |
+| DR-12 | *(một phần đã khắc phục 05-09: mỗi phase có file EDS_xx riêng mang Status ladder trong worktree eds — §17 unified plan vẫn chưa sync, giữ OPEN mức THẤP)* **Status ladder không được ghi**: chỉ EDS-00 có dòng Status; 01→12 không có `PLANNED/CONTRACT_LOCKED/...` trong §17 → không ai track được tiến độ bằng văn bản, vi phạm luật "mỗi phase commit implementation+tests+journal cùng lúc" của chính plan | TB | §17 bookkeeping | OPEN | |
 
 Luật sổ: codex trả lời từng DR trong cột của mình (ACCEPT+phase / REJECT+lý do);
 DR nào ACCEPT thì thành mục kiểm tra exit của phase tương ứng; mỗi tuần Bobby
@@ -304,22 +306,24 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | Phiếu | Chấm cái gì | Kích hoạt khi | Trạng thái 04-09 |
 |---|---|---|---|
 | **L1** | Contract đầu vào (E7 pack ↔ ma trận màn) | pack tồn tại | ✅ **ĐÃ CHẤM** — 126/126 dòng, 5 bucket (tracker §7) |
-| A-01 | EDS-01 vertical đầu (named op deployment) | codex giao op+fixture | ⬜ chờ giao |
-| A-02 | EDS-02 generated contracts | types+enum-map giao | ⬜ chờ giao |
-| A-03 | EDS-03 ba màn stage | từng màn một | ⬜ chờ giao |
-| A-04 | EDS-04 bốn màn resource | từng màn một | ⬜ chờ giao |
-| A-05 | EDS-05 derivations+governance | từng op một | ⬜ chờ giao |
-| A-06 | EDS-06 mirror/index cutover | dual-read bật | ⬜ chờ giao |
-| A-07 | EDS-07 chart DTO | DTO đầu tiên | ⬜ chờ giao (FE-side: chartTheme.ts tôi tự khởi công — xem A-07b) |
-| A-08 | EDS-08 asks packet | packet hợp nhất | ⬜ (hạ blocker theo OR-1) |
-| A-09 | EDS-09 observation-lane | reducer đầu ra đầu tiên | ⬜ chờ codex commit WIP |
+| A-01 | EDS-01 vertical đầu (named op deployment) | codex giao op+fixture | 🔶 **SẴN SÀNG CHẤM** — commit `1a9e2d0` trên `feat/eds-current-bff` (05-09); cần deploy nhánh đó lên runtime probe |
+| A-02 | EDS-02 generated contracts | types+enum-map giao | 🔶 SẴN SÀNG CHẤM — `5547e6a` |
+| A-03 | EDS-03 ba màn stage | từng màn một | 🔶 SẴN SÀNG CHẤM — `4a2ae85` |
+| A-04 | EDS-04 bốn màn resource | từng màn một | 🔶 SẴN SÀNG CHẤM — `a511508` |
+| A-05 | EDS-05 derivations+governance | từng op một | 🔶 SẴN SÀNG CHẤM — `35e96e0` |
+| A-06 | EDS-06 mirror/index cutover | dual-read bật | 🔶 SẴN SÀNG CHẤM — `3a9c996` (DR-01 phải trả lời trong lúc chấm) |
+| A-07 | EDS-07 chart DTO | DTO đầu tiên | 🔶 SẴN SÀNG CHẤM — `6914c9b` |
+| A-08 | EDS-08 asks packet | packet hợp nhất | ✅ **CHẤM ĐẠT 05-09** — addendum ghi parent MC-01, một kênh duy nhất → **DR-07 ĐÓNG** |
+| A-09 | EDS-09 observation-lane | reducer đầu ra đầu tiên | ✅ **ĐÃ CHẤM 05-09: ACCEPT-CORE / DR-13 OPEN** — xem phiếu |
 | A-10 | EDS-10 replay/candles | contract chấp nhận | ⬜ xa |
 | A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ xa |
 | A-12 | EDS-12 release | gói release | ⬜ xa |
 
-**ĐANG Ở ĐÂY →** L1 xong; harness sẵn sàng; phiếu kế tiếp là **A-01, SLA: tôi
-chấm trong ≤1 ngày kể từ khi codex giao**. Không phiếu nào chấm gộp; mỗi
-phiếu ký xong mới tính phase DONE (OR-2).
+**ĐANG Ở ĐÂY (05-09) →** L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
+chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
+`/home/bobby/portal-eds-current-bff`). Bước kế: dựng runtime probe từ nhánh đó
+(compose project phụ, không đụng dev) rồi chấm lần lượt A-01→A-07 theo SLA
+≤1 ngày/phiếu. Không phiếu nào chấm gộp; ký xong mới DONE (OR-2).
 
 ## A1. Bộ đồ nghề chấm (đã dựng và đã chứng minh 03-09)
 
@@ -403,14 +407,35 @@ phiếu ký xong mới tính phase DONE (OR-2).
   (DR-07); không phase nào tuyên bố chờ nó.
 - **Trạng thái**: ⬜.
 
-### Phiếu A-09 — EDS-09 observation-lane (theo OR-1)
-- **Bước chấm**: (1) đầu vào là observation (mirror/drain) — KHÔNG chờ
-  source journal; (2) nhãn `PORTAL_OBSERVATION` đúng chỗ, không giả danh
-  source event; (3) reducer output đối chiếu SQL trực tiếp trên mirror (tôi
-  chạy độc lập); (4) mất/dedupe: bơm trùng + đứt quãng qua restart worker —
-  không mất, không double.
-- **ĐẠT khi**: 4/4 + một màn thật tiêu thụ output qua lane FE.
-- **Trạng thái**: ⬜ — chờ codex commit WIP (+264/−21) để có cái mà chấm.
+### Phiếu A-09 — EDS-09 observation-lane (theo OR-1) — **ĐÃ CHẤM 05-09**
+- **Vật giao đã đọc**: report `EDS_09_RUST_SNAPSHOT_TAIL_APPEND_STORE.md`
+  (161 dòng, Status `CODE_COMPLETE_SOURCE_DARK/VERIFIED/RUNTIME_INACTIVE`),
+  commit `5d904fb` (core `authoritative-event-core` 1.502 dòng + store PG +
+  migration 0017 bảy bảng expand-only + spec TS 306 dòng), addendum MC-01.
+- **Kết quả từng bước**:
+  1. Đầu vào observation không chờ journal → **FAIL theo OR-1**: core được
+     xây source-dark, TỪ CHỐI khởi tạo khi chưa có external acceptance
+     (đúng nguyên văn report); không có adapter observation, grep
+     `PORTAL_OBSERVATION` trong core = 0 → sinh **DR-13**.
+  2. Nhãn observation → N/A (lane chưa tồn tại).
+  3. Reducer đối chiếu SQL độc lập → PENDING (chờ DR-13/EDS-09b có input).
+  4. Dedupe/gap/restart → **PASS trên thiết kế + test**: append nguyên tử
+     ACK-sau-commit, duplicate trả lại receipt gốc, gap/epoch/checksum →
+     quarantine + RESNAPSHOT_REQUIRED, restart resume có fence, triggers
+     cấm update/delete facts. Kỷ luật fail-closed đúng chuẩn N-series.
+- **Đánh giá chất lượng (khách quan)**: kiến trúc & kỷ luật **xuất sắc** —
+  state machine snapshot→tail→ACK chặt, bounded queues, không lộ browser,
+  không đụng runtime, gate khai PASS 05-09 (`execution-edge-test.sh` +
+  control-api 382 tests — *khai bởi codex, tôi chưa re-run Rust gate độc
+  lập*; test đếm trực tiếp: 5 core + 2 store — mỏng so với 10 vùng khai →
+  **DR-14** yêu cầu mapping test↔claim).
+- **Đánh giá khớp chỉ đạo OR-1**: **lệch một nửa** — đây là cỗ máy đợi
+  nguồn; đóng góp cho "màn có số" hôm nay = 0 cho tới khi có adapter.
+  Điểm sáng: core provider-neutral nên adapter observation (EDS-09b) là
+  việc NHỎ, tái dùng toàn bộ máy.
+- **PHÁN QUYẾT PHIẾU: `ACCEPT-CORE / CONDITIONAL`** — chấp nhận phần lõi;
+  EDS-09 chỉ được tính là phục vụ mục tiêu owner khi **DR-13 (EDS-09b)**
+  đóng. A-08 chấm kèm: addendum đúng một kênh MC-01 → DR-07 ĐÓNG.
 
 ### Phiếu A-10/11/12 — replay+candles / SSE+actions / release
 - A-10: candle DTO + renderer OR-3 (⚖ attribution); replay xấp xỉ OR-1b có
