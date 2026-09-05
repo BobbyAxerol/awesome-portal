@@ -444,28 +444,40 @@ chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff
   mọi nút. A-12: tôi nộp Bobby gói bằng chứng browser-matrix toàn màn.
 - **Trạng thái**: ⬜ ×3.
 
-## A2b. CHIẾN DỊCH CHẤM G0→G7 (lập 05-09 theo lệnh owner — lịch để Bobby dõi goal)
+## A2b. CHIẾN DỊCH CHẤM ✚ GHÉP NỐI ✚ BÀN GIAO TỪNG PHASE (sửa 05-09 theo ý owner: goal liên tiếp)
 
-Nguyên tắc: chấm trên **probe-runtime** = control-api build từ `feat/eds-current-bff`
-+ Postgres RIÊNG restore từ dump dev (cùng dữ liệu thật, migration nhánh EDS
-không đụng DB dev) + loopback port riêng + user `claude-probe`. Dev runtime của
-Bobby không bị chạm. Mỗi phiếu xong → lật §A0 + push, Bobby chỉ cần nhìn §A0.
+**Ý owner (đọc đúng):** mỗi phase không dừng ở "chấm đạt" — phải **ghép nối
+vào frontend thật và lên dev** để Bobby NHÌN THẤY và goal, rồi mới sang phase
+kế. Chuỗi goal liên tiếp, không dồn cuối.
 
-| Bước | Việc | Phiếu | Dự kiến | Trạng thái |
+**Vòng đời chuẩn MỖI phase (5 bước, lặp lại):**
+```text
+(1) CHẤM trên probe-runtime (phiếu A-xx, ≤1 ngày)
+(2) GHÉP NỐI FE: wire container/api layer sang named ops theo field-map
+    (lane §17.6 của Claude — có quyền backend, không hỏi lại)
+(3) GATE FE: vitest + build + control gate nếu đụng BE
+(4) DEPLOY DEV: nhánh tích hợp `feat/eds-integration`
+    (= feat/eds-current-bff của codex ⊕ commit FE của Claude — dev chạy nhánh này từ G1)
+(5) BOBBY GOAL trên dev → lật ✅ vào §A0 → mở phase kế
+```
+Trượt ở (1) → DR, codex sửa song song; trượt ở (3)/(4) → lỗi của tôi, sửa
+trong ngày; không phase nào ✅ khi Bobby chưa goal bước (5).
+
+| Bước | Chấm & Ghép | **Bobby nhìn thấy gì trên dev để goal** | Dự kiến | Trạng thái |
 |---|---|---|---|---|
-| G0 | Dựng probe-runtime (dump DB → PG probe → build image nhánh eds → compose project `portal-probe`, loopback :8090) | — | 0.5 ngày | 🔶 ĐANG LÀM 05-09 |
-| G1 | Chấm A-01 named op deployment (6 bước phiếu) | A-01 | 0.5 ngày | ⬜ |
-| G2 | Chấm A-02 generated contracts (offline: generate, enum-map, DR-04) | A-02 | 0.5 ngày | ⬜ |
-| G3 | Chấm A-03 — TỪNG màn: Paper → Sandbox → Live | A-03×3 | 1 ngày | ⬜ |
-| G4 | Chấm A-04 — Alpha/Portfolio/Account/Binding | A-04×4 | 1 ngày | ⬜ |
-| G5 | Chấm A-05 — 5 derivations + governance/ops routes | A-05 | 0.5–1 ngày | ⬜ |
-| G6 | Chấm A-06 — dual-read parity vs mirror baseline của tôi (DR-01 phải được trả lời tại đây) + thử rollback | A-06 | 1 ngày | ⬜ |
-| G7 | Chấm A-07 chart DTO + song song A-07b dựng `PrimusFinancialChart`/`chartTheme.ts` (OR-3) ăn DTO đó | A-07 | 1–1.5 ngày | ⬜ |
+| G0 | Dựng probe-runtime (PG riêng restore dump dev :55432 loopback + image nhánh eds) + tạo nhánh `feat/eds-integration` | (hạ tầng — không cần goal) | 0.5 ngày | 🔶 ĐANG LÀM |
+| G1 | A-01 + wire Paper list sang `maximumDataDeploymentPageV1` | Paper Overview: danh sách deployment chạy qua named op mới, chip trạng thái + freshness đúng | 1 ngày | ⬜ |
+| G2 | A-02 + FE đổi sang generated types/UTC formatter/enum-map | Không đổi hình — nhưng caption completeness hết PARTIAL-oan (DR-04); tôi nộp ảnh before/after | 0.5–1 ngày | ⬜ |
+| G3 | A-03 + wire 3 màn stage (Paper→Sandbox→Live, từng màn goal riêng) | Mỗi màn stage đầy panel: ô nào trống là typed-lý-do, hết ✗ ma trận §2.1-2.3/2.9-2.10 | 1.5 ngày | ⬜ |
+| G4 | A-04 + wire 4 màn resource | Alpha/Portfolio/Account/Binding 360 mở từ khóa chuẩn, deployment ngoài trang đầu vẫn mở được | 1.5 ngày | ⬜ |
+| G5 | A-05 + wire governance/ops | Inbox/R1/R2/Exit/Waivers/Queue/Incident có số + formula version hiện trên tile | 1 ngày | ⬜ |
+| G6 | A-06 cutover từng màn (dual-read parity, DR-01 trả lời tại đây) | Cùng màn, số y hệt, payload NHẸ hẳn (đo byte trước/sau đính vào phiếu) | 1 ngày | ⬜ |
+| G7 | A-07 + **A-07b `PrimusFinancialChart` + chartTheme.ts (OR-3)** ăn chart DTO | Chart equity/perf/drawdown ĐÚNG LOOK artifact đã duyệt, sparkline fleet, hết cap 2000 | 1.5–2 ngày | ⬜ |
+| G8 | EDS-09b observation adapter (DR-13) + wire journal → EDS-11 SSE khi codex giao | Motion tick/flash nổ lại bằng revision thật | theo codex | ⬜ |
 
-Tổng dự kiến: **~5–7 ngày làm việc** cho cả hàng đợi. Luật khi TRƯỢT: mở DR
-ngay trong phiếu, codex sửa song song — chỉ chặn phiếu sau nếu có phụ thuộc
-thật (ví dụ A-03 cần A-02 types). EDS-10 chờ gate trading (đúng ý owner);
-DR-13/EDS-09b chạy song song không chặn hàng đợi này.
+Tổng: **~8–10 ngày làm việc** cho chuỗi goal G1→G7 (EDS-10 chờ gate trading,
+đúng chốt owner). Sau mỗi bước (5), §A0 lật trạng thái — Bobby dõi goal chỉ
+bằng một bảng.
 
 ## A3. Luật vận hành kế hoạch này
 
