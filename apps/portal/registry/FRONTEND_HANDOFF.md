@@ -2093,3 +2093,52 @@ that field rather than rendering it as true replay. Broker ACK,
 correction/tombstone, global Event ordering and market OHLCV stay typed
 panel-local gaps. React must not derive causality, synthesize candles, turn
 numeric values into money, or import fixture fallback data.
+
+### 8.52 EDS-11 local observation revalidation contract (2026-09-05)
+
+EDS-11 completes the current-data revalidation lane without promoting it into
+a Trading System Event. Existing same-origin
+`portal.execution.profile-realtime.v1` `delta` payloads now add:
+
+```ts
+payload.revalidation = {
+  schema_version: "portal.execution.observation-revalidation.v1",
+  mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+  profile_scope: "CURRENT_STREAM_PROFILE_ONLY",
+  affected_screen_ids: string[],
+  affected_operation_ids: string[],
+  revision_tick: { projection_epoch, projection_sequence, payload_digest },
+  redaction: {
+    raw_source_relation: "WITHHELD",
+    source_cursor: "WITHHELD",
+    resource_selector: "WITHHELD",
+  },
+};
+```
+
+The operation list is calculated server-side from the frozen Screen BFF
+catalogue. It contains available `GET` operations only; there is no route URL,
+Manager relation, raw source cursor, resource selector, Edge origin, JWT,
+mTLS field or credential to parse.
+
+Consumer rule is intentionally small:
+
+1. Keep the reviewed rich screen and all of its panels mounted.
+2. Compare the active route's existing named BFF operation with
+   `affected_operation_ids`. Only when it matches **and** the active stream
+   profile matches may the current same-origin BFF be re-fetched.
+3. Retain the route/resource chosen by the browser; do not manufacture query
+   parameters or navigate from a revision hint.
+4. Use `revision_tick` only for local refresh/motion bookkeeping. It is not an
+   Event ID, a source cursor, business data, replay sequence or causal clock.
+5. On `projection.gap`, stale or typed BFF failure, retain the rich panel and
+   use the existing bounded same-origin recovery/polling path. Never call the
+   Edge or source from JavaScript.
+
+The server now withholds raw Manager checkpoints from ProductRead, panel
+envelopes and Command Center source descriptors; legacy bounded adapters use
+semantic product group IDs rather than Manager relation selectors. Portal-signed
+page continuations remain the only browser paging tokens. Observed timeline/
+derived mark-context remain valid where current facts exist. True replay/
+correction/ACK/OHLCV and the other owner-confirmed source gaps stay panel-local
+`Soon · SOURCE_GAP_CONFIRMED`.

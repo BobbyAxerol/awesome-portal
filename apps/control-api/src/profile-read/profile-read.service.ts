@@ -206,7 +206,9 @@ export class ProfileReadService {
       capabilities: selected ? selected.relations.map((item) => ({
         capability_id: `source.${item.spec.key}`,
         state: item.state,
-        relations: [item.spec.relation],
+        // Relation names are Edge implementation details. The product route
+        // is already named and bounded by this BFF.
+        relations: [],
         reason_code: item.reasonCode,
         retryable: false,
       })) : [],
@@ -254,8 +256,12 @@ export class ProfileReadService {
     const freshness = relations.some((item) => item.page?.freshness === "STALE") ? "STALE"
       : relations.some((item) => item.page?.freshness === "AGING") ? "AGING"
         : relations.some((item) => item.page?.freshness === "FRESH") ? "FRESH" : "UNKNOWN";
-    const projection = relations.map((item) => item.page?.projection ?? null)
+    const rawProjection = relations.map((item) => item.page?.projection ?? null)
       .find((item) => item !== null) ?? null;
+    // The current-page source cursor remains in the local projection only.
+    // Browser consumers receive epoch/sequence/digest and opaque Portal
+    // continuations, never a Manager cursor.
+    const projection = rawProjection ? { ...rawProjection, sourceCursor: null } : null;
     const readAtMs = Date.now();
     return {
       schema_version: requestedEnvironment === "sandbox"
@@ -286,7 +292,7 @@ export class ProfileReadService {
       capabilities: relations.map((item) => ({
         capability_id: `source.${item.spec.key}`,
         state: item.state,
-        relations: [item.spec.relation],
+        relations: [],
         reason_code: item.reasonCode,
         retryable: false,
       })),

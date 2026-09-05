@@ -1,4 +1,5 @@
 import type { ProjectionEnvironment } from "./profile-projection.repository";
+import { SCREEN_BFF_BY_ID } from "../screen-bff/catalogue";
 
 export interface ProfileProjectionBinding {
   key: string;
@@ -30,6 +31,269 @@ export const WARM_WINDOW_MAX_ROWS = 2_000;
  * reveal those source selectors to a browser.
  */
 export const PROFILE_OBSERVATION_OPERATION_ID = "EXECUTION_PROFILE_OBSERVATION_REVISION";
+
+/**
+ * Browser-safe instruction carried by a Portal-local observation revision.
+ *
+ * It deliberately names only frozen same-origin BFF operations.  The durable
+ * projection is allowed to retain Manager relation checkpoints internally,
+ * but a browser must never learn a relation selector, raw source cursor,
+ * resource selector, upstream address, or credential through this lane.
+ */
+export interface ProfileObservationRevalidation {
+  schema_version: "portal.execution.observation-revalidation.v1";
+  mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF";
+  profile_scope: "CURRENT_STREAM_PROFILE_ONLY";
+  affected_screen_ids: readonly string[];
+  affected_operation_ids: readonly string[];
+  revision_tick: {
+    projection_epoch: string;
+    projection_sequence: number;
+    payload_digest: string;
+  };
+  redaction: {
+    raw_source_relation: "WITHHELD";
+    source_cursor: "WITHHELD";
+    resource_selector: "WITHHELD";
+  };
+}
+
+/**
+ * One local relation can contribute to more than the original list screen.
+ * These links are deliberately explicit and profile-local: a revision tells
+ * the client to refetch the current named BFF if relevant, never to inspect a
+ * relation or synthesize a cross-profile resource request.
+ */
+const OBSERVATION_SCREEN_SUPPLEMENTS: Readonly<Record<
+  ProjectionEnvironment,
+  Readonly<Record<string, readonly string[]>>
+>> = {
+  paper: {
+    "manager.strategies:strategies": [
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+    ],
+    "manager.deployments:strategy_deployments": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:accounts": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:account_balances": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.portfolios:portfolios": ["EXECUTION_PORTFOLIO_360_SCREEN"],
+    "manager.portfolios:portfolio_allocations": [
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+    ],
+    "manager.positions:positions_v2": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.reconciliation:reconciliation_findings": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.venue-accounts:venue_accounts": ["EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+    "manager.accounts:broker_account_sync_effective": ["EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+    "manager.sessions:execution_sessions": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.performance:performance_snapshots": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.performance:account_equity_snapshots": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PAPER_WORKBENCH_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.performance:portfolio_equity_snapshots": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+    ],
+    "manager.orders:orders": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_FULL_BLOTTER_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.fills:fills": [
+      "PAPER_TRADING_SCREEN",
+      "EXECUTION_FULL_BLOTTER_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.conditional-orders:conditional_order_groups": ["EXECUTION_PAPER_WORKBENCH_SCREEN"],
+    "manager.conditional-orders:conditional_order_group_legs": ["EXECUTION_PAPER_WORKBENCH_SCREEN"],
+  },
+  sandbox: {
+    "manager.strategies:strategies": [
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+    ],
+    "manager.deployments:strategy_deployments": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:accounts": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:account_balances": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.portfolios:portfolios": ["EXECUTION_PORTFOLIO_360_SCREEN"],
+    "manager.portfolios:portfolio_allocations": [
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+    ],
+    "manager.positions:positions_v2": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.reconciliation:reconciliation_findings": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.venue-accounts:venue_accounts": ["EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+    "manager.accounts:broker_account_sync_effective": ["EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+    "manager.sessions:execution_sessions": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:margin_balances": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:account_sync_effective": [
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+  },
+  live: {
+    "manager.strategies:strategies": [
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+    ],
+    "manager.deployments:strategy_deployments": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:accounts": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:account_balances": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.portfolios:portfolios": ["EXECUTION_PORTFOLIO_360_SCREEN"],
+    "manager.portfolios:portfolio_allocations": [
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+    ],
+    "manager.positions:positions_v2": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.reconciliation:reconciliation_findings": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.venue-accounts:venue_accounts": ["EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+    "manager.accounts:broker_account_sync_effective": ["EXECUTION_ACCOUNT_BROKER_360_SCREEN"],
+    "manager.sessions:execution_sessions": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:margin_balances": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.accounts:account_sync_effective": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.orders:orders": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+    "manager.fills:fills": [
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
+    ],
+  },
+};
 
 const TIME_SERIES_LADDER: Readonly<Record<string, ProfileProjectionBinding["ladder"]>> = {
   performance_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
@@ -210,9 +474,56 @@ export function profileObservationAffectedScreens(
   relationKeys: readonly string[],
 ): string[] {
   const changed = new Set(relationKeys);
-  return [...new Set(profileProjectionCatalog(environment)
+  const direct = profileProjectionCatalog(environment)
     .filter((binding) => changed.has(`${binding.sourceId}:${binding.relation}`))
-    .map((binding) => binding.screenId))].sort();
+    .map((binding) => binding.screenId);
+  const supplements = relationKeys.flatMap((key) => OBSERVATION_SCREEN_SUPPLEMENTS[environment][key] ?? []);
+  return knownReadScreens([...direct, ...supplements]);
+}
+
+/**
+ * Converts the safe screen set into safe operation names for a client-side
+ * revalidation decision.  This never supplies a URL or a source parameter:
+ * the frontend retains its current route/resource and uses its existing
+ * same-origin BFF consumer.
+ */
+export function profileObservationRevalidation(
+  affectedScreenIds: readonly string[],
+  revision: {
+    projectionEpoch: string;
+    projectionSequence: number;
+    payloadDigest: string;
+  },
+): ProfileObservationRevalidation {
+  const screens = knownReadScreens(affectedScreenIds);
+  return {
+    schema_version: "portal.execution.observation-revalidation.v1",
+    mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+    profile_scope: "CURRENT_STREAM_PROFILE_ONLY",
+    affected_screen_ids: screens,
+    affected_operation_ids: screens.flatMap((screenId) => {
+      const definition = SCREEN_BFF_BY_ID.get(screenId);
+      return definition?.dataApi.status === "AVAILABLE" && definition.dataApi.method === "GET"
+        ? [definition.dataApi.operationId] : [];
+    }).sort(),
+    revision_tick: {
+      projection_epoch: revision.projectionEpoch,
+      projection_sequence: revision.projectionSequence,
+      payload_digest: revision.payloadDigest,
+    },
+    redaction: {
+      raw_source_relation: "WITHHELD",
+      source_cursor: "WITHHELD",
+      resource_selector: "WITHHELD",
+    },
+  };
+}
+
+function knownReadScreens(screenIds: readonly string[]): string[] {
+  return [...new Set(screenIds.filter((screenId) => {
+    const definition = SCREEN_BFF_BY_ID.get(screenId);
+    return definition?.dataApi.status === "AVAILABLE" && definition.dataApi.method === "GET";
+  }))].sort();
 }
 
 function bind(

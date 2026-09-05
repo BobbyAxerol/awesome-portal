@@ -7,7 +7,10 @@ import {
   ProfileProjectionSnapshot,
   ProjectionEnvironment,
 } from "./profile-projection.repository";
-import { PROFILE_OBSERVATION_OPERATION_ID } from "./profile-projection.catalog";
+import {
+  PROFILE_OBSERVATION_OPERATION_ID,
+  profileObservationRevalidation,
+} from "./profile-projection.catalog";
 
 const CURSOR = /^([0-9a-f-]{36}):(\d+)$/;
 const REPLAY_LIMIT = 1_000;
@@ -401,21 +404,30 @@ function observationFromEntry(entry: ProfileProjectionJournalEntry): PortalObser
 
 /**
  * The persisted journal is server-side.  Its older payload shape contained
- * private Manager relation keys; return only the new named screen identifiers
- * and fixed observation operation even while a short legacy journal window
- * still exists after the additive migration.
+ * private Manager relation keys; return only the named screen identifiers,
+ * fixed observation operation, and a locally bound revalidation hint even
+ * while a short legacy journal window still exists after the additive
+ * migration.  Do not trust a persisted operation list: rederive it from the
+ * frozen Portal registry so a legacy/forensic row cannot turn SSE into a
+ * browser-side generic query surface.
  */
 function safeObservationPayload(entry: ProfileProjectionJournalEntry): Record<string, unknown> {
   const candidates = entry.payload.affected_screen_ids;
   const affectedScreenIds = Array.isArray(candidates)
     ? candidates.filter((item): item is string => typeof item === "string" && /^[A-Z0-9_]{3,128}$/.test(item))
     : [];
+  const revalidation = profileObservationRevalidation(affectedScreenIds, {
+    projectionEpoch: entry.projectionEpoch,
+    projectionSequence: entry.projectionSequence,
+    payloadDigest: entry.payloadDigest,
+  });
   return {
     schema_version: "portal.execution.observation-revision.v1",
     observation_authority: entry.observationAuthority,
     observation_semantics: entry.observationSemantics,
     operation_id: PROFILE_OBSERVATION_OPERATION_ID,
-    affected_screen_ids: [...new Set(affectedScreenIds)].sort(),
+    affected_screen_ids: revalidation.affected_screen_ids,
+    revalidation,
   };
 }
 

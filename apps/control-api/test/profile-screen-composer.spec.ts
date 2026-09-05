@@ -68,6 +68,9 @@ describe("Phase 2 profile screen composition", () => {
         projection_sequence: 14,
       },
     });
+    expect(source.collection("orders", "EXECUTION", "orders").envelope.source_cursor).toBeNull();
+    expect(JSON.stringify(source.panel("orders", "EXECUTION", ["orders"], {})))
+      .not.toContain("cursor-live");
     expect(source.panel("fills", "EXECUTION", ["fills"], { rows: [] }).panel_state).toBe("empty");
     const sourceWithoutClock = new ProfileScreenSource({
       state: "empty",

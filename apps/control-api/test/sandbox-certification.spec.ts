@@ -311,6 +311,7 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
     expect(first.json().source_panels).toHaveLength(3);
     expect(first.json().source_panels.every((panel: { panel_state: string; data: unknown }) =>
       panel.panel_state === "unavailable" && panel.data === null)).toBe(true);
+    expect(JSON.stringify(first.json())).not.toContain("cursor-shadow-1");
     await expect(ctx.pool.query(
       `UPDATE governance_sandbox_smoke_plans SET cap = 200
         WHERE certification_id = $1`,
@@ -362,6 +363,8 @@ describe("EX-BE-05b/F2 Portal Sandbox Certification", () => {
       progress: { passed_count: 7, total_count: 7, eligible: true, blocker_codes: [] },
       smoke_plan: { status: "PLANNED", source_side_effect_requested: false },
     });
+    expect(JSON.stringify(detail.json())).not.toContain("cursor-shadow-1");
+    expect(detail.json().source_panels.every((panel: { source_cursor: unknown }) => panel.source_cursor === null)).toBe(true);
     const evidenceHash = detail.json().progress.evidence_set_hash;
     const base = {
       workspace_id: workspaceId,

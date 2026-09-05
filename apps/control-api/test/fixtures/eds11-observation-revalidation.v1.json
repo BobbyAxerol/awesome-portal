@@ -1,0 +1,83 @@
+{
+  "schema_version": "portal.execution.observation-revalidation.fixture.v1",
+  "purpose": "Browser-safe local observation revision examples; no source selector, cursor, upstream or credential is present.",
+  "cases": [
+    {
+      "name": "paper_alpha_current_route_refetch",
+      "environment": "paper",
+      "payload": {
+        "schema_version": "portal.execution.observation-revision.v1",
+        "observation_authority": "PORTAL_OBSERVATION",
+        "observation_semantics": "BOUNDED_CURRENT_PAGE",
+        "operation_id": "EXECUTION_PROFILE_OBSERVATION_REVISION",
+        "affected_screen_ids": [
+          "EXECUTION_ALPHA_360_SCREEN",
+          "EXECUTION_ALPHA_FLEET_LIST_SCREEN"
+        ],
+        "revalidation": {
+          "schema_version": "portal.execution.observation-revalidation.v1",
+          "mode": "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+          "profile_scope": "CURRENT_STREAM_PROFILE_ONLY",
+          "affected_screen_ids": [
+            "EXECUTION_ALPHA_360_SCREEN",
+            "EXECUTION_ALPHA_FLEET_LIST_SCREEN"
+          ],
+          "affected_operation_ids": [
+            "executionAlphaFleetListV2",
+            "executionAlphaQueryAnalyticsV1"
+          ],
+          "revision_tick": {
+            "projection_epoch": "00000000-0000-4000-8000-000000000011",
+            "projection_sequence": 42,
+            "payload_digest": "sha256:fixture-observation-revision"
+          },
+          "redaction": {
+            "raw_source_relation": "WITHHELD",
+            "source_cursor": "WITHHELD",
+            "resource_selector": "WITHHELD"
+          }
+        }
+      }
+    },
+    {
+      "name": "live_stage_current_route_refetch",
+      "environment": "live",
+      "payload": {
+        "schema_version": "portal.execution.observation-revision.v1",
+        "observation_authority": "PORTAL_OBSERVATION",
+        "observation_semantics": "BOUNDED_CURRENT_PAGE",
+        "operation_id": "EXECUTION_PROFILE_OBSERVATION_REVISION",
+        "affected_screen_ids": [
+          "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+          "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+          "LIVE_OPERATIONS_SCREEN"
+        ],
+        "revalidation": {
+          "schema_version": "portal.execution.observation-revalidation.v1",
+          "mode": "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+          "profile_scope": "CURRENT_STREAM_PROFILE_ONLY",
+          "affected_screen_ids": [
+            "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+            "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+            "LIVE_OPERATIONS_SCREEN"
+          ],
+          "affected_operation_ids": [
+            "executionCanaryControlRoom",
+            "executionLiveFullOperations",
+            "executionLiveOverviewV1"
+          ],
+          "revision_tick": {
+            "projection_epoch": "00000000-0000-4000-8000-000000000012",
+            "projection_sequence": 43,
+            "payload_digest": "sha256:fixture-live-observation-revision"
+          },
+          "redaction": {
+            "raw_source_relation": "WITHHELD",
+            "source_cursor": "WITHHELD",
+            "resource_selector": "WITHHELD"
+          }
+        }
+      }
+    }
+  ]
+}

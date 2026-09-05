@@ -708,6 +708,24 @@ deep-dive → ADR → slice → evidence discipline documented above.
   command authority changed. See
   [EDS-10b observed timeline](backend/EDS_10B_OBSERVED_TIMELINE_AND_MARK_CONTEXT.md).
 
+- **EDS-11 current-data BFF hydration and local realtime closed at the
+  contract gate (2026-09-05):** the committed local observation journal now
+  maps direct and composition-dependent Paper/Sandbox/Live current facts to
+  frozen named Screen BFF `GET` operation IDs. Its additive revalidation hint
+  binds only local projection epoch/sequence/digest and current stream profile;
+  it carries neither a Manager relation, raw source cursor, resource selector,
+  URL nor cross-cell credential. A single local journal tail fans the same
+  contiguous revision to all browser subscribers, keeping source reads
+  independent of browser count. ProductRead and panel envelopes now withhold
+  raw Manager checkpoints while retaining Portal-signed continuations for
+  pagination. Legacy bounded adapters emit semantic product group IDs and
+  Command Center nulls source checkpoints for the same browser boundary. This
+  is `PORTAL_OBSERVATION`, not an Event/replay lane; missing
+  lifecycle/ACK/market/artifact capabilities remain typed source gaps and do
+  not block current-data screens. No source transport, runtime flag, container
+  or command authority changed. See
+  [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).
+
 - **EX-DP-05/E5 existing-data adapter and publication closed
   (2026-09-04, source-dark):** the additive Rust
   `maximum-data-adapter` has a digest-bound 34-field registry: four existing

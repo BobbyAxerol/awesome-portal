@@ -151,6 +151,13 @@ function managerResponse(
     schema_version: "portal.execution.current-source-bff.v2",
     source_environment: profile,
     profile_id: profileId,
+    projection: {
+      epoch: `projection-${profile}`,
+      sequence: 17,
+      source_cursor: "opaque-manager-source-cursor",
+      payload_digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      last_successful_refresh_at: "2026-08-30T12:00:00.000Z",
+    },
     source: {
       authority: "EXECUTION_CELL", profile_id: profileId, availability: "AVAILABLE",
       freshness: "FRESH", completeness: "COMPLETE", as_of: "2026-08-30T12:00:00Z",
@@ -234,6 +241,10 @@ describe("N23 Sandbox and Live profile reads", () => {
     expect(source.calls).toHaveLength(4);
     expect(source.calls.every((item) => item.environment === "sandbox" && item.screenId === "SANDBOX_TRADING_SCREEN")).toBe(true);
     expect(JSON.stringify(result)).not.toContain("must-not-leak");
+    expect(JSON.stringify(result)).not.toContain("opaque-manager-source-cursor");
+    expect(JSON.stringify(result)).not.toContain("manager.");
+    expect(result.projection).toMatchObject({ epoch: "projection-sandbox", sequence: 17, sourceCursor: null });
+    expect(result.capabilities.every((item: { relations: unknown[] }) => item.relations.length === 0)).toBe(true);
   });
 
   it("returns an honest EMPTY Live overview when every source relation has no rows", async () => {

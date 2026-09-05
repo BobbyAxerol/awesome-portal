@@ -10,6 +10,7 @@ import type {
 import {
   PROFILE_OBSERVATION_OPERATION_ID,
   profileObservationAffectedScreens,
+  profileObservationRevalidation,
 } from "./profile-projection.catalog";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
@@ -488,6 +489,7 @@ export class ExecutionProfileProjectionRepository {
       );
       await this.persistRelationCursors(client, document, input.relationCursors ?? []);
       const changedRelations = relationChanges(previous?.payload, document);
+      const affectedScreenIds = profileObservationAffectedScreens(document.environment, changedRelations);
       const observationPayload = {
         schema_version: "portal.execution.observation-revision.v1",
         observation_authority: "PORTAL_OBSERVATION",
@@ -496,7 +498,15 @@ export class ExecutionProfileProjectionRepository {
         // Source relation selectors remain inside the server-side durable
         // mirror.  Browser-facing revision ticks name only frozen Portal
         // screens, so this channel cannot become a generic Manager reader.
-        affected_screen_ids: profileObservationAffectedScreens(document.environment, changedRelations),
+        affected_screen_ids: affectedScreenIds,
+        // This is a fixed, browser-safe revalidation hint.  It binds the
+        // named Portal operations to this committed revision without leaking
+        // the Manager relation or raw source checkpoint that caused it.
+        revalidation: profileObservationRevalidation(affectedScreenIds, {
+          projectionEpoch,
+          projectionSequence,
+          payloadDigest,
+        }),
       };
       await client.query(
         `INSERT INTO execution_profile_projection_journal

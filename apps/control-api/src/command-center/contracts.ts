@@ -205,8 +205,14 @@ function observedExactTotal<T>(sources: ExactSourceSlice<T>[]): number {
   );
 }
 
+function publicSource(source: SourceStatus): SourceStatus {
+  // A source cursor is a server-side Manager/projection checkpoint. Browser
+  // resume is owned by the local SSE protocol, never this dashboard snapshot.
+  return { ...source, source_cursor: null };
+}
+
 function publicSources(sources: SourceStatus[]): SourceStatus[] {
-  return sources.map((source) => ({ ...source }));
+  return sources.map(publicSource);
 }
 
 export function unavailableSource<T>(
@@ -336,7 +342,7 @@ export function composeCommandCenterSnapshot(input: CommandCenterInputs) {
     snapshot: {
       projection_epoch: fleetStatus.projection_epoch,
       projection_sequence: fleetStatus.projection_sequence,
-      cursor: fleetStatus.source_cursor,
+      cursor: null,
       stream_available: fleetStatus.availability === "AVAILABLE" && fleetStatus.projection_epoch !== null,
       resnapshot_not_before: null,
     },
@@ -363,7 +369,7 @@ export function composeCommandCenterSnapshot(input: CommandCenterInputs) {
         freshness_state: fleetStatus.freshness_state,
         exact_total: fleetSnapshot !== null && input.fleet.exact_total_count !== null,
         total_deployments: fleetSnapshot?.total_deployments ?? null,
-        source: { ...fleetStatus },
+        source: publicSource(fleetStatus),
         cells: fleetCells,
       },
       pinned_watchlist: {

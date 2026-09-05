@@ -610,7 +610,9 @@ function scopedRelation(
     projection: {
       epoch: snapshot.projectionEpoch,
       sequence: snapshot.projectionSequence,
-      sourceCursor: snapshot.sourceCursor,
+      // A Manager continuation is a server-side drain checkpoint, never a
+      // browser pagination token. Resource BFFs use their own bounded pages.
+      sourceCursor: null,
       payloadDigest: snapshot.payloadDigest,
       lastSuccessfulRefreshAt: snapshot.lastSuccessfulRefreshAt.toISOString(),
     },

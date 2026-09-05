@@ -10,7 +10,6 @@ interface Capability {
 interface Projection {
   epoch: string;
   sequence: number;
-  sourceCursor: string | null;
   payloadDigest: string;
   lastSuccessfulRefreshAt: string;
 }
@@ -75,7 +74,9 @@ export class ProfileScreenSource {
       read_at: this.readAt,
       age_seconds: unavailable || !this.asOf ? null : Math.max(0, Math.floor((Date.now() - Date.parse(this.asOf)) / 1000)),
       lag_ms: unavailable || !this.asOf ? null : Math.max(0, Date.now() - Date.parse(this.asOf)),
-      source_cursor: this.projection?.sourceCursor ?? null,
+      // Source checkpoints stay server-side.  The browser receives the local
+      // revision coordinates and Portal-signed page cursors only.
+      source_cursor: null,
       projection_epoch: this.projection?.epoch ?? null,
       projection_sequence: this.projection?.sequence ?? null,
       capability_snapshot_id: this.projection?.payloadDigest ?? null,
@@ -199,7 +200,6 @@ function projection(value: unknown): Projection | null {
   return {
     epoch: value.epoch,
     sequence: value.sequence as number,
-    sourceCursor: typeof value.sourceCursor === "string" ? value.sourceCursor : null,
     payloadDigest: value.payloadDigest,
     lastSuccessfulRefreshAt: value.lastSuccessfulRefreshAt,
   };

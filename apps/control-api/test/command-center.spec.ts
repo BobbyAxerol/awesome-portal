@@ -516,6 +516,14 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
       label: "INSPECT · dep_1 · SUCCESS",
       href: "/deployments/blotter",
     });
+    const response = composeCommandCenterSnapshot(inputs);
+    expect(response.snapshot.cursor).toBeNull();
+    expect(response.panels.fleet_health.source.source_cursor).toBeNull();
+    // `cursor` remains a nullable presentation field for the local SSE
+    // protocol, but the source checkpoint supplied by the projection must
+    // never cross this browser-facing snapshot boundary.
+    expect(JSON.stringify(response)).not.toContain('"cursor":"cursor"');
+    expect(JSON.stringify(response)).not.toContain('"source_cursor":"cursor"');
   });
 
   it("enforces the five-slot, user-scoped watchlist in PostgreSQL", async () => {

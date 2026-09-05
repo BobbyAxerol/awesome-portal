@@ -65,6 +65,42 @@ const FILTER_ALIASES = Object.freeze({
   venue: Object.freeze(["venue"]),
 } as const);
 
+// Internal Edge relation references are intentionally not a browser contract.
+// These stable product group ids retain useful structure for the Admin read
+// tasks without turning their result into a relation-selection API.
+const PUBLIC_GROUP_ID = Object.freeze({
+  "manager.strategies:strategies": "strategies",
+  "manager.deployments:strategy_deployments": "deployments",
+  "manager.accounts:accounts": "accounts",
+  "manager.positions:positions_v2": "positions",
+  "manager.reconciliation:reconciliation_findings": "reconciliation",
+  "manager.performance:performance_snapshots": "performance",
+  "manager.performance:account_equity_snapshots": "account_equity",
+  "manager.performance:portfolio_equity_snapshots": "portfolio_equity",
+  "manager.accounts:account_balances": "balances",
+  "manager.accounts:margin_balances": "margin",
+  "manager.accounts:account_sync_effective": "account_sync",
+  "manager.accounts:broker_account_sync_effective": "broker_sync",
+  "manager.venue-accounts:venue_accounts": "venue_accounts",
+  "manager.orders:orders": "orders",
+  "manager.fills:fills": "fills",
+  "manager.sessions:execution_sessions": "sessions",
+  "manager.command-journal:command_journal": "command_journal",
+  "manager.conditional-orders:conditional_order_groups": "conditional_order_groups",
+  "manager.conditional-orders:conditional_order_group_legs": "conditional_order_group_legs",
+} as const);
+
+interface AdapterGroup {
+  readonly state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE";
+  readonly freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+  readonly completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+  readonly as_of: string | null;
+  readonly items: readonly Record<string, ProjectionScalar>[];
+  readonly returned_count: number;
+  readonly truncated: boolean;
+  readonly reason_code?: string;
+}
+
 /** Bounded existing-source alternatives backed only by committed SGP projection rows. */
 @Injectable()
 export class ExecutionProfileReadAdapterService {
@@ -98,10 +134,12 @@ export class ExecutionProfileReadAdapterService {
     if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
       throw new ProjectionAdapterError("N32_PROJECTION_STALE_CEILING_EXCEEDED", 503);
     }
-    const relations = Object.fromEntries(adapter.relations.map((key) => {
+    const relations: Record<string, AdapterGroup> = {};
+    for (const key of adapter.relations) {
       const relation = snapshot.document.relations[key];
       const selected = relation?.items.filter((row) => matchesFilters(row.fields, filters)) ?? [];
-      return [key, relation ? {
+      const groupId = publicGroupId(key);
+      relations[groupId] = relation ? {
         state: selected.length > 0 ? "AVAILABLE" : "EMPTY",
         freshness: relation.freshness,
         completeness: relation.completeness,
@@ -113,8 +151,8 @@ export class ExecutionProfileReadAdapterService {
         state: "UNAVAILABLE", freshness: "UNKNOWN", completeness: "UNKNOWN",
         as_of: null, items: [], returned_count: 0, truncated: false,
         reason_code: "N32_RELATION_NOT_PROJECTED",
-      }];
-    }));
+      };
+    }
     const states = Object.values(relations).map((relation) => relation.state);
     return {
       schema_version: "portal.execution.profile-read-adapter.v1",
@@ -171,6 +209,12 @@ export class ProjectionAdapterError extends LocalRealtimeError {}
 
 export function acceptedProjectionAdapters(): readonly string[] {
   return Object.keys(ADAPTERS).sort();
+}
+
+function publicGroupId(sourceReference: string): string {
+  const groupId = PUBLIC_GROUP_ID[sourceReference as keyof typeof PUBLIC_GROUP_ID];
+  if (!groupId) throw new ProjectionAdapterError("N32_ADAPTER_GROUP_NOT_ACCEPTED", 500);
+  return groupId;
 }
 
 function profile(config: ControlApiConfig, environment: ProjectionEnvironment): string {

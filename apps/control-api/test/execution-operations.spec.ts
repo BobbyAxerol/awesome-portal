@@ -512,7 +512,7 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
         viewer_workspace_id: workspaceId,
         environment: "paper",
         relations: {
-          "manager.strategies:strategies": {
+          strategies: {
             state: "AVAILABLE",
             returned_count: 1,
             items: [{ strategy_id: "alpha_42" }],
@@ -521,6 +521,8 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       },
     });
     expect(JSON.stringify(response.json())).not.toContain("alpha_other");
+    expect(JSON.stringify(response.json())).not.toContain("manager.");
+    expect(JSON.stringify(response.json())).not.toContain('"cursor"');
     expect(response.json().response_digest).toMatch(/^sha256:[0-9a-f]{64}$/);
     const audit = await ctx.pool.query(
       `SELECT result, reason_code, metadata_json

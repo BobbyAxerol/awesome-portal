@@ -13,6 +13,7 @@ import { ControlPlaneQueryService, KeysetCursorCodec, RawKeysetQuery } from "../
 import { CONTROL_API_CONFIG } from "../tokens";
 import { TypedCondition } from "../operations/contracts";
 import { ProfileReadService } from "../profile-read/profile-read.service";
+import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
 import { GovernanceApplyTokenSigner } from "./apply-token";
 import {
   approvalHistoryResource,
@@ -613,7 +614,7 @@ export class GovernanceService {
         composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS",
       },
       governance_backbone: backbone,
-      current_source: currentSource,
+      current_source: browserSafeProfileRead(currentSource),
       derived_branches: [
         { capability_id: "live-gate.kpis", state: liveKpiState,
           reason_code: liveKpiState === "UNAVAILABLE" ? "PHASE2_LIVE_GATE_SOURCE_UNAVAILABLE" : null },

@@ -1748,8 +1748,30 @@ durable run/attempt events. Detailed evidence:
   image, service, profile or command authority was added.
 - Portal work continues on maximum current-data screens and the explicitly
   labelled observation lane: **EDS-09b local observation revisions is
-  implemented source-dark**, **EDS-10b observed/derived panels is now
-  contract-verified**, and EDS-11 same-origin local SSE is the next current
-  product slice. Authoritative EDS-09
+  implemented source-dark**, **EDS-10b observed/derived panels is
+  contract-verified**, and **EDS-11 same-origin local SSE is now
+  contract-verified**. Authoritative EDS-09
   Event ingestion remains source-dark until a later owner return contains a
   verified accepted class.
+
+## Backend state — 2026-09-05 (EDS-11 local BFF hydration and revalidation)
+
+- EDS-11 is `IMPLEMENTED / CONTRACT_VERIFIED / CURRENT_SOURCE_ONLY /
+  RUNTIME_INACTIVE`. It advances maximum current-source product data without
+  waiting for any of the 18 owner-confirmed Event gaps.
+- One Portal-local observation revision now maps only to frozen same-origin
+  Screen BFF `GET` operation IDs for the active Paper, Sandbox or Live
+  profile. The browser retains its current route/resource and can only
+  re-fetch that named BFF; it receives no raw Manager relation, source cursor,
+  generic URL, cross-cell credential or source selector.
+- The local SSE group remains one `(workspace, environment, profile)` journal
+  tail for every number of tabs. Focused evidence covers profile isolation,
+  unknown relation rejection, cursor redaction, resume/gap semantics and 100
+  subscribers sharing a single local journal read.
+- ProductRead and screen panel envelopes now null raw Manager checkpoints;
+  legacy bounded adapters expose semantic product group IDs and Command Center
+  source descriptors also withhold checkpoints. Portal-signed continuations
+  remain the browser paging boundary. Commands, source transport, runtime
+  profile activation and containers are unchanged.
+- Detail:
+  [`EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md`](./EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).

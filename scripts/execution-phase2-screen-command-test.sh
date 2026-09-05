@@ -25,6 +25,15 @@ operations = (root / "apps/control-api/src/operations/operations.service.ts").re
 tasks = (root / "apps/control-api/src/operations/operator-tasks.ts").read_text()
 adapter = (root / "apps/control-api/src/execution/profile-read-adapter.service.ts").read_text()
 analytics = (root / "apps/control-api/src/execution/local-query-analytics.service.ts").read_text()
+projection_catalogue = (root / "apps/control-api/src/execution/profile-projection.catalog.ts").read_text()
+realtime = (root / "apps/control-api/src/execution/profile-realtime.service.ts").read_text()
+product_read = (root / "apps/control-api/src/execution/product-read-source.ts").read_text()
+screen_composer = (root / "apps/control-api/src/execution/profile-screen-composer.ts").read_text()
+profile_read = (root / "apps/control-api/src/profile-read/profile-read.service.ts").read_text()
+resource_read = (root / "apps/control-api/src/resource-read/resource-read.service.ts").read_text()
+browser_safe_profile_read = (root / "apps/control-api/src/execution/browser-safe-profile-read.ts").read_text()
+adapter_service = (root / "apps/control-api/src/execution/profile-read-adapter.service.ts").read_text()
+command_center_contracts = (root / "apps/control-api/src/command-center/contracts.ts").read_text()
 production = (root / "deploy/compose.production.yaml").read_text()
 local = (root / "deploy/compose.execution-local-projection.yaml").read_text()
 
@@ -76,6 +85,26 @@ assert "selected.slice(0, limit)" in adapter
 assert "source_fact_digest:" in analytics
 assert "facts: sourceFactGroups" in analytics
 assert "Object.values(sourceFactGroups).flat()" in analytics
+
+# EDS-11: local revisions can ask a browser to re-fetch only its current
+# named same-origin BFF. They cannot disclose a Manager selector/checkpoint or
+# become a general upstream query surface.
+assert "profileObservationRevalidation" in projection_catalogue
+assert 'mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF"' in projection_catalogue
+assert 'raw_source_relation: "WITHHELD"' in projection_catalogue
+assert "profileObservationRevalidation" in realtime
+assert "source_cursor: null" in product_read
+assert "source_cursor: null" in screen_composer
+assert "sourceCursor: null" in profile_read
+assert "relations: []" in profile_read
+assert "sourceCursor: null" in resource_read
+assert "sourceCursor: null" in browser_safe_profile_read
+assert "const { relations: _relations" in browser_safe_profile_read
+assert "const PUBLIC_GROUP_ID" in adapter_service
+assert "publicGroupId(key)" in adapter_service
+assert "source_cursor: null" in command_center_contracts
+fixture = (root / "apps/control-api/test/fixtures/eds11-observation-revalidation.v1.json").read_text()
+assert "manager." not in fixture and "cursor-" not in fixture and "https://" not in fixture
 
 for proxy in (
     root / "apps/control-api/src/execution/current-source.proxy.ts",

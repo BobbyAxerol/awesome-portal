@@ -4,6 +4,7 @@ import { AuthSession, PortalUser } from "../domain";
 import { ProfileReadService } from "../profile-read/profile-read.service";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
 import {
   exactCurrencySum,
   latest,
@@ -154,7 +155,7 @@ export class LiveOperationsService {
       realtime_active: realtimeActive,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
-      current_source: currentSource,
+      current_source: browserSafeProfileRead(currentSource),
       deployment: {
         deployment_id: typeof deployment?.deployment_id === "string" ? deployment.deployment_id : deploymentId,
         portfolio_id: typeof deployment?.portfolio_id === "string" ? deployment.portfolio_id : null,
@@ -199,7 +200,9 @@ export class LiveOperationsService {
       projection_continuity: {
         state: source.projection ? "CONTIGUOUS" : "UNAVAILABLE",
         epoch: source.projection?.epoch ?? null,
-        cursor: source.projection?.sourceCursor ?? null,
+        // The raw Manager checkpoint is a server-side drain/resume detail.
+        // Browser continuity uses the local epoch/sequence only.
+        cursor: null,
         sequence: source.projection?.sequence ?? null,
         gap_detected: source.projection ? false : null,
         affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],
@@ -362,7 +365,7 @@ export class LiveOperationsService {
       realtime_active: realtimeActive,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
-      current_source: currentSource,
+      current_source: browserSafeProfileRead(currentSource),
       deployment: {
         deployment_id: canary.deployment_id,
         portfolio_id: certification.portfolio_id,
@@ -440,7 +443,9 @@ export class LiveOperationsService {
       projection_continuity: {
         state: source.projection ? "CONTIGUOUS" : "UNAVAILABLE",
         epoch: source.projection?.epoch ?? null,
-        cursor: source.projection?.sourceCursor ?? null,
+        // See the full Live screen above: raw source checkpoints never leave
+        // the SGP projection boundary.
+        cursor: null,
         sequence: source.projection?.sequence ?? null,
         gap_detected: source.projection ? false : null,
         affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],

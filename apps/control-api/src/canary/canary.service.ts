@@ -4,6 +4,7 @@ import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProfileReadService } from "../profile-read/profile-read.service";
+import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
 import {
   decimalAbsoluteSum,
   decimalSubtract,
@@ -229,7 +230,7 @@ export class CanaryService {
       replayed,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
-      ...(currentSource ? { current_source: currentSource } : {}),
+      ...(currentSource ? { current_source: browserSafeProfileRead(currentSource) } : {}),
       deployment: {
         deployment_id: envelope.deployment_id,
         portfolio_id: certification.portfolio_id,

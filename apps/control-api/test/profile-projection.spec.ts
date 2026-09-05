@@ -1,4 +1,6 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
 import { buildPool } from "../src/db/pool";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
@@ -13,7 +15,10 @@ import {
   ProfileProjectionDocument,
 } from "../src/execution/profile-projection.repository";
 import type { DurableMirrorWriter } from "../src/execution/durable-mirror.contract";
-import { profileProjectionCatalog } from "../src/execution/profile-projection.catalog";
+import {
+  profileObservationAffectedScreens,
+  profileProjectionCatalog,
+} from "../src/execution/profile-projection.catalog";
 import { ExecutionProfileProjectionWorker, mergeTimeSeriesWindow } from "../src/execution/profile-projection.worker";
 import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
@@ -86,11 +91,36 @@ describe("Phase 1 SGP-local profile projection", () => {
       observation_authority: "PORTAL_OBSERVATION",
       observation_semantics: "BOUNDED_CURRENT_PAGE",
       operation_id: "EXECUTION_PROFILE_OBSERVATION_REVISION",
-      affected_screen_ids: ["EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
+      affected_screen_ids: [
+        "EXECUTION_ALPHA_360_SCREEN",
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+        "EXECUTION_PORTFOLIO_360_SCREEN",
+      ],
+      revalidation: {
+        schema_version: "portal.execution.observation-revalidation.v1",
+        mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+        profile_scope: "CURRENT_STREAM_PROFILE_ONLY",
+        affected_operation_ids: [
+          "executionAlphaFleetListV2",
+          "executionAlphaQueryAnalyticsV1",
+          "executionPortfolioQueryAnalyticsV1",
+        ],
+        revision_tick: {
+          projection_epoch: first.projectionEpoch,
+          projection_sequence: 2,
+        },
+        redaction: {
+          raw_source_relation: "WITHHELD",
+          source_cursor: "WITHHELD",
+          resource_selector: "WITHHELD",
+        },
+      },
     });
     expect(replay[1].sourceContractRevision).toBe("manager-v2.test.v1");
     expect(JSON.stringify(replay[1].payload)).not.toContain("manager.");
-    expect(JSON.stringify(replay[1].payload)).not.toContain("cursor");
+    // The redaction field names the withheld category, but no raw checkpoint
+    // value may cross the local replay boundary.
+    expect(JSON.stringify(replay[1].payload)).not.toContain("cursor-3");
     expect((await repository.snapshot(workspaceId, "paper", profileId))?.sourceCursor)
       .toBe("cursor-3");
   });
@@ -116,6 +146,8 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect((left as any).source.data.items[0].fields.strategy_id).toEqual({
       kind: "TEXT", value: "123",
     });
+    expect((left as any).projection.source_cursor).toBeNull();
+    expect(JSON.stringify(left)).not.toContain("cursor-1");
 
     const otherViewer = await source.relation(
       { ...principal, workspaceId: "ws_other" }, "paper", "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
@@ -211,7 +243,24 @@ describe("Phase 1 SGP-local profile projection", () => {
       },
       payload: {
         schema_version: "portal.execution.observation-revision.v1",
-        affected_screen_ids: ["EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
+        affected_screen_ids: [
+          "EXECUTION_ALPHA_360_SCREEN",
+          "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+          "EXECUTION_PORTFOLIO_360_SCREEN",
+        ],
+        revalidation: {
+          mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+          affected_operation_ids: [
+            "executionAlphaFleetListV2",
+            "executionAlphaQueryAnalyticsV1",
+            "executionPortfolioQueryAnalyticsV1",
+          ],
+          redaction: {
+            raw_source_relation: "WITHHELD",
+            source_cursor: "WITHHELD",
+            resource_selector: "WITHHELD",
+          },
+        },
       },
     });
     expect(JSON.stringify(events[0])).not.toContain("manager.");
@@ -227,6 +276,107 @@ describe("Phase 1 SGP-local profile projection", () => {
     realtime.onApplicationShutdown();
   });
 
+  it("maps observation revisions to profile-compatible named BFFs only", () => {
+    const paper = profileObservationAffectedScreens("paper", ["manager.strategies:strategies"]);
+    expect(paper).toEqual([
+      "EXECUTION_ALPHA_360_SCREEN",
+      "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
+      "EXECUTION_PORTFOLIO_360_SCREEN",
+    ]);
+
+    const sandbox = profileObservationAffectedScreens("sandbox", ["manager.sessions:execution_sessions"]);
+    expect(sandbox).toEqual(expect.arrayContaining([
+      "SANDBOX_TRADING_SCREEN",
+      "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
+    ]));
+    expect(sandbox).not.toContain("PAPER_TRADING_SCREEN");
+
+    const live = profileObservationAffectedScreens("live", ["manager.orders:orders"]);
+    expect(live).toEqual(expect.arrayContaining([
+      "LIVE_OPERATIONS_SCREEN",
+      "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
+      "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+    ]));
+    expect(live).not.toContain("EXECUTION_PAPER_WORKBENCH_SCREEN");
+    expect(profileObservationAffectedScreens("paper", ["manager.private:never_publish"]))
+      .toEqual([]);
+  });
+
+  it("keeps the versioned observation fixture browser-safe and operation-bound", () => {
+    const fixture = JSON.parse(readFileSync(
+      resolve(__dirname, "fixtures/eds11-observation-revalidation.v1.json"),
+      "utf8",
+    )) as { cases: Array<{ payload: { revalidation: Record<string, unknown> } }> };
+    expect(fixture.cases).toHaveLength(2);
+    for (const entry of fixture.cases) {
+      const serialized = JSON.stringify(entry.payload);
+      expect(entry.payload.revalidation).toMatchObject({
+        schema_version: "portal.execution.observation-revalidation.v1",
+        mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+        profile_scope: "CURRENT_STREAM_PROFILE_ONLY",
+        redaction: {
+          raw_source_relation: "WITHHELD",
+          source_cursor: "WITHHELD",
+          resource_selector: "WITHHELD",
+        },
+      });
+      expect(serialized).not.toContain("manager.");
+      expect(serialized).not.toContain("cursor-");
+      expect(serialized).not.toContain("https://");
+    }
+  });
+
+  it("fans one sanitized local revision to 100 clients without multiplying journal reads", async () => {
+    vi.useFakeTimers();
+    const realtime = new ExecutionProfileRealtimeService(config, repository);
+    const stops: Array<() => void> = [];
+    const batches: Array<Array<Record<string, unknown>>> = [];
+    let journalAfter: { mockRestore: () => void } | null = null;
+    try {
+      const first = await commit(document("alpha-1"), "cursor-private-first");
+      for (let index = 0; index < 100; index += 1) {
+        const batch: Array<Record<string, unknown>> = [];
+        batches.push(batch);
+        stops.push(await realtime.subscribe(
+          workspaceId,
+          "paper",
+          profileId,
+          `${first.projectionEpoch}:${first.projectionSequence}`,
+          (event) => { batch.push(event as unknown as Record<string, unknown>); return true; },
+        ));
+      }
+      journalAfter = vi.spyOn(repository, "journalAfter");
+      await commit(document("alpha-2"), "cursor-private-second");
+      await (realtime as unknown as { tick(): Promise<void> }).tick();
+
+      expect(journalAfter).toHaveBeenCalledTimes(1);
+      expect(batches).toHaveLength(100);
+      for (const batch of batches) {
+        expect(batch).toHaveLength(1);
+        expect(batch[0]).toMatchObject({
+          event_type: "delta",
+          payload: {
+            schema_version: "portal.execution.observation-revision.v1",
+            revalidation: {
+              mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+              revision_tick: {
+                projection_epoch: first.projectionEpoch,
+                projection_sequence: 2,
+              },
+            },
+          },
+        });
+        expect(JSON.stringify(batch[0])).not.toContain("cursor-private");
+        expect(JSON.stringify(batch[0])).not.toContain("manager.");
+      }
+    } finally {
+      for (const stop of stops) stop();
+      journalAfter?.mockRestore();
+      realtime.onApplicationShutdown();
+      vi.useRealTimers();
+    }
+  });
+
   it("exposes only the four bounded, read-only existing-source adapters", async () => {
     await commit(document("alpha-1"), "cursor-1");
     const adapters = new ExecutionProfileReadAdapterService(config, repository);
@@ -240,7 +390,9 @@ describe("Phase 1 SGP-local profile projection", () => {
       state: "PARTIAL",
       bounds: { arbitrary_source_selection: false, browser_cross_cell_access: false },
     });
-    expect(value.relations[relationKey]).toMatchObject({ state: "AVAILABLE", truncated: false });
+    expect(value.relations.strategies).toMatchObject({ state: "AVAILABLE", truncated: false });
+    expect(JSON.stringify(value)).not.toContain("manager.");
+    expect(JSON.stringify(value)).not.toContain("cursor-1");
     await expect(adapters.read(workspaceId, "paper", "market.ticks"))
       .rejects.toMatchObject({ code: "N32_ADAPTER_NOT_ACCEPTED" });
     await expect(adapters.read(workspaceId, "paper", "admin.broker-read"))

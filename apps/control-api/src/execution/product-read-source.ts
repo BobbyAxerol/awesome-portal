@@ -239,7 +239,11 @@ export class ExecutionProductReadSource {
         sequence: snapshot.projectionSequence,
         payload_digest: snapshot.payloadDigest,
         source_contract_revision: snapshot.document.source_contract_revision,
-        source_cursor: snapshot.sourceCursor,
+        // The raw Manager checkpoint stays only in the durable SGP mirror.
+        // Browser pagination uses Portal-signed continuation tokens; exposing
+        // this value would make a current-page BFF an accidental source
+        // selector and violates the EDS-11 revalidation boundary.
+        source_cursor: null,
         received_at: snapshot.receivedAt.toISOString(),
         last_successful_refresh_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
       },

@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-05 | **EDS-11 local BFF hydration and observation revalidation closed at the contract gate**: a committed Portal-local observation revision now resolves direct and composition-dependent Paper/Sandbox/Live screen impact through the frozen Screen BFF catalogue, yielding only the active profile's named same-origin `GET` operation IDs and a local epoch/sequence/digest tick. ProductRead/panel output withholds raw Manager checkpoints; bounded adapters use semantic product groups and Command Center withholds source checkpoints; one local journal tail fan-outs to browsers without source amplification | focused profile-isolation, unknown-mapping, operation/redaction, cursor-withholding and 100-client/shared-journal regressions plus the full fresh-PostgreSQL Control API gate; no Event/replay claim, direct source path, runtime activation, container, cache or command change |
 | 2026-09-05 | **EDS-10b observed timeline and derived mark-context closed at the contract gate**: Portal replaces the misleading current-page `replay-journal` presentation with a named bounded same-origin `executionObservedTimelineV1` BFF. It serves only `PORTAL_OBSERVATION` rows with exact decimal strings, UTC milliseconds, profile/freshness/coverage metadata and a Portal-signed projection-bound continuation; `DERIVED · mark-context` uses only published mark/equity context. True replay/Event/ACK/correction/global sequence/OHLCV remain separate typed source gaps | focused resource-isolation, stable mixed-clock order, cursor/redaction, exact-decimal, mark-context and disabled-profile regressions plus fresh-PostgreSQL Control API gate; no source transport, direct source path, command, runtime flag, container or profile activation |
 | 2026-09-05 | **EDS-09b Portal observation bridge closed source-dark**: current Manager-page data continues through the existing server-only lease/coalescer and durable mirror, while the local revision journal/SSE now carries only `PORTAL_OBSERVATION` provenance plus named affected screen IDs. A retained-range digest conflict is forensic-quarantined before the compatibility snapshot, source checkpoint or visible revision can advance | additive migration `1723680000024`; focused provenance/redaction/replay and quarantine regressions plus full fresh-PostgreSQL Control API **45 files / 384 tests** + restore gate; no Edge route, source transport, runtime flag, container, direct DB/Redis/broker/CLI or command change |
 | 2026-09-05 | **EDS-09 owner return accepted as source-as-is, current-product route replanned**: Portal verified the immutable owner-return manifest and EDS-08 validator. All 18 gaps and all three Event classes remain `SOURCE_GAP_CONFIRMED`; no current Manager page is allowed into `authoritative-event-core`. The binding decision is `EDS-09b` Portal observation journal → `EDS-10b` observed/derived panel plane → `EDS-11` local BFF/SSE. True Event/replay/market requirements are consolidated into one visible `Soon` source-upgrade backlog, never a blocker for existing Paper/Sandbox/Live current data | manifest **12/12** + EDS-08 owner-return validator passed (`18` gaps, `7` owner lanes, `3` Event classes, `8` synthetic cases); documentation only, no source/runtime/container/credential/command change |
@@ -4481,7 +4482,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-09b | Portal observation bridge, local observation journal and revision ticks | EDS-03–07 current source | **IMPLEMENTED / VERIFIED_SOURCE_DARK / RUNTIME_INACTIVE**; bounded/resumable current pages only, without Event claims |
 | EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
 | EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE**; yes, with `PORTAL_OBSERVATION` / `DERIVED` labels |
-| EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | planned; **yes**, panel by panel with typed gaps |
+| EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE** on 2026-09-05; yes, panel by panel with typed gaps |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
 
 EDS-03 through EDS-07 must not wait for EDS-08. This is the key
@@ -5181,8 +5182,9 @@ receive a Manager relation selector, raw source cursor, JWT, mTLS input or an
 asserted Trading System Event. The existing profile-isolated lease/coalescer
 remains the only source read path. Detailed contract, failure and handoff rules
 are in [`EDS_09B_PORTAL_OBSERVATION_JOURNAL.md`](backend/EDS_09B_PORTAL_OBSERVATION_JOURNAL.md).
-The next current-source product work is EDS-10b, then EDS-11; EDS-08/09/10
-remain a separate future-source lane.
+The remaining current-source product work at this decision was EDS-10b, then
+EDS-11; both are now contract-closed. EDS-08/09/10 remain a separate
+future-source lane.
 
 ### EDS-10b — Observed timeline and derived mark-context plane
 
@@ -5242,7 +5244,8 @@ until the source owner publishes an independently accepted Event class.
 
 ### EDS-11 — Current-data screen BFF hydration and local realtime
 
-**Status:** `PLANNED / FOLLOWS_EDS-09B_AND_10B`.
+**Status:** `IMPLEMENTED / CONTRACT_VERIFIED / CURRENT_SOURCE_ONLY /
+RUNTIME_INACTIVE` on 2026-09-05.
 
 **Goal:** connect every frozen frontend screen to named same-origin BFFs and
 local observation revisions. It is not an Event-stream activation and does not
@@ -5255,6 +5258,25 @@ Last-Event-ID resync/fallback polling; and have frontend acceptance prove each
 screen keeps its rich layout under available, partial, stale, empty and
 unavailable states. Commands retain their separately accepted exact contract
 and remain fail-closed outside it.
+
+**Completion record (2026-09-05):** EDS-11 now turns only committed
+Portal-local observation revisions into a profile-scoped list of frozen
+same-origin Screen BFF `GET` operation IDs. The server derives that list from
+the fixed catalogue for the directly changed current relation plus explicit
+Paper/Sandbox/Live composition dependencies; unknown, cross-profile and
+non-read screens map to no operation. The browser receives a local
+epoch/sequence/digest `revision_tick` and may re-fetch only its already-active
+named BFF/resource. It receives no Manager relation, raw source cursor,
+resource selector, upstream URL, delegated JWT or mTLS material. Existing
+local snapshot/resume/gap semantics remain intact: one journal tail fans to all
+subscribers without an AWS-HK source read per tab. Raw Manager checkpoints are
+now withheld from ProductRead and panel output, while Portal-signed page
+continuations remain valid. Focused tests prove mapping/profile isolation,
+redaction and a single journal read for 100 subscribers. This is
+`PORTAL_OBSERVATION`, never Event/replay; the owner-confirmed lifecycle,
+ACK, market and artifact gaps stay visible `Soon` branches without blocking
+current-data screens. No runtime, source, container or command authority
+changed. See [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).
 
 ### Source-upgrade backlog — visible as `Soon`, never a delivery blocker
 
@@ -5299,6 +5321,11 @@ continues through EDS-09b → EDS-10b → EDS-11; EDS-10 resumes only when its
 future source contract exists.
 
 ### EDS-11 — Complete screen BFF/action graph and local realtime activation
+
+**Status:** `IMPLEMENTED / CONTRACT_VERIFIED / CURRENT_SOURCE_ONLY /
+RUNTIME_INACTIVE` on 2026-09-05. The current-data portion is complete; actual
+runtime/profile activation and the future authoritative Event lane remain
+separate operational/source decisions.
 
 **Goal:** finish every frozen screen, tab, panel, filter and button using local
 committed revisions and one resumable realtime channel.

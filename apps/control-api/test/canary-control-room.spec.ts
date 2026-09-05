@@ -452,6 +452,8 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
       },
       projection_continuity: { state: "CONTIGUOUS", epoch: "epoch-live", sequence: 9 },
     });
+    expect(live.json().projection_continuity.cursor).toBeNull();
+    expect(JSON.stringify(live.json())).not.toContain("cursor-live");
     expect(live.json().kpis.find((item: { key: string }) => item.key === "broker_equity").value)
       .toBeNull();
 

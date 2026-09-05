@@ -4,6 +4,7 @@ import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProfileReadService } from "../profile-read/profile-read.service";
+import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
 import {
   SANDBOX_CERTIFICATION_STEPS,
   SandboxCertificationCreateRequest,
@@ -327,7 +328,9 @@ export class SandboxCertificationService {
         source_authority: authority,
         as_of: asOf,
         read_at: readAt,
-        source_cursor: steps.find((item) => item.evidence?.source_cursor)?.evidence?.source_cursor ?? null,
+        // Evidence retains its raw source cursor only server-side for audit.
+        // The product panel gets stable local projection coordinates instead.
+        source_cursor: null,
         source_sequence: null,
         projection_epoch: steps.find((item) => item.evidence?.projection_epoch)?.evidence?.projection_epoch ?? null,
         projection_sequence: steps.find((item) => item.evidence?.projection_sequence)?.evidence?.projection_sequence ?? null,
@@ -359,7 +362,7 @@ export class SandboxCertificationService {
       replayed,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
-      ...(currentSource ? { current_source: currentSource } : {}),
+      ...(currentSource ? { current_source: browserSafeProfileRead(currentSource) } : {}),
       certification: {
         certification_id: record.certification_id,
         deployment_id: record.deployment_id,
@@ -510,7 +513,7 @@ export class SandboxCertificationService {
       replayed: false,
       read_at: readAt,
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
-      current_source: currentSource,
+      current_source: browserSafeProfileRead(currentSource),
       certification: {
         certification_id: `uncommissioned:${deploymentId}`,
         deployment_id: deploymentId,
