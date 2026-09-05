@@ -132,6 +132,8 @@ export interface AccountBroker360Props {
   aggregate: AggregateHeadroom | null;
   /** Population coverage for the linked list, from the exposure contract. */
   exposure?: BindingExposure | null;
+  /** EDS-07 account equity chart; absent = the container did not request it. */
+  financialChart?: ReactNode;
   syncPolicy: string;
   syncHistory: readonly SyncRow[];
   /**
@@ -336,6 +338,7 @@ export function AccountBroker360({
   aggregate,
   exposure = null,
   syncPolicy,
+  financialChart,
   syncHistory,
   syncTotal = null,
   openFindings,
@@ -426,6 +429,8 @@ export function AccountBroker360({
       </div>
 
       <HeadroomBanner aggregate={aggregate} exposure={exposure} />
+
+      {financialChart ?? null}
 
       {/* Hi-fi 1g shows binding, sync history and findings at once — no tabs. */}
         {(

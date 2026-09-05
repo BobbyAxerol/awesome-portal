@@ -33,7 +33,8 @@ describe("Alpha 360 — no blank frames", () => {
     const tiles = container.querySelectorAll(".exec-alpha-tiles > *");
     expect(tiles).toHaveLength(12);
     for (const tile of tiles) {
-      const hasChart = tile.querySelector("[data-echart]") !== null;
+      // ECharts tiles carry `data-echart`; the equity tile is PrimusFinancialChart (OR-3) and carries `data-financial-chart`.
+      const hasChart = tile.querySelector("[data-echart], [data-financial-chart]") !== null;
       const hasState = tile.querySelector(".exec-state") !== null || tile.querySelector(".exec-chart-unavailable-body") !== null;
       expect(hasChart || hasState, tile.getAttribute("aria-label") ?? "tile").toBe(true);
     }

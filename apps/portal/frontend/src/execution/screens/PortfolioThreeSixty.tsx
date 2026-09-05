@@ -192,6 +192,8 @@ export interface PortfolioThreeSixtyProps {
   ledgerStatus?: PanelStatus;
   ledgerReason?: string;
   ledgerTotals?: { allocated: string; max: string; free: string; currency: string } | null;
+  /** EDS-05 capital-by-currency derivation; absent = the container did not request it. */
+  capital?: ReactNode;
   approvals: readonly ApprovalRow[];
   /**
    * Open and resolved incidents.
@@ -776,6 +778,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
     insight,
     ledger,
     ledgerTotals,
+    capital,
     approvals,
     incidents,
     status = "ok",
@@ -1050,6 +1053,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         {tab === "Capital Ledger" ? (
           <>
             {demoPanels?.ledger ?? null}
+            {capital ?? null}
             <details className="exec-pf2-contract" open={!smoke}><summary>published ledger · capital-ledger.v1 contract</summary><Ledger ledger={ledger} totals={ledgerTotals} status={props.ledgerStatus === "ok" ? "empty" : props.ledgerStatus} reason={props.ledgerReason} /></details>
           </>
         ) : null}

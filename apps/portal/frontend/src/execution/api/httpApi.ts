@@ -38,6 +38,8 @@ import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
+import { financialChartPath, readFinancialChart, type FinancialChartPayload, type FinancialChartQuery, type FinancialEnvironment } from "./financialChart";
+import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSourceHealth } from "./derivations";
 import {
   commandPlanRequest,
   readCommandPlan,
@@ -301,6 +303,19 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     readGet(`/resources/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account resource");
   const getBindingResource = (bindingId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/resources/bindings/${encodeURIComponent(bindingId)}`, readProfileEnvelope, "The binding resource");
+  const getFinancialChart = (query: FinancialChartQuery): Promise<Result<FinancialChartPayload>> =>
+    readGet(financialChartPath(query), readFinancialChart, "The financial chart");
+  // EDS-05: every derivation is environment-scoped; the server rejects a read without one.
+  const derivation = <T>(path: string, environment: FinancialEnvironment, reader: (raw: unknown) => T | null, what: string): Promise<Result<T>> =>
+    readGet(`/derivations${path}?environment=${encodeURIComponent(environment)}`, reader, what);
+  const getSourceHealth = (environment: FinancialEnvironment) =>
+    derivation("/source-health", environment, readSourceHealth, "The source-health derivation");
+  const getDeploymentQuality = (deploymentId: string, environment: FinancialEnvironment) =>
+    derivation(`/deployments/${encodeURIComponent(deploymentId)}/execution-quality`, environment, readDeploymentQuality, "The execution-quality derivation");
+  const getPortfolioCapital = (portfolioId: string, environment: FinancialEnvironment) =>
+    derivation(`/portfolios/${encodeURIComponent(portfolioId)}/capital`, environment, readPortfolioCapital, "The portfolio-capital derivation");
+  const getAlphaActivity = (alphaId: string, environment: FinancialEnvironment) =>
+    derivation(`/alphas/${encodeURIComponent(alphaId)}/activity`, environment, readAlphaActivity, "The alpha-activity derivation");
   const listParameters = (query: object) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
@@ -402,6 +417,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getPortfolio360Resource,
     getAccount360Resource,
     getBindingResource,
+    getFinancialChart,
+    getSourceHealth,
+    getDeploymentQuality,
+    getPortfolioCapital,
+    getAlphaActivity,
     getAlphaFleet,
     listPortfolios,
     getBindings,

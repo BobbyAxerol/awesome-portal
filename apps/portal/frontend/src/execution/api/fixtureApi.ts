@@ -429,6 +429,13 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const blocked = gate<ProfileEnvelope>("getBindingResource");
       return blocked ?? fixtureRead(resourceFixture("binding", bindingId), readProfileEnvelope, "The binding resource");
     },
+    // EDS-05/07 reads have no canonical fixture yet; the fixtures surface shows
+    // their typed unavailable state rather than an invented payload.
+    async getFinancialChart() { return unavailable("The financial chart (EDS-07) is not part of the fixture set."); },
+    async getSourceHealth() { return unavailable("Source health (EDS-05) is not part of the fixture set."); },
+    async getDeploymentQuality() { return unavailable("Execution quality (EDS-05) is not part of the fixture set."); },
+    async getPortfolioCapital() { return unavailable("Portfolio capital (EDS-05) is not part of the fixture set."); },
+    async getAlphaActivity() { return unavailable("Alpha activity (EDS-05) is not part of the fixture set."); },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
       return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");

@@ -63,6 +63,8 @@
   --exec-font-caption: 400 11px/14px var(--font-body);
   /* Prose measure (§5.2): a readable line is about 72 characters. */
   --exec-measure: 72ch;
+  /* Financial chart colours (`--exec-chart-*`) live in styles/tokens.css with
+   * the other colour tokens (U02 gate); PrimusFinancialChart reads them there. */
 }
 
 /* Role classes for JSX that has no better home than a role — the typography
@@ -4519,6 +4521,67 @@
 .exec-chart-tip-k { font: var(--exec-font-th); text-transform: uppercase; letter-spacing: .02em; opacity: .8; }
 .exec-chart-tip-v { font: var(--exec-font-num); }
 .exec-chart-tip-env { font: var(--exec-font-meta); opacity: .7; margin-top: 4px; }
+
+/* ── OR-3 · PrimusFinancialChart (uPlot) ──────────────────────────────────
+   The canvas is uPlot's; everything a reader touches is DOM laid over it in
+   `.exec-fc-overlay` so it inherits the surface tokens like any other text. */
+.exec-fc { position: relative; width: 100%; min-width: 0; }
+.exec-fc .u-select { background: var(--accent-soft); opacity: .55; }
+.exec-fc .u-cursor-x { border-right: 1px dashed var(--ink-faint); }
+.exec-fc .u-cursor-pt { border-radius: 50%; }
+.exec-fc-overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.exec-fc-pill {
+  position: absolute; transform: translate(10px, -50%);
+  font: var(--exec-font-id); font-weight: 600; letter-spacing: .01em;
+  padding: 2px 7px; color: var(--paper-sunken); white-space: nowrap;
+}
+.exec-fc-pill[data-side="left"] { transform: translate(calc(-100% - 10px), -50%); }
+.exec-fc-halo {
+  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border-radius: 50%; border: 1px solid currentColor; opacity: .9;
+}
+/* The pulse is a claim — "the source called this fresh" — and only the
+   server's verdict may make it (`live`). Static otherwise. */
+.exec-fc-halo[data-live="true"] { animation: exec-fc-pulse 1.8s ease-out infinite; }
+@keyframes exec-fc-pulse { 0% { transform: scale(.6); opacity: .9; } 100% { transform: scale(1.9); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .exec-fc-halo[data-live="true"] { animation: none; } }
+.exec-fc-tip {
+  position: absolute; min-width: 200px; max-width: 340px; padding: 8px 10px; z-index: 3;
+  background: var(--paper-raised); border: 1px solid var(--line); box-shadow: var(--shadow-raised);
+  font: var(--exec-font-meta); color: var(--ink); overflow-wrap: anywhere;
+}
+.exec-fc-tip[hidden] { display: none; }
+.exec-fc-tip-row { display: flex; justify-content: space-between; gap: 12px; }
+.exec-fc-sw { display: inline-block; width: 10px; height: 3px; margin-right: 6px; vertical-align: middle; }
+.exec-chart-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font: var(--exec-font-meta); color: var(--ink-soft); margin: 2px 0 6px; }
+.exec-chart-legend button { all: unset; cursor: pointer; display: inline-flex; align-items: center; font: inherit; color: inherit; }
+.exec-chart-legend button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.exec-chart-legend button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.exec-chart-swatch { display: inline-block; width: 12px; height: 3px; margin-right: 6px; vertical-align: middle; background: var(--exec-chart-line); }
+.exec-chart-swatch[data-tone="bad"] { background: var(--exec-chart-gap); }
+.exec-chart-swatch[data-tone="band"] { background: var(--exec-chart-band); opacity: .7; height: 6px; }
+.exec-chart-swatch[data-tone="gap"] { background: repeating-linear-gradient(135deg, var(--exec-chart-gap) 0 2px, transparent 2px 5px); height: 8px; }
+.exec-chart-seg { display: inline-flex; border: 1px solid var(--line); }
+.exec-chart-seg .exec-btn-ghost { border: 0; }
+.exec-chart-seg .exec-btn-ghost + .exec-btn-ghost { border-left: 1px solid var(--line-soft); }
+.exec-chart-seg .exec-btn-ghost[aria-pressed="true"] { background: var(--paper-sunken); color: var(--ink); }
+.exec-chart-seg .exec-btn-ghost[disabled] { opacity: .4; cursor: not-allowed; }
+.exec-chart-empty { font: var(--exec-font-body); color: var(--ink-mute); margin: 12px 0; }
+
+/* ── EDS-05 · derivation tiles ───────────────────────────────────────────── */
+.exec-deriv .exec-tile-head { align-items: center; }
+.exec-deriv-chips { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.exec-deriv-formula { font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-deriv-body { padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-2); }
+.exec-deriv-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 16px; margin: 0; }
+.exec-deriv-facts dt { font: var(--exec-font-th); color: var(--ink-mute); text-transform: uppercase; letter-spacing: .02em; }
+.exec-deriv-facts dd { margin: 0; font: var(--exec-font-num); }
+.exec-deriv-table { width: 100%; border-collapse: collapse; font: var(--exec-font-data); }
+.exec-deriv-table th, .exec-deriv-table td { padding: 4px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; white-space: nowrap; }
+.exec-deriv-table th { font: var(--exec-font-th); color: var(--ink-mute); }
+.exec-deriv-counts { display: flex; flex-wrap: wrap; gap: 6px; }
+.exec-deriv-unpublished { font: var(--exec-font-meta); color: var(--warn); margin: 0; }
+.exec-cc-sourcehealth { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--space-3); margin: var(--space-3) 0 0; }
 
 /* ── EL-V2-04 · decision strip at phone widths ───────────────────────────
    A ten-digit VND equity at kpi 24px mono is ~190px; two 160px cells cannot

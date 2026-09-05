@@ -18,6 +18,8 @@ import { readCommandCenter, type CommandCenter } from "../commandCenter";
 import { CommandCenterLive } from "./containers";
 import type { SseFactory } from "../sse";
 import { PanelState } from "../components/states";
+import { SourceHealthPanel } from "../components/DerivationTile";
+import type { SourceHealth } from "../api/derivations";
 import { ProfileEnvelopeScreen, QueryAnalyticsScreen, TypedUnavailableScreen } from "./ProfileScreens";
 import type { PanelStatus } from "../contracts";
 import { StatusChip } from "../components/badges";
@@ -103,7 +105,25 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
       </section>
     );
   }
-  return <CommandCenterLive snapshot={snapshot} factory={factory} fetchSnapshot={fetchCommandCenterResume} />;
+  return <CommandCenterLive snapshot={snapshot} factory={factory} fetchSnapshot={fetchCommandCenterResume} sourceHealth={<SourceHealthLiveTiles api={api} />} />;
+}
+
+/**
+ * EDS-05 source health, one read per environment. Three tiles rather than one
+ * merged table: each envelope carries its own state, formula and input list,
+ * and folding three PARTIALs into one row would hide which one is.
+ */
+export function SourceHealthLiveTiles({ api }: { api: ExecutionApi }) {
+  const paper = useApiRead<SourceHealth>(() => api.getSourceHealth("paper"), [api]);
+  const sandbox = useApiRead<SourceHealth>(() => api.getSourceHealth("sandbox"), [api]);
+  const live = useApiRead<SourceHealth>(() => api.getSourceHealth("live"), [api]);
+  return (
+    <>
+      <SourceHealthPanel health={paper.value} transport={paper.status} reason={paper.reason} />
+      <SourceHealthPanel health={sandbox.value} transport={sandbox.status} reason={sandbox.reason} />
+      <SourceHealthPanel health={live.value} transport={live.status} reason={live.reason} />
+    </>
+  );
 }
 
 const OVERVIEW_TITLE = {

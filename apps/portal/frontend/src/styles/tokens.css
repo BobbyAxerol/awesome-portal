@@ -32,6 +32,14 @@
   --stage-paper: #7c5cbf;
   --stage-paper-bg: #efe9fb;
   --accent-soft: #e2edf0;
+  /* Financial chart roles (tracker OR-3, PrimusFinancialChart). Role refs here;
+   * the dark themes pin the two line colours approved on the artifact. */
+  --exec-chart-line: var(--good);
+  --exec-chart-line-2: var(--accent);
+  --exec-chart-band: var(--accent-2);
+  --exec-chart-gap: var(--bad);
+  --exec-chart-grid: var(--line-soft);
+  --exec-chart-axis: var(--ink-faint);
   --accent-strong: #226173;
   --accent-2: #9a6a1f;
   --accent-2-soft: #f4ecdb;
@@ -277,6 +285,8 @@
   --accent: #7fb3c4;
   --accent-contrast: #101010;
   --accent-soft: #1a2b34;
+  --exec-chart-line: #42a365;
+  --exec-chart-line-2: #5b96dd;
   --accent-strong: #9ac6d4;
   --accent-2: #d4a75e;
   --accent-2-soft: #33291a;
@@ -374,6 +384,9 @@
    * 60 #6f6f6f · 50 #8d8d8d · 30 #c6c6c6 · 10 #f4f4f4 */
   --paper: #161616;
   --paper-raised: #1d1d1d;
+  --exec-chart-line: #42a365;
+  --exec-chart-line-2: #5b96dd;
+  --exec-chart-band: #d4a75e;
   --paper-sunken: #101010;
   --surface-2: #262626;
   --surface-3: #1d1d1d;

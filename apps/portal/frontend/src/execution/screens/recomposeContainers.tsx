@@ -25,6 +25,11 @@ import { pageOf, workbenchFillRow, workbenchOrderRow, workbenchPositionRow, work
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
 import { useApiRead } from "./profileContainers";
+import { EquityChart } from "../components/EquityChart";
+import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalTile } from "../components/DerivationTile";
+import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
+import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/derivations";
+import type { ChartEnvelope } from "../contracts";
 import { PaperOverview } from "./PaperOverview";
 import { SandboxOverview } from "./SandboxOverview";
 import { LiveOverview } from "./LiveOverview";
@@ -101,6 +106,11 @@ function resourceReason(profile: ProfileEnvelope | null | undefined, fallback?: 
     ...profile.capabilities.flatMap((item) => item.reasonCode ? [item.reasonCode] : []),
   ];
   return reasons.length > 0 ? reasons.join(" · ") : fallback;
+}
+
+/** The caption an EDS-07 tile wears before its panel answered — says so, claims nothing. */
+function chartFallbackEnvelope(asOf: string | null): ChartEnvelope {
+  return { window: "not read", interval: "not read", asOf: asOf ?? "not stated", authority: "PORTAL" };
 }
 
 const STAGE_FOR_MODE: Record<string, PromotionStage> = {
@@ -256,6 +266,7 @@ export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
 export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "paper" }: { api: ExecutionApi; deploymentId: string; variant?: "paper" | "vnm" }) {
   const realtime = useProfileRealtime("paper");
   const state = useApiRead<ProfileEnvelope>(() => api.getPaperWorkbenchProfile(deploymentId, variant), [api, deploymentId, variant, realtime.refreshKey]);
+  const qualityState = useApiRead<DeploymentQuality>(() => api.getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const navigate = useNavigate();
   const profile = state.value;
@@ -369,6 +380,7 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
       driftNote={null}
       runtime={[{ label: "sessions", value: sessionCount === null ? String(sessions.length) : String(sessionCount) }, { label: "orders", value: String(orders.length) }, { label: "fills", value: String(fills.length) }, { label: "freshness", value: profile.freshness }]}
       accounting={[{ label: "cash free", value: text(performance?.cash_free) }, { label: "cash locked", value: text(performance?.cash_locked) }, { label: "margin initial", value: text(performance?.margin_initial) }, { label: "margin maintenance", value: text(performance?.margin_maintenance) }]}
+      quality={<ExecutionQualityTile quality={qualityState.value} transport={qualityState.status} reason={qualityState.reason} />}
       contribution={analytics?.executionQuality ? Object.entries(analytics.executionQuality).slice(0, 4).map(([label, value]) => ({ label: label.replace(/_/g, " "), value: text(value) })) : []}
       tab={tab}
       onTabChange={setTab}
@@ -945,6 +957,9 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
   const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
+  const activityEnv = resourceState.value?.selectedEnvironment ?? "paper";
+  const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   const [scope, setScope] = useAnalyticsScope();
   const navigate = useNavigate();
@@ -999,6 +1014,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       risk={alphaRisk(viewFacts)}
       sessions={alphaSessions(viewFacts)}
       accounting={alphaAccounting(viewFacts)}
+      activity={<AlphaActivityTile activity={activityState.value} transport={activityState.status} reason={activityState.reason} />}
       reconciliation={alphaReconciliation(viewFacts)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
@@ -1073,6 +1089,8 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
+  const capitalEnv = resourceState.value?.selectedEnvironment ?? "paper";
+  const capitalState = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, capitalEnv), [api, portfolioId, capitalEnv, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<PortfolioTab>("tab", PORTFOLIO_TABS, "Overview");
   const [lens, setLens] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -1119,6 +1137,7 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       ledgerStatus={ledgerState.status}
       ledgerReason={ledgerState.reason}
       ledgerTotals={null}
+      capital={<PortfolioCapitalTile capital={capitalState.value} transport={capitalState.status} reason={capitalState.reason} />}
       approvals={[]}
       incidents={null}
       status={rootStatus}
@@ -1134,6 +1153,24 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
 export function AccountBroker360RichContainer({ api, accountId }: { api: ExecutionApi; accountId: string }) {
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
   const state = useApiRead<ProfileEnvelope>(() => api.getAccount360Resource(accountId), [api, accountId, realtime.refreshKey], { keepValue: true });
+  // EDS-07: the chart is read for the environment and projection workspace the
+  // resource resolved to; the server rejects any other workspace, so the id is
+  // never guessed here. Viewport = the window width, clamped by the path builder.
+  const chartEnv = state.value?.selectedEnvironment ?? "paper";
+  const chartWorkspace = state.value?.workspaceId ?? null;
+  const chartState = useApiRead<FinancialChartPayload>(
+    () => api.getFinancialChart({
+      environment: chartEnv,
+      subjectKind: "account",
+      subjectId: accountId,
+      metric: "equity",
+      viewportPx: typeof window !== "undefined" ? window.innerWidth : undefined,
+      workspaceId: chartWorkspace,
+    }),
+    [api, accountId, chartEnv, chartWorkspace, realtime.refreshKey],
+    { keepValue: true },
+  );
+  const chart = chartState.value ? financialChartView(chartState.value) : null;
   const profile = state.value;
   const account = profile?.data.accounts?.[0] ?? null;
   const balances = profile?.data.account_balances ?? [];
@@ -1235,6 +1272,16 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
         physicalLabel: "free balance",
       } : null}
       exposure={profile ? { bindingId: text(profile.data.venue_accounts?.[0]?.binding_id) ?? accountId, aggregate: null, accountCount: 1, expectedAccountCount: 1, completeness: "COMPLETE", buckets: [] } : null}
+      financialChart={
+        <EquityChart
+          title={`Account equity · ${chartEnv}`}
+          envelope={chart?.envelope ?? chartFallbackEnvelope(sourceEnvelope.asOf)}
+          series={chart?.series ?? null}
+          unavailableReason={chart?.reason ?? chartState.reason ?? "The EDS-07 chart panel published no points for this account."}
+          live={sourceEnvelope.freshness === "OK"}
+          height={280}
+        />
+      }
       syncPolicy={reason ?? `current-source ${environment} profile`}
       syncHistory={syncRows}
       syncTotal={null}

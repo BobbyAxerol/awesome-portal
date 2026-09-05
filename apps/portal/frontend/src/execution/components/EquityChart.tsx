@@ -1,24 +1,27 @@
 /**
  * Equity vs approved research evidence — the centre chart of every workbench
- * (HiFi 1c/1e/1f/2a/2b; handoff §10.3).
+ * (HiFi 1c/1e/1f/2a/2b; handoff §10.3). Rendered by `PrimusFinancialChart`
+ * (uPlot, tracker OR-3) since the EDS-07 activation.
  *
  * Numbers: the server publishes decimal strings. Coordinates for plotting need
  * JS numbers, so `Number()` is used *only* to place a point on the canvas; every
- * value a person reads (tooltip, table view) is the server's string verbatim.
- * Nothing is summed, averaged or derived — the approved band is drawn from the
- * server's lower/upper as published.
+ * value a person reads (pill, tooltip, table view) is the server's string —
+ * verbatim in the table, exact-decimal formatted on the canvas. Nothing is
+ * summed, averaged or derived — the approved band is drawn from the server's
+ * lower/upper as published.
  *
- * Gaps are gaps: a missing bucket is a `null` point (`connectNulls:false`) and a
- * shaded mark area, never an interpolated line.
+ * Gaps are gaps: a missing bucket is a `null` point that breaks the line and a
+ * hatched area where the server declared one, never an interpolated line.
  */
-import { useId, useMemo, useState } from "react";
-import type { EChartsOption, LineSeriesOption } from "echarts";
-import { EChart } from "../../charts/EChart";
-import { baseOption } from "../../charts/theme";
+import { useCallback, useId, useMemo, useState } from "react";
+
+import { PrimusFinancialChart, type FinancialMarker } from "../../charts/financial/PrimusFinancialChart";
+import { RANGE_PRESETS, presetAvailable, presetRange, toFinancialData, type RangePreset } from "../../charts/financial/financialData";
 import type { ChartEnvelope } from "../contracts";
+import { formatExact } from "../formatExact";
 import { envelopeCaption } from "./chart";
-import { activeTheme } from "../../styles/tokens";
-import { chartTokens } from "../../charts/theme";
+
+export { toFinancialData as equityChartData } from "../../charts/financial/financialData";
 
 export interface EquityPoint {
   /** bucket start, ISO-8601 UTC */
@@ -46,6 +49,11 @@ export interface EquitySeries {
   gaps?: readonly EquityGap[] | null;
   /** true only on the fixtures evidence page: not a published projection */
   evidenceOnly?: boolean;
+  /**
+   * What the values are. `drawdown` draws downward from zero in the bad tone;
+   * anything else is a level series in the primary tone. Absent = `equity`.
+   */
+  kind?: "equity" | "drawdown" | "value";
 }
 
 export interface EquityChartProps {
@@ -56,149 +64,21 @@ export interface EquityChartProps {
   unavailableReason?: string;
   height?: number;
   id?: string;
-  /** Cross-filter source: a bucket picked in the table view (chart clicks need no wrapper change). */
+  /** Cross-filter source: a bucket picked on the canvas or in the table view. */
   onSelectBucket?: (t: string) => void;
   /**
-   * Tile mode (Insight grids): two tools instead of four, no slider, no
-   * legend, caption folded to one line. Expand restores the full chart.
+   * Tile mode (Insight grids): two tools instead of the full row, no legend,
+   * caption folded to one line. Expand restores the full chart.
    */
   compact?: boolean;
+  /** The server's freshness verdict for this series. True pulses the last point; never inferred here. */
+  live?: boolean;
+  /** Time markers drawn on the canvas (risk decisions, halts) — labels are the server's. */
+  markers?: readonly FinancialMarker[];
 }
 
 const EXPANDED_HEIGHT = 560;
 const DEFAULT_HEIGHT = 300;
-
-function num(v: string | null | undefined): number | null {
-  if (v === null || v === undefined || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
-/** Build the ECharts option. Exported for tests: option shape is the contract. */
-export interface EquityOptionOpts {
-  /** Tile mode: no slider, no legend, tighter grid — the title already names the series. */
-  compact?: boolean;
-}
-
-export function equityOption(series: EquitySeries, envelope: ChartEnvelope, zoomEpoch: number, opts: EquityOptionOpts = {}): EChartsOption {
-  const tokens = chartTokens(activeTheme());
-  // Band colour comes from the execution token; the theme accent is the
-  // fallback so no raw colour literal lives outside the token files (U02).
-  const warn =
-    (typeof getComputedStyle === "function"
-      ? getComputedStyle(document.documentElement).getPropertyValue("--exec-warn").trim()
-      : "") || tokens.accent;
-  const colors = { good: tokens.good, bad: tokens.bad, warn };
-  const times = series.points.map((p) => p.t);
-  const equity = series.points.map((p) => num(p.equity));
-  const byTime = new Map(series.band?.map((b) => [b.t, b]) ?? []);
-  const lower = times.map((t) => num(byTime.get(t)?.lower));
-  // Stacked area needs the height of the band, not its top: a rendering
-  // quantity only — it is never shown as a number.
-  const bandHeight = times.map((t) => {
-    const b = byTime.get(t);
-    const lo = num(b?.lower);
-    const hi = num(b?.upper);
-    return lo === null || hi === null ? null : hi - lo;
-  });
-  const gapAreas = (series.gaps ?? []).map((g) => [
-    { xAxis: g.from, name: g.reason },
-    { xAxis: g.to },
-  ]);
-  const raw = new Map(series.points.map((p) => [p.t, p]));
-  const gaps = series.gaps ?? [];
-  const gapAt = (t: string) => gaps.find((g) => t >= g.from && t < g.to);
-  const compact = opts.compact === true;
-  return baseOption({
-    animation: false,
-    grid: compact
-      ? { left: 52, right: 12, top: 12, bottom: 28, containLabel: false }
-      : { left: 64, right: 16, top: 28, bottom: 56, containLabel: false },
-    tooltip: {
-      trigger: "axis",
-      axisPointer: { type: "line" },
-      formatter: (params: unknown) => {
-        const list = Array.isArray(params) ? params : [params];
-        const first = list[0] as { axisValue?: string } | undefined;
-        const t = String(first?.axisValue ?? "");
-        const p = raw.get(t);
-        const b = byTime.get(t);
-        const rows = [
-          `<div class="exec-chart-tip-t">${t}</div>`,
-          `<div><span class="exec-chart-tip-k">${series.label}</span> <span class="exec-chart-tip-v">${
-            p?.equity ?? "gap — not published"
-          }</span></div>`,
-        ];
-        if (p?.drawdown) rows.push(`<div><span class="exec-chart-tip-k">drawdown</span> <span class="exec-chart-tip-v">${p.drawdown}</span></div>`);
-        if (b) rows.push(`<div><span class="exec-chart-tip-k">${series.bandLabel ?? "approved band"}</span> <span class="exec-chart-tip-v">${b.lower} … ${b.upper}</span></div>`);
-        // The gap reason lives here, not painted over the plot: a markArea
-        // label at the top of a 220px tile sat on the legend (audit F8).
-        const g = gapAt(t);
-        if (g) rows.push(`<div><span class="exec-chart-tip-k">gap</span> <span class="exec-chart-tip-v">${g.reason}</span></div>`);
-        rows.push(
-          `<div class="exec-chart-tip-env">${envelope.authority} · as of ${envelope.asOf}${
-            envelope.formulaVersion ? ` · ${envelope.formulaVersion}` : ""
-          }</div>`,
-        );
-        return rows.join("");
-      },
-    },
-    xAxis: {
-      type: "category",
-      data: times,
-      boundaryGap: false,
-      axisLabel: { formatter: (v: string) => v.slice(5, 10), hideOverlap: true },
-    },
-    // Currency lives in the envelope caption; a y-axis name here collided
-    // with the legend. The stacked helper series stays out of the legend.
-    legend: compact ? { show: false } : { data: [series.bandLabel ?? "approved band", series.label], top: 0, right: 0 },
-    yAxis: {
-      type: "value",
-      scale: true,
-      axisLabel: { formatter: (v: number) => String(v) },
-    },
-    dataZoom: compact
-      ? [{ type: "inside", start: 0, end: 100, zoomLock: false, id: `inside-${zoomEpoch}` }]
-      : [
-          { type: "inside", start: 0, end: 100, zoomLock: false, id: `inside-${zoomEpoch}` },
-          { type: "slider", start: 0, end: 100, height: 18, bottom: 8, id: `slider-${zoomEpoch}` },
-        ],
-    series: ([
-      {
-        name: "band-lower",
-        type: "line",
-        data: lower,
-        stack: "band",
-        lineStyle: { opacity: 0 },
-        symbol: "none",
-        silent: true,
-        connectNulls: false,
-      },
-      {
-        name: series.bandLabel ?? "approved band",
-        type: "line",
-        data: bandHeight,
-        stack: "band",
-        lineStyle: { opacity: 0 },
-        areaStyle: { color: colors.warn, opacity: 0.16 },
-        symbol: "none",
-        silent: true,
-        connectNulls: false,
-      },
-      {
-        name: series.label,
-        type: "line",
-        data: equity,
-        symbol: "none",
-        connectNulls: false,
-        lineStyle: { width: 1.5, color: colors.good },
-        markArea: gapAreas.length
-          ? ({ silent: true, label: { show: false }, itemStyle: { color: colors.bad, opacity: 0.14 }, data: gapAreas } as LineSeriesOption["markArea"])
-          : undefined,
-      },
-    ] as LineSeriesOption[]),
-  });
-}
 
 export function EquityChart({
   title,
@@ -209,18 +89,29 @@ export function EquityChart({
   id,
   onSelectBucket,
   compact = false,
+  live = false,
+  markers,
 }: EquityChartProps) {
   const [exported, setExported] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [table, setTable] = useState(false);
   const [zoomEpoch, setZoomEpoch] = useState(0);
+  const [scale, setScale] = useState<"linear" | "log">("linear");
+  const [preset, setPreset] = useState<RangePreset | "custom">("ALL");
+  const [showBand, setShowBand] = useState(true);
   const uid = useId();
   const tile = compact && !expanded;
-  const option = useMemo(
-    () => (series ? equityOption(series, envelope, zoomEpoch, { compact: tile }) : null),
-    [series, envelope, zoomEpoch, tile],
-  );
-  if (!series || !option) {
+  const data = useMemo(() => (series ? toFinancialData(series) : null), [series]);
+  // `undefined` leaves a drag-zoom alone; `null` is an explicit "whole series".
+  const range = useMemo(() => (data && preset !== "custom" ? presetRange(data.xs, preset) : undefined), [data, preset]);
+  const unit = series?.kind === "drawdown" ? "ratio" : "money";
+  const formatValue = useCallback((raw: string) => formatExact(raw, unit).display, [unit]);
+  const resetZoom = () => {
+    setZoomEpoch((n) => n + 1);
+    setPreset("ALL");
+  };
+
+  if (!series || !data) {
     return (
       <section className="exec-chart-tile exec-chart-unavailable" aria-label={title}>
         <div className="exec-chart-head">
@@ -234,15 +125,43 @@ export function EquityChart({
       </section>
     );
   }
-  const gapCount = series.points.filter((p) => p.equity === null).length;
+  const gapCount = data.missing;
+  const presets = RANGE_PRESETS.filter((p) => presetAvailable(data.xs, p));
+  const plotHeight = expanded ? EXPANDED_HEIGHT : height;
+  const footer = `${envelope.authority} · as of ${envelope.asOf}${envelope.formulaVersion ? ` · ${envelope.formulaVersion}` : ""}`;
   return (
-    <section
-      className={`exec-chart-tile exec-equity${expanded ? " exec-chart-expanded" : ""}`}
-      aria-label={title}
-    >
+    <section className={`exec-chart-tile exec-equity${expanded ? " exec-chart-expanded" : ""}`} aria-label={title}>
       <div className="exec-chart-head">
         <h3 className="exec-section-title">{title}</h3>
         <div className="exec-chart-tools" role="group" aria-label="Chart view">
+          {tile ? null : (
+            <>
+              <span className="exec-chart-seg" role="group" aria-label="Axis scale">
+                <button type="button" className="exec-btn-ghost" aria-pressed={scale === "linear"} onClick={() => setScale("linear")}>
+                  Lin
+                </button>
+                <button
+                  type="button"
+                  className="exec-btn-ghost"
+                  aria-pressed={scale === "log"}
+                  disabled={!data.positive}
+                  title={data.positive ? undefined : "A log axis needs every value above zero"}
+                  onClick={() => setScale("log")}
+                >
+                  Log
+                </button>
+              </span>
+              {presets.length > 1 ? (
+                <span className="exec-chart-seg" role="group" aria-label="Window">
+                  {presets.map((p) => (
+                    <button key={p} type="button" className="exec-btn-ghost" aria-pressed={preset === p} onClick={() => setPreset(p)}>
+                      {p}
+                    </button>
+                  ))}
+                </span>
+              ) : null}
+            </>
+          )}
           {/* Zoom resets on double-click (announced in the plot's label); a
               standing "Reset zoom" button was an enabled no-op until the
               reader had zoomed, which the EL-V2-03 sweep rightly rejects. */}
@@ -253,18 +172,18 @@ export function EquityChart({
             {expanded ? "Collapse" : "Expand"}
           </button>
           {tile ? null : (
-          <button
-            type="button"
-            className="exec-btn-ghost"
-            onClick={() => {
-              // Export = the published points as JSON strings, bounded to this window; never a derived figure.
-              const text = JSON.stringify({ label: series.label, envelope, points: series.points, band: series.band ?? null }, null, 2);
-              void navigator.clipboard?.writeText(text);
-              setExported(`${series.points.length} buckets copied as JSON`);
-            }}
-          >
-            Export
-          </button>
+            <button
+              type="button"
+              className="exec-btn-ghost"
+              onClick={() => {
+                // Export = the published points as JSON strings, bounded to this window; never a derived figure.
+                const text = JSON.stringify({ label: series.label, envelope, points: series.points, band: series.band ?? null }, null, 2);
+                void navigator.clipboard?.writeText(text);
+                setExported(`${series.points.length} buckets copied as JSON`);
+              }}
+            >
+              Export
+            </button>
           )}
         </div>
       </div>
@@ -274,8 +193,30 @@ export function EquityChart({
           Evidence fixture — not a published projection.
         </p>
       ) : null}
+      {data.dropped > 0 ? (
+        <p className="exec-chart-evidence-note" role="note">
+          {data.dropped} {data.dropped === 1 ? "point" : "points"} not plotted — unreadable timestamp.
+        </p>
+      ) : null}
+      {tile || table ? null : (
+        <div className="exec-chart-legend" aria-label="Legend">
+          <span>
+            <span className="exec-chart-swatch" data-tone={series.kind === "drawdown" ? "bad" : "line"} aria-hidden="true" /> {series.label}
+          </span>
+          {data.hasBand ? (
+            <button type="button" aria-pressed={showBand} onClick={() => setShowBand((v) => !v)} title="Show or hide the approved band">
+              <span className="exec-chart-swatch" data-tone="band" aria-hidden="true" /> {series.bandLabel ?? "approved band"}
+            </button>
+          ) : null}
+          {data.gaps.length > 0 ? (
+            <span>
+              <span className="exec-chart-swatch" data-tone="gap" aria-hidden="true" /> {data.gaps.length} declared {data.gaps.length === 1 ? "gap" : "gaps"}
+            </span>
+          ) : null}
+        </div>
+      )}
       {table ? (
-        <div className="exec-scroll-x exec-chart-table" style={{ maxHeight: expanded ? EXPANDED_HEIGHT : height }}>
+        <div className="exec-scroll-x exec-chart-table" style={{ maxHeight: plotHeight }}>
           <table className="exec-360-sync">
             <caption className="exec-blotter-note">
               {series.label} · {series.points.length} buckets · {gapCount} missing
@@ -308,15 +249,35 @@ export function EquityChart({
             </tbody>
           </table>
         </div>
+      ) : data.xs.length === 0 ? (
+        <p className="exec-chart-empty" role="status">
+          No plottable buckets — {data.dropped} {data.dropped === 1 ? "point" : "points"} had unreadable timestamps.
+        </p>
       ) : (
         <div
           className="exec-chart-body"
           role="img"
-          aria-label={`${title}: ${series.label}, ${series.points.length} buckets, ${gapCount} missing. Double-click resets zoom.`}
-          onDoubleClick={() => setZoomEpoch((n) => n + 1)}
+          aria-label={`${title}: ${series.label}, ${series.points.length} buckets, ${gapCount} missing. Drag to zoom, Ctrl+wheel to zoom, double-click resets zoom.`}
+          onDoubleClick={resetZoom}
           data-zoom-epoch={zoomEpoch}
         >
-          <EChart id={id ?? `${uid}-equity`} option={option} height={expanded ? EXPANDED_HEIGHT : height} />
+          <PrimusFinancialChart
+            key={zoomEpoch}
+            id={id ?? `${uid}-equity`}
+            data={data}
+            height={plotHeight}
+            scale={scale}
+            range={range}
+            compact={tile}
+            tone={series.kind === "drawdown" ? "bad" : "line"}
+            showBand={showBand}
+            live={live}
+            markers={markers}
+            formatValue={formatValue}
+            footer={footer}
+            onZoom={(r) => setPreset(r === null ? "ALL" : "custom")}
+            onSelectBucket={onSelectBucket}
+          />
         </div>
       )}
       <EnvelopeCaption envelope={envelope} compact={tile} />

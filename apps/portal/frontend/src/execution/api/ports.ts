@@ -32,6 +32,8 @@ import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operati
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
+import type { FinancialChartPayload, FinancialChartQuery, FinancialEnvironment } from "./financialChart";
+import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth } from "./derivations";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
@@ -281,6 +283,16 @@ export interface ExecutionApi {
   getPortfolio360Resource(portfolioId: string): Promise<Result<ProfileEnvelope>>;
   getAccount360Resource(accountId: string): Promise<Result<ProfileEnvelope>>;
   getBindingResource(bindingId: string): Promise<Result<ProfileEnvelope>>;
+  /** EDS-07 `GET /views/equity-chart` — viewport-sized financial series with its sampling metadata. */
+  getFinancialChart(query: FinancialChartQuery): Promise<Result<FinancialChartPayload>>;
+  /** EDS-05 `GET /derivations/source-health` */
+  getSourceHealth(environment: FinancialEnvironment): Promise<Result<SourceHealth>>;
+  /** EDS-05 `GET /derivations/deployments/{id}/execution-quality` */
+  getDeploymentQuality(deploymentId: string, environment: FinancialEnvironment): Promise<Result<DeploymentQuality>>;
+  /** EDS-05 `GET /derivations/portfolios/{id}/capital` */
+  getPortfolioCapital(portfolioId: string, environment: FinancialEnvironment): Promise<Result<PortfolioCapital>>;
+  /** EDS-05 `GET /derivations/alphas/{id}/activity` */
+  getAlphaActivity(alphaId: string, environment: FinancialEnvironment): Promise<Result<AlphaActivity>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */

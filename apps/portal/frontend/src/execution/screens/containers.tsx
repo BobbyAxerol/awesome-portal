@@ -11,7 +11,7 @@
  * state with the server's reason attached. It never becomes an empty list, and
  * it never becomes a thrown error the shell has to guess about.
  */
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
@@ -1234,10 +1234,13 @@ export function CommandCenterLive({
   snapshot,
   factory = null,
   fetchSnapshot,
+  sourceHealth,
 }: {
   snapshot: CommandCenter;
   factory?: SseFactory | null;
   fetchSnapshot?: () => Promise<{ cursor: string; epoch: string; sequence: number; asOf?: string | null }>;
+  /** EDS-05 source-health tiles rendered under the masthead; the fixtures surface passes none. */
+  sourceHealth?: ReactNode;
 }) {
   const { live } = useCommandCentreStream({
     snapshot,
@@ -1252,5 +1255,5 @@ export function CommandCenterLive({
   const navigate = useNavigate();
   // Every ranked row links to its owning screen (HiFi 5a). The href is the
   // server's; a row without one renders disabled inside the screen.
-  return <CommandCenterScreen snapshot={snapshot} live={live} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
+  return <CommandCenterScreen snapshot={snapshot} live={live} sourceHealth={sourceHealth} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
 }

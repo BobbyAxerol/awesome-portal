@@ -171,6 +171,8 @@ export interface AlphaThreeSixtyProps {
    * all. `null` renders as unavailable rather than an empty frame.
    */
   equity?: { envelope: ChartEnvelope; series?: EquitySeries | null; body?: ReactNode } | null;
+  /** EDS-05 activity rollup tile for this alpha; absent = the container did not request it. */
+  activity?: ReactNode;
   deployments: readonly DeploymentRow[];
   tiles: readonly InsightTile[];
   /** Unbounded. Paged by cursor, never capped. */
@@ -558,6 +560,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 <Contribution rows={contributions} />
               </div>
             </div>
+            {props.activity ? <div data-scope-panel="activity">{props.activity}</div> : null}
             <div data-scope-panel="deployments"><Deployments onOpenDeployment={onOpenDeployment} onOpenAccount={onOpenAccount} rows={deployments} scope={scope} /></div>
           </>
         ) : null}

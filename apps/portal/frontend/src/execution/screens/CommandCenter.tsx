@@ -367,7 +367,7 @@ export function PromotionPipeline({ pipeline, warning }: { pipeline: Pipeline; w
   );
 }
 
-export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0 }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null; demo?: CcDemo | null; demoTick?: number }) {
+export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0, sourceHealth }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null; demo?: CcDemo | null; demoTick?: number; /** EDS-05 source-health tiles; absent = the container did not request them. */ sourceHealth?: ReactNode }) {
   const gate = streamGate(snapshot);
   const smoke = demo ?? null;
   const clock = demoTick;
@@ -411,6 +411,7 @@ export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0
             <span className="exec-cc-asof" data-smoke-clock={smoke ? "true" : undefined}>as_of {asOf ? utcStamp(asOf) : "not published"} · every row links to its owning screen</span>
           </header>
           {streamLine}
+          {sourceHealth ? <div className="exec-cc-sourcehealth">{sourceHealth}</div> : null}
           {snapshot.warnings.length > 0 ? (
             <ul className="exec-cc-warnings" role="status">
               {snapshot.warnings.map((w) => (

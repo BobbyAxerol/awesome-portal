@@ -163,6 +163,8 @@ export interface PaperWorkbenchProps {
   driftNote?: string | null;
   runtime: readonly { label: string; value: string | null; note?: string | null }[];
   accounting: readonly { label: string; value: string | null; note?: string | null }[];
+  /** EDS-05 execution-quality derivation for this deployment; absent = the container did not request it. */
+  quality?: ReactNode;
   contribution: readonly { label: string; value: string | null; note?: string | null }[];
   tab: WorkbenchTab;
   onTabChange: (tab: WorkbenchTab) => void;
@@ -263,6 +265,7 @@ export function PaperWorkbench({
   driftNote,
   runtime,
   accounting,
+  quality,
   contribution,
   tab,
   onTabChange,
@@ -646,6 +649,7 @@ export function PaperWorkbench({
               )}
               <Drift drift={shownDrift.shown} note={driftNote} notice={driftNotice} head={hifi.drift} demoChart={demoPlots?.drift} />
             </div>
+            {quality ?? null}
             {equity ? (
               <details className="exec-pw-contract">
                 <summary>published equity series · equity_projection.v1 — the band above is smoke until BR-EX-62</summary>
