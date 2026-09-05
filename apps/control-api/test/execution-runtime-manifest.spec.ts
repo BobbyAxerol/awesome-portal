@@ -29,7 +29,11 @@ describe("EDS-00 runtime manifest intake", () => {
     expect(MAXIMUM_DATA_INTAKE_V1.returnPack.sourceCommit).toBe(owner.source_commit);
     expect(MAXIMUM_DATA_INTAKE_V1.returnPack.edgeCommit).toBe(owner.edge_commit);
     expect(MAXIMUM_DATA_INTAKE_V1.returnPack.edgeImageDigest).toBe(owner.image_digest);
-    expect(MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest).toBe(owner.catalogue_digest);
+    // DR-15: the runtime envelope carries the catalogue's SELF-digest (the
+    // value e6-runtime-evidence records), not the owner-response body digest.
+    // The intake pins what a live read must match.
+    expect(MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest)
+      .toBe("sha256:0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44");
     expect(MAXIMUM_DATA_INTAKE_V1.returnPack.servingPolicyDigest).toBe(owner.serving_policy_digest);
     expect(MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueRelationCount).toBe(managerV2.catalogue_relation_count);
     expect(MAXIMUM_DATA_INTAKE_V1.returnPack.e5PublicationRevision).toBe(e5.schema_version);

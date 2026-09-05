@@ -16,7 +16,11 @@ export const MAXIMUM_DATA_INTAKE_V1 = Object.freeze({
     sourceCommit: "9081397de9e981c43b4e0f67fabe747e7ed964c7",
     edgeCommit: "9266a6843d1863395e15b563ac53de32780e0f25",
     edgeImageDigest: "sha256:47ea4d78099347706710879bf26e46a15cfaf80e4ef7ac22879f0a71f12c3077",
-    catalogueDigest: "sha256:9040f0897d8f452a486e51ce35abb7f3165b2238d07221b6b0e684d9829b012e",
+    // DR-15 (A-01 live grading, 2026-09-05): the runtime Manager envelope
+    // carries the catalogue's own self-digest — the value e6-runtime-evidence
+    // recorded — not the return-pack manifest's response-body digest. The
+    // previous pin could never match a live read.
+    catalogueDigest: "sha256:0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44",
     servingPolicyDigest: "sha256:b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3",
     managerContractRevision: "trading-system.portal-execution.manager-v2.runtime.v1",
     e5PublicationRevision: "portal.execution.maximum-data.e5.existing-data-publication.v1",
