@@ -463,6 +463,10 @@ kế. Chuỗi goal liên tiếp, không dồn cuối.
 Trượt ở (1) → DR, codex sửa song song; trượt ở (3)/(4) → lỗi của tôi, sửa
 trong ngày; không phase nào ✅ khi Bobby chưa goal bước (5).
 
+**🎯 GOAL ĐỢT 1 (Bobby chốt 05-09): G1 → G2 → G3** — vertical proof nhỏ nhất
+→ nền types + hết PARTIAL-oan mọi màn (DR-04) → 3 màn stage đầy đủ. Đợt 2 đề
+xuất G7 (chart) nhảy trước G4/G5 vì không phụ thuộc chúng — chốt sau đợt 1.
+
 | Bước | Chấm & Ghép | **Bobby nhìn thấy gì trên dev để goal** | Dự kiến | Trạng thái |
 |---|---|---|---|---|
 | G0 | Dựng probe-runtime (PG riêng restore dump dev :55432 loopback + image nhánh eds) + tạo nhánh `feat/eds-integration` | (hạ tầng — không cần goal) | 0.5 ngày | 🔶 ĐANG LÀM |
