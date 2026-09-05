@@ -4801,6 +4801,26 @@ changed. Current source gaps remain typed truth rather than EDS-04 debt.
 **Goal:** activate all five permitted Portal derivations and join operational
 truth without inventing source history.
 
+**Status (2026-09-05): completed, source-dark at the browser boundary.** The
+Control API now exposes only named same-origin derivation routes under
+`/api/v1/execution/derivations` and explicit operational-composition routes
+under `/api/v1/execution/compositions`.  Each route is pinned to the configured
+local-projection workspace, reads only the committed SGP projection/Portal
+workflow state, and remains incapable of selecting an Edge relation, cursor,
+credential, database, broker or command.  Conditional structures and command
+journal rows are field-allowlisted/redacted; portfolio capital stays exact by
+currency and is typed `PARTIAL` until the owner publishes ledger/reservation
+inputs.  Live Review uses the existing R2 workflow plus a local accepted
+deployment-quality DTO, never the direct current-source path.  Canary remains
+`E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED`; command authority remains unchanged
+and fail-closed.
+
+**Evidence:** a clean `./scripts/control-api-test.sh` run passed TypeScript
+build, fresh PostgreSQL migration/restore drill, 42 test files and 366 tests,
+including EDS-05 formula, redaction, workspace-isolation and composition tests.
+The named DTOs are ready for same-origin frontend consumers; no runtime image,
+feature flag or external source profile was changed in this phase.
+
 **Backend work:**
 
 - implement the named `source_health`, `execution_quality`,

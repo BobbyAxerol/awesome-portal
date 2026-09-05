@@ -77,6 +77,10 @@ import { ManagerListsRepository } from "./manager-lists/manager-lists.repository
 import { ManagerListsService } from "./manager-lists/manager-lists.service";
 import { ResourceReadController } from "./resource-read/resource-read.controller";
 import { ResourceReadService } from "./resource-read/resource-read.service";
+import { PortalDerivationsController } from "./execution/portal-derivations.controller";
+import { PortalDerivationsService } from "./execution/portal-derivations.service";
+import { OperationalCompositionController } from "./execution/operational-composition.controller";
+import { OperationalCompositionService } from "./execution/operational-composition.service";
 
 @Module({})
 export class AppModule {
@@ -109,6 +113,8 @@ export class AppModule {
         ProfileReadController,
         ManagerListsController,
         ResourceReadController,
+        PortalDerivationsController,
+        OperationalCompositionController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -163,6 +169,8 @@ export class AppModule {
         ManagerListsRepository,
         ManagerListsService,
         ResourceReadService,
+        PortalDerivationsService,
+        OperationalCompositionService,
         ExecutionSharedReadRepository,
         ExecutionRuntimeManifestService,
         ExecutionContractAuthorityService,

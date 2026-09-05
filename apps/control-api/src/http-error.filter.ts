@@ -22,6 +22,7 @@ import { PaperReadError } from "./paper-read/paper-read.service";
 import { ProfileReadError } from "./profile-read/profile-read.controller";
 import { ManagerListsError } from "./manager-lists/manager-lists.service";
 import { ResourceReadError } from "./resource-read/resource-read.controller";
+import { PortalDerivationError } from "./execution/portal-derivations.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -50,7 +51,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof PaperReadError ||
       exception instanceof ProfileReadError ||
       exception instanceof ManagerListsError ||
-      exception instanceof ResourceReadError
+      exception instanceof ResourceReadError ||
+      exception instanceof PortalDerivationError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },
