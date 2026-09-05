@@ -154,6 +154,9 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 
 ## 4. Track theo phase EDS — FE nhận gì, thiếu gì thì chưa đạt "khớp 100%"
 
+> Cách CHẤM từng phase (bước, tiêu chí, trạng thái phiếu) nằm ở file kế hoạch
+> riêng: `EDS_ACCEPTANCE_PLAN_CLAUDE.md` — bảng §A0 là chỗ nhìn "đến đâu rồi".
+
 | Phase | FE phải NHẬN được (điều kiện G5 từ phía FE) | Trạng thái | [CODEX] |
 |---|---|---|---|
 | 01 | 1 named op + fixture + bảng field-map cũ→mới cho vertical đầu | **CHƯA MỞ** (04-09: không ladder entry, không `MaximumDataOperationRegistry` trong code) | |
