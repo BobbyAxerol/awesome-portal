@@ -24,6 +24,13 @@ Chúng không thay thế phase hoặc exit gate trong
   core plus additive PostgreSQL facts, pure reducers, checkpoint, quarantine
   and committed local journal. It accepts no source transport until one exact
   independently verified `EVENT_SOURCE_ACCEPTED` class is returned.
+- [EDS-09b — Portal observation journal](./EDS_09B_PORTAL_OBSERVATION_JOURNAL.md)
+  — **implemented / verified source-dark / runtime inactive:** converts the
+  existing local projection revision stream into a browser-safe
+  `PORTAL_OBSERVATION` feed. It protects raw Manager selectors/cursors, pins
+  declared source revision/profile freshness, and quarantines a durable-range
+  conflict before any snapshot or local revision can advance. It is not an
+  authoritative Event, replay or source transport.
 - [EDS-09 Trading System event-source implementation addendum](./EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md)
   — **the only incremental owner handoff for MC-01 / durable event replay.**
   It consolidates the three event classes, source-as-is implementation choice,
@@ -1731,7 +1738,8 @@ durable run/attempt events. Detailed evidence:
   no Event transport, replay authority, direct source path, runtime route,
   image, service, profile or command authority was added.
 - Portal work continues on maximum current-data screens and the explicitly
-  labelled observation lane: EDS-09b local observation revisions, EDS-10b
-  observed/derived panels and EDS-11 same-origin local SSE are the current
-  product sequence. Authoritative EDS-09 Event ingestion remains source-dark
-  until a later owner return contains a verified accepted class.
+  labelled observation lane: **EDS-09b local observation revisions is
+  implemented source-dark**, and EDS-10b observed/derived panels then EDS-11
+  same-origin local SSE are the current product sequence. Authoritative EDS-09
+  Event ingestion remains source-dark until a later owner return contains a
+  verified accepted class.

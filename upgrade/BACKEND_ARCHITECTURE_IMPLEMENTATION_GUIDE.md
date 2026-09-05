@@ -679,6 +679,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   class. See
   [EDS-09 owner-return handoff](backend/EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md).
 
+- **EDS-09b Portal observation bridge closed source-dark (2026-09-05):** the
+  existing local projection and durable mirror now publish an additive
+  browser-safe revision descriptor labelled `PORTAL_OBSERVATION` /
+  `BOUNDED_CURRENT_PAGE`. A browser receives only Portal screen identifiers,
+  scope, declared contract revision, UTC-millisecond timing and
+  availability/freshness/completeness metadata; it never sees a Manager
+  relation/cursor or cross-cell credential. A durable range conflict commits
+  forensic quarantine only and cannot advance the Portal snapshot/checkpoint
+  or local SSE revision. This is intentionally not a Trading System Event or
+  replay claim and does not activate runtime source transport. See
+  [EDS-09b observation journal](backend/EDS_09B_PORTAL_OBSERVATION_JOURNAL.md).
+
 - **EX-DP-05/E5 existing-data adapter and publication closed
   (2026-09-04, source-dark):** the additive Rust
   `maximum-data-adapter` has a digest-bound 34-field registry: four existing

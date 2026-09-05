@@ -1,4 +1,4 @@
-import { ProjectionEnvironment } from "./profile-projection.repository";
+import type { ProjectionEnvironment } from "./profile-projection.repository";
 
 export interface ProfileProjectionBinding {
   key: string;
@@ -23,6 +23,13 @@ export interface ProfileProjectionBinding {
  */
 export const WARM_WINDOW_DAYS = 30;
 export const WARM_WINDOW_MAX_ROWS = 2_000;
+
+/**
+ * Browser-safe name for the one local revision operation.  The durable mirror
+ * can keep raw Manager relation keys privately, but an SSE frame must never
+ * reveal those source selectors to a browser.
+ */
+export const PROFILE_OBSERVATION_OPERATION_ID = "EXECUTION_PROFILE_OBSERVATION_REVISION";
 
 const TIME_SERIES_LADDER: Readonly<Record<string, ProfileProjectionBinding["ladder"]>> = {
   performance_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
@@ -190,6 +197,22 @@ const LIVE: readonly ProfileProjectionBinding[] = [
 
 export function profileProjectionCatalog(environment: ProjectionEnvironment): readonly ProfileProjectionBinding[] {
   return [...FLEET, ...(environment === "paper" ? PAPER : environment === "sandbox" ? SANDBOX : LIVE)];
+}
+
+/**
+ * Converts private Manager relation keys into the frozen, public screen IDs
+ * affected by a Portal-local observation revision.  Unknown keys deliberately
+ * produce no selector: a client can refresh its current screen from the
+ * revision tick but cannot use this lane as a generic relation browser.
+ */
+export function profileObservationAffectedScreens(
+  environment: ProjectionEnvironment,
+  relationKeys: readonly string[],
+): string[] {
+  const changed = new Set(relationKeys);
+  return [...new Set(profileProjectionCatalog(environment)
+    .filter((binding) => changed.has(`${binding.sourceId}:${binding.relation}`))
+    .map((binding) => binding.screenId))].sort();
 }
 
 function bind(

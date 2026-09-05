@@ -7,6 +7,7 @@ import {
   ProfileProjectionSnapshot,
   ProjectionEnvironment,
 } from "./profile-projection.repository";
+import { PROFILE_OBSERVATION_OPERATION_ID } from "./profile-projection.catalog";
 
 const CURSOR = /^([0-9a-f-]{36}):(\d+)$/;
 const REPLAY_LIMIT = 1_000;
@@ -18,6 +19,37 @@ export type LocalRealtimeKind =
   | "heartbeat"
   | "auth.expired"
   | "projection.gap";
+
+/**
+ * Additive v1 provenance for the local revision feed.  It intentionally names
+ * the Portal observation, not a Trading System Event: the Manager plane only
+ * publishes bounded current pages and has not accepted source replay,
+ * correction, acknowledgement or global ordering semantics.
+ */
+export interface PortalObservationDescriptor {
+  authority: "PORTAL_OBSERVATION";
+  semantics: "BOUNDED_CURRENT_PAGE";
+  derived: false;
+  operation_id: typeof PROFILE_OBSERVATION_OPERATION_ID;
+  scope: {
+    workspace_id: string;
+    environment: ProjectionEnvironment;
+    profile_id: string;
+    resource_kind: "PROFILE";
+    resource_id: string;
+    venue: null;
+  };
+  source: {
+    contract_revision: string | null;
+    catalogue_revision: null;
+    as_of_ms: number | null;
+    received_at_ms: number;
+  };
+  coverage: {
+    kind: "CURRENT_PROFILE_PROJECTION";
+    relation_count: number | null;
+  };
+}
 
 export interface LocalRealtimeEnvelope {
   schema_version: "portal.execution.profile-realtime.v1";
@@ -34,8 +66,11 @@ export interface LocalRealtimeEnvelope {
   source_as_of: string | null;
   received_at: string;
   last_successful_refresh_at: string | null;
+  availability: "AVAILABLE" | "UNKNOWN";
   freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+  /** Null for transport heartbeats/session-expiry, never a source Event. */
+  observation: PortalObservationDescriptor | null;
   payload: Record<string, unknown>;
 }
 
@@ -149,7 +184,8 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
       workspace_id: workspaceId, environment, profile_id: profileId,
       cursor: null, projection_epoch: null, projection_sequence: null, payload_digest: null,
       source_as_of: null, received_at: new Date().toISOString(),
-      last_successful_refresh_at: null, freshness: "UNKNOWN", completeness: "UNKNOWN",
+      last_successful_refresh_at: null, availability: "UNKNOWN", freshness: "UNKNOWN", completeness: "UNKNOWN",
+      observation: null,
       payload: {},
     };
   }
@@ -263,8 +299,11 @@ function delta(
     projection_epoch: entry.projectionEpoch, projection_sequence: entry.projectionSequence,
     payload_digest: entry.payloadDigest, source_as_of: entry.sourceAsOf?.toISOString() ?? null,
     received_at: entry.receivedAt.toISOString(), last_successful_refresh_at: lastRefresh.toISOString(),
+    availability: "AVAILABLE",
     freshness: ageFreshness(Date.now() - lastRefresh.valueOf(), pollIntervalMs),
-    completeness: entry.completeness, payload: entry.payload,
+    completeness: entry.completeness,
+    observation: observationFromEntry(entry),
+    payload: safeObservationPayload(entry),
   };
 }
 
@@ -298,9 +337,90 @@ function envelope(
     payload_digest: snapshot.payloadDigest, source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
     received_at: snapshot.receivedAt.toISOString(),
     last_successful_refresh_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
+    availability: "AVAILABLE",
     freshness: ageFreshness(Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf(), pollIntervalMs),
-    completeness: snapshot.completeness, payload,
+    completeness: snapshot.completeness,
+    observation: observationFromSnapshot(snapshot),
+    payload,
   };
+}
+
+function observationFromSnapshot(snapshot: ProfileProjectionSnapshot): PortalObservationDescriptor {
+  return {
+    authority: "PORTAL_OBSERVATION",
+    semantics: "BOUNDED_CURRENT_PAGE",
+    derived: false,
+    operation_id: PROFILE_OBSERVATION_OPERATION_ID,
+    scope: {
+      workspace_id: snapshot.document.workspace_id,
+      environment: snapshot.document.environment,
+      profile_id: snapshot.document.profile_id,
+      resource_kind: "PROFILE",
+      resource_id: snapshot.document.profile_id,
+      venue: null,
+    },
+    source: {
+      contract_revision: snapshot.document.source_contract_revision,
+      catalogue_revision: null,
+      as_of_ms: utcMs(snapshot.sourceAsOf),
+      received_at_ms: snapshot.receivedAt.valueOf(),
+    },
+    coverage: {
+      kind: "CURRENT_PROFILE_PROJECTION",
+      relation_count: Object.keys(snapshot.document.relations).length,
+    },
+  };
+}
+
+function observationFromEntry(entry: ProfileProjectionJournalEntry): PortalObservationDescriptor {
+  return {
+    authority: entry.observationAuthority,
+    semantics: entry.observationSemantics,
+    derived: false,
+    operation_id: PROFILE_OBSERVATION_OPERATION_ID,
+    scope: {
+      workspace_id: entry.workspaceId,
+      environment: entry.environment,
+      profile_id: entry.profileId,
+      resource_kind: "PROFILE",
+      resource_id: entry.profileId,
+      venue: null,
+    },
+    source: {
+      contract_revision: entry.sourceContractRevision,
+      catalogue_revision: null,
+      as_of_ms: utcMs(entry.sourceAsOf),
+      received_at_ms: entry.receivedAt.valueOf(),
+    },
+    coverage: {
+      kind: "CURRENT_PROFILE_PROJECTION",
+      relation_count: null,
+    },
+  };
+}
+
+/**
+ * The persisted journal is server-side.  Its older payload shape contained
+ * private Manager relation keys; return only the new named screen identifiers
+ * and fixed observation operation even while a short legacy journal window
+ * still exists after the additive migration.
+ */
+function safeObservationPayload(entry: ProfileProjectionJournalEntry): Record<string, unknown> {
+  const candidates = entry.payload.affected_screen_ids;
+  const affectedScreenIds = Array.isArray(candidates)
+    ? candidates.filter((item): item is string => typeof item === "string" && /^[A-Z0-9_]{3,128}$/.test(item))
+    : [];
+  return {
+    schema_version: "portal.execution.observation-revision.v1",
+    observation_authority: entry.observationAuthority,
+    observation_semantics: entry.observationSemantics,
+    operation_id: PROFILE_OBSERVATION_OPERATION_ID,
+    affected_screen_ids: [...new Set(affectedScreenIds)].sort(),
+  };
+}
+
+function utcMs(value: Date | null): number | null {
+  return value ? value.valueOf() : null;
 }
 
 function gap(snapshot: ProfileProjectionSnapshot, reason: string, pollIntervalMs: number): LocalRealtimeEnvelope {

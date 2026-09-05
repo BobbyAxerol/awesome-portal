@@ -4,7 +4,12 @@ import { Pool, PoolClient } from "pg";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { KeysetCursorCodec, queryFingerprint } from "../query";
-import { DurableMirrorCommitInput, DurableMirrorScope, DurableMirrorWriter } from "./durable-mirror.contract";
+import {
+  DurableMirrorCommitInput,
+  DurableMirrorCommitResult,
+  DurableMirrorScope,
+  DurableMirrorWriter,
+} from "./durable-mirror.contract";
 import { ProjectionRelation, ProjectionRow, ProjectionScalar } from "./profile-projection.repository";
 
 type MirrorState = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
@@ -132,8 +137,11 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     });
   }
 
-  async commitAcceptedProjection(client: PoolClient, input: DurableMirrorCommitInput): Promise<void> {
-    if (this.config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true") return;
+  async commitAcceptedProjection(
+    client: PoolClient,
+    input: DurableMirrorCommitInput,
+  ): Promise<DurableMirrorCommitResult> {
+    if (this.config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true") return { outcome: "DISABLED" };
 
     const batchId = randomUUID();
     const revisionId = randomUUID();
@@ -180,7 +188,10 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
           WHERE batch_id=$1::uuid`,
         [batchId, input.receivedAt],
       );
-      return;
+      return {
+        outcome: "QUARANTINED",
+        reasonCode: "EDS09B_DURABLE_OBSERVATION_QUARANTINED",
+      };
     }
 
     await this.insertRevision(client, {
@@ -208,6 +219,7 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
         WHERE batch_id=$1::uuid`,
       [batchId, input.receivedAt],
     );
+    return { outcome: "COMMITTED" };
   }
 
   /**

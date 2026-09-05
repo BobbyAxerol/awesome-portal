@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-05 | **EDS-09b Portal observation bridge closed source-dark**: current Manager-page data continues through the existing server-only lease/coalescer and durable mirror, while the local revision journal/SSE now carries only `PORTAL_OBSERVATION` provenance plus named affected screen IDs. A retained-range digest conflict is forensic-quarantined before the compatibility snapshot, source checkpoint or visible revision can advance | additive migration `1723680000024`; focused provenance/redaction/replay and quarantine regressions plus full fresh-PostgreSQL Control API **45 files / 384 tests** + restore gate; no Edge route, source transport, runtime flag, container, direct DB/Redis/broker/CLI or command change |
 | 2026-09-05 | **EDS-09 owner return accepted as source-as-is, current-product route replanned**: Portal verified the immutable owner-return manifest and EDS-08 validator. All 18 gaps and all three Event classes remain `SOURCE_GAP_CONFIRMED`; no current Manager page is allowed into `authoritative-event-core`. The binding decision is `EDS-09b` Portal observation journal → `EDS-10b` observed/derived panel plane → `EDS-11` local BFF/SSE. True Event/replay/market requirements are consolidated into one visible `Soon` source-upgrade backlog, never a blocker for existing Paper/Sandbox/Live current data | manifest **12/12** + EDS-08 owner-return validator passed (`18` gaps, `7` owner lanes, `3` Event classes, `8` synthetic cases); documentation only, no source/runtime/container/credential/command change |
 | 2026-09-05 | **EDS-03 maximum current truth closed at the code/contract gate**: exact deployment scope is resolved from the local, profile-bound projection before pagination; Paper/Sandbox/Live rich panels receive named current relation DTOs and generated UTC/panel envelopes; absent Canary governance can no longer hide a readable Live source; no-currency/no-mark position aggregates are typed-null rather than invented | E7 **34/18/3** + full manifest verified; read-only generator check; contracts **117/117**; fresh-PG Control API **40 files / 354 tests** + restore; Node 22 frontend **98 files / 1,826 tests / 3 skipped** + production build. No runtime/container/Edge/source/command mutation; detailed evidence `backend/EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md` |
 | 2026-09-04 | **OWNER RULING OR-1 (ghi tại EDS_FRONTEND_DATA_CONTRACT_TRACKER.md §OR, codex áp dụng ngay)**: BỎ chờ event-journal phía Trading System — EDS-08 hạ thành asks-nâng-cấp không chặn; EDS-09/10 đổi đầu vào sang observation lane (pseudo-tail từ resumable drain/mirror, lifecycle replay xấp xỉ từ orders+fills+sessions đã giao, market context DERIVED từ mark_price sẵn có — nhãn trung thực, không bịa OHLC); tận dụng tối đa mọi thứ E1→E7 đã adapt; yêu cầu duy nhất còn lại của DR-11 là mở song song lane FE (EDS-01→03). Kèm đính chính chốt đo: chuỗi E1→E7 là CODE thật đã xong nguồn-side | owner directive trong phiên; tracker cập nhật cùng commit |
@@ -5131,7 +5132,7 @@ required current-source delivery path.
 
 ### EDS-09b — Portal observation bridge and committed local revision journal
 
-**Status:** `PLANNED / CURRENT_SOURCE_ONLY / DOES_NOT_WAIT_FOR_TRADING_SYSTEM`.
+**Status:** `IMPLEMENTED / VERIFIED_SOURCE_DARK / RUNTIME_INACTIVE / DOES_NOT_WAIT_FOR_TRADING_SYSTEM`.
 
 **Goal:** use the existing named Manager/E5 current-page operations, durable
 mirror and resumable server-side drains to publish one Portal-owned observation
@@ -5163,6 +5164,24 @@ resumable drain; partial/stale/error propagation; source-read coalescing;
 bounded local retention; backup/restore; and a same-origin revision-tick
 consumer. The phase closes only when a browser refresh cannot multiply source
 reads and every observation is visibly distinguishable from an owner Event.
+
+**Completion record (2026-09-05):** EDS-09b is implemented in the existing
+Control API projection/mirror boundary, with no additional source consumer,
+Edge route, credential, runtime container or source activation. The additive
+`1723680000024_execution-portal-observation-journal.sql` migration marks every
+retained journal row `PORTAL_OBSERVATION` / `BOUNDED_CURRENT_PAGE` and preserves
+the declared source contract revision without inventing one for legacy records.
+The server-only durable mirror is admitted before the compatibility snapshot: a
+same-key, different-digest retained-range conflict writes its forensic
+quarantine but does **not** advance a snapshot, raw source cursor or
+browser-visible local revision. Browser SSE v1 remains additive and receives a
+bounded observation descriptor plus named affected screen IDs; it cannot
+receive a Manager relation selector, raw source cursor, JWT, mTLS input or an
+asserted Trading System Event. The existing profile-isolated lease/coalescer
+remains the only source read path. Detailed contract, failure and handoff rules
+are in [`EDS_09B_PORTAL_OBSERVATION_JOURNAL.md`](backend/EDS_09B_PORTAL_OBSERVATION_JOURNAL.md).
+The next current-source product work is EDS-10b, then EDS-11; EDS-08/09/10
+remain a separate future-source lane.
 
 ### EDS-10b — Observed timeline and derived mark-context plane
 

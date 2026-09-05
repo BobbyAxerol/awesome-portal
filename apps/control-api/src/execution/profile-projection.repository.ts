@@ -7,6 +7,10 @@ import type {
   DurableMirrorRetainedRangeRows,
   DurableMirrorWriter,
 } from "./durable-mirror.contract";
+import {
+  PROFILE_OBSERVATION_OPERATION_ID,
+  profileObservationAffectedScreens,
+} from "./profile-projection.catalog";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
 export type ProjectionCompleteness = "COMPLETE" | "PARTIAL" | "UNKNOWN";
@@ -69,11 +73,20 @@ export interface ProfileProjectionJournalEntry {
   receivedAt: Date;
   completeness: ProjectionCompleteness;
   payloadDigest: string;
+  /** Always Portal-local; never a Trading System lifecycle Event authority. */
+  observationAuthority: "PORTAL_OBSERVATION";
+  /** The current read plane has no history/replay/correction semantics. */
+  observationSemantics: "BOUNDED_CURRENT_PAGE";
+  /** Null only for pre-EDS-09b retained journal rows; never inferred. */
+  sourceContractRevision: string | null;
   payload: Record<string, unknown>;
 }
 
 export interface ProjectionCommitReceipt {
+  outcome: "COMMITTED" | "QUARANTINED";
   changed: boolean;
+  reasonCode: "EDS09B_DURABLE_OBSERVATION_QUARANTINED" | null;
+  /** Internal diagnostic coordinates only. They are never emitted to a browser on quarantine. */
   projectionEpoch: string;
   projectionSequence: number;
   payloadDigest: string;
@@ -403,7 +416,37 @@ export class ExecutionProfileProjectionRepository {
         [document.workspace_id, document.environment, document.profile_id],
       );
       const previous = existing.rows[0];
-      if (previous?.payload_digest === payloadDigest) {
+      const changed = previous?.payload_digest !== payloadDigest;
+      const projectionEpoch = previous?.projection_epoch ?? randomUUID();
+      const projectionSequence = previous ? Number(previous.projection_sequence) + (changed ? 1 : 0) : 1;
+      const mirrorResult = await this.durableMirror?.commitAcceptedProjection(client, {
+        document,
+        sourceEpoch: input.sourceEpoch,
+        sourceCursor: input.sourceCursor,
+        sourceAsOf: input.sourceAsOf,
+        receivedAt: input.receivedAt,
+        completeness: input.completeness,
+        projectionEpoch,
+        projectionSequence,
+        payloadDigest,
+        relationCursors: input.relationCursors ?? [],
+        retainedRangeRows: input.retainedRangeRows ?? {},
+      });
+      if (mirrorResult?.outcome === "QUARANTINED") {
+        // The durable writer already persisted the forensic quarantine in this
+        // transaction.  Do not advance the compatibility snapshot, source
+        // checkpoint or local journal: a same-key/different-digest range row
+        // is not an accepted Portal observation.
+        return {
+          outcome: "QUARANTINED",
+          changed: false,
+          reasonCode: mirrorResult.reasonCode,
+          projectionEpoch,
+          projectionSequence,
+          payloadDigest,
+        };
+      }
+      if (!changed) {
         await client.query(
           `UPDATE execution_profile_projection_snapshots SET
              source_epoch=$4, source_cursor=$5, source_as_of=$6, received_at=$7,
@@ -414,28 +457,15 @@ export class ExecutionProfileProjectionRepository {
             input.completeness],
         );
         await this.persistRelationCursors(client, document, input.relationCursors ?? []);
-        await this.durableMirror?.commitAcceptedProjection(client, {
-          document,
-          sourceEpoch: input.sourceEpoch,
-          sourceCursor: input.sourceCursor,
-          sourceAsOf: input.sourceAsOf,
-          receivedAt: input.receivedAt,
-          completeness: input.completeness,
-          projectionEpoch: previous.projection_epoch,
-          projectionSequence: Number(previous.projection_sequence),
-          payloadDigest,
-          relationCursors: input.relationCursors ?? [],
-          retainedRangeRows: input.retainedRangeRows ?? {},
-        });
         return {
+          outcome: "COMMITTED",
           changed: false,
-          projectionEpoch: previous.projection_epoch,
-          projectionSequence: Number(previous.projection_sequence),
+          reasonCode: null,
+          projectionEpoch,
+          projectionSequence,
           payloadDigest,
         };
       }
-      const projectionEpoch = previous?.projection_epoch ?? randomUUID();
-      const projectionSequence = previous ? Number(previous.projection_sequence) + 1 : 1;
       await client.query(
         `INSERT INTO execution_profile_projection_snapshots
            (workspace_id,environment,profile_id,source_contract_revision,source_epoch,
@@ -457,34 +487,28 @@ export class ExecutionProfileProjectionRepository {
           projectionSequence, payloadDigest, JSON.stringify(document)],
       );
       await this.persistRelationCursors(client, document, input.relationCursors ?? []);
-      await this.durableMirror?.commitAcceptedProjection(client, {
-        document,
-        sourceEpoch: input.sourceEpoch,
-        sourceCursor: input.sourceCursor,
-        sourceAsOf: input.sourceAsOf,
-        receivedAt: input.receivedAt,
-        completeness: input.completeness,
-        projectionEpoch,
-        projectionSequence,
-        payloadDigest,
-        relationCursors: input.relationCursors ?? [],
-        retainedRangeRows: input.retainedRangeRows ?? {},
-      });
       const changedRelations = relationChanges(previous?.payload, document);
-      const eventPayload = {
-        schema_version: "portal.execution.profile-projection-delta.v1",
-        changed_relations: changedRelations,
-        relation_digests: Object.fromEntries(changedRelations.map((key) =>
-          [key, digest(document.relations[key] ?? null)])),
+      const observationPayload = {
+        schema_version: "portal.execution.observation-revision.v1",
+        observation_authority: "PORTAL_OBSERVATION",
+        observation_semantics: "BOUNDED_CURRENT_PAGE",
+        operation_id: PROFILE_OBSERVATION_OPERATION_ID,
+        // Source relation selectors remain inside the server-side durable
+        // mirror.  Browser-facing revision ticks name only frozen Portal
+        // screens, so this channel cannot become a generic Manager reader.
+        affected_screen_ids: profileObservationAffectedScreens(document.environment, changedRelations),
       };
       await client.query(
         `INSERT INTO execution_profile_projection_journal
            (workspace_id,environment,profile_id,projection_epoch,projection_sequence,event_kind,
-            source_as_of,received_at,completeness,payload_digest,payload)
-         VALUES ($1,$2,$3,$4,$5,'delta',$6,$7,$8,$9,$10::jsonb)`,
+            source_as_of,received_at,completeness,payload_digest,observation_authority,
+            observation_semantics,source_contract_revision,payload)
+         VALUES ($1,$2,$3,$4,$5,'delta',$6,$7,$8,$9,'PORTAL_OBSERVATION',
+                 'BOUNDED_CURRENT_PAGE',$10,$11::jsonb)`,
         [document.workspace_id, document.environment, document.profile_id,
           projectionEpoch, projectionSequence, input.sourceAsOf, input.receivedAt,
-          input.completeness, payloadDigest, JSON.stringify(eventPayload)],
+          input.completeness, payloadDigest, document.source_contract_revision,
+          JSON.stringify(observationPayload)],
       );
       await client.query(
         `DELETE FROM execution_profile_projection_journal
@@ -506,7 +530,14 @@ export class ExecutionProfileProjectionRepository {
         projection_epoch: projectionEpoch,
         projection_sequence: projectionSequence,
       })]);
-      return { changed: true, projectionEpoch, projectionSequence, payloadDigest };
+      return {
+        outcome: "COMMITTED",
+        changed: true,
+        reasonCode: null,
+        projectionEpoch,
+        projectionSequence,
+        payloadDigest,
+      };
     });
   }
 
@@ -550,11 +581,14 @@ export class ExecutionProfileProjectionRepository {
       workspace_id: string; environment: ProjectionEnvironment; profile_id: string;
       projection_epoch: string; projection_sequence: string; source_as_of: Date | null;
       received_at: Date; completeness: ProjectionCompleteness; payload_digest: string;
+      observation_authority: "PORTAL_OBSERVATION"; observation_semantics: "BOUNDED_CURRENT_PAGE";
+      source_contract_revision: string | null;
       payload: Record<string, unknown>;
     }>(
       `SELECT workspace_id,environment,profile_id,projection_epoch::text,
               projection_sequence::text,source_as_of,received_at,completeness,
-              payload_digest,payload
+              payload_digest,observation_authority,observation_semantics,
+              source_contract_revision,payload
          FROM execution_profile_projection_journal
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
           AND projection_epoch=$4 AND projection_sequence>$5
@@ -565,7 +599,11 @@ export class ExecutionProfileProjectionRepository {
       workspaceId: row.workspace_id, environment: row.environment, profileId: row.profile_id,
       projectionEpoch: row.projection_epoch, projectionSequence: Number(row.projection_sequence),
       sourceAsOf: row.source_as_of, receivedAt: row.received_at,
-      completeness: row.completeness, payloadDigest: row.payload_digest, payload: row.payload,
+      completeness: row.completeness, payloadDigest: row.payload_digest,
+      observationAuthority: row.observation_authority,
+      observationSemantics: row.observation_semantics,
+      sourceContractRevision: row.source_contract_revision,
+      payload: row.payload,
     }));
   }
 

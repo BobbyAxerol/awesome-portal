@@ -12,6 +12,7 @@ import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
 } from "../src/execution/profile-projection.repository";
+import type { DurableMirrorWriter } from "../src/execution/durable-mirror.contract";
 import { profileProjectionCatalog } from "../src/execution/profile-projection.catalog";
 import { ExecutionProfileProjectionWorker, mergeTimeSeriesWindow } from "../src/execution/profile-projection.worker";
 import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
@@ -81,9 +82,15 @@ describe("Phase 1 SGP-local profile projection", () => {
     );
     expect(replay.map((entry) => entry.projectionSequence)).toEqual([1, 2]);
     expect(replay[1].payload).toMatchObject({
-      schema_version: "portal.execution.profile-projection-delta.v1",
-      changed_relations: [relationKey],
+      schema_version: "portal.execution.observation-revision.v1",
+      observation_authority: "PORTAL_OBSERVATION",
+      observation_semantics: "BOUNDED_CURRENT_PAGE",
+      operation_id: "EXECUTION_PROFILE_OBSERVATION_REVISION",
+      affected_screen_ids: ["EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
     });
+    expect(replay[1].sourceContractRevision).toBe("manager-v2.test.v1");
+    expect(JSON.stringify(replay[1].payload)).not.toContain("manager.");
+    expect(JSON.stringify(replay[1].payload)).not.toContain("cursor");
     expect((await repository.snapshot(workspaceId, "paper", profileId))?.sourceCursor)
       .toBe("cursor-3");
   });
@@ -167,6 +174,13 @@ describe("Phase 1 SGP-local profile projection", () => {
     const handshake = await realtime.snapshot(workspaceId, "paper", profileId);
     expect(handshake).toMatchObject({
       event_type: "snapshot",
+      availability: "AVAILABLE",
+      observation: {
+        authority: "PORTAL_OBSERVATION",
+        semantics: "BOUNDED_CURRENT_PAGE",
+        operation_id: "EXECUTION_PROFILE_OBSERVATION_REVISION",
+        source: { contract_revision: "manager-v2.test.v1", as_of_ms: 1_788_307_200_000 },
+      },
       payload: {
         snapshot_mode: "CURSOR_ONLY",
         relation_count: 1,
@@ -187,7 +201,21 @@ describe("Phase 1 SGP-local profile projection", () => {
       (event) => { events.push(event); return true; },
     );
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ event_type: "delta", projection_sequence: 2 });
+    expect(events[0]).toMatchObject({
+      event_type: "delta",
+      projection_sequence: 2,
+      availability: "AVAILABLE",
+      observation: {
+        authority: "PORTAL_OBSERVATION",
+        semantics: "BOUNDED_CURRENT_PAGE",
+      },
+      payload: {
+        schema_version: "portal.execution.observation-revision.v1",
+        affected_screen_ids: ["EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
+      },
+    });
+    expect(JSON.stringify(events[0])).not.toContain("manager.");
+    expect(JSON.stringify(events[0])).not.toContain("changed_relations");
     stop();
 
     const gaps: string[] = [];
@@ -245,6 +273,28 @@ describe("Phase 1 SGP-local profile projection", () => {
     const after = await repository.snapshot(workspaceId, "paper", profileId);
     expect(after?.projectionEpoch).toBe(before?.projectionEpoch);
     expect(after?.projectionSequence).toBe(before?.projectionSequence);
+    await worker.onApplicationShutdown();
+  });
+
+  it("fails a paced refresh closed when durable observation admission quarantines", async () => {
+    const quarantiningMirror: DurableMirrorWriter = {
+      commitAcceptedProjection: async () => ({
+        outcome: "QUARANTINED",
+        reasonCode: "EDS09B_DURABLE_OBSERVATION_QUARANTINED",
+      }),
+    };
+    const quarantinedRepository = new ExecutionProfileProjectionRepository(pool, quarantiningMirror);
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => emptyManagerResponse(environment, relation),
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, quarantinedRepository);
+    await expect(worker.runOnce()).rejects.toThrow(
+      "N31_PROFILE_PROJECTION_CYCLE_FAILED:paper:EDS09B_DURABLE_OBSERVATION_QUARANTINED",
+    );
+    expect(await quarantinedRepository.snapshot(workspaceId, "paper", profileId)).toBeNull();
     await worker.onApplicationShutdown();
   });
 

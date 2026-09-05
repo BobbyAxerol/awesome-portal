@@ -33,11 +33,24 @@ export interface DurableMirrorCommitInput {
 }
 
 /**
+ * A durable-mirror write is part of the same Portal observation admission as
+ * the compatibility snapshot.  A range-row digest conflict is deliberately
+ * not an accepted observation: callers must preserve the last committed
+ * snapshot/revision and may not publish a local revision tick for it.
+ */
+export type DurableMirrorCommitResult =
+  | { outcome: "COMMITTED" | "DISABLED" }
+  | { outcome: "QUARANTINED"; reasonCode: "EDS09B_DURABLE_OBSERVATION_QUARANTINED" };
+
+/**
  * Kept as a narrow injection boundary so the legacy snapshot repository can
  * remain the atomic transaction owner and tests can prove rollback behavior.
  */
 export interface DurableMirrorWriter {
-  commitAcceptedProjection(client: PoolClient, input: DurableMirrorCommitInput): Promise<void>;
+  commitAcceptedProjection(
+    client: PoolClient,
+    input: DurableMirrorCommitInput,
+  ): Promise<DurableMirrorCommitResult>;
 }
 
 export interface DurableMirrorScope {

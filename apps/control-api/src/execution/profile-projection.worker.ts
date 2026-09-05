@@ -293,7 +293,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         ? "PARTIAL"
         : isolated.some((item) => item.page?.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
       const sourceCursor = projectionDigest(relations);
-      await this.repository.commit(document, {
+      const receipt = await this.repository.commit(document, {
         sourceEpoch: `manager-v2:${profileId}:${SOURCE_CONTRACT_REVISION}`,
         sourceCursor,
         sourceAsOf,
@@ -304,6 +304,14 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         relationCursors,
         retainedRangeRows,
       });
+      if (receipt.outcome === "QUARANTINED") {
+        // A retained current/range fact changed beneath the same source key.
+        // The forensic batch is committed, but it must not refresh the
+        // browser-visible projection or revision stream.  Surface one typed
+        // cycle failure so the paced worker retries only after the source is
+        // coherent again.
+        throw new Error(receipt.reasonCode ?? "EDS09B_DURABLE_OBSERVATION_QUARANTINED");
+      }
     } finally {
       await this.repository.releaseLease(workspaceId, environment, profileId, this.ownerId)
         .catch(() => undefined);

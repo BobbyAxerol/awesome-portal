@@ -138,18 +138,40 @@ describe("EDS-06 durable current/range mirror", () => {
 
   it("deduplicates a repeated accepted page and quarantines a same-key/different-digest range conflict", async () => {
     const document = projectionDocument();
-    await commit(document, "source-cursor-secret-1");
+    const first = await commit(document, "source-cursor-secret-1");
     const repeated = await commit(document, "source-cursor-secret-2");
     expect(repeated.changed).toBe(false);
     expect((await pool.query("SELECT count(*)::int AS n FROM execution_durable_mirror_range_rows")).rows[0]?.n).toBe(1);
+    const before = await repository.snapshot(workspaceId, "paper", profileId);
+    const beforeJournal = await repository.journalAfter(
+      workspaceId, "paper", profileId, first.projectionEpoch, 0, 10,
+    );
 
     const conflictingRows = [{
       lineage: document.relations[rangeKey]!.items[0]!.lineage,
       fields: { ...document.relations[rangeKey]!.items[0]!.fields, equity: "100.26" },
     }];
-    await repository.commit(document, commitInput("source-cursor-secret-3", {
+    const changedDocument = projectionDocument({ strategyIds: ["alpha_2"] });
+    const quarantinedReceipt = await repository.commit(changedDocument, commitInput("source-cursor-secret-3", {
       [rangeKey]: conflictingRows,
     }));
+    expect(quarantinedReceipt).toMatchObject({
+      outcome: "QUARANTINED",
+      changed: false,
+      reasonCode: "EDS09B_DURABLE_OBSERVATION_QUARANTINED",
+      projectionEpoch: first.projectionEpoch,
+      projectionSequence: first.projectionSequence + 1,
+    });
+    const after = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(after).toMatchObject({
+      projectionEpoch: before?.projectionEpoch,
+      projectionSequence: before?.projectionSequence,
+      payloadDigest: before?.payloadDigest,
+      sourceCursor: before?.sourceCursor,
+    });
+    expect(await repository.journalAfter(
+      workspaceId, "paper", profileId, first.projectionEpoch, 0, 10,
+    )).toEqual(beforeJournal);
 
     const range = await pool.query<{ fields: { equity: string } }>(
       `SELECT fields FROM execution_durable_mirror_range_rows

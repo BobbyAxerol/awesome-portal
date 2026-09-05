@@ -2000,3 +2000,45 @@ links normalize source case and route to the correct Paper/Sandbox/Live
 workbench; missing bounded 30-day equity/drawdown stays a panel-local typed gap.
 Do not replace the screen with an envelope and do not reconstruct historical
 series or monetary totals in React.
+
+### 8.50 EDS-09b local observation-revision consumer contract (2026-09-05)
+
+Backend has closed the first current-source observation slice without waiting
+for a Trading System Event upgrade. The existing same-origin
+`portal.execution.profile-realtime.v1` envelope is **additive**: it now may
+carry `availability` and an `observation` descriptor with
+`authority: PORTAL_OBSERVATION`, `semantics: BOUNDED_CURRENT_PAGE`, declared
+source contract revision and UTC-millisecond timestamps. `heartbeat` and
+`auth.expired` retain `observation: null`.
+
+For a `delta`, `payload` is deliberately restricted to:
+
+```ts
+{
+  schema_version: "portal.execution.observation-revision.v1";
+  observation_authority: "PORTAL_OBSERVATION";
+  observation_semantics: "BOUNDED_CURRENT_PAGE";
+  operation_id: "EXECUTION_PROFILE_OBSERVATION_REVISION";
+  affected_screen_ids: string[];
+}
+```
+
+Consumer rules:
+
+1. Treat `affected_screen_ids` only as a revalidation hint for the named
+   current panel; it is not a generic data selector.
+2. Preserve the reviewed rich layout. Revalidate only the affected panel and
+   retain typed `empty`, `partial`, `stale` or `unavailable` inside that panel.
+3. Never display the feed as Event replay, broker lifecycle, correction,
+   source-global ordering or full history. Render `PORTAL_OBSERVATION` wording
+   where provenance is visible.
+4. Keep the local revision cursor opaque; terminal `projection.gap` means
+   resubscribe/resync through same-origin BFF, not a client-side source retry.
+5. Do not expect source relation names, source cursors, Edge routes, JWT or
+   mTLS fields in product JavaScript. Backend removes old journal keys even
+   during the short legacy retention window.
+
+This does not turn missing source capabilities into unavailable whole screens.
+Authoritative replay/corrections/ACK and missing market artifacts remain
+`Soon · SOURCE_GAP_CONFIRMED`; EDS-10b will add observed/derived panel data and
+EDS-11 will complete route-level hydration using this local revision lane.
