@@ -8,11 +8,13 @@ Chúng không thay thế phase hoặc exit gate trong
 ## Active deep dives
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
-  — **the only active document to send to the Trading System owner.** It
-  consolidates N02/N03 incremental source, N06 evidence, all 24 N11 reads, all
-  nine N12 commands, N15 Event/Artifact authority and the N13–N17 operational
-  evidence ladder. Older D4, Claude, N11 and N12 request prose is audit or a
-  machine annex and must not be sent separately.
+  — **the governing owner request.** It consolidates N02/N03 incremental
+  source, N06 evidence, all 24 N11 reads, all nine N12 commands, N15
+  Event/Artifact authority and the N13–N17 operational evidence ladder. For
+  MC-01 event implementation only, attach its single linked
+  [EDS-09 implementation addendum](./EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md)
+  and the manifest-bound EDS-08 contract directory; older D4, Claude, N11 and
+  N12 request prose is audit or a machine annex and must not be sent separately.
 - [Execution Loop backend unified plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
   records the completed N13–N17 `A` (Portal-owned/source-dark) and `B`
   (current-source acceptance) lanes. Phase acceptance never implies product
@@ -22,6 +24,10 @@ Chúng không thay thế phase hoặc exit gate trong
   core plus additive PostgreSQL facts, pure reducers, checkpoint, quarantine
   and committed local journal. It accepts no source transport until one exact
   independently verified `EVENT_SOURCE_ACCEPTED` class is returned.
+- [EDS-09 Trading System event-source implementation addendum](./EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md)
+  — **the only incremental owner handoff for MC-01 / durable event replay.**
+  It consolidates the three event classes, source-as-is implementation choice,
+  sanitized return package and source-dark receipt boundary.
 - [Maximum Data Discovery, Publication & Return Request v1](../../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md)
   — **governing delta-discovery request, seven owner-approved EX-DP phases.**
   It uses N18–N29, the current Manager-v2 plane and data-activation evidence

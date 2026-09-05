@@ -148,6 +148,11 @@ This is an external acceptance gate, not hidden Portal technical debt.
 
 ## Next handoff
 
+The owner-facing implementation scope is centralized in
+[`EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md`](./EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md).
+It is the MC-01 addendum to the governing owner request, not a competing
+request or an authorization to activate traffic.
+
 After the owner return is accepted, add a narrow versioned adapter that maps
 only that wire contract to `EventSourceAdmission`, `SnapshotBoundary`,
 `SourceFrame`, `SnapshotTailCoordinator` and this append store. Do not broaden
