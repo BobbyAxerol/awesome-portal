@@ -4477,7 +4477,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-07 | equity/performance/risk/chart query plane | EDS-06 | **CODE_COMPLETE / SOURCE_DARK** on 2026-09-05; yes for retained source range |
 | EDS-08 | optional authoritative event/continuity upgrade lane | EDS-00; external source work | **OWNER_RETURN_VERIFIED / 18_GAPS_CONFIRMED** on 2026-09-05; it does not block current-data product work |
 | EDS-09 | authoritative source snapshot+tail append store | EDS-08 | **CODE_COMPLETE_SOURCE_DARK / PARKED_FOR_FUTURE_SOURCE_UPGRADE**; no current source class is eligible |
-| EDS-09b | Portal observation bridge, local observation journal and revision ticks | EDS-03–07 current source | planned; **yes**, using bounded/resumable current pages without Event claims |
+| EDS-09b | Portal observation bridge, local observation journal and revision ticks | EDS-03–07 current source | **IMPLEMENTED / VERIFIED_SOURCE_DARK / RUNTIME_INACTIVE**; bounded/resumable current pages only, without Event claims |
 | EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
 | EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | planned; **yes**, with `PORTAL_OBSERVATION` / `DERIVED` labels |
 | EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | planned; **yes**, panel by panel with typed gaps |
