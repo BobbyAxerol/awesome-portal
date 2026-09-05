@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-05 | **EDS-09 owner return accepted as source-as-is, current-product route replanned**: Portal verified the immutable owner-return manifest and EDS-08 validator. All 18 gaps and all three Event classes remain `SOURCE_GAP_CONFIRMED`; no current Manager page is allowed into `authoritative-event-core`. The binding decision is `EDS-09b` Portal observation journal → `EDS-10b` observed/derived panel plane → `EDS-11` local BFF/SSE. True Event/replay/market requirements are consolidated into one visible `Soon` source-upgrade backlog, never a blocker for existing Paper/Sandbox/Live current data | manifest **12/12** + EDS-08 owner-return validator passed (`18` gaps, `7` owner lanes, `3` Event classes, `8` synthetic cases); documentation only, no source/runtime/container/credential/command change |
 | 2026-09-05 | **EDS-03 maximum current truth closed at the code/contract gate**: exact deployment scope is resolved from the local, profile-bound projection before pagination; Paper/Sandbox/Live rich panels receive named current relation DTOs and generated UTC/panel envelopes; absent Canary governance can no longer hide a readable Live source; no-currency/no-mark position aggregates are typed-null rather than invented | E7 **34/18/3** + full manifest verified; read-only generator check; contracts **117/117**; fresh-PG Control API **40 files / 354 tests** + restore; Node 22 frontend **98 files / 1,826 tests / 3 skipped** + production build. No runtime/container/Edge/source/command mutation; detailed evidence `backend/EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md` |
 | 2026-09-04 | **OWNER RULING OR-1 (ghi tại EDS_FRONTEND_DATA_CONTRACT_TRACKER.md §OR, codex áp dụng ngay)**: BỎ chờ event-journal phía Trading System — EDS-08 hạ thành asks-nâng-cấp không chặn; EDS-09/10 đổi đầu vào sang observation lane (pseudo-tail từ resumable drain/mirror, lifecycle replay xấp xỉ từ orders+fills+sessions đã giao, market context DERIVED từ mark_price sẵn có — nhãn trung thực, không bịa OHLC); tận dụng tối đa mọi thứ E1→E7 đã adapt; yêu cầu duy nhất còn lại của DR-11 là mở song song lane FE (EDS-01→03). Kèm đính chính chốt đo: chuỗi E1→E7 là CODE thật đã xong nguồn-side | owner directive trong phiên; tracker cập nhật cùng commit |
 | 2026-09-03 | **First AUTHENTICATED end-to-end payload probe (viewer user `claude-probe`, USER role, tự tạo qua bootstrap CLI — không đụng credential owner)**: sự thật từng route. TỐT: alpha 360 analytics serve equity 1,540 điểm phủ đúng 05/08→04/09 downsample khai báo (source 10,119 rows); correlation AVAILABLE 66 cặp/43 alpha; drawdown AVAILABLE 43 alpha + 6 cửa sổ trùng; workbench 1,540+1,699 điểm windows khai báo. HỎNG — đích danh: (1) **/screens/paper overview chỉ serve 200 rows equity thô** (cap 200/relation của screens BFF, 43 account trộn ≈ 5 điểm/account) → chart overview không thể ra hồn, phải build DERIVED-sum series từ mirror phía server; (2) **payload khổng lồ**: workbench 5.9MB, alpha analytics 2.4MB (rows đầy đủ fields thay vì series (t,v)) — xác nhận R2 perf; (3) completeness PARTIAL toàn cục do 5 trang nóng transactional bounded-by-design + portfolio_equity typed-rejected → 'stage-equity' PARTIAL, polish 'ready' tắt — cần tách 'serving completeness' (window đã giao đủ, truncated khai báo) khỏi 'population completeness'; (4) workbench orders/fills=0 cho deployment probe (trang nóng 400 không chứa) — Lane E2 | curl + cookie session thật, files scratchpad paper/alpha/wb.json; kế tiếp: Fix A (overview series từ mirror) + Fix C (completeness semantics) |
@@ -4473,15 +4474,17 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-05 | governance/operations and five Portal derivations | EDS-04 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
 | EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | **COMPLETE_SOURCE_DARK / VERIFIED** on 2026-09-05; yes for observed pages; no replay claim |
 | EDS-07 | equity/performance/risk/chart query plane | EDS-06 | **CODE_COMPLETE / SOURCE_DARK** on 2026-09-05; yes for retained source range |
-| EDS-08 | authoritative event/continuity acquisition | EDS-00; external source work | **CONTRACT_PREPARATION_COMPLETE / VERIFIED** on 2026-09-05; an accepted owner event class is still an external gate |
-| EDS-09 | Rust snapshot+tail append store and reducers | EDS-08 | **CODE_COMPLETE_SOURCE_DARK / VERIFIED** on 2026-09-05; runtime ingest remains fail-closed pending one independently accepted event class |
-| EDS-10 | full lifecycle replay and market-context chart plane | EDS-09 + typed market source | no |
-| EDS-11 | complete screen BFF/action graph and local SSE | EDS-03–10 as applicable | partial before EDS-08/10; exact typed state required |
+| EDS-08 | optional authoritative event/continuity upgrade lane | EDS-00; external source work | **OWNER_RETURN_VERIFIED / 18_GAPS_CONFIRMED** on 2026-09-05; it does not block current-data product work |
+| EDS-09 | authoritative source snapshot+tail append store | EDS-08 | **CODE_COMPLETE_SOURCE_DARK / PARKED_FOR_FUTURE_SOURCE_UPGRADE**; no current source class is eligible |
+| EDS-09b | Portal observation bridge, local observation journal and revision ticks | EDS-03–07 current source | planned; **yes**, using bounded/resumable current pages without Event claims |
+| EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
+| EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | planned; **yes**, with `PORTAL_OBSERVATION` / `DERIVED` labels |
+| EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | planned; **yes**, panel by panel with typed gaps |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
 
 EDS-03 through EDS-07 must not wait for EDS-08. This is the key
 adapt-first decision: current source delivers the maximum honest product now;
-event/replay work advances in a separate dependency lane.
+authoritative event/replay work advances only as a future source-upgrade lane.
 
 ### EDS-00 — Return-pack intake and immutable baseline
 
@@ -4965,8 +4968,10 @@ follow-up remains; source activation and browser consumption are deliberately
 separate operational/product gates.
 See [EDS-07 retained financial chart API](backend/EDS_07_RETAINED_FINANCIAL_CHART_API.md).
 
-**Next:** EDS-09 for streaming-enabled source classes; EDS-11 for local
-current-revision SSE.
+**Next:** EDS-09b is the current-product path: extend the already accepted
+durable current/range mirror into a labelled Portal observation journal and
+local revision feed. EDS-09 remains a separate future-source lane only for an
+independently accepted owner Event class.
 
 ### EDS-08 — Source continuity and authoritative event contract lane
 
@@ -5048,7 +5053,9 @@ validator passed against the Portal path (18 gaps, three classes x three
 profiles, 15 synthetic guard cases, no transport). Rollback is a revert of
 this one Portal documentation commit.
 
-**Next:** EDS-09 only for accepted classes.
+**Next:** begin EDS-09b for maximum current-source delivery now. EDS-09 stays
+parked and can resume only if a later owner return contains an independently
+verified `EVENT_SOURCE_ACCEPTED` class.
 
 ### EDS-09 — Rust snapshot+tail, append store, reducers and durable ACK
 
@@ -5116,9 +5123,105 @@ They are an explicit external activation gate, not hidden Portal technical debt:
 5. a separately approved runtime change window that enables only the named
    adapter/profile after preflight passes.
 
-**Next:** EDS-10/EDS-11 may consume only accepted source classes. Until then,
-current-page BFFs remain the honest current-truth path and replay stays typed
-unavailable rather than fabricated.
+**Decision after the verified owner return (2026-09-05):** no current class
+may enter this authoritative Event core. The core remains intact and parked for
+a future source upgrade; it is not deleted, weakened, or repurposed to make
+current observations look like owner events. The product path below is now the
+required current-source delivery path.
+
+### EDS-09b — Portal observation bridge and committed local revision journal
+
+**Status:** `PLANNED / CURRENT_SOURCE_ONLY / DOES_NOT_WAIT_FOR_TRADING_SYSTEM`.
+
+**Goal:** use the existing named Manager/E5 current-page operations, durable
+mirror and resumable server-side drains to publish one Portal-owned observation
+revision per scope. This removes browser-to-AWS-HK amplification and gives
+screens/SSE truthful movement without claiming source event continuity.
+
+**Work:**
+
+- extend the existing EDS-06 durable mirror only; do not feed
+  `authoritative-event-core` or its event-fact tables;
+- bind each observation to the named operation, workspace/profile/venue/resource
+  scope, source contract/catalogue revision, `as_of_ms`, received time,
+  availability, freshness, completeness and opaque server continuation;
+- deduplicate by the existing source key plus payload digest, atomically commit
+  a Portal-generated observation revision and write a local observation-journal
+  entry only after that commit;
+- retain current state and retained range separately, use a Portal-generated
+  revision sequence only for local ordering, and label every emitted record
+  `PORTAL_OBSERVATION`;
+- use the existing lease, paced refresh, cache/admission limits and stale
+  fallback. A browser receives a local revision/cursor, never a source cursor,
+  relation, JWT, mTLS input or AWS-HK route; and
+- keep source failure, partial population, empty result and stale result as
+  panel-level typed states. Never convert any into zero, `READY`, or replay.
+
+**Tests/exit:** prove per-profile isolation; duplicate/different-digest
+quarantine; lease loss/recovery; restart with no double-visible revision;
+resumable drain; partial/stale/error propagation; source-read coalescing;
+bounded local retention; backup/restore; and a same-origin revision-tick
+consumer. The phase closes only when a browser refresh cannot multiply source
+reads and every observation is visibly distinguishable from an owner Event.
+
+### EDS-10b — Observed timeline and derived mark-context plane
+
+**Status:** `PLANNED / CURRENT_SOURCE_ONLY / PANEL-LEVEL_TRUTH`.
+
+**Goal:** give Alpha 360, Portfolio 360, Account/Broker, Workbench, Blotter and
+stage screens the maximum useful timelines/charts from current orders, fills,
+sessions, equity, performance, risk and sizing data already published.
+
+**Work:**
+
+- compose per-resource observed timelines from the available order/fill/session
+  timestamps, preserving original field clocks and showing an unavailable
+  acknowledgement/correction segment where it is not published;
+- use retained equity/performance/risk ranges for financial charts and derive
+  mark-context lines only from available `mark_price`/equity observations;
+- expose exact decimal strings, UTC milliseconds, coverage window, source and
+  returned counts, sampling rule, freshness and completeness in every DTO;
+- label timelines `OBSERVED_TIMELINE`, mark charts `DERIVED · mark-context`,
+  and never call either Trade Replay, OHLCV, benchmark, broker-clock history or
+  authoritative lifecycle history; and
+- preserve the approved rich screen composition: a missing panel is typed
+  within its panel, not a replacement of the whole screen with an unavailable
+  envelope.
+
+**Tests/exit:** exact-resource isolation; stable mixed-clock ordering with an
+explicit tie rule; no invented causal/broker time; retained-window boundary;
+first/last/extrema downsampling; mark-context provenance label; profile/venue
+negative cases; and one frontend contract fixture for each panel state. The
+phase closes when all usable current-source panels have data or an honest
+typed-empty state on the frozen product routes.
+
+### EDS-11 — Current-data screen BFF hydration and local realtime
+
+**Status:** `PLANNED / FOLLOWS_EDS-09B_AND_10B`.
+
+**Goal:** connect every frozen frontend screen to named same-origin BFFs and
+local observation revisions. It is not an Event-stream activation and does not
+broaden command authority.
+
+**Work/exit:** publish the complete panel mapping from the E2 catalogue; enable
+local SSE only from committed `PORTAL_OBSERVATION` revisions; emit a revision
+tick, freshness/coverage change or typed panel transition; preserve
+Last-Event-ID resync/fallback polling; and have frontend acceptance prove each
+screen keeps its rich layout under available, partial, stale, empty and
+unavailable states. Commands retain their separately accepted exact contract
+and remain fail-closed outside it.
+
+### Source-upgrade backlog — visible as `Soon`, never a delivery blocker
+
+| Product need | Current disposition |
+| --- | --- |
+| immutable position/fill/risk lifecycle replay, corrections and tombstones | `SOON · SOURCE_GAP_CONFIRMED` |
+| broker acknowledgement clocks and terminal command evidence | `SOON · SOURCE_GAP_CONFIRMED` |
+| typed ticks, OHLCV, benchmark, venue calendar and VNM constraints | `SOON · SOURCE_GAP_CONFIRMED`; use only labelled current/derived context where available |
+| mark provenance, direct profile equity producer, artifact reference and research linkage | `SOON · SOURCE_GAP_CONFIRMED` |
+
+These are retained as one future source-upgrade backlog. They do not suppress
+or degrade current-source screens that already have usable data.
 
 ### EDS-10 — Full lifecycle replay and market-context query plane
 
@@ -5146,7 +5249,9 @@ boundary and browser seek/virtualization.
 and no smoke fallback; available lifecycle is replayable and unavailable
 pre-capture history is visibly bounded.
 
-**Next:** EDS-11.
+**Next:** this authoritative branch is parked. Current product delivery
+continues through EDS-09b → EDS-10b → EDS-11; EDS-10 resumes only when its
+future source contract exists.
 
 ### EDS-11 — Complete screen BFF/action graph and local realtime activation
 
@@ -5221,8 +5326,10 @@ Claude can work in parallel without source/runtime authority:
 | EDS-06 | old/new revision diagnostics and local-mirror parity test harness |
 | EDS-07 | `PrimusFinancialChart`, accessible table and exact tooltip display |
 | EDS-08/09 | event fixtures only from frozen contract; no synthetic product replay |
-| EDS-10 | virtualized replay/candlestick renderer after contract acceptance |
-| EDS-11 | incremental updates, virtualization, full route/action Playwright |
+| EDS-09b | local observation/revision state visuals; preserve `PORTAL_OBSERVATION` wording |
+| EDS-10b | observed timelines, derived mark-context panels and typed `Soon` replay/market gaps |
+| EDS-11 | incremental local revision updates, virtualization, full route/action Playwright |
+| EDS-10 | virtualized authoritative replay/candlestick renderer only after source acceptance |
 | EDS-12 | visual regression, browser failure matrix and owner review packet |
 
 Claude must not replace a rich screen with an envelope page, derive business
@@ -5236,13 +5343,19 @@ Unless Bobby changes priority, execute one campaign branch in this order:
 
 ```text
 EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
-                              ↘ EDS-08 → EDS-09 → EDS-10 ↗
-                                                   EDS-11 → EDS-12
+                                                     ↓
+                                      EDS-09b → EDS-10b → EDS-11 → EDS-12
+
+Future source-upgrade lane only:
+EDS-08 → EDS-09 → EDS-10
 ```
 
-EDS-07 is closed in source-dark form, EDS-08 is closed for contract preparation
-and EDS-09 is code-complete source-dark. Runtime activation of EDS-09 remains
+EDS-07 is closed in source-dark form, EDS-08 is verified as a future-source
+contract lane, and EDS-09 is code-complete but parked after the owner confirmed
+that all current classes are gaps for authoritative event semantics. EDS-09b,
+EDS-10b and EDS-11 are the approved current-source route and do not wait for a
+new Trading System event implementation. Runtime activation of EDS-09 remains
 blocked until the source owner returns at least one independently verified
 `EVENT_SOURCE_ACCEPTED` class and the exact deployment evidence listed above.
-Neither phase may replace the committed local, server-side range boundary with
+Neither lane may replace the committed local, server-side range boundary with
 bounded global-page filtering or client-side business joins.

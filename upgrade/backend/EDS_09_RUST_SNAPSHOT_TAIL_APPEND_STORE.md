@@ -148,14 +148,22 @@ This is an external acceptance gate, not hidden Portal technical debt.
 
 ## Next handoff
 
+**Current-source ruling (2026-09-05):** the verified owner return confirms
+that no currently published class is eligible for this authoritative Event
+core. Do not adapt bounded Manager pages to this crate and do not hold product
+delivery for an owner Event upgrade. The current product path is EDS-09b in
+the existing `ExecutionDurableMirrorRepository`: it creates a separate,
+explicitly `PORTAL_OBSERVATION`-labelled local revision journal from accepted
+current/range reads. It must never write these Event tables or claim source
+sequence, replay, correction, retention or ACK authority.
+
 The owner-facing implementation scope is centralized in
 [`EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md`](./EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md).
 It is the MC-01 addendum to the governing owner request, not a competing
 request or an authorization to activate traffic.
 
-After the owner return is accepted, add a narrow versioned adapter that maps
-only that wire contract to `EventSourceAdmission`, `SnapshotBoundary`,
-`SourceFrame`, `SnapshotTailCoordinator` and this append store. Do not broaden
-it into a generic relation reader. EDS-10 then builds replay/market context
-only for accepted event and market classes; EDS-11 fans out only committed local
-journal revisions.
+Only after a future owner return is accepted, add a narrow versioned adapter
+that maps that exact wire contract to `EventSourceAdmission`,
+`SnapshotBoundary`, `SourceFrame`, `SnapshotTailCoordinator` and this append
+store. Do not broaden it into a generic relation reader. EDS-10 then builds
+replay/market context only for accepted event and market classes.

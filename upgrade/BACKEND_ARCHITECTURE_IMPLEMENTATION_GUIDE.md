@@ -672,10 +672,11 @@ deep-dive → ADR → slice → evidence discipline documented above.
   not add an Event transport, accept a source class, change a route or runtime,
   or grant data/command authority. Byte identity, manifest, Portal EDS-08
   validation and source-side package validation passed from the Portal
-  checkout. The Portal may continue the
-  separately approved observation lane, but authoritative Event ingestion
-  remains unavailable unless a later owner return contains an independently
-  verified `EVENT_SOURCE_ACCEPTED` class. See
+  checkout. The Portal now advances through the separately approved EDS-09b
+  observation-revision, EDS-10b observed/derived-panel and EDS-11 local-SSE
+  sequence; authoritative Event ingestion remains unavailable unless a later
+  owner return contains an independently verified `EVENT_SOURCE_ACCEPTED`
+  class. See
   [EDS-09 owner-return handoff](backend/EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md).
 
 - **EX-DP-05/E5 existing-data adapter and publication closed

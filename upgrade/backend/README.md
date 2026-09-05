@@ -1731,5 +1731,7 @@ durable run/attempt events. Detailed evidence:
   no Event transport, replay authority, direct source path, runtime route,
   image, service, profile or command authority was added.
 - Portal work continues on maximum current-data screens and the explicitly
-  labelled observation lane. Authoritative EDS-09 Event ingestion remains
-  source-dark until a later owner return contains a verified accepted class.
+  labelled observation lane: EDS-09b local observation revisions, EDS-10b
+  observed/derived panels and EDS-11 same-origin local SSE are the current
+  product sequence. Authoritative EDS-09 Event ingestion remains source-dark
+  until a later owner return contains a verified accepted class.
