@@ -1,0 +1,15 @@
+{
+  "schema_version": "trading-system.portal.execution.eds09.fixture-index.v1",
+  "synthetic_no_business_data": true,
+  "fixtures": [
+    {
+      "path": "fixtures/continuity-cases.v1.json",
+      "cases": ["DUPLICATE","GAP","CORRECTION","TOMBSTONE","EPOCH_RESET","RETENTION_BOUNDARY","CROSS_PROFILE_REJECTION","SNAPSHOT_TAIL"]
+    },
+    {
+      "path": "fixtures/operational-guard-cases.v1.json",
+      "cases": ["RESTART_RESUME","MTLS_JWT_POSITIVE","MTLS_JWT_NEGATIVE","BOUNDED_PAYLOAD","BACKPRESSURE","SOURCE_LOSS_RECOVERY","ROLLBACK"]
+    }
+  ],
+  "interpretation": "Fixtures validate consumer and publisher guard semantics only. They cannot change any SOURCE_GAP_CONFIRMED ruling into operational source evidence."
+}

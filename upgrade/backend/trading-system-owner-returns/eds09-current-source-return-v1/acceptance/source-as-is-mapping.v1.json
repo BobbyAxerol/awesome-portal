@@ -1,0 +1,48 @@
+{
+  "schema_version": "trading-system.portal.execution.eds09.source-as-is-mapping.v1",
+  "assessment_revision": "eds09-current-source-audit-v1",
+  "source_revision": "73ba2826d42de53f52840facc9d97bc53e517b26",
+  "assessment_kind": "STATIC_SOURCE_AND_SCHEMA_AUDIT",
+  "no_source_connection_opened": true,
+  "event_classes": [
+    {
+      "event_class_id": "execution.position-lifecycle.v1",
+      "mapped_gap_id": "position-version-history",
+      "current_source_kind": "MUTABLE_CURRENT_POSITION_PROJECTION",
+      "profile_assessments": [
+        {"mode":"PAPER","ruling":"SOURCE_GAP_CONFIRMED"},
+        {"mode":"SANDBOX","ruling":"SOURCE_GAP_CONFIRMED"},
+        {"mode":"LIVE","ruling":"SOURCE_GAP_CONFIRMED"}
+      ],
+      "missing_authority": ["OWNER_EPOCH","CONTIGUOUS_GLOBAL_U64_SEQUENCE","IMMUTABLE_ENTITY_VERSION_HISTORY","CORRECTION_TOMBSTONE_CAUSALITY","RETENTION_FLOOR","OPAQUE_RESUME_CURSOR","SNAPSHOT_HIGH_WATERMARK_TO_TAIL","PROFILE_RESOURCE_EVENT_BINDING"]
+    },
+    {
+      "event_class_id": "execution.fill-lifecycle.v1",
+      "mapped_gap_id": "fill-correction-replay",
+      "current_source_kind": "RETAINED_FILL_ROWS_WITHOUT_LIFECYCLE_JOURNAL",
+      "profile_assessments": [
+        {"mode":"PAPER","ruling":"SOURCE_GAP_CONFIRMED"},
+        {"mode":"SANDBOX","ruling":"SOURCE_GAP_CONFIRMED"},
+        {"mode":"LIVE","ruling":"SOURCE_GAP_CONFIRMED"}
+      ],
+      "missing_authority": ["OWNER_EPOCH","CONTIGUOUS_GLOBAL_U64_SEQUENCE","IMMUTABLE_LIFECYCLE_EVENT_ID","CORRECTION_TOMBSTONE_CAUSALITY","DECLARED_RETENTION_FLOOR","OPAQUE_RESUME_CURSOR","SNAPSHOT_HIGH_WATERMARK_TO_TAIL","PROFILE_RESOURCE_EVENT_BINDING"]
+    },
+    {
+      "event_class_id": "risk.decision-lifecycle.v1",
+      "mapped_gap_id": "risk-event-correction",
+      "current_source_kind": "MUTABLE_CURRENT_RISK_DECISION_STATE",
+      "profile_assessments": [
+        {"mode":"PAPER","ruling":"SOURCE_GAP_CONFIRMED"},
+        {"mode":"SANDBOX","ruling":"SOURCE_GAP_CONFIRMED"},
+        {"mode":"LIVE","ruling":"SOURCE_GAP_CONFIRMED"}
+      ],
+      "missing_authority": ["OWNER_EPOCH","CONTIGUOUS_GLOBAL_U64_SEQUENCE","IMMUTABLE_DECISION_VERSION_HISTORY","CORRECTION_TOMBSTONE_CAUSALITY","DECLARED_RETENTION_FLOOR","OPAQUE_RESUME_CURSOR","SNAPSHOT_HIGH_WATERMARK_TO_TAIL","PROFILE_RESOURCE_EVENT_BINDING"]
+    }
+  ],
+  "rejected_as_event_sources": [
+    {"source_kind":"GENERIC_AUDIT_EVENT_RECORDS","reason":"No owner-controlled contiguous sequence, lifecycle coverage, declared retention floor, or published snapshot-tail boundary."},
+    {"source_kind":"POLICY_SCOPED_DELIVERY_OUTBOX","reason":"Delivery scope does not establish a full authoritative position, fill, and risk lifecycle source."},
+    {"source_kind":"CURRENT_PROJECTION_CHANGE_HINT","reason":"A change hint and bounded snapshot are not immutable replay history."}
+  ],
+  "consumer_rule": "Portal must keep current-state reads distinct from event history and must not infer event continuity from page deltas, current rows, or change hints."
+}

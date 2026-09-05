@@ -1,0 +1,83 @@
+{
+  "schema_version": "portal.execution.eds08.continuity-cases.v1",
+  "synthetic_no_business_data": true,
+  "description": "These are contract cases, not source evidence. Identifiers, timestamps, payloads and digests are synthetic and cannot activate an event class.",
+  "cases": [
+    {
+      "case_id": "duplicate-event-idempotency",
+      "kind": "DUPLICATE",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "events": [
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.fill-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "101", "event_id": "synthetic-fill-101", "operation": "UPSERT", "occurred_at_ms": 1788500000101, "published_at_ms": 1788500000102, "entity": {"entity_kind": "fill", "entity_id": "synthetic-fill", "entity_version": "1"}, "causation_id": "synthetic-order-1", "correlation_id": "synthetic-correlation-1", "correction_of_event_id": null, "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-fill-v1", "payload_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-101"},
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.fill-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "101", "event_id": "synthetic-fill-101", "operation": "UPSERT", "occurred_at_ms": 1788500000101, "published_at_ms": 1788500000102, "entity": {"entity_kind": "fill", "entity_id": "synthetic-fill", "entity_version": "1"}, "causation_id": "synthetic-order-1", "correlation_id": "synthetic-correlation-1", "correction_of_event_id": null, "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-fill-v1", "payload_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-101"}
+      ],
+      "expected": {"decision": "IDEMPOTENT_DUPLICATE_NO_VISIBLE_DUPLICATION", "advance_checkpoint": false, "resnapshot_required": false}
+    },
+    {
+      "case_id": "sequence-gap-fences-until-resnapshot",
+      "kind": "GAP",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "events": [
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.position-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "201", "event_id": "synthetic-position-201", "operation": "UPSERT", "occurred_at_ms": 1788500000201, "published_at_ms": 1788500000202, "entity": {"entity_kind": "position", "entity_id": "synthetic-position", "entity_version": "2"}, "causation_id": null, "correlation_id": "synthetic-correlation-2", "correction_of_event_id": null, "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-position-v1", "payload_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-201"},
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.position-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "203", "event_id": "synthetic-position-203", "operation": "UPSERT", "occurred_at_ms": 1788500000203, "published_at_ms": 1788500000204, "entity": {"entity_kind": "position", "entity_id": "synthetic-position", "entity_version": "3"}, "causation_id": null, "correlation_id": "synthetic-correlation-2", "correction_of_event_id": null, "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-position-v1", "payload_sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-203"}
+      ],
+      "expected": {"decision": "FENCE_AND_RESNAPSHOT_REQUIRED", "advance_checkpoint": false, "resnapshot_required": true}
+    },
+    {
+      "case_id": "correction-keeps-causal-reference",
+      "kind": "CORRECTION",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "events": [
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.fill-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "302", "event_id": "synthetic-fill-302", "operation": "CORRECTION", "occurred_at_ms": 1788500000302, "published_at_ms": 1788500000303, "entity": {"entity_kind": "fill", "entity_id": "synthetic-fill", "entity_version": "2"}, "causation_id": "synthetic-order-3", "correlation_id": "synthetic-correlation-3", "correction_of_event_id": "synthetic-fill-301", "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-fill-v1", "payload_sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-302"}
+      ],
+      "expected": {"decision": "APPLY_CORRECTION_WITH_CAUSAL_REFERENCE", "advance_checkpoint": true, "resnapshot_required": false}
+    },
+    {
+      "case_id": "tombstone-keeps-causal-reference",
+      "kind": "TOMBSTONE",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "events": [
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "risk.decision-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "401", "event_id": "synthetic-risk-401", "operation": "TOMBSTONE", "occurred_at_ms": 1788500000401, "published_at_ms": 1788500000402, "entity": {"entity_kind": "risk_decision", "entity_id": "synthetic-risk", "entity_version": "2"}, "causation_id": "synthetic-signal-4", "correlation_id": "synthetic-correlation-4", "correction_of_event_id": null, "tombstone_of_event_id": "synthetic-risk-400", "payload_schema_revision": "synthetic-risk-v1", "payload_sha256": "sha256:4444444444444444444444444444444444444444444444444444444444444444", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-401"}
+      ],
+      "expected": {"decision": "APPLY_TOMBSTONE_WITH_CAUSAL_REFERENCE", "advance_checkpoint": true, "resnapshot_required": false}
+    },
+    {
+      "case_id": "epoch-reset-requires-fenced-snapshot",
+      "kind": "EPOCH_RESET",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "previous_checkpoint": {"source_epoch": "epoch-1", "source_sequence": "999"},
+      "events": [
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.position-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-2", "source_sequence": "1", "event_id": "synthetic-position-epoch2-1", "operation": "UPSERT", "occurred_at_ms": 1788500000501, "published_at_ms": 1788500000502, "entity": {"entity_kind": "position", "entity_id": "synthetic-position", "entity_version": "1"}, "causation_id": null, "correlation_id": "synthetic-correlation-5", "correction_of_event_id": null, "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-position-v1", "payload_sha256": "sha256:5555555555555555555555555555555555555555555555555555555555555555", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-epoch2-1"}
+      ],
+      "expected": {"decision": "FENCE_PREVIOUS_EPOCH_AND_REQUIRE_SNAPSHOT", "advance_checkpoint": false, "resnapshot_required": true}
+    },
+    {
+      "case_id": "retention-floor-requires-resnapshot",
+      "kind": "RETENTION_BOUNDARY",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "requested_after": {"source_epoch": "epoch-1", "source_sequence": "99"},
+      "retention_floor": {"source_epoch": "epoch-1", "source_sequence": "100", "occurred_at_ms": 1788500000600},
+      "events": [],
+      "expected": {"decision": "RETENTION_FLOOR_AND_RESNAPSHOT_REQUIRED", "advance_checkpoint": false, "resnapshot_required": true}
+    },
+    {
+      "case_id": "cross-profile-event-is-rejected",
+      "kind": "CROSS_PROFILE_REJECTION",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "events": [
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.fill-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "SANDBOX", "profile_id": "SANDBOX_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "701", "event_id": "synthetic-cross-profile-701", "operation": "UPSERT", "occurred_at_ms": 1788500000701, "published_at_ms": 1788500000702, "entity": {"entity_kind": "fill", "entity_id": "synthetic-fill", "entity_version": "1"}, "causation_id": null, "correlation_id": "synthetic-correlation-7", "correction_of_event_id": null, "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-fill-v1", "payload_sha256": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-701"}
+      ],
+      "expected": {"decision": "REJECT_CROSS_PROFILE_NO_ACK", "advance_checkpoint": false, "resnapshot_required": false}
+    },
+    {
+      "case_id": "snapshot-high-watermark-then-tail",
+      "kind": "SNAPSHOT_TAIL",
+      "expected_profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
+      "snapshot": {"schema_version": "portal.execution.eds08.snapshot-tail.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.fill-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "snapshot_id": "synthetic-snapshot-8", "snapshot_as_of_ms": 1788500000800, "snapshot_high_watermark": {"source_epoch": "epoch-1", "source_sequence": "800"}, "tail_starts_after": {"source_epoch": "epoch-1", "source_sequence": "800"}, "retention_floor": {"source_epoch": "epoch-1", "source_sequence": "1", "occurred_at_ms": 1788400000000}, "resnapshot_required": false, "resume_cursor": "opaque-synthetic-cursor-800", "completeness": "COMPLETE"},
+      "events": [
+        {"schema_version": "portal.execution.eds08.source-event.v1", "contract_revision": "synthetic-v1", "stream_id": "execution.fill-lifecycle.v1", "profile": {"workspace_id": "synthetic-workspace", "mode": "PAPER", "profile_id": "PAPER_BINANCE_USDM", "venue_id": "BINANCE_USDM", "resource_kind": "deployment", "resource_id": "synthetic-deployment", "filter_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"}, "source_epoch": "epoch-1", "source_sequence": "801", "event_id": "synthetic-fill-801", "operation": "UPSERT", "occurred_at_ms": 1788500000801, "published_at_ms": 1788500000802, "entity": {"entity_kind": "fill", "entity_id": "synthetic-fill", "entity_version": "3"}, "causation_id": "synthetic-order-8", "correlation_id": "synthetic-correlation-8", "correction_of_event_id": null, "tombstone_of_event_id": null, "payload_schema_revision": "synthetic-fill-v1", "payload_sha256": "sha256:8888888888888888888888888888888888888888888888888888888888888888", "payload": {"synthetic": true}, "resume_cursor": "opaque-synthetic-cursor-801"}
+      ],
+      "expected": {"decision": "COMMIT_SNAPSHOT_THEN_TAIL_FROM_NEXT_SEQUENCE", "advance_checkpoint": true, "resnapshot_required": false}
+    }
+  ]
+}

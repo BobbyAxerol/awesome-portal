@@ -1,0 +1,37 @@
+{
+  "schema_version": "trading-system.portal.execution.eds08-owner-return.v1",
+  "request_revision": "portal.execution.eds08.source-continuity-owner-request.v1",
+  "publication_state": "OWNER_RETURN",
+  "source_revision": "73ba2826d42de53f52840facc9d97bc53e517b26",
+  "owner_id": "trading-system-event-owner",
+  "owner_accepted": true,
+  "entries": [
+    {"gap_id":"artifact-signed-reference","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No source-owned signed-reference metadata contract with bounded retention and expiry is published."},
+    {"gap_id":"research-run-linkage","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No immutable source-owned deployment-to-research linkage contract is published."},
+    {"gap_id":"portfolio-profile-equity-direct","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No profile-qualified direct equity producer or frozen derivation contract is published."},
+    {"gap_id":"position-mark-provenance","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"Current position state lacks a published typed mark-provenance contract."},
+    {"gap_id":"position-version-history","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"Mutable position state is not an authoritative lifecycle journal with epoch, contiguous sequence, retained versions, correction/tombstone causality, or snapshot-tail semantics."},
+    {"gap_id":"order-broker-ack-clocks","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No immutable source-owned acknowledgement timeline with declared source and broker clock authority is published."},
+    {"gap_id":"fill-correction-replay","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"Retained fill rows do not provide an owner epoch, global contiguous sequence, correction/tombstone journal, retention floor, resumable cursor, or snapshot-tail contract."},
+    {"gap_id":"session-funnel-and-producer-version","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No bounded session funnel with declared population, time window, and producer revision is published."},
+    {"gap_id":"signal-intent-funnel","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No source-owned signal-to-intent funnel or separately versioned append contract is published."},
+    {"gap_id":"risk-event-correction","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"Current risk decision state is not a correction-aware lifecycle journal with epoch, contiguous sequence, retention, resume, and snapshot-tail semantics."},
+    {"gap_id":"valuation-mark-provenance","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No typed valuation mark provenance and valuation-revision contract is published."},
+    {"gap_id":"reconciliation-ack-evidence","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No immutable reconciliation acknowledgement evidence DTO is published."},
+    {"gap_id":"command-safe-reference-payload-contract","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No allowlisted terminal command evidence contract with safe references and payload digest is published."},
+    {"gap_id":"market-latest-ticks","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No typed latest market observation contract with authority and freshness is published."},
+    {"gap_id":"market-ohlcv","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No typed bounded retained OHLCV contract with completeness and source authority is published."},
+    {"gap_id":"market-benchmark","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No named benchmark series or frozen derivation-input contract is published."},
+    {"gap_id":"market-session-calendar","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No typed venue session calendar with timezone and effective revision is published."},
+    {"gap_id":"market-vnm-constraints","state":"SOURCE_GAP_CONFIRMED","contract_revision":null,"schema_sha256":null,"fixture_index_sha256":null,"acceptance_evidence_sha256":null,"event_class_id":null,"event_contract":null,"capability_contract":null,"reason":"No typed VNM venue-constraint contract is published."}
+  ],
+  "authority": {
+    "contains_credentials": false,
+    "contains_private_keys": false,
+    "contains_dsn_or_raw_sql": false,
+    "contains_raw_business_rows": false,
+    "portal_runtime_flags_changed": false,
+    "portal_direct_database_or_redis_authority": false,
+    "portal_command_or_cli_authority": false
+  }
+}

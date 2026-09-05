@@ -1,0 +1,26 @@
+{
+  "schema_version": "trading-system.portal.execution.eds09.acceptance-evidence.v1",
+  "evidence_kind": "STATIC_SOURCE_AUDIT_AND_SYNTHETIC_CONTRACT_GUARDS",
+  "source_revision": "73ba2826d42de53f52840facc9d97bc53e517b26",
+  "owner_ruling": "ALL_18_SOURCE_GAP_CONFIRMED",
+  "event_classes_assessed_together": ["execution.position-lifecycle.v1","execution.fill-lifecycle.v1","risk.decision-lifecycle.v1"],
+  "profile_scope_assessed": ["PAPER","SANDBOX","LIVE"],
+  "source_connections_opened": false,
+  "runtime_changed": false,
+  "portal_runtime_changed": false,
+  "source_transport_published": false,
+  "image_digest": null,
+  "test_evidence_status": "PASS_STATIC_ONLY_NO_RUNTIME_EVIDENCE",
+  "test_evidence": {
+    "json_syntax": "PASS",
+    "package_validator": "PASS",
+    "portal_eds08_owner_return_validator": "PASS",
+    "contract_guard_tests": {"runner":"PYTHON_UNITTEST","passed":8,"failed":0},
+    "n03_source_dark_fixture_and_evidence_tests": {"passed":13,"failed":0,"runtime_evidence":false}
+  },
+  "evidence_limits": [
+    "No runtime source was queried or activated.",
+    "No source class was accepted because all required event invariants were not jointly proven.",
+    "Synthetic cases are not production, replay, Sandbox, or Live qualification."
+  ]
+}

@@ -5032,6 +5032,22 @@ No runtime, cache, source, proxy, Trading System, command or browser behavior
 changed. There is no Portal technical debt left in this contract-preparation
 scope; the sole follow-up is the explicit source-owner return.
 
+**Owner-return mirror handoff (2026-09-05, COMPLETED):** Bobby authorized a
+docs-only Portal receipt of the Trading System EDS-09 owner return. The work
+created a byte-identical immutable mirror under
+`upgrade/backend/trading-system-owner-returns/eds09-current-source-return-v1/`
+plus a Portal handoff index. It retains the source-side commit reference,
+manifest and source-as-is assessment, records the all-gap ruling without
+relabeling it as runtime authority, and explicitly preserve the owner-approved
+observation lane. It changed no Edge/Rust source, routes, flags, credentials,
+services, containers, source traffic, commands, databases or cache. Evidence:
+the mirror was `diff -qr` byte-identical to the Trading System source package;
+its twelve-file manifest passed; the existing Portal EDS-08 validator passed
+against the mirrored `owner-return.v1.json`; and the source-side package
+validator passed against the Portal path (18 gaps, three classes x three
+profiles, 15 synthetic guard cases, no transport). Rollback is a revert of
+this one Portal documentation commit.
+
 **Next:** EDS-09 only for accepted classes.
 
 ### EDS-09 — Rust snapshot+tail, append store, reducers and durable ACK

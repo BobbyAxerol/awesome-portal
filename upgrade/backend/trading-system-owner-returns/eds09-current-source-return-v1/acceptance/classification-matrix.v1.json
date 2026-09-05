@@ -1,0 +1,24 @@
+{
+  "schema_version": "trading-system.portal.execution.eds09.classification-matrix.v1",
+  "classification_rule": "Each EDS-08 gap is classified once; no row grants an event transport, direct data access, or command authority.",
+  "entries": [
+    {"gap_id":"artifact-signed-reference","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"research-run-linkage","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"portfolio-profile-equity-direct","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"position-mark-provenance","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"position-version-history","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":"execution.position-lifecycle.v1"},
+    {"gap_id":"order-broker-ack-clocks","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"fill-correction-replay","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":"execution.fill-lifecycle.v1"},
+    {"gap_id":"session-funnel-and-producer-version","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"signal-intent-funnel","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"risk-event-correction","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":"risk.decision-lifecycle.v1"},
+    {"gap_id":"valuation-mark-provenance","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"reconciliation-ack-evidence","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"command-safe-reference-payload-contract","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"market-latest-ticks","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"market-ohlcv","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"market-benchmark","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"market-session-calendar","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null},
+    {"gap_id":"market-vnm-constraints","state":"SOURCE_GAP_CONFIRMED","expected_event_class_id":null}
+  ]
+}

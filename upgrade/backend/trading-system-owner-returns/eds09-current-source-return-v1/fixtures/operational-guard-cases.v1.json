@@ -1,0 +1,14 @@
+{
+  "schema_version": "trading-system.portal.execution.eds09.operational-guard-cases.v1",
+  "synthetic_no_business_data": true,
+  "purpose": "Contract guard cases for a future accepted source. They do not demonstrate a deployed source or authorize activation.",
+  "cases": [
+    {"case_id":"restart-resume-requires-opaque-cursor","kind":"RESTART_RESUME","expected":"NO_RESUME_OFFERED_WHILE_SOURCE_GAP_CONFIRMED"},
+    {"case_id":"mtls-jwt-valid-identity-no-source-transport","kind":"MTLS_JWT_POSITIVE","expected":"NO_EVENT_TRANSPORT_PUBLISHED"},
+    {"case_id":"mtls-jwt-invalid-identity-denied-before-source","kind":"MTLS_JWT_NEGATIVE","expected":"DENY_BEFORE_SOURCE"},
+    {"case_id":"bounded-payload-required-before-publication","kind":"BOUNDED_PAYLOAD","expected":"FUTURE_SOURCE_MUST_DECLARE_FINITE_PAYLOAD_BOUND"},
+    {"case_id":"backpressure-required-before-publication","kind":"BACKPRESSURE","expected":"FUTURE_SOURCE_MUST_DECLARE_BACKPRESSURE_BEHAVIOR"},
+    {"case_id":"source-loss-fences-and-resnapshot","kind":"SOURCE_LOSS_RECOVERY","expected":"FENCE_AND_RESNAPSHOT_REQUIRED"},
+    {"case_id":"source-rollback-withdraws-contract","kind":"ROLLBACK","expected":"WITHDRAW_SOURCE_CONTRACT_BEFORE_RUNTIME_ROLLBACK"}
+  ]
+}

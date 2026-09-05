@@ -28,6 +28,11 @@ Chúng không thay thế phase hoặc exit gate trong
   — **the only incremental owner handoff for MC-01 / durable event replay.**
   It consolidates the three event classes, source-as-is implementation choice,
   sanitized return package and source-dark receipt boundary.
+- [EDS-09 Trading System owner-return handoff](./EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md)
+  — **Portal-local immutable receipt:** mirrors the source-owner return at its
+  declared Trading System commit, records all 18 current source gaps, and
+  separates the allowed observation lane from unavailable authoritative Event
+  replay. It changes no Portal runtime authority.
 - [Maximum Data Discovery, Publication & Return Request v1](../../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md)
   — **governing delta-discovery request, seven owner-approved EX-DP phases.**
   It uses N18–N29, the current Manager-v2 plane and data-activation evidence
@@ -1715,3 +1720,16 @@ durable run/attempt events. Detailed evidence:
   [`MASTER_RESPONSE.md`](../../services/portal-execution-edge-rs/contracts/maximum-data-return-v1/MASTER_RESPONSE.md)
   and
   [`UNIFIED_IMPLEMENTATION_PLAN.md`](../UNIFIED_IMPLEMENTATION_PLAN.md#ex-dp-07--e7-resilience-capacity-and-complete-owner-return).
+
+## Backend state — 2026-09-05 (EDS-09 owner-return Portal receipt)
+
+- The Trading System owner return is now available inside this Portal repository
+  at `upgrade/backend/trading-system-owner-returns/eds09-current-source-return-v1/`,
+  accompanied by [`EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md`](./EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md).
+- The mirrored bytes, complete manifest, Portal EDS-08 verifier and source-side
+  package verifier passed. All 18 EDS-08 gaps remain `SOURCE_GAP_CONFIRMED`;
+  no Event transport, replay authority, direct source path, runtime route,
+  image, service, profile or command authority was added.
+- Portal work continues on maximum current-data screens and the explicitly
+  labelled observation lane. Authoritative EDS-09 Event ingestion remains
+  source-dark until a later owner return contains a verified accepted class.
