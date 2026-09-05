@@ -12,6 +12,7 @@ import {
   ProjectionCompleteness,
   ProjectionEnvironment,
   projectionDigest, ProjectionRow } from "./profile-projection.repository";
+import { DurableMirrorRelationCursor, DurableMirrorRetainedRangeRows } from "./durable-mirror.contract";
 
 const SOURCE_CONTRACT_REVISION = "trading-system.portal-execution.manager-v2.runtime.v1";
 // Owner directive 2026-09-03 ("call hết dữ liệu có thể"): every relation
@@ -101,6 +102,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         spec: { key: string; binding: ProfileProjectionBinding };
         carryForward?: ProfileProjectionDocument["relations"][string];
       }> = [];
+      const relationCursors: DurableMirrorRelationCursor[] = [];
       for (const binding of profileProjectionCatalog(environment)) {
         let page: ManagerPage;
         let resumePoint: string | null = null;
@@ -173,10 +175,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           // last held cursor and follow the (ts, id)-ordered stream forward —
           // new rows land strictly after it, and the final page's overlap is
           // deduplicated by the ladder merge.
-          await this.repository.saveRelationCursor(
-            workspaceId, environment, profileId,
-            `${binding.sourceId}:${binding.relation}`, page.nextCursor ?? resumePoint,
-          ).catch(() => undefined);
+          relationCursors.push({
+            relationKey: `${binding.sourceId}:${binding.relation}`,
+            sourceCursor: page.nextCursor ?? resumePoint,
+          });
         }
         results.push({
           spec: { key: binding.key, binding }, page,
@@ -189,34 +191,48 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       // carry-forward association survives it at runtime; its signature just
       // does not model extra fields.
       const isolated = enforceProfileLineage(results, "N30") as typeof results;
-      // Owner directive 2026-09-03: every lineage-accepted time-series row is
-      // kept at full depth in the history store — the snapshot window bounds
-      // what screens embed, never what analysis can read back.
-      for (const item of isolated) {
+      const retainedRangeRows: DurableMirrorRetainedRangeRows = Object.fromEntries(isolated.flatMap((item) => {
         const binding = item.spec.binding;
-        if (!binding.ladder || !item.page) continue;
-        const rows = item.page.items.flatMap((fields) => {
-          // Source ids are TEXT in some relations and INTEGER sequences in the
-          // time-series ones — both are identities, both must persist.
-          const rawId = fields[binding.ladder!.idField];
-          const rowId = typeof rawId === "string" && rawId.length > 0 ? rawId
-            : typeof rawId === "number" && Number.isSafeInteger(rawId) ? String(rawId) : null;
-          const ts = fields[binding.ladder!.timestampField];
-          return rowId !== null && typeof ts === "string" && !Number.isNaN(Date.parse(ts))
-            ? [{ rowId, ts, fields }] : [];
-        });
-        await this.repository.appendTimeSeriesHistory(
-          workspaceId, environment, profileId,
-          `${binding.sourceId}:${binding.relation}`, rows,
-        ).catch((error: unknown) => {
-          this.logger.warn(JSON.stringify({
-            event: "execution_profile_projection_history_append_failed",
-            environment,
+        if (!binding.ladder || !item.page) return [];
+        const relationKey = `${binding.sourceId}:${binding.relation}`;
+        return [[relationKey, item.page.items.map((fields) => ({
+          lineage: {
+            workspace_id: workspaceId,
             profile_id: profileId,
-            relation: binding.relation,
-            error_code: safeFailureCode(error),
-          }));
-        });
+            source_contract_revision: SOURCE_CONTRACT_REVISION,
+          },
+          fields,
+        }))]];
+      }));
+      // The old history table remains a compatible rollback read while EDS-06
+      // is dark. Once the mirror is explicitly enabled, raw accepted range
+      // rows move through repository.commit() in the same transaction as the
+      // snapshot, revision, and server-only cursor checkpoints.
+      if (this.config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true") {
+        for (const item of isolated) {
+          const binding = item.spec.binding;
+          if (!binding.ladder || !item.page) continue;
+          const rows = item.page.items.flatMap((fields) => {
+            const rawId = fields[binding.ladder!.idField];
+            const rowId = typeof rawId === "string" && rawId.length > 0 ? rawId
+              : typeof rawId === "number" && Number.isSafeInteger(rawId) ? String(rawId) : null;
+            const ts = fields[binding.ladder!.timestampField];
+            return rowId !== null && typeof ts === "string" && !Number.isNaN(Date.parse(ts))
+              ? [{ rowId, ts, fields }] : [];
+          });
+          await this.repository.appendTimeSeriesHistory(
+            workspaceId, environment, profileId,
+            `${binding.sourceId}:${binding.relation}`, rows,
+          ).catch((error: unknown) => {
+            this.logger.warn(JSON.stringify({
+              event: "execution_profile_projection_history_append_failed",
+              environment,
+              profile_id: profileId,
+              relation: binding.relation,
+              error_code: safeFailureCode(error),
+            }));
+          });
+        }
       }
       const relations = Object.fromEntries(isolated.map((item) => {
         const binding = item.spec.binding;
@@ -285,6 +301,8 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         completeness,
         retentionSeconds: this.config.EXECUTION_LOCAL_PROJECTION_JOURNAL_RETENTION_SECONDS,
         maximumJournalEntries: this.config.EXECUTION_LOCAL_PROJECTION_MAXIMUM_JOURNAL_ENTRIES,
+        relationCursors,
+        retainedRangeRows,
       });
     } finally {
       await this.repository.releaseLease(workspaceId, environment, profileId, this.ownerId)

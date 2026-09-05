@@ -4464,8 +4464,8 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-02 | generated screen/action/panel/time contracts | EDS-01 | complete; 25 classified screens, 34 fields and 12 actions; no runtime mutation |
 | EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | **BFF_READY / FRONTEND_COMPATIBLE / VERIFIED** on 2026-09-05; yes, with typed gaps |
 | EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
-| EDS-05 | governance/operations and five Portal derivations | EDS-04 | yes, with typed gaps |
-| EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | yes for observed pages; no replay claim |
+| EDS-05 | governance/operations and five Portal derivations | EDS-04 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
+| EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | **COMPLETE_SOURCE_DARK / VERIFIED** on 2026-09-05; yes for observed pages; no replay claim |
 | EDS-07 | equity/performance/risk/chart query plane | EDS-06 | yes for retained source range |
 | EDS-08 | authoritative event/continuity acquisition | EDS-00; external source work | no, external gate |
 | EDS-09 | Rust snapshot+tail append store and reducers | EDS-08 | no |
@@ -4882,6 +4882,21 @@ old/new browser parity.
 screens read one committed local revision; rollback selects the previous real
 read path without deleting mirror data.
 
+**Completion record (2026-09-05):** implemented migration
+`1723680000022_execution-durable-current-range-mirror.sql`, typed
+batch/revision/observation/current/range/continuation/gap/conflict storage,
+atomic projection commit wiring, exact resource/time indexes, signed
+relation-bound server keysets, repeatable-read revision consistency, digest
+dedupe/quarantine and dark runtime flags.
+The durable tables never persist a raw Edge cursor; the existing
+server-only coordinator remains its authority. A clean
+`./scripts/control-api-test.sh` run passed build, 43 test files / 371 tests,
+fresh-PostgreSQL migration/history validation and backup/restore parity.
+EDS-06 is closed as code/migration readiness. Its explicit activation window is
+an owner-controlled operational gate, not deferred implementation work: writer
+and mirror-read flags remain false; no screen, Edge, AWS-HK transport or
+command route changed.
+
 **Next:** EDS-07; EDS-08 may run in parallel.
 
 ### EDS-07 — Retained equity/performance/risk queries and financial chart API
@@ -5096,8 +5111,8 @@ EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                    EDS-11 → EDS-12
 ```
 
-The immediate next phase is **EDS-05 — Portal derivations, governance and
-operational composition**. EDS-04 has closed the exact resource resolver and
-rich same-origin detail wire without changing runtime/Edge/source authority;
-EDS-05 must retain that server-side boundary rather than return to bounded
-global-page filtering or client-side business joins.
+The immediate next phase is **EDS-07 — retained equity/performance/risk query
+and financial-chart API**. EDS-05 and EDS-06 are closed in source-dark form:
+the next phase must consume only one committed Portal revision and retain the
+server-side boundary rather than returning to bounded global-page filtering or
+client-side business joins.

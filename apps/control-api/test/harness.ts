@@ -7,6 +7,14 @@ import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
 export const TEST_TABLES = [
+  "execution_durable_mirror_conflicts",
+  "execution_durable_mirror_gaps",
+  "execution_durable_mirror_continuations",
+  "execution_durable_mirror_range_rows",
+  "execution_durable_mirror_current_entities",
+  "execution_durable_mirror_observations",
+  "execution_durable_mirror_revisions",
+  "execution_durable_mirror_batches",
   "execution_profile_projection_journal",
   "execution_profile_projection_snapshots",
   "execution_profile_projection_leases",
@@ -62,6 +70,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_profile_projection_snapshots: boolean;
       has_profile_projection_journal: boolean;
       has_manager_operation_continuations: boolean;
+      has_durable_batches: boolean;
+      has_durable_revisions: boolean;
+      has_durable_observations: boolean;
+      has_durable_current_entities: boolean;
+      has_durable_range_rows: boolean;
+      has_durable_continuations: boolean;
+      has_durable_gaps: boolean;
+      has_durable_conflicts: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -96,6 +112,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_profile_projection_snapshots') IS NOT NULL AS has_profile_projection_snapshots,
          to_regclass('public.execution_profile_projection_journal') IS NOT NULL AS has_profile_projection_journal,
          to_regclass('public.execution_manager_operation_continuations') IS NOT NULL AS has_manager_operation_continuations,
+         to_regclass('public.execution_durable_mirror_batches') IS NOT NULL AS has_durable_batches,
+         to_regclass('public.execution_durable_mirror_revisions') IS NOT NULL AS has_durable_revisions,
+         to_regclass('public.execution_durable_mirror_observations') IS NOT NULL AS has_durable_observations,
+         to_regclass('public.execution_durable_mirror_current_entities') IS NOT NULL AS has_durable_current_entities,
+         to_regclass('public.execution_durable_mirror_range_rows') IS NOT NULL AS has_durable_range_rows,
+         to_regclass('public.execution_durable_mirror_continuations') IS NOT NULL AS has_durable_continuations,
+         to_regclass('public.execution_durable_mirror_gaps') IS NOT NULL AS has_durable_gaps,
+         to_regclass('public.execution_durable_mirror_conflicts') IS NOT NULL AS has_durable_conflicts,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -106,7 +130,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 21 ||
+      row.migration_count < 22 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -129,10 +153,18 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_profile_projection_snapshots ||
       !row.has_profile_projection_journal ||
       !row.has_manager_operation_continuations ||
+      !row.has_durable_batches ||
+      !row.has_durable_revisions ||
+      !row.has_durable_observations ||
+      !row.has_durable_current_entities ||
+      !row.has_durable_range_rows ||
+      !row.has_durable_continuations ||
+      !row.has_durable_gaps ||
+      !row.has_durable_conflicts ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
-        `Control API test migration gate did not reach EX-BE-05b/F3 ` +
+        `Control API test migration gate did not reach EDS-06 durable mirror ` +
         `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
         `hash_only_policy=${row.has_hash_only_policy}, ` +
         `hash_only_constraint=${row.has_hash_only_constraint}, ` +
@@ -155,6 +187,14 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `profile_projection_snapshots=${row.has_profile_projection_snapshots}, ` +
         `profile_projection_journal=${row.has_profile_projection_journal}, ` +
         `manager_operation_continuations=${row.has_manager_operation_continuations}, ` +
+        `durable_batches=${row.has_durable_batches}, ` +
+        `durable_revisions=${row.has_durable_revisions}, ` +
+        `durable_observations=${row.has_durable_observations}, ` +
+        `durable_current_entities=${row.has_durable_current_entities}, ` +
+        `durable_range_rows=${row.has_durable_range_rows}, ` +
+        `durable_continuations=${row.has_durable_continuations}, ` +
+        `durable_gaps=${row.has_durable_gaps}, ` +
+        `durable_conflicts=${row.has_durable_conflicts}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

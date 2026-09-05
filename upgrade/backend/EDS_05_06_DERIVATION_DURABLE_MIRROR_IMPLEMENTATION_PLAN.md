@@ -1,7 +1,7 @@
 # EDS-05 / EDS-06 — Portal derivations and durable local mirror
 
 **Campaign branch:** `feat/eds-current-bff`  
-**Status:** `EDS-05_COMPLETE · EDS-06_IN_PROGRESS`  
+**Status:** `EDS-05_COMPLETE · EDS-06_COMPLETE_SOURCE_DARK`  
 **Scope date:** 2026-09-05
 
 ## 1. Decision and boundary
@@ -109,6 +109,35 @@ claim is introduced.
 - profile/workspace isolation, exact resource/time index and keyset plan;
 - payload budget and no-source-read browser concurrency proof;
 - dark flag defaults and bounded old/new parity proof.
+
+### EDS-06 completion record — 2026-09-05
+
+Implemented and verified:
+
+- migration `1723680000022_execution-durable-current-range-mirror.sql`;
+- typed batch, revision, observation, current-entity, retained-range,
+  continuation, gap and quarantine/conflict tables with exact
+  workspace/environment/profile/resource/time indexes;
+- atomic projection snapshot + server-only continuation + durable-mirror write
+  path, including rollback on mirror-writer failure;
+- read-only repeatable-read server queries that bind a current page to one
+  committed revision, including a regression for partial refreshes;
+- SHA-256 canonical row/page dedupe and same-key/different-digest quarantine;
+- bounded (1–200) relation-bound signed Portal keysets for server-side current
+  and range consumers; raw Edge cursor material is neither returned nor stored
+  by the durable tables;
+- default-dark writer/read flags and a rollback-compatible bounded legacy
+  projection path.
+
+`./scripts/control-api-test.sh` passed from a fresh PostgreSQL database:
+TypeScript build, 43 test files / 371 tests, migration-history validation and
+backup/restore parity. The focused EDS-06 proof covers normal atomic commit,
+duplicate acceptance, conflict quarantine, cross-workspace cursor rejection,
+exact resource/time index selection and transaction rollback.
+
+The remaining owner-approved runtime window is an operational activation gate,
+not an implementation omission: both EDS-06 flags remain `false`, no screen
+uses mirror reads, and no AWS-HK, Edge, command or browser transport changed.
 
 ## 4. Explicit non-goals and no-debt rule
 

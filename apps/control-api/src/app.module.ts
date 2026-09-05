@@ -9,7 +9,7 @@ import { AdminService } from "./admin/admin.service";
 import { AdminGuard } from "./admin/rbac.guard";
 import { HealthController } from "./health/health.controller";
 import { ControlApiConfig } from "./config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "./tokens";
+import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "./tokens";
 import { FacadeController } from "./facade/facade.controller";
 import { PlanningFacadeController } from "./facade/planning.controller";
 import { PortalProxyService } from "./facade/proxy.service";
@@ -37,6 +37,7 @@ import { MaximumDataOperationService } from "./execution/maximum-data-operation.
 import { MaximumDataContinuationRepository } from "./execution/maximum-data-continuation.repository";
 import { ExecutionSharedReadRepository } from "./execution/shared-read.repository";
 import { ExecutionProfileProjectionRepository } from "./execution/profile-projection.repository";
+import { ExecutionDurableMirrorRepository } from "./execution/durable-mirror.repository";
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
 import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
 import { ExecutionProductReadSource } from "./execution/product-read-source";
@@ -176,6 +177,8 @@ export class AppModule {
         ExecutionContractAuthorityService,
         MaximumDataContinuationRepository,
         MaximumDataOperationService,
+        ExecutionDurableMirrorRepository,
+        { provide: EXECUTION_DURABLE_MIRROR_WRITER, useExisting: ExecutionDurableMirrorRepository },
         ExecutionProfileProjectionRepository,
         ExecutionProfileProjectionWorker,
         ExecutionProfileRealtimeService,

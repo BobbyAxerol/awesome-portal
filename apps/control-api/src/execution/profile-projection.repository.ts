@@ -1,7 +1,12 @@
 import { createHash, randomUUID } from "node:crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
+import type {
+  DurableMirrorRelationCursor,
+  DurableMirrorRetainedRangeRows,
+  DurableMirrorWriter,
+} from "./durable-mirror.contract";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
 export type ProjectionCompleteness = "COMPLETE" | "PARTIAL" | "UNKNOWN";
@@ -74,9 +79,27 @@ export interface ProjectionCommitReceipt {
   payloadDigest: string;
 }
 
+export interface ProjectionCommitInput {
+  sourceEpoch: string;
+  sourceCursor: string;
+  sourceAsOf: Date | null;
+  receivedAt: Date;
+  completeness: ProjectionCompleteness;
+  retentionSeconds: number;
+  maximumJournalEntries: number;
+  /** Raw source checkpoints remain server-only and now share the commit transaction. */
+  relationCursors?: readonly DurableMirrorRelationCursor[];
+  /** Raw accepted range rows stay out of the bounded compatibility JSONB snapshot. */
+  retainedRangeRows?: DurableMirrorRetainedRangeRows;
+}
+
 @Injectable()
 export class ExecutionProfileProjectionRepository {
-  constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
+  constructor(
+    @Inject(CONTROL_API_POOL) readonly pool: Pool,
+    @Optional() @Inject(EXECUTION_DURABLE_MIRROR_WRITER)
+    private readonly durableMirror?: DurableMirrorWriter,
+  ) {}
 
   async tryAcquireLease(
     workspaceId: string,
@@ -364,15 +387,7 @@ export class ExecutionProfileProjectionRepository {
 
   async commit(
     document: ProfileProjectionDocument,
-    input: {
-      sourceEpoch: string;
-      sourceCursor: string;
-      sourceAsOf: Date | null;
-      receivedAt: Date;
-      completeness: ProjectionCompleteness;
-      retentionSeconds: number;
-      maximumJournalEntries: number;
-    },
+    input: ProjectionCommitInput,
   ): Promise<ProjectionCommitReceipt> {
     validateDocument(document);
     const payloadDigest = digest(document);
@@ -398,6 +413,20 @@ export class ExecutionProfileProjectionRepository {
             input.sourceEpoch, input.sourceCursor, input.sourceAsOf, input.receivedAt,
             input.completeness],
         );
+        await this.persistRelationCursors(client, document, input.relationCursors ?? []);
+        await this.durableMirror?.commitAcceptedProjection(client, {
+          document,
+          sourceEpoch: input.sourceEpoch,
+          sourceCursor: input.sourceCursor,
+          sourceAsOf: input.sourceAsOf,
+          receivedAt: input.receivedAt,
+          completeness: input.completeness,
+          projectionEpoch: previous.projection_epoch,
+          projectionSequence: Number(previous.projection_sequence),
+          payloadDigest,
+          relationCursors: input.relationCursors ?? [],
+          retainedRangeRows: input.retainedRangeRows ?? {},
+        });
         return {
           changed: false,
           projectionEpoch: previous.projection_epoch,
@@ -427,6 +456,20 @@ export class ExecutionProfileProjectionRepository {
           input.sourceAsOf, input.receivedAt, input.completeness, projectionEpoch,
           projectionSequence, payloadDigest, JSON.stringify(document)],
       );
+      await this.persistRelationCursors(client, document, input.relationCursors ?? []);
+      await this.durableMirror?.commitAcceptedProjection(client, {
+        document,
+        sourceEpoch: input.sourceEpoch,
+        sourceCursor: input.sourceCursor,
+        sourceAsOf: input.sourceAsOf,
+        receivedAt: input.receivedAt,
+        completeness: input.completeness,
+        projectionEpoch,
+        projectionSequence,
+        payloadDigest,
+        relationCursors: input.relationCursors ?? [],
+        retainedRangeRows: input.retainedRangeRows ?? {},
+      });
       const changedRelations = relationChanges(previous?.payload, document);
       const eventPayload = {
         schema_version: "portal.execution.profile-projection-delta.v1",
@@ -524,6 +567,31 @@ export class ExecutionProfileProjectionRepository {
       sourceAsOf: row.source_as_of, receivedAt: row.received_at,
       completeness: row.completeness, payloadDigest: row.payload_digest, payload: row.payload,
     }));
+  }
+
+  private async persistRelationCursors(
+    client: PoolClient,
+    document: ProfileProjectionDocument,
+    cursors: readonly DurableMirrorRelationCursor[],
+  ): Promise<void> {
+    const unique = new Map(cursors.map((cursor) => [cursor.relationKey, cursor.sourceCursor]));
+    for (const [relationKey, sourceCursor] of [...unique.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+      if (!(relationKey in document.relations)) {
+        throw new Error("EDS06_RELATION_CURSOR_NOT_IN_DOCUMENT");
+      }
+      await client.query(
+        `INSERT INTO execution_profile_relation_cursors
+           (workspace_id, environment, profile_id, relation_key, source_cursor)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (workspace_id, environment, profile_id, relation_key) DO UPDATE SET
+           source_cursor = EXCLUDED.source_cursor,
+           pass_started_at = CASE WHEN EXCLUDED.source_cursor IS NULL
+                                  THEN clock_timestamp()
+                                  ELSE execution_profile_relation_cursors.pass_started_at END,
+           updated_at = clock_timestamp()`,
+        [document.workspace_id, document.environment, document.profile_id, relationKey, sourceCursor],
+      );
+    }
   }
 
   private async transaction<T>(action: (client: PoolClient) => Promise<T>): Promise<T> {

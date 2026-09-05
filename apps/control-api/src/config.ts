@@ -105,6 +105,10 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_LOCAL_PROJECTION: z.enum(["true", "false"]).default("false"),
+  // EDS-06 stays storage/change-window gated even when the source projection
+  // itself is active. Browser reads are a later, per-screen cutover.
+  FEATURE_EXECUTION_DURABLE_MIRROR: z.enum(["true", "false"]).default("false"),
+  FEATURE_EXECUTION_DURABLE_MIRROR_READS: z.enum(["true", "false"]).default("false"),
   EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional(),
@@ -411,6 +415,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     ) {
       throw new Error("local execution projection lease must exceed its poll interval");
     }
+  }
+  if (
+    config.FEATURE_EXECUTION_DURABLE_MIRROR === "true" &&
+    config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true"
+  ) {
+    throw new Error("FEATURE_EXECUTION_DURABLE_MIRROR=true requires FEATURE_EXECUTION_LOCAL_PROJECTION=true");
+  }
+  if (
+    config.FEATURE_EXECUTION_DURABLE_MIRROR_READS === "true" &&
+    config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true"
+  ) {
+    throw new Error("FEATURE_EXECUTION_DURABLE_MIRROR_READS=true requires FEATURE_EXECUTION_DURABLE_MIRROR=true");
   }
   if (
     config.FEATURE_EXECUTION_REALTIME_SSE === "true" ||
