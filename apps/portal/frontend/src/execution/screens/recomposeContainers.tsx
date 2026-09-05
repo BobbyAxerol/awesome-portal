@@ -26,7 +26,7 @@ import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, 
 import { useParamState } from "../routeState";
 import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
-import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalTile } from "../components/DerivationTile";
+import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/derivations";
 import type { ChartEnvelope } from "../contracts";
@@ -1089,8 +1089,12 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
-  const capitalEnv = resourceState.value?.selectedEnvironment ?? "paper";
-  const capitalState = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, capitalEnv), [api, portfolioId, capitalEnv, realtime.refreshKey], { keepValue: true });
+  // EDS-05 capital is a separate book per environment; all three are read and
+  // shown as partitions, never folded (the resource's selected environment
+  // alone would hide a paper book behind an empty live one).
+  const capitalPaper = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "paper"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
+  const capitalSandbox = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "sandbox"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
+  const capitalLive = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "live"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<PortfolioTab>("tab", PORTFOLIO_TABS, "Overview");
   const [lens, setLens] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -1137,7 +1141,15 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       ledgerStatus={ledgerState.status}
       ledgerReason={ledgerState.reason}
       ledgerTotals={null}
-      capital={<PortfolioCapitalTile capital={capitalState.value} transport={capitalState.status} reason={capitalState.reason} />}
+      capital={
+        <PortfolioCapitalBoard
+          reads={[
+            { environment: "paper", value: capitalPaper.value, transport: capitalPaper.status, reason: capitalPaper.reason },
+            { environment: "sandbox", value: capitalSandbox.value, transport: capitalSandbox.status, reason: capitalSandbox.reason },
+            { environment: "live", value: capitalLive.value, transport: capitalLive.status, reason: capitalLive.reason },
+          ]}
+        />
+      }
       approvals={[]}
       incidents={null}
       status={rootStatus}

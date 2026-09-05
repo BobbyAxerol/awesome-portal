@@ -4569,10 +4569,17 @@
 .exec-chart-empty { font: var(--exec-font-body); color: var(--ink-mute); margin: 12px 0; }
 
 /* ── EDS-05 · derivation tiles ───────────────────────────────────────────── */
-.exec-deriv .exec-tile-head { align-items: center; }
-.exec-deriv-chips { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+/* Same panel grammar as the Ledger / Contribution panels beside them; the
+   screen's own rules (exec-a3, exec-pf2) restyle `.exec-tile-title` for us. */
+.exec-deriv > .exec-tile-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.exec-deriv-chips { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto; text-transform: none; letter-spacing: 0; }
 .exec-deriv-formula { font: var(--exec-font-meta); color: var(--ink-mute); }
-.exec-deriv-body { padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-2); }
+.exec-deriv-body { display: grid; gap: var(--space-2); }
+.exec-deriv-caption { margin: 0; overflow-wrap: anywhere; }
+/* exec-a3 zeroes the panel padding and pads the title itself; give the body
+   and caption the same 14px gutter so the figures line up under the title. */
+.exec-a3 .exec-gate-panel.exec-deriv > .exec-deriv-body { padding: 0 14px; }
+.exec-a3 .exec-gate-panel.exec-deriv > .exec-deriv-caption { padding: 0 14px 10px; }
 .exec-deriv-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 16px; margin: 0; }
 .exec-deriv-facts dt { font: var(--exec-font-th); color: var(--ink-mute); text-transform: uppercase; letter-spacing: .02em; }
 .exec-deriv-facts dd { margin: 0; font: var(--exec-font-num); }
@@ -4581,7 +4588,7 @@
 .exec-deriv-table th { font: var(--exec-font-th); color: var(--ink-mute); }
 .exec-deriv-counts { display: flex; flex-wrap: wrap; gap: 6px; }
 .exec-deriv-unpublished { font: var(--exec-font-meta); color: var(--warn); margin: 0; }
-.exec-cc-sourcehealth { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--space-3); margin: var(--space-3) 0 0; }
+.exec-cc-sourcehealth { margin: var(--space-3) 0 0; }
 
 /* ── EL-V2-04 · decision strip at phone widths ───────────────────────────
    A ten-digit VND equity at kpi 24px mono is ~190px; two 160px cells cannot
