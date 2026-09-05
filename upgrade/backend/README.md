@@ -17,6 +17,11 @@ Chúng không thay thế phase hoặc exit gate trong
   records the completed N13–N17 `A` (Portal-owned/source-dark) and `B`
   (current-source acceptance) lanes. Phase acceptance never implies product
   activation.
+- [EDS-09 — Rust snapshot+tail append store](./EDS_09_RUST_SNAPSHOT_TAIL_APPEND_STORE.md)
+  — **code-complete / source-dark / runtime inactive:** provider-neutral Rust
+  core plus additive PostgreSQL facts, pure reducers, checkpoint, quarantine
+  and committed local journal. It accepts no source transport until one exact
+  independently verified `EVENT_SOURCE_ACCEPTED` class is returned.
 - [Maximum Data Discovery, Publication & Return Request v1](../../PORTAL_EXECUTION_EDGE_MAXIMUM_DATA_DISCOVERY_PUBLICATION_AND_RETURN_REQUEST_v1.md)
   — **governing delta-discovery request, seven owner-approved EX-DP phases.**
   It uses N18–N29, the current Manager-v2 plane and data-activation evidence

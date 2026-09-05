@@ -34,6 +34,7 @@ members = [
   "crates/maximum-data-adapter",
   "crates/maximum-data-acceptance",
   "crates/maximum-data-return",
+  "crates/authoritative-event-core",
 ]
 resolver = "2"
 

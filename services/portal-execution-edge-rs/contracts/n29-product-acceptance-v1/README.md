@@ -16,6 +16,11 @@ rich product composition and admission-pacing regression.
 zero unnamed backend debt from the closed BR-EX-72 product request, protected
 release gate and nine typed owner gaps.
 
+On 2026-09-05 the BR-EX-72 source-boundary and boundary-test evidence was
+rebound to the exact current files after the retained-read extension. The
+offline verifier still checks both bytes and their safety invariants; this
+evidence correction changes neither accepted scope nor runtime authority.
+
 The `RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING` decision is deliberate.
 BR-EX-72 is complete and the reviewed campaign branch may proceed through
 normal development review, but the pack cannot authorize stable deployment,

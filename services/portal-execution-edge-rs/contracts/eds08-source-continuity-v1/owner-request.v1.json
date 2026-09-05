@@ -1,0 +1,246 @@
+{
+  "schema_version": "portal.execution.eds08.source-continuity-owner-request.v1",
+  "request_revision": "portal.execution.eds08.source-continuity-owner-request.v1",
+  "phase": "EDS-08",
+  "status": "SOURCE_OWNER_ACTION_REQUIRED",
+  "baseline": {
+    "e7_return_pack_manifest_sha256": "sha256:d031134c4d49e741286948f62992ca334e7f7bc81d3bb8d546faf7180d9243bb",
+    "source_owner_gaps_sha256": "sha256:dd2bb1228969802b4626aef402991fe6ca3697f5e2128ca9f2633fdd7e42dbe7",
+    "event_continuity_ruling_sha256": "sha256:a99edcf20ea7f9808e731aabfc89902088ea7e03e4a54df53e40592bc3f5fbb2",
+    "e5_existing_data_publication_sha256": "sha256:72afcfc1972f3a12a8577d30eacc2bee7ed17c445e7ef6475731707674805df0",
+    "e6_domain_acceptance_sha256": "sha256:7789a0e9b1cacb50489a4eb198cecae825a61bbad61696e538930f622a238c3b"
+  },
+  "current_truth": {
+    "qualified_surface": "MANAGER_V2_PROFILE_AND_CATALOGUE_BOUND_CURRENT_PAGE",
+    "global_event_sequence": "NOT_PROVEN",
+    "retention_floor": "UNDECLARED",
+    "correction_replay": "NOT_ACCEPTED",
+    "portal_may_not_synthesize": [
+      "owner_event_history_from_mutable_rows",
+      "owner_event_history_from_page_hashes",
+      "owner_event_history_from_portal_projection_deltas",
+      "cross_relation_global_ordering"
+    ]
+  },
+  "source_owner_implementation_freedom": {
+    "acceptable_internal_mechanisms": [
+      "IMMUTABLE_JOURNAL",
+      "OUTBOX",
+      "CDC_BRIDGE",
+      "APPEND_ONLY_KEYSET_TAIL"
+    ],
+    "portal_does_not_prescribe": [
+      "trading_system_table_or_database_schema",
+      "broker_or_market_vendor",
+      "source_proxy_implementation",
+      "internal_queue_or_cache",
+      "internal_endpoint_path"
+    ],
+    "portal_accepts_only": "A versioned named capability or event contract with the stated semantics and sanitized evidence."
+  },
+  "event_classes": [
+    {
+      "event_class_id": "execution.position-lifecycle.v1",
+      "gap_ids": ["position-version-history"],
+      "required_profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "purpose": "Versioned position lifecycle and retained correction-safe exposure history."
+    },
+    {
+      "event_class_id": "execution.fill-lifecycle.v1",
+      "gap_ids": ["fill-correction-replay"],
+      "required_profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "purpose": "Correction/tombstone-aware fill replay; bounded fill pages alone are not sufficient."
+    },
+    {
+      "event_class_id": "risk.decision-lifecycle.v1",
+      "gap_ids": ["risk-event-correction"],
+      "required_profiles": ["PAPER", "SANDBOX", "LIVE"],
+      "purpose": "Correction-aware risk decision lifecycle, distinct from a current decision record."
+    }
+  ],
+  "owner_lanes": [
+    {
+      "lane_id": "EVENT",
+      "owners": ["trading_system_event_owner", "trading_system_execution_owner", "trading_system_risk_owner"],
+      "items": [
+        {
+          "gap_id": "position-version-history",
+          "delivery_kind": "AUTHORITATIVE_EVENT_STREAM",
+          "event_class_id": "execution.position-lifecycle.v1",
+          "minimum_result": "An append/change contract with exact epoch/sequence, entity version, correction/tombstone and snapshot-tail semantics."
+        },
+        {
+          "gap_id": "order-broker-ack-clocks",
+          "delivery_kind": "IMMUTABLE_ACK_TIMELINE",
+          "event_class_id": null,
+          "minimum_result": "A safe order-scoped acknowledgement timeline with source/broker clock authority; a global replay stream is not required for this gap."
+        },
+        {
+          "gap_id": "fill-correction-replay",
+          "delivery_kind": "AUTHORITATIVE_EVENT_STREAM",
+          "event_class_id": "execution.fill-lifecycle.v1",
+          "minimum_result": "An append/change contract with exact epoch/sequence, correction/tombstone, retention floor and snapshot-tail semantics."
+        },
+        {
+          "gap_id": "session-funnel-and-producer-version",
+          "delivery_kind": "SOURCE_OWNED_BOUNDED_AGGREGATE",
+          "event_class_id": null,
+          "minimum_result": "A named bounded funnel/version aggregate with population, time window and producer revision."
+        },
+        {
+          "gap_id": "signal-intent-funnel",
+          "delivery_kind": "SOURCE_OWNED_BOUNDED_AGGREGATE",
+          "event_class_id": null,
+          "minimum_result": "A source-owned signal-to-intent aggregate or a separately versioned append source; current risk rows are not a substitute."
+        },
+        {
+          "gap_id": "risk-event-correction",
+          "delivery_kind": "AUTHORITATIVE_EVENT_STREAM",
+          "event_class_id": "risk.decision-lifecycle.v1",
+          "minimum_result": "An append/change contract with exact epoch/sequence, correction/tombstone, retention floor and snapshot-tail semantics."
+        }
+      ]
+    },
+    {
+      "lane_id": "MARKET",
+      "owners": ["trading_system_market_owner"],
+      "items": [
+        {
+          "gap_id": "market-latest-ticks",
+          "delivery_kind": "TYPED_LATEST_OBSERVATION",
+          "event_class_id": null,
+          "minimum_result": "A latest mark/index/last observation with authority, source timestamp and freshness."
+        },
+        {
+          "gap_id": "market-ohlcv",
+          "delivery_kind": "TYPED_BOUNDED_RETAINED_SERIES",
+          "event_class_id": null,
+          "minimum_result": "A bounded OHLCV series with interval, retained range, completeness and source authority."
+        },
+        {
+          "gap_id": "market-benchmark",
+          "delivery_kind": "TYPED_BOUNDED_RETAINED_SERIES",
+          "event_class_id": null,
+          "minimum_result": "A named benchmark series or exact derivation inputs with identity, clock and retained range."
+        },
+        {
+          "gap_id": "market-session-calendar",
+          "delivery_kind": "TYPED_VENUE_CALENDAR",
+          "event_class_id": null,
+          "minimum_result": "Venue session, holiday and auction windows with timezone and effective revision."
+        },
+        {
+          "gap_id": "market-vnm-constraints",
+          "delivery_kind": "TYPED_VENUE_CONSTRAINTS",
+          "event_class_id": null,
+          "minimum_result": "Safe typed VNM order/session constraints; no raw metadata blob."
+        }
+      ]
+    },
+    {
+      "lane_id": "VALUATION",
+      "owners": ["trading_system_performance_owner"],
+      "items": [
+        {
+          "gap_id": "portfolio-profile-equity-direct",
+          "delivery_kind": "SCOPE_QUALIFIED_RETAINED_SNAPSHOT",
+          "event_class_id": null,
+          "minimum_result": "A profile/venue-qualified portfolio equity producer or documented account-input derivation."
+        },
+        {
+          "gap_id": "position-mark-provenance",
+          "delivery_kind": "TYPED_MARK_PROVENANCE",
+          "event_class_id": null,
+          "minimum_result": "Mark/index/last source, source timestamp and valuation revision for position marks."
+        },
+        {
+          "gap_id": "valuation-mark-provenance",
+          "delivery_kind": "TYPED_MARK_PROVENANCE",
+          "event_class_id": null,
+          "minimum_result": "Mark source, source timestamp and valuation-formula revision for performance snapshots."
+        }
+      ]
+    },
+    {
+      "lane_id": "OPERATIONS",
+      "owners": ["trading_system_operations_owner"],
+      "items": [
+        {
+          "gap_id": "reconciliation-ack-evidence",
+          "delivery_kind": "IMMUTABLE_ACK_EVIDENCE",
+          "event_class_id": null,
+          "minimum_result": "A safe acknowledgement actor/time/evidence DTO, or an explicit current-status-only classification."
+        }
+      ]
+    },
+    {
+      "lane_id": "COMMAND",
+      "owners": ["trading_system_command_owner"],
+      "items": [
+        {
+          "gap_id": "command-safe-reference-payload-contract",
+          "delivery_kind": "ALLOWLISTED_TERMINAL_EVIDENCE",
+          "event_class_id": null,
+          "minimum_result": "A terminal command evidence DTO with payload digest and safe references, never a raw payload/receipt."
+        }
+      ]
+    },
+    {
+      "lane_id": "ARTIFACT",
+      "owners": ["trading_system_artifact_owner"],
+      "items": [
+        {
+          "gap_id": "artifact-signed-reference",
+          "delivery_kind": "SIGNED_REFERENCE_METADATA",
+          "event_class_id": null,
+          "minimum_result": "Typed artifact metadata, digest, retention and expiry-bound read reference without a storage path or permanent credential."
+        }
+      ]
+    },
+    {
+      "lane_id": "RESEARCH",
+      "owners": ["trading_system_research_owner"],
+      "items": [
+        {
+          "gap_id": "research-run-linkage",
+          "delivery_kind": "IMMUTABLE_RESEARCH_LINKAGE",
+          "event_class_id": null,
+          "minimum_result": "Deployment-to-research-run linkage only when the producer owns a stable immutable identifier."
+        }
+      ]
+    }
+  ],
+  "event_contract": {
+    "event_envelope_schema": "source-event-envelope.v1.schema.json",
+    "snapshot_tail_schema": "snapshot-tail.v1.schema.json",
+    "sequence_encoding": "DECIMAL_STRING_U64",
+    "timestamp_encoding": "UTC_EPOCH_MILLISECONDS",
+    "required_semantics": [
+      "STREAM_PROFILE_RESOURCE_BINDING",
+      "SOURCE_EPOCH_AND_CONTIGUOUS_SEQUENCE",
+      "IMMUTABLE_EVENT_ID_AND_ENTITY_VERSION",
+      "CORRECTION_AND_TOMBSTONE_CAUSALITY",
+      "RETENTION_FLOOR_AND_RESNAPSHOT_REQUIRED",
+      "SNAPSHOT_HIGH_WATERMARK_THEN_TAIL_FROM_NEXT_SEQUENCE",
+      "OPAQUE_RELATION_BOUND_RESUME_CURSOR"
+    ],
+    "acceptance_rule": "These semantics apply only to an entry returned as EVENT_SOURCE_ACCEPTED; a named non-event capability must not be relabelled as event history."
+  },
+  "return_pack": {
+    "owner_return_schema": "owner-return.v1.schema.json",
+    "pending_template": "owner-return.pending.example.json",
+    "required_evidence": ["schema_sha256", "fixture_index_sha256", "acceptance_evidence_sha256"],
+    "accepted_entry_states": ["EVENT_SOURCE_ACCEPTED", "CAPABILITY_ACCEPTED_NON_EVENT", "SOURCE_GAP_CONFIRMED"],
+    "partial_publication_rule": "Each of the 18 entries may be returned independently. Unaccepted entries remain typed source-owner gaps; no all-or-nothing source migration is required."
+  },
+  "authority": {
+    "trading_system_change_authorized_by_this_file": false,
+    "portal_runtime_activation": false,
+    "portal_source_network_change": false,
+    "portal_direct_database_or_redis_access": false,
+    "portal_command_or_cli_execution": false,
+    "browser_direct_source_access": false,
+    "credentials_or_private_keys_in_return_pack": false,
+    "raw_business_rows_in_return_pack": false
+  }
+}

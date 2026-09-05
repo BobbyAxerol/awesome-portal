@@ -8,6 +8,7 @@ repository.workspace = true
 
 [dependencies]
 analytics = { path = "../analytics" }
+authoritative-event-core = { path = "../authoritative-event-core" }
 chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
 hex.workspace = true

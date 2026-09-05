@@ -1866,6 +1866,11 @@ only for protected-main signed image evidence (`N29-REL-01`). Evidence:
 [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md)
 and [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
+**Evidence rebinding (2026-09-05):** EDS-07 legitimately extended the
+server-side current-source boundary and its test. N29 now re-pins those exact
+two bytes and regenerates the N29 contract manifest; the offline verifier
+passes with the same scope, authority and single protected-main release gate.
+
 ### N29-RTA — Runtime truth reset and data-first product closeout (2026-09-02)
 
 **Current product verdict:** `PRODUCT_NO_GO / DATA_PLANE_PARTIAL /
@@ -4467,8 +4472,8 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-05 | governance/operations and five Portal derivations | EDS-04 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
 | EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | **COMPLETE_SOURCE_DARK / VERIFIED** on 2026-09-05; yes for observed pages; no replay claim |
 | EDS-07 | equity/performance/risk/chart query plane | EDS-06 | **CODE_COMPLETE / SOURCE_DARK** on 2026-09-05; yes for retained source range |
-| EDS-08 | authoritative event/continuity acquisition | EDS-00; external source work | no, external gate |
-| EDS-09 | Rust snapshot+tail append store and reducers | EDS-08 | no |
+| EDS-08 | authoritative event/continuity acquisition | EDS-00; external source work | **CONTRACT_PREPARATION_COMPLETE / VERIFIED** on 2026-09-05; an accepted owner event class is still an external gate |
+| EDS-09 | Rust snapshot+tail append store and reducers | EDS-08 | **CODE_COMPLETE_SOURCE_DARK / VERIFIED** on 2026-09-05; runtime ingest remains fail-closed pending one independently accepted event class |
 | EDS-10 | full lifecycle replay and market-context chart plane | EDS-09 + typed market source | no |
 | EDS-11 | complete screen BFF/action graph and local SSE | EDS-03–10 as applicable | partial before EDS-08/10; exact typed state required |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
@@ -4977,6 +4982,27 @@ append-all source history.
   owner; do not prescribe Trading System internals;
 - keep product panels typed while the owner task is open.
 
+**Implementation breakdown (EDS-08 delivery):**
+
+1. Pin the accepted E7 return pack and map every one of its 18 named gaps once
+   into exactly seven owner lanes. The packet must distinguish a true
+   event-history requirement from a named current/retained/reference capability
+   so that it does not turn every source-as-is limitation into a request for a
+   new journal.
+2. Publish a portable owner-request, owner-return schema, event-envelope and
+   snapshot-plus-tail contract. Sequence values are decimal strings (never
+   JavaScript numbers); time is UTC epoch milliseconds; source/profile/resource
+   binding, retention floor, correction/tombstone, epoch, causal identifiers
+   and resnapshot semantics are mandatory only for an accepted event class.
+3. Supply synthetic no-business-data fixtures for duplicate, gap, correction,
+   tombstone, epoch reset, retention boundary, cross-profile rejection and
+   snapshot-plus-tail. A dependency-free verifier and a Control API compatibility
+   test must reject malformed, cross-profile or falsely accepted input.
+4. Keep the packet and the pending owner return strictly source-dark: no
+   endpoint, credential, direct database, Source Proxy, runtime flag, cache,
+   command or browser change is part of EDS-08. EDS-09 may consume only an
+   independently returned `EVENT_SOURCE_ACCEPTED` class.
+
 **External completion needed:** a source-owned journal/outbox/CDC/exact tail
 that proves ordering and retention for each activated class. Current
 `domain_events` without `source_sequence` is not accepted as that authority.
@@ -4988,6 +5014,22 @@ fixtures supplied by the owner.
 **Exit:** each history-bearing class is either `EVENT_SOURCE_ACCEPTED` or
 remains a named external gap. EDS-08 may close contract preparation without
 falsely unblocking EDS-09; runtime source acceptance is recorded separately.
+
+**Completion record (2026-09-05):** the Portal now carries one source-dark
+[`EDS-08 owner packet`](backend/EDS_08_SOURCE_CONTINUITY_OWNER_PACKET.md)
+under `eds08-source-continuity-v1`: it pins the accepted E7 return pack,
+maps all 18 gaps exactly once to the seven required owner lanes, limits the
+full event requirement to position lifecycle, fill correction/replay and risk
+decision lifecycle, and keeps the remaining source-as-is needs as named
+capabilities. It includes the event-envelope, snapshot-tail and sanitized
+owner-return schemas, a deliberately pending (non-evidence) return, eight
+synthetic continuity cases, a complete digest manifest, dependency-free owner
+verifier and Control API compatibility test. Final evidence passed: EDS-08
+verifier, EDS-08 manifest check, E7 verifier, E7 manifest check, and the fresh
+PostgreSQL Control API gate (`45` test files / `382` tests plus backup/restore).
+No runtime, cache, source, proxy, Trading System, command or browser behavior
+changed. There is no Portal technical debt left in this contract-preparation
+scope; the sole follow-up is the explicit source-owner return.
 
 **Next:** EDS-09 only for accepted classes.
 
@@ -5018,7 +5060,48 @@ duplicates.
 disabled only for that exact scope, and a source event reaches a frozen screen
 with one trace and committed revision.
 
-**Next:** EDS-10 and EDS-11.
+**Completion record (2026-09-05):** Portal-owned source-dark implementation is
+complete and documented in [EDS-09 Rust snapshot+tail append store](backend/EDS_09_RUST_SNAPSHOT_TAIL_APPEND_STORE.md).
+It adds a new `authoritative-event-core` Rust crate and an expand-only
+PostgreSQL append store. The core admits only an independently accepted,
+digest-bound source/profile/resource contract; enforces complete snapshot
+`<= W`, then `CURRENT`/`LIVE_TAIL` strictly from `W + 1`; preserves exact
+decimal-string source offsets and UTC milliseconds; checks checksum, binding,
+epoch, contiguous sequence, correction/tombstone causality and bounded
+queue/unacknowledged bytes; and exposes a non-forgeable `PendingAppend` that
+cannot be acknowledged before the store returns a committed receipt.
+
+The store atomically writes immutable event facts, generic pure-reducer current
+state, generation checkpoint, committed local journal and source stream state.
+Duplicate exact batches return the original receipt; any source offset,
+sequence, target, frame/lane or persisted-state conflict writes a redacted
+quarantine marker and fences the generation behind an explicit resnapshot.
+Tail state cannot regress after the snapshot is complete; an unsafe restart
+checkpoint or non-active resnapshot journal fails closed. The PostgreSQL restore
+drill includes all seven EDS-09 tables. Final clean verification passed the
+full Rust format/test/Clippy/fresh-PostgreSQL/restore gate and the Control API
+TypeScript build plus fresh-PostgreSQL gate (**45 test files / 382 tests**).
+
+This does **not** activate H2/mTLS transport, decompression, a source adapter,
+spool, cache, source proxy, listener, container, command or browser path.
+Those missing runtime values are not inferred from D4/Manager current pages.
+They are an explicit external activation gate, not hidden Portal technical debt:
+
+1. an immutable, verifier-accepted `EVENT_SOURCE_ACCEPTED` owner return for
+   one exact event class/profile/resource;
+2. an accepted wire/capability revision resolving the present current-source
+   GET/STREAM ambiguity, including checksum, compression and decoded-frame
+   bounds;
+3. deployment-bound endpoint, mTLS/delegated-read identity and negative
+   transport evidence, without exposing any input to a browser;
+4. measured capacity, retention, disk/spool, partition/restart/resnapshot and
+   rollback evidence for that exact scope; and
+5. a separately approved runtime change window that enables only the named
+   adapter/profile after preflight passes.
+
+**Next:** EDS-10/EDS-11 may consume only accepted source classes. Until then,
+current-page BFFs remain the honest current-truth path and replay stays typed
+unavailable rather than fabricated.
 
 ### EDS-10 — Full lifecycle replay and market-context query plane
 
@@ -5140,8 +5223,9 @@ EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                    EDS-11 → EDS-12
 ```
 
-EDS-07 is closed in source-dark form. The next approved implementation choice
-is **EDS-08** (the external authoritative event/continuity contract lane), or
-after its prerequisite is accepted **EDS-09** (durable append/reducer work).
-Neither may replace the committed local, server-side range boundary with
+EDS-07 is closed in source-dark form, EDS-08 is closed for contract preparation
+and EDS-09 is code-complete source-dark. Runtime activation of EDS-09 remains
+blocked until the source owner returns at least one independently verified
+`EVENT_SOURCE_ACCEPTED` class and the exact deployment evidence listed above.
+Neither phase may replace the committed local, server-side range boundary with
 bounded global-page filtering or client-side business joins.

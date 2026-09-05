@@ -1,0 +1,37 @@
+{
+  "schema_version": "trading-system.portal.execution.eds08-owner-return.v1",
+  "request_revision": "portal.execution.eds08.source-continuity-owner-request.v1",
+  "publication_state": "PENDING_TEMPLATE_NOT_EVIDENCE",
+  "source_revision": "PENDING_NO_SOURCE_REVISION",
+  "owner_id": "trading-system-owner-template",
+  "owner_accepted": false,
+  "entries": [
+    {"gap_id": "artifact-signed-reference", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending source-owner artifact metadata/reference capability."},
+    {"gap_id": "research-run-linkage", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending source-owner immutable research linkage."},
+    {"gap_id": "portfolio-profile-equity-direct", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending scope-qualified producer or documented derivation."},
+    {"gap_id": "position-mark-provenance", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending typed position mark provenance."},
+    {"gap_id": "position-version-history", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending authoritative position lifecycle event source."},
+    {"gap_id": "order-broker-ack-clocks", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending immutable order acknowledgement timeline."},
+    {"gap_id": "fill-correction-replay", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending authoritative fill correction/replay event source."},
+    {"gap_id": "session-funnel-and-producer-version", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending source-owned session funnel and producer revision."},
+    {"gap_id": "signal-intent-funnel", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending source-owned signal-to-intent funnel."},
+    {"gap_id": "risk-event-correction", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending authoritative risk correction event source."},
+    {"gap_id": "valuation-mark-provenance", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending performance valuation mark provenance."},
+    {"gap_id": "reconciliation-ack-evidence", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending immutable reconciliation acknowledgement evidence."},
+    {"gap_id": "command-safe-reference-payload-contract", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending allowlisted command terminal evidence DTO."},
+    {"gap_id": "market-latest-ticks", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending typed latest market observation capability."},
+    {"gap_id": "market-ohlcv", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending typed bounded OHLCV capability."},
+    {"gap_id": "market-benchmark", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending typed benchmark series capability."},
+    {"gap_id": "market-session-calendar", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending typed venue session calendar."},
+    {"gap_id": "market-vnm-constraints", "state": "SOURCE_GAP_CONFIRMED", "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_evidence_sha256": null, "event_class_id": null, "event_contract": null, "capability_contract": null, "reason": "Pending typed VNM venue constraints."}
+  ],
+  "authority": {
+    "contains_credentials": false,
+    "contains_private_keys": false,
+    "contains_dsn_or_raw_sql": false,
+    "contains_raw_business_rows": false,
+    "portal_runtime_flags_changed": false,
+    "portal_direct_database_or_redis_authority": false,
+    "portal_command_or_cli_authority": false
+  }
+}

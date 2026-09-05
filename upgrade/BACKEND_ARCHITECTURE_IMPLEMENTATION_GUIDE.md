@@ -653,6 +653,19 @@ deep-dive → ADR → slice → evidence discipline documented above.
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
 
+- **EDS-09 authoritative event durability core closed source-dark
+  (2026-09-05):** a provider-neutral Rust snapshot+tail state machine now
+  gates source acknowledgement on one atomic Portal PostgreSQL append of
+  immutable facts, generic current reducer state, checkpoint and local journal.
+  Exact decimal-string offsets, snapshot high watermark, correction/tombstone
+  causality, bounded queue/unacknowledged bytes, restart and resnapshot fences
+  are all verified locally. It does not create source transport, a listener,
+  proxy rule, runtime container, cache or command authority. A versioned owner
+  `EVENT_SOURCE_ACCEPTED` return plus transport/capacity/change-window evidence
+  remains the explicit external activation gate. See
+  [EDS-09 appendix](backend/EDS_09_RUST_SNAPSHOT_TAIL_APPEND_STORE.md) and the
+  Execution Loop unified plan for the exact accepted-scope rules.
+
 - **EX-DP-05/E5 existing-data adapter and publication closed
   (2026-09-04, source-dark):** the additive Rust
   `maximum-data-adapter` has a digest-bound 34-field registry: four existing

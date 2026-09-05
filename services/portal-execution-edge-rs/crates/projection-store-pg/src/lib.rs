@@ -18,6 +18,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 mod analytics_repository;
+mod authoritative_event_store;
 mod d4_writer;
 mod manager_projection;
 mod manager_query_analytics;
@@ -29,6 +30,10 @@ mod source_admission;
 
 pub use analytics_repository::{
     analytics_facts_digest, AnalyticsFactDigestInput, AnalyticsReadRequirement, AnalyticsSourceRead,
+};
+pub use authoritative_event_store::{
+    AuthoritativeAppendOutcome, AuthoritativeEventGenerationState, AuthoritativeLocalJournalEntry,
+    AuthoritativeResumeState, AUTHORITATIVE_EVENT_LOCAL_JOURNAL_MAX_PAGE,
 };
 pub use d4_writer::{
     D4BaselineCommitInput, D4CommitOutcome, D4EventPageCommitInput, D4ProjectionWrite,
@@ -1409,6 +1414,8 @@ pub enum StoreError {
     Contract(#[from] execution_contracts::ContractError),
     #[error(transparent)]
     Query(#[from] query_api::QueryError),
+    #[error(transparent)]
+    AuthoritativeEvent(#[from] authoritative_event_core::CoreError),
     #[error("projection epoch metadata is invalid")]
     InvalidEpochMetadata,
     #[error("projection stream key is invalid")]
@@ -1553,6 +1560,20 @@ pub enum StoreError {
     CleanupNotReady,
     #[error("retired epoch cleanup is blocked by a live consumer lease")]
     CleanupLeaseStillActive,
+    #[error("EDS-09 authoritative event stream identity collides with different evidence")]
+    AuthoritativeStreamIdentityCollision,
+    #[error("EDS-09 authoritative generation is not eligible for this append")]
+    AuthoritativeGenerationNotReady,
+    #[error("EDS-09 durable checkpoint does not match the staged append")]
+    AuthoritativeCheckpointMismatch,
+    #[error("EDS-09 durable event fact collides with different source evidence")]
+    AuthoritativeEventFactCollision,
+    #[error("EDS-09 correction or tombstone target is absent or belongs to another entity")]
+    AuthoritativeTargetMismatch,
+    #[error("EDS-09 persisted event state is internally inconsistent")]
+    AuthoritativePersistenceInvariant,
+    #[error("EDS-09 resnapshot reason code is invalid")]
+    InvalidAuthoritativeResnapshotReason,
 }
 
 #[cfg(test)]

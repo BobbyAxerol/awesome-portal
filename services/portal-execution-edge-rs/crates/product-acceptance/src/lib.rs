@@ -14,6 +14,12 @@ use thiserror::Error;
 pub const ACCEPTANCE_REVISION: &str = "portal.execution.product-acceptance.v1";
 pub const DEBT_REVISION: &str = "portal.execution.product-debt-register.v1";
 
+// N29 was amended by the delivered Account/Broker 360 screen extension and
+// BR-EX-72 evidence package.  Keep these values exact instead of silently
+// accepting an arbitrary later expansion of the frozen release candidate.
+const N29_SCREEN_CONTRACT_COUNT: u64 = 25;
+const N29_EVIDENCE_COUNT: usize = 37;
+
 const ACCEPTANCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../contracts/n29-product-acceptance-v1/product-acceptance.v1.json"
@@ -85,7 +91,7 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         || summary.commissioned_request_count != 31
         || summary.portal_read_count != 27
         || summary.requested_command_count != 9
-        || summary.screen_contract_count != 23
+        || summary.screen_contract_count != N29_SCREEN_CONTRACT_COUNT
         || summary.typed_owner_gap_count != 9
         || summary.release_blocker_count != 1
         || summary.product_release_authorized
@@ -110,7 +116,7 @@ pub fn validate_embedded_acceptance() -> Result<AcceptanceSummary, AcceptanceErr
         .pointer("/evidence")
         .and_then(Value::as_object)
         .ok_or(AcceptanceError::Malformed)?;
-    if evidence.len() != 35
+    if evidence.len() != N29_EVIDENCE_COUNT
         || evidence
             .values()
             .any(|value| !value.as_str().is_some_and(is_sha256))
@@ -216,6 +222,7 @@ mod tests {
         let result = validate_embedded_acceptance().expect("valid N29 closeout");
         assert_eq!(result.relation_count, 96);
         assert_eq!(result.commissioned_request_count, 31);
+        assert_eq!(result.screen_contract_count, N29_SCREEN_CONTRACT_COUNT);
         assert_eq!(result.release_blocker_count, 1);
         assert!(!result.product_release_authorized);
     }
