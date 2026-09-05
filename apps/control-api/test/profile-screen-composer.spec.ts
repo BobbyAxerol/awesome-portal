@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decimalAbsoluteSum,
   decimalSubtract,
+  exactCurrencySum,
   decimalSum,
   openOrders,
   ProfileScreenSource,
@@ -20,6 +21,18 @@ describe("Phase 2 profile screen composition", () => {
     ], "notional")).toBe("6002.500000000000000001");
     expect(decimalSubtract("10000.000000000000000001", "6002.500000000000000001"))
       .toBe("3997.5");
+  });
+
+  it("publishes a monetary aggregate only with one explicit source currency", () => {
+    expect(exactCurrencySum([
+      { total: "10.000000000000000001", currency: "USDT" },
+      { total: "0.5", currency: "USDT" },
+    ], ["total"])).toEqual({ value: "10.500000000000000001", currency: "USDT", reasonCode: null });
+    expect(exactCurrencySum([{ total: "10" }], ["total"]))
+      .toEqual({ value: null, currency: null, reasonCode: "EXACT_DECIMAL_VALUES_REQUIRE_EXPLICIT_CURRENCY" });
+    expect(exactCurrencySum([
+      { total: "10", currency: "USDT" }, { total: "1", currency: "USD" },
+    ], ["total"])).toEqual({ value: null, currency: null, reasonCode: "CROSS_CURRENCY_AGGREGATE_FORBIDDEN" });
   });
 
   it("composes ready, empty and unavailable branches from one profile envelope", () => {

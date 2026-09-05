@@ -24,6 +24,9 @@ import { utcStamp } from "../time";
 export const SANDBOX_FILTERS = ["all", "halted", "findings"] as const;
 export type SandboxFilter = (typeof SANDBOX_FILTERS)[number];
 const LABEL: Record<SandboxFilter, string> = { all: "All", halted: "Halted", findings: "Open findings" };
+const str = (value: unknown): string | null => typeof value === "string" && value.length > 0 ? value : null;
+const isOpenFinding = (row: Record<string, unknown>) => !["RESOLVED", "CLOSED"].includes((str(row.status) ?? "").toUpperCase());
+const isHalted = (row: Record<string, unknown>) => ["HALTED", "PAUSED", "STOPPED"].includes((str(row.state) ?? "").toUpperCase());
 
 /** Splices the note's identifiers into links without inventing new words. */
 function Note({ text, links }: { text: string; links: SbLink[] }) {
@@ -69,6 +72,9 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
   if (!smoke) {
     // Product: the reviewed layout over the published envelope, panel by panel.
     const deployments = envelope?.data.deployments ?? [];
+    const findings = envelope?.data.reconciliation ?? [];
+    const halted = deployments.filter(isHalted).length;
+    const openFindings = findings.filter(isOpenFinding).length;
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !envelope ? "unavailable" : null;
     const sourceReason = reason ?? (!envelope ? "No sandbox overview was published for this workspace." : undefined);
     const notPublished = <span className="exec-gate-unverified">not published</span>;
@@ -82,7 +88,7 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
               <span className="exec-af-wf">entry for WF 1d</span>
               <span className="exec-af-spacer" />
               <span className="exec-af-source">
-                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()}
+                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()}
               </span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
@@ -92,23 +98,23 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                 <div className="exec-af-kpival">{deployments.length}</div>
                 <div className="exec-af-kpisub">published deployments</div>
               </div>
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Halted</div><div className="exec-af-kpival">{notPublished}</div></div>
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Open findings</div><div className="exec-af-kpival">{notPublished}</div></div>
-              <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Test-fund equity</div><div className="exec-af-kpival">{notPublished}</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Halted</div><div className="exec-af-kpival" data-tone={halted > 0 ? "warn" : undefined}>{halted}</div><div className="exec-af-kpisub">returned deployment rows</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Open findings</div><div className="exec-af-kpival" data-tone={openFindings > 0 ? "bad" : undefined}>{openFindings}</div><div className="exec-af-kpisub">returned reconciliation rows</div></div>
+              <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Test-fund equity</div><div className="exec-af-kpival">{notPublished}</div><div className="exec-af-kpisub">no balance relation is published by this overview profile</div></div>
               <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope?.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope?.completeness ?? "completeness not stated"}</div></div>
             </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
                 <table className="exec-af-table exec-sb-table" aria-label="Deployments in certification">
-                  <thead><tr><th>deployment</th><th>mode</th><th>certification</th><th>next step</th></tr></thead>
+                  <thead><tr><th>alpha · deployment</th><th>venue · account · portfolio</th><th>current source state</th><th>next step</th></tr></thead>
                   <tbody>
                     {deployments.map((row, i) => {
                       const id = typeof row.deployment_id === "string" ? row.deployment_id : `row ${i + 1}`;
                       return (
                         <tr key={id} className="exec-af-row">
-                          <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}><b>{id}</b></a></td>
-                          <td>{typeof row.mode === "string" ? row.mode : notPublished}</td>
-                          <td>{notPublished}</td>
+                          <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-af-dim">· {id}</span></td>
+                          <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · {str(row.account_id) ?? "account not published"} · {str(row.portfolio_id) ?? "portfolio not published"}</td>
+                          <td>{str(row.state) ?? str(row.mode) ?? notPublished}</td>
                           <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}>Open certification →</a></td>
                         </tr>
                       );

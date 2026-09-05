@@ -25,12 +25,22 @@ consumer = (root / "apps/portal/frontend/src/execution/screenBff.ts").read_text(
 openapi = (root / "packages/contracts/openapi/execution-screen-bff.openapi.json").read_text()
 generated = (root / "packages/contracts/generated/execution-screen-bff.d.ts").read_text()
 
-assert catalogue.count("screen({") == 23
-# N20 established the immutable 23-screen catalogue. Later read-profile phases
-# may promote only their named rows without changing its shape or request set:
-# N22 owns four Paper products and N23 owns six Sandbox/Live compositions.
-assert catalogue.count('status: "AVAILABLE"') == 23
+# N20 established the immutable 23-screen owner inventory. EDS-02 registers
+# exactly two first-class Portal list extensions (BR-EX-72), so the current
+# browser catalogue is 23 immutable rows + 2 named extensions, never an
+# unbounded "whatever the frontend happens to render" set.
+assert catalogue.count("screen({") == 25
+assert catalogue.count('status: "AVAILABLE"') == 25
 assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 0
+for screen_id, operation_id, path in [
+    ("EXECUTION_ALPHA_FLEET_LIST_SCREEN", "executionAlphaFleetListV2", "/api/v1/execution/alphas"),
+    ("EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "executionBindingsListV1", "/api/v1/execution/broker-bindings"),
+]:
+    row = next(line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line)
+    assert 'requestIds: ["BR-EX-72"]' in row
+    assert 'status: "AVAILABLE"' in row and 'deliveryPhase: "N29"' in row
+    assert f'operationId: "{operation_id}"' in row and f'pathTemplate: "{path}"' in row
+# N22 owns four Paper products and N23 owns six Sandbox/Live compositions.
 assert catalogue.count('deliveryPhase: "N22"') == 4
 for screen_id in [
     "PAPER_TRADING_SCREEN",

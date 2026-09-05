@@ -4,7 +4,9 @@ This immutable pack closes the backend campaign without presenting a fixture UI
 as a source-backed product. `product-acceptance.v1.json` binds the complete N18
 surface, N28 unavailable registry, accepted Paper evidence, N29 approval and
 conditions contracts, release workflow and recovery runbook. A post-N29 Phase
-2 amendment gives all twenty-three screen contracts a canonical backend API;
+2 amendment keeps the immutable twenty-three-screen owner inventory and adds
+two explicit BR-EX-72 Portal list extensions, making the accepted current
+catalogue twenty-five screens with canonical backend APIs;
 Account/Broker 360 composes the current bounded account facts while the absent
 full-exposure population remains a branch-local typed N28 gap. The same-origin frontend consumer is accepted
 with a warning-clean product import graph. The Alpha Fleet closeout is bound

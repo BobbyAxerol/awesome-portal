@@ -4,9 +4,19 @@ import {
   CurrentSourcePrincipal,
   CurrentSourceProxyError,
 } from "../execution/current-source.proxy";
-import { ExecutionProductReadSource } from "../execution/product-read-source";
+import {
+  DeploymentResourceScope,
+  DeploymentScopeResolution,
+  ExecutionProductReadSource,
+} from "../execution/product-read-source";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import {
+  latestStageAsOfMs,
+  stagePanels,
+  type StageRelation,
+  wireStageValue,
+} from "../execution/stage-screen-wire";
 
 export type N23ReadEnvironment = "paper" | "sandbox" | "live" | "canary";
 type SourceEnvironment = "paper" | "sandbox" | "live";
@@ -87,16 +97,16 @@ const FILL_FIELDS = [
 ] as const;
 
 const COMMON = [
-  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),
+  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 200),
   spec("positions", "manager.positions", "positions_v2", POSITION_FIELDS, 200),
-  spec("sessions", "manager.sessions", "execution_sessions", SESSION_FIELDS, 100),
+  spec("sessions", "manager.sessions", "execution_sessions", SESSION_FIELDS, 200),
 ] as const;
 const ACCOUNTS = [
-  spec("accounts", "manager.accounts", "accounts", ACCOUNT_FIELDS, 100),
+  spec("accounts", "manager.accounts", "accounts", ACCOUNT_FIELDS, 200),
   spec("account_balances", "manager.accounts", "account_balances", ACCOUNT_BALANCE_FIELDS, 200),
   spec("margin_balances", "manager.accounts", "margin_balances", MARGIN_BALANCE_FIELDS, 200),
-  spec("account_sync", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC_FIELDS, 100),
-  spec("broker_sync", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, 100),
+  spec("account_sync", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC_FIELDS, 200),
+  spec("broker_sync", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, 200),
 ] as const;
 const RECONCILIATION = spec(
   "reconciliation", "manager.reconciliation", "reconciliation_findings", RECONCILIATION_FIELDS, 200,
@@ -106,13 +116,13 @@ const LIVE_FLOW = [
   spec("fills", "manager.fills", "fills", FILL_FIELDS, 200),
 ] as const;
 const ACCOUNT_360 = [
-  spec("accounts", "manager.accounts", "accounts", ACCOUNT_FIELDS, 100),
+  spec("accounts", "manager.accounts", "accounts", ACCOUNT_FIELDS, 200),
   spec("account_balances", "manager.accounts", "account_balances", ACCOUNT_BALANCE_FIELDS, 200),
   spec("margin_balances", "manager.accounts", "margin_balances", MARGIN_BALANCE_FIELDS, 200),
-  spec("account_sync", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC_FIELDS, 100),
-  spec("broker_sync", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, 100),
-  spec("venue_accounts", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, 100),
-  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),
+  spec("account_sync", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC_FIELDS, 200),
+  spec("broker_sync", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, 200),
+  spec("venue_accounts", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, 200),
+  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 200),
   spec("positions", "manager.positions", "positions_v2", POSITION_FIELDS, 200),
   RECONCILIATION,
 ] as const;
@@ -221,20 +231,32 @@ export class ProfileReadService {
     const sourceEnvironment: SourceEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
     const profile = PROFILE[sourceEnvironment];
     const context: ManagerReadContext = { ...profile, errorPrefix: "N23" };
-    const relations = enforceProfileLineage(await this.fetch(
-      principal,
-      requestedEnvironment,
-      screenId,
-      SCREEN_SPECS[screenId],
-      context,
-    ), "N30");
-    const data = this.data(relations, deploymentId);
+    const resolution = deploymentId
+      ? await this.source.resolveDeploymentScope(
+        principal as CurrentSourcePrincipal, requestedEnvironment, screenId, deploymentId,
+      )
+      : null;
+    const relations = resolution === null || resolution.state === "FOUND"
+      ? enforceProfileLineage(await this.fetch(
+        principal,
+        requestedEnvironment,
+        screenId,
+        SCREEN_SPECS[screenId],
+        context,
+        resolution?.scope,
+      ), "N30")
+      : unresolvedRelations(SCREEN_SPECS[screenId], resolution);
+    // Detail rows are already exact-scoped before keyset pagination by the
+    // local projection.  This layer must never broaden a record using an
+    // account, portfolio or two-dimension heuristic.
+    const data = this.data(relations);
     const state = productState(relations);
     const freshness = relations.some((item) => item.page?.freshness === "STALE") ? "STALE"
       : relations.some((item) => item.page?.freshness === "AGING") ? "AGING"
         : relations.some((item) => item.page?.freshness === "FRESH") ? "FRESH" : "UNKNOWN";
     const projection = relations.map((item) => item.page?.projection ?? null)
       .find((item) => item !== null) ?? null;
+    const readAtMs = Date.now();
     return {
       schema_version: requestedEnvironment === "sandbox"
         ? deploymentId ? "execution.sandbox-current-source.v1" : "execution.sandbox-overview.v1"
@@ -251,7 +273,9 @@ export class ProfileReadService {
         : "DIRECT_PROFILE_READ",
       workspace_id: principal.workspaceId,
       resource: deploymentId ? { kind: "DEPLOYMENT", id: deploymentId } : { kind: "WORKSPACE", id: principal.workspaceId },
-      read_at: new Date().toISOString(),
+      read_at_ms: readAtMs,
+      as_of_ms: latestStageAsOfMs(asStageRelations(relations)),
+      read_at: new Date(readAtMs).toISOString(),
       as_of: latestAsOf(relations),
       state: freshness === "STALE" && state === "ready" ? "stale" : state,
       freshness,
@@ -266,7 +290,11 @@ export class ProfileReadService {
         reason_code: item.reasonCode,
         retryable: false,
       })),
-      data,
+      ...(resolution?.state !== "FOUND" ? {
+        resource_resolution: { state: resolution?.state, reason_code: resolution?.reasonCode ?? null },
+      } : {}),
+      panels: stagePanels(asStageRelations(relations), readAtMs),
+      data: wireStageValue(data),
       unavailable_branches: screenId === "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"
         ? [{ capability_id: "market.ticks", state: "UNAVAILABLE", reason_code: "N28_MARKET_TICKS_NOT_ACTIVATED", retryable: false }]
         : [],
@@ -279,6 +307,7 @@ export class ProfileReadService {
     screenId: keyof typeof SCREEN_SPECS,
     specs: readonly RelationSpec[],
     context: ManagerReadContext,
+    deploymentScope?: DeploymentResourceScope,
   ): Promise<RelationResult[]> {
     const results = await Promise.allSettled(specs.map(async (item) => {
       const response = await this.source.relation(
@@ -287,7 +316,7 @@ export class ProfileReadService {
         screenId,
         item.sourceId,
         item.relation,
-        { limit: item.limit },
+        { limit: item.limit, ...(deploymentScope ? { deploymentScope } : {}) },
       );
       return managerPage(response, item.relation, item.fields, context);
     }));
@@ -297,27 +326,20 @@ export class ProfileReadService {
         return {
           spec: item,
           page: result.value,
-          state: result.value.items.length === 0 ? "EMPTY" as const
-            : result.value.completeness === "PARTIAL" ? "PARTIAL" as const : "AVAILABLE" as const,
-          reasonCode: result.value.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
+          state: result.value.items.length === 0
+            ? (result.value.completeness === "PARTIAL" || result.value.scope?.state === "PARTIAL" ? "PARTIAL" as const : "EMPTY" as const)
+            : result.value.completeness === "PARTIAL" || result.value.scope?.state === "PARTIAL" ? "PARTIAL" as const : "AVAILABLE" as const,
+          reasonCode: result.value.scope?.state === "PARTIAL"
+            ? result.value.scope.reasonCode ?? "EDS03_RESOURCE_SCOPE_PARTIAL"
+            : result.value.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
         };
       }
       return { spec: item, page: null, state: "UNAVAILABLE" as const, reasonCode: safeReason(result.reason) };
     });
   }
 
-  private data(relations: readonly RelationResult[], deploymentId?: string): Record<string, unknown> {
-    if (!deploymentId) {
-      return Object.fromEntries(relations.map((item) => [item.spec.key, item.page?.items ?? []]));
-    }
-    const deployment = relations.find((item) => item.spec.key === "deployments")
-      ?.page?.items.find((row) => row.deployment_id === deploymentId);
-    const accounts = relations.find((item) => item.spec.key === "accounts")?.page?.items ?? [];
-    const account = accounts.find((row) => row.account_id === deployment?.account_id);
-    return Object.fromEntries(relations.map((item) => [
-      item.spec.key,
-      (item.page?.items ?? []).filter((row) => matchesDeployment(row, deploymentId, deployment, account)),
-    ]));
+  private data(relations: readonly RelationResult[]): Record<string, unknown> {
+    return Object.fromEntries(relations.map((item) => [item.spec.key, item.page?.items ?? []]));
   }
 }
 
@@ -332,7 +354,7 @@ function spec(
 }
 
 function safeReason(error: unknown): string {
-  if (error instanceof CurrentSourceProxyError && /^N(?:13B|17B|21|22|23|30)_[A-Z0-9_]+$/.test(error.code)) {
+  if (error instanceof CurrentSourceProxyError && /^(?:N(?:13B|17B|21|22|23|30)_[A-Z0-9_]+|EDS03_[A-Z0-9_]+)$/.test(error.code)) {
     return error.code;
   }
   return "N23_SOURCE_UNAVAILABLE";
@@ -445,21 +467,25 @@ function decimalOperation(left: string, right: string, operation: (a: bigint, b:
   return `${negative ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
 }
 
-function matchesDeployment(
-  row: Record<string, unknown>,
-  deploymentId: string,
-  deployment?: Record<string, unknown>,
-  account?: Record<string, unknown>,
-): boolean {
-  if (row.deployment_id === deploymentId) return true;
-  if (!deployment) return false;
-  if (row.account_id !== undefined && deployment.account_id !== undefined) {
-    return row.account_id === deployment.account_id;
-  }
-  if (row.external_account_ref !== undefined && account?.external_account_ref !== undefined) {
-    return row.external_account_ref === account.external_account_ref;
-  }
-  const dimensions = ["strategy_id", "mode", "venue"] as const;
-  const comparable = dimensions.filter((name) => name in row && name in deployment);
-  return comparable.length >= 2 && comparable.every((name) => row[name] === deployment[name]);
+function unresolvedRelations(
+  specs: readonly RelationSpec[],
+  resolution: Exclude<DeploymentScopeResolution, { state: "FOUND" }>,
+): RelationResult[] {
+  const state: CapabilityState = resolution.state === "EMPTY" ? "EMPTY"
+    : resolution.state === "PARTIAL" ? "PARTIAL" : "UNAVAILABLE";
+  return specs.map((specification) => ({
+    spec: specification,
+    page: null,
+    state,
+    reasonCode: resolution.reasonCode,
+  }));
+}
+
+function asStageRelations(relations: readonly RelationResult[]): StageRelation[] {
+  return relations.map((item) => ({
+    key: item.spec.key,
+    page: item.page,
+    state: item.state,
+    reasonCode: item.reasonCode,
+  }));
 }

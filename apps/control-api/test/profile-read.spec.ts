@@ -19,7 +19,7 @@ const session: AuthSession = {
 type RecordInput = Record<string, string | number | boolean | null>;
 
 class FakeCurrentSource {
-  readonly calls: Array<{ environment: string; screenId: string; relation: string }> = [];
+  readonly calls: Array<{ environment: string; screenId: string; relation: string; query: Record<string, unknown> }> = [];
   readonly rows = new Map<string, RecordInput[]>();
   readonly failures = new Set<string>();
 
@@ -31,11 +31,90 @@ class FakeCurrentSource {
     screenId: string,
     _sourceId: string,
     relation: string,
+    query: Record<string, unknown> = {},
   ) {
-    this.calls.push({ environment, screenId, relation });
+    this.calls.push({ environment, screenId, relation, query });
     if (this.failures.has(relation)) throw new Error("upstream detail must not escape");
-    return managerResponse(this.profile, relation, this.rows.get(relation) ?? [defaultRecord(this.profile, relation)]);
+    const scope = deploymentScope(query);
+    const items = scope
+      ? scopedFixtureRows(relation, this.rows.get(relation) ?? [defaultRecord(this.profile, relation)], scope)
+      : this.rows.get(relation) ?? [defaultRecord(this.profile, relation)];
+    return managerResponse(this.profile, relation, items, scope ? { state: "EXACT", reasonCode: null } : undefined);
   }
+
+  async resolveDeploymentScope(
+    _principal: unknown,
+    _environment: string,
+    _screenId: string,
+    deploymentId: string,
+  ) {
+    const deployment = (this.rows.get("strategy_deployments") ?? [defaultRecord(this.profile, "strategy_deployments")])
+      .find((row) => row.deployment_id === deploymentId);
+    if (!deployment) return { state: "EMPTY" as const, reasonCode: "EDS03_DEPLOYMENT_NOT_FOUND" };
+    const strategyId = typeof deployment.strategy_id === "string" ? deployment.strategy_id : null;
+    const accountId = typeof deployment.account_id === "string" ? deployment.account_id : null;
+    const mode = typeof deployment.mode === "string" ? deployment.mode : null;
+    const venue = typeof deployment.venue === "string" ? deployment.venue : null;
+    if (!strategyId || !accountId || mode !== this.profile || !venue) {
+      return { state: "PARTIAL" as const, reasonCode: "EDS03_DEPLOYMENT_SCOPE_INCOMPLETE" };
+    }
+    const account = (this.rows.get("accounts") ?? [defaultRecord(this.profile, "accounts")])
+      .filter((row) => row.account_id === accountId)
+      .map((row) => row.external_account_ref)
+      .filter((value): value is string => typeof value === "string");
+    return {
+      state: "FOUND" as const,
+      reasonCode: null,
+      deployment,
+      scope: {
+        deploymentId,
+        strategyId,
+        accountId,
+        mode: this.profile,
+        venue,
+        portfolioId: typeof deployment.portfolio_id === "string" ? deployment.portfolio_id : null,
+        externalAccountRef: account.length === 1 ? account[0] : null,
+        tupleUnique: true,
+      },
+    };
+  }
+}
+
+type FixtureScope = {
+  deploymentId: string;
+  strategyId: string;
+  accountId: string;
+  mode: string;
+  venue: string;
+  portfolioId: string | null;
+  externalAccountRef: string | null;
+};
+
+function deploymentScope(query: Record<string, unknown>): FixtureScope | null {
+  const candidate = query.deploymentScope;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
+  const scope = candidate as Record<string, unknown>;
+  return typeof scope.deploymentId === "string" && typeof scope.strategyId === "string" &&
+    typeof scope.accountId === "string" && typeof scope.mode === "string" && typeof scope.venue === "string"
+    ? scope as FixtureScope : null;
+}
+
+function scopedFixtureRows(relation: string, rows: RecordInput[], scope: FixtureScope): RecordInput[] {
+  if (relation === "strategy_deployments") return rows.filter((row) => row.deployment_id === scope.deploymentId);
+  if (["accounts", "account_balances", "margin_balances", "account_sync_effective", "venue_accounts"].includes(relation)) {
+    return rows.filter((row) => row.account_id === scope.accountId);
+  }
+  if (relation === "broker_account_sync_effective") {
+    return scope.externalAccountRef === null ? [] : rows.filter((row) => row.external_account_ref === scope.externalAccountRef);
+  }
+  if (relation === "portfolio_equity_snapshots") {
+    return scope.portfolioId === null ? [] : rows.filter((row) => row.portfolio_id === scope.portfolioId);
+  }
+  if (rows.some((row) => row.deployment_id !== undefined)) {
+    return rows.filter((row) => row.deployment_id === scope.deploymentId);
+  }
+  return rows.filter((row) => row.strategy_id === scope.strategyId && row.account_id === scope.accountId &&
+    row.mode === scope.mode && (row.venue === undefined || row.venue === scope.venue));
 }
 
 function service(source: FakeCurrentSource): ProfileReadService {
@@ -61,7 +140,12 @@ function defaultRecord(profile: "sandbox" | "live", relation: string): RecordInp
   return values[relation] ?? { mode: profile };
 }
 
-function managerResponse(profile: "sandbox" | "live", relation: string, rows: RecordInput[]) {
+function managerResponse(
+  profile: "sandbox" | "live",
+  relation: string,
+  rows: RecordInput[],
+  scope?: { state: "EXACT" | "PARTIAL"; reasonCode: string | null },
+) {
   const profileId = profile === "sandbox" ? "SANDBOX_BINANCE_USDM" : "LIVE_BINANCE_USDM";
   return {
     schema_version: "portal.execution.current-source-bff.v2",
@@ -77,6 +161,7 @@ function managerResponse(profile: "sandbox" | "live", relation: string, rows: Re
           fields: Object.fromEntries(Object.entries({ ...fields, raw: "must-not-leak" }).map(([key, value]) => [key, tagged(value)])),
         })),
         next_cursor: null,
+        ...(scope ? { scope: { state: scope.state, reason_code: scope.reasonCode } } : {}),
       },
     },
   };
@@ -244,7 +329,59 @@ describe("N23 Sandbox and Live profile reads", () => {
     ) as Record<string, any>;
     expect(result.data.deployments.map((item: any) => item.deployment_id)).toEqual(["dep_live"]);
     expect(result.data.orders.map((item: any) => item.order_id)).toEqual(["ord_live"]);
+    expect(result.panels.orders).toMatchObject({ state: "READY", coverage: { returned_count: 1, truncated: false } });
+    expect(result.read_at_ms).toEqual(expect.any(Number));
     expect(result.unavailable_branches).toEqual([expect.objectContaining({ capability_id: "market.ticks" })]);
+  });
+
+  it("EDS-03 resolves Live detail identity before bounded current rows and preserves canonical UTC milliseconds", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("strategy_deployments", Array.from({ length: 201 }, (_, index) => ({
+      deployment_id: `dep_${index}`,
+      strategy_id: `str_${index}`,
+      account_id: `acc_${index}`,
+      portfolio_id: `pf_${index}`,
+      mode: "live",
+      venue: "BINANCE",
+    })));
+    source.rows.set("fills", [
+      { fill_id: "fill_first", strategy_id: "str_0", account_id: "acc_0", mode: "live", venue: "BINANCE", trade_time: "2026-09-05T00:00:00.000Z" },
+      { fill_id: "fill_target", strategy_id: "str_200", account_id: "acc_200", mode: "live", venue: "BINANCE", trade_time: "2026-09-05T00:01:00.000Z" },
+    ]);
+
+    const result = await service(source).snapshot(
+      principal(), "live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "dep_200",
+    ) as Record<string, any>;
+
+    expect(result.data.deployments).toEqual([expect.objectContaining({ deployment_id: "dep_200" })]);
+    expect(result.data.fills).toEqual([expect.objectContaining({
+      fill_id: "fill_target", trade_time_ms: Date.parse("2026-09-05T00:01:00.000Z"),
+    })]);
+    expect(result.panels.fills).toMatchObject({ state: "READY", coverage: { returned_count: 1 } });
+    expect(source.calls.every((call) => {
+      const scope = call.query.deploymentScope as Record<string, unknown> | undefined;
+      return scope?.deploymentId === "dep_200" && scope.strategyId === "str_200" && scope.accountId === "acc_200";
+    })).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("fill_first");
+  });
+
+  it("EDS-03 maps a complete absent Live deployment to typed EMPTY without reading a first page", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("strategy_deployments", [{
+      deployment_id: "dep_present", strategy_id: "str_present", account_id: "acc_present", mode: "live", venue: "BINANCE",
+    }]);
+
+    const result = await service(source).snapshot(
+      principal(), "live", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "dep_missing",
+    ) as Record<string, any>;
+
+    expect(result).toMatchObject({
+      state: "empty",
+      resource_resolution: { state: "EMPTY", reason_code: "EDS03_DEPLOYMENT_NOT_FOUND" },
+    });
+    expect(result.data.orders).toEqual([]);
+    expect(result.panels.orders).toMatchObject({ state: "EMPTY", reason_code: "EDS03_DEPLOYMENT_NOT_FOUND" });
+    expect(source.calls).toHaveLength(0);
   });
 
   it("keeps bounded fan-out under load and recovers after source loss", async () => {

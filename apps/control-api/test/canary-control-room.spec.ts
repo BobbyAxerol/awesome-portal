@@ -407,10 +407,10 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
         orders: [{ order_id: "ord_live", deployment_id: lineage.deploymentId, account_id: "account_alpha", status: "OPEN" }],
         fills: [{ fill_id: "fill_live", deployment_id: lineage.deploymentId, account_id: "account_alpha" }],
         sessions: [{ execution_session_id: "session_live", deployment_id: lineage.deploymentId, account_id: "account_alpha" }],
-        account_balances: [{ account_id: "account_alpha", total: "10000.000000000000000001" }],
+        account_balances: [{ account_id: "account_alpha", currency: "USDT", total: "10000.000000000000000001" }],
         margin_balances: [{ account_id: "account_alpha", initial: "500.000000000000000001" }],
         account_sync: [{ account_id: "account_alpha", status: "CURRENT" }],
-        broker_sync: [{ account_id: "account_alpha", status: brokerStatus, buying_power: "9999.5", synced_at: "2026-09-02T08:00:00.000Z" }],
+        broker_sync: [{ account_id: "account_alpha", currency: "USDT", status: brokerStatus, buying_power: "9999.5", synced_at: "2026-09-02T08:00:00.000Z" }],
         reconciliation: [],
       },
       projection: {
@@ -454,6 +454,34 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
     });
     expect(live.json().kpis.find((item: { key: string }) => item.key === "broker_equity").value)
       .toBeNull();
+
+    // EDS-03: current Live source truth is useful before Portal-owned canary
+    // governance exists.  It must preserve the rich Live screen, but must not
+    // invent a position aggregate without published currency/mark lineage.
+    const sourceOnlyDeploymentId = "dep_current_source_only";
+    const sourceOnly = profile("SYNCED");
+    sourceOnly.data = {
+      ...sourceOnly.data,
+      deployments: [{ deployment_id: sourceOnlyDeploymentId, account_id: "account_alpha", mode: "live" }],
+      positions: [{ position_id: "pos_source_only", deployment_id: sourceOnlyDeploymentId, account_id: "account_alpha", notional: "17.000000000000000001" }],
+      orders: [{ order_id: "ord_source_only", deployment_id: sourceOnlyDeploymentId, account_id: "account_alpha", status: "OPEN" }],
+    };
+    vi.spyOn(profileReads, "snapshot").mockResolvedValueOnce(sourceOnly as never);
+    const withoutCanary = await inject(
+      reader,
+      `/api/v1/execution/deployments/${sourceOnlyDeploymentId}/live?workspace_id=${workspaceId}`,
+    );
+    expect(withoutCanary.statusCode).toBe(200);
+    expect(withoutCanary.json()).toMatchObject({
+      source_integration_state: "SOURCE_BACKED",
+      predecessor_canary_envelope: null,
+      deployment: { deployment_id: sourceOnlyDeploymentId },
+      positions: { exact_total: 1, returned_count: 1 },
+      orders: { exact_total: 1, returned_count: 1 },
+      production_command_active: false,
+    });
+    expect(withoutCanary.json().kpis.find((item: { key: string }) => item.key === "gross_notional"))
+      .toMatchObject({ value: null, qualification_reason_code: "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED" });
   });
 
   it("rejects Live Full Operations without a canary predecessor or workspace access", async () => {

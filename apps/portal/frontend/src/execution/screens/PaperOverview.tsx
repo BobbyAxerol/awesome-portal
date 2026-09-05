@@ -8,8 +8,8 @@
  * Two renders of one layout: `demo` (the lab's hi-fi bundle) draws every
  * reviewed panel; the product passes the published `execution.paper-overview.v1`
  * envelope instead, and each panel shows exactly what that envelope carries —
- * the deployments board from the published rows, and one honest state per
- * branch the contract has not published (BR-EX-62 derived insights).
+ * the deployments board and the bounded server-derived insight block from
+ * published rows, plus one honest state for any remaining source gap.
  */
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +36,13 @@ export interface PaperOverviewProps {
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
+const record = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+const records = (value: unknown): readonly Record<string, unknown>[] =>
+  Array.isArray(value) ? value.flatMap((item) => record(item) ? [record(item)!] : []) : [];
+const count = (value: unknown): number | null => typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+  ? value : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : null;
+const chartTones = ["accent", "good", "warn", "paper", "mute"] as const;
 
 export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick }: PaperOverviewProps) {
   const PO = demo ?? null;
@@ -48,9 +55,31 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !envelope ? "unavailable" : null;
     const sourceReason = reason ?? (!envelope ? "No paper overview was published for this workspace." : undefined);
     const insight = envelope?.capabilities.find((c) => c.capabilityId === "paper.derived-insights");
+    const insightBlock = envelope?.objects.derived_insights ?? null;
+    const cumulative = records(insightBlock?.cumulative_return).flatMap((series, index) => {
+      const deploymentId = str(series.deployment_id);
+      const points = records(series.points).flatMap((point) => {
+        const time = str(point.t);
+        const value = typeof point.return_pct === "number" && Number.isFinite(point.return_pct)
+          ? point.return_pct : null;
+        return time && value !== null ? [[time, value] as const] : [];
+      });
+      return deploymentId && points.length > 0 ? [{
+        name: deploymentId,
+        tone: chartTones[index % chartTones.length],
+        points,
+      }] : [];
+    });
+    const funnel = record(insightBlock?.order_funnel_7d);
+    const statusCounts = record(funnel?.status_counts);
+    const filled = count(statusCounts?.FILLED) ?? 0;
+    const rejected = count(statusCounts?.REJECTED) ?? 0;
+    const working = count(statusCounts?.WORKING) ?? 0;
+    const totalOrders = count(funnel?.total_orders) ?? filled + rejected + working;
+    const insightAvailable = insight !== undefined && ["AVAILABLE", "PARTIAL"].includes(insight.state);
     const insightReason = insight && insight.state !== "AVAILABLE"
       ? `${insight.capabilityId} is ${insight.state}${insight.reasonCode ? ` · ${insight.reasonCode}` : ""}`
-      : "The derived-insight series are not published for this overview (BR-EX-62).";
+      : "The derived-insight block is not present in this source envelope.";
     return (
       <ExecutionSurface kind="deployments" className="exec-po" data-hifi-exact="paper-overview">
         <ExecutionWorkspace layout="dense">
@@ -60,7 +89,7 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
               <span className="exec-po-spacer" />
               <span className="exec-po-source">
                 <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of{" "}
-                <span className="exec-po-num">{utcStamp(envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()} · {envelope?.freshness ?? "freshness not stated"}
+                <span className="exec-po-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()} · {envelope?.freshness ?? "freshness not stated"}
               </span>
             </header>
 
@@ -102,7 +131,20 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                   <span className="exec-po-title">Cumulative return — normalized, own currency</span>
                 </header>
                 <div className="exec-po-plot">
-                  <PanelState status="unavailable" reason={insightReason} />
+                  {insightAvailable && cumulative.length > 0 ? (
+                    <LinesChart
+                      height={150}
+                      series={cumulative}
+                      zeroLine={{ label: "0%" }}
+                      yFormatter={(value) => `${value.toFixed(1)}%`}
+                      provenance={{
+                        authority: "DERIVED",
+                        asOf: str(insightBlock?.as_of) ?? envelope?.asOf ?? envelope?.readAt ?? "—",
+                        formula: str(insightBlock?.formula_version) ?? "paper-overview-insights.v1",
+                      }}
+                      ariaLabel="Cumulative return per deployment, own currency"
+                    />
+                  ) : <PanelState status={insightAvailable ? "empty" : "unavailable"} reason={insightAvailable ? "The published current window contains no normalized equity points." : insightReason} />}
                 </div>
               </section>
               <section className="exec-po-panel" aria-label="Order funnel">
@@ -110,7 +152,20 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                   <span className="exec-po-title">Order funnel — 7d</span>
                 </header>
                 <div className="exec-po-funnel">
-                  <PanelState status="unavailable" reason={insightReason} />
+                  {insightAvailable && totalOrders > 0 ? (
+                    <>
+                      <div className="exec-po-funnelrow">
+                        <span>Current source window</span>
+                        <span>{totalOrders} orders</span>
+                      </div>
+                      <div className="exec-po-funnelbar" role="img" aria-label={`${filled} filled, ${working} working and ${rejected} rejected orders`}>
+                        {filled > 0 ? <span data-seg="filled" style={{ flexGrow: filled }} /> : null}
+                        {working > 0 ? <span data-seg="working" style={{ flexGrow: working }} /> : null}
+                        {rejected > 0 ? <span data-seg="rejected" style={{ flexGrow: rejected }} /> : null}
+                      </div>
+                      <div className="exec-po-dim">filled {filled} · working {working} · rejected {rejected} · server formula {str(insightBlock?.formula_version) ?? "paper-overview-insights.v1"}</div>
+                    </>
+                  ) : <PanelState status={insightAvailable ? "empty" : "unavailable"} reason={insightAvailable ? "The published current window contains no order activity." : insightReason} />}
                 </div>
               </section>
             </div>
@@ -136,11 +191,11 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(href); } }}
                     >
                       <div className="exec-po-id">
-                        <div className="exec-po-alpha"><a href={href} onClick={(e) => e.stopPropagation()}><b>{id}</b></a> <span className="exec-po-dim">· {str(row.mode) ?? "mode not published"}</span></div>
-                        <div className="exec-po-idline"><span className="exec-gate-unverified">alpha · portfolio · account not published on this contract</span></div>
+                        <div className="exec-po-alpha"><a href={href} onClick={(e) => e.stopPropagation()}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-po-dim">· {str(row.venue) ?? "venue not published"}</span></div>
+                        <div className="exec-po-idline">deployment {id} · portfolio {str(row.portfolio_id) ?? "not published"} · account {str(row.account_id) ?? "not published"}</div>
                       </div>
                       <div className="exec-po-days">
-                        <div className="exec-po-gateline"><span className="exec-gate-unverified">observation gate not published</span></div>
+                        <div className="exec-po-gateline"><span>{str(row.state) ?? "runtime state not published"}</span></div>
                       </div>
                       <div className="exec-po-next">
                         <a href={href} onClick={(e) => e.stopPropagation()}>Open workbench →</a>

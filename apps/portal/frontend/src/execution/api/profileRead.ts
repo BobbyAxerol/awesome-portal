@@ -9,6 +9,11 @@
  * keeps every reason code so the screen can say precisely why a panel is not
  * there. Absent is absent — the states system does the talking.
  */
+import {
+  readGeneratedPanelEnvelope,
+  readUtcEpochMs,
+  type GeneratedPanelEnvelope,
+} from "../screenDataContract";
 
 export interface BranchCapability {
   capabilityId: string;
@@ -25,6 +30,9 @@ export interface ProfileEnvelope {
   completeness: string | null;
   asOf: string | null;
   readAt: string | null;
+  /** Canonical EDS-02 clocks; ISO aliases remain only for legacy component props. */
+  asOfMs: number | null;
+  readAtMs: number | null;
   workspaceId: string | null;
   selectedEnvironment: "paper" | "sandbox" | "live" | null;
   actor: string | null;
@@ -38,6 +46,8 @@ export interface ProfileEnvelope {
   /** Scalar data members (e.g. exact server counts). Scalars are never coerced. */
   scalars: Readonly<Record<string, string | number | boolean | null>>;
   unavailableBranches: readonly string[];
+  /** Dynamic, generated EDS-02 panel contracts keyed by product branch. */
+  panels: Readonly<Record<string, GeneratedPanelEnvelope>>;
 }
 
 function obj(raw: unknown): Record<string, unknown> | null {
@@ -65,13 +75,25 @@ export function readProfileEnvelope(raw: unknown): ProfileEnvelope | null {
     }
   }
   const actor = obj(root.actor);
+  const asOfMs = readUtcEpochMs(root.as_of_ms);
+  const readAtMs = readUtcEpochMs(root.read_at_ms);
+  const panels: Record<string, GeneratedPanelEnvelope> = {};
+  const panelRoot = obj(root.panels);
+  if (panelRoot) {
+    for (const [key, value] of Object.entries(panelRoot)) {
+      const panel = readGeneratedPanelEnvelope(value);
+      if (panel) panels[key] = panel;
+    }
+  }
   return {
     schemaVersion,
     state,
     freshness: str(root.freshness),
     completeness: str(root.completeness),
-    asOf: str(root.as_of),
-    readAt: str(root.read_at),
+    asOf: str(root.as_of) ?? (asOfMs === null ? null : new Date(asOfMs).toISOString()),
+    readAt: str(root.read_at) ?? (readAtMs === null ? null : new Date(readAtMs).toISOString()),
+    asOfMs,
+    readAtMs,
     workspaceId: str(root.workspace_id),
     selectedEnvironment: (["paper", "sandbox", "live"] as const).find((item) => item === root.selected_environment) ?? null,
     actor: actor ? (str(actor.username) ?? str(actor.user_id)) : null,
@@ -97,6 +119,7 @@ export function readProfileEnvelope(raw: unknown): ProfileEnvelope | null {
       const item = obj(branch);
       return item ? [str(item.reason_code) ?? str(item.capability_id) ?? "UNAVAILABLE"] : [];
     }),
+    panels,
   };
 }
 

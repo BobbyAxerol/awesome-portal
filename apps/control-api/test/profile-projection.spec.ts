@@ -121,6 +121,37 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(directCalls).toBe(0);
   });
 
+  it("resolves a deployment before applying the 200-row product page bound", async () => {
+    const scoped = deploymentScopeDocument();
+    await commit(scoped, "cursor-eds03-scope");
+    let directCalls = 0;
+    const source = new ExecutionProductReadSource(config, repository, {
+      relation: async () => { directCalls += 1; throw new Error("unexpected AWS read-through"); },
+    } as never);
+    const principal = {
+      principalId: "usr_bobby", sessionId: "ses_eds03", workspaceId,
+      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
+    };
+
+    const resolution = await source.resolveDeploymentScope(
+      principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", "dep_200",
+    );
+    expect(resolution).toMatchObject({ state: "FOUND", scope: { deploymentId: "dep_200", tupleUnique: true } });
+    if (resolution.state !== "FOUND") throw new Error("expected exact deployment scope");
+
+    const result = await source.relation(
+      principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", "manager.orders", "orders",
+      { limit: 200, deploymentScope: resolution.scope },
+    ) as any;
+    expect(result.source.data).toMatchObject({
+      filtered_total_items: 1,
+      scope: { resource_kind: "DEPLOYMENT", resource_id: "dep_200", state: "EXACT", reason_code: null },
+    });
+    expect(result.source.data.items).toHaveLength(1);
+    expect(result.source.data.items[0].fields.order_id.value).toBe("ord_200");
+    expect(directCalls).toBe(0);
+  });
+
   it("rejects cross-profile row lineage before persistence", async () => {
     const invalid = document("alpha-1");
     invalid.relations[relationKey].items[0].lineage.profile_id = "LIVE_BINANCE_USDM";
@@ -303,6 +334,65 @@ function document(alphaId: string): ProfileProjectionDocument {
         }],
       },
     },
+  };
+}
+
+function deploymentScopeDocument(): ProfileProjectionDocument {
+  const lineage = {
+    workspace_id: workspaceId,
+    profile_id: profileId,
+    source_contract_revision: "manager-v2.test.v1",
+  };
+  const deployments = Array.from({ length: 201 }, (_, ordinal) => ({
+    lineage,
+    fields: {
+      deployment_id: `dep_${ordinal}`,
+      strategy_id: `strat_${ordinal}`,
+      account_id: `acct_${ordinal}`,
+      mode: "paper",
+      venue: "BINANCE",
+    },
+  }));
+  const orders = Array.from({ length: 201 }, (_, ordinal) => ({
+    lineage,
+    fields: {
+      order_id: `ord_${ordinal}`,
+      deployment_id: `dep_${ordinal}`,
+      strategy_id: `strat_${ordinal}`,
+      account_id: `acct_${ordinal}`,
+      mode: "paper",
+      venue: "BINANCE",
+      status: "WORKING",
+      submitted_at: `2026-09-02T00:${String(ordinal % 60).padStart(2, "0")}:00.000Z`,
+    },
+  }));
+  return {
+    schema_version: "portal.execution.profile-projection.v1",
+    workspace_id: workspaceId,
+    environment: "paper",
+    profile_id: profileId,
+    source_contract_revision: "manager-v2.test.v1",
+    relations: {
+      "manager.deployments:strategy_deployments": relation("manager.deployments", "strategy_deployments", deployments),
+      "manager.orders:orders": relation("manager.orders", "orders", orders),
+    },
+  };
+}
+
+function relation(
+  sourceId: string,
+  relationName: string,
+  items: ProfileProjectionDocument["relations"][string]["items"],
+) {
+  return {
+    source_id: sourceId,
+    relation: relationName,
+    availability: "AVAILABLE" as const,
+    reason_code: null,
+    as_of: "2026-09-02T00:00:00.000Z",
+    freshness: "FRESH" as const,
+    completeness: "COMPLETE" as const,
+    items,
   };
 }
 

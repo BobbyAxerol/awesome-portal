@@ -12,6 +12,11 @@ export interface ManagerPage {
   exactTotal?: number | null;
   filteredTotal?: number | null;
   aggregates?: Record<string, Record<string, number>> | null;
+  /** Internal Portal resource-scope proof, emitted only by the local mirror. */
+  scope?: {
+    state: "EXACT" | "PARTIAL";
+    reasonCode: string | null;
+  } | null;
   projection?: {
     epoch: string;
     sequence: number;
@@ -121,6 +126,7 @@ export function managerPage(
     throw contractError(`${context.errorPrefix}_MANAGER_TOTAL_INVALID`);
   }
   const aggregates = countAggregates(data.window_aggregates, context.errorPrefix);
+  const scope = optionalScope(data.scope, context.errorPrefix);
   const freshness = typeof source.freshness === "string" && FRESHNESS.has(source.freshness)
     ? source.freshness as ManagerPage["freshness"]
     : "UNKNOWN";
@@ -138,8 +144,19 @@ export function managerPage(
     exactTotal: typeof exactTotal === "number" ? exactTotal : null,
     filteredTotal: typeof filteredTotal === "number" ? filteredTotal : null,
     aggregates,
+    scope,
     projection,
   };
+}
+
+function optionalScope(value: unknown, errorPrefix: "N22" | "N23"): ManagerPage["scope"] {
+  if (value === undefined || value === null) return null;
+  const scope = object(value, `${errorPrefix}_MANAGER_SCOPE_INVALID`);
+  if ((scope.state !== "EXACT" && scope.state !== "PARTIAL") ||
+      (scope.reason_code !== null && typeof scope.reason_code !== "string")) {
+    throw contractError(`${errorPrefix}_MANAGER_SCOPE_INVALID`);
+  }
+  return { state: scope.state, reasonCode: typeof scope.reason_code === "string" ? scope.reason_code : null };
 }
 
 function optionalProjection(

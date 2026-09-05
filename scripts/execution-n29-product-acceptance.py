@@ -157,8 +157,11 @@ def validate_inventory(acceptance: dict[str, Any]) -> None:
 
 def validate_screen_and_ui(acceptance: dict[str, Any]) -> None:
     catalogue = EVIDENCE_PATHS["screen_bff_catalogue_sha256"].read_text(encoding="utf-8")
-    require(catalogue.count("screen({") == 23, "screen catalogue size drifted")
-    require(catalogue.count('status: "AVAILABLE"') == 23, "available screen count drifted")
+    # E3 froze the owner inventory at 23 screens. EDS-02 then registered two
+    # explicitly named BR-EX-72 Portal list extensions; their presence must be
+    # proven individually, not hidden behind a loosened catalogue count.
+    require(catalogue.count("screen({") == 25, "screen catalogue size drifted")
+    require(catalogue.count('status: "AVAILABLE"') == 25, "available screen count drifted")
     require(catalogue.count('status: "TYPED_UNAVAILABLE"') == 0, "unavailable screen count drifted")
     request_ids = set(re.findall(r"BR-EX-\d{2}", catalogue))
     require({request_id for request_id in request_ids if 41 <= int(request_id[-2:]) <= 71} == {f"BR-EX-{n}" for n in range(41, 72)}, "screen request coverage drifted")
@@ -193,6 +196,21 @@ def validate_screen_and_ui(acceptance: dict[str, Any]) -> None:
         match = re.search(r"requestIds: \[([^]]*)\]", row)
         require(match is not None, f"screen request mapping malformed: {screen_id}")
         require(re.findall(r"BR-EX-\d{2}", match.group(1)) == expected, f"screen request mapping drifted: {screen_id}")
+    extension_expectations = {
+        "EXECUTION_ALPHA_FLEET_LIST_SCREEN": ("executionAlphaFleetListV2", "/api/v1/execution/alphas"),
+        "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN": ("executionBindingsListV1", "/api/v1/execution/broker-bindings"),
+    }
+    for screen_id, (operation_id, path) in extension_expectations.items():
+        row = next((line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line), None)
+        require(row is not None, f"BR-EX-72 extension missing: {screen_id}")
+        require('requestIds: ["BR-EX-72"]' in row, f"BR-EX-72 request mapping drifted: {screen_id}")
+        require('status: "AVAILABLE"' in row and 'deliveryPhase: "N29"' in row, f"BR-EX-72 delivery drifted: {screen_id}")
+        require(f'operationId: "{operation_id}"' in row and f'pathTemplate: "{path}"' in row, f"BR-EX-72 route drifted: {screen_id}")
+    screen_scope = acceptance["accepted_scope"]["screen_contracts"]
+    require(screen_scope["immutable_owner_inventory"] == len(expected_base_mapping), "immutable owner screen inventory drifted")
+    require(screen_scope["portal_extensions"] == len(extension_expectations), "Portal screen extension inventory drifted")
+    require(screen_scope["total"] == screen_scope["immutable_owner_inventory"] + screen_scope["portal_extensions"], "screen contract total drifted")
+    require(screen_scope["available_backend_api"] == screen_scope["total"], "available screen API total drifted")
     missing_capabilities = read_json(EVIDENCE_PATHS["n28_registry_sha256"])
     require(
         any(
@@ -443,7 +461,9 @@ def main() -> int:
         "commissioned_requests": 31,
         "portal_reads": 27,
         "commands": 9,
-        "screen_contracts": 23,
+        "immutable_owner_screen_contracts": 23,
+        "portal_screen_extensions": 2,
+        "screen_contracts": 25,
         "internal_technical_debt": 0,
         "release_blockers": ["N29-REL-01"],
     }, sort_keys=True))

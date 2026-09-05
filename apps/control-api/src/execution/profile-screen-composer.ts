@@ -124,6 +124,33 @@ export function decimalSum(rows: readonly ScreenRecord[], fields: readonly strin
   return `${negative ? "-" : ""}${whole}${fraction ? `.${fraction}` : ""}`;
 }
 
+/**
+ * An exact-decimal total is publishable only when every included source value
+ * carries one explicit currency and that currency is uniform. Callers that
+ * also need mark provenance must impose that additional rule themselves; the
+ * current Manager position page intentionally does not publish it.
+ */
+export function exactCurrencySum(
+  rows: readonly ScreenRecord[],
+  fields: readonly string[],
+): { value: string | null; currency: string | null; reasonCode: string | null } {
+  const values = rows.flatMap((row) => fields.flatMap((field) => {
+    const value = row[field];
+    return typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value)
+      ? [{ currency: typeof row.currency === "string" && row.currency.length > 0 ? row.currency : null }]
+      : [];
+  }));
+  if (values.length === 0) return { value: null, currency: null, reasonCode: null };
+  if (values.some((entry) => entry.currency === null)) {
+    return { value: null, currency: null, reasonCode: "EXACT_DECIMAL_VALUES_REQUIRE_EXPLICIT_CURRENCY" };
+  }
+  const currencies = [...new Set(values.map((entry) => entry.currency))] as string[];
+  if (currencies.length !== 1) {
+    return { value: null, currency: null, reasonCode: "CROSS_CURRENCY_AGGREGATE_FORBIDDEN" };
+  }
+  return { value: decimalSum(rows, fields), currency: currencies[0], reasonCode: null };
+}
+
 export function decimalAbsoluteSum(rows: readonly ScreenRecord[], field: string): string | null {
   return decimalSum(rows.map((row) => {
     const value = row[field];

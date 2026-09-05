@@ -20,7 +20,7 @@
       "required_surfaces": ["r1_review"],
       "contract_readiness": "CLASSIFIED",
       "panel_count": 1,
-      "action_count": 0,
+      "action_count": 1,
       "panels": [{
         "panel_id": "source_health",
         "field_id": "source_health",

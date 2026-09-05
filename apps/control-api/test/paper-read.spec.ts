@@ -20,7 +20,7 @@ const session: AuthSession = {
 type RecordInput = Record<string, string | number | boolean | null>;
 
 class FakeCurrentSource {
-  readonly calls: Array<{ screenId: string; relation: string; query: { limit?: number; cursor?: string; statuses?: readonly string[] } }> = [];
+  readonly calls: Array<{ screenId: string; relation: string; query: Record<string, unknown> }> = [];
   readonly rows = new Map<string, RecordInput[]>();
   readonly next = new Map<string, string | null>();
   readonly failures = new Set<string>();
@@ -36,13 +36,17 @@ class FakeCurrentSource {
     screenId: string,
     _sourceId: string,
     relation: string,
-    query: { limit?: number; cursor?: string },
+    query: Record<string, unknown>,
   ) {
     this.calls.push({ screenId, relation, query });
     if (this.failures.has(relation)) throw new Error("source detail must not escape");
+    const scope = deploymentScope(query);
+    const items = scope
+      ? scopedFixtureRows(relation, this.rows.get(relation) ?? [defaultRecord(relation)], scope)
+      : this.rows.get(relation) ?? [defaultRecord(relation)];
     return managerResponse(
       relation,
-      this.rows.get(relation) ?? [defaultRecord(relation)],
+      items,
       this.next.get(relation) ?? null,
       this.stale.has(relation) ? "STALE" : "FRESH",
       {
@@ -50,14 +54,85 @@ class FakeCurrentSource {
         filteredTotal: this.filteredTotals.get(relation),
         previousCursor: this.previous.get(relation),
         aggregates: this.aggregates.get(relation),
+        scope: scope ? { state: "EXACT", reasonCode: null } : undefined,
       },
     );
   }
+
+  async resolveDeploymentScope(
+    _principal: unknown,
+    _environment: string,
+    _screenId: string,
+    deploymentId: string,
+  ) {
+    const deployment = (this.rows.get("strategy_deployments") ?? [defaultRecord("strategy_deployments")])
+      .find((row) => row.deployment_id === deploymentId);
+    if (!deployment) return { state: "EMPTY" as const, reasonCode: "EDS03_DEPLOYMENT_NOT_FOUND" };
+    const strategyId = typeof deployment.strategy_id === "string" ? deployment.strategy_id : null;
+    const accountId = typeof deployment.account_id === "string" ? deployment.account_id : null;
+    const mode = typeof deployment.mode === "string" ? deployment.mode : null;
+    const venue = typeof deployment.venue === "string" ? deployment.venue : null;
+    if (!strategyId || !accountId || mode !== "paper" || !venue) {
+      return { state: "PARTIAL" as const, reasonCode: "EDS03_DEPLOYMENT_SCOPE_INCOMPLETE" };
+    }
+    return {
+      state: "FOUND" as const,
+      reasonCode: null,
+      deployment,
+      scope: {
+        deploymentId,
+        strategyId,
+        accountId,
+        mode: "paper" as const,
+        venue,
+        portfolioId: typeof deployment.portfolio_id === "string" ? deployment.portfolio_id : null,
+        externalAccountRef: null,
+        tupleUnique: true,
+      },
+    };
+  }
+}
+
+type FixtureScope = {
+  deploymentId: string;
+  strategyId: string;
+  accountId: string;
+  mode: string;
+  venue: string;
+  portfolioId: string | null;
+  externalAccountRef: string | null;
+};
+
+function deploymentScope(query: Record<string, unknown>): FixtureScope | null {
+  const candidate = query.deploymentScope;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
+  const scope = candidate as Record<string, unknown>;
+  return typeof scope.deploymentId === "string" && typeof scope.strategyId === "string" &&
+    typeof scope.accountId === "string" && typeof scope.mode === "string" && typeof scope.venue === "string"
+    ? scope as FixtureScope : null;
+}
+
+function scopedFixtureRows(relation: string, rows: RecordInput[], scope: FixtureScope): RecordInput[] {
+  if (relation === "strategy_deployments") return rows.filter((row) => row.deployment_id === scope.deploymentId);
+  if (["accounts", "account_balances", "margin_balances", "account_sync_effective", "venue_accounts"].includes(relation)) {
+    return rows.filter((row) => row.account_id === scope.accountId);
+  }
+  if (relation === "broker_account_sync_effective") {
+    return scope.externalAccountRef === null ? [] : rows.filter((row) => row.external_account_ref === scope.externalAccountRef);
+  }
+  if (relation === "portfolio_equity_snapshots") {
+    return scope.portfolioId === null ? [] : rows.filter((row) => row.portfolio_id === scope.portfolioId);
+  }
+  if (rows.some((row) => row.deployment_id !== undefined)) {
+    return rows.filter((row) => row.deployment_id === scope.deploymentId);
+  }
+  return rows.filter((row) => row.strategy_id === scope.strategyId && row.account_id === scope.accountId &&
+    row.mode === scope.mode && (row.venue === undefined || row.venue === scope.venue));
 }
 
 function defaultRecord(relation: string): RecordInput {
   const defaults: Record<string, RecordInput> = {
-    strategy_deployments: { deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper" },
+    strategy_deployments: { deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper", venue: "BINANCE" },
     positions_v2: { position_id: "pos_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
     execution_sessions: { execution_session_id: "ses_default", strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
     orders: { order_id: 1, strategy_id: "str_default", account_id: "acc_default", mode: "paper" },
@@ -108,6 +183,7 @@ function managerResponse(
     filteredTotal?: number;
     previousCursor?: string;
     aggregates?: Record<string, Record<string, number>>;
+    scope?: { state: "EXACT" | "PARTIAL"; reasonCode: string | null };
   } = {},
 ) {
   return {
@@ -135,6 +211,7 @@ function managerResponse(
         ...(metadata.exactTotal === undefined ? {} : { projected_total_items: metadata.exactTotal }),
         ...(metadata.filteredTotal === undefined ? {} : { filtered_total_items: metadata.filteredTotal }),
         ...(metadata.aggregates === undefined ? {} : { window_aggregates: metadata.aggregates }),
+        ...(metadata.scope === undefined ? {} : { scope: { state: metadata.scope.state, reason_code: metadata.scope.reasonCode } }),
       },
     },
   };
@@ -346,7 +423,11 @@ describe("N22 full Paper read product BFF", () => {
       { position_id: "pos_orphan_acct", strategy_id: "str_1", account_id: "acc_ghost", mode: "paper", venue: "BINANCE" },
       { position_id: "pos_orphan_both", strategy_id: "str_ghost", account_id: "acc_ghost", mode: "paper", venue: "BINANCE" },
     ]);
-    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    // Overview intentionally has no deployment scope. This exercises the
+    // retained lineage guard itself; Workbench now rejects out-of-scope rows
+    // before they reach the guard, which is stricter and has a different
+    // diagnostic contract.
+    const result = await service(source).overview(principal()) as Record<string, any>;
     const positions = result.capabilities.find((cap: any) => cap.capability_id === "source.positions");
     // Two rows dropped; the storm is counted by parent class, not silent.
     expect(positions).toMatchObject({
@@ -486,6 +567,52 @@ describe("N22 full Paper read product BFF", () => {
     }));
     expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "venue.calendar" }));
     expect(source.calls).toHaveLength(7);
+  });
+
+  it("EDS-03 resolves a deployment outside the first global page before it reads any workbench branch", async () => {
+    const source = new FakeCurrentSource();
+    const deployments = Array.from({ length: 201 }, (_, index) => ({
+      deployment_id: `dep_${index}`,
+      strategy_id: `str_${index}`,
+      account_id: `acc_${index}`,
+      portfolio_id: `pf_${index}`,
+      mode: "paper",
+      venue: "BINANCE",
+    }));
+    source.rows.set("strategy_deployments", deployments);
+    source.rows.set("orders", [
+      { order_id: "ord_first", strategy_id: "str_0", account_id: "acc_0", mode: "paper", venue: "BINANCE", submitted_at: "2026-09-05T00:00:00.000Z" },
+      { order_id: "ord_target", strategy_id: "str_200", account_id: "acc_200", mode: "paper", venue: "BINANCE", submitted_at: "2026-09-05T00:01:00.000Z" },
+    ]);
+
+    const result = await service(source).workbench(principal(), "dep_200", false) as Record<string, any>;
+
+    expect(result.data.deployment).toMatchObject({ deployment_id: "dep_200", strategy_id: "str_200" });
+    expect(result.data.orders).toEqual([expect.objectContaining({ order_id: "ord_target", submitted_at_ms: Date.parse("2026-09-05T00:01:00.000Z") })]);
+    expect(result.panels.orders).toMatchObject({ state: "READY", coverage: { returned_count: 1, truncated: false } });
+    expect(source.calls).toHaveLength(7);
+    expect(source.calls.every((call) => {
+      const scope = call.query.deploymentScope as Record<string, unknown> | undefined;
+      return scope?.deploymentId === "dep_200" && scope.strategyId === "str_200" && scope.accountId === "acc_200";
+    })).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("ord_first");
+  });
+
+  it("EDS-03 preserves a complete missing deployment as typed EMPTY without a fallback page", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [{
+      deployment_id: "dep_present", strategy_id: "str_present", account_id: "acc_present", mode: "paper", venue: "BINANCE",
+    }]);
+
+    const result = await service(source).workbench(principal(), "dep_missing", false) as Record<string, any>;
+
+    expect(result.state).toBe("empty");
+    expect(result.data.deployment).toBeNull();
+    expect(result.data.orders).toEqual([]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "deployment.lookup", state: "EMPTY", reason_code: "EDS03_DEPLOYMENT_NOT_FOUND",
+    }));
+    expect(source.calls).toHaveLength(0);
   });
 
   it("composes the N25 Rust analytics envelope without recomputing it in TypeScript", async () => {

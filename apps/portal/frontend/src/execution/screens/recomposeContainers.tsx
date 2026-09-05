@@ -100,14 +100,31 @@ const text = (value: unknown): string | null => {
 };
 const count = (value: unknown): number | null => typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 const latest = (rows: readonly Record<string, unknown>[], ...fields: string[]) => [...rows].sort((left, right) => {
-  const stamp = (row: Record<string, unknown>) => fields.map((field) => text(row[field]) ?? "").find(Boolean) ?? "";
+  const stamp = (row: Record<string, unknown>) => fields.map((field) => {
+    const milliseconds = row[`${field}_ms`];
+    return typeof milliseconds === "number" && Number.isSafeInteger(milliseconds)
+      ? String(milliseconds).padStart(16, "0")
+      : text(row[field]) ?? "";
+  }).find(Boolean) ?? "";
   return stamp(right).localeCompare(stamp(left));
 })[0] ?? null;
+
+function utcRowTime(row: Record<string, unknown>, ...fields: string[]): string | null {
+  for (const field of fields) {
+    const milliseconds = row[`${field}_ms`];
+    if (typeof milliseconds === "number" && Number.isSafeInteger(milliseconds)) {
+      return new Date(milliseconds).toISOString();
+    }
+    const iso = text(row[field]);
+    if (iso) return iso;
+  }
+  return null;
+}
 
 function profileEquity(profile: ProfileEnvelope) {
   const rows = profile.data.account_equity ?? profile.data.performance ?? [];
   const points = rows.flatMap((row) => {
-    const t = text(row.ts) ?? text(row.created_at);
+    const t = utcRowTime(row, "ts", "created_at");
     const equity = text(row.equity);
     return t && equity ? [{ t, equity, drawdown: text(row.drawdown) }] : [];
   });

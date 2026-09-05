@@ -15,6 +15,7 @@ import {
 import {
   ExecutionProfileProjectionRepository,
   ProjectionEnvironment,
+  ProfileProjectionSnapshot,
   ProjectionScalar,
 } from "./profile-projection.repository";
 
@@ -34,6 +35,45 @@ const DECIMAL_FIELD = new Set([
   "filled_quantity", "open_quantity", "excess_quantity", "average_fill_price",
 ]);
 
+/**
+ * A server-only resource identity recovered from the local, profile-bound
+ * projection.  The Edge's current Manager page API deliberately does not
+ * accept arbitrary filters, so a detail route must never emulate one by
+ * fetching a first global page and filtering it in the BFF.
+ */
+export interface DeploymentResourceScope {
+  readonly deploymentId: string;
+  readonly strategyId: string;
+  readonly accountId: string;
+  readonly mode: ProjectionEnvironment;
+  readonly venue: string;
+  readonly portfolioId: string | null;
+  readonly externalAccountRef: string | null;
+  /** A tuple-only relation is safe only when its tuple names one deployment. */
+  readonly tupleUnique: boolean;
+}
+
+export type DeploymentScopeResolution =
+  | {
+    readonly state: "FOUND";
+    readonly reasonCode: null;
+    readonly scope: DeploymentResourceScope;
+    readonly deployment: Record<string, ProjectionScalar>;
+  }
+  | {
+    readonly state: "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+    readonly reasonCode: string;
+    readonly scope?: undefined;
+    readonly deployment?: Record<string, ProjectionScalar>;
+  };
+
+interface DeploymentScopeQuery {
+  /** Internal only; never serialised to the Edge or browser. */
+  deploymentScope?: DeploymentResourceScope;
+}
+
+type ProductReadQuery = CurrentSourcePageQuery & LocalProductQuery & DeploymentScopeQuery;
+
 /** Product-facing relation source. With Phase 1 active it never reads AWS-HK. */
 @Injectable()
 export class ExecutionProductReadSource {
@@ -49,7 +89,7 @@ export class ExecutionProductReadSource {
     screenId: string,
     sourceId: string,
     relation: string,
-    query: CurrentSourcePageQuery & LocalProductQuery,
+    query: ProductReadQuery,
   ): Promise<unknown> {
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
       if (hasLocalQuery(query)) {
@@ -62,34 +102,102 @@ export class ExecutionProductReadSource {
     return this.localRelation(principal, environment, screenId, sourceId, relation, query);
   }
 
+  /**
+   * Resolve one deployment from the full accepted local snapshot.  It is a
+   * named Portal operation, not an exposed relation query and not a source
+   * call.  Absence from a partial projection is deliberately PARTIAL rather
+   * than a false 404.
+   */
+  async resolveDeploymentScope(
+    principal: CurrentSourcePrincipal,
+    requestedEnvironment: CurrentSourceEnvironment,
+    screenId: string,
+    deploymentId: string,
+  ): Promise<DeploymentScopeResolution> {
+    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
+      return { state: "UNAVAILABLE", reasonCode: "EDS03_EXACT_RESOURCE_REQUIRES_LOCAL_PROJECTION" };
+    }
+    if (!isOpaqueId(deploymentId)) {
+      return { state: "EMPTY", reasonCode: "EDS03_DEPLOYMENT_ID_INVALID" };
+    }
+    try {
+      validateBinding(requestedEnvironment, screenId, "manager.deployments", "strategy_deployments", { limit: 1 });
+      const { snapshot, environment } = await this.localSnapshot(requestedEnvironment);
+      const deployments = snapshot.document.relations["manager.deployments:strategy_deployments"];
+      if (!deployments || deployments.availability === "UNAVAILABLE") {
+        return {
+          state: "UNAVAILABLE",
+          reasonCode: deployments?.reason_code ?? "EDS03_DEPLOYMENT_RELATION_UNAVAILABLE",
+        };
+      }
+      const matches = deployments.items
+        .map((row) => row.fields)
+        .filter((fields) => fields.deployment_id === deploymentId);
+      if (matches.length === 0) {
+        return deployments.completeness === "COMPLETE"
+          ? { state: "EMPTY", reasonCode: "EDS03_DEPLOYMENT_NOT_FOUND" }
+          : { state: "PARTIAL", reasonCode: "EDS03_DEPLOYMENT_OUTSIDE_RETAINED_WINDOW" };
+      }
+      if (matches.length !== 1) {
+        return { state: "PARTIAL", reasonCode: "EDS03_DEPLOYMENT_ID_DUPLICATE" };
+      }
+      const deployment = matches[0];
+      const strategyId = textField(deployment.strategy_id);
+      const accountId = textField(deployment.account_id);
+      const mode = textField(deployment.mode);
+      const venue = textField(deployment.venue);
+      if (!strategyId || !accountId || !venue || mode !== environment) {
+        return {
+          state: "PARTIAL",
+          reasonCode: "EDS03_DEPLOYMENT_SCOPE_INCOMPLETE",
+          deployment,
+        };
+      }
+      const tupleMatches = deployments.items
+        .map((row) => row.fields)
+        .filter((fields) => fields.strategy_id === strategyId && fields.account_id === accountId &&
+          fields.mode === mode && fields.venue === venue);
+      const accounts = snapshot.document.relations["manager.accounts:accounts"];
+      const accountMatches = accounts?.availability === "AVAILABLE"
+        ? accounts.items.map((row) => row.fields).filter((fields) => fields.account_id === accountId)
+        : [];
+      const externalRefs = [...new Set(accountMatches
+        .map((fields) => textField(fields.external_account_ref))
+        .filter((value): value is string => value !== null))];
+      return {
+        state: "FOUND",
+        reasonCode: null,
+        scope: {
+          deploymentId,
+          strategyId,
+          accountId,
+          mode: environment,
+          venue,
+          portfolioId: textField(deployment.portfolio_id),
+          externalAccountRef: externalRefs.length === 1 ? externalRefs[0] : null,
+          tupleUnique: tupleMatches.length === 1,
+        },
+        deployment,
+      };
+    } catch (error) {
+      const reasonCode = error instanceof CurrentSourceProxyError ? error.code : "EDS03_DEPLOYMENT_SCOPE_UNAVAILABLE";
+      return { state: "UNAVAILABLE", reasonCode };
+    }
+  }
+
   private async localRelation(
     principal: CurrentSourcePrincipal,
     requestedEnvironment: CurrentSourceEnvironment,
     screenId: string,
     sourceId: string,
     relation: string,
-    query: CurrentSourcePageQuery & LocalProductQuery,
+    query: ProductReadQuery,
   ): Promise<unknown> {
     validateBinding(requestedEnvironment, screenId, sourceId, relation, {
       limit: query.limit,
       ...(query.cursor ? { cursor: query.cursor } : {}),
     });
-    const environment: ProjectionEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
-    const profileId = profile(this.config, environment);
-    const projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
-    if (!projectionWorkspaceId) {
-      throw new CurrentSourceProxyError("N31_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
-    }
-    const snapshot = await this.repository.snapshot(projectionWorkspaceId, environment, profileId);
-    if (!snapshot) throw new CurrentSourceProxyError("N31_PROJECTION_NOT_READY", 503, {
-      availability: "UNAVAILABLE", retryable: true,
-    });
-    const ageMs = Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf();
-    if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
-      throw new CurrentSourceProxyError("N31_PROJECTION_STALE_CEILING_EXCEEDED", 503, {
-        availability: "UNAVAILABLE", retryable: true,
-      });
-    }
+    const { snapshot, environment, profileId, projectionWorkspaceId, ageMs } = await this.localSnapshot(requestedEnvironment);
     const projected = snapshot.document.relations[`${sourceId}:${relation}`];
     if (!projected) throw new CurrentSourceProxyError("N31_PROJECTED_RELATION_NOT_AVAILABLE", 503, {
       availability: "UNAVAILABLE", retryable: false,
@@ -99,17 +207,21 @@ export class ExecutionProductReadSource {
         availability: "UNAVAILABLE", reason_code: projected.reason_code, retryable: false,
       });
     }
-    const filteredItems = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
-      ? filterAndSort(projected.items, query) : projected.items;
+    const scoped = query.deploymentScope
+      ? scopeRows(relation, projected.items, query.deploymentScope)
+      : { items: projected.items, state: "EXACT" as const, reasonCode: null };
+    const scopedItems = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
+      ? filterAndSort(scoped.items, query)
+      : scoped.items;
     const limit = query.limit ?? 100;
     const start = decodeCursor(query.cursor, snapshot.payloadDigest);
-    if (start > filteredItems.length) {
+    if (start > scopedItems.length) {
       throw new CurrentSourceProxyError("N31_PROJECTION_CURSOR_AHEAD", 409, {
         availability: "DEGRADED", retryable: false,
       });
     }
-    const rows = filteredItems.slice(start, start + limit);
-    const next = start + rows.length < filteredItems.length
+    const rows = scopedItems.slice(start, start + limit);
+    const next = start + rows.length < scopedItems.length
       ? encodeCursor(start + rows.length, snapshot.payloadDigest) : null;
     const previous = start > 0
       ? encodeCursor(Math.max(0, start - limit), snapshot.payloadDigest) : null;
@@ -147,12 +259,44 @@ export class ExecutionProductReadSource {
           next_cursor: next,
           previous_cursor: previous,
           projected_total_items: projected.items.length,
-          filtered_total_items: filteredItems.length,
+          filtered_total_items: scopedItems.length,
+          scope: query.deploymentScope ? {
+            resource_kind: "DEPLOYMENT",
+            resource_id: query.deploymentScope.deploymentId,
+            state: scoped.state,
+            reason_code: scoped.reasonCode,
+          } : undefined,
           window_aggregates: screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
             ? countByDimensions(projected.items) : null,
         },
       },
     };
+  }
+
+  private async localSnapshot(requestedEnvironment: CurrentSourceEnvironment): Promise<{
+    snapshot: ProfileProjectionSnapshot;
+    environment: ProjectionEnvironment;
+    profileId: string;
+    projectionWorkspaceId: string;
+    ageMs: number;
+  }> {
+    const environment: ProjectionEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
+    const profileId = profile(this.config, environment);
+    const projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if (!projectionWorkspaceId) {
+      throw new CurrentSourceProxyError("N31_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
+    }
+    const snapshot = await this.repository.snapshot(projectionWorkspaceId, environment, profileId);
+    if (!snapshot) throw new CurrentSourceProxyError("N31_PROJECTION_NOT_READY", 503, {
+      availability: "UNAVAILABLE", retryable: true,
+    });
+    const ageMs = Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf();
+    if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+      throw new CurrentSourceProxyError("N31_PROJECTION_STALE_CEILING_EXCEEDED", 503, {
+        availability: "UNAVAILABLE", retryable: true,
+      });
+    }
+    return { snapshot, environment, profileId, projectionWorkspaceId, ageMs };
   }
 }
 
@@ -165,9 +309,70 @@ interface LocalProductQuery {
   sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
 }
 
-function hasLocalQuery(query: LocalProductQuery): boolean {
+function hasLocalQuery(query: LocalProductQuery & DeploymentScopeQuery): boolean {
   return query.status !== undefined || query.statuses !== undefined || query.venue !== undefined || query.symbol !== undefined ||
-    query.side !== undefined || query.sort !== undefined;
+    query.side !== undefined || query.sort !== undefined || query.deploymentScope !== undefined;
+}
+
+type ScopedRows = {
+  readonly items: readonly { fields: Record<string, ProjectionScalar> }[];
+  readonly state: "EXACT" | "PARTIAL";
+  readonly reasonCode: string | null;
+};
+
+/**
+ * Scope rows before local keyset pagination.  A row with an explicit
+ * deployment_id wins.  Relations without that id may use the complete
+ * four-part tuple only when that tuple names exactly one deployment; this is
+ * intentionally narrower than the historical two-of-four heuristic.
+ */
+function scopeRows(
+  relation: string,
+  rows: readonly { fields: Record<string, ProjectionScalar> }[],
+  scope: DeploymentResourceScope,
+): ScopedRows {
+  if (relation === "strategy_deployments") {
+    return exactRows(rows, (fields) => fields.deployment_id === scope.deploymentId);
+  }
+  if (["accounts", "account_balances", "margin_balances", "account_sync_effective", "venue_accounts"].includes(relation)) {
+    return exactRows(rows, (fields) => fields.account_id === scope.accountId);
+  }
+  if (relation === "broker_account_sync_effective") {
+    if (!scope.externalAccountRef) {
+      return { items: [], state: "PARTIAL", reasonCode: "EDS03_EXTERNAL_ACCOUNT_REF_UNAVAILABLE" };
+    }
+    return exactRows(rows, (fields) => fields.external_account_ref === scope.externalAccountRef);
+  }
+  if (relation === "portfolio_equity_snapshots") {
+    if (!scope.portfolioId) {
+      return { items: [], state: "PARTIAL", reasonCode: "EDS03_PORTFOLIO_SCOPE_UNAVAILABLE" };
+    }
+    return exactRows(rows, (fields) => fields.portfolio_id === scope.portfolioId);
+  }
+  const explicit = rows.filter((row) => row.fields.deployment_id !== undefined);
+  if (explicit.length > 0) {
+    return exactRows(rows, (fields) => fields.deployment_id === scope.deploymentId);
+  }
+  if (!scope.tupleUnique) {
+    return { items: [], state: "PARTIAL", reasonCode: "EDS03_DEPLOYMENT_SCOPE_AMBIGUOUS" };
+  }
+  return exactRows(rows, (fields) => fields.strategy_id === scope.strategyId &&
+    fields.account_id === scope.accountId && fields.mode === scope.mode && fields.venue === scope.venue);
+}
+
+function exactRows(
+  rows: readonly { fields: Record<string, ProjectionScalar> }[],
+  predicate: (fields: Record<string, ProjectionScalar>) => boolean,
+): ScopedRows {
+  return { items: rows.filter((row) => predicate(row.fields)), state: "EXACT", reasonCode: null };
+}
+
+function textField(value: ProjectionScalar | undefined): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function isOpaqueId(value: string): boolean {
+  return value.length > 0 && value.length <= 191 && !/[\u0000-\u001f]/.test(value);
 }
 
 function filterAndSort(

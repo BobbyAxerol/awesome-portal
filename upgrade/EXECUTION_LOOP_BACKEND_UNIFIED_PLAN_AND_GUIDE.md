@@ -4045,6 +4045,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-05 | **EDS-03 maximum current truth closed at the code/contract gate**: exact deployment scope is resolved from the local, profile-bound projection before pagination; Paper/Sandbox/Live rich panels receive named current relation DTOs and generated UTC/panel envelopes; absent Canary governance can no longer hide a readable Live source; no-currency/no-mark position aggregates are typed-null rather than invented | E7 **34/18/3** + full manifest verified; read-only generator check; contracts **117/117**; fresh-PG Control API **40 files / 354 tests** + restore; Node 22 frontend **98 files / 1,826 tests / 3 skipped** + production build. No runtime/container/Edge/source/command mutation; detailed evidence `backend/EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md` |
 | 2026-09-03 | **First AUTHENTICATED end-to-end payload probe (viewer user `claude-probe`, USER role, tự tạo qua bootstrap CLI — không đụng credential owner)**: sự thật từng route. TỐT: alpha 360 analytics serve equity 1,540 điểm phủ đúng 05/08→04/09 downsample khai báo (source 10,119 rows); correlation AVAILABLE 66 cặp/43 alpha; drawdown AVAILABLE 43 alpha + 6 cửa sổ trùng; workbench 1,540+1,699 điểm windows khai báo. HỎNG — đích danh: (1) **/screens/paper overview chỉ serve 200 rows equity thô** (cap 200/relation của screens BFF, 43 account trộn ≈ 5 điểm/account) → chart overview không thể ra hồn, phải build DERIVED-sum series từ mirror phía server; (2) **payload khổng lồ**: workbench 5.9MB, alpha analytics 2.4MB (rows đầy đủ fields thay vì series (t,v)) — xác nhận R2 perf; (3) completeness PARTIAL toàn cục do 5 trang nóng transactional bounded-by-design + portfolio_equity typed-rejected → 'stage-equity' PARTIAL, polish 'ready' tắt — cần tách 'serving completeness' (window đã giao đủ, truncated khai báo) khỏi 'population completeness'; (4) workbench orders/fills=0 cho deployment probe (trang nóng 400 không chứa) — Lane E2 | curl + cookie session thật, files scratchpad paper/alpha/wb.json; kế tiếp: Fix A (overview series từ mirror) + Fix C (completeness semantics) |
 | 2026-09-03 | **Owner question "hiệu ứng động showcase biến mất trên dev-portal?" — investigated, NOTHING was removed**: HEAD chứa NHIỀU code hiệu ứng hơn nhánh showcase (287 vs 279 match; cả 2 nhánh showcase đều là tổ tiên của nhánh hiện tại; image portal-web:dev build 02:34 SAU commit FE cuối). Nguyên nhân thật: (1) **51 animation rule đều gate theo data-state đúng thiết kế hi-fi D4** — dot thở chỉ khi FRESH, pulse chỉ khi bad/CRITICAL/overdue, flash chỉ khi delta tick; showcase chạy fixture dàn dựng đủ trạng thái nên mọi effect nổ, dev chạy dữ liệu thật (không incident CRITICAL, không SLA overdue → im lặng là ĐÚNG); (2) hiệu ứng grow-on-mount chỉ chạy lần đầu vì P4-C giữ cây mounted khi revalidate (chủ đích chống loading-flash); (3) envelope PARTIAL toàn cục (portfolio_equity typed-rejected) ghìm polish "ready" ở mọi màn — sẽ tự hết khi release-kit/acceptance dọn trạng thái đó. Muốn effects nổ lại đúng cách: un-halt (tick/flash CC có delta thật) + dọn PARTIAL, KHÔNG phải bỏ gating | git diff/grep evidence hai nhánh + execution.css lines 1653-5094; không đổi code |
 | 2026-09-03 | **Owner question "gai là do dữ liệu hay do vẽ?" — answered with forensics, BOTH, each named**: (a) phần lớn band lởm chởm cũ = trộn account (đã sửa bằng DERIVED sum); (b) một phần gai là DỮ LIỆU NGUỒN THẬT — `signalcombine00230m` ping-pong ±1.5-2% equity mỗi ~90s do `unrealized_pnl` flip giữa hai mức mark (đối chiếu row-for-row với bảng HK: trùng khớp tuyệt đối, ids 3790924-3791526); các account nhỏ `combine_weight_*` cùng pattern ở ±10-20% base; mirror không trùng row, không méo. Ghi thành BR-EX-79 item 1.5 (câu hỏi marking cho trading owner) | SQL forensics cả hai DB trong changelog + BR-EX-79 1.5; không đổi code — Portal đang render đúng sự thật |
@@ -4461,7 +4462,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-00 | intake, hashes and frozen baseline | E7 handoff | complete; immutable planning gate closed |
 | EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | complete; fixed E5 deployment BFF authority closed |
 | EDS-02 | generated screen/action/panel/time contracts | EDS-01 | complete; 25 classified screens, 34 fields and 12 actions; no runtime mutation |
-| EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | yes, with typed gaps |
+| EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | **BFF_READY / FRONTEND_COMPATIBLE / VERIFIED** on 2026-09-05; yes, with typed gaps |
 | EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | yes, with typed gaps |
 | EDS-05 | governance/operations and five Portal derivations | EDS-04 | yes, with typed gaps |
 | EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | yes for observed pages; no replay claim |
@@ -4659,6 +4660,57 @@ out of scope rather than deferred work.
 
 **Goal:** fill stage overview/workbench screens with all current Manager data
 that already exists, while preserving honest gaps.
+
+**Status:** `BFF_READY / FRONTEND_COMPATIBLE / VERIFIED / NO_RUNTIME_MUTATION`
+on 2026-09-05.
+
+**Implemented closure:**
+
+- added a server-only exact deployment resolver over the profile-bound local
+  projection, then applies its exact scope before the 200-row Portal page
+  bound; no detail route can read/filter a first global source page or use the
+  former two-of-four join heuristic;
+- composed named Paper Overview/Workbench, Sandbox Overview/Certification and
+  Live Overview/Full Operations reads from the accepted current Manager
+  relations, carrying availability, freshness, completeness, as-of, profile
+  and opaque Portal cursor metadata into generated panel envelopes;
+- made a complete zero-row Live source an authoritative `EMPTY`; added a
+  source-backed Live fallback when Portal-owned Canary governance has no
+  predecessor, while preserving the original typed 404 when the source itself
+  is unavailable;
+- made `*_ms`/UTC clocks canonical at the screen wire and retained old ISO
+  aliases only for separately-versioned specialised consumer compatibility;
+- preserved exact decimal strings and rejected monetary aggregates without
+  uniform explicit currency; `positions_v2` rows remain visible but gross
+  notional/daily P&L deliberately stay typed-null with
+  `E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED` until published mark and
+  currency lineage exists;
+- kept the approved rich frontend composition intact, changing only its
+  source data inside panels. No browser sees a Manager relation/cursor/JWT/
+  mTLS input and no direct Trading System DB/Source Proxy/Redis/broker/CLI
+  call was added.
+
+**Verification completed:** E7 passed (**34 capabilities / 18 genuine source
+gaps / three profiles**) and every return-pack manifest entry verified;
+read-only EDS-02 generator check and contracts workspace passed **117/117**;
+fresh PostgreSQL Control API build/test/restore passed **40 files / 354
+tests**; clean Node 22 Portal-plus-Planning frontend test/build passed **98
+files / 1,826 tests / 3 skipped** followed by the production build. Focused
+coverage includes deep-page exact resource lookup, cross-profile/resource
+isolation, empty/partial/unavailable source states, Live-without-Canary,
+mixed/missing currency refusal, UTC/exact-value mapping and local-only source
+enforcement. Detail/evidence:
+[`EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md`](./backend/EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md).
+The closure also repairs the stale N20, N29 and Phase-2 acceptance verifiers
+to pin **23 immutable E3 screens + two explicit BR-EX-72 extensions**, with
+individual extension operation/path assertions, rather than a contradictory
+hard-coded total of 23.
+
+**Exit:** the accepted current fields are available to their rich stage panels;
+remaining gaps are explicit E7/EDS03 typed reasons, not implementation debt.
+Runtime deployment/browser acceptance remains owner-controlled because this
+phase intentionally leaves containers, profile activation, network, commands
+and Edge/Trading-System source unchanged.
 
 **Named operations:** deployment, position, session, order, fill, account,
 balance, margin, sync, broker-sync, venue-account, reconciliation, equity,
@@ -5002,8 +5054,8 @@ EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                    EDS-11 → EDS-12
 ```
 
-The immediate next phase is **EDS-03 — Maximum current truth for Paper,
-Sandbox and Live stage screens**. EDS-02 is closed with one generated,
-role/workspace-scoped product authority shared by Control API and the frozen
-frontend; EDS-03 may now widen only named, server-side BFF DTOs into the
-already-approved rich stage panels.
+The immediate next phase is **EDS-04 — Alpha, Portfolio, Account and Binding
+resource BFFs**. EDS-03 has closed the exact stage-resource resolver and
+generated panel wire without changing runtime/Edge/source authority; EDS-04
+must reuse that resolver rather than return to bounded global-page filtering
+or client-side business joins.

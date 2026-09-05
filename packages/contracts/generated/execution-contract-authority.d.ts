@@ -145,6 +145,8 @@ export interface components {
             roles: ("ADMIN" | "USER")[];
         };
         Digest: string;
+        /** @enum {string} */
+        SourceAuthority: "DATA_LAYER_OR_MARKET_SERVICE" | "MARKET_SERVICE" | "PORTAL_CONTROL" | "PORTAL_EDGE" | "TRADING_SYSTEM" | "TRADING_SYSTEM_OR_RESEARCH";
         SourceReadiness: {
             state: string;
             reason_code: string;
@@ -157,8 +159,6 @@ export interface components {
             profiles: ("PAPER" | "SANDBOX" | "LIVE" | "CANARY")[];
             portal_can_proceed: boolean;
         };
-        /** @enum {string} */
-        SourceAuthority: "DATA_LAYER_OR_MARKET_SERVICE" | "MARKET_SERVICE" | "PORTAL_CONTROL" | "PORTAL_EDGE" | "TRADING_SYSTEM" | "TRADING_SYSTEM_OR_RESEARCH";
         RuntimeDelivery: {
             state: string;
             implementation: string;

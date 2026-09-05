@@ -28,9 +28,20 @@ analytics = (root / "apps/control-api/src/execution/local-query-analytics.servic
 production = (root / "deploy/compose.production.yaml").read_text()
 local = (root / "deploy/compose.execution-local-projection.yaml").read_text()
 
-assert catalogue.count("screen({") == 23
-assert catalogue.count('status: "AVAILABLE"') == 23
+# Preserve the fixed 23-screen owner inventory while requiring the two named
+# BR-EX-72 Portal list extensions. A generic count alone would allow a future
+# screen to replace an owner contract silently.
+assert catalogue.count("screen({") == 25
+assert catalogue.count('status: "AVAILABLE"') == 25
 assert catalogue.count('status: "TYPED_UNAVAILABLE"') == 0
+for screen_id, operation_id, path in (
+    ("EXECUTION_ALPHA_FLEET_LIST_SCREEN", "executionAlphaFleetListV2", "/api/v1/execution/alphas"),
+    ("EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "executionBindingsListV1", "/api/v1/execution/broker-bindings"),
+):
+    row = next(line for line in catalogue.splitlines() if f'screenId: "{screen_id}"' in line)
+    assert 'requestIds: ["BR-EX-72"]' in row
+    assert 'status: "AVAILABLE"' in row and 'deliveryPhase: "N29"' in row
+    assert f'operationId: "{operation_id}"' in row and f'pathTemplate: "{path}"' in row
 for operation in (
     "executionCommandCenterSnapshot",
     "executionAccountBroker360V1",

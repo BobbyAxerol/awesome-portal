@@ -7,7 +7,11 @@ import {
   CurrentSourcePrincipal,
   CurrentSourceProxyError,
 } from "../execution/current-source.proxy";
-import { ExecutionProductReadSource } from "../execution/product-read-source";
+import {
+  DeploymentResourceScope,
+  DeploymentScopeResolution,
+  ExecutionProductReadSource,
+} from "../execution/product-read-source";
 import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
 import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "../execution/analytics.proxy";
 import { KeysetCursorCodec, QueryContractError } from "../query";
@@ -16,9 +20,22 @@ import { PaperBlotterQuery } from "./contracts";
 import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
+import {
+  latestStageAsOfMs,
+  stagePanels,
+  type StageRelation,
+  wireStageValue,
+} from "../execution/stage-screen-wire";
 
 type ProductState = "ready" | "empty" | "stale" | "partial" | "unavailable";
 type CapabilityState = "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+
+/** Public controller/filter error contract for the stable Paper routes. */
+export class PaperReadError extends Error {
+  constructor(readonly code: string, message: string, readonly status: number) {
+    super(message);
+  }
+}
 
 interface RelationSpec {
   key: string;
@@ -129,22 +146,22 @@ import {
 } from "./order-status-map";
 
 const OVERVIEW_SPECS: readonly RelationSpec[] = [
-  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),
+  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 200),
   spec("positions", "manager.positions", "positions_v2", POSITION_FIELDS, 200),
-  spec("sessions", "manager.sessions", "execution_sessions", SESSION_FIELDS, 100),
+  spec("sessions", "manager.sessions", "execution_sessions", SESSION_FIELDS, 200),
   spec("performance", "manager.performance", "performance_snapshots", PERFORMANCE_FIELDS, 200),
   spec("account_equity", "manager.performance", "account_equity_snapshots", ACCOUNT_EQUITY_FIELDS, 200),
-  spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 100),
+  spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 200),
 ];
 
 const WORKBENCH_SPECS: readonly RelationSpec[] = [
-  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 100),
+  spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 200),
   spec("positions", "manager.positions", "positions_v2", POSITION_FIELDS, 200),
   spec("orders", "manager.orders", "orders", ORDER_FIELDS, 200),
   spec("fills", "manager.fills", "fills", FILL_FIELDS, 200),
-  spec("performance", "manager.performance", "performance_snapshots", PERFORMANCE_FIELDS, 100),
-  spec("account_equity", "manager.performance", "account_equity_snapshots", ACCOUNT_EQUITY_FIELDS, 100),
-  spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 100),
+  spec("performance", "manager.performance", "performance_snapshots", PERFORMANCE_FIELDS, 200),
+  spec("account_equity", "manager.performance", "account_equity_snapshots", ACCOUNT_EQUITY_FIELDS, 200),
+  spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 200),
 ];
 
 @Injectable()
@@ -247,20 +264,20 @@ export class PaperReadService {
     const screenId = vnm
       ? "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN"
       : "EXECUTION_PAPER_WORKBENCH_SCREEN";
-    const relations = await this.fetch(principal, screenId, WORKBENCH_SPECS);
-    const deployments = relations.find((item) => item.spec.key === "deployments");
-    const deployment = deployments?.page?.items.find((row) => row.deployment_id === deploymentId);
-    const deploymentPageComplete = deployments?.page?.nextCursor === null;
-    if (!deployment && deployments?.state === "AVAILABLE" && deploymentPageComplete) {
-      throw new PaperReadError("N22_DEPLOYMENT_NOT_FOUND", "Deployment not found.", 404);
-    }
-    const scoped = Object.fromEntries(relations.map((item) => [
-      item.spec.key,
-      item.page?.items.filter((row) => item.spec.key === "deployments"
-        ? row.deployment_id === deploymentId
-        : matchesDeployment(row, deploymentId, deployment)) ?? [],
-    ]));
-    const observationGate = paperObservationGate(relations, scoped, deployment);
+    const resolution = await this.source.resolveDeploymentScope(
+      principal as CurrentSourcePrincipal, "paper", screenId, deploymentId,
+    );
+    const relations = resolution.state === "FOUND"
+      ? await this.fetch(principal, screenId, WORKBENCH_SPECS, resolution.scope)
+      : unresolvedRelations(WORKBENCH_SPECS, resolution);
+    const deployment = resolution.state === "FOUND"
+      ? relations.find((item) => item.spec.key === "deployments")?.page?.items[0] ?? resolution.deployment
+      : null;
+    // Relation filtering has already happened inside the local, profile-bound
+    // projection before pagination.  Do not reintroduce the historical
+    // bounded-page / two-of-four join in this screen layer.
+    const scoped = this.data(relations);
+    const observationGate = paperObservationGate(relations, scoped, deployment ?? undefined);
     let queryAnalytics: unknown = null;
     let analyticsReason = "N25_DERIVED_ANALYTICS_NOT_ACTIVE";
     if (this.localAnalytics?.enabled()) {
@@ -296,9 +313,12 @@ export class PaperReadService {
       ...(vnm
         ? [capability("venue.calendar", "UNAVAILABLE", ["session_shading"], "N28_VENUE_CALENDAR_NOT_ACTIVE")]
         : []),
-      ...(!deployment && !deploymentPageComplete
-        ? [capability("deployment.lookup", "PARTIAL", ["strategy_deployments"], "N22_DEPLOYMENT_OUTSIDE_BOUNDED_SOURCE_PAGE")]
-        : []),
+      ...(resolution.state === "FOUND" ? [] : [capability(
+        "deployment.lookup",
+        resolution.state === "EMPTY" ? "EMPTY" : resolution.state === "PARTIAL" ? "PARTIAL" : "UNAVAILABLE",
+        ["strategy_deployments"],
+        resolution.reasonCode,
+      )]),
       capability(
         "workbench.observation-gate",
         deployment ? (observationGate?.state === "PARTIAL" ? "PARTIAL" : "AVAILABLE") : "UNAVAILABLE",
@@ -398,6 +418,7 @@ export class PaperReadService {
     principal: PaperPrincipal,
     screenId: string,
     specs: readonly RelationSpec[],
+    deploymentScope?: DeploymentResourceScope,
   ): Promise<RelationResult[]> {
     // Fixed, bounded fan-out: never one source call per returned row.
     const results = await Promise.allSettled(specs.map(async (item) => {
@@ -411,6 +432,7 @@ export class PaperReadService {
           limit: item.limit,
           ...(item.cursor ? { cursor: item.cursor } : {}),
           ...(item.localQuery ?? {}),
+          ...(deploymentScope ? { deploymentScope } : {}),
         },
       );
       const page = managerPage(response, item.relation, item.fields);
@@ -423,14 +445,15 @@ export class PaperReadService {
         const { page, quarantinedOrderRows } = result.value;
         // A quarantined row is a stated gap: the branch stays PARTIAL with its
         // own reason and count, and every surviving row still renders.
-        const partial = page.completeness === "PARTIAL" || quarantinedOrderRows > 0;
+        const partial = page.completeness === "PARTIAL" || page.scope?.state === "PARTIAL" || quarantinedOrderRows > 0;
         return {
           spec: item,
           page,
-          state: page.items.length === 0 ? (quarantinedOrderRows > 0 ? "PARTIAL" : "EMPTY") :
+          state: page.items.length === 0 ? (partial ? "PARTIAL" : "EMPTY") :
             partial ? "PARTIAL" : "AVAILABLE",
           reasonCode: quarantinedOrderRows > 0 ? "N22_ORDER_STATUS_QUARANTINED" :
-            page.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
+            page.scope?.state === "PARTIAL" ? page.scope.reasonCode ?? "EDS03_RESOURCE_SCOPE_PARTIAL" :
+              page.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
           quarantinedRows: quarantinedOrderRows,
         };
       }
@@ -462,6 +485,7 @@ export class PaperReadService {
       ...extraCapabilities,
     ];
     const state = productState(relations, extraCapabilities);
+    const readAtMs = Date.now();
     const asOf = latestAsOf(relations);
     const freshness = relations.some((item) => item.page?.freshness === "STALE") ? "STALE"
       : relations.some((item) => item.page?.freshness === "AGING") ? "AGING"
@@ -472,7 +496,12 @@ export class PaperReadService {
       source_authority: "TRADING_SYSTEM",
       delivery_profile: "PAPER_BINANCE_USDM",
       workspace_id: principal.workspaceId,
-      read_at: new Date().toISOString(),
+      // `*_ms` is the canonical EDS-02 wire.  The ISO aliases preserve the
+      // pre-existing v1 response contract for specialised consumers until
+      // their separately versioned DTOs are promoted.
+      read_at_ms: readAtMs,
+      as_of_ms: latestStageAsOfMs(asStageRelations(relations)),
+      read_at: new Date(readAtMs).toISOString(),
       as_of: asOf,
       state: freshness === "STALE" && state === "ready" ? "stale" : state,
       freshness,
@@ -480,12 +509,13 @@ export class PaperReadService {
         ? "PARTIAL" : "COMPLETE",
       actor: { user_id: principal.user.userId, username: principal.user.username, roles: [principal.user.role] },
       capabilities,
-      data,
+      panels: stagePanels(asStageRelations(relations), readAtMs),
+      data: wireStageValue(data),
       ...extra,
     };
   }
 
-  private data(relations: readonly RelationResult[]): Record<string, unknown> {
+  private data(relations: readonly RelationResult[]): Record<string, Array<Record<string, unknown>>> {
     return Object.fromEntries(relations.map((item) => [item.spec.key, item.page?.items ?? []]));
   }
 
@@ -603,10 +633,6 @@ function paperObservationGate(
   };
 }
 
-export class PaperReadError extends Error {
-  constructor(readonly code: string, message: string, readonly status: number) { super(message); }
-}
-
 function spec(
   key: string,
   sourceId: string,
@@ -616,6 +642,29 @@ function spec(
   cursor?: string,
 ): RelationSpec {
   return { key, sourceId, relation, fields, limit, ...(cursor ? { cursor } : {}) };
+}
+
+function unresolvedRelations(
+  specs: readonly RelationSpec[],
+  resolution: Exclude<DeploymentScopeResolution, { state: "FOUND" }>,
+): RelationResult[] {
+  const state: CapabilityState = resolution.state === "EMPTY" ? "EMPTY"
+    : resolution.state === "PARTIAL" ? "PARTIAL" : "UNAVAILABLE";
+  return specs.map((specification) => ({
+    spec: specification,
+    page: null,
+    state,
+    reasonCode: resolution.reasonCode,
+  }));
+}
+
+function asStageRelations(relations: readonly RelationResult[]): StageRelation[] {
+  return relations.map((item) => ({
+    key: item.spec.key,
+    page: item.page,
+    state: item.state,
+    reasonCode: item.reasonCode,
+  }));
 }
 
 
@@ -707,7 +756,7 @@ function capability(
 }
 
 function safeReason(error: unknown): string {
-  if (error instanceof CurrentSourceProxyError && /^N(?:13B|17B|21|22|30)_[A-Z0-9_]+$/.test(error.code)) {
+  if (error instanceof CurrentSourceProxyError && /^(?:N(?:13B|17B|21|22|30)_[A-Z0-9_]+|EDS03_[A-Z0-9_]+)$/.test(error.code)) {
     return error.code;
   }
   return "N22_SOURCE_UNAVAILABLE";
@@ -728,21 +777,6 @@ function productState(
 function latestAsOf(relations: readonly RelationResult[]): string | null {
   return relations.map((item) => item.page?.asOf ?? null).filter((value): value is string => value !== null)
     .sort().at(-1) ?? null;
-}
-
-function matchesDeployment(
-  row: Record<string, unknown>,
-  deploymentId: string,
-  deployment?: Record<string, unknown>,
-): boolean {
-  if (row.deployment_id === deploymentId) return true;
-  if (!deployment) return false;
-  if ("portfolio_id" in row && "portfolio_id" in deployment) {
-    return row.portfolio_id === deployment.portfolio_id;
-  }
-  const dimensions = ["strategy_id", "account_id", "mode", "venue"] as const;
-  const comparable = dimensions.filter((name) => name in row && name in deployment);
-  return comparable.length >= 2 && comparable.every((name) => row[name] === deployment[name]);
 }
 
 function blotterFingerprint(query: PaperBlotterQuery): string {

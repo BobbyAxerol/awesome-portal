@@ -5,17 +5,26 @@ import { ProfileReadService } from "../profile-read/profile-read.service";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
-  decimalAbsoluteSum,
-  decimalSum,
+  exactCurrencySum,
   latest,
   openOrders,
   ProfileScreenSource,
 } from "../execution/profile-screen-composer";
+import { GovernanceError } from "../governance/governance.service";
 
 function decimal(value: string): string {
   const [whole, fraction = ""] = value.split(".");
   const trimmed = fraction.replace(/0+$/, "");
   return trimmed.length > 0 ? `${whole}.${trimmed}` : whole;
+}
+
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function isReadableCurrentSource(source: Record<string, unknown>): boolean {
+  return source.state === "ready" || source.state === "empty" ||
+    source.state === "partial" || source.state === "stale";
 }
 
 @Injectable()
@@ -27,7 +36,27 @@ export class LiveOperationsService {
   ) {}
 
   async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
-    const canary = await this.canaries.latestByDeployment(workspaceId, deploymentId);
+    let canary: CanaryEnvelopeRow;
+    try {
+      canary = await this.canaries.latestByDeployment(workspaceId, deploymentId);
+    } catch (error) {
+      // Live source truth is independent of Portal-owned canary governance.
+      // A missing governance record must not hide a real, authorised Manager
+      // read behind a generic unavailable page.
+      if (error instanceof GovernanceError && error.code === "CANARY_ENVELOPE_NOT_FOUND") {
+        const currentSource = await this.profileReads.snapshot(
+          { user, session, workspaceId },
+          "live",
+          "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
+          deploymentId,
+        );
+        // Replace an absent Portal governance record only with a readable
+        // source envelope. A failed source read retains the typed 404.
+        if (!isReadableCurrentSource(currentSource)) throw error;
+        return this.sourceOnlyDetail(user, deploymentId, currentSource);
+      }
+      throw error;
+    }
     const [lineage, currentSource] = await Promise.all([
       this.canaries.lineageFor(canary),
       this.profileReads.snapshot(
@@ -38,6 +67,169 @@ export class LiveOperationsService {
       ),
     ]);
     return this.composeDetail(user, canary, lineage, currentSource);
+  }
+
+  private sourceOnlyDetail(user: PortalUser, deploymentId: string, currentSource: Record<string, unknown>) {
+    const readAt = new Date().toISOString();
+    const source = new ProfileScreenSource(currentSource, readAt);
+    const deployment = source.rows("deployments")[0] ?? null;
+    const positions = source.rows("positions");
+    const orders = source.rows("orders");
+    const fills = source.rows("fills");
+    const balances = source.rows("account_balances");
+    const margins = source.rows("margin_balances");
+    const brokerSync = source.rows("broker_sync");
+    const reconciliation = source.rows("reconciliation");
+    const activeFindings = reconciliation.filter((row) => !["RESOLVED", "CLOSED"].includes(String(row.status ?? "").toUpperCase()));
+    const brokerRecord = latest(brokerSync, "synced_at");
+    const brokerHealthy = brokerRecord !== null && ["SYNCED", "CURRENT", "OK", "HEALTHY"]
+      .includes(String(brokerRecord.status ?? "").toUpperCase());
+    const deploymentCurrency = text(deployment?.currency);
+    const capitalAggregate = exactCurrencySum(balances, ["total"]);
+    const capitalReason = capitalAggregate.reasonCode ??
+      (deploymentCurrency && capitalAggregate.currency && deploymentCurrency !== capitalAggregate.currency
+        ? "EDS03_DEPLOYMENT_BALANCE_CURRENCY_MISMATCH" : null);
+    const currency = capitalAggregate.currency ?? deploymentCurrency ?? "UNIT";
+    const open = openOrders(orders);
+    const capital = capitalReason ? null : capitalAggregate.value;
+    // The accepted Manager current-position page has neither explicit
+    // currency nor mark lineage. Keep its rows visible, but do not turn them
+    // into a monetary aggregate until the owner publishes both facts.
+    const positionValueReason = positions.length > 0
+      ? "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED" : null;
+    const grossNotional = null;
+    const dailyPnl = null;
+    const brokerAggregate = brokerRecord ? exactCurrencySum([brokerRecord], ["buying_power"])
+      : { value: null, currency: null, reasonCode: null };
+    const brokerReason = brokerAggregate.reasonCode ??
+      (brokerAggregate.currency && brokerAggregate.currency !== currency
+        ? "EDS03_BROKER_CURRENCY_MISMATCH" : null);
+    const brokerEquity = brokerReason ? null : brokerAggregate.value;
+    const brokerVisible = source.connected && brokerHealthy && activeFindings.length === 0 && brokerReason === null;
+    const realtimeActive = source.connected && source.projection !== null &&
+      this.config.FEATURE_EXECUTION_REALTIME_SSE === "true";
+    const sourceMissing = !source.connected || deployment === null;
+    const blockers = [
+      "PORTAL_CANARY_GOVERNANCE_NOT_COMMISSIONED",
+      "PRODUCTION_COMMAND_INACTIVE",
+      "LIVE_FULL_ACTIVATION_NOT_APPROVED",
+      ...(sourceMissing ? ["LIVE_SOURCE_UNAVAILABLE"] : []),
+      ...(!source.projection ? ["SOURCE_CONTINUITY_UNAVAILABLE"] : []),
+      ...(!brokerVisible ? [activeFindings.length > 0 ? "BROKER_RECONCILIATION_MISMATCH"
+        : brokerReason ?? "BROKER_STATE_UNAVAILABLE"] : []),
+    ];
+    const kpi = (
+      key: string,
+      label: string,
+      authority: "EXECUTION" | "BROKER" | "DERIVED",
+      unit: string,
+      value: string | null,
+      keys: readonly string[],
+      suppress = false,
+      qualificationReason: string | null = null,
+    ) => {
+      const panel = source.panel(`kpi-${key}`, authority, keys, value === null ? {} : { value }, suppress);
+      const qualification = qualificationReason === null ? panel : {
+        ...panel,
+        panel_state: suppress ? panel.panel_state : "partial",
+        source_verification_state: suppress ? panel.source_verification_state : "PARTIAL",
+        data: null,
+        warnings: [...panel.warnings, { code: qualificationReason }],
+      };
+      return {
+        key, label, value: suppress || qualificationReason ? null : value, unit,
+        qualification_reason_code: qualificationReason,
+        envelope: qualification,
+      };
+    };
+    return {
+      schema_version: "execution.live-full-operations.v1",
+      record_authority: "PORTAL",
+      delivery_profile: source.deliveryProfile,
+      source_integration_state: source.connected ? "SOURCE_BACKED" : "UNAVAILABLE",
+      source_side_effect_requested: false,
+      runtime_activation_requested: false,
+      promotion_execution_requested: false,
+      production_command_active: false,
+      realtime_active: realtimeActive,
+      read_at: readAt,
+      actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      current_source: currentSource,
+      deployment: {
+        deployment_id: typeof deployment?.deployment_id === "string" ? deployment.deployment_id : deploymentId,
+        portfolio_id: typeof deployment?.portfolio_id === "string" ? deployment.portfolio_id : null,
+        account_id: typeof deployment?.account_id === "string" ? deployment.account_id : null,
+        external_account_ref: null,
+        venue: typeof deployment?.venue === "string" ? deployment.venue : null,
+        declared_environment: "LIVE_FULL",
+        runtime_state: typeof deployment?.state === "string" ? deployment.state : null,
+        activated_at: null,
+      },
+      lineage: [],
+      lifecycle: {
+        declared_stage: "LIVE_FULL",
+        runtime_state: typeof deployment?.state === "string" ? deployment.state : null,
+        activated_at: null,
+        blocker_codes: blockers,
+      },
+      predecessor_canary_envelope: null,
+      kpis: [
+        kpi("capital", "Capital", "EXECUTION", currency, capital, ["account_balances"], false, capitalReason),
+        kpi("gross_notional", "Gross notional", "EXECUTION", currency, grossNotional, ["positions"], false, positionValueReason),
+        kpi("daily_pnl", "Daily P&L", "DERIVED", currency, dailyPnl, ["positions"], false, positionValueReason),
+        kpi("open_orders", "Open orders", "EXECUTION", "COUNT", String(open.length), ["orders"]),
+        kpi("broker_equity", "Broker equity", "BROKER", currency, brokerEquity, ["broker_sync"], !brokerVisible, brokerReason),
+      ],
+      source_panels: {
+        internal: source.panel("internal", "EXECUTION", ["positions", "orders", "fills", "account_balances", "margin_balances"], {
+          positions, orders, fills, account_balances: balances, margin_balances: margins,
+        }),
+        broker: source.panel("broker", "BROKER", ["broker_sync"], { broker_sync: brokerSync }, !brokerVisible),
+        difference: source.panel("difference", "DERIVED", ["reconciliation"], { reconciliation }),
+      },
+      broker_consistency: {
+        state: !source.connected || !brokerHealthy ? "UNAVAILABLE" : activeFindings.length > 0 ? "MISMATCH" : "IN_SYNC",
+        mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES",
+        broker_values_visible: brokerVisible,
+        finding_href: activeFindings.length > 0 ? `/operations/reconciliation/${String(activeFindings[0].finding_id ?? "current")}` : null,
+        dry_run_reconcile_href: null,
+        blocker_codes: brokerVisible ? [] : activeFindings.length > 0 ? ["BROKER_RECONCILIATION_MISMATCH"]
+          : [brokerReason ?? "BROKER_STATE_UNAVAILABLE", ...(sourceMissing ? ["LIVE_SOURCE_UNAVAILABLE"] : [])],
+      },
+      projection_continuity: {
+        state: source.projection ? "CONTIGUOUS" : "UNAVAILABLE",
+        epoch: source.projection?.epoch ?? null,
+        cursor: source.projection?.sourceCursor ?? null,
+        sequence: source.projection?.sequence ?? null,
+        gap_detected: source.projection ? false : null,
+        affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],
+        blocker_codes: source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE"],
+      },
+      positions: source.collection("positions", "EXECUTION", "positions"),
+      orders: source.collection("orders", "EXECUTION", "orders"),
+      open_order_footer: {
+        envelope: source.panel("open-order-footer", "EXECUTION", ["orders"], { exact_open_order_count: open.length }),
+        exact_open_order_count: source.connected ? open.length : null,
+      },
+      incidents: { envelope: source.panel("incidents", "EXECUTION", ["reconciliation"], { findings: reconciliation }), exact_total: null, returned_count: 0, next_cursor: null, previous_cursor: null, rows: [] },
+      series: { envelope: source.panel("series", "DERIVED", ["positions"], { points: [] }), resolution: null, points: [] },
+      rollback_readiness: {
+        envelope: source.panel("rollback-readiness", "EXECUTION", ["positions"], { ready: false }),
+        ready: false, evidence_hash: null, blocker_codes: ["ROLLBACK_EVIDENCE_UNAVAILABLE"],
+      },
+      realtime: {
+        active: realtimeActive,
+        stream_url: realtimeActive ? "/api/v1/execution/realtime/stream" : null,
+        subscription_id: realtimeActive ? `live:${deploymentId}` : null,
+        blocker_codes: realtimeActive ? [] : ["REALTIME_INACTIVE", ...(source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE"])],
+      },
+      command_policy: {
+        production_command_active: false,
+        guard_semantics: "BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4",
+        protective: { risk_tier: "R3_LIVE_PROTECTIVE", visible: false, enabled: false, source_gap_blocks: false, blocker_codes: ["PRODUCTION_COMMAND_INACTIVE"] },
+        risk_increasing: { risk_tier: "R4_LIVE_RISK_INCREASING", visible: false, enabled: false, source_gap_blocks: true, blocker_codes: blockers },
+      },
+    };
   }
 
   private composeDetail(
@@ -62,12 +254,26 @@ export class LiveOperationsService {
     const brokerRecord = latest(brokerSync, "synced_at");
     const brokerHealthy = brokerRecord !== null && ["SYNCED", "CURRENT", "OK", "HEALTHY"]
       .includes(String(brokerRecord.status ?? "").toUpperCase());
-    const brokerVisible = sourceConnected && brokerHealthy && activeFindings.length === 0;
+    const capitalAggregate = exactCurrencySum(balances, ["total"]);
+    const capitalReason = capitalAggregate.reasonCode ??
+      (capitalAggregate.currency && capitalAggregate.currency !== canary.currency
+        ? "EDS03_CANARY_BALANCE_CURRENCY_MISMATCH" : null);
+    // `positions_v2` currently proves neither the currency nor the mark
+    // lineage needed for an aggregate.  Keep the exact rows on the screen,
+    // but never manufacture an aggregate in a Portal BFF.
+    const positionValueReason = positions.length > 0
+      ? "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED" : null;
+    const brokerAggregate = brokerRecord ? exactCurrencySum([brokerRecord], ["buying_power"])
+      : { value: null, currency: null, reasonCode: null };
+    const brokerReason = brokerAggregate.reasonCode ??
+      (brokerAggregate.currency && brokerAggregate.currency !== canary.currency
+        ? "EDS03_CANARY_BROKER_CURRENCY_MISMATCH" : null);
+    const brokerVisible = sourceConnected && brokerHealthy && activeFindings.length === 0 && brokerReason === null;
     const open = openOrders(orders);
-    const capital = decimalSum(balances, ["total"]);
-    const grossNotional = decimalAbsoluteSum(positions, "notional");
-    const dailyPnl = decimalSum(positions, ["realized_pnl", "unrealized_pnl"]);
-    const brokerEquity = typeof brokerRecord?.buying_power === "string" ? brokerRecord.buying_power : null;
+    const capital = capitalReason ? null : capitalAggregate.value;
+    const grossNotional = null;
+    const dailyPnl = null;
+    const brokerEquity = brokerReason ? null : brokerAggregate.value;
     const realtimeActive = sourceConnected && source.projection !== null &&
       this.config.FEATURE_EXECUTION_REALTIME_SSE === "true";
     const blockers = [
@@ -76,7 +282,8 @@ export class LiveOperationsService {
       "CANARY_EXIT_EVIDENCE_UNAVAILABLE",
       ...(sourceUnavailable ? ["LIVE_SOURCE_UNAVAILABLE"] : []),
       ...(!source.projection ? ["SOURCE_CONTINUITY_UNAVAILABLE"] : []),
-      ...(!brokerVisible ? [activeFindings.length > 0 ? "BROKER_RECONCILIATION_MISMATCH" : "BROKER_STATE_UNAVAILABLE"] : []),
+      ...(!brokerVisible ? [activeFindings.length > 0 ? "BROKER_RECONCILIATION_MISMATCH"
+        : brokerReason ?? "BROKER_STATE_UNAVAILABLE"] : []),
       "ROLLBACK_EVIDENCE_UNAVAILABLE",
       "EX_BE_08_PENDING",
     ];
@@ -124,8 +331,22 @@ export class LiveOperationsService {
       value: string | null,
       keys: readonly string[],
       suppress = false,
-    ) => ({ key, label, value: suppress ? null : value, unit,
-      envelope: source.panel(`kpi-${key}`, authority, keys, value === null ? {} : { value }, suppress) });
+      qualificationReason: string | null = null,
+    ) => {
+      const panel = source.panel(`kpi-${key}`, authority, keys, value === null ? {} : { value }, suppress);
+      const qualification = qualificationReason === null ? panel : {
+        ...panel,
+        panel_state: suppress ? panel.panel_state : "partial",
+        source_verification_state: suppress ? panel.source_verification_state : "PARTIAL",
+        data: null,
+        warnings: [...panel.warnings, { code: qualificationReason }],
+      };
+      return {
+        key, label, value: suppress || qualificationReason ? null : value, unit,
+        qualification_reason_code: qualificationReason,
+        envelope: qualification,
+      };
+    };
     const sourcePositions = source.collection("positions", "EXECUTION", "positions");
     const sourceOrders = source.collection("orders", "EXECUTION", "orders");
 
@@ -183,11 +404,11 @@ export class LiveOperationsService {
       },
       kpis: [
         ...(sourceConnected ? [
-          valueKpi("capital", "Capital", "EXECUTION", canary.currency, capital, ["account_balances"]),
-          valueKpi("gross_notional", "Gross notional", "EXECUTION", canary.currency, grossNotional, ["positions"]),
-          valueKpi("daily_pnl", "Daily P&L", "DERIVED", canary.currency, dailyPnl, ["positions"]),
+          valueKpi("capital", "Capital", "EXECUTION", canary.currency, capital, ["account_balances"], false, capitalReason),
+          valueKpi("gross_notional", "Gross notional", "EXECUTION", canary.currency, grossNotional, ["positions"], false, positionValueReason),
+          valueKpi("daily_pnl", "Daily P&L", "DERIVED", canary.currency, dailyPnl, ["positions"], false, positionValueReason),
           valueKpi("open_orders", "Open orders", "EXECUTION", "COUNT", String(open.length), ["orders"]),
-          valueKpi("broker_equity", "Broker equity", "BROKER", canary.currency, brokerEquity, ["broker_sync"], !brokerVisible),
+          valueKpi("broker_equity", "Broker equity", "BROKER", canary.currency, brokerEquity, ["broker_sync"], !brokerVisible, brokerReason),
         ] : [
           unavailableKpi("capital", "Capital", "EXECUTION", canary.currency),
           unavailableKpi("gross_notional", "Gross notional", "EXECUTION", canary.currency),
@@ -214,7 +435,7 @@ export class LiveOperationsService {
         finding_href: activeFindings.length > 0 ? `/operations/reconciliation/${String(activeFindings[0].finding_id ?? "current")}` : null,
         dry_run_reconcile_href: null,
         blocker_codes: brokerVisible ? [] : activeFindings.length > 0 ? ["BROKER_RECONCILIATION_MISMATCH"]
-          : ["BROKER_STATE_UNAVAILABLE", ...(sourceUnavailable ? ["LIVE_SOURCE_UNAVAILABLE"] : [])],
+          : [brokerReason ?? "BROKER_STATE_UNAVAILABLE", ...(sourceUnavailable ? ["LIVE_SOURCE_UNAVAILABLE"] : [])],
       },
       projection_continuity: {
         state: source.projection ? "CONTIGUOUS" : "UNAVAILABLE",
