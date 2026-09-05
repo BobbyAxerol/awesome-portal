@@ -64,7 +64,7 @@ test.describe("§8.2 journeys — recomposed product truth", () => {
     const tiles = page.locator(".exec-alpha-tiles > *");
     await expect.poll(() => tiles.count()).toBe(12);
     await page.getByRole("tab", { name: "Trade Replay" }).click();
-    await expect(page.getByText(/market candles, which are not published/)).toBeVisible();
+    await expect(page.getByText(/Market candles are unavailable.*E5_MARKET_CANDLES_NOT_PUBLISHED/)).toBeVisible();
   });
 
   test("4 · Portfolio 360: the published correlation and capital ledger render in their reviewed tabs", async ({ page }) => {
@@ -585,7 +585,10 @@ test.describe("EL-V2-08 · analytical surfaces", () => {
     await expect.poll(() => tiles.count()).toBe(12);
     for (let i = 0; i < 12; i += 1) {
       const t = tiles.nth(i);
-      const ok = (await t.locator("canvas, .exec-state, .exec-chart-unavailable-body").count()) > 0;
+      // A fact table is also a real panel: query capabilities can publish
+      // exact source facts rather than a time series. The invariant is no
+      // blank tile, not that every truth shape is a chart.
+      const ok = (await t.locator("canvas, table, .exec-state, .exec-chart-unavailable-body").count()) > 0;
       expect(ok, `tile ${i + 1}`).toBe(true);
     }
   });

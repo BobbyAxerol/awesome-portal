@@ -488,7 +488,8 @@ function readManagerEnvelope<T>(
   return { environment, freshness, completeness, sourceAsOf: str(root.source_as_of), readAt, page, ...(parsedSummary ? { summary: parsedSummary } : {}) };
 }
 
-function readFleetItem(raw: unknown): AlphaFleetItem | null {
+/** Reused by the EDS-04 named Alpha resource BFF; no client-side joins. */
+export function readAlphaFleetItem(raw: unknown): AlphaFleetItem | null {
   const root = obj(raw);
   if (!root || !Array.isArray(root.deployments) || !Array.isArray(root.portfolios)
     || !Array.isArray(root.allocations) || !Array.isArray(root.balances)
@@ -585,7 +586,8 @@ function readFleetSummary(raw: unknown): AlphaFleetSummary | null {
     currentPositionPnlByCurrency: pnl, metricBasis: "CURRENT_SOURCE_FACTS" };
 }
 
-function readBindingItem(raw: unknown): BindingItem | null {
+/** Reused by the EDS-04 named Binding resource BFF; non-secret shape only. */
+export function readBindingItem(raw: unknown): BindingItem | null {
   const root = obj(raw);
   const bindingId = str(root?.binding_id); const accountId = str(root?.account_id);
   const venue = str(root?.venue); const state = str(root?.state);
@@ -664,7 +666,7 @@ export function readPortfolioList(raw: unknown): PortfolioListEnvelope | null {
 }
 
 export const readAlphaFleet = (raw: unknown) =>
-  readManagerEnvelope(raw, "execution.alpha-fleet-list.v2", readFleetItem, readFleetSummary);
+  readManagerEnvelope(raw, "execution.alpha-fleet-list.v2", readAlphaFleetItem, readFleetSummary);
 
 export const readBindings = (raw: unknown) =>
   readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem);

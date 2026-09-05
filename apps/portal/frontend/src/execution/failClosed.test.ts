@@ -72,6 +72,7 @@ const FLAGS: Record<string, { dangerous: boolean; why: string }> = {
   portal_reachable: { dangerous: false, why: "absent reachability is not reachability" },
   broker_values_visible: { dangerous: false, why: "absent is not permission to show broker figures" },
   production_command_active: { dangerous: false, why: "absent is not an active command surface" },
+  active: { dangerous: false, why: "an unreadable deployment activity bit is not an active deployment" },
   realtime_active: { dangerous: false, why: "absent is not a live stream" },
   stream_available: { dangerous: false, why: "a stream nobody published is not a stream" },
   active_for_live_full: { dangerous: false, why: "the canary envelope does not govern Live Full by default" },

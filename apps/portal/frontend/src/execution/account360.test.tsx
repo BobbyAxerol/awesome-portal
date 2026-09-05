@@ -198,10 +198,11 @@ describe("Account 360° — the secret, the guard band and the buttons", () => {
     expect(screen.getByText(/plan → apply → verify/)).toBeTruthy();
   });
 
-  it("renders a panel state rather than a half-populated screen when the read fails", () => {
+  it("keeps the approved shell and localizes a denied account state", () => {
     render(<AccountBroker360 {...accountHandlers()} {...account360({ status: "denied", reason: "Not your binding." })} />);
     expect(screen.getByText("Not your binding.")).toBeTruthy();
-    expect(screen.queryByText(/Broker binding/)).toBeNull();
+    expect(screen.getByLabelText("Account resource state")).toBeTruthy();
+    expect(screen.getByText(/Broker binding/)).toBeTruthy();
   });
 });
 

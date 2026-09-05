@@ -793,14 +793,6 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   const lens = lensIndex ?? localLens;
   const setLens = onLensChange ?? setLocalLens;
 
-  if (status !== "ok" && status !== "partial") {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-pf">
-        <PanelState status={status} reason={reason ?? "This portfolio could not be read."} />
-      </ExecutionSurface>
-    );
-  }
-
   const shownHoldings = capPreserving(holdings, 40, (row) => row.readiness !== "READY");
   const holdingsNotice = capNotice(shownHoldings, "holdings");
 
@@ -823,6 +815,11 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         <button type="button" className="exec-a3-btn" aria-pressed={action === "report"} onClick={() => setAction(action === "report" ? null : "report")}>Report pack</button>
         <button type="button" className="exec-pf2-primary" aria-pressed={action === "rebalance"} onClick={() => setAction(action === "rebalance" ? null : "rebalance")}>Rebalance plan<span aria-hidden="true"> ▾</span></button>
       </header>
+      {status !== "ok" && status !== "partial" ? (
+        <section className="exec-gate-panel" aria-label="Portfolio resource state">
+          <PanelState status={status} reason={reason ?? "This portfolio could not be read."} />
+        </section>
+      ) : null}
       {action === "rebalance" ? (
         <section className="exec-sbc-plan" aria-label="PLAN · portfolio rebalance">
           <header className="exec-sbc-planhead">

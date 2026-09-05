@@ -4463,7 +4463,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | complete; fixed E5 deployment BFF authority closed |
 | EDS-02 | generated screen/action/panel/time contracts | EDS-01 | complete; 25 classified screens, 34 fields and 12 actions; no runtime mutation |
 | EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | **BFF_READY / FRONTEND_COMPATIBLE / VERIFIED** on 2026-09-05; yes, with typed gaps |
-| EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | yes, with typed gaps |
+| EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
 | EDS-05 | governance/operations and five Portal derivations | EDS-04 | yes, with typed gaps |
 | EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | yes for observed pages; no replay claim |
 | EDS-07 | equity/performance/risk/chart query plane | EDS-06 | yes for retained source range |
@@ -4744,33 +4744,55 @@ has the exact E7 reason.
 
 ### EDS-04 — Alpha, Portfolio, Account and Binding resource BFFs
 
+**Implementation status:** `COMPLETE / VERIFIED / SERVER_SIDE_ONLY / NO_RUNTIME_MUTATION` on `feat/eds-current-bff`.
+The implementation contract and test matrix are recorded in
+[`backend/EDS_04_RESOURCE_BFF_IMPLEMENTATION_PLAN.md`](backend/EDS_04_RESOURCE_BFF_IMPLEMENTATION_PLAN.md).
+This phase is explicitly server-side only: it reads the accepted SGP local
+projection and does not change the Edge, Trading System, runtime, network,
+cache policy or command authority.
+
 **Goal:** make all 360/list/detail screens exact-resource operations rather
 than thin envelopes or client-side joins.
 
-**Backend work:**
+**Delivered backend work:**
 
-- implement named Alpha Fleet/list, Alpha 360, Portfolio list/360, Account 360,
-  Accounts & Bindings list and Binding detail DTOs;
-- use explicit strategy/deployment/portfolio/account/binding keys from the
-  source census; forbid `portfolio_id`-only and “two of four” heuristics;
-- compose positions, account/balance/margin/sync/binding, equity/performance,
-  risk/sizing and reconciliation branches;
-- paginate with Portal cursors and exact local/source coverage metadata;
-- use owner-approved entity-name registry for display labels, never expose
-  source handles/hashes as primary UI labels;
-- preserve mark/valuation provenance limitations as panel warnings.
+- implement named Alpha 360, Portfolio 360, Account/Broker 360 and Binding
+  detail DTOs at `/api/v1/execution/resources/{alphas|portfolios|accounts|bindings}/{id}`;
+- require session membership and pin every request to the configured local
+  projection workspace before reading any resource fact;
+- resolve full projection identity first, then scope declared relations by
+  strategy/deployment/portfolio/account/binding keys; forbid
+  `portfolio_id`-only and “two of four” transactional selection;
+- compose accepted positions, account/balance/margin/sync/binding, deployment,
+  allocation, equity/performance and reconciliation branches without a direct
+  Trading System source or database connection;
+- enforce a 200-row relation limit and a 1-MiB product wire limit with typed
+  `PARTIAL` panels, opaque relation-bound internals retained server-side and
+  no invented cursor;
+- redact internal broker references and use only the published union field
+  schema across already accepted profiles; no new source activation or poll;
+- retain exact decimal/currency facts and deduplicate multi-currency balances
+  with currency in the identity key.
 
 **Frontend proof:** current rich tabs/components remain intact; Alpha/Fleet,
-Portfolio and Account/Binding routes render real branches and typed gaps at
-panel granularity.
+Portfolio and Account/Binding routes call their named same-origin resource BFF
+and render direct branches plus typed gaps at panel granularity.  A missing
+branch cannot replace the full rich screen. `deployment.active` is explicitly
+fail-closed: absent is not active.
 
-**Tests:** identity property tests, parent/orphan checks, duplicate resource
-keys, deep-page lookup, mixed currency fail-closed, empty binding/margin/sync,
-all resource tabs and authenticated browser traversal.
+**Verification:** `./scripts/control-api-test.sh` passed the TypeScript build,
+41 files / 360 tests and real PostgreSQL restore drill. The CI-equivalent
+frontend full-repository mirror passed 98 files / 1,829 tests (1 skipped) and
+the production build. After a manual review confirmed direct resource facts
+inside the existing rich Alpha, Portfolio and Account frames, their three
+affected visual baselines were refreshed deliberately and replayed with no
+update flag: 3/3 passed. The Playwright visual runner remains disposable; no
+runtime deployment or implicit source-worktree snapshot recording occurs.
 
-**Exit:** no detail screen filters a global bounded page; field coverage for
-these screens is 100% direct/derived/typed-gap and visible on the deployed dev
-image.
+**Exit:** achieved. No detail screen filters a global bounded page; field
+coverage is direct/derived/typed-gap at panel level, and no runtime image,
+source profile, cache policy, command authority, Edge or Trading System was
+changed. Current source gaps remain typed truth rather than EDS-04 debt.
 
 **Next:** EDS-05.
 
@@ -5054,8 +5076,8 @@ EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                    EDS-11 → EDS-12
 ```
 
-The immediate next phase is **EDS-04 — Alpha, Portfolio, Account and Binding
-resource BFFs**. EDS-03 has closed the exact stage-resource resolver and
-generated panel wire without changing runtime/Edge/source authority; EDS-04
-must reuse that resolver rather than return to bounded global-page filtering
-or client-side business joins.
+The immediate next phase is **EDS-05 — Portal derivations, governance and
+operational composition**. EDS-04 has closed the exact resource resolver and
+rich same-origin detail wire without changing runtime/Edge/source authority;
+EDS-05 must retain that server-side boundary rather than return to bounded
+global-page filtering or client-side business joins.

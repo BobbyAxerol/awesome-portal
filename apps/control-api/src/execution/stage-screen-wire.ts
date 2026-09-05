@@ -8,6 +8,8 @@ export interface StageRelation {
   readonly page: ManagerPage | null;
   readonly state: StageCapabilityState;
   readonly reasonCode: string | null;
+  /** A named product BFF may enforce its own non-cursor response bound. */
+  readonly truncated?: boolean;
 }
 
 const TIMESTAMP_KEYS = new Set([
@@ -83,9 +85,9 @@ export function stagePanel(relation: StageRelation, readAtMs: number): PanelEnve
       filtered_total: relation.page?.filteredTotal === null || relation.page?.filteredTotal === undefined
         ? null : String(relation.page.filteredTotal),
       returned_count: rows.length,
-      truncated: relation.page?.nextCursor !== null && relation.page?.nextCursor !== undefined,
+      truncated: relation.truncated === true || (relation.page?.nextCursor !== null && relation.page?.nextCursor !== undefined),
       downsampled: false,
-      has_more: relation.page?.nextCursor !== null && relation.page?.nextCursor !== undefined,
+      has_more: relation.truncated === true || (relation.page?.nextCursor !== null && relation.page?.nextCursor !== undefined),
       next_cursor: relation.page?.nextCursor ?? null,
       gaps: relation.state === "PARTIAL" && relation.reasonCode
         ? sourceAsOfMs === null ? [] : [{ from_ms: sourceAsOfMs, to_ms: sourceAsOfMs, reason_code: relation.reasonCode }]

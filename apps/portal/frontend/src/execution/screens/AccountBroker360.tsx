@@ -347,13 +347,6 @@ export function AccountBroker360({
   status = "ok",
   reason,
 }: AccountBroker360Props) {
-  if (status !== "ok" && status !== "partial") {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-360">
-        <PanelState status={status} reason={reason ?? "This account could not be read."} />
-      </ExecutionSurface>
-    );
-  }
   const live = stage === "LIVE_FULL" || stage === "LIVE_CANARY";
 
   // The account being viewed always survives the cap — a list of siblings that
@@ -410,6 +403,12 @@ export function AccountBroker360({
         <span className="exec-ac-facts">{stage === "LIVE_FULL" || stage === "LIVE_CANARY" ? "live" : stage.toLowerCase()} · {venue} · {marginMode} · settle {settleCurrency} · {accountRevision}</span>
       </header>
 
+      {status !== "ok" && status !== "partial" ? (
+        <section className="exec-gate-panel" aria-label="Account resource state">
+          <PanelState status={status} reason={reason ?? "This account could not be read."} />
+        </section>
+      ) : null}
+
       <div className="exec-360-grid3">
         <Column title="Internal virtual state" column={internal} />
         <Column title="Physical broker state" column={broker} />
@@ -432,7 +431,7 @@ export function AccountBroker360({
         {(
       <section className="exec-gate-panel">
         <div className="exec-tile-title">
-          Broker binding · external_account_ref {externalAccountRef}
+          Broker binding · reference {externalAccountRef}
         </div>
         <div className="exec-360-colmeta">
           <span className="exec-num">credential alias {credentialAlias}</span>

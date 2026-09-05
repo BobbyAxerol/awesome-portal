@@ -220,6 +220,122 @@ const CREATE_APPROVAL_BASE = {
   created_at: "2026-08-31T12:00:00.000Z", updated_at: "2026-08-31T12:00:00.000Z",
 } as const;
 
+/**
+ * Raw, post-BFF EDS-04 fixture used by both Fixture Lab and the browser
+ * same-origin BFF double. The shared wire shape makes rich detail screens
+ * exercise named resource reads rather than rebuild from a bounded Fleet
+ * page, and prevents browser tests from drifting from the lab DTO.
+ */
+function resourceFixture(kind: "alpha" | "portfolio" | "account" | "binding", id: string): unknown {
+  const fleet = ALPHA_FLEET as unknown as { page?: { rows?: Array<Record<string, unknown>> } };
+  const row = fleet.page?.rows?.find((candidate) => candidate.alpha_id === "alpha_a") ?? null;
+  const rawDeployments = Array.isArray(row?.deployments) ? row.deployments as Array<Record<string, unknown>> : [];
+  // The Fleet fixture's nested row intentionally omits the parent strategy id.
+  // A real EDS-04 resource DTO has already resolved it server-side, so model
+  // that named-resource shape here instead of teaching the browser to recover
+  // it from a Fleet parent.
+  const deployments: Array<Record<string, unknown>> = rawDeployments.map((item) => ({
+    ...item,
+    strategy_id: typeof item.strategy_id === "string" ? item.strategy_id : "alpha_a",
+    mode: typeof item.mode === "string" ? item.mode : "paper",
+  }));
+  const deployment = deployments[0] ?? {
+    deployment_id: "dep_a", strategy_id: "alpha_a", account_id: "acc_a", mode: "paper", venue: "BINANCE", currency: "USDT",
+  };
+  const accountId = typeof deployment.account_id === "string" ? deployment.account_id : "acc_a";
+  // This is a post-BFF fixture, not a source fixture.  Keep the same resource
+  // shape that EDS-04 publishes: allocation membership is a first-class panel
+  // relation and physical broker identifiers have already been redacted.
+  const portfolioAllocations = [{
+    portfolio_id: "pf_main", portfolio_name: "Main", deployment_id: "dep_a", strategy_id: "alpha_a",
+    account_id: accountId, mode: "paper", venue: "BINANCE", currency: "USDT", allocated_capital: "20000",
+    updated_at: "2026-09-02T06:00:00.000Z",
+  }];
+  const base = {
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "TRADING_SYSTEM",
+    workspace_id: "primary",
+    selected_environment: "paper",
+    read_at: "2026-09-02T06:00:01.000Z",
+    as_of: "2026-09-02T06:00:00.000Z",
+    read_at_ms: Date.parse("2026-09-02T06:00:01.000Z"),
+    as_of_ms: Date.parse("2026-09-02T06:00:00.000Z"),
+    freshness: "FRESH",
+    completeness: "COMPLETE",
+    capabilities: [],
+    panels: {},
+    unavailable_branches: [],
+  };
+  const common = {
+    strategies: [{ strategy_id: "alpha_a", alpha_id: "alpha_a", label: "Carry A", version: "3.2", trader_id: "Bobby-001", mode: "paper", updated_at: "2026-09-02T06:00:00.000Z" }],
+    deployments,
+    accounts: [{ account_id: accountId, strategy_id: "alpha_a", mode: "paper", venue: "BINANCE", base_currency: "USDT", updated_at: "2026-09-02T06:00:00.000Z" }],
+    account_balances: [{ account_id: accountId, currency: "USDT", total: "20123.19605", free: "20123.19605", locked: "0", updated_at: "2026-09-02T06:00:00.000Z" }],
+    margin_balances: [{ account_id: accountId, currency: "USDT", initial: "100", maintenance: "50", updated_at: "2026-09-02T06:00:00.000Z" }],
+    account_sync: [{ sync_id: "sync_a", account_id: accountId, mode: "paper", venue: "BINANCE", source: "EXECUTION", status: "SYNCED", synced_at: "2026-09-02T06:00:00.000Z" }],
+    broker_sync: [{ sync_id: "broker_sync_a", mode: "paper", venue: "BINANCE", status: "SYNCED", currency: "USDT", buying_power: "20123.19605", synced_at: "2026-09-02T06:00:00.000Z" }],
+    venue_accounts: [{ binding_id: "acc_a@BINANCE", account_id: accountId, mode: "paper", venue: "BINANCE", state: "ACTIVE", updated_at: "2026-09-02T06:00:00.000Z" }],
+    positions: [{ position_id: "pos_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: accountId, mode: "paper", venue: "BINANCE", instrument_id: "BTCUSDT", quantity: "0.1", avg_px_open: "60000", mark_price: "61000", unrealized_pnl: "100", notional: "6100", currency: "USDT", updated_at: "2026-09-02T06:00:00.000Z" }],
+    orders: [{ order_id: "ord_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: accountId, mode: "paper", venue: "BINANCE", instrument_id: "BTCUSDT", status: "FILLED", quantity: "0.1", price: "60000", submitted_at: "2026-09-02T05:00:00.000Z" }],
+    fills: [],
+    sessions: [{ execution_session_id: "ses_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: accountId, mode: "paper", venue: "BINANCE", state: "COMPLETED", accounting_recovered_count: "1", reconciliation_deferred_count: "0", reconciliation_actionable_count: "0", updated_at: "2026-09-02T05:01:00.000Z" }],
+    performance: [{ id: "perf_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: accountId, mode: "paper", venue: "BINANCE", currency: "USDT", net_pnl: "123.19605", realized_pnl: "23.19605", fee_total: "0.5", equity: "20123.19605", ts: "2026-09-02T06:00:00.000Z" }],
+    account_equity: [{ id: "eq_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: accountId, mode: "paper", venue: "BINANCE", currency: "USDT", equity: "20123.19605", total_notional: "6100", ts: "2026-09-02T06:00:00.000Z" }],
+    portfolio_allocations: portfolioAllocations,
+    reconciliation: [{ finding_id: "rec_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: accountId, mode: "paper", venue: "BINANCE", finding_type: "POSITION", status: "RESOLVED", resolved_at: "2026-09-02T06:00:00.000Z" }],
+    journal: [{ command_id: "cmd_a", deployment_id: "dep_a", strategy_id: "alpha_a", account_id: accountId, mode: "paper", venue: "BINANCE", command_kind: "INSPECT", aggregate_key: "alpha_a", outcome_class: "SUCCESS", updated_at: "2026-09-02T06:00:00.000Z" }],
+  };
+  if (kind === "alpha") {
+    const alpha = id === "alpha_a" && row ? { ...row } : null;
+    return {
+      ...base, schema_version: "execution.alpha-resource.v1", state: alpha ? "ready" : "empty",
+      data: alpha ? { ...common, alpha, profile_coverage: { paper: { state: "FOUND" } } } : {},
+    };
+  }
+  if (kind === "portfolio") {
+    const portfolio = id === "pf_unallocated"
+      ? { portfolio_id: id, name: "Unallocated", owner: "bobby", base_currency: "USDT", state: "ACTIVE", deployments: [], allocations: [], allocation_by_currency: [], holdings_count: 0, account_ids: [] }
+      : id === "pf_main"
+        ? {
+          portfolio_id: id, name: "Main", owner: "bobby", base_currency: "USDT", state: "ACTIVE",
+          deployments: deployments.map((item) => ({ ...item, portfolio_id: id })), allocations: portfolioAllocations,
+          allocation_by_currency: [{ currency: "USDT", value: "20000" }], holdings_count: deployments.length, account_ids: [accountId],
+        }
+        : null;
+    return {
+      ...base, schema_version: "execution.portfolio-resource.v1", state: portfolio ? "ready" : "empty",
+      data: portfolio ? {
+        ...common,
+        // `portfolio.deployments` is the server-scoped membership.  The rich
+        // screen intentionally consumes the canonical top-level relation,
+        // just like a real resource DTO does.
+        deployments: portfolio.deployments,
+        portfolio_allocations: portfolio.allocations,
+        portfolios: [{ portfolio_id: portfolio.portfolio_id, name: portfolio.name, base_currency: portfolio.base_currency, state: portfolio.state }],
+        portfolio,
+        profile_coverage: { paper: { state: "FOUND" } },
+      } : {},
+    };
+  }
+  if (kind === "account") {
+    const account = id === accountId ? {
+      ...common.accounts[0], label: "BINANCE · execution account", deployments: common.deployments,
+      differences: [], exposure_headroom: [{ currency: "USDT", free: "20123.19605", maintenance: "50", headroom: "20073.19605", verdict: "AVAILABLE" }],
+    } : null;
+    return {
+      ...base, schema_version: "execution.account-resource.v1", state: account ? "ready" : "empty",
+      data: account ? { ...common, account, differences: [], exposure_headroom: account.exposure_headroom, profile_coverage: { paper: { state: "FOUND" } } } : {},
+    };
+  }
+  const binding = id === "acc_a@BINANCE" ? {
+    binding_id: id, account_id: accountId, venue: "BINANCE", state: "ACTIVE", credential_state: "SYNC_SYNCED", updated_at: "2026-09-02T06:00:00.000Z",
+  } : null;
+  return {
+    ...base, schema_version: "execution.binding-resource.v1", state: binding ? "ready" : "empty",
+    data: binding ? { ...common, binding, profile_coverage: { paper: { state: "FOUND" } } } : {},
+  };
+}
+
 export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi {
   const down = new Set(options.unavailableEndpoints ?? []);
   let polls = 0;
@@ -296,6 +412,22 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     },
     async getAccountBroker360(_accountId: string) {
       return unavailable("N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED: the full exposure population is not published; this screen stays typed unavailable.");
+    },
+    async getAlpha360Resource(alphaId: string) {
+      const blocked = gate<ProfileEnvelope>("getAlpha360Resource");
+      return blocked ?? fixtureRead(resourceFixture("alpha", alphaId), readProfileEnvelope, "The alpha resource");
+    },
+    async getPortfolio360Resource(portfolioId: string) {
+      const blocked = gate<ProfileEnvelope>("getPortfolio360Resource");
+      return blocked ?? fixtureRead(resourceFixture("portfolio", portfolioId), readProfileEnvelope, "The portfolio resource");
+    },
+    async getAccount360Resource(accountId: string) {
+      const blocked = gate<ProfileEnvelope>("getAccount360Resource");
+      return blocked ?? fixtureRead(resourceFixture("account", accountId), readProfileEnvelope, "The account resource");
+    },
+    async getBindingResource(bindingId: string) {
+      const blocked = gate<ProfileEnvelope>("getBindingResource");
+      return blocked ?? fixtureRead(resourceFixture("binding", bindingId), readProfileEnvelope, "The binding resource");
     },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");

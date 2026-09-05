@@ -226,10 +226,11 @@ describe("Alpha 360° — at the volume the Trading System actually holds", () =
 });
 
 describe("Alpha 360° — states the runtime opens in", () => {
-  it("renders a panel state rather than a half-built screen when the alpha cannot be read", () => {
+  it("keeps the approved shell and localizes a denied alpha state", () => {
     render(<AlphaThreeSixty {...alphaHandlers()} {...alpha360({ status: "denied", reason: "Not your alpha." })} />);
     expect(screen.getByText("Not your alpha.")).toBeTruthy();
-    expect(screen.queryByRole("tab", { name: "Overview" })).toBeNull();
+    expect(screen.getByLabelText("Alpha resource state")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Overview" })).toBeTruthy();
   });
 
   it("says a position has no mark rather than showing a stale one as current", () => {

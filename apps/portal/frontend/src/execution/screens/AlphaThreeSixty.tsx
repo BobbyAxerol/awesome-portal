@@ -442,14 +442,6 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
   // of one of these, so this was live on a real page, not hypothetical.
   const uid = useId();
 
-  if (status !== "ok" && status !== "partial") {
-    return (
-      <ExecutionSurface kind="deployments" className="exec-alpha">
-        <PanelState status={status} reason={reason ?? "This alpha could not be read."} />
-      </ExecutionSurface>
-    );
-  }
-
   const researchStatus = props.researchStatus ?? "RESEARCH_APPROVED";
   const clock = props.demoClock ?? null;
   const stagesNow = Array.from(new Set(deployments.map((d) => d.stage)));
@@ -466,6 +458,11 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
         <span className="exec-a3-source"><b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span></span>
         {passportHref ? <a className="exec-a3-btn" href={passportHref}>Artifact passport →</a> : null}
       </header>
+      {status !== "ok" && status !== "partial" ? (
+        <section className="exec-gate-panel" aria-label="Alpha resource state">
+          <PanelState status={status} reason={reason ?? "This alpha could not be read."} />
+        </section>
+      ) : null}
       <div className="exec-a3-meta">
         <span>artifact <a href={passportHref ?? `/deployments/alphas/${alphaId}?tab=Audit`} title={artifactDigest}>{artifactDigest.length > 20 ? shortDigest(artifactDigest) : artifactDigest}</a></span>
         <span>owner {owner}</span>

@@ -75,6 +75,8 @@ import { ProfileReadService } from "./profile-read/profile-read.service";
 import { ManagerListsController } from "./manager-lists/manager-lists.controller";
 import { ManagerListsRepository } from "./manager-lists/manager-lists.repository";
 import { ManagerListsService } from "./manager-lists/manager-lists.service";
+import { ResourceReadController } from "./resource-read/resource-read.controller";
+import { ResourceReadService } from "./resource-read/resource-read.service";
 
 @Module({})
 export class AppModule {
@@ -106,6 +108,7 @@ export class AppModule {
         PaperReadController,
         ProfileReadController,
         ManagerListsController,
+        ResourceReadController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -159,6 +162,7 @@ export class AppModule {
         ProfileReadService,
         ManagerListsRepository,
         ManagerListsService,
+        ResourceReadService,
         ExecutionSharedReadRepository,
         ExecutionRuntimeManifestService,
         ExecutionContractAuthorityService,

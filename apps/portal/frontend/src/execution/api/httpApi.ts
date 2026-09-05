@@ -293,6 +293,14 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     readGet(`/governance/approvals/${encodeURIComponent(approvalId)}/live`, readLiveReview, "The live review");
   const getAccountBroker360 = (accountId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/screens/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account 360");
+  const getAlpha360Resource = (alphaId: string): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/resources/alphas/${encodeURIComponent(alphaId)}`, readProfileEnvelope, "The alpha resource");
+  const getPortfolio360Resource = (portfolioId: string): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/resources/portfolios/${encodeURIComponent(portfolioId)}`, readProfileEnvelope, "The portfolio resource");
+  const getAccount360Resource = (accountId: string): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/resources/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account resource");
+  const getBindingResource = (bindingId: string): Promise<Result<ProfileEnvelope>> =>
+    readGet(`/resources/bindings/${encodeURIComponent(bindingId)}`, readProfileEnvelope, "The binding resource");
   const listParameters = (query: object) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
@@ -390,6 +398,10 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     runOperatorTask,
     getLiveReview,
     getAccountBroker360,
+    getAlpha360Resource,
+    getPortfolio360Resource,
+    getAccount360Resource,
+    getBindingResource,
     getAlphaFleet,
     listPortfolios,
     getBindings,

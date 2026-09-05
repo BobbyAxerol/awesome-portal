@@ -8,7 +8,7 @@
  * screen is never swapped for a generic envelope view, and no fixture value
  * is reachable from this module.
  */
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
@@ -19,7 +19,7 @@ import type {
   ProfileEnvelope,
   QueryAnalytics,
 } from "../api/profileRead";
-import { readQueryAnalytics } from "../api/profileRead";
+import { readAlphaFleetItem, readBindingItem, readQueryAnalytics } from "../api/profileRead";
 import { formatExact } from "../formatExact";
 import { pageOf, workbenchFillRow, workbenchOrderRow, workbenchPositionRow, workbenchSessionRow } from "../api/profileRows";
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
@@ -78,6 +78,29 @@ export function screenEnvelope(profile: ProfileEnvelope): Envelope {
     readAt: profile.readAt,
     freshness: FRESHNESS[profile.freshness ?? ""] ?? "UNKNOWN",
   };
+}
+
+/** The server owns resource state; HTTP success alone never means product-ready. */
+function profilePanelStatus(profile: ProfileEnvelope | null | undefined, transport: PanelStatus): PanelStatus {
+  if (transport !== "ok") return transport;
+  switch (profile?.state) {
+    case "ready": return "ok";
+    case "empty": return "empty";
+    case "partial": return "partial";
+    case "stale": return "stale";
+    case "unavailable": return "unavailable";
+    case "denied": return "denied";
+    default: return profile ? "partial" : "unavailable";
+  }
+}
+
+function resourceReason(profile: ProfileEnvelope | null | undefined, fallback?: string): string | undefined {
+  if (!profile) return fallback;
+  const reasons = [
+    ...profile.unavailableBranches,
+    ...profile.capabilities.flatMap((item) => item.reasonCode ? [item.reasonCode] : []),
+  ];
+  return reasons.length > 0 ? reasons.join(" · ") : fallback;
 }
 
 const STAGE_FOR_MODE: Record<string, PromotionStage> = {
@@ -141,6 +164,70 @@ function profileEquity(profile: ProfileEnvelope) {
       returnedRows: points.length,
     },
     series: { label: "Account equity", points },
+  };
+}
+
+/**
+ * View-only bridge from a named EDS-04 resource DTO to existing rich panels.
+ * Every row was identity-resolved by the server; this function neither joins
+ * nor broadens it. Derived query analytics remains additive beside it.
+ */
+function resourceFacts(profile: ProfileEnvelope | null | undefined, subjectKind: "ALPHA" | "PORTFOLIO", subjectId: string): QueryAnalytics | null {
+  if (!profile) return null;
+  const sourceFacts: Record<string, readonly Record<string, unknown>[]> = {
+    deployments: profile.data.deployments ?? [],
+    positions: profile.data.positions ?? [],
+    orders: profile.data.orders ?? [],
+    fills: profile.data.fills ?? [],
+    sessions: profile.data.sessions ?? [],
+    allocations: profile.data.portfolio_allocations ?? [],
+    accountEquity: profile.data.account_equity ?? [],
+    performance: profile.data.performance ?? [],
+    reconciliation: profile.data.reconciliation ?? [],
+    journal: profile.data.journal ?? [],
+  };
+  const tradeLog = [
+    ...(profile.data.orders ?? []).map((row) => ({
+      timestamp: utcRowTime(row, "submitted_at", "updated_at"), event_type: "ORDER", order_id: text(row.order_id),
+      fill_id: null, quantity: text(row.quantity), price: text(row.price), journal_id: text(row.command_id),
+    })),
+    ...(profile.data.fills ?? []).map((row) => ({
+      timestamp: utcRowTime(row, "trade_time", "updated_at"), event_type: "FILL", order_id: text(row.order_id),
+      fill_id: text(row.fill_id), quantity: text(row.quantity), price: text(row.price), journal_id: text(row.command_id),
+    })),
+  ];
+  return {
+    subjectKind,
+    subjectId,
+    asOf: profile.asOf,
+    readAt: profile.readAt,
+    completeness: profile.completeness,
+    authority: profile.sourceAuthority,
+    formulaVersion: null,
+    capabilities: profile.capabilities,
+    orderFunnel: null,
+    executionQuality: null,
+    chartSeries: [],
+    positions: sourceFacts.positions,
+    sourceFacts,
+    replay: {
+      state: sourceFacts.orders.length + sourceFacts.fills.length > 0 ? "AVAILABLE" : "EMPTY",
+      reasonCode: null,
+      candlesState: "UNAVAILABLE",
+      candlesReasonCode: "E5_MARKET_CANDLES_NOT_PUBLISHED",
+      tradeLog,
+    },
+    correlation: null,
+  };
+}
+
+function combinedFacts(resource: QueryAnalytics | null, additive: QueryAnalytics | null | undefined): QueryAnalytics | null {
+  if (!resource) return additive ?? null;
+  if (!additive) return resource;
+  return {
+    ...additive,
+    sourceFacts: { ...(additive.sourceFacts ?? {}), ...(resource.sourceFacts ?? {}) },
+    replay: resource.replay ?? additive.replay,
   };
 }
 
@@ -580,15 +667,6 @@ function readiness(deployment: AlphaFleetDeployment): Readiness {
   return deployment.active && deployment.state.toUpperCase() === "ACTIVE" ? "READY" : "UNKNOWN";
 }
 
-function fleetEnvelope(item: AlphaFleetItem, readAt: string, sourceAsOf: string | null, freshness: string): Envelope {
-  return {
-    authority: "EXECUTION",
-    asOf: sourceAsOf ?? item.updatedAt,
-    readAt,
-    freshness: FRESHNESS[freshness] ?? "UNKNOWN",
-  };
-}
-
 function unique(values: readonly string[]): readonly string[] {
   return Array.from(new Set(values.filter((value) => value.length > 0)));
 }
@@ -646,12 +724,12 @@ function facts(analytics: QueryAnalytics | null | undefined, key: string): reado
 function deploymentFor(row: SourceRow, deployments: readonly SourceRow[]): SourceRow | null {
   const explicit = text(row.deployment_id);
   if (explicit) return deployments.find((item) => text(item.deployment_id) === explicit) ?? null;
-  const strategy = text(row.strategy_id);
-  const account = text(row.account_id);
-  return deployments.find((item) =>
-    (strategy !== null && text(item.strategy_id) === strategy) ||
-    (account !== null && text(item.account_id) === account),
-  ) ?? null;
+  // Resource BFFs resolve any tuple fallback server-side. The browser must
+  // never recreate the retired "strategy OR account" heuristic: it can merge
+  // unrelated accounts into the same rich panel. Legacy analytics without a
+  // declared deployment remains renderable, but its deployment label stays
+  // explicitly unpublished.
+  return null;
 }
 
 function alphaPositions(analytics: QueryAnalytics | null | undefined): PositionRow[] {
@@ -861,35 +939,37 @@ function deploymentHref(deployment: DeploymentRow): string {
 }
 
 export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionApi; alphaId: string }) {
-  // Fleet v2 is the current-source identity/deployment spine. Query analytics
-  // is an additive branch: disabling or losing it must never erase the alpha,
-  // its deployments, accounts or reviewed screen composition.
-  // P4-C: an alpha spans every profile it holds a deployment in; its realtime
-  // truth is the union of the three published projection streams, coalesced.
+  // EDS-04: exact resource identity and all current source rows arrive through
+  // one named server BFF. Fleet remains the root register only; a detail route
+  // never searches its first bounded page in the browser.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const fleetState = useApiRead(() => api.getAlphaFleet({ search: alphaId, limit: 50 }), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   const [scope, setScope] = useAnalyticsScope();
   const navigate = useNavigate();
   const analytics = analyticsState.value;
-  const fleet = fleetState.value;
-  const item = fleet?.page.rows.find((row) => row.alphaId === alphaId) ?? null;
-  const envelope: Envelope = analytics
-    ? { authority: AUTHORITY[analytics.authority ?? ""] ?? "DERIVED", asOf: analytics.asOf, freshness: "OK" }
-    : item && fleet
-      ? fleetEnvelope(item, fleet.readAt, fleet.sourceAsOf, fleet.freshness)
+  const resource = resourceState.value;
+  const item = resource ? readAlphaFleetItem(resource.objects.alpha) : null;
+  const sourceFacts = resourceFacts(resource, "ALPHA", alphaId);
+  const viewFacts = combinedFacts(sourceFacts, analytics);
+  const envelope: Envelope = resource
+    ? screenEnvelope(resource)
+    : analytics
+      ? { authority: AUTHORITY[analytics.authority ?? ""] ?? "DERIVED", asOf: analytics.asOf, freshness: "OK" }
       : { authority: "PORTAL", asOf: null, freshness: "UNKNOWN" };
   const analyticsReason = analyticsState.status === "loading"
     ? "Analytics are loading; current-source identity and deployments remain available."
     : analyticsState.reason ?? "This analytics branch is not published for this alpha.";
-  const rootStatus: PanelStatus = fleetState.status === "ok"
-    ? item ? "ok" : "empty"
-    : fleetState.status;
+  const rootStatus: PanelStatus = resourceState.status !== "ok"
+    ? resourceState.status
+    : !item
+      ? resource?.state === "empty" ? "empty" : "partial"
+      : profilePanelStatus(resource, resourceState.status);
   const deployments = item ? fleetDeployments(item) : [];
-  const positions = analytics ? alphaPositions(analytics) : null;
-  const orders = analytics ? alphaOrders(analytics) : null;
-  const audit = analytics ? alphaAudit(analytics) : null;
+  const positions = viewFacts ? alphaPositions(viewFacts) : null;
+  const orders = viewFacts ? alphaOrders(viewFacts) : null;
+  const audit = viewFacts ? alphaAudit(viewFacts) : null;
   return (
     <AlphaThreeSixty
       researchStatus={item?.health ?? null}
@@ -908,45 +988,62 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       onTabChange={setTab}
       venues={item ? fleetVenues(item) : []}
       kpis={analytics ? analyticsKpis(analytics) : item ? fleetKpis(item) : []}
-      contributions={alphaContributions(analytics)}
-      equity={analyticsEquity(analytics)}
+      contributions={alphaContributions(viewFacts)}
+      equity={resource ? profileEquity(resource) ?? analyticsEquity(analytics) : analyticsEquity(analytics)}
       deployments={deployments}
       tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      replay={analytics ? <SourceTradeReplay analytics={analytics} /> : undefined}
+      replay={viewFacts ? <SourceTradeReplay analytics={viewFacts} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
       audit={audit ? pageOf(audit) : null}
-      risk={alphaRisk(analytics)}
-      sessions={alphaSessions(analytics)}
-      accounting={alphaAccounting(analytics)}
-      reconciliation={alphaReconciliation(analytics)}
+      risk={alphaRisk(viewFacts)}
+      sessions={alphaSessions(viewFacts)}
+      accounting={alphaAccounting(viewFacts)}
+      reconciliation={alphaReconciliation(viewFacts)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
       onOpenAccount={(accountId) => navigate(`/deployments/accounts/${encodeURIComponent(accountId)}`)}
       status={rootStatus}
-      reason={rootStatus === "empty" ? `Alpha ${alphaId} was not present in the current-source Fleet.` : fleetState.reason}
+      reason={rootStatus === "empty"
+        ? `Alpha ${alphaId} was not present in the current projected resource population.`
+        : resourceReason(resource, resourceState.reason ?? (item ? undefined : "EDS04_ALPHA_RESOURCE_UNREADABLE"))}
     />
   );
 }
 
 /* ── portfolio 360 ────────────────────────────────────────────────────── */
 
-function portfolioHoldings(fleet: readonly AlphaFleetItem[], portfolioId: string): HoldingRow[] {
-  return fleet.flatMap((alpha) => alpha.deployments
-    .filter((deployment) => deployment.portfolioId === portfolioId)
-    .map((deployment) => ({
-      alpha: alpha.alphaId,
-      deploymentId: deployment.deploymentId,
-      accountId: deployment.accountId,
-      venue: deployment.venue,
-      mode: deployment.stage.toLowerCase(),
-      allocation: deployment.allocation,
-      exposure: deployment.exposure,
+function resourceRows(value: unknown): readonly Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.flatMap((row) => row !== null && typeof row === "object" && !Array.isArray(row)
+      ? [row as Record<string, unknown>] : [])
+    : [];
+}
+
+/** EDS-04 rows are already exact-resource scoped by the server. */
+function portfolioResourceHoldings(rows: readonly Record<string, unknown>[]): HoldingRow[] {
+  return rows.map((deployment) => {
+    const stage = text(deployment.stage) ?? text(deployment.mode) ?? "PAPER";
+    const active = deployment.active === true;
+    const state = text(deployment.state)?.toUpperCase() ?? "UNKNOWN";
+    const health = text(deployment.health)?.toUpperCase() ?? "UNKNOWN";
+    const readiness: Readiness = health === "READY" || health === "BLOCKED" || health === "NOT_READY"
+      ? health
+      : active && state === "ACTIVE" ? "READY" : "UNKNOWN";
+    return {
+      alpha: text(deployment.strategy_id) ?? "alpha not published",
+      deploymentId: text(deployment.deployment_id) ?? "deployment not published",
+      accountId: text(deployment.account_id) ?? "account not published",
+      venue: text(deployment.venue) ?? "venue not published",
+      mode: stage.toLowerCase(),
+      allocation: text(deployment.allocation),
+      exposure: text(deployment.exposure),
       exposurePct: null,
-      currency: deployment.currency,
-      stage: promotionStage(deployment.stage),
-      readiness: readiness(deployment),
-    })));
+      currency: text(deployment.currency) ?? "currency not published",
+      stage: promotionStage(stage),
+      readiness,
+    };
+  });
 }
 
 export function PortfolioListRichContainer({ api }: { api: ExecutionApi }) {
@@ -968,15 +1065,11 @@ export function PortfolioListRichContainer({ api }: { api: ExecutionApi }) {
 }
 
 export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: ExecutionApi; portfolioId: string }) {
-  // Fleet is the current-source portfolio/holding spine across Paper,
-  // Sandbox and Live. Analytics remains additive and cannot blank identity or
-  // holdings when a derived branch is disabled.
+  // EDS-04 resolves the portfolio identity and its exact deployment membership
+  // on the server.  The browser does not fetch a Fleet page and re-create the
+  // former portfolio/alpha join.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const fleetState = useApiRead(() => api.getAlphaFleet({ environment: "all", limit: 50 }), [api, realtime.refreshKey], { keepValue: true });
-  // P4-A: the portfolios relation is the identity authority — a portfolio
-  // with no fleet allocation (an unallocated register row) still renders its
-  // rich screen, and a genuinely unknown id names the real available ids.
-  const registerState = useApiRead(() => api.listPortfolios(), [api, realtime.refreshKey], { keepValue: true });
+  const resourceState = useApiRead<ProfileEnvelope>(() => api.getPortfolio360Resource(portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
@@ -984,42 +1077,36 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const [lens, setLens] = useState<number | null>(null);
   const navigate = useNavigate();
   const analytics = analyticsState.value;
-  const fleet = fleetState.value;
-  const fleetRows = fleet?.page.rows ?? [];
-  const registerItem = registerState.value?.items.find((item) => item.portfolioId === portfolioId) ?? null;
-  const portfolio = fleetRows.flatMap((alpha) => alpha.portfolios)
-    .find((item) => item.portfolioId === portfolioId)
-    ?? (registerItem
-      ? { portfolioId: registerItem.portfolioId, name: registerItem.name, baseCurrency: registerItem.baseCurrency }
-      : null);
-  const holdings = portfolioHoldings(fleetRows, portfolioId);
-  const envelope: Envelope = analytics
-    ? { authority: AUTHORITY[analytics.authority ?? ""] ?? "DERIVED", asOf: analytics.asOf, freshness: "OK" }
-    : fleetRows[0] && fleet
-      ? fleetEnvelope(fleetRows[0], fleet.readAt, fleet.sourceAsOf, fleet.freshness)
+  const resource = resourceState.value;
+  const portfolio = resource?.objects.portfolio ?? null;
+  const holdings = portfolioResourceHoldings(resource?.data.deployments ?? []);
+  const allocationKpis = resourceRows(portfolio?.allocation_by_currency).flatMap((row) => {
+    const currency = text(row.currency); const value = text(row.value);
+    return currency && value ? [{ label: `allocation · ${currency}`, value, unit: currency }] : [];
+  });
+  const envelope: Envelope = resource
+    ? screenEnvelope(resource)
+    : analytics
+      ? { authority: AUTHORITY[analytics.authority ?? ""] ?? "DERIVED", asOf: analytics.asOf, freshness: "OK" }
       : { authority: "PORTAL", asOf: null, freshness: "UNKNOWN" };
-  const rootStatus: PanelStatus = portfolio
-    ? "ok"
-    : fleetState.status === "ok" || registerState.status === "ok"
-      ? "empty"
-      : fleetState.status;
-  const availableIds = [...new Set([
-    ...(registerState.value?.items.map((item) => item.portfolioId) ?? []),
-    ...fleetRows.flatMap((alpha) => alpha.portfolios.map((item) => item.portfolioId)),
-  ])].sort();
+  const rootStatus: PanelStatus = resourceState.status !== "ok"
+    ? resourceState.status
+    : !portfolio
+      ? resource?.state === "empty" ? "empty" : "partial"
+      : profilePanelStatus(resource, resourceState.status);
   return (
     <PortfolioThreeSixty
       portfolioId={portfolioId}
-      portfolioName={portfolio?.name ?? portfolioId}
+      portfolioName={text(portfolio?.name) ?? portfolioId}
       envelope={envelope}
-      scopeWindow={analytics?.completeness ?? "window not published"}
+      scopeWindow={resource?.completeness ?? analytics?.completeness ?? "window not published"}
       benchmark="benchmark not published"
       benchmarkId=""
       tab={tab}
       onTabChange={setTab}
       onOpenAlpha={(alphaId) => navigate(`/deployments/alphas/${encodeURIComponent(alphaId)}`)}
       onOpenAccount={(accountId) => navigate(`/deployments/accounts/${encodeURIComponent(accountId)}`)}
-      kpis={analytics ? analyticsKpis(analytics) : []}
+      kpis={analytics ? analyticsKpis(analytics) : allocationKpis}
       holdings={holdings}
       fxNote={null}
       correlation={correlationState.value?.correlation ?? null}
@@ -1036,8 +1123,8 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       incidents={null}
       status={rootStatus}
       reason={rootStatus === "empty"
-        ? `Portfolio ${portfolioId} is not present in the projected population${availableIds.length > 0 ? ` — available: ${availableIds.join(", ")}` : ""}.`
-        : fleetState.reason}
+        ? `Portfolio ${portfolioId} is not present in the current projected resource population.`
+        : resourceReason(resource, resourceState.reason)}
     />
   );
 }
@@ -1045,15 +1132,9 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
 /* ── account/broker 360 ───────────────────────────────────────────────── */
 
 export function AccountBroker360RichContainer({ api, accountId }: { api: ExecutionApi; accountId: string }) {
-  const [realtimeEnvironment, setRealtimeEnvironment] = useState<"paper" | "sandbox" | "live" | null>(null);
-  const realtime = useProfileRealtime(realtimeEnvironment);
-  const state = useApiRead<ProfileEnvelope>(() => api.getAccountBroker360(accountId), [api, accountId, realtime.refreshKey]);
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
+  const state = useApiRead<ProfileEnvelope>(() => api.getAccount360Resource(accountId), [api, accountId, realtime.refreshKey], { keepValue: true });
   const profile = state.value;
-  useEffect(() => {
-    if (profile?.selectedEnvironment && profile.selectedEnvironment !== realtimeEnvironment) {
-      setRealtimeEnvironment(profile.selectedEnvironment);
-    }
-  }, [profile?.selectedEnvironment, realtimeEnvironment]);
   const account = profile?.data.accounts?.[0] ?? null;
   const balances = profile?.data.account_balances ?? [];
   const margins = profile?.data.margin_balances ?? [];
@@ -1077,14 +1158,19 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
   const stage = STAGE_FOR_MODE[environment] ?? "LIVE_FULL";
   const sourceEnvelope = profile ? screenEnvelope(profile) : { authority: "PORTAL" as Authority, asOf: null, freshness: "UNKNOWN" as FreshnessState };
   const positionNotional = positions.map((row) => text(row.notional)).find((item) => item !== null) ?? "not published";
-  const syncRows = [...(profile?.data.account_sync ?? []), ...(profile?.data.broker_sync ?? [])]
-    .map((row) => {
+  const syncRows = [
+    ...(profile?.data.account_sync ?? []).map((row) => ({ row, fallbackSource: "EXECUTION" })),
+    ...(profile?.data.broker_sync ?? []).map((row) => ({ row, fallbackSource: "BROKER" })),
+  ]
+    .map(({ row, fallbackSource }) => {
       const rawStatus = text(row.status)?.toUpperCase();
       const syncStatus = rawStatus === "OK" || rawStatus === "SYNCED" ? "OK" as const
         : rawStatus === "STALE" ? "STALE" as const : "FAILED" as const;
       return {
         at: text(row.synced_at) ?? text(row.created_at) ?? "time not published",
-        source: text(row.source) ?? (row.external_account_ref ? "BROKER" : "EXECUTION"),
+        // Broker provenance is relationship metadata, not a reason to expose
+        // the physical `external_account_ref` to a browser.
+        source: text(row.source) ?? fallbackSource,
         status: syncStatus,
         detail: rawStatus && !["OK", "SYNCED", "STALE", "FAILED"].includes(rawStatus) ? rawStatus : null,
         digest: null,
@@ -1092,9 +1178,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
     })
     .sort((left, right) => right.at.localeCompare(left.at));
   const findings = profile?.data.reconciliation ?? [];
-  const reason = state.status === "ok"
-    ? [...(profile?.unavailableBranches ?? []), ...(profile?.capabilities ?? []).flatMap((item) => item.reasonCode ? [item.reasonCode] : [])].join(" · ") || null
-    : state.reason ?? "ACCOUNT_PROFILE_READ_UNAVAILABLE";
+  const reason = resourceReason(profile, state.reason ?? "EDS04_ACCOUNT_RESOURCE_UNAVAILABLE") ?? null;
   const internal = {
     positions: profile ? String(positions.length) : null,
     openOrders: null,
@@ -1159,7 +1243,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
       operatorAdmin={false}
       onSyncNow={() => undefined}
       onDryRun={() => undefined}
-      status={state.status}
+      status={profilePanelStatus(profile, state.status)}
       reason={reason ?? undefined}
     />
   );
@@ -1198,17 +1282,19 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
 export function AccountsBindingsRichContainer({ api, bindingId }: { api: ExecutionApi; bindingId?: string | null }) {
   const [query, setQuery] = useState<BindingListQuery>({ limit: 50 });
   const listState = useApiRead(() => api.getBindings(query), [api, query]);
-  const detailState = useApiRead(
-    () => (bindingId ? api.getBindingDetail(bindingId) : Promise.resolve({ ok: true as const, value: null })),
+  const detailState = useApiRead<ProfileEnvelope | null>(
+    () => (bindingId ? api.getBindingResource(bindingId) : Promise.resolve({ ok: true as const, value: null })),
     [api, bindingId],
   );
   if (bindingId) {
+    const profile = detailState.value;
+    const detail = profile ? readBindingItem(profile.objects.binding) : null;
     return (
       <BindingDetail
         bindingId={bindingId}
-        detail={detailState.value ?? null}
-        status={detailState.status}
-        reason={detailState.reason}
+        detail={detail}
+        status={profilePanelStatus(profile, detailState.status)}
+        reason={resourceReason(profile, detailState.reason)}
       />
     );
   }

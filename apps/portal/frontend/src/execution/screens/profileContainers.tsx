@@ -13,6 +13,7 @@ import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
   ProfileEnvelope, QueryAnalytics,
 } from "../api/profileRead";
+import { readBindingItem } from "../api/profileRead";
 import { readCommandCenter, type CommandCenter } from "../commandCenter";
 import { CommandCenterLive } from "./containers";
 import type { SseFactory } from "../sse";
@@ -157,7 +158,7 @@ export function QueryAnalyticsContainer({ api, subject, subjectId }: { api: Exec
 }
 
 export function AccountBroker360Container({ api, accountId }: { api: ExecutionApi; accountId: string }) {
-  const state = useApiRead<ProfileEnvelope>(() => api.getAccountBroker360(accountId), [api, accountId]);
+  const state = useApiRead<ProfileEnvelope>(() => api.getAccount360Resource(accountId), [api, accountId]);
   if (state.status === "loading") {
     return (
       <section className="exec-envelope" aria-label="Account 360">
@@ -255,16 +256,17 @@ function BindingFacts({ item }: { item: BindingItem }) {
 
 export function AccountsBindingsContainer({ api, bindingId }: { api: ExecutionApi; bindingId?: string | null }) {
   const [query, setQuery] = useState<BindingListQuery>({ limit: 50 });
-  const detail = useApiRead<BindingItem>(
-    () => bindingId ? api.getBindingDetail(bindingId) : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "list" }),
+  const detail = useApiRead<ProfileEnvelope | null>(
+    () => bindingId ? api.getBindingResource(bindingId) : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "list" }),
     [api, bindingId],
   );
   const list = useApiRead<ManagerListEnvelope<BindingItem>>(() => api.getBindings(query), [api, query]);
   if (bindingId) {
+    const item = detail.value ? readBindingItem(detail.value.objects.binding) : null;
     return (
       <section className="exec-envelope" aria-label={`Binding ${bindingId}`}>
         <header className="exec-envelope-head"><h1 className="exec-role-h1">Binding · {bindingId}</h1><a className="exec-link" href="/deployments/accounts">All bindings</a></header>
-        {detail.status === "ok" && detail.value ? <section className="exec-envelope-panel"><BindingFacts item={detail.value} /></section> : <PanelState status={detail.status} reason={detail.reason} />}
+        {detail.status === "ok" && item ? <section className="exec-envelope-panel"><BindingFacts item={item} /></section> : <PanelState status={detail.status === "ok" ? "partial" : detail.status} reason={detail.reason ?? "The binding resource was not readable."} />}
       </section>
     );
   }

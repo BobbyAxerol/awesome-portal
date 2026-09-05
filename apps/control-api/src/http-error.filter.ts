@@ -21,6 +21,7 @@ import { ScreenBffError } from "./screen-bff/screen-bff.service";
 import { PaperReadError } from "./paper-read/paper-read.service";
 import { ProfileReadError } from "./profile-read/profile-read.controller";
 import { ManagerListsError } from "./manager-lists/manager-lists.service";
+import { ResourceReadError } from "./resource-read/resource-read.controller";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -48,7 +49,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof ScreenBffError ||
       exception instanceof PaperReadError ||
       exception instanceof ProfileReadError ||
-      exception instanceof ManagerListsError
+      exception instanceof ManagerListsError ||
+      exception instanceof ResourceReadError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },

@@ -276,6 +276,11 @@ export interface ExecutionApi {
   getLiveReview(approvalId: string): Promise<Result<LiveReviewPayload>>;
   /** `GET /screens/accounts/{id}` — N28 typed unavailable until published. */
   getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
+  /** EDS-04 exact resource BFFs. Each resolves the resource server-side first. */
+  getAlpha360Resource(alphaId: string): Promise<Result<ProfileEnvelope>>;
+  getPortfolio360Resource(portfolioId: string): Promise<Result<ProfileEnvelope>>;
+  getAccount360Resource(accountId: string): Promise<Result<ProfileEnvelope>>;
+  getBindingResource(bindingId: string): Promise<Result<ProfileEnvelope>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */

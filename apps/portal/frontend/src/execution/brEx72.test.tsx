@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
 import ALPHA_FLEET from "../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.v2.valid.json";
+import PAPER_OVERVIEW_READY from "../../../../../packages/contracts/fixtures/execution-paper-overview.ready.valid.json";
 import BINDINGS_LIST from "../../../../../packages/contracts/fixtures/execution-bindings-list.valid.json";
 import BINDING_DETAIL from "../../../../../packages/contracts/fixtures/execution-binding-detail.valid.json";
 import LIVE_REVIEW from "../../../../../packages/contracts/fixtures/governance-live-review.valid.json";
@@ -52,6 +53,37 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
       "/api/v1/execution/alphas",
       "/api/v1/execution/broker-bindings?venue=BINANCE",
       "/api/v1/execution/broker-bindings/acc_a%40BINANCE?environment=paper",
+    ]);
+  });
+
+  it("uses named same-origin EDS-04 resource routes and keeps physical broker refs out of fixture wire data", async () => {
+    const fixture = createFixtureApi();
+    const alpha = await fixture.getAlpha360Resource("alpha_a");
+    const account = await fixture.getAccount360Resource("acc_a");
+    expect(alpha.ok).toBe(true);
+    expect(account.ok).toBe(true);
+    if (alpha.ok && account.ok) {
+      expect(JSON.stringify(alpha.value)).not.toContain("external_account_ref");
+      expect(JSON.stringify(account.value)).not.toContain("fixture-ref");
+    }
+    // All four named routes use the same generated ProfileEnvelope transport
+    // reader. Their resource-specific identity/resolution is separately
+    // covered by the server suite; this verifies that the browser uses only
+    // same-origin paths and never receives physical broker identifiers.
+    const fetch = vi.fn(async (_request: RequestInfo | URL) =>
+      new Response(JSON.stringify(PAPER_OVERVIEW_READY), { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    const api = createHttpApi({ policy: POLICY });
+    expect((await api.getAlpha360Resource("alpha_a")).ok).toBe(true);
+    expect((await api.getPortfolio360Resource("pf_main")).ok).toBe(true);
+    expect((await api.getAccount360Resource("acc_a")).ok).toBe(true);
+    expect((await api.getBindingResource("acc_a@BINANCE")).ok).toBe(true);
+    expect(fetch.mock.calls.map(([request]) => String(request))).toEqual([
+      "/api/v1/execution/resources/alphas/alpha_a",
+      "/api/v1/execution/resources/portfolios/pf_main",
+      "/api/v1/execution/resources/accounts/acc_a",
+      "/api/v1/execution/resources/bindings/acc_a%40BINANCE",
     ]);
   });
 
@@ -265,8 +297,12 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     render(<MemoryRouter><PortfolioThreeSixtyRichContainer api={api} portfolioId="pf_unallocated" /></MemoryRouter>);
     expect(await screen.findByRole("heading", { name: /pf_unallocated/i })).toBeTruthy();
 
-    const { unmount } = render(<MemoryRouter><PortfolioThreeSixtyRichContainer api={api} portfolioId="pf_ghost" /></MemoryRouter>);
-    expect(await screen.findByText(/available: pf_carry_core, pf_main, pf_unallocated/)).toBeTruthy();
+    const { container, unmount } = render(<MemoryRouter><PortfolioThreeSixtyRichContainer api={api} portfolioId="pf_ghost" /></MemoryRouter>);
+    expect(await screen.findByText(/Portfolio pf_ghost is not present in the current projected resource population/)).toBeTruthy();
+    // EDS-04 keeps the approved 360 shell even for an authoritative empty
+    // resource. The state belongs to a panel, not to a generic replacement
+    // page that would make a temporary source gap look like a lost product UI.
+    expect(container.querySelector('[data-hifi-exact="portfolio-360"]')).toBeTruthy();
     unmount();
   });
 
