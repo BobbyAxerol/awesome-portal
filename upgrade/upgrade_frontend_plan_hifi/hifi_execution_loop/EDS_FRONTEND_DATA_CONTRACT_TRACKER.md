@@ -444,6 +444,29 @@ chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff
   mọi nút. A-12: tôi nộp Bobby gói bằng chứng browser-matrix toàn màn.
 - **Trạng thái**: ⬜ ×3.
 
+## A2b. CHIẾN DỊCH CHẤM G0→G7 (lập 05-09 theo lệnh owner — lịch để Bobby dõi goal)
+
+Nguyên tắc: chấm trên **probe-runtime** = control-api build từ `feat/eds-current-bff`
++ Postgres RIÊNG restore từ dump dev (cùng dữ liệu thật, migration nhánh EDS
+không đụng DB dev) + loopback port riêng + user `claude-probe`. Dev runtime của
+Bobby không bị chạm. Mỗi phiếu xong → lật §A0 + push, Bobby chỉ cần nhìn §A0.
+
+| Bước | Việc | Phiếu | Dự kiến | Trạng thái |
+|---|---|---|---|---|
+| G0 | Dựng probe-runtime (dump DB → PG probe → build image nhánh eds → compose project `portal-probe`, loopback :8090) | — | 0.5 ngày | 🔶 ĐANG LÀM 05-09 |
+| G1 | Chấm A-01 named op deployment (6 bước phiếu) | A-01 | 0.5 ngày | ⬜ |
+| G2 | Chấm A-02 generated contracts (offline: generate, enum-map, DR-04) | A-02 | 0.5 ngày | ⬜ |
+| G3 | Chấm A-03 — TỪNG màn: Paper → Sandbox → Live | A-03×3 | 1 ngày | ⬜ |
+| G4 | Chấm A-04 — Alpha/Portfolio/Account/Binding | A-04×4 | 1 ngày | ⬜ |
+| G5 | Chấm A-05 — 5 derivations + governance/ops routes | A-05 | 0.5–1 ngày | ⬜ |
+| G6 | Chấm A-06 — dual-read parity vs mirror baseline của tôi (DR-01 phải được trả lời tại đây) + thử rollback | A-06 | 1 ngày | ⬜ |
+| G7 | Chấm A-07 chart DTO + song song A-07b dựng `PrimusFinancialChart`/`chartTheme.ts` (OR-3) ăn DTO đó | A-07 | 1–1.5 ngày | ⬜ |
+
+Tổng dự kiến: **~5–7 ngày làm việc** cho cả hàng đợi. Luật khi TRƯỢT: mở DR
+ngay trong phiếu, codex sửa song song — chỉ chặn phiếu sau nếu có phụ thuộc
+thật (ví dụ A-03 cần A-02 types). EDS-10 chờ gate trading (đúng ý owner);
+DR-13/EDS-09b chạy song song không chặn hàng đợi này.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
