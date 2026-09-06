@@ -756,7 +756,7 @@ function capability(
 }
 
 function safeReason(error: unknown): string {
-  if (error instanceof CurrentSourceProxyError && /^(?:N(?:13B|17B|21|22|30)_[A-Z0-9_]+|EDS03_[A-Z0-9_]+)$/.test(error.code)) {
+  if (error instanceof CurrentSourceProxyError && /^(?:N(?:13B|17B|21|22|30)_[A-Z0-9_]+|EDS(?:03|11R)_[A-Z0-9_]+)$/.test(error.code)) {
     return error.code;
   }
   return "N22_SOURCE_UNAVAILABLE";

@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-06 | **EDS-11R2 complete at the Portal server-side hydration gate**: existing rich Paper/Sandbox/Live product composers now prefer the durable local projection but can warm a simple current panel through the R1 static named-operation BFF when no first projection snapshot exists or when the local projection feature is deliberately off. The old generic direct `relation()` read-through is removed from the product source. | R1's safe page is converted only in-process into the existing narrow Manager-page composer shape: no raw record key, source relation/alias, source cursor, mTLS or delegated JWT is emitted. Only `N31_PROJECTION_NOT_READY` may warm through R1; stale/corrupt/scoped/detail queries remain fail-closed. Exact integer strings and UTC-ms survive. New focused warm-up/negative tests plus fresh-PG Control API **47 files / 399 tests** and restore drill pass. **Next: EDS-11R3 local projection/SSE runtime-readiness.** |
 | 2026-09-06 | **EDS-11R1 complete at the Portal contract gate**: a deterministic compiler now reconciles all **96/96** accepted Manager-v2 census entries into 54 named, same-origin screen-bound BFF operations plus explicit non-browser dispositions for 16 projection inputs, 13 audit-only relations and 13 internal-only relations. The browser-facing manifest contains only product operation IDs, route aliases, safe scalar DTO field names/kinds and screen ownership; it contains no source schema/relation, source alias, cursor, mTLS input or delegated JWT. | Generated source provenance pins the sanitized census + relation/column catalogues; 54 operation routes use a fixed 200-row/1-MiB bound, Portal-issued relation-bound continuation, UTC-ms codec, exact-decimal strings, Portal-derived opaque resource IDs and scalar/non-sensitive redaction. Focused generator, transport, profile/drift/continuation/redaction/controller tests pass. No current-source runtime flag, AWS-HK service, Trading System code, command or container changed. **Next: EDS-11R2 rich-panel consumption.** |
 | 2026-09-06 | **EDS-11R delivery plan expanded into five closeable phases immediately before EDS-12**: R1 classifies the complete 96-relation catalogue into named safe BFF authority; R2 retains and hydrates rich product panels; R3 supplies durable current projection, financial range and local SSE; R4 is a small TS-owned Data-Layer Market Context adapter; R5 is an explicitly optional authoritative-replay semantic upgrade | Corrected the old blanket `SOURCE_GAP_CONFIRMED` wording: Market Context data already exists but needs a versioned source adapter, while current `domain_events` remain observed history until a real sequence/epoch/correction/retention contract exists.  Each phase now has scope, ownership, negative tests, exit gate and no-hidden-debt rule |
 | 2026-09-06 | **EDS-11R AWS-HK runtime discovery corrected the current-source plan**: read-only inspection verified that Manager-v2 Paper/Sandbox/Live current read is already active, all three profiles share the same 96-relation catalogue digest, Source Proxy forwards the Manager-v2 private routes, and the private Data Layer already provides last-price/OHLCV/calendar/universe inputs.  The prior source-gap wording is retained only for missing authoritative semantics, not as a claim that current data is absent | EDS-11R is inserted before EDS-12: Portal must now map all authorized screen-bound relations to named safe BFFs, hydrate rich panels and activate local current-observation/SSE; only a small TS-owned Market Context adapter is needed for Data Layer facts.  No source/runtime/credential/container/command change occurred during inspection |
@@ -5291,8 +5292,8 @@ changed. See [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND
 
 #### EDS-11R discovery record — current Manager-v2 maximum-data activation
 
-**Status:** `PLANNED / RUNTIME_DISCOVERY_VERIFIED /
-PORTAL_CONSUMER_RECONCILIATION_REQUIRED` on 2026-09-06.
+**Status:** `R1_BFF_READY / R2_SERVER_HYDRATION_READY /
+R3_RUNTIME_READINESS_NEXT / R4_OWNER_ADAPTER_READY` on 2026-09-06.
 
 **Correction:** the old `RUNTIME_INACTIVE` wording describes the Portal
 consumer slice, not AWS-HK Manager availability.  Read-only deployment
@@ -5564,6 +5565,18 @@ broker acknowledgement.  **Next:** EDS-11R3 makes the admitted reads efficient
 and realtime; market-only panels wait for EDS-11R4 rather than degrading their
 whole screens.
 
+**Completion record:** `ExecutionProductReadSource` now prefers the durable
+profile snapshot and uses an R1 generated operation only for a simple current
+page when the snapshot is not yet present (or when projection is intentionally
+off).  The compatibility conversion is internal to Control API; it discards
+the R1 `resource_id`, never exposes source relation/cursor/transport data, and
+retains exact-integer strings and UTC timestamps for existing Paper/Profile
+composers.  `N31_PROJECTION_NOT_READY` is the sole local-projection error that
+may warm through R1.  Stale, corrupt, scoped, sorted, filtered and exact-detail
+reads remain fail-closed and wait for the local projection.  This preserves
+the approved rich screen shell while R3 prepares the retained data needed by
+charts, resource detail and exact local query panels.
+
 #### EDS-11R3 — Durable current projection, financial range and local SSE
 
 **Goal:** make refreshes smooth and bounded by retaining admitted current data
@@ -5648,6 +5661,23 @@ current panel remains usable.
 runtime, but the adapter belongs in the Trading System repository and should
 be made by its owner/agent.  Codex does not edit that repository unless Bobby
 explicitly grants this exact EDS-11R4 Trading System scope.
+
+**AWS-HK read-only audit record (2026-09-06):** the owner runtime already has
+both `data_layer_service` and `market_data_service` running.  The Trading
+System source contains `DataLayerV2Facade.latest_market`, `latest_bar` and
+`warmup_bars`, `VersionedDataLayerClient.warmup_ohlcv`, and
+`MarketCacheReader.execution_market_context()`, which composes the validated
+quote/mark/trade/book cache into `execution_market_context.v1` immediately
+before Risk admission.  This proves that latest market truth, bars and a
+typed execution-mark context are present upstream now.  It also proves the
+boundary: that object is currently an internal Trading-System cache/Risk
+object, not a Manager-v2 catalogue operation or a Portal route.  The owner
+agent should therefore add the thin adapter above, reuse those readers, and
+publish a capability/fixture pack.  Benchmark, calendar and VNM constraints
+must be listed by exact availability in that pack; any source facet not yet
+available remains typed `SOURCE_UNAVAILABLE`, not fabricated.  No new market
+database, Redis access from Portal, or direct Data-Layer browser route is
+permitted.
 
 #### EDS-11R5 — Optional exact lifecycle replay semantics
 

@@ -127,9 +127,9 @@ describe("Phase 1 SGP-local profile projection", () => {
 
   it("never turns browser refreshes or projection misses into AWS-HK reads", async () => {
     await commit(document("123"), "cursor-1");
-    let directCalls = 0;
+    let namedCalls = 0;
     const source = new ExecutionProductReadSource(config, repository, {
-      relation: async () => { directCalls += 1; throw new Error("unexpected AWS read-through"); },
+      relationPage: async () => { namedCalls += 1; throw new Error("unexpected named warm-up read"); },
     } as never);
     const principal = {
       principalId: "usr_bobby", sessionId: "ses_1", workspaceId,
@@ -142,7 +142,7 @@ describe("Phase 1 SGP-local profile projection", () => {
         "manager.strategies", "strategies", { limit: 1 }),
     ]);
     expect(left).toEqual(right);
-    expect(directCalls).toBe(0);
+    expect(namedCalls).toBe(0);
     expect((left as any).source.data.items[0].fields.strategy_id).toEqual({
       kind: "TEXT", value: "123",
     });
@@ -157,15 +157,15 @@ describe("Phase 1 SGP-local profile projection", () => {
       workspace_id: workspaceId,
       viewer_workspace_id: "ws_other",
     });
-    expect(directCalls).toBe(0);
+    expect(namedCalls).toBe(0);
   });
 
   it("resolves a deployment before applying the 200-row product page bound", async () => {
     const scoped = deploymentScopeDocument();
     await commit(scoped, "cursor-eds03-scope");
-    let directCalls = 0;
+    let namedCalls = 0;
     const source = new ExecutionProductReadSource(config, repository, {
-      relation: async () => { directCalls += 1; throw new Error("unexpected AWS read-through"); },
+      relationPage: async () => { namedCalls += 1; throw new Error("unexpected named warm-up read"); },
     } as never);
     const principal = {
       principalId: "usr_bobby", sessionId: "ses_eds03", workspaceId,
@@ -188,7 +188,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     });
     expect(result.source.data.items).toHaveLength(1);
     expect(result.source.data.items[0].fields.order_id.value).toBe("ord_200");
-    expect(directCalls).toBe(0);
+    expect(namedCalls).toBe(0);
   });
 
   it("rejects cross-profile row lineage before persistence", async () => {

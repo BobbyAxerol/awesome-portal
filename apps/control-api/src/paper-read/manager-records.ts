@@ -206,6 +206,11 @@ function taggedValue(value: unknown, errorPrefix: "N22" | "N23"): Scalar | reado
   if (kind === "NULL" && item === null) return null;
   if (kind === "BOOLEAN" && typeof item === "boolean") return item;
   if (kind === "INTEGER" && typeof item === "number" && Number.isSafeInteger(item)) return item;
+  // EDS-11R's safe named BFF preserves potentially-large database integers
+  // as decimal strings.  Do not coerce them through JavaScript Number merely
+  // to satisfy an older Manager-page composer.
+  if (kind === "INTEGER" && typeof item === "string" && item.length <= 96 &&
+      /^-?(?:0|[1-9]\d*)$/.test(item)) return item;
   if (kind === "DECIMAL" && typeof item === "string" && /^-?\d+(?:\.\d+)?$/.test(item)) return item;
   if ((kind === "TEXT" || kind === "TIMESTAMP") && typeof item === "string") return item;
   if (kind === "ARRAY" && Array.isArray(item) && item.length <= 100) {

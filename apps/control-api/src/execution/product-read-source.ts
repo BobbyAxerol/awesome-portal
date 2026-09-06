@@ -7,11 +7,20 @@ import {
   CurrentSourcePageQuery,
   CurrentSourcePrincipal,
   CurrentSourceProxyError,
-  ExecutionCurrentSourceProxy,
   managerListManagerV2Path,
   paperManagerV2Path,
   profileManagerV2Path,
 } from "./current-source.proxy";
+import {
+  MaximumDataOperationError,
+  MaximumDataOperationService,
+} from "./maximum-data-operation.service";
+import {
+  ManagerRelationOperation,
+  managerRelationOperationByRelation,
+  managerRelationProfileBinding,
+} from "./eds11r-manager-relation.registry";
+import { MaximumDataEnvironment } from "./maximum-data-intake";
 import {
   ExecutionProfileProjectionRepository,
   ProjectionEnvironment,
@@ -74,16 +83,25 @@ interface DeploymentScopeQuery {
 
 type ProductReadQuery = CurrentSourcePageQuery & LocalProductQuery & DeploymentScopeQuery;
 
-/** Product-facing relation source. With Phase 1 active it never reads AWS-HK. */
+/**
+ * Product-facing relation source.
+ *
+ * The durable local projection remains the normal path.  Before it has a
+ * first committed snapshot (or while the feature is intentionally disabled),
+ * a simple current page can use a checked-in EDS-11R named operation as a
+ * server-side warm-up path.  It never restores the old generic direct
+ * relation read: the browser cannot select a relation, upstream cursor or
+ * source identity in either mode.
+ */
 @Injectable()
 export class ExecutionProductReadSource {
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
-    @Inject(ExecutionCurrentSourceProxy) private readonly direct: ExecutionCurrentSourceProxy,
+    @Inject(MaximumDataOperationService) private readonly namedOperations: MaximumDataOperationService,
   ) {}
 
-  relation(
+  async relation(
     principal: CurrentSourcePrincipal,
     environment: CurrentSourceEnvironment,
     screenId: string,
@@ -97,9 +115,69 @@ export class ExecutionProductReadSource {
           availability: "UNAVAILABLE", retryable: false,
         });
       }
-      return this.direct.relation(principal, environment, screenId, sourceId, relation, query);
+      return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
     }
-    return this.localRelation(principal, environment, screenId, sourceId, relation, query);
+    try {
+      return await this.localRelation(principal, environment, screenId, sourceId, relation, query);
+    } catch (error) {
+      // A missing initial snapshot is the only safe read-through case.  A
+      // stale, corrupt, scoped or otherwise rejected projection must remain
+      // truthful rather than silently changing its consistency model.
+      if (
+        error instanceof CurrentSourceProxyError &&
+        error.code === "N31_PROJECTION_NOT_READY" &&
+        !hasLocalQuery(query)
+      ) {
+        return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Convert the safe R1 named DTO back into the pre-existing internal
+   * Manager-page envelope.  This is strictly an in-process compatibility
+   * adapter so the established Paper/Profile composers can retain their rich
+   * layouts.  It does not expose a generic relation route or a raw source
+   * record/cursor to any browser response.
+   */
+  private async namedCurrentRelation(
+    principal: CurrentSourcePrincipal,
+    requestedEnvironment: CurrentSourceEnvironment,
+    screenId: string,
+    sourceId: string,
+    relation: string,
+    query: ProductReadQuery,
+  ): Promise<unknown> {
+    // Retain the frozen product composition binding before translating to the
+    // EDS-11R operation.  Both values are server-owned constants from the
+    // calling service, not browser selectors.
+    validateBinding(requestedEnvironment, screenId, sourceId, relation, query);
+    const operation = managerRelationOperationByRelation(relation);
+    if (!operation || !operation.screenIds.includes(screenId)) {
+      throw new CurrentSourceProxyError("EDS11R_PANEL_REQUIRES_PROJECTION", 503, {
+        availability: "UNAVAILABLE",
+        reason_code: "NO_SCREEN_BOUND_NAMED_CURRENT_OPERATION",
+        retryable: false,
+      });
+    }
+    const environment = maximumDataEnvironment(requestedEnvironment);
+    try {
+      const page = await this.namedOperations.relationPage(principal, operation.routeId, {
+        environment,
+        limit: query.limit ?? 100,
+        ...(query.cursor ? { cursor: query.cursor } : {}),
+      });
+      return namedOperationPageAsManagerEnvelope(page, operation, requestedEnvironment, environment);
+    } catch (error) {
+      if (error instanceof MaximumDataOperationError) {
+        throw new CurrentSourceProxyError(error.code, error.status, {
+          availability: error.status >= 500 ? "UNAVAILABLE" : "DEGRADED",
+          retryable: error.status >= 500,
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -302,6 +380,145 @@ export class ExecutionProductReadSource {
     }
     return { snapshot, environment, profileId, projectionWorkspaceId, ageMs };
   }
+}
+
+function maximumDataEnvironment(environment: CurrentSourceEnvironment): MaximumDataEnvironment {
+  // Canary is deliberately a Portal governance composition over the approved
+  // Live read profile.  It is never a fourth source profile.
+  return environment === "canary" ? "live" : environment;
+}
+
+function namedOperationPageAsManagerEnvelope(
+  value: unknown,
+  operation: ManagerRelationOperation,
+  requestedEnvironment: CurrentSourceEnvironment,
+  environment: MaximumDataEnvironment,
+): Record<string, unknown> {
+  const page = namedObject(value, "EDS11R_NAMED_PAGE_INVALID");
+  const binding = managerRelationProfileBinding(environment);
+  if (
+    page.schema_version !== "portal.execution.eds11r.manager-relation-page.v1" ||
+    page.logical_operation_id !== operation.operationId ||
+    page.field_id !== operation.fieldId ||
+    page.environment !== environment ||
+    page.profile_id !== binding.profileId ||
+    typeof page.source_contract_revision !== "string" ||
+    typeof page.source_catalogue_sha256 !== "string" ||
+    !/^sha256:[0-9a-f]{64}$/.test(page.source_catalogue_sha256)
+  ) throw namedContractError();
+
+  const sourceHealth = namedObject(page.source_health, "EDS11R_NAMED_SOURCE_HEALTH_INVALID");
+  if (
+    sourceHealth.availability !== "AVAILABLE" ||
+    typeof sourceHealth.as_of_ms !== "number" ||
+    !Number.isSafeInteger(sourceHealth.as_of_ms) ||
+    sourceHealth.as_of_ms < 0 || sourceHealth.as_of_ms > 8_640_000_000_000_000
+  ) throw namedContractError();
+  const sourceFreshness = namedFreshness(sourceHealth.freshness);
+  const sourceCompleteness = namedCompleteness(sourceHealth.completeness);
+
+  const pageInfo = namedObject(page.page, "EDS11R_NAMED_PAGE_METADATA_INVALID");
+  const nextCursor = namedOptionalCursor(pageInfo.next_cursor);
+  if (!Array.isArray(page.records) || page.records.length > 200) throw namedContractError();
+  const records = page.records.map((candidate) => {
+    const record = namedObject(candidate, "EDS11R_NAMED_RECORD_INVALID");
+    const values = namedObject(record.values, "EDS11R_NAMED_RECORD_VALUES_INVALID");
+    const fields: Record<string, unknown> = {};
+    for (const field of operation.fields) {
+      if (!(field.name in values)) continue;
+      fields[field.name] = namedTaggedValue(field.kind, values[field.name]);
+    }
+    if (Object.keys(fields).length === 0) throw namedContractError();
+    // `resource_id` is intentionally not copied: it is a Portal BFF identity
+    // for the named route, not the Manager record key or a new browser join
+    // selector.  The existing narrow composer consumes approved safe fields.
+    return {
+      relation: { schema: operation.schema, relation: operation.relation },
+      fields,
+    };
+  });
+
+  return {
+    schema_version: "portal.execution.current-source-bff.v2",
+    authority: "PORTAL_CONTROL_API",
+    requested_environment: requestedEnvironment,
+    source_environment: environment,
+    profile_id: binding.profileId,
+    source: {
+      contract_version: page.source_contract_revision,
+      authority: "EXECUTION_CELL",
+      profile_id: binding.profileId,
+      catalogue_sha256: page.source_catalogue_sha256,
+      availability: "AVAILABLE",
+      freshness: sourceFreshness,
+      completeness: sourceCompleteness,
+      as_of: new Date(sourceHealth.as_of_ms).toISOString(),
+      data: {
+        relation: { schema: operation.schema, relation: operation.relation },
+        items: records,
+        next_cursor: nextCursor,
+      },
+    },
+  };
+}
+
+function namedFreshness(value: unknown): "FRESH" | "AGING" | "STALE" | "UNKNOWN" {
+  if (value === "FRESH" || value === "AGING" || value === "UNKNOWN") return value;
+  if (value === "DEGRADED" || value === "STALE" || value === "PAUSED" || value === "UNAVAILABLE") return "STALE";
+  throw namedContractError();
+}
+
+function namedCompleteness(value: unknown): "COMPLETE" | "PARTIAL" | "UNKNOWN" {
+  if (value === "COMPLETE" || value === "UNKNOWN") return value;
+  if (value === "PARTIAL" || value === "POLL_BOUNDED" || value === "EVENT_SOURCED") return "PARTIAL";
+  throw namedContractError();
+}
+
+function namedTaggedValue(
+  kind: ManagerRelationOperation["fields"][number]["kind"],
+  value: unknown,
+): Record<string, unknown> {
+  if (value === null) return { kind: "NULL", value: null };
+  if (kind === "BOOLEAN" && typeof value === "boolean") return { kind, value };
+  if (
+    kind === "INTEGER" && typeof value === "string" && value.length <= 96 &&
+    /^-?(?:0|[1-9]\d*)$/.test(value)
+  ) return { kind, value };
+  if (
+    kind === "DECIMAL" && typeof value === "string" && value.length <= 96 &&
+    /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)
+  ) return { kind, value };
+  if (kind === "TEXT" && typeof value === "string" && Buffer.byteLength(value, "utf8") <= 4_096) {
+    return { kind, value };
+  }
+  if (kind === "TIMESTAMP" && typeof value === "number" && Number.isSafeInteger(value) &&
+      value >= 0 && value <= 8_640_000_000_000_000) {
+    return { kind, value: new Date(value).toISOString() };
+  }
+  throw namedContractError();
+}
+
+function namedOptionalCursor(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string" || value.length < 1 || Buffer.byteLength(value, "utf8") > 4_096) {
+    throw namedContractError();
+  }
+  return value;
+}
+
+function namedObject(value: unknown, code: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new CurrentSourceProxyError(code, 502, {
+      availability: "UNAVAILABLE", reason_code: "SOURCE_CONTRACT_REJECTED", retryable: false,
+    });
+  }
+  return value as Record<string, unknown>;
+}
+
+function namedContractError(): CurrentSourceProxyError {
+  return new CurrentSourceProxyError("EDS11R_NAMED_SOURCE_CONTRACT_REJECTED", 502, {
+    availability: "UNAVAILABLE", reason_code: "SOURCE_CONTRACT_REJECTED", retryable: false,
+  });
 }
 
 interface LocalProductQuery {

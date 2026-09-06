@@ -130,14 +130,19 @@ function compileOperation(value: GeneratedOperation): ManagerRelationOperation {
 const compiled = generated.operations.map(compileOperation);
 const byRoute = new Map<string, ManagerRelationOperation>();
 const byOperation = new Map<string, ManagerRelationOperation>();
+const byRelation = new Map<string, ManagerRelationOperation>();
 for (const operation of compiled) {
-  if (byRoute.has(operation.routeId) || byOperation.has(operation.operationId)) {
+  if (byRoute.has(operation.routeId) || byOperation.has(operation.operationId) || byRelation.has(operation.relation)) {
     throw new Error(`EDS11R generated registry contains a duplicate: ${operation.operationId}`);
   }
   byRoute.set(operation.routeId, operation);
   byOperation.set(operation.operationId, operation);
+  // This index is server-only.  It lets established, named product composers
+  // move from their checked-in relation binding to the R1 operation without
+  // ever accepting a browser-supplied relation selector.
+  byRelation.set(operation.relation, operation);
 }
-if (byRoute.size !== 54 || byOperation.size !== 54) {
+if (byRoute.size !== 54 || byOperation.size !== 54 || byRelation.size !== 54) {
   throw new Error("EDS11R generated registry does not cover all screen-bound relations");
 }
 
@@ -171,6 +176,16 @@ export function managerRelationOperationByRoute(routeId: string): ManagerRelatio
 
 export function managerRelationOperationById(operationId: string): ManagerRelationOperation | null {
   return byOperation.get(operationId) ?? null;
+}
+
+/**
+ * Server-only compatibility lookup for a relation already fixed by a named
+ * product composer.  Controllers must use `managerRelationOperationByRoute`
+ * instead; exposing this lookup would turn a product BFF into a generic
+ * source-query surface.
+ */
+export function managerRelationOperationByRelation(relation: string): ManagerRelationOperation | null {
+  return byRelation.get(relation) ?? null;
 }
 
 export function managerRelationProfileBinding(environment: MaximumDataEnvironment) {
