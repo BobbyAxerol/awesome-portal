@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-06 | **EDS-11R5 source-as-is audit closes the false choice between “use nothing” and “claim replay”**: `domain_events` is a real immutable audit table and is already useful through the bounded Portal observation lane; it is not a published authoritative replay stream. | Read-only AWS-HK inspection confirms its deterministic query order is only `event_ts, created_at`, while the table has no source epoch, contiguous per-stream sequence, correction/tombstone vocabulary, declared retention floor, snapshot/resume contract or durable consumer ACK. Existing `event/source.py` is explicitly source-dark/test-only, and raw `payload`/`raw` fields are unsuitable for Portal publication. **Status: `OBSERVED_HISTORY_CLOSED_AT_PORTAL / AUTHORITATIVE_REPLAY_OPTIONAL_NOT_ELECTED`.** EDS-10b/R1–R3 continue to show safe current observation without a direct table/browser route; no source/database/runtime change is needed or hidden. |
 | 2026-09-06 | **EDS-11R4 Trading-System source implementation is complete in its isolated clean worktree**: commit `26fd6b2` adds only the two frozen private Manager-v2 routes over confirmed `DataLayerV2Facade.latest_market()` / `warmup_bars()` readers, with profile/venue/instrument admission before every source call. | Added source-owned contract pack `contracts/portal-execution-owner/eds-11r-market-context-v1/`, manifest, synthetic row-free fixtures and a default-off runtime template. Changed-source Ruff and the full `tests/unit/test_portal_execution_owner_*.py` suite pass in a no-network test container; the manifest validates. **Status: `TS_SOURCE_IMPLEMENTED_RUNTIME_DISABLED / PORTAL_CONSUMER_SOURCE_DARK_READY / PENDING_SEPARATE_OWNER_DEPLOYMENT_EVIDENCE`.** No Data Layer client, listener, source-proxy route, Browser input, broker/CLI path or existing runtime container was enabled or changed. |
 | 2026-09-06 | **EDS-11R4 owner handoff is now machine-verifiable and included in the one official Trading System master campaign**: the Portal attachment pins the exact bounded Market Context v1 capability inventory, input/output schema, expected coverage fixtures, pending-return semantics and a manifest.  The owner needs only an additive Manager-side adapter over the already-running private Data Layer. | `execution-eds11r-market-context-test.sh` validates the attachment, its manifest, authority boundary and an end-to-end rendered master-campaign pack; the pack copies into the existing N28 return root without creating a second request.  **Status: `OWNER_HANDOFF_VERIFIED / SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.  Next: Trading System agent implements and returns the digest-pinned adapter pack; Portal validates and consumes it through named BFFs.** |
 | 2026-09-06 | **EDS-11R4 Portal consumer contract closeout is complete while remaining source-dark**: the two fixed BFF endpoints now have canonical JSON Schema, OpenAPI, generated TypeScript types, valid populated fixtures and a static authority gate. | `execution-market-context.v1` permits only latest current observation (`≤200`, `1 MiB`) and bounded candles (`≤2,000`, `8 MiB`, `≤366 days`), preserves profile/freshness/completeness/UTC-ms/exact decimals, rejects unknown fields, and explicitly forbids replay claims. Contract verification passes **120/120**. **Status: `PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY / TS_ADAPTER_IMPLEMENTATION_PENDING`; no Edge/Data-Layer call, credential or runtime flag is enabled.** |
@@ -5844,7 +5845,8 @@ repository or bypass the boundary.
 
 #### EDS-11R5 — Optional exact lifecycle replay semantics
 
-**Status:** `OPTIONAL_PRODUCT_QUALITY_UPGRADE / NOT_A_CURRENT_DATA_BLOCKER`.
+**Status:** `OBSERVED_HISTORY_CLOSED_AT_PORTAL /
+AUTHORITATIVE_REPLAY_OPTIONAL_NOT_ELECTED / NOT_A_CURRENT_DATA_BLOCKER`.
 
 **Goal:** promote useful existing observed history into **authoritative replay**
 only if Trading System publishes a contract that guarantees the missing
@@ -5855,6 +5857,21 @@ tombstone representation, retention floor, snapshot/resume and durable ACK.
 can already feed R2/R3 observed timelines.  Neither `event_ts` nor database
 row order proves a global order, replayability, correction handling or history
 completeness, so Portal must not infer those properties.
+
+**Source-as-is audit (2026-09-06):** the real `domain_events` hypertable has
+immutable `(event_id, event_ts)` identity and useful scope/timestamp columns,
+but the current owner query orders a bounded page by `event_ts, created_at` and
+returns raw `payload`/`raw` material.  It has no declared stream epoch,
+contiguous sequence, correction/tombstone model, retention floor, snapshot /
+resume envelope or durable Portal ACK.  The existing
+`services/portal_execution_owner/event/source.py` models those semantics only
+as a source-dark, transport/database-free future core.  Therefore Portal's
+existing named `executionObservedTimelineV1` operation is the maximum safe
+current use: it composes redacted current source facts through the durable
+Portal projection and labels the result `CURRENT_SOURCE` /
+`PORTAL_OBSERVATION`.  `public.domain_events` remains `PROJECTION_INPUT`, not
+a browser-readable generic relation.  This is a closed current-data decision,
+not hidden technical debt or a reason to discard existing observation data.
 
 **Work if elected:** TS adds an additive stream envelope over its existing
 tables/outbox; Portal validates snapshot-plus-tail, persists source checkpoint
@@ -5889,7 +5906,7 @@ owner campaign or replace a completed phase with a vague `Soon` state.
 | `R2` | Every listed rich product screen consumes a named server DTO and retains its approved composition through populated, empty, partial, stale and denied states. | `CLOSED_AT_PORTAL_HYDRATION_GATE` | Frontend integration/release verifies panel-level rendering; no full-screen envelope fallback is admissible. |
 | `R3` | Local profile projection, bounded financial query and one profile-scoped SSE observation tail retain digest/provenance and pass restore/quarantine tests. | `CLOSED_AT_PORTAL_PROVENANCE_GATE` | Runtime activation uses the accepted profile/config release; it must not create per-tab AWS-HK polling. |
 | `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `TS_SOURCE_IMPLEMENTED_RUNTIME_DISABLED / PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY` | Source implementation is committed as `26fd6b2`; owner next produces deployment-bound image/transport/profile/response evidence and return manifest. Portal then validates it, replaces the compiled pending intake, and enables only the two fixed BFF operations plus local chart invalidations through a separately approved runtime flag. |
-| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `OPTIONAL_UNTIL_REPLAY_IS_CLAIMED` | Keep `domain_events` as labelled observed history now. Implement only when product needs exact replay, without delaying the maximum-current-data release. |
+| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `OBSERVED_HISTORY_CLOSED_AT_PORTAL / AUTHORITATIVE_REPLAY_OPTIONAL_NOT_ELECTED` | Keep `domain_events` as labelled observed history through the existing redacted projection lane. Implement the separate source contract only if product claims exact replay; it does not delay maximum-current-data release. |
 
 **Hard routing rule:** R4 and R5 never authorize Portal to read the Trading
 System database, Redis, broker or CLI directly.  R4's only production route is
