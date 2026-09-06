@@ -97,6 +97,64 @@ describe("log ↔ chart ids and keyboard stepping", () => {
   });
 });
 
+describe("order vocabulary coverage — multi-TP brackets, hedge position side, trailing, DENIED/EXPIRED/TRIGGERED", () => {
+  const T = (s: string) => `2026-07-18T22:00:${s}Z`;
+  const orders = readReplayOrders([
+    { order_id: 1, symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "FILLED", quantity: "0.4", client_order_id: "b-en0", reduce_only: false, position_side: "BOTH", submitted_at: T("00"), updated_at: T("01"), venue_order_id: "v1" },
+    { order_id: 2, symbol: "ETHUSDT", side: "SELL", order_type: "TAKE_PROFIT_MARKET", status: "FILLED", trigger_price: "1900", quantity: "0.1", client_order_id: "b-tp1", reduce_only: true, submitted_at: T("05"), updated_at: "2026-07-19T01:00:00Z" },
+    { order_id: 3, symbol: "ETHUSDT", side: "SELL", order_type: "TAKE_PROFIT_MARKET", status: "CANCELED", trigger_price: "1950", quantity: "0.1", client_order_id: "b-tp2", reduce_only: true, submitted_at: T("05"), updated_at: "2026-07-19T01:00:01Z" },
+    { order_id: 4, symbol: "ETHUSDT", side: "SELL", order_type: "TAKE_PROFIT_MARKET", status: "EXPIRED", trigger_price: "2000", quantity: "0.1", client_order_id: "b-tp3", reduce_only: true, submitted_at: T("05"), updated_at: "2026-07-19T01:00:02Z" },
+    { order_id: 5, symbol: "ETHUSDT", side: "SELL", order_type: "TRAILING_STOP_MARKET", status: "TRIGGERED", trigger_price: "1800", quantity: "0.4", client_order_id: "b-st0", reduce_only: true, submitted_at: T("05"), updated_at: "2026-07-19T00:30:00Z" },
+    { order_id: 6, symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "DENIED", quantity: "5", client_order_id: "d1", reduce_only: false, submitted_at: "2026-07-18T23:00:00Z", updated_at: "2026-07-18T23:00:00Z", error_code: "RISK_DENIED" },
+    { order_id: 7, symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "RISK_REJECTED", quantity: "5", client_order_id: "d2", reduce_only: false, submitted_at: "2026-07-18T23:00:01Z", updated_at: "2026-07-18T23:00:01Z", error_code: "RISK_MAX_NOTIONAL" },
+    { order_id: 8, symbol: "ETHUSDT", side: "SELL", order_type: "MARKET", status: "FILLED", quantity: "0.2", client_order_id: "h-en0", reduce_only: false, position_side: "SHORT", submitted_at: "2026-07-20T00:00:00Z", updated_at: "2026-07-20T00:00:01Z", venue_order_id: "v8" },
+  ]);
+  const fills = readReplayFills([
+    { fill_id: 10, symbol: "ETHUSDT", side: "BUY", price: "1850", quantity: "0.4", trade_time: T("01"), client_order_id: "b-en0", realized_pnl: "0" },
+    { fill_id: 11, symbol: "ETHUSDT", side: "SELL", price: "1900", quantity: "0.1", trade_time: "2026-07-19T01:00:00Z", client_order_id: "b-tp1", realized_pnl: "5" },
+    { fill_id: 12, symbol: "ETHUSDT", side: "SELL", price: "1830", quantity: "0.2", trade_time: "2026-07-20T00:00:01Z", client_order_id: "h-en0", realized_pnl: "0" },
+  ]);
+  const scene = buildScene(fills, orders, pairRoundTrips(fills, orders), legLevels(orders));
+  it("claims every partial TP and the stop into one box, R:R on the nearest pair, zone to the farthest", () => {
+    const b = scene.brackets.find((x) => x.id === "bracket:10")!;
+    expect(b.tps).toEqual([1900, 1950, 2000]);
+    expect(b.sls).toEqual([1800]);
+    expect(b.tp).toBe(1900);
+    expect(b.rr).toBe("1.00");
+    expect(b.legIds).toEqual(["leg:2", "leg:3", "leg:4", "leg:5"]);
+    expect(b.title).toContain("TP 1,900.00 / 1,950.00 / 2,000.00");
+  });
+  it("ends legs by status: FILLED ◇, CANCELED and EXPIRED ⊣, TRIGGERED ◇ while still working", () => {
+    expect(scene.legEnds.map((e) => [e.id, e.kind])).toEqual([["trigger:2", "TRIGGER"], ["cancel:3", "CANCEL"], ["cancel:4", "CANCEL"], ["trigger:5", "TRIGGER"]]);
+    expect(scene.legEnds.find((e) => e.id === "cancel:4")!.title).toContain("expired");
+    expect(scene.legEnds.find((e) => e.id === "trigger:5")!.title).toContain("awaiting fill");
+    expect(scene.legs.find((l) => l.id === "leg:5")).toMatchObject({ trailing: true, label: "TRAIL 1,800.00", to: null });
+  });
+  it("never turns a rejected TP / SL / LIMIT into a leg or a level — it is a reject mark only", () => {
+    const rejectedLegs = readReplayOrders([
+      { order_id: 21, symbol: "ETHUSDT", side: "SELL", order_type: "TAKE_PROFIT_MARKET", status: "RISK_REJECTED", trigger_price: "1990", quantity: "0.1", client_order_id: "b-tp4", reduce_only: true, submitted_at: T("06"), updated_at: T("06"), error_code: "REDUCE_ONLY_WOULD_INCREASE_LONG" },
+      { order_id: 22, symbol: "ETHUSDT", side: "BUY", order_type: "LIMIT", status: "RISK_REJECTED", price: "1700", quantity: "1", client_order_id: "g", reduce_only: false, submitted_at: T("06"), updated_at: T("06"), error_code: "RISK_MAX_NOTIONAL" },
+    ]);
+    const all = [...orders, ...rejectedLegs];
+    expect(legLevels(all).map((l) => l.order.orderId)).toEqual(["2", "3", "4", "5"]);
+    const s = buildScene(fills, all, pairRoundTrips(fills, all), legLevels(all));
+    expect(s.brackets.find((x) => x.id === "bracket:10")!.tps).toEqual([1900, 1950, 2000]);
+    expect(s.ladder).toEqual([]);
+    expect(s.rejects.map((r) => r.id)).toEqual(["reject:6", "reject:7", "reject:21", "reject:22"]);
+  });
+  it("counts DENIED with the rejects and takes the hedge-mode position_side over the fill side", () => {
+    expect(scene.rejects.map((r) => r.id)).toEqual(["reject:6", "reject:7"]);
+    expect(scene.markers.find((m) => m.id === "fill:12")).toMatchObject({ side: "SHORT", role: "ENTRY", pointsUp: false });
+  });
+  it("logs EXPIRE and a triggered-awaiting-fill row", () => {
+    const log = buildLog(orders, fills, pairRoundTrips(fills, orders));
+    expect(log.find((r) => r.ref === "4")?.event).toBe("EXPIRE");
+    expect(log.find((r) => r.ref === "5")).toMatchObject({ event: "TRIGGER", eventTone: "accent" });
+    expect(log.find((r) => r.ref === "5")?.note).toContain("triggered · awaiting fill");
+    expect(log.find((r) => r.ref === "6")).toMatchObject({ event: "REJECT", eventTone: "bad" });
+  });
+});
+
 describe("R3 — deep-link focus, published timeframe, candle page merging", () => {
   it("resolves an order id to the object it left behind: its fill, its reject, its leg, its resting level", () => {
     expect(resolveFocus("order:1", ORDERS, FILLS)).toBe("fill:10");

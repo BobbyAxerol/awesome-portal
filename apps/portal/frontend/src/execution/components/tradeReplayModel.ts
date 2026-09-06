@@ -30,6 +30,8 @@ export interface ReplayOrder {
   errorMessage: string | null;
   venueOrderId: string | null;
   accountId: string | null;
+  /** hedge-mode position side (LONG / SHORT); BOTH or null in one-way mode */
+  positionSide: "LONG" | "SHORT" | null;
 }
 
 export interface ReplayFill {
@@ -89,6 +91,7 @@ export function readReplayOrders(rows: readonly Record<string, unknown>[]): Repl
       errorMessage: str(row.error_message),
       venueOrderId: str(row.venue_order_id),
       accountId: str(row.account_id),
+      positionSide: str(row.position_side) === "LONG" ? "LONG" : str(row.position_side) === "SHORT" ? "SHORT" : null,
     }];
   });
 }
@@ -123,11 +126,17 @@ export function readReplayFills(rows: readonly Record<string, unknown>[]): Repla
 
 export type LegRole = "ENTRY" | "TP" | "SL" | "OTHER";
 
-/** The leg an order plays, from its type first and its client id suffix second. */
+/** Statuses under which an order is still live on the venue (a leg still armed, a level still resting). */
+export const WORKING_STATUSES: readonly string[] = ["NEW", "WORKING", "INITIALIZED", "SUBMITTED", "ACCEPTED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "TRIGGERED"];
+export const isWorking = (status: string | null | undefined): boolean => WORKING_STATUSES.includes((status ?? "").toUpperCase());
+export const isRejected = (status: string | null | undefined): boolean => { const s = (status ?? "").toUpperCase(); return s.includes("REJECT") || s.includes("DENIED"); };
+export const isTrailing = (type: string | null | undefined): boolean => (type ?? "").toUpperCase().startsWith("TRAILING");
+
+/** The leg an order plays, from its type first and its client id suffix second. A trailing stop is a protective (SL) leg. */
 export function legRole(o: { type: string | null; clientOrderId: string | null; reduceOnly: boolean }): LegRole {
   const type = (o.type ?? "").toUpperCase();
   if (type.startsWith("TAKE_PROFIT")) return "TP";
-  if (type.startsWith("STOP")) return "SL";
+  if (type.startsWith("STOP") || type.startsWith("TRAILING")) return "SL";
   const tail = (o.clientOrderId ?? "").split("-").pop() ?? "";
   if (/^tp\d*$/i.test(tail)) return "TP";
   if (/^st\d*$|^sl\d*$/i.test(tail)) return "SL";
@@ -190,15 +199,17 @@ export function legLevels(orders: readonly ReplayOrder[]): Leg[] {
   return orders.flatMap((o) => {
     const role = legRole(o);
     if (role !== "TP" && role !== "SL") return [];
+    // a rejected / denied leg never armed on the venue: it is a reject mark, not a level
+    if (isRejected(o.status)) return [];
     const level = o.trigger ?? o.price;
     const from = ms(o.submittedAt);
     if (!level || from === null) return [];
-    const to = (o.status ?? "").toUpperCase() === "NEW" || (o.status ?? "").toUpperCase() === "WORKING" ? null : ms(o.updatedAt);
+    const to = isWorking(o.status) ? null : ms(o.updatedAt);
     return [{ order: o, role, level, from, to }];
   });
 }
 
-export type LogEvent = "FILL" | "SUBMIT" | "ACK" | "REJECT" | "TRIGGER" | "CANCEL";
+export type LogEvent = "FILL" | "SUBMIT" | "ACK" | "REJECT" | "TRIGGER" | "CANCEL" | "EXPIRE";
 export interface LogRow {
   t: number;
   time: string;
@@ -251,13 +262,15 @@ export function buildLog(orders: readonly ReplayOrder[], fills: readonly ReplayF
     const status = (o.status ?? "").toUpperCase();
     // A terminal row (filled / canceled / rejected) is dated when it became
     // terminal; a placement is dated when it was submitted.
-    const terminal = status === "FILLED" || status.startsWith("CANCEL") || status.includes("REJECT");
+    const terminal = status === "FILLED" || status.startsWith("CANCEL") || status === "EXPIRED" || status === "TRIGGERED" || isRejected(status);
     const t = (terminal ? ms(o.updatedAt) : null) ?? ms(o.submittedAt);
     if (t === null) continue;
     let event: LogEvent = "SUBMIT";
     let eventTone: LogRow["eventTone"] = "mute";
-    if (status.includes("REJECT")) { event = "REJECT"; eventTone = "bad"; }
+    if (isRejected(status)) { event = "REJECT"; eventTone = "bad"; }
     else if (status === "CANCELED" || status === "CANCELLED") { event = "CANCEL"; eventTone = "mute"; }
+    else if (status === "EXPIRED") { event = "EXPIRE"; eventTone = "mute"; }
+    else if (status === "TRIGGERED" && (role === "TP" || role === "SL")) { event = "TRIGGER"; eventTone = "accent"; }
     else if (status === "FILLED" && (role === "TP" || role === "SL")) { event = "TRIGGER"; eventTone = role === "TP" ? "good" : "bad"; }
     else if (role === "ENTRY" && o.venueOrderId) { event = "ACK"; eventTone = "accent"; }
     const flags = [o.timeInForce, o.postOnly ? "POST-ONLY" : null, o.reduceOnly ? "reduce_only" : null].filter(Boolean).join(" ");
@@ -267,8 +280,8 @@ export function buildLog(orders: readonly ReplayOrder[], fills: readonly ReplayF
       type: `${o.type ?? "ORDER"}${flags ? ` ${flags}` : ""}`, side: o.side, qty: qtyFmt(o.qty),
       price: o.trigger ? `${money(o.trigger)} (trigger)` : o.price ? money(o.price) : "market",
       fee: null,
-      note: [o.status, o.errorCode, o.errorMessage, o.venueOrderId ? `venue ${o.venueOrderId}` : "no venue_order_id"].filter(Boolean).join(" · "),
-      noteTone: status.includes("REJECT") ? "bad" : o.errorCode ? "warn" : null,
+      note: [status === "TRIGGERED" ? "triggered · awaiting fill" : o.status, isTrailing(o.type) ? "trailing" : null, o.positionSide ? `position ${o.positionSide}` : null, o.errorCode, o.errorMessage, o.venueOrderId ? `venue ${o.venueOrderId}` : "no venue_order_id"].filter(Boolean).join(" · "),
+      noteTone: isRejected(status) ? "bad" : o.errorCode ? "warn" : null,
     });
   }
   rows.sort((a, b) => b.t - a.t);

@@ -25,7 +25,7 @@ import type {
 } from "lightweight-charts";
 
 import type { MarketCandle } from "../api/marketCandles";
-import { money, ms, num, qtyFmt, type Leg, type ReplayFill, type ReplayOrder, type RoundTrip } from "./tradeReplayModel";
+import { isRejected, isTrailing, isWorking, money, ms, num, qtyFmt, type Leg, type ReplayFill, type ReplayOrder, type RoundTrip } from "./tradeReplayModel";
 
 type Lib = typeof import("lightweight-charts");
 let libPromise: Promise<Lib> | null = null;
@@ -73,9 +73,10 @@ export interface SceneMarker {
   title: string;
   card: CardRow[];
 }
-export interface SceneLeg { id: string; role: "TP" | "SL"; level: number; from: number; to: number | null; label: string; title: string }
+export interface SceneLeg { id: string; role: "TP" | "SL"; level: number; from: number; to: number | null; label: string; title: string; trailing: boolean }
 export interface SceneTrip { id: string; t0: number; p0: number; t1: number; p1: number; side: PositionSide; tone: "good" | "bad" | "warn"; label: string }
 export interface SceneReject { id: string; t: number; price: number; title: string; card: CardRow[] }
+/** Drawn rejects are clustered per bar: one × with a count, so a grid alpha's hundreds of risk rejects stay legible. */
 /** How a leg ended: the order filled (the level triggered) or was cancelled. */
 export interface SceneLegEnd { id: string; legId: string; t: number; level: number; kind: "TRIGGER" | "CANCEL"; title: string }
 /**
@@ -91,8 +92,12 @@ export interface SceneBracket {
   /** exit fill time, else the last leg's terminal time, else null while working */
   t1: number | null;
   entry: number;
+  /** nearest TP / SL level (R:R is computed on these) */
   tp: number | null;
   sl: number | null;
+  /** every TP / SL level of the bracket (partial take-profits tp1..tp4); the box reaches the farthest */
+  tps: number[];
+  sls: number[];
   /** |tp − entry| / |entry − sl| when both legs exist */
   rr: string | null;
   legIds: string[];
@@ -107,7 +112,8 @@ export interface ReplayScene {
 }
 
 const stamp = (t: number) => new Date(t).toISOString().replace("T", " ").slice(0, 19) + "Z";
-const sideOfEntry = (f: ReplayFill): PositionSide => ((f.side ?? "").toUpperCase() === "SELL" ? "SHORT" : "LONG");
+/** Position side: the order's hedge-mode position_side when published, else from the fill's side (one-way mode). */
+const sideOfEntry = (f: ReplayFill, o?: ReplayOrder): PositionSide => o?.positionSide ?? ((f.side ?? "").toUpperCase() === "SELL" ? "SHORT" : "LONG");
 /** Legs armed within this window after an entry fill belong to that entry. */
 export const BRACKET_PAIRING_MS = 180_000;
 
@@ -138,7 +144,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
     const trip = exitOf.get(f.fillId);
     const o = f.clientOrderId ? byCoid.get(f.clientOrderId) : undefined;
     if (trip) {
-      const side = sideOfEntry(trip.entry);
+      const side = sideOfEntry(trip.entry, trip.entry.clientOrderId ? byCoid.get(trip.entry.clientOrderId) : undefined);
       const tone = trip.win === null ? "warn" : trip.win ? "good" : "bad";
       markers.push({
         id: `fill:${f.fillId}`, t, price, side, role: "EXIT",
@@ -148,7 +154,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
         card: fillCard(f, o, trip),
       });
     } else {
-      const side = sideOfEntry(f);
+      const side = sideOfEntry(f, o);
       markers.push({
         id: `fill:${f.fillId}`, t, price, side, role: "ENTRY",
         pointsUp: side === "LONG", hollow: false, label: null, labelTone: null,
@@ -160,10 +166,11 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
   const sceneLegs: SceneLeg[] = legs.flatMap((l) => {
     const level = num(l.level);
     if (level === null) return [];
+    const trailing = isTrailing(l.order.type);
     return [{
-      id: `leg:${l.order.orderId}`, role: l.role, level, from: l.from, to: l.to,
-      label: `${l.role} ${money(l.level)}`,
-      title: `${l.role} leg · order ${l.order.orderId} · ${l.order.type ?? ""} · ${l.order.status ?? ""} · trigger ${money(l.level)} · armed ${stamp(l.from)}${l.to ? ` → ${stamp(l.to)}` : " → working"}`,
+      id: `leg:${l.order.orderId}`, role: l.role, level, from: l.from, to: l.to, trailing,
+      label: `${trailing ? "TRAIL" : l.role} ${money(l.level)}`,
+      title: `${trailing ? "trailing stop" : `${l.role} leg`} · order ${l.order.orderId} · ${l.order.type ?? ""} · ${l.order.status ?? ""} · trigger ${money(l.level)} · armed ${stamp(l.from)}${l.to ? ` → ${stamp(l.to)}` : " → working"}`,
     }];
   });
   const sceneTrips: SceneTrip[] = trips.flatMap((tr) => {
@@ -173,7 +180,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
   });
   const sorted = [...fills].map((f) => ({ t: ms(f.tradeTime), p: num(f.price) })).filter((x): x is { t: number; p: number } => x.t !== null && x.p !== null);
   const rejects: SceneReject[] = orders.flatMap((o) => {
-    if (!(o.status ?? "").toUpperCase().includes("REJECT")) return [];
+    if (!isRejected(o.status)) return [];
     const t = ms(o.submittedAt);
     if (t === null) return [];
     const near = sorted.reduce<{ t: number; p: number } | null>((best, f) => (best === null || Math.abs(f.t - t) < Math.abs(best.t - t) ? f : best), null);
@@ -189,44 +196,56 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
   const claimed = new Set<string>();
   const brackets: SceneBracket[] = markers.filter((m) => m.role === "ENTRY").flatMap((m) => {
     const fill = fills.find((f) => `fill:${f.fillId}` === m.id)!;
-    const near = (role: "TP" | "SL") => sceneLegs
+    // every TP and SL armed in the window belongs to this entry: partial take-profits tp1..tp4 and the stop
+    const mine = (role: "TP" | "SL") => sceneLegs
       .filter((l) => l.role === role && !claimed.has(l.id) && l.from >= m.t - 30_000 && l.from <= m.t + BRACKET_PAIRING_MS)
       .map((l) => ({ l, o: legs.find((x) => `leg:${x.order.orderId}` === l.id)?.order }))
       .filter(({ o }) => !o || !o.symbol || !fill.symbol || o.symbol === fill.symbol)
-      .sort((a, b) => Math.abs(a.l.from - m.t) - Math.abs(b.l.from - m.t))[0]?.l ?? null;
-    const tp = near("TP");
-    if (tp) claimed.add(tp.id);
-    const sl = near("SL");
-    if (sl) claimed.add(sl.id);
-    if (!tp && !sl) return [];
+      .map(({ l }) => l)
+      .sort((a, b) => Math.abs(a.level - m.price) - Math.abs(b.level - m.price)); // nearest first
+    const tps = mine("TP");
+    const sls = mine("SL");
+    for (const l of [...tps, ...sls]) claimed.add(l.id);
+    if (tps.length === 0 && sls.length === 0) return [];
+    const tp = tps[0] ?? null;
+    const sl = sls[0] ?? null;
     const trip = tripOfEntry.get(fill.fillId);
     const exitT = trip ? ms(trip.exit.tradeTime) : null;
-    const legEnd = [tp?.to ?? null, sl?.to ?? null].filter((x): x is number => x !== null);
-    const t1 = exitT ?? (legEnd.length > 0 && (!tp || tp.to !== null) && (!sl || sl.to !== null) ? Math.max(...legEnd) : null);
+    const all = [...tps, ...sls];
+    const legEnd = all.map((l) => l.to).filter((x): x is number => x !== null);
+    const t1 = exitT ?? (all.every((l) => l.to !== null) && legEnd.length > 0 ? Math.max(...legEnd) : null);
     const rr = tp && sl && Math.abs(m.price - sl.level) > 0 ? (Math.abs(tp.level - m.price) / Math.abs(m.price - sl.level)).toFixed(2) : null;
     return [{
-      id: `bracket:${fill.fillId}`, side: m.side, t0: m.t, t1, entry: m.price, tp: tp?.level ?? null, sl: sl?.level ?? null, rr,
-      legIds: [tp?.id, sl?.id].filter((x): x is string => !!x),
-      title: `${m.side} position · entry ${money(fill.price)}${tp ? ` · TP ${money(String(tp.level))}` : ""}${sl ? ` · SL ${money(String(sl.level))}` : ""}${rr ? ` · R:R ${rr}` : ""} · legs paired by time (DERIVED)`,
+      id: `bracket:${fill.fillId}`, side: m.side, t0: m.t, t1, entry: m.price,
+      tp: tp?.level ?? null, sl: sl?.level ?? null, tps: tps.map((l) => l.level), sls: sls.map((l) => l.level), rr,
+      legIds: all.map((l) => l.id),
+      title: `${m.side} position · entry ${money(fill.price)}${tps.length ? ` · TP ${tps.map((l) => money(String(l.level))).join(" / ")}` : ""}${sls.length ? ` · SL ${sls.map((l) => money(String(l.level))).join(" / ")}` : ""}${rr ? ` · R:R ${rr} (nearest TP vs SL)` : ""} · legs paired by time (DERIVED)`,
     }];
   });
   const legEnds: SceneLegEnd[] = sceneLegs.flatMap((l) => {
-    if (l.to === null) return [];
     const o = legs.find((x) => `leg:${x.order.orderId}` === l.id)?.order;
-    const status = (o?.status ?? "").toUpperCase();
-    const kind = status === "FILLED" ? "TRIGGER" : status.startsWith("CANCEL") ? "CANCEL" : null;
+    if (!o) return [];
+    const status = (o.status ?? "").toUpperCase();
+    // TRIGGERED = the level was hit and the order is live, awaiting its fill: ◇ at updated_at, leg still working
+    if (status === "TRIGGERED") {
+      const t = ms(o.updatedAt);
+      return t === null ? [] : [{ id: `trigger:${o.orderId}`, legId: l.id, t, level: l.level, kind: "TRIGGER" as const, title: `${l.role} triggered · awaiting fill · order ${o.orderId} · ${money(String(l.level))} · ${stamp(t)}` }];
+    }
+    if (l.to === null) return [];
+    const kind = status === "FILLED" ? "TRIGGER" : status.startsWith("CANCEL") || status === "EXPIRED" ? "CANCEL" : null;
     if (!kind) return [];
-    return [{ id: `${kind === "TRIGGER" ? "trigger" : "cancel"}:${o!.orderId}`, legId: l.id, t: l.to, level: l.level, kind, title: `${l.role} ${kind === "TRIGGER" ? "triggered" : "cancelled"} · order ${o!.orderId} · ${money(String(l.level))} · ${stamp(l.to)}` }];
+    const word = status === "EXPIRED" ? "expired" : kind === "TRIGGER" ? "triggered" : "cancelled";
+    return [{ id: `${kind === "TRIGGER" ? "trigger" : "cancel"}:${o.orderId}`, legId: l.id, t: l.to, level: l.level, kind, title: `${l.role} ${word} · order ${o.orderId} · ${money(String(l.level))} · ${stamp(l.to)}` }];
   });
   // ladder: resting limit orders that are not bracket legs, at their price while they worked
   const ladder: SceneLadder[] = orders.flatMap((o) => {
     const type = (o.type ?? "").toUpperCase();
     if (!type.includes("LIMIT") || type.startsWith("TAKE_PROFIT") || type.startsWith("STOP")) return [];
+    if (isRejected(o.status)) return []; // never rested — it is a reject mark
     const price = num(o.price);
     const from = ms(o.submittedAt);
     if (price === null || from === null) return [];
-    const status = (o.status ?? "").toUpperCase();
-    const to = status === "NEW" || status === "WORKING" || status === "PARTIALLY_FILLED" ? null : ms(o.updatedAt);
+    const to = isWorking(o.status) ? null : ms(o.updatedAt);
     const side = (o.side ?? "").toUpperCase() === "SELL" ? "SELL" : (o.side ?? "").toUpperCase() === "BUY" ? "BUY" : null;
     return [{
       id: `ladder:${o.orderId}`, price, from, to, side,
@@ -290,8 +309,8 @@ interface Drawn {
   markers: { m: SceneMarker; x: number; y: number; off: boolean }[];
   legs: { l: SceneLeg; x1: number; x2: number; y: number }[];
   trips: { tr: SceneTrip; x0: number; y0: number; x1: number; y1: number }[];
-  rejects: { r: SceneReject; x: number; y: number }[];
-  brackets: { b: SceneBracket; x0: number; x1: number; yEntry: number; yTp: number | null; ySl: number | null; open: boolean }[];
+  rejects: { r: SceneReject; x: number; y: number; count: number }[];
+  brackets: { b: SceneBracket; x0: number; x1: number; yEntry: number; yTp: number | null; ySl: number | null; yTps: number[]; ySls: number[]; open: boolean }[];
   legEnds: { e: SceneLegEnd; x: number; y: number }[];
   ladder: { l: SceneLadder; x1: number; x2: number; y: number }[];
   ladderHidden: number;
@@ -313,12 +332,15 @@ class TradesRenderer implements IPrimitivePaneRenderer {
       ctx.font = `500 10px ${pal.font}`;
       ctx.textBaseline = "middle";
       // position boxes: profit zone entry→TP, risk zone entry→SL, entry level, R:R at the right edge
-      for (const { b, x0, x1, yEntry, yTp, ySl, open } of d.brackets) {
+      for (const { b, x0, x1, yEntry, yTp, ySl, yTps, ySls, open } of d.brackets) {
         const lit = hi === b.id || b.legIds.includes(hi ?? "") || hi === `fill:${b.id.slice(8)}`;
-        // translucent zones by globalAlpha on the token colours — no colour literal lives here (U02)
+        // translucent zones by globalAlpha on the token colours — no colour literal lives here (U02);
+        // the zone reaches the farthest level, each partial level draws its own step line
+        const far = (ys: number[]) => ys.reduce<number | null>((acc, y) => (acc === null || Math.abs(y - yEntry) > Math.abs(acc - yEntry) ? y : acc), null);
+        const yTpFar = far(yTps) ?? yTp, ySlFar = far(ySls) ?? ySl;
         ctx.globalAlpha = lit ? 0.22 : 0.11;
-        if (yTp !== null) { ctx.fillStyle = pal.good; ctx.fillRect(x0, Math.min(yEntry, yTp), x1 - x0, Math.abs(yTp - yEntry)); }
-        if (ySl !== null) { ctx.fillStyle = pal.bad; ctx.fillRect(x0, Math.min(yEntry, ySl), x1 - x0, Math.abs(ySl - yEntry)); }
+        if (yTpFar !== null) { ctx.fillStyle = pal.good; ctx.fillRect(x0, Math.min(yEntry, yTpFar), x1 - x0, Math.abs(yTpFar - yEntry)); }
+        if (ySlFar !== null) { ctx.fillStyle = pal.bad; ctx.fillRect(x0, Math.min(yEntry, ySlFar), x1 - x0, Math.abs(ySlFar - yEntry)); }
         ctx.globalAlpha = 1;
         ctx.strokeStyle = b.side === "LONG" ? pal.long : pal.short;
         ctx.lineWidth = lit ? 1.5 : 1;
@@ -327,7 +349,7 @@ class TradesRenderer implements IPrimitivePaneRenderer {
         if (open) { ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x1, Math.min(yEntry, yTp ?? yEntry, ySl ?? yEntry)); ctx.lineTo(x1, Math.max(yEntry, yTp ?? yEntry, ySl ?? yEntry)); ctx.stroke(); ctx.setLineDash([]); }
         if (b.rr && x1 - x0 >= 46) {
           // just above the entry line, past the entry marker: clear of the leg labels at the box edges
-          const text = `R:R ${b.rr}`;
+          const text = `R:R ${b.rr}${b.tps.length > 1 ? ` · TP×${b.tps.length}` : ""}${b.sls.length > 1 ? ` · SL×${b.sls.length}` : ""}`;
           const w = ctx.measureText(text).width;
           ctx.globalAlpha = 0.75;
           ctx.fillStyle = pal.bg;
@@ -384,11 +406,12 @@ class TradesRenderer implements IPrimitivePaneRenderer {
         if (e.kind === "TRIGGER") { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
         else { ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.moveTo(x - 4, y); ctx.lineTo(x, y); ctx.stroke(); }
       }
-      // rejects: ×
-      for (const { r, x, y } of d.rejects) {
+      // rejects: × — one per bar, with the count when several share it
+      for (const { r, x, y, count } of d.rejects) {
         ctx.strokeStyle = pal.bad;
         ctx.lineWidth = hi === r.id ? 2.5 : 1.5;
         ctx.beginPath(); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x + 4, y + 4); ctx.moveTo(x + 4, y - 4); ctx.lineTo(x - 4, y + 4); ctx.stroke();
+        if (count > 1) { ctx.fillStyle = pal.bad; ctx.textAlign = "left"; ctx.fillText(`×${count}`, x + 6, y - 6); }
       }
       // markers: triangles by position side; entry filled, exit hollow
       const S = 13, HW = 7, GAP = 2;
@@ -465,7 +488,10 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
     const m = this.scene.markers.find((x) => x.id === id);
     if (m) return { title: m.title.split(" · ").slice(0, 2).join(" · "), rows: m.card };
     const r = this.scene.rejects.find((x) => x.id === id);
-    if (r) return { title: "rejected", rows: r.card };
+    if (r) {
+      const drawn = this.drawn?.rejects.find((d) => d.r.id === id);
+      return { title: drawn && drawn.count > 1 ? `rejected · ${drawn.count} in this bar (first shown)` : "rejected", rows: r.card };
+    }
     const l = this.scene.ladder.find((x) => x.id === id);
     if (l) return { title: "resting order", rows: l.card };
     const e = this.scene.legEnds.find((x) => x.id === id);
@@ -535,11 +561,18 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
       if (x0 === null || x1 === null || y0 === null || y1 === null || x1 < 0 || x0 > width) continue;
       trips.push({ tr, x0, y0: clampY(y0), x1, y1: clampY(y1) });
     }
+    // rejects clustered per bar (a grid alpha books hundreds of risk rejects): the first of a bar is drawn, the rest counted
     const rejects: Drawn["rejects"] = [];
+    const bucket = Math.max(6, spacing);
+    const seen = new Map<number, number>();
     for (const r of this.scene.rejects) {
       const rx = x(r.t), ry = y(r.price);
       if (rx === null || ry === null || rx < 0 || rx > width) continue;
-      rejects.push({ r, x: rx, y: clampY(ry) });
+      const key = Math.round(rx / bucket);
+      const at = seen.get(key);
+      if (at !== undefined) { rejects[at]!.count += 1; continue; }
+      seen.set(key, rejects.length);
+      rejects.push({ r, x: rx, y: clampY(ry), count: 1 });
     }
     const brackets: Drawn["brackets"] = [];
     for (const b of this.scene.brackets) {
@@ -548,7 +581,8 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
       if (x0 === null || x1 === null || yEntry === null || x1 < 0 || x0 > width) continue;
       const yTp = b.tp === null ? null : y(b.tp);
       const ySl = b.sl === null ? null : y(b.sl);
-      brackets.push({ b, x0: Math.max(0, x0), x1: Math.min(width, Math.max(x1, x0 + 2)), yEntry: clampY(yEntry), yTp: yTp === null ? null : clampY(yTp), ySl: ySl === null ? null : clampY(ySl), open: b.t1 === null });
+      const ys = (levels: number[]): number[] => { const out: number[] = []; for (const l of levels) { const v = y(l); if (v !== null) out.push(clampY(v)); } return out; };
+      brackets.push({ b, x0: Math.max(0, x0), x1: Math.min(width, Math.max(x1, x0 + 2)), yEntry: clampY(yEntry), yTp: yTp === null ? null : clampY(yTp), ySl: ySl === null ? null : clampY(ySl), yTps: ys(b.tps), ySls: ys(b.sls), open: b.t1 === null });
     }
     const legEnds: Drawn["legEnds"] = [];
     for (const e of this.scene.legEnds) {
