@@ -11,8 +11,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MARKET_CANDLE_INTERVALS, type MarketCandleInterval, type MarketCandlesPayload } from "../api/marketCandles";
 import type { PanelStatus } from "../contracts";
 import { ReplayCandleChart, type ReplayChartHandle } from "./ReplayCandleChart";
-import { buildLog, legLevels, money, ms, num, pairRoundTrips } from "./tradeReplayModel";
-import type { ReplayFill, ReplayOrder } from "./tradeReplayModel";
+import { buildLog, legLevels, legRole, money, ms, num, pairRoundTrips } from "./tradeReplayModel";
+import type { LogRow, ReplayFill, ReplayOrder } from "./tradeReplayModel";
 
 export {
   buildLog, legLevels, legRole, money, ms, num, pairRoundTrips, qtyFmt, readReplayFills, readReplayOrders,
@@ -41,6 +41,27 @@ export interface TradeReplayEventsProps {
 }
 
 const HEIGHT = { compact: 420, tall: 620 } as const;
+
+/** The scene object a log row stands for (the same ids the chart primitive uses). */
+export function sceneIdOfRow(row: LogRow, orders: readonly ReplayOrder[]): string | null {
+  if (row.event === "FILL") return `fill:${row.ref}`;
+  if (row.event === "REJECT") return `reject:${row.ref}`;
+  const o = orders.find((x) => x.orderId === row.ref);
+  if (!o) return null;
+  const role = legRole(o);
+  if (role === "TP" || role === "SL") return row.event === "TRIGGER" ? `trigger:${row.ref}` : row.event === "CANCEL" ? `cancel:${row.ref}` : `leg:${row.ref}`;
+  if ((o.type ?? "").toUpperCase().includes("LIMIT")) return `ladder:${row.ref}`;
+  return null;
+}
+
+/** Next / previous fill from the current selection (or from the newest fill when nothing is selected). */
+export function stepFill(fills: readonly ReplayFill[], selected: string | null, direction: -1 | 1): string | null {
+  if (fills.length === 0) return null;
+  const ids = fills.map((f) => `fill:${f.fillId}`);
+  const at = selected ? ids.indexOf(selected) : -1;
+  const next = at < 0 ? (direction < 0 ? ids.length - 1 : 0) : Math.max(0, Math.min(ids.length - 1, at + direction));
+  return ids[next] ?? null;
+}
 const TALL_KEY = "exec.replay.tall";
 const readTall = (): boolean => { try { return window.localStorage.getItem(TALL_KEY) === "1"; } catch { return false; } };
 const writeTall = (tall: boolean): void => { try { window.localStorage.setItem(TALL_KEY, tall ? "1" : "0"); } catch { /* per-viewer convenience only */ } };
@@ -84,6 +105,19 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
   const [tall, setTall] = useState(false);
   useEffect(() => { setTall(readTall()); }, []);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const select = (id: string | null, scroll: boolean) => {
+    setSelected(id);
+    if (id) {
+      chart.current?.focus(id);
+      if (scroll) document.querySelector<HTMLElement>(`tr[data-scene-id="${id}"]`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    }
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    select(stepFill(scopedFills, selected, e.key === "ArrowLeft" ? -1 : 1), true);
+  };
 
   if (!times || (scopedFills.length === 0 && scopedOrders.length === 0)) {
     return (
@@ -107,8 +141,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
     : marketTransport !== "ok" && marketTransport !== "loading" ? `venue klines ${marketTransport}${marketReason ? ` · ${marketReason}` : ""}`
     : marketTransport === "loading" && !market ? "venue klines loading" : null;
   const notice = bars.length > 0 ? null : `${klinesWord ?? "venue klines not requested"} · source candles ${candlesWord} (${candles.reason ?? "not published"}) — no candles: the time axis is indexed by the events themselves`;
-  const hoveredRef = hovered?.startsWith("fill:") ? hovered.slice(5) : hovered?.startsWith("reject:") ? hovered.slice(7) : null;
   const height = tall ? HEIGHT.tall : HEIGHT.compact;
+  const brackets = scopedFills.filter((f) => !trips.some((tr) => tr.exit.fillId === f.fillId)).length;
 
   return (
     <>
@@ -142,7 +176,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             <button type="button" className="exec-rp-chip" onClick={() => chart.current?.fit()}>Fit</button>
             <button type="button" className="exec-rp-chip" onClick={() => { setTall(!tall); writeTall(!tall); }} aria-pressed={tall} aria-label={tall ? "Compact chart" : "Expand chart"}>{tall ? "Compact" : "Expand"}</button>
           </span>
-          <span className="exec-rp-win">{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · crosshair · drag · wheel zoom · drag the price axis</span>
+          <span className="exec-rp-win">{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"} · crosshair · drag · wheel zoom · drag the price axis · ← → step fills</span>
         </header>
         <div className="exec-rp-canvas" style={{ height }} data-tall={tall}>
           <ReplayCandleChart
@@ -159,14 +193,18 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             notice={notice}
             ariaLabel={`${bars.length} ${market?.interval ?? interval} candles, ${scopedFills.length} fills with markers, ${legs.length} bracket legs, ${trips.length} round trips`}
             onHover={setHovered}
+            onSelect={(id) => select(id, true)}
+            selectedId={selected}
+            onKeyDown={onKey}
           />
         </div>
         <div className="exec-rp-legend">
           <span><b data-side="long">▲</b> long entry · <b data-side="long">▽</b> long exit (hollow; label = realized_pnl)</span>
           <span><b data-side="short">▼</b> short entry · <b data-side="short">△</b> short exit</span>
-          <span>─ ─ <span data-tone="good">TP</span> / <span data-tone="bad">SL</span> leg at trigger_price while working</span>
+          <span><span data-tone="good">▒</span> entry→TP · <span data-tone="bad">▒</span> entry→SL position box, R:R at its edge (legs paired to the entry by time · DERIVED)</span>
+          <span>─ ─ <span data-tone="good">TP</span> / <span data-tone="bad">SL</span> leg at trigger_price · ◇ triggered · ⊣ cancelled · ┈ resting limit level</span>
           <span data-tone="bad">× rejected ({rejects})</span>
-          <span className="exec-rp-mute">╌ round trip entry→exit · {bars.length > 0 ? "▮ venue candle up / down" : "no candles"} · hover a marker for its fill</span>
+          <span className="exec-rp-mute">╌ round trip · {bars.length > 0 ? "▮ venue candle up / down" : "no candles"} · hover a marker for its card · click ↔ log row · ← → step fills</span>
         </div>
         <footer className="exec-rp-foot">
           source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
@@ -183,8 +221,20 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           <table className="exec-rp-table">
             <thead><tr><th>time (UTC)</th><th>event</th><th>order · leg</th><th>type · side</th><th data-numeric="true">qty</th><th data-numeric="true">price / trigger</th><th data-numeric="true">fee</th><th>note</th></tr></thead>
             <tbody>
-              {log.map((r) => (
-                <tr key={`${r.ref}-${r.t}`} data-hover={hoveredRef !== null && hoveredRef === r.ref ? "true" : undefined}>
+              {log.map((r) => {
+                const sceneId = sceneIdOfRow(r, scopedOrders);
+                return (
+                <tr
+                  key={`${r.ref}-${r.t}`}
+                  data-scene-id={sceneId ?? undefined}
+                  data-hover={sceneId !== null && hovered === sceneId ? "true" : undefined}
+                  data-selected={sceneId !== null && selected === sceneId ? "true" : undefined}
+                  onMouseEnter={sceneId ? () => chart.current?.highlight(sceneId) : undefined}
+                  onMouseLeave={sceneId ? () => chart.current?.highlight(null) : undefined}
+                  onClick={sceneId ? () => select(sceneId, false) : undefined}
+                  tabIndex={sceneId ? 0 : undefined}
+                  onKeyDown={sceneId ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(sceneId, false); } } : undefined}
+                >
                   <td className="exec-rp-dim">{r.time}</td>
                   <td><span className="exec-rp-ev" data-tone={r.eventTone}>{r.event}</span></td>
                   <td><span className="exec-rp-mute">{r.event === "FILL" ? "fill " : "ord "}</span><span className="exec-num">{r.ref}</span>{r.tail}</td>
@@ -194,7 +244,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
                   <td data-numeric="true" className={r.fee ? undefined : "exec-rp-mute"}>{r.fee ?? "—"}</td>
                   <td data-tone={r.noteTone ?? undefined}>{r.note}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

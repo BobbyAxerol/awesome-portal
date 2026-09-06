@@ -5499,6 +5499,16 @@
 .exec-rp-legend [data-side="long"] { color: var(--exec-trade-long); } .exec-rp-legend [data-side="short"] { color: var(--exec-trade-short); }
 .exec-rp-attrib a { color: var(--ink-mute); text-decoration: underline dotted; }
 .exec-rp-table tr[data-hover="true"] td { background: var(--surface-2); }
+.exec-rp-table tr[data-scene-id] { cursor: pointer; }
+.exec-rp-table tr[data-selected="true"] td { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
+.exec-rp-table tr[data-scene-id]:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.exec-rp-chart-stage:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.exec-rp-card { position: absolute; z-index: 3; min-width: 200px; max-width: 360px; padding: 6px 8px; pointer-events: none; font: 400 10px/14px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink); background: var(--paper-raised); border: 1px solid var(--line); box-shadow: var(--shadow-raised); }
+.exec-rp-card-title { margin-bottom: 4px; padding-bottom: 3px; border-bottom: 1px solid var(--line-soft); font: 500 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); }
+.exec-rp-card-row { display: flex; justify-content: space-between; gap: 12px; }
+.exec-rp-card-row span { color: var(--ink-mute); }
+.exec-rp-card-row b { font-weight: 500; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exec-rp-card-row[data-tone="good"] b { color: var(--good); } .exec-rp-card-row[data-tone="bad"] b { color: var(--bad); } .exec-rp-card-row[data-tone="warn"] b { color: var(--warn); } .exec-rp-card-row[data-tone="mute"] b { color: var(--ink-mute); }
 .exec-rp-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 6px 12px; font: 400 10px/14px var(--font-mono); color: var(--ink-soft); }
 .exec-rp-legend [data-tone="good"] { color: var(--good); } .exec-rp-legend [data-tone="bad"] { color: var(--bad); } .exec-rp-legend [data-tone="warn"] { color: var(--warn); }
 .exec-rp-mute { color: var(--ink-mute); }

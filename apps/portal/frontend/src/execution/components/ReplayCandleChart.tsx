@@ -71,24 +71,72 @@ export interface SceneMarker {
   label: string | null;
   labelTone: "good" | "bad" | "warn" | null;
   title: string;
+  card: CardRow[];
 }
 export interface SceneLeg { id: string; role: "TP" | "SL"; level: number; from: number; to: number | null; label: string; title: string }
 export interface SceneTrip { id: string; t0: number; p0: number; t1: number; p1: number; side: PositionSide; tone: "good" | "bad" | "warn"; label: string }
-export interface SceneReject { id: string; t: number; price: number; title: string }
-export interface ReplayScene { markers: SceneMarker[]; legs: SceneLeg[]; trips: SceneTrip[]; rejects: SceneReject[]; lastT: number | null }
+export interface SceneReject { id: string; t: number; price: number; title: string; card: CardRow[] }
+/** How a leg ended: the order filled (the level triggered) or was cancelled. */
+export interface SceneLegEnd { id: string; legId: string; t: number; level: number; kind: "TRIGGER" | "CANCEL"; title: string }
+/**
+ * An entry fill with the TP / SL legs armed around it — the "position box"
+ * of the TradingView long/short tool, from the server's own levels. Legs are
+ * paired to the entry by time (armed within the pairing window after the
+ * fill, same symbol); the client ids carry no shared key. Labelled DERIVED.
+ */
+export interface SceneBracket {
+  id: string;
+  side: PositionSide;
+  t0: number;
+  /** exit fill time, else the last leg's terminal time, else null while working */
+  t1: number | null;
+  entry: number;
+  tp: number | null;
+  sl: number | null;
+  /** |tp − entry| / |entry − sl| when both legs exist */
+  rr: string | null;
+  legIds: string[];
+  title: string;
+}
+/** A resting limit order (grid / ladder level) at its price while it worked. */
+export interface SceneLadder { id: string; price: number; from: number; to: number | null; side: "BUY" | "SELL" | null; title: string; card: CardRow[] }
+export type CardRow = readonly [label: string, value: string, tone?: "good" | "bad" | "warn" | "mute"];
+export interface ReplayScene {
+  markers: SceneMarker[]; legs: SceneLeg[]; trips: SceneTrip[]; rejects: SceneReject[];
+  brackets: SceneBracket[]; legEnds: SceneLegEnd[]; ladder: SceneLadder[]; lastT: number | null;
+}
 
 const stamp = (t: number) => new Date(t).toISOString().replace("T", " ").slice(0, 19) + "Z";
 const sideOfEntry = (f: ReplayFill): PositionSide => ((f.side ?? "").toUpperCase() === "SELL" ? "SHORT" : "LONG");
+/** Legs armed within this window after an entry fill belong to that entry. */
+export const BRACKET_PAIRING_MS = 180_000;
 
-/** Pure: markers by position side, legs at trigger_price, round trips, rejects. */
+const fillCard = (f: ReplayFill, o: ReplayOrder | undefined, trip: RoundTrip | undefined): CardRow[] => {
+  const rows: CardRow[] = [
+    ["fill", f.fillId],
+    ["side · qty", `${f.side ?? "—"} ${qtyFmt(f.qty)}`],
+    ["price", money(f.price)],
+    ["fee", f.commission ? `${money(f.commission)} ${f.commissionCurrency ?? ""} · ${(f.liquidity ?? "").toLowerCase() || "fee"}` : "not published", f.commission ? undefined : "mute"],
+  ];
+  if (trip) rows.push(["realized", `${money(trip.pnl)} · ${trip.kind} exit`, trip.win === null ? "warn" : trip.win ? "good" : "bad"]);
+  if (o) rows.push(["order", `${o.orderId} · ${o.type ?? "ORDER"} · ${o.status ?? ""}${o.venueOrderId ? "" : " · no venue id"}`, o.venueOrderId ? undefined : "warn"]);
+  rows.push(["time", stamp(ms(f.tradeTime)!)]);
+  if (f.tradeId) rows.push(["trade", f.tradeId]);
+  return rows;
+};
+
+/** Pure: markers by position side, legs at trigger_price, round trips, rejects, brackets, ladder. */
 export function buildScene(fills: readonly ReplayFill[], orders: readonly ReplayOrder[], trips: readonly RoundTrip[], legs: readonly Leg[]): ReplayScene {
   const exitOf = new Map(trips.map((tr) => [tr.exit.fillId, tr]));
+  const tripOfEntry = new Map(trips.map((tr) => [tr.entry.fillId, tr]));
+  const byCoid = new Map(orders.filter((o) => o.clientOrderId).map((o) => [o.clientOrderId!, o]));
   const markers: SceneMarker[] = [];
   for (const f of fills) {
     const t = ms(f.tradeTime);
     const price = num(f.price);
     if (t === null || price === null) continue;
     const trip = exitOf.get(f.fillId);
+    const o = f.clientOrderId ? byCoid.get(f.clientOrderId) : undefined;
     if (trip) {
       const side = sideOfEntry(trip.entry);
       const tone = trip.win === null ? "warn" : trip.win ? "good" : "bad";
@@ -97,6 +145,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
         pointsUp: side === "SHORT", hollow: true,
         label: trip.pnl ? `${num(trip.pnl)! >= 0 ? "+" : ""}${money(trip.pnl)}` : "pnl not published", labelTone: tone,
         title: `${side} exit · ${trip.kind} · fill ${f.fillId} · ${f.side ?? ""} ${qtyFmt(f.qty)} @ ${money(f.price)} · realized ${money(trip.pnl)} · ${stamp(t)}`,
+        card: fillCard(f, o, trip),
       });
     } else {
       const side = sideOfEntry(f);
@@ -104,6 +153,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
         id: `fill:${f.fillId}`, t, price, side, role: "ENTRY",
         pointsUp: side === "LONG", hollow: false, label: null, labelTone: null,
         title: `${side} entry · fill ${f.fillId} · ${f.side ?? ""} ${qtyFmt(f.qty)} @ ${money(f.price)} · ${stamp(t)}`,
+        card: fillCard(f, o, undefined),
       });
     }
   }
@@ -129,10 +179,63 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
     const near = sorted.reduce<{ t: number; p: number } | null>((best, f) => (best === null || Math.abs(f.t - t) < Math.abs(best.t - t) ? f : best), null);
     const price = num(o.price) ?? num(o.trigger) ?? near?.p ?? null;
     if (price === null) return [];
-    return [{ id: `reject:${o.orderId}`, t, price, title: `rejected · order ${o.orderId} · ${o.type ?? ""} ${o.side ?? ""} ${qtyFmt(o.qty)} · ${o.errorCode ?? o.status ?? ""}${o.errorMessage ? ` · ${o.errorMessage}` : ""} · ${stamp(t)}` }];
+    return [{
+      id: `reject:${o.orderId}`, t, price,
+      title: `rejected · order ${o.orderId} · ${o.type ?? ""} ${o.side ?? ""} ${qtyFmt(o.qty)} · ${o.errorCode ?? o.status ?? ""}${o.errorMessage ? ` · ${o.errorMessage}` : ""} · ${stamp(t)}`,
+      card: [["order", `${o.orderId} · ${o.type ?? "ORDER"}`], ["side · qty", `${o.side ?? "—"} ${qtyFmt(o.qty)}`], ["rejected", `${o.errorCode ?? o.status ?? "REJECTED"}`, "bad"], ...(o.errorMessage ? [["reason", o.errorMessage, "bad"] as CardRow] : []), ["drawn at", `${money(String(price))}${num(o.price) === null && num(o.trigger) === null ? " (nearest fill · DERIVED)" : ""}`, "mute"], ["time", stamp(t)]],
+    }];
   });
-  const times = [...markers.map((m) => m.t), ...sceneLegs.map((l) => l.to ?? l.from), ...rejects.map((r) => r.t)];
-  return { markers, legs: sceneLegs, trips: sceneTrips, rejects, lastT: times.length > 0 ? Math.max(...times) : null };
+  // brackets: each entry fill claims the nearest TP and SL armed within the pairing window
+  const claimed = new Set<string>();
+  const brackets: SceneBracket[] = markers.filter((m) => m.role === "ENTRY").flatMap((m) => {
+    const fill = fills.find((f) => `fill:${f.fillId}` === m.id)!;
+    const near = (role: "TP" | "SL") => sceneLegs
+      .filter((l) => l.role === role && !claimed.has(l.id) && l.from >= m.t - 30_000 && l.from <= m.t + BRACKET_PAIRING_MS)
+      .map((l) => ({ l, o: legs.find((x) => `leg:${x.order.orderId}` === l.id)?.order }))
+      .filter(({ o }) => !o || !o.symbol || !fill.symbol || o.symbol === fill.symbol)
+      .sort((a, b) => Math.abs(a.l.from - m.t) - Math.abs(b.l.from - m.t))[0]?.l ?? null;
+    const tp = near("TP");
+    if (tp) claimed.add(tp.id);
+    const sl = near("SL");
+    if (sl) claimed.add(sl.id);
+    if (!tp && !sl) return [];
+    const trip = tripOfEntry.get(fill.fillId);
+    const exitT = trip ? ms(trip.exit.tradeTime) : null;
+    const legEnd = [tp?.to ?? null, sl?.to ?? null].filter((x): x is number => x !== null);
+    const t1 = exitT ?? (legEnd.length > 0 && (!tp || tp.to !== null) && (!sl || sl.to !== null) ? Math.max(...legEnd) : null);
+    const rr = tp && sl && Math.abs(m.price - sl.level) > 0 ? (Math.abs(tp.level - m.price) / Math.abs(m.price - sl.level)).toFixed(2) : null;
+    return [{
+      id: `bracket:${fill.fillId}`, side: m.side, t0: m.t, t1, entry: m.price, tp: tp?.level ?? null, sl: sl?.level ?? null, rr,
+      legIds: [tp?.id, sl?.id].filter((x): x is string => !!x),
+      title: `${m.side} position · entry ${money(fill.price)}${tp ? ` · TP ${money(String(tp.level))}` : ""}${sl ? ` · SL ${money(String(sl.level))}` : ""}${rr ? ` · R:R ${rr}` : ""} · legs paired by time (DERIVED)`,
+    }];
+  });
+  const legEnds: SceneLegEnd[] = sceneLegs.flatMap((l) => {
+    if (l.to === null) return [];
+    const o = legs.find((x) => `leg:${x.order.orderId}` === l.id)?.order;
+    const status = (o?.status ?? "").toUpperCase();
+    const kind = status === "FILLED" ? "TRIGGER" : status.startsWith("CANCEL") ? "CANCEL" : null;
+    if (!kind) return [];
+    return [{ id: `${kind === "TRIGGER" ? "trigger" : "cancel"}:${o!.orderId}`, legId: l.id, t: l.to, level: l.level, kind, title: `${l.role} ${kind === "TRIGGER" ? "triggered" : "cancelled"} · order ${o!.orderId} · ${money(String(l.level))} · ${stamp(l.to)}` }];
+  });
+  // ladder: resting limit orders that are not bracket legs, at their price while they worked
+  const ladder: SceneLadder[] = orders.flatMap((o) => {
+    const type = (o.type ?? "").toUpperCase();
+    if (!type.includes("LIMIT") || type.startsWith("TAKE_PROFIT") || type.startsWith("STOP")) return [];
+    const price = num(o.price);
+    const from = ms(o.submittedAt);
+    if (price === null || from === null) return [];
+    const status = (o.status ?? "").toUpperCase();
+    const to = status === "NEW" || status === "WORKING" || status === "PARTIALLY_FILLED" ? null : ms(o.updatedAt);
+    const side = (o.side ?? "").toUpperCase() === "SELL" ? "SELL" : (o.side ?? "").toUpperCase() === "BUY" ? "BUY" : null;
+    return [{
+      id: `ladder:${o.orderId}`, price, from, to, side,
+      title: `resting ${o.type ?? "LIMIT"} ${o.side ?? ""} ${qtyFmt(o.qty)} @ ${money(o.price)} · order ${o.orderId} · ${o.status ?? ""} · ${stamp(from)}${to ? ` → ${stamp(to)}` : " → working"}`,
+      card: [["order", `${o.orderId} · ${o.type ?? "LIMIT"} · ${o.status ?? ""}`], ["side · qty", `${o.side ?? "—"} ${qtyFmt(o.qty)}`], ["price", money(o.price)], ["armed", stamp(from)], ["ended", to ? stamp(to) : "working", to ? undefined : "warn"]],
+    }];
+  });
+  const times = [...markers.map((m) => m.t), ...sceneLegs.map((l) => l.to ?? l.from), ...rejects.map((r) => r.t), ...ladder.map((l) => l.to ?? l.from)];
+  return { markers, legs: sceneLegs, trips: sceneTrips, rejects, brackets, legEnds, ladder, lastT: times.length > 0 ? Math.max(...times) : null };
 }
 
 /* ── time ↔ logical index ────────────────────────────────────────────── */
@@ -188,6 +291,10 @@ interface Drawn {
   legs: { l: SceneLeg; x1: number; x2: number; y: number }[];
   trips: { tr: SceneTrip; x0: number; y0: number; x1: number; y1: number }[];
   rejects: { r: SceneReject; x: number; y: number }[];
+  brackets: { b: SceneBracket; x0: number; x1: number; yEntry: number; yTp: number | null; ySl: number | null; open: boolean }[];
+  legEnds: { e: SceneLegEnd; x: number; y: number }[];
+  ladder: { l: SceneLadder; x1: number; x2: number; y: number }[];
+  ladderHidden: number;
   barSpacing: number;
   width: number;
   height: number;
@@ -199,11 +306,53 @@ class TradesRenderer implements IPrimitivePaneRenderer {
     const d = this.owner.drawn;
     const pal = this.owner.palette;
     if (!d || !pal) return;
+    const hi = this.owner.highlightId;
     target.useMediaCoordinateSpace(({ context: ctx }) => {
       ctx.save();
       ctx.lineJoin = "round";
       ctx.font = `500 10px ${pal.font}`;
       ctx.textBaseline = "middle";
+      // position boxes: profit zone entry→TP, risk zone entry→SL, entry level, R:R at the right edge
+      for (const { b, x0, x1, yEntry, yTp, ySl, open } of d.brackets) {
+        const lit = hi === b.id || b.legIds.includes(hi ?? "") || hi === `fill:${b.id.slice(8)}`;
+        // translucent zones by globalAlpha on the token colours — no colour literal lives here (U02)
+        ctx.globalAlpha = lit ? 0.22 : 0.11;
+        if (yTp !== null) { ctx.fillStyle = pal.good; ctx.fillRect(x0, Math.min(yEntry, yTp), x1 - x0, Math.abs(yTp - yEntry)); }
+        if (ySl !== null) { ctx.fillStyle = pal.bad; ctx.fillRect(x0, Math.min(yEntry, ySl), x1 - x0, Math.abs(ySl - yEntry)); }
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = b.side === "LONG" ? pal.long : pal.short;
+        ctx.lineWidth = lit ? 1.5 : 1;
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x0, yEntry); ctx.lineTo(x1, yEntry); ctx.stroke();
+        if (open) { ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x1, Math.min(yEntry, yTp ?? yEntry, ySl ?? yEntry)); ctx.lineTo(x1, Math.max(yEntry, yTp ?? yEntry, ySl ?? yEntry)); ctx.stroke(); ctx.setLineDash([]); }
+        if (b.rr && x1 - x0 >= 46) {
+          // just above the entry line, past the entry marker: clear of the leg labels at the box edges
+          const text = `R:R ${b.rr}`;
+          const w = ctx.measureText(text).width;
+          ctx.globalAlpha = 0.75;
+          ctx.fillStyle = pal.bg;
+          ctx.fillRect(x0 + 12, yEntry - 15, w + 4, 14);
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = pal.mute;
+          ctx.textAlign = "left";
+          ctx.fillText(text, x0 + 14, yEntry - 8);
+        }
+      }
+      // ladder: resting limit levels while they worked
+      for (const { l, x1, x2, y } of d.ladder) {
+        ctx.strokeStyle = l.side === "SELL" ? pal.short : pal.long;
+        ctx.globalAlpha = hi === l.id ? 1 : 0.7;
+        ctx.lineWidth = hi === l.id ? 2 : 1;
+        ctx.setLineDash([1, 3]);
+        ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(x1, y - 3); ctx.lineTo(x1, y + 3); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      if (d.ladderHidden > 0) {
+        ctx.fillStyle = pal.mute; ctx.textAlign = "right";
+        ctx.fillText(`+${d.ladderHidden} resting levels not drawn (top 8 by time)`, d.width - 4, d.height - 8);
+      }
       // round trips: a thin dashed thread from entry to exit in the side's colour
       for (const { tr, x0, y0, x1, y1 } of d.trips) {
         ctx.strokeStyle = tr.side === "LONG" ? pal.long : pal.short;
@@ -227,16 +376,29 @@ class TradesRenderer implements IPrimitivePaneRenderer {
         }
       }
       ctx.setLineDash([]);
+      // how a leg ended: ◇ triggered, ⊣ cancelled
+      for (const { e, x, y } of d.legEnds) {
+        const colour = e.kind === "TRIGGER" ? (this.owner.legRole(e.legId) === "TP" ? pal.good : pal.bad) : pal.mute;
+        ctx.strokeStyle = colour; ctx.fillStyle = pal.bg; ctx.lineWidth = hi === e.id || hi === e.legId ? 2 : 1.2;
+        ctx.beginPath();
+        if (e.kind === "TRIGGER") { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+        else { ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.moveTo(x - 4, y); ctx.lineTo(x, y); ctx.stroke(); }
+      }
       // rejects: ×
-      for (const { x, y } of d.rejects) {
+      for (const { r, x, y } of d.rejects) {
         ctx.strokeStyle = pal.bad;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = hi === r.id ? 2.5 : 1.5;
         ctx.beginPath(); ctx.moveTo(x - 4, y - 4); ctx.lineTo(x + 4, y + 4); ctx.moveTo(x + 4, y - 4); ctx.lineTo(x - 4, y + 4); ctx.stroke();
       }
       // markers: triangles by position side; entry filled, exit hollow
       const S = 13, HW = 7, GAP = 2;
       for (const { m, x, y, off } of d.markers) {
         const colour = m.side === "LONG" ? pal.long : pal.short;
+        if (hi === m.id) {
+          // highlight ring around the hovered / selected marker
+          ctx.strokeStyle = pal.text; ctx.lineWidth = 1; ctx.setLineDash([]);
+          ctx.beginPath(); ctx.arc(x, m.pointsUp ? y + GAP + S / 2 : y - GAP - S / 2, S, 0, Math.PI * 2); ctx.stroke();
+        }
         ctx.beginPath();
         if (m.pointsUp) { ctx.moveTo(x, y + GAP); ctx.lineTo(x - HW, y + GAP + S); ctx.lineTo(x + HW, y + GAP + S); }
         else { ctx.moveTo(x, y - GAP); ctx.lineTo(x - HW, y - GAP - S); ctx.lineTo(x + HW, y - GAP - S); }
@@ -273,13 +435,43 @@ class TradesPaneView implements IPrimitivePaneView {
 export class TradesPrimitive implements ISeriesPrimitive<Time> {
   private param: SeriesAttachedParameter<Time, "Candlestick"> | null = null;
   private readonly views: IPrimitivePaneView[] = [new TradesPaneView(this)];
-  scene: ReplayScene = { markers: [], legs: [], trips: [], rejects: [], lastT: null };
+  scene: ReplayScene = { markers: [], legs: [], trips: [], rejects: [], brackets: [], legEnds: [], ladder: [], lastT: null };
   times: readonly number[] = [];
   intervalMs: number | null = null;
   palette: ChartPalette | null = null;
   drawn: Drawn | null = null;
+  /** the marker / leg / bracket the reader is on (hover or selection) */
+  highlightId: string | null = null;
 
   attached(param: SeriesAttachedParameter<Time, "Candlestick">): void { this.param = param; }
+  setHighlight(id: string | null): void {
+    if (this.highlightId === id) return;
+    this.highlightId = id;
+    this.param?.requestUpdate();
+  }
+  legRole(legId: string): "TP" | "SL" | null { return this.scene.legs.find((l) => l.id === legId)?.role ?? null; }
+  /** time of any scene object, for focusing the view on it */
+  timeOf(id: string): number | null {
+    return this.scene.markers.find((m) => m.id === id)?.t
+      ?? this.scene.rejects.find((r) => r.id === id)?.t
+      ?? this.scene.legEnds.find((e) => e.id === id)?.t
+      ?? this.scene.legs.find((l) => l.id === id)?.from
+      ?? this.scene.ladder.find((l) => l.id === id)?.from
+      ?? this.scene.brackets.find((b) => b.id === id)?.t0
+      ?? null;
+  }
+  cardOf(id: unknown): { title: string; rows: CardRow[] } | null {
+    if (typeof id !== "string") return null;
+    const m = this.scene.markers.find((x) => x.id === id);
+    if (m) return { title: m.title.split(" · ").slice(0, 2).join(" · "), rows: m.card };
+    const r = this.scene.rejects.find((x) => x.id === id);
+    if (r) return { title: "rejected", rows: r.card };
+    const l = this.scene.ladder.find((x) => x.id === id);
+    if (l) return { title: "resting order", rows: l.card };
+    const e = this.scene.legEnds.find((x) => x.id === id);
+    if (e) return { title: e.kind === "TRIGGER" ? "leg triggered" : "leg cancelled", rows: [["leg", e.legId.slice(4)], ["level", money(String(e.level))], ["time", stamp(e.t)]] };
+    return null;
+  }
   detached(): void { this.param = null; }
   paneViews(): readonly IPrimitivePaneView[] { return this.views; }
 
@@ -349,7 +541,29 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
       if (rx === null || ry === null || rx < 0 || rx > width) continue;
       rejects.push({ r, x: rx, y: clampY(ry) });
     }
-    this.drawn = { markers, legs, trips, rejects, barSpacing: spacing, width, height };
+    const brackets: Drawn["brackets"] = [];
+    for (const b of this.scene.brackets) {
+      const end = b.t1 ?? this.scene.lastT ?? b.t0;
+      const x0 = x(b.t0), x1 = x(end), yEntry = y(b.entry);
+      if (x0 === null || x1 === null || yEntry === null || x1 < 0 || x0 > width) continue;
+      const yTp = b.tp === null ? null : y(b.tp);
+      const ySl = b.sl === null ? null : y(b.sl);
+      brackets.push({ b, x0: Math.max(0, x0), x1: Math.min(width, Math.max(x1, x0 + 2)), yEntry: clampY(yEntry), yTp: yTp === null ? null : clampY(yTp), ySl: ySl === null ? null : clampY(ySl), open: b.t1 === null });
+    }
+    const legEnds: Drawn["legEnds"] = [];
+    for (const e of this.scene.legEnds) {
+      const ex = x(e.t), ey = y(e.level);
+      if (ex === null || ey === null || ex < 0 || ex > width || ey < 0 || ey > height) continue;
+      legEnds.push({ e, x: ex, y: ey });
+    }
+    const ladderAll: Drawn["ladder"] = [];
+    for (const l of this.scene.ladder) {
+      const x1 = x(l.from), x2 = x(l.to ?? this.scene.lastT ?? l.from), ly = y(l.price);
+      if (x1 === null || x2 === null || ly === null || x2 < 0 || x1 > width || ly < 0 || ly > height) continue;
+      ladderAll.push({ l, x1: Math.max(0, x1), x2: Math.min(width, Math.max(x2, x1 + 6)), y: ly });
+    }
+    const ladder = ladderAll.slice(0, 8);
+    this.drawn = { markers, legs, trips, rejects, brackets, legEnds, ladder, ladderHidden: ladderAll.length - ladder.length, barSpacing: spacing, width, height };
   }
 
   hitTest(x: number, y: number): PrimitiveHoveredItem | null {
@@ -364,6 +578,13 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
     for (const { r, x: rx, y: ry } of d.rejects) {
       const dist = Math.hypot(rx - x, ry - y);
       if (dist <= 8 && (best === null || dist < best.dist)) best = { id: r.id, dist };
+    }
+    for (const { e, x: ex, y: ey } of d.legEnds) {
+      const dist = Math.hypot(ex - x, ey - y);
+      if (dist <= 8 && (best === null || dist < best.dist)) best = { id: e.id, dist };
+    }
+    for (const { l, x1, x2, y: ly } of d.ladder) {
+      if (x >= x1 - 4 && x <= x2 + 4 && Math.abs(ly - y) <= 5) { const dist = Math.abs(ly - y) + 4; if (best === null || dist < best.dist) best = { id: l.id, dist }; }
     }
     return best ? { externalId: best.id, zOrder: "top", cursorStyle: "pointer", hitTestPriority: 10 } : null;
   }
@@ -381,6 +602,10 @@ export interface ReplayChartHandle {
   zoom(factor: number): void;
   pan(direction: -1 | 1): void;
   showRange(t0: number, t1: number): void;
+  /** ring the object (a log row is hovered); null clears */
+  highlight(id: string | null): void;
+  /** centre the view on the object, keeping the span, and ring it */
+  focus(id: string): boolean;
 }
 
 export interface ReplayCandleChartProps {
@@ -399,6 +624,11 @@ export interface ReplayCandleChartProps {
   notice: string | null;
   ariaLabel: string;
   onHover?: (id: string | null) => void;
+  /** a marker / reject / leg end / ladder level was clicked */
+  onSelect?: (id: string) => void;
+  /** the panel's selection (a log row or a keyboard step); ringed while nothing is hovered */
+  selectedId?: string | null;
+  onKeyDown?: (event: KeyboardEvent) => void;
   onStatus?: (status: ChartStatus) => void;
 }
 export type ChartStatus = "loading" | "ready" | "unavailable";
@@ -414,7 +644,7 @@ const reducedMotion = () => (typeof window !== "undefined" && (window.matchMedia
 type Runtime = { lib: Lib; chart: IChartApi; series: ISeriesApi<"Candlestick">; prim: TradesPrimitive; mark: IPriceLine | null };
 
 export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChartProps>(function ReplayCandleChart(
-  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onStatus },
+  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus },
   ref,
 ) {
   const host = useRef<HTMLDivElement>(null);
@@ -422,8 +652,14 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
   const rt = useRef<Runtime | null>(null);
   const appliedKey = useRef<string | null>(null);
   const [status, setStatus] = useState<ChartStatus>("loading");
+  const [card, setCard] = useState<{ id: string; x: number; y: number } | null>(null);
   const hoverRef = useRef(onHover);
   hoverRef.current = onHover;
+  const selectRef = useRef(onSelect);
+  selectRef.current = onSelect;
+  const hoveredRef = useRef<string | null>(null);
+  const selectedRef = useRef<string | null>(selectedId);
+  selectedRef.current = selectedId;
 
   // create once
   useEffect(() => {
@@ -447,8 +683,16 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
       chart.subscribeCrosshairMove((param: MouseEventParams<Time>) => {
         const box = hud.current;
         if (!box) return;
-        const hovered = prim.titleOf(param.hoveredObjectId);
-        hoverRef.current?.(typeof param.hoveredObjectId === "string" ? param.hoveredObjectId : null);
+        const id = typeof param.hoveredObjectId === "string" ? param.hoveredObjectId : null;
+        if (id !== hoveredRef.current) {
+          hoveredRef.current = id;
+          hoverRef.current?.(id);
+          prim.setHighlight(id ?? selectedRef.current);
+          setCard(id && param.point ? { id, x: param.point.x, y: param.point.y } : null);
+        } else if (id && param.point) {
+          setCard((c) => (c && Math.abs(c.x - param.point!.x) + Math.abs(c.y - param.point!.y) > 24 ? { id, x: param.point!.x, y: param.point!.y } : c));
+        }
+        const hovered = prim.titleOf(id);
         if (hovered) { box.textContent = hovered; box.dataset.kind = "trade"; return; }
         const bar = param.seriesData.get(series) as CandlestickData<Time> | undefined;
         if (!bar || bar.open === undefined || typeof param.time !== "number") { box.textContent = ""; box.dataset.kind = "none"; return; }
@@ -459,6 +703,9 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
         const vol = bars[floorIndex(prim.times, param.time * 1000)]?.v;
         box.textContent = `${UTC_MONTH[d.getUTCMonth()]} ${d.getUTCDate()} ${hhmm(d)} UTC · O ${money(String(bar.open))} H ${money(String(bar.high))} L ${money(String(bar.low))} C ${money(String(bar.close))}${vol ? ` V ${qtyFmt(vol)}` : ""}${delta !== null ? ` · ${delta >= 0 ? "+" : ""}${delta.toFixed(2)}%` : ""}`;
         box.dataset.kind = bar.close >= bar.open ? "up" : "down";
+      });
+      chart.subscribeClick((param: MouseEventParams<Time>) => {
+        if (typeof param.hoveredObjectId === "string") selectRef.current?.(param.hoveredObjectId);
       });
       rt.current = { lib, chart, series, prim, mark: null };
       // verification hook for the browser harness (no DOM attribute, no serialisation)
@@ -532,7 +779,29 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     return undefined;
   }, [status, bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening]);
 
+  useEffect(() => {
+    const r = rt.current;
+    if (status !== "ready" || !r) return;
+    if (hoveredRef.current === null) r.prim.setHighlight(selectedId);
+  }, [status, selectedId]);
+
+  const focusOn = (id: string): boolean => {
+    const r = rt.current;
+    if (!r) return false;
+    const t = r.prim.timeOf(id);
+    if (t === null) return false;
+    const ts = r.chart.timeScale();
+    const lr = ts.getVisibleLogicalRange();
+    const span = lr ? Math.max(6, lr.to - lr.from) : 60;
+    const centre = r.prim.logical(t);
+    ts.setVisibleLogicalRange({ from: centre - span / 2, to: centre + span / 2 });
+    r.prim.setHighlight(id);
+    return true;
+  };
+
   useImperativeHandle(ref, (): ReplayChartHandle => ({
+    highlight: (id) => { if (hoveredRef.current === null) rt.current?.prim.setHighlight(id ?? selectedRef.current); },
+    focus: focusOn,
     fit: () => rt.current?.chart.timeScale().fitContent(),
     zoom: (factor) => {
       const ts = rt.current?.chart.timeScale();
@@ -557,10 +826,22 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     },
   }), []);
 
+  const cardData = card ? rt.current?.prim.cardOf(card.id) ?? null : null;
+  const stageW = host.current?.clientWidth ?? 0;
+  const cardLeft = card ? (stageW > 0 && card.x > stageW - 260 ? Math.max(0, card.x - 250) : card.x + 14) : 0;
   return (
-    <div className="exec-rp-chart-stage" data-replay-chart={status} data-replay-bars={bars.length} data-replay-events={fills.length}>
+    <div
+      className="exec-rp-chart-stage" data-replay-chart={status} data-replay-bars={bars.length} data-replay-events={fills.length}
+      tabIndex={0} onKeyDown={onKeyDown ? (e) => onKeyDown(e.nativeEvent) : undefined} aria-label={`${ariaLabel}. Arrow keys step between fills.`}
+    >
       <div ref={host} className="exec-rp-chart-host" role="img" aria-label={ariaLabel} />
       <div ref={hud} className="exec-rp-hud" data-kind="none" aria-live="off" />
+      {card && cardData ? (
+        <div className="exec-rp-card" style={{ left: cardLeft, top: Math.max(4, card.y - 12) }} data-card-for={card.id} role="tooltip">
+          <div className="exec-rp-card-title">{cardData.title}</div>
+          {cardData.rows.map(([label, value, tone]) => <div key={label} className="exec-rp-card-row" data-tone={tone}><span>{label}</span><b>{value}</b></div>)}
+        </div>
+      ) : null}
       {notice && status !== "unavailable" ? <div className="exec-rp-notice">{notice}</div> : null}
       {status === "unavailable" ? <div className="exec-rp-notice" data-tone="warn">Chart runtime unavailable in this browser (no canvas) — the trade log below is the same record.</div> : null}
     </div>

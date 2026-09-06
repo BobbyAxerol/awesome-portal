@@ -4,7 +4,9 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { buildScene, logicalOf, robustRange } from "./components/ReplayCandleChart";
+import { BRACKET_PAIRING_MS, buildScene, logicalOf, robustRange } from "./components/ReplayCandleChart";
+import { sceneIdOfRow, stepFill } from "./components/TradeReplayEvents";
+import { buildLog } from "./components/tradeReplayModel";
 import { legLevels, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/tradeReplayModel";
 import { marketCandlesPath, timeframeFromStrategyId } from "./api/marketCandles";
 
@@ -38,6 +40,60 @@ describe("buildScene — markers by position side, legs, trips, rejects", () => 
     expect(scene.trips[0]).toMatchObject({ side: "SHORT", tone: "good", p0: 1850, p1: 1800 });
     expect(scene.rejects[0]).toMatchObject({ id: "reject:4", price: 3500 });
     expect(scene.lastT).toBe(Date.parse("2026-07-19T03:00:00Z"));
+  });
+});
+
+describe("buildScene — brackets, leg ends, ladder, cards (R2)", () => {
+  const trips = pairRoundTrips(FILLS, ORDERS);
+  const scene = buildScene(FILLS, ORDERS, trips, legLevels(ORDERS));
+  it("pairs the TP and SL armed within the window after the entry fill into one position box with R:R from the server's levels", () => {
+    expect(scene.brackets).toHaveLength(1);
+    const b = scene.brackets[0]!;
+    expect(b).toMatchObject({ id: "bracket:10", side: "SHORT", entry: 1850, tp: 1800, sl: 1900, legIds: ["leg:2", "leg:3"] });
+    expect(b.t1).toBe(Date.parse("2026-07-19T01:00:00Z")); // the exit fill
+    expect(b.rr).toBe("1.00");
+    expect(b.title).toContain("legs paired by time (DERIVED)");
+    expect(BRACKET_PAIRING_MS).toBe(180_000);
+  });
+  it("marks how each leg ended: the filled TP triggered, the cancelled SL cut", () => {
+    expect(scene.legEnds.map((e) => [e.id, e.kind, e.level])).toEqual([["trigger:2", "TRIGGER", 1800], ["cancel:3", "CANCEL", 1900]]);
+  });
+  it("draws a resting limit order as a ladder level and leaves market entries out of it", () => {
+    const orders = readReplayOrders([
+      { order_id: 50, symbol: "ETHUSDT", side: "BUY", order_type: "LIMIT", status: "NEW", price: "1700", quantity: "0.5", client_order_id: "g1", submitted_at: "2026-07-20T00:00:00Z", updated_at: "2026-07-20T00:00:00Z" },
+      { order_id: 51, symbol: "ETHUSDT", side: "SELL", order_type: "LIMIT", status: "CANCELED", price: "2100", quantity: "0.5", client_order_id: "g2", submitted_at: "2026-07-20T00:00:00Z", updated_at: "2026-07-21T00:00:00Z" },
+      { order_id: 52, symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "FILLED", quantity: "0.5", client_order_id: "m", submitted_at: "2026-07-20T00:00:00Z", updated_at: "2026-07-20T00:00:01Z" },
+    ]);
+    const s = buildScene([], orders, [], legLevels(orders));
+    expect(s.ladder.map((l) => [l.id, l.price, l.side, l.to])).toEqual([["ladder:50", 1700, "BUY", null], ["ladder:51", 2100, "SELL", Date.parse("2026-07-21T00:00:00Z")]]);
+    expect(s.ladder[0]!.card.find((r) => r[0] === "ended")?.[1]).toBe("working");
+  });
+  it("gives every marker a card of server fields", () => {
+    const exit = scene.markers.find((m) => m.id === "fill:11")!;
+    expect(exit.card.map((r) => r[0])).toEqual(["fill", "side · qty", "price", "fee", "realized", "order", "time"]);
+    expect(exit.card.find((r) => r[0] === "realized")).toEqual(["realized", "5.00 · TP exit", "good"]);
+    expect(exit.card.find((r) => r[0] === "fee")?.[1]).toBe("not published");
+    expect(scene.rejects[0]!.card.find((r) => r[0] === "rejected")).toEqual(["rejected", "RISK_MAX_NOTIONAL", "bad"]);
+  });
+});
+
+describe("log ↔ chart ids and keyboard stepping", () => {
+  it("maps each log row to the scene object it stands for", () => {
+    const log = buildLog(ORDERS, FILLS, pairRoundTrips(FILLS, ORDERS));
+    const ids = Object.fromEntries(log.map((r) => [`${r.event}:${r.ref}`, sceneIdOfRow(r, ORDERS)]));
+    expect(ids["FILL:10"]).toBe("fill:10");
+    expect(ids["REJECT:4"]).toBe("reject:4");
+    expect(ids["TRIGGER:2"]).toBe("trigger:2");
+    expect(ids["CANCEL:3"]).toBe("cancel:3");
+    expect(ids["ACK:1"]).toBeNull(); // a market entry has no object of its own — its fill has
+  });
+  it("steps through fills in time order from the selection, clamped at both ends", () => {
+    expect(stepFill(FILLS, null, 1)).toBe("fill:10");
+    expect(stepFill(FILLS, null, -1)).toBe("fill:12");
+    expect(stepFill(FILLS, "fill:10", 1)).toBe("fill:11");
+    expect(stepFill(FILLS, "fill:12", 1)).toBe("fill:12");
+    expect(stepFill(FILLS, "fill:10", -1)).toBe("fill:10");
+    expect(stepFill([], null, 1)).toBeNull();
   });
 });
 

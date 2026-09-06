@@ -4,7 +4,7 @@
  * (2026-09-05): MARKET entry, STOP_MARKET / TAKE_PROFIT_MARKET legs with
  * trigger_price, exit fills carrying realized_pnl.
  */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TradeReplayEvents, buildLog, legLevels, legRole, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/TradeReplayEvents";
@@ -44,6 +44,8 @@ const recorder = vi.hoisted(() => {
     paneSize: () => ({ width: 800, height: 400 }),
     subscribeCrosshairMove: () => undefined,
     unsubscribeCrosshairMove: () => undefined,
+    subscribeClick: () => undefined,
+    unsubscribeClick: () => undefined,
     applyOptions: () => undefined,
     remove: () => undefined,
   };
@@ -183,6 +185,25 @@ describe("TradeReplayEvents panel", () => {
     await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
     expect(container.querySelector("[data-replay-chart]")?.getAttribute("data-replay-bars")).toBe("0");
     expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("venue klines unavailable · MARKET_CANDLES_FEATURE_DISABLED");
+  });
+  it("selects a fill from the log or the keyboard, centres the chart on it and rings it", async () => {
+    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} accounts={[ACCT]} />);
+    await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    const prim = primitive();
+    const before = recorder.state.ranges.length;
+    const row = container.querySelector('tr[data-scene-id="fill:1877"]') as HTMLTableRowElement;
+    expect(row).not.toBeNull();
+    fireEvent.click(row);
+    await waitFor(() => expect(container.querySelector('tr[data-selected="true"]')?.getAttribute("data-scene-id")).toBe("fill:1877"));
+    expect(recorder.state.ranges.length).toBeGreaterThan(before);
+    expect(prim.highlightId).toBe("fill:1877");
+    const stage = container.querySelector(".exec-rp-chart-stage") as HTMLDivElement;
+    fireEvent.keyDown(stage, { key: "ArrowRight" });
+    await waitFor(() => expect(container.querySelector('tr[data-selected="true"]')?.getAttribute("data-scene-id")).toBe("fill:1900"));
+    expect(prim.highlightId).toBe("fill:1900");
+    // the exit's bracket is in the scene: entry 1859.89, TP 1889.62, SL 1845.01
+    expect(prim.scene.brackets[0]).toMatchObject({ id: "bracket:1877", tp: 1889.62, sl: 1845.01 });
+    expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("position box");
   });
   it("says so when there are no events", () => {
     render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} />);
