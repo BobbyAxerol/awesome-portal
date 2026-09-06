@@ -27,8 +27,9 @@ runtime flags.
 
 ## Frozen authority and compatibility inputs
 
-- P01/R4/R5 remains source-only at
-  `integration/portal-r4r5-p01-final@1c5a7fa2566d8298c51b8ec4d5ab969a8a0bde25`;
+- P01/R4/R5 remains source-only at the verified integration head
+  `integration/portal-r4r5-p01-final@98c47b3a66668b6082a60767cc94bfd2359a607f`;
+  it is the portable-verification follow-up to integration record `1c5a7fa`.
   P01 base is `f9e3d94613b1b9421043ce38e9a778d243124c69`.
 - Both activation templates must retain
   `TS_PORTAL_EVENT_LEDGER_LEASE_TTL_SECONDS=900`.

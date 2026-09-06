@@ -1573,7 +1573,8 @@ durable run/attempt events. Detailed evidence:
 - A pure Rust authority, strict static/deployed evidence verifier, ten-scenario
   failure matrix, profile-local operations/rollback runbooks and the isolated
   N17A restore/rebuild rehearsal are versioned together.  P01/R4/R5 remains
-  pinned to source-only integration `1c5a7fa` with lease TTL `900`.
+  pinned to verified source-only integration `98c47b3` (the portable-verification
+  follow-up to `1c5a7fa`) with lease TTL `900`.
 - Claude's BR-EX-80 and BR-EX-81 are frozen as explicit source-owner evidence
   gates: a derived timeframe stays visibly derived, and a bounded current page
   is never represented as complete subject order/fill history.

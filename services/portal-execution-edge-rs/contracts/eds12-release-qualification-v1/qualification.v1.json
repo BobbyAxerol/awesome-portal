@@ -11,7 +11,7 @@
     "p01_r4_r5_source_integration": {
       "p01_base": "f9e3d94613b1b9421043ce38e9a778d243124c69",
       "integration_ref": "integration/portal-r4r5-p01-final",
-      "integration_commit": "1c5a7fa2566d8298c51b8ec4d5ab969a8a0bde25",
+      "integration_commit": "98c47b3a66668b6082a60767cc94bfd2359a607f",
       "lease_ttl_seconds": 900,
       "source_only": true,
       "runtime_activation": false
@@ -115,7 +115,7 @@
     {
       "id": "phase12_qualification",
       "file": "upgrade/execution-v1/PHASE_12_QUALIFICATION.md",
-      "sha256": "sha256:c6f0e1723ea0512ce2d9d154f562efddd50372bd6f3df665a0da42f086e153aa"
+      "sha256": "sha256:c8bb67e6140953ee00f750a11bcdc70596337c94787a3b10473ba2a046ed5d02"
     },
     {
       "id": "operations_runbook",

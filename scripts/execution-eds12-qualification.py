@@ -184,7 +184,7 @@ def validate_baseline(qualification: dict[str, Any]) -> None:
     require(r4r5 == {
         "p01_base": "f9e3d94613b1b9421043ce38e9a778d243124c69",
         "integration_ref": "integration/portal-r4r5-p01-final",
-        "integration_commit": "1c5a7fa2566d8298c51b8ec4d5ab969a8a0bde25",
+        "integration_commit": "98c47b3a66668b6082a60767cc94bfd2359a607f",
         "lease_ttl_seconds": 900,
         "source_only": True,
         "runtime_activation": False,

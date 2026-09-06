@@ -114,7 +114,7 @@ fn validate_p01_r4_r5_boundary(qualification: &Value) -> Result<(), Qualificatio
         || text(
             qualification,
             "/baseline/p01_r4_r5_source_integration/integration_commit",
-        ) != Some("1c5a7fa2566d8298c51b8ec4d5ab969a8a0bde25")
+        ) != Some("98c47b3a66668b6082a60767cc94bfd2359a607f")
         || number(
             qualification,
             "/baseline/p01_r4_r5_source_integration/lease_ttl_seconds",
