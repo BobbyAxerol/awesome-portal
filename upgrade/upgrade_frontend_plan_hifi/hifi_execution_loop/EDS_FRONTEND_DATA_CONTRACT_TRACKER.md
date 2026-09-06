@@ -395,7 +395,7 @@ Replay vừa phải. Tạo 3 phase, duyệt từng cái."*
 
 ### OR-5.7 Kế hoạch 3 phase — mỗi phase một gate, Bobby duyệt từng phase
 
-**Phase R1 — Nền chart chuẩn TradingView (lõi)** · ước lượng 2 ngày · trạng thái: **chờ Bobby duyệt**
+**Phase R1 — Nền chart chuẩn TradingView (lõi)** · ước lượng 2 ngày · trạng thái: **ĐÃ GIAO 06-09 → xem OR-5.8, chờ Bobby duyệt trên dev**
 
 | | |
 |---|---|
@@ -431,6 +431,29 @@ Replay vừa phải. Tạo 3 phase, duyệt từng cái."*
 strategy trong relation `strategies` (hoặc fleet register BR-EX-72) để Trade
 Replay chọn đúng interval mà không suy từ id. Ảnh hưởng: tới khi giao, FE
 dán nhãn DERIVED. Đề xuất schema: `timeframe: "1m"|"5m"|"15m"|"30m"|"1h"|"4h"|"1d"`.
+
+### OR-5.8 Phase R1 — ĐÃ GIAO 06-09 (chờ Bobby duyệt trên dev) · nhánh `feat/trade-replay-signature` (từ `daa30a8`)
+
+**Commit:** `e465100` (control-api: phân trang Binance tới 6000 nến, adapter OKX SWAP, interval 30m) · `ce9d230` (FE: chart canvas Lightweight Charts, marker theo side, cửa sổ mở đầu theo fill, N29 re-pin). Push `origin/feat/trade-replay-signature`.
+
+**Đã làm (khớp OR-5.7 R1):**
+- `ReplayCandleChart.tsx` (mới, ~600 dòng): wrapper `lightweight-charts@5.2.1` (lazy-import như uPlot), `TradesPrimitive` vẽ toàn bộ lớp trade từ dòng server; HUD crosshair O/H/L/C/V/Δ%; kéo trục giá, wheel zoom neo con trỏ, kinetic pan (tắt khi reduced-motion/webdriver); Fit; palette đọc từ token CSS lúc chạy (không màu thô trong TSX); badge TradingView (`attributionLogo`) + dòng attribution ở footer.
+- Marker theo **side vị thế**: LONG ▲ teal dưới giá (vào đặc) / ▽ rỗng trên giá (ra, nhãn realized_pnl màu theo dấu); SHORT ▼ amber trên giá / △ rỗng dưới giá. Cỡ 13×14 px, viền nền. TP/SL leg nét đứt tại `trigger_price` từ submit→terminal, nhãn khi ≥70 px; round trip nét chấm màu side; reject ×; print lệch xa (fill 3,500 giữa nến 1,8xx) kẹp mép + nhãn "off venue print".
+- x của sự kiện = chỉ số nến lẻ (`logicalOf`, i−0.5+phần lẻ) — thư viện chỉ map chỉ số nguyên nên cộng phần lẻ × barSpacing (lỗi thật đã bắt trên probe: mọi marker về x=0).
+- Cửa sổ mở đầu: từ fill thứ 6 cuối → fill cuối (+pad), lệnh sau chỉ gộp nếu ≤2 ngày; **áp lại khi fill đến đợt sau** (resource rows trước, N25 facts sau) — trước đó view bị giữ ở đợt 1.
+- Khung 420 px, Expand 620 px (nhớ theo viewer, localStorage). Token mới `--exec-candle-up/down`, `--exec-trade-long/short`, `--exec-chart-crosshair` cho 4 theme.
+- Interval mặc định = hậu tố id (`…00115m` → 15m, nhãn "inferred from the strategy id · DERIVED"), đổi tay được; `fittingInterval` giữ interval alpha tới 6000 nến rồi mới nâng. Venue theo deployment (BINANCE→USDM, OKX→SWAP; khác → typed unsupported).
+- Backend: Binance 1500/trang đi tới từ `from_ms` (hoặc lùi từ `to_ms`), OKX `history-candles` 100/trang newest-first đảo từng trang; `coverage.pages`; `truncated` = đầy limit mà cửa sổ còn hở. Config `EXECUTION_PUBLIC_MARKET_CANDLES_OKX_ORIGIN`.
+
+**Gate (số thật):** control-api build-tsc sạch, spec 10/10 · FE tsc sạch (15 lỗi tsc còn lại đều ở spec của codex `canary-control-room/command-center/profile-projection`, không thuộc diff) · vitest **1880 pass / 1 skipped (104 file)** · U02 colour/font gate qua hook pre-commit.
+
+**Bằng chứng browser (probe :8090, harness `replay-r1.js`, DPR 2):** `r1e_01_tab.png` (cả tab), `r1e_02_chart.png` (cửa sổ mở đầu Jul 24→27: 3 round trip, leg TP/SL, nhãn −3.4896/+1.3208/+2.05821), `r1e_07_fit.png` (Fit cả record Jul 19→Aug 3, reject ×, print 3,500 kẹp mép), `r1e_08_tall.png` (620 px). Đo: 1512 nến 15m (2 trang), 10 fill, 12 leg, 5 round trip; HUD crosshair "Jul 18 22:00 UTC · O 1,859.98 H … C 1,862.11"; hover marker → "LONG exit · TP · fill 4047 · SELL 0.077 @ 1,960.82 · realized 2.05821"; dòng log sáng theo marker; pan 40 bước **60 fps**; đổi interval 15m→1h → 378 nến; console 0 lỗi.
+
+**Phát hiện ngoài lề, đã xử lý:** DB probe thiếu migration `1723680000024_execution-portal-observation-journal` → worker projection `POSTGRES_42703`, reads 503 `PHASE2_PROJECTION_STALE_CEILING_EXCEEDED`; chạy `control-api-migrate` cho DB probe, refresh lại bình thường. Dev không bị (migration đã có).
+
+**Chưa có trong R1 (đúng kế hoạch):** bracket/position box, ladder grid, hover card, click log → chart, phím ←/→ (R2); prefetch/trang khi kéo, nhớ interval, dùng lại Account 360/Blotter, adapter nguồn (R3). OKX adapter có spec nhưng chưa có alpha OKX trong fleet để nhìn bằng mắt.
+
+**Bobby kiểm trên dev:** `/deployments/alphas/adaptive_hma_cpp_00115m?tab=Trade%20Replay` — di chuột thấy HUD số nến; kéo trục giá phải giãn/nén; wheel zoom tại con trỏ; kéo ngang có quán tính; Fit; Expand; đổi interval; hover ▲▽ thấy fill; badge TradingView góc dưới trái.
 
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
