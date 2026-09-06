@@ -6,7 +6,7 @@ const T0 = Date.UTC(2026, 6, 18, 22, 0, 0);
 const RAW = {
   schema_version: "portal.execution.market-candles.v1",
   source_authority: "VENUE_PUBLIC_MARKET_DATA",
-  source: { venue: "BINANCE", market: "USDM", endpoint: "https://fapi.binance.com/fapi/v1/klines", note: "public venue klines" },
+  source: { kind: "venue_public", venue: "BINANCE", market: "USDM", endpoint: "https://fapi.binance.com/fapi/v1/klines", note: "public venue klines" },
   symbol: "ETHUSDT", interval: "1h", interval_ms: 3_600_000, state: "READY", reason_code: null, retryable: false,
   fetched_at_ms: T0 + 10_000, read_at_ms: T0 + 10_000,
   coverage: { from_ms: T0, to_ms: T0 + 7_199_999, requested_limit: 500, returned_count: 2, truncated: false, pages: null },

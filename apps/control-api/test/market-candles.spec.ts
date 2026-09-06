@@ -62,6 +62,17 @@ describe("venue public market candles — market context, never the source's his
     await svc.candles({ venue: "BINANCE", symbol: "ETHUSDT", interval: "1h", fromMs: T0, toMs: null, limit: 10 }, NOW + 5_000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+  it("answers a typed not-wired state when the source is the data layer, without calling any venue", async () => {
+    const svc = new ExecutionMarketCandlesService(testConfig({ FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES: "true", EXECUTION_MARKET_CANDLES_SOURCE: "data_layer" }));
+    const fetchMock = vi.fn();
+    svc.setFetch(fetchMock as never);
+    const body = await svc.candles({ venue: "BINANCE", symbol: "ETHUSDT", interval: "1h", fromMs: null, toMs: null, limit: 10 }, NOW);
+    expect(body).toMatchObject({ state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_SOURCE_NOT_WIRED", source_authority: "TRADING_SYSTEM_DATA_LAYER", source: { kind: "data_layer" } });
+    expect(body.source.note).toContain("no candle is fabricated");
+    expect(fetchMock).not.toHaveBeenCalled();
+    const venue = await service().svc.candles({ venue: "BINANCE", symbol: "ETHUSDT", interval: "1h", fromMs: null, toMs: null, limit: 10 }, NOW);
+    expect(venue.source).toMatchObject({ kind: "venue_public" });
+  });
   it("is typed unavailable when the flag is off, without calling the venue", async () => {
     const { svc, fetchMock } = service("false");
     const body = await svc.candles({ venue: "BINANCE", symbol: "ETHUSDT", interval: "1h", fromMs: null, toMs: null, limit: 10 }, NOW);

@@ -62,6 +62,8 @@ const FILL_BUDGET = 12;
  */
 export interface BlotterRow {
   orderId: string;
+  /** deep link to the alpha's Trade Replay focused on this order (null when the deployment id is not published) */
+  chartHref?: string | null;
   /** ISO-8601 with milliseconds. The hi-fi's first column, to the millisecond. */
   at: string;
   deployment: string;
@@ -433,7 +435,7 @@ export function FullBlotter({
   const columns: readonly Column<BlotterRow>[] = [
     { key: "mark", header: "", width: "26px", render: () => "" },
     { key: "at", header: "time (UTC)", width: "8rem", render: (row) => <span className="exec-bl-time">{row.at}</span> },
-    { key: "order", header: "order · client id", width: "11rem", render: (row) => <span>{row.orderId}<div className="exec-bl-sub">cl: not published</div></span> },
+    { key: "order", header: "order · client id", width: "11rem", render: (row) => <span>{row.orderId}<div className="exec-bl-sub">cl: not published{row.chartHref ? <> · <a href={row.chartHref} className="exec-bl-chart" onClick={(e) => e.stopPropagation()}>open on chart</a></> : null}</div></span> },
     { key: "where", header: "deployment · venue", width: "11rem", render: (row) => <span className="exec-bl-dim">{row.deployment} · {row.venue}</span> },
     { key: "symbol", header: "symbol", width: "7rem", render: (row) => row.symbol },
     { key: "type", header: "type · tif · flags", width: "12rem", render: (row) => <Flags flags={[{ text: row.orderType }, { text: row.side, tone: row.side === "BUY" ? "good" : "bad" }]} /> },

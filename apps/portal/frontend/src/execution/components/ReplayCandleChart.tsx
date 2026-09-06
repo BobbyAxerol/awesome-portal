@@ -630,7 +630,12 @@ export interface ReplayCandleChartProps {
   selectedId?: string | null;
   onKeyDown?: (event: KeyboardEvent) => void;
   onStatus?: (status: ChartStatus) => void;
+  /** the reader panned within `edgeBars` of the first / last candle — the container may fetch the next page */
+  onRangeEdge?: (edge: "left" | "right") => void;
+  /** scene object to centre on and ring once the chart is ready (deep link `?focus=`) */
+  focusId?: string | null;
 }
+const EDGE_BARS = 40;
 export type ChartStatus = "loading" | "ready" | "unavailable";
 
 const UTC_MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -644,9 +649,15 @@ const reducedMotion = () => (typeof window !== "undefined" && (window.matchMedia
 type Runtime = { lib: Lib; chart: IChartApi; series: ISeriesApi<"Candlestick">; prim: TradesPrimitive; mark: IPriceLine | null };
 
 export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChartProps>(function ReplayCandleChart(
-  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus },
+  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus, onRangeEdge, focusId = null },
   ref,
 ) {
+  const edgeRef = useRef(onRangeEdge);
+  edgeRef.current = onRangeEdge;
+  const barCount = useRef(0);
+  barCount.current = bars.length;
+  const edgeArmed = useRef(false);
+  const focusedRef = useRef<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const hud = useRef<HTMLDivElement>(null);
   const rt = useRef<Runtime | null>(null);
@@ -707,6 +718,17 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
       chart.subscribeClick((param: MouseEventParams<Time>) => {
         if (typeof param.hoveredObjectId === "string") selectRef.current?.(param.hoveredObjectId);
       });
+      // edge signal: within EDGE_BARS of either end of the loaded candles —
+      // only once the opening window has settled, never from the library's
+      // own first layout of freshly set data
+      let lastEdge: "left" | "right" | null = null;
+      chart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
+        if ((window as Window & { __replayDebug?: boolean }).__replayDebug) console.debug("[replay] range-change", JSON.stringify({ range, bars: barCount.current, armed: edgeArmed.current, lastEdge }));
+        if (!range || barCount.current === 0 || !edgeArmed.current) return;
+        const edge: "left" | "right" | null = range.from < EDGE_BARS ? "left" : range.to > barCount.current - 1 - EDGE_BARS ? "right" : null;
+        if (edge && edge !== lastEdge) edgeRef.current?.(edge);
+        lastEdge = edge;
+      });
       rt.current = { lib, chart, series, prim, mark: null };
       // verification hook for the browser harness (no DOM attribute, no serialisation)
       (el as HTMLDivElement & { __replay?: { chart: IChartApi; prim: TradesPrimitive } }).__replay = { chart, prim };
@@ -741,6 +763,20 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     return () => { mo.disconnect(); mq?.removeEventListener?.("change", apply); };
   }, [status]);
 
+  const focusOn = (id: string): boolean => {
+    const r = rt.current;
+    if (!r) return false;
+    const t = r.prim.timeOf(id);
+    if (t === null) return false;
+    const ts = r.chart.timeScale();
+    const lr = ts.getVisibleLogicalRange();
+    const span = lr ? Math.max(6, lr.to - lr.from) : 60;
+    const centre = r.prim.logical(t);
+    ts.setVisibleLogicalRange({ from: centre - span / 2, to: centre + span / 2 });
+    r.prim.setHighlight(id);
+    return true;
+  };
+
   // data → chart
   useEffect(() => {
     const r = rt.current;
@@ -761,6 +797,8 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     // reader's own view is kept only while it does not.
     const openingKey = `${viewKey}|${opening?.t0 ?? ""}|${opening?.t1 ?? ""}`;
     const keep = appliedKey.current === openingKey ? r.chart.timeScale().getVisibleRange() : null;
+    edgeArmed.current = false;
+    const arm = setTimeout(() => { edgeArmed.current = true; }, 700);
     r.series.setData(data);
     r.prim.set(scene, times, withBars ? intervalMs : null, r.prim.palette ?? readPalette(host.current!)!);
     const mark = num(markPrice);
@@ -776,28 +814,20 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
       if (Number.isFinite(from) && Number.isFinite(to) && to > from) applyLogicalRange(r.chart, from - 1, to + 2); else ts.fitContent();
     } else ts.fitContent(); // no candles: the event-indexed scale shows the whole record
     appliedKey.current = openingKey;
-    return undefined;
-  }, [status, bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening]);
+    if (focusId && focusedRef.current !== focusId && r.prim.timeOf(focusId) !== null) {
+      focusedRef.current = focusId;
+      const frame = typeof requestAnimationFrame === "function" ? requestAnimationFrame : (f: () => void) => { setTimeout(f, 0); };
+      frame(() => { focusOn(focusId); });
+    }
+    return () => { clearTimeout(arm); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, focusId]);
 
   useEffect(() => {
     const r = rt.current;
     if (status !== "ready" || !r) return;
     if (hoveredRef.current === null) r.prim.setHighlight(selectedId);
   }, [status, selectedId]);
-
-  const focusOn = (id: string): boolean => {
-    const r = rt.current;
-    if (!r) return false;
-    const t = r.prim.timeOf(id);
-    if (t === null) return false;
-    const ts = r.chart.timeScale();
-    const lr = ts.getVisibleLogicalRange();
-    const span = lr ? Math.max(6, lr.to - lr.from) : 60;
-    const centre = r.prim.logical(t);
-    ts.setVisibleLogicalRange({ from: centre - span / 2, to: centre + span / 2 });
-    r.prim.setHighlight(id);
-    return true;
-  };
 
   useImperativeHandle(ref, (): ReplayChartHandle => ({
     highlight: (id) => { if (hoveredRef.current === null) rt.current?.prim.setHighlight(id ?? selectedRef.current); },

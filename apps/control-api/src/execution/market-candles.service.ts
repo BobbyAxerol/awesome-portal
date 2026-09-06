@@ -19,6 +19,13 @@
  *                 limit; every page counts against the per-minute budget.
  *
  * Every price stays the venue's decimal string. Nothing is resampled here.
+ *
+ * Source boundary (OR-5 R3): `EXECUTION_MARKET_CANDLES_SOURCE` picks the
+ * candle source behind the same envelope. `venue_public` is the only one
+ * wired; `data_layer` (the Trading System's own market gateway,
+ * `/v1/binance/futures/klines/{symbol}` behind the execution edge, BR-EX-50)
+ * answers a typed `MARKET_CANDLES_SOURCE_NOT_WIRED` until codex delivers it —
+ * the chart, the route and the vocabulary do not change when it does.
  */
 import { Inject, Injectable } from "@nestjs/common";
 
@@ -71,12 +78,16 @@ export interface MarketCandle {
   trades: number | null;
 }
 
+export const MARKET_CANDLE_SOURCES = ["venue_public", "data_layer"] as const;
+export type MarketCandleSource = (typeof MARKET_CANDLE_SOURCES)[number];
+
 export interface MarketCandlesEnvelope {
   schema_version: "portal.execution.market-candles.v1";
   logical_operation_id: "executionMarketCandlesV1";
   record_authority: "PORTAL_CONTROL";
-  source_authority: "VENUE_PUBLIC_MARKET_DATA";
-  source: { venue: MarketVenue; market: MarketKind; endpoint: string; instrument: string; note: string };
+  /** VENUE_PUBLIC_MARKET_DATA today; TRADING_SYSTEM_DATA_LAYER once BR-EX-50 is wired behind the edge */
+  source_authority: "VENUE_PUBLIC_MARKET_DATA" | "TRADING_SYSTEM_DATA_LAYER";
+  source: { kind: MarketCandleSource; venue: MarketVenue; market: MarketKind; endpoint: string; instrument: string; note: string };
   symbol: string;
   interval: MarketCandleInterval;
   interval_ms: number;
@@ -96,6 +107,7 @@ export type MarketCandlesFetch = (
 ) => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>;
 
 const SOURCE_NOTE = "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending).";
+const DATA_LAYER_NOTE = "Trading System data_layer klines behind the execution edge — not wired yet (BR-EX-50); no candle is fabricated in its place.";
 
 /**
  * OKX names a perpetual `BASE-QUOTE-SWAP`. The Trading System records its
@@ -127,6 +139,9 @@ export class ExecutionMarketCandlesService {
   async candles(query: MarketCandlesQuery, now = Date.now()): Promise<MarketCandlesEnvelope> {
     if (this.config.FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES !== "true") {
       return this.envelope(query, now, { state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_FEATURE_DISABLED", retryable: false });
+    }
+    if (this.source() === "data_layer") {
+      return this.envelope(query, now, { state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_SOURCE_NOT_WIRED", retryable: false });
     }
     const key = `${query.venue}|${query.symbol}|${query.interval}|${query.fromMs ?? ""}|${query.toMs ?? ""}|${query.limit}`;
     const cached = this.cache.get(key);
@@ -273,19 +288,23 @@ export class ExecutionMarketCandlesService {
     return { from_ms: candles[0]?.t ?? query.fromMs, to_ms: last?.close_t ?? query.toMs, requested_limit: query.limit, returned_count: candles.length, truncated, pages };
   }
 
+  source(): MarketCandleSource { return this.config.EXECUTION_MARKET_CANDLES_SOURCE; }
+
   private envelope(query: MarketCandlesQuery, now: number, patch: Partial<MarketCandlesEnvelope>): MarketCandlesEnvelope {
     const okx = query.venue === "OKX";
+    const kind = this.source();
     return {
       schema_version: "portal.execution.market-candles.v1",
       logical_operation_id: "executionMarketCandlesV1",
       record_authority: "PORTAL_CONTROL",
-      source_authority: "VENUE_PUBLIC_MARKET_DATA",
+      source_authority: kind === "data_layer" ? "TRADING_SYSTEM_DATA_LAYER" : "VENUE_PUBLIC_MARKET_DATA",
       source: {
+        kind,
         venue: query.venue,
         market: MARKET_OF_VENUE[query.venue],
-        endpoint: okx ? `${this.config.EXECUTION_PUBLIC_MARKET_CANDLES_OKX_ORIGIN}${OKX_PATH}` : `${this.config.EXECUTION_PUBLIC_MARKET_CANDLES_ORIGIN}${BINANCE_PATH}`,
+        endpoint: kind === "data_layer" ? "edge:/v1/binance/futures/klines/{symbol}" : okx ? `${this.config.EXECUTION_PUBLIC_MARKET_CANDLES_OKX_ORIGIN}${OKX_PATH}` : `${this.config.EXECUTION_PUBLIC_MARKET_CANDLES_ORIGIN}${BINANCE_PATH}`,
         instrument: okx ? okxInstrument(query.symbol) : query.symbol,
-        note: SOURCE_NOTE,
+        note: kind === "data_layer" ? DATA_LAYER_NOTE : SOURCE_NOTE,
       },
       symbol: query.symbol,
       interval: query.interval,

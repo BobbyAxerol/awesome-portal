@@ -26,6 +26,24 @@ export const marketVenueOf = (venue: string | null | undefined): MarketVenue | n
  * from the strategy id's own suffix (`adaptive_hma_cpp_00115m` → 15m,
  * `signalcombine00230m` → 30m) and labelled DERIVED wherever it is used.
  */
+/** BR-EX-80: a published timeframe wins over the id suffix; anything outside the vocabulary is ignored. */
+export function publishedTimeframe(rows: readonly Record<string, unknown>[]): MarketCandleInterval | null {
+  for (const row of rows) {
+    for (const key of ["timeframe", "bar_interval", "interval", "resolution"]) {
+      const v = row[key];
+      if (typeof v === "string" && (MARKET_CANDLE_INTERVALS as readonly string[]).includes(v.toLowerCase())) return v.toLowerCase() as MarketCandleInterval;
+    }
+  }
+  return null;
+}
+
+/** Merge candle pages (ascending, unique by open time); later pages win on a duplicate open time. */
+export function mergeCandles(pages: readonly (readonly MarketCandle[])[]): MarketCandle[] {
+  const byT = new Map<number, MarketCandle>();
+  for (const page of pages) for (const c of page) byT.set(c.t, c);
+  return [...byT.values()].sort((a, b) => a.t - b.t);
+}
+
 export function timeframeFromStrategyId(id: string | null | undefined): MarketCandleInterval | null {
   const lower = (id ?? "").toLowerCase();
   if (!/\d[mhd]$/.test(lower)) return null;
@@ -57,7 +75,7 @@ export interface MarketCandle {
 export interface MarketCandlesPayload {
   schemaVersion: string;
   sourceAuthority: string | null;
-  source: { venue: string | null; market: string | null; endpoint: string | null; instrument: string | null; note: string | null };
+  source: { kind: string | null; venue: string | null; market: string | null; endpoint: string | null; instrument: string | null; note: string | null };
   symbol: string | null;
   interval: MarketCandleInterval | null;
   intervalMs: number | null;
@@ -85,7 +103,7 @@ export function readMarketCandles(raw: unknown): MarketCandlesPayload | null {
   return {
     schemaVersion: schema,
     sourceAuthority: str(root.source_authority),
-    source: { venue: str(source.venue), market: str(source.market), endpoint: str(source.endpoint), instrument: str(source.instrument), note: str(source.note) },
+    source: { kind: str(source.kind), venue: str(source.venue), market: str(source.market), endpoint: str(source.endpoint), instrument: str(source.instrument), note: str(source.note) },
     symbol: str(root.symbol),
     interval: interval && (MARKET_CANDLE_INTERVALS as readonly string[]).includes(interval) ? (interval as MarketCandleInterval) : null,
     intervalMs: int(root.interval_ms),

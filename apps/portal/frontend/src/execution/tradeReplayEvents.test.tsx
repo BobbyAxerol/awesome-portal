@@ -37,6 +37,10 @@ const recorder = vi.hoisted(() => {
     options: () => ({ barSpacing: 9 }),
     width: () => 800,
     applyOptions: () => undefined,
+    subscribeVisibleLogicalRangeChange: () => undefined,
+    unsubscribeVisibleLogicalRangeChange: () => undefined,
+    subscribeSizeChange: () => undefined,
+    unsubscribeSizeChange: () => undefined,
   };
   const chart = {
     addSeries: () => series,
@@ -154,7 +158,7 @@ describe("TradeReplayEvents panel", () => {
     const bars = Array.from({ length: 12 }, (_, i) => ({ t: t0 + i * 3_600_000, o: "1858", h: "1866", l: "1852", c: i % 2 ? "1861" : "1856", v: "1", closeT: t0 + (i + 1) * 3_600_000 - 1 }));
     const market = {
       schemaVersion: "portal.execution.market-candles.v1", sourceAuthority: "VENUE_PUBLIC_MARKET_DATA",
-      source: { venue: "BINANCE", market: "USDM", endpoint: "https://fapi.binance.com/fapi/v1/klines", instrument: "ETHUSDT", note: null },
+      source: { kind: "venue_public", venue: "BINANCE", market: "USDM", endpoint: "https://fapi.binance.com/fapi/v1/klines", instrument: "ETHUSDT", note: null },
       symbol: "ETHUSDT", interval: "1h" as const, intervalMs: 3_600_000, state: "READY", reasonCode: null, retryable: false, fetchedAtMs: t0,
       coverage: { fromMs: t0, toMs: null, requestedLimit: 500, returnedCount: 12, truncated: false, pages: 1 }, lastCandleClosed: true, candles: bars,
     };
@@ -181,7 +185,7 @@ describe("TradeReplayEvents panel", () => {
     expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("short exit");
   });
   it("names the klines state in the notice when they are not READY", async () => {
-    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} market={{ schemaVersion: "x", sourceAuthority: null, source: { venue: null, market: null, endpoint: null, instrument: null, note: null }, symbol: null, interval: null, intervalMs: null, state: "UNAVAILABLE", reasonCode: "MARKET_CANDLES_FEATURE_DISABLED", retryable: false, fetchedAtMs: null, coverage: { fromMs: null, toMs: null, requestedLimit: null, returnedCount: null, truncated: false, pages: null }, lastCandleClosed: null, candles: [] }} marketTransport="ok" />);
+    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} market={{ schemaVersion: "x", sourceAuthority: null, source: { kind: null, venue: null, market: null, endpoint: null, instrument: null, note: null }, symbol: null, interval: null, intervalMs: null, state: "UNAVAILABLE", reasonCode: "MARKET_CANDLES_FEATURE_DISABLED", retryable: false, fetchedAtMs: null, coverage: { fromMs: null, toMs: null, requestedLimit: null, returnedCount: null, truncated: false, pages: null }, lastCandleClosed: null, candles: [] }} marketTransport="ok" />);
     await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
     expect(container.querySelector("[data-replay-chart]")?.getAttribute("data-replay-bars")).toBe("0");
     expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("venue klines unavailable · MARKET_CANDLES_FEATURE_DISABLED");

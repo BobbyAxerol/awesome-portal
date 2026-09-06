@@ -5498,6 +5498,7 @@
 .exec-rp-interval { display: inline-flex; align-items: center; gap: 6px; }
 .exec-rp-legend [data-side="long"] { color: var(--exec-trade-long); } .exec-rp-legend [data-side="short"] { color: var(--exec-trade-short); }
 .exec-rp-attrib a { color: var(--ink-mute); text-decoration: underline dotted; }
+.exec-bl-chart { color: var(--accent); text-decoration: underline dotted; }
 .exec-rp-table tr[data-hover="true"] td { background: var(--surface-2); }
 .exec-rp-table tr[data-scene-id] { cursor: pointer; }
 .exec-rp-table tr[data-selected="true"] td { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }

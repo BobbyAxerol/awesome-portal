@@ -134,6 +134,8 @@ export interface AccountBroker360Props {
   exposure?: BindingExposure | null;
   /** EDS-07 account equity chart; absent = the container did not request it. */
   financialChart?: ReactNode;
+  /** OR-5 R3: the Trade Replay on this account's own orders / fills; absent = the container did not request it. */
+  tradeReplay?: ReactNode;
   syncPolicy: string;
   syncHistory: readonly SyncRow[];
   /**
@@ -339,6 +341,7 @@ export function AccountBroker360({
   exposure = null,
   syncPolicy,
   financialChart,
+  tradeReplay,
   syncHistory,
   syncTotal = null,
   openFindings,
@@ -431,6 +434,7 @@ export function AccountBroker360({
       <HeadroomBanner aggregate={aggregate} exposure={exposure} />
 
       {financialChart ?? null}
+      {tradeReplay ?? null}
 
       {/* Hi-fi 1g shows binding, sync history and findings at once — no tabs. */}
         {(

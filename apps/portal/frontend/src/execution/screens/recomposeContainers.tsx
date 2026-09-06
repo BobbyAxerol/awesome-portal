@@ -8,7 +8,7 @@
  * screen is never swapped for a generic envelope view, and no fixture value
  * is reachable from this module.
  */
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
@@ -28,7 +28,7 @@ import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
-import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVAL_MS, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, timeframeFromStrategyId } from "../api/marketCandles";
+import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { unavailable } from "../api/ports";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
@@ -186,7 +186,7 @@ function profileEquity(profile: ProfileEnvelope) {
  * Every row was identity-resolved by the server; this function neither joins
  * nor broadens it. Derived query analytics remains additive beside it.
  */
-function resourceFacts(profile: ProfileEnvelope | null | undefined, subjectKind: "ALPHA" | "PORTFOLIO", subjectId: string): QueryAnalytics | null {
+function resourceFacts(profile: ProfileEnvelope | null | undefined, subjectKind: "ALPHA" | "PORTFOLIO" | "ACCOUNT", subjectId: string): QueryAnalytics | null {
   if (!profile) return null;
   const sourceFacts: Record<string, readonly Record<string, unknown>[]> = {
     deployments: profile.data.deployments ?? [],
@@ -409,12 +409,15 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
 const BLOTTER_STATUS: readonly OrderStatus[] = ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED"];
 
 function blotterRowOf(row: Record<string, unknown>): BlotterRow {
-  const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
+  // the source prints order_id as a number; a number is a value, not a gap
+  const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : typeof v === "number" && Number.isFinite(v) ? String(v) : null);
   const status = str(row.status);
   return {
     orderId: str(row.order_id) ?? "order id not published",
     at: str(row.submitted_at) ?? str(row.updated_at) ?? str(row.created_at) ?? str(row.at) ?? "",
     deployment: str(row.deployment_id) ?? "—",
+    // OR-5 R3: open this order on the alpha's Trade Replay — the blotter rows carry strategy_id (deployment_id is not published there)
+    chartHref: (() => { const alpha = str(row.strategy_id) ?? str(row.deployment_id)?.split(":")[0] ?? null; const id = str(row.order_id); return alpha && id ? `/deployments/alphas/${encodeURIComponent(alpha)}?tab=Trade%20Replay&focus=order:${encodeURIComponent(id)}` : null; })(),
     venue: str(row.venue) ?? "—",
     symbol: str(row.symbol) ?? "—",
     orderType: (str(row.order_type) as BlotterRow["orderType"]) ?? "LIMIT",
@@ -1027,18 +1030,30 @@ function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
  * (exact, bounded) plus the analytics facts filtered to the alpha's accounts —
  * the N25 facts are profile-wide — deduplicated by id.
  */
-function replayEvents(analytics: QueryAnalytics | null | undefined, additive: QueryAnalytics | null | undefined, alphaId: string | null) {
+export function replayEvents(analytics: QueryAnalytics | null | undefined, additive: QueryAnalytics | null | undefined, alphaId: string | null, accountId: string | null = null) {
   const facts = analytics?.sourceFacts ?? {};
   const extra = additive?.sourceFacts ?? {};
   const accounts = new Set<string>();
   let venue: string | null = null;
-  for (const d of [...(facts.deployments ?? []), ...(extra.deployments ?? [])]) {
+  const own: Record<string, unknown>[] = [];
+  // Scope: an alpha claims the accounts of its own deployments (resource and
+  // analytics rows alike); an account claims itself only — the analytics
+  // deployments are profile-wide and must not widen it.
+  if (accountId !== null) accounts.add(accountId);
+  for (const d of [...(facts.deployments ?? []), ...(alphaId !== null ? extra.deployments ?? [] : [])]) {
     const account = text(d.account_id);
-    if (account && (alphaId === null || text(d.strategy_id) === alphaId)) {
+    const mine = accountId !== null ? account === accountId : alphaId === null || text(d.strategy_id) === alphaId;
+    if (account && mine) {
       accounts.add(account);
       venue ??= text(d.venue);
+      own.push(d);
     }
   }
+  // BR-EX-80: the strategy's timeframe, if the source ever publishes it (strategies or deployments rows)
+  const timeframe = publishedTimeframe([
+    ...own,
+    ...[...(facts.strategies ?? []), ...(extra.strategies ?? [])].filter((r) => alphaId === null || text(r.strategy_id) === alphaId || text(r.id) === alphaId),
+  ]);
   const scoped = (rows: readonly Record<string, unknown>[]) =>
     rows.filter((r) => accounts.size === 0 || accounts.has(text(r.account_id) ?? "") || (alphaId !== null && text(r.strategy_id) === alphaId));
   const replay = analytics?.replay ?? additive?.replay ?? null;
@@ -1048,6 +1063,8 @@ function replayEvents(analytics: QueryAnalytics | null | undefined, additive: Qu
     accounts: [...accounts],
     /** the deployment's venue — the public klines are read from the same venue */
     venue,
+    /** published bar interval (BR-EX-80) — null today */
+    timeframe,
     candles: { state: replay?.candlesState ?? "UNAVAILABLE", reason: replay?.candlesReasonCode ?? null },
     asOf: analytics?.asOf ?? additive?.asOf ?? null,
   };
@@ -1070,16 +1087,26 @@ export function SourceTradeReplay({ analytics, additive = null, alphaId = null }
  * shows the interval actually drawn. Symbol and interval live here so the
  * fetch follows the reader's choice.
  */
-export function TradeReplayLive({ api, analytics, additive = null, alphaId }: { api: ExecutionApi; analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId: string }) {
-  const events = useMemo(() => replayEvents(analytics, additive, alphaId), [analytics, additive, alphaId]);
+const INTERVAL_PREF = (subject: string) => `exec.replay.interval.${subject}`;
+const readIntervalPref = (subject: string): MarketCandleInterval | null => {
+  try { const v = window.localStorage.getItem(INTERVAL_PREF(subject)); return v && (MARKET_CANDLE_INTERVALS as readonly string[]).includes(v) ? (v as MarketCandleInterval) : null; } catch { return null; }
+};
+const writeIntervalPref = (subject: string, interval: MarketCandleInterval): void => { try { window.localStorage.setItem(INTERVAL_PREF(subject), interval); } catch { /* per-viewer convenience only */ } };
+
+export function TradeReplayLive({ api, analytics, additive = null, alphaId, subjectId, focusId = null }: { api: ExecutionApi; analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId: string | null; subjectId?: string; focusId?: string | null }) {
+  const subject = subjectId ?? alphaId ?? "subject";
+  const events = useMemo(() => replayEvents(analytics, additive, alphaId, alphaId === null ? subjectId ?? null : null), [analytics, additive, alphaId, subjectId]);
   const symbols = useMemo(() => Array.from(new Set([...events.fills.map((f) => f.symbol), ...events.orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [events]);
   const [symbol, setSymbol] = useState<string | null>(null);
   const activeSymbol = symbol && symbols.includes(symbol) ? symbol : symbols[0] ?? null;
-  // The strategy's own bar interval is not published (BR-EX-80): it is read
-  // from the id's suffix and labelled DERIVED until the reader picks another.
-  const inferred = useMemo(() => timeframeFromStrategyId(alphaId), [alphaId]);
+  // Interval: the reader's remembered choice, else the published timeframe
+  // (BR-EX-80), else the strategy id's suffix (DERIVED), else 1h.
+  // an account id carries the strategy id too (`paper-binance-<strategy_id>`), so the suffix rule serves both
+  const inferred = useMemo(() => timeframeFromStrategyId(alphaId ?? subjectId ?? null), [alphaId, subjectId]);
   const [chosen, setChosen] = useState<MarketCandleInterval | null>(null);
-  const wanted: MarketCandleInterval = chosen ?? inferred ?? "1h";
+  useEffect(() => { setChosen(readIntervalPref(subject)); }, [subject]);
+  const choose = (i: MarketCandleInterval) => { setChosen(i); writeIntervalPref(subject, i); };
+  const wanted: MarketCandleInterval = chosen ?? events.timeframe ?? inferred ?? "1h";
   const venue = marketVenueOf(events.venue);
   const range = useMemo(() => {
     const ts = [
@@ -1101,9 +1128,48 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId }: { 
     [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue],
     { keepValue: true },
   );
+  // Edge paging: when the reader reaches an end of the loaded candles, one
+  // more page is read on that side and merged; a page that comes back empty
+  // marks that side exhausted. Pages are keyed by symbol|interval.
+  const pageKey = `${activeSymbol ?? ""}|${interval}|${venue ?? ""}`;
+  const [pages, setPages] = useState<{ key: string; candles: (readonly MarketCandle[])[]; exhausted: { left: boolean; right: boolean }; loading: "left" | "right" | null }>({ key: pageKey, candles: [], exhausted: { left: false, right: false }, loading: null });
+  const merged = useMemo(() => {
+    const base = market.value && market.value.state === "READY" ? market.value.candles : [];
+    const extra = pages.key === pageKey ? pages.candles : [];
+    if (extra.length === 0) return base;
+    return mergeCandles([base, ...extra]);
+  }, [market.value, pages, pageKey]);
+  const onRangeEdge = (edge: "left" | "right") => {
+    if ((window as Window & { __replayDebug?: boolean }).__replayDebug) console.debug("[replay] edge", JSON.stringify({ edge, activeSymbol, venue, merged: merged.length, loading: pages.loading, exhausted: pages.exhausted, key: pages.key === pageKey }));
+    if (!activeSymbol || venue === null || merged.length === 0 || pages.loading) return;
+    if (pages.key === pageKey && pages.exhausted[edge]) return;
+    const first = merged[0]!, last = merged[merged.length - 1]!;
+    const stepMs = MARKET_CANDLE_INTERVAL_MS[interval];
+    const q = edge === "left"
+      ? { venue, symbol: activeSymbol, interval, toMs: first.t - 1, limit: 1500 }
+      : { venue, symbol: activeSymbol, interval, fromMs: last.closeT + 1, toMs: Math.min(Date.now(), last.closeT + 1500 * stepMs), limit: 1500 };
+    if (edge === "right" && last.closeT >= Date.now() - stepMs) return; // already at the live edge
+    setPages((p) => ({ key: pageKey, candles: p.key === pageKey ? p.candles : [], exhausted: p.key === pageKey ? p.exhausted : { left: false, right: false }, loading: edge }));
+    void api.getMarketCandles(q).then((result) => {
+      setPages((p) => {
+        const fresh = p.key === pageKey ? p : { key: pageKey, candles: [], exhausted: { left: false, right: false }, loading: null };
+        const got = result.ok && result.value.state === "READY" ? result.value.candles : [];
+        return {
+          key: pageKey,
+          candles: got.length > 0 ? [...fresh.candles, got] : fresh.candles,
+          exhausted: { ...fresh.exhausted, [edge]: got.length === 0 },
+          loading: null,
+        };
+      });
+    });
+  };
+  const marketMerged = useMemo<MarketCandlesPayload | null>(() => {
+    if (!market.value || market.value.state !== "READY" || merged === market.value.candles) return market.value;
+    return { ...market.value, candles: merged, coverage: { ...market.value.coverage, fromMs: merged[0]?.t ?? null, toMs: merged[merged.length - 1]?.closeT ?? null, returnedCount: merged.length, pages: (market.value.coverage.pages ?? 1) + pages.candles.length } };
+  }, [market.value, merged, pages.candles.length]);
   const intervalNote = chosen === null
-    ? inferred ? `${inferred} inferred from the strategy id · DERIVED` : "1h default · timeframe not published"
-    : interval !== chosen ? `${chosen} requested · ${interval} fits one venue page` : null;
+    ? events.timeframe ? `${events.timeframe} · strategy timeframe (published)` : inferred ? `${inferred} inferred from the strategy id · DERIVED` : "1h default · timeframe not published"
+    : interval !== chosen ? `${chosen} requested · ${interval} fits one read` : `${chosen} · remembered`;
   return (
     <div className="exec-rp-source">
       <TradeReplayEvents
@@ -1112,14 +1178,17 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId }: { 
         candles={events.candles}
         asOf={events.asOf}
         accounts={events.accounts}
-        market={market.value}
+        market={marketMerged}
         marketTransport={market.status}
         marketReason={market.reason}
         interval={interval}
-        onIntervalChange={setChosen}
+        onIntervalChange={choose}
         intervalNote={intervalNote}
         symbol={activeSymbol}
         onSymbolChange={setSymbol}
+        onRangeEdge={onRangeEdge}
+        paging={pages.key === pageKey ? pages.loading : null}
+        focusId={focusId}
       />
     </div>
   );
@@ -1158,6 +1227,8 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const activityEnv = resourceState.value?.selectedEnvironment ?? "paper";
   const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
+  // deep link from the Blotter / a shared URL: `?tab=Trade%20Replay&focus=order:123` (or fill:…)
+  const focus = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("focus") : null;
   const [scope, setScope] = useAnalyticsScope();
   const navigate = useNavigate();
   const analytics = analyticsState.value;
@@ -1204,7 +1275,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       equity={resource ? profileEquity(resource) ?? analyticsEquity(analytics) : analyticsEquity(analytics)}
       deployments={deployments}
       tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      replay={viewFacts ? <TradeReplayLive api={api} analytics={viewFacts} additive={analytics} alphaId={alphaId} /> : undefined}
+      replay={viewFacts ? <TradeReplayLive api={api} analytics={viewFacts} additive={analytics} alphaId={alphaId} focusId={focus} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
       audit={audit ? pageOf(audit) : null}
@@ -1367,6 +1438,19 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
   // never guessed here. Viewport = the window width, clamped by the path builder.
   const chartEnv = state.value?.selectedEnvironment ?? "paper";
   const chartWorkspace = state.value?.workspaceId ?? null;
+  // R3 reuse: the same Trade Replay on the account's own orders / fills — the
+  // EDS-04 account resource (exact, bounded) plus the N25 facts of the strategy
+  // the account is deployed for, scoped back to this account by replayEvents.
+  const accountFacts = useMemo(() => resourceFacts(state.value, "ACCOUNT", accountId), [state.value, accountId]);
+  const accountStrategy = useMemo(() => {
+    const ids = new Set((state.value?.data.deployments ?? []).map((d) => text(d.strategy_id)).filter((x): x is string => !!x));
+    return ids.size === 1 ? [...ids][0]! : null;
+  }, [state.value]);
+  const accountAnalytics = useApiRead<QueryAnalytics>(
+    () => (accountStrategy ? api.getQueryAnalytics("alphas", accountStrategy) : Promise.resolve(unavailable("The account is not deployed for exactly one strategy; no additive facts."))),
+    [api, accountStrategy, realtime.refreshKey],
+    { keepValue: true },
+  );
   const chartState = useApiRead<FinancialChartPayload>(
     () => api.getFinancialChart({
       environment: chartEnv,
@@ -1481,6 +1565,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
         physicalLabel: "free balance",
       } : null}
       exposure={profile ? { bindingId: text(profile.data.venue_accounts?.[0]?.binding_id) ?? accountId, aggregate: null, accountCount: 1, expectedAccountCount: 1, completeness: "COMPLETE", buckets: [] } : null}
+      tradeReplay={accountFacts ? <TradeReplayLive api={api} analytics={accountFacts} additive={accountAnalytics.value ?? null} alphaId={null} subjectId={accountId} /> : undefined}
       financialChart={
         <EquityChart
           title={`Account equity · ${chartEnv}`}

@@ -38,6 +38,12 @@ export interface TradeReplayEventsProps {
   /** Controlled symbol; when absent the panel keeps its own. */
   symbol?: string | null;
   onSymbolChange?: (symbol: string) => void;
+  /** the container fetches another candle page when the reader reaches an end of the loaded ones */
+  onRangeEdge?: (edge: "left" | "right") => void;
+  /** more candles are on their way (edge paging) */
+  paging?: "left" | "right" | null;
+  /** deep link: scene object to open on (`fill:123`, `order:456` → its fill / reject / leg) */
+  focusId?: string | null;
 }
 
 const HEIGHT = { compact: 420, tall: 620 } as const;
@@ -66,7 +72,22 @@ const TALL_KEY = "exec.replay.tall";
 const readTall = (): boolean => { try { return window.localStorage.getItem(TALL_KEY) === "1"; } catch { return false; } };
 const writeTall = (tall: boolean): void => { try { window.localStorage.setItem(TALL_KEY, tall ? "1" : "0"); } catch { /* per-viewer convenience only */ } };
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange }: TradeReplayEventsProps) {
+/** `order:<id>` names whichever scene object that order left behind: its fill, its reject, its leg. */
+export function resolveFocus(focus: string | null | undefined, orders: readonly ReplayOrder[], fills: readonly ReplayFill[]): string | null {
+  if (!focus) return null;
+  if (focus.startsWith("fill:") || focus.startsWith("reject:") || focus.startsWith("leg:") || focus.startsWith("ladder:")) return focus;
+  const id = focus.startsWith("order:") ? focus.slice(6) : focus;
+  const o = orders.find((x) => x.orderId === id);
+  if (!o) return null;
+  const fill = fills.find((f) => f.clientOrderId && f.clientOrderId === o.clientOrderId);
+  if (fill) return `fill:${fill.fillId}`;
+  if ((o.status ?? "").toUpperCase().includes("REJECT")) return `reject:${o.orderId}`;
+  const role = legRole(o);
+  if (role === "TP" || role === "SL") return `leg:${o.orderId}`;
+  return (o.type ?? "").toUpperCase().includes("LIMIT") ? `ladder:${o.orderId}` : null;
+}
+
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
   const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
@@ -105,7 +126,9 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
   const [tall, setTall] = useState(false);
   useEffect(() => { setTall(readTall()); }, []);
   const [hovered, setHovered] = useState<string | null>(null);
+  const focusTarget = useMemo(() => resolveFocus(focusId, orders, fills), [focusId, orders, fills]);
   const [selected, setSelected] = useState<string | null>(null);
+  useEffect(() => { if (focusTarget) setSelected(focusTarget); }, [focusTarget]);
   const select = (id: string | null, scroll: boolean) => {
     setSelected(id);
     if (id) {
@@ -176,7 +199,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             <button type="button" className="exec-rp-chip" onClick={() => chart.current?.fit()}>Fit</button>
             <button type="button" className="exec-rp-chip" onClick={() => { setTall(!tall); writeTall(!tall); }} aria-pressed={tall} aria-label={tall ? "Compact chart" : "Expand chart"}>{tall ? "Compact" : "Expand"}</button>
           </span>
-          <span className="exec-rp-win">{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"} · crosshair · drag · wheel zoom · drag the price axis · ← → step fills</span>
+          <span className="exec-rp-win">{paging ? `loading ${paging === "left" ? "earlier" : "later"} candles · ` : ""}{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"} · crosshair · drag · wheel zoom · drag the price axis · ← → step fills</span>
         </header>
         <div className="exec-rp-canvas" style={{ height }} data-tall={tall}>
           <ReplayCandleChart
@@ -196,6 +219,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             onSelect={(id) => select(id, true)}
             selectedId={selected}
             onKeyDown={onKey}
+            onRangeEdge={onRangeEdge}
+            focusId={focusTarget}
           />
         </div>
         <div className="exec-rp-legend">
@@ -209,7 +234,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
         <footer className="exec-rp-foot">
           source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
           {market && market.state === "READY"
-            ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} public klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? new Date(market.fetchedAtMs).toISOString().slice(11, 19) : "—"}Z, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
+            ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? new Date(market.fetchedAtMs).toISOString().slice(11, 19) : "—"}Z, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
             : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
           {" "}· source candles {candlesWord} ({candles.reason ?? "not published"}) — BR-EX-50 pending · as_of {asOf ?? "not stated"}
           <span className="exec-rp-attrib"> · charting: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener">TradingView Lightweight Charts™</a> © TradingView, Inc.</span>

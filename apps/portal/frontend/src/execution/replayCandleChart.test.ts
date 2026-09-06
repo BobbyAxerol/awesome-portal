@@ -5,10 +5,10 @@
 import { describe, expect, it } from "vitest";
 
 import { BRACKET_PAIRING_MS, buildScene, logicalOf, robustRange } from "./components/ReplayCandleChart";
-import { sceneIdOfRow, stepFill } from "./components/TradeReplayEvents";
+import { resolveFocus, sceneIdOfRow, stepFill } from "./components/TradeReplayEvents";
 import { buildLog } from "./components/tradeReplayModel";
 import { legLevels, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/tradeReplayModel";
-import { marketCandlesPath, timeframeFromStrategyId } from "./api/marketCandles";
+import { marketCandlesPath, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "./api/marketCandles";
 
 const ORDERS = readReplayOrders([
   { order_id: 1, symbol: "ETHUSDT", side: "SELL", order_type: "MARKET", status: "FILLED", quantity: "0.1", client_order_id: "s-en0", reduce_only: false, submitted_at: "2026-07-18T22:00:00Z", updated_at: "2026-07-18T22:00:01Z", venue_order_id: "v1" },
@@ -94,6 +94,28 @@ describe("log ↔ chart ids and keyboard stepping", () => {
     expect(stepFill(FILLS, "fill:12", 1)).toBe("fill:12");
     expect(stepFill(FILLS, "fill:10", -1)).toBe("fill:10");
     expect(stepFill([], null, 1)).toBeNull();
+  });
+});
+
+describe("R3 — deep-link focus, published timeframe, candle page merging", () => {
+  it("resolves an order id to the object it left behind: its fill, its reject, its leg, its resting level", () => {
+    expect(resolveFocus("order:1", ORDERS, FILLS)).toBe("fill:10");
+    expect(resolveFocus("order:4", ORDERS, FILLS)).toBe("reject:4");
+    expect(resolveFocus("order:3", ORDERS, FILLS)).toBe("leg:3");
+    expect(resolveFocus("fill:12", ORDERS, FILLS)).toBe("fill:12");
+    expect(resolveFocus("order:999", ORDERS, FILLS)).toBeNull();
+    expect(resolveFocus(null, ORDERS, FILLS)).toBeNull();
+  });
+  it("prefers a published timeframe (BR-EX-80) and ignores anything outside the vocabulary", () => {
+    expect(publishedTimeframe([{ strategy_id: "x" }, { timeframe: "15m" }])).toBe("15m");
+    expect(publishedTimeframe([{ bar_interval: "1H" }])).toBe("1h");
+    expect(publishedTimeframe([{ timeframe: "2h" }])).toBeNull();
+    expect(publishedTimeframe([])).toBeNull();
+  });
+  it("merges candle pages ascending and unique by open time, later pages winning", () => {
+    const c = (t: number, close: string) => ({ t, o: "1", h: "2", l: "0.5", c: close, v: "1", closeT: t + 59_999 });
+    const merged = mergeCandles([[c(300, "a"), c(400, "b")], [c(100, "x"), c(200, "y")], [c(300, "z")]]);
+    expect(merged.map((x) => [x.t, x.c])).toEqual([[100, "x"], [200, "y"], [300, "z"], [400, "b"]]);
   });
 });
 
