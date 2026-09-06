@@ -5754,6 +5754,15 @@ only after durable reduction, and provides replay seek/correction/retention
 UI through named BFFs.  The contract must define scope rather than pretending
 to be a database-wide total order.
 
+**One-request rule:** this is already the `MC-01 · event.full-incremental`
+lane of the single
+[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md),
+with the prepared EDS-08 snapshot/tail schemas and synthetic continuity corpus
+as Portal's acceptance surface.  Do **not** create an R5 side request.  The
+Trading System owner may implement MC-01 in the same source campaign as R4,
+but a delayed MC-01 result must neither delay R4 nor downgrade the current
+observed-history product.
+
 **Tests and acceptance:** duplicate, out-of-order, gap, restart, resnapshot,
 late correction/tombstone, retention-floor, ACK and cross-profile-negative
 tests; browser replay seeks have no arbitrary 200-row history cap.  The phase
