@@ -79,6 +79,38 @@ describe("TradeReplayEvents panel", () => {
     expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(6);
     expect(screen.getByRole("button", { name: "Fit" })).toBeTruthy();
   });
+  it("opens a long-lived replay on recent fills instead of an empty seven-day tail", () => {
+    // The newest source fact can be an order rejection/cancel long after the
+    // latest fill.  The default plot must still give the operator markers to
+    // inspect; "Fit" remains the explicit all-history control.
+    const historicFills = Array.from({ length: 6 }, (_, index) => ({
+      ...FILLS[0]!,
+      fill_id: 3000 + index,
+      trade_id: `historic-fill-${index}`,
+      trade_time: `2026-08-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
+    }));
+    const newestNonFillOrder = {
+      ...ORDERS[3]!,
+      order_id: 41000,
+      client_order_id: "recent-rejection",
+      submitted_at: "2026-08-30T00:00:00.000Z",
+      updated_at: "2026-08-30T00:00:00.100Z",
+    };
+    const { container } = render(
+      <TradeReplayEvents
+        orders={readReplayOrders([newestNonFillOrder])}
+        fills={readReplayFills(historicFills)}
+        candles={{ state: "UNAVAILABLE", reason: "E5_MARKET_CANDLES_NOT_PUBLISHED" }}
+        asOf="2026-08-30T00:00:00Z"
+        accounts={[ACCT]}
+      />,
+    );
+
+    // A naive `hi - 7 days` opening begins on 23 Aug and renders zero fills.
+    // The sixth-last-fill anchor keeps all six Aug 1–6 observations visible.
+    expect(container.querySelector("svg.exec-rp-svg")?.getAttribute("data-replay-events")).toBe("6");
+    expect(screen.getByText(/6 fills ·/)).toBeTruthy();
+  });
   it("says so when there are no events", () => {
     render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} />);
     expect(screen.getByText(/No order or fill event is present/)).toBeTruthy();
