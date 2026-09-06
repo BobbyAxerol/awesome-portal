@@ -79,6 +79,32 @@ describe("TradeReplayEvents panel", () => {
     expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(6);
     expect(screen.getByRole("button", { name: "Fit" })).toBeTruthy();
   });
+  it("draws venue candles under the markers when klines are READY, and names their provenance", () => {
+    const t0 = Date.parse("2026-07-18T21:00:00.000Z");
+    const bars = Array.from({ length: 12 }, (_, i) => ({ t: t0 + i * 3_600_000, o: "1858", h: "1866", l: "1852", c: i % 2 ? "1861" : "1856", v: "1", closeT: t0 + (i + 1) * 3_600_000 - 1 }));
+    const market = {
+      schemaVersion: "portal.execution.market-candles.v1", sourceAuthority: "VENUE_PUBLIC_MARKET_DATA",
+      source: { venue: "BINANCE", market: "USDM", endpoint: "https://fapi.binance.com/fapi/v1/klines", note: null },
+      symbol: "ETHUSDT", interval: "1h" as const, intervalMs: 3_600_000, state: "READY", reasonCode: null, retryable: false, fetchedAtMs: t0,
+      coverage: { fromMs: t0, toMs: null, requestedLimit: 500, returnedCount: 12, truncated: false }, lastCandleClosed: true, candles: bars,
+    };
+    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: "E5_MARKET_CANDLES_NOT_PUBLISHED" }} asOf={null} market={market} marketTransport="ok" interval="1h" onIntervalChange={() => undefined} />);
+    const svg = container.querySelector("svg.exec-rp-svg")!;
+    expect(Number(svg.getAttribute("data-replay-bars"))).toBeGreaterThan(0);
+    expect(svg.querySelector("[data-candles]")).not.toBeNull();
+    expect(svg.textContent).not.toContain("dotted path joins fill prices only");
+    expect(svg.textContent).toContain("▲");
+    expect(container.querySelector(".exec-rp-mark")?.textContent).toMatch(/^mark /);
+    expect(screen.getByRole("combobox", { name: "Candle interval" })).toBeTruthy();
+    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard");
+    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("source candles unavailable (E5_MARKET_CANDLES_NOT_PUBLISHED)");
+  });
+  it("falls back to the fill-price path and names the klines state when they are not READY", () => {
+    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} market={{ schemaVersion: "x", sourceAuthority: null, source: { venue: null, market: null, endpoint: null, note: null }, symbol: null, interval: null, intervalMs: null, state: "UNAVAILABLE", reasonCode: "MARKET_CANDLES_FEATURE_DISABLED", retryable: false, fetchedAtMs: null, coverage: { fromMs: null, toMs: null, requestedLimit: null, returnedCount: null, truncated: false }, lastCandleClosed: null, candles: [] }} marketTransport="ok" />);
+    const svg = container.querySelector("svg.exec-rp-svg")!;
+    expect(svg.getAttribute("data-replay-bars")).toBe("0");
+    expect(svg.textContent).toContain("venue klines unavailable · MARKET_CANDLES_FEATURE_DISABLED");
+  });
   it("says so when there are no events", () => {
     render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} />);
     expect(screen.getByText(/No order or fill event is present/)).toBeTruthy();

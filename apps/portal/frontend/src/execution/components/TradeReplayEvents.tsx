@@ -16,6 +16,8 @@
 import { useMemo, useRef, useState, type MouseEvent, type WheelEvent } from "react";
 
 import { formatExact } from "../formatExact";
+import { MARKET_CANDLE_INTERVALS, type MarketCandleInterval, type MarketCandlesPayload } from "../api/marketCandles";
+import type { PanelStatus } from "../contracts";
 
 export interface ReplayOrder {
   orderId: string;
@@ -288,10 +290,20 @@ export function buildLog(orders: readonly ReplayOrder[], fills: readonly ReplayF
 export interface TradeReplayEventsProps {
   orders: readonly ReplayOrder[];
   fills: readonly ReplayFill[];
+  /** The Trading System's own candle state (E5/N28) — printed even when venue klines are drawn. */
   candles: { state: string | null; reason: string | null };
   asOf: string | null;
   /** Deployment / account chips; the first is selected. */
   accounts?: readonly string[];
+  /** Venue public klines for the active symbol; absent = the container did not request them. */
+  market?: MarketCandlesPayload | null;
+  marketTransport?: PanelStatus;
+  marketReason?: string | null;
+  interval?: MarketCandleInterval;
+  onIntervalChange?: (interval: MarketCandleInterval) => void;
+  /** Controlled symbol; when absent the panel keeps its own. */
+  symbol?: string | null;
+  onSymbolChange?: (symbol: string) => void;
 }
 
 const VW = 880;
@@ -308,10 +320,14 @@ function niceStep(span: number): number {
 }
 const axisPrice = (v: number, step: number) => v.toLocaleString("en-US", { minimumFractionDigits: step < 1 ? 2 : 0, maximumFractionDigits: step < 1 ? 4 : 0 });
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] }: TradeReplayEventsProps) {
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, symbol: controlledSymbol, onSymbolChange }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
-  const [symbol, setSymbol] = useState<string | null>(null);
+  const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
+  const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
+  const setSymbol = (s: string) => { setOwnSymbol(s); onSymbolChange?.(s); };
   const activeSymbol = symbol && symbols.includes(symbol) ? symbol : symbols[0] ?? null;
+  const bars = market && market.state === "READY" && (market.symbol === null || market.symbol === activeSymbol) ? market.candles : [];
+  const barMs = market?.intervalMs ?? null;
   const scopedFills = useMemo(() => fills.filter((f) => !activeSymbol || f.symbol === activeSymbol).sort((a, b) => a.tradeTime.localeCompare(b.tradeTime)), [fills, activeSymbol]);
   const scopedOrders = useMemo(() => orders.filter((o) => !activeSymbol || o.symbol === activeSymbol), [orders, activeSymbol]);
   const trips = useMemo(() => pairRoundTrips(scopedFills, scopedOrders), [scopedFills, scopedOrders]);
@@ -326,6 +342,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
     const pad = Math.max((hi - lo) * 0.04, 3_600_000);
     return { lo: lo - pad, hi: hi + pad };
   }, [scopedFills, scopedOrders]);
+  // the venue's bars are drawn where they fall; they widen the record only to the last closed bar
+  const barsLast = bars.length > 0 ? bars[bars.length - 1]!.closeT : null;
   const [win, setWin] = useState<{ t0: number; t1: number } | null>(null);
   // Opening view: recent, but never empty — it reaches back to the sixth-last
   // fill (or seven days, whichever is wider), because the newest events are
@@ -335,8 +353,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
     if (times.hi - times.lo <= 10 * 86_400_000) return { t0: times.lo, t1: times.hi };
     const fillTimes = scopedFills.map((f) => ms(f.tradeTime)).filter((x): x is number => x !== null);
     const anchor = fillTimes.length > 0 ? fillTimes[Math.max(0, fillTimes.length - 6)]! - 6 * 3_600_000 : times.hi - 7 * 86_400_000;
-    return { t0: Math.max(times.lo, Math.min(anchor, times.hi - 7 * 86_400_000)), t1: times.hi };
-  }, [times, scopedFills]);
+    return { t0: Math.max(times.lo, Math.min(anchor, times.hi - 7 * 86_400_000)), t1: Math.max(times.hi, barsLast ?? times.hi) };
+  }, [times, scopedFills, barsLast]);
   const view = win && times ? { t0: Math.max(times.lo, win.t0), t1: Math.min(times.hi, win.t1) } : opening;
   const drag = useRef<{ x: number; t0: number; t1: number; w: number } | null>(null);
 
@@ -353,7 +371,9 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
   const X = (t: number) => PLOT_L + ((t - view.t0) / span) * (PLOT_R - PLOT_L);
   const inT = (t: number) => t >= view.t0 && t <= view.t1;
   const visibleFills = scopedFills.filter((f) => inT(ms(f.tradeTime)!));
+  const visibleBars = barMs ? bars.filter((b) => b.t + barMs > view.t0 && b.t < view.t1) : [];
   const prices = [
+    ...visibleBars.flatMap((b) => [num(b.l), num(b.h)]),
     ...visibleFills.map((f) => num(f.price)),
     ...legs.filter((l) => (l.to ?? view.t1) >= view.t0 && l.from <= view.t1).map((l) => num(l.level)),
   ].filter((p): p is number => p !== null);
@@ -387,6 +407,21 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
 
   const good = "var(--good)", bad = "var(--bad)", warn = "var(--warn)", soft = "var(--ink-soft)";
   const exitIds = new Map(trips.map((t) => [t.exit.fillId, t]));
+  // Candles: wick + body per bar, as the hi-fi draws them. The body is a stroke
+  // whose width follows the bars-per-plot density; a flat bar keeps 1px so an
+  // unchanged hour is still a bar and not a gap.
+  const pxPerBar = barMs ? ((PLOT_R - PLOT_L) / span) * barMs : 0;
+  const bodyW = Math.max(1.5, Math.min(12, pxPerBar * 0.6));
+  let wicks = "", up = "", dn = "";
+  for (const b of visibleBars) {
+    const o = num(b.o), h = num(b.h), l = num(b.l), c = num(b.c);
+    if (o === null || h === null || l === null || c === null) continue;
+    const x = X(b.t + barMs! / 2).toFixed(1);
+    wicks += `M${x},${Y(h).toFixed(1)} L${x},${Y(l).toFixed(1)} `;
+    const yo = Y(o), yc = Y(c);
+    const seg = `M${x},${yo.toFixed(1)} L${x},${(Math.abs(yc - yo) < 1 ? yo + 1 : yc).toFixed(1)} `;
+    if (c >= o) up += seg; else dn += seg;
+  }
   const markers: { x: number; y: number; glyph: string; color: string; size: number; title: string }[] = [];
   const segs: { pts: string; color: string; lx: number; ly: number; label: string }[] = [];
   const path = visibleFills.map((f) => `${X(ms(f.tradeTime)!).toFixed(1)},${Y(num(f.price)!).toFixed(1)}`).join(" ");
@@ -434,7 +469,11 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
   }
   const last = scopedFills[scopedFills.length - 1] ?? null;
   const prev = scopedFills[scopedFills.length - 2] ?? null;
-  const upTick = last && prev ? (num(last.price) ?? 0) >= (num(prev.price) ?? 0) : true;
+  const lastBar = bars[bars.length - 1] ?? null;
+  const prevBar = bars[bars.length - 2] ?? null;
+  const markPrice = lastBar ? lastBar.c : last?.price ?? null;
+  const markLabel = lastBar ? "mark" : "last fill";
+  const upTick = lastBar && prevBar ? (num(lastBar.c) ?? 0) >= (num(prevBar.c) ?? 0) : last && prev ? (num(last.price) ?? 0) >= (num(prev.price) ?? 0) : true;
 
   const zoom = (f: number) => setWin(() => {
     const c = (view.t0 + view.t1) / 2;
@@ -472,8 +511,13 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
             </select>
           ) : activeSymbol ? <span className="exec-rp-chip">{activeSymbol}</span> : null}
           <span className="exec-rp-spacer" />
-          {last ? (
-            <span className="exec-rp-mark">last fill <b data-tone={upTick ? "good" : "bad"}>{money(last.price)}</b> <span data-tone={upTick ? "good" : "bad"}>{upTick ? "▲" : "▼"}</span></span>
+          {onIntervalChange ? (
+            <select className="exec-rp-chip" aria-label="Candle interval" value={interval} onChange={(e) => onIntervalChange(e.target.value as MarketCandleInterval)}>
+              {MARKET_CANDLE_INTERVALS.map((i) => <option key={i} value={i}>{i}</option>)}
+            </select>
+          ) : null}
+          {markPrice ? (
+            <span className="exec-rp-mark">{markLabel} <b data-tone={upTick ? "good" : "bad"}>{money(markPrice)}</b> <span data-tone={upTick ? "good" : "bad"}>{upTick ? "▲" : "▼"}</span></span>
           ) : null}
           <span className="exec-rp-ctl" role="group" aria-label="Replay window">
             <button type="button" className="exec-rp-chip" onClick={() => zoom(0.6)} aria-label="Zoom in">+</button>
@@ -482,14 +526,26 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
             <button type="button" className="exec-rp-chip" onClick={() => pan(1)} aria-label="Pan right">▶</button>
             <button type="button" className="exec-rp-chip" onClick={() => setWin({ t0: times.lo, t1: times.hi })}>Fit</button>
           </span>
-          <span className="exec-rp-win">{visibleFills.length} fills · {hours >= 48 ? `${Math.round(hours / 24)}d` : `${hours}h`} window{offScaleCount > 0 ? ` · ${offScaleCount} off-scale print${offScaleCount === 1 ? "" : "s"} drawn at the edge` : ""} · drag / wheel</span>
+          <span className="exec-rp-win">{visibleBars.length > 0 ? `${visibleBars.length} bars · ${interval} · ` : ""}{visibleFills.length} fills · {hours >= 48 ? `${Math.round(hours / 24)}d` : `${hours}h`} window{offScaleCount > 0 ? ` · ${offScaleCount} off-scale print${offScaleCount === 1 ? "" : "s"} drawn at the edge` : ""} · drag / wheel</span>
         </header>
         <div className="exec-rp-canvas" onWheel={onWheel} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
-          <svg viewBox={`0 0 ${VW} 258`} className="exec-rp-svg" style={{ fontFamily: "var(--font-mono)" }} role="img" aria-label={`${visibleFills.length} fills with markers, ${legs.length} bracket legs, ${trips.length} round trips; candles ${candlesWord}`} data-replay-events={visibleFills.length}>
+          <svg viewBox={`0 0 ${VW} 258`} className="exec-rp-svg" style={{ fontFamily: "var(--font-mono)" }} role="img" aria-label={`${visibleBars.length} ${interval} candles, ${visibleFills.length} fills with markers, ${legs.length} bracket legs, ${trips.length} round trips`} data-replay-events={visibleFills.length} data-replay-bars={visibleBars.length}>
             {grid.map((g) => <g key={g.label}><line x1="0" y1={g.y.toFixed(1)} x2={PLOT_R} y2={g.y.toFixed(1)} stroke="var(--surface-2)" strokeWidth="1" /><text x={PLOT_R + 4} y={(g.y + 3).toFixed(1)} fontSize="9" fill="var(--ink-mute)">{g.label}</text></g>)}
             {ticks.map((t) => <text key={t.label + t.x} x={t.x.toFixed(1)} y="252" fontSize="9" fill="var(--ink-mute)" textAnchor="middle">{t.label}</text>)}
-            <text x={PLOT_L + 4} y={PLOT_T + 10} fontSize="9" fill="var(--ink-mute)">candles {candlesWord} · {candles.reason ?? "source not published"} — dotted path joins fill prices only</text>
-            {path ? <polyline points={path} fill="none" stroke="var(--ink-soft)" strokeWidth="1" strokeDasharray="2 3" opacity="0.7" /> : null}
+            {visibleBars.length > 0 ? (
+              <g data-candles={visibleBars.length}>
+                <path d={wicks} stroke="var(--line-strong)" strokeWidth="1" fill="none" />
+                <path d={up} stroke={good} strokeWidth={bodyW.toFixed(1)} fill="none" />
+                <path d={dn} stroke={bad} strokeWidth={bodyW.toFixed(1)} fill="none" />
+              </g>
+            ) : (
+              <>
+                <text x={PLOT_L + 4} y={PLOT_T + 10} fontSize="9" fill="var(--ink-mute)">
+                  {market && market.state !== "READY" ? `venue klines ${market.state.toLowerCase()} · ${market.reasonCode ?? ""} · ` : marketTransport !== "ok" && marketTransport !== "loading" ? `venue klines ${marketTransport} · ` : ""}source candles {candlesWord} · {candles.reason ?? "source not published"} — dotted path joins fill prices only
+                </text>
+                {path ? <polyline points={path} fill="none" stroke="var(--ink-soft)" strokeWidth="1" strokeDasharray="2 3" opacity="0.7" /> : null}
+              </>
+            )}
             {segs.map((s, i) => {
               const [a, b] = s.pts.split(" ");
               const horizontal = !!a && !!b && a.split(",")[1] === b.split(",")[1];
@@ -500,7 +556,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
                 </g>
               );
             })}
-            {last && inY(num(last.price)!) ? <line x1="0" y1={Y(num(last.price)!).toFixed(1)} x2={PLOT_R} y2={Y(num(last.price)!).toFixed(1)} stroke="var(--accent)" strokeWidth="1" strokeDasharray="2 3" /> : null}
+            {markPrice && num(markPrice) !== null && inY(num(markPrice)!) ? <line x1="0" y1={Y(num(markPrice)!).toFixed(1)} x2={PLOT_R} y2={Y(num(markPrice)!).toFixed(1)} stroke="var(--accent)" strokeWidth="1" strokeDasharray="2 3" /> : null}
             {markers.map((m, i) => <text key={i} x={m.x.toFixed(1)} y={m.y.toFixed(1)} fontSize={m.size} fill={m.color} textAnchor="middle"><title>{m.title}</title>{m.glyph}</text>)}
           </svg>
         </div>
@@ -509,9 +565,15 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
           <span>▼ exit fill — <span data-tone="good">realized ≥ 0</span> / <span data-tone="bad">realized &lt; 0</span> / <span data-tone="warn">pnl not published</span></span>
           <span>◇ bracket leg armed (TP / STOP order submitted)</span>
           <span data-tone="bad">× rejected ({scopedOrders.filter((o) => (o.status ?? "").toUpperCase().includes("REJECT")).length})</span>
-          <span className="exec-rp-mute">╌ round trip entry→exit (label = exit fill realized_pnl) · ─ ─ leg trigger_price while working · ··· fill-price path · drag to pan · wheel to zoom</span>
+          <span className="exec-rp-mute">╌ round trip entry→exit (label = exit fill realized_pnl) · ─ ─ leg trigger_price while working · {visibleBars.length > 0 ? "▮ venue candle up / down" : "··· fill-price path"} · drag to pan · wheel to zoom</span>
         </div>
-        <footer className="exec-rp-foot">source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) · candles: {candlesWord} ({candles.reason ?? "not published"}) — BR-EX-50 pending · as_of {asOf ?? "not stated"}</footer>
+        <footer className="exec-rp-foot">
+          source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
+          {market && market.state === "READY"
+            ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} public klines ${market.interval ?? interval} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? new Date(market.fetchedAtMs).toISOString().slice(11, 19) : "—"}Z, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
+            : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
+          {" "}· source candles {candlesWord} ({candles.reason ?? "not published"}) — BR-EX-50 pending · as_of {asOf ?? "not stated"}
+        </footer>
       </section>
       <section className="exec-rp-panel" aria-label="Trade log">
         <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win">{log.length} events{activeSymbol ? ` · ${activeSymbol}` : ""} · row ↔ marker share order_id / fill id</span></header>

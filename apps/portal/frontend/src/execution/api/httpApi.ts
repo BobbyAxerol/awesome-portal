@@ -40,6 +40,7 @@ import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
 import { financialChartPath, readFinancialChart, type FinancialChartPayload, type FinancialChartQuery, type FinancialEnvironment } from "./financialChart";
 import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSourceHealth } from "./derivations";
+import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type MarketCandlesQuery } from "./marketCandles";
 import {
   commandPlanRequest,
   readCommandPlan,
@@ -316,6 +317,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     derivation(`/portfolios/${encodeURIComponent(portfolioId)}/capital`, environment, readPortfolioCapital, "The portfolio-capital derivation");
   const getAlphaActivity = (alphaId: string, environment: FinancialEnvironment) =>
     derivation(`/alphas/${encodeURIComponent(alphaId)}/activity`, environment, readAlphaActivity, "The alpha-activity derivation");
+  const getMarketCandles = (query: MarketCandlesQuery): Promise<Result<MarketCandlesPayload>> =>
+    readGet(marketCandlesPath(query), readMarketCandles, "The venue market candles");
   const listParameters = (query: object) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
@@ -422,6 +425,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getDeploymentQuality,
     getPortfolioCapital,
     getAlphaActivity,
+    getMarketCandles,
     getAlphaFleet,
     listPortfolios,
     getBindings,

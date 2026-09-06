@@ -8,7 +8,7 @@
  * screen is never swapped for a generic envelope view, and no fixture value
  * is reachable from this module.
  */
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
@@ -28,6 +28,8 @@ import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
+import { MARKET_CANDLE_INTERVAL_MS, fittingInterval, type MarketCandleInterval, type MarketCandlesPayload } from "../api/marketCandles";
+import { unavailable } from "../api/ports";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/derivations";
@@ -1021,12 +1023,11 @@ function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
 }
 
 /**
- * Trade Replay in the hi-fi grammar (BR-EX-50), on the source's own events:
- * the alpha's orders and fills from the EDS-04 resource (exact, bounded) plus
- * the analytics facts scoped to the alpha's accounts, deduplicated by id.
- * Candles stay unavailable (E5/N28) and the panel says so. Exported for tests.
+ * The alpha's own events for the Trade Replay: EDS-04 resource orders/fills
+ * (exact, bounded) plus the analytics facts filtered to the alpha's accounts —
+ * the N25 facts are profile-wide — deduplicated by id.
  */
-export function SourceTradeReplay({ analytics, additive = null, alphaId = null }: { analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId?: string | null }) {
+function replayEvents(analytics: QueryAnalytics | null | undefined, additive: QueryAnalytics | null | undefined, alphaId: string | null) {
   const facts = analytics?.sourceFacts ?? {};
   const extra = additive?.sourceFacts ?? {};
   const accounts = new Set<string>();
@@ -1036,17 +1037,72 @@ export function SourceTradeReplay({ analytics, additive = null, alphaId = null }
   }
   const scoped = (rows: readonly Record<string, unknown>[]) =>
     rows.filter((r) => accounts.size === 0 || accounts.has(text(r.account_id) ?? "") || (alphaId !== null && text(r.strategy_id) === alphaId));
-  const orders = readReplayOrders([...(facts.orders ?? []), ...scoped(extra.orders ?? [])]);
-  const fills = readReplayFills([...(facts.fills ?? []), ...scoped(extra.fills ?? [])]);
   const replay = analytics?.replay ?? additive?.replay ?? null;
+  return {
+    orders: readReplayOrders([...(facts.orders ?? []), ...scoped(extra.orders ?? [])]),
+    fills: readReplayFills([...(facts.fills ?? []), ...scoped(extra.fills ?? [])]),
+    accounts: [...accounts],
+    candles: { state: replay?.candlesState ?? "UNAVAILABLE", reason: replay?.candlesReasonCode ?? null },
+    asOf: analytics?.asOf ?? additive?.asOf ?? null,
+  };
+}
+
+/** Trade Replay in the hi-fi grammar (BR-EX-50) without venue klines. Exported for tests. */
+export function SourceTradeReplay({ analytics, additive = null, alphaId = null }: { analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId?: string | null }) {
+  const events = replayEvents(analytics, additive, alphaId);
+  return (
+    <div className="exec-rp-source">
+      <TradeReplayEvents orders={events.orders} fills={events.fills} candles={events.candles} asOf={events.asOf} accounts={events.accounts} />
+    </div>
+  );
+}
+
+/**
+ * Trade Replay with the venue's public klines drawn under the markers. The
+ * klines are fetched for the alpha's event range at the chosen interval; when
+ * that range would exceed one venue page the interval steps up and the header
+ * shows the interval actually drawn. Symbol and interval live here so the
+ * fetch follows the reader's choice.
+ */
+export function TradeReplayLive({ api, analytics, additive = null, alphaId }: { api: ExecutionApi; analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId: string }) {
+  const events = useMemo(() => replayEvents(analytics, additive, alphaId), [analytics, additive, alphaId]);
+  const symbols = useMemo(() => Array.from(new Set([...events.fills.map((f) => f.symbol), ...events.orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [events]);
+  const [symbol, setSymbol] = useState<string | null>(null);
+  const activeSymbol = symbol && symbols.includes(symbol) ? symbol : symbols[0] ?? null;
+  const [wanted, setWanted] = useState<MarketCandleInterval>("1h");
+  const range = useMemo(() => {
+    const ts = [
+      ...events.fills.map((f) => Date.parse(f.tradeTime)),
+      ...events.orders.flatMap((o) => [o.submittedAt, o.updatedAt].map((x) => (x ? Date.parse(x) : NaN))),
+    ].filter((x) => Number.isFinite(x));
+    if (ts.length === 0) return null;
+    const pad = 6 * 3_600_000;
+    return { lo: Math.min(...ts) - pad, hi: Math.max(...ts) + pad };
+  }, [events]);
+  const interval = range ? fittingInterval(range.hi - range.lo, wanted) : wanted;
+  const limit = range ? Math.min(1500, Math.ceil((range.hi - range.lo) / MARKET_CANDLE_INTERVAL_MS[interval]) + 2) : 500;
+  const market = useApiRead<MarketCandlesPayload>(
+    () => activeSymbol && range
+      ? api.getMarketCandles({ symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit })
+      : Promise.resolve(unavailable("No symbol among this alpha's events to read candles for.")),
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit],
+    { keepValue: true },
+  );
   return (
     <div className="exec-rp-source">
       <TradeReplayEvents
-        orders={orders}
-        fills={fills}
-        candles={{ state: replay?.candlesState ?? "UNAVAILABLE", reason: replay?.candlesReasonCode ?? null }}
-        asOf={analytics?.asOf ?? additive?.asOf ?? null}
-        accounts={[...accounts]}
+        orders={events.orders}
+        fills={events.fills}
+        candles={events.candles}
+        asOf={events.asOf}
+        accounts={events.accounts}
+        market={market.value}
+        marketTransport={market.status}
+        marketReason={market.reason}
+        interval={interval}
+        onIntervalChange={setWanted}
+        symbol={activeSymbol}
+        onSymbolChange={setSymbol}
       />
     </div>
   );
@@ -1131,7 +1187,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       equity={resource ? profileEquity(resource) ?? analyticsEquity(analytics) : analyticsEquity(analytics)}
       deployments={deployments}
       tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      replay={viewFacts ? <SourceTradeReplay analytics={viewFacts} additive={analytics} alphaId={alphaId} /> : undefined}
+      replay={viewFacts ? <TradeReplayLive api={api} analytics={viewFacts} additive={analytics} alphaId={alphaId} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
       audit={audit ? pageOf(audit) : null}

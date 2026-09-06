@@ -1,0 +1,88 @@
+import { describe, expect, it, vi } from "vitest";
+
+import { ExecutionMarketCandlesController } from "../src/execution/market-candles.controller";
+import { ExecutionMarketCandlesService, readKlines } from "../src/execution/market-candles.service";
+import { testConfig } from "./harness";
+
+const KLINE = (t: number, o: string, h: string, l: string, c: string) => [t, o, h, l, c, "12.5", t + 3_599_999, "31250.0", 42, "6.1", "15200.0", "0"];
+const T0 = Date.UTC(2026, 6, 18, 22, 0, 0);
+const NOW = T0 + 10 * 3_600_000;
+
+function service(flag = "true") {
+  const svc = new ExecutionMarketCandlesService(testConfig({ FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES: flag }));
+  const fetchMock = vi.fn(async (url: string) => ({ ok: true, status: 200, json: async () => [KLINE(T0, "1859.00", "1866.00", "1855.00", "1862.50"), KLINE(T0 + 3_600_000, "1862.50", "1870.00", "1860.00", "1868.10")], url }));
+  svc.setFetch(fetchMock as never);
+  return { svc, fetchMock };
+}
+
+describe("venue public market candles — market context, never the source's history", () => {
+  it("returns the venue's klines as strings, named VENUE_PUBLIC_MARKET_DATA, with coverage", async () => {
+    const { svc, fetchMock } = service();
+    const body = await svc.candles({ symbol: "ETHUSDT", interval: "1h", fromMs: T0, toMs: T0 + 7_200_000, limit: 500 }, NOW);
+    expect(body).toMatchObject({
+      schema_version: "portal.execution.market-candles.v1",
+      source_authority: "VENUE_PUBLIC_MARKET_DATA",
+      source: { venue: "BINANCE", market: "USDM", endpoint: "https://fapi.binance.com/fapi/v1/klines" },
+      symbol: "ETHUSDT", interval: "1h", interval_ms: 3_600_000, state: "READY", reason_code: null,
+      coverage: { from_ms: T0, to_ms: T0 + 7_199_999, requested_limit: 500, returned_count: 2, truncated: false },
+      last_candle_closed: true,
+    });
+    expect(body.candles[0]).toEqual({ t: T0, o: "1859.00", h: "1866.00", l: "1855.00", c: "1862.50", v: "12.5", close_t: T0 + 3_599_999, trades: 42 });
+    const url = String(fetchMock.mock.calls[0]![0]);
+    expect(url).toContain("symbol=ETHUSDT");
+    expect(url).toContain("interval=1h");
+    expect(url).toContain(`startTime=${T0}`);
+    expect(url).toContain(`endTime=${T0 + 7_200_000}`);
+    expect(body.source.note).toContain("not the Trading System kline shard");
+  });
+  it("serves a repeat of the same query from cache within the TTL", async () => {
+    const { svc, fetchMock } = service();
+    await svc.candles({ symbol: "ETHUSDT", interval: "1h", fromMs: T0, toMs: null, limit: 10 }, NOW);
+    await svc.candles({ symbol: "ETHUSDT", interval: "1h", fromMs: T0, toMs: null, limit: 10 }, NOW + 5_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+  it("is typed unavailable when the flag is off, without calling the venue", async () => {
+    const { svc, fetchMock } = service("false");
+    const body = await svc.candles({ symbol: "ETHUSDT", interval: "1h", fromMs: null, toMs: null, limit: 10 }, NOW);
+    expect(body).toMatchObject({ state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_FEATURE_DISABLED", retryable: false, candles: [] });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("maps an unknown symbol to EMPTY, a venue failure and a network failure to typed UNAVAILABLE", async () => {
+    const { svc } = service();
+    svc.setFetch(async () => ({ ok: false, status: 400, json: async () => ({ code: -1121, msg: "Invalid symbol." }) }));
+    expect(await svc.candles({ symbol: "NOPEUSDT", interval: "1h", fromMs: null, toMs: null, limit: 10 }, NOW)).toMatchObject({ state: "EMPTY", reason_code: "MARKET_CANDLES_SYMBOL_UNKNOWN" });
+    svc.setFetch(async () => ({ ok: false, status: 429, json: async () => ({}) }));
+    expect(await svc.candles({ symbol: "ETHUSDT", interval: "4h", fromMs: null, toMs: null, limit: 10 }, NOW)).toMatchObject({ state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_VENUE_RATE_LIMITED", retryable: true });
+    svc.setFetch(async () => { throw new Error("ECONNRESET"); });
+    expect(await svc.candles({ symbol: "ETHUSDT", interval: "1d", fromMs: null, toMs: null, limit: 10 }, NOW)).toMatchObject({ state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_VENUE_UNREACHABLE", retryable: true });
+    svc.setFetch(async () => ({ ok: true, status: 200, json: async () => ({ not: "an array" }) }));
+    expect(await svc.candles({ symbol: "ETHUSDT", interval: "5m", fromMs: null, toMs: null, limit: 10 }, NOW)).toMatchObject({ state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_VENUE_MALFORMED" });
+  });
+  it("stops calling the venue past the per-minute budget", async () => {
+    const { svc, fetchMock } = service();
+    for (let i = 0; i < 60; i += 1) await svc.candles({ symbol: `S${String(i).padStart(4, "0")}`, interval: "1h", fromMs: null, toMs: null, limit: 1 }, NOW);
+    const body = await svc.candles({ symbol: "ETHUSDT", interval: "1h", fromMs: null, toMs: null, limit: 1 }, NOW);
+    expect(body).toMatchObject({ state: "UNAVAILABLE", reason_code: "MARKET_CANDLES_RATE_LIMITED", retryable: true });
+    expect(fetchMock).toHaveBeenCalledTimes(60);
+  });
+  it("reads klines strictly: strings for prices, numbers for times, or nothing", () => {
+    expect(readKlines([KLINE(T0, "1", "2", "0.5", "1.5")])).toHaveLength(1);
+    expect(readKlines([[T0, 1, "2", "0.5", "1.5", "1", T0 + 1]])).toBeNull();
+    expect(readKlines({})).toBeNull();
+    expect(readKlines([])).toEqual([]);
+  });
+});
+
+describe("market candles controller", () => {
+  it("accepts only the fixed vocabulary and forwards the query", async () => {
+    const candles = vi.fn(async () => ({ state: "READY" }));
+    const controller = new ExecutionMarketCandlesController({ candles } as never);
+    await controller.get({ symbol: "ETHUSDT", interval: "15m", from_ms: "1", to_ms: "2", limit: "40" });
+    expect(candles).toHaveBeenCalledWith({ symbol: "ETHUSDT", interval: "15m", fromMs: 1, toMs: 2, limit: 40 });
+    await expect(controller.get({ symbol: "eth-usdt" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID", status: 400 });
+    await expect(controller.get({ symbol: "ETHUSDT", interval: "3m" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get({ symbol: "ETHUSDT", venue: "OKX" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get({ symbol: "ETHUSDT", from_ms: "5", to_ms: "1" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get({ symbol: "ETHUSDT", limit: "5000" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+  });
+});
