@@ -9,12 +9,20 @@ independent receipt validation
 
 ## 1. Decision and authority order
 
-The Portal has already exhausted the truthful current-page surface.  It can
-serve current rows, retained ranges, Portal observations and explicitly
-derived views today, but it cannot manufacture facts that the source did not
-retain or publish.  In particular, a current order/fill row cannot become an
-immutable lifecycle event, and a current mark cannot become a candle,
-benchmark, broker-ack clock or valuation provenance record.
+The Portal has **not** exhausted the truthful current-page surface.  On
+2026-09-06, read-only AWS-HK inspection verified that Manager-v2 current read
+is active for Paper, Sandbox and Live, and that each profile has the same
+96-relation catalogue.  Portal is separately delivering EDS-11R to consume
+those already-authorized current facts through named BFFs.
+
+This document therefore concerns only the remaining **semantic-quality**
+facts that cannot be claimed from a bounded current relation without an
+explicit source contract.  A current order/fill row must not become an
+immutable lifecycle replay merely because the row exists, and a current mark
+must not become a candle, benchmark, broker-ack clock or valuation provenance
+record.  Existing source tables and the Market Data Layer should be reused by
+the owner wherever possible; a new database or parallel data store is not a
+campaign requirement.
 
 This document turns the visible `Soon · SOURCE_GAP_CONFIRMED` backlog into
 **one finite Trading System implementation campaign**.  It is a delivery map,

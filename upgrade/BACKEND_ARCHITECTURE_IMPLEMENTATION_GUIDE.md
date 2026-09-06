@@ -687,8 +687,10 @@ deep-dive → ADR → slice → evidence discipline documented above.
   branch, one release and one sanitized nested return pack, while retaining
   the existing frozen EDS-09/N28 machine contracts.  Per-stream epoch and
   sequence are sufficient; Portal does not demand a fictitious database-wide
-  event order.  No Portal runtime, direct data path, source traffic or command
-  authority changes until the returned bytes independently validate.  See
+  event order.  It is a future semantic-quality campaign and does not block or
+  replace the existing active Manager-v2 current-read plane; only new source
+  capabilities wait for returned-byte validation.  It creates no direct data
+  path or command authority.  See
   [source-completeness campaign](backend/TRADING_SYSTEM_SOURCE_COMPLETENESS_CAMPAIGN_V1.md).
 
 - **EDS-09b Portal observation bridge closed source-dark (2026-09-05):** the
@@ -737,6 +739,20 @@ deep-dive → ADR → slice → evidence discipline documented above.
   not block current-data screens. No source transport, runtime flag, container
   or command authority changed. See
   [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).
+
+- **EDS-11R current Manager-v2 maximum-data activation planned from verified
+  AWS-HK runtime (2026-09-06):** read-only inspection verified that the
+  deployed Paper, Sandbox and Live Manager-v2 profiles are transport-qualified
+  and source-read enabled, with the same digest-pinned 96-relation catalogue.
+  Their Source Proxies already forward the private bounded Manager routes;
+  the legacy `/v1` routes returning `503` are not this read plane.  Portal has
+  not yet mapped all screen-bound relations into named BFF DTOs, which is why
+  rich product panels can still be unavailable despite source rows.  EDS-11R
+  now precedes EDS-12: safe server-owned relation intake, rich panel hydration,
+  admitted local projection/SSE, then one TS-owned adapter over the existing
+  Data Layer for market context.  Authoritative replay semantics remain a
+  separate optional upgrade.  See
+  [EDS-11R activation plan](backend/EDS_11R_CURRENT_MANAGER_V2_MAXIMUM_DATA_ACTIVATION.md).
 
 - **EX-DP-05/E5 existing-data adapter and publication closed
   (2026-09-04, source-dark):** the additive Rust

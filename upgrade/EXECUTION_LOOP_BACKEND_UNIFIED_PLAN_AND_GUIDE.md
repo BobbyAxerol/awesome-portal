@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-06 | **EDS-11R AWS-HK runtime discovery corrected the current-source plan**: read-only inspection verified that Manager-v2 Paper/Sandbox/Live current read is already active, all three profiles share the same 96-relation catalogue digest, Source Proxy forwards the Manager-v2 private routes, and the private Data Layer already provides last-price/OHLCV/calendar/universe inputs.  The prior source-gap wording is retained only for missing authoritative semantics, not as a claim that current data is absent | EDS-11R is inserted before EDS-12: Portal must now map all authorized screen-bound relations to named safe BFFs, hydrate rich panels and activate local current-observation/SSE; only a small TS-owned Market Context adapter is needed for Data Layer facts.  No source/runtime/credential/container/command change occurred during inspection |
 | 2026-09-05 | **EDS-11 local BFF hydration and observation revalidation closed at the contract gate**: a committed Portal-local observation revision now resolves direct and composition-dependent Paper/Sandbox/Live screen impact through the frozen Screen BFF catalogue, yielding only the active profile's named same-origin `GET` operation IDs and a local epoch/sequence/digest tick. ProductRead/panel output withholds raw Manager checkpoints; bounded adapters use semantic product groups and Command Center withholds source checkpoints; one local journal tail fan-outs to browsers without source amplification | focused profile-isolation, unknown-mapping, operation/redaction, cursor-withholding and 100-client/shared-journal regressions plus the full fresh-PostgreSQL Control API gate; no Event/replay claim, direct source path, runtime activation, container, cache or command change |
 | 2026-09-05 | **EDS-10b observed timeline and derived mark-context closed at the contract gate**: Portal replaces the misleading current-page `replay-journal` presentation with a named bounded same-origin `executionObservedTimelineV1` BFF. It serves only `PORTAL_OBSERVATION` rows with exact decimal strings, UTC milliseconds, profile/freshness/coverage metadata and a Portal-signed projection-bound continuation; `DERIVED · mark-context` uses only published mark/equity context. True replay/Event/ACK/correction/global sequence/OHLCV remain separate typed source gaps | focused resource-isolation, stable mixed-clock order, cursor/redaction, exact-decimal, mark-context and disabled-profile regressions plus fresh-PostgreSQL Control API gate; no source transport, direct source path, command, runtime flag, container or profile activation |
 | 2026-09-05 | **EDS-09b Portal observation bridge closed source-dark**: current Manager-page data continues through the existing server-only lease/coalescer and durable mirror, while the local revision journal/SSE now carries only `PORTAL_OBSERVATION` provenance plus named affected screen IDs. A retained-range digest conflict is forensic-quarantined before the compatibility snapshot, source checkpoint or visible revision can advance | additive migration `1723680000024`; focused provenance/redaction/replay and quarantine regressions plus full fresh-PostgreSQL Control API **45 files / 384 tests** + restore gate; no Edge route, source transport, runtime flag, container, direct DB/Redis/broker/CLI or command change |
@@ -4483,11 +4484,19 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
 | EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE**; yes, with `PORTAL_OBSERVATION` / `DERIVED` labels |
 | EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE** on 2026-09-05; yes, panel by panel with typed gaps |
+| EDS-11R | maximum current Manager-v2 relation activation | EDS-11 + deployed Manager-v2 profiles | **PLANNED / RUNTIME_DISCOVERY_VERIFIED** on 2026-09-06; required before EDS-12 because the source plane already exposes 96 profile-scoped current relations |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
 
 EDS-03 through EDS-07 must not wait for EDS-08. This is the key
 adapt-first decision: current source delivers the maximum honest product now;
 authoritative event/replay work advances only as a future source-upgrade lane.
+However, the 2026-09-06 AWS-HK runtime inventory corrected an important
+implementation assumption: Manager-v2 current read is already active for
+Paper, Sandbox and Live and carries the same 96-relation catalogue per
+profile.  EDS-11R must first consume that existing truthful surface through
+named server-side BFF operations.  Missing authoritative semantics remain a
+separate source-upgrade lane; they are not a reason to leave current rich
+screen panels unavailable.
 
 ### EDS-00 — Return-pack intake and immutable baseline
 
@@ -5277,6 +5286,47 @@ redaction and a single journal read for 100 subscribers. This is
 ACK, market and artifact gaps stay visible `Soon` branches without blocking
 current-data screens. No runtime, source, container or command authority
 changed. See [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).
+
+### EDS-11R — Current Manager-v2 maximum-data activation
+
+**Status:** `PLANNED / RUNTIME_DISCOVERY_VERIFIED /
+PORTAL_CONSUMER_RECONCILIATION_REQUIRED` on 2026-09-06.
+
+**Correction:** the old `RUNTIME_INACTIVE` wording describes the Portal
+consumer slice, not AWS-HK Manager availability.  Read-only deployment
+inspection verified that Paper, Sandbox and Live Manager-v2 profiles are each
+transport-qualified and current-source enabled over TLS 1.3 mTLS plus the
+bound `execution:manager-v2:read` delegation.  Every profile carries the same
+96-relation catalogue.  The deployed Source Proxy already forwards the
+private Manager `/catalog`, `/capabilities`, bounded `/projections/*` and
+bounded `/records/{schema}/{relation}` routes.  Legacy `/v1/*` routes are
+intentionally fail-closed and must not be confused with Manager-v2.
+
+**Goal:** use every authorized, screen-bound current relation through a named
+same-origin BFF and retain rich UI composition under available, empty,
+partial, stale and denied conditions.  A server-owned mapping selects safe
+DTO fields and makes relation/cursor/profile choices; the browser never calls
+or sees a generic Manager route.
+
+**Phases:**
+
+1. `EDS-11R1` — digest-pinned 96-relation intake and named safe BFF registry;
+2. `EDS-11R2` — rich-screen hydration for Alpha, Portfolio, Account/Binding,
+   stage, Blotter, Operations and governance panels;
+3. `EDS-11R3` — admitted durable current projection, retained financial
+   range and bounded current-observation/SSE lane; and
+4. `EDS-11R4` — one additive TS-owned Market Context adapter over the already
+   running Data Layer for latest observation, OHLCV, benchmark, calendar and
+   VNM constraints.
+
+`EDS-11R5` remains optional: only an owner-published per-stream
+sequence/epoch/correction/tombstone/retention contract upgrades current
+`domain_events` and evidence rows into authoritative replay.  It cannot be
+faked from `event_ts` or an arbitrary database order, but it does not block
+the first four current-data phases or EDS-12.
+
+**Detailed plan and runtime evidence:**
+[EDS-11R current Manager-v2 maximum-data activation](backend/EDS_11R_CURRENT_MANAGER_V2_MAXIMUM_DATA_ACTIVATION.md).
 
 ### Source-upgrade backlog — visible as `Soon`, never a delivery blocker
 

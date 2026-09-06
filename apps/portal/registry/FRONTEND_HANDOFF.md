@@ -2165,3 +2165,33 @@ authority/provenance, exact decimal strings and UTC milliseconds.  The rich
 panel replaces only its local typed-gap content; it must not replace the route
 shell or consume an Edge relation, source cursor, JWT, mTLS material or direct
 source URL.
+
+### 8.54 EDS-11R maximum-current data correction (2026-09-06)
+
+The AWS-HK Manager-v2 read plane is already active for Paper, Sandbox and Live
+and has the same 96-relation current-data catalogue in each profile.  The
+existing Portal currently consumes only a narrow subset, so `Unavailable` on a
+rich panel does **not** mean that all Trading System data is absent.  Backend
+will add named same-origin BFF DTOs panel by panel under EDS-11R; frontend must
+not add a generic Manager client or a fixture fallback while that work lands.
+
+For every EDS-11R panel:
+
+1. Preserve the reviewed rich layout and its information hierarchy.
+2. Render source-backed current data when the named BFF is `AVAILABLE`.
+3. Render `EMPTY` inside the relevant panel when that authorized profile has
+   no row; do not turn the entire page into a `Soon` or `Unavailable` shell.
+4. Render `PARTIAL` with its coverage/freshness information and preserve the
+   provided rows.  Do not assume a bounded current page is full history.
+5. Render `STALE` by retaining the last valid panel and its source time; the
+   browser revalidates only through the existing local revision channel.
+6. Keep only true semantic gaps panel-local: authoritative replay/corrections,
+   exact broker-ACK chronology and market candles/benchmark/calendar/VNM wait
+   for their explicit named contracts.  Current observations and current
+   command evidence remain usable now.
+
+The Data Layer already has private last-price, OHLCV/klines,
+session-calendar and universe endpoints.  It will be consumed through one
+Trading-System-owned Market Context adapter, then a named Portal BFF; React
+must never call it directly.  See the
+[EDS-11R activation plan](../../../upgrade/backend/EDS_11R_CURRENT_MANAGER_V2_MAXIMUM_DATA_ACTIVATION.md).

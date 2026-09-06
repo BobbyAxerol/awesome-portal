@@ -40,16 +40,25 @@ Chúng không thay thế phase hoặc exit gate trong
   Event replay, ACK/correction/global sequence and OHLCV remain independently
   typed `SOURCE_GAP_CONFIRMED`; no source route, direct DB/cache/broker/CLI,
   credential, container, profile or command authority changes.
+- [EDS-11R — Current Manager-v2 maximum-data activation](./EDS_11R_CURRENT_MANAGER_V2_MAXIMUM_DATA_ACTIVATION.md)
+  — **planned / runtime discovery verified:** AWS-HK Manager-v2 read is
+  already active for Paper, Sandbox and Live with one digest-pinned
+  96-relation catalogue per profile.  This is the required pre-EDS-12 Portal
+  consumer reconciliation: server-owned named BFF mapping, rich-panel
+  hydration, durable current observation/SSE and one TS-owned adapter over the
+  existing Market Data Layer.  It does not create a browser generic relation
+  client, direct DB/Redis/broker/CLI path or command authority.
 - [EDS-09 Trading System event-source implementation addendum](./EDS_09_TRADING_SYSTEM_EVENT_SOURCE_IMPLEMENTATION_REQUEST.md)
   — **the only incremental owner handoff for MC-01 / durable event replay.**
   It consolidates the three event classes, source-as-is implementation choice,
   sanitized return package and source-dark receipt boundary.
 - [Trading System source-completeness campaign v1](./TRADING_SYSTEM_SOURCE_COMPLETENESS_CAMPAIGN_V1.md)
-  — **the single delivery map for closing the visible source-gap backlog.** It
+  — **the future semantic-quality delivery map for the visible source-gap backlog.** It
   keeps N28 v3 and the EDS-09 addendum as the machine authorities, maps all 18
   EDS-08 gaps plus MC-01…MC-09 into four source-side implementation bundles,
   and requires one branch, one release and one nested sanitized return pack.
-  It does not create a direct Portal source path or runtime activation.
+  It does not block EDS-11R use of existing current Manager-v2 facts or create
+  a direct Portal source path/runtime activation.
 - [EDS-09 Trading System owner-return handoff](./EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md)
   — **Portal-local immutable receipt:** mirrors the source-owner return at its
   declared Trading System commit, records all 18 current source gaps, and
