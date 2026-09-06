@@ -6,6 +6,11 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${ROOT_DIR}/apps/control-api"
 MAXIMUM_DATA_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v1"
 EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1"
+# EDS-11R's checked-in named-operation compiler consumes this immutable
+# Manager census in addition to the maximum-data evidence pack.  Keep it
+# explicitly mounted into the disposable test cell so the provenance test is
+# meaningful in CI as well as from a developer checkout.
+EDS11R_MANAGER_CENSUS_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1"
 # Permit a caller to use a replacement disposable test-network name after a
 # stale-name collision, without changing any Portal runtime network. The
 # default keeps CI behavior unchanged.
@@ -48,6 +53,7 @@ cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
 test -x "${DEPS_DIR}/node_modules/.bin/tsc"
 test -f "${MAXIMUM_DATA_PACK}/MANIFEST.sha256"
 test -f "${EDS08_SOURCE_CONTINUITY_PACK}/MANIFEST.sha256"
+test -f "${EDS11R_MANAGER_CENSUS_PACK}/manager-surface-census.v1.json"
 
 # Docker/containerd cannot create a nested tmpfs or bind mount below a
 # read-only bind destination on every supported host. Build a non-secret,
@@ -97,6 +103,7 @@ fi
   -v "${DEPS_DIR}:/cell" \
   -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
   -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \
+  -v "${EDS11R_MANAGER_CENSUS_PACK}:/services/portal-execution-edge-rs/contracts/manager-surface-census-v1:ro" \
   --tmpfs /tmp:rw,exec,mode=1777,size=512m \
   -w /cell/work \
   -e HOME=/tmp \
@@ -104,6 +111,8 @@ fi
   -e TEST_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_control_test" \
   -e EDS02_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
   -e EDS08_SOURCE_CONTINUITY_PACK="/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1" \
+  -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
+  -e EDS11R_CENSUS_PACK="/services/portal-execution-edge-rs/contracts/manager-surface-census-v1" \
   "${NODE_IMAGE}" sh -c '
     set -e
     npm run build

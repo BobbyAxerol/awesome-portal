@@ -460,6 +460,39 @@ export interface CurrentSourceOperationPolicy {
   profileMaximumConcurrency: number;
 }
 
+/**
+ * EDS-11R adds a compile-time catalogue operation path.  `relation` remains
+ * server-only: it is supplied by a checked-in registry rather than a browser
+ * request, and the composed BFF response never serializes it.
+ */
+export interface CurrentSourceCataloguedOperationPolicy extends CurrentSourceOperationPolicy {
+  relation: string;
+}
+
+interface CurrentSourceGatewayContext {
+  readonly screenId: string;
+  readonly capabilityIds: readonly string[];
+  readonly sourceBindingIds: readonly string[];
+  readonly acceptance: {
+    readonly decision: string;
+    readonly adapter: string;
+    readonly sourceContract: string;
+    readonly sourceMaximumRequestsPerSecond: number;
+  };
+}
+
+const EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT: CurrentSourceGatewayContext = Object.freeze({
+  screenId: "EDS11R_MANAGER_RELATION_BFF",
+  capabilityIds: Object.freeze(["manager.relation-page"]),
+  sourceBindingIds: Object.freeze([]),
+  acceptance: Object.freeze({
+    decision: "EDS11R_SCREEN_BOUND_MANAGER_RELATIONS_ACCEPTED",
+    adapter: "MANAGER_V2_CURRENT_AS_IS",
+    sourceContract: "trading-system.portal-execution.manager-v2.runtime.v1",
+    sourceMaximumRequestsPerSecond: 20,
+  }),
+});
+
 interface CurrentSourceIdentity {
   principalId: string;
   sessionId: string;
@@ -696,6 +729,33 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   }
 
   /**
+   * One fixed, generated EDS-11R operation.  This is intentionally distinct
+   * from `relation`: callers receive no generic relation input, and a static
+   * policy is the authority for the private Manager-v2 route.
+   */
+  relationForCataloguedOperation(
+    principal: CurrentSourcePrincipal,
+    environment: Exclude<CurrentSourceEnvironment, "canary">,
+    policy: CurrentSourceCataloguedOperationPolicy,
+    query: CurrentSourcePageQuery,
+  ): Promise<unknown> {
+    assertNamedOperationPolicy(policy, policy.sourceId, this.config);
+    assertCataloguedOperationPolicy(policy);
+    const path = eds11rManagerV2Path(policy, query);
+    return this.request(
+      browserIdentity(principal),
+      environment,
+      EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT.screenId,
+      path,
+      policy,
+      {
+        ...EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT,
+        sourceBindingIds: [policy.sourceId],
+      },
+    );
+  }
+
+  /**
    * Dedicated service-to-service read used only by the lease-controlled SGP
    * projection worker. It carries no browser session and cannot request a
    * command resource or arbitrary route.
@@ -737,6 +797,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     screenId: string,
     path: string,
     operationPolicy?: CurrentSourceOperationPolicy,
+    gatewayContext?: CurrentSourceGatewayContext,
   ): Promise<unknown> {
     const sourceEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
     const profile = this.profiles.get(sourceEnvironment);
@@ -769,7 +830,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     if (shared.kind === "CACHE_HIT") {
       return this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
-        shared.value, "HIT",
+        shared.value, "HIT", gatewayContext,
       );
     }
     if (shared.kind === "FOLLOWER") {
@@ -781,7 +842,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       }
       return this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
-        value, "COALESCED",
+        value, "COALESCED", gatewayContext,
       );
     }
     if (shared.kind === "DENIED") {
@@ -824,7 +885,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       sharedCompleted = true;
       return this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
-        value, "MISS",
+        value, "MISS", gatewayContext,
       );
     } finally {
       release();
@@ -844,8 +905,17 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     profileId: string,
     cached: SharedReadCacheValue,
     cacheState: "HIT" | "MISS" | "COALESCED",
+    gatewayContext?: CurrentSourceGatewayContext,
   ): unknown {
-    const { binding, acceptance } = acceptedScreenBinding(requestedEnvironment, screenId);
+    const gateway = gatewayContext ?? (() => {
+      const { binding, acceptance } = acceptedScreenBinding(requestedEnvironment, screenId);
+      return {
+        screenId,
+        capabilityIds: binding.capabilityIds,
+        sourceBindingIds: Object.keys(binding.relations).sort(),
+        acceptance,
+      } satisfies CurrentSourceGatewayContext;
+    })();
     return {
       schema_version: "portal.execution.current-source-bff.v2",
       authority: "PORTAL_CONTROL_API",
@@ -857,16 +927,16 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       profile_id: profileId,
       gateway: {
           interface: "QUERY",
-          acceptance: acceptance.decision,
-          adapter: acceptance.adapter,
-          source_contract: acceptance.sourceContract,
-          screen_id: screenId,
-          capability_ids: binding.capabilityIds,
-          source_binding_ids: Object.keys(binding.relations).sort(),
+          acceptance: gateway.acceptance.decision,
+          adapter: gateway.acceptance.adapter,
+          source_contract: gateway.acceptance.sourceContract,
+          screen_id: gateway.screenId,
+          capability_ids: gateway.capabilityIds,
+          source_binding_ids: gateway.sourceBindingIds,
           request_id: randomUUID(),
           transport: "H2_MTLS_DELEGATED_JWT",
           source_maximum_requests_per_second:
-            acceptance.sourceMaximumRequestsPerSecond,
+            gateway.acceptance.sourceMaximumRequestsPerSecond,
           portal_maximum_requests_per_second:
             this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND,
           retry_count: 0,
@@ -1036,6 +1106,37 @@ function assertNamedOperationPolicy(
   ) {
     throw new CurrentSourceProxyError("EDS01_OPERATION_POLICY_INVALID", 500);
   }
+}
+
+function assertCataloguedOperationPolicy(
+  policy: CurrentSourceCataloguedOperationPolicy,
+): void {
+  if (
+    !/^manager\.current\.[a-z][a-z0-9.-]{1,127}$/.test(policy.sourceId) ||
+    !RELATION.test(policy.relation)
+  ) {
+    throw new CurrentSourceProxyError("EDS11R_CATALOGUED_OPERATION_POLICY_INVALID", 500);
+  }
+}
+
+export function eds11rManagerV2Path(
+  policy: CurrentSourceCataloguedOperationPolicy,
+  query: CurrentSourcePageQuery,
+): string {
+  assertCataloguedOperationPolicy(policy);
+  if (
+    (query.limit !== undefined &&
+      (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 200)) ||
+    (query.cursor !== undefined &&
+      (query.cursor.length < 1 || Buffer.byteLength(query.cursor, "utf8") > 4096))
+  ) {
+    throw new CurrentSourceProxyError("EDS11R_PAGE_INVALID", 400);
+  }
+  const parameters = new URLSearchParams();
+  if (query.limit !== undefined) parameters.set("limit", String(query.limit));
+  if (query.cursor !== undefined) parameters.set("cursor", query.cursor);
+  const suffix = parameters.size > 0 ? `?${parameters.toString()}` : "";
+  return `/internal/v2/manager/relations/public/${encodeURIComponent(policy.relation)}${suffix}`;
 }
 
 export function assertN22PaperReadAccepted(

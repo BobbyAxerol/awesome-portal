@@ -1,6 +1,6 @@
 # EDS-11R — Current Manager-v2 maximum-data activation
 
-**Status:** `PLANNED / RUNTIME_DISCOVERY_VERIFIED / PORTAL_CONSUMER_RECONCILIATION_REQUIRED`  
+**Status:** `R1_BFF_READY / CONTRACT_VERIFIED / RUNTIME_NOT_ACTIVATED`  
 **Date:** 2026-09-06  
 **Scope:** Portal Execution Edge, Control API and same-origin Portal BFF only.  
 **Does not authorize:** direct Trading System DB/Redis/broker/CLI access from
@@ -176,10 +176,21 @@ EDS-11R1 through EDS-11R4 or for usable current data.
 
 ## 6. Next action before EDS-12
 
-Start **EDS-11R1** on the Portal campaign branch.  It requires no Trading
-System code, no AWS change window and no new secret.  It uses the already
-active Manager-v2 read plane and establishes the exact safe BFF mapping that
-the frontend is currently missing.
+**EDS-11R1 is complete at the Portal contract gate.** It required no Trading
+System code, AWS change window or new secret. The campaign branch now carries
+a deterministic 96-relation manifest: all 54 `SCREEN_BOUND` rows map to named
+same-origin operations, while 16 projection inputs, 13 audit-only rows and 13
+internal-only rows have explicit non-browser dispositions. Only scalar,
+non-sensitive fields compile into DTO selectors; raw record keys, JSON/array
+values, sensitive structured columns, source cursors and transport material do
+not cross the browser boundary. The public BFF aliases are fixed by the
+compiled registry and preserve the 200-row/1-MiB source ceiling.
+
+**Next:** start **EDS-11R2** on the same campaign branch. It consumes this
+named operation manifest to hydrate each approved rich panel without replacing
+screen composition, then records panel-local authoritative-empty/partial/
+stale/denied states. EDS-11R3 may prepare only after R2 has fixed the exact
+screen-to-operation consumers.
 
 In parallel, send the owner only the EDS-11R4 market-context adapter request.
 The wider source-completeness campaign remains a future quality upgrade, not a

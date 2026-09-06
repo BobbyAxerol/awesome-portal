@@ -27,7 +27,12 @@ import {
   retainedFinancialManagerV2Path,
   currentSourcePath,
   currentSourceUpstreamError,
+  eds11rManagerV2Path,
 } from "../src/execution/current-source.proxy";
+import {
+  managerRelationOperationByRoute,
+  managerRelationOperationPolicy,
+} from "../src/execution/eds11r-manager-relation.registry";
 
 const base = {
   DATABASE_URL: "postgres://portal:portal@localhost/portal",
@@ -262,6 +267,20 @@ describe("N13B current-source BFF boundary", () => {
       status: 503,
       details: expect.objectContaining({ retryable: false }),
     });
+  });
+});
+
+describe("EDS-11R generated Manager relation transport authority", () => {
+  it("builds an exact bounded Manager-v2 path from a static policy only", () => {
+    const operation = managerRelationOperationByRoute("account-balances");
+    expect(operation).not.toBeNull();
+    const policy = managerRelationOperationPolicy(operation!, "paper");
+    expect(eds11rManagerV2Path(policy, { limit: 50, cursor: "portal-private-source-cursor" }))
+      .toBe("/internal/v2/manager/relations/public/account_balances?limit=50&cursor=portal-private-source-cursor");
+    expect(() => eds11rManagerV2Path({ ...policy, relation: "../orders" }, { limit: 1 }))
+      .toThrowError(expect.objectContaining({ code: "EDS11R_CATALOGUED_OPERATION_POLICY_INVALID", status: 500 }));
+    expect(() => eds11rManagerV2Path(policy, { limit: 201 }))
+      .toThrowError(expect.objectContaining({ code: "EDS11R_PAGE_INVALID", status: 400 }));
   });
 });
 

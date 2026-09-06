@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-06 | **EDS-11R1 complete at the Portal contract gate**: a deterministic compiler now reconciles all **96/96** accepted Manager-v2 census entries into 54 named, same-origin screen-bound BFF operations plus explicit non-browser dispositions for 16 projection inputs, 13 audit-only relations and 13 internal-only relations. The browser-facing manifest contains only product operation IDs, route aliases, safe scalar DTO field names/kinds and screen ownership; it contains no source schema/relation, source alias, cursor, mTLS input or delegated JWT. | Generated source provenance pins the sanitized census + relation/column catalogues; 54 operation routes use a fixed 200-row/1-MiB bound, Portal-issued relation-bound continuation, UTC-ms codec, exact-decimal strings, Portal-derived opaque resource IDs and scalar/non-sensitive redaction. Focused generator, transport, profile/drift/continuation/redaction/controller tests pass. No current-source runtime flag, AWS-HK service, Trading System code, command or container changed. **Next: EDS-11R2 rich-panel consumption.** |
 | 2026-09-06 | **EDS-11R delivery plan expanded into five closeable phases immediately before EDS-12**: R1 classifies the complete 96-relation catalogue into named safe BFF authority; R2 retains and hydrates rich product panels; R3 supplies durable current projection, financial range and local SSE; R4 is a small TS-owned Data-Layer Market Context adapter; R5 is an explicitly optional authoritative-replay semantic upgrade | Corrected the old blanket `SOURCE_GAP_CONFIRMED` wording: Market Context data already exists but needs a versioned source adapter, while current `domain_events` remain observed history until a real sequence/epoch/correction/retention contract exists.  Each phase now has scope, ownership, negative tests, exit gate and no-hidden-debt rule |
 | 2026-09-06 | **EDS-11R AWS-HK runtime discovery corrected the current-source plan**: read-only inspection verified that Manager-v2 Paper/Sandbox/Live current read is already active, all three profiles share the same 96-relation catalogue digest, Source Proxy forwards the Manager-v2 private routes, and the private Data Layer already provides last-price/OHLCV/calendar/universe inputs.  The prior source-gap wording is retained only for missing authoritative semantics, not as a claim that current data is absent | EDS-11R is inserted before EDS-12: Portal must now map all authorized screen-bound relations to named safe BFFs, hydrate rich panels and activate local current-observation/SSE; only a small TS-owned Market Context adapter is needed for Data Layer facts.  No source/runtime/credential/container/command change occurred during inspection |
 | 2026-09-05 | **EDS-11 local BFF hydration and observation revalidation closed at the contract gate**: a committed Portal-local observation revision now resolves direct and composition-dependent Paper/Sandbox/Live screen impact through the frozen Screen BFF catalogue, yielding only the active profile's named same-origin `GET` operation IDs and a local epoch/sequence/digest tick. ProductRead/panel output withholds raw Manager checkpoints; bounded adapters use semantic product groups and Command Center withholds source checkpoints; one local journal tail fan-outs to browsers without source amplification | focused profile-isolation, unknown-mapping, operation/redaction, cursor-withholding and 100-client/shared-journal regressions plus the full fresh-PostgreSQL Control API gate; no Event/replay claim, direct source path, runtime activation, container, cache or command change |
@@ -4485,7 +4486,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
 | EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE**; yes, with `PORTAL_OBSERVATION` / `DERIVED` labels |
 | EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE** on 2026-09-05; yes, panel by panel with typed gaps |
-| EDS-11R | maximum current Manager-v2 relation activation | EDS-11 + deployed Manager-v2 profiles | **PLANNED / RUNTIME_DISCOVERY_VERIFIED** on 2026-09-06; R1–R3 are required before EDS-12; R4 is required for a market-context claim; R5 is optional unless authoritative replay is claimed |
+| EDS-11R | maximum current Manager-v2 relation activation | EDS-11 + deployed Manager-v2 profiles | **R1 BFF_READY / CONTRACT_VERIFIED / RUNTIME_NOT_ACTIVATED** on 2026-09-06: 96/96 classified, 54 named safe operations, 42 explicit non-browser dispositions. R2–R3 remain required before EDS-12; R4 is required for a market-context claim; R5 is optional unless authoritative replay is claimed. |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
 
 EDS-03 through EDS-07 must not wait for EDS-08. This is the key
@@ -5469,6 +5470,9 @@ approved rich UI with generic envelopes.
 
 #### EDS-11R1 — Complete 96-relation, screen-bound named BFF authority
 
+**Status:** `BFF_READY / CONTRACT_VERIFIED / RUNTIME_NOT_ACTIVATED` on
+2026-09-06.
+
 **Goal:** classify all 96 Manager-v2 relations and make every authorized
 screen-bound fact reachable through one explicit, safe, same-origin Portal
 operation.  The 54 `SCREEN_BOUND` relations must be mapped; the remaining 16
@@ -5504,6 +5508,23 @@ fixtures and complete frontend screen-to-operation matrix agree.
 **Does not do:** no direct Trading System DB, Redis, broker or CLI access; no
 source/runtime/container/command activation.  **Next:** EDS-11R2 consumes the
 manifest; EDS-11R3 can prepare its admitted projection schema in parallel.
+
+**Completion record:** `generate-eds11r-manager-relation-registry.mjs` compiles
+the accepted sanitized Manager census and column metadata into a checked-in
+registry: 54 `SCREEN_BOUND` named operations, 16 explicit
+`PORTAL_PROJECTION_ONLY` dispositions, 13 `AUDIT_REPOSITORY_ONLY` dispositions
+and 13 `NOT_BROWSER_ADMISSIBLE` dispositions. Empty legacy census screen lists
+were assigned to their existing rich Portal screen(s) in the generator as
+presentation ownership only; they do not widen a source capability. The
+same-origin surface is `GET /api/v1/execution/manager/operations` (redacted
+binding manifest) and `GET /api/v1/execution/manager/current/:operationId`
+(fixed logical operation only). It accepts only `environment`, `limit` and a
+Portal-issued opaque continuation; there is deliberately no browser relation,
+schema, source, sort or filter parameter. Manager relation/cursor/transport
+values stay server-side. The response preserves profile, catalogue revision,
+availability/freshness/completeness, `as_of_ms`, exact decimal strings and
+typed source outcomes while stripping raw record keys, JSON/array fields and
+`MAY_CONTAIN_SENSITIVE_STRUCTURED_DATA` fields.
 
 #### EDS-11R2 — Rich UI hydration across current Paper, Sandbox and Live truth
 
