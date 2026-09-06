@@ -308,7 +308,7 @@ nguyên marker/leg/log. **Điểm cần Bobby chốt:** control-api có được
 ra ngoài tới venue công khai không (hiện nó đã reach được, 200/206ms); codex
 có đồng ý phân loại authority `VENUE_PUBLIC_MARKET_DATA` không (DR-23).
 
-## OR-5 (APPROVED 06-09 để lập kế hoạch — duyệt từng phase R1→R3, xem OR-5.6/5.7) — Trade Replay "signature": chuẩn TradingView
+## OR-5 (R1+R2+R3 ĐÃ GIAO 06-09 trên `feat/trade-replay-signature` — chờ Bobby duyệt trên dev; xem OR-5.8/5.9/5.10) — Trade Replay "signature": chuẩn TradingView
 
 Owner 06-09 hỏi ý kiến: *"có nên đầu tư thêm thời gian để trade replay động
 hơn như các sàn / TradingView — mượt, crosshair hiện số nến, tam giác vào/ra
@@ -419,7 +419,7 @@ Replay vừa phải. Tạo 3 phase, duyệt từng cái."*
 | Bobby kiểm | bracket/box đọc được ngay; grid không rối; hover card đúng số; click log → chart cuộn tới trade |
 | Đóng khi | gate xanh + Bobby OK grammar + §8 đủ 6 ô |
 
-**Phase R3 — Hiệu năng, dùng lại, sẵn sàng đổi nguồn** · 1–1.5 ngày · trạng thái: chờ R2 đóng
+**Phase R3 — Hiệu năng, dùng lại, sẵn sàng đổi nguồn** · 1–1.5 ngày · trạng thái: **ĐÃ GIAO 06-09 → xem OR-5.10, chờ Bobby duyệt trên dev**
 
 | | |
 |---|---|
@@ -481,6 +481,28 @@ dán nhãn DERIVED. Đề xuất schema: `timeframe: "1m"|"5m"|"15m"|"30m"|"1h"|
 | Perf budget | pan 60 fps @1512 nến + 10 fill (đo); ngân sách 6000 nến + 500 marker ≥ 55 fps (đo ở R3); updateAllViews O(objects) mỗi frame, không React re-render khi hover trừ khi đổi đối tượng |
 
 **Bobby kiểm trên dev:** hover ▲▽ thấy card; click ▲ thấy dòng log được chọn; click dòng FILL cũ thấy chart cuộn về; nhấn vào khung rồi ← → ; hộp lời/lỗ và R:R ở mỗi entry; ◇/⊣ ở cuối leg.
+
+### OR-5.10 Phase R3 — ĐÃ GIAO 06-09 (chờ Bobby duyệt trên dev) · commit `e06963a` trên `feat/trade-replay-signature`
+
+**Đã làm (khớp OR-5.7 R3):**
+- **Phân trang khi kéo tới mép**: chart phát tín hiệu khi cửa sổ vào trong 40 nến của đầu/cuối record (chỉ sau khi cửa sổ mở đầu đã ổn định, không bắn từ lần layout đầu của thư viện); container đọc thêm 1 trang 1500 nến phía đó (single-flight, phía đã hết thì nhớ), gộp tăng dần theo open time, giữ nguyên cửa sổ thời gian đang xem; header ghi "loading earlier/later candles".
+- **Nhớ theo viewer**: interval theo subject (`exec.replay.interval.<alpha|account>`), chiều cao (R1). Nhãn "5m · remembered".
+- **BR-EX-80 sẵn sàng**: nếu strategies/deployments rows có `timeframe|bar_interval|interval|resolution` hợp lệ → dùng và ghi "strategy timeframe (published)"; hôm nay không có → suy từ id (DERIVED). Account id `paper-binance-<strategy_id>` cũng suy được.
+- **Deep link**: `?tab=Trade%20Replay&focus=order:<id>` (hoặc `fill:<id>`) mở replay, chọn và cuộn tới đối tượng lệnh đó để lại (fill / reject / leg / ladder). **Full Blotter**: mỗi dòng có "open on chart" → link đó (hàng blotter mang `strategy_id`, không có `deployment_id`). Sửa kèm: `order_id` trong blotter là số → trước in "order id not published", nay in đúng số.
+- **Account 360**: mount cùng `TradeReplayLive` (slot `tradeReplay` sau equity chart) trên rows của account (EDS-04) + N25 facts của strategy account đang deploy; **scope theo account** — phát hiện & sửa: deployments trong N25 là toàn profile nên bản đầu kéo 42 account vào (25 fill lạ BTC/SOL); nay `replayEvents(…, accountId)` chỉ nhận account đó (test unit).
+- **Adapter nguồn nến (backend)**: `EXECUTION_MARKET_CANDLES_SOURCE = venue_public | data_layer`; envelope thêm `source.kind`, `source_authority` = `VENUE_PUBLIC_MARKET_DATA` | `TRADING_SYSTEM_DATA_LAYER`; `data_layer` trả typed `MARKET_CANDLES_SOURCE_NOT_WIRED` (không gọi venue, không bịa) tới khi codex giao BR-EX-50 qua edge (`/v1/binance/futures/klines/{symbol}` trong data-layer-contract.json). Đổi nguồn = đổi env, chart/route/vocabulary không đổi.
+
+**Gate:** control-api build-tsc sạch, spec 11/11 · FE tsc sạch · vitest ****1891 pass / 1 skipped (104 file)**** · U02 gate qua hook.
+
+**Bằng chứng browser (probe :8090, harness `replay-r3.js`):** kéo sang quá khứ 6 lần → 1512 → **3012 nến** (call thứ 2: `to_ms=<first−1>&limit=1500`), `r3c_01_paged_left.png`; chọn 5m → 4536 nến, pan **60 fps**; reload → "5m · remembered"; `?focus=order:40548` → chọn `fill:4047`, chart canh giữa (`r3c_02_deeplink.png`); Account 360 `paper-binance-adaptive_hma_cpp_00115m` → panel Trade replay + log, 1512 nến, **đúng 10 fill của account** (`r3c_03_account.png`); Blotter 49 dòng → 49 link `open on chart` (ví dụ `/deployments/alphas/sl_tp_map_ma_00115m_binance?tab=Trade%20Replay&focus=order:48651`); console 0 lỗi.
+
+**Perf budget (đo):** 4536 nến 5m + 10 fill + 5 hộp: pan 60 fps; 7534 nến (khi thử paging tự phát): 61 fps. Trần đọc 6000/lần + paging 1500/lần; ladder cap 8.
+
+**Reuse report (v0.5 §11.3):** `ReplayCandleChart` + `TradeReplayEvents` dùng ở Alpha 360 và Account 360; Blotter chỉ thêm link (không panel mới); token/chip/legend/footer/table dùng lại `.exec-rp-*` có sẵn; không tạo primitive mới ngoài `TradesPrimitive`.
+
+**Còn lại / ngoài phạm vi:** nến từ data_layer (BR-EX-50, codex); `timeframe` (BR-EX-80, codex); DR-24 fill thiếu của order 41279; DR-25 (mới) EDS-04 account resource chỉ trả 1 fill (bị bound) trong khi N25 có 10 — codex xác nhận bound; OKX chưa có alpha để nhìn bằng mắt; hatched gap chưa cần (venue liên tục).
+
+**Bobby kiểm trên dev:** kéo chart sang trái tới hết nến → thấy "loading earlier candles" rồi nến nối dài; đổi interval rồi reload → nhớ; mở Blotter → bấm "open on chart" → replay mở đúng lệnh; mở Accounts & Bindings → account paper → panel Trade replay dưới equity.
 
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
