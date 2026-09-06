@@ -605,6 +605,108 @@ Trên dev, Bobby là chủ `ws_06G19F61YB8CFR7TEWMS7HQ660` → không gặp DR-1
 - Ký từng màn A-04 (identity ngoài trang đầu, mixed-currency) chưa làm.
 - e2e BFF double không có route EDS-05/07 (DR-19) → e2e thấy typed unavailable.
 
+## A5. GOAL 06-09 — "so sánh từng tí" showcase ↔ dev-portal, chart/insight/replay không có dữ liệu, Command Center mất động
+
+Owner hỏi ba câu: (1) G7+G4+G5 sửa màn nào, (2) vì sao Insight Charts và
+Trade Replay vẫn không có dữ liệu dù equity chart đã mới, (3) Command Center
+mất động, mất màu so với showcase. Trả lời bằng đo máy, không bằng cảm giác.
+
+### A5.1 Câu 1 — G7+G4+G5 đã chạm màn nào (xem chi tiết §A4.1)
+
+| Màn | Đổi gì |
+|---|---|
+| Account 360 | chart EDS-07 mới (uPlot) + pulse fresh |
+| Paper Workbench | equity chart uPlot + tile Execution quality |
+| Alpha 360 | Equity-by-stage chart uPlot; tile Activity (EMPTY typed, DR-21); Insight tile Stage equity uPlot |
+| Portfolio 360 · Capital Ledger | board Capital 3 env × currency |
+| Command Center | board Source health 3 env |
+| Live Full · Canary · Fixtures demo | equity chart uPlot (cùng component) |
+
+Không đổi: Paper/Sandbox/Live Overview, Fleet, Blotter, Governance, Ops.
+
+### A5.2 Cách đo
+
+Showcase = `execution-portal` (:8081, build **preview** `VITE_EXECUTION_PREVIEW_ENABLED`,
+`previewControllers.tsx` bơm **smoke** `ccSmoke()/paperSmoke()/pfDemo()/TradeReplay`).
+Dev = image `635e2a5` chụp trên probe :8090 (login localhost :8080 bị
+ORIGIN_DENIED — cùng image, dữ liệu thật). Harness `shots5.js`: cùng viewport
+1440×1100, đếm `document.getAnimations()`, phần tử có CSS animation, `data-tone`,
+canvas, panel; 7 route mỗi bên.
+
+### A5.3 Kết quả đo (trước khi sửa, 06-09)
+
+| Màn | Showcase | Dev (thật) | Khác biệt gốc |
+|---|---|---|---|
+| Command Center | **24** phần tử động (beat, pulse CRITICAL, rankring, overdue/due text, drain, flash ×3, canary, funnel grow ×4, matrix nowdot ×5); panel **Promotion pipeline**; tone warn3/bad2/mute2/good1 | **3** động (rankring + overdue của 1 hàng OVERDUE thật); **không có** Promotion pipeline; không beat; tone chỉ warn×7 (chip source-health) | Toàn bộ động/màu showcase đến từ `ccSmoke()` (pipeline giả, pin/fleet giả, clock giả). Dev không có nguồn thay thế → mất |
+| Alpha 360 Overview | 3 canvas, tone 11 | 2 canvas, tone 6 | tương đương; khác dữ liệu |
+| Alpha 360 · Insight Charts | **12 canvas** (12 chart demo, 11 chữ SMOKE) | **1 canvas** (Stage equity) · 6 tile chỉ in số (fact rows) · 2 tile **insufficient_data dù server AVAILABLE** (Drawdown overlap, Correlation — FE không có case vẽ) · 3 UNAVAILABLE thật (Market candles N28, ρ timeline, Paper-vs-live drift) | FE chỉ vẽ chart cho stage-equity; các branch khác có dữ liệu (funnel 770 orders, quality, contribution, journal 200 event, drawdown 43 alpha × 50 ngày, correlation 66 pair) nhưng FE in chữ hoặc bỏ qua |
+| Alpha 360 · Trade Replay | chart replay SVG demo + trade log | **0 canvas**: chỉ thông báo "candles unavailable" + bảng 200 event | Không có candles (N28) → FE bỏ luôn chart dù có equity series 1474 điểm + 12 fill |
+| Paper Overview | 4 canvas · 2 động (gatechip pulse, tick) | 1 canvas · 0 động · 1 empty | smoke `paperSmoke()`; chưa xử lý đợt này |
+| Portfolio 360 Overview | 4 canvas · 2 động (livedot, kpival) | 0 canvas · 0 panel | smoke `pfDemo()`; chưa xử lý đợt này |
+| Live Overview | 4 canvas · 3 động | 0 canvas | smoke; chưa xử lý đợt này |
+
+Payload thật: `GET /alphas/{id}/query-analytics` = **4.0 MB** (source_facts 6627
+row) — DR-10 đo lại.
+
+### A5.4 Sửa trong goal này (nhánh eds, sau `635e2a5`)
+
+**Command Center — động và màu từ dữ liệu thật, không smoke**
+- **Promotion pipeline thật** từ Fleet register (`GET /alphas`, BR-EX-72): funnel
+  = số alpha có deployment trong stage (funnel grow), matrix alpha × stage
+  (ô `current` = deployments hôm nay, chip stage màu, nowdot), cap 12 hàng
+  có ghi "top 12 of N". Register không publish lịch sử promotion → không ô
+  "done", không conversion — ghi thẳng trong footer panel (`fleetPipeline.ts`).
+- **Beat** chạy khi SSE stream thật đang nối (`live.phase` ≠ idle/auth_expired/
+  source_lost), không phải khi smoke.
+- **Đồng hồ thật**: `age mm:ss` kể từ `read_at` nhích mỗi giây; thanh SLA
+  (`Needs you now`) chạy theo (drain/overdue/due-text) — tắt trên fixtures/
+  webdriver/reduced-motion như mọi motion khác.
+- CRITICAL pulse, severity colour, OVERDUE: vốn đã theo dữ liệu thật, giữ.
+- Chưa có nguồn thật → không làm: figure nhấp nháy ở Pinned (không có pin
+  thật), sub-note màu ở Fleet cells (server không publish tone).
+
+**Alpha 360 · Insight Charts — 8 tile vẽ chart từ số server**
+| Tile | Chart | Nguồn |
+|---|---|---|
+| Exact query surface | bars đếm fact/relation | `source_fact` counts |
+| Exposure profile | bars notional/position | `positions[]` |
+| Stage equity | uPlot (đã có) | `chart_series[equity]` |
+| Execution quality | bars submitted/filled/risk-rej/broker-rej | `execution_quality.v1` |
+| Venue contribution | bars net/venue·currency (không cộng chéo currency) | performance |
+| Order funnel | bars total + status | `order_funnel.v1` |
+| Trade replay journal | bars event/ngày UTC — **đếm phía client**, provenance ghi rõ | `replay.trade_log` |
+| Drawdown overlap | LinesChart drawdown alpha này + band các cửa sổ joint-drawdown | `drawdown_overlap.v1` (đọc mới) |
+| Correlation matrix | bars ρ với từng alpha khác, ρ=0 threshold | `portfolio-correlation-returns.v1` pairs (đọc mới) |
+| Market candles · ρ timeline · Paper-vs-live | typed UNAVAILABLE (thật) | N28 / N25 |
+
+**Alpha 360 · Trade Replay** — chart equity uPlot với marker dashed tại mỗi FILL
+của journal (không phải chart giá — ghi rõ "candles unavailable · N28"), bảng
+journal exact giữ nguyên.
+
+### A5.5 Còn lệch showcase, chưa làm đợt này (đề xuất goal kế)
+
+- Paper Overview (`paperSmoke`: gate chip pulse, tick, 3 chart demo) → cần
+  wire funnel/runway từ profile thật + tick từ SSE.
+- Portfolio 360 Overview (`pfDemo`: livedot, kpival tick, equity vs benchmark,
+  cross-portfolio, config log) → equity portfolio bị nguồn từ chối
+  (`portfolio_equity` MANAGER_V2_SOURCE_CONTRACT_REJECTED) — chặn ở BR-EX-79.
+- Live Overview (livedot/kpival tick, 4 chart) → không có deployment live.
+- Fleet sparkline uPlot + ECharts reskin (OR-3 dòng 2).
+
+### A5.6 Bằng chứng sau sửa (probe :8090, cùng harness, cùng viewport)
+
+| Màn | Trước | Sau | Showcase (tham chiếu) |
+|---|---|---|---|
+| Command Center — phần tử động | 3 | **32** (beat 1 · rankring 1 · overdue 2 · funnel grow 4 · matrix nowdot 24) | 24 |
+| Command Center — panel | 5 (không pipeline) | **6** — có Promotion pipeline thật (43 alpha, 12 hàng hiện, footer ghi cap) | 5 (pipeline giả 4 hàng) |
+| Alpha 360 · Insight Charts — canvas | 1 | **9** (3 UNAVAILABLE typed thật, 0 insufficient_data) | 12 (toàn demo) |
+| Alpha 360 · Trade Replay — canvas | 0 | **1** (equity + 12 marker fill) | 1 (SVG demo) |
+
+Gate: `tsc -b` sạch · vitest **101 file / 1859 pass** · N29 re-pin 2 digest. Ảnh
+`s5_probe2_*.png`, `s5_probe3_*.png` (scratchpad phiên).
+
+**Deploy dev 06-09 ~02:55 UTC**: `portal-portal-web-1` recreate trên image `:dev` mới (bundle `assets/index-BP7ruNdb.js`), control-api giữ image `635e2a5` (goal này không đổi backend). Commit FE: **`7f6f5cb`** trên `feat/eds-current-bff` (đã push origin).
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
