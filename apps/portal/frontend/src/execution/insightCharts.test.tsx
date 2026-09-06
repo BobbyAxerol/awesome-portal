@@ -94,8 +94,8 @@ describe("SourceTradeReplay — the hi-fi replay grammar on the alpha's own even
       orders: [{ order_id: 1, account_id: "acct-1", symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "FILLED", quantity: "0.08", client_order_id: "brk-a-en0", submitted_at: "2026-08-08T12:00:00.000Z", updated_at: "2026-08-08T12:00:01.000Z", venue_order_id: "v1" }],
       fills: [{ fill_id: 2, account_id: "acct-1", instrument_id: "ETHUSDT.BINANCE", side: "BUY", price: "1893.76", quantity: "0.08", trade_time: "2026-08-08T12:47:50.927Z", client_order_id: "brk-a-en0", realized_pnl: "0", commission: "0.05", liquidity_side: "TAKER" }] } };
     const { container } = render(<SourceTradeReplay analytics={scoped} alphaId="adaptive_hma_cpp_00115m" />);
-    expect(container.querySelector("svg.exec-rp-svg")?.getAttribute("data-replay-events")).toBe("1");
-    expect(screen.getByText(/candles unavailable · N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED/)).toBeTruthy();
+    expect(container.querySelector("[data-replay-chart]")?.getAttribute("data-replay-events")).toBe("1");
+    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("source candles unavailable (N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED)");
     expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(2);
   });
   it("keeps only the alpha's accounts when merging the analytics facts", () => {

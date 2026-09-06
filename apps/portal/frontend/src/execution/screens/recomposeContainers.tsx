@@ -28,7 +28,7 @@ import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
-import { MARKET_CANDLE_INTERVAL_MS, fittingInterval, type MarketCandleInterval, type MarketCandlesPayload } from "../api/marketCandles";
+import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVAL_MS, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, timeframeFromStrategyId } from "../api/marketCandles";
 import { unavailable } from "../api/ports";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
@@ -1031,9 +1031,13 @@ function replayEvents(analytics: QueryAnalytics | null | undefined, additive: Qu
   const facts = analytics?.sourceFacts ?? {};
   const extra = additive?.sourceFacts ?? {};
   const accounts = new Set<string>();
+  let venue: string | null = null;
   for (const d of [...(facts.deployments ?? []), ...(extra.deployments ?? [])]) {
     const account = text(d.account_id);
-    if (account && (alphaId === null || text(d.strategy_id) === alphaId)) accounts.add(account);
+    if (account && (alphaId === null || text(d.strategy_id) === alphaId)) {
+      accounts.add(account);
+      venue ??= text(d.venue);
+    }
   }
   const scoped = (rows: readonly Record<string, unknown>[]) =>
     rows.filter((r) => accounts.size === 0 || accounts.has(text(r.account_id) ?? "") || (alphaId !== null && text(r.strategy_id) === alphaId));
@@ -1042,6 +1046,8 @@ function replayEvents(analytics: QueryAnalytics | null | undefined, additive: Qu
     orders: readReplayOrders([...(facts.orders ?? []), ...scoped(extra.orders ?? [])]),
     fills: readReplayFills([...(facts.fills ?? []), ...scoped(extra.fills ?? [])]),
     accounts: [...accounts],
+    /** the deployment's venue — the public klines are read from the same venue */
+    venue,
     candles: { state: replay?.candlesState ?? "UNAVAILABLE", reason: replay?.candlesReasonCode ?? null },
     asOf: analytics?.asOf ?? additive?.asOf ?? null,
   };
@@ -1069,7 +1075,12 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId }: { 
   const symbols = useMemo(() => Array.from(new Set([...events.fills.map((f) => f.symbol), ...events.orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [events]);
   const [symbol, setSymbol] = useState<string | null>(null);
   const activeSymbol = symbol && symbols.includes(symbol) ? symbol : symbols[0] ?? null;
-  const [wanted, setWanted] = useState<MarketCandleInterval>("1h");
+  // The strategy's own bar interval is not published (BR-EX-80): it is read
+  // from the id's suffix and labelled DERIVED until the reader picks another.
+  const inferred = useMemo(() => timeframeFromStrategyId(alphaId), [alphaId]);
+  const [chosen, setChosen] = useState<MarketCandleInterval | null>(null);
+  const wanted: MarketCandleInterval = chosen ?? inferred ?? "1h";
+  const venue = marketVenueOf(events.venue);
   const range = useMemo(() => {
     const ts = [
       ...events.fills.map((f) => Date.parse(f.tradeTime)),
@@ -1080,14 +1091,19 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId }: { 
     return { lo: Math.min(...ts) - pad, hi: Math.max(...ts) + pad };
   }, [events]);
   const interval = range ? fittingInterval(range.hi - range.lo, wanted) : wanted;
-  const limit = range ? Math.min(1500, Math.ceil((range.hi - range.lo) / MARKET_CANDLE_INTERVAL_MS[interval]) + 2) : 500;
+  const limit = range ? Math.min(MARKET_CANDLES_MAX_LIMIT, Math.ceil((range.hi - range.lo) / MARKET_CANDLE_INTERVAL_MS[interval]) + 2) : 500;
   const market = useApiRead<MarketCandlesPayload>(
-    () => activeSymbol && range
-      ? api.getMarketCandles({ symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit })
-      : Promise.resolve(unavailable("No symbol among this alpha's events to read candles for.")),
-    [api, activeSymbol, interval, range?.lo, range?.hi, limit],
+    () => !activeSymbol || !range
+      ? Promise.resolve(unavailable("No symbol among this alpha's events to read candles for."))
+      : venue === null
+        ? Promise.resolve(unavailable(`No public klines for venue ${events.venue ?? "(not published)"} — MARKET_CANDLES_VENUE_UNSUPPORTED.`))
+        : api.getMarketCandles({ venue, symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit }),
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue],
     { keepValue: true },
   );
+  const intervalNote = chosen === null
+    ? inferred ? `${inferred} inferred from the strategy id · DERIVED` : "1h default · timeframe not published"
+    : interval !== chosen ? `${chosen} requested · ${interval} fits one venue page` : null;
   return (
     <div className="exec-rp-source">
       <TradeReplayEvents
@@ -1100,7 +1116,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId }: { 
         marketTransport={market.status}
         marketReason={market.reason}
         interval={interval}
-        onIntervalChange={setWanted}
+        onIntervalChange={setChosen}
+        intervalNote={intervalNote}
         symbol={activeSymbol}
         onSymbolChange={setSymbol}
       />

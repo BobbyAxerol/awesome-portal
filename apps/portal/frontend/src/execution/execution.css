@@ -5485,8 +5485,20 @@
 .exec-rp-mark { font: 400 11px/16px var(--font-mono); color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .exec-rp-mark [data-tone="good"] { color: var(--good); } .exec-rp-mark [data-tone="bad"] { color: var(--bad); }
 .exec-rp-win { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
-.exec-rp-canvas { padding: 10px 12px 2px; cursor: grab; user-select: none; }
-.exec-rp-svg { width: 100%; height: auto; display: block; }
+.exec-rp-canvas { position: relative; padding: 6px 12px 2px; user-select: none; transition: height 220ms ease; }
+@media (prefers-reduced-motion: reduce) { .exec-rp-canvas { transition: none; } }
+.exec-rp-chart-stage { position: relative; height: 100%; }
+.exec-rp-chart-host { position: absolute; inset: 0; }
+.exec-rp-chart-host canvas { display: block; }
+.exec-rp-hud { position: absolute; top: 4px; left: 8px; max-width: calc(100% - 96px); padding: 2px 6px; pointer-events: none; font: 400 10px/14px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-soft); background: var(--paper-raised); border: 1px solid var(--line-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.exec-rp-hud:empty { display: none; }
+.exec-rp-hud[data-kind="up"] { color: var(--good); } .exec-rp-hud[data-kind="down"] { color: var(--bad); } .exec-rp-hud[data-kind="trade"] { color: var(--ink); border-color: var(--line); }
+.exec-rp-notice { position: absolute; left: 8px; bottom: 28px; max-width: calc(100% - 96px); padding: 2px 6px; pointer-events: none; font: 400 10px/14px var(--font-mono); color: var(--ink-mute); background: var(--paper-raised); border: 1px solid var(--line-soft); }
+.exec-rp-notice[data-tone="warn"] { color: var(--warn); }
+.exec-rp-interval { display: inline-flex; align-items: center; gap: 6px; }
+.exec-rp-legend [data-side="long"] { color: var(--exec-trade-long); } .exec-rp-legend [data-side="short"] { color: var(--exec-trade-short); }
+.exec-rp-attrib a { color: var(--ink-mute); text-decoration: underline dotted; }
+.exec-rp-table tr[data-hover="true"] td { background: var(--surface-2); }
 .exec-rp-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 6px 12px; font: 400 10px/14px var(--font-mono); color: var(--ink-soft); }
 .exec-rp-legend [data-tone="good"] { color: var(--good); } .exec-rp-legend [data-tone="bad"] { color: var(--bad); } .exec-rp-legend [data-tone="warn"] { color: var(--warn); }
 .exec-rp-mute { color: var(--ink-mute); }
