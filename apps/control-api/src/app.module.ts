@@ -44,6 +44,7 @@ import { ExecutionDurableFinancialRepository } from "./execution/durable-financi
 import { ExecutionFinancialQueryCursorRepository } from "./execution/financial-query-cursor.repository";
 import { ExecutionFinancialChartService } from "./execution/financial-chart.service";
 import { ExecutionFinancialChartController } from "./execution/financial-chart.controller";
+import { AuthoritativeEventLedgerRepository } from "./execution/authoritative-event-ledger.repository";
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
 import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
 import { ExecutionProductReadSource } from "./execution/product-read-source";
@@ -190,6 +191,10 @@ export class AppModule {
         ExecutionDurableFinancialRepository,
         ExecutionFinancialQueryCursorRepository,
         ExecutionFinancialChartService,
+        // R5 is a dormant, server-only durable receiver.  Registering its
+        // repository creates no source transport, route, worker, or feature
+        // activation; a later accepted Manager/Edge cutover is required.
+        AuthoritativeEventLedgerRepository,
         { provide: EXECUTION_DURABLE_MIRROR_WRITER, useExisting: ExecutionDurableMirrorRepository },
         ExecutionProfileProjectionRepository,
         ExecutionProfileProjectionWorker,

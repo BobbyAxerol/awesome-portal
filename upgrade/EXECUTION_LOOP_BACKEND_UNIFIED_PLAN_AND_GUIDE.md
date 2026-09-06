@@ -5455,8 +5455,8 @@ with the exact accepted capability matrix.
 ### EDS-11R — Current Manager-v2 maximum-data activation: canonical delivery plan
 
 **Status:** `R1_R2_R3_PORTAL_COMPLETE /
-R4_PORTAL_CONSUMER_SOURCE_DARK_READY__TS_ADAPTER_READY_TO_IMPLEMENT /
-R5_OPTIONAL_SEMANTIC_UPGRADE` on 2026-09-06.
+R4_PORTAL_CONSUMER_SOURCE_DARK_READY__TS_ADAPTER_IMPLEMENTED_RUNTIME_DISABLED /
+R5_SOURCE_DARK_LEDGER_IMPLEMENTED__RUNTIME_CUTOVER_OPTIONAL` on 2026-09-06.
 
 **Why this exists:** the active Paper, Sandbox and Live Manager-v2 instances
 already expose the same digest-pinned 96-relation current-read catalogue over
@@ -5490,17 +5490,20 @@ approved rich UI with generic envelopes.
 | `EDS-11R1` | Map all 96 Manager-v2 relations: 54 screen-bound relations become fixed, named, safe same-origin BFF operations; each remaining relation has an explicit non-browser disposition. | Portal | A browser can request a product operation only; it can never select a relation, source cursor, schema, mTLS input or delegated JWT. |
 | `EDS-11R2` | Hydrate Alpha, Portfolio, Account/Binding, Paper, Sandbox, Live, Blotter and Operations panels from those operations without replacing the approved rich UI. | Portal + frontend consumer | Rich shell, chart/table/drawer composition and interaction remain mounted; truthfully empty/partial/stale states live inside the affected panel. |
 | `EDS-11R3` | Retain admitted current truth locally, serve bounded financial/performance/risk windows and fan out local observation updates by SSE. | Portal | One bounded source refresh can serve many browser tabs; exact decimal/UTC/provenance/freshness survive; this remains current observation, not a claimed source replay log. |
-| `EDS-11R4` | Publish Market Context from the already-running Data Layer: latest observation, bounded OHLCV/candles and every exact available benchmark/calendar/VNM facet. | Trading System agent; Portal validates and consumes | No new database, ingestion, public listener or Portal-to-Redis/Data-Layer path. The existing private Manager → Edge mTLS/delegated-JWT boundary remains the only path. |
+| `EDS-11R4` | Publish Market Context from the already-running Data Layer: latest observation and bounded OHLCV/candles now; benchmark/calendar/VNM only where an exact fixed DTO is actually published. | Trading System agent; Portal validates and consumes | No new database, ingestion, public listener or Portal-to-Redis/Data-Layer path. The existing private Manager → Edge mTLS/delegated-JWT boundary remains the only path. |
 | `EDS-11R5` | Optionally promote observed lifecycle history to exact authoritative replay. | Trading System agent + Portal reducer | `domain_events` may be shown now only as observed history. It becomes authoritative replay only after an epoch/sequence/correction/retention/snapshot/ACK contract is accepted. |
 
-**No-wait interpretation:** R4 is executable now.  The Trading System agent
-does not wait for a new market-data project, new AWS resource, database copy
-or public API approval: it adds a small internal Manager-side adapter around
-the existing Data Layer readers and returns the pinned capability pack.  Portal
-then validates that pack and enables named BFF/chart operations.  SSH is useful
-for read-only inspection and later validation; the Trading System agent is the
-correct writer because the adapter lives in the Trading System repository and
-must preserve that system's ownership, tests and release process.
+**No-wait interpretation and verified result:** R4 did not need a new
+market-data project, AWS resource, database copy or public API approval.  The
+Trading System clean worktree now contains commit `26fd6b2`, a small internal
+Manager-side adapter over the existing `DataLayerV2Facade.latest_market()` and
+`warmup_bars()` readers.  It publishes exactly two bounded private operations:
+`managerMarketContextLatestV1` and `managerMarketContextCandlesV1`.  Benchmark,
+calendar and VNM remain explicit typed facets until the owner publishes exact
+DTOs for them; they are not fabricated or treated as a blocker for latest and
+candle data.  SSH was used only to verify this code and its contract pack.
+The Trading System repository remains the correct release owner; Portal only
+validates the digest-pinned return and consumes it through named BFFs.
 
 #### EDS-11R1 — Complete 96-relation, screen-bound named BFF authority
 
@@ -5846,8 +5849,8 @@ repository or bypass the boundary.
 #### EDS-11R5 — Optional exact lifecycle replay semantics
 
 **Status:** `OBSERVED_HISTORY_CLOSED_AT_PORTAL /
-AUTHORITATIVE_LEDGER_SOURCE_DARK_IMPLEMENTATION_ELECTED /
-NOT_A_CURRENT_DATA_BLOCKER`.
+AUTHORITATIVE_LEDGER_SOURCE_DARK_IMPLEMENTED /
+RUNTIME_CUTOVER_OPTIONAL__NOT_A_CURRENT_DATA_BLOCKER`.
 
 **Goal:** promote useful existing observed history into **authoritative replay**
 only if Trading System publishes a contract that guarantees the missing
@@ -5954,6 +5957,24 @@ sequences with `payload`/`raw` absent. No migration, stream binding, retention
 job, listener, Manager/Edge route, credential, container or AWS network change
 was applied.
 
+**Portal receiver completion (2026-09-06):** the Portal now has the matching
+source-dark reducer in `AuthoritativeEventLedgerRepository` plus migration
+`1723680000027`. It admits only the exact Paper / `PAPER_BINANCE_USDM` /
+`BINANCE` v1 contract, persists an `EVENT_LOG_ANCHOR`, immutable redacted
+entries and a derived entity view, and advances its durable local ACK only in
+the transaction that commits a contiguous page. Gap, epoch mismatch,
+retention-floor advance, duplicate conflict and unknown correction reference
+move the stream to `RESNAPSHOT_REQUIRED`; an explicit re-anchor clears only
+the derived view, never historical event evidence. The receiver has **no
+controller, source transport, worker, timer, feature flag or runtime
+activation path**. Its contract rejects raw payloads and credentials
+recursively (including nested authorization/token-like fields), keeps
+exact-sequence strings as integers, and preserves the source-owned epoch.
+Focused tests cover anchor/page/ACK, idempotence, gap/floor, epoch rotation,
+re-anchor, correction, cross-profile and redaction paths. The complete Control
+API gate passes TypeScript build, **49 files / 416 tests**, and a
+backup/restore fingerprint that includes all three new ledger tables.
+
 **Tests and acceptance:** duplicate, out-of-order, gap, restart, resnapshot,
 late correction/tombstone, retention-floor, ACK and cross-profile-negative
 tests; browser replay seeks have no arbitrary 200-row history cap. The
@@ -5975,7 +5996,7 @@ owner campaign or replace a completed phase with a vague `Soon` state.
 | `R2` | Every listed rich product screen consumes a named server DTO and retains its approved composition through populated, empty, partial, stale and denied states. | `CLOSED_AT_PORTAL_HYDRATION_GATE` | Frontend integration/release verifies panel-level rendering; no full-screen envelope fallback is admissible. |
 | `R3` | Local profile projection, bounded financial query and one profile-scoped SSE observation tail retain digest/provenance and pass restore/quarantine tests. | `CLOSED_AT_PORTAL_PROVENANCE_GATE` | Runtime activation uses the accepted profile/config release; it must not create per-tab AWS-HK polling. |
 | `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `TS_SOURCE_IMPLEMENTED_RUNTIME_DISABLED / PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY` | Source implementation is committed as `26fd6b2`; owner next produces deployment-bound image/transport/profile/response evidence and return manifest. Portal then validates it, replaces the compiled pending intake, and enables only the two fixed BFF operations plus local chart invalidations through a separately approved runtime flag. |
-| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `SOURCE_DARK_LEDGER_IMPLEMENTED / OBSERVED_HISTORY_REMAINS_RELEASED / RUNTIME_CUTOVER_NOT_APPROVED` | Source commit `d7542f1` is fully tested but intentionally default-off. A later owner-approved exact-profile cutover deploys the ledger, binds a stream, obtains transport/response evidence and then permits Portal tail activation; current-data release stays unblocked. |
+| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal source-dark reducer/checkpoint implementation validates that contract. | `TS_AND_PORTAL_SOURCE_DARK_IMPLEMENTED / OBSERVED_HISTORY_REMAINS_RELEASED / RUNTIME_CUTOVER_NOT_APPROVED` | Source commit `d7542f1` and Portal migration `1723680000027` are fully tested but intentionally default-off. A later owner-approved exact-profile cutover deploys the ledger, binds a stream, obtains transport/response evidence and then permits Portal tail activation; current-data release stays unblocked. |
 
 **Hard routing rule:** R4 and R5 never authorize Portal to read the Trading
 System database, Redis, broker or CLI directly.  R4's only production route is
