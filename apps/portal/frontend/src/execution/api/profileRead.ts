@@ -328,7 +328,24 @@ export interface QueryAnalytics {
     candlesReasonCode: string | null;
     tradeLog: readonly Record<string, unknown>[];
   } | null;
-  correlation: { state: string | null; reasonCode: string | null } | null;
+  correlation: {
+    state: string | null;
+    reasonCode: string | null;
+    formulaVersion: string | null;
+    windowDays: number | null;
+    alphaIds: readonly string[];
+    /** Pairwise return correlation as the server computed it; `rho` is drawn, never re-derived. */
+    pairs: readonly { left: string; right: string; rho: number; overlappingDays: number | null }[];
+  } | null;
+  /** `drawdown_overlap.v1` — per-alpha daily drawdown series and joint-drawdown windows. Optional: resource-derived facts carry none. */
+  drawdownOverlap?: {
+    state: string | null;
+    reasonCode: string | null;
+    formulaVersion: string | null;
+    windowDays: number | null;
+    alphas: readonly { alphaId: string; maxDrawdown: number | null; maxDrawdownAt: string | null; series: readonly { t: string; drawdown: number | null }[] }[];
+    overlaps: readonly { from: string; to: string; alphaIds: readonly string[] }[];
+  } | null;
 }
 
 export function readQueryAnalytics(raw: unknown): QueryAnalytics | null {
@@ -337,6 +354,8 @@ export function readQueryAnalytics(raw: unknown): QueryAnalytics | null {
   if (!root || !a) return null;
   const funnel = typeof a.order_funnel === "object" && a.order_funnel !== null ? (a.order_funnel as Record<string, unknown>) : null;
   const corr = typeof a.correlation === "object" && a.correlation !== null ? (a.correlation as Record<string, unknown>) : null;
+  const dd = typeof a.drawdown_overlap === "object" && a.drawdown_overlap !== null ? (a.drawdown_overlap as Record<string, unknown>) : null;
+  const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
   const facts = typeof a.source_facts === "object" && a.source_facts !== null ? (a.source_facts as Record<string, unknown>) : {};
   const replay = typeof a.replay === "object" && a.replay !== null ? (a.replay as Record<string, unknown>) : null;
   const s = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
@@ -378,7 +397,47 @@ export function readQueryAnalytics(raw: unknown): QueryAnalytics | null {
       tradeLog: (Array.isArray(replay.trade_log) ? replay.trade_log : []).flatMap((row) =>
         typeof row === "object" && row !== null ? [row as Record<string, unknown>] : []),
     } : null,
-    correlation: corr ? { state: s(corr.state), reasonCode: s(corr.reasonCode ?? corr.reason_code) } : null,
+    correlation: corr ? {
+      state: s(corr.state),
+      reasonCode: s(corr.reasonCode ?? corr.reason_code),
+      formulaVersion: s(corr.formula_version),
+      windowDays: num(obj(corr.window)?.days),
+      alphaIds: (Array.isArray(corr.alpha_ids) ? corr.alpha_ids : []).flatMap((x) => (typeof x === "string" ? [x] : [])),
+      pairs: (Array.isArray(corr.pairs) ? corr.pairs : []).flatMap((row) => {
+        const o = obj(row);
+        const left = s(o?.left_alpha);
+        const right = s(o?.right_alpha);
+        const rho = num(o?.correlation);
+        return o && left && right && rho !== null ? [{ left, right, rho, overlappingDays: num(o.overlapping_days) }] : [];
+      }),
+    } : null,
+    drawdownOverlap: dd ? {
+      state: s(dd.state),
+      reasonCode: s(dd.reason_code),
+      formulaVersion: s(dd.formula_version),
+      windowDays: num(obj(dd.window)?.days),
+      alphas: (Array.isArray(dd.alphas) ? dd.alphas : []).flatMap((row) => {
+        const o = obj(row);
+        const alphaId = s(o?.alpha_id);
+        if (!o || !alphaId) return [];
+        return [{
+          alphaId,
+          maxDrawdown: num(o.max_drawdown),
+          maxDrawdownAt: s(o.max_drawdown_at),
+          series: (Array.isArray(o.series) ? o.series : []).flatMap((pt) => {
+            const q = obj(pt);
+            const at = s(q?.timestamp);
+            return q && at ? [{ t: at, drawdown: num(q.drawdown) }] : [];
+          }),
+        }];
+      }),
+      overlaps: (Array.isArray(dd.overlaps) ? dd.overlaps : []).flatMap((row) => {
+        const o = obj(row);
+        const from = s(o?.from);
+        const to = s(o?.to);
+        return o && from && to ? [{ from, to, alphaIds: (Array.isArray(o.alpha_ids) ? o.alpha_ids : []).flatMap((x) => (typeof x === "string" ? [x] : [])) }] : [];
+      }),
+    } : null,
   };
 }
 

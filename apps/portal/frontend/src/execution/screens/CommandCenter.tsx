@@ -363,15 +363,39 @@ export function PromotionPipeline({ pipeline, warning }: { pipeline: Pipeline; w
           </tbody>
         </table>
       </div>
+      {pipeline.note ? <p className="exec-cc-note">{pipeline.note}</p> : null}
     </Panel>
   );
 }
 
-export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0, sourceHealth }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null; demo?: CcDemo | null; demoTick?: number; /** EDS-05 source-health tiles; absent = the container did not request them. */ sourceHealth?: ReactNode }) {
+/**
+ * Seconds since `iso`, ticking once a second — the real clock behind the SLA
+ * bars and the masthead age. Frozen (0) where motion is off: the fixtures
+ * surface, automated browsers, reduced-motion readers.
+ */
+function useElapsedSince(iso: string | null, active: boolean): number {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    if (!active || !iso || !smokeMotionAllowed()) { setElapsed(0); return; }
+    const start = Date.parse(iso);
+    if (!Number.isFinite(start)) { setElapsed(0); return; }
+    const tick = () => setElapsed(Math.max(0, Math.round((Date.now() - start) / 1000)));
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [iso, active]);
+  return elapsed;
+}
+
+export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0, sourceHealth, pipeline = null }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null; demo?: CcDemo | null; demoTick?: number; /** EDS-05 source-health tiles; absent = the container did not request them. */ sourceHealth?: ReactNode; /** Real promotion pipeline built from the Fleet register; absent = not fetched. */ pipeline?: Pipeline | null }) {
   const gate = streamGate(snapshot);
   const smoke = demo ?? null;
   const clock = demoTick;
   const asOf = smoke ? advanceAsOf(snapshot.readAt, clock) : snapshot.readAt;
+  // Real motion: the age since the snapshot was read ticks every second, and
+  // the SLA bars move with it; the beat runs while the live stream is attached.
+  const elapsed = useElapsedSince(snapshot.readAt, !smoke);
+  const streamLive = !!live && live.phase !== "idle" && live.phase !== "auth_expired" && live.phase !== "source_lost";
   const ranked = rankTriage(snapshot.needsYou?.items ?? []);
   const critical = ranked.filter((i) => i.severity === "CRITICAL").length;
   const busy = ranked.length > 0;
@@ -407,8 +431,8 @@ export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0
             <span className="exec-cc-state" data-tone={busy ? "warn" : "good"}>{busy ? `BUSY · ${ranked.length}` : "QUIET"}</span>
             {streamBadge ? <span className="exec-cc-state" data-tone={streamBadge.tone}>{streamBadge.label}</span> : null}
             <span className="exec-cc-spacer" />
-            {smoke ? <span className="exec-cc-beat" aria-hidden="true"><span className="exec-cc-beatfill" /></span> : null}
-            <span className="exec-cc-asof" data-smoke-clock={smoke ? "true" : undefined}>as_of {asOf ? utcStamp(asOf) : "not published"} · every row links to its owning screen</span>
+            {smoke || streamLive ? <span className="exec-cc-beat" aria-hidden="true" data-stream={streamLive ? "beat" : undefined}><span className="exec-cc-beatfill" /></span> : null}
+            <span className="exec-cc-asof" data-smoke-clock={smoke ? "true" : undefined}>as_of {asOf ? utcStamp(asOf) : "not published"}{!smoke && elapsed > 0 ? <span className="exec-cc-age"> · age {clockLabel(elapsed)}</span> : null} · every row links to its owning screen</span>
           </header>
           {streamLine}
           {sourceHealth ? <div className="exec-cc-sourcehealth">{sourceHealth}</div> : null}
@@ -421,12 +445,12 @@ export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0
               ))}
             </ul>
           ) : null}
-          {snapshot.needsYou ? <NeedsYou panel={snapshot.needsYou} onOpen={onOpen} readAt={snapshot.readAt} demoElapsed={smoke ? clock : 0} /> : null}
+          {snapshot.needsYou ? <NeedsYou panel={snapshot.needsYou} onOpen={onOpen} readAt={snapshot.readAt} demoElapsed={smoke ? clock : elapsed} /> : null}
           <div className="exec-cc-twoup">
             {snapshot.fleet ? <FleetHealth panel={snapshot.fleet} demo={demo} demoTick={demoTick} /> : null}
             {snapshot.pinned ? <PinnedWatchlist panel={snapshot.pinned} demo={demo} demoTick={demoTick} /> : null}
           </div>
-          {smoke ? <PromotionPipeline pipeline={smoke.pipeline} warning={smoke.warning} /> : null}
+          {smoke ? <PromotionPipeline pipeline={smoke.pipeline} warning={smoke.warning} /> : pipeline ? <PromotionPipeline pipeline={pipeline} /> : null}
           {snapshot.today ? <Today panel={snapshot.today} /> : null}
         </div>
       </ExecutionWorkspace>

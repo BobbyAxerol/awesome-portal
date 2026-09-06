@@ -56,6 +56,8 @@ export interface Pipeline {
   authority: string;
   stages: FunnelStage[];
   rows: MatrixRow[];
+  /** Footer sentence a real-data pipeline adds (cap, what a cell means). Smoke leaves it unset. */
+  note?: string;
 }
 export interface PinExtra {
   stage: StageKey;

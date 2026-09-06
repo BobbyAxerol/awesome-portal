@@ -45,6 +45,7 @@ import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
 import type { StageVisuals } from "../stage.types";
 import { CommandCenterScreen } from "./CommandCenter";
+import type { Pipeline } from "../commandCenter.smoke";
 import { GateLiveReview } from "./GateLiveReview";
 import { canonicalHref } from "../links";
 import { useCommandCentreStream } from "../commandCenterStream";
@@ -1235,12 +1236,15 @@ export function CommandCenterLive({
   factory = null,
   fetchSnapshot,
   sourceHealth,
+  pipeline = null,
 }: {
   snapshot: CommandCenter;
   factory?: SseFactory | null;
   fetchSnapshot?: () => Promise<{ cursor: string; epoch: string; sequence: number; asOf?: string | null }>;
   /** EDS-05 source-health tiles rendered under the masthead; the fixtures surface passes none. */
   sourceHealth?: ReactNode;
+  /** Real promotion pipeline from the Fleet register; the fixtures surface passes none. */
+  pipeline?: Pipeline | null;
 }) {
   const { live } = useCommandCentreStream({
     snapshot,
@@ -1255,5 +1259,5 @@ export function CommandCenterLive({
   const navigate = useNavigate();
   // Every ranked row links to its owning screen (HiFi 5a). The href is the
   // server's; a row without one renders disabled inside the screen.
-  return <CommandCenterScreen snapshot={snapshot} live={live} sourceHealth={sourceHealth} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
+  return <CommandCenterScreen snapshot={snapshot} live={live} sourceHealth={sourceHealth} pipeline={pipeline} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
 }

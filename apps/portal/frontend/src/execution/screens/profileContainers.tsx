@@ -19,6 +19,7 @@ import { CommandCenterLive } from "./containers";
 import type { SseFactory } from "../sse";
 import { PanelState } from "../components/states";
 import { SourceHealthBoard } from "../components/DerivationTile";
+import { fleetPipeline } from "../fleetPipeline";
 import type { SourceHealth } from "../api/derivations";
 import { ProfileEnvelopeScreen, QueryAnalyticsScreen, TypedUnavailableScreen } from "./ProfileScreens";
 import type { PanelStatus } from "../contracts";
@@ -81,6 +82,9 @@ async function fetchCommandCenterResume(): Promise<{ cursor: string; epoch: stri
 
 export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: ExecutionApi; sseFactory?: SseFactory | null }) {
   const state = useApiRead(() => api.getCommandCenterSnapshot(), [api]);
+  // The promotion pipeline is the Fleet register read once per visit (BR-EX-72
+  // bounded page, 50 alphas); a failed read simply leaves the panel out.
+  const fleet = useApiRead(() => api.getAlphaFleet({ limit: 50 }), [api]);
   // P4-H: the product route passes a live factory; the hook still refuses to
   // open anything unless the server publishes stream_available. Memoized —
   // a fresh function identity per render would cycle the stream effect.
@@ -105,7 +109,15 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
       </section>
     );
   }
-  return <CommandCenterLive snapshot={snapshot} factory={factory} fetchSnapshot={fetchCommandCenterResume} sourceHealth={<SourceHealthLiveTiles api={api} />} />;
+  return (
+    <CommandCenterLive
+      snapshot={snapshot}
+      factory={factory}
+      fetchSnapshot={fetchCommandCenterResume}
+      sourceHealth={<SourceHealthLiveTiles api={api} />}
+      pipeline={fleet.value ? fleetPipeline(fleet.value) : null}
+    />
+  );
 }
 
 /**
