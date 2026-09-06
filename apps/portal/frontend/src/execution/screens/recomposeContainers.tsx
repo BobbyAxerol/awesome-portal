@@ -27,7 +27,7 @@ import { useParamState } from "../routeState";
 import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
-import type { FinancialMarker } from "../../charts/financial/PrimusFinancialChart";
+import { TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/derivations";
@@ -1021,51 +1021,33 @@ function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
 }
 
 /**
- * Trade replay without market candles (N28: the candle source is not
- * activated): the execution equity series carries the journal's fills as
- * markers, so a reader still sees WHEN the alpha traded against how equity
- * moved. It is not a price chart and says so. Exported for tests.
+ * Trade Replay in the hi-fi grammar (BR-EX-50), on the source's own events:
+ * the alpha's orders and fills from the EDS-04 resource (exact, bounded) plus
+ * the analytics facts scoped to the alpha's accounts, deduplicated by id.
+ * Candles stay unavailable (E5/N28) and the panel says so. Exported for tests.
  */
-export function SourceTradeReplay({ analytics }: { analytics: QueryAnalytics | null | undefined }) {
-  const replay = analytics?.replay;
-  const rows = replay?.tradeLog ?? [];
-  const equity = analyticsEquity(analytics);
-  const fills = rows.filter((row) => text(row.event_type) === "FILL");
-  const markers: FinancialMarker[] = fills.flatMap((row) => {
-    const ms = Date.parse(text(row.timestamp) ?? "");
-    return Number.isFinite(ms) ? [{ t: ms, label: "", tone: "accent" as const }] : [];
-  });
-  const candles = `Market candles are ${replay?.candlesState?.toLowerCase() ?? "unavailable"} · ${replay?.candlesReasonCode ?? "source not published"}.`;
-  // A fill older than the equity window has nowhere to sit on the canvas; say
-  // so rather than let a reader count dashed lines and find fewer than fills.
-  const window = equity ? [Date.parse(equity.series.points[0]!.t), Date.parse(equity.series.points[equity.series.points.length - 1]!.t)] as const : null;
-  const inWindow = window ? markers.filter((m) => m.t >= window[0] && m.t <= window[1]).length : 0;
-  const outside = markers.length - inWindow;
+export function SourceTradeReplay({ analytics, additive = null, alphaId = null }: { analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId?: string | null }) {
+  const facts = analytics?.sourceFacts ?? {};
+  const extra = additive?.sourceFacts ?? {};
+  const accounts = new Set<string>();
+  for (const d of [...(facts.deployments ?? []), ...(extra.deployments ?? [])]) {
+    const account = text(d.account_id);
+    if (account && (alphaId === null || text(d.strategy_id) === alphaId)) accounts.add(account);
+  }
+  const scoped = (rows: readonly Record<string, unknown>[]) =>
+    rows.filter((r) => accounts.size === 0 || accounts.has(text(r.account_id) ?? "") || (alphaId !== null && text(r.strategy_id) === alphaId));
+  const orders = readReplayOrders([...(facts.orders ?? []), ...scoped(extra.orders ?? [])]);
+  const fills = readReplayFills([...(facts.fills ?? []), ...scoped(extra.fills ?? [])]);
+  const replay = analytics?.replay ?? additive?.replay ?? null;
   return (
     <div className="exec-rp-source">
-      <section className="exec-rp-panel" aria-label="Trade replay on execution equity">
-        <header className="exec-rp-head">
-          <span className="exec-rp-title">Trade replay — fills on execution equity</span>
-          <span className="exec-rp-spacer" />
-          <span className="exec-rp-win">{fills.length} fills{equity && outside > 0 ? ` (${outside} before the equity window)` : ""} · {rows.length - fills.length} order events · candles {replay?.candlesState?.toLowerCase() ?? "unavailable"}</span>
-        </header>
-        {equity ? (
-          <EquityChart title="Execution equity · each dashed line is a journal fill" envelope={equity.envelope} series={equity.series} markers={markers} height={280} />
-        ) : (
-          <div className="exec-gate-unverified">No execution equity series is published for this alpha; the journal below is exact.</div>
-        )}
-        <div className="exec-gate-unverified">{candles} Replay is drawn on the execution equity series with journal fills as markers — not a price chart.</div>
-      </section>
-      <section className="exec-rp-panel" aria-label="Source-backed trade log">
-        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — orders and fills</span><span className="exec-rp-spacer" /><span className="exec-rp-win">{rows.length} source events</span></header>
-        {rows.length > 0 ? (
-          <div className="exec-scroll-x"><table className="exec-rp-table"><thead><tr><th>time (UTC)</th><th>event</th><th>journal</th><th>order</th><th>fill</th><th>qty</th><th>price</th></tr></thead><tbody>
-            {rows.map((row, index) => <tr key={`${text(row.timestamp)}-${text(row.journal_id)}-${index}`}>
-              <td className="exec-rp-dim">{text(row.timestamp) ?? "—"}</td><td>{text(row.event_type) ?? "—"}</td><td>{text(row.journal_id) ?? "—"}</td><td>{text(row.order_id) ?? "—"}</td><td>{text(row.fill_id) ?? "—"}</td><td className="exec-num">{text(row.quantity) ?? "—"}</td><td className="exec-num">{text(row.price) ?? "—"}</td>
-            </tr>)}
-          </tbody></table></div>
-        ) : <div className="exec-gate-unverified">No order or fill event is present for this alpha in the retained projection window.</div>}
-      </section>
+      <TradeReplayEvents
+        orders={orders}
+        fills={fills}
+        candles={{ state: replay?.candlesState ?? "UNAVAILABLE", reason: replay?.candlesReasonCode ?? null }}
+        asOf={analytics?.asOf ?? additive?.asOf ?? null}
+        accounts={[...accounts]}
+      />
     </div>
   );
 }
@@ -1149,7 +1131,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       equity={resource ? profileEquity(resource) ?? analyticsEquity(analytics) : analyticsEquity(analytics)}
       deployments={deployments}
       tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      replay={viewFacts ? <SourceTradeReplay analytics={viewFacts} /> : undefined}
+      replay={viewFacts ? <SourceTradeReplay analytics={viewFacts} additive={analytics} alphaId={alphaId} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
       audit={audit ? pageOf(audit) : null}
