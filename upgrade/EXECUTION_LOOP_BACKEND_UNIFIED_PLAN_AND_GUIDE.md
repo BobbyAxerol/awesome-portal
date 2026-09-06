@@ -5451,7 +5451,8 @@ with the exact accepted capability matrix.
 
 ### EDS-11R — Current Manager-v2 maximum-data activation: canonical delivery plan
 
-**Status:** `R1_R2_R3_PORTAL_COMPLETE / R4_TS_ADAPTER_READY_TO_IMPLEMENT /
+**Status:** `R1_R2_R3_PORTAL_COMPLETE /
+R4_PORTAL_CONSUMER_SOURCE_DARK_READY__TS_ADAPTER_READY_TO_IMPLEMENT /
 R5_OPTIONAL_SEMANTIC_UPGRADE` on 2026-09-06.
 
 **Why this exists:** the active Paper, Sandbox and Live Manager-v2 instances
