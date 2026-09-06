@@ -583,6 +583,41 @@
   "detail": "/deployments/portfolios/not%20published"
  },
  {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 2,
+  "tag": "BUTTON",
+  "text": "Lin",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 3,
+  "tag": "BUTTON",
+  "text": "Log",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 4,
+  "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 5,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 6,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "changed"
+ },
+ {
   "route": "/deployments/alphas/av_2041",
   "index": 0,
   "tag": "A",
@@ -694,13 +729,48 @@
   "route": "/deployments/alphas/av_2041",
   "index": 14,
   "tag": "BUTTON",
+  "text": "Lin",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 15,
+  "tag": "BUTTON",
+  "text": "Log",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 16,
+  "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 17,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 18,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 19,
+  "tag": "BUTTON",
   "text": "dep_a",
   "verdict": "navigated",
   "detail": "/deployments/paper/dep_a"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 15,
+  "index": 20,
   "tag": "BUTTON",
   "text": "acc_a",
   "verdict": "navigated",
@@ -1266,13 +1336,21 @@
   "route": "/execution",
   "index": 3,
   "tag": "A",
+  "text": "Carry A · alpha_a",
+  "verdict": "navigated",
+  "detail": "/deployments/alphas/alpha_a"
+ },
+ {
+  "route": "/execution",
+  "index": 4,
+  "tag": "A",
   "text": "R1 review · Momentum v4",
   "verdict": "navigated",
   "detail": "/governance/approvals/AP-201/r1"
  },
  {
   "route": "/execution",
-  "index": 4,
+  "index": 5,
   "tag": "A",
   "text": "Capital condition expires",
   "verdict": "navigated",
@@ -1280,7 +1358,7 @@
  },
  {
   "route": "/execution",
-  "index": 5,
+  "index": 6,
   "tag": "A",
   "text": "Last verified protective action",
   "verdict": "navigated",

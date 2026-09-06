@@ -26,6 +26,8 @@ import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, 
 import { useParamState } from "../routeState";
 import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
+import { BarsChart, LinesChart } from "../components/marketChart";
+import type { FinancialMarker } from "../../charts/financial/PrimusFinancialChart";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/derivations";
@@ -546,9 +548,11 @@ const ANALYTICS_TILE_TITLES: Readonly<Record<string, string>> = {
 };
 
 function factRows(rows: readonly (readonly [string, string])[], label: string): ReactNode {
+  // Its own compact table: `.exec-rp-table` carries a 920px minimum for the
+  // replay journal, which inside a 600px tile pushed every value off-screen.
   return (
-    <div className="exec-scroll-x">
-      <table className="exec-rp-table" aria-label={label}>
+    <div className="exec-fact-rows">
+      <table className="exec-fact-table" aria-label={label}>
         <tbody>
           {rows.map(([key, value]) => (
             <tr key={key}><td className="exec-rp-dim">{key}</td><td data-numeric="true">{value}</td></tr>
@@ -565,28 +569,69 @@ function factRows(rows: readonly (readonly [string, string])[], label: string): 
  * numbers or the real series; EMPTY/PARTIAL/UNAVAILABLE keep the reviewed
  * frame with the served state and reason code.
  */
-function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): InsightTile[] {
+/** Exported for tests: the tile set is the contract between the analytics branch and the Insight grid. */
+export function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): InsightTile[] {
   const factCount = (key: string) => analytics.sourceFacts?.[key]?.length ?? 0;
+  const provenance = (formula: string | null | undefined) => ({
+    authority: "DERIVED",
+    asOf: asOf ?? "—",
+    formula: formula ?? analytics.formulaVersion ?? "manager-query-analytics.v1",
+  });
+  const count = (v: number) => formatExact(String(Math.round(v)), "count").display;
+  const axisNumber = (v: number) => v.toLocaleString("en-US", { maximumFractionDigits: Math.abs(v) < 1 ? 4 : 2 });
+  const numeric = (v: unknown): number | null => {
+    const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+    return Number.isFinite(n) ? n : null;
+  };
+  // Every chart below is drawn from figures the server published; the browser
+  // only places them on a canvas. The one aggregation done here is a COUNT of
+  // journal events per UTC day, and its provenance says so.
   const body = (cap: BranchCapability): ReactNode => {
     switch (cap.capabilityId) {
       case "exact-query": {
         const rows = (["orders", "fills", "positions", "sessions", "accountEquity", "journal"] as const)
           .map((key) => [key, formatExact(String(factCount(key)), "count").display] as const)
           .filter(([, count]) => count !== "0");
-        return rows.length > 0 ? factRows(rows, "Exact query fact counts in the committed window") : null;
+        if (rows.length === 0) return null;
+        return (
+          <>
+            <BarsChart points={rows.map(([k]) => [k, factCount(k)] as const)} height={140} yFormatter={count} provenance={provenance("exact-query fact counts (committed window)")} ariaLabel="Exact query fact counts per relation in the committed window" />
+            {factRows(rows, "Exact query fact counts in the committed window")}
+          </>
+        );
       }
       case "position-exposure": {
         const rows = analytics.positions.slice(0, 6).map((row) => [
           `${text(row.instrument_id) ?? text(row.position_id) ?? "position"} ${text(row.side) ?? ""}`.trim(),
           `${formatExact(text(row.signed_qty) ?? text(row.quantity) ?? "0", "qty").display} · uPnL ${formatExact(text(row.unrealized_pnl) ?? "0", "money").display}`,
         ] as const);
-        return rows.length > 0 ? factRows(rows, "Current position exposure") : null;
+        if (rows.length === 0) return null;
+        const bars = analytics.positions.flatMap((row) => {
+          const label = text(row.instrument_id) ?? text(row.position_id) ?? "position";
+          const value = numeric(row.notional) ?? numeric(row.signed_qty);
+          return value === null ? [] : [[label.slice(0, 16), value] as const];
+        }).slice(0, 12);
+        return (
+          <>
+            {bars.some(([, v]) => v !== 0) ? <BarsChart points={bars} height={140} yFormatter={axisNumber} provenance={provenance("source positions · notional")} ariaLabel="Current position notional per position" /> : <p className="exec-blotter-note">Every published position is flat (notional 0) — no exposure bar to draw.</p>}
+            {factRows(rows, "Current position exposure")}
+          </>
+        );
       }
       case "execution-quality": {
-        const rows = Object.entries(analytics.executionQuality ?? {})
+        const quality = analytics.executionQuality ?? {};
+        const rows = Object.entries(quality)
           .filter(([key]) => key !== "formula_version")
           .flatMap(([key, value]) => value === null || value === undefined ? [] : [[key.replace(/_/g, " "), formatExact(String(value), "qty").display] as const]);
-        return rows.length > 0 ? factRows(rows, "Execution quality measures") : null;
+        if (rows.length === 0) return null;
+        const bars = (["submitted_count", "filled_count", "risk_rejected_count", "broker_rejected_count"] as const)
+          .flatMap((key) => { const v = numeric(quality[key]); return v === null ? [] : [[key.replace(/_count$/, "").replace(/_/g, " "), v] as const]; });
+        return (
+          <>
+            {bars.length > 0 ? <BarsChart points={bars} height={140} yFormatter={count} provenance={provenance(text(quality.formula_version) ?? "execution_quality.v1")} ariaLabel="Execution quality counts: submitted, filled, risk rejected, broker rejected" /> : null}
+            {factRows(rows, "Execution quality measures")}
+          </>
+        );
       }
       case "contribution": {
         const contributions = alphaContributions(analytics).slice(0, 6);
@@ -594,7 +639,14 @@ function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): Insight
           `${row.venue} · ${row.currency}`,
           row.value !== null ? `net ${formatExact(row.value, "money").display}` : "net not published",
         ] as const);
-        return rows.length > 0 ? factRows(rows, "Venue contribution from latest source performance") : null;
+        if (rows.length === 0) return null;
+        const bars = contributions.flatMap((row) => { const v = numeric(row.value); return v === null ? [] : [[`${row.venue} · ${row.currency}`, v] as const]; });
+        return (
+          <>
+            {bars.length > 0 ? <BarsChart points={bars} height={140} yFormatter={axisNumber} provenance={provenance("latest source performance · net pnl per venue")} ariaLabel="Net contribution per venue and currency, one bar each, never summed across currencies" /> : null}
+            {factRows(rows, "Venue contribution from latest source performance")}
+          </>
+        );
       }
       case "order-funnel": {
         const funnel = analytics.orderFunnel;
@@ -604,18 +656,86 @@ function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): Insight
           ...Object.entries(funnel.statusCounts).map(([status, count]) =>
             [status.toLowerCase(), formatExact(String(count), "count").display] as const),
         ];
-        return factRows(rows, "Server order funnel for the window");
+        const bars = [["total", funnel.totalOrders] as const, ...Object.entries(funnel.statusCounts).map(([status, n]) => [status.toLowerCase(), n] as const)];
+        return (
+          <>
+            <BarsChart points={bars} height={140} yFormatter={count} provenance={provenance("order_funnel.v1")} ariaLabel="Order funnel: total orders and count per terminal status" />
+            {factRows(rows, "Server order funnel for the window")}
+          </>
+        );
       }
       case "replay-journal": {
         const log = analytics.replay?.tradeLog ?? [];
         if (log.length === 0) return null;
         const first = text(log[0]?.timestamp);
         const last = text(log[log.length - 1]?.timestamp);
-        return factRows([
-          ["journal events", formatExact(String(log.length), "count").display],
-          ["first", first ?? "—"],
-          ["last", last ?? "—"],
-        ], "Trade replay journal coverage");
+        const perDay = new Map<string, number>();
+        for (const row of log) {
+          const day = text(row.timestamp)?.slice(0, 10);
+          if (day) perDay.set(day, (perDay.get(day) ?? 0) + 1);
+        }
+        const bars = [...perDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, n]) => [day.slice(5), n] as const);
+        return (
+          <>
+            <BarsChart points={bars} height={140} yFormatter={count} provenance={provenance("client count of published journal events per UTC day")} ariaLabel="Journal events per UTC day (orders and fills), counted from the published journal" />
+            {factRows([
+              ["journal events", formatExact(String(log.length), "count").display],
+              ["first", first ?? "—"],
+              ["last", last ?? "—"],
+            ], "Trade replay journal coverage")}
+          </>
+        );
+      }
+      case "portfolio-drawdown-overlap": {
+        const dd = analytics.drawdownOverlap;
+        if (!dd || dd.alphas.length === 0) return null;
+        const mine = dd.alphas.find((a) => a.alphaId === analytics.subjectId) ?? null;
+        const rows: (readonly [string, string])[] = [
+          ["window", `${dd.windowDays ?? "?"}d · ${dd.alphas.length} alphas`],
+          ["joint drawdown windows", count(dd.overlaps.length)],
+          ...(mine ? [["max drawdown", `${mine.maxDrawdown ?? "not published"} @ ${mine.maxDrawdownAt ?? "—"}`] as const] : []),
+        ];
+        if (!mine || mine.series.length === 0) return factRows(rows, "Drawdown overlap (portfolio)");
+        return (
+          <>
+            <LinesChart
+              series={[{ name: `${mine.alphaId} drawdown`, tone: "bad", points: mine.series.map((pt) => [pt.t, pt.drawdown] as const) }]}
+              bands={dd.overlaps
+                .filter((o) => o.to >= mine.series[0]!.t && o.from <= mine.series[mine.series.length - 1]!.t)
+                .slice(0, 16)
+                .map((o) => ({ from: o.from, to: o.to, label: `${o.alphaIds.length} alphas`, tone: "warn" as const }))}
+              zeroLine={{ label: "0" }}
+              height={150}
+              yFormatter={(v) => `${(v * 100).toFixed(2)}%`}
+              provenance={provenance(dd.formulaVersion)}
+              ariaLabel="Daily drawdown of this alpha, with the portfolio's joint-drawdown windows shaded"
+            />
+            {factRows(rows, "Drawdown overlap (portfolio)")}
+          </>
+        );
+      }
+      case "portfolio-correlation": {
+        const c = analytics.correlation;
+        if (!c || c.pairs.length === 0) return null;
+        const me = analytics.subjectId;
+        const mine = c.pairs
+          .filter((pair) => pair.left === me || pair.right === me)
+          .map((pair) => [pair.left === me ? pair.right : pair.left, pair.rho] as const)
+          .sort((a, b) => b[1] - a[1]);
+        const points = mine.length > 0 ? mine : c.pairs.slice(0, 12).map((pair) => [`${pair.left} ↔ ${pair.right}`, pair.rho] as const);
+        const rows: (readonly [string, string])[] = [
+          ["window", `${c.windowDays ?? "?"}d · ${c.alphaIds.length} alphas · ${count(c.pairs.length)} pairs`],
+          ...(mine.length > 0 ? [
+            ["most correlated", `${mine[0]![0]} · ρ ${mine[0]![1].toFixed(2)}`] as const,
+            ["least correlated", `${mine[mine.length - 1]![0]} · ρ ${mine[mine.length - 1]![1].toFixed(2)}`] as const,
+          ] : []),
+        ];
+        return (
+          <>
+            <BarsChart points={points.map(([label, rho]) => [label.slice(0, 18), rho] as const)} height={150} yFormatter={(v) => v.toFixed(2)} thresholdLine={{ y: 0, label: "ρ = 0", tone: "mute" }} provenance={provenance(c.formulaVersion)} ariaLabel="Return correlation of this alpha against each other alpha in the window" />
+            {factRows(rows, "Correlation (portfolio)")}
+          </>
+        );
       }
       default:
         return null;
@@ -900,26 +1020,48 @@ function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
   };
 }
 
-function SourceTradeReplay({ analytics }: { analytics: QueryAnalytics | null | undefined }) {
+/**
+ * Trade replay without market candles (N28: the candle source is not
+ * activated): the execution equity series carries the journal's fills as
+ * markers, so a reader still sees WHEN the alpha traded against how equity
+ * moved. It is not a price chart and says so. Exported for tests.
+ */
+export function SourceTradeReplay({ analytics }: { analytics: QueryAnalytics | null | undefined }) {
   const replay = analytics?.replay;
   const rows = replay?.tradeLog ?? [];
+  const equity = analyticsEquity(analytics);
+  const fills = rows.filter((row) => text(row.event_type) === "FILL");
+  const markers: FinancialMarker[] = fills.flatMap((row) => {
+    const ms = Date.parse(text(row.timestamp) ?? "");
+    return Number.isFinite(ms) ? [{ t: ms, label: "", tone: "accent" as const }] : [];
+  });
+  const candles = `Market candles are ${replay?.candlesState?.toLowerCase() ?? "unavailable"} · ${replay?.candlesReasonCode ?? "source not published"}.`;
+  // A fill older than the equity window has nowhere to sit on the canvas; say
+  // so rather than let a reader count dashed lines and find fewer than fills.
+  const window = equity ? [Date.parse(equity.series.points[0]!.t), Date.parse(equity.series.points[equity.series.points.length - 1]!.t)] as const : null;
+  const inWindow = window ? markers.filter((m) => m.t >= window[0] && m.t <= window[1]).length : 0;
+  const outside = markers.length - inWindow;
   return (
     <div className="exec-rp-source">
-      <section className="exec-rp-panel" aria-label="Trade replay market context">
-        <header className="exec-rp-head"><span className="exec-rp-title">Trade replay — current-source events</span></header>
-        <div className="exec-pw-chartplot">
-          <div className="exec-gate-unverified">
-            Market candles are {replay?.candlesState?.toLowerCase() ?? "unavailable"} · {replay?.candlesReasonCode ?? "source not published"}.
-            The exact event journal remains available below.
-          </div>
-        </div>
+      <section className="exec-rp-panel" aria-label="Trade replay on execution equity">
+        <header className="exec-rp-head">
+          <span className="exec-rp-title">Trade replay — fills on execution equity</span>
+          <span className="exec-rp-spacer" />
+          <span className="exec-rp-win">{fills.length} fills{equity && outside > 0 ? ` (${outside} before the equity window)` : ""} · {rows.length - fills.length} order events · candles {replay?.candlesState?.toLowerCase() ?? "unavailable"}</span>
+        </header>
+        {equity ? (
+          <EquityChart title="Execution equity · each dashed line is a journal fill" envelope={equity.envelope} series={equity.series} markers={markers} height={280} />
+        ) : (
+          <div className="exec-gate-unverified">No execution equity series is published for this alpha; the journal below is exact.</div>
+        )}
+        <div className="exec-gate-unverified">{candles} Replay is drawn on the execution equity series with journal fills as markers — not a price chart.</div>
       </section>
       <section className="exec-rp-panel" aria-label="Source-backed trade log">
         <header className="exec-rp-head"><span className="exec-rp-title">Trade log — orders and fills</span><span className="exec-rp-spacer" /><span className="exec-rp-win">{rows.length} source events</span></header>
         {rows.length > 0 ? (
           <div className="exec-scroll-x"><table className="exec-rp-table"><thead><tr><th>time (UTC)</th><th>event</th><th>journal</th><th>order</th><th>fill</th><th>qty</th><th>price</th></tr></thead><tbody>
             {rows.map((row, index) => <tr key={`${text(row.timestamp)}-${text(row.journal_id)}-${index}`}>
-              <td className="exec-rp-dim">{text(row.timestamp) ?? "—"}</td><td>{text(row.event_type) ?? "—"}</td><td>{text(row.journal_id) ?? "—"}</td><td>{text(row.order_id) ?? "—"}</td><td>{text(row.fill_id) ?? "—"}</td><td data-numeric="true">{text(row.quantity) ?? "—"}</td><td data-numeric="true">{text(row.price) ?? "—"}</td>
+              <td className="exec-rp-dim">{text(row.timestamp) ?? "—"}</td><td>{text(row.event_type) ?? "—"}</td><td>{text(row.journal_id) ?? "—"}</td><td>{text(row.order_id) ?? "—"}</td><td>{text(row.fill_id) ?? "—"}</td><td className="exec-num">{text(row.quantity) ?? "—"}</td><td className="exec-num">{text(row.price) ?? "—"}</td>
             </tr>)}
           </tbody></table></div>
         ) : <div className="exec-gate-unverified">No order or fill event is present for this alpha in the retained projection window.</div>}

@@ -4589,6 +4589,14 @@
 .exec-deriv-counts { display: flex; flex-wrap: wrap; gap: 6px; }
 .exec-deriv-unpublished { font: var(--exec-font-meta); color: var(--warn); margin: 0; }
 .exec-cc-sourcehealth { margin: var(--space-3) 0 0; }
+/* Real clock on the masthead: seconds since the snapshot was read, ticking. */
+.exec-cc-age { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+/* Insight tile fact rows: label left, published value right, fits the tile. */
+.exec-fact-rows { min-width: 0; }
+.exec-fact-table { width: 100%; border-collapse: collapse; font: var(--exec-font-data); font-variant-numeric: tabular-nums; }
+.exec-fact-table td { padding: 4px 6px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.exec-fact-table td.exec-rp-dim { color: var(--ink-mute); }
+.exec-fact-table td[data-numeric="true"] { text-align: right; font: var(--exec-font-num); overflow-wrap: anywhere; }
 
 /* ── EL-V2-04 · decision strip at phone widths ───────────────────────────
    A ten-digit VND equity at kpi 24px mono is ~190px; two 160px cells cannot

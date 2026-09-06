@@ -183,6 +183,233 @@ function realtimeSnapshot(environment: string): Answer {
   });
 }
 
+/**
+ * Stable, wire-shaped EDS-05/EDS-07 fixtures for the browser's same-origin
+ * contract double.  These are deliberately server envelopes, not client-side
+ * mock objects: the real HTTP readers must parse every field below.  A new
+ * rich panel therefore fails here if its named BFF operation was forgotten,
+ * instead of looking empty because a generic catch-all silently answered it.
+ */
+const E2E_READ_AT = "2026-09-06T12:00:01.000Z";
+const E2E_AS_OF = "2026-09-06T12:00:00.000Z";
+const E2E_READ_AT_MS = Date.parse(E2E_READ_AT);
+const E2E_AS_OF_MS = Date.parse(E2E_AS_OF);
+const E2E_INPUT_DIGEST = `sha256:${"e".repeat(64)}`;
+
+function e2eProfileId(environment: string): string {
+  switch (environment) {
+    case "paper": return "PAPER_BINANCE_USDM";
+    case "sandbox": return "SANDBOX_BINANCE_USDM";
+    case "live": return "LIVE_BINANCE_USDM";
+    default: return "UNKNOWN_PROFILE";
+  }
+}
+
+function validEnvironment(environment: string | null): environment is "paper" | "sandbox" | "live" {
+  return environment === "paper" || environment === "sandbox" || environment === "live";
+}
+
+function derivationEnvelope(
+  logicalOperationId: string,
+  environment: "paper" | "sandbox" | "live",
+  data: Record<string, unknown>,
+  state: "READY" | "PARTIAL" | "EMPTY" = "READY",
+  reasonCode: string | null = null,
+): Record<string, unknown> {
+  return {
+    schema_version: "execution.derivation.v1",
+    logical_operation_id: logicalOperationId,
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "TRADING_SYSTEM",
+    workspace_id: "workspace_execution_manager",
+    environment,
+    profile_id: e2eProfileId(environment),
+    read_at: E2E_READ_AT,
+    as_of: E2E_AS_OF,
+    read_at_ms: E2E_READ_AT_MS,
+    as_of_ms: E2E_AS_OF_MS,
+    state,
+    reason_code: reasonCode,
+    freshness: "FRESH",
+    completeness: state === "PARTIAL" ? "PARTIAL" : "COMPLETE",
+    formula: {
+      id: `${logicalOperationId}.fixture`,
+      version: "v1",
+      currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
+      temporal_policy: "UTC_EPOCH_MS",
+    },
+    input_population: [{
+      relation: "portal.e2e.current-observation",
+      state: "AVAILABLE",
+      reason_code: null,
+      population: "1",
+      freshness: "FRESH",
+      completeness: "COMPLETE",
+      as_of_ms: E2E_AS_OF_MS,
+    }],
+    input_digest: E2E_INPUT_DIGEST,
+    data,
+  };
+}
+
+function sourceHealthEnvelope(environment: "paper" | "sandbox" | "live"): Record<string, unknown> {
+  return {
+    ...derivationEnvelope("executionSourceHealthV1", environment, {}),
+    schema_version: "execution.derivation.source-health.v1",
+    requested_environment: environment,
+    profiles: [{
+      environment,
+      profile_id: e2eProfileId(environment),
+      state: "READY",
+      reason_code: null,
+      availability: "AVAILABLE",
+      freshness: "FRESH",
+      completeness: "COMPLETE",
+      as_of: E2E_AS_OF,
+      read_at_ms: E2E_READ_AT_MS,
+      global_sequence: null,
+      retention_floor_ms: null,
+      replay_eligible: false,
+      projection_revision: { epoch: `e2e-${environment}`, sequence: "1" },
+    }],
+    source_side_effect_requested: false,
+  };
+}
+
+function deploymentQualityEnvelope(deploymentId: string, environment: "paper" | "sandbox" | "live"): Record<string, unknown> {
+  return derivationEnvelope("executionDeploymentQualityV1", environment, {
+    deployment_id: deploymentId,
+    execution_session_population: "1",
+    order_population: "2",
+    fill_population: "1",
+    submitted_count: "2",
+    risk_rejected_count: "0",
+    broker_rejected_count: "0",
+    filled_count: "1",
+    rejected_count: "0",
+    reject_rate: { numerator: "0", denominator: "2" },
+    latency_state: "UNAVAILABLE",
+    latency_reason_code: "N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED",
+    current_observation_only: true,
+  }, "PARTIAL", "N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED");
+}
+
+function portfolioCapitalEnvelope(portfolioId: string, environment: "paper" | "sandbox" | "live"): Record<string, unknown> {
+  return derivationEnvelope("executionPortfolioCapitalV1", environment, {
+    portfolio_id: portfolioId,
+    portfolio: {
+      name: "Primary execution portfolio",
+      base_currency: "USDT",
+      state: "ACTIVE",
+      created_at: "2026-08-01T00:00:00.000Z",
+      updated_at: E2E_AS_OF,
+    },
+    allocation_by_currency: [{ currency: "USDT", population: "1", allocated_capital: "20000", max_capital: "50000" }],
+    account_balance_by_currency: [{ currency: "USDT", population: "1", total: "20123.19605", free: "19123.19605", locked: "1000" }],
+    currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
+    unpublished_inputs: [],
+    current_observation_only: true,
+  });
+}
+
+function alphaActivityEnvelope(alphaId: string, environment: "paper" | "sandbox" | "live"): Record<string, unknown> {
+  return derivationEnvelope("executionAlphaActivityV1", environment, {
+    alpha_id: alphaId,
+    strategy_id: alphaId,
+    deployment_population: "1",
+    session_population: "1",
+    order_population: "2",
+    fill_population: "1",
+    state_counts: { COMPLETED: "1" },
+    order_status_counts: { FILLED: "1", NEW: "1" },
+    latest_observed_at: E2E_AS_OF,
+    retained_input_range_not_event_replay: true,
+  });
+}
+
+function financialChartEnvelope(search: URLSearchParams): Record<string, unknown> {
+  const environment = validEnvironment(search.get("environment")) ? search.get("environment")! : "paper";
+  const subjectKind = search.get("subject_kind") ?? "alpha";
+  const subjectId = search.get("subject_id") ?? "alpha_a";
+  const metric = search.get("metric") ?? "equity";
+  const fromMs = Number(search.get("from_ms") ?? E2E_AS_OF_MS - 3_600_000);
+  const toMs = Number(search.get("to_ms") ?? E2E_AS_OF_MS);
+  const start = Number.isSafeInteger(fromMs) ? fromMs : E2E_AS_OF_MS - 3_600_000;
+  const end = Number.isSafeInteger(toMs) ? toMs : E2E_AS_OF_MS;
+  return {
+    schema_version: "execution.financial-chart.v1",
+    logical_operation_id: "executionFinancialChartV1",
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "DERIVED",
+    workspace_id: search.get("workspace_id") ?? "workspace_execution_manager",
+    environment,
+    profile_id: e2eProfileId(environment),
+    subject: { kind: subjectKind, id: subjectId },
+    metric,
+    panel: {
+      state: "PARTIAL",
+      reason_code: "E2E_CURRENT_OBSERVATION_RANGE",
+      retryable: false,
+      clocks: { as_of_ms: E2E_AS_OF_MS, read_at_ms: E2E_READ_AT_MS, source_published_at_ms: E2E_AS_OF_MS },
+      coverage: {
+        from_ms: start,
+        to_ms: end,
+        source_total: null,
+        filtered_total: "3",
+        returned_count: 3,
+        truncated: false,
+        downsampled: false,
+        has_more: false,
+        gaps: [],
+      },
+      formula: {
+        formula_id: "e2e.current-observation-financial-chart.v1",
+        formula_version: "v1",
+        input_digest: E2E_INPUT_DIGEST,
+        input_revision: `e2e-${environment}:1`,
+      },
+      data: {
+        comparison_mode: "SINGLE_SUBJECT",
+        scale_mode: "LINEAR",
+        currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
+        series: [{
+          id: `${subjectKind}:${subjectId}:${metric}`,
+          label: `${subjectId} ${metric}`,
+          account_id: "acc_a",
+          currency: "USDT",
+          points: [[start, "20000.00000"], [Math.trunc((start + end) / 2), "20061.59802"], [end, "20123.19605"]],
+        }],
+        sampling: {
+          algorithm: "IDENTITY_CURRENT_OBSERVATION_V1",
+          source_rows: "3",
+          numeric_rows: "3",
+          rejected_rows: "0",
+          returned_rows: 3,
+          target_points: 256,
+          bucket_seconds: null,
+          preserves_extrema: true,
+          preserves_first_last: true,
+          preserves_gaps: true,
+          gap_semantics: "NO_GAPS_IN_E2E_FIXTURE",
+          marker_semantics: "NONE",
+        },
+        retention: {
+          retention_floor_ms: null,
+          retention_floor_state: "UNKNOWN",
+          oldest_available_ms: start,
+          newest_available_ms: end,
+          history_semantics: "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+        },
+        benchmark: {
+          requested: search.get("include_benchmark") === "true",
+          state: "UNAVAILABLE",
+          reason_code: "EDS11R4_MARKET_CONTEXT_NOT_ACTIVATED",
+        },
+      },
+    },
+  };
+}
+
 function objectRows(value: unknown): Record<string, unknown>[] {
   return Array.isArray(value)
     ? value.flatMap((item) => item !== null && typeof item === "object" && !Array.isArray(item)
@@ -304,6 +531,19 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
 
   if (method === "GET") {
     if (path === "/command-center") return ok(CC_SNAPSHOT_BUSY);
+    if (path === "/command-center/realtime-snapshot") return realtimeSnapshot("command-center");
+    if (path === "/command-center/stream") {
+      const event = JSON.stringify({
+        schema_version: "execution.command-center.stream.v1",
+        event_type: "heartbeat",
+        terminal: true,
+        reconnect_required: false,
+        cursor: "e2e-command-center:1",
+        projection_epoch: "e2e-command-center",
+        projection_sequence: 1,
+      });
+      return { status: 200, contentType: "text/event-stream", body: `event: heartbeat\ndata: ${event}\n\n` };
+    }
     if (path === "/screens/paper") return ok(PAPER_OVERVIEW_READY);
     if (path === "/screens/sandbox") return ok(SANDBOX_OVERVIEW_READY);
     if (path === "/screens/live") return ok(LIVE_OVERVIEW_EMPTY);
@@ -350,6 +590,18 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
       });
       return { status: 200, contentType: "text/event-stream", body: `event: heartbeat\ndata: ${event}\n\n` };
     }
+    if (seg[0] === "derivations") {
+      const environment = search.get("environment");
+      if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
+      if (seg[1] === "source-health" && seg.length === 2) return ok(sourceHealthEnvelope(environment));
+      if (seg[1] === "deployments" && seg[3] === "execution-quality" && seg.length === 4)
+        return ok(deploymentQualityEnvelope(seg[2], environment));
+      if (seg[1] === "portfolios" && seg[3] === "capital" && seg.length === 4)
+        return ok(portfolioCapitalEnvelope(seg[2], environment));
+      if (seg[1] === "alphas" && seg[3] === "activity" && seg.length === 4)
+        return ok(alphaActivityEnvelope(seg[2], environment));
+    }
+    if (path === "/views/equity-chart") return ok(financialChartEnvelope(search));
     if ((seg[0] === "alphas" || seg[0] === "portfolios") && seg[2] === "query-analytics") return ok(QUERY_ANALYTICS_EMPTY);
     if (path === "/commands/tasks") return ok(COMMAND_TASKS);
     if (path === "/commands/catalog") return ok(COMMAND_CATALOGUE_FIXTURE);

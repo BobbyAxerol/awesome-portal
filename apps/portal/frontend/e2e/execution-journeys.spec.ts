@@ -302,20 +302,22 @@ async function auditRouteControls(page: Page, route: string): Promise<ControlRec
   return records;
 }
 
-test("structural: no enabled control on any preview route is a no-op", async ({ page }) => {
+test("structural: no enabled control on any preview route is a no-op", async ({ browser }) => {
   test.setTimeout(900_000);
   const records: ControlRecord[] = [];
   // A route remains isolated per page/control as before, but four independent
-  // route audits can run together. This preserves the no-op guarantee while
-  // keeping the release gate bounded enough to run on every closeout.
-  const context = page.context();
+  // route audits can run together. `page.clock` is context-scoped in Chromium,
+  // so each audit also receives its own context: sharing one context made
+  // concurrent clock installation nondeterministic, which could fail the
+  // release gate before any product control was examined.
   for (let start = 0; start < ROUTES.length; start += 4) {
     const batch = await Promise.all(ROUTES.slice(start, start + 4).map(async (route) => {
+      const context = await browser.newContext();
       const auditPage = await context.newPage();
       try {
         return await auditRouteControls(auditPage, route);
       } finally {
-        await auditPage.close();
+        await context.close();
       }
     }));
     records.push(...batch.flat());

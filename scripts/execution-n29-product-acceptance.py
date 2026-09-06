@@ -34,6 +34,7 @@ EVIDENCE_PATHS = {
     "frontend_consumer_return_packet_sha256": ROOT / "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CLAUDE_TO_CODEX_N29_FE_01_RETURN_PACKET.md",
     "frontend_consumer_evidence_sha256": ROOT / "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md",
     "frontend_same_origin_bff_double_sha256": ROOT / "apps/portal/frontend/e2e/bffDouble.ts",
+    "frontend_same_origin_bff_contract_test_sha256": ROOT / "apps/portal/frontend/e2e/bffDouble.contract.spec.ts",
     "n17b_real_paper_acceptance_sha256": ROOT / "packages/contracts/fixtures/execution-production-acceptance.current-paper.accepted.json",
     "release_workflow_sha256": ROOT / ".github/workflows/publish-images.yml",
     "recovery_runbook_sha256": ROOT / "deploy/runbooks/portal-n17a-source-dark-production-dr.md",
