@@ -55,7 +55,10 @@ services:
       EDGE_MANAGER_V2_PROFILE_ID: ${EDGE_MANAGER_V2_PROFILE_ID:?set the exact Manager profile ID}
       EDGE_MANAGER_EVENT_LEDGER_ENABLED: "true"
       EDGE_MANAGER_EVENT_LEDGER_REANCHOR_AUTHORIZED: "false"
-      EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE: /run/secrets/event-ledger-runtime-admission.json
+      # One profile-local manifest per worker.  The shared Edge secret mount
+      # intentionally never contains a mutable "current profile" file: a
+      # Paper worker must not be able to start from a Sandbox/Live admission.
+      EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE: ${EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE:?set the exact profile event-ledger admission manifest}
       EDGE_MANAGER_EVENT_LEDGER_STATE_FILE: /var/lib/portal-event-ledger/session.json
       EDGE_MANAGER_EVENT_LEDGER_POLL_INTERVAL_MS: ${EDGE_MANAGER_EVENT_LEDGER_POLL_INTERVAL_MS:-2000}
       EDGE_MANAGER_EVENT_LEDGER_PAGE_ROWS: ${EDGE_MANAGER_EVENT_LEDGER_PAGE_ROWS:-200}

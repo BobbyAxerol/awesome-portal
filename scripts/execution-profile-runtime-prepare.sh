@@ -72,6 +72,8 @@ sed -i \
   -e '/^SOURCE_PROXY_MANAGER_EXTENSION_SET=/d' \
   -e '/^EDGE_MANAGER_V2_READ_ENABLED=/d' \
   -e '/^EDGE_MANAGER_V2_PROFILE_ID=/d' \
+  -e '/^EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE=/d' \
+  -e '/^EDGE_EVENT_LEDGER_STATE_DIRECTORY=/d' \
   -e '/^EDGE_SHADOW_QUERY_ENABLED=/d' \
   -e '/^EDGE_PAPER_WORKBENCH_SHADOW_ENABLED=/d' \
   -e "s#^PORTAL_EXECUTION_EDGE_IMAGE=.*#PORTAL_EXECUTION_EDGE_IMAGE=${edge_image}#" \
@@ -94,6 +96,8 @@ printf '%s\n' \
   "SOURCE_PROXY_MANAGER_EXTENSION_SET=${manager_extension_set}" \
   'EDGE_MANAGER_V2_READ_ENABLED=true' \
   "EDGE_MANAGER_V2_PROFILE_ID=${profile_id}" \
+  "EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE=/run/secrets/event-ledger-runtime-${profile}.json" \
+  "EDGE_EVENT_LEDGER_STATE_DIRECTORY=/srv/primus/portal/runtime/event-ledger/${profile}" \
   'EDGE_SHADOW_QUERY_ENABLED=false' \
   'EDGE_PAPER_WORKBENCH_SHADOW_ENABLED=false' \
   >>"${output_env}"

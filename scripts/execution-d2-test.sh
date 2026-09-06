@@ -19,6 +19,7 @@ compose_base="${root_dir}/deploy/compose.execution-edge.yaml"
 compose_dark="${root_dir}/deploy/execution-d1/compose.dark.yaml"
 manager_profile_compose="${root_dir}/deploy/execution-manager-v2/compose.profile-read.yaml"
 manager_proxy_profile_compose="${root_dir}/deploy/execution-manager-v2/compose.profile-source-proxy.yaml"
+manager_event_ledger_compose="${root_dir}/deploy/execution-manager-v2/compose.event-ledger.yaml"
 manager_contract_dir="${root_dir}/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1"
 
 # The Manager-v2 handoff is an imported owner pack, not a loose collection of
@@ -535,6 +536,11 @@ sed -i \
   -e "s#^SOURCE_PROXY_MANAGER_LOCATIONS_FILE=.*#SOURCE_PROXY_MANAGER_LOCATIONS_FILE=${manager_locations}#" \
   "${manager_active_env}"
 printf '%s\n' 'SOURCE_PROXY_MANAGER_EXTENSION_SET=eds11r-r4-r5' >>"${manager_active_env}"
+printf '%s\n' \
+  'EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE=/run/secrets/event-ledger-runtime-live.json' \
+  "EDGE_EVENT_LEDGER_STATE_DIRECTORY=${tmp_dir}/event-ledger/live" \
+  >>"${manager_active_env}"
+mkdir -p "${tmp_dir}/event-ledger/live"
 chmod 0600 "${manager_active_env}"
 "${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
   --manager-locations-output "${manager_locations}" >/dev/null
@@ -550,6 +556,15 @@ for fixed_route in \
 done
 [[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8223;' "${manager_locations}")" -eq 9 ]]
 [[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8224/internal/issue;' "${manager_locations}")" -eq 1 ]]
+sed -i 's#^EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE=/run/secrets/event-ledger-runtime-live\.json$#EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE=/run/secrets/event-ledger-runtime-paper.json#' \
+  "${manager_active_env}"
+if "${preflight}" --env-file "${manager_active_env}" --mode manager-active-offline \
+    >/dev/null 2>&1; then
+  printf 'Manager active-read preflight accepted a cross-profile R5 admission manifest.\n' >&2
+  exit 1
+fi
+sed -i 's#^EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE=/run/secrets/event-ledger-runtime-paper\.json$#EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE=/run/secrets/event-ledger-runtime-live.json#' \
+  "${manager_active_env}"
 sed -i 's/^SOURCE_PROXY_MANAGER_PROFILE_ID=LIVE_BINANCE_USDM$/SOURCE_PROXY_MANAGER_PROFILE_ID=SANDBOX_BINANCE_USDM/' \
   "${manager_active_env}"
 if "${preflight}" --env-file "${manager_active_env}" --mode manager-active-offline \
@@ -624,13 +639,15 @@ compose=("${docker_cli[@]}" compose --project-directory "${root_dir}" -f "${comp
 "${compose[@]}" --env-file "${tmp_dir}/rollback.env" config > "${tmp_dir}/rollback.yaml"
 manager_profile_render=("${docker_cli[@]}" compose --project-directory "${root_dir}" \
   -f "${compose_base}" -f "${compose_dark}" -f "${manager_profile_compose}" \
-  -f "${manager_proxy_profile_compose}")
+  -f "${manager_proxy_profile_compose}" -f "${manager_event_ledger_compose}")
 "${manager_profile_render[@]}" --env-file "${manager_active_env}" config --quiet
 "${manager_profile_render[@]}" --env-file "${manager_active_env}" config > "${tmp_dir}/manager-profile.yaml"
 grep -Fq 'EDGE_MANAGER_V2_READ_ENABLED: "true"' "${tmp_dir}/manager-profile.yaml"
 grep -Fq 'EDGE_MANAGER_V2_PROFILE_ID: LIVE_BINANCE_USDM' "${tmp_dir}/manager-profile.yaml"
 grep -Fq "source: ${manager_locations}" "${tmp_dir}/manager-profile.yaml"
 grep -Fq 'target: /run/secrets/manager-v2-locations.conf' "${tmp_dir}/manager-profile.yaml"
+grep -Fq 'EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE: /run/secrets/event-ledger-runtime-live.json' "${tmp_dir}/manager-profile.yaml"
+grep -Fq "source: ${tmp_dir}/event-ledger/live" "${tmp_dir}/manager-profile.yaml"
 for flag in EDGE_PROJECTION_INGESTION_ENABLED EDGE_SOURCE_PROBES_ENABLED \
   EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_COMMAND_RELAY_ENABLED; do
   grep -Fq "${flag}: \"false\"" "${tmp_dir}/manager-profile.yaml"
