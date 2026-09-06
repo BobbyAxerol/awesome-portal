@@ -200,6 +200,7 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | DR-21 | **`alphas/{id}/activity` EMPTY `EDS05_ALPHA_NOT_FOUND` cho mọi id đã thử** (`signalcombine00230m`, `gridcombine001`, `adaptive_hma_cpp_00115m` — id thứ ba là `strategy_id` thật trong deployments, strategies relation có 48 row AVAILABLE) → khóa join của alpha_id sai hoặc alpha_id là trường khác (`alpha_id` registry?). Tile Alpha 360 vì thế luôn EMPTY dù alpha đang chạy paper | TB | 05 | OPEN — codex chỉ khóa đúng | |
 | DR-22 | **N25 `query-analytics.source_facts` không scope theo alpha**: `fills` 63 / `orders` 770 là toàn profile (fill mẫu thuộc `fib_sl_tp_strength_0015m` khi hỏi `adaptive_hma_cpp_00115m`; alpha này chỉ 10/19). Tile "Exact query surface" và funnel vì thế in số toàn profile dưới tên alpha. FE tạm lọc theo account của alpha (Trade Replay); các tile khác vẫn dùng số server. Đề nghị server scope facts theo subject hoặc ghi rõ `scope: PROFILE` trong envelope | CAO (số sai chủ) | N25 | OPEN | |
 | DR-23 | **Nến cho Trade Replay** (OR-4): Portal đọc klines công khai Binance USDM dưới cờ, authority `VENUE_PUBLIC_MARKET_DATA`. Codex xác nhận/từ chối phân loại; nếu từ chối thì Trade Replay quay lại đường chấm fill-price tới khi BR-EX-50 | TB | new route | OPEN — chờ codex + Bobby (egress) | |
+| DR-26 | **`orders`/`fills` chỉ là bounded current page toàn profile** (812 order của 11 strategy, 71 fill của 5 strategy trên 42 strategy deploy): alpha có lịch sử equity (`delta_rsi_00115m`: 2024 snapshot) nhưng 0 order/fill đọc được → Trade Replay / Orders & Fills / funnel không thể đúng theo alpha; ô Overview in số toàn profile (DR-22). FE đã nói rõ bằng số trong empty state (`ce08548`). Cần BR-EX-81: đọc order/fill theo `strategy_id`/`account_id` có cursor, hoặc mirror bền `orders`/`fills` như equity (EDS-06) | CAO | 04/N25 | OPEN — @codex | |
 
 Luật sổ: codex trả lời từng DR trong cột của mình (ACCEPT+phase / REJECT+lý do);
 DR nào ACCEPT thì thành mục kiểm tra exit của phase tương ứng; mỗi tuần Bobby
@@ -528,6 +529,16 @@ dán nhãn DERIVED. Đề xuất schema: `timeframe: "1m"|"5m"|"15m"|"30m"|"1h"|
 | Fill giá lệch venue (paper) | fills | vẽ rỗng + "off venue print · giá" (fib: 125.00; adaptive: 3,500) | ✓ |
 
 **Kết luận trung thực:** phủ 100 % từ vựng đang có trong DB và toàn bộ status của contract; ba mục có logic + test nhưng chưa có dữ liệu để nhìn bằng mắt (trailing, hedge position_side, TRIGGERED/EXPIRED/DENIED); VN types ngoài phạm vi dữ liệu hiện tại. Bằng chứng: `vocab2_fib_sl_tp_strength_0015m_fit.png`, `vocab2_burst_paper_alpha_fit.png`.
+
+### OR-5.12 Owner phát hiện 06-09: alpha "có dữ liệu" mà Trade Replay trống (`delta_rsi_00115m`) · commit `ce08548`
+
+**Đo:** projection dev không có **bất kỳ** order/fill nào của `delta_rsi_00115m` (resource EDS-04: orders 0 / fills 0; snapshot: 0 dòng theo `strategy_id` lẫn `account_id`; mirror: 0 fill) dù có 2 deployment (paper, sandbox) và **2024 account_equity_snapshots** trong mirror. Trang "bounded current page" toàn profile chỉ chứa **812 order của 11 strategy** và **71 fill của 5 strategy** (fib 45 · adaptive 10 · burst 8 · combine_0014h 7 · combine_0011h 1) trên **42 strategy deploy**. Các ô Overview "orders (window) 730 · filled 58 · risk_rejected 646" là số toàn profile (DR-22) → người đọc tưởng alpha có dữ liệu.
+
+**Không phải hardcode:** cùng một đường code cho mọi alpha (`replayEvents` scope theo deployment/account/strategy_id); alpha nào có dòng trong trang là hiện (đã nhìn 5 alpha: adaptive, fib, burst, và 2 combine qua log). Khoảng trống là **nguồn**: facade manager chỉ phát trang hiện tại của `orders`/`fills`, không có đọc theo alpha ra ngoài trang.
+
+**Sửa (FE, `ce08548`):** empty state của replay in đúng số: "No order or fill of `<alpha>` is present in the retained projection page. The page holds N orders and M fills across K strategies — none of them belongs here" + chú thích DR-22/BR-EX-81; nhãn ô funnel Overview thêm "· profile-wide". Không bịa thêm gì.
+
+**DR-26 (mới, CAO):** `orders`/`fills` chỉ là bounded current page toàn profile; alpha có lịch sử equity nhưng không có order/fill nào đọc được → Trade Replay, Orders & Fills, funnel không thể đúng theo alpha. **BR-EX-81 (@codex):** đọc order/fill theo `strategy_id`/`account_id` có phân trang (cursor) ra ngoài trang hiện tại, hoặc mirror bền `orders`/`fills` như đã làm với equity (EDS-06) — đề xuất schema: `GET /resources/alphas/{id}/orders?cursor&limit`, `…/fills?cursor&limit`, cùng envelope EDS-04.
 
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
