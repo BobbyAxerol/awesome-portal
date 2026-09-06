@@ -5451,8 +5451,8 @@ with the exact accepted capability matrix.
 
 ### EDS-11R — Current Manager-v2 maximum-data activation: canonical delivery plan
 
-**Status:** `PLANNED / RUNTIME_DISCOVERY_VERIFIED /
-PORTAL_CONSUMER_RECONCILIATION_REQUIRED` on 2026-09-06.
+**Status:** `R1_R2_R3_PORTAL_COMPLETE / R4_TS_ADAPTER_READY_TO_IMPLEMENT /
+R5_OPTIONAL_SEMANTIC_UPGRADE` on 2026-09-06.
 
 **Why this exists:** the active Paper, Sandbox and Live Manager-v2 instances
 already expose the same digest-pinned 96-relation current-read catalogue over
@@ -5478,6 +5478,25 @@ approved rich UI with generic envelopes.
   tests, profile-isolation tests and a plan-journal update in the same commit.
   A newly discovered source limitation is either handled in that phase or
   recorded as a named, typed source capability — never concealed as debt.
+
+**Bobby-approved delivery matrix — exact scope before EDS-12:**
+
+| Phase | Product result to close | Implementation owner | Release truth after the phase |
+| --- | --- | --- | --- |
+| `EDS-11R1` | Map all 96 Manager-v2 relations: 54 screen-bound relations become fixed, named, safe same-origin BFF operations; each remaining relation has an explicit non-browser disposition. | Portal | A browser can request a product operation only; it can never select a relation, source cursor, schema, mTLS input or delegated JWT. |
+| `EDS-11R2` | Hydrate Alpha, Portfolio, Account/Binding, Paper, Sandbox, Live, Blotter and Operations panels from those operations without replacing the approved rich UI. | Portal + frontend consumer | Rich shell, chart/table/drawer composition and interaction remain mounted; truthfully empty/partial/stale states live inside the affected panel. |
+| `EDS-11R3` | Retain admitted current truth locally, serve bounded financial/performance/risk windows and fan out local observation updates by SSE. | Portal | One bounded source refresh can serve many browser tabs; exact decimal/UTC/provenance/freshness survive; this remains current observation, not a claimed source replay log. |
+| `EDS-11R4` | Publish Market Context from the already-running Data Layer: latest observation, bounded OHLCV/candles and every exact available benchmark/calendar/VNM facet. | Trading System agent; Portal validates and consumes | No new database, ingestion, public listener or Portal-to-Redis/Data-Layer path. The existing private Manager → Edge mTLS/delegated-JWT boundary remains the only path. |
+| `EDS-11R5` | Optionally promote observed lifecycle history to exact authoritative replay. | Trading System agent + Portal reducer | `domain_events` may be shown now only as observed history. It becomes authoritative replay only after an epoch/sequence/correction/retention/snapshot/ACK contract is accepted. |
+
+**No-wait interpretation:** R4 is executable now.  The Trading System agent
+does not wait for a new market-data project, new AWS resource, database copy
+or public API approval: it adds a small internal Manager-side adapter around
+the existing Data Layer readers and returns the pinned capability pack.  Portal
+then validates that pack and enables named BFF/chart operations.  SSH is useful
+for read-only inspection and later validation; the Trading System agent is the
+correct writer because the adapter lives in the Trading System repository and
+must preserve that system's ownership, tests and release process.
 
 #### EDS-11R1 — Complete 96-relation, screen-bound named BFF authority
 
@@ -5781,6 +5800,26 @@ tests; browser replay seeks have no arbitrary 200-row history cap.  The phase
 is complete only when those tests pass.  If it is not elected for this release,
 it remains an explicit future capability and never masquerades as technical
 debt or an incomplete R1-R4 result.
+
+#### EDS-11R closeout matrix — required handoff immediately before EDS-12
+
+This is the single closeout record for the five R phases; do not open a second
+owner campaign or replace a completed phase with a vague `Soon` state.
+
+| Phase | Close condition | Current disposition | Exact next action, if any |
+| --- | --- | --- | --- |
+| `R1` | 96/96 catalogue disposition and 54 named safe BFF operations are generated, redacted and profile-bound. | `CLOSED_AT_PORTAL_CONTRACT_GATE` | Activate only through a separately approved runtime release; no additional relation API is needed. |
+| `R2` | Every listed rich product screen consumes a named server DTO and retains its approved composition through populated, empty, partial, stale and denied states. | `CLOSED_AT_PORTAL_HYDRATION_GATE` | Frontend integration/release verifies panel-level rendering; no full-screen envelope fallback is admissible. |
+| `R3` | Local profile projection, bounded financial query and one profile-scoped SSE observation tail retain digest/provenance and pass restore/quarantine tests. | `CLOSED_AT_PORTAL_PROVENANCE_GATE` | Runtime activation uses the accepted profile/config release; it must not create per-tab AWS-HK polling. |
+| `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `READY_FOR_TS_AGENT_NOW` | Trading System agent implements the additive Manager adapter around its existing Data Layer readers; Portal validates the returned pack, then enables the two fixed Market Context BFF operations and local chart invalidations. |
+| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `OPTIONAL_UNTIL_REPLAY_IS_CLAIMED` | Keep `domain_events` as labelled observed history now. Implement only when product needs exact replay, without delaying the maximum-current-data release. |
+
+**Hard routing rule:** R4 and R5 never authorize Portal to read the Trading
+System database, Redis, broker or CLI directly.  R4's only production route is
+the existing private Manager/Edge mTLS + delegated-JWT chain.  R5's future
+stream must use the same owned boundary.  Thus all currently available truth
+can ship without weakening source ownership, while the two semantic upgrades
+remain independently closeable.
 
 **Campaign completion and EDS-12 entry:** EDS-11R1, R2 and R3 are mandatory
 for the maximum current-source product release.  EDS-11R4 is mandatory before
