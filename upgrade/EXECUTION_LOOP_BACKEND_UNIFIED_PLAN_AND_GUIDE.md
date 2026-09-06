@@ -5294,7 +5294,16 @@ changed. See [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND
 #### EDS-11R discovery record — current Manager-v2 maximum-data activation
 
 **Status:** `R1_BFF_READY / R2_SERVER_HYDRATION_READY /
-R3_RUNTIME_READINESS_NEXT / R4_OWNER_ADAPTER_READY` on 2026-09-06.
+R3_PORTAL_PROVENANCE_READY / R4_OWNER_ADAPTER_READY` on 2026-09-06.
+
+**Integration record (2026-09-06):** Portal commit `7825ad0` merges the
+current-data activation base (`feat/execution-data-activation`) into the
+EDS-11R campaign without overwriting the separate dev worktree.  The clean,
+isolated Control API gate passed TypeScript build, **47 test files / 404
+tests**, and the fresh-PostgreSQL restore drill; the EDS-11R4 request gate and
+execution-tracking reconciliation also passed.  Runtime promotion remains a
+separate, explicit deployment decision because the existing dev worktree has
+uncommitted work owned by another integration slice.
 
 **Correction:** the old `RUNTIME_INACTIVE` wording describes the Portal
 consumer slice, not AWS-HK Manager availability.  Read-only deployment
