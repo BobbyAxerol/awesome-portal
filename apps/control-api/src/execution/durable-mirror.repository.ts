@@ -50,6 +50,8 @@ export interface DurableMirrorCurrentPage {
     projection_epoch: string;
     projection_sequence: number;
     payload_digest: string;
+    /** Null only for retained pre-EDS-11R3 mirror batches. */
+    source_catalogue_sha256: string | null;
     received_at: string;
   } | null;
   observation: {
@@ -71,6 +73,8 @@ export interface DurableMirrorRangePage {
     projection_epoch: string;
     projection_sequence: number;
     payload_digest: string;
+    /** Null only for retained pre-EDS-11R3 mirror batches. */
+    source_catalogue_sha256: string | null;
     received_at: string;
   } | null;
   observation: {
@@ -152,14 +156,15 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
 
     await client.query(
       `INSERT INTO execution_durable_mirror_batches
-         (batch_id,workspace_id,environment,profile_id,source_contract_revision,source_epoch,
+         (batch_id,workspace_id,environment,profile_id,source_contract_revision,source_catalogue_sha256,source_epoch,
           source_cursor_digest,source_as_of,received_at,completeness,projection_epoch,
           projection_sequence,payload_digest,read_model_revision,relation_count,state)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::uuid,$12,$13,$14::uuid,$15,'PENDING')`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::uuid,$13,$14,$15::uuid,$16,'PENDING')`,
       [batchId, scope.workspaceId, scope.environment, scope.profileId,
-        input.document.source_contract_revision, input.sourceEpoch, digest(input.sourceCursor),
-        input.sourceAsOf, input.receivedAt, input.completeness, input.projectionEpoch,
-        input.projectionSequence, input.payloadDigest, revisionId, observations.length],
+        input.document.source_contract_revision, input.document.source_catalogue_sha256 ?? null,
+        input.sourceEpoch, digest(input.sourceCursor), input.sourceAsOf, input.receivedAt,
+        input.completeness, input.projectionEpoch, input.projectionSequence,
+        input.payloadDigest, revisionId, observations.length],
     );
     await this.insertObservations(client, batchId, scope, input.receivedAt, observations);
     for (const gap of rangeCollection.gaps) {
@@ -603,10 +608,11 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       projection_epoch: string;
       projection_sequence: string;
       payload_digest: string;
+      source_catalogue_sha256: string | null;
       received_at: Date;
     }>(
       `SELECT r.read_model_revision::text,r.projection_epoch::text,r.projection_sequence::text,
-              b.payload_digest,b.received_at
+              b.payload_digest,b.source_catalogue_sha256,b.received_at
          FROM execution_durable_mirror_revisions r
          JOIN execution_durable_mirror_batches b ON b.batch_id=r.batch_id
         WHERE r.workspace_id=$1 AND r.environment=$2 AND r.profile_id=$3 AND r.is_current=true`,
@@ -618,6 +624,7 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
       projection_epoch: row.projection_epoch,
       projection_sequence: Number(row.projection_sequence),
       payload_digest: row.payload_digest,
+      source_catalogue_sha256: row.source_catalogue_sha256,
       received_at: row.received_at.toISOString(),
     } : null;
   }

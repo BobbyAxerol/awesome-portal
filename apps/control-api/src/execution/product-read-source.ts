@@ -317,6 +317,7 @@ export class ExecutionProductReadSource {
         sequence: snapshot.projectionSequence,
         payload_digest: snapshot.payloadDigest,
         source_contract_revision: snapshot.document.source_contract_revision,
+        source_catalogue_sha256: snapshot.sourceCatalogueSha256 ?? snapshot.document.source_catalogue_sha256 ?? null,
         // The raw Manager checkpoint stays only in the durable SGP mirror.
         // Browser pagination uses Portal-signed continuation tokens; exposing
         // this value would make a current-page BFF an accidental source

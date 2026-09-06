@@ -5614,6 +5614,30 @@ subscribers.
 System event sequence; no command authority changes.  **Next:** EDS-11R4 adds
 the separate market-context source contract; R5 remains independent.
 
+**Completion record (2026-09-06):** the existing SGP-local lease-owned
+projection, retained financial/risk range and single local SSE tail are now
+closed through the R3 provenance boundary.  Every fresh snapshot relation and
+row carries the immutable accepted Manager catalogue SHA-256 alongside its
+contract revision; a retained range row keeps the exact revision/digest under
+which it was originally admitted rather than being relabelled on a later
+catalogue deployment.  The current accepted digest is persisted separately in
+snapshot, journal and durable-batch storage, included in the local cursor-only
+SSE provenance, and incorporated in the local source epoch.  A catalogue
+release therefore creates a new local epoch/resync boundary rather than
+silently reusing the old revision.
+Pre-R3 rows remain explicitly `null`/absent rather than being retroactively
+labelled.  The static projection catalog now rejects every audit-only or
+internal-only relation at module admission; only R1 screen-bound operations
+and R1 `PORTAL_PROJECTION_ONLY` inputs can enter the server-side projection.
+Browser tabs continue to receive only same-origin BFF reads and one
+profile-scoped local observation feed; no browser refresh creates a direct
+AWS-HK read and no source relation/cursor/credential crosses SSE.  Existing
+tests exercise one shared local tail for 1/10/100 subscribers, local replay
+gap/resync/auth-expiry/slow-client behavior, range/downsample and
+restore/quarantine paths; focused R3 tests add catalogue persistence and
+audit/internal-admission negatives.  This remains **Portal observation**, not
+authoritative Trading-System event replay.
+
 #### EDS-11R4 — TS-owned Market Context v1 adapter over the existing Data Layer
 
 **Status:** `OWNER_IMPLEMENTATION_READY / NO_DATA_COLLECTION_WAIT`.

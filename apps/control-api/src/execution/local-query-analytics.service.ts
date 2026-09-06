@@ -167,6 +167,7 @@ export class LocalQueryAnalyticsService {
         sequence: context.snapshot.projectionSequence,
         payload_digest: context.snapshot.payloadDigest,
         source_contract_revision: context.snapshot.document.source_contract_revision,
+        source_catalogue_sha256: context.snapshot.sourceCatalogueSha256 ?? context.snapshot.document.source_catalogue_sha256 ?? null,
         source_as_of_ms: epochMs(context.snapshot.sourceAsOf),
         received_at_ms: epochMs(context.snapshot.receivedAt),
         last_successful_refresh_at_ms: epochMs(context.snapshot.lastSuccessfulRefreshAt),

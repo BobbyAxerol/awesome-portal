@@ -6,6 +6,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import { enforceProfileLineage } from "./profile-lineage";
 import { profileProjectionCatalog, ProfileProjectionBinding, WARM_WINDOW_DAYS, WARM_WINDOW_MAX_ROWS } from "./profile-projection.catalog";
+import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
 import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
@@ -14,7 +15,8 @@ import {
   projectionDigest, ProjectionRow } from "./profile-projection.repository";
 import { DurableMirrorRelationCursor, DurableMirrorRetainedRangeRows } from "./durable-mirror.contract";
 
-const SOURCE_CONTRACT_REVISION = "trading-system.portal-execution.manager-v2.runtime.v1";
+const SOURCE_CONTRACT_REVISION = MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision;
+const SOURCE_CATALOGUE_SHA256 = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
 // Owner directive 2026-09-03 ("call hết dữ liệu có thể"): every relation
 // drains to the snapshot document's own 2,000-row invariant — ten pages of
 // two hundred — inside the unchanged paced source admission. Larger source
@@ -200,6 +202,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             workspace_id: workspaceId,
             profile_id: profileId,
             source_contract_revision: SOURCE_CONTRACT_REVISION,
+            source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
           },
           fields,
         }))]];
@@ -240,6 +243,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         const carried = item.carryForward;
         if (carried) {
           return [key, {
+            // Keep the retained row provenance intact.  The enclosing
+            // document gets the newly accepted catalogue and therefore a new
+            // local epoch, but a failed refresh may not relabel older source
+            // facts as though they arrived under that newer catalogue.
             ...carried,
             reason_code: "N31_LADDER_REFRESH_DEFERRED",
             completeness: "PARTIAL" as const,
@@ -250,6 +257,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             workspace_id: workspaceId,
             profile_id: profileId,
             source_contract_revision: SOURCE_CONTRACT_REVISION,
+            source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
           },
           fields,
         }));
@@ -264,6 +272,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           as_of: item.page?.asOf ?? null,
           freshness: item.page?.freshness ?? "UNKNOWN" as const,
           completeness: item.page?.completeness ?? "UNKNOWN" as const,
+          source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
           items: merged.items,
           ...(binding.ladder && item.page ? {
             window: {
@@ -285,6 +294,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         environment,
         profile_id: profileId,
         source_contract_revision: SOURCE_CONTRACT_REVISION,
+        source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
         relations,
       };
       const sourceAsOf = latestAsOf(isolated.flatMap((item) => item.page ? [item.page] : []));
@@ -294,7 +304,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         : isolated.some((item) => item.page?.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
       const sourceCursor = projectionDigest(relations);
       const receipt = await this.repository.commit(document, {
-        sourceEpoch: `manager-v2:${profileId}:${SOURCE_CONTRACT_REVISION}`,
+        sourceEpoch: `manager-v2:${profileId}:${SOURCE_CONTRACT_REVISION}:${SOURCE_CATALOGUE_SHA256}`,
         sourceCursor,
         sourceAsOf,
         receivedAt: new Date(),

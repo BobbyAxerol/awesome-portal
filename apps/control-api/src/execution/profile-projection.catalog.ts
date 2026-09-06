@@ -1,5 +1,9 @@
 import type { ProjectionEnvironment } from "./profile-projection.repository";
 import { SCREEN_BFF_BY_ID } from "../screen-bff/catalogue";
+import {
+  EDS11R_MANAGER_NON_BROWSER_RELATION_DISPOSITIONS,
+  managerRelationOperationByRelation,
+} from "./eds11r-manager-relation.registry";
 
 export interface ProfileProjectionBinding {
   key: string;
@@ -14,6 +18,16 @@ export interface ProfileProjectionBinding {
    */
   ladder?: { class: "TIME_SERIES"; idField: string; timestampField: string };
 }
+
+/**
+ * Server-only admission class for a relation which may enter the durable
+ * projection.  The browser never receives this relation selector.  A
+ * relation is admissible only when R1 gave it a fixed named screen operation,
+ * or when R1 explicitly classified it as a Portal projection input.
+ */
+export type ProfileProjectionBindingAdmission =
+  | "SCREEN_BOUND_NAMED_OPERATION"
+  | "PORTAL_PROJECTION_ONLY";
 
 /**
  * The declared hot window screens embed: 30 days of raw points, bounded to
@@ -460,7 +474,33 @@ const LIVE: readonly ProfileProjectionBinding[] = [
 ];
 
 export function profileProjectionCatalog(environment: ProjectionEnvironment): readonly ProfileProjectionBinding[] {
-  return [...FLEET, ...(environment === "paper" ? PAPER : environment === "sandbox" ? SANDBOX : LIVE)];
+  return assertProfileProjectionCatalogAdmissible([
+    ...FLEET,
+    ...(environment === "paper" ? PAPER : environment === "sandbox" ? SANDBOX : LIVE),
+  ]);
+}
+
+/**
+ * Prevent a future catalog edit from silently admitting audit or internal
+ * Manager relations into the durable current-data projection.  This is a
+ * module-level safety boundary, not a browser policy: all inputs remain
+ * static server-owned bindings.
+ */
+export function profileProjectionBindingAdmission(
+  binding: Pick<ProfileProjectionBinding, "relation">,
+): ProfileProjectionBindingAdmission {
+  if (managerRelationOperationByRelation(binding.relation)) return "SCREEN_BOUND_NAMED_OPERATION";
+  const disposition = EDS11R_MANAGER_NON_BROWSER_RELATION_DISPOSITIONS
+    .find((candidate) => candidate.relation_id === `public.${binding.relation}`);
+  if (disposition?.browser_disposition === "PORTAL_PROJECTION_ONLY") return "PORTAL_PROJECTION_ONLY";
+  throw new Error(`EDS11R projection relation is not admissible: ${binding.relation}`);
+}
+
+function assertProfileProjectionCatalogAdmissible(
+  bindings: readonly ProfileProjectionBinding[],
+): readonly ProfileProjectionBinding[] {
+  for (const binding of bindings) profileProjectionBindingAdmission(binding);
+  return bindings;
 }
 
 /**

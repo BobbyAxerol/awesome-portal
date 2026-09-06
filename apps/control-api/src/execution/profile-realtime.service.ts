@@ -44,7 +44,8 @@ export interface PortalObservationDescriptor {
   };
   source: {
     contract_revision: string | null;
-    catalogue_revision: null;
+    /** Exact accepted Manager catalogue digest; null only for legacy rows. */
+    catalogue_revision: string | null;
     as_of_ms: number | null;
     received_at_ms: number;
   };
@@ -321,6 +322,7 @@ function cursorPayload(snapshot: ProfileProjectionSnapshot): Record<string, unkn
     snapshot_mode: "CURSOR_ONLY",
     relation_count: Object.keys(snapshot.document.relations).length,
     source_contract_revision: snapshot.document.source_contract_revision,
+    source_catalogue_sha256: snapshot.sourceCatalogueSha256 ?? snapshot.document.source_catalogue_sha256 ?? null,
   };
 }
 
@@ -364,7 +366,7 @@ function observationFromSnapshot(snapshot: ProfileProjectionSnapshot): PortalObs
     },
     source: {
       contract_revision: snapshot.document.source_contract_revision,
-      catalogue_revision: null,
+      catalogue_revision: snapshot.sourceCatalogueSha256 ?? snapshot.document.source_catalogue_sha256 ?? null,
       as_of_ms: utcMs(snapshot.sourceAsOf),
       received_at_ms: snapshot.receivedAt.valueOf(),
     },
@@ -391,7 +393,7 @@ function observationFromEntry(entry: ProfileProjectionJournalEntry): PortalObser
     },
     source: {
       contract_revision: entry.sourceContractRevision,
-      catalogue_revision: null,
+      catalogue_revision: entry.sourceCatalogueSha256,
       as_of_ms: utcMs(entry.sourceAsOf),
       received_at_ms: entry.receivedAt.valueOf(),
     },

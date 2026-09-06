@@ -136,6 +136,38 @@ describe("EDS-06 durable current/range mirror", () => {
     }
   });
 
+  it("retains the accepted catalogue identity with a current and financial range revision", async () => {
+    const catalogue = `sha256:${"e".repeat(64)}`;
+    const document = cataloguedProjectionDocument(catalogue);
+    await repository.commit(document, {
+      ...commitInput("source-cursor-catalogue"),
+      sourceEpoch: `manager-v2:${profileId}:runtime.v1:${catalogue}`,
+    });
+
+    const persisted = await pool.query<{ source_catalogue_sha256: string | null }>(
+      `SELECT source_catalogue_sha256
+         FROM execution_durable_mirror_batches
+        WHERE workspace_id=$1 AND environment='paper' AND profile_id=$2
+        ORDER BY received_at DESC
+        LIMIT 1`,
+      [workspaceId, profileId],
+    );
+    expect(persisted.rows).toEqual([{ source_catalogue_sha256: catalogue }]);
+
+    const current = await mirror.currentPage({
+      workspaceId, environment: "paper", profileId, relationKey: currentKey,
+    });
+    const range = await mirror.rangePage({
+      workspaceId,
+      environment: "paper",
+      profileId,
+      relationKey: rangeKey,
+      resource: { kind: "strategy", id: "alpha_1" },
+    });
+    expect(current.revision?.source_catalogue_sha256).toBe(catalogue);
+    expect(range.revision?.source_catalogue_sha256).toBe(catalogue);
+  });
+
   it("deduplicates a repeated accepted page and quarantines a same-key/different-digest range conflict", async () => {
     const document = projectionDocument();
     const first = await commit(document, "source-cursor-secret-1");
@@ -335,4 +367,14 @@ function projectionDocument(input: {
       },
     },
   };
+}
+
+function cataloguedProjectionDocument(catalogue: string): ProfileProjectionDocument {
+  const document = projectionDocument();
+  document.source_catalogue_sha256 = catalogue;
+  for (const relation of Object.values(document.relations)) {
+    relation.source_catalogue_sha256 = catalogue;
+    for (const row of relation.items) row.lineage.source_catalogue_sha256 = catalogue;
+  }
+  return document;
 }

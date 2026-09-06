@@ -170,6 +170,7 @@ export class ExecutionProfileReadAdapterService {
         sequence: snapshot.projectionSequence,
         payload_digest: snapshot.payloadDigest,
         source_contract_revision: snapshot.document.source_contract_revision,
+        source_catalogue_sha256: snapshot.sourceCatalogueSha256 ?? snapshot.document.source_catalogue_sha256 ?? null,
         last_successful_refresh_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
       },
       bounds: {

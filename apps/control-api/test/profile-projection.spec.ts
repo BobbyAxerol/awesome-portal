@@ -17,10 +17,12 @@ import {
 import type { DurableMirrorWriter } from "../src/execution/durable-mirror.contract";
 import {
   profileObservationAffectedScreens,
+  profileProjectionBindingAdmission,
   profileProjectionCatalog,
 } from "../src/execution/profile-projection.catalog";
 import { ExecutionProfileProjectionWorker, mergeTimeSeriesWindow } from "../src/execution/profile-projection.worker";
 import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
+import { MAXIMUM_DATA_INTAKE_V1 } from "../src/execution/maximum-data-intake";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
 
 const workspaceId = "ws_projection_test";
@@ -123,6 +125,58 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(JSON.stringify(replay[1].payload)).not.toContain("cursor-3");
     expect((await repository.snapshot(workspaceId, "paper", profileId))?.sourceCursor)
       .toBe("cursor-3");
+  });
+
+  it("starts a new local epoch when the accepted source catalogue changes", async () => {
+    const firstCatalogue = `sha256:${"1".repeat(64)}`;
+    const secondCatalogue = `sha256:${"2".repeat(64)}`;
+    const first = await commit(
+      cataloguedDocument("alpha-1", firstCatalogue),
+      "cursor-catalogue-1",
+      `manager-v2:test:${firstCatalogue}`,
+    );
+    const second = await commit(
+      cataloguedDocument("alpha-1", secondCatalogue),
+      "cursor-catalogue-2",
+      `manager-v2:test:${secondCatalogue}`,
+    );
+    expect(second).toMatchObject({ changed: true, projectionSequence: 1 });
+    expect(second.projectionEpoch).not.toBe(first.projectionEpoch);
+    expect((await repository.snapshot(workspaceId, "paper", profileId))?.sourceCatalogueSha256)
+      .toBe(secondCatalogue);
+
+    const realtime = new ExecutionProfileRealtimeService(config, repository);
+    const events: Array<{ event_type: string }> = [];
+    await realtime.subscribe(
+      workspaceId, "paper", profileId, `${first.projectionEpoch}:${first.projectionSequence}`,
+      (event) => { events.push(event); return true; },
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ event_type: "projection.gap", terminal: true, reconnect_required: true });
+    realtime.onApplicationShutdown();
+  });
+
+  it("keeps retained row provenance when a newer catalogue starts a new snapshot epoch", async () => {
+    const firstCatalogue = `sha256:${"a".repeat(64)}`;
+    const secondCatalogue = `sha256:${"b".repeat(64)}`;
+    await commit(
+      cataloguedDocument("alpha-1", firstCatalogue),
+      "cursor-retained-first",
+      `manager-v2:test:${firstCatalogue}`,
+    );
+    const next = cataloguedDocument("alpha-1", secondCatalogue);
+    const retained = next.relations[relationKey]!.items[0]!;
+    retained.lineage.source_contract_revision = "manager-v2.test.v0";
+    retained.lineage.source_catalogue_sha256 = firstCatalogue;
+
+    await commit(next, "cursor-retained-next", `manager-v2:test:${secondCatalogue}`);
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(snapshot?.sourceCatalogueSha256).toBe(secondCatalogue);
+    expect(snapshot?.document.relations[relationKey]?.source_catalogue_sha256).toBe(secondCatalogue);
+    expect(snapshot?.document.relations[relationKey]?.items[0]?.lineage).toMatchObject({
+      source_contract_revision: "manager-v2.test.v0",
+      source_catalogue_sha256: firstCatalogue,
+    });
   });
 
   it("never turns browser refreshes or projection misses into AWS-HK reads", async () => {
@@ -508,6 +562,52 @@ describe("Phase 1 SGP-local profile projection", () => {
       });
     await worker.onApplicationShutdown();
   });
+
+  it("persists the accepted catalogue identity through worker, journal and local SSE", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => emptyManagerResponse(environment, relation),
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+
+    const expected = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(snapshot?.sourceCatalogueSha256).toBe(expected);
+    expect(snapshot?.sourceEpoch).toContain(expected);
+    expect(snapshot?.document.source_catalogue_sha256).toBe(expected);
+    for (const relation of Object.values(snapshot?.document.relations ?? {})) {
+      expect(relation.source_catalogue_sha256).toBe(expected);
+      expect(relation.items.every((row) => row.lineage.source_catalogue_sha256 === expected)).toBe(true);
+    }
+
+    const [entry] = await repository.journalAfter(
+      workspaceId, "paper", profileId, snapshot!.projectionEpoch, 0, 1,
+    );
+    expect(entry.sourceCatalogueSha256).toBe(expected);
+
+    const realtime = new ExecutionProfileRealtimeService(config, repository);
+    const envelope = await realtime.snapshot(workspaceId, "paper", profileId);
+    expect(envelope.observation?.source.catalogue_revision).toBe(expected);
+    expect(envelope.payload).toMatchObject({ source_catalogue_sha256: expected });
+    expect(JSON.stringify(envelope)).not.toContain("manager.");
+    realtime.onApplicationShutdown();
+    await worker.onApplicationShutdown();
+  });
+
+  it("admits only R1 named or explicit projection-input relations into the static projection catalog", () => {
+    for (const environment of ["paper", "sandbox", "live"] as const) {
+      for (const binding of profileProjectionCatalog(environment)) {
+        expect(profileProjectionBindingAdmission(binding)).toMatch(/SCREEN_BOUND_NAMED_OPERATION|PORTAL_PROJECTION_ONLY/);
+      }
+    }
+    expect(() => profileProjectionBindingAdmission({ relation: "audit_log" }))
+      .toThrow("EDS11R projection relation is not admissible");
+    expect(() => profileProjectionBindingAdmission({ relation: "venue_credentials" }))
+      .toThrow("EDS11R projection relation is not admissible");
+  });
 });
 
 function document(alphaId: string): ProfileProjectionDocument {
@@ -598,9 +698,9 @@ function relation(
   };
 }
 
-function commit(value: ProfileProjectionDocument, cursor: string) {
+function commit(value: ProfileProjectionDocument, cursor: string, sourceEpoch = "manager-v2:test") {
   return repository.commit(value, {
-    sourceEpoch: "manager-v2:test",
+    sourceEpoch,
     sourceCursor: cursor,
     sourceAsOf: new Date("2026-09-02T00:00:00.000Z"),
     receivedAt: new Date(),
@@ -608,6 +708,16 @@ function commit(value: ProfileProjectionDocument, cursor: string) {
     retentionSeconds: 86_400,
     maximumJournalEntries: 10_000,
   });
+}
+
+function cataloguedDocument(alphaId: string, catalogue: string): ProfileProjectionDocument {
+  const value = document(alphaId);
+  value.source_catalogue_sha256 = catalogue;
+  for (const relation of Object.values(value.relations)) {
+    relation.source_catalogue_sha256 = catalogue;
+    for (const row of relation.items) row.lineage.source_catalogue_sha256 = catalogue;
+  }
+  return value;
 }
 
 function emptyManagerResponse(environment: string, relation: string) {

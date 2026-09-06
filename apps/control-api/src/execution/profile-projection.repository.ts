@@ -23,6 +23,12 @@ export interface ProjectionRow {
     workspace_id: string;
     profile_id: string;
     source_contract_revision: string;
+    /**
+     * The accepted Manager catalogue identity under which this row entered
+     * the Portal projection.  It is contract provenance, not a source-event
+     * sequence or an assertion that the row is replayable.
+     */
+    source_catalogue_sha256?: string;
   };
   fields: Record<string, ProjectionScalar>;
 }
@@ -35,6 +41,8 @@ export interface ProjectionRelation {
   as_of: string | null;
   freshness: ProjectionFreshness;
   completeness: ProjectionCompleteness;
+  /** Additive R3 contract provenance; absent only on pre-R3 retained rows. */
+  source_catalogue_sha256?: string;
   items: ProjectionRow[];
   /** P4-D window ladder: a time-series relation states its merged window. */
   window?: { days: number; max_rows: number; basis: "MERGED_SNAPSHOT_LADDER"; truncated: boolean };
@@ -48,6 +56,8 @@ export interface ProfileProjectionDocument {
   environment: ProjectionEnvironment;
   profile_id: string;
   source_contract_revision: string;
+  /** Additive R3 contract provenance; legacy documents remain honestly null. */
+  source_catalogue_sha256?: string;
   relations: Record<string, ProjectionRelation>;
 }
 
@@ -62,6 +72,8 @@ export interface ProfileProjectionSnapshot {
   projectionEpoch: string;
   projectionSequence: number;
   payloadDigest: string;
+  /** Exact persisted source catalogue digest, null only for pre-R3 snapshots. */
+  sourceCatalogueSha256: string | null;
 }
 
 export interface ProfileProjectionJournalEntry {
@@ -80,6 +92,8 @@ export interface ProfileProjectionJournalEntry {
   observationSemantics: "BOUNDED_CURRENT_PAGE";
   /** Null only for pre-EDS-09b retained journal rows; never inferred. */
   sourceContractRevision: string | null;
+  /** Null only for pre-R3 retained journal rows; never inferred. */
+  sourceCatalogueSha256: string | null;
   payload: Record<string, unknown>;
 }
 
@@ -407,19 +421,26 @@ export class ExecutionProfileProjectionRepository {
     const payloadDigest = digest(document);
     return this.transaction(async (client) => {
       const existing = await client.query<{
-        projection_epoch: string; projection_sequence: string; payload_digest: string;
+        projection_epoch: string; projection_sequence: string; payload_digest: string; source_epoch: string;
         payload: ProfileProjectionDocument;
       }>(
-        `SELECT projection_epoch::text, projection_sequence::text, payload_digest, payload
+        `SELECT projection_epoch::text, projection_sequence::text, payload_digest, source_epoch, payload
            FROM execution_profile_projection_snapshots
           WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
           FOR UPDATE`,
         [document.workspace_id, document.environment, document.profile_id],
       );
       const previous = existing.rows[0];
-      const changed = previous?.payload_digest !== payloadDigest;
-      const projectionEpoch = previous?.projection_epoch ?? randomUUID();
-      const projectionSequence = previous ? Number(previous.projection_sequence) + (changed ? 1 : 0) : 1;
+      // A changed source epoch means a new accepted catalogue/contract
+      // boundary.  Never let a client resume an old local revision stream
+      // through that boundary, even if a payload happens to canonicalize to
+      // the same bytes.  It receives a typed epoch gap and bootstraps again.
+      const sourceEpochChanged = previous !== undefined && previous.source_epoch !== input.sourceEpoch;
+      const changed = previous?.payload_digest !== payloadDigest || sourceEpochChanged;
+      const projectionEpoch = !previous || sourceEpochChanged ? randomUUID() : previous.projection_epoch;
+      const projectionSequence = !previous || sourceEpochChanged
+        ? 1
+        : Number(previous.projection_sequence) + (changed ? 1 : 0);
       const mirrorResult = await this.durableMirror?.commitAcceptedProjection(client, {
         document,
         sourceEpoch: input.sourceEpoch,
@@ -450,12 +471,12 @@ export class ExecutionProfileProjectionRepository {
       if (!changed) {
         await client.query(
           `UPDATE execution_profile_projection_snapshots SET
-             source_epoch=$4, source_cursor=$5, source_as_of=$6, received_at=$7,
-             last_successful_refresh_at=$7, completeness=$8, updated_at=clock_timestamp()
+             source_catalogue_sha256=$4, source_epoch=$5, source_cursor=$6, source_as_of=$7, received_at=$8,
+             last_successful_refresh_at=$8, completeness=$9, updated_at=clock_timestamp()
            WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
           [document.workspace_id, document.environment, document.profile_id,
-            input.sourceEpoch, input.sourceCursor, input.sourceAsOf, input.receivedAt,
-            input.completeness],
+            document.source_catalogue_sha256 ?? null, input.sourceEpoch, input.sourceCursor,
+            input.sourceAsOf, input.receivedAt, input.completeness],
         );
         await this.persistRelationCursors(client, document, input.relationCursors ?? []);
         return {
@@ -469,12 +490,13 @@ export class ExecutionProfileProjectionRepository {
       }
       await client.query(
         `INSERT INTO execution_profile_projection_snapshots
-           (workspace_id,environment,profile_id,source_contract_revision,source_epoch,
+           (workspace_id,environment,profile_id,source_contract_revision,source_catalogue_sha256,source_epoch,
             source_cursor,source_as_of,received_at,last_successful_refresh_at,completeness,
             projection_epoch,projection_sequence,payload_digest,payload)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$8,$9,$10,$11,$12,$13::jsonb)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$11,$12,$13,$14::jsonb)
          ON CONFLICT (workspace_id,environment,profile_id) DO UPDATE SET
            source_contract_revision=EXCLUDED.source_contract_revision,
+           source_catalogue_sha256=EXCLUDED.source_catalogue_sha256,
            source_epoch=EXCLUDED.source_epoch, source_cursor=EXCLUDED.source_cursor,
            source_as_of=EXCLUDED.source_as_of, received_at=EXCLUDED.received_at,
            last_successful_refresh_at=EXCLUDED.last_successful_refresh_at,
@@ -483,9 +505,10 @@ export class ExecutionProfileProjectionRepository {
            payload_digest=EXCLUDED.payload_digest, payload=EXCLUDED.payload,
            updated_at=clock_timestamp()`,
         [document.workspace_id, document.environment, document.profile_id,
-          document.source_contract_revision, input.sourceEpoch, input.sourceCursor,
-          input.sourceAsOf, input.receivedAt, input.completeness, projectionEpoch,
-          projectionSequence, payloadDigest, JSON.stringify(document)],
+          document.source_contract_revision, document.source_catalogue_sha256 ?? null,
+          input.sourceEpoch, input.sourceCursor, input.sourceAsOf, input.receivedAt,
+          input.completeness, projectionEpoch, projectionSequence, payloadDigest,
+          JSON.stringify(document)],
       );
       await this.persistRelationCursors(client, document, input.relationCursors ?? []);
       const changedRelations = relationChanges(previous?.payload, document);
@@ -512,13 +535,13 @@ export class ExecutionProfileProjectionRepository {
         `INSERT INTO execution_profile_projection_journal
            (workspace_id,environment,profile_id,projection_epoch,projection_sequence,event_kind,
             source_as_of,received_at,completeness,payload_digest,observation_authority,
-            observation_semantics,source_contract_revision,payload)
+            observation_semantics,source_contract_revision,source_catalogue_sha256,payload)
          VALUES ($1,$2,$3,$4,$5,'delta',$6,$7,$8,$9,'PORTAL_OBSERVATION',
-                 'BOUNDED_CURRENT_PAGE',$10,$11::jsonb)`,
+                 'BOUNDED_CURRENT_PAGE',$10,$11,$12::jsonb)`,
         [document.workspace_id, document.environment, document.profile_id,
           projectionEpoch, projectionSequence, input.sourceAsOf, input.receivedAt,
           input.completeness, payloadDigest, document.source_contract_revision,
-          JSON.stringify(observationPayload)],
+          document.source_catalogue_sha256 ?? null, JSON.stringify(observationPayload)],
       );
       await client.query(
         `DELETE FROM execution_profile_projection_journal
@@ -560,11 +583,11 @@ export class ExecutionProfileProjectionRepository {
       payload: ProfileProjectionDocument; source_epoch: string; source_cursor: string;
       source_as_of: Date | null; received_at: Date; last_successful_refresh_at: Date;
       completeness: ProjectionCompleteness; projection_epoch: string;
-      projection_sequence: string; payload_digest: string;
+      projection_sequence: string; payload_digest: string; source_catalogue_sha256: string | null;
     }>(
       `SELECT payload, source_epoch, source_cursor, source_as_of, received_at,
               last_successful_refresh_at, completeness, projection_epoch::text,
-              projection_sequence::text, payload_digest
+              projection_sequence::text, payload_digest, source_catalogue_sha256
          FROM execution_profile_projection_snapshots
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
       [workspaceId, environment, profileId],
@@ -576,6 +599,7 @@ export class ExecutionProfileProjectionRepository {
       lastSuccessfulRefreshAt: row.last_successful_refresh_at,
       completeness: row.completeness, projectionEpoch: row.projection_epoch,
       projectionSequence: Number(row.projection_sequence), payloadDigest: row.payload_digest,
+      sourceCatalogueSha256: row.source_catalogue_sha256,
     } : null;
   }
 
@@ -593,12 +617,13 @@ export class ExecutionProfileProjectionRepository {
       received_at: Date; completeness: ProjectionCompleteness; payload_digest: string;
       observation_authority: "PORTAL_OBSERVATION"; observation_semantics: "BOUNDED_CURRENT_PAGE";
       source_contract_revision: string | null;
+      source_catalogue_sha256: string | null;
       payload: Record<string, unknown>;
     }>(
       `SELECT workspace_id,environment,profile_id,projection_epoch::text,
               projection_sequence::text,source_as_of,received_at,completeness,
               payload_digest,observation_authority,observation_semantics,
-              source_contract_revision,payload
+              source_contract_revision,source_catalogue_sha256,payload
          FROM execution_profile_projection_journal
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
           AND projection_epoch=$4 AND projection_sequence>$5
@@ -613,6 +638,7 @@ export class ExecutionProfileProjectionRepository {
       observationAuthority: row.observation_authority,
       observationSemantics: row.observation_semantics,
       sourceContractRevision: row.source_contract_revision,
+      sourceCatalogueSha256: row.source_catalogue_sha256,
       payload: row.payload,
     }));
   }
@@ -687,15 +713,20 @@ function relationChanges(
 
 function validateDocument(document: ProfileProjectionDocument): void {
   const expectedPrefix = `${document.environment.toUpperCase()}_`;
+  const catalogue = document.source_catalogue_sha256;
+  const hasCatalogue = catalogue !== undefined;
   if (
     document.schema_version !== "portal.execution.profile-projection.v1" ||
     !document.profile_id.startsWith(expectedPrefix) ||
     document.workspace_id.trim() === "" ||
     document.source_contract_revision.trim() === "" ||
+    (hasCatalogue && !isSha256(catalogue)) ||
     Object.keys(document.relations).length === 0 ||
     Object.entries(document.relations).some(([key, relation]) =>
       key !== `${relation.source_id}:${relation.relation}` ||
       !["AVAILABLE", "UNAVAILABLE"].includes(relation.availability) ||
+      (hasCatalogue && !isSha256(relation.source_catalogue_sha256)) ||
+      (!hasCatalogue && relation.source_catalogue_sha256 !== undefined) ||
       (relation.reason_code !== null && !/^[A-Z][A-Z0-9_]{1,95}$/.test(relation.reason_code)) ||
       (relation.availability === "UNAVAILABLE" && (
         relation.items.length !== 0 ||
@@ -706,8 +737,14 @@ function validateDocument(document: ProfileProjectionDocument): void {
       relation.items.some((row) =>
         row.lineage.workspace_id !== document.workspace_id ||
         row.lineage.profile_id !== document.profile_id ||
-        row.lineage.source_contract_revision !== document.source_contract_revision
+        row.lineage.source_contract_revision.trim() === "" ||
+        (hasCatalogue && !isSha256(row.lineage.source_catalogue_sha256)) ||
+        (!hasCatalogue && row.lineage.source_catalogue_sha256 !== undefined)
       )
     )
   ) throw new Error("N31_PROFILE_PROJECTION_DOCUMENT_INVALID");
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === "string" && /^sha256:[0-9a-f]{64}$/.test(value);
 }

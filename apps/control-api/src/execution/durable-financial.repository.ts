@@ -47,6 +47,8 @@ export interface DurableFinancialRevision {
   projectionEpoch: string;
   projectionSequence: number;
   payloadDigest: string;
+  /** Null only for retained pre-EDS-11R3 mirror batches. */
+  sourceCatalogueSha256: string | null;
 }
 
 export interface DurableFinancialPoint {
@@ -405,9 +407,11 @@ async function loadCurrentRevision(
     projection_epoch: string;
     projection_sequence: string;
     payload_digest: string;
+    source_catalogue_sha256: string | null;
     received_at: Date;
   }>(
-    `SELECT r.read_model_revision::text,r.projection_epoch::text,r.projection_sequence::text,b.payload_digest,b.received_at
+    `SELECT r.read_model_revision::text,r.projection_epoch::text,r.projection_sequence::text,
+            b.payload_digest,b.source_catalogue_sha256,b.received_at
        FROM execution_durable_mirror_revisions r
        JOIN execution_durable_mirror_batches b ON b.batch_id=r.batch_id
       WHERE r.workspace_id=$1 AND r.environment=$2 AND r.profile_id=$3 AND r.is_current=true`,
@@ -420,6 +424,7 @@ async function loadCurrentRevision(
     projectionEpoch: revisionRow.projection_epoch,
     projectionSequence: Number(revisionRow.projection_sequence),
     payloadDigest: revisionRow.payload_digest,
+    sourceCatalogueSha256: revisionRow.source_catalogue_sha256,
     receivedAt: revisionRow.received_at,
   };
 }
