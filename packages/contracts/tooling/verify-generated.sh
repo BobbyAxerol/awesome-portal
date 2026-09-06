@@ -32,3 +32,4 @@ generate_and_compare openapi/execution-paper-read.openapi.json generated/executi
 generate_and_compare openapi/execution-profile-read.openapi.json generated/execution-profile-read.d.ts
 generate_and_compare openapi/execution-manager-lists.openapi.json generated/execution-manager-lists.d.ts
 generate_and_compare openapi/execution-contract-authority.openapi.json generated/execution-contract-authority.d.ts
+generate_and_compare openapi/execution-market-context.openapi.json generated/execution-market-context.d.ts

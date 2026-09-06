@@ -1,0 +1,117 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Primus Portal EDS-11R4 Market Context API",
+    "version": "1.0.0",
+    "description": "Two named same-origin, session-protected Portal BFF routes. They are source-dark until a digest-pinned Trading System Market Context owner return is accepted and the separate runtime flag is enabled. No browser calls the Execution Edge, Data Layer, Redis, broker or Trading System directly."
+  },
+  "servers": [{ "url": "/" }],
+  "security": [{ "portalSession": [] }],
+  "paths": {
+    "/api/v1/execution/market/latest": {
+      "get": {
+        "operationId": "executionMarketContextLatestV1",
+        "description": "Returns at most 200 current market observations for one exact venue/instrument. This is a current observation, never an event replay or correction feed.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Workspace" },
+          { "$ref": "#/components/parameters/Environment" },
+          { "$ref": "#/components/parameters/Venue" },
+          { "$ref": "#/components/parameters/Instrument" }
+        ],
+        "responses": {
+          "200": { "description": "Exact current Market Context response", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-market-context.v1.schema.json#/$defs/LatestResponse" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    },
+    "/api/v1/execution/market/candles": {
+      "get": {
+        "operationId": "executionMarketContextCandlesV1",
+        "description": "Returns one bounded provider OHLCV series: at most 2,000 source candles, 8 MiB and 366 days. The Portal must not infer global lifecycle ordering or replay semantics from this series.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Workspace" },
+          { "$ref": "#/components/parameters/Environment" },
+          { "$ref": "#/components/parameters/Venue" },
+          { "$ref": "#/components/parameters/Instrument" },
+          { "$ref": "#/components/parameters/Interval" },
+          { "$ref": "#/components/parameters/FromMilliseconds" },
+          { "$ref": "#/components/parameters/ToMilliseconds" },
+          { "$ref": "#/components/parameters/PointLimit" }
+        ],
+        "responses": {
+          "200": { "description": "Exact bounded Market Context candles response", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-market-context.v1.schema.json#/$defs/CandlesResponse" } } } },
+          "400": { "$ref": "#/components/responses/Problem" },
+          "401": { "$ref": "#/components/responses/Problem" },
+          "403": { "$ref": "#/components/responses/Problem" },
+          "404": { "$ref": "#/components/responses/Problem" },
+          "502": { "$ref": "#/components/responses/Problem" },
+          "503": { "$ref": "#/components/responses/Problem" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+    },
+    "parameters": {
+      "Workspace": { "name": "workspace_id", "in": "query", "required": false, "schema": { "type": "string", "minLength": 1, "maxLength": 96 } },
+      "Environment": { "name": "environment", "in": "query", "required": false, "schema": { "type": "string", "enum": ["paper", "sandbox", "live"], "default": "paper" } },
+      "Venue": { "name": "venue", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/Venue" } },
+      "Instrument": { "name": "instrument", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/Token" } },
+      "Interval": { "name": "interval", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/Interval" } },
+      "FromMilliseconds": { "name": "from_ms", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/UtcMilliseconds" } },
+      "ToMilliseconds": { "name": "to_ms", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/UtcMilliseconds" } },
+      "PointLimit": { "name": "point_limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 2000, "default": 200 } }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed same-origin BFF failure; no upstream credential, URL, relation, cursor or stack is returned.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } }
+      }
+    },
+    "schemas": {
+      "Token": { "type": "string", "minLength": 1, "maxLength": 191, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$" },
+      "Venue": { "type": "string", "minLength": 1, "maxLength": 96, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$" },
+      "Interval": { "type": "string", "minLength": 1, "maxLength": 32, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$" },
+      "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 8640000000000000 },
+      "LatestResponse": { "$ref": "../schemas/execution-market-context.v1.schema.json#/$defs/LatestResponse" },
+      "CandlesResponse": { "$ref": "../schemas/execution-market-context.v1.schema.json#/$defs/CandlesResponse" },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["error", "request_id"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "enum": [
+                  "EDS11R4_MARKET_QUERY_INVALID",
+                  "PENDING_MARKET_CONTEXT_ADAPTER",
+                  "MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED",
+                  "MARKET_CONTEXT_PROFILE_NOT_ACCEPTED",
+                  "MARKET_CONTEXT_OWNER_RETURN_INVALID",
+                  "EDS11R4_SOURCE_CONTRACT_REJECTED",
+                  "EDS11R4_RESPONSE_TOO_LARGE",
+                  "WORKSPACE_NOT_FOUND",
+                  "SESSION_REQUIRED",
+                  "REQUEST_REJECTED"
+                ]
+              },
+              "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+            }
+          },
+          "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+        }
+      }
+    }
+  }
+}

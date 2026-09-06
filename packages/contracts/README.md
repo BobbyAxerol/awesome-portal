@@ -147,6 +147,16 @@ repository proof. Source semantics not yet published by the Trading System
 `UNAVAILABLE`; TypeScript composes the product envelope but never recomputes
 financial truth.
 
+EDS-11R4 adds the two fixed Market Context BFF contracts at
+`openapi/execution-market-context.openapi.json`, generated as
+`generated/execution-market-context.d.ts`. The only routes are current latest
+observation and bounded OHLCV/candles. They preserve profile/environment,
+availability/freshness/completeness, UTC milliseconds and exact decimal
+strings, but deliberately make no lifecycle replay, global ordering,
+correction or retention claim. The checked-in intake starts fail-closed until
+a digest-pinned Trading System owner return is accepted; the browser never sees
+an Edge path, relation, cursor, mTLS input or delegated credential.
+
 Rules:
 
 - JSON Schema Draft 2020-12 with `additionalProperties: false`; unknown fields
@@ -196,6 +206,7 @@ packages/contracts/
     execution-intercell-gateway.v1.schema.json
     execution-paper-read.v1.schema.json
     execution-profile-read.v1.schema.json
+    execution-market-context.v1.schema.json
     governance-live-review.v1.schema.json
   fixtures/
     problem.valid.json
@@ -228,6 +239,7 @@ packages/contracts/
     execution-live-overview.empty.valid.json
     execution-canary-live-facts.empty.valid.json
     execution-query-analytics.empty.valid.json
+    execution-market-context.{latest,candles}.valid.json
   openapi/
     execution-analytics.openapi.json
     execution-analytics-series.openapi.json
@@ -241,6 +253,7 @@ packages/contracts/
     execution-emergency-routing.openapi.json
     execution-paper-read.openapi.json
     execution-profile-read.openapi.json
+    execution-market-context.openapi.json
   generated/
     portal-api.d.ts
     execution-analytics.d.ts
@@ -254,6 +267,7 @@ packages/contracts/
     execution-intercell-gateway.d.ts
     execution-emergency-routing.d.ts
     execution-paper-read.d.ts
+    execution-market-context.d.ts
   contracts-snapshot.json
   package.json
   tsconfig.json

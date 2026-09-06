@@ -1,6 +1,6 @@
 # EDS-11R — Current Manager-v2 maximum-data activation
 
-**Status:** `R1_BFF_READY / CONTRACT_VERIFIED / RUNTIME_NOT_ACTIVATED`  
+**Status:** `R1_TO_R3_PORTAL_READY / R4_PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY / RUNTIME_NOT_ACTIVATED`  
 **Date:** 2026-09-06  
 **Scope:** Portal Execution Edge, Control API and same-origin Portal BFF only.  
 **Does not authorize:** direct Trading System DB/Redis/broker/CLI access from
@@ -160,6 +160,14 @@ browser or Portal-to-Data-Layer connection.
 
 **Portal deliverable:** schema decoder, source profile binding, durable window
 projection/cache, UTC/exact-decimal chart DTO and SSE invalidation.
+
+**Portal contract record (2026-09-06):** both exact same-origin routes now
+have canonical Schema/OpenAPI/generated TypeScript contracts and fixture
+coverage in `packages/contracts/`. They are `GET` only, preserve exact decimal
+and UTC-ms values, bind environment to a single profile, cap current/latest at
+200 rows and candles at 2,000 rows / 8 MiB, and are still source-dark until the
+owner return is verified. This contract does not add a direct Data Layer route,
+runtime listener or source activation.
 
 **Exit:** Paper/Sandbox/Live market panels receive source-backed or typed
 empty/unsupported facts; chart data remains bounded and provenance-labelled.

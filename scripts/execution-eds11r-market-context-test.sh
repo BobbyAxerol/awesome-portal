@@ -43,6 +43,12 @@ registry_source = (root / "apps/control-api/src/execution/market-context.registr
 service_source = (root / "apps/control-api/src/execution/market-context.service.ts").read_text()
 controller_source = (root / "apps/control-api/src/execution/market-context.controller.ts").read_text()
 proxy_source = (root / "apps/control-api/src/execution/current-source.proxy.ts").read_text()
+portal_contracts = root / "packages/contracts"
+portal_schema = json.loads((portal_contracts / "schemas/execution-market-context.v1.schema.json").read_text())
+portal_openapi = json.loads((portal_contracts / "openapi/execution-market-context.openapi.json").read_text())
+portal_latest_fixture = json.loads((portal_contracts / "fixtures/execution-market-context.latest.valid.json").read_text())
+portal_candles_fixture = json.loads((portal_contracts / "fixtures/execution-market-context.candles.valid.json").read_text())
+portal_generated = (portal_contracts / "generated/execution-market-context.d.ts").read_text()
 
 ids = ["market.latest.v1", "market.candles.v1", "venue.calendar.v1", "market.benchmark.v1", "market.vnm-constraints.v1"]
 assert request["schema_version"] == "portal.execution.eds11r.market-context-owner-request.v1"
@@ -168,6 +174,38 @@ assert 'relationFor' not in service_source
 for token in ('@Controller("/api/v1/execution/market")', '@Get("/latest")', '@Get("/candles")'):
     assert token in controller_source, token
 assert 'fixedPathForNamedOperation' in proxy_source
+
+# The source-dark server consumer must also have a canonical browser contract.
+# This freezes only its two named same-origin DTOs; it does not make the source
+# adapter live or grant the browser a relation/Edge/credential escape hatch.
+assert portal_schema["$id"].endswith("execution-market-context.v1.schema.json")
+assert portal_schema["oneOf"] == [
+    {"$ref": "#/$defs/LatestResponse"},
+    {"$ref": "#/$defs/CandlesResponse"},
+]
+assert portal_schema["$defs"]["LatestResponse"]["unevaluatedProperties"] is False
+assert portal_schema["$defs"]["CandlesResponse"]["unevaluatedProperties"] is False
+assert portal_schema["$defs"]["LatestResponse"]["allOf"][1]["properties"]["observations"]["maxItems"] == 200
+assert portal_schema["$defs"]["CandlesResponse"]["allOf"][1]["properties"]["candles"]["maxItems"] == 2000
+assert portal_openapi["servers"] == [{"url": "/"}]
+assert set(portal_openapi["paths"]) == {
+    "/api/v1/execution/market/latest",
+    "/api/v1/execution/market/candles",
+}
+assert portal_openapi["paths"]["/api/v1/execution/market/latest"]["get"]["operationId"] == "executionMarketContextLatestV1"
+assert portal_openapi["paths"]["/api/v1/execution/market/candles"]["get"]["operationId"] == "executionMarketContextCandlesV1"
+assert portal_latest_fixture["provenance"]["history_semantics"] == "CURRENT_MARKET_OBSERVATION_NO_REPLAY_CLAIM"
+assert portal_candles_fixture["provenance"]["history_semantics"] == "BOUNDED_PROVIDER_SERIES_NO_REPLAY_CLAIM"
+assert portal_latest_fixture["profile_id"] == "PAPER_BINANCE_USDM"
+assert portal_candles_fixture["profile_id"] == "SANDBOX_BINANCE_USDM"
+for token in ("executionMarketContextLatestV1", "executionMarketContextCandlesV1"):
+    assert token in portal_generated
+route_surface = json.dumps({
+    "paths": portal_openapi["paths"],
+    "parameters": portal_openapi["components"]["parameters"],
+}, sort_keys=True).lower()
+for forbidden in ("/internal/v2/", "manager/market", "cursor", "mtls", "delegated", "credential"):
+    assert forbidden not in route_surface
 PY
 
 # The owner receives one campaign directory.  Exercise the builder rather

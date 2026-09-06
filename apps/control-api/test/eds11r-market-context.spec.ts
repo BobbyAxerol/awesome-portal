@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadConfig, type ControlApiConfig } from "../src/config";
 import { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
 import {
@@ -15,11 +15,13 @@ import {
   MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS,
 } from "../src/execution/market-context.registry";
 import {
+  MarketContextError,
   MarketContextService,
   translateMarketCandles,
   translateMarketLatest,
 } from "../src/execution/market-context.service";
 import type { AuthSession, PortalUser } from "../src/domain";
+import { HttpErrorFilter } from "../src/http-error.filter";
 
 const user: PortalUser = {
   userId: "usr_market_context", username: "market-context", displayName: "Market Context", role: "ADMIN",
@@ -84,6 +86,35 @@ describe("EDS-11R4 Market Context owner-gated BFF", () => {
       environment: "paper", venue: "BINANCE", instrument: "BTCUSDT",
     })).rejects.toMatchObject({ code: "PENDING_MARKET_CONTEXT_ADAPTER", status: 503 });
     expect(source.calls).toEqual([]);
+  });
+
+  it("preserves typed source-dark and invalid-query HTTP failures", () => {
+    const reply = {
+      status: vi.fn(),
+      send: vi.fn(),
+    };
+    reply.status.mockReturnValue(reply);
+    const host = {
+      switchToHttp: () => ({
+        getResponse: () => reply,
+        getRequest: () => ({ headers: { "x-request-id": "req_market_context" } }),
+      }),
+    };
+    const filter = new HttpErrorFilter();
+
+    filter.catch(new MarketContextError("PENDING_MARKET_CONTEXT_ADAPTER", 503), host as never);
+    expect(reply.status).toHaveBeenLastCalledWith(503);
+    expect(reply.send).toHaveBeenLastCalledWith({
+      error: { code: "PENDING_MARKET_CONTEXT_ADAPTER", message: "PENDING_MARKET_CONTEXT_ADAPTER" },
+      request_id: "req_market_context",
+    });
+
+    filter.catch(new MarketContextError("EDS11R4_MARKET_QUERY_INVALID", 400), host as never);
+    expect(reply.status).toHaveBeenLastCalledWith(400);
+    expect(reply.send).toHaveBeenLastCalledWith({
+      error: { code: "EDS11R4_MARKET_QUERY_INVALID", message: "EDS11R4_MARKET_QUERY_INVALID" },
+      request_id: "req_market_context",
+    });
   });
 
   it("requires an accepted digest-pinned capability for each profile", () => {

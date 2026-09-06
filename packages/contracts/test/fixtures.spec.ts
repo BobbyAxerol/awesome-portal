@@ -172,6 +172,10 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-screen-bff.v1.schema.json#/$defs/DetailResponse",
   "execution-contract-authority.valid.json":
     "https://schemas.primusspark.com/portal/execution-contract-authority.v1.schema.json#/$defs/ContractAuthorityResponse",
+  "execution-market-context.latest.valid.json":
+    "https://schemas.primusspark.com/portal/execution-market-context.v1.schema.json#/$defs/LatestResponse",
+  "execution-market-context.candles.valid.json":
+    "https://schemas.primusspark.com/portal/execution-market-context.v1.schema.json#/$defs/CandlesResponse",
   "execution-paper-overview.ready.valid.json":
     "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
   "execution-paper-overview.empty.valid.json":
@@ -264,6 +268,14 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(commandValidate!({ ...command, injected: true })).toBe(false);
     expect(commandValidate!({ ...command, expected_aggregate_version: 0 })).toBe(false);
     expect(commandValidate!({ ...command, idempotency_key: "bad key!" })).toBe(false);
+
+    const marketLatest = loadJson(
+      join(fixtureDir, "execution-market-context.latest.valid.json"),
+    ) as Record<string, unknown>;
+    const marketLatestValidate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-market-context.v1.schema.json#/$defs/LatestResponse",
+    );
+    expect(marketLatestValidate!({ ...marketLatest, injected: true })).toBe(false);
   });
 
   it("keeps the N20 seven-state corpus exact, non-actionable and source-safe", () => {
@@ -1223,5 +1235,45 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(generated).toContain('"/api/v1/execution/command-center"');
     expect(generated).toContain("CommandCenterSnapshot");
     expect(generated).toContain("command-center.triage-rank.v1");
+  });
+
+  it("keeps EDS-11R4 Market Context named, bounded and explicitly non-replay", () => {
+    const latest = loadJson(
+      join(fixtureDir, "execution-market-context.latest.valid.json"),
+    ) as Record<string, unknown> & { observations: Array<Record<string, unknown>> };
+    const candles = loadJson(
+      join(fixtureDir, "execution-market-context.candles.valid.json"),
+    ) as Record<string, unknown> & { candles: Array<Record<string, unknown>> };
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-market-context.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    expect(latest).toMatchObject({
+      logical_operation_id: "managerMarketContextLatestV1",
+      environment: "paper",
+      profile_id: "PAPER_BINANCE_USDM",
+      provenance: { history_semantics: "CURRENT_MARKET_OBSERVATION_NO_REPLAY_CLAIM", derived: false },
+    });
+    expect(candles).toMatchObject({
+      logical_operation_id: "managerMarketContextCandlesV1",
+      environment: "sandbox",
+      profile_id: "SANDBOX_BINANCE_USDM",
+      provenance: { history_semantics: "BOUNDED_PROVIDER_SERIES_NO_REPLAY_CLAIM", derived: false },
+    });
+    expect(latest.observations).toHaveLength(1);
+    expect(candles.candles).toHaveLength(2);
+    expect(validate!({ ...latest, profile_id: "LIVE_BINANCE_USDM" })).toBe(false);
+    expect(validate!({ ...candles, state: "AUTHORITATIVE_EMPTY" })).toBe(false);
+    const generated = readFileSync(
+      join(ROOT, "generated", "execution-market-context.d.ts"),
+      "utf8",
+    );
+    for (const operation of ["executionMarketContextLatestV1", "executionMarketContextCandlesV1"]) {
+      expect(generated).toContain(operation);
+    }
+    expect(generated).not.toMatch(/post:|put:|patch:|delete:/);
+    expect(`${JSON.stringify(latest)}${JSON.stringify(candles)}`).not.toMatch(
+      /internal\/v2|relation|cursor|mtls|delegated|credential|token/i,
+    );
   });
 });

@@ -4051,6 +4051,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 | Date | Change | Evidence/status effect |
 |---|---|---|
 | 2026-09-06 | **EDS-11R4 owner handoff is now machine-verifiable and included in the one official Trading System master campaign**: the Portal attachment pins the exact bounded Market Context v1 capability inventory, input/output schema, expected coverage fixtures, pending-return semantics and a manifest.  The owner needs only an additive Manager-side adapter over the already-running private Data Layer. | `execution-eds11r-market-context-test.sh` validates the attachment, its manifest, authority boundary and an end-to-end rendered master-campaign pack; the pack copies into the existing N28 return root without creating a second request.  **Status: `OWNER_HANDOFF_VERIFIED / SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.  Next: Trading System agent implements and returns the digest-pinned adapter pack; Portal validates and consumes it through named BFFs.** |
+| 2026-09-06 | **EDS-11R4 Portal consumer contract closeout is complete while remaining source-dark**: the two fixed BFF endpoints now have canonical JSON Schema, OpenAPI, generated TypeScript types, valid populated fixtures and a static authority gate. | `execution-market-context.v1` permits only latest current observation (`≤200`, `1 MiB`) and bounded candles (`≤2,000`, `8 MiB`, `≤366 days`), preserves profile/freshness/completeness/UTC-ms/exact decimals, rejects unknown fields, and explicitly forbids replay claims. Contract verification passes **120/120**. **Status: `PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY / TS_ADAPTER_IMPLEMENTATION_PENDING`; no Edge/Data-Layer call, credential or runtime flag is enabled.** |
 | 2026-09-06 | **EDS-11R2 complete at the Portal server-side hydration gate**: existing rich Paper/Sandbox/Live product composers now prefer the durable local projection but can warm a simple current panel through the R1 static named-operation BFF when no first projection snapshot exists or when the local projection feature is deliberately off. The old generic direct `relation()` read-through is removed from the product source. | R1's safe page is converted only in-process into the existing narrow Manager-page composer shape: no raw record key, source relation/alias, source cursor, mTLS or delegated JWT is emitted. Only `N31_PROJECTION_NOT_READY` may warm through R1; stale/corrupt/scoped/detail queries remain fail-closed. Exact integer strings and UTC-ms survive. New focused warm-up/negative tests plus fresh-PG Control API **47 files / 399 tests** and restore drill pass. **Next: EDS-11R3 local projection/SSE runtime-readiness.** |
 | 2026-09-06 | **EDS-11R1 complete at the Portal contract gate**: a deterministic compiler now reconciles all **96/96** accepted Manager-v2 census entries into 54 named, same-origin screen-bound BFF operations plus explicit non-browser dispositions for 16 projection inputs, 13 audit-only relations and 13 internal-only relations. The browser-facing manifest contains only product operation IDs, route aliases, safe scalar DTO field names/kinds and screen ownership; it contains no source schema/relation, source alias, cursor, mTLS input or delegated JWT. | Generated source provenance pins the sanitized census + relation/column catalogues; 54 operation routes use a fixed 200-row/1-MiB bound, Portal-issued relation-bound continuation, UTC-ms codec, exact-decimal strings, Portal-derived opaque resource IDs and scalar/non-sensitive redaction. Focused generator, transport, profile/drift/continuation/redaction/controller tests pass. No current-source runtime flag, AWS-HK service, Trading System code, command or container changed. **Next: EDS-11R2 rich-panel consumption.** |
 | 2026-09-06 | **EDS-11R delivery plan expanded into five closeable phases immediately before EDS-12**: R1 classifies the complete 96-relation catalogue into named safe BFF authority; R2 retains and hydrates rich product panels; R3 supplies durable current projection, financial range and local SSE; R4 is a small TS-owned Data-Layer Market Context adapter; R5 is an explicitly optional authoritative-replay semantic upgrade | Corrected the old blanket `SOURCE_GAP_CONFIRMED` wording: Market Context data already exists but needs a versioned source adapter, while current `domain_events` remain observed history until a real sequence/epoch/correction/retention contract exists.  Each phase now has scope, ownership, negative tests, exit gate and no-hidden-debt rule |
@@ -5677,7 +5678,7 @@ authoritative Trading-System event replay.
 
 #### EDS-11R4 — TS-owned Market Context v1 adapter over the existing Data Layer
 
-**Status:** `PORTAL_CONSUMER_SOURCE_DARK_READY / OWNER_HANDOFF_VERIFIED /
+**Status:** `PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY / OWNER_HANDOFF_VERIFIED /
 SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.
 
 **Execution decision:** this can start immediately in the Trading System
@@ -5742,7 +5743,21 @@ intake, and the separate deployment flag is then still required.  Thus the
 Portal half is ready without inventing a route, exposing an upstream cursor or
 creating AWS-HK traffic before source acceptance.
 
-**Current R4 state:** `PORTAL_CONSUMER_SOURCE_DARK_READY /
+**Portal canonical contract closeout (source-dark, 2026-09-06):**
+`packages/contracts/schemas/execution-market-context.v1.schema.json`,
+`openapi/execution-market-context.openapi.json`, generated
+`execution-market-context.d.ts`, and populated latest/candle fixtures now
+freeze the exact browser response shape. The schema admits only the two named
+operations, maps every environment to its exact profile, preserves
+`availability/freshness/completeness/as_of_ms`, UTC milliseconds and exact
+decimal strings, caps latest at 200 rows and candles at 2,000 rows, and rejects
+unknown browser fields. The generated client surface contains only `GET`
+operations; OpenAPI never exposes Edge paths, source relations, cursors, mTLS
+inputs or delegated credentials. Contract fixture/type verification passes
+**120/120**. This does not change the compiled pending owner intake or activate
+a source read.
+
+**Current R4 state:** `PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY /
 TS_ADAPTER_IMPLEMENTATION_PENDING`.  This is not a claim that Market Context
 is live; dependent rich panels must continue their typed pending state until
 the named owner return validates and a separate runtime activation is approved.
@@ -5832,7 +5847,7 @@ owner campaign or replace a completed phase with a vague `Soon` state.
 | `R1` | 96/96 catalogue disposition and 54 named safe BFF operations are generated, redacted and profile-bound. | `CLOSED_AT_PORTAL_CONTRACT_GATE` | Activate only through a separately approved runtime release; no additional relation API is needed. |
 | `R2` | Every listed rich product screen consumes a named server DTO and retains its approved composition through populated, empty, partial, stale and denied states. | `CLOSED_AT_PORTAL_HYDRATION_GATE` | Frontend integration/release verifies panel-level rendering; no full-screen envelope fallback is admissible. |
 | `R3` | Local profile projection, bounded financial query and one profile-scoped SSE observation tail retain digest/provenance and pass restore/quarantine tests. | `CLOSED_AT_PORTAL_PROVENANCE_GATE` | Runtime activation uses the accepted profile/config release; it must not create per-tab AWS-HK polling. |
-| `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `PORTAL_CONSUMER_SOURCE_DARK_READY / READY_FOR_TS_AGENT_NOW` | Trading System agent implements the additive Manager adapter around its existing Data Layer readers; Portal replaces the compiled pending intake with the verified return, then enables the two fixed Market Context BFF operations and local chart invalidations through a separately approved runtime flag. |
+| `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY / READY_FOR_TS_AGENT_NOW` | Trading System agent implements the additive Manager adapter around its existing Data Layer readers; Portal replaces the compiled pending intake with the verified return, then enables the two fixed Market Context BFF operations and local chart invalidations through a separately approved runtime flag. |
 | `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `OPTIONAL_UNTIL_REPLAY_IS_CLAIMED` | Keep `domain_events` as labelled observed history now. Implement only when product needs exact replay, without delaying the maximum-current-data release. |
 
 **Hard routing rule:** R4 and R5 never authorize Portal to read the Trading

@@ -1,0 +1,30 @@
+{
+  "schema_version": "portal.execution.market-context.latest.v1",
+  "authority": "PORTAL_CONTROL_API",
+  "logical_operation_id": "managerMarketContextLatestV1",
+  "environment": "paper",
+  "profile_id": "PAPER_BINANCE_USDM",
+  "provenance": {
+    "source_contract_revision": "trading-system.portal-execution.market-context.v1",
+    "history_semantics": "CURRENT_MARKET_OBSERVATION_NO_REPLAY_CLAIM",
+    "derived": false
+  },
+  "source_health": {
+    "availability": "AVAILABLE",
+    "freshness": "FRESH",
+    "completeness": "COMPLETE",
+    "as_of_ms": 1788566400500
+  },
+  "state": "POPULATED",
+  "observations": [
+    {
+      "venue": "BINANCE",
+      "instrument": "BTCUSDT",
+      "value": "105123.000000000000000001",
+      "observation_kind": "MARK",
+      "observed_at_ms": 1788566400000,
+      "quote_currency": "USDT",
+      "provider": "data-layer-v2"
+    }
+  ]
+}

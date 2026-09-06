@@ -26,6 +26,7 @@ import { PortalDerivationError } from "./execution/portal-derivations.service";
 import { DurableFinancialReadError } from "./execution/durable-financial.repository";
 import { FinancialQueryCursorError } from "./execution/financial-query-cursor.repository";
 import { FinancialChartError } from "./execution/financial-chart.service";
+import { MarketContextError } from "./execution/market-context.service";
 
 @Catch()
 export class HttpErrorFilter implements ExceptionFilter {
@@ -58,7 +59,8 @@ export class HttpErrorFilter implements ExceptionFilter {
       exception instanceof PortalDerivationError ||
       exception instanceof DurableFinancialReadError ||
       exception instanceof FinancialQueryCursorError ||
-      exception instanceof FinancialChartError
+      exception instanceof FinancialChartError ||
+      exception instanceof MarketContextError
     ) {
       void reply.status(exception.status).send({
         error: { code: exception.code, message: exception.message },
