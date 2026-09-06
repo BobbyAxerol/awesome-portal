@@ -44,6 +44,12 @@ Chúng không thay thế phase hoặc exit gate trong
   — **the only incremental owner handoff for MC-01 / durable event replay.**
   It consolidates the three event classes, source-as-is implementation choice,
   sanitized return package and source-dark receipt boundary.
+- [Trading System source-completeness campaign v1](./TRADING_SYSTEM_SOURCE_COMPLETENESS_CAMPAIGN_V1.md)
+  — **the single delivery map for closing the visible source-gap backlog.** It
+  keeps N28 v3 and the EDS-09 addendum as the machine authorities, maps all 18
+  EDS-08 gaps plus MC-01…MC-09 into four source-side implementation bundles,
+  and requires one branch, one release and one nested sanitized return pack.
+  It does not create a direct Portal source path or runtime activation.
 - [EDS-09 Trading System owner-return handoff](./EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md)
   — **Portal-local immutable receipt:** mirrors the source-owner return at its
   declared Trading System commit, records all 18 current source gaps, and

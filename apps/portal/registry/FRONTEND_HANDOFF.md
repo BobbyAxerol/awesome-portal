@@ -2142,3 +2142,26 @@ page continuations remain the only browser paging tokens. Observed timeline/
 derived mark-context remain valid where current facts exist. True replay/
 correction/ACK/OHLCV and the other owner-confirmed source gaps stay panel-local
 `Soon · SOURCE_GAP_CONFIRMED`.
+
+### 8.53 Source-completeness campaign consumer rule (2026-09-06)
+
+The source-gap backlog is now one finite Trading System implementation campaign,
+not an invitation for React to infer missing truth.  Its owner handoff is
+[source-completeness campaign v1](../../../upgrade/backend/TRADING_SYSTEM_SOURCE_COMPLETENESS_CAMPAIGN_V1.md).
+
+Until a named same-origin BFF operation is published and accepted, keep the
+reviewed rich panel mounted with its exact typed state.  In particular:
+
+- do not turn current orders/fills or Portal observations into lifecycle
+  replay, correction history, broker acknowledgement latency or global order;
+- do not synthesize candles, benchmarks, venue sessions, VNM constraints or
+  mark provenance from chart pixels, wall-clock values or fixture data; and
+- do not change browser transport: all future accepted facts still arrive only
+  through named same-origin BFFs and the local revision channel.
+
+When a capability is accepted, backend will publish a named DTO with
+availability, freshness, completeness, retention/pre-capture boundary,
+authority/provenance, exact decimal strings and UTC milliseconds.  The rich
+panel replaces only its local typed-gap content; it must not replace the route
+shell or consume an Edge relation, source cursor, JWT, mTLS material or direct
+source URL.

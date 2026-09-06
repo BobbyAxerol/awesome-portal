@@ -679,6 +679,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
   class. See
   [EDS-09 owner-return handoff](backend/EDS_09_TRADING_SYSTEM_OWNER_RETURN_HANDOFF.md).
 
+- **EDS-SC-01 source-completeness campaign is ready for Trading System
+  implementation (2026-09-06):** Portal has consolidated the finite 18-gap
+  EDS-08 inventory and overlapping MC-01…MC-09 capabilities into one
+  source-owner delivery map: lifecycle continuity, operational evidence,
+  market context and provenance/reference contracts.  It requires one source
+  branch, one release and one sanitized nested return pack, while retaining
+  the existing frozen EDS-09/N28 machine contracts.  Per-stream epoch and
+  sequence are sufficient; Portal does not demand a fictitious database-wide
+  event order.  No Portal runtime, direct data path, source traffic or command
+  authority changes until the returned bytes independently validate.  See
+  [source-completeness campaign](backend/TRADING_SYSTEM_SOURCE_COMPLETENESS_CAMPAIGN_V1.md).
+
 - **EDS-09b Portal observation bridge closed source-dark (2026-09-05):** the
   existing local projection and durable mirror now publish an additive
   browser-safe revision descriptor labelled `PORTAL_OBSERVATION` /

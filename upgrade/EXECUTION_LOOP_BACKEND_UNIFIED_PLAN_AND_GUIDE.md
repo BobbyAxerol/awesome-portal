@@ -5290,6 +5290,44 @@ changed. See [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND
 These are retained as one future source-upgrade backlog. They do not suppress
 or degrade current-source screens that already have usable data.
 
+### EDS-SC-01 — Trading System source-completeness campaign
+
+**Status:** `OWNER_IMPLEMENTATION_READY / ONE_BRANCH_ONE_RETURN / PORTAL_RUNTIME_UNCHANGED`
+on 2026-09-06.
+
+**Goal:** turn the finite, source-owned `Soon · SOURCE_GAP_CONFIRMED` list
+into one implementation campaign rather than serial portal requests.  It
+closes each item either through an accepted typed source contract or an honest
+source-grain decision with a named Portal replacement; it never fakes a
+lifecycle, candle, benchmark or provenance fact from current rows.
+
+**Owner delivery shape:** one Trading System branch/release implements four
+bundles: (A) per-bound-stream position/fill/risk snapshot-plus-tail event
+continuity; (B) acknowledgement, funnel, reconciliation and safe terminal
+evidence; (C) latest tick/OHLCV/benchmark/calendar/VNM contracts; and (D)
+mark/valuation provenance, artifact/reference, research linkage and the
+portfolio-equity grain decision.  The same release returns all MC-01…MC-09
+results.  It may adapt an existing Market Data source internally, but Portal
+receives only versioned private Edge contracts.
+
+**Non-negotiable boundary:** event sequence is contiguous within its exact
+bound stream `(workspace, profile, venue, resource, filter)`, not a fictitious
+database-wide total order.  Cross-stream relationships use source-owned
+causation/correlation IDs.  Pre-capture history is an explicit retention
+boundary; it is never reconstructed.
+
+**Evidence/exit:** one
+[`source-completeness campaign`](backend/TRADING_SYSTEM_SOURCE_COMPLETENESS_CAMPAIGN_V1.md)
+return root contains the existing EDS-09 event return, N28 return, market and
+provenance schemas/fixtures, acceptance evidence and one manifest.  Portal
+validates those existing machine schemas before any separate per-contract
+activation proposal.  Current Manager reads, the Portal observation lane and
+all source-dark runtime flags stay unchanged during source implementation.
+
+**Next:** Trading System owner implements and returns the one package.  Portal
+then resumes EDS-09/EDS-10 only for individually verified accepted contracts;
+it continues EDS-09b/EDS-10b/EDS-11 current-data product work in parallel.
+
 ### EDS-10 — Full lifecycle replay and market-context query plane
 
 **Goal:** activate Trade Replay and complete chart context only when the
