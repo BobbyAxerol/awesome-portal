@@ -198,6 +198,8 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | DR-19 | **N29 acceptance pack pin sha256 của file FE** (`recomposeContainers.tsx`, `profileContainers.tsx`, `e2e/bffDouble.ts`, …): mọi wire FE hợp lệ đều làm pre-commit đỏ `evidence digest drifted`. Đợt 2 tôi re-pin 2 digest theo đúng cách codex đã làm ở `a511508`; `bffDouble.ts` giữ nguyên nên e2e double trả 501 gap cho route EDS-05/07 (tile render unavailable — trung thực nhưng không phải trạng thái thật). Đề nghị: tách file FE khỏi pin N29 hoặc ghi thủ tục re-pin vào README pack | TB | N29 pack | OPEN | |
 | DR-20 | **Mirror EDS-06 trên dev rỗng (0 row) và chỉ có relation paper** sau backfill từ `execution_timeseries_history` (710k row → `account_equity_snapshots` 581k · `performance_snapshots` 129k · `fills` 71): EDS-07 chart cho live/sandbox/deployment trả `EDS07_RELATION_NOT_MIRRORED` tới khi worker mirror các profile đó (flag bật 05-09 tối trên dev). Đây chính là câu hỏi DR-01 (absorb/replace): tôi đã absorb history→mirror bằng script (digest canonical y hệt `durable-mirror.repository.ts`), codex xác nhận cách này hay worker tự backfill | CAO | 06/07 | OPEN | |
 | DR-21 | **`alphas/{id}/activity` EMPTY `EDS05_ALPHA_NOT_FOUND` cho mọi id đã thử** (`signalcombine00230m`, `gridcombine001`, `adaptive_hma_cpp_00115m` — id thứ ba là `strategy_id` thật trong deployments, strategies relation có 48 row AVAILABLE) → khóa join của alpha_id sai hoặc alpha_id là trường khác (`alpha_id` registry?). Tile Alpha 360 vì thế luôn EMPTY dù alpha đang chạy paper | TB | 05 | OPEN — codex chỉ khóa đúng | |
+| DR-22 | **N25 `query-analytics.source_facts` không scope theo alpha**: `fills` 63 / `orders` 770 là toàn profile (fill mẫu thuộc `fib_sl_tp_strength_0015m` khi hỏi `adaptive_hma_cpp_00115m`; alpha này chỉ 10/19). Tile "Exact query surface" và funnel vì thế in số toàn profile dưới tên alpha. FE tạm lọc theo account của alpha (Trade Replay); các tile khác vẫn dùng số server. Đề nghị server scope facts theo subject hoặc ghi rõ `scope: PROFILE` trong envelope | CAO (số sai chủ) | N25 | OPEN | |
+| DR-23 | **Nến cho Trade Replay** (OR-4): Portal đọc klines công khai Binance USDM dưới cờ, authority `VENUE_PUBLIC_MARKET_DATA`. Codex xác nhận/từ chối phân loại; nếu từ chối thì Trade Replay quay lại đường chấm fill-price tới khi BR-EX-50 | TB | new route | OPEN — chờ codex + Bobby (egress) | |
 
 Luật sổ: codex trả lời từng DR trong cột của mình (ACCEPT+phase / REJECT+lý do);
 DR nào ACCEPT thì thành mục kiểm tra exit của phase tương ứng; mỗi tuần Bobby
@@ -278,6 +280,33 @@ fade, band vàng đứt nét + fill, gap gạch chéo đỏ, pill giá cuối ex
 Ctrl+wheel zoom, Shift+wheel pan, double-click reset. Baseline visual
 `v2-equity-chart-demo` (2 viewport) cập nhật; 4 baseline màn có chart KHÔNG
 đổi quá 0.2%. Dòng 2 (ECharts reskin bar/heatmap) và sparkline fleet: chưa.
+
+## OR-4 (PROPOSED ⚖ — đã triển khai dưới cờ, chờ Bobby chốt) — Nến venue công khai cho Trade Replay
+
+Owner 06-09: *"Trade replay là vẽ trên candle như indicator TradingView… làm khi
+nào cho được thì thôi."* Trading System không publish kline (E5/N28; EDS-10b của
+codex ghi rõ `EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED`, không bao giờ tự bịa
+OHLCV). Không có nến thì không thể "vẽ marker lên nến".
+
+**Quyết định đề xuất (tôi đã làm, cờ mặc định OFF):** Portal tự đọc **klines
+công khai của venue** — với profile paper USDM đó chính là Binance USDM
+(`fapi.binance.com/fapi/v1/klines`, không cần credential) — làm *market
+context* cho Trade Replay. Route mới `GET /api/v1/execution/market/candles`
+(control-api, `ExecutionMarketCandlesController/Service`): venue/market cố
+định BINANCE/USDM, symbol theo regex, interval trong {1m,5m,15m,1h,4h,1d},
+limit ≤ 1500, from/to UTC ms; cache 30s; ngân sách 60 call/phút; timeout 6s;
+mọi envelope mang `source_authority: VENUE_PUBLIC_MARKET_DATA` + endpoint +
+câu "not the Trading System kline shard (BR-EX-50 pending)"; lỗi typed
+(FEATURE_DISABLED / RATE_LIMITED / SYMBOL_UNKNOWN → EMPTY / VENUE_ERROR /
+VENUE_UNREACHABLE / VENUE_MALFORMED). Cờ `FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES`
+(compose overlay local-projection, bật trên dev `.env`). Test unit 10 case.
+
+**Vì sao chấp nhận được:** paper engine mark theo chính feed Binance đó; nến
+là dữ liệu công khai, không phải "lịch sử của nguồn"; FE ghi rõ nguồn ở
+footer và chip; khi BR-EX-50 giao kline shard thì đổi nguồn lớp nến, giữ
+nguyên marker/leg/log. **Điểm cần Bobby chốt:** control-api có được phép gọi
+ra ngoài tới venue công khai không (hiện nó đã reach được, 200/206ms); codex
+có đồng ý phân loại authority `VENUE_PUBLIC_MARKET_DATA` không (DR-23).
 
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
@@ -679,9 +708,28 @@ row) — DR-10 đo lại.
 | Correlation matrix | bars ρ với từng alpha khác, ρ=0 threshold | `portfolio-correlation-returns.v1` pairs (đọc mới) |
 | Market candles · ρ timeline · Paper-vs-live | typed UNAVAILABLE (thật) | N28 / N25 |
 
-**Alpha 360 · Trade Replay** — chart equity uPlot với marker dashed tại mỗi FILL
-của journal (không phải chart giá — ghi rõ "candles unavailable · N28"), bảng
-journal exact giữ nguyên.
+**Alpha 360 · Trade Replay** — *(sửa lại 06-09 sau khi owner chỉ ra tôi làm sai
+kiểu chart)* đúng grammar hi-fi/BR-EX-50: cùng engine SVG của showcase
+(`components/TradeReplayEvents.tsx` viết theo `TradeReplay.tsx`): chip
+account/symbol (symbol chọn được thật), `last fill` ▲/▼, nút + − ◀ ▶ Fit,
+drag/wheel; marker ▲ entry fill (good) · ▼ exit fill (good/bad theo dấu
+`realized_pnl` server publish, warn nếu chưa publish) · ◇ leg armed · ×
+rejected; leg TP/STOP = đường dashed tại `trigger_price` từ submit→terminal;
+round trip entry→exit nét đứt, nhãn = `realized_pnl` của fill exit (không trừ
+phía client); legend + footer như hi-fi; trade log 8 cột (time · event chip
+FILL/ACK/SUBMIT/TRIGGER/REJECT/CANCEL · order·leg · type·side · qty ·
+price/trigger · fee maker/taker · note) mới nhất trước. **Lớp candle chưa có**
+(E5/N28, BR-EX-50 codex): thay bằng đường chấm nối giá các fill và dòng chữ
+trong plot nói rõ — khi BR-EX-50 giao thì lắp candle vào đúng lớp đó. Dữ liệu:
+orders/fills của resource EDS-04 ∪ facts analytics lọc theo account của alpha
+(facts N25 KHÔNG scope theo alpha — 63 fill/770 order là toàn profile; chỉ 10/19
+thuộc alpha này).
+**Bản 3 (06-09, sau khi owner yêu cầu nến thật):** lớp nến = klines công khai
+Binance USDM qua route mới `/market/candles` (OR-4): wick + body up/down như
+hi-fi, marker/leg/round-trip vẽ lên nến, chip interval (1m…1d, tự nâng khi
+range vượt 1500 bar), `mark` = close nến cuối, footer ghi nguồn + giờ fetch +
+"VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard". Khi cờ tắt
+hoặc venue lỗi → quay lại đường chấm fill-price với lý do typed.
 
 ### A5.5 Còn lệch showcase, chưa làm đợt này (đề xuất goal kế)
 
@@ -700,12 +748,16 @@ journal exact giữ nguyên.
 | Command Center — phần tử động | 3 | **32** (beat 1 · rankring 1 · overdue 2 · funnel grow 4 · matrix nowdot 24) | 24 |
 | Command Center — panel | 5 (không pipeline) | **6** — có Promotion pipeline thật (43 alpha, 12 hàng hiện, footer ghi cap) | 5 (pipeline giả 4 hàng) |
 | Alpha 360 · Insight Charts — canvas | 1 | **9** (3 UNAVAILABLE typed thật, 0 insufficient_data) | 12 (toàn demo) |
-| Alpha 360 · Trade Replay — canvas | 0 | **1** (equity + 12 marker fill) | 1 (SVG demo) |
+| Alpha 360 · Trade Replay — chart | bảng, không chart | **SVG replay đúng grammar hi-fi** (marker ▲▼◇×, leg TP/STOP, round trip, log 8 cột) — lớp candle chờ BR-EX-50 | SVG demo (smoke) |
 
-Gate: `tsc -b` sạch · vitest **101 file / 1859 pass** · N29 re-pin 2 digest. Ảnh
+Trade Replay (bản sửa lại): 6 fill trong cửa sổ mở đầu 11d, marker ▲▼◇×, 2 leg dashed, round trip `1.3208 · TP`, trục 1,800–1,950 (fill 3,500 ngoài dải vẽ ở mép, ghi off-scale), log 29 event ETHUSDT.
+
+Trade Replay **bản 3 (nến thật)**: 257 nến 1h Binance USDM ETHUSDT hiện trong cửa sổ 11d (378 bar fetch), marker ▲▼◇× + 2 leg + round trip vẽ lên nến, `mark 1,845.38 ▼` = close nến cuối, footer ghi `fapi.binance.com/fapi/v1/klines · fetched 05:00:04Z · VENUE_PUBLIC_MARKET_DATA`. Gate: control-api tsc sạch + spec 10/10 · FE tsc sạch · vitest **103 file / 1871 pass**.
+
+Gate: `tsc -b` sạch · vitest **102 file / 1866 pass** · N29 re-pin 2 digest. Ảnh
 `s5_probe2_*.png`, `s5_probe3_*.png` (scratchpad phiên).
 
-**Deploy dev 06-09 ~02:55 UTC**: `portal-portal-web-1` recreate trên image `:dev` mới (bundle `assets/index-BP7ruNdb.js`), control-api giữ image `635e2a5` (goal này không đổi backend). Commit FE: **`7f6f5cb`** trên `feat/eds-current-bff` (đã push origin).
+**Deploy dev 06-09 ~05:05 UTC**: `portal-control-api-1` + `portal-portal-web-1` recreate trên image `:dev` mới (control-api có route `/market/candles`, cờ `FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true` trong `.env` dev; bundle FE `assets/index-P0O2ckNK.js`). Commit FE trên `feat/eds-current-bff`: `7f6f5cb` (motion + insight charts) · `91bf468` (Trade Replay grammar hi-fi) · `743907e` (cửa sổ mở đầu) · `daa30a8` (nến venue: route klines có cờ + lớp nến hi-fi; push xong `feat/eds-current-bff`).
 
 ## A3. Luật vận hành kế hoạch này
 
