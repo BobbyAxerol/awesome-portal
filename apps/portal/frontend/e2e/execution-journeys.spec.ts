@@ -64,7 +64,10 @@ test.describe("§8.2 journeys — recomposed product truth", () => {
     const tiles = page.locator(".exec-alpha-tiles > *");
     await expect.poll(() => tiles.count()).toBe(12);
     await page.getByRole("tab", { name: "Trade Replay" }).click();
-    await expect(page.getByText(/Market candles are unavailable.*E5_MARKET_CANDLES_NOT_PUBLISHED/)).toBeVisible();
+    // The rich replay stays mounted even when the Market Context adapter has
+    // not published candles.  The typed state belongs to the SVG panel, not a
+    // replacement blank-frame message.
+    await expect(page.locator("svg.exec-rp-svg")).toContainText("candles unavailable · E5_MARKET_CANDLES_NOT_PUBLISHED");
   });
 
   test("4 · Portfolio 360: the published correlation and capital ledger render in their reviewed tabs", async ({ page }) => {
