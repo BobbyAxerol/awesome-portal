@@ -87,17 +87,26 @@ describe("analyticsTiles — every published branch becomes a chart, unpublished
   });
 });
 
-describe("SourceTradeReplay — fills as markers on the execution equity, candles named unavailable", () => {
-  it("draws the equity chart host with one marker per FILL event and keeps the exact journal table", () => {
-    const { container } = render(<SourceTradeReplay analytics={readQueryAnalytics(RAW)} />);
-    expect(container.querySelector("[data-financial-chart]")?.getAttribute("data-points")).toBe("3");
-    expect(screen.getByText(/1 fills · 2 order events · candles unavailable/)).toBeTruthy();
-    expect(screen.getByText(/Market candles are unavailable · N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED/)).toBeTruthy();
-    expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(3);
+describe("SourceTradeReplay — the hi-fi replay grammar on the alpha's own events", () => {
+  it("draws the SVG replay from the resource's orders and fills and names the candles unavailable", () => {
+    const facts = readQueryAnalytics(RAW)!;
+    const scoped = { ...facts, sourceFacts: { ...facts.sourceFacts, deployments: [{ account_id: "acct-1", strategy_id: "adaptive_hma_cpp_00115m" }],
+      orders: [{ order_id: 1, account_id: "acct-1", symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "FILLED", quantity: "0.08", client_order_id: "brk-a-en0", submitted_at: "2026-08-08T12:00:00.000Z", updated_at: "2026-08-08T12:00:01.000Z", venue_order_id: "v1" }],
+      fills: [{ fill_id: 2, account_id: "acct-1", instrument_id: "ETHUSDT.BINANCE", side: "BUY", price: "1893.76", quantity: "0.08", trade_time: "2026-08-08T12:47:50.927Z", client_order_id: "brk-a-en0", realized_pnl: "0", commission: "0.05", liquidity_side: "TAKER" }] } };
+    const { container } = render(<SourceTradeReplay analytics={scoped} alphaId="adaptive_hma_cpp_00115m" />);
+    expect(container.querySelector("svg.exec-rp-svg")?.getAttribute("data-replay-events")).toBe("1");
+    expect(screen.getByText(/candles unavailable · N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED/)).toBeTruthy();
+    expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(2);
   });
-  it("says so when no equity series is published, and still lists the journal", () => {
-    const { container } = render(<SourceTradeReplay analytics={readQueryAnalytics({ ...RAW, analytics: { ...RAW.analytics, chart_series: [] } })} />);
-    expect(container.querySelector("[data-financial-chart]")).toBeNull();
-    expect(screen.getByText(/No execution equity series is published/)).toBeTruthy();
+  it("keeps only the alpha's accounts when merging the analytics facts", () => {
+    const facts = readQueryAnalytics(RAW)!;
+    const resource = { ...facts, sourceFacts: { deployments: [{ account_id: "acct-1", strategy_id: "adaptive_hma_cpp_00115m" }], orders: [], fills: [] } };
+    const additive = { ...facts, sourceFacts: { orders: [
+      { order_id: 7, account_id: "acct-1", symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "FILLED", quantity: "1", submitted_at: "2026-08-08T12:00:00.000Z" },
+      { order_id: 8, account_id: "acct-other", symbol: "BTCUSDT", side: "SELL", order_type: "MARKET", status: "FILLED", quantity: "1", submitted_at: "2026-08-08T12:00:00.000Z" },
+    ], fills: [] } };
+    const { container } = render(<SourceTradeReplay analytics={resource} additive={additive} alphaId="adaptive_hma_cpp_00115m" />);
+    expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(1);
+    expect(screen.getByText("7")).toBeTruthy();
   });
 });
