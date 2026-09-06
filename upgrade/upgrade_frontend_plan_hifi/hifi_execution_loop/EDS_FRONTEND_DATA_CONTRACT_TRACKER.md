@@ -308,6 +308,67 @@ nguyên marker/leg/log. **Điểm cần Bobby chốt:** control-api có được
 ra ngoài tới venue công khai không (hiện nó đã reach được, 200/206ms); codex
 có đồng ý phân loại authority `VENUE_PUBLIC_MARKET_DATA` không (DR-23).
 
+## OR-5 (PROPOSED ⚖ — chưa làm, chờ Bobby quyết) — Trade Replay "signature": chuẩn TradingView
+
+Owner 06-09 hỏi ý kiến: *"có nên đầu tư thêm thời gian để trade replay động
+hơn như các sàn / TradingView — mượt, crosshair hiện số nến, tam giác vào/ra
+cho long và short màu khác nến, to hơn một tí, cách thể hiện lệnh điều kiện /
+grid / 1–2 leg sáng tạo hơn, kéo giãn trục giá, kéo ngang mượt bằng chuột —
+tôi muốn chỗ đó như một signature."* Đây là đánh giá, không phải goal; kết
+luận ghi ở đây để Bobby quyết.
+
+### OR-5.1 Hiện trạng thật (bản 3, `daa30a8`)
+
+Engine SVG tự viết (`TradeReplayEvents.tsx`, ~560 dòng, port từ hi-fi): nến
+là `<path>`, marker là **glyph chữ** ▲▼◇× (`<text fontSize>`), tooltip bằng
+`<title>` của trình duyệt, wheel = zoom bước 0.75, kéo = pan, Fit. **Chưa có**:
+crosshair + bảng OHLCV theo con trỏ, kéo giãn trục giá, zoom neo tại con trỏ,
+quán tính khi kéo, HiDPI canvas, đồng bộ hover marker ↔ dòng log. Mỗi
+mousemove đi qua React state → 1500 bar vẫn ổn nhưng không bao giờ "mượt như
+sàn"; muốn mượt phải viết lại vòng tương tác bằng rAF/refs — tức là tự viết
+lại nửa thư viện chart.
+
+### OR-5.2 Khuyến nghị: NÊN làm, và làm bằng **TradingView Lightweight Charts**
+
+| Phương án | Vì sao / vì sao không |
+|---|---|
+| **Lightweight Charts (TradingView, Apache-2.0 + attribution)** — **chọn** | Chính thư viện của TradingView: canvas HiDPI, crosshair + legend, kéo giãn trục giá (`axisPressedMouseMove`), zoom neo con trỏ, kinetic scroll, series markers, price lines, **primitive/plugin API** để vẽ thứ của riêng ta (leg, bracket, grid). ~45 KB gz, lazy-import như uPlot. Tick mọi ô Bobby nêu; phần "signature" là primitive ta tự vẽ. |
+| Giữ SVG, tự đánh bóng | Cùng số ngày để viết lại crosshair/kinetic/axis-drag, kết quả vẫn không đạt cảm giác TV. Không chọn. |
+| ECharts candlestick (đã có trong bundle) | Có candlestick + dataZoom nhưng cảm giác dashboard, không kéo giãn trục giá, không có cơ chế vẽ primitive theo pixel; không phải signature. Không chọn. |
+| uPlot candles (đã có cho equity) | Vẽ nến bằng draw hook được, nhưng crosshair-legend/axis-drag/kinetic/markers đều tự viết. Không chọn cho màn này; uPlot vẫn giữ cho equity (OR-3). |
+| TradingView Charting Library (bản đầy đủ) | Proprietary, cần ký license; quá tay cho một tab. Không chọn. |
+
+**Ràng buộc license:** Apache-2.0 kèm *attribution notice* — phải hiện link
+"TradingView" ở chỗ người dùng thấy (thường là góc chart, kiểu các sàn ghi
+"Charting by TradingView"). Bobby chốt có chấp nhận dấu đó trên portal không.
+
+### OR-5.3 Grammar "signature" đề xuất (vẽ bằng primitive, dữ liệu 100% server)
+
+- **Marker vào/ra theo *side* của vị thế, không theo màu nến**: LONG = tam giác ▲ dưới low, màu token mới `--exec-trade-long` (teal/cyan, khác xanh nến); SHORT = ▼ trên high, `--exec-trade-short` (amber/magenta, khác đỏ nến). Vào = đặc; ra = rỗng cùng màu + nhãn pnl (dấu pnl đổi màu chữ, không đổi hình). Cỡ 10–12 px, viền 1 px màu nền để đọc được trên bấc nến. Giá marker = `fill.price` server.
+- **Bracket (1–2 leg)**: có TP → dải mờ entry→TP (tint long); có SL → dải mờ entry→SL (tint short); có cả hai → một "position box" kiểu công cụ Long/Short Position của TV, nhãn R:R ở mép phải. Level = `trigger_price`, thời gian từ submit → terminal (đã có trong `legLevels`). Kích hoạt (TRIGGER) = ◇ nhỏ trên chính đường đó; REJECT = × ; CANCEL = đường cắt cụt có nhãn.
+- **Grid / nhiều lệnh chờ cùng lúc**: ladder — mỗi level một vạch ngắn cùng màu side, gộp thành "×N levels" khi >8 trong cùng cửa sổ (nhãn trung thực khi cap, §8 invariant).
+- **Round trip**: ruy-băng mảnh nối entry→exit, nhãn pnl server; hover marker → sáng dòng log; click dòng log → chart cuộn tới trade (đồng bộ hai chiều).
+- **Crosshair**: O/H/L/C/V của nến dưới con trỏ + "Δ từ entry" nếu đang có vị thế mở tại thời điểm đó (tính từ fill server, ghi rõ DERIVED).
+- **Trung thực với nguồn**: nến vẫn `VENUE_PUBLIC_MARKET_DATA` (OR-4); fill nằm ngoài dải nến (đã thấy 1 fill ~3,500 khi nến ~1,845) vẽ rỗng + nhãn "off venue print", không kéo về nến. Mọi typed state giữ nguyên.
+
+### OR-5.4 Lộ trình + ước lượng thật
+
+| Bước | Giao gì | Ước lượng |
+|---|---|---|
+| S1 lõi | `lightweight-charts` lazy-import; `ReplayCandleChart` canvas, theme từ `--exec-chart-*` + 2 token trade mới (chỉ trong `tokens.css`, U02 gate); crosshair + legend; markers long/short; price line TP/SL; interval/Fit/typed states; giữ nguyên `readReplayOrders/pairRoundTrips/legLevels/buildLog` | 1.5–2 ngày |
+| S2 signature | primitive bracket/position box, ladder grid, ribbon round trip, trigger/reject/cancel, hover card marker, đồng bộ log ↔ chart, phím ←/→ nhảy trade | 2–3 ngày |
+| S3 gate | vitest (jsdom không có canvas → mock LWC, test data model), Playwright baseline mới cho tab Replay, perf budget 1500 bar / 60 fps pan, reduced-motion, attribution link | 1 ngày |
+
+Tổng **4–6 ngày làm việc**. Reuse: cùng component cho Account 360 (fill của
+account), Full Blotter "open on chart", Sandbox certification replay — không
+phải chart riêng cho một tab.
+
+### OR-5.5 Ba nhóm quyết định (§7.7)
+
+- **(a) Bobby quyết**: ① làm hay để sau §A5.5 (Paper/Portfolio/Live Overview còn lệch showcase); ② chấp nhận attribution "TradingView" trên chart; ③ egress venue công khai (OR-4) — signature trên nến sai nguồn thì đẹp vô nghĩa.
+- **(b) Claude làm không cần chờ**: S1–S3 ở trên, toàn bộ FE, không đổi contract nào.
+- **(c) chờ codex**: BR-EX-50 kline shard (để marker khớp feed của chính hệ thống, hết cảnh fill lệch nến) — không chặn S1–S3, chỉ đổi nguồn lớp nến khi giao; DR-22 scope facts theo alpha.
+
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
 Chính sách nghiệm thu 2 lớp: **Lớp 1 = contract đầu vào** (chấm được ngay vì
