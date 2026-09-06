@@ -142,8 +142,11 @@ function buildOptions(b: Build): uPlot.Options {
       spanGaps: false,
       points: { show: false },
       fill: (u) => {
+        // Fades out by two thirds of the plot so a band drawn lower stays its
+        // own colour instead of blending into the line's fill.
         const g = u.ctx.createLinearGradient(0, u.bbox.top, 0, u.bbox.top + u.bbox.height);
-        g.addColorStop(0, alpha(color, 0.28));
+        g.addColorStop(0, alpha(color, 0.26));
+        g.addColorStop(0.65, alpha(color, 0.04));
         g.addColorStop(1, alpha(color, 0));
         return g;
       },

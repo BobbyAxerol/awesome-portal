@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSourceHealth } from "./api/derivations";
 import { financialChartPath, financialChartView, readFinancialChart, viewportPx } from "./api/financialChart";
-import { ExecutionQualityTile, PortfolioCapitalTile, SourceHealthPanel } from "./components/DerivationTile";
+import { ExecutionQualityTile, PortfolioCapitalBoard, PortfolioCapitalTile, SourceHealthBoard, SourceHealthPanel } from "./components/DerivationTile";
 
 afterEach(cleanup);
 
@@ -234,6 +234,36 @@ describe("derivation tiles", () => {
     expect(screen.getAllByText("11360000").length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText(/not published by the source: portfolio_capital_ledger, account_reservations/)).toBeTruthy();
     expect(screen.queryByText(/^total$/i)).toBeNull();
+  });
+  it("boards keep one row per environment partition and name the reads that failed", () => {
+    render(
+      <SourceHealthBoard
+        reads={[
+          { environment: "paper", value: readSourceHealth(HEALTH), transport: "ok" },
+          { environment: "sandbox", value: null, transport: "loading" },
+          { environment: "live", value: null, transport: "denied", reason: "PERMISSION_DENIED" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("paper PARTIAL", { selector: ".exec-chip" })).toBeTruthy();
+    expect(screen.getByText("sandbox …", { selector: ".exec-chip" })).toBeTruthy();
+    expect(screen.getByText("live DENIED", { selector: ".exec-chip" })).toBeTruthy();
+    expect(screen.getByRole("row", { name: /paper PAPER_BINANCE_USDM/ })).toBeTruthy();
+    expect(screen.getByRole("note").textContent).toContain("live: denied · PERMISSION_DENIED");
+    cleanup();
+    const empty = readPortfolioCapital({ ...CAPITAL, environment: "live", data: { ...CAPITAL.data, allocation_by_currency: [], account_balance_by_currency: [], unpublished_inputs: [] } });
+    render(
+      <PortfolioCapitalBoard
+        reads={[
+          { environment: "paper", value: readPortfolioCapital(CAPITAL), transport: "ok" },
+          { environment: "live", value: empty, transport: "ok" },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("row", { name: /^paper USDT/ })).toBeTruthy();
+    expect(screen.queryByRole("row", { name: /^live/ })).toBeNull();
+    expect(screen.getByText(/live: no currency rows published · EDS05_PORTFOLIO_CAPITAL_LEDGER_NOT_PUBLISHED/)).toBeTruthy();
+    expect(screen.getByText(/paper: not published by the source: portfolio_capital_ledger, account_reservations/)).toBeTruthy();
   });
   it("renders the transport failure when nothing was read, and the server's EMPTY when it answered EMPTY", () => {
     const { container } = render(<SourceHealthPanel health={null} transport="denied" reason="PERMISSION_DENIED" />);

@@ -5612,6 +5612,15 @@ reads remain fail-closed and wait for the local projection.  This preserves
 the approved rich screen shell while R3 prepares the retained data needed by
 charts, resource detail and exact local query panels.
 
+**Rich-composition integration note (2026-09-06):** the reviewed approved UI
+slice from `feat/eds-current-bff` is integrated here as a bounded R2 input:
+environment-specific derivation boards, the financial-chart grammar, Command
+Center motion, Insight Charts and observed Trade Replay remain mounted in the
+product shell. The later public-venue-candle commit is intentionally excluded:
+Market Context must arrive through the EDS-11R4 Trading-System-owned adapter,
+not through a second Portal-to-public-market transport. This is an authority
+preservation decision, not a missing rich-UI feature.
+
 #### EDS-11R3 — Durable current projection, financial range and local SSE
 
 **Status:** `COMPLETE_AT_PORTAL_PROVENANCE_GATE / PUSHED`; it is local
@@ -5675,6 +5684,12 @@ gap/resync/auth-expiry/slow-client behavior, range/downsample and
 restore/quarantine paths; focused R3 tests add catalogue persistence and
 audit/internal-admission negatives.  This remains **Portal observation**, not
 authoritative Trading-System event replay.
+
+**Deployment wiring note (2026-09-06):** the local-projection overlay now
+accepts explicit durable-mirror write/read flags in addition to the existing
+projection flag. Both remain default-off; an operator enables both only in a
+reviewed dev/release overlay. This makes R3 chart data and SSE fan-out
+available without adding a per-browser AWS-HK refresh path.
 
 #### EDS-11R4 — TS-owned Market Context v1 adapter over the existing Data Layer
 

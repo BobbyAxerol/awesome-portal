@@ -660,12 +660,15 @@ export function PaperWorkbench({
             )}
           </>
         ) : equity ? (
-          <EquityChart
-            title="Equity vs approved research evidence"
-            envelope={equity.envelope}
-            series={equity.series ?? null}
-            height={220}
-          />
+          <>
+            <EquityChart
+              title="Equity vs approved research evidence"
+              envelope={equity.envelope}
+              series={equity.series ?? null}
+              height={220}
+            />
+            {quality ?? null}
+          </>
         ) : (
           <PanelState status="unavailable" reason="No equity series was published for this window." />
         )}

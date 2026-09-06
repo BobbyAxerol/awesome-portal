@@ -18,7 +18,7 @@ import { readCommandCenter, type CommandCenter } from "../commandCenter";
 import { CommandCenterLive } from "./containers";
 import type { SseFactory } from "../sse";
 import { PanelState } from "../components/states";
-import { SourceHealthPanel } from "../components/DerivationTile";
+import { SourceHealthBoard } from "../components/DerivationTile";
 import type { SourceHealth } from "../api/derivations";
 import { ProfileEnvelopeScreen, QueryAnalyticsScreen, TypedUnavailableScreen } from "./ProfileScreens";
 import type { PanelStatus } from "../contracts";
@@ -109,20 +109,22 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
 }
 
 /**
- * EDS-05 source health, one read per environment. Three tiles rather than one
- * merged table: each envelope carries its own state, formula and input list,
- * and folding three PARTIALs into one row would hide which one is.
+ * EDS-05 source health, one read per environment, one board: a row per
+ * profile with its environment named, an environment chip per read so a
+ * PARTIAL is still attributable to the read that said it.
  */
 export function SourceHealthLiveTiles({ api }: { api: ExecutionApi }) {
   const paper = useApiRead<SourceHealth>(() => api.getSourceHealth("paper"), [api]);
   const sandbox = useApiRead<SourceHealth>(() => api.getSourceHealth("sandbox"), [api]);
   const live = useApiRead<SourceHealth>(() => api.getSourceHealth("live"), [api]);
   return (
-    <>
-      <SourceHealthPanel health={paper.value} transport={paper.status} reason={paper.reason} />
-      <SourceHealthPanel health={sandbox.value} transport={sandbox.status} reason={sandbox.reason} />
-      <SourceHealthPanel health={live.value} transport={live.status} reason={live.reason} />
-    </>
+    <SourceHealthBoard
+      reads={[
+        { environment: "paper", value: paper.value, transport: paper.status, reason: paper.reason },
+        { environment: "sandbox", value: sandbox.value, transport: sandbox.status, reason: sandbox.reason },
+        { environment: "live", value: live.value, transport: live.status, reason: live.reason },
+      ]}
+    />
   );
 }
 
