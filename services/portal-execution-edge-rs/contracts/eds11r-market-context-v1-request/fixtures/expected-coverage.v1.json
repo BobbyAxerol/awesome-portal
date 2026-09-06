@@ -1,0 +1,19 @@
+{
+  "schema_version": "portal.execution.eds11r.market-context-expected-coverage.v1",
+  "synthetic_no_business_data": true,
+  "browser_authority": "NAMED_SAME_ORIGIN_BFF_ONLY",
+  "portal_activation": false,
+  "expected_capabilities": [
+    {"capability_id": "market.latest.v1", "minimum_delivery": "REQUIRED_IMMEDIATE", "required_profiles": ["PAPER", "SANDBOX", "LIVE"], "value_encoding": "EXACT_DECIMAL_STRING", "time_encoding": "UTC_MILLISECONDS"},
+    {"capability_id": "market.candles.v1", "minimum_delivery": "REQUIRED_IMMEDIATE", "required_profiles": ["PAPER", "SANDBOX", "LIVE"], "value_encoding": "EXACT_DECIMAL_STRING", "time_encoding": "UTC_MILLISECONDS"},
+    {"capability_id": "venue.calendar.v1", "minimum_delivery": "TYPED_UNAVAILABLE_ALLOWED", "required_profiles": ["PAPER", "SANDBOX", "LIVE"], "value_encoding": "NOT_APPLICABLE", "time_encoding": "UTC_MILLISECONDS"},
+    {"capability_id": "market.benchmark.v1", "minimum_delivery": "TYPED_UNAVAILABLE_ALLOWED", "required_profiles": ["PAPER", "SANDBOX", "LIVE"], "value_encoding": "EXACT_DECIMAL_STRING", "time_encoding": "UTC_MILLISECONDS"},
+    {"capability_id": "market.vnm-constraints.v1", "minimum_delivery": "TYPED_UNAVAILABLE_ALLOWED", "required_profiles": ["PAPER", "SANDBOX", "LIVE"], "value_encoding": "NOT_APPLICABLE", "time_encoding": "UTC_MILLISECONDS"}
+  ],
+  "bounds": {
+    "latest_maximum_instruments": 200,
+    "candles_maximum_raw_bars": 2000,
+    "candles_maximum_response_bytes": 8388608,
+    "portal_visual_points_per_page": 200
+  }
+}

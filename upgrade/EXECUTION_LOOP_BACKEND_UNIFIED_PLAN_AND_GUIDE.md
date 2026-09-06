@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-06 | **EDS-11R4 owner handoff is now machine-verifiable and included in the one official Trading System master campaign**: the Portal attachment pins the exact bounded Market Context v1 capability inventory, input/output schema, expected coverage fixtures, pending-return semantics and a manifest.  The owner needs only an additive Manager-side adapter over the already-running private Data Layer. | `execution-eds11r-market-context-test.sh` validates the attachment, its manifest, authority boundary and an end-to-end rendered master-campaign pack; the pack copies into the existing N28 return root without creating a second request.  **Status: `OWNER_HANDOFF_VERIFIED / SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.  Next: Trading System agent implements and returns the digest-pinned adapter pack; Portal validates and consumes it through named BFFs.** |
 | 2026-09-06 | **EDS-11R2 complete at the Portal server-side hydration gate**: existing rich Paper/Sandbox/Live product composers now prefer the durable local projection but can warm a simple current panel through the R1 static named-operation BFF when no first projection snapshot exists or when the local projection feature is deliberately off. The old generic direct `relation()` read-through is removed from the product source. | R1's safe page is converted only in-process into the existing narrow Manager-page composer shape: no raw record key, source relation/alias, source cursor, mTLS or delegated JWT is emitted. Only `N31_PROJECTION_NOT_READY` may warm through R1; stale/corrupt/scoped/detail queries remain fail-closed. Exact integer strings and UTC-ms survive. New focused warm-up/negative tests plus fresh-PG Control API **47 files / 399 tests** and restore drill pass. **Next: EDS-11R3 local projection/SSE runtime-readiness.** |
 | 2026-09-06 | **EDS-11R1 complete at the Portal contract gate**: a deterministic compiler now reconciles all **96/96** accepted Manager-v2 census entries into 54 named, same-origin screen-bound BFF operations plus explicit non-browser dispositions for 16 projection inputs, 13 audit-only relations and 13 internal-only relations. The browser-facing manifest contains only product operation IDs, route aliases, safe scalar DTO field names/kinds and screen ownership; it contains no source schema/relation, source alias, cursor, mTLS input or delegated JWT. | Generated source provenance pins the sanitized census + relation/column catalogues; 54 operation routes use a fixed 200-row/1-MiB bound, Portal-issued relation-bound continuation, UTC-ms codec, exact-decimal strings, Portal-derived opaque resource IDs and scalar/non-sensitive redaction. Focused generator, transport, profile/drift/continuation/redaction/controller tests pass. No current-source runtime flag, AWS-HK service, Trading System code, command or container changed. **Next: EDS-11R2 rich-panel consumption.** |
 | 2026-09-06 | **EDS-11R delivery plan expanded into five closeable phases immediately before EDS-12**: R1 classifies the complete 96-relation catalogue into named safe BFF authority; R2 retains and hydrates rich product panels; R3 supplies durable current projection, financial range and local SSE; R4 is a small TS-owned Data-Layer Market Context adapter; R5 is an explicitly optional authoritative-replay semantic upgrade | Corrected the old blanket `SOURCE_GAP_CONFIRMED` wording: Market Context data already exists but needs a versioned source adapter, while current `domain_events` remain observed history until a real sequence/epoch/correction/retention contract exists.  Each phase now has scope, ownership, negative tests, exit gate and no-hidden-debt rule |
@@ -5647,7 +5648,7 @@ authoritative Trading-System event replay.
 
 #### EDS-11R4 — TS-owned Market Context v1 adapter over the existing Data Layer
 
-**Status:** `OWNER_IMPLEMENTATION_READY / NO_DATA_COLLECTION_WAIT`.
+**Status:** `OWNER_HANDOFF_VERIFIED / SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.
 
 **Execution decision:** this can start immediately in the Trading System
 repository.  AWS-HK already has the required Data Layer and market services;
@@ -5656,6 +5657,9 @@ new database, new market ingestion, direct Portal access to Redis/Data Layer,
 a public listener, or a Portal runtime activation.  The single owner handoff
 is the `EDS-11R4` annex in
 [`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
+Its machine-readable attachment is
+`services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/`;
+it is an annex of that one request, not a separate owner campaign.
 
 **Goal:** publish the market facts that already exist in AWS-HK's private Data
 Layer through one additive, versioned, profile-bound Manager/Edge contract:

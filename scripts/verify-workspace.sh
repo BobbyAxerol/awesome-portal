@@ -557,6 +557,7 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md" \
   "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
+  "${ROOT_DIR}/scripts/execution-eds11r-market-context-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md" \
@@ -577,6 +578,7 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/README.md" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/MANIFEST.sha256" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
@@ -1386,6 +1388,7 @@ for tracked_source in \
   upgrade/backend/EX_BE_29_N26_REALTIME_SSE_ACTIVATION.md \
   upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md \
   scripts/execution-n28-missing-capability-test.sh \
+  scripts/execution-eds11r-market-context-test.sh \
   upgrade/backend/EX_BE_31_N28_GENUINE_MISSING_CAPABILITY_ADAPTERS.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N26_N27_REALTIME_DRAWER_HANDOFF.md \
   upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N28_MISSING_CAPABILITY_HANDOFF.md \
@@ -1407,6 +1410,7 @@ for tracked_source in \
   services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json \
   services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256 \
   services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256 \
+  services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/MANIFEST.sha256 \
   services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs \
   scripts/execution-n29-product-acceptance.py \
   scripts/execution-n29-product-acceptance-test.sh \
@@ -1603,6 +1607,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n23-sandbox-live-read-test.sh" \
   "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
   "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
+  "${ROOT_DIR}/scripts/execution-eds11r-market-context-test.sh" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \

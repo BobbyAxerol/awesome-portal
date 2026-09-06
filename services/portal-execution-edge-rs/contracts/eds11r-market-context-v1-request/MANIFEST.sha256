@@ -1,0 +1,5 @@
+23340854755684f0f3c5a8331569e69bc1492278d827c1d26236fb3185b8872e  README.md
+a6d6d3110220213235aed7bb28a2f7eaf1f40dd6b60e9b16db7916b876c8c3be  fixtures/expected-coverage.v1.json
+888f23cbb1daaacf39869792466467004400a2f215a781a1d3e7d3a50566689d  market-context-owner-request.v1.json
+c1b284cff730ef8bfa3d1c49236ff927c4e84b683b720f48f087a85fc9ded3cd  market-context-owner-return.v1.schema.json
+0b862a28933892b96bda250f6a9632cbeb902d309d283ce1bc21230953d87422  owner-return.pending.example.json

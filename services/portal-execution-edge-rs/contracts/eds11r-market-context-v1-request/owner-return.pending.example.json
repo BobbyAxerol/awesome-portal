@@ -1,0 +1,24 @@
+{
+  "schema_version": "trading-system.portal-execution.market-context-publication.v1",
+  "request_revision": "portal.execution.eds11r.market-context-owner-request.v1",
+  "source_commit": "0000000000000000000000000000000000000000",
+  "source_image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "owner_id": "pending-trading-system-owner",
+  "owner_accepted": false,
+  "portal_activation": false,
+  "capabilities": [
+    {"capability_id": "market.latest.v1", "state": "TYPED_UNAVAILABLE", "operation_id": null, "profiles": ["PAPER", "SANDBOX", "LIVE"], "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "reason": "PENDING_OWNER_ADAPTER_IMPLEMENTATION"},
+    {"capability_id": "market.candles.v1", "state": "TYPED_UNAVAILABLE", "operation_id": null, "profiles": ["PAPER", "SANDBOX", "LIVE"], "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "reason": "PENDING_OWNER_ADAPTER_IMPLEMENTATION"},
+    {"capability_id": "venue.calendar.v1", "state": "TYPED_UNAVAILABLE", "operation_id": null, "profiles": ["PAPER", "SANDBOX", "LIVE"], "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "reason": "PENDING_EXACT_SOURCE_SEMANTICS"},
+    {"capability_id": "market.benchmark.v1", "state": "TYPED_UNAVAILABLE", "operation_id": null, "profiles": ["PAPER", "SANDBOX", "LIVE"], "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "reason": "PENDING_EXACT_SOURCE_SEMANTICS"},
+    {"capability_id": "market.vnm-constraints.v1", "state": "TYPED_UNAVAILABLE", "operation_id": null, "profiles": ["PAPER", "SANDBOX", "LIVE"], "contract_revision": null, "schema_sha256": null, "fixture_index_sha256": null, "acceptance_sha256": null, "reason": "PENDING_EXACT_SOURCE_SEMANTICS"}
+  ],
+  "authority": {
+    "contains_credentials": false,
+    "contains_business_rows": false,
+    "contains_raw_sql": false,
+    "portal_direct_data_layer_or_redis_access": false,
+    "portal_cli_or_broker_authority": false,
+    "runtime_flags_changed": false
+  }
+}

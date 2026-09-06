@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution/eds11r-market-context-owner-return.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_revision", "source_commit", "source_image_digest", "owner_id", "owner_accepted", "portal_activation", "capabilities", "authority"],
+  "properties": {
+    "schema_version": {"const": "trading-system.portal-execution.market-context-publication.v1"},
+    "request_revision": {"const": "portal.execution.eds11r.market-context-owner-request.v1"},
+    "source_commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "source_image_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "owner_id": {"type": "string", "minLength": 1, "maxLength": 128},
+    "owner_accepted": {"type": "boolean"},
+    "portal_activation": {"const": false},
+    "capabilities": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability_id", "state", "operation_id", "profiles", "contract_revision", "schema_sha256", "fixture_index_sha256", "acceptance_sha256", "reason"],
+        "properties": {
+          "capability_id": {"enum": ["market.latest.v1", "market.candles.v1", "venue.calendar.v1", "market.benchmark.v1", "market.vnm-constraints.v1"]},
+          "state": {"enum": ["PUBLISHED", "TYPED_UNAVAILABLE"]},
+          "operation_id": {"type": ["string", "null"], "maxLength": 256},
+          "profiles": {"type": "array", "items": {"enum": ["PAPER", "SANDBOX", "LIVE"]}, "uniqueItems": true},
+          "contract_revision": {"type": ["string", "null"], "maxLength": 256},
+          "schema_sha256": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+          "fixture_index_sha256": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+          "acceptance_sha256": {"type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$"},
+          "reason": {"type": "string", "minLength": 1, "maxLength": 512}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"state": {"const": "PUBLISHED"}}},
+            "then": {
+              "properties": {
+                "operation_id": {"type": "string", "minLength": 1},
+                "contract_revision": {"type": "string", "minLength": 1},
+                "schema_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+                "fixture_index_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+                "acceptance_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+              }
+            },
+            "else": {
+              "properties": {
+                "operation_id": {"const": null},
+                "contract_revision": {"const": null},
+                "schema_sha256": {"const": null},
+                "fixture_index_sha256": {"const": null},
+                "acceptance_sha256": {"const": null}
+              }
+            }
+          }
+        ]
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contains_credentials", "contains_business_rows", "contains_raw_sql", "portal_direct_data_layer_or_redis_access", "portal_cli_or_broker_authority", "runtime_flags_changed"],
+      "properties": {
+        "contains_credentials": {"const": false},
+        "contains_business_rows": {"const": false},
+        "contains_raw_sql": {"const": false},
+        "portal_direct_data_layer_or_redis_access": {"const": false},
+        "portal_cli_or_broker_authority": {"const": false},
+        "runtime_flags_changed": {"const": false}
+      }
+    }
+  }
+}

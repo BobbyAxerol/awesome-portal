@@ -1,0 +1,90 @@
+{
+  "schema_version": "portal.execution.eds11r.market-context-owner-request.v1",
+  "request_revision": "portal.execution.eds11r.market-context-owner-request.v1",
+  "phase": "EDS-11R4",
+  "status": "OWNER_ADAPTER_IMPLEMENTATION_PENDING",
+  "source_as_is": true,
+  "reuse": {
+    "no_new_market_database": true,
+    "no_history_reingestion": true,
+    "existing_private_readers": [
+      "DataLayerV2Facade.latest_market",
+      "DataLayerV2Facade.latest_bar",
+      "VersionedDataLayerClient.warmup_ohlcv",
+      "MarketCacheReader.execution_market_context"
+    ]
+  },
+  "common_contract": {
+    "transport": "TLS_1_3_MTLS",
+    "delegated_scope": "execution:manager-v2:read",
+    "identity_binding": "EXACT_CAPABILITY_AUDIENCE_ENVIRONMENT_PROFILE",
+    "version_header": "X-Trading-Contract-Revision",
+    "browser_direct_access": false,
+    "portal_direct_data_layer_or_redis_access": false,
+    "source_command_authority": false,
+    "automatic_retry": false,
+    "portal_activation_on_publication": false,
+    "runtime_change_authorized": false
+  },
+  "operations": [
+    {
+      "capability_id": "market.latest.v1",
+      "delivery": "REQUIRED_IMMEDIATE",
+      "source_readers": ["DataLayerV2Facade.latest_market", "DataLayerV2Facade.latest_bar", "MarketCacheReader.execution_market_context"],
+      "request_binding": ["profile_id", "venue", "instrument"],
+      "required_fields": ["value", "observation_kind", "observed_at_ms", "as_of_ms", "quote_currency", "provider", "freshness", "completeness", "availability"],
+      "bounds": {"maximum_instruments": 200, "maximum_response_bytes": 1048576},
+      "typed_fallback": "AUTHORITATIVE_EMPTY_OR_SOURCE_TYPED_FAILURE"
+    },
+    {
+      "capability_id": "market.candles.v1",
+      "delivery": "REQUIRED_IMMEDIATE",
+      "source_readers": ["VersionedDataLayerClient.warmup_ohlcv", "DataLayerV2Facade.latest_bar"],
+      "request_binding": ["profile_id", "venue", "instrument", "interval", "from_ms", "to_ms", "point_limit"],
+      "required_fields": ["open_ms", "close_ms", "open", "high", "low", "close", "volume", "interval", "as_of_ms", "coverage", "sampling", "freshness", "completeness", "availability"],
+      "bounds": {"maximum_raw_bars": 2000, "maximum_response_bytes": 8388608, "portal_visual_points_per_page": 200},
+      "typed_fallback": "EXACT_PROVIDER_INSTRUMENT_INTERVAL_UNSUPPORTED"
+    },
+    {
+      "capability_id": "venue.calendar.v1",
+      "delivery": "PUBLISH_IF_EXACT_SOURCE_SEMANTICS_EXIST",
+      "source_readers": ["approved_data_layer_session_or_universe_reader"],
+      "request_binding": ["profile_id", "venue", "effective_from_ms", "effective_to_ms"],
+      "required_fields": ["trading_day", "timezone", "session_kind", "opens_at_ms", "closes_at_ms", "calendar_revision", "availability"],
+      "bounds": {"maximum_sessions": 400, "maximum_response_bytes": 1048576},
+      "typed_fallback": "TYPED_UNAVAILABLE"
+    },
+    {
+      "capability_id": "market.benchmark.v1",
+      "delivery": "PUBLISH_IF_EXACT_SOURCE_SEMANTICS_EXIST",
+      "source_readers": ["approved_bounded_candle_series"],
+      "request_binding": ["profile_id", "benchmark_id", "from_ms", "to_ms", "point_limit"],
+      "required_fields": ["benchmark_id", "formula_revision", "value", "observed_at_ms", "coverage", "source_authority", "availability"],
+      "bounds": {"maximum_points": 2000, "maximum_response_bytes": 8388608},
+      "typed_fallback": "TYPED_UNAVAILABLE"
+    },
+    {
+      "capability_id": "market.vnm-constraints.v1",
+      "delivery": "PUBLISH_IF_EXACT_SOURCE_SEMANTICS_EXIST",
+      "source_readers": ["approved_effective_dated_venue_configuration"],
+      "request_binding": ["profile_id", "venue", "effective_at_ms"],
+      "required_fields": ["venue", "effective_at_ms", "constraint_revision", "rules", "availability"],
+      "bounds": {"maximum_rules": 256, "maximum_response_bytes": 1048576},
+      "typed_fallback": "TYPED_UNAVAILABLE"
+    }
+  ],
+  "return_pack": {
+    "root_name": "portal-execution-owner-return-v3/market-context-v1",
+    "required_files": ["market-context-capability.v1.json", "schemas/", "fixtures/", "acceptance/", "RETURN_MANIFEST.sha256"],
+    "forbidden_content": ["credentials", "private keys", "JWT", "DSN", "raw SQL", "Redis keys", "broker secrets", "business rows"],
+    "portal_activation": false
+  },
+  "authority": {
+    "trading_system_change_authorized_by_this_file": false,
+    "portal_runtime_activation": false,
+    "portal_source_network_change": false,
+    "direct_database_or_redis_access": false,
+    "public_listener": false,
+    "unpublished_capability_remains_typed_pending": true
+  }
+}

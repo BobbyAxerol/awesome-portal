@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACT_DIR="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n28-missing-capability-v1"
+MARKET_CONTEXT_DIR="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request"
 
 if [[ $# -ne 1 ]]; then
   printf 'Usage: %s DESTINATION\n' "$0" >&2
@@ -32,6 +33,16 @@ for file in \
   install -m 0644 "${CONTRACT_DIR}/${file}" "${DESTINATION}/contracts/${file}"
 done
 
+# EDS-11R4 is an annex of the same single owner campaign, not an independent
+# request. Preserve its own manifest-bound directory so its return schema
+# cannot collide with the exact MC-01…MC-09 response schema above.
+install -d -m 0755 "${DESTINATION}/contracts/eds11r-market-context-v1-request"
+while IFS= read -r file; do
+  install -d -m 0755 "$(dirname "${DESTINATION}/contracts/eds11r-market-context-v1-request/${file}")"
+  install -m 0644 "${MARKET_CONTEXT_DIR}/${file}" \
+    "${DESTINATION}/contracts/eds11r-market-context-v1-request/${file}"
+done < <(cd "${MARKET_CONTEXT_DIR}" && find . -type f -printf '%P\n' | LC_ALL=C sort)
+
 (
   cd "${DESTINATION}"
   while IFS= read -r relative_path; do
@@ -44,4 +55,4 @@ done
   sha256sum --quiet -c INPUT_MANIFEST.sha256
 )
 
-printf 'Trading System N28 owner request v3 pack built: %s\n' "${DESTINATION}"
+printf 'Trading System master owner campaign (N28 + EDS-11R4) built: %s\n' "${DESTINATION}"

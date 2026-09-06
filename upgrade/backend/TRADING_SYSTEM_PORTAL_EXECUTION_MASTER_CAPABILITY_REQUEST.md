@@ -26,6 +26,9 @@ Machine authority:
 - `services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/owner-request.v3.json`
 - `services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/owner-response.v1.schema.json`
 - `services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256`
+- `services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/market-context-owner-request.v1.json`
+- `services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/market-context-owner-return.v1.schema.json`
+- `services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/MANIFEST.sha256`
 
 The existing `owner-request.v3.json` remains normative for exactly
 `MC-01…MC-09`.  EDS-11R4 is deliberately not an MC entry: it is a thin,
