@@ -5471,8 +5471,8 @@ approved rich UI with generic envelopes.
 
 #### EDS-11R1 — Complete 96-relation, screen-bound named BFF authority
 
-**Status:** `BFF_READY / CONTRACT_VERIFIED / RUNTIME_NOT_ACTIVATED` on
-2026-09-06.
+**Status:** `COMPLETE_AT_PORTAL_CONTRACT_GATE / PUSHED`; runtime promotion is
+deliberately a separate release decision, not unfinished R1 work.
 
 **Goal:** classify all 96 Manager-v2 relations and make every authorized
 screen-bound fact reachable through one explicit, safe, same-origin Portal
@@ -5529,6 +5529,10 @@ typed source outcomes while stripping raw record keys, JSON/array fields and
 
 #### EDS-11R2 — Rich UI hydration across current Paper, Sandbox and Live truth
 
+**Status:** `COMPLETE_AT_PORTAL_HYDRATION_GATE / PUSHED`; each product panel
+has a named-data path and preserves its rich shell while deployment promotion
+remains independently gated.
+
 **Goal:** hydrate the approved rich UI without changing its hierarchy, visual
 language or interaction model.  Alpha, Portfolio, Account/Broker/Binding,
 Paper, Sandbox, Live, Blotter, Operations and governance screens must render
@@ -5578,6 +5582,9 @@ the approved rich screen shell while R3 prepares the retained data needed by
 charts, resource detail and exact local query panels.
 
 #### EDS-11R3 — Durable current projection, financial range and local SSE
+
+**Status:** `COMPLETE_AT_PORTAL_PROVENANCE_GATE / PUSHED`; it is local
+observation/SSE only and makes no unearned authoritative-event claim.
 
 **Goal:** make refreshes smooth and bounded by retaining admitted current data
 on Portal, serving financial/risk/performance windows locally, and fan-out
@@ -5642,6 +5649,14 @@ authoritative Trading-System event replay.
 
 **Status:** `OWNER_IMPLEMENTATION_READY / NO_DATA_COLLECTION_WAIT`.
 
+**Execution decision:** this can start immediately in the Trading System
+repository.  AWS-HK already has the required Data Layer and market services;
+R4 needs only a thin, additive publication adapter.  It does **not** need a
+new database, new market ingestion, direct Portal access to Redis/Data Layer,
+a public listener, or a Portal runtime activation.  The single owner handoff
+is the `EDS-11R4` annex in
+[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
+
 **Goal:** publish the market facts that already exist in AWS-HK's private Data
 Layer through one additive, versioned, profile-bound Manager/Edge contract:
 latest observation, OHLCV/candles, benchmark, venue calendar and VNM
@@ -5658,7 +5673,10 @@ database, re-ingest history or relax the Portal security boundary.
   calendar and effective VNM constraints.  Each request must bind
   `(profile, venue, instrument, interval, time range)` as applicable, return
   UTC milliseconds/exact decimal strings/provenance/freshness/coverage, and
-  enforce a finite range/point limit.
+  enforce a finite range/point limit.  `latest` and bounded OHLCV are the
+  immediate required deliverables because their readers are confirmed; a
+  benchmark, calendar or VNM facet may return a precise typed-unavailable
+  capability when the existing source cannot supply its exact semantics.
 - Preserve mTLS, short-lived delegated audience/scope, profile isolation and
   fail-closed unknown instruments/venues.  Do not expose Data Layer directly
   to Portal or a browser, alter broker/CLI authority, or create a public
@@ -5680,6 +5698,15 @@ calendar/VNM boundary fixtures.  The phase closes only with a source-owned
 contract and an end-to-end Portal consumer acceptance.  Until then, market
 panels show a precise `PENDING_MARKET_CONTEXT_ADAPTER` state while every other
 current panel remains usable.
+
+**Closeable handoff/return sequence:** the owner implements and tests one
+additive adapter on a clean Trading System feature branch, returns its
+contract/fixture/acceptance pack under the existing master-request return
+root, and does not enable a runtime listener.  Portal then performs schema and
+digest verification, adds only named same-origin BFF operations, and proves
+Paper/Sandbox/Live profile isolation plus retained-chart/SSE invalidation.
+Thus R4 cannot strand a half-built transport: it is either fully accepted end
+to end or every dependent panel stays visibly typed-pending.
 
 **Ownership note:** a Portal agent may SSH to inspect and validate the AWS-HK
 runtime, but the adapter belongs in the Trading System repository and should
