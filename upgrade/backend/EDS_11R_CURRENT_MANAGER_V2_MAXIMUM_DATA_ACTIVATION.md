@@ -7,6 +7,13 @@
 Portal, browser access to Edge, command activation, or a Trading System schema
 rewrite.
 
+**Canonical phase plan:** the complete closeable `EDS-11R1` through
+`EDS-11R5` specification now lives in
+[`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md`](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+immediately before EDS-12.  This document preserves the technical runtime
+inventory and detailed supporting rationale; the unified plan is the source of
+execution order, ownership and phase exit gates.
+
 ## 1. Corrected decision
 
 The earlier `SOURCE_GAP_CONFIRMED` wording correctly described **missing

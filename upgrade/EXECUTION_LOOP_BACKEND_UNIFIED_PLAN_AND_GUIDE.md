@@ -4050,6 +4050,7 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
+| 2026-09-06 | **EDS-11R delivery plan expanded into five closeable phases immediately before EDS-12**: R1 classifies the complete 96-relation catalogue into named safe BFF authority; R2 retains and hydrates rich product panels; R3 supplies durable current projection, financial range and local SSE; R4 is a small TS-owned Data-Layer Market Context adapter; R5 is an explicitly optional authoritative-replay semantic upgrade | Corrected the old blanket `SOURCE_GAP_CONFIRMED` wording: Market Context data already exists but needs a versioned source adapter, while current `domain_events` remain observed history until a real sequence/epoch/correction/retention contract exists.  Each phase now has scope, ownership, negative tests, exit gate and no-hidden-debt rule |
 | 2026-09-06 | **EDS-11R AWS-HK runtime discovery corrected the current-source plan**: read-only inspection verified that Manager-v2 Paper/Sandbox/Live current read is already active, all three profiles share the same 96-relation catalogue digest, Source Proxy forwards the Manager-v2 private routes, and the private Data Layer already provides last-price/OHLCV/calendar/universe inputs.  The prior source-gap wording is retained only for missing authoritative semantics, not as a claim that current data is absent | EDS-11R is inserted before EDS-12: Portal must now map all authorized screen-bound relations to named safe BFFs, hydrate rich panels and activate local current-observation/SSE; only a small TS-owned Market Context adapter is needed for Data Layer facts.  No source/runtime/credential/container/command change occurred during inspection |
 | 2026-09-05 | **EDS-11 local BFF hydration and observation revalidation closed at the contract gate**: a committed Portal-local observation revision now resolves direct and composition-dependent Paper/Sandbox/Live screen impact through the frozen Screen BFF catalogue, yielding only the active profile's named same-origin `GET` operation IDs and a local epoch/sequence/digest tick. ProductRead/panel output withholds raw Manager checkpoints; bounded adapters use semantic product groups and Command Center withholds source checkpoints; one local journal tail fan-outs to browsers without source amplification | focused profile-isolation, unknown-mapping, operation/redaction, cursor-withholding and 100-client/shared-journal regressions plus the full fresh-PostgreSQL Control API gate; no Event/replay claim, direct source path, runtime activation, container, cache or command change |
 | 2026-09-05 | **EDS-10b observed timeline and derived mark-context closed at the contract gate**: Portal replaces the misleading current-page `replay-journal` presentation with a named bounded same-origin `executionObservedTimelineV1` BFF. It serves only `PORTAL_OBSERVATION` rows with exact decimal strings, UTC milliseconds, profile/freshness/coverage metadata and a Portal-signed projection-bound continuation; `DERIVED · mark-context` uses only published mark/equity context. True replay/Event/ACK/correction/global sequence/OHLCV remain separate typed source gaps | focused resource-isolation, stable mixed-clock order, cursor/redaction, exact-decimal, mark-context and disabled-profile regressions plus fresh-PostgreSQL Control API gate; no source transport, direct source path, command, runtime flag, container or profile activation |
@@ -4484,7 +4485,7 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 | EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
 | EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE**; yes, with `PORTAL_OBSERVATION` / `DERIVED` labels |
 | EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE** on 2026-09-05; yes, panel by panel with typed gaps |
-| EDS-11R | maximum current Manager-v2 relation activation | EDS-11 + deployed Manager-v2 profiles | **PLANNED / RUNTIME_DISCOVERY_VERIFIED** on 2026-09-06; required before EDS-12 because the source plane already exposes 96 profile-scoped current relations |
+| EDS-11R | maximum current Manager-v2 relation activation | EDS-11 + deployed Manager-v2 profiles | **PLANNED / RUNTIME_DISCOVERY_VERIFIED** on 2026-09-06; R1–R3 are required before EDS-12; R4 is required for a market-context claim; R5 is optional unless authoritative replay is claimed |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
 
 EDS-03 through EDS-07 must not wait for EDS-08. This is the key
@@ -5287,7 +5288,7 @@ ACK, market and artifact gaps stay visible `Soon` branches without blocking
 current-data screens. No runtime, source, container or command authority
 changed. See [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).
 
-### EDS-11R — Current Manager-v2 maximum-data activation
+#### EDS-11R discovery record — current Manager-v2 maximum-data activation
 
 **Status:** `PLANNED / RUNTIME_DISCOVERY_VERIFIED /
 PORTAL_CONSUMER_RECONCILIATION_REQUIRED` on 2026-09-06.
@@ -5308,37 +5309,27 @@ partial, stale and denied conditions.  A server-owned mapping selects safe
 DTO fields and makes relation/cursor/profile choices; the browser never calls
 or sees a generic Manager route.
 
-**Phases:**
-
-1. `EDS-11R1` — digest-pinned 96-relation intake and named safe BFF registry;
-2. `EDS-11R2` — rich-screen hydration for Alpha, Portfolio, Account/Binding,
-   stage, Blotter, Operations and governance panels;
-3. `EDS-11R3` — admitted durable current projection, retained financial
-   range and bounded current-observation/SSE lane; and
-4. `EDS-11R4` — one additive TS-owned Market Context adapter over the already
-   running Data Layer for latest observation, OHLCV, benchmark, calendar and
-   VNM constraints.
-
-`EDS-11R5` remains optional: only an owner-published per-stream
-sequence/epoch/correction/tombstone/retention contract upgrades current
-`domain_events` and evidence rows into authoritative replay.  It cannot be
-faked from `event_ts` or an arbitrary database order, but it does not block
-the first four current-data phases or EDS-12.
+**Canonical delivery-plan location:** the complete `EDS-11R1` through
+`EDS-11R5` specification is placed immediately before **EDS-12** below.  This
+record remains here as the immutable runtime-discovery evidence that justifies
+the delivery plan.
 
 **Detailed plan and runtime evidence:**
 [EDS-11R current Manager-v2 maximum-data activation](backend/EDS_11R_CURRENT_MANAGER_V2_MAXIMUM_DATA_ACTIVATION.md).
 
-### Source-upgrade backlog — visible as `Soon`, never a delivery blocker
+### Source-upgrade capability ledger — visible, scoped and never hidden
 
 | Product need | Current disposition |
 | --- | --- |
-| immutable position/fill/risk lifecycle replay, corrections and tombstones | `SOON · SOURCE_GAP_CONFIRMED` |
-| broker acknowledgement clocks and terminal command evidence | `SOON · SOURCE_GAP_CONFIRMED` |
-| typed ticks, OHLCV, benchmark, venue calendar and VNM constraints | `SOON · SOURCE_GAP_CONFIRMED`; use only labelled current/derived context where available |
-| mark provenance, direct profile equity producer, artifact reference and research linkage | `SOON · SOURCE_GAP_CONFIRMED` |
+| immutable position/fill/risk lifecycle replay, corrections and tombstones | `EDS-11R5 · OPTIONAL_SEMANTIC_CONTRACT_REQUIRED`; current `domain_events` may be shown only as observed history now |
+| broker acknowledgement clocks and terminal command evidence | consume catalogued current evidence in EDS-11R1/R2; deeper terminal-clock semantics remain a typed follow-up only where absent |
+| typed ticks, OHLCV, benchmark, venue calendar and VNM constraints | `EDS-11R4 · ADAPTER_TO_PUBLISH`; the private Data Layer already has the facts, but Manager-v2 does not yet publish their safe profile-bound contract |
+| mark provenance, direct profile equity producer, artifact reference and research linkage | consume catalogued current facts in EDS-11R1/R2; retain only the exact missing grain as a typed follow-up |
 
-These are retained as one future source-upgrade backlog. They do not suppress
-or degrade current-source screens that already have usable data.
+These are retained as explicit capability work.  They do not suppress or
+degrade current-source screens that already have usable data; however,
+EDS-11R4 must be accepted before a release claims real market-context support,
+and EDS-11R5 must be accepted before it claims authoritative replay.
 
 ### EDS-SC-01 — Trading System source-completeness campaign
 
@@ -5442,7 +5433,236 @@ performance traces.
 available action resolves correctly; no browser-driven source amplification;
 deployed image passes the complete route graph.
 
-**Next:** EDS-12.
+**Next:** execute EDS-11R1 → EDS-11R3 for current truth, with the
+Trading-System-owned EDS-11R4 market adapter in parallel; then enter EDS-12
+with the exact accepted capability matrix.
+
+### EDS-11R — Current Manager-v2 maximum-data activation: canonical delivery plan
+
+**Status:** `PLANNED / RUNTIME_DISCOVERY_VERIFIED /
+PORTAL_CONSUMER_RECONCILIATION_REQUIRED` on 2026-09-06.
+
+**Why this exists:** the active Paper, Sandbox and Live Manager-v2 instances
+already expose the same digest-pinned 96-relation current-read catalogue over
+the private mTLS/delegated-JWT path.  This campaign turns that existing surface
+into useful Portal product data.  It is deliberately not a request to copy the
+Trading System database, bypass Edge, add browser credentials, or replace the
+approved rich UI with generic envelopes.
+
+**Campaign rules — apply to every R phase:**
+
+- The browser calls named same-origin BFF operations only.  It never selects a
+  Manager relation, passes a source cursor, or sees upstream URLs, mTLS input
+  or a delegated JWT.
+- The server retains the exact active profile, catalogue revision/digest,
+  availability, freshness, completeness, `as_of_ms`, UTC milliseconds and
+  exact-decimal strings.  It returns source empty, partial, stale and denied
+  states faithfully.
+- A bounded source page remains at or below 200 rows and 1 MiB.  Portal may
+  emit only a Portal-signed, relation-bound continuation to the browser.
+- Keep the approved rich composition mounted.  A typed state belongs inside
+  the affected panel; it must never erase a screen or substitute fixture data.
+- Every phase closes with its mapping/contract evidence, focused negative
+  tests, profile-isolation tests and a plan-journal update in the same commit.
+  A newly discovered source limitation is either handled in that phase or
+  recorded as a named, typed source capability — never concealed as debt.
+
+#### EDS-11R1 — Complete 96-relation, screen-bound named BFF authority
+
+**Goal:** classify all 96 Manager-v2 relations and make every authorized
+screen-bound fact reachable through one explicit, safe, same-origin Portal
+operation.  The 54 `SCREEN_BOUND` relations must be mapped; the remaining 16
+projection inputs, 13 audit-only relations and 13 intentionally internal
+relations must have an explicit non-browser disposition.
+
+**Work:**
+
+- Fetch the catalogue only through the existing server-side private Manager
+  capability route, validate its immutable revision/digest per profile, and
+  fail closed on an unreviewed drift.
+- Extend the server-owned operation registry so every rich screen panel has a
+  named operation and exact relation dependency.  A browser cannot construct a
+  generic `/records/{schema}/{relation}` request or choose a relation itself.
+- Define safe DTO selectors, identity joins, sort/filter allowlists, exact
+  decimal/UTC codecs and panel-specific maximums.  Redact raw payload,
+  credentials, command input, source checkpoint and other internal fields even
+  when the underlying relation is permitted to Portal.
+- Record one of `AVAILABLE_DIRECT`, `AVAILABLE_DERIVED_AT_PORTAL`,
+  `AUTHORITATIVE_EMPTY`, `PARTIAL_BOUNDED`, `SOURCE_TYPED_FAILURE`,
+  `AUDIT_ONLY` or `INTERNAL_ONLY` for every relation/panel mapping; no default
+  `Unavailable` branch is allowed.
+- Generate a mapping manifest that the frontend consumer catalogue can bind to
+  by named operation ID, never by an upstream relation string.
+
+**Tests and acceptance:** 96/96 classifications reconcile to the catalogue
+digest; all 54 screen-bound mappings have a named operation or a documented
+typed no-data state; unknown/digest-drift/relation injection/profile crossover/
+cursor substitution/over-bound responses are rejected; safe-field snapshots
+prove redaction.  The phase closes only when the mapping manifest, contract
+fixtures and complete frontend screen-to-operation matrix agree.
+
+**Does not do:** no direct Trading System DB, Redis, broker or CLI access; no
+source/runtime/container/command activation.  **Next:** EDS-11R2 consumes the
+manifest; EDS-11R3 can prepare its admitted projection schema in parallel.
+
+#### EDS-11R2 — Rich UI hydration across current Paper, Sandbox and Live truth
+
+**Goal:** hydrate the approved rich UI without changing its hierarchy, visual
+language or interaction model.  Alpha, Portfolio, Account/Broker/Binding,
+Paper, Sandbox, Live, Blotter, Operations and governance screens must render
+the maximum current truth their named R1 operations provide.
+
+**Work:**
+
+- Bind each panel to one or more R1 named BFF operations, preserving its
+  existing layout, tables, charts, toolbars, drawers and animated state model.
+- Build server-side joins only through documented keys and declare their
+  provenance.  Cross-profile portfolio/account aggregates are exact-decimal
+  `DERIVED_AT_PORTAL`, with input relation names, formula revision and
+  completeness exposed to the consumer.
+- Distinguish an authoritative absence of rows from a bounded partial page,
+  stale source, denied profile or a truly unsupported capability.  A resource
+  detail route must keep its shell and render a panel-local state instead of a
+  blank full-page error.
+- Make Paper, Sandbox and Live separate read profiles.  Live may legitimately
+  be empty; it must render typed empty data, never an invented readiness state
+  or a generic `Unavailable` error.
+- Remove product-route fixture fallback.  Fixtures remain allowed only in
+  isolated labs, contract tests and browser doubles.
+
+**Tests and acceptance:** authenticated route journeys cover list/detail/tab/
+empty/partial/stale/denied states for each screen family; all panel reads are
+same-origin and named; no fixture import reaches a production route; exact
+decimals/UTC timestamps/profile labels survive from BFF to renderer; React/DOM
+and browser-console gates remain clean.  The phase closes when rich UI remains
+rich under every truthful data state, rather than merely when a route returns
+HTTP 200.
+
+**Does not do:** no fabricated candle, benchmark, replay, causal ordering or
+broker acknowledgement.  **Next:** EDS-11R3 makes the admitted reads efficient
+and realtime; market-only panels wait for EDS-11R4 rather than degrading their
+whole screens.
+
+#### EDS-11R3 — Durable current projection, financial range and local SSE
+
+**Goal:** make refreshes smooth and bounded by retaining admitted current data
+on Portal, serving financial/risk/performance windows locally, and fan-out
+committed local revisions without multiplying AWS-HK calls per browser tab.
+
+**Work:**
+
+- Extend the existing profile-isolated lease/coalescer and durable projection
+  only for named R1 operations.  Preserve source `as_of`, coverage,
+  completeness, freshness and catalogue/profile identity on every retained
+  row/window.
+- Build bounded retained equity, performance and risk query DTOs with exact
+  decimal strings, UTC milliseconds, declared sampling/downsampling and a
+  finite range continuation.  Do not store a second uncontrolled raw-data
+  lake or silently downcast finance values.
+- Publish current `domain_events`, fills, positions and command evidence only
+  as `CURRENT_SOURCE`/`PORTAL_OBSERVATION`; they are useful observed history,
+  not an authoritative replay log.
+- Emit SSE only after a local committed revision.  Send profile-scoped named
+  operation/panel invalidations, not raw relation/cursor/source checkpoints;
+  preserve Last-Event-ID, gap/resync, slow-client and polling fallback rules.
+- Bound retention and rebuild/restore behaviour, including source-page replay
+  quarantine when the same logical retained range changes digest unexpectedly.
+
+**Tests and acceptance:** source-read coalescing for 1/10/100 subscribers;
+profile switch and profile-crossing negative cases; restart/replay without a
+double visible revision; gap/resync/slow-client/auth-expiry; retained financial
+range boundary and downsampling extrema; empty/stale/partial propagation;
+backup/restore and corrupted-range quarantine.  The phase closes when browser
+refresh/reconnect uses Portal-local truth and one source read serves many
+subscribers.
+
+**Does not do:** local sequence values must not be presented as a Trading
+System event sequence; no command authority changes.  **Next:** EDS-11R4 adds
+the separate market-context source contract; R5 remains independent.
+
+#### EDS-11R4 — TS-owned Market Context v1 adapter over the existing Data Layer
+
+**Status:** `OWNER_IMPLEMENTATION_READY / NO_DATA_COLLECTION_WAIT`.
+
+**Goal:** publish the market facts that already exist in AWS-HK's private Data
+Layer through one additive, versioned, profile-bound Manager/Edge contract:
+latest observation, OHLCV/candles, benchmark, venue calendar and VNM
+constraints.  This is an adapter task, not a request to create a new market
+database, re-ingest history or relax the Portal security boundary.
+
+**Trading System owner/agent work (the correct implementation owner):**
+
+- Implement one `market-context.v1` adapter adjacent to the existing Manager
+  source boundary.  It calls the local Data Layer privately and exposes only
+  bounded, versioned reads through the existing Source Proxy/Manager/Edge
+  trust path.
+- Publish named operations for latest observation, candles, benchmark,
+  calendar and effective VNM constraints.  Each request must bind
+  `(profile, venue, instrument, interval, time range)` as applicable, return
+  UTC milliseconds/exact decimal strings/provenance/freshness/coverage, and
+  enforce a finite range/point limit.
+- Preserve mTLS, short-lived delegated audience/scope, profile isolation and
+  fail-closed unknown instruments/venues.  Do not expose Data Layer directly
+  to Portal or a browser, alter broker/CLI authority, or create a public
+  listener.
+- Return one signed/digest-pinned contract, fixtures, positive/negative
+  transport evidence, range/retention semantics and an owner acceptance
+  manifest.  It may be implemented now because its upstream facts already
+  exist; it does not wait for a Trading System data upgrade.
+
+**Portal work after the return:** validate the schema/digest, bind named BFF
+operations to the approved market profile, retain bounded chart windows,
+surface provenance and exact values, and send local invalidations through
+R3's SSE lane.
+
+**Tests and acceptance:** per-profile/venue/instrument isolation; invalid
+interval/range/point-limit; stale/empty/provider-degraded source; exact
+decimal/UTC fidelity; no direct Data Layer or browser route; chart range and
+calendar/VNM boundary fixtures.  The phase closes only with a source-owned
+contract and an end-to-end Portal consumer acceptance.  Until then, market
+panels show a precise `PENDING_MARKET_CONTEXT_ADAPTER` state while every other
+current panel remains usable.
+
+**Ownership note:** a Portal agent may SSH to inspect and validate the AWS-HK
+runtime, but the adapter belongs in the Trading System repository and should
+be made by its owner/agent.  Codex does not edit that repository unless Bobby
+explicitly grants this exact EDS-11R4 Trading System scope.
+
+#### EDS-11R5 — Optional exact lifecycle replay semantics
+
+**Status:** `OPTIONAL_PRODUCT_QUALITY_UPGRADE / NOT_A_CURRENT_DATA_BLOCKER`.
+
+**Goal:** promote useful existing observed history into **authoritative replay**
+only if Trading System publishes a contract that guarantees the missing
+semantics per exact bound stream: epoch, contiguous sequence, correction/
+tombstone representation, retention floor, snapshot/resume and durable ACK.
+
+**Current truthful behaviour:** `domain_events`, fills, positions and evidence
+can already feed R2/R3 observed timelines.  Neither `event_ts` nor database
+row order proves a global order, replayability, correction handling or history
+completeness, so Portal must not infer those properties.
+
+**Work if elected:** TS adds an additive stream envelope over its existing
+tables/outbox; Portal validates snapshot-plus-tail, persists source checkpoint
+only after durable reduction, and provides replay seek/correction/retention
+UI through named BFFs.  The contract must define scope rather than pretending
+to be a database-wide total order.
+
+**Tests and acceptance:** duplicate, out-of-order, gap, restart, resnapshot,
+late correction/tombstone, retention-floor, ACK and cross-profile-negative
+tests; browser replay seeks have no arbitrary 200-row history cap.  The phase
+is complete only when those tests pass.  If it is not elected for this release,
+it remains an explicit future capability and never masquerades as technical
+debt or an incomplete R1-R4 result.
+
+**Campaign completion and EDS-12 entry:** EDS-11R1, R2 and R3 are mandatory
+for the maximum current-source product release.  EDS-11R4 is mandatory before
+the release claims real Market Context/candles/benchmark/calendar/VNM support;
+otherwise those individual panels remain precisely typed.  EDS-11R5 does not
+block current data or EDS-12 unless the release claims authoritative replay.
+EDS-12 freezes the accepted operation/profile matrix, validates the same
+catalogue and contract digests, and rejects any claim beyond those accepted
+capabilities.
 
 ### EDS-12 — Failure/DR, product acceptance and immutable release
 
@@ -5504,10 +5724,15 @@ Unless Bobby changes priority, execute one campaign branch in this order:
 ```text
 EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
                                                      ↓
-                                      EDS-09b → EDS-10b → EDS-11 → EDS-12
+                         EDS-09b → EDS-10b → EDS-11 → EDS-11R1 → EDS-11R2
+                                                                    ↓
+                                                                  EDS-11R3 → EDS-12
+
+Parallel source-owned contract lane:
+EDS-11R4 (Market Context v1 over existing Data Layer) → accepted market panels
 
 Future source-upgrade lane only:
-EDS-08 → EDS-09 → EDS-10
+EDS-08 → EDS-09 → EDS-10 / EDS-11R5 (authoritative replay semantics)
 ```
 
 EDS-07 is closed in source-dark form, EDS-08 is verified as a future-source
