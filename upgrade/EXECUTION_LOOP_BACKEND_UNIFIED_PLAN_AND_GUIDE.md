@@ -5985,6 +5985,91 @@ snapshot-plus-tail continuity corpus. If that cutover is not elected for this
 release, R5 remains an explicit future capability and never masquerades as
 technical debt or an incomplete R1-R4 result.
 
+#### EDS-11R4/R5 — approved runtime-activation amendment (2026-09-06)
+
+**Authorization and objective:** Bobby has approved the complete R4/R5
+activation path before EDS-12.  The objective is to expose every *currently
+available* Market Context and event-ledger fact to Portal through the existing
+private Manager/Edge boundary, while retaining exact empty states for profiles
+that do not yet have a source row.  “Activated” never permits a direct Portal
+connection to Trading System PostgreSQL, Redis, broker, CLI, Data Layer or a
+browser-visible source credential.
+
+**Immutable starting point:** Trading System source is pinned at
+`d7542f1` (which contains R4 source commit `26fd6b2`); Portal source is pinned
+at `50239f6`.  AWS-HK currently runs three isolated Manager-v2 profiles:
+`PAPER_BINANCE_USDM`, `SANDBOX_BINANCE_USDM` and `LIVE_BINANCE_USDM`.  The
+source audit confirms current Paper `domain_events` rows and no Sandbox/Live
+event rows at the activation point.  Sandbox/Live must therefore be activated
+with their exact profile binding but return `AUTHORITATIVE_EMPTY`, never Paper
+data, a fabricated sample, or a cross-profile fallback.
+
+**R4 activation sequence — bounded Market Context:**
+
+1. Build and pin one immutable Trading System image containing the two fixed
+   `market/latest` and `market/candles` Manager routes.  Preserve each existing
+   profile's mTLS trust material, delegated-JWT audience/resource and Manager
+   serving policy; add only a private, mode-0600 Data Layer settings input,
+   fixed consumer identity and per-profile instrument allowlist.
+2. Deploy the image to the three existing Manager containers without changing
+   their host ports or exposing a public listener.  Add only the two fixed
+   Source Proxy locations.  Verify mTLS/JWT positive reads, wrong
+   audience/profile/instrument negatives, 200-row/1-MiB latest bounds and
+   2,000-row/8-MiB candle bounds.  Capture response schema, fixture and image
+   digests in an owner-return manifest.
+3. Replace Portal's checked-in pending intake only with that digest-pinned
+   return, enable `FEATURE_EXECUTION_MARKET_CONTEXT` only in the reviewed
+   development overlay, and prove same-origin DTO fidelity, profile isolation,
+   exact decimals/UTC milliseconds and local R3 SSE invalidation.  A source or
+   consumer failure makes the individual market panel typed-unavailable; it
+   must not unmount the rich screen.
+
+**R5 activation sequence — exact ledger only:**
+
+1. Apply the additive, idempotent `portal_event_stream` migration to the
+   existing Trading System database and provision an exact read-only ledger
+   login/member of `ts_portal_event_stream_read`.  Its secret is a private
+   mode-0600 runtime file; it has no write, DDL, source-table, Redis, broker or
+   CLI privilege.  Create a durable, non-secret Manager event-cursor state
+   volume.  No historical `domain_events` backfill is permitted.
+2. Extend the fixed Manager contract with exactly `events/anchor` and
+   `events/tail`, not a generic relation/table route.  Each Manager profile
+   binds one `(profile_id, mode, venue)` stream, validates lease/cursor/page
+   bounds, and serves only redacted ledger records.  The Source Proxy forwards
+   only those two private routes after existing mTLS and delegated-JWT
+   verification.
+3. Activate the existing Rust Portal Execution Edge snapshot+tail coordinator
+   and PostgreSQL append store before any browser SSE.  It writes its durable
+   receipt first, then uses that receipt as the next source cursor/ACK.  It
+   passes only safe, reduced observations to Control API's local projection;
+   source epoch/floor/gap/duplicate/correction violations stop the affected
+   stream and require an explicit re-anchor.  It never silently retries a
+   poisoned cursor or advances an ACK before durable commit.
+4. Qualify Paper with actual post-cutover rows first.  Then qualify Sandbox and
+   Live separately: an empty stream is a successful isolated activation only
+   when its response proves the correct profile/epoch/floor and zero records.
+   Only after all three profile probes pass may the local SSE fan-out be
+   enabled.  Browser traffic reads Portal projection/SSE only; it never drives
+   a source poll.
+
+**Required activation evidence and rollback:** every release record must pin
+the source commit, image digest, Manager contract/fixture manifests, Source
+Proxy revision, profile binding, mTLS/JWT positive and negative probes,
+response bounds, migration fingerprint, current stream state and Portal Edge
+durable append/ACK receipt.  The rollback order is: disable Portal local event
+consumer/SSE, disable Edge event polling, disable the two proxy locations,
+then restore the prior Manager image.  The additive ledger tables and retained
+immutable entries remain intact; the migration is never rolled back by data
+destruction.  R4 may be rolled back independently of R5.
+
+**Close condition:** R4 is `RUNTIME_ACCEPTED` only after all three bounded
+profiles pass the private transport and Portal BFF acceptance corpus.  R5 is
+`RUNTIME_ACCEPTED` only after the Paper contiguous-tail corpus plus Sandbox/
+Live isolated-empty corpus have durable receipt/ACK evidence.  Otherwise the
+individual capability remains typed and the next step is the failed evidence
+repair, not a new speculative phase.  This amendment is part of R4/R5, not
+new technical debt and not an EDS-12 substitute.
+
 #### EDS-11R closeout matrix — required handoff immediately before EDS-12
 
 This is the single closeout record for the five R phases; do not open a second
