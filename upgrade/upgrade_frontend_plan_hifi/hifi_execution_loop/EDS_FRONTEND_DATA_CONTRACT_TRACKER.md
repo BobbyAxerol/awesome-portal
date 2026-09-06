@@ -409,7 +409,7 @@ Replay vừa phải. Tạo 3 phase, duyệt từng cái."*
 | Bobby kiểm trên dev | crosshair đúng số nến; kéo trục giá; zoom tại con trỏ; kéo quán tính; marker long/short đúng màu, đúng side, to hơn; badge; khung cao hơn; đổi interval |
 | Đóng khi | gate xanh + Bobby OK trên dev + dòng deploy ghi ở đây |
 
-**Phase R2 — Signature: lệnh điều kiện, bracket, grid, round trip, đồng bộ log** · 2–3 ngày · trạng thái: chờ R1 đóng
+**Phase R2 — Signature: lệnh điều kiện, bracket, grid, round trip, đồng bộ log** · 2–3 ngày · trạng thái: **ĐÃ GIAO 06-09 → xem OR-5.9, chờ Bobby duyệt trên dev**
 
 | | |
 |---|---|
@@ -454,6 +454,33 @@ dán nhãn DERIVED. Đề xuất schema: `timeframe: "1m"|"5m"|"15m"|"30m"|"1h"|
 **Chưa có trong R1 (đúng kế hoạch):** bracket/position box, ladder grid, hover card, click log → chart, phím ←/→ (R2); prefetch/trang khi kéo, nhớ interval, dùng lại Account 360/Blotter, adapter nguồn (R3). OKX adapter có spec nhưng chưa có alpha OKX trong fleet để nhìn bằng mắt.
 
 **Bobby kiểm trên dev:** `/deployments/alphas/adaptive_hma_cpp_00115m?tab=Trade%20Replay` — di chuột thấy HUD số nến; kéo trục giá phải giãn/nén; wheel zoom tại con trỏ; kéo ngang có quán tính; Fit; Expand; đổi interval; hover ▲▽ thấy fill; badge TradingView góc dưới trái.
+
+### OR-5.9 Phase R2 — ĐÃ GIAO 06-09 (chờ Bobby duyệt trên dev) · commit `5704ac4` trên `feat/trade-replay-signature`
+
+**Đã làm (khớp OR-5.7 R2), toàn bộ từ dòng server:**
+- **Position box** (công cụ Long/Short Position của TradingView): mỗi fill vào lệnh nhận TP và SL được arm trong cửa sổ ghép 180 s sau fill (client id không có khoá chung → ghép theo thời gian, ghi **DERIVED** trong title/legend); vùng lời entry→TP (tint good), vùng rủi ro entry→SL (tint bad), đường entry màu side, nhãn **R:R** = |TP−entry|/|entry−SL| từ chính các mức server; hộp còn mở thì mép phải nét đứt.
+- **Kết cục leg**: ◇ tại thời điểm leg khớp (TRIGGER), ⊣ tại thời điểm huỷ (CANCEL) — từ `status` của order leg và `updated_at`.
+- **Ladder**: lệnh LIMIT nghỉ (không phải TP/SL) vẽ nét chấm tại `price` từ submit → terminal, tối đa 8 trong khung, còn lại đếm "+N resting levels not drawn". Alpha này không có lệnh LIMIT → ladder = 0 (đúng dữ liệu); có unit test với 2 lệnh LIMIT.
+- **Hover card** theo con trỏ: fill · side·qty · price · fee (+currency, taker/maker) · realized (màu theo dấu) · order (id·type·status, cảnh báo "no venue id") · time · trade id; reject card có mã lỗi + lý do + "drawn at (nearest fill · DERIVED)" khi lệnh không có giá; ladder card có armed/ended.
+- **Đồng bộ hai chiều**: hover marker → dòng log sáng; click marker → chọn dòng log (cuộn tới); hover dòng log → marker/leg/hộp sáng; click hoặc Enter dòng log → chart cuộn về sự kiện, giữ độ rộng cửa sổ, vòng highlight; **← →** (khi khung chart có focus) bước qua từng fill theo thời gian.
+- Không vẽ đường mark DERIVED từ `positions.mark_price` như dự kiến: trường này **null** cho alpha (vị thế FLAT) → không có gì để vẽ, không bịa.
+
+**Gate:** FE tsc sạch · vitest ****1887 pass / 1 skipped (104 file; hook pre-commit xanh, gồm U02 token gate sau khi bỏ rgba() → globalAlpha)**** · U02 colour/font gate qua hook.
+
+**Bằng chứng browser (probe :8090, harness `replay-r2.js`):** `r2d_02_chart.png` (3 hộp trong cửa sổ mở đầu: SHORT Jul 24 R:R 1.05 SL trigger ◇ / TP ⊣, LONG Jul 25 R:R 0.72 TP ◇ / SL ⊣, LONG Jul 26 TP ◇), `r2a_03_card.png` (card "LONG EXIT · TP" fill 4047, fee 0.06039326 USDT taker, realized 2.05821, order 40548 TAKE_PROFIT_MARKET FILLED), `r2d_05_row_focus.png` (click dòng fill 1877 → chart về Jul 18), `r2d_07_fit.png` (Fit: 5 hộp, vòng chọn fill 2386, off print 3,500 kẹp mép, leg lẻ Jul 28–Aug 3, reject ×). Đo: 5 bracket (R:R 2.00 / 0.91 / 1.05 / 0.72 / 0.66), 12 leg end; click marker → `selected fill:4047`; click dòng log fill 1877 → visible range 628..961 → −144..189 (về đúng fill); ArrowRight ×2 từ 1877 → 1894 → 2386; console 0 lỗi.
+
+**§8 scale refine — Trade Replay (6 ô):**
+
+| Ô | Trade Replay |
+|---|---|
+| Cardinality | hi-fi ngầm ~10 fill / 6 leg / 1 symbol; thực tế alpha này 10 fill · 29 order · 12 leg trong 46 ngày; p95 fleet ước ~10³ fill/alpha/quý (grid alpha cao hơn); nến 6000/lần đọc |
+| Break point | >~300 marker trong một khung: nhãn pnl và hộp chồng nhau; >8 mức ladder trong khung: rối; >6000 nến: interval tự nâng |
+| Degradation | nhãn pnl ẩn khi <2.5 px/nến; R:R ẩn khi hộp <46 px; ladder cap 8 + đếm phần còn lại; nến nâng interval (nhãn ghi "requested · fits"); hover card/hit-test chỉ trên đối tượng đã vẽ trong khung |
+| Server contract | BR-EX-50 kline shard (thay VENUE_PUBLIC_MARKET_DATA), BR-EX-80 `timeframe`, DR-22 facts scope theo alpha, DR-24 (mới): fill của order 41279 (FILLED) không có trong `fills` — projection cắt/thiếu |
+| Invariant | mọi số = chuỗi server; ghép round trip/bracket ghi DERIVED; print lệch không kéo về nến (vẽ rỗng + nhãn); cap ladder luôn in "+N"; không typed state nào bị hộp/nhãn che thành xanh |
+| Perf budget | pan 60 fps @1512 nến + 10 fill (đo); ngân sách 6000 nến + 500 marker ≥ 55 fps (đo ở R3); updateAllViews O(objects) mỗi frame, không React re-render khi hover trừ khi đổi đối tượng |
+
+**Bobby kiểm trên dev:** hover ▲▽ thấy card; click ▲ thấy dòng log được chọn; click dòng FILL cũ thấy chart cuộn về; nhấn vào khung rồi ← → ; hộp lời/lỗ và R:R ở mỗi entry; ◇/⊣ ở cuối leg.
 
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
