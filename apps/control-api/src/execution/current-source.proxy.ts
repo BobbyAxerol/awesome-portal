@@ -469,6 +469,17 @@ export interface CurrentSourceCataloguedOperationPolicy extends CurrentSourceOpe
   relation: string;
 }
 
+/**
+ * One private Edge path selected by a checked-in Portal operation.  It exists
+ * for contracts such as EDS-11R4 Market Context that are deliberately not a
+ * Manager relation.  The caller cannot supply this path from the browser and
+ * the proxy validates the tiny allowlist again before minting a delegated
+ * assertion.
+ */
+export interface CurrentSourceFixedPathOperationPolicy extends CurrentSourceOperationPolicy {
+  readonly fixedPath: string;
+}
+
 interface CurrentSourceGatewayContext {
   readonly screenId: string;
   readonly capabilityIds: readonly string[];
@@ -489,6 +500,18 @@ const EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT: CurrentSourceGatewayContext = Obj
     decision: "EDS11R_SCREEN_BOUND_MANAGER_RELATIONS_ACCEPTED",
     adapter: "MANAGER_V2_CURRENT_AS_IS",
     sourceContract: "trading-system.portal-execution.manager-v2.runtime.v1",
+    sourceMaximumRequestsPerSecond: 20,
+  }),
+});
+
+const EDS11R_MARKET_CONTEXT_GATEWAY_CONTEXT: CurrentSourceGatewayContext = Object.freeze({
+  screenId: "EDS11R_MARKET_CONTEXT_BFF",
+  capabilityIds: Object.freeze(["market.latest.v1", "market.candles.v1"]),
+  sourceBindingIds: Object.freeze(["market.context"]),
+  acceptance: Object.freeze({
+    decision: "EDS11R_MARKET_CONTEXT_OWNER_RETURN_ACCEPTED",
+    adapter: "MARKET_CONTEXT_V1",
+    sourceContract: "trading-system.portal-execution.market-context.v1",
     sourceMaximumRequestsPerSecond: 20,
   }),
 });
@@ -752,6 +775,30 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         ...EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT,
         sourceBindingIds: [policy.sourceId],
       },
+    );
+  }
+
+  /**
+   * EDS-11R4's two fixed Market Context operations.  This intentionally does
+   * not accept a source ID, relation, route, profile, or audience from a
+   * browser caller.  The already-existing mTLS/delegated-JWT transport is
+   * reused unchanged and only after the Portal service has accepted the
+   * owner-return pack.
+   */
+  fixedPathForNamedOperation(
+    principal: CurrentSourcePrincipal,
+    environment: Exclude<CurrentSourceEnvironment, "canary">,
+    policy: CurrentSourceFixedPathOperationPolicy,
+  ): Promise<unknown> {
+    assertNamedOperationPolicy(policy, policy.sourceId, this.config);
+    assertMarketContextFixedPathPolicy(policy);
+    return this.request(
+      browserIdentity(principal),
+      environment,
+      EDS11R_MARKET_CONTEXT_GATEWAY_CONTEXT.screenId,
+      policy.fixedPath,
+      policy,
+      EDS11R_MARKET_CONTEXT_GATEWAY_CONTEXT,
     );
   }
 
@@ -1116,6 +1163,44 @@ function assertCataloguedOperationPolicy(
     !RELATION.test(policy.relation)
   ) {
     throw new CurrentSourceProxyError("EDS11R_CATALOGUED_OPERATION_POLICY_INVALID", 500);
+  }
+}
+
+function assertMarketContextFixedPathPolicy(
+  policy: CurrentSourceFixedPathOperationPolicy,
+): void {
+  if (
+    policy.sourceId !== "market.context" ||
+    ![
+      "managerMarketContextLatestV1",
+      "managerMarketContextCandlesV1",
+    ].includes(policy.operationId)
+  ) {
+    throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
+  }
+  const parsed = new URL(policy.fixedPath, "https://portal-edge.invalid");
+  if (parsed.origin !== "https://portal-edge.invalid" || parsed.hash !== "") {
+    throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
+  }
+  const allowed = policy.operationId === "managerMarketContextLatestV1"
+    ? ["venue", "instrument"]
+    : ["venue", "instrument", "interval", "from_ms", "to_ms", "point_limit"];
+  const expectedPath = policy.operationId === "managerMarketContextLatestV1"
+    ? "/internal/v2/manager/market/latest"
+    : "/internal/v2/manager/market/candles";
+  const seen = new Set<string>();
+  for (const [key, value] of parsed.searchParams.entries()) {
+    if (!allowed.includes(key) || seen.has(key) || value.length < 1 || value.length > 256) {
+      throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
+    }
+    seen.add(key);
+  }
+  if (
+    parsed.pathname !== expectedPath ||
+    seen.size !== allowed.length ||
+    !allowed.every((key) => seen.has(key))
+  ) {
+    throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
   }
 }
 

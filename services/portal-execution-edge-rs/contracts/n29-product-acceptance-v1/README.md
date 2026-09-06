@@ -21,6 +21,13 @@ rebound to the exact current files after the retained-read extension. The
 offline verifier still checks both bytes and their safety invariants; this
 evidence correction changes neither accepted scope nor runtime authority.
 
+On 2026-09-06 the same boundary was deliberately extended with the two
+source-dark, named EDS-11R4 Market Context BFF operations.  The re-pinned
+digest proves that extension remains inside the existing server-only
+mTLS/delegated-JWT boundary; its compiled intake is still pending the Trading
+System owner return, so it changes neither N29 release authority nor source
+runtime activation.
+
 The `RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING` decision is deliberate.
 BR-EX-72 is complete and the reviewed campaign branch may proceed through
 normal development review, but the pack cannot authorize stable deployment,

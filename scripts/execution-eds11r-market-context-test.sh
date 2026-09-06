@@ -38,6 +38,11 @@ latest_schema = json.loads((contract / "schemas/market-latest-envelope.v1.schema
 candles_schema = json.loads((contract / "schemas/market-candles-envelope.v1.schema.json").read_text())
 coverage = json.loads((contract / "fixtures/expected-coverage.v1.json").read_text())
 master = (root / "upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md").read_text()
+intake_source = (root / "apps/control-api/src/execution/market-context.intake.ts").read_text()
+registry_source = (root / "apps/control-api/src/execution/market-context.registry.ts").read_text()
+service_source = (root / "apps/control-api/src/execution/market-context.service.ts").read_text()
+controller_source = (root / "apps/control-api/src/execution/market-context.controller.ts").read_text()
+proxy_source = (root / "apps/control-api/src/execution/current-source.proxy.ts").read_text()
 
 ids = ["market.latest.v1", "market.candles.v1", "venue.calendar.v1", "market.benchmark.v1", "market.vnm-constraints.v1"]
 assert request["schema_version"] == "portal.execution.eds11r.market-context-owner-request.v1"
@@ -135,6 +140,34 @@ serialized = json.dumps({"request": request, "pending": pending, "coverage": cov
 for forbidden in ("-----begin", "authorization: bearer", "client_secret", "private_key", "postgres://", "redis://", "api_key"):
     assert forbidden not in serialized
 assert not re.search(r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}", serialized)
+
+# Portal's source-dark consumer must be ready without becoming a bypass.  The
+# detailed DTO and HTTP behaviour is exercised in Vitest; this static gate
+# binds that code to the immutable owner request as part of the wider contract
+# verifier run by pre-commit/CI.
+manifest_sha = (contract / "MANIFEST.sha256").read_bytes()
+import hashlib
+manifest_digest = "sha256:" + hashlib.sha256(manifest_sha).hexdigest()
+assert f'MARKET_CONTEXT_REQUEST_MANIFEST_SHA256 =\n  "{manifest_digest}"' in intake_source
+assert 'status: "PENDING_OWNER_ADAPTER_IMPLEMENTATION"' in intake_source
+assert 'acceptedMarketContextCapability' in intake_source
+for token in (
+    'managerMarketContextLatestV1', 'managerMarketContextCandlesV1',
+    '/internal/v2/manager/market/latest', '/internal/v2/manager/market/candles',
+    'maximumResponseBytes: 8_388_608', 'MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS',
+):
+    assert token in registry_source, token
+for token in (
+    'acceptedMarketContextCapability(MARKET_CONTEXT_PUBLICATION_INTAKE_V1',
+    'fixedPathForNamedOperation', 'PENDING_MARKET_CONTEXT_ADAPTER',
+    'CURRENT_MARKET_OBSERVATION_NO_REPLAY_CLAIM',
+    'BOUNDED_PROVIDER_SERIES_NO_REPLAY_CLAIM',
+):
+    assert token in (intake_source if token == 'PENDING_MARKET_CONTEXT_ADAPTER' else service_source), token
+assert 'relationFor' not in service_source
+for token in ('@Controller("/api/v1/execution/market")', '@Get("/latest")', '@Get("/candles")'):
+    assert token in controller_source, token
+assert 'fixedPathForNamedOperation' in proxy_source
 PY
 
 # The owner receives one campaign directory.  Exercise the builder rather

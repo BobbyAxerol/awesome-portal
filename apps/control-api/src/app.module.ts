@@ -28,6 +28,8 @@ import { ExecutionAnalyticsController } from "./execution/analytics.controller";
 import { ExecutionAnalyticsProxy } from "./execution/analytics.proxy";
 import { ExecutionCurrentSourceController } from "./execution/current-source.controller";
 import { ExecutionCurrentSourceProxy } from "./execution/current-source.proxy";
+import { MarketContextController } from "./execution/market-context.controller";
+import { MarketContextService } from "./execution/market-context.service";
 import { ExecutionRuntimeManifestController } from "./execution/runtime-manifest.controller";
 import { ExecutionRuntimeManifestService } from "./execution/runtime-manifest.service";
 import { ExecutionContractAuthorityController } from "./execution/contract-authority.controller";
@@ -102,6 +104,7 @@ export class AppModule {
         ExecutionRealtimeController,
         ExecutionAnalyticsController,
         ExecutionCurrentSourceController,
+        MarketContextController,
         ExecutionRuntimeManifestController,
         ExecutionContractAuthorityController,
         MaximumDataOperationController,
@@ -178,6 +181,7 @@ export class AppModule {
         PortalDerivationsService,
         OperationalCompositionService,
         ExecutionSharedReadRepository,
+        MarketContextService,
         ExecutionRuntimeManifestService,
         ExecutionContractAuthorityService,
         MaximumDataContinuationRepository,

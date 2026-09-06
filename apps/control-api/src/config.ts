@@ -104,6 +104,10 @@ const EnvSchema = z.object({
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
+  // EDS-11R4 remains separately dark even when a current-source profile is
+  // active.  The checked-in owner-return intake is the first gate; this flag
+  // is the second, deployment-review gate after that intake is accepted.
+  FEATURE_EXECUTION_MARKET_CONTEXT: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_LOCAL_PROJECTION: z.enum(["true", "false"]).default("false"),
   // EDS-06 stays storage/change-window gated even when the source projection
   // itself is active. Browser reads are a later, per-screen cutover.
@@ -191,7 +195,10 @@ const EnvSchema = z.object({
   EXECUTION_EDGE_ANALYTICS_MAXIMUM_QUEUE: z.coerce.number().int().min(0).max(2_048).default(128),
   EXECUTION_EDGE_ANALYTICS_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(10).max(5_000).default(250),
   EXECUTION_EDGE_CURRENT_SOURCE_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(250).max(30_000).default(5_000),
-  EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES: z.coerce.number().int().min(64 * 1024).max(4 * 1024 * 1024).default(2 * 1024 * 1024),
+  // The published Market Context candle contract is bounded at 8 MiB.  It is
+  // still constrained by per-operation admission (2) and does not widen the
+  // default 2 MiB limit used by existing current-page operations.
+  EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES: z.coerce.number().int().min(64 * 1024).max(8 * 1024 * 1024).default(2 * 1024 * 1024),
   EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY: z.coerce.number().int().min(1).max(512).default(64),
   EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_QUEUE: z.coerce.number().int().min(0).max(2_048).default(128),
   EXECUTION_EDGE_CURRENT_SOURCE_QUEUE_TIMEOUT_MS: z.coerce.number().int().min(10).max(5_000).default(250),
@@ -398,6 +405,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       throw new Error(
         `current-source ${profile.environment} profile and audience must match the N13B pins`,
       );
+    }
+  }
+  if (config.FEATURE_EXECUTION_MARKET_CONTEXT === "true") {
+    if (config.FEATURE_EXECUTION_EDGE !== "true") {
+      throw new Error("FEATURE_EXECUTION_MARKET_CONTEXT=true requires FEATURE_EXECUTION_EDGE=true");
+    }
+    if (!currentSourceProfiles.some((profile) => profile.feature === "true")) {
+      throw new Error("FEATURE_EXECUTION_MARKET_CONTEXT=true requires at least one current-source profile");
     }
   }
   if (config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true") {

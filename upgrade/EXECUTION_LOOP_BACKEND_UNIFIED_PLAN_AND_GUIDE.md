@@ -5676,7 +5676,8 @@ authoritative Trading-System event replay.
 
 #### EDS-11R4 — TS-owned Market Context v1 adapter over the existing Data Layer
 
-**Status:** `OWNER_HANDOFF_VERIFIED / SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.
+**Status:** `PORTAL_CONSUMER_SOURCE_DARK_READY / OWNER_HANDOFF_VERIFIED /
+SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.
 
 **Execution decision:** this can start immediately in the Trading System
 repository.  AWS-HK already has the required Data Layer and market services;
@@ -5725,6 +5726,25 @@ database, re-ingest history or relax the Portal security boundary.
 operations to the approved market profile, retain bounded chart windows,
 surface provenance and exact values, and send local invalidations through
 R3's SSE lane.
+
+**Portal consumer preparation (source-dark, 2026-09-06):** Control API now
+contains exactly two same-origin endpoint shapes — `GET
+/api/v1/execution/market/latest` and `GET
+/api/v1/execution/market/candles` — with fixed private Edge paths, strict
+venue/instrument/interval/range bounds, 1 MiB/8 MiB operation limits,
+server-owned workspace identity, mTLS/delegated-read reuse, exact decimal
+strings and UTC milliseconds.  The compiled publication intake is deliberately
+`PENDING_OWNER_ADAPTER_IMPLEMENTATION`; it rejects every request **before** a
+transport/session/JWT can be opened, even if the deployment feature flag is
+mistakenly true.  Only a reviewed, digest-pinned owner return can change that
+intake, and the separate deployment flag is then still required.  Thus the
+Portal half is ready without inventing a route, exposing an upstream cursor or
+creating AWS-HK traffic before source acceptance.
+
+**Current R4 state:** `PORTAL_CONSUMER_SOURCE_DARK_READY /
+TS_ADAPTER_IMPLEMENTATION_PENDING`.  This is not a claim that Market Context
+is live; dependent rich panels must continue their typed pending state until
+the named owner return validates and a separate runtime activation is approved.
 
 **Tests and acceptance:** per-profile/venue/instrument isolation; invalid
 interval/range/point-limit; stale/empty/provider-degraded source; exact
@@ -5811,7 +5831,7 @@ owner campaign or replace a completed phase with a vague `Soon` state.
 | `R1` | 96/96 catalogue disposition and 54 named safe BFF operations are generated, redacted and profile-bound. | `CLOSED_AT_PORTAL_CONTRACT_GATE` | Activate only through a separately approved runtime release; no additional relation API is needed. |
 | `R2` | Every listed rich product screen consumes a named server DTO and retains its approved composition through populated, empty, partial, stale and denied states. | `CLOSED_AT_PORTAL_HYDRATION_GATE` | Frontend integration/release verifies panel-level rendering; no full-screen envelope fallback is admissible. |
 | `R3` | Local profile projection, bounded financial query and one profile-scoped SSE observation tail retain digest/provenance and pass restore/quarantine tests. | `CLOSED_AT_PORTAL_PROVENANCE_GATE` | Runtime activation uses the accepted profile/config release; it must not create per-tab AWS-HK polling. |
-| `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `READY_FOR_TS_AGENT_NOW` | Trading System agent implements the additive Manager adapter around its existing Data Layer readers; Portal validates the returned pack, then enables the two fixed Market Context BFF operations and local chart invalidations. |
+| `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `PORTAL_CONSUMER_SOURCE_DARK_READY / READY_FOR_TS_AGENT_NOW` | Trading System agent implements the additive Manager adapter around its existing Data Layer readers; Portal replaces the compiled pending intake with the verified return, then enables the two fixed Market Context BFF operations and local chart invalidations through a separately approved runtime flag. |
 | `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `OPTIONAL_UNTIL_REPLAY_IS_CLAIMED` | Keep `domain_events` as labelled observed history now. Implement only when product needs exact replay, without delaying the maximum-current-data release. |
 
 **Hard routing rule:** R4 and R5 never authorize Portal to read the Trading
