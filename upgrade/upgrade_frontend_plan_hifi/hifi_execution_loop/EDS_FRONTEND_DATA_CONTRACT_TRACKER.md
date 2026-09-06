@@ -504,6 +504,31 @@ dán nhãn DERIVED. Đề xuất schema: `timeframe: "1m"|"5m"|"15m"|"30m"|"1h"|
 
 **Bobby kiểm trên dev:** kéo chart sang trái tới hết nến → thấy "loading earlier candles" rồi nến nối dài; đổi interval rồi reload → nhớ; mở Blotter → bấm "open on chart" → replay mở đúng lệnh; mở Accounts & Bindings → account paper → panel Trade replay dưới equity.
 
+### OR-5.11 Kiểm phủ từ vựng lệnh (owner hỏi 06-09: "OCO, reduce_only, GTC… cover hết chưa?") · commit `5b59384`
+
+**Đo trên projection dev (812 order, mọi profile):** `order_type` = TAKE_PROFIT_MARKET 641 · MARKET 92 · STOP_MARKET 47 · LIMIT 32; `status` = RISK_REJECTED 658 · FILLED 91 · CANCELED 63; `time_in_force` = GTC 812; `position_side` = BOTH 812; `reduce_only` true 732 / false 80; `post_only` false 812; venue BINANCE 812. Khoá trên order rows: không có trường OCO / bracket_group / trailing / activation / callback nào — OCO chỉ tồn tại ngầm qua cặp TP+SL cùng bracket. Client id: `brk-<hash>-en0|st0|tp1..tp4` (bracket, tới 4 TP một phần) và `0000..0007` (grid LIMIT).
+
+| Từ vựng | Nguồn | Vẽ / xử lý | Trạng thái |
+|---|---|---|---|
+| MARKET entry/exit | type + fill | ▲▼ theo side vị thế, exit rỗng + pnl | ✓ dữ liệu thật |
+| LIMIT (grid/ladder) | type LIMIT, price, status | ┈ mức nghỉ từ submit→terminal, cap 8 + "+N hidden" | ✓ `burst_paper_alpha` 16 mức → 8 vẽ + 8 đếm |
+| TAKE_PROFIT_MARKET / _LIMIT | type prefix | leg TP, ◇ khi khớp, ⊣ khi huỷ/expire | ✓ |
+| STOP_MARKET / STOP_LIMIT | type prefix | leg SL | ✓ |
+| TRAILING_STOP_* | type prefix | leg bảo vệ nhãn TRAIL tại `trigger_price` (chưa có trong dữ liệu; không có activation/callback để vẽ thêm) | ✓ logic + test, chưa thấy dữ liệu |
+| Bracket nhiều TP (tp1..tp4) | coid suffix + thời điểm arm | box tới TP xa nhất, nhãn "R:R x · TP×n", từng mức TP vẽ riêng | ✓ sửa 06-09 (trước chỉ nhận 1 TP) |
+| OCO | không có trường | ngầm: TP khớp ◇ → SL huỷ ⊣ trong cùng box; không dán nhãn "OCO" vì nguồn không nói | ✓ trung thực |
+| reduce_only | flag | phân vai leg khi type không nói; hiện trong log/card | ✓ |
+| post_only / time_in_force (GTC/IOC/FOK/GTX) | flag/text | log + card (không cần hình); IOC/FOK không khớp → EXPIRED/CANCELED xử lý theo status | ✓ |
+| position_side LONG/SHORT (hedge) | field | side marker/box lấy từ position_side khi ≠ BOTH | ✓ logic + test, dữ liệu hôm nay chỉ BOTH |
+| RISK_REJECTED / REJECTED / DENIED | status | × gộp theo nến "×N", card lý do; **lệnh reject không bao giờ là leg/ladder** | ✓ sửa 06-09 (fib: 24–31 "TP" ma → 0–3 thật; 310 reject → 16 cụm, max ×31) |
+| CANCELED / EXPIRED | status | ⊣ cuối leg / mức (EXPIRED ghi "expired"), log EXPIRE | ✓ |
+| TRIGGERED (chạm mức, chờ khớp) | status | ◇ tại updated_at, leg vẫn working; log "triggered · awaiting fill" | ✓ logic + test |
+| NEW/WORKING/INITIALIZED/SUBMITTED/ACCEPTED/PENDING_*/PARTIALLY_FILLED | status | leg/mức đang working (không có mốc kết thúc), fill từng phần qua rows `fills` | ✓ |
+| VN (DNSE: LO/ATO/ATC/MP) | chưa có trong projection | không có nến công khai (typed unsupported); type VN chưa map — sẽ map khi có dữ liệu | ✗ ngoài dữ liệu hôm nay |
+| Fill giá lệch venue (paper) | fills | vẽ rỗng + "off venue print · giá" (fib: 125.00; adaptive: 3,500) | ✓ |
+
+**Kết luận trung thực:** phủ 100 % từ vựng đang có trong DB và toàn bộ status của contract; ba mục có logic + test nhưng chưa có dữ liệu để nhìn bằng mắt (trailing, hedge position_side, TRIGGERED/EXPIRED/DENIED); VN types ngoài phạm vi dữ liệu hiện tại. Bằng chứng: `vocab2_fib_sl_tp_strength_0015m_fit.png`, `vocab2_burst_paper_alpha_fit.png`.
+
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
 Chính sách nghiệm thu 2 lớp: **Lớp 1 = contract đầu vào** (chấm được ngay vì
