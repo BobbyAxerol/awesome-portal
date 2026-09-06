@@ -5801,6 +5801,24 @@ available remains typed `SOURCE_UNAVAILABLE`, not fabricated.  No new market
 database, Redis access from Portal, or direct Data-Layer browser route is
 permitted.
 
+**Current-source adapter boundary verified (2026-09-06, read-only SSH):** do
+not mistake the existing static N11 catalogue declaration for a live Manager
+publication. The Trading System checkout has a public-system
+`GET /v1/market/latest/{venue}/{symbol}` reader, a private
+`MarketCacheReader.execution_market_context()` reader, and static N11 entries
+for `/portal/execution/v1/market/ticks` and
+`/portal/execution/v1/market/candles`. However the current capability
+catalogue explicitly marks the two N11 market entries `published: false`,
+`portal_reachable: false` and `source_binding_status: TYPED_UNAVAILABLE`; the
+current query adapter returns `MARKET_SOURCE_UNAVAILABLE`. They therefore
+cannot be adopted by Portal or silently activated. The required R4 work is
+still only the small additive source-owner adapter: bind the confirmed existing
+readers, expose the two fixed Manager routes under the already-approved
+mTLS/delegated-JWT boundary, publish accepted digest/fixtures/negative
+transport evidence, and return the pack. It needs no new market database,
+cache, public endpoint or AWS resource. Portal must not edit that source
+repository or bypass the boundary.
+
 #### EDS-11R5 — Optional exact lifecycle replay semantics
 
 **Status:** `OPTIONAL_PRODUCT_QUALITY_UPGRADE / NOT_A_CURRENT_DATA_BLOCKER`.
