@@ -5846,7 +5846,8 @@ repository or bypass the boundary.
 #### EDS-11R5 — Optional exact lifecycle replay semantics
 
 **Status:** `OBSERVED_HISTORY_CLOSED_AT_PORTAL /
-AUTHORITATIVE_REPLAY_OPTIONAL_NOT_ELECTED / NOT_A_CURRENT_DATA_BLOCKER`.
+AUTHORITATIVE_LEDGER_SOURCE_DARK_IMPLEMENTATION_ELECTED /
+NOT_A_CURRENT_DATA_BLOCKER`.
 
 **Goal:** promote useful existing observed history into **authoritative replay**
 only if Trading System publishes a contract that guarantees the missing
@@ -5872,6 +5873,57 @@ Portal projection and labels the result `CURRENT_SOURCE` /
 `PORTAL_OBSERVATION`.  `public.domain_events` remains `PROJECTION_INPUT`, not
 a browser-readable generic relation.  This is a closed current-data decision,
 not hidden technical debt or a reason to discard existing observation data.
+
+**Elected delivery specification — source-owned ledger, not a synthetic
+ordering (2026-09-06):** R5 is now implemented as an additive, default-off
+Trading-System-owned ledger adjacent to `domain_events`. It does **not**
+reinterpret `event_ts` or `created_at` as a sequence and it does not backfill
+old rows. At a separately approved cutover, an enabled exact
+`(profile_id, mode, venue)` binding causes an `AFTER INSERT` trigger to assign
+one contiguous per-stream `source_sequence` in the same database transaction
+as the newly committed domain event. The ledger keeps a persistent stream
+epoch, head and retention floor; it records a redacted immutable event
+envelope only, never `payload` or `raw`. Existing history before that cutover
+remains the explicitly labelled Portal observation lane.
+
+The source-owned `AsyncPgEventJournal` will read only that ledger under the
+existing read-only role and feed the already-tested demand/lease/cursor core.
+Its snapshot is explicitly an `EVENT_LOG_ANCHOR` at a durable watermark, not a
+claim that the current order/fill/position tables were atomically reconstructed
+from pre-cutover events. A Portal reducer therefore combines a current named
+Manager snapshot with a post-watermark tail only after durable local commit;
+it never treats the audit ledger as an unproven full state-reconstruction
+stream. A source epoch change, retention-floor advance, gap, duplicate,
+cursor-ahead or correction-model violation is a typed resnapshot condition.
+
+The correction model is explicit and append-only: each ledger entry represents
+an immutable `domain_event`; ordinary events are `UPSERT`, a future tombstone
+is `DELETE`, and an optional `supersedes_event_id` may identify a correction.
+No code may infer a correction from timestamp/order or reuse `causation_id` as
+a substitute. Existing emitters default to `UPSERT`; only emitters that set
+the explicit source field can publish correction/tombstone semantics. This is
+an exact replay of the bounded **event ledger** from its declared cutover, not
+a fabricated database-wide total order or retrospective state replay.
+
+**R5 implementation slices and exit evidence:**
+
+1. Add `portal_event_stream` tables for exact profile bindings, persistent
+   epochs/head/floor and redacted immutable entries, plus a transactional
+   capture trigger. No binding is seeded/enabled and no historical backfill,
+   retention purge, listener or source route is activated by the migration.
+2. Extend the private event core with source-epoch and snapshot-semantics
+   validation, then add a bounded read-only AsyncPG journal adapter. It must
+   use fixed SQL, one profile binding and the existing read-only database role;
+   it cannot select an arbitrary table, payload, raw field or profile.
+3. Freeze a `portal-event-ledger.v1` contract/manifest, cutover/rollback
+   runbook and synthetic continuity corpus. The future Manager/Edge route is
+   named and private; it remains disabled until a separate image/config/mTLS /
+   delegated-JWT / response-bound acceptance window.
+4. Prove migration idempotence, sequence contiguity under concurrent capture,
+   empty-anchor behavior, profile isolation, raw-redaction, epoch rollover,
+   correction/tombstone representation, retention floor, duplicate page,
+   restart/ACK, cursor tamper and gap/resync paths. Runtime acceptance is a
+   separate release gate and cannot be claimed from synthetic tests.
 
 **Work if elected:** TS adds an additive stream envelope over its existing
 tables/outbox; Portal validates snapshot-plus-tail, persists source checkpoint
@@ -5906,7 +5958,7 @@ owner campaign or replace a completed phase with a vague `Soon` state.
 | `R2` | Every listed rich product screen consumes a named server DTO and retains its approved composition through populated, empty, partial, stale and denied states. | `CLOSED_AT_PORTAL_HYDRATION_GATE` | Frontend integration/release verifies panel-level rendering; no full-screen envelope fallback is admissible. |
 | `R3` | Local profile projection, bounded financial query and one profile-scoped SSE observation tail retain digest/provenance and pass restore/quarantine tests. | `CLOSED_AT_PORTAL_PROVENANCE_GATE` | Runtime activation uses the accepted profile/config release; it must not create per-tab AWS-HK polling. |
 | `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `TS_SOURCE_IMPLEMENTED_RUNTIME_DISABLED / PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY` | Source implementation is committed as `26fd6b2`; owner next produces deployment-bound image/transport/profile/response evidence and return manifest. Portal then validates it, replaces the compiled pending intake, and enables only the two fixed BFF operations plus local chart invalidations through a separately approved runtime flag. |
-| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `OBSERVED_HISTORY_CLOSED_AT_PORTAL / AUTHORITATIVE_REPLAY_OPTIONAL_NOT_ELECTED` | Keep `domain_events` as labelled observed history through the existing redacted projection lane. Implement the separate source contract only if product claims exact replay; it does not delay maximum-current-data release. |
+| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal snapshot+tail reduction passes the full continuity corpus. | `SOURCE_DARK_LEDGER_IMPLEMENTATION_IN_PROGRESS / OBSERVED_HISTORY_REMAINS_RELEASED` | Implement and test the additive immutable ledger without activating a binding, listener or runtime route. A later owner window elects exact profile cutover and Portal tail activation; current-data release stays unblocked. |
 
 **Hard routing rule:** R4 and R5 never authorize Portal to read the Trading
 System database, Redis, broker or CLI directly.  R4's only production route is
