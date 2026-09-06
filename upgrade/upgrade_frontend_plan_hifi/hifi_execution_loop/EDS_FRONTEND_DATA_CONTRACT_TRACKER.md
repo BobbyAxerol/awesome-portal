@@ -308,7 +308,7 @@ nguyên marker/leg/log. **Điểm cần Bobby chốt:** control-api có được
 ra ngoài tới venue công khai không (hiện nó đã reach được, 200/206ms); codex
 có đồng ý phân loại authority `VENUE_PUBLIC_MARKET_DATA` không (DR-23).
 
-## OR-5 (PROPOSED ⚖ — chưa làm, chờ Bobby quyết) — Trade Replay "signature": chuẩn TradingView
+## OR-5 (APPROVED 06-09 để lập kế hoạch — duyệt từng phase R1→R3, xem OR-5.6/5.7) — Trade Replay "signature": chuẩn TradingView
 
 Owner 06-09 hỏi ý kiến: *"có nên đầu tư thêm thời gian để trade replay động
 hơn như các sàn / TradingView — mượt, crosshair hiện số nến, tam giác vào/ra
@@ -368,6 +368,69 @@ phải chart riêng cho một tab.
 - **(a) Bobby quyết**: ① làm hay để sau §A5.5 (Paper/Portfolio/Live Overview còn lệch showcase); ② chấp nhận attribution "TradingView" trên chart; ③ egress venue công khai (OR-4) — signature trên nến sai nguồn thì đẹp vô nghĩa.
 - **(b) Claude làm không cần chờ**: S1–S3 ở trên, toàn bộ FE, không đổi contract nào.
 - **(c) chờ codex**: BR-EX-50 kline shard (để marker khớp feed của chính hệ thống, hết cảnh fill lệch nến) — không chặn S1–S3, chỉ đổi nguồn lớp nến khi giao; DR-22 scope facts theo alpha.
+
+### OR-5.6 Quyết định owner 06-09 (chiều) — OR-5 chuyển sang **APPROVED để lập kế hoạch**, duyệt từng phase
+
+Nguyên văn: *"không cần chờ codex, làm riêng được. Ưu tiên làm cái này trước,
+các G và R khác goal sau. Chấp nhận hiện TradingView badge. Nguồn nến lấy từ
+data layer bên Trading System qua portal execution, hoặc tự call REST Binance /
+OKX theo đúng interval của alpha_id — không cần nhanh/stream, chỉ cần đúng và
+khớp giá từ database Trading System lên nến; order, fill, lệnh điều kiện, mark…
+từ database Trading System vẽ lên candle. Cho phép tăng chiều cao khung Trade
+Replay vừa phải. Tạo 3 phase, duyệt từng cái."*
+
+| Điểm | Chốt | Hệ quả kế hoạch |
+|---|---|---|
+| Ưu tiên | OR-5 trước §A5.5 và mọi G/R khác | 3 phase dưới đây là việc kế tiếp của Claude; không đụng phase EDS của codex |
+| Attribution | Chấp nhận badge "TradingView" | Đặt góc dưới-phải chart, kích thước tối thiểu theo NOTICE của thư viện |
+| Nguồn nến | REST venue trực tiếp (Binance/OKX) **hoặc** data_layer qua edge; đúng interval alpha | Phase 1 dùng route OR-4 (đã có), thêm OKX; adapter nguồn để đổi sang data_layer `/v1/binance/futures/klines/{symbol}` (pack `extract/data-layer-contract.json`) khi BR-EX-50 giao — chart không đổi |
+| Khung | Tăng chiều cao vừa phải | 258 px (viewBox hiện tại) → **420 px** mặc định, nút Expand → 620 px, nhớ theo viewer |
+
+**Kiểm sẵn sàng bằng máy (06-09, dev DB read-only + host egress):**
+- Deployment của `adaptive_hma_cpp_00115m`: `venue BINANCE`, `mode paper|sandbox`, instrument `ETHUSDT.BINANCE`, account riêng từng alpha (`paper-binance-<strategy_id>`) → lọc theo account (DR-22) là an toàn với cách đặt tên này.
+- **Trading System không publish timeframe của alpha**: strategy row chỉ có `active, trader_id, created_at, strategy_id`; không object nào trong projection có key `timeframe|interval|resolution`. → Phase 1 suy interval từ hậu tố id (`…15m`, `…30m`) và **dán nhãn DERIVED, cho đổi tay**; ghi **BR-EX-80** xin codex trường `timeframe` trong strategies/fleet register. Không bịa.
+- Egress từ host: Binance `fapi/v1/klines` 200/0.14s, OKX `api/v5/market/candles` 200/0.16s. DNSE (VN) không có nến công khai tương đương → typed `MARKET_CANDLES_VENUE_UNSUPPORTED`.
+- Trong DB có `mark_price`/`mark_price_at` trên position rows (75 object) → Phase 2 vẽ được đường mark DERIVED từ chính hệ thống để đối chiếu với nến venue.
+- Thư viện: `lightweight-charts` chưa có trong bundle; sẽ pin version chính xác, lazy-import như uPlot (OR-3).
+
+### OR-5.7 Kế hoạch 3 phase — mỗi phase một gate, Bobby duyệt từng phase
+
+**Phase R1 — Nền chart chuẩn TradingView (lõi)** · ước lượng 2 ngày · trạng thái: **chờ Bobby duyệt**
+
+| | |
+|---|---|
+| Giao | `ReplayCandleChart` (canvas, Lightweight Charts) thay lớp vẽ SVG; giữ nguyên lớp dữ liệu `readReplayOrders / readReplayFills / legRole / pairRoundTrips / legLevels / buildLog` và log bên phải |
+| Tương tác | crosshair + bảng O/H/L/C/V + thời gian UTC theo con trỏ; kéo trục giá để giãn/nén; wheel zoom neo tại con trỏ; kéo ngang có quán tính; double-click trục giá = auto-scale; Fit; phím Home/End |
+| Marker (bản đầu) | ▲ LONG dưới low màu `--exec-trade-long`, ▼ SHORT trên high màu `--exec-trade-short` (token mới, chỉ trong `tokens.css`); vào = đặc, ra = rỗng + nhãn pnl server; cỡ 10–12 px, viền nền; TP/SL của leg đang hiển thị = price line có nhãn |
+| Nến | interval mặc định = timeframe alpha (DERIVED từ id, đổi tay được); venue theo deployment (BINANCE → `fapi`, OKX → `api/v5`, khác → typed unsupported); range = sự kiện ±N nến; cache/budget như OR-4 |
+| Khung | 420 px + Expand 620 px; badge TradingView; footer nguồn + giờ fetch + authority giữ nguyên |
+| File | FE: `components/ReplayCandleChart.tsx` (mới), `TradeReplayEvents.tsx` (bỏ lớp SVG nến, giữ data + log), `styles/tokens.css` (+2 token), `execution.css` (khung), `api/marketCandles.ts` (+venue/interval map). BE: `market-candles.service.ts` (+OKX adapter, venue map), spec |
+| Gate | control-api spec; FE `tsc` + vitest (mock LWC trong jsdom, test lớp dữ liệu + props) + build; Playwright baseline mới cho tab Replay trên probe; đo pan 1500 nến ≥ 55 fps bằng harness; U02 colour/font gate |
+| Bobby kiểm trên dev | crosshair đúng số nến; kéo trục giá; zoom tại con trỏ; kéo quán tính; marker long/short đúng màu, đúng side, to hơn; badge; khung cao hơn; đổi interval |
+| Đóng khi | gate xanh + Bobby OK trên dev + dòng deploy ghi ở đây |
+
+**Phase R2 — Signature: lệnh điều kiện, bracket, grid, round trip, đồng bộ log** · 2–3 ngày · trạng thái: chờ R1 đóng
+
+| | |
+|---|---|
+| Giao | primitive tự vẽ (`ISeriesPrimitive`): **bracket** entry→TP (tint long) / entry→SL (tint short), cả hai → position box + nhãn R:R; **ladder** cho grid/nhiều lệnh chờ (gộp "×N levels" khi >8, nhãn trung thực); TRIGGER ◇ trên đường leg, REJECT ×, CANCEL đường cắt cụt; **ruy băng round trip** entry→exit + pnl server; **hover card** marker (order id, qty, giá, phí, realized pnl, thời gian ack nếu có); **đồng bộ hai chiều** hover/click marker ↔ dòng log, phím ←/→ nhảy trade; fill ngoài dải nến vẽ rỗng + "off venue print"; **đường mark DERIVED** từ `mark_price` DB (đối chiếu DB ↔ nến venue) |
+| Dữ liệu | 100% server: `trigger_price`, `order_type`, `realized_pnl`, `submitted_at/updated_at`, `mark_price`; FE chỉ ghép (round trip, vai leg) và ghi rõ DERIVED |
+| Gate | unit test hình học/ghép; Playwright baseline 4 trạng thái (1 leg, 2 leg, grid, reject); reduced-motion; §8 scale cells (cardinality fill/leg trong cửa sổ, cap) |
+| Bobby kiểm | bracket/box đọc được ngay; grid không rối; hover card đúng số; click log → chart cuộn tới trade |
+| Đóng khi | gate xanh + Bobby OK grammar + §8 đủ 6 ô |
+
+**Phase R3 — Hiệu năng, dùng lại, sẵn sàng đổi nguồn** · 1–1.5 ngày · trạng thái: chờ R2 đóng
+
+| | |
+|---|---|
+| Giao | fetch nến theo trang ≤1500/call, khâu coverage, gap gạch chéo; prefetch khi kéo tới mép; auto-fit interval theo range; nhớ interval/height theo viewer; **dùng lại** chart ở Account 360 (fill của account) và Full Blotter "open on chart" (deep link `?tab=Trade%20Replay&order=`); adapter nguồn nến: `VENUE_PUBLIC_MARKET_DATA` ↔ data_layer qua edge (BR-EX-50) ↔ Trading System kline shard — chart không đổi; tiêu thụ BR-EX-80 `timeframe` khi codex giao |
+| Gate | full FE gate + refresh baseline; perf budget ghi số thật; tracker cập nhật A0/§8; Reuse report |
+| Đóng khi | gate xanh + Bobby OK + OR-5 chuyển DONE; DR-23 đóng theo phân loại của codex |
+
+**Backend request (BR-EX-80, @codex):** trường `timeframe`/`bar_interval` của
+strategy trong relation `strategies` (hoặc fleet register BR-EX-72) để Trade
+Replay chọn đúng interval mà không suy từ id. Ảnh hưởng: tới khi giao, FE
+dán nhãn DERIVED. Đề xuất schema: `timeframe: "1m"|"5m"|"15m"|"30m"|"1h"|"4h"|"1d"`.
 
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
