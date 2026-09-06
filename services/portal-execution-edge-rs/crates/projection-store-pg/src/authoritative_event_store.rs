@@ -8,9 +8,10 @@
 use std::collections::BTreeMap;
 
 use authoritative_event_core::{
-    reduce_current_entity, AuthoritativeEvent, CurrentEntityState, DurableAppendReceipt,
-    DurableCheckpoint, EventOperation, EventStreamBinding, FrameLane, PendingAppend,
-    SnapshotBoundary, SnapshotCompleteness, SnapshotTailState, SourcePosition,
+    reduce_current_entity, AuthoritativeEvent, CurrentEntityState, DurableAnchorReceipt,
+    DurableAppendReceipt, DurableCheckpoint, EventOperation, EventStreamBinding, FrameLane,
+    PendingAnchor, PendingAppend, SnapshotBoundary, SnapshotCompleteness, SnapshotSemantics,
+    SnapshotTailState, SourcePosition,
 };
 use serde_json::Value;
 use sqlx::{postgres::PgRow, Postgres, Row, Transaction};
@@ -54,6 +55,15 @@ pub enum AuthoritativeAppendOutcome {
     Written(DurableAppendReceipt),
     AlreadyDurable(DurableAppendReceipt),
     Quarantined(AuthoritativeAppendQuarantine),
+}
+
+/// Result of persisting a no-backfill event-log anchor.  A durable result is
+/// the only condition under which the worker may advance its opaque source
+/// cursor into tail mode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AuthoritativeAnchorOutcome {
+    Written(DurableAnchorReceipt),
+    AlreadyDurable(DurableAnchorReceipt),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -165,7 +175,7 @@ impl PgProjectionStore {
         let generation = sqlx::query(
             "SELECT generation_id,source_epoch,snapshot_as_of_ms,high_watermark_sequence,
                     retention_floor_sequence,committed_source_sequence,committed_revision,state,
-                    resnapshot_reason_code
+                    resnapshot_reason_code,snapshot_semantics
                FROM portal_projection.authoritative_event_generations
               WHERE stream_binding_digest=$1 AND source_epoch=$2 AND snapshot_id=$3
               FOR UPDATE",
@@ -468,6 +478,173 @@ impl PgProjectionStore {
         }))
     }
 
+    /// Persists one explicit no-backfill event-log anchor.  It does not write
+    /// a synthetic business event, batch or local journal row: those records
+    /// begin only with the first actual post-cutover source event.
+    ///
+    /// The transaction creates or selects one exact generation under the same
+    /// stream lock as append.  Its receipt is deliberately separate from a
+    /// [`DurableAppendReceipt`], making it impossible for a caller to treat an
+    /// empty anchor as a fake append and acknowledge a cursor early.
+    ///
+    /// # Errors
+    ///
+    /// Returns an integrity or database error without changing a source
+    /// cursor. It never contacts Manager, a browser, cache, broker or CLI.
+    #[allow(clippy::too_many_lines)]
+    pub async fn commit_authoritative_event_anchor(
+        &self,
+        pending: &PendingAnchor,
+        committed_at_ms: i64,
+    ) -> Result<AuthoritativeAnchorOutcome, StoreError> {
+        pending.validate_for_storage()?;
+        let admission = pending.admission();
+        let binding = &admission.binding;
+        let snapshot = pending.snapshot();
+        if snapshot.semantics != SnapshotSemantics::EventLogAnchor {
+            return Err(StoreError::AuthoritativePersistenceInvariant);
+        }
+        let stream_binding_digest = binding.binding_digest()?;
+        let mut transaction = self.pool.begin().await?;
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
+            .bind(format!("eds09:{stream_binding_digest}"))
+            .execute(&mut *transaction)
+            .await?;
+
+        sqlx::query(
+            "INSERT INTO portal_projection.authoritative_event_streams
+             (stream_binding_digest,stream_id,contract_revision,workspace_id,environment,
+              profile_id,venue_id,resource_kind,resource_id,filter_digest,contract_digest,
+              owner_return_digest,runtime_evidence_digest,transport_contract_digest,
+              local_storage_policy_digest,state,created_at_ms,updated_at_ms)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
+                     'SNAPSHOT_BACKFILL',$16,$16)
+             ON CONFLICT (stream_binding_digest) DO NOTHING",
+        )
+        .bind(&stream_binding_digest)
+        .bind(&binding.stream_id)
+        .bind(&binding.contract_revision)
+        .bind(binding.workspace_id.as_str())
+        .bind(&binding.environment)
+        .bind(&binding.profile_id)
+        .bind(&binding.venue_id)
+        .bind(&binding.resource_kind)
+        .bind(&binding.resource_id)
+        .bind(&binding.filter_digest)
+        .bind(&admission.contract_digest)
+        .bind(&admission.owner_return_digest)
+        .bind(&admission.runtime_evidence_digest)
+        .bind(&admission.transport_contract_digest)
+        .bind(&admission.local_storage_policy_digest)
+        .bind(committed_at_ms)
+        .execute(&mut *transaction)
+        .await?;
+
+        let stream = sqlx::query(
+            "SELECT stream_id,contract_revision,workspace_id,environment,profile_id,venue_id,
+                    resource_kind,resource_id,filter_digest,contract_digest,owner_return_digest,
+                    runtime_evidence_digest,transport_contract_digest,local_storage_policy_digest,
+                    current_generation_id,active_generation_id,state
+               FROM portal_projection.authoritative_event_streams
+              WHERE stream_binding_digest=$1 FOR UPDATE",
+        )
+        .bind(&stream_binding_digest)
+        .fetch_one(&mut *transaction)
+        .await?;
+        if !stream_matches(&stream, admission)? {
+            return Err(StoreError::AuthoritativeStreamIdentityCollision);
+        }
+        let stream_current_generation: Option<Uuid> = stream.try_get("current_generation_id")?;
+        let stream_state: String = stream.try_get("state")?;
+
+        let existing = sqlx::query(
+            "SELECT generation_id,source_epoch,snapshot_as_of_ms,high_watermark_sequence,
+                    retention_floor_sequence,committed_source_sequence,committed_revision,state,
+                    snapshot_semantics,anchor_digest
+               FROM portal_projection.authoritative_event_generations
+              WHERE stream_binding_digest=$1 AND source_epoch=$2 AND snapshot_id=$3
+              FOR UPDATE",
+        )
+        .bind(&stream_binding_digest)
+        .bind(&snapshot.high_watermark.source_epoch)
+        .bind(&snapshot.snapshot_id)
+        .fetch_optional(&mut *transaction)
+        .await?;
+
+        if let Some(existing) = existing {
+            let generation_id: Uuid = existing.try_get("generation_id")?;
+            let state = parse_generation_state(&existing.try_get::<String, _>("state")?)?;
+            let committed_position = row_position(
+                &snapshot.high_watermark.source_epoch,
+                existing.try_get("committed_source_sequence")?,
+            )?;
+            let committed_revision = required_revision(existing.try_get("committed_revision")?)?;
+            let exact = stream_current_generation == Some(generation_id)
+                && generation_matches(&existing, snapshot)?
+                && existing.try_get::<String, _>("snapshot_semantics")? == "EVENT_LOG_ANCHOR"
+                && existing
+                    .try_get::<Option<String>, _>("anchor_digest")?
+                    .as_deref()
+                    == Some(pending.anchor_digest())
+                && state == SnapshotTailState::TailReady
+                && committed_position.as_ref() == Some(&snapshot.high_watermark)
+                && committed_revision > 0;
+            if !exact {
+                return Err(StoreError::AuthoritativeGenerationNotReady);
+            }
+            transaction.commit().await?;
+            return Ok(AuthoritativeAnchorOutcome::AlreadyDurable(
+                DurableAnchorReceipt {
+                    anchor_digest: pending.anchor_digest().to_owned(),
+                    committed_position: snapshot.high_watermark.clone(),
+                    committed_revision,
+                },
+            ));
+        }
+
+        let can_start =
+            stream_current_generation.is_none() || stream_state == "RESNAPSHOT_REQUIRED";
+        if !can_start {
+            return Err(StoreError::AuthoritativeGenerationNotReady);
+        }
+        let generation_id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO portal_projection.authoritative_event_generations
+             (generation_id,stream_binding_digest,source_epoch,snapshot_id,snapshot_as_of_ms,
+              high_watermark_sequence,retention_floor_sequence,snapshot_semantics,anchor_digest,
+              committed_source_sequence,committed_revision,state,created_at_ms,updated_at_ms)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,'EVENT_LOG_ANCHOR',$8,$9,1,'TAIL_READY',$10,$10)",
+        )
+        .bind(generation_id)
+        .bind(&stream_binding_digest)
+        .bind(&snapshot.high_watermark.source_epoch)
+        .bind(&snapshot.snapshot_id)
+        .bind(snapshot.snapshot_as_of_ms)
+        .bind(&snapshot.high_watermark.source_sequence)
+        .bind(&snapshot.retention_floor.source_sequence)
+        .bind(pending.anchor_digest())
+        .bind(&snapshot.high_watermark.source_sequence)
+        .bind(committed_at_ms)
+        .execute(&mut *transaction)
+        .await?;
+        sqlx::query(
+            "UPDATE portal_projection.authoritative_event_streams
+                SET current_generation_id=$2,active_generation_id=$2,state='TAIL_READY',updated_at_ms=$3
+              WHERE stream_binding_digest=$1",
+        )
+        .bind(&stream_binding_digest)
+        .bind(generation_id)
+        .bind(committed_at_ms)
+        .execute(&mut *transaction)
+        .await?;
+        transaction.commit().await?;
+        Ok(AuthoritativeAnchorOutcome::Written(DurableAnchorReceipt {
+            anchor_digest: pending.anchor_digest().to_owned(),
+            committed_position: snapshot.high_watermark.clone(),
+            committed_revision: 1,
+        }))
+    }
+
     /// Fences a current generation after an integrity condition detected
     /// outside the SQL transaction (for example a decoded-frame or transport
     /// checksum failure).  It stores no raw payload and never contacts source.
@@ -552,7 +729,7 @@ impl PgProjectionStore {
             "SELECT s.active_generation_id,s.current_generation_id,g.generation_id,g.source_epoch,
                     g.snapshot_id,g.snapshot_as_of_ms,g.high_watermark_sequence,
                     g.retention_floor_sequence,g.committed_source_sequence,g.committed_revision,
-                    g.state,g.resnapshot_reason_code
+                    g.state,g.resnapshot_reason_code,g.snapshot_semantics
                FROM portal_projection.authoritative_event_streams s
                LEFT JOIN portal_projection.authoritative_event_generations g
                  ON g.generation_id=s.current_generation_id
@@ -593,6 +770,9 @@ impl PgProjectionStore {
                 snapshot_as_of_ms: row.try_get("snapshot_as_of_ms")?,
                 high_watermark,
                 retention_floor,
+                semantics: parse_snapshot_semantics(
+                    &row.try_get::<String, _>("snapshot_semantics")?,
+                )?,
                 completeness: SnapshotCompleteness::Complete,
             },
             committed_position,
@@ -981,7 +1161,9 @@ fn generation_matches(row: &PgRow, snapshot: &SnapshotBoundary) -> Result<bool, 
             && row.try_get::<String, _>("high_watermark_sequence")?
                 == snapshot.high_watermark.source_sequence
             && row.try_get::<String, _>("retention_floor_sequence")?
-                == snapshot.retention_floor.source_sequence,
+                == snapshot.retention_floor.source_sequence
+            && row.try_get::<String, _>("snapshot_semantics")?
+                == snapshot_semantics_name(snapshot.semantics),
     )
 }
 
@@ -1050,10 +1232,26 @@ fn parse_operation(value: &str) -> Result<EventOperation, StoreError> {
 fn state_name(state: SnapshotTailState) -> &'static str {
     match state {
         SnapshotTailState::AwaitingSnapshot
+        | SnapshotTailState::AwaitingAnchorCommit
         | SnapshotTailState::AwaitingDurableCommit
         | SnapshotTailState::SnapshotBackfill => "SNAPSHOT_BACKFILL",
         SnapshotTailState::TailReady => "TAIL_READY",
         SnapshotTailState::ResnapshotRequired => "RESNAPSHOT_REQUIRED",
+    }
+}
+
+fn snapshot_semantics_name(semantics: SnapshotSemantics) -> &'static str {
+    match semantics {
+        SnapshotSemantics::StateBaseline => "STATE_BASELINE",
+        SnapshotSemantics::EventLogAnchor => "EVENT_LOG_ANCHOR",
+    }
+}
+
+fn parse_snapshot_semantics(value: &str) -> Result<SnapshotSemantics, StoreError> {
+    match value {
+        "STATE_BASELINE" => Ok(SnapshotSemantics::StateBaseline),
+        "EVENT_LOG_ANCHOR" => Ok(SnapshotSemantics::EventLogAnchor),
+        _ => Err(StoreError::AuthoritativePersistenceInvariant),
     }
 }
 
@@ -1143,6 +1341,7 @@ mod tests {
             snapshot_as_of_ms: 1_788_500_000_000,
             high_watermark: position(2),
             retention_floor: position(1),
+            semantics: SnapshotSemantics::StateBaseline,
             completeness: SnapshotCompleteness::Complete,
         }
     }

@@ -535,7 +535,6 @@ for token in \
     "BR-EX-77" \
     "BR-EX-78" \
     "BR-EX-79" \
-    "_next: BR-EX-80_" \
     "EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
@@ -543,6 +542,36 @@ do
         exit 1
     fi
 done
+
+# The request ledger is intentionally append-only.  Do not pin this gate to a
+# particular next row: a valid owner/consumer request added to the ledger must
+# not make the workspace unverifiable.  Instead require the one declared
+# placeholder to be exactly the successor of the highest concrete BR-EX row.
+latest_br_ex="$({
+    awk -F'|' '
+        $2 ~ /^[[:space:]]*BR-EX-[0-9]+[[:space:]]*$/ {
+            value = $2
+            gsub(/[^0-9]/, "", value)
+            if ((value + 0) > highest) {
+                highest = value + 0
+            }
+        }
+        END {
+            if (highest > 0) {
+                print highest
+            }
+        }
+    ' "${EXECUTION_UNIFIED_PLAN}"
+})"
+if [[ -z "${latest_br_ex}" ]]; then
+    echo "execution unified plan contains no concrete BR-EX request rows" >&2
+    exit 1
+fi
+expected_next_br_ex="$((latest_br_ex + 1))"
+if ! grep -Fq "| _next: BR-EX-${expected_next_br_ex}_ |" "${EXECUTION_UNIFIED_PLAN}"; then
+    echo "execution unified plan next-request placeholder is not BR-EX-${expected_next_br_ex}" >&2
+    exit 1
+fi
 
 python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" "${N09_REPORT}" "${N09_HANDOFF}" <<'PY'
 from pathlib import Path

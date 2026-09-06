@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 mod d4_command;
+mod manager_event_ledger_command;
 mod manager_projection_command;
 
 use std::{
@@ -46,6 +47,7 @@ use manager_compat_authority::{
     AuthorityError as ManagerAuthorityError, BoundManagerAuthority, DeploymentEnvironment,
     ManagerCompatibilityAuthority, ManagerRequestContext, DELEGATED_RESOURCE,
 };
+use manager_extension_contract::{ManagerExtensionRead, ManagerExtensionRequest};
 use manager_v2_client::{
     ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError, ManagerV2ClientLimits,
 };
@@ -207,6 +209,12 @@ struct EdgeConfig {
     manager_projection_retained_epoch_id: Option<Uuid>,
     manager_projection_owner_digest: Option<String>,
     manager_projection_poll_interval: Duration,
+    manager_event_ledger_enabled: RuntimeGate,
+    manager_event_ledger_reanchor_authorized: RuntimeGate,
+    manager_event_ledger_admission_file: Option<PathBuf>,
+    manager_event_ledger_state_file: Option<PathBuf>,
+    manager_event_ledger_poll_interval: Duration,
+    manager_event_ledger_page_rows: u16,
     manager_shared_admission_maximum_rps: u16,
     manager_shared_admission_maximum_concurrency: u16,
     manager_shared_admission_maximum_wait: Duration,
@@ -260,6 +268,7 @@ impl EdgeConfig {
         RuntimeGate::from(
             self.projection_ingestion_enabled.is_enabled()
                 || self.manager_projection_enabled.is_enabled()
+                || self.manager_event_ledger_enabled.is_enabled()
                 || self.realtime_sse_enabled.is_enabled()
                 || self.analytics_query_enabled.is_enabled()
                 || self.shadow_query_enabled.is_enabled()
@@ -352,6 +361,48 @@ impl EdgeConfig {
             250,
             60_000,
         )? as u64);
+        let manager_event_ledger_enabled =
+            RuntimeGate::from(strict_boolean("EDGE_MANAGER_EVENT_LEDGER_ENABLED", false)?);
+        if manager_event_ledger_enabled.is_enabled() && !manager_v2_read_enabled.is_enabled() {
+            return Err(ConfigError::Invalid("EDGE_MANAGER_EVENT_LEDGER_ENABLED"));
+        }
+        let manager_event_ledger_reanchor_authorized = RuntimeGate::from(strict_boolean(
+            "EDGE_MANAGER_EVENT_LEDGER_REANCHOR_AUTHORIZED",
+            false,
+        )?);
+        if manager_event_ledger_reanchor_authorized.is_enabled()
+            && !manager_event_ledger_enabled.is_enabled()
+        {
+            return Err(ConfigError::Invalid(
+                "EDGE_MANAGER_EVENT_LEDGER_REANCHOR_AUTHORIZED",
+            ));
+        }
+        let manager_event_ledger_admission_file =
+            optional_path("EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE");
+        let manager_event_ledger_state_file = optional_path("EDGE_MANAGER_EVENT_LEDGER_STATE_FILE");
+        if manager_event_ledger_enabled.is_enabled()
+            && manager_event_ledger_admission_file.is_none()
+        {
+            return Err(ConfigError::Missing(
+                "EDGE_MANAGER_EVENT_LEDGER_ADMISSION_FILE",
+            ));
+        }
+        if manager_event_ledger_enabled.is_enabled() && manager_event_ledger_state_file.is_none() {
+            return Err(ConfigError::Missing("EDGE_MANAGER_EVENT_LEDGER_STATE_FILE"));
+        }
+        let manager_event_ledger_poll_interval = Duration::from_millis(bounded_usize(
+            "EDGE_MANAGER_EVENT_LEDGER_POLL_INTERVAL_MS",
+            2_000,
+            250,
+            30_000,
+        )? as u64);
+        let manager_event_ledger_page_rows = u16::try_from(bounded_usize(
+            "EDGE_MANAGER_EVENT_LEDGER_PAGE_ROWS",
+            200,
+            1,
+            usize::from(manager_extension_contract::EVENT_LEDGER_MAXIMUM_PAGE_ROWS),
+        )?)
+        .map_err(|_| ConfigError::Invalid("EDGE_MANAGER_EVENT_LEDGER_PAGE_ROWS"))?;
         if manager_v2_read_enabled.is_enabled() && runtime.projection_database_url_file.is_none() {
             return Err(ConfigError::Missing("EDGE_PROJECTION_DATABASE_URL_FILE"));
         }
@@ -388,6 +439,12 @@ impl EdgeConfig {
             manager_projection_retained_epoch_id,
             manager_projection_owner_digest,
             manager_projection_poll_interval,
+            manager_event_ledger_enabled,
+            manager_event_ledger_reanchor_authorized,
+            manager_event_ledger_admission_file,
+            manager_event_ledger_state_file,
+            manager_event_ledger_poll_interval,
+            manager_event_ledger_page_rows,
             manager_shared_admission_maximum_rps: u16::try_from(bounded_usize(
                 "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS",
                 8,
@@ -703,6 +760,21 @@ async fn main() -> Result<(), ServiceError> {
         }
         Some("manager-projection-run") => {
             manager_projection_command::run_forever(&EdgeConfig::from_environment()?)
+                .await
+                .map_err(Into::into)
+        }
+        Some("manager-event-ledger-once") => {
+            manager_event_ledger_command::run_once_cli(&EdgeConfig::from_environment()?)
+                .await
+                .map_err(Into::into)
+        }
+        Some("manager-event-ledger-reanchor") => {
+            manager_event_ledger_command::run_reanchor_cli(&EdgeConfig::from_environment()?)
+                .await
+                .map_err(Into::into)
+        }
+        Some("manager-event-ledger-run") => {
+            manager_event_ledger_command::run_forever(&EdgeConfig::from_environment()?)
                 .await
                 .map_err(Into::into)
         }
@@ -1052,6 +1124,17 @@ fn private_router(state: AppState) -> Router {
         .route(
             "/internal/v2/manager/relations/:schema/:relation",
             get(manager_relation_records),
+        )
+        // EDS-11R4 is intentionally a fixed two-route extension.  It shares
+        // the existing profile-bound Manager mTLS/JWT boundary, but never
+        // becomes a generic source URL or relation browser.
+        .route(
+            "/internal/v2/manager/market/latest",
+            get(manager_market_latest),
+        )
+        .route(
+            "/internal/v2/manager/market/candles",
+            get(manager_market_candles),
         )
         .route(
             "/internal/v1/current-source/screens/:screen_id",
@@ -1770,10 +1853,141 @@ async fn manager_relation_records(
     )
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ManagerMarketLatestQuery {
+    venue: String,
+    instrument: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ManagerMarketCandlesQuery {
+    venue: String,
+    instrument: String,
+    interval: String,
+    from_ms: i64,
+    to_ms: i64,
+    point_limit: u16,
+}
+
+/// Relays one profile-bound current observation.  The Edge validates the
+/// named product query before it can reach the private Source Proxy; it never
+/// lets a caller choose a route, source, profile or credential.
+async fn manager_market_latest(
+    State(state): State<AppState>,
+    Query(query): Query<ManagerMarketLatestQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let access = match manager_extension_request_client(&state, &headers) {
+        Ok(access) => access,
+        Err(response) => return response,
+    };
+    let request = match ManagerExtensionRequest::market_latest(query.venue, query.instrument) {
+        Ok(request) => request,
+        Err(_) => {
+            return manager_problem(
+                StatusCode::BAD_REQUEST,
+                "MANAGER_MARKET_QUERY_INVALID",
+                "The market observation query is outside the fixed contract.",
+            );
+        }
+    };
+    manager_extension_read_response(
+        admitted_manager_extension_execute(&state, access.profile_id, access.client, &request)
+            .await,
+        |read| match read {
+            ManagerExtensionRead::Market(envelope) => Some(envelope.into_wire()),
+            _ => None,
+        },
+    )
+}
+
+/// Relays one bounded current OHLCV range.  Query range and cardinality stay
+/// fixed in `manager-extension-contract`; the browser sees only the Portal
+/// BFF DTO after Control API validates this source envelope.
+async fn manager_market_candles(
+    State(state): State<AppState>,
+    Query(query): Query<ManagerMarketCandlesQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let access = match manager_extension_request_client(&state, &headers) {
+        Ok(access) => access,
+        Err(response) => return response,
+    };
+    let request = match ManagerExtensionRequest::market_candles(
+        query.venue,
+        query.instrument,
+        query.interval,
+        query.from_ms,
+        query.to_ms,
+        query.point_limit,
+    ) {
+        Ok(request) => request,
+        Err(_) => {
+            return manager_problem(
+                StatusCode::BAD_REQUEST,
+                "MANAGER_MARKET_QUERY_INVALID",
+                "The market candle query is outside the fixed contract.",
+            );
+        }
+    };
+    manager_extension_read_response(
+        admitted_manager_extension_execute(&state, access.profile_id, access.client, &request)
+            .await,
+        |read| match read {
+            ManagerExtensionRead::Market(envelope) => Some(envelope.into_wire()),
+            _ => None,
+        },
+    )
+}
+
 struct AuthorizedManagerRequest<'a> {
     client: &'a ManagerV2Client,
     authority: BoundManagerAuthority<'a>,
     profile_id: &'a str,
+}
+
+/// Extension operations intentionally do not bind the relation/catalogue
+/// authority: their source revision, path, query vocabulary and response
+/// schema are sealed in `manager-extension-contract` instead.  They still use
+/// exactly the same delegated resource and profile/environment binding as a
+/// normal Manager read.
+struct AuthorizedManagerExtensionRequest<'a> {
+    client: &'a ManagerV2Client,
+    profile_id: &'a str,
+}
+
+fn manager_extension_request_client<'a>(
+    state: &'a AppState,
+    headers: &HeaderMap,
+) -> Result<AuthorizedManagerExtensionRequest<'a>, Response> {
+    let token = bearer(headers).ok_or_else(|| StatusCode::UNAUTHORIZED.into_response())?;
+    let claims = state
+        .verifier
+        .verify_read(
+            token,
+            &RequiredRead {
+                environment: &state.environment,
+                resource: Some(MANAGER_V2_RESOURCE),
+            },
+        )
+        .map_err(|_| StatusCode::FORBIDDEN.into_response())?;
+    if claims.profile_id.as_deref() != state.manager_v2_profile_id.as_deref() {
+        return Err(StatusCode::FORBIDDEN.into_response());
+    }
+    let client = state.manager_v2_client.as_ref().ok_or_else(|| {
+        manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "MANAGER_EXTENSION_READ_DISABLED",
+            "Manager extension read-through is disabled for this Edge runtime.",
+        )
+    })?;
+    let profile_id = state
+        .manager_v2_profile_id
+        .as_deref()
+        .ok_or_else(|| StatusCode::FORBIDDEN.into_response())?;
+    Ok(AuthorizedManagerExtensionRequest { client, profile_id })
 }
 
 fn manager_request_client<'a>(
@@ -1920,6 +2134,59 @@ async fn admitted_manager_execute(
     result
 }
 
+#[derive(Debug)]
+enum ManagerExtensionDispatchError {
+    AdmissionDenied(SourceAdmissionDenyReason),
+    AdmissionUnavailable,
+    Client(ManagerV2ClientError),
+}
+
+/// Executes a sealed R4/R5 extension through the same cross-replica admission
+/// slot as Manager-v2 itself.  Keeping the source id identical is deliberate:
+/// market/event operations cannot bypass the configured shared Manager rate
+/// or concurrency budget by claiming a second source namespace.
+async fn admitted_manager_extension_execute(
+    state: &AppState,
+    profile_id: &str,
+    client: &ManagerV2Client,
+    request: &ManagerExtensionRequest,
+) -> Result<ManagerExtensionRead, ManagerExtensionDispatchError> {
+    let store = state
+        .projection_store
+        .as_ref()
+        .ok_or(ManagerExtensionDispatchError::AdmissionUnavailable)?;
+    let admission = store
+        .acquire_source_admission(&SourceAdmissionRequest {
+            source_id: "manager-v2".to_owned(),
+            profile_id: profile_id.to_owned(),
+            owner_id: format!("edge-extension:{}", Uuid::now_v7()),
+            maximum_requests_per_second: state.manager_shared_admission_maximum_rps,
+            maximum_concurrency: state.manager_shared_admission_maximum_concurrency,
+            maximum_wait: state.manager_shared_admission_maximum_wait,
+            lease_ttl: state.manager_shared_admission_lease_ttl,
+        })
+        .await
+        .map_err(|_| ManagerExtensionDispatchError::AdmissionUnavailable)?;
+    let lease = match admission {
+        SourceAdmissionOutcome::Accepted(lease) => lease,
+        SourceAdmissionOutcome::Denied(reason) => {
+            return Err(ManagerExtensionDispatchError::AdmissionDenied(reason));
+        }
+    };
+    if !lease.wait.is_zero() {
+        tokio::time::sleep(lease.wait).await;
+    }
+    let result = client
+        .execute_extension(request)
+        .await
+        .map_err(ManagerExtensionDispatchError::Client);
+    store
+        .release_source_admission(&lease)
+        .await
+        .map_err(|_| ManagerExtensionDispatchError::AdmissionUnavailable)?;
+    result
+}
+
 async fn fetch_manager_catalogue(
     state: &AppState,
     profile_id: &str,
@@ -2048,6 +2315,55 @@ fn manager_dispatch_error_response(error: &ManagerDispatchError) -> Response {
     }
 }
 
+fn manager_extension_dispatch_error_response(error: &ManagerExtensionDispatchError) -> Response {
+    match error {
+        ManagerExtensionDispatchError::Client(error) => manager_client_error_response(error),
+        ManagerExtensionDispatchError::AdmissionDenied(
+            SourceAdmissionDenyReason::ConcurrencyExhausted,
+        ) => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N21_SHARED_CONCURRENCY_EXHAUSTED",
+            "The Edge-wide Manager concurrency budget is exhausted.",
+        ),
+        ManagerExtensionDispatchError::AdmissionDenied(
+            SourceAdmissionDenyReason::RateBudgetExhausted,
+        ) => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N21_SHARED_RATE_BUDGET_EXHAUSTED",
+            "The Edge-wide Manager rate budget is exhausted.",
+        ),
+        ManagerExtensionDispatchError::AdmissionUnavailable => manager_problem(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "N21_SHARED_ADMISSION_UNAVAILABLE",
+            "The Edge-wide Manager admission authority is unavailable.",
+        ),
+    }
+}
+
+fn manager_extension_read_response<T, F>(
+    read: Result<ManagerExtensionRead, ManagerExtensionDispatchError>,
+    select: F,
+) -> Response
+where
+    T: Serialize,
+    F: FnOnce(ManagerExtensionRead) -> Option<T>,
+{
+    match read {
+        Ok(ManagerExtensionRead::Unavailable(unavailable)) => {
+            manager_json_response(StatusCode::SERVICE_UNAVAILABLE, unavailable)
+        }
+        Ok(payload) => match select(payload) {
+            Some(payload) => manager_json_response(StatusCode::OK, payload),
+            None => manager_problem(
+                StatusCode::BAD_GATEWAY,
+                "MANAGER_EXTENSION_UNEXPECTED_PAYLOAD",
+                "Manager returned a payload for a different fixed extension operation.",
+            ),
+        },
+        Err(error) => manager_extension_dispatch_error_response(&error),
+    }
+}
+
 fn manager_catalogue_response(
     read: Result<ManagerRead, ManagerDispatchError>,
     authority: &BoundManagerAuthority<'_>,
@@ -2171,10 +2487,13 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
         | ManagerV2ClientError::ClientConfiguration
         | ManagerV2ClientError::RedirectDenied
         | ManagerV2ClientError::ContractHeaderMismatch
+        | ManagerV2ClientError::ExtensionContractHeaderMismatch
         | ManagerV2ClientError::InvalidContentType
         | ManagerV2ClientError::ResponseTooLarge
         | ManagerV2ClientError::UnexpectedHttpStatus(_)
-        | ManagerV2ClientError::Contract(_) => manager_problem(
+        | ManagerV2ClientError::ExtensionUnexpectedHttpStatus(_)
+        | ManagerV2ClientError::Contract(_)
+        | ManagerV2ClientError::Extension(_) => manager_problem(
             StatusCode::BAD_GATEWAY,
             "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
             "Manager source response did not satisfy the fixed read contract.",
@@ -4281,6 +4600,8 @@ enum ServiceError {
     D4Command(#[from] d4_command::D4CommandError),
     #[error(transparent)]
     ManagerProjectionCommand(#[from] manager_projection_command::ManagerProjectionCommandError),
+    #[error(transparent)]
+    ManagerEventLedgerCommand(#[from] manager_event_ledger_command::ManagerEventLedgerCommandError),
     #[error(transparent)]
     Realtime(#[from] realtime_sse::RealtimeError),
     #[error(transparent)]

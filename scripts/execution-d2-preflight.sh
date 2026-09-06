@@ -29,7 +29,7 @@ if [[ "${mode}" != template ]]; then
 fi
 
 declare -A values=()
-allowed_keys=' PORTAL_EXECUTION_EDGE_IMAGE EDGE_DEV_LOCAL_IMAGE_ALLOWED PORTAL_SOURCE_PROXY_IMAGE PORTAL_PROJECTION_POSTGRES_IMAGE PORTAL_RUNTIME_GID EDGE_PRIVATE_BIND_IP EDGE_PRIVATE_PORT EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP SOURCE_PROXY_PRIVATE_PORT SOURCE_PROXY_SOURCE_MODE SOURCE_PROXY_MANAGER_PROFILE_ID SOURCE_PROXY_MANAGER_FACADE_PORT SOURCE_PROXY_MANAGER_ISSUER_PORT SOURCE_PROXY_MANAGER_LOCATIONS_FILE PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT PROJECTION_DB_VOLUME_NAME PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER PROJECTION_DB_RUNTIME_USER EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST EDGE_SOURCE_PROBES_ENABLED EDGE_MANAGER_V2_READ_ENABLED EDGE_MANAGER_V2_PROFILE_ID EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE EDGE_PROBE_ALPHA_ID EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_SHADOW_QUERY_ENABLED EDGE_PAPER_WORKBENCH_SHADOW_ENABLED EDGE_COMMAND_RELAY_ENABLED '
+allowed_keys=' PORTAL_EXECUTION_EDGE_IMAGE EDGE_DEV_LOCAL_IMAGE_ALLOWED PORTAL_SOURCE_PROXY_IMAGE PORTAL_PROJECTION_POSTGRES_IMAGE PORTAL_RUNTIME_GID EDGE_PRIVATE_BIND_IP EDGE_PRIVATE_PORT EDGE_SECRET_DIRECTORY SOURCE_PROXY_SECRET_DIRECTORY SOURCE_PROXY_CONFIG_FILE PORTAL_BRIDGE_CIDR PORTAL_BRIDGE_GATEWAY_IP SOURCE_PROXY_PRIVATE_PORT SOURCE_PROXY_SOURCE_MODE SOURCE_PROXY_MANAGER_PROFILE_ID SOURCE_PROXY_MANAGER_FACADE_PORT SOURCE_PROXY_MANAGER_ISSUER_PORT SOURCE_PROXY_MANAGER_LOCATIONS_FILE SOURCE_PROXY_MANAGER_EXTENSION_SET PROJECTION_DB_SECRET_DIRECTORY PROJECTION_DB_INIT_SCRIPT PROJECTION_DB_VOLUME_NAME PROJECTION_DB_CONTAINER_GID PROJECTION_DB_NAME PROJECTION_DB_OWNER_USER PROJECTION_DB_RUNTIME_USER EDGE_ENVIRONMENT EDGE_DELEGATION_ISSUER EDGE_DELEGATION_AUDIENCE EDGE_SOURCE_ORIGIN EDGE_SOURCE_GATEWAY_DIGEST EDGE_SOURCE_PROBES_ENABLED EDGE_MANAGER_V2_READ_ENABLED EDGE_MANAGER_V2_PROFILE_ID EDGE_SOURCE_CLIENT_IDENTITY_FILE EDGE_SOURCE_API_KEY_FILE EDGE_PROBE_ALPHA_ID EDGE_PROJECTION_INGESTION_ENABLED EDGE_REALTIME_SSE_ENABLED EDGE_ANALYTICS_QUERY_ENABLED EDGE_ANALYTICS_SOURCE_PROFILE EDGE_SHADOW_QUERY_ENABLED EDGE_PAPER_WORKBENCH_SHADOW_ENABLED EDGE_COMMAND_RELAY_ENABLED '
 
 while IFS= read -r line || [[ -n "${line}" ]]; do
   [[ -z "${line}" || "${line}" == \#* ]] && continue
@@ -198,6 +198,17 @@ if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-profile-read ]] ||
      [[ "${values[EDGE_MANAGER_V2_READ_ENABLED]}" == true ]]; }; then
   manager_profile_enabled=true
 fi
+manager_extension_set="${values[SOURCE_PROXY_MANAGER_EXTENSION_SET]:-none}"
+[[ "${manager_extension_set}" =~ ^(none|eds11r-r4-r5)$ ]] || {
+  printf 'D2 preflight rejected an unknown Manager extension set.\n' >&2
+  exit 1
+}
+if [[ "${manager_extension_set}" == eds11r-r4-r5 ]]; then
+  [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-profile-read ]] || {
+    printf 'EDS-11R4/R5 Manager extension requires the profile-bound Manager mode.\n' >&2
+    exit 1
+  }
+fi
 if [[ "${manager_profile_enabled}" == true ]]; then
   [[ "${values[EDGE_ENVIRONMENT]}" =~ ^(paper|sandbox|live)$ ]] || {
     printf 'Manager active-read preflight requires paper, sandbox, or live.\n' >&2
@@ -239,6 +250,10 @@ if [[ "${manager_profile_enabled}" == true ]]; then
     [[ "${values[SOURCE_PROXY_MANAGER_LOCATIONS_FILE]:-}" == /* &&
        "${values[SOURCE_PROXY_MANAGER_LOCATIONS_FILE]}" != *'/../'* ]] || {
       printf 'Manager profile overlay requires one absolute non-traversing locations file.\n' >&2
+      exit 1
+    }
+    [[ -n "${values[SOURCE_PROXY_MANAGER_EXTENSION_SET]:-}" ]] || {
+      printf 'Manager profile overlay requires an explicit extension-set value.\n' >&2
       exit 1
     }
   fi
@@ -639,12 +654,17 @@ PY
   if [[ "${manager_source_enabled}" == true ]]; then
     manager_locations_file="${values[SOURCE_PROXY_MANAGER_LOCATIONS_FILE]:-${proxy_dir}/manager-v2-locations.conf}"
     manager_locations_template="${root_dir}/deploy/execution-d1/source-proxy/manager-v2-locations.conf.template"
+    manager_extension_template="${root_dir}/deploy/execution-d1/source-proxy/manager-r4-r5-extension-locations.conf.template"
     [[ "$(grep -Fxc '        include /run/secrets/manager-v2-locations.conf;' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 &&
        "$(grep -Fc 'manager-v2-locations.conf' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 ]] || {
       printf 'Manager read preflight requires the one exact Manager locations include.\n' >&2
       exit 1
     }
     if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-paper-read ]]; then
+      [[ "${manager_extension_set}" == none ]] || {
+        printf 'Historical Manager V1 source mode cannot receive an extension set.\n' >&2
+        exit 1
+      }
       cmp -s "${manager_locations_template}" "${manager_locations_file}" || {
         printf 'Manager read preflight rejected Manager locations drift.\n' >&2
         exit 1
@@ -659,16 +679,32 @@ PY
           -e "s#127\\.0\\.0\\.1:8023#127.0.0.1:${manager_facade_port}#g" \
           -e "s#127\\.0\\.0\\.1:8024/internal/issue#127.0.0.1:${manager_issuer_port}/internal/issue#g" \
           "${manager_locations_template}"
+        if [[ "${manager_extension_set}" == eds11r-r4-r5 ]]; then
+          printf '\n# Appended exact EDS-11R4/R5 extension set.\n'
+          sed \
+            -e "s#127\\.0\\.0\\.1:8023#127.0.0.1:${manager_facade_port}#g" \
+            "${manager_extension_template}"
+        fi
       ) "${manager_locations_file}" || {
         printf 'Manager profile overlay may change only the dedicated upstream ports.\n' >&2
         exit 1
       }
     fi
-    [[ "$(grep -Ec '^location ' "${manager_locations_file}")" -eq 6 &&
-       "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations_file}")" -eq 5 &&
-       "$(grep -Fxc "    proxy_pass https://127.0.0.1:${manager_facade_port};" "${manager_locations_file}")" -eq 5 &&
+    expected_manager_locations=6
+    expected_manager_auth_requests=5
+    expected_manager_facade_passes=5
+    expected_manager_tls_locations=6
+    if [[ "${manager_extension_set}" == eds11r-r4-r5 ]]; then
+      expected_manager_locations=10
+      expected_manager_auth_requests=9
+      expected_manager_facade_passes=9
+      expected_manager_tls_locations=10
+    fi
+    [[ "$(grep -Ec '^location ' "${manager_locations_file}")" -eq "${expected_manager_locations}" &&
+       "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations_file}")" -eq "${expected_manager_auth_requests}" &&
+       "$(grep -Fxc "    proxy_pass https://127.0.0.1:${manager_facade_port};" "${manager_locations_file}")" -eq "${expected_manager_facade_passes}" &&
        "$(grep -Fxc "    proxy_pass https://127.0.0.1:${manager_issuer_port}/internal/issue;" "${manager_locations_file}")" -eq 1 &&
-       "$(grep -Fxc '    proxy_ssl_protocols TLSv1.3;' "${manager_locations_file}")" -eq 6 ]] || {
+       "$(grep -Fxc '    proxy_ssl_protocols TLSv1.3;' "${manager_locations_file}")" -eq "${expected_manager_tls_locations}" ]] || {
       printf 'Manager read preflight rejected the bounded mTLS route set.\n' >&2
       exit 1
     }

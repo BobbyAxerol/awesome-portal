@@ -525,6 +525,7 @@ name = "edge-service"
 version = "0.1.0"
 dependencies = [
  "analytics",
+ "authoritative-event-core",
  "axum",
  "axum-server",
  "base64",
@@ -537,6 +538,7 @@ dependencies = [
  "intercell-gateway",
  "jsonwebtoken",
  "manager-compat-authority",
+ "manager-extension-contract",
  "manager-projection",
  "manager-v2-client",
  "manager-v2-contract",
@@ -1221,6 +1223,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "manager-extension-contract"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "manager-projection"
 version = "0.1.0"
 dependencies = [
@@ -1239,6 +1251,7 @@ name = "manager-v2-client"
 version = "0.1.0"
 dependencies = [
  "futures-util",
+ "manager-extension-contract",
  "manager-v2-contract",
  "reqwest",
  "thiserror",

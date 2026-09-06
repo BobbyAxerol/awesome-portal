@@ -3,23 +3,25 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --profile sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS\n' "$0" >&2
+  printf 'Usage: %s --profile sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS [--manager-extension-set none|eds11r-r4-r5]\n' "$0" >&2
   exit 2
 }
 
-profile="" base_env="" output_env="" edge_image=""
+profile="" base_env="" output_env="" edge_image="" manager_extension_set="none"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --profile) profile="${2:-}"; shift 2 ;;
     --base-env) base_env="${2:-}"; shift 2 ;;
     --output-env) output_env="${2:-}"; shift 2 ;;
     --edge-image) edge_image="${2:-}"; shift 2 ;;
+    --manager-extension-set) manager_extension_set="${2:-}"; shift 2 ;;
     *) usage ;;
   esac
 done
 [[ "${EUID}" -eq 0 && "${profile}" =~ ^(sandbox|live)$ && -f "${base_env}" &&
    "${output_env}" == /srv/primus/portal/runtime/* &&
-   "${edge_image}" =~ ^portal-execution-edge-manager-v2@sha256:[a-f0-9]{64}$ ]] || usage
+   "${edge_image}" =~ ^portal-execution-edge-manager-v2@sha256:[a-f0-9]{64}$ &&
+   "${manager_extension_set}" =~ ^(none|eds11r-r4-r5)$ ]] || usage
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 runtime_gid="$(getent group portal-runtime | cut -d: -f3)"
@@ -54,6 +56,7 @@ sed -i \
   -e '/^SOURCE_PROXY_MANAGER_FACADE_PORT=/d' \
   -e '/^SOURCE_PROXY_MANAGER_ISSUER_PORT=/d' \
   -e '/^SOURCE_PROXY_MANAGER_LOCATIONS_FILE=/d' \
+  -e '/^SOURCE_PROXY_MANAGER_EXTENSION_SET=/d' \
   -e '/^EDGE_MANAGER_V2_READ_ENABLED=/d' \
   -e '/^EDGE_MANAGER_V2_PROFILE_ID=/d' \
   -e '/^EDGE_SHADOW_QUERY_ENABLED=/d' \
@@ -75,6 +78,7 @@ printf '%s\n' \
   "SOURCE_PROXY_MANAGER_FACADE_PORT=${facade_port}" \
   "SOURCE_PROXY_MANAGER_ISSUER_PORT=${issuer_port}" \
   "SOURCE_PROXY_MANAGER_LOCATIONS_FILE=${manager_locations}" \
+  "SOURCE_PROXY_MANAGER_EXTENSION_SET=${manager_extension_set}" \
   'EDGE_MANAGER_V2_READ_ENABLED=true' \
   "EDGE_MANAGER_V2_PROFILE_ID=${profile_id}" \
   'EDGE_SHADOW_QUERY_ENABLED=false' \

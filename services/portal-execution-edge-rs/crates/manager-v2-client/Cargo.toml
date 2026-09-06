@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 futures-util.workspace = true
 manager-v2-contract = { path = "../manager-v2-contract" }
+manager-extension-contract = { path = "../manager-extension-contract" }
 reqwest.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

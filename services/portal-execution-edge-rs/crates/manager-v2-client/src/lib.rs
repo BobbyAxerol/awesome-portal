@@ -10,6 +10,10 @@
 use std::{sync::Arc, time::Duration};
 
 use futures_util::StreamExt as _;
+use manager_extension_contract::{
+    decode_extension_success_for_profile, decode_extension_unavailable_for_profile,
+    ExtensionContractError, ManagerExtensionRead, ManagerExtensionRequest,
+};
 #[cfg(test)]
 use manager_v2_contract::PROFILE_ID;
 use manager_v2_contract::{
@@ -175,6 +179,26 @@ impl ManagerV2Client {
         self.send_once(request).await
     }
 
+    /// Executes one separately versioned, fixed Manager extension operation.
+    ///
+    /// R4/R5 extension routes use the identical TLS 1.3 mTLS tunnel and
+    /// profile-bound Source Proxy as catalogue reads, but intentionally keep a
+    /// distinct contract revision and response bound.  This method exposes no
+    /// generic URL, method, header or caller-selected profile.
+    pub async fn execute_extension(
+        &self,
+        request: &ManagerExtensionRequest,
+    ) -> Result<ManagerExtensionRead, ManagerV2ClientError> {
+        let _permit = tokio::time::timeout(
+            self.limits.queue_timeout,
+            self.semaphore.clone().acquire_owned(),
+        )
+        .await
+        .map_err(|_| ManagerV2ClientError::QueueSaturated)?
+        .map_err(|_| ManagerV2ClientError::QueueClosed)?;
+        self.send_extension_once(request).await
+    }
+
     async fn send_once(
         &self,
         request: &ManagerV2Request,
@@ -232,6 +256,68 @@ impl ManagerV2Client {
                 .map(ManagerRead::Unavailable)
                 .map_err(ManagerV2ClientError::from),
             _ => Err(ManagerV2ClientError::UnexpectedHttpStatus(status)),
+        }
+    }
+
+    async fn send_extension_once(
+        &self,
+        request: &ManagerExtensionRequest,
+    ) -> Result<ManagerExtensionRead, ManagerV2ClientError> {
+        let blueprint = request.blueprint();
+        let mut url = self.source_proxy_origin.clone();
+        url.set_path(blueprint.path());
+        if !blueprint.query().is_empty() {
+            url.query_pairs_mut().extend_pairs(
+                blueprint
+                    .query()
+                    .iter()
+                    .map(|(name, value)| (*name, value.as_str())),
+            );
+        }
+        let request_id = HeaderValue::from_str(&Uuid::now_v7().to_string())
+            .map_err(|_| ManagerV2ClientError::ClientConfiguration)?;
+        let response = self
+            .client
+            .get(url)
+            .header(ACCEPT, "application/json")
+            .header(HeaderName::from_static("x-request-id"), request_id)
+            .send()
+            .await
+            .map_err(|_| ManagerV2ClientError::RequestFailed)?;
+        if response.status().is_redirection() {
+            return Err(ManagerV2ClientError::RedirectDenied);
+        }
+        let status = response.status().as_u16();
+        if !matches!(status, 200 | 503) {
+            return Err(ManagerV2ClientError::ExtensionUnexpectedHttpStatus(status));
+        }
+        validate_extension_response_headers(
+            response.headers(),
+            request.expected_contract_revision(),
+        )?;
+        let maximum_response_bytes = request.maximum_response_bytes();
+        if response
+            .content_length()
+            .is_some_and(|length| length > maximum_response_bytes as u64)
+        {
+            return Err(ManagerV2ClientError::ResponseTooLarge);
+        }
+        let mut stream = response.bytes_stream();
+        let mut body = Vec::new();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|_| ManagerV2ClientError::RequestFailed)?;
+            if body.len().saturating_add(chunk.len()) > maximum_response_bytes {
+                return Err(ManagerV2ClientError::ResponseTooLarge);
+            }
+            body.extend_from_slice(&chunk);
+        }
+        match status {
+            200 => decode_extension_success_for_profile(request, &body, &self.profile_id)
+                .map_err(ManagerV2ClientError::Extension),
+            503 => decode_extension_unavailable_for_profile(&body, &self.profile_id)
+                .map(ManagerExtensionRead::Unavailable)
+                .map_err(ManagerV2ClientError::Extension),
+            _ => Err(ManagerV2ClientError::ExtensionUnexpectedHttpStatus(status)),
         }
     }
 }
@@ -297,6 +383,26 @@ fn validate_response_headers(
     Ok(())
 }
 
+fn validate_extension_response_headers(
+    headers: &reqwest::header::HeaderMap,
+    expected_contract: &str,
+) -> Result<(), ManagerV2ClientError> {
+    let contract = headers
+        .get(HeaderName::from_static("x-manager-contract"))
+        .and_then(|value| value.to_str().ok());
+    if contract != Some(expected_contract) {
+        return Err(ManagerV2ClientError::ExtensionContractHeaderMismatch);
+    }
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_ascii_lowercase);
+    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
+        return Err(ManagerV2ClientError::InvalidContentType);
+    }
+    Ok(())
+}
+
 /// Bounded Manager-v2 client errors. They intentionally exclude source bodies,
 /// keys and transport credentials from their values and display text.
 #[derive(Debug, Error)]
@@ -327,14 +433,20 @@ pub enum ManagerV2ClientError {
     RedirectDenied,
     #[error("Manager-v2 response contract header drifted or was absent")]
     ContractHeaderMismatch,
+    #[error("Manager extension response contract header drifted or was absent")]
+    ExtensionContractHeaderMismatch,
     #[error("Manager-v2 response content type is not JSON")]
     InvalidContentType,
     #[error("Manager-v2 response exceeded the owner-qualified byte limit")]
     ResponseTooLarge,
     #[error("Manager-v2 Source Proxy returned unexpected HTTP status {0}")]
     UnexpectedHttpStatus(u16),
+    #[error("Manager extension Source Proxy returned unexpected HTTP status {0}")]
+    ExtensionUnexpectedHttpStatus(u16),
     #[error(transparent)]
     Contract(#[from] manager_v2_contract::ContractError),
+    #[error(transparent)]
+    Extension(ExtensionContractError),
 }
 
 #[cfg(test)]

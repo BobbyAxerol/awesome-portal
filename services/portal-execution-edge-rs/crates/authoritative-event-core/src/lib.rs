@@ -211,6 +211,10 @@ pub struct SnapshotBoundary {
     pub snapshot_as_of_ms: i64,
     pub high_watermark: SourcePosition,
     pub retention_floor: SourcePosition,
+    /// A state baseline contains durable state records through the high-water
+    /// mark.  An event-log anchor deliberately contains no fabricated state:
+    /// it starts an append-only stream at its exact high-water mark.
+    pub semantics: SnapshotSemantics,
     pub completeness: SnapshotCompleteness,
 }
 
@@ -231,8 +235,22 @@ impl SnapshotBoundary {
         }
         if self.completeness != SnapshotCompleteness::Complete
             || self.high_watermark.source_epoch != self.retention_floor.source_epoch
-            || self.high_watermark.sequence_u64()? < self.retention_floor.sequence_u64()?
         {
+            return Err(CoreError::InvalidSnapshotBoundary);
+        }
+        let high_watermark = self.high_watermark.sequence_u64()?;
+        let retention_floor = self.retention_floor.sequence_u64()?;
+        let valid_boundary = match self.semantics {
+            SnapshotSemantics::StateBaseline => high_watermark >= retention_floor,
+            // A newly enabled stream is valid at high-watermark 0 with an
+            // explicit retention floor 1.  Treating this as invalid would
+            // force a synthetic event and would falsely claim historical
+            // replay semantics.
+            SnapshotSemantics::EventLogAnchor => {
+                high_watermark >= retention_floor.saturating_sub(1)
+            }
+        };
+        if !valid_boundary {
             return Err(CoreError::InvalidSnapshotBoundary);
         }
         Ok(())
@@ -244,6 +262,18 @@ impl SnapshotBoundary {
 pub enum SnapshotCompleteness {
     Complete,
     Partial,
+}
+
+/// The source-owned meaning of a snapshot boundary.
+///
+/// `EVENT_LOG_ANCHOR` is not a thin spelling of an empty state snapshot.  It
+/// is the explicit no-backfill boundary for a post-cutover event ledger and
+/// must be durably committed before the source cursor can advance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SnapshotSemantics {
+    StateBaseline,
+    EventLogAnchor,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -567,6 +597,7 @@ impl IngestBounds {
 pub enum SnapshotTailState {
     AwaitingSnapshot,
     SnapshotBackfill,
+    AwaitingAnchorCommit,
     TailReady,
     AwaitingDurableCommit,
     ResnapshotRequired,
@@ -593,7 +624,9 @@ impl DurableCheckpoint {
             return Err(CoreError::InvalidCheckpoint);
         }
         if let Some(position) = &self.committed_position {
-            position.validate(false)?;
+            // EVENT_LOG_ANCHOR legitimately persists a zero high-watermark
+            // before the first post-cutover event exists.
+            position.validate(true)?;
             let position_sequence = position.sequence_u64()?;
             let high_watermark_sequence = self.snapshot.high_watermark.sequence_u64()?;
             if position.source_epoch != self.snapshot.high_watermark.source_epoch
@@ -616,6 +649,53 @@ pub struct PendingAppend {
     batch_digest: String,
     expected_previous_position: Option<SourcePosition>,
     target_position: SourcePosition,
+}
+
+/// A non-forgeable request to persist an event-log anchor.  It has no source
+/// records and therefore cannot be represented as a normal append batch.
+/// The fields remain private so a storage implementation cannot advance a
+/// source cursor with a caller-assembled checkpoint.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PendingAnchor {
+    admission: EventSourceAdmission,
+    snapshot: SnapshotBoundary,
+    anchor_digest: String,
+}
+
+impl PendingAnchor {
+    #[must_use]
+    pub fn admission(&self) -> &EventSourceAdmission {
+        &self.admission
+    }
+
+    #[must_use]
+    pub fn snapshot(&self) -> &SnapshotBoundary {
+        &self.snapshot
+    }
+
+    #[must_use]
+    pub fn anchor_digest(&self) -> &str {
+        &self.anchor_digest
+    }
+
+    /// Revalidates the anchor immediately before storage opens a transaction.
+    ///
+    /// # Errors
+    ///
+    /// Rejects a non-event-log boundary, scope drift or canonical digest
+    /// mismatch. It never makes a source call.
+    pub fn validate_for_storage(&self) -> Result<(), CoreError> {
+        self.admission.validate()?;
+        self.snapshot.validate_against(&self.admission)?;
+        if self.snapshot.semantics != SnapshotSemantics::EventLogAnchor
+            || canonical_digest(&self.snapshot).map_err(|_| CoreError::FrameSerialization)?
+                != self.anchor_digest
+        {
+            return Err(CoreError::PendingAnchorInvariant);
+        }
+        validate_sha256(&self.anchor_digest)?;
+        Ok(())
+    }
 }
 
 impl PendingAppend {
@@ -685,9 +765,20 @@ pub struct DurableAppendReceipt {
     pub committed_revision: u64,
 }
 
+/// Exact receipt returned only after the anchor generation is committed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DurableAnchorReceipt {
+    pub anchor_digest: String,
+    pub committed_position: SourcePosition,
+    pub committed_revision: u64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum IngestEffect {
     SnapshotStarted,
+    AnchorCommitRequired {
+        anchor_digest: String,
+    },
     CommitRequired {
         batch_digest: String,
         record_count: usize,
@@ -710,6 +801,7 @@ pub struct SnapshotTailCoordinator {
     snapshot: Option<SnapshotBoundary>,
     committed_position: Option<SourcePosition>,
     committed_revision: u64,
+    pending_anchor: Option<PendingAnchor>,
     pending: Option<PendingAppend>,
 }
 
@@ -731,6 +823,7 @@ impl SnapshotTailCoordinator {
             snapshot: None,
             committed_position: None,
             committed_revision: 0,
+            pending_anchor: None,
             pending: None,
         })
     }
@@ -760,6 +853,7 @@ impl SnapshotTailCoordinator {
             snapshot: Some(checkpoint.snapshot),
             committed_position: checkpoint.committed_position,
             committed_revision: checkpoint.committed_revision,
+            pending_anchor: None,
             pending: None,
         })
     }
@@ -772,6 +866,11 @@ impl SnapshotTailCoordinator {
     #[must_use]
     pub fn pending_append(&self) -> Option<&PendingAppend> {
         self.pending.as_ref()
+    }
+
+    #[must_use]
+    pub fn pending_anchor(&self) -> Option<&PendingAnchor> {
+        self.pending_anchor.as_ref()
     }
 
     #[must_use]
@@ -799,9 +898,59 @@ impl SnapshotTailCoordinator {
             return Err(CoreError::InvalidCoordinatorState);
         }
         snapshot.validate_against(&self.admission)?;
-        self.snapshot = Some(snapshot);
-        self.state = SnapshotTailState::SnapshotBackfill;
-        Ok(IngestEffect::SnapshotStarted)
+        self.snapshot = Some(snapshot.clone());
+        match snapshot.semantics {
+            SnapshotSemantics::StateBaseline => {
+                self.state = SnapshotTailState::SnapshotBackfill;
+                Ok(IngestEffect::SnapshotStarted)
+            }
+            SnapshotSemantics::EventLogAnchor => {
+                let anchor_digest =
+                    canonical_digest(&snapshot).map_err(|_| CoreError::FrameSerialization)?;
+                self.pending_anchor = Some(PendingAnchor {
+                    admission: self.admission.clone(),
+                    snapshot,
+                    anchor_digest: anchor_digest.clone(),
+                });
+                self.state = SnapshotTailState::AwaitingAnchorCommit;
+                Ok(IngestEffect::AnchorCommitRequired { anchor_digest })
+            }
+        }
+    }
+
+    /// Advances into tail mode only after the event-log anchor has a durable
+    /// storage receipt. This is the source-ACK barrier for an empty
+    /// post-cutover stream as well as for a populated stream.
+    ///
+    /// # Errors
+    ///
+    /// Rejects an absent/mismatched anchor receipt or any non-monotonic
+    /// revision; it never advances an in-memory cursor on failure.
+    pub fn acknowledge_durable_anchor(
+        &mut self,
+        receipt: DurableAnchorReceipt,
+    ) -> Result<IngestEffect, CoreError> {
+        if self.state != SnapshotTailState::AwaitingAnchorCommit {
+            return Err(CoreError::InvalidCoordinatorState);
+        }
+        let pending = self
+            .pending_anchor
+            .as_ref()
+            .ok_or(CoreError::InvalidCoordinatorState)?;
+        if receipt.anchor_digest != pending.anchor_digest
+            || receipt.committed_position != pending.snapshot.high_watermark
+            || receipt.committed_revision <= self.committed_revision
+        {
+            return Err(CoreError::DurableAnchorReceiptMismatch);
+        }
+        self.committed_position = Some(receipt.committed_position);
+        self.committed_revision = receipt.committed_revision;
+        self.pending_anchor = None;
+        self.state = SnapshotTailState::TailReady;
+        Ok(IngestEffect::DurableCheckpointAdvanced {
+            state: self.state,
+            committed_revision: self.committed_revision,
+        })
     }
 
     /// Validates and stages exactly one snapshot or tail frame.  The returned
@@ -813,7 +962,10 @@ impl SnapshotTailCoordinator {
     /// Returns an error on invalid state, source/profile drift, a gap, an
     /// unexpected lane, or any invalid frame; it never advances the offset.
     pub fn prepare_append(&mut self, frame: SourceFrame) -> Result<IngestEffect, CoreError> {
-        if self.state == SnapshotTailState::AwaitingDurableCommit {
+        if matches!(
+            self.state,
+            SnapshotTailState::AwaitingDurableCommit | SnapshotTailState::AwaitingAnchorCommit
+        ) {
             return Err(CoreError::AppendAlreadyPending);
         }
         if self.state == SnapshotTailState::ResnapshotRequired {
@@ -851,6 +1003,7 @@ impl SnapshotTailCoordinator {
                 Self::validate_tail_frame(&frame, expected_previous.as_ref())?;
             }
             SnapshotTailState::AwaitingSnapshot
+            | SnapshotTailState::AwaitingAnchorCommit
             | SnapshotTailState::AwaitingDurableCommit
             | SnapshotTailState::ResnapshotRequired => {
                 return Err(CoreError::InvalidCoordinatorState)
@@ -920,6 +1073,7 @@ impl SnapshotTailCoordinator {
     /// explicit snapshot; silently skipping or rewinding a source position is
     /// prohibited.
     pub fn require_resnapshot(&mut self, reason: &'static str) -> IngestEffect {
+        self.pending_anchor = None;
         self.pending = None;
         self.state = SnapshotTailState::ResnapshotRequired;
         IngestEffect::ResnapshotRequired { reason }
@@ -1179,6 +1333,8 @@ pub enum CoreError {
     InvalidCoordinatorState,
     #[error("another append is awaiting durable acknowledgement")]
     AppendAlreadyPending,
+    #[error("event-log anchor receipt does not match the staged boundary")]
+    DurableAnchorReceiptMismatch,
     #[error("frame lane is invalid for the current snapshot-tail state")]
     UnexpectedFrameLane,
     #[error("snapshot backfill frame is invalid")]
@@ -1193,6 +1349,8 @@ pub enum CoreError {
     InvalidCheckpoint,
     #[error("a pending append is internally inconsistent")]
     PendingAppendInvariant,
+    #[error("a pending event-log anchor is internally inconsistent")]
+    PendingAnchorInvariant,
     #[error("current-state reducer received a different entity")]
     CurrentReducerIdentityMismatch,
     #[error("current-state reducer received a non-monotonic source position")]
@@ -1259,6 +1417,7 @@ mod tests {
             snapshot_as_of_ms: 1_788_500_000_000,
             high_watermark: position(10),
             retention_floor: position(8),
+            semantics: SnapshotSemantics::StateBaseline,
             completeness: SnapshotCompleteness::Complete,
         }
     }
@@ -1387,6 +1546,71 @@ mod tests {
         assert_eq!(
             coordinator.durable_checkpoint().unwrap().committed_position,
             Some(position(11))
+        );
+    }
+
+    #[test]
+    fn event_log_anchor_is_durable_before_the_first_post_cutover_tail() {
+        let mut source_admission = admission(true);
+        source_admission.retention_floor = position(1);
+        let anchor = SnapshotBoundary {
+            binding: source_admission.binding.clone(),
+            snapshot_id: "event_anchor_eds09".to_owned(),
+            snapshot_as_of_ms: 1_788_500_000_000,
+            high_watermark: position(0),
+            retention_floor: position(1),
+            semantics: SnapshotSemantics::EventLogAnchor,
+            completeness: SnapshotCompleteness::Complete,
+        };
+        let mut coordinator =
+            SnapshotTailCoordinator::new(source_admission, IngestBounds::default()).unwrap();
+        let IngestEffect::AnchorCommitRequired { anchor_digest } =
+            coordinator.begin_snapshot(anchor.clone()).unwrap()
+        else {
+            panic!("event-log boundary must require an anchor receipt");
+        };
+        assert_eq!(coordinator.state(), SnapshotTailState::AwaitingAnchorCommit);
+        assert!(matches!(
+            coordinator.prepare_append(
+                SourceFrame::seal(
+                    anchor.binding.clone(),
+                    FrameLane::LiveTail,
+                    position(0),
+                    Some(position(0)),
+                    vec![event(1, EventOperation::Upsert)],
+                    false,
+                    1_788_500_000_500,
+                )
+                .unwrap()
+            ),
+            Err(CoreError::AppendAlreadyPending)
+        ));
+        coordinator
+            .acknowledge_durable_anchor(DurableAnchorReceipt {
+                anchor_digest,
+                committed_position: position(0),
+                committed_revision: 1,
+            })
+            .unwrap();
+        assert_eq!(coordinator.state(), SnapshotTailState::TailReady);
+        coordinator
+            .prepare_append(
+                SourceFrame::seal(
+                    anchor.binding,
+                    FrameLane::LiveTail,
+                    position(0),
+                    Some(position(0)),
+                    vec![event(1, EventOperation::Upsert)],
+                    false,
+                    1_788_500_000_500,
+                )
+                .unwrap(),
+            )
+            .unwrap();
+        commit(&mut coordinator, 2);
+        assert_eq!(
+            coordinator.durable_checkpoint().unwrap().committed_position,
+            Some(position(1))
         );
     }
 

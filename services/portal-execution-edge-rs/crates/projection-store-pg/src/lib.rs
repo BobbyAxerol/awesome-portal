@@ -32,8 +32,9 @@ pub use analytics_repository::{
     analytics_facts_digest, AnalyticsFactDigestInput, AnalyticsReadRequirement, AnalyticsSourceRead,
 };
 pub use authoritative_event_store::{
-    AuthoritativeAppendOutcome, AuthoritativeEventGenerationState, AuthoritativeLocalJournalEntry,
-    AuthoritativeResumeState, AUTHORITATIVE_EVENT_LOCAL_JOURNAL_MAX_PAGE,
+    AuthoritativeAnchorOutcome, AuthoritativeAppendOutcome, AuthoritativeEventGenerationState,
+    AuthoritativeLocalJournalEntry, AuthoritativeResumeState,
+    AUTHORITATIVE_EVENT_LOCAL_JOURNAL_MAX_PAGE,
 };
 pub use d4_writer::{
     D4BaselineCommitInput, D4CommitOutcome, D4EventPageCommitInput, D4ProjectionWrite,

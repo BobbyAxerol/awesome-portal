@@ -534,11 +534,21 @@ sed -i \
   -e 's/^SOURCE_PROXY_MANAGER_ISSUER_PORT=$/SOURCE_PROXY_MANAGER_ISSUER_PORT=8224/' \
   -e "s#^SOURCE_PROXY_MANAGER_LOCATIONS_FILE=.*#SOURCE_PROXY_MANAGER_LOCATIONS_FILE=${manager_locations}#" \
   "${manager_active_env}"
+printf '%s\n' 'SOURCE_PROXY_MANAGER_EXTENSION_SET=eds11r-r4-r5' >>"${manager_active_env}"
 chmod 0600 "${manager_active_env}"
 "${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
   --manager-locations-output "${manager_locations}" >/dev/null
 "${preflight}" --env-file "${manager_active_env}" --mode manager-active-offline >/dev/null
-[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8223;' "${manager_locations}")" -eq 5 ]]
+[[ "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations}")" -eq 9 ]]
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8223;' "${manager_locations}")" -eq 9 ]]
+for fixed_route in \
+  /portal/execution/v2/manager/market/latest \
+  /portal/execution/v2/manager/market/candles \
+  /portal/execution/v2/manager/events/anchor \
+  /portal/execution/v2/manager/events/tail; do
+  grep -Fq "location = ${fixed_route} {" "${manager_locations}"
+done
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8223;' "${manager_locations}")" -eq 9 ]]
 [[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8224/internal/issue;' "${manager_locations}")" -eq 1 ]]
 sed -i 's/^SOURCE_PROXY_MANAGER_PROFILE_ID=LIVE_BINANCE_USDM$/SOURCE_PROXY_MANAGER_PROFILE_ID=SANDBOX_BINANCE_USDM/' \
   "${manager_active_env}"

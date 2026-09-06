@@ -8,6 +8,7 @@ repository.workspace = true
 
 [dependencies]
 analytics = { path = "../analytics" }
+authoritative-event-core = { path = "../authoritative-event-core" }
 axum.workspace = true
 axum-server.workspace = true
 chrono.workspace = true
@@ -18,6 +19,7 @@ execution-contracts = { path = "../execution-contracts" }
 futures-util.workspace = true
 intercell-gateway = { path = "../intercell-gateway" }
 manager-compat-authority = { path = "../manager-compat-authority" }
+manager-extension-contract = { path = "../manager-extension-contract" }
 manager-projection = { path = "../manager-projection" }
 manager-v2-client = { path = "../manager-v2-client" }
 manager-v2-contract = { path = "../manager-v2-contract" }

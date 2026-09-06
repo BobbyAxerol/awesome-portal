@@ -24,6 +24,7 @@ done
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 template="${root_dir}/deploy/execution-d1/source-proxy/nginx.conf.template"
 manager_locations_template="${root_dir}/deploy/execution-d1/source-proxy/manager-v2-locations.conf.template"
+manager_extension_template="${root_dir}/deploy/execution-d1/source-proxy/manager-r4-r5-extension-locations.conf.template"
 "${root_dir}/scripts/execution-d2-preflight.sh" --env-file "${env_file}" --mode template >/dev/null
 
 read_value() {
@@ -34,6 +35,7 @@ bridge_ip="$(read_value PORTAL_BRIDGE_GATEWAY_IP)"
 private_port="$(read_value SOURCE_PROXY_PRIVATE_PORT)"
 runtime_gid="$(read_value PORTAL_RUNTIME_GID)"
 source_mode="$(read_value SOURCE_PROXY_SOURCE_MODE)"
+manager_extension_set="$(read_value SOURCE_PROXY_MANAGER_EXTENSION_SET)"
 case "${source_mode}" in
   dark)
     public_probe_guard='return 503;'
@@ -60,6 +62,21 @@ case "${source_mode}" in
     manager_read_include='include /run/secrets/manager-v2-locations.conf;'
     ;;
   *) printf 'D2 renderer rejected an unknown Source Proxy source mode.\n' >&2; exit 1 ;;
+esac
+
+case "${manager_extension_set:-none}" in
+  none) ;;
+  eds11r-r4-r5)
+    [[ "${source_mode}" =~ ^(manager-paper-read|manager-profile-read)$ ]] || {
+      printf 'EDS-11R4/R5 Manager extension requires a Manager read source mode.\n' >&2
+      exit 1
+    }
+    [[ -f "${manager_extension_template}" ]] || {
+      printf 'EDS-11R4/R5 Manager extension template is missing.\n' >&2
+      exit 1
+    }
+    ;;
+  *) printf 'D2 renderer rejected an unknown Manager extension set.\n' >&2; exit 1 ;;
 esac
 
 output_dir="$(dirname "${output}")"
@@ -92,6 +109,10 @@ trap cleanup EXIT
 if [[ "${source_mode}" =~ ^(manager-paper-read|manager-profile-read)$ ]]; then
   manager_temporary="$(mktemp "${manager_locations_output}.tmp.XXXXXX")"
   cp -- "${manager_locations_template}" "${manager_temporary}"
+  if [[ "${manager_extension_set:-none}" == eds11r-r4-r5 ]]; then
+    printf '\n# Appended exact EDS-11R4/R5 extension set.\n' >>"${manager_temporary}"
+    cat -- "${manager_extension_template}" >>"${manager_temporary}"
+  fi
   if [[ "${source_mode}" == manager-profile-read ]]; then
     manager_facade_port="$(read_value SOURCE_PROXY_MANAGER_FACADE_PORT)"
     manager_issuer_port="$(read_value SOURCE_PROXY_MANAGER_ISSUER_PORT)"
