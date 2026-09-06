@@ -521,9 +521,10 @@ const TILE_TITLES = [
 function analyticsKpis(analytics: QueryAnalytics): Kpi[] {
   const kpis: Kpi[] = [];
   if (analytics.orderFunnel && analytics.orderFunnel.totalOrders !== null) {
-    kpis.push({ label: "orders (window)", value: String(analytics.orderFunnel.totalOrders) });
+    // DR-22: the N25 funnel counts the whole profile's page, not this subject's rows — say so in the label
+    kpis.push({ label: "orders (window · profile-wide)", value: String(analytics.orderFunnel.totalOrders) });
     for (const [status, count] of Object.entries(analytics.orderFunnel.statusCounts)) {
-      kpis.push({ label: status.toLowerCase(), value: String(count) });
+      kpis.push({ label: `${status.toLowerCase()} · profile-wide`, value: String(count) });
     }
   } else {
     kpis.push({ label: "orders (window)", value: null, absentReason: "the order funnel was not published for this subject" });
@@ -1057,10 +1058,15 @@ export function replayEvents(analytics: QueryAnalytics | null | undefined, addit
   const scoped = (rows: readonly Record<string, unknown>[]) =>
     rows.filter((r) => accounts.size === 0 || accounts.has(text(r.account_id) ?? "") || (alphaId !== null && text(r.strategy_id) === alphaId));
   const replay = analytics?.replay ?? additive?.replay ?? null;
+  // what the retained page holds in total, so an empty replay can say "0 of N" instead of "nothing"
+  const pageOrders = new Set([...(facts.orders ?? []), ...(extra.orders ?? [])].map((r) => text(r.order_id)).filter(Boolean)).size;
+  const pageFills = new Set([...(facts.fills ?? []), ...(extra.fills ?? [])].map((r) => text(r.fill_id)).filter(Boolean)).size;
+  const pageStrategies = new Set([...(facts.orders ?? []), ...(extra.orders ?? []), ...(facts.fills ?? []), ...(extra.fills ?? [])].map((r) => text(r.strategy_id)).filter(Boolean)).size;
   return {
     orders: readReplayOrders([...(facts.orders ?? []), ...scoped(extra.orders ?? [])]),
     fills: readReplayFills([...(facts.fills ?? []), ...scoped(extra.fills ?? [])]),
     accounts: [...accounts],
+    page: { orders: pageOrders, fills: pageFills, strategies: pageStrategies },
     /** the deployment's venue — the public klines are read from the same venue */
     venue,
     /** published bar interval (BR-EX-80) — null today */
@@ -1189,6 +1195,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
         onRangeEdge={onRangeEdge}
         paging={pages.key === pageKey ? pages.loading : null}
         focusId={focusId}
+        page={events.page}
+        subjectLabel={alphaId ?? subjectId ?? null}
       />
     </div>
   );

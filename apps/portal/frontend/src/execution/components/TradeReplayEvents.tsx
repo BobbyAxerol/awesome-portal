@@ -44,6 +44,9 @@ export interface TradeReplayEventsProps {
   paging?: "left" | "right" | null;
   /** deep link: scene object to open on (`fill:123`, `order:456` → its fill / reject / leg) */
   focusId?: string | null;
+  /** what the retained projection page holds in total (all strategies), for an honest empty state */
+  page?: { orders: number; fills: number; strategies: number } | null;
+  subjectLabel?: string | null;
 }
 
 const HEIGHT = { compact: 420, tall: 620 } as const;
@@ -87,7 +90,7 @@ export function resolveFocus(focus: string | null | undefined, orders: readonly 
   return (o.type ?? "").toUpperCase().includes("LIMIT") ? `ladder:${o.orderId}` : null;
 }
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null }: TradeReplayEventsProps) {
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
   const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
@@ -146,7 +149,12 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
     return (
       <section className="exec-rp-panel" aria-label="Trade replay">
         <header className="exec-rp-head"><span className="exec-rp-title">Trade replay — trade logs on candles</span></header>
-        <div className="exec-gate-unverified">No order or fill event is present for this alpha in the retained projection window. Market candles are {candles.state?.toLowerCase() ?? "unavailable"} · {candles.reason ?? "source not published"}.</div>
+        <div className="exec-gate-unverified">
+          No order or fill of {subjectLabel ?? "this subject"} is present in the retained projection page.
+          {page ? ` The page holds ${page.orders} orders and ${page.fills} fills across ${page.strategies} strateg${page.strategies === 1 ? "y" : "ies"} (bounded current page, all profiles) — none of them belongs here.` : ""}
+          {" "}Market candles are {candles.state?.toLowerCase() ?? "unavailable"} · {candles.reason ?? "source not published"}.
+        </div>
+        <p className="exec-rp-smoke">Counts on the Overview tab (orders, filled, rejected) are profile-wide analytics facts, not this alpha's — DR-22. A per-alpha order / fill read beyond the current page is a backend request (BR-EX-81).</p>
       </section>
     );
   }

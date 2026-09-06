@@ -209,8 +209,10 @@ describe("TradeReplayEvents panel", () => {
     expect(prim.scene.brackets[0]).toMatchObject({ id: "bracket:1877", tp: 1889.62, sl: 1845.01 });
     expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("position box");
   });
-  it("says so when there are no events", () => {
-    render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} />);
-    expect(screen.getByText(/No order or fill event is present/)).toBeTruthy();
+  it("says so when there are no events — with the page's own bound, so an empty replay is never mistaken for a missing feature", () => {
+    render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} page={{ orders: 812, fills: 71, strategies: 11 }} subjectLabel="delta_rsi_00115m" />);
+    const note = screen.getByText(/No order or fill of delta_rsi_00115m is present/);
+    expect(note.textContent).toContain("812 orders and 71 fills across 11 strategies");
+    expect(screen.getByText(/profile-wide analytics facts, not this alpha's — DR-22/)).toBeTruthy();
   });
 });
