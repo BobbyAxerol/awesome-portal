@@ -1,0 +1,94 @@
+# EDS-12 — Failure/DR, product acceptance and immutable release
+
+Status: `STATIC_QUALIFICATION_READY / DEPLOYED_EVIDENCE_PENDING`
+
+This is the final delivery gate for the Execution Durable Streaming plan. It
+does not change the authority of a source, command, database, broker or
+browser. Static qualification is useful because it makes a future runtime
+promotion evidence-driven instead of a collection of undocumented flags.
+
+## Scope frozen by this phase
+
+| Item | Status | Qualification rule |
+|---|---|---|
+| Named same-origin Portal BFF reads | candidate | exact profile and source metadata remain in the server envelope |
+| Portal-owned projection/query/local SSE | candidate | stale, partial, gap and unavailable states remain visible; no browser source access |
+| Paper, Sandbox, Canary-over-Live, Live readers | staged | each profile needs its own deployed-image evidence; Canary uses the Live source profile but is a separate product stage |
+| Commands and Live mutation | disabled | not part of EDS-12 reader qualification |
+| P01 + R4/R5 | source-only integration | P01 base `f9e3d946`; integration `1c5a7fa`; both activation templates must retain lease TTL `900` |
+| BR-EX-80 timeframe | source-owner input | only a published source value replaces a visibly `DERIVED` suffix |
+| BR-EX-81 subject order/fill history | source-owner + Portal mirror input | full retained relation/profile cursor drain, append-only parity and subject cursor reads; a current page is never history |
+
+## Evidence ladder
+
+```text
+STATIC_QUALIFIED
+  -> OFFLINE_DR_QUALIFIED
+  -> PROTECTED_MAIN_IMAGES_VERIFIED
+  -> DEPLOYED_IMAGE_BROWSER_VERIFIED (each profile/stage)
+  -> PRODUCT_ACTIVE + OPERATIONS_QUALIFIED
+```
+
+No step may skip another. A green local fixture, a BFF double, a source-dark
+contract, a running container or a Git commit is not deployed product evidence.
+
+## Exact static and offline gate
+
+```bash
+./scripts/execution-eds12-qualification-test.sh
+./scripts/execution-eds12-qualification-test.sh --offline-dr
+```
+
+The first command validates N29 as the frozen predecessor, the EDS-12 package,
+digest inputs, strict failure matrix, mutation cases and the pure Rust
+authority. The second additionally runs the isolated N17A PostgreSQL
+PITR/logical-restore/projection-rebuild harness. It uses disposable Docker
+objects only; it must not be relabelled as AWS-HK or production evidence.
+
+## Failure and recovery acceptance matrix
+
+| Failure | Reader result | Recovery invariant |
+|---|---|---|
+| Source outage / network partition | `STALE` or typed unavailable | no browser bypass, no fake freshness, bounded retry only |
+| Edge unavailable | typed unavailable | restore exact signed Edge image, then profile-local preflight |
+| SGP projection DB outage | stale or typed unavailable | restore only Portal-owned data; no Trading System repair |
+| Disk pressure | typed unavailable | pause new ingestion before retention-floor breach; never silently truncate |
+| Cursor expiration/cycle | partial/resnapshot required | cursor remains opaque, relation/profile-bound; gap ledger retained |
+| Epoch change | partial/resnapshot required | no cross-epoch join or implicit ordering claim |
+| Schema/catalogue mismatch | typed unavailable | adapter remains dark until exact compatible revision is bound |
+| Corrupt frame | partial/unavailable | reject before reducer/SSE; preserve diagnostic digest |
+| Late correction | partial/resnapshot required | append correction provenance; never silently overwrite source truth |
+
+The machine-readable authority is
+`services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/failure-matrix.v1.json`.
+
+## Protected-main / deployed evidence
+
+After the normal protected-main workflow publishes signed images, SBOM and
+provenance, create a sanitized evidence object outside Git and run:
+
+```bash
+python3 ./scripts/execution-eds12-qualification.py verify-deployed \
+  --evidence /secure/portal-execution-eds12-deployed-evidence.json
+```
+
+The evidence must bind:
+
+- the exact EDS-12 qualification digest and a protected-main `release_manifest.json`;
+- digest-pinned images with signature, SBOM and provenance verification;
+- the seven browser states (`ready`, `empty`, `partial`, `stale`,
+  `unavailable`, `denied`, `error`) for each accepted profile/stage;
+- all ten failure/recovery scenarios and no P0/P1 integrity issue;
+- profile isolation/redaction, owner visual/data/action parity, and explicit
+  command/Live-mutation non-activation.
+
+Only the verified workflow output writes the ignored runtime artifact
+`artifacts/execution/release_manifest.json`. Its source template and validation
+remain in source control; credentials and business rows never do.
+
+## Release decision
+
+Current decision is intentionally not `PRODUCT_ACTIVE`: protected-main signed
+image evidence and deployed browser evidence have not yet been supplied to this
+worktree. This is an external release-evidence gate, not unnamed technical
+debt and not a reason to weaken readers or replace rich UI with fixture pages.

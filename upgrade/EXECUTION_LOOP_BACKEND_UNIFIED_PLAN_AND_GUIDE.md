@@ -3030,7 +3030,9 @@ Append rows here. Do not create another active request file.
 | BR-EX-77 | 2026-09-02 | Fleet/lists freshness + realtime coverage | Fleet chip pinned STALE (5 s constant vs 15–60 s cadence); Fleet/360/Blotter/CC have no stream binding; delta handling is refetch-per-event | Envelope-declared freshness budgets per ingestion class with AGING tier; extend profile-realtime to remaining read screens; bounded delta coalescing | `PORTAL_PROJECTION` envelopes | read-only · low | existing SSE bounds; coalesce ≥1 s | Phase 1 five-kind contract | budget absent → UNKNOWN never fake-FRESH | unit + SSE + journey with motion assertions | Claude (backend co-impl) | Phase 4 / P4-C | `RECEIVED` | all rich read screens | dev read only | Phase 4 §P4-C; findings F3/F4 |
 | BR-EX-78 | 2026-09-02 | Profile taxonomy + lineage observability + window ladder | N30 lineage guard structurally rejects non-BINANCE paper parents (DNSE/VN) with no diagnostics; flat 400-row windows block 30 d rollups/history | Owner profile-set decision (recommend `PAPER_DNSE_VNM`); reject counters by missing-parent class in envelope; per-class ingestion windows + warm SGP history; DERIVED portfolio-equity while MC gap stays typed | `TRADING_SYSTEM` via `PORTAL_PROJECTION`; derived `DERIVED` | read-only · medium (taxonomy touches isolation proofs) | window ladder per N29-RTA budget table | Phase 1 lineage guard; owner decision | strict rejection retained; counters bounded | taxonomy negatives + migration/restore + parity | Codex + Claude | Phase 4 / P4-D | `APPROVED_IMPLEMENTATION_IN_PROGRESS` (2026-09-03, Bobby approved `PAPER_DNSE_VNM`) | VNM workbench, Fleet rollups, history charts | dev read only | Phase 4 §P4-D; findings F5/F6/F7/F9 |
 | BR-EX-79 | 2026-09-03 | Source publication set for full-data screens | Live sweep: equity/performance relations empty (`SOURCE_PARTIAL`, 0 rows), `portfolio_equity` contract-rejected since Phase 1, live balances published without live accounts, cross-family rows in the BINANCE paper feed, `venue_accounts`/margin/sync zero, candles/benchmark/twin-join not activated, no ≥30 d retention | Detailed publication request to the Execution Cell agent: `upgrade/backend/EXECUTION_SOURCE_PUBLICATION_REQUEST_2026-09-03.md` (13 items P0–P2 + 1 question; restates MC-01…09; DNSE deferred by owner) | `TRADING_SYSTEM` / Execution Cell | read-only · none Portal-side | per-item bounds in the request | none (Portal seams delivered Phase 4) | typed states stay until verified | live projection inventory before/after | Execution Cell agent | Phase 4 follow-on | `EXTERNAL_CONTRACT_PENDING` | every data-bearing screen | n/a | request doc §0 table |
-| _next: BR-EX-80_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+| BR-EX-80 | 2026-09-06 | Alpha 360 · Trade Replay candle interval · Account 360 | The current `strategies` relation only publishes `active`, `trader_id`, `created_at` and `strategy_id`; the replay therefore derives an interval from an id suffix and labels it `DERIVED`. | Publish `strategies[].timeframe` (or `bar_interval`) and carry it through the Fleet register. Vocabulary is `1m\|5m\|15m\|30m\|1h\|4h\|1d`; a published value always wins over the derived suffix. | `TRADING_SYSTEM` | read-only · low | 42 strategies; static per source revision; exact string vocabulary | `strategies` relation / Fleet register; no browser inference becomes source truth | absent → retain the suffix rule and its `DERIVED` label; invalid → typed unavailable field | contract fixture and `replayCandleChart` proof that published timeframe wins | Codex + Trading System owner | EDS-12 | `APPROVED_OWNER_RETURN_REQUIRED` | `TradeReplayLive.publishedTimeframe()` is consumer-ready | no runtime widening | OR-5.6 · DR-21 |
+| BR-EX-81 | 2026-09-06 | Alpha 360 Trade Replay + Orders/Fills · Account 360 · Full Blotter | A bounded profile-wide current page cannot honestly serve subject history: observed input held 812 orders from 11 strategies and 71 fills from 5 strategies across 42 deployed strategies, while strategy-level replay could be empty despite source fills. | Drain the complete retained `orders` and `fills` history of every approved profile only through the Execution Edge into an append-only Portal observation mirror: resumable relation-bound cursor drain, digest dedupe, gap ledger, exact source-vs-mirror counts. Serve subject reads at `alphas/{id}/orders|fills` and `accounts/{id}/orders|fills`, keyset `(updated_at, order_id)` / `(trade_time, fill_id)`, `limit ≤ 500`, exact total and `{completeness, coverage{from,to,rows}, as_of}`. Scope N25 source facts to that same subject. | `TRADING_SYSTEM` rows → `PORTAL_OBSERVATION`; no direct database, Redis, broker or browser source access | read-only · medium: presenting one retained current page as subject history is prohibited | 10³–10⁵ rows/subject; one in-flight drain/profile/relation; page ≤500 at Portal; cursor opaque and relation/profile-bound; a partial drain remains explicitly partial | current Manager relation pager must prove a stable full-retention cursor traversal; EDS-06/N24 mirror and EDS-04 envelope are reused | until verified, preserve the explicit current-page message and profile-wide funnel label; no client-side widening/filter is a substitute | mirror/source exact-count and duplicate/cursor-cycle/gap/restart tests; every strategy with source fills renders a marker; targeted replay remains empty only when source has none | Codex + Trading System owner | EDS-12 | `APPROVED_IMPLEMENTATION_PENDING_SOURCE_PROOF` | `TradeReplayLive` / `replayEvents` consumer is ready; remove the stopgap profile-page filter only after source/mirror parity | no runtime widening; commands and Live mutation remain separately gated | DR-22 · DR-24 · DR-25 · DR-26 · OR-5.12 · BR-EX-50 |
+| _next: BR-EX-82_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
 
@@ -4883,6 +4885,10 @@ waiting for unrelated external gaps.
   frontend bundle and source compatibility digests;
 - stage per operation/screen/profile: Paper, Sandbox, Canary-over-Live, Live;
 - remove expired adapters only after zero-use observation;
+- close BR-EX-80 only from a source-published strategy interval and close
+  BR-EX-81 only from a verified full retained order/fill drain through the
+  Execution Edge into the durable Portal mirror; a bounded current page is
+  never labelled subject history or replay;
 - record any remaining external capability as a versioned next-campaign input,
   not hidden technical debt.
 
@@ -4893,8 +4899,21 @@ exact deployed-image verification.
 
 **Exit:** all accepted-source scope is `PRODUCT_ACTIVE` and
 `OPERATIONS_QUALIFIED`; zero P0/P1 integrity issues; rollback evidence exists;
-owner signs visual/data/action parity. Protected-main merge and stable release
-remain explicit Bobby actions.
+owner signs visual/data/action parity. In addition, every deployed strategy's
+orders and fills are readable through the Edge/mirror and its replay is
+non-empty whenever that source has fills (BR-EX-81); a published strategy
+timeframe supersedes a derived suffix (BR-EX-80). Protected-main merge and
+stable release remain explicit Bobby actions.
+
+**Implementation journal (2026-09-06):** the static EDS-12 qualification
+contract, immutable digest binding, pure Rust fail-closed authority, failure
+matrix, static mutation gate and isolated N17A DR harness are implemented in
+[`EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md`](./backend/EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md).
+Its current decision is deliberately
+`EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`: it is not a release
+claim.  The only remaining EDS-12 inputs are the real protected-main/deployed
+evidence packet and accepted source proof for BR-EX-80 / BR-EX-81.  No source,
+query, SSE, command or Live-mutation flag is widened by this static slice.
 
 ### 17.6 Frontend collaboration lanes
 

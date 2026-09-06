@@ -1,0 +1,87 @@
+{
+  "schema_version": "portal.execution.eds12-failure-matrix.v1",
+  "phase": "EDS-12",
+  "runtime_effect": "NONE",
+  "scenarios": [
+    {
+      "id": "SOURCE_OUTAGE",
+      "reader_state": "STALE_OR_TYPED_UNAVAILABLE",
+      "forbidden": ["browser_source_access", "synthetic_freshness", "command_retry"],
+      "offline_proof": "N17A_SOURCE_LOSS",
+      "runtime_proof": "deployed source-loss browser matrix",
+      "recovery": "resume named Edge reads only after mTLS/JWT/capability preflight"
+    },
+    {
+      "id": "NETWORK_PARTITION",
+      "reader_state": "STALE_OR_TYPED_UNAVAILABLE",
+      "forbidden": ["cross-profile_fallback", "unbounded_retry", "command_retry"],
+      "offline_proof": "N17A_NETWORK_PARTITION",
+      "runtime_proof": "deployed WAN loss/recovery matrix",
+      "recovery": "bounded backoff, re-authenticate and refresh from one named BFF operation"
+    },
+    {
+      "id": "EDGE_UNAVAILABLE",
+      "reader_state": "TYPED_UNAVAILABLE",
+      "forbidden": ["direct_manager_access", "source_proxy_bypass", "browser_credentials"],
+      "offline_proof": "static source-boundary and rollback verifier",
+      "runtime_proof": "deployed Edge restart/readiness matrix",
+      "recovery": "restore the exact signed Edge image and re-run profile-local preflight"
+    },
+    {
+      "id": "SGP_PROJECTION_DB_UNAVAILABLE",
+      "reader_state": "STALE_OR_TYPED_UNAVAILABLE",
+      "forbidden": ["empty_as_fresh", "projection_write_on_reader", "cross_namespace_restore"],
+      "offline_proof": "N17A_CONTROL_DATABASE_PITR",
+      "runtime_proof": "deployed reader/database failover matrix",
+      "recovery": "restore Portal-owned projection only; never repair Trading System data"
+    },
+    {
+      "id": "DISK_PRESSURE",
+      "reader_state": "TYPED_UNAVAILABLE",
+      "forbidden": ["retention_floor_violation", "silent_truncation", "unbounded_backfill"],
+      "offline_proof": "retention and capacity policy verifier",
+      "runtime_proof": "deployed low-space admission/rollback matrix",
+      "recovery": "stop new ingestion, retain append-only evidence, free only policy-expired Portal partitions"
+    },
+    {
+      "id": "CURSOR_EXPIRED_OR_CYCLE",
+      "reader_state": "PARTIAL_OR_RESNAPSHOT_REQUIRED",
+      "forbidden": ["cursor_reuse_across_relation", "cursor_reuse_across_profile", "history_completion_claim"],
+      "offline_proof": "manager cursor negative corpus",
+      "runtime_proof": "deployed cursor expiry/cycle recovery matrix",
+      "recovery": "discard opaque cursor, record gap, resnapshot only the same relation/profile"
+    },
+    {
+      "id": "EPOCH_CHANGE",
+      "reader_state": "PARTIAL_OR_RESNAPSHOT_REQUIRED",
+      "forbidden": ["cross_epoch_join", "global_order_claim", "silent_epoch_switch"],
+      "offline_proof": "projection epoch reducer corpus",
+      "runtime_proof": "deployed epoch change/rebuild matrix",
+      "recovery": "seal prior epoch, rebuild profile-local projection from accepted snapshot"
+    },
+    {
+      "id": "SCHEMA_OR_CATALOGUE_INCOMPATIBLE",
+      "reader_state": "TYPED_UNAVAILABLE",
+      "forbidden": ["unknown_field_passthrough", "unsafe_adapter_fallback", "runtime_schema_patch"],
+      "offline_proof": "contract digest and compatibility authority gate",
+      "runtime_proof": "deployed incompatible revision rejection matrix",
+      "recovery": "hold reader dark, bind a reviewed compatible adapter revision"
+    },
+    {
+      "id": "CORRUPT_FRAME",
+      "reader_state": "PARTIAL_OR_TYPED_UNAVAILABLE",
+      "forbidden": ["partial_frame_apply", "decoder_repair_guess", "unverified_sse_emit"],
+      "offline_proof": "Rust decoder/reducer negative corpus",
+      "runtime_proof": "deployed corrupt-frame rejection matrix",
+      "recovery": "reject frame, preserve diagnostic digest, resnapshot at the relation/profile boundary"
+    },
+    {
+      "id": "LATE_CORRECTION",
+      "reader_state": "PARTIAL_OR_RESNAPSHOT_REQUIRED",
+      "forbidden": ["immutable_replay_claim", "silent_overwrite", "browser_derived_correction"],
+      "offline_proof": "append/reducer correction policy corpus",
+      "runtime_proof": "deployed correction visibility matrix",
+      "recovery": "write a Portal observation correction record with provenance; no Trading System mutation"
+    }
+  ]
+}

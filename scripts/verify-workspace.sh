@@ -580,6 +580,9 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
+  "${ROOT_DIR}/scripts/execution-eds12-qualification.py" \
+  "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py" \
+  "${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md" \
@@ -590,6 +593,16 @@ for required in \
   "${ROOT_DIR}/deploy/runbooks/execution-manager-n29-product-release-and-rollback.md" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/MANIFEST.sha256" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/crates/product-acceptance/src/lib.rs" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/qualification.v1.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/qualification.v1.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/failure-matrix.v1.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/deployed-evidence.v1.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/eds12-qualification/Cargo.toml" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/crates/eds12-qualification/src/lib.rs" \
+  "${ROOT_DIR}/upgrade/execution-v1/PHASE_12_QUALIFICATION.md" \
+  "${ROOT_DIR}/upgrade/execution-v1/OPERATIONS_RUNBOOK.md" \
+  "${ROOT_DIR}/upgrade/execution-v1/ROLLBACK_RUNBOOK.md" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000015_execution-product-governance.sql" \
   "${ROOT_DIR}/apps/control-api/test/governance-product.spec.ts" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-governance-product.v1.schema.json" \
@@ -1410,6 +1423,9 @@ for tracked_source in \
   services/portal-execution-edge-rs/crates/missing-capability-adapter/src/lib.rs \
   scripts/execution-n29-product-acceptance.py \
   scripts/execution-n29-product-acceptance-test.sh \
+  scripts/execution-eds12-qualification.py \
+  scripts/test_execution_eds12_qualification.py \
+  scripts/execution-eds12-qualification-test.sh \
   scripts/execution-phase2-screen-command-test.sh \
   upgrade/backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md \
   upgrade/backend/EX_BE_PHASE2_COMPLETE_SCREEN_BFF_CONTROLLED_COMMAND.md \
@@ -1420,6 +1436,16 @@ for tracked_source in \
   deploy/runbooks/execution-manager-n29-product-release-and-rollback.md \
   services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/MANIFEST.sha256 \
   services/portal-execution-edge-rs/crates/product-acceptance/src/lib.rs \
+  services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/MANIFEST.sha256 \
+  services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/qualification.v1.schema.json \
+  services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/qualification.v1.json \
+  services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/failure-matrix.v1.json \
+  services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/deployed-evidence.v1.schema.json \
+  services/portal-execution-edge-rs/crates/eds12-qualification/Cargo.toml \
+  services/portal-execution-edge-rs/crates/eds12-qualification/src/lib.rs \
+  upgrade/execution-v1/PHASE_12_QUALIFICATION.md \
+  upgrade/execution-v1/OPERATIONS_RUNBOOK.md \
+  upgrade/execution-v1/ROLLBACK_RUNBOOK.md \
   apps/control-api/migrations/1723680000015_execution-product-governance.sql \
   apps/control-api/test/governance-product.spec.ts \
   packages/contracts/schemas/execution-governance-product.v1.schema.json; do
@@ -1604,6 +1630,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
   "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
+  "${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \
   "${ROOT_DIR}/scripts/execution-tracking-test.sh" \
   "${ROOT_DIR}/deploy/execution-d2/init-projection-database.sh" \
@@ -1642,7 +1669,9 @@ python3 -m py_compile \
   "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py" \
   "${ROOT_DIR}/scripts/execution-n18-census.py" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py" \
-  "${ROOT_DIR}/scripts/test_execution_n18_census.py"
+  "${ROOT_DIR}/scripts/test_execution_n18_census.py" \
+  "${ROOT_DIR}/scripts/execution-eds12-qualification.py" \
+  "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py"
 python3 "${ROOT_DIR}/scripts/test_execution_iam_verify.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_host_admission.py"
 python3 "${ROOT_DIR}/scripts/test_execution_d2_authorization.py"
@@ -1662,6 +1691,8 @@ python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
 python3 "${ROOT_DIR}/scripts/test_portal_current_source_release.py"
 python3 "${ROOT_DIR}/scripts/execution-n18-census.py" --verify
 python3 "${ROOT_DIR}/scripts/test_execution_n18_census.py"
+python3 "${ROOT_DIR}/scripts/execution-eds12-qualification.py" verify-static
+python3 "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"
@@ -1715,6 +1746,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n26-n27-test.sh"
 "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh"
 "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh"
+"${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh"
 "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh"
 "${ROOT_DIR}/scripts/execution-tracking-test.sh"
 printf 'Portal monorepo verification passed.\n'

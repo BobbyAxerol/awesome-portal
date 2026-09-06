@@ -76,7 +76,15 @@ if "${preflight}" --env-file "${bad}" --mode offline >/dev/null 2>&1; then
   printf 'D4 storage test expected weak input-mode rejection.\n' >&2
   exit 1
 fi
-if rg -n '(^|_)(SECRET|TOKEN|PASSWORD|API_KEY)=' "${template}" >/dev/null; then
+if command -v rg >/dev/null 2>&1; then
+  credential_scan=(rg -n -- '(^|_)(SECRET|TOKEN|PASSWORD|API_KEY)=')
+elif command -v grep >/dev/null 2>&1; then
+  credential_scan=(grep -nE -- '(^|_)(SECRET|TOKEN|PASSWORD|API_KEY)=')
+else
+  printf 'D4 storage test requires rg or grep for the credential-free template check.\n' >&2
+  exit 1
+fi
+if "${credential_scan[@]}" "${template}" >/dev/null; then
   printf 'D4 storage template must remain credential-free.\n' >&2
   exit 1
 fi
