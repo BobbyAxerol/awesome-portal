@@ -4,6 +4,8 @@
   "phase": "EDS-11R4",
   "status": "OWNER_ADAPTER_IMPLEMENTATION_PENDING",
   "source_as_is": true,
+  "wire_contract": "market-context-wire-contract.v1.json",
+  "return_capability_schema": "market-context-capability.v1.schema.json",
   "reuse": {
     "no_new_market_database": true,
     "no_history_reingestion": true,

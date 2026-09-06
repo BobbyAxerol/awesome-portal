@@ -10,8 +10,12 @@ trap 'rm -rf -- "${TMP_DIR}"' EXIT
 for file in \
   market-context-owner-request.v1.json \
   market-context-owner-return.v1.schema.json \
+  market-context-wire-contract.v1.json \
+  market-context-capability.v1.schema.json \
   owner-return.pending.example.json \
-  fixtures/expected-coverage.v1.json; do
+  fixtures/expected-coverage.v1.json \
+  schemas/market-latest-envelope.v1.schema.json \
+  schemas/market-candles-envelope.v1.schema.json; do
   python3 -m json.tool "${CONTRACT_DIR}/${file}" >/dev/null
 done
 
@@ -28,6 +32,10 @@ contract = root / "services/portal-execution-edge-rs/contracts/eds11r-market-con
 request = json.loads((contract / "market-context-owner-request.v1.json").read_text())
 pending = json.loads((contract / "owner-return.pending.example.json").read_text())
 schema = json.loads((contract / "market-context-owner-return.v1.schema.json").read_text())
+wire = json.loads((contract / "market-context-wire-contract.v1.json").read_text())
+capability_schema = json.loads((contract / "market-context-capability.v1.schema.json").read_text())
+latest_schema = json.loads((contract / "schemas/market-latest-envelope.v1.schema.json").read_text())
+candles_schema = json.loads((contract / "schemas/market-candles-envelope.v1.schema.json").read_text())
 coverage = json.loads((contract / "fixtures/expected-coverage.v1.json").read_text())
 master = (root / "upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md").read_text()
 
@@ -37,6 +45,8 @@ assert request["request_revision"] == "portal.execution.eds11r.market-context-ow
 assert request["phase"] == "EDS-11R4"
 assert request["status"] == "OWNER_ADAPTER_IMPLEMENTATION_PENDING"
 assert request["source_as_is"] is True
+assert request["wire_contract"] == "market-context-wire-contract.v1.json"
+assert request["return_capability_schema"] == "market-context-capability.v1.schema.json"
 assert request["reuse"]["no_new_market_database"] is True
 assert request["reuse"]["no_history_reingestion"] is True
 assert request["common_contract"] == {
@@ -78,6 +88,32 @@ assert schema["properties"]["portal_activation"] == {"const": False}
 entry = schema["properties"]["capabilities"]["items"]
 assert entry["properties"]["capability_id"]["enum"] == ids
 assert entry["properties"]["state"]["enum"] == ["PUBLISHED", "TYPED_UNAVAILABLE"]
+assert wire["schema_version"] == "portal.execution.eds11r.market-context-wire-contract.v1"
+assert wire["contract_revision"] == "trading-system.portal-execution.market-context.v1"
+assert wire["transport"] == {
+    "portal_to_edge": "TLS_1_3_MTLS_AND_SHORT_LIVED_DELEGATED_JWT",
+    "delegated_resource": "execution:manager-v2:read",
+    "browser_direct_access": False,
+    "portal_direct_data_layer_or_redis_access": False,
+    "source_commands": False,
+    "automatic_retry": False,
+}
+assert [(row["capability_id"], row["method"], row["edge_path"], row["manager_path"])
+        for row in wire["operations"]] == [
+    ("market.latest.v1", "GET", "/internal/v2/manager/market/latest", "/portal/execution/v2/manager/market/latest"),
+    ("market.candles.v1", "GET", "/internal/v2/manager/market/candles", "/portal/execution/v2/manager/market/candles"),
+]
+assert wire["operations"][0]["query_parameters"] == ["venue", "instrument"]
+assert wire["operations"][1]["query_parameters"] == ["venue", "instrument", "interval", "from_ms", "to_ms", "point_limit"]
+assert all(value is True for value in wire["owner_rules"].values() if value is True)
+assert capability_schema["$id"].endswith("eds11r-market-context-capability.v1.schema.json")
+assert capability_schema["properties"]["contract_revision"] == {"const": "trading-system.portal-execution.market-context.v1"}
+assert latest_schema["$id"].endswith("market-latest-envelope.v1.schema.json")
+assert candles_schema["$id"].endswith("market-candles-envelope.v1.schema.json")
+assert latest_schema["properties"]["data"]["properties"]["operation_id"] == {"const": "managerMarketContextLatestV1"}
+assert candles_schema["properties"]["data"]["properties"]["operation_id"] == {"const": "managerMarketContextCandlesV1"}
+assert latest_schema["properties"]["data"]["properties"]["items"]["maxItems"] == 200
+assert candles_schema["properties"]["data"]["properties"]["items"]["maxItems"] == 2000
 assert coverage["synthetic_no_business_data"] is True
 assert coverage["browser_authority"] == "NAMED_SAME_ORIGIN_BFF_ONLY"
 assert [row["capability_id"] for row in coverage["expected_capabilities"]] == ids
@@ -90,6 +126,7 @@ assert coverage["bounds"] == {
 
 for token in (
     "## 2A. EDS-11R4", "market-context-owner-request.v1.json",
+    "Exact private Manager/Edge route contract", "market-context-wire-contract.v1.json",
     "same** v3 owner return", "no direct Data Layer/Redis/browser route",
 ):
     assert token in master, token
@@ -106,6 +143,7 @@ PY
 PACKET_DIR="${TMP_DIR}/owner-campaign"
 "${ROOT_DIR}/scripts/build-trading-system-owner-campaign-pack.sh" "${PACKET_DIR}" >/dev/null
 test -f "${PACKET_DIR}/contracts/eds11r-market-context-v1-request/fixtures/expected-coverage.v1.json"
+test -f "${PACKET_DIR}/contracts/eds11r-market-context-v1-request/schemas/market-latest-envelope.v1.schema.json"
 (cd "${PACKET_DIR}/contracts/eds11r-market-context-v1-request" && sha256sum --quiet -c MANIFEST.sha256)
 (cd "${PACKET_DIR}" && sha256sum --quiet -c INPUT_MANIFEST.sha256)
 

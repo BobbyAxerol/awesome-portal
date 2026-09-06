@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution/market-candles-envelope.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "contract_revision", "authority", "profile_id", "availability", "freshness", "completeness", "as_of_ms", "data"],
+  "properties": {
+    "schema_version": {"const": "trading-system.portal-execution.market-context-envelope.v1"},
+    "contract_revision": {"const": "trading-system.portal-execution.market-context.v1"},
+    "authority": {"const": "EXECUTION_CELL"},
+    "profile_id": {"type": "string", "pattern": "^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$"},
+    "availability": {"const": "AVAILABLE"},
+    "freshness": {"enum": ["FRESH", "AGING", "DEGRADED", "STALE"]},
+    "completeness": {"enum": ["COMPLETE", "PARTIAL", "POLL_BOUNDED"]},
+    "as_of_ms": {"type": "integer", "minimum": 0, "maximum": 8640000000000000},
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "venue", "instrument", "interval", "coverage", "sampling", "items"],
+      "properties": {
+        "operation_id": {"const": "managerMarketContextCandlesV1"},
+        "venue": {"type": "string", "minLength": 1, "maxLength": 96},
+        "instrument": {"type": "string", "minLength": 1, "maxLength": 191},
+        "interval": {"type": "string", "minLength": 1, "maxLength": 32},
+        "coverage": {"enum": ["COMPLETE", "PARTIAL", "UNKNOWN"]},
+        "sampling": {"enum": ["NONE", "SOURCE_BOUNDED", "SOURCE_AGGREGATED"]},
+        "items": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["open_ms", "close_ms", "open", "high", "low", "close", "volume"],
+            "properties": {
+              "open_ms": {"type": "integer", "minimum": 0, "maximum": 8640000000000000},
+              "close_ms": {"type": "integer", "minimum": 0, "maximum": 8640000000000000},
+              "open": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+              "high": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+              "low": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+              "close": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"},
+              "volume": {"type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

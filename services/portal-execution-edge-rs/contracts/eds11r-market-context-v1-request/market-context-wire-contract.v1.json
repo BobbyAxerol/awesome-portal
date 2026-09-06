@@ -1,0 +1,52 @@
+{
+  "schema_version": "portal.execution.eds11r.market-context-wire-contract.v1",
+  "contract_revision": "trading-system.portal-execution.market-context.v1",
+  "purpose": "PRIVATE_MANAGER_EDGE_TO_PORTAL_SERVER_CONSUMER_ONLY",
+  "transport": {
+    "portal_to_edge": "TLS_1_3_MTLS_AND_SHORT_LIVED_DELEGATED_JWT",
+    "delegated_resource": "execution:manager-v2:read",
+    "browser_direct_access": false,
+    "portal_direct_data_layer_or_redis_access": false,
+    "source_commands": false,
+    "automatic_retry": false
+  },
+  "response_invariants": {
+    "authority": "EXECUTION_CELL",
+    "time_encoding": "UTC_MILLISECONDS",
+    "decimal_encoding": "EXACT_DECIMAL_STRING",
+    "authoritative_empty_representation": "HTTP_200_AVAILABLE_WITH_EMPTY_ITEMS",
+    "typed_source_failure_representation": "NON_2XX_TYPED_SOURCE_ERROR",
+    "source_cursor_browser_visible": false
+  },
+  "operations": [
+    {
+      "capability_id": "market.latest.v1",
+      "operation_id": "managerMarketContextLatestV1",
+      "method": "GET",
+      "edge_path": "/internal/v2/manager/market/latest",
+      "manager_path": "/portal/execution/v2/manager/market/latest",
+      "query_parameters": ["venue", "instrument"],
+      "response_schema": "schemas/market-latest-envelope.v1.schema.json",
+      "maximum_items": 200,
+      "maximum_response_bytes": 1048576
+    },
+    {
+      "capability_id": "market.candles.v1",
+      "operation_id": "managerMarketContextCandlesV1",
+      "method": "GET",
+      "edge_path": "/internal/v2/manager/market/candles",
+      "manager_path": "/portal/execution/v2/manager/market/candles",
+      "query_parameters": ["venue", "instrument", "interval", "from_ms", "to_ms", "point_limit"],
+      "response_schema": "schemas/market-candles-envelope.v1.schema.json",
+      "maximum_items": 2000,
+      "maximum_response_bytes": 8388608
+    }
+  ],
+  "owner_rules": {
+    "source_proxy_must_route_only_the_two_exact_edge_paths": true,
+    "manager_must_reject_unknown_query_parameters_before_source_read": true,
+    "manager_must_reject_cross_profile_venue_and_instrument_before_source_read": true,
+    "generic_relation_route_is_not_an_authority_for_market_context": true,
+    "runtime_activation_authorized_by_this_contract": false
+  }
+}

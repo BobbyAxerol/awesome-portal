@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution/eds11r-market-context-capability.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "contract_revision", "source_commit", "source_image_digest", "operations"],
+  "properties": {
+    "schema_version": {"const": "trading-system.portal-execution.market-context-capability.v1"},
+    "contract_revision": {"const": "trading-system.portal-execution.market-context.v1"},
+    "source_commit": {"type": "string", "pattern": "^[a-f0-9]{40}$"},
+    "source_image_digest": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "operations": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["capability_id", "operation_id", "method", "edge_path", "manager_path", "profiles", "response_schema_sha256", "fixture_index_sha256", "acceptance_sha256"],
+        "properties": {
+          "capability_id": {"enum": ["market.latest.v1", "market.candles.v1"]},
+          "operation_id": {"enum": ["managerMarketContextLatestV1", "managerMarketContextCandlesV1"]},
+          "method": {"const": "GET"},
+          "edge_path": {"enum": ["/internal/v2/manager/market/latest", "/internal/v2/manager/market/candles"]},
+          "manager_path": {"enum": ["/portal/execution/v2/manager/market/latest", "/portal/execution/v2/manager/market/candles"]},
+          "profiles": {"type": "array", "items": {"enum": ["PAPER", "SANDBOX", "LIVE"]}, "uniqueItems": true, "minItems": 1},
+          "response_schema_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+          "fixture_index_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+          "acceptance_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+        }
+      }
+    }
+  }
+}

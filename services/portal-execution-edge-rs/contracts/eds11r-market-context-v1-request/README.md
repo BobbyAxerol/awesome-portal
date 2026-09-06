@@ -14,6 +14,15 @@ runtime services as part of this packet.
 ## Files
 
 - `market-context-owner-request.v1.json` is the exact source-as-is request.
+- `market-context-wire-contract.v1.json` freezes the two exact private
+  Manager/Edge paths, their allowlisted query names and their body bounds;
+  it prevents a later Portal consumer from guessing a route or falling back to
+  a generic relation endpoint.
+- `market-context-capability.v1.schema.json` is the schema for the owner
+  return's non-secret route/capability index.
+- `schemas/` freezes the positive, bounded source envelopes for latest and
+  candle reads.  A typed non-2xx source failure stays a typed failure; a 200
+  empty `items` array is the only authoritative-empty representation.
 - `market-context-owner-return.v1.schema.json` is the required sanitized
   owner return shape.
 - `owner-return.pending.example.json` demonstrates the only honest state until
@@ -27,3 +36,15 @@ Published source facts must use TLS 1.3 mTLS and a short-lived delegated
 `execution:manager-v2:read` identity bound to profile/environment/audience.
 The browser must never see upstream URLs, source cursors, mTLS material or
 delegated JWTs.
+
+The owner must publish exactly these private paths when the first two
+capabilities are accepted:
+
+| Portal → Edge path | Edge → Manager path | Capability |
+| --- | --- | --- |
+| `/internal/v2/manager/market/latest` | `/portal/execution/v2/manager/market/latest` | `market.latest.v1` |
+| `/internal/v2/manager/market/candles` | `/portal/execution/v2/manager/market/candles` | `market.candles.v1` |
+
+They are server-to-server paths only.  They do not widen the existing generic
+relation route, and this packet does not authorize a listener, proxy reload or
+runtime activation.

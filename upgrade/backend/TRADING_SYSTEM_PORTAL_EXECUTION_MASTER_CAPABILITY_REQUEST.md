@@ -115,8 +115,11 @@ by Portal or a browser.
 
 ### 2A.2 Required capability catalogue
 
-Publish a versioned capability family `market-context.v1`, with exact operation
-identifiers chosen by the owner but semantically equivalent to this table.
+Publish the versioned capability family `market-context.v1` using the frozen
+operation identifiers and private paths in
+`market-context-wire-contract.v1.json`.  The owner may choose its internal
+implementation, but it may not rename, widen or route these two Portal-facing
+operations through the generic relation surface.  Every response has
 Every response has `schema_version`, contract revision, active profile,
 availability/reason, freshness, completeness, `as_of_ms` and source/provider
 provenance.  All timestamps are UTC milliseconds and every financial quantity
@@ -135,6 +138,26 @@ read-only audit has confirmed their readers.  The remaining rows may be
 returned `TYPED_UNAVAILABLE` individually if the existing source cannot prove
 their exact semantics; that is a valid source-as-is result and must not delay
 latest/candle publication.
+
+### 2A.2a Exact private Manager/Edge route contract
+
+The packet now freezes the end-to-end private transport in
+`market-context-wire-contract.v1.json`, with schemas for the positive latest
+and candle envelopes.  The Source Proxy exposes only these mappings after a
+separate owner-approved deployment slice:
+
+| Capability | Portal → Edge path | Edge → Manager path | Allowlisted query names |
+| --- | --- | --- | --- |
+| `market.latest.v1` | `/internal/v2/manager/market/latest` | `/portal/execution/v2/manager/market/latest` | `venue`, `instrument` |
+| `market.candles.v1` | `/internal/v2/manager/market/candles` | `/portal/execution/v2/manager/market/candles` | `venue`, `instrument`, `interval`, `from_ms`, `to_ms`, `point_limit` |
+
+The Manager server authenticates mTLS and the exact delegated resource before
+it validates the named query and calls its private Data Layer adapter.  Unknown
+parameters, cross-profile instrument/venue, invalid ranges and unsupported
+intervals are rejected before source I/O.  `HTTP 200` with an empty `items`
+array is the only authoritative-empty shape; a stale/degraded/unsupported
+source is a typed non-2xx response.  Neither route is a generic relation route
+or a browser endpoint.
 
 ### 2A.3 Admission, bounds and negative behavior
 
@@ -173,8 +196,10 @@ portal-execution-owner-return-v3/
 ```
 
 The capability document states the precise operation IDs, schema revisions,
-source commit, immutable image digest, per-profile availability and SHA-256
-paths for every schema/fixture/acceptance artifact.  The acceptance proof must
+source commit, immutable image digest, per-profile availability, the exact
+two private paths above, and SHA-256 paths for every
+schema/fixture/acceptance artifact.  It must validate against
+`market-context-capability.v1.schema.json`.  The acceptance proof must
 include positive Paper/Sandbox/Live reads where rows exist, authoritative-empty
 where rows do not exist, and negative mTLS/JWT/profile/venue/instrument/range/
 interval/limit cases.  It also proves no direct Data Layer/Redis/browser route

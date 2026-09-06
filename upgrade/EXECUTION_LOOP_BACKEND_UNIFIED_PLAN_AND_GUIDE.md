@@ -5668,6 +5668,9 @@ is the `EDS-11R4` annex in
 [`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
 Its machine-readable attachment is
 `services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/`;
+its `market-context-wire-contract.v1.json` freezes the exact two private
+Manager/Edge mappings and response schema identities, so Portal never has to
+guess an adapter route after the owner return.
 it is an annex of that one request, not a separate owner campaign.
 
 **Goal:** publish the market facts that already exist in AWS-HK's private Data
