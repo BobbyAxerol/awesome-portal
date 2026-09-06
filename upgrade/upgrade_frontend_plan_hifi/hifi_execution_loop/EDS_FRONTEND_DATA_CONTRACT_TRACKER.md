@@ -540,6 +540,52 @@ dán nhãn DERIVED. Đề xuất schema: `timeframe: "1m"|"5m"|"15m"|"30m"|"1h"|
 
 **DR-26 (mới, CAO):** `orders`/`fills` chỉ là bounded current page toàn profile; alpha có lịch sử equity nhưng không có order/fill nào đọc được → Trade Replay, Orders & Fills, funnel không thể đúng theo alpha. **BR-EX-81 (@codex):** đọc order/fill theo `strategy_id`/`account_id` có phân trang (cursor) ra ngoài trang hiện tại, hoặc mirror bền `orders`/`fills` như đã làm với equity (EDS-06) — đề xuất schema: `GET /resources/alphas/{id}/orders?cursor&limit`, `…/fills?cursor&limit`, cùng envelope EDS-04.
 
+**Owner 06-09 (tối):** *"thêm BR-EX-81 vào EDS-12 luôn, đảm bảo nó call hết data từ trading system qua portal execution edge."* Đã ghi vào `upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` (bảng request: BR-EX-80 timeframe + BR-EX-81 full `orders`/`fills` history qua edge → durable mirror → đọc theo alpha/account có cursor; mục EDS-12: đầu việc + điều kiện Exit "mọi strategy đọc đủ order/fill qua edge, Trade Replay không rỗng khi nguồn có fill"). Sửa trong worktree codex `/home/bobby/portal-eds10-eds11` (nhánh `feat/eds11r-r4-r5-activation`), **đang staged, chưa commit được**: hook pre-commit của nhánh đó rớt ở gate "Imported Manager route template does not match the active template" (6 lần, không liên quan docs) — codex commit cùng lần sau hoặc sửa gate. Bản patch giữ ngay dưới đây (một markdown duy nhất, không file mới) để không mất:
+
+```diff
+diff --git a/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md b/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md
+index 39e1946..d6ac74c 100644
+--- a/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md
++++ b/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md
+@@ -3035,7 +3035,9 @@ Append rows here. Do not create another active request file.
+ | BR-EX-77 | 2026-09-02 | Fleet/lists freshness + realtime coverage | Fleet chip pinned STALE (5 s constant vs 15–60 s cadence); Fleet/360/Blotter/CC have no stream binding; delta handling is refetch-per-event | Envelope-declared freshness budgets per ingestion class with AGING tier; extend profile-realtime to remaining read screens; bounded delta coalescing | `PORTAL_PROJECTION` envelopes | read-only · low | existing SSE bounds; coalesce ≥1 s | Phase 1 five-kind contract | budget absent → UNKNOWN never fake-FRESH | unit + SSE + journey with motion assertions | Claude (backend co-impl) | Phase 4 / P4-C | `RECEIVED` | all rich read screens | dev read only | Phase 4 §P4-C; findings F3/F4 |
+ | BR-EX-78 | 2026-09-02 | Profile taxonomy + lineage observability + window ladder | N30 lineage guard structurally rejects non-BINANCE paper parents (DNSE/VN) with no diagnostics; flat 400-row windows block 30 d rollups/history | Owner profile-set decision (recommend `PAPER_DNSE_VNM`); reject counters by missing-parent class in envelope; per-class ingestion windows + warm SGP history; DERIVED portfolio-equity while MC gap stays typed | `TRADING_SYSTEM` via `PORTAL_PROJECTION`; derived `DERIVED` | read-only · medium (taxonomy touches isolation proofs) | window ladder per N29-RTA budget table | Phase 1 lineage guard; owner decision | strict rejection retained; counters bounded | taxonomy negatives + migration/restore + parity | Codex + Claude | Phase 4 / P4-D | `APPROVED_IMPLEMENTATION_IN_PROGRESS` (2026-09-03, Bobby approved `PAPER_DNSE_VNM`) | VNM workbench, Fleet rollups, history charts | dev read only | Phase 4 §P4-D; findings F5/F6/F7/F9 |
+ | BR-EX-79 | 2026-09-03 | Source publication set for full-data screens | Live sweep: equity/performance relations empty (`SOURCE_PARTIAL`, 0 rows), `portfolio_equity` contract-rejected since Phase 1, live balances published without live accounts, cross-family rows in the BINANCE paper feed, `venue_accounts`/margin/sync zero, candles/benchmark/twin-join not activated, no ≥30 d retention | Detailed publication request to the Execution Cell agent: `upgrade/backend/EXECUTION_SOURCE_PUBLICATION_REQUEST_2026-09-03.md` (13 items P0–P2 + 1 question; restates MC-01…09; DNSE deferred by owner) | `TRADING_SYSTEM` / Execution Cell | read-only · none Portal-side | per-item bounds in the request | none (Portal seams delivered Phase 4) | typed states stay until verified | live projection inventory before/after | Execution Cell agent | Phase 4 follow-on | `EXTERNAL_CONTRACT_PENDING` | every data-bearing screen | n/a | request doc §0 table |
+-| _next: BR-EX-80_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
++| BR-EX-80 | 2026-09-06 | Alpha 360 · Trade Replay (candle interval) · Account 360 | The source publishes no strategy timeframe (strategies relation carries `active, trader_id, created_at, strategy_id` only), so the replay infers the bar interval from the strategy id suffix and labels it DERIVED | Facts: `strategies[].timeframe` (or `bar_interval`) in the strategies relation and the fleet register, vocabulary `1m\|5m\|15m\|30m\|1h\|4h\|1d` | TRADING_SYSTEM | read-only · low | 42 strategies; static per version | `strategies` relation (EDS-04) · BR-EX-72 fleet register | absent → frontend keeps the suffix rule with its DERIVED label | frontend `replayCandleChart.test` (published timeframe wins over the suffix) | Codex | EDS-04 / EDS-12 | `RECEIVED` | `TradeReplayLive` — `publishedTimeframe()` already reads it | none | OR-5.6 (tracker) · DR-21 |
++| BR-EX-81 | 2026-09-06 | Alpha 360 · Trade Replay + Orders & Fills · Account 360 · Full Blotter | `orders` / `fills` reach the Portal as one bounded current page per profile (2026-09-06: 812 orders of 11 strategies, 71 fills of 5, over 42 deployed): an alpha with 2,026 equity snapshots (`delta_rsi_0011d`) has zero readable orders or fills, so Trade Replay, Orders & Fills and the funnels cannot be true per alpha, while the Overview funnel counts are profile-wide (DR-22) | **Owner order 2026-09-06: pull the complete `orders` and `fills` history of every profile from the Trading System through the portal execution edge** into the durable mirror (as EDS-06 did for equity: resumable cursor drain, digest dedupe, append-only, gap ledger), then serve per-subject reads: `GET /api/v1/execution/resources/alphas/{id}/orders\|fills?cursor&limit` and `…/accounts/{id}/orders\|fills…` (keyset `(updated_at, order_id)` / `(trade_time, fill_id)`, ≤500 a page, exact `total`), same EDS-04 envelope with `completeness` and `coverage{from,to,rows}`; N25 `source_facts` scoped to the subject (closes DR-22) | TRADING_SYSTEM rows · PORTAL_OBSERVATION mirror (append-only) · nothing DERIVED | read-only · medium: a page presented as history is exactly the misread this removes | 10³–10⁵ rows per alpha; pages ≤500; freshness = mirror `as_of`; a truncated drain must be named in `completeness` | EDS-06 mirror worker · §6.5 orders/fills routes (N11) · manager facade paging semantics (source owner to confirm cursor/page contract) | until delivered the replay prints "no order or fill of <alpha> in the retained page · the page holds N orders / M fills / K strategies" (`ce08548`); no client-side widening | mirror row counts equal source counts per relation and profile; every strategy with fills in the source renders ≥1 marker; `delta_rsi_0011d` replay is non-empty iff the source holds its fills; frontend deletes the account-scoped client filter of the profile page on delivery | Codex · source owner (facade paging) | **EDS-12** (owner order 2026-09-06) | `RECEIVED` | `TradeReplayLive` / `replayEvents` — consumer ready; stopgap filter to be removed | none until approved | DR-22 · DR-24 · DR-25 · DR-26 · OR-5.12 (tracker) · BR-EX-50 |
++| _next: BR-EX-82_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+ 
+ ### 7.3 Request quality gate
+ 
+@@ -6114,6 +6116,13 @@ waiting for unrelated external gaps.
+   frontend bundle and source compatibility digests;
+ - stage per operation/screen/profile: Paper, Sandbox, Canary-over-Live, Live;
+ - remove expired adapters only after zero-use observation;
++- **BR-EX-81 (owner order 2026-09-06):** drain the complete `orders` / `fills`
++  history of every profile from the Trading System through the portal execution
++  edge into the durable mirror and serve per-alpha / per-account cursor reads;
++  no order-bearing screen (Trade Replay, Orders & Fills, Blotter, funnels) may
++  be qualified on the bounded current page, which on 2026-09-06 held 812 orders
++  of 11 strategies and 71 fills of 5 over 42 deployed (DR-26); BR-EX-80
++  (strategy timeframe) rides the same relation refresh;
+ - record any remaining external capability as a versioned next-campaign input,
+   not hidden technical debt.
+ 
+@@ -6124,8 +6133,10 @@ exact deployed-image verification.
+ 
+ **Exit:** all accepted-source scope is `PRODUCT_ACTIVE` and
+ `OPERATIONS_QUALIFIED`; zero P0/P1 integrity issues; rollback evidence exists;
+-owner signs visual/data/action parity. Protected-main merge and stable release
+-remain explicit Bobby actions.
++every deployed strategy's orders and fills are readable in full through the
++edge and its Trade Replay is non-empty whenever the source holds its fills
++(BR-EX-81); owner signs visual/data/action parity. Protected-main merge and
++stable release remain explicit Bobby actions.
+ 
+ ### 17.6 Frontend collaboration lanes
+```
+
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
 Chính sách nghiệm thu 2 lớp: **Lớp 1 = contract đầu vào** (chấm được ngay vì
