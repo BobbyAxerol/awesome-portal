@@ -327,9 +327,16 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [] 
     return { lo: lo - pad, hi: hi + pad };
   }, [scopedFills, scopedOrders]);
   const [win, setWin] = useState<{ t0: number; t1: number } | null>(null);
-  // Opening view: the last seven days when the record is long — the hi-fi opens
-  // on half its bars for the same reason. Fit widens to everything.
-  const opening = times ? (times.hi - times.lo > 10 * 86_400_000 ? { t0: times.hi - 7 * 86_400_000, t1: times.hi } : { t0: times.lo, t1: times.hi }) : null;
+  // Opening view: recent, but never empty — it reaches back to the sixth-last
+  // fill (or seven days, whichever is wider), because the newest events are
+  // often cancels and rejects with no fill among them. Fit widens to everything.
+  const opening = useMemo(() => {
+    if (!times) return null;
+    if (times.hi - times.lo <= 10 * 86_400_000) return { t0: times.lo, t1: times.hi };
+    const fillTimes = scopedFills.map((f) => ms(f.tradeTime)).filter((x): x is number => x !== null);
+    const anchor = fillTimes.length > 0 ? fillTimes[Math.max(0, fillTimes.length - 6)]! - 6 * 3_600_000 : times.hi - 7 * 86_400_000;
+    return { t0: Math.max(times.lo, Math.min(anchor, times.hi - 7 * 86_400_000)), t1: times.hi };
+  }, [times, scopedFills]);
   const view = win && times ? { t0: Math.max(times.lo, win.t0), t1: Math.min(times.hi, win.t1) } : opening;
   const drag = useRef<{ x: number; t0: number; t1: number; w: number } | null>(null);
 
