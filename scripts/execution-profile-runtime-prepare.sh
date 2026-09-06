@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Render one Sandbox/Live profile without copying any workload secret.
+# Render one Paper/Sandbox/Live profile without copying any workload secret.
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --profile sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS [--manager-extension-set none|eds11r-r4-r5]\n' "$0" >&2
+  printf 'Usage: %s --profile paper|sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS [--manager-extension-set none|eds11r-r4-r5]\n' "$0" >&2
   exit 2
 }
 
@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
     *) usage ;;
   esac
 done
-[[ "${EUID}" -eq 0 && "${profile}" =~ ^(sandbox|live)$ && -f "${base_env}" &&
+[[ "${EUID}" -eq 0 && "${profile}" =~ ^(paper|sandbox|live)$ && -f "${base_env}" &&
    "${output_env}" == /srv/primus/portal/runtime/* &&
    "${edge_image}" =~ ^portal-execution-edge-manager-v2@sha256:[a-f0-9]{64}$ &&
    "${manager_extension_set}" =~ ^(none|eds11r-r4-r5)$ ]] || usage
@@ -28,6 +28,11 @@ runtime_gid="$(getent group portal-runtime | cut -d: -f3)"
 [[ "${runtime_gid}" =~ ^[0-9]+$ ]] || { printf 'portal-runtime group is missing.\n' >&2; exit 1; }
 
 case "${profile}" in
+  paper)
+    upper=PAPER profile_id=PAPER_BINANCE_USDM edge_port=8443
+    bridge_cidr=172.23.0.0/24 bridge_gateway=172.23.0.1
+    facade_port=8023 issuer_port=8024 volume=portal-execution-projection-pgdata-v1
+    ;;
   sandbox)
     upper=SANDBOX profile_id=SANDBOX_BINANCE_USDM edge_port=8444
     bridge_cidr=172.24.0.0/24 bridge_gateway=172.24.0.1
@@ -41,8 +46,16 @@ case "${profile}" in
 esac
 
 proxy_dir=/srv/primus/portal/source-proxy
-proxy_config="${proxy_dir}/nginx.manager-${profile}.conf"
-manager_locations="${proxy_dir}/manager-v2-locations-${profile}.conf"
+case "${profile}" in
+  paper)
+    proxy_config="${proxy_dir}/nginx.manager-v2.conf"
+    manager_locations="${proxy_dir}/manager-v2-locations.conf"
+    ;;
+  *)
+    proxy_config="${proxy_dir}/nginx.manager-${profile}.conf"
+    manager_locations="${proxy_dir}/manager-v2-locations-${profile}.conf"
+    ;;
+esac
 [[ -d "${proxy_dir}" && ! -L "${proxy_dir}" ]] || {
   printf 'Shared Source Proxy directory is missing or unsafe.\n' >&2
   exit 1
