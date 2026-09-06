@@ -189,8 +189,15 @@ chỉ nằm trong URL/state; con trỏ điều hướng KHÔNG bao giờ là sou
 | DR-10 | Payload budget chưa là con số per-phase (5.9MB workbench, 2.4MB alpha đo thật) | TB | 07/12 | OPEN | |
 | DR-11 | **Đảo thứ tự adapt-first (đo 04-09)**: codex đang code EDS-09 (5 file WIP edge +264/−21) trong khi EDS-01→08 chưa mở phase nào theo ladder; EDS-09 lại bị chặn bởi EDS-08 `EVENT_SOURCE_ACCEPTED` (external, chưa có — domain_events bị chính plan từ chối) → công sức này KHÔNG tạo ra dữ liệu nhìn thấy nào trên màn cho tới khi nguồn giao event contract, ngược mục tiêu owner "mọi màn có số" và ngược chính doctrine §17.5 "EDS-03..07 must not wait". Đề nghị: (a) đổi thứ tự sang 01→03 vertical đầu tiên, hoặc (b) nếu giữ EDS-09 thì tuyên bố rõ đây là contract-prep offline và mở song song EDS-01. **Cập nhật theo OR-1 (04-09): vế event-journal đã được owner gỡ — EDS-09 chạy trên observation lane là hợp lệ; DR-11 chỉ còn yêu cầu mở song song lane FE 01→03** | **CAO** | thứ tự chiến dịch | OPEN-THU HẸP | |
 | DR-13 | **OR-1 gap của EDS-09**: core chờ external acceptance, không có observation adapter → giá trị màn hình = 0 tới khi trading giao MC-01. Yêu cầu phase nhỏ **EDS-09b**: adapter map mirror/drain observations vào CHÍNH core này (stream class riêng, nhãn `PORTAL_OBSERVATION`, admission facts do Portal tự phát hành) — mở reducer/journal/EDS-11 fan-out NGAY. Core generic sẵn nên đây là việc nhỏ | **CAO** | EDS-09b | OPEN | |
+| DR-15 | **A-01: pin catalogue digest sai trường** — intake lấy `catalogue_digest` (9040f, hash response-body) thay vì `catalogue_sha256` envelope (0c71b, có sẵn trong e6-runtime-evidence của chính pack) → mọi live read 502 `EDS01_SOURCE_CONTRACT_REJECTED`; gate xanh nhờ fixture nên không ai thấy. **Đã sửa tại source bởi Claude (quyền backend), chờ gate re-run + codex xác nhận trường chuẩn trong contract test** | CAO | EDS-01 | FIXED-IN-REVIEW | |
+| DR-16 | **Sập cả cycle vì 1 relation mới bị từ chối**: `manager.risk:risk_grants` (sandbox) trả `N23_PROFILE_READ_NOT_ACCEPTED` ×7 → mã này không nằm trong danh sách cô lập của worker → cycle sandbox fail liên tục → snapshot vượt stale ceiling → **cả màn Sandbox 'unavailable'** (regression so với dev đang ready/COMPLETE). Fix: thêm N22/N23_PROFILE_READ_NOT_ACCEPTED vào isolate per-relation (UNAVAILABLE typed, carry phần còn lại) | **CAO — CHẶN G3** | worker (Claude nhận vá) + codex rà acceptance list | **FIXED 05-09** — isolate N22/N23 per-relation + regression test, gate 383/383, sandbox hồi sinh trên probe; codex còn rà DR-17 | |
+| DR-17 | Binding mới `risk_grants`/`sizing_decisions` được thêm vào catalog worker nhưng chưa được proxy/edge chấp nhận cho screen tương ứng (sandbox N23; paper sizing N17B) — cần khớp acceptance list ↔ catalog trước khi thêm binding | TB | EDS-03/06 | OPEN | |
 | DR-14 | Test trực tiếp EDS-09 đếm được 7 (5 core + 2 store) so với 10 vùng khai trong report — cần bảng map test↔claim (hoặc chỉ rõ spec TS 306 dòng gánh vùng nào) để nghiệm thu chặt | THẤP | EDS-09 docs | OPEN | |
 | DR-12 | *(một phần đã khắc phục 05-09: mỗi phase có file EDS_xx riêng mang Status ladder trong worktree eds — §17 unified plan vẫn chưa sync, giữ OPEN mức THẤP)* **Status ladder không được ghi**: chỉ EDS-00 có dòng Status; 01→12 không có `PLANNED/CONTRACT_LOCKED/...` trong §17 → không ai track được tiến độ bằng văn bản, vi phạm luật "mỗi phase commit implementation+tests+journal cùng lúc" của chính plan | TB | §17 bookkeeping | OPEN | |
+| DR-18 | **Workspace mặc định = workspace cá nhân của session** (`SessionGuard.ensurePersonal`) mà EDS-04/05/07 chỉ chấp nhận đúng `EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID`: user KHÔNG phải chủ workspace đó (mọi người trừ Bobby) nhận 404 typed `EDS0x_PROJECTION_WORKSPACE_NOT_FOUND` trừ khi query mang `workspace_id` — mà không envelope nào (`/screens/*`, `/resources/*`, `/contract-authority`) publish id này cho browser. Đo 05-09 trên probe (claude-probe, member nhưng không chủ): Alpha 360 resource, 4 tile derivation, chart Account 360 đều 404 typed; đổi owner trên probe DB → tất cả READY. Spec codex `portal-derivations.spec:pins…` cố ý fail-closed, nên đây là quyết định thiết kế cần chốt, không phải bug tôi tự sửa. **Backend request**: (a) publish `projection_workspace_id` trong `/contract-authority` để FE gửi kèm, hoặc (b) khi query không có `workspace_id` và user là member của projection workspace thì mặc định vào đó | CAO (mọi user ≠ Bobby) | 04/05/07 | OPEN — chờ codex chọn (a)/(b) | |
+| DR-19 | **N29 acceptance pack pin sha256 của file FE** (`recomposeContainers.tsx`, `profileContainers.tsx`, `e2e/bffDouble.ts`, …): mọi wire FE hợp lệ đều làm pre-commit đỏ `evidence digest drifted`. Đợt 2 tôi re-pin 2 digest theo đúng cách codex đã làm ở `a511508`; `bffDouble.ts` giữ nguyên nên e2e double trả 501 gap cho route EDS-05/07 (tile render unavailable — trung thực nhưng không phải trạng thái thật). Đề nghị: tách file FE khỏi pin N29 hoặc ghi thủ tục re-pin vào README pack | TB | N29 pack | OPEN | |
+| DR-20 | **Mirror EDS-06 trên dev rỗng (0 row) và chỉ có relation paper** sau backfill từ `execution_timeseries_history` (710k row → `account_equity_snapshots` 581k · `performance_snapshots` 129k · `fills` 71): EDS-07 chart cho live/sandbox/deployment trả `EDS07_RELATION_NOT_MIRRORED` tới khi worker mirror các profile đó (flag bật 05-09 tối trên dev). Đây chính là câu hỏi DR-01 (absorb/replace): tôi đã absorb history→mirror bằng script (digest canonical y hệt `durable-mirror.repository.ts`), codex xác nhận cách này hay worker tự backfill | CAO | 06/07 | OPEN | |
+| DR-21 | **`alphas/{id}/activity` EMPTY `EDS05_ALPHA_NOT_FOUND` cho mọi id đã thử** (`signalcombine00230m`, `gridcombine001`, `adaptive_hma_cpp_00115m` — id thứ ba là `strategy_id` thật trong deployments, strategies relation có 48 row AVAILABLE) → khóa join của alpha_id sai hoặc alpha_id là trường khác (`alpha_id` registry?). Tile Alpha 360 vì thế luôn EMPTY dù alpha đang chạy paper | TB | 05 | OPEN — codex chỉ khóa đúng | |
 
 Luật sổ: codex trả lời từng DR trong cột của mình (ACCEPT+phase / REJECT+lý do);
 DR nào ACCEPT thì thành mục kiểm tra exit của phase tương ứng; mỗi tuần Bobby
@@ -262,6 +269,16 @@ nhất thấy contract sai cho mình.
 | Candlestick market-context (EDS-10) | đề xuất `lightweight-charts` (Apache-2.0, cần ⚖ attribution TradingView) | chờ Bobby |
 | Trade replay hiện tại | GIỮ NGUYÊN (owner chốt) | — |
 
+**Tiến độ OR-3 (05-09 tối)**: dòng 1 ✅ ship `172ebdd` — `src/charts/financial/`
+(`chartTheme.ts` đọc token `--exec-chart-*` từ `styles/tokens.css`;
+`financialData.ts` biến đổi thuần, test được; `PrimusFinancialChart.tsx` uPlot
+1.6.32 load động — jsdom không đụng canvas). Look: line #42a365 + gradient
+fade, band vàng đứt nét + fill, gap gạch chéo đỏ, pill giá cuối exact + halo
+(pulse CHỈ khi server nói fresh), tooltip UTC, Lin/Log, 1W/1M/3M/ALL, kéo-zoom,
+Ctrl+wheel zoom, Shift+wheel pan, double-click reset. Baseline visual
+`v2-equity-chart-demo` (2 viewport) cập nhật; 4 baseline màn có chart KHÔNG
+đổi quá 0.2%. Dòng 2 (ECharts reskin bar/heatmap) và sparkline fleet: chưa.
+
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
 Chính sách nghiệm thu 2 lớp: **Lớp 1 = contract đầu vào** (chấm được ngay vì
@@ -306,20 +323,20 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | Phiếu | Chấm cái gì | Kích hoạt khi | Trạng thái 04-09 |
 |---|---|---|---|
 | **L1** | Contract đầu vào (E7 pack ↔ ma trận màn) | pack tồn tại | ✅ **ĐÃ CHẤM** — 126/126 dòng, 5 bucket (tracker §7) |
-| A-01 | EDS-01 vertical đầu (named op deployment) | codex giao op+fixture | 🔶 **SẴN SÀNG CHẤM** — commit `1a9e2d0` trên `feat/eds-current-bff` (05-09); cần deploy nhánh đó lên runtime probe |
-| A-02 | EDS-02 generated contracts | types+enum-map giao | 🔶 SẴN SÀNG CHẤM — `5547e6a` |
-| A-03 | EDS-03 ba màn stage | từng màn một | 🔶 SẴN SÀNG CHẤM — `4a2ae85` |
-| A-04 | EDS-04 bốn màn resource | từng màn một | 🔶 SẴN SÀNG CHẤM — `a511508` |
-| A-05 | EDS-05 derivations+governance | từng op một | 🔶 SẴN SÀNG CHẤM — `35e96e0` |
+| A-01 | EDS-01 vertical đầu (named op deployment) | codex giao op+fixture | ✅ **PASS-VỚI-SỬA 05-09** (live-probe :8090): 3 env đúng (`POPULATED/POPULATED/EMPTY-authoritative`), DTO chuẩn (43 records, source_health trung thực, replay_eligible:false), negatives 3×400, cursor `mdc1.*` phân trang 0-overlap + cross-env bị chặn `EDS01_CURSOR_INVALID_OR_EXPIRED`, 16KB/43 rows. **DR-15 bắt tại chỗ**: pin catalogue sai trường (9040f response-body digest thay vì envelope 0c71b của chính e6-evidence) → op CHƯA TỪNG chạy nổi với nguồn sống (gate codex xanh vì fixture); đã sửa 1 dòng tại source, chờ gate re-run. Phụ: migration EDS phải chạy tay trên DB restore (bootstrap chỉ seed user) — ghi nhận quy trình |
+| A-02 | EDS-02 generated contracts | types+enum-map giao | ✅ **PASS 05-09**: `/contract-authority` 200/213KB đủ blocks (clock_contract 7 đồng hồ, exact_value, panel_envelope, screen_data_manifest); FE `screenDataContract.ts` +321 dòng đã vào; gate FE codex 1.826 test + build xanh. Còn soi sâu enum-map ↔ U02 khi wire (ghi vào G-tích-hợp) |
+| A-03 | EDS-03 ba màn stage | từng màn một | ✅ **PASS-VỚI-SỬA 05-09** sau vá DR-16: PAPER ✓ (43 dep + đủ arrays, ms-clocks); **SANDBOX HỒI SINH** `partial` + 35 deployments (risk_grants thành typed UNAVAILABLE đúng ô); LIVE ✓ arrays-0 trung thực (semantics completeness còn note trong phiếu); screenshot 3 màn authenticated render khác biệt thật (73/123/183KB). Còn theo dõi: paper 1,29MB (DR-10), live EMPTY-vs-PARTIAL note |
+| A-04 | EDS-04 bốn màn resource | từng màn một | 🟡 **CHẤM MỘT PHẦN 05-09 (tối)** — 4/4 route 200 trên probe, 17–18 panel typed (READY/PARTIAL/EMPTY), binding lạ → EMPTY typed; FE đã wire sẵn (recomposeContainers) và render thật trên probe. Còn: ký từng màn + identity ngoài trang đầu (Bobby xem dev) · **DR-18** (workspace) |
+| A-05 | EDS-05 derivations+governance | từng op một | 🟡 **CHẤM MỘT PHẦN 05-09 (tối)** — 5/5 derivation route 200 typed; execution-quality có số thật (19 orders · 10 fills · reject 1/19); capital PARTIAL (ledger chưa publish); source-health PARTIAL/AGING; activity EMPTY mọi id thử (**DR-21**); governance approvals 200 (filter[...]); ops queue 403 cho USER (typed denied). FE wire 4 tile (§A4). Golden vector chưa tính lại |
 | A-06 | EDS-06 mirror/index cutover | dual-read bật | 🔶 SẴN SÀNG CHẤM — `3a9c996` (DR-01 phải trả lời trong lúc chấm) |
-| A-07 | EDS-07 chart DTO | DTO đầu tiên | 🔶 SẴN SÀNG CHẤM — `6914c9b` |
+| A-07 | EDS-07 chart DTO | DTO đầu tiên | 🟢 **A-07 CHẤM ĐẠT-CORE 05-09 (tối)** — paper account equity/drawdown READY 1946/51370 điểm `MIN_MAX_LAST_BUCKET_V1` (extrema+first/last giữ, gaps không publish); portfolio → UNAVAILABLE `MANAGER_V2_SOURCE_CONTRACT_REJECTED` (nguồn); live/sandbox → `EDS07_RELATION_NOT_MIRRORED` tới khi mirror có relation (**DR-20**); viewport ngoài 256–2048 bị 400 (FE clamp); risk-decisions typed EMPTY/UNAVAILABLE. **A-07b ✅ ĐÃ SHIP** `172ebdd` PrimusFinancialChart |
 | A-08 | EDS-08 asks packet | packet hợp nhất | ✅ **CHẤM ĐẠT 05-09** — addendum ghi parent MC-01, một kênh duy nhất → **DR-07 ĐÓNG** |
 | A-09 | EDS-09 observation-lane | reducer đầu ra đầu tiên | ✅ **ĐÃ CHẤM 05-09: ACCEPT-CORE / DR-13 OPEN** — xem phiếu |
 | A-10 | EDS-10 replay/candles | contract chấp nhận | ⬜ xa |
 | A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ xa |
 | A-12 | EDS-12 release | gói release | ⬜ xa |
 
-**ĐANG Ở ĐÂY (05-09) →** L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
+**ĐANG Ở ĐÂY (05-09 tối) →** đợt goal 2 (G7+G4+G5) ĐÃ LÊN dev-portal — xem **§A4**; chờ Bobby goal cả đợt 1+2. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
 chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
 `/home/bobby/portal-eds-current-bff`). Bước kế: dựng runtime probe từ nhánh đó
 (compose project phụ, không đụng dev) rồi chấm lần lượt A-01→A-07 theo SLA
@@ -374,14 +391,34 @@ chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff
   — thử deployment nằm NGOÀI trang đầu vẫn mở được 360); tên hiển thị từ
   entity-registry; mixed-currency fail-closed.
 - **ĐẠT khi**: 4 màn ký; §2.5–2.8 hết ✗/⏳ phần local.
-- **Trạng thái**: ⬜ ×4.
+- **Trạng thái (05-09 tối)**: 🟡 chấm route + render, chưa ký màn. Bằng chứng
+  probe (claude-probe, `workspace_id` tường minh): `/resources/alphas/…` 200
+  628KB 18 panel · `/portfolios/…` 200 960KB 18 panel · `/accounts/…` 200
+  497KB 17 panel · `/bindings/unknown` 200 EMPTY typed (không 404 — đúng spec
+  "absence stays EMPTY"). Panel state phân bố: strategies/deployments/accounts/
+  portfolios/positions READY; balances/sync/sessions/orders/fills PARTIAL;
+  venue_accounts EMPTY. FE: cả 4 container đã đọc resource BFF; Alpha 360 render
+  thật trên probe (ảnh §A4). **Chặn ký**: DR-18 (session của user không phải
+  chủ projection workspace → 404 typed) và payload 0.5–1MB/màn (DR-10).
 
 ### Phiếu A-05 — EDS-05: 5 derivations + governance/ops
 - **Bước chấm**: golden vectors từng formula (tôi tự tính lại bằng exact
   decimal độc lập); partial/stale lan truyền đúng; redaction dead-letter
   (bucket D) không lộ raw; mọi route governance/ops probe xanh.
 - **ĐẠT khi**: 5 formula + 8 màn governance/ops ký.
-- **Trạng thái**: ⬜.
+- **Trạng thái (05-09 tối)**: 🟡 route + FE wire xong, formula chưa ký.
+  Probe: `source-health` PARTIAL (paper AVAILABLE/AGING/PARTIAL, seq 7387) ·
+  `deployments/{id}/execution-quality` PARTIAL `SOURCE_PARTIAL` với số thật
+  (sessions 2000 · orders 19 · fills 10 · submitted 19 · filled 11 · risk-rej 1
+  · reject_rate 1/19 · latency UNAVAILABLE `N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED`)
+  · `portfolios/{id}/capital` PARTIAL `EDS05_PORTFOLIO_CAPITAL_LEDGER_NOT_PUBLISHED`
+  (USDT 42 tài khoản · allocated 11,360,000 · unpublished: portfolio_capital_ledger,
+  account_reservations) · `alphas/{id}/activity` EMPTY `EDS05_ALPHA_NOT_FOUND`
+  cho CẢ 3 id thử (DR-21) · `conditional-groups/{id}` EMPTY typed. Governance:
+  approvals 200 (lọc bằng `filter[environment]=`, không phải `environment=`);
+  ops queue 403 với role USER (typed denied — Bobby ADMIN không bị). Deployment
+  id phải URL-encode (`:` trong id) — không encode thì 404 `REQUEST_REJECTED`
+  từ gateway. FE (`172ebdd`): 4 tile EDS-05 lên 4 màn (§A4).
 
 ### Phiếu A-06 — EDS-06: mirror/index cutover
 - **Bước chấm**: (1) DR-01 phải có tuyên bố absorb/replace TRƯỚC khi chấm;
@@ -400,7 +437,15 @@ chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff
 - **A-07b (không chờ codex)**: `chartTheme.ts` + `PrimusFinancialChart`
   component theo OR-3, ăn tạm serving hiện có; khi DTO tới chỉ đổi adapter.
 - **ĐẠT khi**: mọi ô chart §2 lật ●; artifact-look tái hiện trên portal thật.
-- **Trạng thái**: A-07 ⬜ · A-07b ⬜ tôi khởi công sau DR-09.
+- **Trạng thái (05-09 tối)**: A-07 🟢 **ĐẠT-CORE** — DTO đúng MỘT từ vựng
+  downsample (`sampling.algorithm` + cờ `preserves_*`), extrema/first/last
+  bảo toàn theo cờ server, budget điểm theo `viewport_px` (256–2048, ngoài
+  khoảng server trả 400 chứ không clamp → FE clamp trước khi gọi), `scale_mode`
+  LOG tôn trọng bằng nút Lin/Log (không client clamp). Chưa ĐẠT-FULL vì:
+  portfolio subject bị nguồn từ chối, live/sandbox chưa mirror (DR-20), gaps
+  `SOURCE_GAP_INTERVALS_NOT_PUBLISHED`. · A-07b ✅ **ĐÃ SHIP** (`172ebdd`):
+  `charts/financial/{chartTheme,financialData,PrimusFinancialChart}` + adapter
+  `api/financialChart.ts`; artifact-look tái hiện trên probe (ảnh §A4).
 
 ### Phiếu A-08 — EDS-08 (đã hạ blocker theo OR-1)
 - **Chấm duy nhất**: packet asks hợp nhất = đúng BR-EX-79 A–E, một kênh
@@ -443,6 +488,224 @@ chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff
   cho motion (DR-06) — tôi giả lập đứt mạng/chậm client; action graph đi đủ
   mọi nút. A-12: tôi nộp Bobby gói bằng chứng browser-matrix toàn màn.
 - **Trạng thái**: ⬜ ×3.
+
+## A2b. CHIẾN DỊCH CHẤM ✚ GHÉP NỐI ✚ BÀN GIAO TỪNG PHASE (sửa 05-09 theo ý owner: goal liên tiếp)
+
+**Ý owner (đọc đúng):** mỗi phase không dừng ở "chấm đạt" — phải **ghép nối
+vào frontend thật và lên dev** để Bobby NHÌN THẤY và goal, rồi mới sang phase
+kế. Chuỗi goal liên tiếp, không dồn cuối.
+
+**Vòng đời chuẩn MỖI phase (5 bước, lặp lại):**
+```text
+(1) CHẤM trên probe-runtime (phiếu A-xx, ≤1 ngày)
+(2) GHÉP NỐI FE: wire container/api layer sang named ops theo field-map
+    (lane §17.6 của Claude — có quyền backend, không hỏi lại)
+(3) GATE FE: vitest + build + control gate nếu đụng BE
+(4) DEPLOY DEV: nhánh tích hợp `feat/eds-integration`
+    (= feat/eds-current-bff của codex ⊕ commit FE của Claude — dev chạy nhánh này từ G1)
+(5) BOBBY GOAL trên dev → lật ✅ vào §A0 → mở phase kế
+```
+Trượt ở (1) → DR, codex sửa song song; trượt ở (3)/(4) → lỗi của tôi, sửa
+trong ngày; không phase nào ✅ khi Bobby chưa goal bước (5).
+
+**🎯 GOAL ĐỢT 1 (Bobby chốt 05-09): G1 → G2 → G3** — vertical proof nhỏ nhất
+→ nền types + hết PARTIAL-oan mọi màn (DR-04) → 3 màn stage đầy đủ. Đợt 2 đề
+xuất G7 (chart) nhảy trước G4/G5 vì không phụ thuộc chúng — chốt sau đợt 1.
+
+| Bước | Chấm & Ghép | **Bobby nhìn thấy gì trên dev để goal** | Dự kiến | Trạng thái |
+|---|---|---|---|---|
+| G0 | Dựng probe-runtime (PG riêng restore dump dev :55432 loopback + image nhánh eds) + tạo nhánh `feat/eds-integration` | (hạ tầng — không cần goal) | 0.5 ngày | 🔶 ĐANG LÀM |
+| G1 | A-01 + wire Paper list sang `maximumDataDeploymentPageV1` | Paper Overview: danh sách deployment chạy qua named op mới, chip trạng thái + freshness đúng | 1 ngày | ✅ CHẤM XONG (05-09, DR-15 fixed, gate 382) — chờ Bobby goal trên dev |
+| G2 | A-02 + FE đổi sang generated types/UTC formatter/enum-map | Không đổi hình — nhưng caption completeness hết PARTIAL-oan (DR-04); tôi nộp ảnh before/after | 0.5–1 ngày | ✅ CHẤM XONG (authority 200/213KB; DR-04 top-level còn theo dõi ở G-sau) — chờ Bobby goal |
+| G3 | A-03 + wire 3 màn stage (Paper→Sandbox→Live, từng màn goal riêng) | Mỗi màn stage đầy panel: ô nào trống là typed-lý-do, hết ✗ ma trận §2.1-2.3/2.9-2.10 | 1.5 ngày | ✅ CHẤM XONG sau vá DR-16 — build dev đang chạy, chờ Bobby goal cả đợt |
+| G4 | A-04 + wire 4 màn resource | Alpha/Portfolio/Account/Binding 360 mở từ khóa chuẩn, deployment ngoài trang đầu vẫn mở được | 1.5 ngày | 🟡 **ĐỢT 2 (05-09 tối)** — route+render xong, chưa ký màn (DR-18/DR-10) — chờ Bobby goal trên dev |
+| G5 | A-05 + wire governance/ops | Inbox/R1/R2/Exit/Waivers/Queue/Incident có số + formula version hiện trên tile | 1 ngày | 🟡 **ĐỢT 2 (05-09 tối)** — 4 tile derivation lên Command Center / Paper Workbench / Portfolio 360 / Alpha 360, formula id+version hiện trên tile; governance/ops tile CHƯA (route governance đã probe) — chờ Bobby goal |
+| G6 | A-06 cutover từng màn (dual-read parity, DR-01 trả lời tại đây) | Cùng màn, số y hệt, payload NHẸ hẳn (đo byte trước/sau đính vào phiếu) | 1 ngày | ⬜ |
+| G7 | A-07 + **A-07b `PrimusFinancialChart` + chartTheme.ts (OR-3)** ăn chart DTO | Chart equity/perf/drawdown ĐÚNG LOOK artifact đã duyệt, sparkline fleet, hết cap 2000 | 1.5–2 ngày | ✅ **ĐỢT 2 (05-09 tối) — SHIP `172ebdd`**: mọi EquityChart (Paper Workbench, Alpha 360, Live Full, Canary, Insight tile) chạy uPlot; Account 360 ăn EDS-07 DTO; sparkline fleet + ECharts reskin CHƯA — chờ Bobby goal |
+| G8 | EDS-09b observation adapter (DR-13) + wire journal → EDS-11 SSE khi codex giao | Motion tick/flash nổ lại bằng revision thật | theo codex | ⬜ |
+
+Tổng: **~8–10 ngày làm việc** cho chuỗi goal G1→G7 (EDS-10 chờ gate trading,
+đúng chốt owner). Sau mỗi bước (5), §A0 lật trạng thái — Bobby dõi goal chỉ
+bằng một bảng.
+
+## A4. NHẬT KÝ GOAL ĐỢT 2 — G7 (chart) + G4 (resource) + G5 (derivations) — 05-09 tối
+
+Owner order: *"3 phase 1 lúc, test kỹ, khai thác hết backend, đẹp, khớp với
+frontend đã giao, hiệu ứng động không được mất, chart như BingX/OKX"*. Làm trên
+nhánh `feat/eds-current-bff` (worktree `/home/bobby/portal-eds-current-bff`).
+
+### A4.1 Đã giao (commit)
+
+| Commit | Nội dung |
+|---|---|
+| `172ebdd` | **PrimusFinancialChart** (uPlot 1.6.32) thay ECharts trong `EquityChart` — cùng props/contract `EquitySeries`, cùng Table/Expand/Export, thêm Lin/Log · 1W/1M/3M/ALL · legend toggle band · kéo-zoom, Ctrl+wheel zoom, Shift+wheel pan, double-click reset · pill giá cuối exact + halo (pulse chỉ khi server nói fresh) · tooltip UTC · gap gạch chéo · band vàng. Adapter **EDS-07** `api/financialChart.ts` (reader + `financialChartView` → envelope khai downsample/rows/retention) wire vào **Account 360**. **EDS-05**: `api/derivations.ts` (4 reader) + `components/DerivationTile.tsx` (một grammar: chip state server, formula id·version, inputs kèm state, số = chuỗi server, reject rate giữ tử/mẫu) lên Command Center (source health), Paper Workbench (execution quality), Portfolio 360 tab Capital Ledger (capital), Alpha 360 Overview (activity). Token `--exec-chart-*` vào `styles/tokens.css` (gate U02 xanh). N29 pack re-pin 2 digest FE (DR-19). |
+| `0964773` | compose overlay local-projection: map `FEATURE_EXECUTION_DURABLE_MIRROR(_READS)` ← `CONTROL_API_*` (mặc định false). |
+| `635e2a5` | Tile derivation mang đúng grammar panel (`exec-gate-panel`, title direct-child → exec-a3/pf2 restyle như panel cạnh); Source health gộp 1 board 3 env; Capital board env × currency (3 env đọc riêng, không gộp, không total); quality tile lên cả nhánh non-hifi workbench; fill chart fade sớm; baseline `v2-equity-chart-demo` ×2 cập nhật. |
+
+Gate FE: `tsc -b` sạch · vitest **99 file / 1847 pass** · `vite build` OK ·
+Playwright fixtures **90/90** (chỉ 2 baseline chart-demo đổi; 4 baseline màn có
+chart trong dung sai 0.2%). Gate control-api trong pre-commit (`verify-workspace`)
+xanh cho `172ebdd`/`0964773`.
+
+### A4.2 Bằng chứng probe-runtime (image `eds-probe`, DB restore dev, user claude-probe)
+
+| Màn | Route probe | Thấy gì (thật, không fixture) |
+|---|---|---|
+| Account 360 | `/deployments/accounts/paper-binance-gridcombine001_4h` | Chart EDS-07 READY **2327 điểm** từ **51375 row** `MIN_MAX_LAST_BUCKET_V1`, cửa sổ 2026-06-30→09-05, bucket 6087s, pill `1,000,000.00`, pulse (server fresh), caption khai downsample + cảnh báo "retained snapshot range — not event replay" |
+| Alpha 360 | `/deployments/alphas/adaptive_hma_cpp_00115m` | Equity-by-stage chart uPlot (46 điểm window 30d), tile Activity rollup **EMPTY typed** `EDS05_ALPHA_NOT_FOUND` (DR-21) |
+| Portfolio 360 · Capital Ledger | `/deployments/portfolios/portfolio_types_pool?tab=Capital%20Ledger` | Capital board: paper USDT 42 tài khoản allocated 11,360,000 / max 11,360,000 / total-free-locked; sandbox/live "no currency rows"; PARTIAL `…LEDGER_NOT_PUBLISHED`; unpublished inputs nêu tên |
+| Paper Workbench | `/deployments/paper/<deployment_id url-encoded>` | Chart 1473 điểm; tile Execution quality PARTIAL: sessions 2000 · orders 19 · fills 10 · submitted 19 · filled 11 · risk-rej 1 · reject 1/19 · latency UNAVAILABLE `N28_…` |
+| Command Center | `/execution` | Source health board: paper/sandbox/live PARTIAL · AVAILABLE · AGING · seq 7483/7477/… |
+
+Ảnh chụp 1440px lưu scratchpad phiên (`shot4_*.png`); Bobby duyệt trực tiếp
+trên dev-portal. **Lưu ý probe**: claude-probe không phải chủ projection
+workspace nên lần chụp đầu mọi EDS-04/05/07 trả 404 typed (DR-18); tôi đổi
+owner workspace **trên DB probe** (không đụng dev) để chụp đường dữ liệu.
+Trên dev, Bobby là chủ `ws_06G19F61YB8CFR7TEWMS7HQ660` → không gặp DR-18.
+
+### A4.3 Deploy dev (`dev-portal.primusspark.com`)
+
+- `.env` dev: bật `CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR=true` và
+  `…_READS=true` (05-09 tối). Backfill mirror dev từ `execution_timeseries_history`
+  (710k row) bằng script canonical-digest — chỉ paper relations có (DR-20).
+- Image `:dev` build từ nhánh eds **`635e2a5`** (control-api + portal-web),
+  `up -d` hai service trong project `portal` lúc 05-09 ~20:20 UTC — **ĐÃ LÊN**:
+  `portal-control-api-1` + `portal-portal-web-1` healthy trên image `:dev` mới,
+  env container có `FEATURE_EXECUTION_DURABLE_MIRROR=true`, `…_READS=true`,
+  `EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID=ws_06G19F61YB8CFR7TEWMS7HQ660`;
+  mirror dev **710,449 row** (backfill 710k + worker); bundle FE
+  `assets/index-BvUcBKjK.js`; `/views/equity-chart` không session → 401 typed
+  (đúng). Các service khác (postgres/nats/minio/portal-api/quant-worker/
+  roadmap-api) không đụng. Rollback: `up -d` lại với image `:dev` cũ hoặc tắt
+  hai cờ trong `.env` rồi `up -d control-api`.
+
+### A4.4 Bobby kiểm gì trên dev (checklist goal)
+
+1. `/deployments/accounts/paper-binance-gridcombine001_4h` — chart "ACCOUNT
+   EQUITY · PAPER": kéo chọn vùng để zoom, double-click reset, Ctrl+wheel,
+   Lin/Log, 1W/1M/3M/ALL, hover tooltip UTC, pill giá cuối có halo nhấp nháy
+   (fresh). Caption phải khai `51375 → 2327 samples · downsample MIN_MAX_LAST_BUCKET_V1`.
+2. `/deployments/paper/<deployment>` — chart equity mới + tile "Execution quality"
+   PARTIAL với số thật, reject rate `1 / 19`.
+3. `/deployments/portfolios/portfolio_types_pool?tab=Capital%20Ledger` — board
+   "Capital by currency" 3 chip env, hàng paper USDT.
+4. `/deployments/alphas/<alpha>` — chart Equity by stage mới; tile Activity
+   rollup EMPTY typed (DR-21, chờ codex sửa khóa).
+5. `/execution` — board Source health 3 env ngay dưới masthead.
+6. Không màn nào mất hiệu ứng động cũ: motion vẫn gate theo freshness/tick
+   như trước; pulse chart chỉ thêm khi fresh.
+
+### A4.5 Chưa làm / giới hạn thật
+
+- Sparkline fleet uPlot và ECharts reskin (OR-3 dòng 2) chưa.
+- Governance/ops tile (Inbox/R1/R2/Exit/Waivers/Queue/Incident) của G5 chưa
+  wire thêm — route đã probe xanh (approvals) / 403 USER (queue).
+- EDS-07 cho live/sandbox/deployment: UNAVAILABLE typed tới khi mirror có
+  relation (DR-20); portfolio subject: nguồn từ chối (BR-EX-79 Ask).
+- Ký từng màn A-04 (identity ngoài trang đầu, mixed-currency) chưa làm.
+- e2e BFF double không có route EDS-05/07 (DR-19) → e2e thấy typed unavailable.
+
+## A5. GOAL 06-09 — "so sánh từng tí" showcase ↔ dev-portal, chart/insight/replay không có dữ liệu, Command Center mất động
+
+Owner hỏi ba câu: (1) G7+G4+G5 sửa màn nào, (2) vì sao Insight Charts và
+Trade Replay vẫn không có dữ liệu dù equity chart đã mới, (3) Command Center
+mất động, mất màu so với showcase. Trả lời bằng đo máy, không bằng cảm giác.
+
+### A5.1 Câu 1 — G7+G4+G5 đã chạm màn nào (xem chi tiết §A4.1)
+
+| Màn | Đổi gì |
+|---|---|
+| Account 360 | chart EDS-07 mới (uPlot) + pulse fresh |
+| Paper Workbench | equity chart uPlot + tile Execution quality |
+| Alpha 360 | Equity-by-stage chart uPlot; tile Activity (EMPTY typed, DR-21); Insight tile Stage equity uPlot |
+| Portfolio 360 · Capital Ledger | board Capital 3 env × currency |
+| Command Center | board Source health 3 env |
+| Live Full · Canary · Fixtures demo | equity chart uPlot (cùng component) |
+
+Không đổi: Paper/Sandbox/Live Overview, Fleet, Blotter, Governance, Ops.
+
+### A5.2 Cách đo
+
+Showcase = `execution-portal` (:8081, build **preview** `VITE_EXECUTION_PREVIEW_ENABLED`,
+`previewControllers.tsx` bơm **smoke** `ccSmoke()/paperSmoke()/pfDemo()/TradeReplay`).
+Dev = image `635e2a5` chụp trên probe :8090 (login localhost :8080 bị
+ORIGIN_DENIED — cùng image, dữ liệu thật). Harness `shots5.js`: cùng viewport
+1440×1100, đếm `document.getAnimations()`, phần tử có CSS animation, `data-tone`,
+canvas, panel; 7 route mỗi bên.
+
+### A5.3 Kết quả đo (trước khi sửa, 06-09)
+
+| Màn | Showcase | Dev (thật) | Khác biệt gốc |
+|---|---|---|---|
+| Command Center | **24** phần tử động (beat, pulse CRITICAL, rankring, overdue/due text, drain, flash ×3, canary, funnel grow ×4, matrix nowdot ×5); panel **Promotion pipeline**; tone warn3/bad2/mute2/good1 | **3** động (rankring + overdue của 1 hàng OVERDUE thật); **không có** Promotion pipeline; không beat; tone chỉ warn×7 (chip source-health) | Toàn bộ động/màu showcase đến từ `ccSmoke()` (pipeline giả, pin/fleet giả, clock giả). Dev không có nguồn thay thế → mất |
+| Alpha 360 Overview | 3 canvas, tone 11 | 2 canvas, tone 6 | tương đương; khác dữ liệu |
+| Alpha 360 · Insight Charts | **12 canvas** (12 chart demo, 11 chữ SMOKE) | **1 canvas** (Stage equity) · 6 tile chỉ in số (fact rows) · 2 tile **insufficient_data dù server AVAILABLE** (Drawdown overlap, Correlation — FE không có case vẽ) · 3 UNAVAILABLE thật (Market candles N28, ρ timeline, Paper-vs-live drift) | FE chỉ vẽ chart cho stage-equity; các branch khác có dữ liệu (funnel 770 orders, quality, contribution, journal 200 event, drawdown 43 alpha × 50 ngày, correlation 66 pair) nhưng FE in chữ hoặc bỏ qua |
+| Alpha 360 · Trade Replay | chart replay SVG demo + trade log | **0 canvas**: chỉ thông báo "candles unavailable" + bảng 200 event | Không có candles (N28) → FE bỏ luôn chart dù có equity series 1474 điểm + 12 fill |
+| Paper Overview | 4 canvas · 2 động (gatechip pulse, tick) | 1 canvas · 0 động · 1 empty | smoke `paperSmoke()`; chưa xử lý đợt này |
+| Portfolio 360 Overview | 4 canvas · 2 động (livedot, kpival) | 0 canvas · 0 panel | smoke `pfDemo()`; chưa xử lý đợt này |
+| Live Overview | 4 canvas · 3 động | 0 canvas | smoke; chưa xử lý đợt này |
+
+Payload thật: `GET /alphas/{id}/query-analytics` = **4.0 MB** (source_facts 6627
+row) — DR-10 đo lại.
+
+### A5.4 Sửa trong goal này (nhánh eds, sau `635e2a5`)
+
+**Command Center — động và màu từ dữ liệu thật, không smoke**
+- **Promotion pipeline thật** từ Fleet register (`GET /alphas`, BR-EX-72): funnel
+  = số alpha có deployment trong stage (funnel grow), matrix alpha × stage
+  (ô `current` = deployments hôm nay, chip stage màu, nowdot), cap 12 hàng
+  có ghi "top 12 of N". Register không publish lịch sử promotion → không ô
+  "done", không conversion — ghi thẳng trong footer panel (`fleetPipeline.ts`).
+- **Beat** chạy khi SSE stream thật đang nối (`live.phase` ≠ idle/auth_expired/
+  source_lost), không phải khi smoke.
+- **Đồng hồ thật**: `age mm:ss` kể từ `read_at` nhích mỗi giây; thanh SLA
+  (`Needs you now`) chạy theo (drain/overdue/due-text) — tắt trên fixtures/
+  webdriver/reduced-motion như mọi motion khác.
+- CRITICAL pulse, severity colour, OVERDUE: vốn đã theo dữ liệu thật, giữ.
+- Chưa có nguồn thật → không làm: figure nhấp nháy ở Pinned (không có pin
+  thật), sub-note màu ở Fleet cells (server không publish tone).
+
+**Alpha 360 · Insight Charts — 8 tile vẽ chart từ số server**
+| Tile | Chart | Nguồn |
+|---|---|---|
+| Exact query surface | bars đếm fact/relation | `source_fact` counts |
+| Exposure profile | bars notional/position | `positions[]` |
+| Stage equity | uPlot (đã có) | `chart_series[equity]` |
+| Execution quality | bars submitted/filled/risk-rej/broker-rej | `execution_quality.v1` |
+| Venue contribution | bars net/venue·currency (không cộng chéo currency) | performance |
+| Order funnel | bars total + status | `order_funnel.v1` |
+| Trade replay journal | bars event/ngày UTC — **đếm phía client**, provenance ghi rõ | `replay.trade_log` |
+| Drawdown overlap | LinesChart drawdown alpha này + band các cửa sổ joint-drawdown | `drawdown_overlap.v1` (đọc mới) |
+| Correlation matrix | bars ρ với từng alpha khác, ρ=0 threshold | `portfolio-correlation-returns.v1` pairs (đọc mới) |
+| Market candles · ρ timeline · Paper-vs-live | typed UNAVAILABLE (thật) | N28 / N25 |
+
+**Alpha 360 · Trade Replay** — chart equity uPlot với marker dashed tại mỗi FILL
+của journal (không phải chart giá — ghi rõ "candles unavailable · N28"), bảng
+journal exact giữ nguyên.
+
+### A5.5 Còn lệch showcase, chưa làm đợt này (đề xuất goal kế)
+
+- Paper Overview (`paperSmoke`: gate chip pulse, tick, 3 chart demo) → cần
+  wire funnel/runway từ profile thật + tick từ SSE.
+- Portfolio 360 Overview (`pfDemo`: livedot, kpival tick, equity vs benchmark,
+  cross-portfolio, config log) → equity portfolio bị nguồn từ chối
+  (`portfolio_equity` MANAGER_V2_SOURCE_CONTRACT_REJECTED) — chặn ở BR-EX-79.
+- Live Overview (livedot/kpival tick, 4 chart) → không có deployment live.
+- Fleet sparkline uPlot + ECharts reskin (OR-3 dòng 2).
+
+### A5.6 Bằng chứng sau sửa (probe :8090, cùng harness, cùng viewport)
+
+| Màn | Trước | Sau | Showcase (tham chiếu) |
+|---|---|---|---|
+| Command Center — phần tử động | 3 | **32** (beat 1 · rankring 1 · overdue 2 · funnel grow 4 · matrix nowdot 24) | 24 |
+| Command Center — panel | 5 (không pipeline) | **6** — có Promotion pipeline thật (43 alpha, 12 hàng hiện, footer ghi cap) | 5 (pipeline giả 4 hàng) |
+| Alpha 360 · Insight Charts — canvas | 1 | **9** (3 UNAVAILABLE typed thật, 0 insufficient_data) | 12 (toàn demo) |
+| Alpha 360 · Trade Replay — canvas | 0 | **1** (equity + 12 marker fill) | 1 (SVG demo) |
+
+Gate: `tsc -b` sạch · vitest **101 file / 1859 pass** · N29 re-pin 2 digest. Ảnh
+`s5_probe2_*.png`, `s5_probe3_*.png` (scratchpad phiên).
+
+**Deploy dev 06-09 ~02:55 UTC**: `portal-portal-web-1` recreate trên image `:dev` mới (bundle `assets/index-BP7ruNdb.js`), control-api giữ image `635e2a5` (goal này không đổi backend). Commit FE: **`7f6f5cb`** trên `feat/eds-current-bff` (đã push origin).
 
 ## A3. Luật vận hành kế hoạch này
 
