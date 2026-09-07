@@ -13,6 +13,7 @@ import type { PanelStatus } from "../contracts";
 import { ReplayCandleChart, type ReplayChartHandle } from "./ReplayCandleChart";
 import { buildLog, legLevels, legRole, money, ms, num, pairRoundTrips } from "./tradeReplayModel";
 import { EMPTY_GROUPS, type ReplayGroups } from "./tradeReplayGroups";
+import { soonReason } from "../soon";
 import type { LogRow, ReplayFill, ReplayOrder } from "./tradeReplayModel";
 
 export {
@@ -186,12 +187,11 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
   const markPrice = lastBar ? lastBar.c : last?.price ?? null;
   const markLabel = lastBar ? "mark" : "last fill";
   const upTick = lastBar && prevBar ? (num(lastBar.c) ?? 0) >= (num(prevBar.c) ?? 0) : last && prev ? (num(last.price) ?? 0) >= (num(prev.price) ?? 0) : true;
-  const candlesWord = candles.state?.toLowerCase() ?? "unavailable";
   const klinesWord = market && market.state !== "READY"
     ? `venue klines ${market.state.toLowerCase()}${market.reasonCode ? ` · ${market.reasonCode}` : ""}`
     : marketTransport !== "ok" && marketTransport !== "loading" ? `venue klines ${marketTransport}${marketReason ? ` · ${marketReason}` : ""}`
     : marketTransport === "loading" && !market ? "venue klines loading" : null;
-  const notice = bars.length > 0 ? null : `${klinesWord ?? "venue klines not requested"} · source candles ${candlesWord} (${candles.reason ?? "not published"}) — no candles: the time axis is indexed by the events themselves`;
+  const notice = bars.length > 0 ? null : `${klinesWord ?? "venue klines not requested"} · Trading System candles: ${soonReason(candles.reason) ?? "Soon · BR-EX-50"} — no candles: the time axis is indexed by the events themselves`;
   const height = tall ? HEIGHT.tall : HEIGHT.compact;
   const brackets = scopedFills.filter((f) => !trips.some((tr) => tr.exit.fillId === f.fillId)).length;
 
@@ -272,7 +272,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           {market && market.state === "READY"
             ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? new Date(market.fetchedAtMs).toISOString().slice(11, 19) : "—"}Z, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
             : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
-          {" "}· source candles {candlesWord} ({candles.reason ?? "not published"}) — BR-EX-50 pending · as_of {asOf ?? "not stated"}
+          {" "}· Trading System candles: {soonReason(candles.reason) ?? "Soon · BR-EX-50"} · as_of {asOf ?? "not stated"}
           <span className="exec-rp-attrib"> · charting: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener">TradingView Lightweight Charts™</a> © TradingView, Inc.</span>
         </footer>
       </section>

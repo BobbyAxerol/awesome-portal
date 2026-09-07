@@ -12,6 +12,8 @@
 import type { PanelStatus } from "../contracts";
 import type { ReactNode } from "react";
 
+import { soonReason, soonTitle } from "../soon";
+
 const TITLE: Record<Exclude<PanelStatus, "ok">, string> = {
   loading: "Loading",
   empty: "Nothing to show",
@@ -68,10 +70,16 @@ export function PanelState({
 }) {
   if (status === "loading") return <PanelSkeleton />;
 
+  // A capability the source has not published yet is a schedule, not a fault:
+  // it reads "Soon" and keeps its code, so nobody pages an engineer over it and
+  // nobody holds a phase open waiting for it (owner ruling 2026-09-07).
+  const title = soonTitle(status, reason, TITLE[status]);
+  const line = soonReason(reason);
+
   return (
-    <div className="exec-state" data-status={status}>
-      <span className="exec-state-title">{TITLE[status]}</span>
-      {reason ? <span className="exec-state-reason">{reason}</span> : null}
+    <div className="exec-state" data-status={status} data-soon={title === "Soon" ? "true" : undefined}>
+      <span className="exec-state-title">{title}</span>
+      {line ? <span className="exec-state-reason">{line}</span> : null}
       {lastGood ? <div className="exec-state-lastgood">{lastGood}</div> : null}
       {actions}
     </div>

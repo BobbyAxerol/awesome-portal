@@ -76,7 +76,11 @@ export class OperationalCompositionController {
   private async principal(request: CompositionRequest, raw: unknown) {
     const parsed = QuerySchema.safeParse(raw);
     if (!parsed.success) throw new PortalDerivationError("EDS05_QUERY_INVALID", 400, "Invalid composition query.");
-    const workspaceId = parsed.data.workspace_id ?? request.portalWorkspaceId;
+    // An unqualified read means the projection's own workspace, not the
+    // session's personal one (DR-30); membership still decides access.
+    const workspaceId = parsed.data.workspace_id
+      ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
+      ?? request.portalWorkspaceId;
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new PortalDerivationError("EDS05_PROJECTION_WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }

@@ -104,7 +104,7 @@ function service(relations: Record<string, ProjectionRelation>) {
 function principal() { return { user, session, workspaceId }; }
 
 describe("EDS-04 named resource BFFs", () => {
-  it("pins a named resource read to the configured projection workspace before it can read data", async () => {
+  it("refuses a named foreign workspace, so the projection is never relabelled", async () => {
     const read = vi.fn();
     const controller = new ResourceReadController(
       { read } as unknown as ResourceReadService,
@@ -113,8 +113,44 @@ describe("EDS-04 named resource BFFs", () => {
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_other", portalSession: session } as never;
 
-    await expect(controller.alpha(request, "alpha_target", {})).rejects.toMatchObject({
+    await expect(controller.alpha(request, "alpha_target", { workspace_id: "ws_other" })).rejects.toMatchObject({
       code: "EDS04_PROJECTION_WORKSPACE_NOT_FOUND",
+      status: 404,
+    } satisfies Partial<ResourceReadError>);
+    expect(read).not.toHaveBeenCalled();
+  });
+
+  it("reads the projection's own workspace when the caller names none, whatever the session's personal workspace is (DR-30)", async () => {
+    const read = vi.fn(async () => ({ ok: true }));
+    const isMember = vi.fn(async () => true);
+    const controller = new ResourceReadController(
+      { read } as unknown as ResourceReadService,
+      { isMember } as never,
+      config(),
+    );
+    const request = { portalUser: user, portalWorkspaceId: "ws_personal_of_another_member", portalSession: session } as never;
+
+    await controller.alpha(request, "alpha_target", {});
+    expect(isMember).toHaveBeenCalledWith(workspaceId, user.userId);
+    expect(read).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId }),
+      "ALPHA",
+      "alpha_target",
+      undefined,
+    );
+  });
+
+  it("still refuses a member of no projection workspace", async () => {
+    const read = vi.fn();
+    const controller = new ResourceReadController(
+      { read } as unknown as ResourceReadService,
+      { isMember: vi.fn(async () => false) } as never,
+      config(),
+    );
+    const request = { portalUser: user, portalWorkspaceId: "ws_other", portalSession: session } as never;
+
+    await expect(controller.alpha(request, "alpha_target", {})).rejects.toMatchObject({
+      code: "WORKSPACE_NOT_FOUND",
       status: 404,
     } satisfies Partial<ResourceReadError>);
     expect(read).not.toHaveBeenCalled();

@@ -61,11 +61,16 @@ export class ResourceReadController {
     }
     const query = ResourceQuerySchema.safeParse(raw);
     if (!query.success) throw new ResourceReadError("EDS04_RESOURCE_QUERY_INVALID", 400);
-    const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
+    const workspaceId = query.data.workspace_id
+      ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
+      ?? request.portalWorkspaceId;
     // The accepted local projection is deliberately bound to one configured
-    // Portal workspace.  A caller may select it explicitly if they are a
-    // member, but must never use a different workspace id as a label around
-    // data read from that projection.
+    // Portal workspace, and that workspace — not the session's personal one —
+    // is what an unqualified read means. Membership is still required, and a
+    // caller who names a different workspace is still refused: the reply is
+    // always labelled with the projection's own workspace, never another.
+    // Before 2026-09-07 the personal default meant every account except the
+    // projection owner's received 404 on eight screens (DR-30).
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new ResourceReadError("EDS04_PROJECTION_WORKSPACE_NOT_FOUND", 404);
     }

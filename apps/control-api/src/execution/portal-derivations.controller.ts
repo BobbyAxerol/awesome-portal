@@ -66,10 +66,14 @@ export class PortalDerivationsController {
   private async principal(request: DerivationRequest, raw: unknown, requireEnvironment = false) {
     const parsed = QuerySchema.safeParse(raw);
     if (!parsed.success) throw new PortalDerivationError("EDS05_QUERY_INVALID", 400, "Invalid derivation query.");
-    const workspaceId = parsed.data.workspace_id ?? request.portalWorkspaceId;
+    const workspaceId = parsed.data.workspace_id
+      ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
+      ?? request.portalWorkspaceId;
     // Every derivation is a label-safe view of the one accepted local
-    // projection.  Membership alone must not let another workspace relabel
-    // that projection's facts.
+    // projection, and an unqualified read means that projection's workspace —
+    // not the session's personal one (DR-30). Membership is still required and
+    // a named foreign workspace is still refused, so no caller can relabel
+    // these facts with a workspace of their own.
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new PortalDerivationError("EDS05_PROJECTION_WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }

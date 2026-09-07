@@ -138,7 +138,7 @@ describe("TradeReplayEvents panel", () => {
     expect(stage.getAttribute("data-replay-events")).toBe("2");
     expect(stage.getAttribute("data-replay-bars")).toBe("0");
     // no candles: the scale is indexed by the events themselves and the panel says so
-    expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("source candles unavailable (E5_MARKET_CANDLES_NOT_PUBLISHED)");
+    expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("Trading System candles: Soon · E5_MARKET_CANDLES_NOT_PUBLISHED");
     expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("indexed by the events themselves");
     expect(recorder.state.data.every((d) => typeof d === "object" && d !== null && !("open" in d))).toBe(true);
     const scene = primitive().scene;
@@ -180,7 +180,7 @@ describe("TradeReplayEvents panel", () => {
     expect(screen.getByRole("combobox", { name: "Candle interval" })).toBeTruthy();
     expect(screen.getByText("15m inferred from the strategy id · DERIVED")).toBeTruthy();
     expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard");
-    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("source candles unavailable (E5_MARKET_CANDLES_NOT_PUBLISHED)");
+    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("Trading System candles: Soon · E5_MARKET_CANDLES_NOT_PUBLISHED");
     expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("long entry");
     expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("short exit");
   });

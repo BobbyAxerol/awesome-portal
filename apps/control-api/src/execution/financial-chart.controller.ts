@@ -110,9 +110,13 @@ export class ExecutionFinancialChartController {
   }
 
   private async authorizeWorkspace(request: FinancialChartRequest, requestedWorkspace: string | undefined): Promise<string> {
-    const workspaceId = requestedWorkspace ?? request.portalWorkspaceId;
-    // A caller cannot use membership in one workspace to relabel the lone
-    // accepted execution mirror owned by another workspace.
+    // An unqualified read means the workspace the accepted mirror lives in,
+    // not the session's personal one (DR-30). A caller still cannot use
+    // membership in one workspace to relabel the lone accepted execution
+    // mirror owned by another workspace.
+    const workspaceId = requestedWorkspace
+      ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
+      ?? request.portalWorkspaceId;
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new FinancialChartError("EDS07_PROJECTION_WORKSPACE_NOT_FOUND", 404);
     }
