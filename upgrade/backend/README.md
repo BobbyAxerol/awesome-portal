@@ -1612,6 +1612,26 @@ durable run/attempt events. Detailed evidence:
   deployments, BFF `200`, no unavailable panel and no console warning; the
   first-ever population remains fail-closed.
 
+## Backend state — 2026-09-06 (EDS-12 immutable qualification)
+
+- EDS-12 is `STATIC_QUALIFICATION_READY / OFFLINE_DR_QUALIFIED /
+  DEPLOYED_EVIDENCE_PENDING`.  Its source pack has no runtime effect and does
+  not widen source, query, SSE, command or Live-mutation authority.
+- A pure Rust authority, strict static/deployed evidence verifier, ten-scenario
+  failure matrix, profile-local operations/rollback runbooks and the isolated
+  N17A restore/rebuild rehearsal are versioned together.  P01/R4/R5 remains
+  pinned to verified source-only integration `98c47b3` (the portable-verification
+  follow-up to `1c5a7fa`) with lease TTL `900`.
+- Claude's BR-EX-80 and BR-EX-81 are frozen as explicit source-owner evidence
+  gates: a derived timeframe stays visibly derived, and a bounded current page
+  is never represented as complete subject order/fill history.
+- Product activation still requires actual protected-main signed image,
+  SBOM/provenance, deployed browser/failure/profile evidence and accepted
+  source-return evidence; a local test or dev container cannot satisfy that
+  claim.
+- Detail:
+  [`EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md`](./EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md).
+
 ## Backend state — 2026-09-01 (product recomposition integration acceptance)
 
 - Claude's reviewed rich compositions are accepted on the product routes over

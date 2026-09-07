@@ -2195,3 +2195,31 @@ session-calendar and universe endpoints.  It will be consumed through one
 Trading-System-owned Market Context adapter, then a named Portal BFF; React
 must never call it directly.  See the
 [EDS-11R activation plan](../../../upgrade/backend/EDS_11R_CURRENT_MANAGER_V2_MAXIMUM_DATA_ACTIVATION.md).
+### 8.55 EDS-12 qualification handoff (2026-09-06)
+
+Codex has added the source-only EDS-12 release qualification pack.  It does
+**not** change an approved hierarchy, visual token, component, route or client
+transport.  It freezes the following frontend truth until a protected-main
+deployed evidence packet exists:
+
+1. Paper, Sandbox, Canary-over-Live and Live remain separate read-only product
+   stages.  Each must retain all seven panel states (`ready`, `empty`,
+   `partial`, `stale`, `unavailable`, `denied`, `error`) and never use another
+   profile as a fallback.
+2. Keep rich composition in every state.  A missing panel capability is a
+   panel-local honest state, not a replacement of the route with an envelope.
+3. BR-EX-80: until a validated source `timeframe`/`bar_interval` arrives,
+   retain the visibly `DERIVED` strategy-id suffix behavior.  A source value
+   wins only when the BFF marks it published and valid.
+4. BR-EX-81: a bounded profile-wide current `orders`/`fills` page is not alpha
+   or account history.  Keep the current explicit disclosure until the BFF
+   supplies a verified full retained drain, exact coverage/completeness and
+   subject cursor reads.
+5. Do not add a browser source call, raw relation/cursor, mTLS/JWT input,
+   client-side history reconstruction, command retry or Live mutation while
+   consuming EDS-12 data.
+
+The backend decision is `EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`,
+not Product GO.  After an immutable protected-main release, Codex will hand
+over the exact BFF evidence shape for the final per-profile browser matrix;
+until then no frontend release assertion should claim `PRODUCT_ACTIVE`.

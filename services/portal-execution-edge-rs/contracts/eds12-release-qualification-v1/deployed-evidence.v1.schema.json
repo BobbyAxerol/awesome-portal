@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://primusspark.com/schemas/portal-execution-eds12-deployed-evidence.v1.schema.json",
+  "title": "Sanitized EDS-12 deployed product evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_qualification_sha256",
+    "release_manifest",
+    "images",
+    "profiles",
+    "browser_states",
+    "failure_scenarios",
+    "source_extensions",
+    "p0_p1_open",
+    "owner_visual_data_action_parity",
+    "authority"
+  ],
+  "properties": {
+    "schema_version": {"const": "portal.execution.eds12-deployed-evidence.v1"},
+    "candidate_qualification_sha256": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"},
+    "release_manifest": {"type": "object"},
+    "images": {"type": "array", "minItems": 1},
+    "profiles": {"type": "array", "minItems": 4, "maxItems": 4},
+    "browser_states": {"type": "array", "minItems": 28},
+    "failure_scenarios": {"type": "array", "minItems": 10, "maxItems": 10},
+    "source_extensions": {"type": "array", "minItems": 2, "maxItems": 2},
+    "p0_p1_open": {"const": 0},
+    "owner_visual_data_action_parity": {"const": true},
+    "authority": {"type": "object"}
+  }
+}

@@ -6,7 +6,7 @@
 > **Baseline:** `feat/execution-data-activation` at `6f6503e`, 2026-09-04; the
 > accepted E7 return pack is pinned by `maximum-data-return-v1/MANIFEST.sha256`  
 > **Document status:** `COORDINATION_AUTHORITY_ACTIVE / EDS_BACKEND_CAMPAIGN_PLANNED /
-> EDS_00_AND_EDS_01_COMPLETE`  
+> IMPLEMENTATION_NOT_AUTHORIZED_BY_THIS_FILE`  
 > **Scope:** Portal Execution Loop backend, Paper read integration, Trading System compatibility,
 > activation, hardening and every current/future Claude backend request.
 
@@ -1866,11 +1866,6 @@ only for protected-main signed image evidence (`N29-REL-01`). Evidence:
 [`EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md`](./backend/EX_BE_32_N29_PRODUCT_ACCEPTANCE_AND_RELEASE_CLOSEOUT.md)
 and [`EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md`](./backend/EX_BE_33_BR_EX_72_MANAGER_LISTS_REGISTRY_CLOSEOUT.md).
 
-**Evidence rebinding (2026-09-05):** EDS-07 legitimately extended the
-server-side current-source boundary and its test. N29 now re-pins those exact
-two bytes and regenerates the N29 contract manifest; the offline verifier
-passes with the same scope, authority and single protected-main release gate.
-
 ### N29-RTA — Runtime truth reset and data-first product closeout (2026-09-02)
 
 **Current product verdict:** `PRODUCT_NO_GO / DATA_PLANE_PARTIAL /
@@ -3035,8 +3030,8 @@ Append rows here. Do not create another active request file.
 | BR-EX-77 | 2026-09-02 | Fleet/lists freshness + realtime coverage | Fleet chip pinned STALE (5 s constant vs 15–60 s cadence); Fleet/360/Blotter/CC have no stream binding; delta handling is refetch-per-event | Envelope-declared freshness budgets per ingestion class with AGING tier; extend profile-realtime to remaining read screens; bounded delta coalescing | `PORTAL_PROJECTION` envelopes | read-only · low | existing SSE bounds; coalesce ≥1 s | Phase 1 five-kind contract | budget absent → UNKNOWN never fake-FRESH | unit + SSE + journey with motion assertions | Claude (backend co-impl) | Phase 4 / P4-C | `RECEIVED` | all rich read screens | dev read only | Phase 4 §P4-C; findings F3/F4 |
 | BR-EX-78 | 2026-09-02 | Profile taxonomy + lineage observability + window ladder | N30 lineage guard structurally rejects non-BINANCE paper parents (DNSE/VN) with no diagnostics; flat 400-row windows block 30 d rollups/history | Owner profile-set decision (recommend `PAPER_DNSE_VNM`); reject counters by missing-parent class in envelope; per-class ingestion windows + warm SGP history; DERIVED portfolio-equity while MC gap stays typed | `TRADING_SYSTEM` via `PORTAL_PROJECTION`; derived `DERIVED` | read-only · medium (taxonomy touches isolation proofs) | window ladder per N29-RTA budget table | Phase 1 lineage guard; owner decision | strict rejection retained; counters bounded | taxonomy negatives + migration/restore + parity | Codex + Claude | Phase 4 / P4-D | `APPROVED_IMPLEMENTATION_IN_PROGRESS` (2026-09-03, Bobby approved `PAPER_DNSE_VNM`) | VNM workbench, Fleet rollups, history charts | dev read only | Phase 4 §P4-D; findings F5/F6/F7/F9 |
 | BR-EX-79 | 2026-09-03 | Source publication set for full-data screens | Live sweep: equity/performance relations empty (`SOURCE_PARTIAL`, 0 rows), `portfolio_equity` contract-rejected since Phase 1, live balances published without live accounts, cross-family rows in the BINANCE paper feed, `venue_accounts`/margin/sync zero, candles/benchmark/twin-join not activated, no ≥30 d retention | Detailed publication request to the Execution Cell agent: `upgrade/backend/EXECUTION_SOURCE_PUBLICATION_REQUEST_2026-09-03.md` (13 items P0–P2 + 1 question; restates MC-01…09; DNSE deferred by owner) | `TRADING_SYSTEM` / Execution Cell | read-only · none Portal-side | per-item bounds in the request | none (Portal seams delivered Phase 4) | typed states stay until verified | live projection inventory before/after | Execution Cell agent | Phase 4 follow-on | `EXTERNAL_CONTRACT_PENDING` | every data-bearing screen | n/a | request doc §0 table |
-| BR-EX-80 | 2026-09-06 | Alpha 360 · Trade Replay (candle interval) · Account 360 | The source publishes no strategy timeframe (strategies relation carries `active, trader_id, created_at, strategy_id` only), so the replay infers the bar interval from the strategy id suffix and labels it DERIVED | Facts: `strategies[].timeframe` (or `bar_interval`) in the strategies relation and the fleet register, vocabulary `1m\|5m\|15m\|30m\|1h\|4h\|1d` | TRADING_SYSTEM | read-only · low | 42 strategies; static per version | `strategies` relation (EDS-04) · BR-EX-72 fleet register | absent → frontend keeps the suffix rule with its DERIVED label | frontend `replayCandleChart.test` (published timeframe wins over the suffix) | Codex | EDS-04 / EDS-12 | `RECEIVED` | `TradeReplayLive` — `publishedTimeframe()` already reads it | none | OR-5.6 (tracker) · DR-21 |
-| BR-EX-81 | 2026-09-06 | Alpha 360 · Trade Replay + Orders & Fills · Account 360 · Full Blotter | `orders` / `fills` reach the Portal as one bounded current page per profile (2026-09-06: 812 orders of 11 strategies, 71 fills of 5, over 42 deployed): an alpha with 2,026 equity snapshots (`delta_rsi_0011d`) has zero readable orders or fills, so Trade Replay, Orders & Fills and the funnels cannot be true per alpha, while the Overview funnel counts are profile-wide (DR-22) | **Owner order 2026-09-06: pull the complete `orders` and `fills` history of every profile from the Trading System through the portal execution edge** into the durable mirror (as EDS-06 did for equity: resumable cursor drain, digest dedupe, append-only, gap ledger), then serve per-subject reads: `GET /api/v1/execution/resources/alphas/{id}/orders\|fills?cursor&limit` and `…/accounts/{id}/orders\|fills…` (keyset `(updated_at, order_id)` / `(trade_time, fill_id)`, ≤500 a page, exact `total`), same EDS-04 envelope with `completeness` and `coverage{from,to,rows}`; N25 `source_facts` scoped to the subject (closes DR-22) | TRADING_SYSTEM rows · PORTAL_OBSERVATION mirror (append-only) · nothing DERIVED | read-only · medium: a page presented as history is exactly the misread this removes | 10³–10⁵ rows per alpha; pages ≤500; freshness = mirror `as_of`; a truncated drain must be named in `completeness` | EDS-06 mirror worker · §6.5 orders/fills routes (N11) · manager facade paging semantics (source owner to confirm cursor/page contract) | until delivered the replay prints "no order or fill of <alpha> in the retained page · the page holds N orders / M fills / K strategies" (`ce08548`); no client-side widening | mirror row counts equal source counts per relation and profile; every strategy with fills in the source renders ≥1 marker; `delta_rsi_0011d` replay is non-empty iff the source holds its fills; frontend deletes the account-scoped client filter of the profile page on delivery | Codex · source owner (facade paging) | **EDS-12** (owner order 2026-09-06) | `RECEIVED` | `TradeReplayLive` / `replayEvents` — consumer ready; stopgap filter to be removed | none until approved | DR-22 · DR-24 · DR-25 · DR-26 · OR-5.12 (tracker) · BR-EX-50 |
+| BR-EX-80 | 2026-09-06 | Alpha 360 · Trade Replay candle interval · Account 360 | The current `strategies` relation only publishes `active`, `trader_id`, `created_at` and `strategy_id`; the replay therefore derives an interval from an id suffix and labels it `DERIVED`. | Publish `strategies[].timeframe` (or `bar_interval`) and carry it through the Fleet register. Vocabulary is `1m\|5m\|15m\|30m\|1h\|4h\|1d`; a published value always wins over the derived suffix. | `TRADING_SYSTEM` | read-only · low | 42 strategies; static per source revision; exact string vocabulary | `strategies` relation / Fleet register; no browser inference becomes source truth | absent → retain the suffix rule and its `DERIVED` label; invalid → typed unavailable field | contract fixture and `replayCandleChart` proof that published timeframe wins | Codex + Trading System owner | EDS-12 | `APPROVED_OWNER_RETURN_REQUIRED` | `TradeReplayLive.publishedTimeframe()` is consumer-ready | no runtime widening | OR-5.6 · DR-21 |
+| BR-EX-81 | 2026-09-06 | Alpha 360 Trade Replay + Orders/Fills · Account 360 · Full Blotter | A bounded profile-wide current page cannot honestly serve subject history: observed input held 812 orders from 11 strategies and 71 fills from 5 strategies across 42 deployed strategies, while strategy-level replay could be empty despite source fills. | Drain the complete retained `orders` and `fills` history of every approved profile only through the Execution Edge into an append-only Portal observation mirror: resumable relation-bound cursor drain, digest dedupe, gap ledger, exact source-vs-mirror counts. Serve subject reads at `alphas/{id}/orders|fills` and `accounts/{id}/orders|fills`, keyset `(updated_at, order_id)` / `(trade_time, fill_id)`, `limit ≤ 500`, exact total and `{completeness, coverage{from,to,rows}, as_of}`. Scope N25 source facts to that same subject. | `TRADING_SYSTEM` rows → `PORTAL_OBSERVATION`; no direct database, Redis, broker or browser source access | read-only · medium: presenting one retained current page as subject history is prohibited | 10³–10⁵ rows/subject; one in-flight drain/profile/relation; page ≤500 at Portal; cursor opaque and relation/profile-bound; a partial drain remains explicitly partial | current Manager relation pager must prove a stable full-retention cursor traversal; EDS-06/N24 mirror and EDS-04 envelope are reused | until verified, preserve the explicit current-page message and profile-wide funnel label; no client-side widening/filter is a substitute | mirror/source exact-count and duplicate/cursor-cycle/gap/restart tests; every strategy with source fills renders a marker; targeted replay remains empty only when source has none | Codex + Trading System owner | EDS-12 | `APPROVED_IMPLEMENTATION_PENDING_SOURCE_PROOF` | `TradeReplayLive` / `replayEvents` consumer is ready; remove the stopgap profile-page filter only after source/mirror parity | no runtime widening; commands and Live mutation remain separately gated | DR-22 · DR-24 · DR-25 · DR-26 · OR-5.12 · BR-EX-50 |
 | _next: BR-EX-82_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
 ### 7.3 Request quality gate
@@ -4052,19 +4047,6 @@ Read these only when entering the mapped phase; this plan is the everyday overvi
 
 | Date | Change | Evidence/status effect |
 |---|---|---|
-| 2026-09-06 | **EDS-11R5 source-as-is audit closes the false choice between “use nothing” and “claim replay”**: `domain_events` is a real immutable audit table and is already useful through the bounded Portal observation lane; it is not a published authoritative replay stream. | Read-only AWS-HK inspection confirms its deterministic query order is only `event_ts, created_at`, while the table has no source epoch, contiguous per-stream sequence, correction/tombstone vocabulary, declared retention floor, snapshot/resume contract or durable consumer ACK. Existing `event/source.py` was source-dark/test-only at audit time, and raw `payload`/`raw` fields are unsuitable for Portal publication. **Status: `OBSERVED_HISTORY_CLOSED_AT_PORTAL / AUTHORITATIVE_LEDGER_SOURCE_DARK_IMPLEMENTED / RUNTIME_NOT_ACCEPTED`.** EDS-10b/R1–R3 continue to show safe current observation without a direct table/browser route; no source/database/runtime change is needed or hidden. |
-| 2026-09-06 | **EDS-11R4 Trading-System source implementation is complete in its isolated clean worktree**: commit `26fd6b2` adds only the two frozen private Manager-v2 routes over confirmed `DataLayerV2Facade.latest_market()` / `warmup_bars()` readers, with profile/venue/instrument admission before every source call. | Added source-owned contract pack `contracts/portal-execution-owner/eds-11r-market-context-v1/`, manifest, synthetic row-free fixtures and a default-off runtime template. Changed-source Ruff and the full `tests/unit/test_portal_execution_owner_*.py` suite pass in a no-network test container; the manifest validates. **Status: `TS_SOURCE_IMPLEMENTED_RUNTIME_DISABLED / PORTAL_CONSUMER_SOURCE_DARK_READY / PENDING_SEPARATE_OWNER_DEPLOYMENT_EVIDENCE`.** No Data Layer client, listener, source-proxy route, Browser input, broker/CLI path or existing runtime container was enabled or changed. |
-| 2026-09-06 | **EDS-11R4 owner handoff is now machine-verifiable and included in the one official Trading System master campaign**: the Portal attachment pins the exact bounded Market Context v1 capability inventory, input/output schema, expected coverage fixtures, pending-return semantics and a manifest.  The owner needs only an additive Manager-side adapter over the already-running private Data Layer. | `execution-eds11r-market-context-test.sh` validates the attachment, its manifest, authority boundary and an end-to-end rendered master-campaign pack; the pack copies into the existing N28 return root without creating a second request.  **Status: `OWNER_HANDOFF_VERIFIED / SOURCE_IMPLEMENTATION_PENDING / NO_DATA_COLLECTION_WAIT`.  Next: Trading System agent implements and returns the digest-pinned adapter pack; Portal validates and consumes it through named BFFs.** |
-| 2026-09-06 | **EDS-11R4 Portal consumer contract closeout is complete while remaining source-dark**: the two fixed BFF endpoints now have canonical JSON Schema, OpenAPI, generated TypeScript types, valid populated fixtures and a static authority gate. | `execution-market-context.v1` permits only latest current observation (`≤200`, `1 MiB`) and bounded candles (`≤2,000`, `8 MiB`, `≤366 days`), preserves profile/freshness/completeness/UTC-ms/exact decimals, rejects unknown fields, and explicitly forbids replay claims. Contract verification passes **120/120**. **Status: `PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY / TS_ADAPTER_IMPLEMENTATION_PENDING`; no Edge/Data-Layer call, credential or runtime flag is enabled.** |
-| 2026-09-06 | **EDS-11R2 complete at the Portal server-side hydration gate**: existing rich Paper/Sandbox/Live product composers now prefer the durable local projection but can warm a simple current panel through the R1 static named-operation BFF when no first projection snapshot exists or when the local projection feature is deliberately off. The old generic direct `relation()` read-through is removed from the product source. | R1's safe page is converted only in-process into the existing narrow Manager-page composer shape: no raw record key, source relation/alias, source cursor, mTLS or delegated JWT is emitted. Only `N31_PROJECTION_NOT_READY` may warm through R1; stale/corrupt/scoped/detail queries remain fail-closed. Exact integer strings and UTC-ms survive. New focused warm-up/negative tests plus fresh-PG Control API **47 files / 399 tests** and restore drill pass. **Next: EDS-11R3 local projection/SSE runtime-readiness.** |
-| 2026-09-06 | **EDS-11R1 complete at the Portal contract gate**: a deterministic compiler now reconciles all **96/96** accepted Manager-v2 census entries into 54 named, same-origin screen-bound BFF operations plus explicit non-browser dispositions for 16 projection inputs, 13 audit-only relations and 13 internal-only relations. The browser-facing manifest contains only product operation IDs, route aliases, safe scalar DTO field names/kinds and screen ownership; it contains no source schema/relation, source alias, cursor, mTLS input or delegated JWT. | Generated source provenance pins the sanitized census + relation/column catalogues; 54 operation routes use a fixed 200-row/1-MiB bound, Portal-issued relation-bound continuation, UTC-ms codec, exact-decimal strings, Portal-derived opaque resource IDs and scalar/non-sensitive redaction. Focused generator, transport, profile/drift/continuation/redaction/controller tests pass. No current-source runtime flag, AWS-HK service, Trading System code, command or container changed. **Next: EDS-11R2 rich-panel consumption.** |
-| 2026-09-06 | **EDS-11R delivery plan expanded into five closeable phases immediately before EDS-12**: R1 classifies the complete 96-relation catalogue into named safe BFF authority; R2 retains and hydrates rich product panels; R3 supplies durable current projection, financial range and local SSE; R4 is a small TS-owned Data-Layer Market Context adapter; R5 is an explicitly optional authoritative-replay semantic upgrade | Corrected the old blanket `SOURCE_GAP_CONFIRMED` wording: Market Context data already exists but needs a versioned source adapter, while current `domain_events` remain observed history until a real sequence/epoch/correction/retention contract exists.  Each phase now has scope, ownership, negative tests, exit gate and no-hidden-debt rule |
-| 2026-09-06 | **EDS-11R AWS-HK runtime discovery corrected the current-source plan**: read-only inspection verified that Manager-v2 Paper/Sandbox/Live current read is already active, all three profiles share the same 96-relation catalogue digest, Source Proxy forwards the Manager-v2 private routes, and the private Data Layer already provides last-price/OHLCV/calendar/universe inputs.  The prior source-gap wording is retained only for missing authoritative semantics, not as a claim that current data is absent | EDS-11R is inserted before EDS-12: Portal must now map all authorized screen-bound relations to named safe BFFs, hydrate rich panels and activate local current-observation/SSE; only a small TS-owned Market Context adapter is needed for Data Layer facts.  No source/runtime/credential/container/command change occurred during inspection |
-| 2026-09-05 | **EDS-11 local BFF hydration and observation revalidation closed at the contract gate**: a committed Portal-local observation revision now resolves direct and composition-dependent Paper/Sandbox/Live screen impact through the frozen Screen BFF catalogue, yielding only the active profile's named same-origin `GET` operation IDs and a local epoch/sequence/digest tick. ProductRead/panel output withholds raw Manager checkpoints; bounded adapters use semantic product groups and Command Center withholds source checkpoints; one local journal tail fan-outs to browsers without source amplification | focused profile-isolation, unknown-mapping, operation/redaction, cursor-withholding and 100-client/shared-journal regressions plus the full fresh-PostgreSQL Control API gate; no Event/replay claim, direct source path, runtime activation, container, cache or command change |
-| 2026-09-05 | **EDS-10b observed timeline and derived mark-context closed at the contract gate**: Portal replaces the misleading current-page `replay-journal` presentation with a named bounded same-origin `executionObservedTimelineV1` BFF. It serves only `PORTAL_OBSERVATION` rows with exact decimal strings, UTC milliseconds, profile/freshness/coverage metadata and a Portal-signed projection-bound continuation; `DERIVED · mark-context` uses only published mark/equity context. True replay/Event/ACK/correction/global sequence/OHLCV remain separate typed source gaps | focused resource-isolation, stable mixed-clock order, cursor/redaction, exact-decimal, mark-context and disabled-profile regressions plus fresh-PostgreSQL Control API gate; no source transport, direct source path, command, runtime flag, container or profile activation |
-| 2026-09-05 | **EDS-09b Portal observation bridge closed source-dark**: current Manager-page data continues through the existing server-only lease/coalescer and durable mirror, while the local revision journal/SSE now carries only `PORTAL_OBSERVATION` provenance plus named affected screen IDs. A retained-range digest conflict is forensic-quarantined before the compatibility snapshot, source checkpoint or visible revision can advance | additive migration `1723680000024`; focused provenance/redaction/replay and quarantine regressions plus full fresh-PostgreSQL Control API **45 files / 384 tests** + restore gate; no Edge route, source transport, runtime flag, container, direct DB/Redis/broker/CLI or command change |
-| 2026-09-05 | **EDS-09 owner return accepted as source-as-is, current-product route replanned**: Portal verified the immutable owner-return manifest and EDS-08 validator. All 18 gaps and all three Event classes remain `SOURCE_GAP_CONFIRMED`; no current Manager page is allowed into `authoritative-event-core`. The binding decision is `EDS-09b` Portal observation journal → `EDS-10b` observed/derived panel plane → `EDS-11` local BFF/SSE. True Event/replay/market requirements are consolidated into one visible `Soon` source-upgrade backlog, never a blocker for existing Paper/Sandbox/Live current data | manifest **12/12** + EDS-08 owner-return validator passed (`18` gaps, `7` owner lanes, `3` Event classes, `8` synthetic cases); documentation only, no source/runtime/container/credential/command change |
-| 2026-09-05 | **EDS-03 maximum current truth closed at the code/contract gate**: exact deployment scope is resolved from the local, profile-bound projection before pagination; Paper/Sandbox/Live rich panels receive named current relation DTOs and generated UTC/panel envelopes; absent Canary governance can no longer hide a readable Live source; no-currency/no-mark position aggregates are typed-null rather than invented | E7 **34/18/3** + full manifest verified; read-only generator check; contracts **117/117**; fresh-PG Control API **40 files / 354 tests** + restore; Node 22 frontend **98 files / 1,826 tests / 3 skipped** + production build. No runtime/container/Edge/source/command mutation; detailed evidence `backend/EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md` |
 | 2026-09-04 | **OWNER RULING OR-1 (ghi tại EDS_FRONTEND_DATA_CONTRACT_TRACKER.md §OR, codex áp dụng ngay)**: BỎ chờ event-journal phía Trading System — EDS-08 hạ thành asks-nâng-cấp không chặn; EDS-09/10 đổi đầu vào sang observation lane (pseudo-tail từ resumable drain/mirror, lifecycle replay xấp xỉ từ orders+fills+sessions đã giao, market context DERIVED từ mark_price sẵn có — nhãn trung thực, không bịa OHLC); tận dụng tối đa mọi thứ E1→E7 đã adapt; yêu cầu duy nhất còn lại của DR-11 là mở song song lane FE (EDS-01→03). Kèm đính chính chốt đo: chuỗi E1→E7 là CODE thật đã xong nguồn-side | owner directive trong phiên; tracker cập nhật cùng commit |
 | 2026-09-03 | **First AUTHENTICATED end-to-end payload probe (viewer user `claude-probe`, USER role, tự tạo qua bootstrap CLI — không đụng credential owner)**: sự thật từng route. TỐT: alpha 360 analytics serve equity 1,540 điểm phủ đúng 05/08→04/09 downsample khai báo (source 10,119 rows); correlation AVAILABLE 66 cặp/43 alpha; drawdown AVAILABLE 43 alpha + 6 cửa sổ trùng; workbench 1,540+1,699 điểm windows khai báo. HỎNG — đích danh: (1) **/screens/paper overview chỉ serve 200 rows equity thô** (cap 200/relation của screens BFF, 43 account trộn ≈ 5 điểm/account) → chart overview không thể ra hồn, phải build DERIVED-sum series từ mirror phía server; (2) **payload khổng lồ**: workbench 5.9MB, alpha analytics 2.4MB (rows đầy đủ fields thay vì series (t,v)) — xác nhận R2 perf; (3) completeness PARTIAL toàn cục do 5 trang nóng transactional bounded-by-design + portfolio_equity typed-rejected → 'stage-equity' PARTIAL, polish 'ready' tắt — cần tách 'serving completeness' (window đã giao đủ, truncated khai báo) khỏi 'population completeness'; (4) workbench orders/fills=0 cho deployment probe (trang nóng 400 không chứa) — Lane E2 | curl + cookie session thật, files scratchpad paper/alpha/wb.json; kế tiếp: Fix A (overview series từ mirror) + Fix C (completeness semantics) |
 | 2026-09-03 | **Owner question "hiệu ứng động showcase biến mất trên dev-portal?" — investigated, NOTHING was removed**: HEAD chứa NHIỀU code hiệu ứng hơn nhánh showcase (287 vs 279 match; cả 2 nhánh showcase đều là tổ tiên của nhánh hiện tại; image portal-web:dev build 02:34 SAU commit FE cuối). Nguyên nhân thật: (1) **51 animation rule đều gate theo data-state đúng thiết kế hi-fi D4** — dot thở chỉ khi FRESH, pulse chỉ khi bad/CRITICAL/overdue, flash chỉ khi delta tick; showcase chạy fixture dàn dựng đủ trạng thái nên mọi effect nổ, dev chạy dữ liệu thật (không incident CRITICAL, không SLA overdue → im lặng là ĐÚNG); (2) hiệu ứng grow-on-mount chỉ chạy lần đầu vì P4-C giữ cây mounted khi revalidate (chủ đích chống loading-flash); (3) envelope PARTIAL toàn cục (portfolio_equity typed-rejected) ghìm polish "ready" ở mọi màn — sẽ tự hết khi release-kit/acceptance dọn trạng thái đó. Muốn effects nổ lại đúng cách: un-halt (tick/flash CC có delta thật) + dọn PARTIAL, KHÔNG phải bỏ gating | git diff/grep evidence hai nhánh + execution.css lines 1653-5094; không đổi code |
@@ -4479,38 +4461,27 @@ PLANNED → CONTRACT_LOCKED → SOURCE_ACTIVE → BFF_READY
 
 | Phase | Result | Depends on | Can close with current source? |
 |---|---|---|---|
-| EDS-00 | intake, hashes and frozen baseline | E7 handoff | complete; immutable planning gate closed |
-| EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | complete; fixed E5 deployment BFF authority closed |
-| EDS-02 | generated screen/action/panel/time contracts | EDS-01 | complete; 25 classified screens, 34 fields and 12 actions; no runtime mutation |
-| EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | **BFF_READY / FRONTEND_COMPATIBLE / VERIFIED** on 2026-09-05; yes, with typed gaps |
-| EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
-| EDS-05 | governance/operations and five Portal derivations | EDS-04 | **COMPLETE / VERIFIED** on 2026-09-05; yes, with typed gaps |
-| EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | **COMPLETE_SOURCE_DARK / VERIFIED** on 2026-09-05; yes for observed pages; no replay claim |
-| EDS-07 | equity/performance/risk/chart query plane | EDS-06 | **CODE_COMPLETE / SOURCE_DARK** on 2026-09-05; yes for retained source range |
-| EDS-08 | optional authoritative event/continuity upgrade lane | EDS-00; external source work | **OWNER_RETURN_VERIFIED / 18_GAPS_CONFIRMED** on 2026-09-05; it does not block current-data product work |
-| EDS-09 | authoritative source snapshot+tail append store | EDS-08 | **CODE_COMPLETE_SOURCE_DARK / PARKED_FOR_FUTURE_SOURCE_UPGRADE**; no current source class is eligible |
-| EDS-09b | Portal observation bridge, local observation journal and revision ticks | EDS-03–07 current source | **IMPLEMENTED / VERIFIED_SOURCE_DARK / RUNTIME_INACTIVE**; bounded/resumable current pages only, without Event claims |
-| EDS-10 | true lifecycle replay and authoritative market-event chart plane | EDS-09 + typed market source | later source upgrade only |
-| EDS-10b | observed lifecycle timeline and derived mark-context chart plane | EDS-06/07 + EDS-09b | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE**; yes, with `PORTAL_OBSERVATION` / `DERIVED` labels |
-| EDS-11 | current-data screen BFF hydration and local SSE | EDS-03–07 + EDS-09b/10b where relevant | **IMPLEMENTED / CONTRACT_VERIFIED / RUNTIME_INACTIVE** on 2026-09-05; yes, panel by panel with typed gaps |
-| EDS-11R | maximum current Manager-v2 relation activation | EDS-11 + deployed Manager-v2 profiles | **R1 BFF_READY / CONTRACT_VERIFIED / RUNTIME_NOT_ACTIVATED** on 2026-09-06: 96/96 classified, 54 named safe operations, 42 explicit non-browser dispositions. R2–R3 remain required before EDS-12; R4 is required for a market-context claim; R5 is optional unless authoritative replay is claimed. |
+| EDS-00 | intake, hashes and frozen baseline | E7 handoff | yes; planning gate complete |
+| EDS-01 | sealed private client + named E5 BFF operations | EDS-00 | yes |
+| EDS-02 | generated screen/action/panel/time contracts | EDS-01 | yes |
+| EDS-03 | Paper/Sandbox/Live current-stage screens | EDS-02 | yes, with typed gaps |
+| EDS-04 | Alpha/Portfolio/Account/Bindings resource screens | EDS-03 | yes, with typed gaps |
+| EDS-05 | governance/operations and five Portal derivations | EDS-04 | yes, with typed gaps |
+| EDS-06 | durable SGP current/range mirror and exact resource indexes | EDS-05 + owner runtime window | yes for observed pages; no replay claim |
+| EDS-07 | equity/performance/risk/chart query plane | EDS-06 | yes for retained source range |
+| EDS-08 | authoritative event/continuity acquisition | EDS-00; external source work | no, external gate |
+| EDS-09 | Rust snapshot+tail append store and reducers | EDS-08 | no |
+| EDS-10 | full lifecycle replay and market-context chart plane | EDS-09 + typed market source | no |
+| EDS-11 | complete screen BFF/action graph and local SSE | EDS-03–10 as applicable | partial before EDS-08/10; exact typed state required |
 | EDS-12 | failure/DR/performance/product release | all accepted preceding scope | yes per accepted capability set |
 
 EDS-03 through EDS-07 must not wait for EDS-08. This is the key
 adapt-first decision: current source delivers the maximum honest product now;
-authoritative event/replay work advances only as a future source-upgrade lane.
-However, the 2026-09-06 AWS-HK runtime inventory corrected an important
-implementation assumption: Manager-v2 current read is already active for
-Paper, Sandbox and Live and carries the same 96-relation catalogue per
-profile.  EDS-11R must first consume that existing truthful surface through
-named server-side BFF operations.  Missing authoritative semantics remain a
-separate source-upgrade lane; they are not a reason to leave current rich
-screen panels unavailable.
+event/replay work advances in a separate dependency lane.
 
 ### EDS-00 — Return-pack intake and immutable baseline
 
-**Status:** `CONTRACT_LOCKED / SERVER_BASELINE_COMPLETE / NO_RUNTIME_MUTATION`
-on 2026-09-04.
+**Status:** `PLANNING_GATE_COMPLETE` on 2026-09-04; no product/runtime change.
 
 **Goal:** establish one reproducible authority before implementation.
 
@@ -4529,45 +4500,20 @@ on 2026-09-04.
 - inspected the existing Control API transport/BFF/projection/realtime paths,
   Rust Manager-v2 client/adapter and frozen frontend consumers.
 
-**Implemented closure:**
-
-- created the isolated consumer branch `feat/eds-current-bff`, leaving the
-  dirty P4-E worktree untouched;
-- added the authenticated, workspace-bound
-  `GET /api/v1/execution/runtime-manifest` Control API endpoint;
-- compiled the E7 source/Edge/catalogue/serving-policy/E5/E6 pins, profile
-  capacity, page bounds and explicit external gates into a sanitized
-  in-image baseline (`maximum-data-intake.ts`), which cannot infer runtime
-  truth from a URL or current configuration;
-- made the endpoint state `EDS_00_BASELINE_ONLY` and
-  `named_portal_operation=NOT_YET_PUBLISHED`, so intake cannot claim that a
-  source query or product release happened;
-- added a focused contract test that compares the baseline against the
-  accepted E5/E7/owner/deployed-return artifacts, verifies session/workspace
-  enforcement, and scans the emitted metadata for raw source/secret material;
-- recorded the phase evidence and retained boundary in
-  [`EDS_00_RETURN_PACK_INTAKE_AND_IMMUTABLE_BASELINE.md`](./backend/EDS_00_RETURN_PACK_INTAKE_AND_IMMUTABLE_BASELINE.md).
-
-The pre-existing E3 contract test remains the generated inventory drift gate:
-it compares all 23 frozen screens, operations and capabilities to the return
-pack rather than duplicating a second mutable inventory.
+**Implementation entry gate:** create the campaign branch from the reviewed
+baseline; record source/Edge/contract/manifest digests in a runtime manifest;
+generate a screen/panel/action inventory from code and compare it with E3.
 
 **Tests:** E7 validator, full manifest check, isolated Control API/EX-DP
 contract suites, link check, dirty-worktree guard, screen inventory drift test
 and secret/path redaction scan.
 
 **Exit:** no unknown authority or unclassified frozen field; all later phase
-dependencies reference one digest-bound matrix. The runtime-manifest is
-metadata-only, authenticated, workspace-bound and explicitly non-probing.
-There is no EDS-00 implementation debt. The four E7 owner gates remain
-machine-readable external requirements, not a deferred Portal task.
+dependencies reference one digest-bound matrix.
 
 **Next:** EDS-01.
 
 ### EDS-01 — Sealed Manager-v2 consumer and fixed E5 operation authority
-
-**Status:** `BFF_AUTHORITY_COMPLETE / CONTRACT_FAIL_CLOSED / NO_RUNTIME_MUTATION`
-on 2026-09-04.
 
 **Goal:** make the existing private source callable only through stable named
 Portal operations.
@@ -4590,42 +4536,17 @@ Portal operations.
 - use the Rust E5 fixtures/operation descriptors as compatibility evidence;
   do not make browser-visible Rust/source DTOs the product DTO.
 
-**Implemented vertical:** `maximumDataDeploymentPageV1` is now the fixed,
-authenticated same-origin `GET /api/v1/execution/manager/deployments`
-operation. It uses a server-only frozen registry for
-`manager.deployments/public.strategy_deployments`, exact Paper/Sandbox/Live
-profile binding, the existing mTLS/delegated-JWT proxy, and Portal-bound
-opaque `mdc1.*` continuations. It emits normalized, allowlisted deployment
-records with availability/freshness/completeness/as-of metadata, UTC epoch
-milliseconds and truthful empty/partial/stale states. Raw Manager relation,
-cursor, trace and record keys cannot cross the browser boundary.
-
-The implementation adds no runtime activation or frontend composition.
-EDS-02 owns generated product contracts and EDS-03 owns rich screen
-composition; that deliberate layering is not deferred EDS-01 debt. The
-runtime-manifest was updated from `EDS_00_BASELINE_ONLY` to
-`EDS_01_FIXED_E5_OPERATION_PUBLISHED` so it cannot claim the operation is
-absent, while remaining source-non-probing.
+**Initial vertical proof:** `maximumDataDeploymentPageV1` behind one
+same-origin operation, consumed by the existing Paper overview/list location.
 
 **Tests:** positive Paper/Sandbox/Live empty/populated/partial cases; wrong
 audience/profile/resource; expired JWT; absent/bad certificate; relation/path
 injection; cursor rebind; 400/401/403/404/502/503; body/row/concurrency bounds;
 one/ten/one-hundred browser coalescing with constant upstream requests.
 
-**Verification completed:** E7 validator and return-pack manifest verification;
-full isolated Control API fresh-PG/migration/restore gate (**39 test files /
-341 tests**); focused fixed E5
-Paper/Sandbox/Live, source contract, continuation, injection, refusal and
-shared-admission/coalescing tests. The detailed evidence is
-[`EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md`](./backend/EDS_01_SEALED_MANAGER_V2_E5_DEPLOYMENT_BFF.md).
-The N29 acceptance source-boundary pin and its manifest are regenerated for
-this intentional tightening; N29's release decision and authority stay
-unchanged.
-
-**Exit:** no browser-accessible raw Manager route; the server-side E5
-deployment operation is closed and fail-closed. Immutable dev-image/browser
-composition is an EDS-03 delivery proof, not falsely claimed by this
-server-side-only phase.
+**Exit:** no browser-accessible raw Manager route; first real deployment slice
+is `FRONTEND_CONSUMED` and verified on an immutable dev image; rollback selects
+the previous BFF operation without changing Edge/source.
 
 **Next:** EDS-02.
 
@@ -4634,55 +4555,32 @@ server-side-only phase.
 **Goal:** give Control API and the frozen frontend one generated contract
 authority.
 
-**Status:** `CONTRACT_AUTHORITY_COMPLETE / FRONTEND_COMPATIBLE /
-NO_RUNTIME_MUTATION` on 2026-09-05.
+**Backend work:**
 
-**Implemented closure:**
+- generate Screen Data Manifest and Action Manifest from E3 coverage plus the
+  current `SCREEN_BFF_CATALOGUE`;
+- define `UtcEpochMs` on v2 wires and separate event/source/ingest/as-of/read
+  clocks;
+- keep sequence/large IDs as strings and financial values as exact decimal
+  strings with currency/precision;
+- define panel envelope states `READY/EMPTY/PARTIAL/STALE/UNAVAILABLE/DENIED/ERROR`;
+- add multidimensional coverage, source history semantics, formula/input
+  revision and composite read revision;
+- separate contract readiness, source readiness and runtime delivery;
+- generate OpenAPI/JSON Schema/TS types/runtime decoders and Rust DTOs where
+  they cross the Rust boundary;
+- define semantic actions; frontend route registry owns URLs.
 
-- added a deterministic E3/E5 source compiler, generated source authority,
-  generated Screen Data Manifest/Action Manifest, public evidence digest and
-  authenticated workspace-scoped
-  `GET /api/v1/execution/contract-authority`;
-- retained the immutable 23-screen E3 inventory and registered two explicit
-  BR-EX-72 Portal list extensions, making the current authority 25 screens,
-  34 field definitions and 12 semantic actions without hiding the inventory
-  distinction;
-- defined browser-renderable `UtcEpochMs` wires and separate
-  event/source-published/received/ingested/processed/as-of/read clocks;
-- sealed opaque strings for identifiers and sequence values and exact decimal
-  strings with currency/scale validation; no floating-point coercion occurs;
-- defined and runtime-validated
-  `READY/EMPTY/PARTIAL/STALE/UNAVAILABLE/DENIED/ERROR`, complete coverage,
-  history semantics, readiness/delivery separation and formula lineage;
-- generated JSON Schema, OpenAPI and TypeScript types, and reused the existing
-  Rust E4 `UtcEpochMs(i64)`/`ExactDecimal` inter-cell DTOs because this
-  metadata-only phase adds no Rust boundary; the Portal BFF explicitly clamps
-  values to the browser `Date` range instead of silently narrowing them;
-- defined semantic actions only, while the frozen frontend route registry owns
-  all URL/rendering choices and rejects any source/URL leakage.
+**Frontend handoff:** replace handwritten duplicated shapes and native/ISO
+display logic internally, with no approved layout change.
 
-**Frontend closure:** generated contract types are available through
-`@portal/contracts-screen-data`. UTC display and runtime decoders now reject
-malformed clocks, coverage, formula lineage, action graph and raw-source
-leakage, with no approved layout or rich-screen composition changed.
+**Tests:** generator reproducibility, digest equality, epoch-ms/DST/browser
+timezone matrix, decimal round-trip, large-ID coercion, every panel state,
+route/action graph and a bundle guard against production fixture imports.
 
-**Verification completed:** E7 validation passed (**34 capabilities, 18
-genuine source gaps, three measured profiles**); every return-pack manifest
-entry verified; generator reproducibility/digest equality passed; contract
-workspace passed **117/117**; fresh PostgreSQL Control API build/test/restore
-passed **40 files / 348 tests**; and the clean Portal-plus-embedded-Planning
-frontend gate passed **590 suites, 1,826 passed, 0 failed, 3 skipped** followed
-by a production build. Focused coverage includes epoch-ms/DST/browser-timezone
-semantics, exact decimals, large ID coercion, every panel state, route/action
-graph and production fixture-import guard. Detailed evidence is
-[`EDS_02_GENERATED_SCREEN_PANEL_ACTION_CONTRACTS.md`](./backend/EDS_02_GENERATED_SCREEN_PANEL_ACTION_CONTRACTS.md).
-
-**Exit:** every frozen field/action is classified; `READY + null` is rejected;
-the generated digest is visible in runtime evidence; authenticated frontend
-code formats only UTC milliseconds; and the public contract cannot expose raw
-source access. There is no EDS-02 implementation debt. Runtime/source/profile/
-command activation, Edge changes, containers and network remain intentionally
-out of scope rather than deferred work.
+**Exit:** every frozen field/action is classified; no `READY+null`; generated
+digest is visible in runtime evidence; authenticated browser shows UTC through
+the existing formatter locations.
 
 **Next:** EDS-03.
 
@@ -4690,57 +4588,6 @@ out of scope rather than deferred work.
 
 **Goal:** fill stage overview/workbench screens with all current Manager data
 that already exists, while preserving honest gaps.
-
-**Status:** `BFF_READY / FRONTEND_COMPATIBLE / VERIFIED / NO_RUNTIME_MUTATION`
-on 2026-09-05.
-
-**Implemented closure:**
-
-- added a server-only exact deployment resolver over the profile-bound local
-  projection, then applies its exact scope before the 200-row Portal page
-  bound; no detail route can read/filter a first global source page or use the
-  former two-of-four join heuristic;
-- composed named Paper Overview/Workbench, Sandbox Overview/Certification and
-  Live Overview/Full Operations reads from the accepted current Manager
-  relations, carrying availability, freshness, completeness, as-of, profile
-  and opaque Portal cursor metadata into generated panel envelopes;
-- made a complete zero-row Live source an authoritative `EMPTY`; added a
-  source-backed Live fallback when Portal-owned Canary governance has no
-  predecessor, while preserving the original typed 404 when the source itself
-  is unavailable;
-- made `*_ms`/UTC clocks canonical at the screen wire and retained old ISO
-  aliases only for separately-versioned specialised consumer compatibility;
-- preserved exact decimal strings and rejected monetary aggregates without
-  uniform explicit currency; `positions_v2` rows remain visible but gross
-  notional/daily P&L deliberately stay typed-null with
-  `E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED` until published mark and
-  currency lineage exists;
-- kept the approved rich frontend composition intact, changing only its
-  source data inside panels. No browser sees a Manager relation/cursor/JWT/
-  mTLS input and no direct Trading System DB/Source Proxy/Redis/broker/CLI
-  call was added.
-
-**Verification completed:** E7 passed (**34 capabilities / 18 genuine source
-gaps / three profiles**) and every return-pack manifest entry verified;
-read-only EDS-02 generator check and contracts workspace passed **117/117**;
-fresh PostgreSQL Control API build/test/restore passed **40 files / 354
-tests**; clean Node 22 Portal-plus-Planning frontend test/build passed **98
-files / 1,826 tests / 3 skipped** followed by the production build. Focused
-coverage includes deep-page exact resource lookup, cross-profile/resource
-isolation, empty/partial/unavailable source states, Live-without-Canary,
-mixed/missing currency refusal, UTC/exact-value mapping and local-only source
-enforcement. Detail/evidence:
-[`EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md`](./backend/EDS_03_MAXIMUM_CURRENT_TRUTH_STAGE_SCREENS.md).
-The closure also repairs the stale N20, N29 and Phase-2 acceptance verifiers
-to pin **23 immutable E3 screens + two explicit BR-EX-72 extensions**, with
-individual extension operation/path assertions, rather than a contradictory
-hard-coded total of 23.
-
-**Exit:** the accepted current fields are available to their rich stage panels;
-remaining gaps are explicit E7/EDS03 typed reasons, not implementation debt.
-Runtime deployment/browser acceptance remains owner-controlled because this
-phase intentionally leaves containers, profile activation, network, commands
-and Edge/Trading-System source unchanged.
 
 **Named operations:** deployment, position, session, order, fill, account,
 balance, margin, sync, broker-sync, venue-account, reconciliation, equity,
@@ -4774,55 +4621,33 @@ has the exact E7 reason.
 
 ### EDS-04 — Alpha, Portfolio, Account and Binding resource BFFs
 
-**Implementation status:** `COMPLETE / VERIFIED / SERVER_SIDE_ONLY / NO_RUNTIME_MUTATION` on `feat/eds-current-bff`.
-The implementation contract and test matrix are recorded in
-[`backend/EDS_04_RESOURCE_BFF_IMPLEMENTATION_PLAN.md`](backend/EDS_04_RESOURCE_BFF_IMPLEMENTATION_PLAN.md).
-This phase is explicitly server-side only: it reads the accepted SGP local
-projection and does not change the Edge, Trading System, runtime, network,
-cache policy or command authority.
-
 **Goal:** make all 360/list/detail screens exact-resource operations rather
 than thin envelopes or client-side joins.
 
-**Delivered backend work:**
+**Backend work:**
 
-- implement named Alpha 360, Portfolio 360, Account/Broker 360 and Binding
-  detail DTOs at `/api/v1/execution/resources/{alphas|portfolios|accounts|bindings}/{id}`;
-- require session membership and pin every request to the configured local
-  projection workspace before reading any resource fact;
-- resolve full projection identity first, then scope declared relations by
-  strategy/deployment/portfolio/account/binding keys; forbid
-  `portfolio_id`-only and “two of four” transactional selection;
-- compose accepted positions, account/balance/margin/sync/binding, deployment,
-  allocation, equity/performance and reconciliation branches without a direct
-  Trading System source or database connection;
-- enforce a 200-row relation limit and a 1-MiB product wire limit with typed
-  `PARTIAL` panels, opaque relation-bound internals retained server-side and
-  no invented cursor;
-- redact internal broker references and use only the published union field
-  schema across already accepted profiles; no new source activation or poll;
-- retain exact decimal/currency facts and deduplicate multi-currency balances
-  with currency in the identity key.
+- implement named Alpha Fleet/list, Alpha 360, Portfolio list/360, Account 360,
+  Accounts & Bindings list and Binding detail DTOs;
+- use explicit strategy/deployment/portfolio/account/binding keys from the
+  source census; forbid `portfolio_id`-only and “two of four” heuristics;
+- compose positions, account/balance/margin/sync/binding, equity/performance,
+  risk/sizing and reconciliation branches;
+- paginate with Portal cursors and exact local/source coverage metadata;
+- use owner-approved entity-name registry for display labels, never expose
+  source handles/hashes as primary UI labels;
+- preserve mark/valuation provenance limitations as panel warnings.
 
 **Frontend proof:** current rich tabs/components remain intact; Alpha/Fleet,
-Portfolio and Account/Binding routes call their named same-origin resource BFF
-and render direct branches plus typed gaps at panel granularity.  A missing
-branch cannot replace the full rich screen. `deployment.active` is explicitly
-fail-closed: absent is not active.
+Portfolio and Account/Binding routes render real branches and typed gaps at
+panel granularity.
 
-**Verification:** `./scripts/control-api-test.sh` passed the TypeScript build,
-41 files / 360 tests and real PostgreSQL restore drill. The CI-equivalent
-frontend full-repository mirror passed 98 files / 1,829 tests (1 skipped) and
-the production build. After a manual review confirmed direct resource facts
-inside the existing rich Alpha, Portfolio and Account frames, their three
-affected visual baselines were refreshed deliberately and replayed with no
-update flag: 3/3 passed. The Playwright visual runner remains disposable; no
-runtime deployment or implicit source-worktree snapshot recording occurs.
+**Tests:** identity property tests, parent/orphan checks, duplicate resource
+keys, deep-page lookup, mixed currency fail-closed, empty binding/margin/sync,
+all resource tabs and authenticated browser traversal.
 
-**Exit:** achieved. No detail screen filters a global bounded page; field
-coverage is direct/derived/typed-gap at panel level, and no runtime image,
-source profile, cache policy, command authority, Edge or Trading System was
-changed. Current source gaps remain typed truth rather than EDS-04 debt.
+**Exit:** no detail screen filters a global bounded page; field coverage for
+these screens is 100% direct/derived/typed-gap and visible on the deployed dev
+image.
 
 **Next:** EDS-05.
 
@@ -4830,26 +4655,6 @@ changed. Current source gaps remain typed truth rather than EDS-04 debt.
 
 **Goal:** activate all five permitted Portal derivations and join operational
 truth without inventing source history.
-
-**Status (2026-09-05): completed, source-dark at the browser boundary.** The
-Control API now exposes only named same-origin derivation routes under
-`/api/v1/execution/derivations` and explicit operational-composition routes
-under `/api/v1/execution/compositions`.  Each route is pinned to the configured
-local-projection workspace, reads only the committed SGP projection/Portal
-workflow state, and remains incapable of selecting an Edge relation, cursor,
-credential, database, broker or command.  Conditional structures and command
-journal rows are field-allowlisted/redacted; portfolio capital stays exact by
-currency and is typed `PARTIAL` until the owner publishes ledger/reservation
-inputs.  Live Review uses the existing R2 workflow plus a local accepted
-deployment-quality DTO, never the direct current-source path.  Canary remains
-`E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED`; command authority remains unchanged
-and fail-closed.
-
-**Evidence:** a clean `./scripts/control-api-test.sh` run passed TypeScript
-build, fresh PostgreSQL migration/restore drill, 42 test files and 366 tests,
-including EDS-05 formula, redaction, workspace-isolation and composition tests.
-The named DTOs are ready for same-origin frontend consumers; no runtime image,
-feature flag or external source profile was changed in this phase.
 
 **Backend work:**
 
@@ -4912,87 +4717,41 @@ old/new browser parity.
 screens read one committed local revision; rollback selects the previous real
 read path without deleting mirror data.
 
-**Completion record (2026-09-05):** implemented migration
-`1723680000022_execution-durable-current-range-mirror.sql`, typed
-batch/revision/observation/current/range/continuation/gap/conflict storage,
-atomic projection commit wiring, exact resource/time indexes, signed
-relation-bound server keysets, repeatable-read revision consistency, digest
-dedupe/quarantine and dark runtime flags.
-The durable tables never persist a raw Edge cursor; the existing
-server-only coordinator remains its authority. A clean
-`./scripts/control-api-test.sh` run passed build, 43 test files / 371 tests,
-fresh-PostgreSQL migration/history validation and backup/restore parity.
-EDS-06 is closed as code/migration readiness. Its explicit activation window is
-an owner-controlled operational gate, not deferred implementation work: writer
-and mirror-read flags remain false; no screen, Edge, AWS-HK transport or
-command route changed.
-
 **Next:** EDS-07; EDS-08 may run in parallel.
 
 ### EDS-07 — Retained equity/performance/risk queries and financial chart API
 
-**Status:** `CODE_COMPLETE / SOURCE_DARK / BFF_READY_WHEN_DURABLE_MIRROR_IS_ACTIVATED`
-on 2026-09-05. The default runtime flags remain false; this is not a browser,
-AWS-HK, command, or deployment activation.
-
 **Goal:** use all honestly retained source range to power fast financial views,
 without claiming an unknown retention floor as total history.
 
-**Completed backend work:**
+**Backend/Rust work:**
 
 - exact range/keyset queries for account/deployment/portfolio equity,
-  performance, risk grants and sizing decisions, with named Portal cursor
-  handles rather than browser-visible relation keysets;
-- server-side subject scope and direct retained values only. No cross-currency
-  aggregate, synthetic drawdown, execution-quality or contribution formula is
-  claimed where the current source does not publish its exact inputs;
-- viewport-aware min/max/last downsampling preserving first/last and extrema.
-  Source gap intervals and markers are explicitly absent rather than inferred;
+  performance, risk grants and sizing decisions;
+- server-side subject scoping, aggregation, drawdown, execution quality and
+  contribution with exact formula/currency/input coverage;
+- viewport-aware min/max/last downsampling that preserves gaps/extrema/markers;
 - chart DTO with `UtcEpochMs`, decimal strings, source/returned counts,
   sampling algorithm, scale decision and visible coverage boundary;
 - benchmark series stays typed unavailable until a named market authority is
   published; frontend must not synthesize it;
-- no range cache until a measured invalidation test can prove it preserves the
-  committed-revision contract;
-- versioned `EDS07` source-acceptance overlay for `risk_grants` and
-  `sizing_decisions` on Paper/Sandbox/Live. This does not rewrite frozen
-  N22/N23 acceptance records.
+- optional range cache is revision-keyed and may be enabled only after a
+  measured invalidation test.
 
 **Frontend handoff:** `PrimusFinancialChart`/approved renderer consumes this
 DTO in the existing chart shell; backend does not alter the visual design.
 
-**Tests:** source-dark/no source read, raw-versus-downsample population,
-first/last/extrema bound, exact-decimal and UTC output, log/linear rule,
-typed benchmark/gap/marker semantics, principal-bound opaque cursor, strict
-route/workspace rejection, per-profile ladder map, response budget, full
-fresh-PostgreSQL migration and backup/restore parity.
+**Tests:** raw-versus-downsample population, extrema/gap/marker properties,
+log/linear rules, large range, per-account/all-account scope, no float-derived
+business result, payload/render budget and browser chart evidence on Alpha,
+Portfolio, Account and stage screens.
 
-**Exit achieved for this phase:** retained BFF reads only a repeatable local
-durable-mirror snapshot, has no 2,000-row presentation cap, and returns actual
-available range/completeness without exposing source relation/cursor/JWT/mTLS
-inputs. Product/browser acceptance still requires a separately approved mirror
-activation and frontend consumption; those are explicit operational gates, not
-deferred EDS-07 implementation.
+**Exit:** no 2,000-row total-history presentation cap; every chart states the
+actual available range and completeness; real chart payload is consumed on
+the deployed image.
 
-**Completion record (2026-09-05):** added migration
-`1723680000023_execution-financial-query-cursors.sql`, durable financial
-repository, financial chart/decision service and controller, strict
-same-origin routes, opaque `fqc1` server cursor storage, source acceptance
-overlay, risk/sizing retention ladders and focused EDS-07 tests. Exact values
-remain strings; UTC stays epoch milliseconds; a requested benchmark is typed
-unavailable; direct source decision records remain distinct from replay.
-Final clean evidence passed: E7 return validation (`34` capabilities, `18`
-genuine source gaps, three measured profiles), every return-pack manifest
-hash, and `./scripts/control-api-test.sh` (`44` test files / `379` tests) with
-the fresh PostgreSQL migration and backup/restore drill. No EDS-07 code
-follow-up remains; source activation and browser consumption are deliberately
-separate operational/product gates.
-See [EDS-07 retained financial chart API](backend/EDS_07_RETAINED_FINANCIAL_CHART_API.md).
-
-**Next:** EDS-09b is the current-product path: extend the already accepted
-durable current/range mirror into a labelled Portal observation journal and
-local revision feed. EDS-09 remains a separate future-source lane only for an
-independently accepted owner Event class.
+**Next:** EDS-09 for streaming-enabled source classes; EDS-11 for local
+current-revision SSE.
 
 ### EDS-08 — Source continuity and authoritative event contract lane
 
@@ -5009,27 +4768,6 @@ append-all source history.
   owner; do not prescribe Trading System internals;
 - keep product panels typed while the owner task is open.
 
-**Implementation breakdown (EDS-08 delivery):**
-
-1. Pin the accepted E7 return pack and map every one of its 18 named gaps once
-   into exactly seven owner lanes. The packet must distinguish a true
-   event-history requirement from a named current/retained/reference capability
-   so that it does not turn every source-as-is limitation into a request for a
-   new journal.
-2. Publish a portable owner-request, owner-return schema, event-envelope and
-   snapshot-plus-tail contract. Sequence values are decimal strings (never
-   JavaScript numbers); time is UTC epoch milliseconds; source/profile/resource
-   binding, retention floor, correction/tombstone, epoch, causal identifiers
-   and resnapshot semantics are mandatory only for an accepted event class.
-3. Supply synthetic no-business-data fixtures for duplicate, gap, correction,
-   tombstone, epoch reset, retention boundary, cross-profile rejection and
-   snapshot-plus-tail. A dependency-free verifier and a Control API compatibility
-   test must reject malformed, cross-profile or falsely accepted input.
-4. Keep the packet and the pending owner return strictly source-dark: no
-   endpoint, credential, direct database, Source Proxy, runtime flag, cache,
-   command or browser change is part of EDS-08. EDS-09 may consume only an
-   independently returned `EVENT_SOURCE_ACCEPTED` class.
-
 **External completion needed:** a source-owned journal/outbox/CDC/exact tail
 that proves ordering and retention for each activated class. Current
 `domain_events` without `source_sequence` is not accepted as that authority.
@@ -5042,41 +4780,7 @@ fixtures supplied by the owner.
 remains a named external gap. EDS-08 may close contract preparation without
 falsely unblocking EDS-09; runtime source acceptance is recorded separately.
 
-**Completion record (2026-09-05):** the Portal now carries one source-dark
-[`EDS-08 owner packet`](backend/EDS_08_SOURCE_CONTINUITY_OWNER_PACKET.md)
-under `eds08-source-continuity-v1`: it pins the accepted E7 return pack,
-maps all 18 gaps exactly once to the seven required owner lanes, limits the
-full event requirement to position lifecycle, fill correction/replay and risk
-decision lifecycle, and keeps the remaining source-as-is needs as named
-capabilities. It includes the event-envelope, snapshot-tail and sanitized
-owner-return schemas, a deliberately pending (non-evidence) return, eight
-synthetic continuity cases, a complete digest manifest, dependency-free owner
-verifier and Control API compatibility test. Final evidence passed: EDS-08
-verifier, EDS-08 manifest check, E7 verifier, E7 manifest check, and the fresh
-PostgreSQL Control API gate (`45` test files / `382` tests plus backup/restore).
-No runtime, cache, source, proxy, Trading System, command or browser behavior
-changed. There is no Portal technical debt left in this contract-preparation
-scope; the sole follow-up is the explicit source-owner return.
-
-**Owner-return mirror handoff (2026-09-05, COMPLETED):** Bobby authorized a
-docs-only Portal receipt of the Trading System EDS-09 owner return. The work
-created a byte-identical immutable mirror under
-`upgrade/backend/trading-system-owner-returns/eds09-current-source-return-v1/`
-plus a Portal handoff index. It retains the source-side commit reference,
-manifest and source-as-is assessment, records the all-gap ruling without
-relabeling it as runtime authority, and explicitly preserve the owner-approved
-observation lane. It changed no Edge/Rust source, routes, flags, credentials,
-services, containers, source traffic, commands, databases or cache. Evidence:
-the mirror was `diff -qr` byte-identical to the Trading System source package;
-its twelve-file manifest passed; the existing Portal EDS-08 validator passed
-against the mirrored `owner-return.v1.json`; and the source-side package
-validator passed against the Portal path (18 gaps, three classes x three
-profiles, 15 synthetic guard cases, no transport). Rollback is a revert of
-this one Portal documentation commit.
-
-**Next:** begin EDS-09b for maximum current-source delivery now. EDS-09 stays
-parked and can resume only if a later owner return contains an independently
-verified `EVENT_SOURCE_ACCEPTED` class.
+**Next:** EDS-09 only for accepted classes.
 
 ### EDS-09 — Rust snapshot+tail, append store, reducers and durable ACK
 
@@ -5105,286 +4809,7 @@ duplicates.
 disabled only for that exact scope, and a source event reaches a frozen screen
 with one trace and committed revision.
 
-**Completion record (2026-09-05):** Portal-owned source-dark implementation is
-complete and documented in [EDS-09 Rust snapshot+tail append store](backend/EDS_09_RUST_SNAPSHOT_TAIL_APPEND_STORE.md).
-It adds a new `authoritative-event-core` Rust crate and an expand-only
-PostgreSQL append store. The core admits only an independently accepted,
-digest-bound source/profile/resource contract; enforces complete snapshot
-`<= W`, then `CURRENT`/`LIVE_TAIL` strictly from `W + 1`; preserves exact
-decimal-string source offsets and UTC milliseconds; checks checksum, binding,
-epoch, contiguous sequence, correction/tombstone causality and bounded
-queue/unacknowledged bytes; and exposes a non-forgeable `PendingAppend` that
-cannot be acknowledged before the store returns a committed receipt.
-
-The store atomically writes immutable event facts, generic pure-reducer current
-state, generation checkpoint, committed local journal and source stream state.
-Duplicate exact batches return the original receipt; any source offset,
-sequence, target, frame/lane or persisted-state conflict writes a redacted
-quarantine marker and fences the generation behind an explicit resnapshot.
-Tail state cannot regress after the snapshot is complete; an unsafe restart
-checkpoint or non-active resnapshot journal fails closed. The PostgreSQL restore
-drill includes all seven EDS-09 tables. Final clean verification passed the
-full Rust format/test/Clippy/fresh-PostgreSQL/restore gate and the Control API
-TypeScript build plus fresh-PostgreSQL gate (**45 test files / 382 tests**).
-
-This does **not** activate H2/mTLS transport, decompression, a source adapter,
-spool, cache, source proxy, listener, container, command or browser path.
-Those missing runtime values are not inferred from D4/Manager current pages.
-They are an explicit external activation gate, not hidden Portal technical debt:
-
-1. an immutable, verifier-accepted `EVENT_SOURCE_ACCEPTED` owner return for
-   one exact event class/profile/resource;
-2. an accepted wire/capability revision resolving the present current-source
-   GET/STREAM ambiguity, including checksum, compression and decoded-frame
-   bounds;
-3. deployment-bound endpoint, mTLS/delegated-read identity and negative
-   transport evidence, without exposing any input to a browser;
-4. measured capacity, retention, disk/spool, partition/restart/resnapshot and
-   rollback evidence for that exact scope; and
-5. a separately approved runtime change window that enables only the named
-   adapter/profile after preflight passes.
-
-**Decision after the verified owner return (2026-09-05):** no current class
-may enter this authoritative Event core. The core remains intact and parked for
-a future source upgrade; it is not deleted, weakened, or repurposed to make
-current observations look like owner events. The product path below is now the
-required current-source delivery path.
-
-### EDS-09b — Portal observation bridge and committed local revision journal
-
-**Status:** `IMPLEMENTED / VERIFIED_SOURCE_DARK / RUNTIME_INACTIVE / DOES_NOT_WAIT_FOR_TRADING_SYSTEM`.
-
-**Goal:** use the existing named Manager/E5 current-page operations, durable
-mirror and resumable server-side drains to publish one Portal-owned observation
-revision per scope. This removes browser-to-AWS-HK amplification and gives
-screens/SSE truthful movement without claiming source event continuity.
-
-**Work:**
-
-- extend the existing EDS-06 durable mirror only; do not feed
-  `authoritative-event-core` or its event-fact tables;
-- bind each observation to the named operation, workspace/profile/venue/resource
-  scope, source contract/catalogue revision, `as_of_ms`, received time,
-  availability, freshness, completeness and opaque server continuation;
-- deduplicate by the existing source key plus payload digest, atomically commit
-  a Portal-generated observation revision and write a local observation-journal
-  entry only after that commit;
-- retain current state and retained range separately, use a Portal-generated
-  revision sequence only for local ordering, and label every emitted record
-  `PORTAL_OBSERVATION`;
-- use the existing lease, paced refresh, cache/admission limits and stale
-  fallback. A browser receives a local revision/cursor, never a source cursor,
-  relation, JWT, mTLS input or AWS-HK route; and
-- keep source failure, partial population, empty result and stale result as
-  panel-level typed states. Never convert any into zero, `READY`, or replay.
-
-**Tests/exit:** prove per-profile isolation; duplicate/different-digest
-quarantine; lease loss/recovery; restart with no double-visible revision;
-resumable drain; partial/stale/error propagation; source-read coalescing;
-bounded local retention; backup/restore; and a same-origin revision-tick
-consumer. The phase closes only when a browser refresh cannot multiply source
-reads and every observation is visibly distinguishable from an owner Event.
-
-**Completion record (2026-09-05):** EDS-09b is implemented in the existing
-Control API projection/mirror boundary, with no additional source consumer,
-Edge route, credential, runtime container or source activation. The additive
-`1723680000024_execution-portal-observation-journal.sql` migration marks every
-retained journal row `PORTAL_OBSERVATION` / `BOUNDED_CURRENT_PAGE` and preserves
-the declared source contract revision without inventing one for legacy records.
-The server-only durable mirror is admitted before the compatibility snapshot: a
-same-key, different-digest retained-range conflict writes its forensic
-quarantine but does **not** advance a snapshot, raw source cursor or
-browser-visible local revision. Browser SSE v1 remains additive and receives a
-bounded observation descriptor plus named affected screen IDs; it cannot
-receive a Manager relation selector, raw source cursor, JWT, mTLS input or an
-asserted Trading System Event. The existing profile-isolated lease/coalescer
-remains the only source read path. Detailed contract, failure and handoff rules
-are in [`EDS_09B_PORTAL_OBSERVATION_JOURNAL.md`](backend/EDS_09B_PORTAL_OBSERVATION_JOURNAL.md).
-The remaining current-source product work at this decision was EDS-10b, then
-EDS-11; both are now contract-closed. EDS-08/09/10 remain a separate
-future-source lane.
-
-### EDS-10b — Observed timeline and derived mark-context plane
-
-**Status:** `IMPLEMENTED / CONTRACT_VERIFIED / CURRENT_SOURCE_ONLY / RUNTIME_INACTIVE`
-on 2026-09-05.
-
-**Goal:** give Alpha 360, Portfolio 360, Account/Broker, Workbench, Blotter and
-stage screens the maximum useful timelines/charts from current orders, fills,
-sessions, equity, performance, risk and sizing data already published.
-
-**Work:**
-
-- compose per-resource observed timelines from the available order/fill/session
-  timestamps, preserving original field clocks and showing an unavailable
-  acknowledgement/correction segment where it is not published;
-- use retained equity/performance/risk ranges for financial charts and derive
-  mark-context lines only from available `mark_price`/equity observations;
-- expose exact decimal strings, UTC milliseconds, coverage window, source and
-  returned counts, sampling rule, freshness and completeness in every DTO;
-- label timelines `OBSERVED_TIMELINE`, mark charts `DERIVED · mark-context`,
-  and never call either Trade Replay, OHLCV, benchmark, broker-clock history or
-  authoritative lifecycle history; and
-- preserve the approved rich screen composition: a missing panel is typed
-  within its panel, not a replacement of the whole screen with an unavailable
-  envelope.
-
-**Tests/exit:** exact-resource isolation; stable mixed-clock ordering with an
-explicit tie rule; no invented causal/broker time; retained-window boundary;
-first/last/extrema downsampling; mark-context provenance label; profile/venue
-negative cases; and one frontend contract fixture for each panel state. The
-phase closes when all usable current-source panels have data or an honest
-typed-empty state on the frozen product routes.
-
-**Completion record (2026-09-05):** `executionObservedTimelineV1` is now a
-named authenticated same-origin BFF at
-`GET /api/v1/execution/views/observed-timeline`. It admits only the fixed
-`paper|sandbox|live` and `deployment|alpha|portfolio|account` vocabulary,
-uses the existing profile-bound local projection and issues only a Portal
-query-keyring-signed continuation. It never receives or returns a Manager
-relation/cursor, source credential, raw source path or generic selector. The
-timeline is visibly `OBSERVED_TIMELINE` / `PORTAL_OBSERVATION`, sorted by a
-declared display-only mixed-clock rule; it neither links current rows causally
-nor represents a lifecycle Event/replay, ACK, correction/tombstone, global
-sequence or total history. Current mark price plus equity context is exposed
-only as `DERIVED · mark-context`; OHLCV/candle remains independently typed
-unavailable. Legacy `analytics.replay` is deliberately an empty
-`SOURCE_GAP_CONFIRMED` compatibility shell so an existing consumer cannot
-accidentally claim current rows are a replay. The additive slice is bounded to
-200 rows/1 MiB, preserves exact source decimal strings and UTC milliseconds,
-and leaves flags, runtime containers, source routes and command authority
-unchanged. Detailed DTO/consumer rules and evidence are in
-[`EDS_10B_OBSERVED_TIMELINE_AND_MARK_CONTEXT.md`](backend/EDS_10B_OBSERVED_TIMELINE_AND_MARK_CONTEXT.md).
-
-**Next:** EDS-11 consumes this named panel alongside the existing local
-revision stream. The future-source EDS-10 Event/replay lane remains parked
-until the source owner publishes an independently accepted Event class.
-
-### EDS-11 — Current-data screen BFF hydration and local realtime
-
-**Status:** `IMPLEMENTED / CONTRACT_VERIFIED / CURRENT_SOURCE_ONLY /
-RUNTIME_INACTIVE` on 2026-09-05.
-
-**Goal:** connect every frozen frontend screen to named same-origin BFFs and
-local observation revisions. It is not an Event-stream activation and does not
-broaden command authority.
-
-**Work/exit:** publish the complete panel mapping from the E2 catalogue; enable
-local SSE only from committed `PORTAL_OBSERVATION` revisions; emit a revision
-tick, freshness/coverage change or typed panel transition; preserve
-Last-Event-ID resync/fallback polling; and have frontend acceptance prove each
-screen keeps its rich layout under available, partial, stale, empty and
-unavailable states. Commands retain their separately accepted exact contract
-and remain fail-closed outside it.
-
-**Completion record (2026-09-05):** EDS-11 now turns only committed
-Portal-local observation revisions into a profile-scoped list of frozen
-same-origin Screen BFF `GET` operation IDs. The server derives that list from
-the fixed catalogue for the directly changed current relation plus explicit
-Paper/Sandbox/Live composition dependencies; unknown, cross-profile and
-non-read screens map to no operation. The browser receives a local
-epoch/sequence/digest `revision_tick` and may re-fetch only its already-active
-named BFF/resource. It receives no Manager relation, raw source cursor,
-resource selector, upstream URL, delegated JWT or mTLS material. Existing
-local snapshot/resume/gap semantics remain intact: one journal tail fans to all
-subscribers without an AWS-HK source read per tab. Raw Manager checkpoints are
-now withheld from ProductRead and panel output, while Portal-signed page
-continuations remain valid. Focused tests prove mapping/profile isolation,
-redaction and a single journal read for 100 subscribers. This is
-`PORTAL_OBSERVATION`, never Event/replay; the owner-confirmed lifecycle,
-ACK, market and artifact gaps stay visible `Soon` branches without blocking
-current-data screens. No runtime, source, container or command authority
-changed. See [EDS-11 local BFF hydration](backend/EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).
-
-#### EDS-11R discovery record — current Manager-v2 maximum-data activation
-
-**Status:** `R1_BFF_READY / R2_SERVER_HYDRATION_READY /
-R3_PORTAL_PROVENANCE_READY / R4_OWNER_ADAPTER_READY` on 2026-09-06.
-
-**Integration record (2026-09-06):** Portal commit `7825ad0` merges the
-current-data activation base (`feat/execution-data-activation`) into the
-EDS-11R campaign without overwriting the separate dev worktree.  The clean,
-isolated Control API gate passed TypeScript build, **47 test files / 404
-tests**, and the fresh-PostgreSQL restore drill; the EDS-11R4 request gate and
-execution-tracking reconciliation also passed.  Runtime promotion remains a
-separate, explicit deployment decision because the existing dev worktree has
-uncommitted work owned by another integration slice.
-
-**Correction:** the old `RUNTIME_INACTIVE` wording describes the Portal
-consumer slice, not AWS-HK Manager availability.  Read-only deployment
-inspection verified that Paper, Sandbox and Live Manager-v2 profiles are each
-transport-qualified and current-source enabled over TLS 1.3 mTLS plus the
-bound `execution:manager-v2:read` delegation.  Every profile carries the same
-96-relation catalogue.  The deployed Source Proxy already forwards the
-private Manager `/catalog`, `/capabilities`, bounded `/projections/*` and
-bounded `/records/{schema}/{relation}` routes.  Legacy `/v1/*` routes are
-intentionally fail-closed and must not be confused with Manager-v2.
-
-**Goal:** use every authorized, screen-bound current relation through a named
-same-origin BFF and retain rich UI composition under available, empty,
-partial, stale and denied conditions.  A server-owned mapping selects safe
-DTO fields and makes relation/cursor/profile choices; the browser never calls
-or sees a generic Manager route.
-
-**Canonical delivery-plan location:** the complete `EDS-11R1` through
-`EDS-11R5` specification is placed immediately before **EDS-12** below.  This
-record remains here as the immutable runtime-discovery evidence that justifies
-the delivery plan.
-
-**Detailed plan and runtime evidence:**
-[EDS-11R current Manager-v2 maximum-data activation](backend/EDS_11R_CURRENT_MANAGER_V2_MAXIMUM_DATA_ACTIVATION.md).
-
-### Source-upgrade capability ledger — visible, scoped and never hidden
-
-| Product need | Current disposition |
-| --- | --- |
-| immutable position/fill/risk lifecycle replay, corrections and tombstones | `EDS-11R5 · OPTIONAL_SEMANTIC_CONTRACT_REQUIRED`; current `domain_events` may be shown only as observed history now |
-| broker acknowledgement clocks and terminal command evidence | consume catalogued current evidence in EDS-11R1/R2; deeper terminal-clock semantics remain a typed follow-up only where absent |
-| typed ticks, OHLCV, benchmark, venue calendar and VNM constraints | `EDS-11R4 · ADAPTER_TO_PUBLISH`; the private Data Layer already has the facts, but Manager-v2 does not yet publish their safe profile-bound contract |
-| mark provenance, direct profile equity producer, artifact reference and research linkage | consume catalogued current facts in EDS-11R1/R2; retain only the exact missing grain as a typed follow-up |
-
-These are retained as explicit capability work.  They do not suppress or
-degrade current-source screens that already have usable data; however,
-EDS-11R4 must be accepted before a release claims real market-context support,
-and EDS-11R5 must be accepted before it claims authoritative replay.
-
-### EDS-SC-01 — Trading System source-completeness campaign
-
-**Status:** `OWNER_IMPLEMENTATION_READY / ONE_BRANCH_ONE_RETURN / PORTAL_RUNTIME_UNCHANGED`
-on 2026-09-06.
-
-**Goal:** turn the finite, source-owned `Soon · SOURCE_GAP_CONFIRMED` list
-into one implementation campaign rather than serial portal requests.  It
-closes each item either through an accepted typed source contract or an honest
-source-grain decision with a named Portal replacement; it never fakes a
-lifecycle, candle, benchmark or provenance fact from current rows.
-
-**Owner delivery shape:** one Trading System branch/release implements four
-bundles: (A) per-bound-stream position/fill/risk snapshot-plus-tail event
-continuity; (B) acknowledgement, funnel, reconciliation and safe terminal
-evidence; (C) latest tick/OHLCV/benchmark/calendar/VNM contracts; and (D)
-mark/valuation provenance, artifact/reference, research linkage and the
-portfolio-equity grain decision.  The same release returns all MC-01…MC-09
-results.  It may adapt an existing Market Data source internally, but Portal
-receives only versioned private Edge contracts.
-
-**Non-negotiable boundary:** event sequence is contiguous within its exact
-bound stream `(workspace, profile, venue, resource, filter)`, not a fictitious
-database-wide total order.  Cross-stream relationships use source-owned
-causation/correlation IDs.  Pre-capture history is an explicit retention
-boundary; it is never reconstructed.
-
-**Evidence/exit:** one
-[`source-completeness campaign`](backend/TRADING_SYSTEM_SOURCE_COMPLETENESS_CAMPAIGN_V1.md)
-return root contains the existing EDS-09 event return, N28 return, market and
-provenance schemas/fixtures, acceptance evidence and one manifest.  Portal
-validates those existing machine schemas before any separate per-contract
-activation proposal.  Current Manager reads, the Portal observation lane and
-all source-dark runtime flags stay unchanged during source implementation.
-
-**Next:** Trading System owner implements and returns the one package.  Portal
-then resumes EDS-09/EDS-10 only for individually verified accepted contracts;
-it continues EDS-09b/EDS-10b/EDS-11 current-data product work in parallel.
+**Next:** EDS-10 and EDS-11.
 
 ### EDS-10 — Full lifecycle replay and market-context query plane
 
@@ -5412,16 +4837,9 @@ boundary and browser seek/virtualization.
 and no smoke fallback; available lifecycle is replayable and unavailable
 pre-capture history is visibly bounded.
 
-**Next:** this authoritative branch is parked. Current product delivery
-continues through EDS-09b → EDS-10b → EDS-11; EDS-10 resumes only when its
-future source contract exists.
+**Next:** EDS-11.
 
 ### EDS-11 — Complete screen BFF/action graph and local realtime activation
-
-**Status:** `IMPLEMENTED / CONTRACT_VERIFIED / CURRENT_SOURCE_ONLY /
-RUNTIME_INACTIVE` on 2026-09-05. The current-data portion is complete; actual
-runtime/profile activation and the future authoritative Event lane remain
-separate operational/source decisions.
 
 **Goal:** finish every frozen screen, tab, panel, filter and button using local
 committed revisions and one resumable realtime channel.
@@ -5450,656 +4868,7 @@ performance traces.
 available action resolves correctly; no browser-driven source amplification;
 deployed image passes the complete route graph.
 
-**Next:** execute EDS-11R1 → EDS-11R3 for current truth, with the
-Trading-System-owned EDS-11R4 market adapter in parallel; then enter EDS-12
-with the exact accepted capability matrix.
-
-### EDS-11R — Current Manager-v2 maximum-data activation: canonical delivery plan
-
-**Status:** `R1_R2_R3_PORTAL_COMPLETE /
-R4_PORTAL_CONSUMER_SOURCE_DARK_READY__TS_ADAPTER_IMPLEMENTED_RUNTIME_DISABLED /
-R5_SOURCE_DARK_LEDGER_IMPLEMENTED__RUNTIME_CUTOVER_OPTIONAL` on 2026-09-06.
-
-**Why this exists:** the active Paper, Sandbox and Live Manager-v2 instances
-already expose the same digest-pinned 96-relation current-read catalogue over
-the private mTLS/delegated-JWT path.  This campaign turns that existing surface
-into useful Portal product data.  It is deliberately not a request to copy the
-Trading System database, bypass Edge, add browser credentials, or replace the
-approved rich UI with generic envelopes.
-
-**Campaign rules — apply to every R phase:**
-
-- The browser calls named same-origin BFF operations only.  It never selects a
-  Manager relation, passes a source cursor, or sees upstream URLs, mTLS input
-  or a delegated JWT.
-- The server retains the exact active profile, catalogue revision/digest,
-  availability, freshness, completeness, `as_of_ms`, UTC milliseconds and
-  exact-decimal strings.  It returns source empty, partial, stale and denied
-  states faithfully.
-- A bounded source page remains at or below 200 rows and 1 MiB.  Portal may
-  emit only a Portal-signed, relation-bound continuation to the browser.
-- Keep the approved rich composition mounted.  A typed state belongs inside
-  the affected panel; it must never erase a screen or substitute fixture data.
-- Every phase closes with its mapping/contract evidence, focused negative
-  tests, profile-isolation tests and a plan-journal update in the same commit.
-  A newly discovered source limitation is either handled in that phase or
-  recorded as a named, typed source capability — never concealed as debt.
-
-**Bobby-approved delivery matrix — exact scope before EDS-12:**
-
-| Phase | Product result to close | Implementation owner | Release truth after the phase |
-| --- | --- | --- | --- |
-| `EDS-11R1` | Map all 96 Manager-v2 relations: 54 screen-bound relations become fixed, named, safe same-origin BFF operations; each remaining relation has an explicit non-browser disposition. | Portal | A browser can request a product operation only; it can never select a relation, source cursor, schema, mTLS input or delegated JWT. |
-| `EDS-11R2` | Hydrate Alpha, Portfolio, Account/Binding, Paper, Sandbox, Live, Blotter and Operations panels from those operations without replacing the approved rich UI. | Portal + frontend consumer | Rich shell, chart/table/drawer composition and interaction remain mounted; truthfully empty/partial/stale states live inside the affected panel. |
-| `EDS-11R3` | Retain admitted current truth locally, serve bounded financial/performance/risk windows and fan out local observation updates by SSE. | Portal | One bounded source refresh can serve many browser tabs; exact decimal/UTC/provenance/freshness survive; this remains current observation, not a claimed source replay log. |
-| `EDS-11R4` | Publish Market Context from the already-running Data Layer: latest observation and bounded OHLCV/candles now; benchmark/calendar/VNM only where an exact fixed DTO is actually published. | Trading System agent; Portal validates and consumes | No new database, ingestion, public listener or Portal-to-Redis/Data-Layer path. The existing private Manager → Edge mTLS/delegated-JWT boundary remains the only path. |
-| `EDS-11R5` | Optionally promote observed lifecycle history to exact authoritative replay. | Trading System agent + Portal reducer | `domain_events` may be shown now only as observed history. It becomes authoritative replay only after an epoch/sequence/correction/retention/snapshot/ACK contract is accepted. |
-
-**No-wait interpretation and verified result:** R4 did not need a new
-market-data project, AWS resource, database copy or public API approval.  The
-Trading System clean worktree now contains commit `26fd6b2`, a small internal
-Manager-side adapter over the existing `DataLayerV2Facade.latest_market()` and
-`warmup_bars()` readers.  It publishes exactly two bounded private operations:
-`managerMarketContextLatestV1` and `managerMarketContextCandlesV1`.  Benchmark,
-calendar and VNM remain explicit typed facets until the owner publishes exact
-DTOs for them; they are not fabricated or treated as a blocker for latest and
-candle data.  SSH was used only to verify this code and its contract pack.
-The Trading System repository remains the correct release owner; Portal only
-validates the digest-pinned return and consumes it through named BFFs.
-
-#### EDS-11R1 — Complete 96-relation, screen-bound named BFF authority
-
-**Status:** `COMPLETE_AT_PORTAL_CONTRACT_GATE / PUSHED`; runtime promotion is
-deliberately a separate release decision, not unfinished R1 work.
-
-**Goal:** classify all 96 Manager-v2 relations and make every authorized
-screen-bound fact reachable through one explicit, safe, same-origin Portal
-operation.  The 54 `SCREEN_BOUND` relations must be mapped; the remaining 16
-projection inputs, 13 audit-only relations and 13 intentionally internal
-relations must have an explicit non-browser disposition.
-
-**Work:**
-
-- Fetch the catalogue only through the existing server-side private Manager
-  capability route, validate its immutable revision/digest per profile, and
-  fail closed on an unreviewed drift.
-- Extend the server-owned operation registry so every rich screen panel has a
-  named operation and exact relation dependency.  A browser cannot construct a
-  generic `/records/{schema}/{relation}` request or choose a relation itself.
-- Define safe DTO selectors, identity joins, sort/filter allowlists, exact
-  decimal/UTC codecs and panel-specific maximums.  Redact raw payload,
-  credentials, command input, source checkpoint and other internal fields even
-  when the underlying relation is permitted to Portal.
-- Record one of `AVAILABLE_DIRECT`, `AVAILABLE_DERIVED_AT_PORTAL`,
-  `AUTHORITATIVE_EMPTY`, `PARTIAL_BOUNDED`, `SOURCE_TYPED_FAILURE`,
-  `AUDIT_ONLY` or `INTERNAL_ONLY` for every relation/panel mapping; no default
-  `Unavailable` branch is allowed.
-- Generate a mapping manifest that the frontend consumer catalogue can bind to
-  by named operation ID, never by an upstream relation string.
-
-**Tests and acceptance:** 96/96 classifications reconcile to the catalogue
-digest; all 54 screen-bound mappings have a named operation or a documented
-typed no-data state; unknown/digest-drift/relation injection/profile crossover/
-cursor substitution/over-bound responses are rejected; safe-field snapshots
-prove redaction.  The phase closes only when the mapping manifest, contract
-fixtures and complete frontend screen-to-operation matrix agree.
-
-**Does not do:** no direct Trading System DB, Redis, broker or CLI access; no
-source/runtime/container/command activation.  **Next:** EDS-11R2 consumes the
-manifest; EDS-11R3 can prepare its admitted projection schema in parallel.
-
-**Completion record:** `generate-eds11r-manager-relation-registry.mjs` compiles
-the accepted sanitized Manager census and column metadata into a checked-in
-registry: 54 `SCREEN_BOUND` named operations, 16 explicit
-`PORTAL_PROJECTION_ONLY` dispositions, 13 `AUDIT_REPOSITORY_ONLY` dispositions
-and 13 `NOT_BROWSER_ADMISSIBLE` dispositions. Empty legacy census screen lists
-were assigned to their existing rich Portal screen(s) in the generator as
-presentation ownership only; they do not widen a source capability. The
-same-origin surface is `GET /api/v1/execution/manager/operations` (redacted
-binding manifest) and `GET /api/v1/execution/manager/current/:operationId`
-(fixed logical operation only). It accepts only `environment`, `limit` and a
-Portal-issued opaque continuation; there is deliberately no browser relation,
-schema, source, sort or filter parameter. Manager relation/cursor/transport
-values stay server-side. The response preserves profile, catalogue revision,
-availability/freshness/completeness, `as_of_ms`, exact decimal strings and
-typed source outcomes while stripping raw record keys, JSON/array fields and
-`MAY_CONTAIN_SENSITIVE_STRUCTURED_DATA` fields.
-
-#### EDS-11R2 — Rich UI hydration across current Paper, Sandbox and Live truth
-
-**Status:** `COMPLETE_AT_PORTAL_HYDRATION_GATE / PUSHED`; each product panel
-has a named-data path and preserves its rich shell while deployment promotion
-remains independently gated.
-
-**Goal:** hydrate the approved rich UI without changing its hierarchy, visual
-language or interaction model.  Alpha, Portfolio, Account/Broker/Binding,
-Paper, Sandbox, Live, Blotter, Operations and governance screens must render
-the maximum current truth their named R1 operations provide.
-
-**Work:**
-
-- Bind each panel to one or more R1 named BFF operations, preserving its
-  existing layout, tables, charts, toolbars, drawers and animated state model.
-- Build server-side joins only through documented keys and declare their
-  provenance.  Cross-profile portfolio/account aggregates are exact-decimal
-  `DERIVED_AT_PORTAL`, with input relation names, formula revision and
-  completeness exposed to the consumer.
-- Distinguish an authoritative absence of rows from a bounded partial page,
-  stale source, denied profile or a truly unsupported capability.  A resource
-  detail route must keep its shell and render a panel-local state instead of a
-  blank full-page error.
-- Make Paper, Sandbox and Live separate read profiles.  Live may legitimately
-  be empty; it must render typed empty data, never an invented readiness state
-  or a generic `Unavailable` error.
-- Remove product-route fixture fallback.  Fixtures remain allowed only in
-  isolated labs, contract tests and browser doubles.
-
-**Tests and acceptance:** authenticated route journeys cover list/detail/tab/
-empty/partial/stale/denied states for each screen family; all panel reads are
-same-origin and named; no fixture import reaches a production route; exact
-decimals/UTC timestamps/profile labels survive from BFF to renderer; React/DOM
-and browser-console gates remain clean.  The phase closes when rich UI remains
-rich under every truthful data state, rather than merely when a route returns
-HTTP 200.
-
-**Does not do:** no fabricated candle, benchmark, replay, causal ordering or
-broker acknowledgement.  **Next:** EDS-11R3 makes the admitted reads efficient
-and realtime; market-only panels wait for EDS-11R4 rather than degrading their
-whole screens.
-
-**Completion record:** `ExecutionProductReadSource` now prefers the durable
-profile snapshot and uses an R1 generated operation only for a simple current
-page when the snapshot is not yet present (or when projection is intentionally
-off).  The compatibility conversion is internal to Control API; it discards
-the R1 `resource_id`, never exposes source relation/cursor/transport data, and
-retains exact-integer strings and UTC timestamps for existing Paper/Profile
-composers.  `N31_PROJECTION_NOT_READY` is the sole local-projection error that
-may warm through R1.  Stale, corrupt, scoped, sorted, filtered and exact-detail
-reads remain fail-closed and wait for the local projection.  This preserves
-the approved rich screen shell while R3 prepares the retained data needed by
-charts, resource detail and exact local query panels.
-
-**Rich-composition integration note (2026-09-06):** the reviewed approved UI
-slice from `feat/eds-current-bff` is integrated here as a bounded R2 input:
-environment-specific derivation boards, the financial-chart grammar, Command
-Center motion, Insight Charts and observed Trade Replay remain mounted in the
-product shell. The later public-venue-candle commit is intentionally excluded:
-Market Context must arrive through the EDS-11R4 Trading-System-owned adapter,
-not through a second Portal-to-public-market transport. This is an authority
-preservation decision, not a missing rich-UI feature.
-
-#### EDS-11R3 — Durable current projection, financial range and local SSE
-
-**Status:** `COMPLETE_AT_PORTAL_PROVENANCE_GATE / PUSHED`; it is local
-observation/SSE only and makes no unearned authoritative-event claim.
-
-**Goal:** make refreshes smooth and bounded by retaining admitted current data
-on Portal, serving financial/risk/performance windows locally, and fan-out
-committed local revisions without multiplying AWS-HK calls per browser tab.
-
-**Work:**
-
-- Extend the existing profile-isolated lease/coalescer and durable projection
-  only for named R1 operations.  Preserve source `as_of`, coverage,
-  completeness, freshness and catalogue/profile identity on every retained
-  row/window.
-- Build bounded retained equity, performance and risk query DTOs with exact
-  decimal strings, UTC milliseconds, declared sampling/downsampling and a
-  finite range continuation.  Do not store a second uncontrolled raw-data
-  lake or silently downcast finance values.
-- Publish current `domain_events`, fills, positions and command evidence only
-  as `CURRENT_SOURCE`/`PORTAL_OBSERVATION`; they are useful observed history,
-  not an authoritative replay log.
-- Emit SSE only after a local committed revision.  Send profile-scoped named
-  operation/panel invalidations, not raw relation/cursor/source checkpoints;
-  preserve Last-Event-ID, gap/resync, slow-client and polling fallback rules.
-- Bound retention and rebuild/restore behaviour, including source-page replay
-  quarantine when the same logical retained range changes digest unexpectedly.
-
-**Tests and acceptance:** source-read coalescing for 1/10/100 subscribers;
-profile switch and profile-crossing negative cases; restart/replay without a
-double visible revision; gap/resync/slow-client/auth-expiry; retained financial
-range boundary and downsampling extrema; empty/stale/partial propagation;
-backup/restore and corrupted-range quarantine.  The phase closes when browser
-refresh/reconnect uses Portal-local truth and one source read serves many
-subscribers.
-
-**Does not do:** local sequence values must not be presented as a Trading
-System event sequence; no command authority changes.  **Next:** EDS-11R4 adds
-the separate market-context source contract; R5 remains independent.
-
-**Completion record (2026-09-06):** the existing SGP-local lease-owned
-projection, retained financial/risk range and single local SSE tail are now
-closed through the R3 provenance boundary.  Every fresh snapshot relation and
-row carries the immutable accepted Manager catalogue SHA-256 alongside its
-contract revision; a retained range row keeps the exact revision/digest under
-which it was originally admitted rather than being relabelled on a later
-catalogue deployment.  The current accepted digest is persisted separately in
-snapshot, journal and durable-batch storage, included in the local cursor-only
-SSE provenance, and incorporated in the local source epoch.  A catalogue
-release therefore creates a new local epoch/resync boundary rather than
-silently reusing the old revision.
-Pre-R3 rows remain explicitly `null`/absent rather than being retroactively
-labelled.  The static projection catalog now rejects every audit-only or
-internal-only relation at module admission; only R1 screen-bound operations
-and R1 `PORTAL_PROJECTION_ONLY` inputs can enter the server-side projection.
-Browser tabs continue to receive only same-origin BFF reads and one
-profile-scoped local observation feed; no browser refresh creates a direct
-AWS-HK read and no source relation/cursor/credential crosses SSE.  Existing
-tests exercise one shared local tail for 1/10/100 subscribers, local replay
-gap/resync/auth-expiry/slow-client behavior, range/downsample and
-restore/quarantine paths; focused R3 tests add catalogue persistence and
-audit/internal-admission negatives.  This remains **Portal observation**, not
-authoritative Trading-System event replay.
-
-**Deployment wiring note (2026-09-06):** the local-projection overlay now
-accepts explicit durable-mirror write/read flags in addition to the existing
-projection flag. Both remain default-off; an operator enables both only in a
-reviewed dev/release overlay. This makes R3 chart data and SSE fan-out
-available without adding a per-browser AWS-HK refresh path.
-
-#### EDS-11R4 — TS-owned Market Context v1 adapter over the existing Data Layer
-
-**Status:** `PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY / OWNER_HANDOFF_VERIFIED /
-TS_SOURCE_IMPLEMENTED_RUNTIME_DISABLED / PENDING_SEPARATE_OWNER_DEPLOYMENT_EVIDENCE`.
-
-**Execution decision:** this can start immediately in the Trading System
-repository.  AWS-HK already has the required Data Layer and market services;
-R4 needs only a thin, additive publication adapter.  It does **not** need a
-new database, new market ingestion, direct Portal access to Redis/Data Layer,
-a public listener, or a Portal runtime activation.  The single owner handoff
-is the `EDS-11R4` annex in
-[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md).
-Its machine-readable attachment is
-`services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/`;
-its `market-context-wire-contract.v1.json` freezes the exact two private
-Manager/Edge mappings and response schema identities, so Portal never has to
-guess an adapter route after the owner return.
-it is an annex of that one request, not a separate owner campaign.
-
-**Goal:** publish the market facts that already exist in AWS-HK's private Data
-Layer through one additive, versioned, profile-bound Manager/Edge contract:
-latest observation, OHLCV/candles, benchmark, venue calendar and VNM
-constraints.  This is an adapter task, not a request to create a new market
-database, re-ingest history or relax the Portal security boundary.
-
-**Trading System owner/agent work (the correct implementation owner):**
-
-- Implement one `market-context.v1` adapter adjacent to the existing Manager
-  source boundary.  It calls the local Data Layer privately and exposes only
-  bounded, versioned reads through the existing Source Proxy/Manager/Edge
-  trust path.
-- Publish named operations for latest observation, candles, benchmark,
-  calendar and effective VNM constraints.  Each request must bind
-  `(profile, venue, instrument, interval, time range)` as applicable, return
-  UTC milliseconds/exact decimal strings/provenance/freshness/coverage, and
-  enforce a finite range/point limit.  `latest` and bounded OHLCV are the
-  immediate required deliverables because their readers are confirmed; a
-  benchmark, calendar or VNM facet may return a precise typed-unavailable
-  capability when the existing source cannot supply its exact semantics.
-- Preserve mTLS, short-lived delegated audience/scope, profile isolation and
-  fail-closed unknown instruments/venues.  Do not expose Data Layer directly
-  to Portal or a browser, alter broker/CLI authority, or create a public
-  listener.
-- Return one signed/digest-pinned contract, fixtures, positive/negative
-  transport evidence, range/retention semantics and an owner acceptance
-  manifest.  It may be implemented now because its upstream facts already
-  exist; it does not wait for a Trading System data upgrade.
-
-**Portal work after the return:** validate the schema/digest, bind named BFF
-operations to the approved market profile, retain bounded chart windows,
-surface provenance and exact values, and send local invalidations through
-R3's SSE lane.
-
-**Portal consumer preparation (source-dark, 2026-09-06):** Control API now
-contains exactly two same-origin endpoint shapes — `GET
-/api/v1/execution/market/latest` and `GET
-/api/v1/execution/market/candles` — with fixed private Edge paths, strict
-venue/instrument/interval/range bounds, 1 MiB/8 MiB operation limits,
-server-owned workspace identity, mTLS/delegated-read reuse, exact decimal
-strings and UTC milliseconds.  The compiled publication intake is deliberately
-`PENDING_OWNER_ADAPTER_IMPLEMENTATION`; it rejects every request **before** a
-transport/session/JWT can be opened, even if the deployment feature flag is
-mistakenly true.  Only a reviewed, digest-pinned owner return can change that
-intake, and the separate deployment flag is then still required.  Thus the
-Portal half is ready without inventing a route, exposing an upstream cursor or
-creating AWS-HK traffic before source acceptance.
-
-**Portal canonical contract closeout (source-dark, 2026-09-06):**
-`packages/contracts/schemas/execution-market-context.v1.schema.json`,
-`openapi/execution-market-context.openapi.json`, generated
-`execution-market-context.d.ts`, and populated latest/candle fixtures now
-freeze the exact browser response shape. The schema admits only the two named
-operations, maps every environment to its exact profile, preserves
-`availability/freshness/completeness/as_of_ms`, UTC milliseconds and exact
-decimal strings, caps latest at 200 rows and candles at 2,000 rows, and rejects
-unknown browser fields. The generated client surface contains only `GET`
-operations; OpenAPI never exposes Edge paths, source relations, cursors, mTLS
-inputs or delegated credentials. Contract fixture/type verification passes
-**120/120**. This does not change the compiled pending owner intake or activate
-a source read.
-
-**Current R4 state (2026-09-06):** source commit `26fd6b2` in the isolated
-Trading System worktree implements the frozen two-operation adapter, tests,
-source-owned manifest and a default-off runtime template.  Its changed-source
-Ruff gate, full Owner Manager unit suite and manifest check pass in a
-no-network test container.  This is deliberately **not** a claim that Market
-Context is live: a deployment-bound image digest, exact private mTLS/JWT
-positive/negative transport evidence, profile-scoped source configuration,
-response-bound/retention evidence and owner return manifest remain the one
-separate activation gate.  Dependent rich panels must continue their typed
-pending state until that return validates and a separate runtime activation is
-approved.
-
-**Tests and acceptance:** per-profile/venue/instrument isolation; invalid
-interval/range/point-limit; stale/empty/provider-degraded source; exact
-decimal/UTC fidelity; no direct Data Layer or browser route; chart range and
-calendar/VNM boundary fixtures.  The phase closes only with a source-owned
-contract and an end-to-end Portal consumer acceptance.  Until then, market
-panels show a precise `PENDING_MARKET_CONTEXT_ADAPTER` state while every other
-current panel remains usable.
-
-**Closeable handoff/return sequence:** the owner implements and tests one
-additive adapter on a clean Trading System feature branch, returns its
-contract/fixture/acceptance pack under the existing master-request return
-root, and does not enable a runtime listener.  Portal then performs schema and
-digest verification, adds only named same-origin BFF operations, and proves
-Paper/Sandbox/Live profile isolation plus retained-chart/SSE invalidation.
-Thus R4 cannot strand a half-built transport: it is either fully accepted end
-to end or every dependent panel stays visibly typed-pending.
-
-**Ownership note:** a Portal agent may SSH to inspect and validate the AWS-HK
-runtime, but the adapter belongs in the Trading System repository and should
-be made by its owner/agent.  Codex does not edit that repository unless Bobby
-explicitly grants this exact EDS-11R4 Trading System scope.
-
-**AWS-HK read-only audit record (2026-09-06):** the owner runtime already has
-both `data_layer_service` and `market_data_service` running.  The Trading
-System source contains `DataLayerV2Facade.latest_market`, `latest_bar` and
-`warmup_bars`, `VersionedDataLayerClient.warmup_ohlcv`, and
-`MarketCacheReader.execution_market_context()`, which composes the validated
-quote/mark/trade/book cache into `execution_market_context.v1` immediately
-before Risk admission.  This proves that latest market truth, bars and a
-typed execution-mark context are present upstream now.  It also proves the
-boundary: that object is currently an internal Trading-System cache/Risk
-object, not a Manager-v2 catalogue operation or a Portal route.  The owner
-agent should therefore add the thin adapter above, reuse those readers, and
-publish a capability/fixture pack.  Benchmark, calendar and VNM constraints
-must be listed by exact availability in that pack; any source facet not yet
-available remains typed `SOURCE_UNAVAILABLE`, not fabricated.  No new market
-database, Redis access from Portal, or direct Data-Layer browser route is
-permitted.
-
-**Current-source adapter boundary verified (2026-09-06, read-only SSH):** do
-not mistake the existing static N11 catalogue declaration for a live Manager
-publication. The Trading System checkout has a public-system
-`GET /v1/market/latest/{venue}/{symbol}` reader, a private
-`MarketCacheReader.execution_market_context()` reader, and static N11 entries
-for `/portal/execution/v1/market/ticks` and
-`/portal/execution/v1/market/candles`. However the current capability
-catalogue explicitly marks the two N11 market entries `published: false`,
-`portal_reachable: false` and `source_binding_status: TYPED_UNAVAILABLE`; the
-current query adapter returns `MARKET_SOURCE_UNAVAILABLE`. They therefore
-cannot be adopted by Portal or silently activated. The required R4 work is
-still only the small additive source-owner adapter: bind the confirmed existing
-readers, expose the two fixed Manager routes under the already-approved
-mTLS/delegated-JWT boundary, publish accepted digest/fixtures/negative
-transport evidence, and return the pack. It needs no new market database,
-cache, public endpoint or AWS resource. Portal must not edit that source
-repository or bypass the boundary.
-
-#### EDS-11R5 — Optional exact lifecycle replay semantics
-
-**Status:** `OBSERVED_HISTORY_CLOSED_AT_PORTAL /
-AUTHORITATIVE_LEDGER_SOURCE_DARK_IMPLEMENTED /
-RUNTIME_CUTOVER_OPTIONAL__NOT_A_CURRENT_DATA_BLOCKER`.
-
-**Goal:** promote useful existing observed history into **authoritative replay**
-only if Trading System publishes a contract that guarantees the missing
-semantics per exact bound stream: epoch, contiguous sequence, correction/
-tombstone representation, retention floor, snapshot/resume and durable ACK.
-
-**Current truthful behaviour:** `domain_events`, fills, positions and evidence
-can already feed R2/R3 observed timelines.  Neither `event_ts` nor database
-row order proves a global order, replayability, correction handling or history
-completeness, so Portal must not infer those properties.
-
-**Source-as-is audit (2026-09-06):** the real `domain_events` hypertable has
-immutable `(event_id, event_ts)` identity and useful scope/timestamp columns,
-but the current owner query orders a bounded page by `event_ts, created_at` and
-returns raw `payload`/`raw` material.  It has no declared stream epoch,
-contiguous sequence, correction/tombstone model, retention floor, snapshot /
-resume envelope or durable Portal ACK.  The existing
-`services/portal_execution_owner/event/source.py` models those semantics only
-as a source-dark, transport/database-free future core.  Therefore Portal's
-existing named `executionObservedTimelineV1` operation is the maximum safe
-current use: it composes redacted current source facts through the durable
-Portal projection and labels the result `CURRENT_SOURCE` /
-`PORTAL_OBSERVATION`.  `public.domain_events` remains `PROJECTION_INPUT`, not
-a browser-readable generic relation.  This is a closed current-data decision,
-not hidden technical debt or a reason to discard existing observation data.
-
-**Elected delivery specification — source-owned ledger, not a synthetic
-ordering (2026-09-06):** R5 is now implemented as an additive, default-off
-Trading-System-owned ledger adjacent to `domain_events`. It does **not**
-reinterpret `event_ts` or `created_at` as a sequence and it does not backfill
-old rows. At a separately approved cutover, an enabled exact
-`(profile_id, mode, venue)` binding causes an `AFTER INSERT` trigger to assign
-one contiguous per-stream `source_sequence` in the same database transaction
-as the newly committed domain event. The ledger keeps a persistent stream
-epoch, head and retention floor; it records a redacted immutable event
-envelope only, never `payload` or `raw`. Existing history before that cutover
-remains the explicitly labelled Portal observation lane.
-
-The source-owned `AsyncPgEventJournal` now reads only that ledger under the
-existing read-only role and feeds the already-tested demand/lease/cursor core;
-it is source-dark and has no runtime factory, listener, Manager route or
-enabled stream binding. It is intentionally not an alternate direct Portal
-database path.
-Its snapshot is explicitly an `EVENT_LOG_ANCHOR` at a durable watermark, not a
-claim that the current order/fill/position tables were atomically reconstructed
-from pre-cutover events. A Portal reducer therefore combines a current named
-Manager snapshot with a post-watermark tail only after durable local commit;
-it never treats the audit ledger as an unproven full state-reconstruction
-stream. A source epoch change, retention-floor advance, gap, duplicate,
-cursor-ahead or correction-model violation is a typed resnapshot condition.
-
-The correction model is explicit and append-only: each ledger entry represents
-an immutable `domain_event`; ordinary events are `UPSERT`, a future tombstone
-is `DELETE`, and an optional `supersedes_event_id` may identify a correction.
-No code may infer a correction from timestamp/order or reuse `causation_id` as
-a substitute. Existing emitters default to `UPSERT`; only emitters that set
-the explicit source field can publish correction/tombstone semantics. This is
-an exact replay of the bounded **event ledger** from its declared cutover, not
-a fabricated database-wide total order or retrospective state replay.
-
-**R5 implementation slices and exit evidence:**
-
-1. Add `portal_event_stream` tables for exact profile bindings, persistent
-   epochs/head/floor and redacted immutable entries, plus a transactional
-   capture trigger. No binding is seeded/enabled and no historical backfill,
-   retention purge, listener or source route is activated by the migration.
-2. Extend the private event core with source-epoch and snapshot-semantics
-   validation, then add a bounded read-only AsyncPG journal adapter. It must
-   use fixed SQL, one profile binding and the existing read-only database role;
-   it cannot select an arbitrary table, payload, raw field or profile.
-3. Freeze a `portal-event-ledger.v1` contract/manifest, cutover/rollback
-   runbook and synthetic continuity corpus. The future Manager/Edge route is
-   named and private; it remains disabled until a separate image/config/mTLS /
-   delegated-JWT / response-bound acceptance window.
-4. Prove migration idempotence, sequence contiguity under concurrent capture,
-   empty-anchor behavior, profile isolation, raw-redaction, epoch rollover,
-   correction/tombstone representation, retention floor, duplicate page,
-   restart/ACK, cursor tamper and gap/resync paths. Runtime acceptance is a
-   separate release gate and cannot be claimed from synthetic tests.
-
-**Work if elected:** TS adds an additive stream envelope over its existing
-tables/outbox; Portal validates snapshot-plus-tail, persists source checkpoint
-only after durable reduction, and provides replay seek/correction/retention
-UI through named BFFs.  The contract must define scope rather than pretending
-to be a database-wide total order.
-
-**One-request rule:** this is already the `MC-01 · event.full-incremental`
-lane of the single
-[`TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md`](backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md),
-with the prepared EDS-08 snapshot/tail schemas and synthetic continuity corpus
-as Portal's acceptance surface.  Do **not** create an R5 side request.  The
-Trading System owner may implement MC-01 in the same source campaign as R4,
-but a delayed MC-01 result must neither delay R4 nor downgrade the current
-observed-history product.
-
-**Source-dark completion record (2026-09-06):** Trading System clean-worktree
-commit `d7542f1` implements the ledger schema, fixed-SQL journal, explicit
-operation/correction fields, source-epoch/contiguity validation, default-off
-config, contract pack and successor provenance bindings for the frozen N03/N15
-artifacts. Changed-source Ruff and the complete unit suite pass in a
-network-none test container; an ephemeral `timescale/timescaledb` smoke run
-proved ten concurrent synthetic captures result in contiguous `1..10`
-sequences with `payload`/`raw` absent. No migration, stream binding, retention
-job, listener, Manager/Edge route, credential, container or AWS network change
-was applied.
-
-**Portal receiver completion (2026-09-06):** the Portal now has the matching
-source-dark reducer in `AuthoritativeEventLedgerRepository` plus migration
-`1723680000027`. It admits only the exact Paper / `PAPER_BINANCE_USDM` /
-`BINANCE` v1 contract, persists an `EVENT_LOG_ANCHOR`, immutable redacted
-entries and a derived entity view, and advances its durable local ACK only in
-the transaction that commits a contiguous page. Gap, epoch mismatch,
-retention-floor advance, duplicate conflict and unknown correction reference
-move the stream to `RESNAPSHOT_REQUIRED`; an explicit re-anchor clears only
-the derived view, never historical event evidence. The receiver has **no
-controller, source transport, worker, timer, feature flag or runtime
-activation path**. Its contract rejects raw payloads and credentials
-recursively (including nested authorization/token-like fields), keeps
-exact-sequence strings as integers, and preserves the source-owned epoch.
-Focused tests cover anchor/page/ACK, idempotence, gap/floor, epoch rotation,
-re-anchor, correction, cross-profile and redaction paths. The complete Control
-API gate passes TypeScript build, **49 files / 416 tests**, and a
-backup/restore fingerprint that includes all three new ledger tables.
-
-**Tests and acceptance:** duplicate, out-of-order, gap, restart, resnapshot,
-late correction/tombstone, retention-floor, ACK and cross-profile-negative
-tests; browser replay seeks have no arbitrary 200-row history cap. The
-source-dark implementation is complete when these tests pass. Runtime
-acceptance remains a separate owner-approved cutover and must additionally
-prove the deployment-bound source/transport response and Portal
-snapshot-plus-tail continuity corpus. If that cutover is not elected for this
-release, R5 remains an explicit future capability and never masquerades as
-technical debt or an incomplete R1-R4 result.
-
-#### EDS-11R4/R5 — approved runtime-activation amendment (2026-09-06)
-
-**Authorization and objective:** Bobby has approved the complete R4/R5
-activation path before EDS-12.  The objective is to expose every *currently
-available* Market Context and event-ledger fact to Portal through the existing
-private Manager/Edge boundary, while retaining exact empty states for profiles
-that do not yet have a source row.  “Activated” never permits a direct Portal
-connection to Trading System PostgreSQL, Redis, broker, CLI, Data Layer or a
-browser-visible source credential.
-
-**Immutable starting point:** Trading System source is pinned at
-`d7542f1` (which contains R4 source commit `26fd6b2`); Portal source is pinned
-at `50239f6`.  AWS-HK currently runs three isolated Manager-v2 profiles:
-`PAPER_BINANCE_USDM`, `SANDBOX_BINANCE_USDM` and `LIVE_BINANCE_USDM`.  The
-source audit confirms current Paper `domain_events` rows and no Sandbox/Live
-event rows at the activation point.  Sandbox/Live must therefore be activated
-with their exact profile binding but return `AUTHORITATIVE_EMPTY`, never Paper
-data, a fabricated sample, or a cross-profile fallback.
-
-**R4 activation sequence — bounded Market Context:**
-
-1. Build and pin one immutable Trading System image containing the two fixed
-   `market/latest` and `market/candles` Manager routes.  Preserve each existing
-   profile's mTLS trust material, delegated-JWT audience/resource and Manager
-   serving policy; add only a private, mode-0600 Data Layer settings input,
-   fixed consumer identity and per-profile instrument allowlist.
-2. Deploy the image to the three existing Manager containers without changing
-   their host ports or exposing a public listener.  Add only the two fixed
-   Source Proxy locations.  Verify mTLS/JWT positive reads, wrong
-   audience/profile/instrument negatives, 200-row/1-MiB latest bounds and
-   2,000-row/8-MiB candle bounds.  Capture response schema, fixture and image
-   digests in an owner-return manifest.
-3. Replace Portal's checked-in pending intake only with that digest-pinned
-   return, enable `FEATURE_EXECUTION_MARKET_CONTEXT` only in the reviewed
-   development overlay, and prove same-origin DTO fidelity, profile isolation,
-   exact decimals/UTC milliseconds and local R3 SSE invalidation.  A source or
-   consumer failure makes the individual market panel typed-unavailable; it
-   must not unmount the rich screen.
-
-**R5 activation sequence — exact ledger only:**
-
-1. Apply the additive, idempotent `portal_event_stream` migration to the
-   existing Trading System database and provision an exact read-only ledger
-   login/member of `ts_portal_event_stream_read`.  Its secret is a private
-   mode-0600 runtime file; it has no write, DDL, source-table, Redis, broker or
-   CLI privilege.  Create a durable, non-secret Manager event-cursor state
-   volume.  No historical `domain_events` backfill is permitted.
-2. Extend the fixed Manager contract with exactly `events/anchor` and
-   `events/tail`, not a generic relation/table route.  Each Manager profile
-   binds one `(profile_id, mode, venue)` stream, validates lease/cursor/page
-   bounds, and serves only redacted ledger records.  The Source Proxy forwards
-   only those two private routes after existing mTLS and delegated-JWT
-   verification.
-3. Activate the existing Rust Portal Execution Edge snapshot+tail coordinator
-   and PostgreSQL append store before any browser SSE.  It writes its durable
-   receipt first, then uses that receipt as the next source cursor/ACK.  It
-   passes only safe, reduced observations to Control API's local projection;
-   source epoch/floor/gap/duplicate/correction violations stop the affected
-   stream and require an explicit re-anchor.  It never silently retries a
-   poisoned cursor or advances an ACK before durable commit.
-4. Qualify Paper with actual post-cutover rows first.  Then qualify Sandbox and
-   Live separately: an empty stream is a successful isolated activation only
-   when its response proves the correct profile/epoch/floor and zero records.
-   Only after all three profile probes pass may the local SSE fan-out be
-   enabled.  Browser traffic reads Portal projection/SSE only; it never drives
-   a source poll.
-
-**Required activation evidence and rollback:** every release record must pin
-the source commit, image digest, Manager contract/fixture manifests, Source
-Proxy revision, profile binding, mTLS/JWT positive and negative probes,
-response bounds, migration fingerprint, current stream state and Portal Edge
-durable append/ACK receipt.  The rollback order is: disable Portal local event
-consumer/SSE, disable Edge event polling, disable the two proxy locations,
-then restore the prior Manager image.  The additive ledger tables and retained
-immutable entries remain intact; the migration is never rolled back by data
-destruction.  R4 may be rolled back independently of R5.
-
-**Close condition:** R4 is `RUNTIME_ACCEPTED` only after all three bounded
-profiles pass the private transport and Portal BFF acceptance corpus.  R5 is
-`RUNTIME_ACCEPTED` only after the Paper contiguous-tail corpus plus Sandbox/
-Live isolated-empty corpus have durable receipt/ACK evidence.  Otherwise the
-individual capability remains typed and the next step is the failed evidence
-repair, not a new speculative phase.  This amendment is part of R4/R5, not
-new technical debt and not an EDS-12 substitute.
-
-#### EDS-11R closeout matrix — required handoff immediately before EDS-12
-
-This is the single closeout record for the five R phases; do not open a second
-owner campaign or replace a completed phase with a vague `Soon` state.
-
-| Phase | Close condition | Current disposition | Exact next action, if any |
-| --- | --- | --- | --- |
-| `R1` | 96/96 catalogue disposition and 54 named safe BFF operations are generated, redacted and profile-bound. | `CLOSED_AT_PORTAL_CONTRACT_GATE` | Activate only through a separately approved runtime release; no additional relation API is needed. |
-| `R2` | Every listed rich product screen consumes a named server DTO and retains its approved composition through populated, empty, partial, stale and denied states. | `CLOSED_AT_PORTAL_HYDRATION_GATE` | Frontend integration/release verifies panel-level rendering; no full-screen envelope fallback is admissible. |
-| `R3` | Local profile projection, bounded financial query and one profile-scoped SSE observation tail retain digest/provenance and pass restore/quarantine tests. | `CLOSED_AT_PORTAL_PROVENANCE_GATE` | Runtime activation uses the accepted profile/config release; it must not create per-tab AWS-HK polling. |
-| `R4` | The Trading System returns a digest-pinned `market-context.v1` adapter pack with exact profile/path/schema/range/negative transport evidence, and Portal accepts it through named BFF/chart DTO tests. | `TS_SOURCE_IMPLEMENTED_RUNTIME_DISABLED / PORTAL_CONSUMER_AND_CONTRACT_SOURCE_DARK_READY` | Source implementation is committed as `26fd6b2`; owner next produces deployment-bound image/transport/profile/response evidence and return manifest. Portal then validates it, replaces the compiled pending intake, and enables only the two fixed BFF operations plus local chart invalidations through a separately approved runtime flag. |
-| `R5` | A source-owned event contract proves bounded-stream epoch, contiguous sequence, correction/tombstone, retention floor, snapshot/resume and durable ACK; Portal source-dark reducer/checkpoint implementation validates that contract. | `TS_AND_PORTAL_SOURCE_DARK_IMPLEMENTED / OBSERVED_HISTORY_REMAINS_RELEASED / RUNTIME_CUTOVER_NOT_APPROVED` | Source commit `d7542f1` and Portal migration `1723680000027` are fully tested but intentionally default-off. A later owner-approved exact-profile cutover deploys the ledger, binds a stream, obtains transport/response evidence and then permits Portal tail activation; current-data release stays unblocked. |
-
-**Hard routing rule:** R4 and R5 never authorize Portal to read the Trading
-System database, Redis, broker or CLI directly.  R4's only production route is
-the existing private Manager/Edge mTLS + delegated-JWT chain.  R5's future
-stream must use the same owned boundary.  Thus all currently available truth
-can ship without weakening source ownership, while the two semantic upgrades
-remain independently closeable.
-
-**Campaign completion and EDS-12 entry:** EDS-11R1, R2 and R3 are mandatory
-for the maximum current-source product release.  EDS-11R4 is mandatory before
-the release claims real Market Context/candles/benchmark/calendar/VNM support;
-otherwise those individual panels remain precisely typed.  EDS-11R5 does not
-block current data or EDS-12 unless the release claims authoritative replay.
-EDS-12 freezes the accepted operation/profile matrix, validates the same
-catalogue and contract digests, and rejects any claim beyond those accepted
-capabilities.
+**Next:** EDS-12.
 
 ### EDS-12 — Failure/DR, product acceptance and immutable release
 
@@ -6116,13 +4885,10 @@ waiting for unrelated external gaps.
   frontend bundle and source compatibility digests;
 - stage per operation/screen/profile: Paper, Sandbox, Canary-over-Live, Live;
 - remove expired adapters only after zero-use observation;
-- **BR-EX-81 (owner order 2026-09-06):** drain the complete `orders` / `fills`
-  history of every profile from the Trading System through the portal execution
-  edge into the durable mirror and serve per-alpha / per-account cursor reads;
-  no order-bearing screen (Trade Replay, Orders & Fills, Blotter, funnels) may
-  be qualified on the bounded current page, which on 2026-09-06 held 812 orders
-  of 11 strategies and 71 fills of 5 over 42 deployed (DR-26); BR-EX-80
-  (strategy timeframe) rides the same relation refresh;
+- close BR-EX-80 only from a source-published strategy interval and close
+  BR-EX-81 only from a verified full retained order/fill drain through the
+  Execution Edge into the durable Portal mirror; a bounded current page is
+  never labelled subject history or replay;
 - record any remaining external capability as a versioned next-campaign input,
   not hidden technical debt.
 
@@ -6133,10 +4899,21 @@ exact deployed-image verification.
 
 **Exit:** all accepted-source scope is `PRODUCT_ACTIVE` and
 `OPERATIONS_QUALIFIED`; zero P0/P1 integrity issues; rollback evidence exists;
-every deployed strategy's orders and fills are readable in full through the
-edge and its Trade Replay is non-empty whenever the source holds its fills
-(BR-EX-81); owner signs visual/data/action parity. Protected-main merge and
+owner signs visual/data/action parity. In addition, every deployed strategy's
+orders and fills are readable through the Edge/mirror and its replay is
+non-empty whenever that source has fills (BR-EX-81); a published strategy
+timeframe supersedes a derived suffix (BR-EX-80). Protected-main merge and
 stable release remain explicit Bobby actions.
+
+**Implementation journal (2026-09-06):** the static EDS-12 qualification
+contract, immutable digest binding, pure Rust fail-closed authority, failure
+matrix, static mutation gate and isolated N17A DR harness are implemented in
+[`EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md`](./backend/EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md).
+Its current decision is deliberately
+`EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`: it is not a release
+claim.  The only remaining EDS-12 inputs are the real protected-main/deployed
+evidence packet and accepted source proof for BR-EX-80 / BR-EX-81.  No source,
+query, SSE, command or Live-mutation flag is widened by this static slice.
 
 ### 17.6 Frontend collaboration lanes
 
@@ -6152,10 +4929,8 @@ Claude can work in parallel without source/runtime authority:
 | EDS-06 | old/new revision diagnostics and local-mirror parity test harness |
 | EDS-07 | `PrimusFinancialChart`, accessible table and exact tooltip display |
 | EDS-08/09 | event fixtures only from frozen contract; no synthetic product replay |
-| EDS-09b | local observation/revision state visuals; preserve `PORTAL_OBSERVATION` wording |
-| EDS-10b | observed timelines, derived mark-context panels and typed `Soon` replay/market gaps |
-| EDS-11 | incremental local revision updates, virtualization, full route/action Playwright |
-| EDS-10 | virtualized authoritative replay/candlestick renderer only after source acceptance |
+| EDS-10 | virtualized replay/candlestick renderer after contract acceptance |
+| EDS-11 | incremental updates, virtualization, full route/action Playwright |
 | EDS-12 | visual regression, browser failure matrix and owner review packet |
 
 Claude must not replace a rich screen with an envelope page, derive business
@@ -6169,24 +4944,12 @@ Unless Bobby changes priority, execute one campaign branch in this order:
 
 ```text
 EDS-01 → EDS-02 → EDS-03 → EDS-04 → EDS-05 → EDS-06 → EDS-07
-                                                     ↓
-                         EDS-09b → EDS-10b → EDS-11 → EDS-11R1 → EDS-11R2
-                                                                    ↓
-                                                                  EDS-11R3 → EDS-12
-
-Parallel source-owned contract lane:
-EDS-11R4 (Market Context v1 over existing Data Layer) → accepted market panels
-
-Future source-upgrade lane only:
-EDS-08 → EDS-09 → EDS-10 / EDS-11R5 (authoritative replay semantics)
+                              ↘ EDS-08 → EDS-09 → EDS-10 ↗
+                                                   EDS-11 → EDS-12
 ```
 
-EDS-07 is closed in source-dark form, EDS-08 is verified as a future-source
-contract lane, and EDS-09 is code-complete but parked after the owner confirmed
-that all current classes are gaps for authoritative event semantics. EDS-09b,
-EDS-10b and EDS-11 are the approved current-source route and do not wait for a
-new Trading System event implementation. Runtime activation of EDS-09 remains
-blocked until the source owner returns at least one independently verified
-`EVENT_SOURCE_ACCEPTED` class and the exact deployment evidence listed above.
-Neither lane may replace the committed local, server-side range boundary with
-bounded global-page filtering or client-side business joins.
+The immediate next phase is **EDS-01 — Sealed Manager-v2 consumer and fixed
+E5 operation authority**. It is deliberately small enough to close fully: one
+operation, one real frozen-frontend vertical, complete negative/security
+matrix and immutable dev-image proof before widening to the remaining
+operations.

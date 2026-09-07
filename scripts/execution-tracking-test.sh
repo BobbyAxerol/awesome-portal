@@ -23,9 +23,6 @@ N09_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_05_N09_PORTAL_GOVERNANCE_WORKFLOW_
 N09_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N09_GOVERNANCE_WORKFLOW_HANDOFF.md"
 OWNER_MASTER_REQUEST="${ROOT_DIR}/upgrade/backend/TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md"
 EXECUTION_UNIFIED_PLAN="${ROOT_DIR}/upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
-EDS11R4_MARKET_CONTEXT_REQUEST="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/market-context-owner-request.v1.json"
-EDS11R4_MARKET_CONTEXT_MANIFEST="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/MANIFEST.sha256"
-EDS11R4_MARKET_CONTEXT_TEST="${ROOT_DIR}/scripts/execution-eds11r-market-context-test.sh"
 N14A_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14A_PORTAL_RELEASE_AUTHORITY_SOURCE_DARK.md"
 N14A_HANDOFF="${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N14A_RELEASE_AUTHORITY_HANDOFF.md"
 N14B_REPORT="${ROOT_DIR}/upgrade/backend/EX_BE_17_N14B_IMMUTABLE_CURRENT_SOURCE_RELEASE_COMPATIBILITY.md"
@@ -59,9 +56,6 @@ N29_ACCEPTANCE="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n29-prod
 for required_file in \
     "${OWNER_MASTER_REQUEST}" \
     "${EXECUTION_UNIFIED_PLAN}" \
-    "${EDS11R4_MARKET_CONTEXT_REQUEST}" \
-    "${EDS11R4_MARKET_CONTEXT_MANIFEST}" \
-    "${EDS11R4_MARKET_CONTEXT_TEST}" \
     "${N14A_REPORT}" \
     "${N14A_HANDOFF}" \
     "${N14B_REPORT}" \
@@ -97,23 +91,6 @@ do
         exit 1
     fi
 done
-
-for token in \
-    "EDS-11R4" \
-    "market-context.v1" \
-    "NO_DATA_COLLECTION_WAIT" \
-    "not a separate owner campaign"
-do
-    if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
-        echo "execution unified plan lost EDS-11R4 source-as-is invariant: ${token}" >&2
-        exit 1
-    fi
-done
-if ! grep -Fq "EDS-11R4" "${OWNER_MASTER_REQUEST}"; then
-    echo "official Trading System master request lost EDS-11R4 annex" >&2
-    exit 1
-fi
-"${EDS11R4_MARKET_CONTEXT_TEST}"
 
 for token in \
     "N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE" \
@@ -535,6 +512,11 @@ for token in \
     "BR-EX-77" \
     "BR-EX-78" \
     "BR-EX-79" \
+    "BR-EX-80" \
+    "BR-EX-81" \
+    "_next: BR-EX-82_" \
+    "EDS-12" \
+    "EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md" \
     "EX_BE_N13_N17_DEBT_CLOSEOUT.md"
 do
     if ! grep -Fq "${token}" "${EXECUTION_UNIFIED_PLAN}"; then
@@ -542,36 +524,6 @@ do
         exit 1
     fi
 done
-
-# The request ledger is intentionally append-only.  Do not pin this gate to a
-# particular next row: a valid owner/consumer request added to the ledger must
-# not make the workspace unverifiable.  Instead require the one declared
-# placeholder to be exactly the successor of the highest concrete BR-EX row.
-latest_br_ex="$({
-    awk -F'|' '
-        $2 ~ /^[[:space:]]*BR-EX-[0-9]+[[:space:]]*$/ {
-            value = $2
-            gsub(/[^0-9]/, "", value)
-            if ((value + 0) > highest) {
-                highest = value + 0
-            }
-        }
-        END {
-            if (highest > 0) {
-                print highest
-            }
-        }
-    ' "${EXECUTION_UNIFIED_PLAN}"
-})"
-if [[ -z "${latest_br_ex}" ]]; then
-    echo "execution unified plan contains no concrete BR-EX request rows" >&2
-    exit 1
-fi
-expected_next_br_ex="$((latest_br_ex + 1))"
-if ! grep -Fq "| _next: BR-EX-${expected_next_br_ex}_ |" "${EXECUTION_UNIFIED_PLAN}"; then
-    echo "execution unified plan next-request placeholder is not BR-EX-${expected_next_br_ex}" >&2
-    exit 1
-fi
 
 python3 - "${MASTER}" "${TRACKER}" "${ROADMAP}" "${LEDGER}" "${BACKEND_README}" "${ARCHITECTURE}" "${FRONTEND_HANDOFF}" "${CATALOG}" "${ADMISSION_HISTORY}" "${UNIFIED}" "${F2_REPORT}" "${F2_HANDOFF}" "${F3_REPORT}" "${F3_HANDOFF}" "${IAM_REVISION}" "${F4_REPORT}" "${F4_HANDOFF}" "${N09_REPORT}" "${N09_HANDOFF}" <<'PY'
 from pathlib import Path

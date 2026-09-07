@@ -568,6 +568,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "eds12-qualification"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "either"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

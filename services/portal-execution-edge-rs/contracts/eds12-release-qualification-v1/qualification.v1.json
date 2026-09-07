@@ -1,0 +1,194 @@
+{
+  "schema_version": "portal.execution.eds12-release-qualification.v1",
+  "phase": "EDS-12",
+  "decision": "EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING",
+  "runtime_effect": "NONE",
+  "baseline": {
+    "n29_product_acceptance": {
+      "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
+      "decision": "RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING"
+    },
+    "p01_r4_r5_source_integration": {
+      "p01_base": "f9e3d94613b1b9421043ce38e9a778d243124c69",
+      "integration_ref": "integration/portal-r4r5-p01-final",
+      "integration_commit": "98c47b3a66668b6082a60767cc94bfd2359a607f",
+      "lease_ttl_seconds": 900,
+      "source_only": true,
+      "runtime_activation": false
+    }
+  },
+  "profiles": [
+    {
+      "profile_id": "PAPER_BINANCE_USDM",
+      "stage": "PAPER",
+      "read_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "sse_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "command_authority": "DISABLED",
+      "live_mutation_authority": "DISABLED"
+    },
+    {
+      "profile_id": "SANDBOX_BINANCE_USDM",
+      "stage": "SANDBOX",
+      "read_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "sse_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "command_authority": "DISABLED",
+      "live_mutation_authority": "DISABLED"
+    },
+    {
+      "profile_id": "LIVE_BINANCE_USDM",
+      "stage": "CANARY_OVER_LIVE",
+      "read_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "sse_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "command_authority": "DISABLED",
+      "live_mutation_authority": "DISABLED"
+    },
+    {
+      "profile_id": "LIVE_BINANCE_USDM",
+      "stage": "LIVE",
+      "read_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "sse_authority": "DEPLOYED_EVIDENCE_REQUIRED",
+      "command_authority": "DISABLED",
+      "live_mutation_authority": "DISABLED"
+    }
+  ],
+  "failure_matrix": {
+    "file": "services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/failure-matrix.v1.json",
+    "schema_version": "portal.execution.eds12-failure-matrix.v1",
+    "scenario_count": 10
+  },
+  "evidence_inputs": [
+    {
+      "id": "n29_acceptance",
+      "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
+      "sha256": "sha256:1670bc919c139625650b6168a06907ad021f45cd79924d43709ef8b28691baad"
+    },
+    {
+      "id": "n29_debt",
+      "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/debt-register.v1.json",
+      "sha256": "sha256:fc19f9c946ab019874c2c806ac5ae9e52406c03ae972589abdb519d00c27fb8c"
+    },
+    {
+      "id": "current_source_map",
+      "file": "services/portal-execution-edge-rs/contracts/current-source-v1/capability-source-map.json",
+      "sha256": "sha256:d269bcaa11a4985ab1121d15f0af4cf2f09dc49bfe8e2c60ab18d0b39bb2e3c9"
+    },
+    {
+      "id": "n17a_dr_harness",
+      "file": "scripts/execution-n17a-production-dr-test.sh",
+      "sha256": "sha256:66d34c408752bd034c3178e706b89bb985e9b5e44d1f760448d6c8a076600cd4"
+    },
+    {
+      "id": "n17b_current_acceptance",
+      "file": "scripts/execution-n17b-current-acceptance-test.sh",
+      "sha256": "sha256:38099707b84a721e9d3502ed9b0388f484ad738ad2b8574d93554a587e5901f1"
+    },
+    {
+      "id": "n29_release_profile",
+      "file": "deploy/manifests/execution-manager-product-release-profile.v1.json",
+      "sha256": "sha256:c2ec6fd744e6b7910c5375f7a0379ec405f28760d3ad12d30031d841d18721fd"
+    },
+    {
+      "id": "protected_release_workflow",
+      "file": ".github/workflows/publish-images.yml",
+      "sha256": "sha256:a38c0664b40737532fba09f8b97ddc5ce729f7e9826275673136df01beaabbcd"
+    },
+    {
+      "id": "current_source_proxy",
+      "file": "apps/control-api/src/execution/current-source.proxy.ts",
+      "sha256": "sha256:8313eb9c4f390a9df2397ffda2241dd18a89a14667dc0a673ff2d1cf27a132fa"
+    },
+    {
+      "id": "manager_projection",
+      "file": "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs",
+      "sha256": "sha256:9c17c3f823d744baffd63ec0e0825b0a7c8085ab201affecf8006a278fb79289"
+    },
+    {
+      "id": "frontend_execution_route",
+      "file": "apps/portal/frontend/src/execution/ExecutionPreviewRoute.tsx",
+      "sha256": "sha256:076a02316ca14254ce4c04e11e96671d7b9967c8c0e922e16c7302bccba13277"
+    },
+    {
+      "id": "frontend_product_boundary",
+      "file": "apps/portal/frontend/src/execution/productBoundary.test.ts",
+      "sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795"
+    },
+    {
+      "id": "phase12_qualification",
+      "file": "upgrade/execution-v1/PHASE_12_QUALIFICATION.md",
+      "sha256": "sha256:c8bb67e6140953ee00f750a11bcdc70596337c94787a3b10473ba2a046ed5d02"
+    },
+    {
+      "id": "operations_runbook",
+      "file": "upgrade/execution-v1/OPERATIONS_RUNBOOK.md",
+      "sha256": "sha256:06d45c7d72af4b79d412e0f544e52a77165f600e593f7059140483f158899167"
+    },
+    {
+      "id": "rollback_runbook",
+      "file": "upgrade/execution-v1/ROLLBACK_RUNBOOK.md",
+      "sha256": "sha256:86fd531cc26e4eb12e271df47fc447f48e7f02cd2602e74823b6b62959acad6a"
+    },
+    {
+      "id": "failure_matrix",
+      "file": "services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/failure-matrix.v1.json",
+      "sha256": "sha256:99c14207dd9241dcb90410d83dd66d45f95c8d744cfc0c8774380374feb2f1d1"
+    }
+  ],
+  "source_extensions": [
+    {
+      "request_id": "BR-EX-80",
+      "state": "SOURCE_OWNER_RETURN_REQUIRED",
+      "required_proof": "published strategies timeframe or bar_interval vocabulary and Fleet propagation",
+      "fallback": "frontend displays only a DERIVED suffix-based interval"
+    },
+    {
+      "request_id": "BR-EX-81",
+      "state": "SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED",
+      "required_proof": "complete relation/profile cursor drain, append-only mirror parity and subject-scoped order/fill cursor APIs",
+      "fallback": "bounded profile page remains explicitly non-historical and non-subject-authoritative"
+    }
+  ],
+  "release_gates": {
+    "static_contract_and_mutation": "REQUIRED",
+    "offline_dr_restore_rebuild": "REQUIRED",
+    "protected_main_signed_images_sbom_provenance": "REQUIRED",
+    "exact_deployed_browser_state_matrix": "REQUIRED",
+    "profile_isolation_and_redaction": "REQUIRED",
+    "p0_p1_integrity_issues": "ZERO_REQUIRED",
+    "owner_visual_data_action_parity": "REQUIRED",
+    "product_active": "FORBIDDEN_UNTIL_ALL_REQUIRED_EVIDENCE"
+  },
+  "authority": {
+    "qualification_pack_authorized": true,
+    "source_activation_authorized": false,
+    "query_activation_authorized": false,
+    "sse_activation_authorized": false,
+    "command_activation_authorized": false,
+    "live_mutation_authorized": false,
+    "stable_release_authorized": false,
+    "product_active": false,
+    "operations_qualified": false
+  },
+  "rollback": {
+    "strategy": "PROFILE_LOCAL_READER_ROLLBACK_ONLY",
+    "first_action": "disable affected named BFF/read/SSE profile before Edge or source changes",
+    "preserve": [
+      "append_only_portal_observations",
+      "failure_evidence",
+      "audit_records",
+      "prior_signed_manifest"
+    ],
+    "forbidden": [
+      "trading_system_data_mutation",
+      "projection_truncate",
+      "automatic_command_retry",
+      "cross_profile_fallback"
+    ],
+    "runbook": "upgrade/execution-v1/ROLLBACK_RUNBOOK.md"
+  },
+  "artifact_generation": {
+    "release_manifest": "artifacts/execution/release_manifest.json",
+    "producer": "protected main release workflow plus EDS-12 verifier",
+    "tracked_template_only": true,
+    "secrets_permitted": false
+  }
+}
