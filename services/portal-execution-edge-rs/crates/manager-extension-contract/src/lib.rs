@@ -62,6 +62,11 @@ pub enum ManagerExtensionRequest {
 
 impl ManagerExtensionRequest {
     /// Builds the fixed latest-observation operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExtensionContractError::InvalidMarketQuery`] when either
+    /// identifier is not a bounded, safe market token.
     pub fn market_latest(
         venue: impl Into<String>,
         instrument: impl Into<String>,
@@ -74,6 +79,12 @@ impl ManagerExtensionRequest {
     }
 
     /// Builds the fixed bounded OHLCV operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExtensionContractError::InvalidMarketQuery`] when an
+    /// identifier, interval, time range, or page bound is outside the frozen
+    /// Market Context contract.
     #[allow(clippy::too_many_arguments)]
     pub fn market_candles(
         venue: impl Into<String>,
@@ -114,6 +125,11 @@ impl ManagerExtensionRequest {
     }
 
     /// Builds one opaque, lease-bound event tail request.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ExtensionContractError::InvalidEventTailQuery`] when the
+    /// opaque lease/cursor or bounded page size is invalid.
     pub fn event_tail(
         lease_token: impl Into<String>,
         cursor: impl Into<String>,
@@ -207,8 +223,9 @@ impl ManagerExtensionRequest {
                     ),
                 ],
             },
-            Self::MarketLatest { .. } => self.blueprint(),
-            Self::EventAnchor { .. } | Self::EventTail { .. } => self.blueprint(),
+            Self::MarketLatest { .. } | Self::EventAnchor { .. } | Self::EventTail { .. } => {
+                self.blueprint()
+            }
         }
     }
 
@@ -330,6 +347,11 @@ pub struct ManagerExtensionUnavailable {
 /// Decodes an exact 200 body for the given deployment profile and fixed
 /// request.  It rejects unbounded/unknown envelopes before any data reaches a
 /// Portal consumer.
+///
+/// # Errors
+///
+/// Returns [`ExtensionContractError`] when the envelope is malformed, does not
+/// bind to the supplied request/profile, or violates the frozen page bounds.
 pub fn decode_extension_success_for_profile(
     request: &ManagerExtensionRequest,
     body: &[u8],
@@ -387,6 +409,11 @@ pub fn decode_extension_success_for_profile(
 
 /// Decodes a Manager-style 503 without treating it as a successful empty
 /// source response.
+///
+/// # Errors
+///
+/// Returns [`ExtensionContractError`] when the body is not the exact typed
+/// unavailable envelope for `expected_profile_id`.
 pub fn decode_extension_unavailable_for_profile(
     body: &[u8],
     expected_profile_id: &str,
@@ -413,6 +440,11 @@ pub fn decode_extension_unavailable_for_profile(
 /// Market Context envelope.  This is the Portal-owned compatibility adapter:
 /// it accepts no arbitrary path, source profile or query; it neither exposes
 /// the raw response nor adds any replay/history claim.
+///
+/// # Errors
+///
+/// Returns [`ExtensionContractError`] when the request is not a Market Context
+/// request or the bounded Data Layer response cannot be faithfully adapted.
 pub fn adapt_data_layer_market_response_for_profile(
     request: &ManagerExtensionRequest,
     body: &[u8],
@@ -472,13 +504,13 @@ fn adapt_data_layer_latest(
     require_binance_usdm(venue, expected_profile_id)?;
     let root = object(value)?;
     if text(root, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
-        || text(root, "market", 32)?.to_ascii_lowercase() != "usdm"
+        || !text(root, "market", 32)?.eq_ignore_ascii_case("usdm")
     {
         return Err(ExtensionContractError::InvalidMarketData);
     }
     let snapshot = object(object_value(root, "snapshot")?)?;
     if text(snapshot, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
-        || text(snapshot, "market", 32)?.to_ascii_lowercase() != "usdm"
+        || !text(snapshot, "market", 32)?.eq_ignore_ascii_case("usdm")
     {
         return Err(ExtensionContractError::InvalidMarketData);
     }
@@ -538,7 +570,7 @@ fn adapt_data_layer_candles(
     require_binance_usdm(venue, expected_profile_id)?;
     let root = object(value)?;
     if text(root, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
-        || text(root, "market", 32)?.to_ascii_lowercase() != "usdm"
+        || !text(root, "market", 32)?.eq_ignore_ascii_case("usdm")
     {
         return Err(ExtensionContractError::InvalidMarketData);
     }
@@ -746,11 +778,11 @@ fn decode_event_anchor(data: &Value) -> Result<EventAnchor, ExtensionContractErr
     if retention_floor == 0 || retention_floor > high_watermark.saturating_add(1) {
         return Err(ExtensionContractError::InvalidEventAnchor);
     }
-    let snapshot_as_of_ms = timestamp_ms(text(snapshot, "observed_at", 64)?)?;
+    let snapshot_as_of_ms = timestamp_ms(&text(snapshot, "observed_at", 64)?)?;
     let lease_epoch = identifier(text(envelope, "epoch", 160)?)?;
     let lease_token = opaque(text(envelope, "lease_token", MAXIMUM_TOKEN_BYTES)?)?;
     let cursor = opaque(text(envelope, "cursor", MAXIMUM_TOKEN_BYTES)?)?;
-    let _lease_expires_at = timestamp_ms(text(envelope, "lease_expires_at", 64)?)?;
+    let _lease_expires_at = timestamp_ms(&text(envelope, "lease_expires_at", 64)?)?;
     Ok(EventAnchor {
         source_epoch,
         lease_epoch,
@@ -776,7 +808,7 @@ fn decode_event_tail(data: &Value) -> Result<EventTail, ExtensionContractError> 
     if retention_floor == 0 {
         return Err(ExtensionContractError::InvalidEventTail);
     }
-    let as_of_ms = timestamp_ms(text(envelope, "as_of", 64)?)?;
+    let as_of_ms = timestamp_ms(&text(envelope, "as_of", 64)?)?;
     let events = array(object_value(envelope, "events")?)?;
     if events.len() > usize::from(EVENT_LEDGER_MAXIMUM_PAGE_ROWS) {
         return Err(ExtensionContractError::InvalidEventTail);
@@ -820,8 +852,8 @@ fn decode_ledger_event(value: &Value) -> Result<LedgerEvent, ExtensionContractEr
     if !record.is_object() || contains_forbidden_event_field(&record, 0)? {
         return Err(ExtensionContractError::InvalidLedgerEvent);
     }
-    let observed_at_ms = timestamp_ms(text(event, "observed_at", 64)?)?;
-    let occurred_at_ms = timestamp_ms(text(object(&record)?, "occurred_at", 64)?)?;
+    let observed_at_ms = timestamp_ms(&text(event, "observed_at", 64)?)?;
+    let occurred_at_ms = timestamp_ms(&text(object(&record)?, "occurred_at", 64)?)?;
     let supersedes_event_id = event
         .get("supersedes_event_id")
         .map(|value| {
@@ -898,11 +930,11 @@ fn utc_ms(value: Option<&Value>) -> Result<i64, ExtensionContractError> {
         .ok_or(ExtensionContractError::InvalidJson)
 }
 
-fn timestamp_ms(value: String) -> Result<i64, ExtensionContractError> {
+fn timestamp_ms(value: &str) -> Result<i64, ExtensionContractError> {
     if !value.ends_with('Z') || value.len() > 64 {
         return Err(ExtensionContractError::InvalidTimestamp);
     }
-    let parsed = DateTime::parse_from_rfc3339(&value)
+    let parsed = DateTime::parse_from_rfc3339(value)
         .map_err(|_| ExtensionContractError::InvalidTimestamp)?
         .with_timezone(&Utc);
     Ok(parsed.timestamp_millis())
