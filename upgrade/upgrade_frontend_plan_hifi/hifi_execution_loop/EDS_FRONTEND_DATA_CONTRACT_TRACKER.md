@@ -1618,9 +1618,48 @@ Khi policy cho `visible: true` thì nút hiện như cũ, disabled cùng mã đ�
 | Hook pre-commit | xanh cho 4a; 4b bị `br72_frontend_containers_sha256` drift một lần vì sửa file sau khi repin, gộp lại thành một commit sạch |
 | Trình duyệt (dev) | đo lại sau bước rebuild cuối — ghi vào A13.6 |
 
-### A13.6 Đo bằng trình duyệt sau rebuild
+### A13.6 Đo bằng trình duyệt sau rebuild (dev `911ccb9`)
 
-_(điền sau khi chạy `measure-goal4.sh`)_
+| Màn | Panel dev | Panel showcase | Nút dev | Nút showcase | Hàng dev |
+|---|---|---|---|---|---|
+| Paper Overview | **4** | 4 | 43 (mỗi deployment một hàng bấm được) | 8 | 43 deployment |
+| Sandbox Overview | **3** | 3 | 2 chip lọc (`All 35`, `ACTIVE 35`) | 7 | 39 |
+| Live Overview | 0 | 0 | **4 chip, cả 4 disabled kèm lý do** | 6 | 0 (không có deployment live) |
+| Paper Workbench | **7 panel + 7 tab** | 12 | 11 (Lin/Log/1W/ALL/Table/Expand/Export + exit + tab) | 13 | 19 order |
+| Sandbox Certification | 5 | 18 | 6 | 11 | 0 |
+
+**Paper Workbench — nhìn tận mắt** (ảnh `wb_full.png`, 1440×2552):
+KPI `Equity 20,000.00 USDT · Net PnL 122.30519373 USDT · Drawdown 0.00 ·
+Trades 10 · Projection age FRESH`; chart equity **1 433 mẫu** với caption ghi
+đúng downsample của nguồn (`30d · 3632s buckets · PER_SERIES_BUCKET_EXTREMA ·
+6619 → 1433`); Observation gate `50/30 days · 10/300 trades · 0/1 sessions` và
+nút `Request Paper Exit Review — blocked: 2 gate criteria unmet` **nêu đủ hai
+tiêu chí** ngay dưới; Accounting 10 dòng; contribution `ρ -0.43 vs
+burst_paper_alpha · 29 overlapping days`; tab Orders hiện **19/19 lệnh** với
+`REDUCE_ONLY_WOULD_INCREASE_LONG` màu đỏ; Execution quality `19 submitted · 11
+filled · 1 risk rejected · reject rate 1/19 · latency UNAVAILABLE`.
+
+**Sandbox — nội dung ba panel thật**: order journal *"The orders relation
+answered for sandbox and returned no row"* (rỗng thật, không phải lỗi); Venue
+connectivity **1 tài khoản** `binance_testnet_main · BINANCE · BINANCE_FUTURES`
+kèm buying power và last sync; findings **0 open of 3** với đủ severity/status/
+thời điểm.
+
+**Một lỗi trợ năng tự tìm ra khi đọc DOM**: panel thứ ba mang `aria-label`
+"Recently certified" trong khi tiêu đề hiển thị là "Reconciliation findings" —
+người dùng screen reader nghe một đằng, nhìn thấy một nẻo. Đã sửa cho khớp.
+
+**Lưu ý về công cụ đo, không phải về sản phẩm**: `parity2.js` báo Paper
+Workbench 0 panel trong lượt chạy 5 route liên tiếp, nhưng mở thẳng route đó thì
+`main` chứa **7 section**, cao 2 552 px, không có lỗi console và không có API
+4xx. Nguyên nhân là `networkidle` trên một màn có polling; số liệu bảng trên lấy
+từ lượt mở thẳng.
+
+**Còn nợ sang goal sau:** Paper Workbench còn 5 panel hi-fi chưa có nguồn
+(market-candles overlay, regime, benchmark) — Goal 7; Sandbox Certification 13
+panel còn lại phụ thuộc **chưa có certification record** (`workflow_state:
+NOT_COMMISSIONED`, cả 7 bước `PHASE2_CERTIFICATION_RECORD_NOT_CREATED`) → Goal 5;
+Canary Control Room chờ có deployment canary.
 
 ## A3. Luật vận hành kế hoạch này
 

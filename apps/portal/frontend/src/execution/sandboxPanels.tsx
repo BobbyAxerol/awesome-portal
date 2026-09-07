@@ -174,8 +174,16 @@ export function sandboxPanels(input: SandboxPanelInput): {
         )}
       </section>
     ),
+    /*
+     * The reviewed screen's third slot is "Recently certified", which needs a
+     * stage-exit history nothing publishes. Rather than leave the slot empty it
+     * carries the findings register — the same question asked of data that does
+     * exist: what has this environment turned up. The accessible name matches
+     * the visible title, because a screen reader announcing one heading while
+     * the page shows another is worse than either name alone.
+     */
     recentlyCertified: (
-      <section className="exec-af-panel exec-sb-panel" aria-label="Recently certified — left sandbox in the last 90d">
+      <section className="exec-af-panel exec-sb-panel" aria-label="Reconciliation findings">
         <header className="exec-sb-head">
           <span className="exec-sb-title">Reconciliation findings — every finding the source published</span>
           <span className="exec-af-spacer" />
