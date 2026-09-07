@@ -34,6 +34,7 @@ import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
 import type { FinancialChartPayload, FinancialChartQuery, FinancialEnvironment } from "./financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth } from "./derivations";
+import type { MarketCandlesPayload, MarketCandlesQuery } from "./marketCandles";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
@@ -293,6 +294,8 @@ export interface ExecutionApi {
   getPortfolioCapital(portfolioId: string, environment: FinancialEnvironment): Promise<Result<PortfolioCapital>>;
   /** EDS-05 `GET /derivations/alphas/{id}/activity` */
   getAlphaActivity(alphaId: string, environment: FinancialEnvironment): Promise<Result<AlphaActivity>>;
+  /** `GET /market/venue-candles` — venue public klines (Trade Replay market context; `/market/candles` is the Manager market context). */
+  getMarketCandles(query: MarketCandlesQuery): Promise<Result<MarketCandlesPayload>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */

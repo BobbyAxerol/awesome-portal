@@ -4,12 +4,78 @@
  * (2026-09-05): MARKET entry, STOP_MARKET / TAKE_PROFIT_MARKET legs with
  * trigger_price, exit fills carrying realized_pnl.
  */
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TradeReplayEvents, buildLog, legLevels, legRole, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/TradeReplayEvents";
+import type { TradesPrimitive } from "./components/ReplayCandleChart";
 
-afterEach(cleanup);
+/**
+ * jsdom has no canvas, so the chart library is replaced by a recorder: what
+ * the panel hands the chart (bars, the trades primitive, price lines, the
+ * visible range) is asserted here; drawing is covered by the probe baseline.
+ */
+const recorder = vi.hoisted(() => {
+  const state = { data: [] as unknown[], primitives: [] as unknown[], priceLines: [] as unknown[], ranges: [] as unknown[], fits: 0, charts: 0 };
+  const series = {
+    setData: (d: unknown[]) => { state.data = d; },
+    attachPrimitive: (p: unknown) => { state.primitives.push(p); },
+    detachPrimitive: () => undefined,
+    applyOptions: () => undefined,
+    createPriceLine: (o: unknown) => { state.priceLines.push(o); return { applyOptions: (n: unknown) => { state.priceLines.push(n); } }; },
+    removePriceLine: () => undefined,
+    priceToCoordinate: (p: number) => 300 - p / 10,
+    priceScale: () => ({ applyOptions: () => undefined }),
+  };
+  const timeScale = {
+    fitContent: () => { state.fits += 1; },
+    setVisibleLogicalRange: (r: unknown) => { state.ranges.push(r); },
+    getVisibleLogicalRange: () => ({ from: 0, to: 10 }),
+    getVisibleRange: () => null,
+    setVisibleRange: () => undefined,
+    logicalToCoordinate: (l: number) => l * 9,
+    options: () => ({ barSpacing: 9 }),
+    width: () => 800,
+    applyOptions: () => undefined,
+    subscribeVisibleLogicalRangeChange: () => undefined,
+    unsubscribeVisibleLogicalRangeChange: () => undefined,
+    subscribeSizeChange: () => undefined,
+    unsubscribeSizeChange: () => undefined,
+  };
+  const chart = {
+    addSeries: () => series,
+    timeScale: () => timeScale,
+    paneSize: () => ({ width: 800, height: 400 }),
+    subscribeCrosshairMove: () => undefined,
+    unsubscribeCrosshairMove: () => undefined,
+    subscribeClick: () => undefined,
+    unsubscribeClick: () => undefined,
+    applyOptions: () => undefined,
+    remove: () => undefined,
+  };
+  return { state, chart };
+});
+vi.mock("lightweight-charts", () => ({
+  createChart: () => { recorder.state.charts += 1; return recorder.chart; },
+  CandlestickSeries: "Candlestick",
+  ColorType: { Solid: "solid" },
+  CrosshairMode: { Normal: 0 },
+  LineStyle: { Solid: 0, Dotted: 1, Dashed: 2 },
+}));
+// the palette is read from CSS custom properties, which jsdom does not resolve — give it one
+const CSS_VARS: Record<string, string> = {
+  "--paper-raised": "white", "--ink-soft": "gray", "--ink-mute": "gray", "--exec-chart-grid": "gray", "--exec-chart-axis": "gray", "--exec-chart-crosshair": "gray",
+  "--exec-candle-up": "green", "--exec-candle-down": "red", "--exec-trade-long": "teal", "--exec-trade-short": "orange", "--good": "green", "--bad": "red", "--warn": "orange", "--accent": "blue", "--font-mono": "monospace",
+};
+beforeEach(() => {
+  recorder.state.data = []; recorder.state.primitives = []; recorder.state.priceLines = []; recorder.state.ranges = []; recorder.state.fits = 0; recorder.state.charts = 0;
+  const original = window.getComputedStyle.bind(window);
+  vi.spyOn(window, "getComputedStyle").mockImplementation((el: Element) => {
+    const cs = original(el);
+    return new Proxy(cs, { get: (t, k) => (k === "getPropertyValue" ? (name: string) => CSS_VARS[name] ?? t.getPropertyValue(name) : Reflect.get(t, k)) });
+  });
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const ACCT = "paper-binance-adaptive_hma_cpp_00115m";
 const ORDERS = [
@@ -64,55 +130,89 @@ describe("replay builders — every figure is the server's", () => {
 });
 
 describe("TradeReplayEvents panel", () => {
-  it("draws the SVG replay with markers, legs and the candle notice, and the log table", () => {
+  const primitive = () => recorder.state.primitives[0] as TradesPrimitive;
+  it("mounts the chart with the trades primitive, marks long/short by position side, keeps the log table", async () => {
     const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: "E5_MARKET_CANDLES_NOT_PUBLISHED" }} asOf="2026-09-05T00:00:00Z" accounts={[ACCT]} />);
-    const svg = container.querySelector("svg.exec-rp-svg")!;
-    expect(svg.getAttribute("data-replay-events")).toBe("2");
-    expect(svg.textContent).toContain("candles unavailable · E5_MARKET_CANDLES_NOT_PUBLISHED");
-    expect(svg.textContent).toContain("▲");
-    expect(svg.textContent).toContain("▼");
-    expect(svg.textContent).toContain("◇");
-    expect(svg.textContent).toContain("×");
-    expect(svg.textContent).toContain("TP leg 1,889.62");
-    expect(svg.textContent).toContain("131.2088 · TP");
+    await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    const stage = container.querySelector("[data-replay-chart]")!;
+    expect(stage.getAttribute("data-replay-events")).toBe("2");
+    expect(stage.getAttribute("data-replay-bars")).toBe("0");
+    // no candles: the scale is indexed by the events themselves and the panel says so
+    expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("source candles unavailable (E5_MARKET_CANDLES_NOT_PUBLISHED)");
+    expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("indexed by the events themselves");
+    expect(recorder.state.data.every((d) => typeof d === "object" && d !== null && !("open" in d))).toBe(true);
+    const scene = primitive().scene;
+    expect(scene.markers.map((m) => [m.side, m.role, m.pointsUp, m.hollow])).toEqual([["LONG", "ENTRY", true, false], ["LONG", "EXIT", false, true]]);
+    expect(scene.markers[1]!.label).toBe("+131.2088");
+    expect(scene.legs.map((l) => [l.role, l.level])).toEqual([["SL", 1845.01], ["TP", 1889.62]]);
+    expect(scene.trips).toHaveLength(1);
+    expect(scene.rejects.map((r) => r.id)).toEqual(["reject:40000"]);
     expect(screen.getByText(/last fill/)).toBeTruthy();
     expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(6);
     expect(screen.getByRole("button", { name: "Fit" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Expand chart" })).toBeTruthy();
+    expect(container.querySelector(".exec-rp-attrib a")?.getAttribute("href")).toBe("https://www.tradingview.com/");
   });
-  it("opens a long-lived replay on recent fills instead of an empty seven-day tail", () => {
-    // The newest source fact can be an order rejection/cancel long after the
-    // latest fill.  The default plot must still give the operator markers to
-    // inspect; "Fit" remains the explicit all-history control.
-    const historicFills = Array.from({ length: 6 }, (_, index) => ({
-      ...FILLS[0]!,
-      fill_id: 3000 + index,
-      trade_id: `historic-fill-${index}`,
-      trade_time: `2026-08-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
-    }));
-    const newestNonFillOrder = {
-      ...ORDERS[3]!,
-      order_id: 41000,
-      client_order_id: "recent-rejection",
-      submitted_at: "2026-08-30T00:00:00.000Z",
-      updated_at: "2026-08-30T00:00:00.100Z",
+  it("hands venue candles to the chart under the markers, names their provenance, and opens on the events' window", async () => {
+    const t0 = Date.parse("2026-07-18T21:00:00.000Z");
+    const bars = Array.from({ length: 12 }, (_, i) => ({ t: t0 + i * 3_600_000, o: "1858", h: "1866", l: "1852", c: i % 2 ? "1861" : "1856", v: "1", closeT: t0 + (i + 1) * 3_600_000 - 1 }));
+    const market = {
+      schemaVersion: "portal.execution.market-candles.v1", sourceAuthority: "VENUE_PUBLIC_MARKET_DATA",
+      source: { kind: "venue_public", venue: "BINANCE", market: "USDM", endpoint: "https://fapi.binance.com/fapi/v1/klines", instrument: "ETHUSDT", note: null },
+      symbol: "ETHUSDT", interval: "1h" as const, intervalMs: 3_600_000, state: "READY", reasonCode: null, retryable: false, fetchedAtMs: t0,
+      coverage: { fromMs: t0, toMs: null, requestedLimit: 500, returnedCount: 12, truncated: false, pages: 1 }, lastCandleClosed: true, candles: bars,
     };
-    const { container } = render(
-      <TradeReplayEvents
-        orders={readReplayOrders([newestNonFillOrder])}
-        fills={readReplayFills(historicFills)}
-        candles={{ state: "UNAVAILABLE", reason: "E5_MARKET_CANDLES_NOT_PUBLISHED" }}
-        asOf="2026-08-30T00:00:00Z"
-        accounts={[ACCT]}
-      />,
-    );
-
-    // A naive `hi - 7 days` opening begins on 23 Aug and renders zero fills.
-    // The sixth-last-fill anchor keeps all six Aug 1–6 observations visible.
-    expect(container.querySelector("svg.exec-rp-svg")?.getAttribute("data-replay-events")).toBe("6");
-    expect(screen.getByText(/6 fills ·/)).toBeTruthy();
+    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: "E5_MARKET_CANDLES_NOT_PUBLISHED" }} asOf={null} market={market} marketTransport="ok" interval="1h" onIntervalChange={() => undefined} intervalNote="15m inferred from the strategy id · DERIVED" />);
+    await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    expect(container.querySelector("[data-replay-chart]")?.getAttribute("data-replay-bars")).toBe("12");
+    expect(recorder.state.data).toHaveLength(12);
+    expect(recorder.state.data[0]).toMatchObject({ time: t0 / 1000, open: 1858, high: 1866, low: 1852, close: 1856 });
+    expect(container.querySelector(".exec-rp-notice")).toBeNull();
+    const prim = primitive();
+    expect(prim.intervalMs).toBe(3_600_000);
+    // a fill 3 seconds into the second bar sits just right of that bar's left edge
+    expect(prim.logical(Date.parse("2026-07-18T22:00:03.040Z"))).toBeCloseTo(0.5 + 3.04 / 3600, 4);
+    await waitFor(() => expect(recorder.state.ranges.length).toBeGreaterThan(0));
+    // the opening window: from the sixth-last fill to the last fill, on the bars' index
+    expect(recorder.state.ranges[0]).toMatchObject({ from: expect.any(Number), to: expect.any(Number) });
+    expect(recorder.state.priceLines[0]).toMatchObject({ title: "mark", price: 1861 });
+    expect(container.querySelector(".exec-rp-mark")?.textContent).toMatch(/^mark /);
+    expect(screen.getByRole("combobox", { name: "Candle interval" })).toBeTruthy();
+    expect(screen.getByText("15m inferred from the strategy id · DERIVED")).toBeTruthy();
+    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard");
+    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("source candles unavailable (E5_MARKET_CANDLES_NOT_PUBLISHED)");
+    expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("long entry");
+    expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("short exit");
   });
-  it("says so when there are no events", () => {
-    render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} />);
-    expect(screen.getByText(/No order or fill event is present/)).toBeTruthy();
+  it("names the klines state in the notice when they are not READY", async () => {
+    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} market={{ schemaVersion: "x", sourceAuthority: null, source: { kind: null, venue: null, market: null, endpoint: null, instrument: null, note: null }, symbol: null, interval: null, intervalMs: null, state: "UNAVAILABLE", reasonCode: "MARKET_CANDLES_FEATURE_DISABLED", retryable: false, fetchedAtMs: null, coverage: { fromMs: null, toMs: null, requestedLimit: null, returnedCount: null, truncated: false, pages: null }, lastCandleClosed: null, candles: [] }} marketTransport="ok" />);
+    await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    expect(container.querySelector("[data-replay-chart]")?.getAttribute("data-replay-bars")).toBe("0");
+    expect(container.querySelector(".exec-rp-notice")?.textContent).toContain("venue klines unavailable · MARKET_CANDLES_FEATURE_DISABLED");
+  });
+  it("selects a fill from the log or the keyboard, centres the chart on it and rings it", async () => {
+    const { container } = render(<TradeReplayEvents orders={readReplayOrders(ORDERS)} fills={readReplayFills(FILLS)} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} accounts={[ACCT]} />);
+    await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    const prim = primitive();
+    const before = recorder.state.ranges.length;
+    const row = container.querySelector('tr[data-scene-id="fill:1877"]') as HTMLTableRowElement;
+    expect(row).not.toBeNull();
+    fireEvent.click(row);
+    await waitFor(() => expect(container.querySelector('tr[data-selected="true"]')?.getAttribute("data-scene-id")).toBe("fill:1877"));
+    expect(recorder.state.ranges.length).toBeGreaterThan(before);
+    expect(prim.highlightId).toBe("fill:1877");
+    const stage = container.querySelector(".exec-rp-chart-stage") as HTMLDivElement;
+    fireEvent.keyDown(stage, { key: "ArrowRight" });
+    await waitFor(() => expect(container.querySelector('tr[data-selected="true"]')?.getAttribute("data-scene-id")).toBe("fill:1900"));
+    expect(prim.highlightId).toBe("fill:1900");
+    // the exit's bracket is in the scene: entry 1859.89, TP 1889.62, SL 1845.01
+    expect(prim.scene.brackets[0]).toMatchObject({ id: "bracket:1877", tp: 1889.62, sl: 1845.01 });
+    expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("position box");
+  });
+  it("says so when there are no events — with the page's own bound, so an empty replay is never mistaken for a missing feature", () => {
+    render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} page={{ orders: 812, fills: 71, strategies: 11 }} subjectLabel="delta_rsi_00115m" />);
+    const note = screen.getByText(/No order or fill of delta_rsi_00115m is present/);
+    expect(note.textContent).toContain("812 orders and 71 fills across 11 strategies");
+    expect(screen.getByText(/profile-wide analytics facts, not this alpha's — DR-22/)).toBeTruthy();
   });
 });

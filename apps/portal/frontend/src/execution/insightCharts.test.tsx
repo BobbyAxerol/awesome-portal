@@ -7,7 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { readQueryAnalytics } from "./api/profileRead";
-import { SourceTradeReplay, analyticsTiles } from "./screens/recomposeContainers";
+import { SourceTradeReplay, analyticsTiles, replayEvents } from "./screens/recomposeContainers";
 
 vi.mock("../charts/EChart", () => ({
   EChart: ({ option, height }: { option: unknown; height: number }) => <div data-echart data-height={height} data-series={JSON.stringify((option as { series: unknown[] }).series.length)} />,
@@ -94,9 +94,25 @@ describe("SourceTradeReplay — the hi-fi replay grammar on the alpha's own even
       orders: [{ order_id: 1, account_id: "acct-1", symbol: "ETHUSDT", side: "BUY", order_type: "MARKET", status: "FILLED", quantity: "0.08", client_order_id: "brk-a-en0", submitted_at: "2026-08-08T12:00:00.000Z", updated_at: "2026-08-08T12:00:01.000Z", venue_order_id: "v1" }],
       fills: [{ fill_id: 2, account_id: "acct-1", instrument_id: "ETHUSDT.BINANCE", side: "BUY", price: "1893.76", quantity: "0.08", trade_time: "2026-08-08T12:47:50.927Z", client_order_id: "brk-a-en0", realized_pnl: "0", commission: "0.05", liquidity_side: "TAKER" }] } };
     const { container } = render(<SourceTradeReplay analytics={scoped} alphaId="adaptive_hma_cpp_00115m" />);
-    expect(container.querySelector("svg.exec-rp-svg")?.getAttribute("data-replay-events")).toBe("1");
-    expect(screen.getByText(/candles unavailable · N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED/)).toBeTruthy();
+    expect(container.querySelector("[data-replay-chart]")?.getAttribute("data-replay-events")).toBe("1");
+    expect(container.querySelector(".exec-rp-foot")?.textContent).toContain("source candles unavailable (N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED)");
     expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(2);
+  });
+  it("scopes an account view to that account alone — the profile-wide analytics deployments never widen it", () => {
+    const facts = readQueryAnalytics(RAW)!;
+    const resource = { ...facts, sourceFacts: { deployments: [{ account_id: "acct-1", strategy_id: "adaptive_hma_cpp_00115m", venue: "BINANCE" }], orders: [], fills: [] } };
+    const additive = { ...facts, sourceFacts: {
+      deployments: [{ account_id: "acct-1", strategy_id: "adaptive_hma_cpp_00115m" }, { account_id: "acct-other", strategy_id: "other" }],
+      orders: [], fills: [
+        { fill_id: 1, account_id: "acct-1", instrument_id: "ETHUSDT.BINANCE", side: "BUY", price: "1", quantity: "1", trade_time: "2026-08-08T12:00:00.000Z" },
+        { fill_id: 2, account_id: "acct-other", instrument_id: "BTCUSDT.BINANCE", side: "BUY", price: "1", quantity: "1", trade_time: "2026-08-08T12:00:00.000Z" },
+      ] } };
+    const byAccount = replayEvents(resource, additive, null, "acct-1");
+    expect(byAccount.accounts).toEqual(["acct-1"]);
+    expect(byAccount.fills.map((f) => f.fillId)).toEqual(["1"]);
+    expect(byAccount.venue).toBe("BINANCE");
+    const byAlpha = replayEvents(resource, additive, "adaptive_hma_cpp_00115m");
+    expect(byAlpha.fills.map((f) => f.fillId)).toEqual(["1"]);
   });
   it("keeps only the alpha's accounts when merging the analytics facts", () => {
     const facts = readQueryAnalytics(RAW)!;

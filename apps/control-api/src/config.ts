@@ -113,6 +113,14 @@ const EnvSchema = z.object({
   // itself is active. Browser reads are a later, per-screen cutover.
   FEATURE_EXECUTION_DURABLE_MIRROR: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_DURABLE_MIRROR_READS: z.enum(["true", "false"]).default("false"),
+  // Venue public klines for the Trade Replay market context (BR-EX-50 gap).
+  // Off by default: an outbound call to a public venue endpoint is an operator
+  // decision, and the envelope always names it VENUE_PUBLIC_MARKET_DATA.
+  FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES: z.enum(["true", "false"]).default("false"),
+  EXECUTION_PUBLIC_MARKET_CANDLES_ORIGIN: z.string().url().default("https://fapi.binance.com"),
+  EXECUTION_PUBLIC_MARKET_CANDLES_OKX_ORIGIN: z.string().url().default("https://www.okx.com"),
+  /** candle source behind /market/candles: venue_public (wired) | data_layer (typed not-wired until BR-EX-50) */
+  EXECUTION_MARKET_CANDLES_SOURCE: z.enum(["venue_public", "data_layer"]).default("venue_public"),
   EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().regex(/^[A-Za-z0-9._-]{1,128}$/).optional(),

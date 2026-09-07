@@ -45,6 +45,8 @@ import { ExecutionFinancialQueryCursorRepository } from "./execution/financial-q
 import { ExecutionFinancialChartService } from "./execution/financial-chart.service";
 import { ExecutionFinancialChartController } from "./execution/financial-chart.controller";
 import { AuthoritativeEventLedgerRepository } from "./execution/authoritative-event-ledger.repository";
+import { ExecutionMarketCandlesController } from "./execution/market-candles.controller";
+import { ExecutionMarketCandlesService } from "./execution/market-candles.service";
 import { ExecutionProfileProjectionWorker } from "./execution/profile-projection.worker";
 import { ExecutionProfileRealtimeService } from "./execution/profile-realtime.service";
 import { ExecutionProductReadSource } from "./execution/product-read-source";
@@ -125,6 +127,7 @@ export class AppModule {
         PortalDerivationsController,
         OperationalCompositionController,
         ExecutionFinancialChartController,
+        ExecutionMarketCandlesController,
       ],
       providers: [
         { provide: CONTROL_API_CONFIG, useValue: config },
@@ -195,6 +198,7 @@ export class AppModule {
         // repository creates no source transport, route, worker, or feature
         // activation; a later accepted Manager/Edge cutover is required.
         AuthoritativeEventLedgerRepository,
+        ExecutionMarketCandlesService,
         { provide: EXECUTION_DURABLE_MIRROR_WRITER, useExisting: ExecutionDurableMirrorRepository },
         ExecutionProfileProjectionRepository,
         ExecutionProfileProjectionWorker,
