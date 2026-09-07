@@ -28,6 +28,7 @@ import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
+import { readReplayGroups, scopeGroups } from "../components/tradeReplayGroups";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { unavailable } from "../api/ports";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
@@ -1062,10 +1063,18 @@ export function replayEvents(analytics: QueryAnalytics | null | undefined, addit
   const pageOrders = new Set([...(facts.orders ?? []), ...(extra.orders ?? [])].map((r) => text(r.order_id)).filter(Boolean)).size;
   const pageFills = new Set([...(facts.fills ?? []), ...(extra.fills ?? [])].map((r) => text(r.fill_id)).filter(Boolean)).size;
   const pageStrategies = new Set([...(facts.orders ?? []), ...(extra.orders ?? []), ...(facts.fills ?? []), ...(extra.fills ?? [])].map((r) => text(r.strategy_id)).filter(Boolean)).size;
+  // order groups / packages / ledgers — read ahead of publication; a relation absent from both bags is "not published"
+  const groupBag: Record<string, readonly Record<string, unknown>[] | undefined> = {};
+  for (const k of ["order_brackets", "order_bracket_legs", "conditional_order_groups", "conditional_order_group_legs", "arb_order_packages", "portfolio_capital_ledger", "settlements"]) {
+    const a = facts[k], b = extra[k];
+    if (Array.isArray(a) || Array.isArray(b)) groupBag[k] = [...(a ?? []), ...(b ?? [])];
+  }
+  const groups = scopeGroups(readReplayGroups(groupBag), accounts, alphaId);
   return {
     orders: readReplayOrders([...(facts.orders ?? []), ...scoped(extra.orders ?? [])]),
     fills: readReplayFills([...(facts.fills ?? []), ...scoped(extra.fills ?? [])]),
     accounts: [...accounts],
+    groups,
     page: { orders: pageOrders, fills: pageFills, strategies: pageStrategies },
     /** the deployment's venue — the public klines are read from the same venue */
     venue,
@@ -1197,6 +1206,7 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
         focusId={focusId}
         page={events.page}
         subjectLabel={alphaId ?? subjectId ?? null}
+        groups={events.groups}
       />
     </div>
   );

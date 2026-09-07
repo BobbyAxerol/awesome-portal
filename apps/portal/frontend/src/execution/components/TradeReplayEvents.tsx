@@ -12,6 +12,7 @@ import { MARKET_CANDLE_INTERVALS, type MarketCandleInterval, type MarketCandlesP
 import type { PanelStatus } from "../contracts";
 import { ReplayCandleChart, type ReplayChartHandle } from "./ReplayCandleChart";
 import { buildLog, legLevels, legRole, money, ms, num, pairRoundTrips } from "./tradeReplayModel";
+import { EMPTY_GROUPS, type ReplayGroups } from "./tradeReplayGroups";
 import type { LogRow, ReplayFill, ReplayOrder } from "./tradeReplayModel";
 
 export {
@@ -47,6 +48,8 @@ export interface TradeReplayEventsProps {
   /** what the retained projection page holds in total (all strategies), for an honest empty state */
   page?: { orders: number; fills: number; strategies: number } | null;
   subjectLabel?: string | null;
+  /** order groups / packages / ledgers as the source publishes them (read ahead of publication) */
+  groups?: ReplayGroups;
 }
 
 const HEIGHT = { compact: 420, tall: 620 } as const;
@@ -90,7 +93,7 @@ export function resolveFocus(focus: string | null | undefined, orders: readonly 
   return (o.type ?? "").toUpperCase().includes("LIMIT") ? `ladder:${o.orderId}` : null;
 }
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null }: TradeReplayEventsProps) {
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
   const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
@@ -229,6 +232,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             onKeyDown={onKey}
             onRangeEdge={onRangeEdge}
             focusId={focusTarget}
+            groups={groups}
           />
         </div>
         <div className="exec-rp-legend">
@@ -238,6 +242,12 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           <span>─ ─ <span data-tone="good">TP</span> / <span data-tone="bad">SL</span> leg at trigger_price · ◇ triggered · ⊣ cancelled · ┈ resting limit level</span>
           <span data-tone="bad">× rejected ({rejects})</span>
           <span className="exec-rp-mute">╌ round trip · {bars.length > 0 ? "▮ venue candle up / down" : "no candles"} · hover a marker for its card · click ↔ log row · ← → step fills</span>
+          <span className="exec-rp-mute" data-groups={groups.published.brackets ? "published" : "not-published"}>
+            groups: {groups.published.brackets ? `brackets published (${groups.brackets.length}) — boxes from the source's groups` : "order_brackets not published — boxes paired by time (DERIVED)"}
+            {" · "}{groups.published.conditional ? `OCO/OTO/OUO groups (${groups.conditional.length}) ⌐ brace` : "conditional_order_groups not published"}
+            {" · "}{groups.published.packages ? `atomic packages (${groups.packages.length}) ▒ band` : "arb_order_packages not published"}
+            {" · "}{groups.published.ledger ? `ledger (${groups.ledger.length}) ◆ on the time axis` : "capital ledger / settlements not published"}
+          </span>
         </div>
         <footer className="exec-rp-foot">
           source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
