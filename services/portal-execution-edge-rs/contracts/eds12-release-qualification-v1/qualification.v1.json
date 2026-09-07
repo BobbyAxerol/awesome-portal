@@ -95,7 +95,7 @@
     {
       "id": "image_publication_gate",
       "file": "scripts/execution-image-publication-test.sh",
-      "sha256": "sha256:d2e890181e6a0f318b776cc89b356d722a6594be54b7e7aa4781990ed3ebd25c"
+      "sha256": "sha256:8a796372d4683ec4f270d0909189f42f9a3d63f6ce2c557502e100c5fedeef15"
     },
     {
       "id": "current_source_compose",

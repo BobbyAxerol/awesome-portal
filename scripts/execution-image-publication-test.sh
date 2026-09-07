@@ -10,8 +10,10 @@ python3 - \
   "${workflow}" \
   "${root_dir}/deploy/images/execution-edge.Dockerfile" \
   "${root_dir}/deploy/images/source-proxy.Dockerfile" \
-  "${root_dir}/deploy/images/control-api.Dockerfile" <<'PY'
+  "${root_dir}/deploy/images/control-api.Dockerfile" \
+  "${root_dir}/deploy/compose.signed-images.yaml" <<'PY'
 import pathlib
+import re
 import sys
 
 import yaml
@@ -21,6 +23,7 @@ raw = path.read_text(encoding="utf-8")
 edge_dockerfile = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
 proxy_dockerfile = pathlib.Path(sys.argv[3]).read_text(encoding="utf-8")
 control_dockerfile = pathlib.Path(sys.argv[4]).read_text(encoding="utf-8")
+signed_overlay = pathlib.Path(sys.argv[5]).read_text(encoding="utf-8")
 document = yaml.safe_load(raw)
 if not isinstance(document, dict):
     raise SystemExit("Image publication workflow is not a YAML object.")
@@ -62,6 +65,33 @@ for build_only_runtime_path in (
 ):
     if build_only_runtime_path not in control_dockerfile:
         raise SystemExit("Control API runtime package-manager removal boundary drifted.")
+
+# A production release applies this overlay after the complete monorepo graph,
+# retaining private supporting services and state while clearing every mutable
+# application build source.
+expected_signed_services = {
+    "portal-api": "PORTAL_API_IMAGE",
+    "roadmap-task-board-api": "PORTAL_ROADMAP_API_IMAGE",
+    "portal-web": "PORTAL_WEB_IMAGE",
+    "control-api-migrate": "PORTAL_CONTROL_API_IMAGE",
+    "control-api-bootstrap": "PORTAL_CONTROL_API_IMAGE",
+    "control-api": "PORTAL_CONTROL_API_IMAGE",
+    "quant-worker-py": "PORTAL_API_IMAGE",
+}
+for service, variable in expected_signed_services.items():
+    match = re.search(
+        rf"(?ms)^  {re.escape(service)}:\n(?P<section>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)",
+        signed_overlay,
+    )
+    if match is None:
+        raise SystemExit(f"Full-stack signed-image override is missing {service}.")
+    section = match.group("section")
+    if f"${{{variable}:?" not in section:
+        raise SystemExit(f"Signed-image override does not bind {service} to {variable}.")
+    if service != "quant-worker-py" and "build: !reset null" not in section:
+        raise SystemExit(f"Signed-image override does not clear the local build for {service}.")
+if "PORTAL_IMAGE_TAG" in signed_overlay or "PORTAL_IMAGE_PREFIX" in signed_overlay:
+    raise SystemExit("Signed-image override must not permit mutable local image tags.")
 
 permissions = document.get("permissions")
 expected_permissions = {

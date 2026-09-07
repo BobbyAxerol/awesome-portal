@@ -5007,6 +5007,19 @@ browser parity in the sanitized EDS-12 deployed-evidence packet. The
 qualification verifier, not a prose status, is the sole authority allowed to
 emit `PRODUCT_ACTIVE`.
 
+**Full-stack immutable deployment amendment (2026-09-07):**
+`deploy/compose.signed-images.yaml` is the mandatory overlay for the existing
+stable Portal stack. It is applied *after* canonical `compose.yaml`, preserves
+NATS, MinIO, the quant worker, named volumes, private network and service
+identities, and clears every application `build` definition before binding the
+six protected-main image digests. This prevents the unsafe shortcut of
+replacing the full stack with the smaller production example or rebuilding
+from a mutable worktree. The publication gate rejects a release if this
+override loses an image binding or build-reset invariant. Actual activation
+still requires exact digest pull/verification, full-stack render with the
+current-source/projection/realtime overlays, measured profile/browser matrix
+and recorded rollback before the deployed verifier may emit `PRODUCT_ACTIVE`.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
