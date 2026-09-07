@@ -115,13 +115,16 @@ async function readPage(read: RelationRead, q: RelationPageQuery): Promise<Await
   return result;
 }
 
-/** Walk a relation's current page set with the Portal continuation, up to `maxPages` × 200 rows. */
-export async function drainRelation(read: RelationRead, routeId: RelationRoute | string, environment: RelationEnvironment, maxPages = 40): Promise<Drained> {
+export const DRAIN_CANCELLED = "DRAIN_CANCELLED";
+
+/** Walk a relation's current page set with the Portal continuation, up to `maxPages` × 200 rows; a cancelled walk stops before its next page and says so. */
+export async function drainRelation(read: RelationRead, routeId: RelationRoute | string, environment: RelationEnvironment, maxPages = 40, isCancelled: () => boolean = () => false): Promise<Drained> {
   const rows: Record<string, unknown>[] = [];
   let cursor: string | null = null;
   let pages = 0;
   let last: RelationPage | null = null;
   for (let i = 0; i < maxPages; i += 1) {
+    if (isCancelled()) return { rows, pages, exhausted: false, state: last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: DRAIN_CANCELLED };
     const result = await readPage(read, { routeId, environment, limit: 200, cursor });
     if (!result.ok) return { rows, pages, exhausted: false, state: pages === 0 ? result.status.toUpperCase() : last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: result.reason };
     pages += 1;
@@ -168,7 +171,7 @@ const COMPLETENESS_RANK = ["COMPLETE", "PARTIAL", "UNKNOWN"];
 export const DRAIN_CONCURRENCY = 2;
 
 /** Drain every replay relation of one environment, at most `DRAIN_CONCURRENCY` relations at a time, each bounded by `maxPages`. */
-export async function drainRelations(read: RelationRead, environment: RelationEnvironment, routes: Readonly<Record<string, RelationRoute>> = REPLAY_RELATIONS, maxPages = 40): Promise<RelationFacts> {
+export async function drainRelations(read: RelationRead, environment: RelationEnvironment, routes: Readonly<Record<string, RelationRoute>> = REPLAY_RELATIONS, maxPages = 40, isCancelled: () => boolean = () => false): Promise<RelationFacts> {
   const entries = Object.entries(routes);
   const drained: Drained[] = new Array<Drained>(entries.length);
   let next = 0;
@@ -176,7 +179,7 @@ export async function drainRelations(read: RelationRead, environment: RelationEn
     while (next < entries.length) {
       const index = next;
       next += 1;
-      drained[index] = await drainRelation(read, entries[index][1], environment, maxPages);
+      drained[index] = await drainRelation(read, entries[index][1], environment, maxPages, isCancelled);
     }
   };
   await Promise.all(Array.from({ length: Math.min(DRAIN_CONCURRENCY, entries.length) }, () => worker()));

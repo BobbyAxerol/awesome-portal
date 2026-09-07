@@ -5,7 +5,7 @@
  * while the tab is visible. The result is the relation's current page set —
  * the reader labels it so, never as history.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { ExecutionApi } from "./api/ports";
 import { drainRelations, REPLAY_RELATIONS, type RelationEnvironment, type RelationFacts, type RelationRoute } from "./api/managerRelations";
@@ -21,18 +21,25 @@ export interface RelationFactsState {
 }
 
 export function useRelationFacts(api: ExecutionApi, environment: RelationEnvironment, active = true, routes: Readonly<Record<string, RelationRoute>> = REPLAY_RELATIONS): RelationFactsState {
-  const tick = usePollTick(RELATION_REFRESH_MS, active);
+  // Once armed the drain stays armed: a subject read that flaps between loading and
+  // unavailable (dev 2026-09-07: three overlapping walks, 168 reads in a minute,
+  // N21_SHARED_CONCURRENCY_EXHAUSTED at the Manager) must not restart it.
+  const armed = useRef(false);
+  if (active) armed.current = true;
+  const on = armed.current;
+  const tick = usePollTick(RELATION_REFRESH_MS, on);
   const [state, setState] = useState<RelationFactsState>({ status: "loading", value: null, refreshing: false });
   useEffect(() => {
-    if (!active) return undefined;
+    if (!on) return undefined;
     let cancelled = false;
     setState((current) => (current.value ? { ...current, refreshing: true } : { status: "loading", value: null, refreshing: false }));
-    void drainRelations((q) => api.getManagerRelationPage(q), environment, routes).then((facts) => {
+    // A superseded walk stops before its next page; its result is discarded.
+    void drainRelations((q) => api.getManagerRelationPage(q), environment, routes, 40, () => cancelled).then((facts) => {
       if (cancelled) return;
       setState({ status: facts.state === "UNAVAILABLE" ? "unavailable" : "ok", value: facts, refreshing: false });
     });
     return () => { cancelled = true; };
     // routes is a module constant by default; a caller passing its own must memoize it
-  }, [api, environment, active, routes, tick]);
+  }, [api, environment, on, routes, tick]);
   return state;
 }
