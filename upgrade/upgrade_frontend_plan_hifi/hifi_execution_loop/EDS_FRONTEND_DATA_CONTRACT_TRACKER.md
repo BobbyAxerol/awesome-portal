@@ -309,7 +309,7 @@ nguyên marker/leg/log. **Điểm cần Bobby chốt:** control-api có được
 ra ngoài tới venue công khai không (hiện nó đã reach được, 200/206ms); codex
 có đồng ý phân loại authority `VENUE_PUBLIC_MARKET_DATA` không (DR-23).
 
-## OR-5 (R1+R2+R3 ĐÃ GIAO 06-09 trên `feat/trade-replay-signature` — chờ Bobby duyệt trên dev; xem OR-5.8/5.9/5.10) — Trade Replay "signature": chuẩn TradingView
+## OR-5 (R1–R4 ĐÃ GIAO và MERGE vào `feat/eds-current-bff` @ `f04dad8` 06-09 — FE đóng; nguồn còn BR-EX-50/80/81; xem OR-5.8…5.13) — Trade Replay "signature": chuẩn TradingView
 
 Owner 06-09 hỏi ý kiến: *"có nên đầu tư thêm thời gian để trade replay động
 hơn như các sàn / TradingView — mượt, crosshair hiện số nến, tam giác vào/ra
@@ -586,6 +586,26 @@ index 39e1946..d6ac74c 100644
  ### 17.6 Frontend collaboration lanes
 ```
 
+### OR-5.13 Owner 06-09 (tối): nghiệm thu EDS-12 + BR-EX-80/81 của codex · viết sẵn logic nhóm lệnh/ledger (R4) · merge nhánh replay
+
+**Nghiệm thu codex (chạy gate của họ tại `/home/bobby/portal-eds12-failure-dr-release`, HEAD `8a7bd6f`, `scripts/execution-eds12-qualification-test.sh`):**
+- N29: `RELEASE_CANDIDATE_READY`, `product_release: NO_GO`, blocker `N29-REL-01`.
+- EDS-12: `EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`, `runtime_effect: NONE`, `operations_qualified: false`, `product_active: false`, 10 failure scenarios, 9 mutation test fail-closed pass. Giao phẩm: crate `eds12-qualification`, contracts `eds12-release-qualification-v1` (qualification/failure-matrix/deployed-evidence schema), `EX_BE_37_*.md`, `PHASE_12_QUALIFICATION.md`, runbook vận hành/rollback. **Là khung nghiệm thu tĩnh, chưa có bằng chứng deploy, không đổi runtime.**
+- **BR-EX-80/81: KHÔNG giao.** Codex xếp `source_extensions`: BR-EX-80 `SOURCE_OWNER_RETURN_REQUIRED` (cần nguồn phát `timeframe`), BR-EX-81 `SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED` ("BR-EX-81 is closed only when the Portal drains complete retained order/fill history through the private Manager relation pager into its append-only mirror, with cursor/restart/dedupe/count parity proof"). Hệ quả: alpha ngoài trang hiện tại (`delta_rsi_*`, 37/42 strategy) vẫn trống replay trên dev — đúng như empty state đang nói. Cần Bobby giao lại codex phần drain + đọc theo subject.
+- Kiểm tra nhánh: `feat/eds12-failure-dr-release` mở từ `feat/execution-data-activation` (chứa cả docs tracker của tôi); `feat/eds11r-r4-r5-activation` chứa bản re-apply của các commit replay bản 2/3 của tôi (`7ec17dd`, `97ab33f`) với hash khác — khi codex merge `feat/eds-current-bff` sẽ conflict trên `TradeReplayEvents.tsx`/`recomposeContainers.tsx`; ghi để codex biết trước.
+
+**R4 — viết sẵn cho các bảng nhóm lệnh/ledger (commit `f04dad8`), theo schema guide §7/§16/§11 + vocabularies của contract pack:**
+| Bảng nguồn | Reader | Vẽ khi có | Hôm nay |
+|---|---|---|---|
+| `order_brackets` + `order_bracket_legs` (ENTRY/STOP/TP/TRAILING, `leg_index`, `entry_client_order_id`, `activation_policy`, `oco_policy`) | `readBracketGroups` | box lập từ group của nguồn (thay ghép theo thời gian), leg type published thắng heuristic, leg chưa thành order = mức "planned" | chưa phát → box vẫn DERIVED, legend ghi "order_brackets not published" |
+| `conditional_order_groups` + `_legs` (BRACKET/OCO/OTO/OUO; `execution_trigger`, `late_fill_policy`, `remainder_policy`; leg state WAITING…REJECTED) | `readConditionalGroups` | brace ⌐ tại thời điểm tạo, ngang qua các mức leg, nhãn contingency + state, leg WAITING nét chấm, state cần chú ý màu bad | chưa phát |
+| `arb_order_packages` (ATOMIC_ALL_OR_NONE, `planned_orders`, gross/net notional, imbalance) | `readOrderPackages` | dải ▒ qua pane từ created→completed, nhãn "ATOMIC ×N · state", leg symbol khác liệt kê trong card | chưa phát |
+| `portfolio_capital_ledger` (ALLOCATE/WITHDRAW/REBALANCE/ADJUST/INITIAL_ALLOCATE) + `settlements` (CASH/SECURITY × PAYABLE/RECEIVABLE) | `readLedgerMovements` | ◆ ở mép dưới trục thời gian, nhãn loại + số, card before→after | chưa phát |
+Scope theo account/strategy (`scopeGroups`), "not published" ≠ "published, empty" (`published{}` flags), test `tradeReplayGroups.test.ts` 8 case với fixture đúng cột schema. Gate: tsc sạch, vitest **1904 pass / 1 skipped (105 file)**; probe: adaptive/fib không đổi hình, legend ghi 4 dòng "not published".
+
+**Không viết sẵn (nói rõ):** `order_group_event_inbox`/`execution_command_outbox` (hàng đợi nội bộ, không phải sự kiện vẽ), `sizing_decisions` (audit sizing — hợp với card của entry hơn là chart; để R5 nếu Bobby muốn), `order_pending_exposure` (rủi ro, không phải lệnh).
+
+**Merge (06-09 tối):** `feat/trade-replay-signature` → `feat/eds-current-bff` fast-forward `daa30a8..f04dad8` (8 commit: e465100 · ce9d230 · 5704ac4 · e06963a · 5b59384 · ce08548 · f04dad8 + pack), push `origin/feat/eds-current-bff`; dev deploy từ `feat/eds-current-bff` @ `f04dad8` (control-api + portal-web `:dev`). OR-5 **đóng phần FE**; còn treo phía nguồn: BR-EX-50 (kline shard), BR-EX-80 (timeframe), BR-EX-81 (drain orders/fills), DR-22/24/25/26. Việc kế: quay lại các G/R còn dở theo `/goal` của Bobby.
 ## 7. NGHIỆM THU LỚP 1 (04-09) — chấm E7 pack ↔ ma trận màn, KHÔNG đợi hết EDS
 
 Chính sách nghiệm thu 2 lớp: **Lớp 1 = contract đầu vào** (chấm được ngay vì
