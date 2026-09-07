@@ -178,6 +178,16 @@ export interface PortfolioThreeSixtyProps {
   /** Account cell → Account/Broker 360° (HiFi 3a: "account click → Account 360°"). */
   onOpenAccount: (accountId: string) => void;
   kpis: readonly { label: string; value: string | null; unit?: string | null }[];
+  /**
+   * P0-4: the three Overview panels the hi-fi draws. Each is a node the
+   * container builds from published rows, or null when the container has
+   * nothing to draw — the screen then says so rather than leaving a gap.
+   */
+  overviewPanels?: {
+    equityVsBenchmark?: ReactNode;
+    crossPortfolio?: ReactNode;
+    configurationLog?: ReactNode;
+  } | null;
   holdings: readonly HoldingRow[];
   /** FX note the hi-fi requires wherever a total crosses currencies. */
   fxNote?: string | null;
@@ -757,6 +767,7 @@ function Ledger({
 
 export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   const {
+    overviewPanels,
     portfolioId,
     portfolioName,
     envelope,
@@ -898,6 +909,9 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
       >
         {tab === "Overview" ? (
           <>
+            {overviewPanels?.equityVsBenchmark ?? null}
+            {overviewPanels?.crossPortfolio ?? null}
+            {overviewPanels?.configurationLog ?? null}
             {demoPanels?.liveStrip ?? null}
             {demoPanels?.eraChart ?? null}
             {demoPanels?.crossPortfolio ?? null}

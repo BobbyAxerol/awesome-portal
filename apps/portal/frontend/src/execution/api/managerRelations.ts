@@ -14,7 +14,8 @@ export const RELATION_ROUTES = {
   orders: "orders", fills: "fills", strategies: "strategies", strategyDeployments: "strategy-deployments",
   orderBrackets: "order-brackets", orderBracketLegs: "order-bracket-legs",
   conditionalGroups: "conditional-order-groups", conditionalGroupLegs: "conditional-order-group-legs",
-  capitalLedger: "portfolio-capital-ledger", sizingDecisions: "sizing-decisions", executionSessions: "execution-sessions", commandJournal: "command-journal",
+  capitalLedger: "portfolio-capital-ledger", portfolioEquitySnapshots: "portfolio-equity-snapshots",
+  sizingDecisions: "sizing-decisions", executionSessions: "execution-sessions", commandJournal: "command-journal",
 } as const;
 export type RelationRoute = (typeof RELATION_ROUTES)[keyof typeof RELATION_ROUTES];
 export type RelationScalar = string | number | boolean | null;

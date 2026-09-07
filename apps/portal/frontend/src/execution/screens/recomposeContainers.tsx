@@ -33,6 +33,9 @@ import { ObservedTimelinePanel } from "../components/ObservedTimelinePanel";
 import { subjectFunnel, subjectRows, type RelationFacts, type SubjectFunnel } from "../api/managerRelations";
 import { type ObservedEntry, type ObservedEnvironment, type ObservedSubjectKind, type ObservedTimeline, deployedEnvironments } from "../api/observedTimeline";
 import { SCOPE_WINDOWS, accountsOfPortfolio, rowInScope, scopeFacts, scopeSummary } from "../alphaScope";
+import { hifiInsightTiles } from "../hifiInsight";
+import { portfolioOverviewPanels } from "../portfolioOverview";
+import { HIFI_TILES } from "../hifiTiles";
 import type { BlotterGroups } from "./FullBlotter";
 import { useRelationFacts, type RelationFactsState } from "../useRelationFacts";
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
@@ -246,9 +249,18 @@ function resourceFacts(profile: ProfileEnvelope | null | undefined, subjectKind:
 function combinedFacts(resource: QueryAnalytics | null, additive: QueryAnalytics | null | undefined): QueryAnalytics | null {
   if (!resource) return additive ?? null;
   if (!additive) return resource;
+  // The resource's facts win — they are scoped to this subject by the server —
+  // but only where it actually has rows. An empty array from the resource is
+  // "this resource carries no such relation", not "there are none": letting it
+  // overwrite the analytics branch silently emptied the venue-contribution tile,
+  // which had the figures all along (found while building the hi-fi tiles).
+  const merged: Record<string, readonly Record<string, unknown>[]> = { ...(additive.sourceFacts ?? {}) };
+  for (const [key, rows] of Object.entries(resource.sourceFacts ?? {})) {
+    if (rows.length > 0 || !(key in merged)) merged[key] = rows;
+  }
   return {
     ...additive,
-    sourceFacts: { ...(additive.sourceFacts ?? {}), ...(resource.sourceFacts ?? {}) },
+    sourceFacts: merged,
     replay: resource.replay ?? additive.replay,
   };
 }
@@ -525,6 +537,9 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
 }
 
 /** Only the two relations the chips need — the blotter must not drain the whole replay set. */
+/** P0-4: the two relations Portfolio 360's Overview panels read. */
+const PORTFOLIO_RELATIONS = { portfolio_equity_snapshots: "portfolio-equity-snapshots", portfolio_capital_ledger: "portfolio-capital-ledger" } as const;
+
 const BLOTTER_GROUP_RELATIONS = { order_brackets: "order-brackets", conditional_order_group_legs: "conditional-order-group-legs" } as const;
 
 /** P0-6: the order ids the source has grouped, for the Brackets and Conditional chips. */
@@ -584,6 +599,17 @@ function analyticsKpis(analytics: QueryAnalytics, funnel: SubjectFunnel | null =
   }
   return kpis;
 }
+
+/**
+ * Portal branch titles that the hi-fi already draws as one of its twelve tiles.
+ * Those branches feed the hi-fi tile instead of appearing twice under two
+ * names, which is what "Venue contribution" and "Paper vs live drift" did on
+ * the first pass of P0-3.
+ */
+const HIFI_COVERED_TITLES: ReadonlySet<string> = new Set([
+  "Stage equity", "Drawdown overlap", "Correlation matrix", "Venue contribution",
+  "Execution quality", "Order funnel", "Paper vs live drift", "\u03c1 vs benchmark timeline",
+]);
 
 /** Reviewed titles for the twelve published analytics capabilities (P4-B). */
 const ANALYTICS_TILE_TITLES: Readonly<Record<string, string>> = {
@@ -1449,7 +1475,17 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       contributions={alphaContributions(scopedFacts)}
       equity={resource ? profileEquity(resource) ?? analyticsEquity(analytics) : analyticsEquity(analytics)}
       deployments={deployments}
-      tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
+      tiles={scopedFacts
+        // P0-3: the hi-fi's twelve, in the hi-fi's order, then the Portal's own
+        // extra branches numbered after them, so tile 8 stays tile 8. A branch
+        // that already has a hi-fi tile is not repeated further down.
+        ? [
+            ...hifiInsightTiles({ analytics: scopedFacts, relations: relations.value, asOf: scopedFacts.asOf, window: scope.window, analyticsUnavailable: analyticsState.status === "ok" ? null : analyticsReason, published: analytics }),
+            ...analyticsTiles(scopedFacts, scopedFacts.asOf)
+              .filter((tile) => !HIFI_COVERED_TITLES.has(tile.title))
+              .map((tile, index) => ({ ...tile, index: HIFI_TILES.length + index + 1 })),
+          ]
+        : unavailableAnalyticsTiles(analyticsReason, envelope)}
       replay={scopedFacts ? <TradeReplayLive api={api} analytics={scopedFacts} additive={analytics} alphaId={alphaId} focusId={focus} relations={relations} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
@@ -1539,6 +1575,7 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const capitalPaper = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "paper"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const capitalSandbox = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "sandbox"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const capitalLive = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "live"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
+  const portfolioRelations = useRelationFacts(api, "paper", true, PORTFOLIO_RELATIONS);
   const [tab, setTab] = useParamState<PortfolioTab>("tab", PORTFOLIO_TABS, "Overview");
   const [lens, setLens] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -1562,6 +1599,12 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       : profilePanelStatus(resource, resourceState.status);
   return (
     <PortfolioThreeSixty
+      overviewPanels={portfolioOverviewPanels({
+        portfolioId,
+        relations: portfolioRelations.value,
+        loading: portfolioRelations.status === "loading",
+        asOf: analytics?.asOf ?? resource?.asOf ?? null,
+      })}
       portfolioId={portfolioId}
       portfolioName={text(portfolio?.name) ?? portfolioId}
       envelope={envelope}
