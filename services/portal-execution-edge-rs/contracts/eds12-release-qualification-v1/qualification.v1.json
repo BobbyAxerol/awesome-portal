@@ -105,12 +105,12 @@
     {
       "id": "profile_runtime_prepare",
       "file": "scripts/execution-profile-runtime-prepare.sh",
-      "sha256": "sha256:3fd851db81c7fd60a955868afcd3138283bc0032ddf54de90ed763723e5b2189"
+      "sha256": "sha256:3543d6fafa098b505edb8a9db21c66378f63b097a801a8568948b81b399543ed"
     },
     {
       "id": "market_context_static_gate",
       "file": "scripts/execution-market-context-data-layer-adapter-test.sh",
-      "sha256": "sha256:f12d7da2cabc704ed34845b46f97ca6021a7310fb10e210ee4889cf36e748bd9"
+      "sha256": "sha256:8c608be6c6e97ec92c524128b98c2e138d431c90e1474d274232918e933f24f9"
     },
     {
       "id": "current_source_proxy",

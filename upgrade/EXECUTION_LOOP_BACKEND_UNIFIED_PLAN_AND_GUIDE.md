@@ -4975,8 +4975,11 @@ reject a newer green release.  Profile preparation accepts either the explicit
 dev-local Edge content address (and writes the exception as `true`) or a
 signed immutable GHCR Edge digest (and writes the exception as `false`).  A
 production render therefore cannot accidentally carry the local-image
-exception into Paper, Sandbox or Live.  The static release and Market Context
-gates cover both invariants.  This closes release-plumbing drift only; actual
+exception into Paper, Sandbox or Live.  The GHCR registry expression is now
+executed by the release gate (not merely source-text matched), preventing an
+escape-level regression from rejecting a valid signed image during the AWS
+render. The static release and Market Context gates cover both invariants.
+This closes release-plumbing drift only; actual
 `PRODUCT_ACTIVE` still requires the exact signed image, private render,
 preflight, measured profile probes and recorded deployed evidence.
 

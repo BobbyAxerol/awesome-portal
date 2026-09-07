@@ -27,7 +27,10 @@ done
 # signed by the protected-main workflow; its env must never retain the local
 # exception.  Preflight verifies the same distinction before a compose apply.
 local_edge_image_pattern='^portal-execution-edge-manager-v2@sha256:[a-f0-9]{64}$'
-signed_edge_image_pattern='^ghcr\\.io/[a-z0-9][a-z0-9._-]*/portal-execution-edge@sha256:[a-f0-9]{64}$'
+# Keep exactly one regex escape before the registry dot. This variable is
+# expanded unquoted by Bash's =~ operator; two literal backslashes would make
+# it look for a backslash in the image name and reject every valid GHCR digest.
+signed_edge_image_pattern='^ghcr\.io/[a-z0-9][a-z0-9._-]*/portal-execution-edge@sha256:[a-f0-9]{64}$'
 if [[ "${edge_image}" =~ ${local_edge_image_pattern} ]]; then
   edge_dev_local_image_allowed=true
 elif [[ "${edge_image}" =~ ${signed_edge_image_pattern} ]]; then

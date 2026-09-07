@@ -48,13 +48,23 @@ profile_prepare = pathlib.Path(sys.argv[1]).parents[3] / "scripts" / "execution-
 profile_prepare_text = profile_prepare.read_text()
 for required in (
     "local_edge_image_pattern='^portal-execution-edge-manager-v2@sha256:",
-    "signed_edge_image_pattern='^ghcr\\\\.io/[a-z0-9][a-z0-9._-]*/portal-execution-edge@sha256:",
+    "signed_edge_image_pattern='^ghcr\\.io/[a-z0-9][a-z0-9._-]*/portal-execution-edge@sha256:",
     "edge_dev_local_image_allowed=true",
     "edge_dev_local_image_allowed=false",
     '"EDGE_DEV_LOCAL_IMAGE_ALLOWED=${edge_dev_local_image_allowed}"',
 ):
     assert required in profile_prepare_text, required
 PY
+
+# Execute the image-address expression rather than merely pinning its source
+# text. A wrong escaping level silently rejects a valid signed GHCR release.
+bash -c '
+  set -euo pipefail
+  signed_pattern='"'"'^ghcr\.io/[a-z0-9][a-z0-9._-]*/portal-execution-edge@sha256:[a-f0-9]{64}$'"'"'
+  image="ghcr.io/bobbyaxerol/portal-execution-edge@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  [[ "$image" =~ $signed_pattern ]]
+  ! [[ "ghcrXio/bobbyaxerol/portal-execution-edge@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" =~ $signed_pattern ]]
+'
 
 bash -n "${root_dir}/scripts/execution-d2-render-source-proxy.sh"
 bash -n "${root_dir}/scripts/execution-d2-preflight.sh"
