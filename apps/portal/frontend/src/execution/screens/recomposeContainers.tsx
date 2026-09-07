@@ -1080,7 +1080,7 @@ function alphaContributions(analytics: QueryAnalytics | null | undefined): Venue
   }));
 }
 
-function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
+export function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
   const source = analytics?.chartSeries[0];
   const points = Array.isArray(source?.points) ? source.points.flatMap((raw) => {
     if (!raw || typeof raw !== "object") return [];

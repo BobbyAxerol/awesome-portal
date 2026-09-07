@@ -113,3 +113,31 @@ describe("subject funnel (DR-22)", () => {
     expect(subjectFunnel({ ...relations, facts: {} }, { alphaId: "a" })).toBeNull();
   });
 });
+
+describe("a relation that refuses the first page size", () => {
+  it("steps down through the sizes rather than calling a readable relation unavailable", async () => {
+    // portfolio-equity-snapshots on dev answers a page of 5 and refuses 8 with
+    // N17B_SOURCE_REJECTED; a fixed 200 read it as unavailable.
+    const asked: number[] = [];
+    const read: RelationRead = async (q) => {
+      asked.push(q.limit ?? -1);
+      if ((q.limit ?? 0) > 5) return { ok: false, status: "unavailable", reason: "N17B_SOURCE_REJECTED" };
+      return {
+        ok: true,
+        value: { ...readRelationPage(RAW)!, records: [{ resourceId: "r1", values: { id: 1 } }], page: { nextCursor: null, hasMore: false, totalUnknown: true, maximumPageRows: 5, truncated: false } },
+      };
+    };
+    const drained = await drainRelation(read, "portfolio-equity-snapshots", "paper");
+    expect(drained.rows).toHaveLength(1);
+    expect(drained.exhausted).toBe(true);
+    // each refused size is tried once (with its one retry) before stepping down
+    expect(asked.filter((size) => size === 5)).toHaveLength(1);
+    expect(new Set(asked)).toEqual(new Set([200, 50, 20, 5]));
+  });
+
+  it("still reports a relation that refuses every size", async () => {
+    const read: RelationRead = async () => ({ ok: false, status: "unavailable", reason: "N17B_SOURCE_REJECTED" });
+    const drained = await drainRelation(read, "portfolio-equity-snapshots", "paper");
+    expect(drained).toMatchObject({ rows: [], pages: 0, state: "UNAVAILABLE", reason: "N17B_SOURCE_REJECTED" });
+  });
+});

@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 
 import { BarsChart, DensityHeatmap, LinesChart } from "./components/marketChart";
 import { HistogramChart } from "./components/visuals";
+import { analyticsEquity } from "./screens/recomposeContainers";
 import { formatExact } from "./formatExact";
 import {
   DENSITY_DAYS, HIFI_TILES, costDrag, densityGrid, returnHistogram, venueContribution, venueQuality,
@@ -65,6 +66,9 @@ interface TileOutcome {
   body?: ReactNode;
   state: "ok" | "insufficient_data" | "unavailable";
   reason?: string | null;
+  /** the published series, when the tile hands one to the screen's chart */
+  series?: InsightTile["series"];
+  envelope?: ChartEnvelope;
 }
 
 const missing = (reason: string): TileOutcome => ({ state: "unavailable", reason });
@@ -150,10 +154,13 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
   const outcome = (index: number): TileOutcome => {
     switch (index) {
       case 1: {
-        // Equity by stage — the published series; the screen draws it through
-        // its own EquityChart, so this tile only reports when it is absent.
-        return analytics.chartSeries.length > 0
-          ? { state: "ok" }
+        // Equity by stage — the published series, handed to the screen's own
+        // EquityChart. Returning only "ok" left the tile saying the series was
+        // not published while the series sat one field away (caught by eye on
+        // dev, not by a test).
+        const equity = analyticsEquity(analytics);
+        return equity
+          ? { state: "ok", series: equity.series, envelope: equity.envelope }
           : missing("EQUITY_SERIES_NOT_PUBLISHED");
       }
       case 2: {
@@ -166,7 +173,14 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
             <>
               <LinesChart
                 series={[{ name: "drawdown", tone: "bad", points: mine.series.map((point) => [point.t, point.drawdown] as const) }]}
-                bands={dd.overlaps.slice(0, 16).map((overlap) => ({ from: overlap.from, to: overlap.to, label: `${overlap.alphaIds.length} alphas`, tone: "warn" as const }))}
+                bands={dd.overlaps.slice(0, 16).map((overlap, _index, all) => ({
+                  from: overlap.from,
+                  to: overlap.to,
+                  // Sixteen labels in a 150px tile overprint each other into a
+                  // grey smear; the count moves to the fact row below instead.
+                  label: all.length <= 3 ? `${overlap.alphaIds.length} alphas` : undefined,
+                  tone: "warn" as const,
+                }))}
                 zeroLine={{ label: "0" }}
                 height={150}
                 yFormatter={(value) => `${(value * 100).toFixed(2)}%`}
@@ -176,6 +190,7 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
               {factRows([
                 ["max drawdown", `${mine.maxDrawdown ?? "not published"} @ ${mine.maxDrawdownAt ?? "—"}`],
                 ["window", `${dd.windowDays ?? "?"}d · no smoothing`],
+                ["joint drawdown windows", `${dd.overlaps.length} shaded · ${dd.alphas.length} alphas in the set`],
               ], "Drawdown and underwater")}
             </>
           ),
@@ -398,7 +413,8 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
     return {
       index: tile.index,
       title: tile.title,
-      envelope: envelopeOf(null),
+      series: result.series,
+      envelope: result.envelope ?? envelopeOf(null),
       state: result.state,
       reason: result.reason ?? (result.state === "ok" ? `${tile.caption} · ${source}` : tile.caption),
       body: result.body,

@@ -105,9 +105,16 @@ export interface Drained {
 export const RETRY_DELAYS_MS: readonly number[] = [400, 1500];
 const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
 
-/** One page, retried after each pause in `RETRY_DELAYS_MS`; the last failure is the one reported. */
-async function readPage(read: RelationRead, q: RelationPageQuery): Promise<Awaited<ReturnType<RelationRead>>> {
+/**
+ * One page, retried after each pause in `RETRY_DELAYS_MS`.
+ *
+ * `retry: false` is for the probe reads that step the page size down: a source
+ * refusing a page of 200 will refuse it again in 1.5 seconds, and waiting four
+ * times over is how a walk that should take a second takes eight.
+ */
+async function readPage(read: RelationRead, q: RelationPageQuery, retry = true): Promise<Awaited<ReturnType<RelationRead>>> {
   let result = await read(q);
+  if (!retry) return result;
   for (const delay of RETRY_DELAYS_MS) {
     if (result.ok) return result;
     await sleep(delay);
@@ -118,15 +125,35 @@ async function readPage(read: RelationRead, q: RelationPageQuery): Promise<Await
 
 export const DRAIN_CANCELLED = "DRAIN_CANCELLED";
 
-/** Walk a relation's current page set with the Portal continuation, up to `maxPages` × 200 rows; a cancelled walk stops before its next page and says so. */
+/**
+ * Page sizes to try, largest first.
+ *
+ * Not every relation accepts the same page. `portfolio-equity-snapshots`
+ * answers a page of 5 and refuses 8 with `N17B_SOURCE_REJECTED` (measured on
+ * dev 2026-09-07), so a fixed 200 read it as "unavailable" when it was in fact
+ * readable. The walk steps down rather than giving up, and reports the size it
+ * settled on so the screen can say how the rows were fetched.
+ */
+export const PAGE_SIZES: readonly number[] = [200, 50, 20, 5];
+
+/** Walk a relation's current page set with the Portal continuation, stepping the page size down when the source refuses one; a cancelled walk stops before its next page and says so. */
 export async function drainRelation(read: RelationRead, routeId: RelationRoute | string, environment: RelationEnvironment, maxPages = 40, isCancelled: () => boolean = () => false): Promise<Drained> {
   const rows: Record<string, unknown>[] = [];
   let cursor: string | null = null;
   let pages = 0;
   let last: RelationPage | null = null;
+  let sizeIndex = 0;
   for (let i = 0; i < maxPages; i += 1) {
     if (isCancelled()) return { rows, pages, exhausted: false, state: last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: DRAIN_CANCELLED };
-    const result = await readPage(read, { routeId, environment, limit: 200, cursor });
+    const stepping = pages === 0 && sizeIndex < PAGE_SIZES.length - 1;
+    const result = await readPage(read, { routeId, environment, limit: PAGE_SIZES[sizeIndex], cursor }, !stepping);
+    if (!result.ok && pages === 0 && sizeIndex < PAGE_SIZES.length - 1) {
+      // The source refused this page size and has given us nothing yet: try a
+      // smaller one before calling the relation unavailable.
+      sizeIndex += 1;
+      i -= 1;
+      continue;
+    }
     if (!result.ok) return { rows, pages, exhausted: false, state: pages === 0 ? result.status.toUpperCase() : last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: result.reason };
     pages += 1;
     last = result.value;

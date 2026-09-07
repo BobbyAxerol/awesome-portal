@@ -98,7 +98,7 @@
     "br72_frontend_test_sha256": "sha256:4aa3588a6f51a707e5301dc2fcca351d201da8fb00cdff5688ab168c9f5b225f",
     "br72_frontend_containers_sha256": "sha256:8a15d831250a8d75afb0d923069a9cb21a21d262da24fbc4582e6762a0646028",
     "br72_frontend_alpha_fleet_sha256": "sha256:536d47e600f146330c05701d26e2936811a67dd14d013e562ef9bd078d8c0882",
-    "br72_frontend_recompose_sha256": "sha256:0bc5ad7161e680babcf3c303b7058a1a888ff10c83978759d012618a0a3b431e",
+    "br72_frontend_recompose_sha256": "sha256:4e7ef3043cfe0d9791ab6f4f428d2a52ed0968deccbce4b264eb5e8426b36027",
     "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e",
     "br76_schema_sha256": "sha256:ef90f2844cd9e92818e6921271c4fd5b5ec2f8b5d7f5cd71ce99df4a546b8244",
     "br76_fixture_sha256": "sha256:23db8c70822e109af7ca54be9ee21a900adc1dec550191eea2f0a40125bc1961"
