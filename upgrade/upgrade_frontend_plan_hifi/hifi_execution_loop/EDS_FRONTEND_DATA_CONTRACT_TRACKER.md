@@ -1125,6 +1125,26 @@ Head tích hợp duy nhất: **`feat/execution-integration`** (worktree `/home/b
 
 **Cho codex:** hai nhánh của codex giờ nằm sau head tích hợp; mọi việc tiếp theo (G8/G9/G10…) làm trên `feat/execution-integration`; Bobby chốt khi nào head này vào `dev`.
 
+### A6.5 G8 — EDS-09b adapter → motion theo revision thật — ĐÃ LÀM 07-09 (commit `9eca5f8` trên `feat/execution-integration`, push; hook đầy đủ xanh: N29 complete-surface / Phase 2 / tracking reconciliation / monorepo verification)
+
+**Giao gì (18 file, +572/−7):** Alpha 360 và Account 360 mount BFF observed timeline của codex (`GET /views/observed-timeline`, `portal.execution.observed-timeline-bff.v1`) thành panel **Observed timeline**: chip provenance (`PORTAL_OBSERVATION` · `BOUNDED_CURRENT_PAGE`), state + reason code của BFF, mỗi quan sát một dòng (source clock, record kind, values, `rejected_exact_value_fields` gọi tên), `unavailable_segments` hiện "Soon · …", trang sau theo `after` của chính BFF. Không tổng hợp gì: EMPTY hiện là EMPTY. **Motion theo revision thật:** nhịp (beat) chỉ nổ khi `projection.sequence` (panel) hoặc `read_at` của snapshot Command Center tiến; re-read theo cadence projection 15 s, dừng khi tab ẩn, chỉ tắt ở trang `/_fixtures`. Backend: `analytics.controller.ts` log lớp lỗi upstream trước khi trả 502 typed (nhờ đó tìm ra lỗi probe bên dưới). N29 + EDS-12 pack re-pin theo cây làm việc.
+
+| Bằng chứng | Kết quả thật |
+|---|---|
+| vitest FE (cây G8) | 106 file · **1910 pass** · 3 skipped; `tsc --noEmit` sạch; gate typography sửa bằng cách dùng lại `exec-rp-title` (không thêm class uppercase) |
+| Probe stack (`:8090`, DB dump dev) | **Lỗi thật tìm được:** `query-analytics`/`observed-timeline` 502 vì DB probe thiếu migration 025–027 của codex (`column "source_catalogue_sha256" does not exist`) — dev đã có; áp migration → `query-analytics` 200, `observed-timeline` 200 PARTIAL |
+| Browser (Playwright, alpha có lệnh `fib_sl_tp_strength_0015m`) | Alpha 360 Overview: panel `PARTIAL · EDS10_OBSERVED_TIMELINE_CURRENT_PAGE_PARTIAL`, **100 quan sát**, env `paper*` / `sandbox`, `rev 32 → 33` sau 20 s, `data-beat` 0 → 1; Account 360 (`paper-binance-fib_sl_tp_strength_0015m`): 100 quan sát; Command Center: `as_of 06:03:16.618 → 06:03:31.623`, `data-revision` 1 (nhịp theo `read_at` thật, không theo đồng hồ) |
+| Alpha không có command (delta_rsi) | panel EMPTY 0 quan sát — đúng với nguồn (curl cùng subject cũng 0) |
+
+**Ba phát hiện ghi lại (không phải lỗi của codex, nhưng phải biết):**
+1. `usePollTick` lúc đầu tôi gắn vào `smokeMotionAllowed()` (tắt dưới `navigator.webdriver`) → trong trình duyệt tự động panel không bao giờ re-read, kiểm tra G8 đầu tiên báo CC đứng yên. Tách `pollAllowed()`: **re-read dữ liệu không phải motion** — chạy cả khi reduced-motion và dưới Playwright, chỉ tắt ở `/_fixtures` và khi tab ẩn. Motion (animation) vẫn theo `smokeMotionAllowed()`.
+2. **DR-27 (mới, đề xuất codex/Bobby):** `resources/alphas/:id` trả `selected_environment = "live"` khi không `requested_environment` — là mặc định của resolver, không phải nơi alpha đang chạy (mọi row của `fib_sl_tp_strength_0015m` là paper/sandbox). Panel observed timeline vì thế đọc `live` → 0 quan sát dù paper có 100. Sửa phía FE: panel lấy môi trường từ chính `panels.deployments.rows[].mode` của resource (chip `paper`/`sandbox`, mặc định env đầu tiên có deploy). **Còn treo:** Activity rollup EDS-05 (`activityEnv`) vẫn đọc theo `selected_environment` → với alpha paper nó đang đọc live; đề nghị resolver chọn env theo deployment thật, hoặc FE đổi Activity sang cùng luật (chờ Bobby quyết vì đổi số Activity trên màn).
+3. BFF observed-timeline chỉ nhận `subject_kind ∈ {deployment, alpha, portfolio, account}` (`strategy` → `EDS10_OBSERVED_TIMELINE_QUERY_INVALID`) — FE gửi `alpha`, khớp.
+
+**Deploy dev:** từ `9eca5f8` bằng `deploy-int.sh` (build + up đều `--env-file portal-dev/.env`) — dòng kết quả ở A6.6 cùng G9.
+
+**Đóng gì:** DR-13 (motion theo clock nội bộ) đóng phía FE bằng nhịp theo `sequence`/`read_at`; **A-09 chưa ký** — Bobby xem trên dev rồi ký. G9 làm tiếp trên cùng head.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
