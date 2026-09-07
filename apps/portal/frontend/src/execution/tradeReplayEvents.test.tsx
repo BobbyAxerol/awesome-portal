@@ -7,7 +7,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TradeReplayEvents, buildLog, legLevels, legRole, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/TradeReplayEvents";
+import { LOG_PAGE, TradeReplayEvents, buildLog, legLevels, legRole, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/TradeReplayEvents";
 import type { TradesPrimitive } from "./components/ReplayCandleChart";
 
 /**
@@ -208,6 +208,21 @@ describe("TradeReplayEvents panel", () => {
     // the exit's bracket is in the scene: entry 1859.89, TP 1889.62, SL 1845.01
     expect(prim.scene.brackets[0]).toMatchObject({ id: "bracket:1877", tp: 1889.62, sl: 1845.01 });
     expect(container.querySelector(".exec-rp-legend")?.textContent).toContain("position box");
+  });
+  it("bounds the trade log to LOG_PAGE newest rows, says how many are not shown, and reveals older rows on request", async () => {
+    const many = Array.from({ length: 450 }, (_, i) => ({ ...FILLS[0], fill_id: 5000 + i, client_order_id: `many-${i}`, trade_time: new Date(Date.UTC(2026, 6, 18, 22, 0, i)).toISOString() }));
+    const { container, rerender } = render(<TradeReplayEvents orders={[]} fills={readReplayFills(many)} candles={{ state: "UNAVAILABLE", reason: "E5_MARKET_CANDLES_NOT_PUBLISHED" }} asOf="2026-09-05T00:00:00Z" accounts={[ACCT]} />);
+    await waitFor(() => expect(container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    expect(container.querySelector("[data-replay-chart]")?.getAttribute("data-replay-events")).toBe("450");
+    expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(LOG_PAGE);
+    expect(container.querySelector("[data-log-total]")?.textContent).toContain(`${LOG_PAGE} of 450 events shown · newest first`);
+    expect(container.querySelector("table.exec-rp-table tbody tr .exec-num")?.textContent).toBe("5449");
+    fireEvent.click(screen.getByRole("button", { name: `show ${LOG_PAGE} older events` }));
+    expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(2 * LOG_PAGE);
+    expect(container.querySelector(".exec-rp-more")?.textContent).toContain("50 older not shown");
+    // a poll rebuilds the same rows as new arrays — the revealed rows stay revealed
+    rerender(<TradeReplayEvents orders={[]} fills={readReplayFills(many)} candles={{ state: "UNAVAILABLE", reason: "E5_MARKET_CANDLES_NOT_PUBLISHED" }} asOf="2026-09-05T00:00:01Z" accounts={[ACCT]} />);
+    expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(2 * LOG_PAGE);
   });
   it("says so when there are no events — with the page's own bound, so an empty replay is never mistaken for a missing feature", () => {
     render(<TradeReplayEvents orders={[]} fills={[]} candles={{ state: "UNAVAILABLE", reason: null }} asOf={null} page={{ orders: 812, fills: 71, strategies: 11 }} subjectLabel="delta_rsi_00115m" />);

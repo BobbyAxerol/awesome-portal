@@ -100,15 +100,19 @@ export interface Drained {
   reason: string | null;
 }
 
-const RETRY_DELAY_MS = 400;
+/** Retry pauses for one page — the Manager connection is shared with the projection worker, so a page can fail for a second or two. */
+export const RETRY_DELAYS_MS: readonly number[] = [400, 1500];
 const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
 
-/** One page, retried once after a short pause — a Manager page can fail transiently under a parallel walk. */
+/** One page, retried after each pause in `RETRY_DELAYS_MS`; the last failure is the one reported. */
 async function readPage(read: RelationRead, q: RelationPageQuery): Promise<Awaited<ReturnType<RelationRead>>> {
-  const first = await read(q);
-  if (first.ok) return first;
-  await sleep(RETRY_DELAY_MS);
-  return read(q);
+  let result = await read(q);
+  for (const delay of RETRY_DELAYS_MS) {
+    if (result.ok) return result;
+    await sleep(delay);
+    result = await read(q);
+  }
+  return result;
 }
 
 /** Walk a relation's current page set with the Portal continuation, up to `maxPages` × 200 rows. */
@@ -161,7 +165,7 @@ export interface RelationFacts {
 const COMPLETENESS_RANK = ["COMPLETE", "PARTIAL", "UNKNOWN"];
 
 /** How many relations walk at once — enough to overlap, few enough not to crowd the Manager. */
-export const DRAIN_CONCURRENCY = 3;
+export const DRAIN_CONCURRENCY = 2;
 
 /** Drain every replay relation of one environment, at most `DRAIN_CONCURRENCY` relations at a time, each bounded by `maxPages`. */
 export async function drainRelations(read: RelationRead, environment: RelationEnvironment, routes: Readonly<Record<string, RelationRoute>> = REPLAY_RELATIONS, maxPages = 40): Promise<RelationFacts> {

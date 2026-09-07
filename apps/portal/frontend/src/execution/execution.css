@@ -6765,4 +6765,5 @@
 .exec-obs-table tr[data-new="true"] td { animation: exec-obs-flash 1600ms ease-out 1; }
 @keyframes exec-obs-flash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
 .exec-obs-more { padding: 6px 12px; }
+.exec-rp-more { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-top: 1px solid var(--line-soft); font: 400 11px/16px var(--font-mono); }
 @media (prefers-reduced-motion: reduce) { .exec-obs-beat[data-motion="on"], .exec-obs-table tr[data-new="true"] td { animation: none; } }

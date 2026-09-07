@@ -49,13 +49,14 @@ describe("manager relation reader", () => {
   });
 });
 
-function pagesOf(n: number, failAt: number | null = null, permanent = false): RelationRead {
+function pagesOf(n: number, failAt: number | number[] | null = null, permanent = false): RelationRead {
   let calls = 0;
+  const failCalls = failAt === null ? [] : Array.isArray(failAt) ? failAt : [failAt];
   return async (q) => {
     calls += 1;
     const index = q.cursor ? Number(q.cursor.slice(1)) : 0;
-    // a flaky page fails once (the walk retries it); a permanent one fails every time it is asked for
-    if (failAt !== null && (permanent ? index === failAt - 1 : calls === failAt)) return { ok: false, status: "unavailable", reason: "EDS11R_SOURCE_UNAVAILABLE" };
+    // a flaky page fails on the listed calls (the walk retries it); a permanent one fails every time it is asked for
+    if (failCalls.length > 0 && (permanent ? index === failCalls[0] - 1 : failCalls.includes(calls))) return { ok: false, status: "unavailable", reason: "EDS11R_SOURCE_UNAVAILABLE" };
     const last = index === n - 1;
     const page: RelationPage = { ...readRelationPage(RAW)!, records: [{ resourceId: `r${index}`, values: { order_id: index, strategy_id: index % 2 === 0 ? "a" : "b", status: index % 2 === 0 ? "FILLED" : "NEW" } }], page: { nextCursor: last ? null : `c${index + 1}`, hasMore: !last, totalUnknown: true, maximumPageRows: 200, truncated: false } };
     return { ok: true, value: page };
@@ -73,8 +74,8 @@ describe("relation drain", () => {
     expect(d.rows).toHaveLength(4);
     expect(d).toMatchObject({ pages: 4, exhausted: false, reason: "page cap 4 reached" });
   });
-  it("retries a page once, so a transient Manager failure does not cut the walk short", async () => {
-    const d = await drainRelation(pagesOf(5, 3), "orders", "paper");
+  it("retries a page after each pause, so a Manager failure of a second or two does not cut the walk short", async () => {
+    const d = await drainRelation(pagesOf(5, [3, 4]), "orders", "paper");
     expect(d.rows).toHaveLength(5);
     expect(d).toMatchObject({ pages: 5, exhausted: true, reason: null });
   });

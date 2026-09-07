@@ -98,6 +98,9 @@ export function resolveFocus(focus: string | null | undefined, orders: readonly 
   return (o.type ?? "").toUpperCase().includes("LIMIT") ? `ladder:${o.orderId}` : null;
 }
 
+/** Scale (§8): the trade log shows this many rows at a time, newest first; older rows come on request, and a selected marker reveals its own row. */
+export const LOG_PAGE = 200;
+
 export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
@@ -111,6 +114,11 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
   const trips = useMemo(() => pairRoundTrips(scopedFills, scopedOrders), [scopedFills, scopedOrders]);
   const legs = useMemo(() => legLevels(scopedOrders), [scopedOrders]);
   const log = useMemo(() => buildLog(scopedOrders, scopedFills, trips), [scopedOrders, scopedFills, trips]);
+  const [logShown, setLogShown] = useState(LOG_PAGE);
+  // reset on a new subject or symbol only — a poll that rebuilds the same rows must not fold the log back up
+  useEffect(() => { setLogShown(LOG_PAGE); }, [activeSymbol, subjectLabel]);
+  const logScene = useMemo(() => log.map((r) => sceneIdOfRow(r, scopedOrders)), [log, scopedOrders]);
+  const revealRow = (id: string) => { const i = logScene.indexOf(id); if (i >= logShown) setLogShown(Math.ceil((i + 1) / LOG_PAGE) * LOG_PAGE); };
   const rejects = scopedOrders.filter((o) => (o.status ?? "").toUpperCase().includes("REJECT")).length;
 
   const times = useMemo(() => {
@@ -139,12 +147,16 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
   const [hovered, setHovered] = useState<string | null>(null);
   const focusTarget = useMemo(() => resolveFocus(focusId, orders, fills), [focusId, orders, fills]);
   const [selected, setSelected] = useState<string | null>(null);
-  useEffect(() => { if (focusTarget) setSelected(focusTarget); }, [focusTarget]);
+  useEffect(() => { if (focusTarget) { revealRow(focusTarget); setSelected(focusTarget); } }, [focusTarget]); // eslint-disable-line react-hooks/exhaustive-deps -- reveal reads the current log
   const select = (id: string | null, scroll: boolean) => {
     setSelected(id);
     if (id) {
       chart.current?.focus(id);
-      if (scroll) document.querySelector<HTMLElement>(`tr[data-scene-id="${id}"]`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+      if (scroll) {
+        const row = document.querySelector<HTMLElement>(`tr[data-scene-id="${id}"]`);
+        if (row) row.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+        else { revealRow(id); window.setTimeout(() => document.querySelector<HTMLElement>(`tr[data-scene-id="${id}"]`)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" }), 0); }
+      }
     }
   };
   const onKey = (e: KeyboardEvent) => {
@@ -265,13 +277,13 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
         </footer>
       </section>
       <section className="exec-rp-panel" aria-label="Trade log">
-        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win">{log.length} events{activeSymbol ? ` · ${activeSymbol}` : ""} · row ↔ marker share order_id / fill id</span></header>
+        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win" data-log-shown={Math.min(logShown, log.length)} data-log-total={log.length}>{log.length > logShown ? `${logShown} of ${log.length} events shown · newest first` : `${log.length} events`}{activeSymbol ? ` · ${activeSymbol}` : ""} · row ↔ marker share order_id / fill id</span></header>
         <div className="exec-scroll-x">
           <table className="exec-rp-table">
             <thead><tr><th>time (UTC)</th><th>event</th><th>order · leg</th><th>type · side</th><th data-numeric="true">qty</th><th data-numeric="true">price / trigger</th><th data-numeric="true">fee</th><th>note</th></tr></thead>
             <tbody>
-              {log.map((r) => {
-                const sceneId = sceneIdOfRow(r, scopedOrders);
+              {log.slice(0, logShown).map((r, index) => {
+                const sceneId = logScene[index];
                 return (
                 <tr
                   key={`${r.ref}-${r.t}`}
@@ -298,6 +310,12 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             </tbody>
           </table>
         </div>
+        {log.length > logShown ? (
+          <div className="exec-rp-more">
+            <button type="button" className="exec-rp-chip" onClick={() => setLogShown((n) => n + LOG_PAGE)}>show {Math.min(LOG_PAGE, log.length - logShown)} older events</button>
+            <span className="exec-rp-mute"> · {log.length - logShown} older not shown — the chart still draws every event</span>
+          </div>
+        ) : null}
       </section>
     </>
   );
