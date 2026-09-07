@@ -1340,7 +1340,8 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const observedEnvs = deployedEnvironments(resourceState.value?.panels);
   const factsEnv: ObservedEnvironment = observedEnvs.includes(activityEnv) ? activityEnv : observedEnvs[0] ?? activityEnv;
   // G9 (EDS-11R1): the replay and the order funnel read the drained relation page set of the alpha's environment
-  const relations = useRelationFacts(api, factsEnv, resourceState.status === "ok");
+  // Drains once the resource read has answered — ok or not: a subject whose resource is denied or absent still has its rows in the page set (env falls back to the rollup default)
+  const relations = useRelationFacts(api, factsEnv, resourceState.status !== "loading");
   const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   // deep link from the Blotter / a shared URL: `?tab=Trade%20Replay&focus=order:123` (or fill:…)
@@ -1555,7 +1556,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
   // never guessed here. Viewport = the window width, clamped by the path builder.
   const chartEnv = state.value?.selectedEnvironment ?? "paper";
   // G9 (EDS-11R1): the account replay reads the drained relation page set of the account's environment
-  const relations = useRelationFacts(api, chartEnv, state.status === "ok");
+  const relations = useRelationFacts(api, chartEnv, state.status !== "loading");
   const chartWorkspace = state.value?.workspaceId ?? null;
   // R3 reuse: the same Trade Replay on the account's own orders / fills — the
   // EDS-04 account resource (exact, bounded) plus the N25 facts of the strategy
