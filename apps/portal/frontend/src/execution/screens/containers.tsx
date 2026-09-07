@@ -1005,7 +1005,12 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
  */
 export function OperationsQueueContainer({
   api,
-  workspaceId = "default",
+  // No workspace unless the caller names one. The literal "default" was not a
+  // workspace: it reached the server as `workspace_id=default`, which matches
+  // nothing, so the queue answered 404 and the screen showed no rows at all
+  // (measured on dev 2026-09-07). An unqualified read resolves to the
+  // projection's own workspace on the server, which is what this screen wants.
+  workspaceId,
   now,
 }: {
   api: ExecutionApi;
@@ -1087,7 +1092,10 @@ export function OperationsQueueContainer({
           roles={roles}
           effectText={effect}
           conflict={conflict}
-          onAcknowledge={(row) =>
+          // A triage command names its workspace explicitly — a read may resolve
+          // to the projection's workspace on the server, a mutation may not.
+          // Without one the buttons stay disabled, which is the honest state.
+          onAcknowledge={workspaceId ? (row) =>
             void runTriage(() =>
               api.acknowledgeOperation({
                 operationId: row.operationId,
@@ -1096,8 +1104,9 @@ export function OperationsQueueContainer({
                 expectedWorkflowVersion: row.workflowVersion ?? 0,
               }),
             )
+            : undefined
           }
-          onResolve={(row, reason, evidenceHash) =>
+          onResolve={workspaceId ? (row, reason, evidenceHash) =>
             void runTriage(() =>
               api.resolveOperation({
                 operationId: row.operationId,
@@ -1108,6 +1117,7 @@ export function OperationsQueueContainer({
                 evidenceHash,
               }),
             )
+            : undefined
           }
         />
       ) : null}

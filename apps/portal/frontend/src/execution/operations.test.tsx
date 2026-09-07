@@ -201,7 +201,7 @@ describe("#4 — acknowledge before resolve, and the version conflict", () => {
         return { ok: false, status: "stale", reason: "This operation changed while you were looking at it." };
       },
     };
-    render(<OperationsQueueContainer api={api} now={NOW} />);
+    render(<OperationsQueueContainer api={api} workspaceId="ws" now={NOW} />);
     fireEvent.click(await screen.findByRole("button", { name: "op_fixture_queue_1" }));
     fireEvent.click(await screen.findByRole("button", { name: "Acknowledge" }));
     expect(await screen.findByRole("alert")).toBeTruthy();
@@ -221,7 +221,7 @@ describe("#5 — a replayed mutation does not duplicate", () => {
         return base.acknowledgeOperation(input);
       },
     };
-    render(<OperationsQueueContainer api={api} now={NOW} />);
+    render(<OperationsQueueContainer api={api} workspaceId="ws" now={NOW} />);
     fireEvent.click(await screen.findByRole("button", { name: "op_fixture_queue_1" }));
     const button = await screen.findByRole("button", { name: "Acknowledge" });
     fireEvent.click(button);
@@ -383,5 +383,29 @@ describe("a chip the server cannot honour says so", () => {
     // enabled — which is the signal, not a failure.
     expect(params.some((p) => /actor|assignee|owner|user/.test(p))).toBe(false);
     expect(params).toContain("triage_state");
+  });
+});
+
+describe("the queue names no workspace of its own", () => {
+  it("reads without a workspace_id and leaves triage disabled until one is named", async () => {
+    const fixture = createFixtureApi();
+    const queries: unknown[] = [];
+    const api: ExecutionApi = {
+      ...fixture,
+      async listOperations(query) {
+        queries.push(query);
+        return fixture.listOperations(query);
+      },
+    };
+    // Before 2026-09-07 this container defaulted to the literal "default",
+    // which is not a workspace: the server answered 404 and the queue showed
+    // nothing at all on dev.
+    render(<OperationsQueueContainer api={api} now={NOW} />);
+    expect(await screen.findByRole("button", { name: "op_fixture_queue_1" })).toBeTruthy();
+    expect((queries[0] as { workspaceId?: string }).workspaceId).toBeUndefined();
+
+    fireEvent.click(await screen.findByRole("button", { name: "op_fixture_queue_1" }));
+    const acknowledge = await screen.findByRole("button", { name: "Acknowledge" });
+    expect(acknowledge.hasAttribute("disabled")).toBe(true);
   });
 });
