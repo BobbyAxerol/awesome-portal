@@ -1,3 +1,4 @@
+import { Logger } from "@nestjs/common";
 import { Body, Controller, Get, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 import { z } from "zod";
@@ -27,6 +28,7 @@ interface AnalyticsRequest extends FastifyRequest {
 @UseGuards(SessionGuard)
 @Controller("/api/v1/execution")
 export class ExecutionAnalyticsController {
+  private static readonly log = new Logger("ExecutionAnalyticsController");
   constructor(
     @Inject(ExecutionAnalyticsProxy) private readonly proxy: ExecutionAnalyticsProxy,
     @Inject(GovernanceRepository) private readonly governance: GovernanceRepository,
@@ -152,6 +154,8 @@ export class ExecutionAnalyticsController {
       return await operation();
     } catch (error) {
       if (error instanceof AnalyticsProxyError) throw error;
+      // The typed 502 stays; the operator gets the failure class and a bounded message in the log.
+      ExecutionAnalyticsController.log.warn(JSON.stringify({ event: "analytics_upstream_error", error_class: error instanceof Error ? error.constructor.name : typeof error, message: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200) }));
       throw new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502);
     }
   }

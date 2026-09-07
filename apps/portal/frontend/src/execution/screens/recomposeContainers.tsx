@@ -29,6 +29,9 @@ import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
 import { readReplayGroups, scopeGroups } from "../components/tradeReplayGroups";
+import { ObservedTimelinePanel } from "../components/ObservedTimelinePanel";
+import { type ObservedEntry, type ObservedEnvironment, type ObservedSubjectKind, type ObservedTimeline, deployedEnvironments } from "../api/observedTimeline";
+import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { unavailable } from "../api/ports";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
@@ -1212,6 +1215,43 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   );
 }
 
+/**
+ * Observed timeline (EDS-09b / EDS-10b, G8): the BFF is re-read on the
+ * realtime refresh key and on the projection's own cadence, so the panel's
+ * beat follows the projection sequence — a real revision — not a clock.
+ * Older pages are appended with the Portal continuation, passed back unchanged.
+ */
+export function ObservedTimelineLive({ api, environment, environments, subjectKind, subjectId, refreshKey = 0 }: { api: ExecutionApi; environment: ObservedEnvironment; environments?: readonly ObservedEnvironment[]; subjectKind: ObservedSubjectKind; subjectId: string; refreshKey?: number }) {
+  // The environments the subject is deployed in; the reader follows the chosen one and resets when the subject changes.
+  const choices = environments && environments.length > 0 ? environments : [environment];
+  const [chosen, setChosen] = useState<{ subject: string; env: ObservedEnvironment } | null>(null);
+  const env: ObservedEnvironment = chosen?.subject === subjectId && choices.includes(chosen.env) ? chosen.env : environment;
+  const tick = usePollTick(PROJECTION_POLL_MS);
+  const state = useApiRead<ObservedTimeline>(() => api.getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100 }), [api, env, subjectKind, subjectId, refreshKey, tick], { keepValue: true });
+  const [older, setOlder] = useState<{ key: string; entries: ObservedEntry[]; loading: boolean }>({ key: "", entries: [], loading: false });
+  const pageKey = `${env}|${subjectKind}|${subjectId}`;
+  const onLoadMore = (after: string) => {
+    setOlder((o) => ({ key: pageKey, entries: o.key === pageKey ? o.entries : [], loading: true }));
+    void api.getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100, after }).then((result) => {
+      setOlder((o) => ({ key: pageKey, entries: [...(o.key === pageKey ? o.entries : []), ...(result.ok ? result.value.timeline.entries : [])], loading: false }));
+    });
+  };
+  return (
+    <ObservedTimelinePanel
+      timeline={state.value}
+      transport={state.status}
+      reason={state.status === "ok" ? null : state.reason}
+      subjectLabel={subjectId}
+      onLoadMore={onLoadMore}
+      loadingMore={older.loading}
+      olderEntries={older.key === pageKey ? older.entries : []}
+      environment={env}
+      environments={choices}
+      onEnvironment={(next) => { const e = choices.find((item) => item === next); if (e) setChosen({ subject: subjectId, env: e }); }}
+    />
+  );
+}
+
 function unavailableAnalyticsTiles(reason: string, envelope: Envelope): InsightTile[] {
   return TILE_TITLES.map((title, index) => ({
     index: index + 1,
@@ -1243,6 +1283,8 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
   const activityEnv = resourceState.value?.selectedEnvironment ?? "paper";
+  // G8: the observed timeline reads where the alpha is deployed; selected_environment is only the resolver default.
+  const observedEnvs = deployedEnvironments(resourceState.value?.panels);
   const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   // deep link from the Blotter / a shared URL: `?tab=Trade%20Replay&focus=order:123` (or fill:…)
@@ -1301,6 +1343,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       sessions={alphaSessions(viewFacts)}
       accounting={alphaAccounting(viewFacts)}
       activity={<AlphaActivityTile activity={activityState.value} transport={activityState.status} reason={activityState.reason} />}
+      observedTimeline={<ObservedTimelineLive api={api} environment={observedEnvs.includes(activityEnv) ? activityEnv : observedEnvs[0] ?? activityEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} />}
       reconciliation={alphaReconciliation(viewFacts)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
@@ -1584,6 +1627,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
       } : null}
       exposure={profile ? { bindingId: text(profile.data.venue_accounts?.[0]?.binding_id) ?? accountId, aggregate: null, accountCount: 1, expectedAccountCount: 1, completeness: "COMPLETE", buckets: [] } : null}
       tradeReplay={accountFacts ? <TradeReplayLive api={api} analytics={accountFacts} additive={accountAnalytics.value ?? null} alphaId={null} subjectId={accountId} /> : undefined}
+      observedTimeline={<ObservedTimelineLive api={api} environment={chartEnv} subjectKind="account" subjectId={accountId} refreshKey={realtime.refreshKey} />}
       financialChart={
         <EquityChart
           title={`Account equity · ${chartEnv}`}

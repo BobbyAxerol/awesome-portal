@@ -25,6 +25,7 @@ import { ExecutionWorkspace } from "../components/workspace";
 import type { SubscriptionState } from "../subscription";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { useRevisionBeat } from "../useRevision";
 import { smokeMotionAllowed } from "../smokeMotion";
 import { canonicalHref } from "../links";
 import { advanceAsOf, jitter } from "../clock";
@@ -395,6 +396,8 @@ export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0
   // Real motion: the age since the snapshot was read ticks every second, and
   // the SLA bars move with it; the beat runs while the live stream is attached.
   const elapsed = useElapsedSince(snapshot.readAt, !smoke);
+  // G8: a beat per real revision of the snapshot (as_of advanced), independent of the stream
+  const revision = useRevisionBeat(asOf);
   const streamLive = !!live && live.phase !== "idle" && live.phase !== "auth_expired" && live.phase !== "source_lost";
   const ranked = rankTriage(snapshot.needsYou?.items ?? []);
   const critical = ranked.filter((i) => i.severity === "CRITICAL").length;
@@ -431,7 +434,7 @@ export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0
             <span className="exec-cc-state" data-tone={busy ? "warn" : "good"}>{busy ? `BUSY · ${ranked.length}` : "QUIET"}</span>
             {streamBadge ? <span className="exec-cc-state" data-tone={streamBadge.tone}>{streamBadge.label}</span> : null}
             <span className="exec-cc-spacer" />
-            {smoke || streamLive ? <span className="exec-cc-beat" aria-hidden="true" data-stream={streamLive ? "beat" : undefined}><span className="exec-cc-beatfill" /></span> : null}
+            {smoke || streamLive || revision.beat > 0 ? <span key={revision.beat} className="exec-cc-beat" aria-hidden="true" data-stream={streamLive ? "beat" : undefined} data-revision={revision.beat > 0 ? String(revision.beat) : undefined}><span className="exec-cc-beatfill" /></span> : null}
             <span className="exec-cc-asof" data-smoke-clock={smoke ? "true" : undefined}>as_of {asOf ? utcStamp(asOf) : "not published"}{!smoke && elapsed > 0 ? <span className="exec-cc-age"> · age {clockLabel(elapsed)}</span> : null} · every row links to its owning screen</span>
           </header>
           {streamLine}

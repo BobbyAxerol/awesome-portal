@@ -6746,3 +6746,23 @@
 .exec-gov-kvfoot { display: flex; flex-direction: column; gap: 4px; padding: 0 14px 14px; }
 .exec-gov-kvfoot .exec-gate-note { margin: 4px 0 0; }
 .exec-gov-kvfoot .exec-px-note { margin-top: 8px; }
+
+/* ── Observed timeline (EDS-09b / EDS-10b consumer, G8) — motion by real revision ── */
+.exec-obs-panel { border: 1px solid var(--line); background: var(--paper-raised); margin-bottom: 14px; }
+.exec-obs-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 9px 12px; border-bottom: 1px solid var(--line-soft); }
+.exec-obs-envs { display: inline-flex; border: 1px solid var(--line); }
+.exec-obs-envbtn { font: 400 10px/14px var(--font-mono); padding: 2px 8px; border: 0; border-right: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); cursor: pointer; }
+.exec-obs-envbtn:last-child { border-right: 0; }
+.exec-obs-envbtn[data-active="true"] { background: var(--ink); color: var(--paper); }
+.exec-obs-chip { font: 400 10px/14px var(--font-mono); padding: 2px 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-soft); }
+.exec-obs-chip[data-tone="good"] { color: var(--good); border-color: var(--good); } .exec-obs-chip[data-tone="warn"] { color: var(--warn); border-color: var(--warn); } .exec-obs-chip[data-tone="bad"] { color: var(--bad); border-color: var(--bad); }
+.exec-obs-spacer { flex: 1; }
+.exec-obs-mute { font: 400 10px/14px var(--font-mono); color: var(--ink-mute); }
+.exec-obs-rev { display: inline-flex; align-items: center; gap: 6px; font: 400 11px/16px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.exec-obs-beat { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: 0.55; }
+.exec-obs-beat[data-motion="on"] { animation: exec-obs-pulse 900ms ease-out 1; }
+@keyframes exec-obs-pulse { 0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 var(--accent); } 100% { transform: scale(1.15); opacity: 0.55; box-shadow: 0 0 0 10px transparent; } }
+.exec-obs-table tr[data-new="true"] td { animation: exec-obs-flash 1600ms ease-out 1; }
+@keyframes exec-obs-flash { 0% { background: var(--accent-soft); } 100% { background: transparent; } }
+.exec-obs-more { padding: 6px 12px; }
+@media (prefers-reduced-motion: reduce) { .exec-obs-beat[data-motion="on"], .exec-obs-table tr[data-new="true"] td { animation: none; } }

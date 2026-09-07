@@ -437,6 +437,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getPortfolioCapital() { return unavailable("Portfolio capital (EDS-05) is not part of the fixture set."); },
     async getAlphaActivity() { return unavailable("Alpha activity (EDS-05) is not part of the fixture set."); },
     async getMarketCandles() { return unavailable("Venue market candles are not part of the fixture set."); },
+    async getObservedTimeline() { return unavailable("The observed timeline BFF is not part of the fixture set."); },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
       return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");

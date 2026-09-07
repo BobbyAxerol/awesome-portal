@@ -6,6 +6,7 @@
  * producer is reachable from here — that is the boundary the import-scan
  * test walks.
  */
+import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 import { useEffect, useState, useMemo } from "react";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi, Result } from "../api/ports";
@@ -81,7 +82,9 @@ async function fetchCommandCenterResume(): Promise<{ cursor: string; epoch: stri
 }
 
 export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: ExecutionApi; sseFactory?: SseFactory | null }) {
-  const state = useApiRead(() => api.getCommandCenterSnapshot(), [api]);
+  // G8: re-read on the projection cadence so the masthead beat follows a real revision (as_of), not a clock
+  const tick = usePollTick(PROJECTION_POLL_MS);
+  const state = useApiRead(() => api.getCommandCenterSnapshot(), [api, tick], { keepValue: true });
   // The promotion pipeline is the Fleet register read once per visit (BR-EX-72
   // bounded page, 50 alphas); a failed read simply leaves the panel out.
   const fleet = useApiRead(() => api.getAlphaFleet({ limit: 50 }), [api]);

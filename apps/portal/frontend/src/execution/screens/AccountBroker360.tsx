@@ -136,6 +136,8 @@ export interface AccountBroker360Props {
   financialChart?: ReactNode;
   /** OR-5 R3: the Trade Replay on this account's own orders / fills; absent = the container did not request it. */
   tradeReplay?: ReactNode;
+  /** EDS-09b observed timeline panel (G8) */
+  observedTimeline?: ReactNode;
   syncPolicy: string;
   syncHistory: readonly SyncRow[];
   /**
@@ -342,6 +344,7 @@ export function AccountBroker360({
   syncPolicy,
   financialChart,
   tradeReplay,
+  observedTimeline,
   syncHistory,
   syncTotal = null,
   openFindings,
@@ -435,6 +438,7 @@ export function AccountBroker360({
 
       {financialChart ?? null}
       {tradeReplay ?? null}
+      {observedTimeline ?? null}
 
       {/* Hi-fi 1g shows binding, sync history and findings at once — no tabs. */}
         {(
