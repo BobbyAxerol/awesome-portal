@@ -30,7 +30,7 @@ import { BarsChart, LinesChart } from "../components/marketChart";
 import { type ReplaySource, TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
 import { readReplayGroups, scopeGroups } from "../components/tradeReplayGroups";
 import { ObservedTimelinePanel } from "../components/ObservedTimelinePanel";
-import { subjectFunnel, subjectRows, type RelationFacts, type SubjectFunnel } from "../api/managerRelations";
+import { RELATION_ROUTES, subjectFunnel, subjectRows, type RelationFacts, type SubjectFunnel } from "../api/managerRelations";
 import { type ObservedEntry, type ObservedEnvironment, type ObservedSubjectKind, type ObservedTimeline, deployedEnvironments } from "../api/observedTimeline";
 import { SCOPE_WINDOWS, accountsOfPortfolio, rowInScope, scopeFacts, scopeSummary } from "../alphaScope";
 import { hifiInsightTiles } from "../hifiInsight";
@@ -47,6 +47,7 @@ import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/
 import type { ChartEnvelope } from "../contracts";
 import { PaperOverview } from "./PaperOverview";
 import { SandboxOverview } from "./SandboxOverview";
+import { sandboxPanels } from "../sandboxPanels";
 import { LiveOverview } from "./LiveOverview";
 import { PaperWorkbench, WORKBENCH_TABS, type WorkbenchTab } from "./PaperWorkbench";
 import { BLOTTER_FILTERS, FullBlotter, type BlotterRow } from "./FullBlotter";
@@ -273,10 +274,26 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
   return <PaperOverview envelope={state.value} status={state.status} reason={state.reason} />;
 }
 
+/**
+ * The sandbox relations the overview profile does not carry: the broker sync
+ * state, the reconciliation findings, and the order rows the journal counts.
+ */
+export const SANDBOX_RELATIONS = {
+  broker_account_sync: RELATION_ROUTES.brokerAccountSync,
+  reconciliation_findings: RELATION_ROUTES.reconciliationFindings,
+  orders: RELATION_ROUTES.orders,
+} as const;
+
 export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
   const realtime = useProfileRealtime("sandbox");
   const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api, realtime.refreshKey]);
-  return <SandboxOverview envelope={state.value} status={state.status} reason={state.reason} />;
+  const relations = useRelationFacts(api, "sandbox", state.status !== "loading", SANDBOX_RELATIONS);
+  const panels = sandboxPanels({
+    relations: relations.value,
+    loading: relations.status === "loading",
+    deployments: state.value?.data.deployments ?? [],
+  });
+  return <SandboxOverview envelope={state.value} status={state.status} reason={state.reason} panels={panels} />;
 }
 
 export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {

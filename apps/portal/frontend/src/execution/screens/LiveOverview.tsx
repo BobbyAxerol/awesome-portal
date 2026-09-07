@@ -63,6 +63,21 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !envelope ? "unavailable" : null;
     const sourceReason = reason ?? (!envelope ? "No live overview was published for this workspace." : undefined);
     const notPublished = <span className="exec-gate-unverified">not published</span>;
+    // Canary and Full are the source's own mode words; Issues is the row
+    // carrying a state the source itself marks as degraded. None is inferred
+    // from a number the browser computed.
+    const isCanary = (row: Record<string, unknown>) => (str(row.mode) ?? "").toUpperCase().includes("CANARY") || (str(row.state) ?? "").toUpperCase().includes("CANARY");
+    const isIssue = (row: Record<string, unknown>) => ["HALTED", "PAUSED", "STOPPED", "DEGRADED", "FAILED"].includes((str(row.state) ?? "").toUpperCase());
+    const liveCounts = {
+      all: deployments.length,
+      canary: deployments.filter(isCanary).length,
+      full: deployments.filter((row) => !isCanary(row)).length,
+      issues: deployments.filter(isIssue).length,
+    };
+    const shown = filter === "all" ? deployments
+      : filter === "canary" ? deployments.filter(isCanary)
+        : filter === "issues" ? deployments.filter(isIssue)
+          : deployments.filter((row) => !isCanary(row));
     return (
       <ExecutionSurface kind="deployments" className="exec-lv exec-af" data-hifi-exact="live-overview">
         <ExecutionWorkspace layout="dense">
@@ -81,12 +96,38 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
               <div className="exec-af-kpi"><div className="exec-af-kpilabel">Published positions</div><div className="exec-af-kpival">{positions.length}</div><div className="exec-af-kpisub">current position rows · no cross-currency sum is inferred</div></div>
               <div className="exec-af-kpi"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{brokerLabel}</div><div className="exec-af-kpisub">envelope {envelope?.freshness ?? "freshness not stated"} · {envelope?.completeness ?? "completeness not stated"}</div></div>
             </div>
+            {/* The reviewed screen filters this table and dev had no filters at
+                all, because they were written against the demo rows. They are
+                derived from the published rows instead: each chip carries its
+                own count, and a chip that can only ever show an empty table is
+                disabled and says why rather than looking broken when pressed. */}
+            <div className="exec-af-filters" role="group" aria-label="Live filter">
+              {LIVE_FILTERS.map((key) => {
+                const n = key === "all" ? deployments.length : liveCounts[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className="exec-af-filter"
+                    data-active={filter === key ? "true" : undefined}
+                    aria-pressed={filter === key}
+                    disabled={n === 0}
+                    title={n === 0 ? `No published live deployment is ${LABEL[key].toLowerCase()}.` : undefined}
+                    onClick={() => setFilter(key)}
+                  >
+                    {LABEL[key]} <span className="exec-af-dim">{n}</span>
+                  </button>
+                );
+              })}
+              <span className="exec-af-spacer" />
+              <span className="exec-af-dim">{shown.length} of {deployments.length} shown</span>
+            </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
                 <table className="exec-af-table exec-lv-table" aria-label="Live deployments">
                   <thead><tr><th>alpha · deployment</th><th>mode</th><th>current source state</th><th>venue · account · portfolio</th></tr></thead>
                   <tbody>
-                    {deployments.map((row, i) => {
+                    {shown.map((row, i) => {
                       const id = typeof row.deployment_id === "string" ? row.deployment_id : `row ${i + 1}`;
                       return (
                         <tr key={id} className="exec-af-row exec-lv-row">
@@ -99,8 +140,12 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
                     })}
                   </tbody>
                 </table>
-                {deployments.length === 0 ? (
-                  <p className="exec-po-empty">No live deployment exists in this workspace — the source published an empty set, and nothing here will ever fill that in from a fixture.</p>
+                {shown.length === 0 ? (
+                  <p className="exec-po-empty">
+                    {deployments.length === 0
+                      ? "No live deployment exists in this workspace — the source published an empty set, and nothing here will ever fill that in from a fixture."
+                      : `No published live deployment matches ${LABEL[filter]}. The other ${deployments.length} are still there.`}
+                  </p>
                 ) : null}
               </div>
             </div>

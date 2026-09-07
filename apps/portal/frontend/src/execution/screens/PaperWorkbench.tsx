@@ -371,7 +371,7 @@ export function PaperWorkbench({
     >
       {/* The hi-fi's blocked control carries its count in the label — a grey
           button with the reason only in a tooltip is a support ticket. */}
-      {exitBlocked && hifi
+      {exitBlocked
         ? `Request Paper Exit Review — blocked: ${unmetCriteria.length || 1} gate criteria unmet`
         : "Request Paper Exit Review"}
     </button>
@@ -380,14 +380,10 @@ export function PaperWorkbench({
     <ExecutionContextRail
       next={{
         title: "Next: Paper Exit Review",
-        detail: hifi ? (
-          // The hi-fi puts the gate beside the chart, where the reader is
-          // already looking; repeating its bars here would be two answers to
-          // one question. The rail keeps the sentence and the blockers.
-          <span className="exec-role-body">The observation gate is beside the equity chart, where the evidence it judges is.</span>
-        ) : (
-          <ObservationProgress items={observation.items} rule={observation.rule} met={observation.met} />
-        ),
+        // The gate is beside the chart in both branches now, where the reader
+        // is already looking; repeating its bars here would be two answers to
+        // one question. The rail keeps the sentence and the blockers.
+        detail: <span className="exec-role-body">The observation gate is beside the equity chart, where the evidence it judges is.</span>,
       }}
       blockers={blockers}
       freshness={
@@ -403,7 +399,7 @@ export function PaperWorkbench({
   return (
     <ExecutionSurface
       kind="deployments"
-      className={hifi ? "exec-paper exec-a3 exec-pw" : "exec-paper"}
+      className="exec-paper exec-a3 exec-pw"
       data-hifi-exact={hifi ? "paper-workbench" : undefined}
     >
       <ExecutionWorkspace layout="balanced" rail={rail}>
@@ -500,7 +496,10 @@ export function PaperWorkbench({
             id={deploymentId}
             badges={badges}
             purpose="Is this deployment tracking approved evidence, and is it ready to leave Paper?"
-            primaryAction={exitCta}
+            /* The exit control lives in the observation gate, beside the
+               evidence it is blocked on. A second copy in the masthead is the
+               same button twice, and the one out of context is the one an
+               operator presses without reading why it was disabled. */
             secondary={
               <>
                 <span className="exec-role-meta">
@@ -659,18 +658,64 @@ export function PaperWorkbench({
               <PanelState status="unavailable" reason="No equity series was published for this window." />
             )}
           </>
-        ) : equity ? (
+        ) : (
+          /*
+           * The reviewed panels, on the published profile (P0-9).
+           *
+           * The branch above runs only in the lab, because it reads a demo
+           * bundle the product never passes. Dev therefore drew one chart and
+           * nothing else — which is not a smaller version of this screen, it is
+           * a different screen. What follows is the same inventory in the same
+           * reading order, built from the profile: the chart beside the gate it
+           * is evidence for, then runtime against accounting, then contribution
+           * beside drift.
+           */
           <>
-            <EquityChart
-              title="Equity vs approved research evidence"
-              envelope={equity.envelope}
-              series={equity.series ?? null}
-              height={220}
-            />
+            <div className="exec-pw-grid" data-ratio="1.55">
+              {equity ? (
+                <EquityChart
+                  title="Equity vs approved research evidence"
+                  envelope={equity.envelope}
+                  series={equity.series ?? null}
+                  height={220}
+                />
+              ) : (
+                <section className="exec-pw-panel" aria-label="Equity vs approved research evidence">
+                  <header className="exec-pw-head">
+                    <span className="exec-pw-title">Equity vs approved research evidence</span>
+                  </header>
+                  <div className="exec-pw-plot">
+                    <PanelState status="unavailable" reason={candlesReason ?? "No equity series was published for this window."} />
+                  </div>
+                </section>
+              )}
+              <section className="exec-pw-panel" aria-label="Observation gate">
+                <header className="exec-pw-head">
+                  <span className="exec-pw-title">Observation gate → Paper Exit</span>
+                </header>
+                <div className="exec-pw-gate">
+                  <ObservationProgress items={observation.items} rule={observation.rule} met={observation.met} />
+                  <div className="exec-pw-cta">{exitCta}</div>
+                  {exitBlocked ? (
+                    <ul className="exec-pw-unmet">
+                      {unmetCriteria.length > 0
+                        ? unmetCriteria.map((c) => <li key={c}>{c}</li>)
+                        : <li>the observation gate is not met, and no criterion was named</li>}
+                    </ul>
+                  ) : null}
+                </div>
+              </section>
+            </div>
+            <div className="exec-pw-grid" data-ratio="1">
+              <FactPanel title="Runtime health" rows={runtime} hifi />
+              <FactPanel title="Accounting" rows={accounting} hifi />
+            </div>
+            <div className="exec-pw-grid" data-ratio="1">
+              <FactPanel title="Portfolio contribution · rolling correlation" rows={contribution} hifi />
+              <Drift drift={shownDrift.shown} note={driftNote} notice={driftNotice} head={null} />
+            </div>
             {quality ?? null}
           </>
-        ) : (
-          <PanelState status="unavailable" reason="No equity series was published for this window." />
         )}
         {visuals ? (
           hifi ? (
@@ -708,21 +753,12 @@ export function PaperWorkbench({
             </>
           ) : undefined}
         >
-          {tab === "Overview" ? (hifi ? <PanelPointer what="Runtime health" /> : <FactPanel title="Runtime health" rows={runtime} />) : null}
+          {tab === "Overview" ? <PanelPointer what="Runtime health" /> : null}
           {tab === "Orders" ? <Orders orders={orders} onLoadOlder={onLoadOlder} /> : null}
           {tab === "Fills" ? <Fills fills={fills} onLoadOlder={onLoadOlder} /> : null}
           {tab === "Positions" ? <Positions positions={positions} onLoadOlder={onLoadOlder} /> : null}
-          {tab === "Accounting" ? (hifi ? <PanelPointer what="Accounting" /> : <FactPanel title="Accounting" rows={accounting} />) : null}
-          {tab === "Evidence" ? (
-            hifi ? (
-              <PanelPointer what="Drift vs approved evidence and portfolio contribution" />
-            ) : (
-            <div className="exec-fixtures-stack">
-              <Drift drift={shownDrift.shown} note={driftNote} notice={driftNotice} head={null} />
-              <FactPanel title="Portfolio contribution · rolling correlation" rows={contribution} />
-            </div>
-            )
-          ) : null}
+          {tab === "Accounting" ? <PanelPointer what="Accounting" /> : null}
+          {tab === "Evidence" ? <PanelPointer what="Drift vs approved evidence and portfolio contribution" /> : null}
           {tab === "Sessions" ? (
             <section className="exec-gate-panel">
               <ExecutionSectionTitle>Sessions</ExecutionSectionTitle>
@@ -893,7 +929,7 @@ function Drift({
   );
 }
 
-function FactPanel({
+export function FactPanel({
   title,
   rows,
   hifi,

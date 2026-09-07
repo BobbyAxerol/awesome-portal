@@ -62,12 +62,24 @@ export interface SandboxOverviewProps {
   /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
   demo?: SandboxDemo | null;
   demoTick?: SandboxTick;
+  /**
+   * The reviewed panels built from drained relations (P0-8). The overview
+   * profile publishes deployments only, so order execution, venue connectivity
+   * and reconciliation findings arrive from the named-relation BFF instead.
+   */
+  panels?: {
+    orderExecution: ReactNode;
+    venueConnectivity: ReactNode;
+    recentlyCertified: ReactNode;
+    openFindings: number | null;
+  } | null;
 }
 
-export function SandboxOverview({ envelope = null, status = "ok", reason, demo, demoTick }: SandboxOverviewProps) {
+export function SandboxOverview({ envelope = null, status = "ok", reason, demo, demoTick, panels = null }: SandboxOverviewProps) {
   const smoke = demo ?? null;
   const { now, orders, filled, ack, fill } = demoTick ?? { now: new Date(0), orders: 0, filled: 0, ack: 0, fill: 0 };
   const [filter, setFilter] = useState<SandboxFilter>("all");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const navigate = useNavigate();
   if (!smoke) {
     // Product: the reviewed layout over the published envelope, panel by panel.
@@ -78,6 +90,14 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !envelope ? "unavailable" : null;
     const sourceReason = reason ?? (!envelope ? "No sandbox overview was published for this workspace." : undefined);
     const notPublished = <span className="exec-gate-unverified">not published</span>;
+    const stateOf = (row: Record<string, unknown>) => (str(row.state) ?? str(row.mode) ?? "not published");
+    const counts = new Map<string, number>();
+    for (const row of deployments) counts.set(stateOf(row), (counts.get(stateOf(row)) ?? 0) + 1);
+    const stateChips = [
+      { key: "all", label: "All", n: deployments.length },
+      ...[...counts.entries()].sort((a, b) => b[1] - a[1]).map(([key, n]) => ({ key, label: key, n })),
+    ];
+    const shown = stateFilter === "all" ? deployments : deployments.filter((row) => stateOf(row) === stateFilter);
     return (
       <ExecutionSurface kind="deployments" className="exec-sb exec-af" data-hifi-exact="sandbox-overview">
         <ExecutionWorkspace layout="dense">
@@ -99,16 +119,47 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                 <div className="exec-af-kpisub">published deployments</div>
               </div>
               <div className="exec-af-kpi"><div className="exec-af-kpilabel">Halted</div><div className="exec-af-kpival" data-tone={halted > 0 ? "warn" : undefined}>{halted}</div><div className="exec-af-kpisub">returned deployment rows</div></div>
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Open findings</div><div className="exec-af-kpival" data-tone={openFindings > 0 ? "bad" : undefined}>{openFindings}</div><div className="exec-af-kpisub">returned reconciliation rows</div></div>
+              <div className="exec-af-kpi">
+                <div className="exec-af-kpilabel">Open findings</div>
+                {/* The overview profile publishes an empty reconciliation
+                    branch; the findings relation answers for the same
+                    environment, so the count comes from whichever spoke. */}
+                <div className="exec-af-kpival" data-tone={(panels?.openFindings ?? openFindings) > 0 ? "bad" : undefined}>
+                  {panels?.openFindings ?? (findings.length > 0 ? openFindings : notPublished)}
+                </div>
+                <div className="exec-af-kpisub">{panels?.openFindings !== null && panels?.openFindings !== undefined ? "unresolved reconciliation findings" : "returned reconciliation rows"}</div>
+              </div>
               <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Test-fund equity</div><div className="exec-af-kpival">{notPublished}</div><div className="exec-af-kpisub">no balance relation is published by this overview profile</div></div>
               <div className="exec-af-kpi" data-wide="true"><div className="exec-af-kpilabel">Broker sync</div><div className="exec-af-kpival">{envelope?.freshness ?? "not stated"}</div><div className="exec-af-kpisub">envelope freshness · {envelope?.completeness ?? "completeness not stated"}</div></div>
+            </div>
+            {/* The reviewed screen filters this table; dev could not, because the
+                filters were written against the demo rows. They are derived from
+                the published `state` instead, each carrying its own count, so a
+                chip that would empty the table says so before it is pressed. */}
+            <div className="exec-af-filters" role="group" aria-label="Sandbox filter">
+              {stateChips.map((chip) => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  className="exec-af-filter"
+                  data-active={stateFilter === chip.key ? "true" : undefined}
+                  aria-pressed={stateFilter === chip.key}
+                  onClick={() => setStateFilter(chip.key)}
+                >
+                  {chip.label} <span className="exec-af-dim">{chip.n}</span>
+                </button>
+              ))}
+              <span className="exec-af-spacer" />
+              <span className="exec-af-dim">
+                {shown.length} of {deployments.length} published deployment{deployments.length === 1 ? "" : "s"}
+              </span>
             </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
                 <table className="exec-af-table exec-sb-table" aria-label="Deployments in certification">
                   <thead><tr><th>alpha · deployment</th><th>venue · account · portfolio</th><th>current source state</th><th>next step</th></tr></thead>
                   <tbody>
-                    {deployments.map((row, i) => {
+                    {shown.map((row, i) => {
                       const id = typeof row.deployment_id === "string" ? row.deployment_id : `row ${i + 1}`;
                       return (
                         <tr key={id} className="exec-af-row">
@@ -119,13 +170,26 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                         </tr>
                       );
                     })}
-                    {deployments.length === 0 ? (
-                      <tr><td colSpan={4}><span className="exec-af-empty">No deployment is in certification — the source published an empty set, and an empty set is a fact.</span></td></tr>
+                    {shown.length === 0 ? (
+                      <tr><td colSpan={4}><span className="exec-af-empty">
+                        {deployments.length === 0
+                          ? "No deployment is in certification — the source published an empty set, and an empty set is a fact."
+                          : `No published deployment is in state ${stateFilter}. The other ${deployments.length} are still there.`}
+                      </span></td></tr>
                     ) : null}
                   </tbody>
                 </table>
               </div>
             </div>
+            {panels ? (
+              <>
+                <div className="exec-sb-grid">
+                  {panels.orderExecution}
+                  {panels.venueConnectivity}
+                </div>
+                {panels.recentlyCertified}
+              </>
+            ) : null}
           </div>
         </ExecutionWorkspace>
       </ExecutionSurface>

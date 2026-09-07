@@ -16,6 +16,7 @@ export const RELATION_ROUTES = {
   conditionalGroups: "conditional-order-groups", conditionalGroupLegs: "conditional-order-group-legs",
   capitalLedger: "portfolio-capital-ledger", portfolioEquitySnapshots: "portfolio-equity-snapshots",
   sizingDecisions: "sizing-decisions", executionSessions: "execution-sessions", commandJournal: "command-journal",
+  brokerAccountSync: "broker-account-sync-current-state", reconciliationFindings: "reconciliation-findings",
 } as const;
 export type RelationRoute = (typeof RELATION_ROUTES)[keyof typeof RELATION_ROUTES];
 export type RelationScalar = string | number | boolean | null;
