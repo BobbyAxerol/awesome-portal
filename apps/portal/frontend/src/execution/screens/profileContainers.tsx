@@ -14,7 +14,7 @@ import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
   ProfileEnvelope, QueryAnalytics,
 } from "../api/profileRead";
-import { readBindingItem, readQueryAnalytics } from "../api/profileRead";
+import { readBindingItem } from "../api/profileRead";
 import { readCommandCenter, type CommandCenter } from "../commandCenter";
 import { CommandCenterLive } from "./containers";
 import type { SseFactory } from "../sse";
@@ -23,8 +23,6 @@ import { SourceHealthBoard } from "../components/DerivationTile";
 import { fleetPipeline } from "../fleetPipeline";
 import type { SourceHealth } from "../api/derivations";
 import { ProfileEnvelopeScreen, QueryAnalyticsScreen, TypedUnavailableScreen } from "./ProfileScreens";
-import { FactPanel, PaperWorkbench, type WorkbenchTab } from "./PaperWorkbench";
-import { workbenchProps } from "../paperWorkbenchData";
 import type { PanelStatus } from "../contracts";
 import { StatusChip } from "../components/badges";
 import { utcStamp } from "../time";
@@ -172,71 +170,15 @@ export function StageOverviewContainer({ api, screen }: { api: ExecutionApi; scr
   );
 }
 
-/**
- * Paper Workbench (P0-9).
- *
- * This container used to hand the envelope to the generic branch dump, so the
- * reviewed screen — twelve panels, a gate, four tabs of rows — existed only in
- * the lab while dev showed a list of branch names over the same data. The
- * profile publishes the deployment, its observation gate, orders, fills,
- * positions, equity and performance snapshots and a full analytics envelope;
- * `workbenchProps` maps them onto the component, and the raw envelope stays
- * reachable under the page for anyone auditing what was actually published.
- */
 export function PaperWorkbenchContainer({ api, deploymentId, variant = "paper" }: { api: ExecutionApi; deploymentId: string; variant?: "paper" | "vnm" }) {
-  const tick = usePollTick(PROJECTION_POLL_MS);
-  const state = useApiRead<ProfileEnvelope>(
-    () => api.getPaperWorkbenchProfile(deploymentId, variant),
-    [api, deploymentId, variant, tick],
-    { keepValue: true },
-  );
-  const [tab, setTab] = useState<WorkbenchTab>("Overview");
-  const [copied, setCopied] = useState<string | null>(null);
-  const title = variant === "vnm" ? `Paper Workbench · ${deploymentId} · VN market` : `Paper Workbench · ${deploymentId}`;
-  const envelope = state.value;
-  const analytics = useMemo(
-    () => (envelope?.objects.query_analytics ? readQueryAnalytics(envelope.objects.query_analytics) : null),
-    [envelope],
-  );
-  const props = useMemo(() => (envelope ? workbenchProps(envelope, analytics) : null), [envelope, analytics]);
-
-  if (!props || !envelope) {
-    return (
-      <section className="exec-envelope" aria-label={title}>
-        <h1 className="exec-role-h1">{title}</h1>
-        <PanelState status={state.status === "ok" ? "unavailable" : state.status} reason={state.reason ?? "The paper workbench profile could not be read."} />
-      </section>
-    );
-  }
+  const state = useApiRead<ProfileEnvelope>(() => api.getPaperWorkbenchProfile(deploymentId, variant), [api, deploymentId, variant]);
   return (
-    <>
-      <PaperWorkbench
-        {...props}
-        equity={props.equity}
-        tab={tab}
-        onTabChange={setTab}
-        onLoadOlder={() => {
-          /* The profile publishes one bounded page per branch and no cursor.
-             Wiring a control that cannot fetch would be a button that lies. */
-        }}
-        onRequestExit={() => {
-          /* Stage exit is a governance mutation; it is raised from the Paper
-             Exit Review, not from the workbench. The control stays visible and
-             disabled with its unmet criteria named. */
-        }}
-        onAdminActions={() => {}}
-        onCopyProvenance={(full) => { setCopied(full); void navigator.clipboard?.writeText(full).catch(() => undefined); }}
-        quality={<FactPanel title="Execution quality" rows={props.qualityFacts} hifi />}
-        // A value only ever accompanies `ok`: a failed re-read clears it and is
-        // caught by the guard above, so there is no third case to pass on here.
-        status="ok"
-      />
-      {copied ? <p className="exec-role-meta" role="status">Copied {copied.slice(0, 24)}… to the clipboard.</p> : null}
-      <details className="exec-pw-contract">
-        <summary>published envelope · {envelope.schemaVersion} · every branch as it arrived</summary>
-        <ProfileEnvelopeScreen title={title} envelope={envelope} status="ok" />
-      </details>
-    </>
+    <ProfileEnvelopeScreen
+      title={variant === "vnm" ? `Paper Workbench · ${deploymentId} · VN market` : `Paper Workbench · ${deploymentId}`}
+      envelope={state.value}
+      status={state.status}
+      reason={state.reason}
+    />
   );
 }
 

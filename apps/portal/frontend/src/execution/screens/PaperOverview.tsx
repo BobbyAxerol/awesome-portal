@@ -23,6 +23,7 @@ import { LinesChart, SparkLine } from "../components/marketChart";
 import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
+import { soonReason } from "../soon";
 
 export interface PaperOverviewProps {
   /** `execution.paper-overview.v1` — the published truth for this stage. */
@@ -205,6 +206,25 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                 })}
                 {deployments.length === 0 ? <p className="exec-po-empty">No deployment is in paper — the source published an empty set, and an empty set is a fact.</p> : null}
               </div></div>
+            </section>
+
+            {/*
+              * The reviewed screen's fourth panel. It needs the stage-exit
+              * history — which deployment left paper, when, and on whose
+              * review — and no branch of this profile carries it. The panel is
+              * kept and named rather than dropped: a missing panel reads as a
+              * feature nobody built, and a named Soon reads as a schedule.
+              */}
+            <section className="exec-po-panel" aria-label="Left paper, last 90 days">
+              <header className="exec-po-head">
+                <span className="exec-po-title">Left paper — last 90 days</span>
+                <span className="exec-po-spacer" />
+                <span className="exec-po-note">stage-exit history</span>
+              </header>
+              <PanelState
+                status="unavailable"
+                reason={soonReason("N28_STAGE_EXIT_HISTORY_NOT_PUBLISHED") ?? "Soon · the stage-exit history is not published by this profile"}
+              />
             </section>
           </div>
         </ExecutionWorkspace>

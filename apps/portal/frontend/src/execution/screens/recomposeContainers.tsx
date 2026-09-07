@@ -21,7 +21,7 @@ import type {
 } from "../api/profileRead";
 import { readAlphaFleetItem, readBindingItem, readQueryAnalytics } from "../api/profileRead";
 import { formatExact } from "../formatExact";
-import { pageOf, workbenchFillRow, workbenchOrderRow, workbenchPositionRow, workbenchSessionRow } from "../api/profileRows";
+import { pageOf } from "../api/profileRows";
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
 import { useApiRead } from "./profileContainers";
@@ -48,6 +48,7 @@ import type { ChartEnvelope } from "../contracts";
 import { PaperOverview } from "./PaperOverview";
 import { SandboxOverview } from "./SandboxOverview";
 import { sandboxPanels } from "../sandboxPanels";
+import { workbenchProps } from "../paperWorkbenchData";
 import { LiveOverview } from "./LiveOverview";
 import { PaperWorkbench, WORKBENCH_TABS, type WorkbenchTab } from "./PaperWorkbench";
 import { BLOTTER_FILTERS, FullBlotter, type BlotterRow } from "./FullBlotter";
@@ -343,93 +344,32 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
     );
   }
   const candlesReason = capabilityReason(profile.capabilities, "market.candles") ?? capabilityReason(profile.capabilities, "venue.calendar");
-  const deployment = profile.objects.deployment ?? null;
-  const mode = text(deployment?.mode) ?? "paper";
-  const sessions = profile.data.sessions ?? [];
-  const orders = profile.data.orders ?? [];
-  const fills = profile.data.fills ?? [];
-  const positions = profile.data.positions ?? [];
-  const performance = latest(profile.data.account_equity ?? profile.data.performance ?? [], "ts", "created_at");
-  const gate = profile.objects.observation_gate;
-  const observedDays = count(gate?.observed_days);
-  const tradeCount = count(gate?.trade_count);
-  const sessionCount = count(gate?.session_count);
-  const gateReason = text(gate?.reason_code) ?? capabilityReason(profile.capabilities, "workbench.observation-gate");
-  const accountId = text(deployment?.account_id) ?? "account not published";
-  const portfolioId = text(deployment?.portfolio_id);
-  const strategyId = text(deployment?.strategy_id) ?? deploymentId;
-  const venue = text(deployment?.venue) ?? "venue not published";
   const analytics = profile.objects.query_analytics ? readQueryAnalytics(profile.objects.query_analytics) : null;
-  // Never derive a population KPI from the bounded rows rendered below. The
-  // Rust/SQL analytics envelope owns the denominator and exact decimal.
-  const quality = analytics?.executionQuality ?? null;
-  const fillRate = text(quality?.fill_rate);
-  const rejectRate = text(quality?.reject_rate);
-  const railParts = [observedDays === null ? null : `${observedDays} days`, tradeCount === null ? null : `${tradeCount} trades`].filter(Boolean);
-  // P4-I / F16: the server publishes the versioned observation policy inside
-  // the gate record; the panel renders real progress against real targets.
-  const policyVersion = text(gate?.policy_version);
-  const minDays = count(gate?.policy_minimum_observed_days);
-  const minTrades = count(gate?.policy_minimum_trade_count);
-  const gateState = text(gate?.state);
-  const observationPanel = policyVersion
-    ? {
-      items: [
-        ...(observedDays !== null && minDays !== null ? [{ label: "days observed", current: observedDays, target: minDays, unit: "days" }] : []),
-        ...(tradeCount !== null && minTrades !== null ? [{ label: "trades", current: tradeCount, target: minTrades, unit: "trades" }] : []),
-      ],
-      met: gateState === "MET",
-      rule: `policy ${policyVersion} · ${minDays ?? "?"}d · ${minTrades ?? "?"} trades${gateState === "PARTIAL" && gateReason ? ` · ${gateReason}` : ""}`,
-    }
-    : { items: [], met: false, rule: gateReason ?? "No promotion verdict was published." };
-  const unmetCriteria = gateState === "NOT_MET"
-    ? [
-      ...(observedDays !== null && minDays !== null && observedDays < minDays ? [`observed ${observedDays}/${minDays} days`] : []),
-      ...(tradeCount !== null && minTrades !== null && tradeCount < minTrades ? [`trades ${tradeCount}/${minTrades}`] : []),
-    ]
-    : gateState === "MET" ? [] : gateReason ? [gateReason] : [];
-  const lineage = [
-    { label: "alpha", chip: { label: strategyId, href: `/deployments/alphas/${encodeURIComponent(strategyId)}` } },
-    ...(portfolioId ? [{ label: "portfolio", chip: { label: portfolioId, href: `/deployments/portfolios/${encodeURIComponent(portfolioId)}` } }] : []),
-    { label: "deployment", chip: { label: deploymentId, href: `/deployments/paper/${encodeURIComponent(deploymentId)}` } },
-    { label: "account", chip: { label: accountId, href: `/deployments/accounts/${encodeURIComponent(accountId)}` } },
-    { label: "venue", chip: { label: venue, href: "/deployments/accounts" } },
-  ];
+  /*
+   * One derivation, in `paperWorkbenchData`, rather than the hand-rolled set
+   * this container carried. Three faults went with it:
+   *
+   *   * readiness was `active === true ? READY`, which is the ACTIVE ≠ READY
+   *     mistake the guide names — it only looked right on dev because the gate
+   *     happened to publish a reason code beside it;
+   *   * unmet criteria were listed only for `NOT_MET`, so the PARTIAL gate dev
+   *     actually publishes produced a control reading "blocked: 1 gate criteria
+   *     unmet" with no criterion named anywhere;
+   *   * the portfolio-contribution panel was filled with the first four
+   *     execution-quality fields, which is a different measurement under
+   *     someone else's title.
+   */
+  const props = workbenchProps(profile, analytics);
   return (
     <PaperWorkbench
-      alphaLabel={strategyId}
-      deploymentId={deploymentId}
-      accountId={accountId}
-      venue={venue}
-      stage={STAGE_FOR_MODE[mode] ?? "PAPER_OBSERVATION"}
-      readiness={gateReason ? "NOT_READY" : text(deployment?.active) === "true" ? "READY" : "UNKNOWN"}
-      envelope={screenEnvelope(profile)}
-      lineage={lineage}
-      railDetail={railParts.length > 0 ? railParts.join(" · ") : undefined}
-      kpis={[
-        { label: "Equity", value: text(performance?.equity), unit: text(performance?.currency) },
-        { label: "Net PnL", value: text(performance?.net_pnl), unit: text(performance?.currency) },
-        { label: "Drawdown", value: text(performance?.drawdown) },
-        { label: "Fill rate", value: fillRate },
-        { label: "Reject rate", value: rejectRate },
-      ]}
-      equity={profileEquity(profile)}
-      observation={observationPanel}
-      unmetCriteria={unmetCriteria}
-      onRequestExit={() => navigate("/governance/exit-reviews")}
-      drift={[]}
-      driftNote={null}
-      runtime={[{ label: "sessions", value: sessionCount === null ? String(sessions.length) : String(sessionCount) }, { label: "orders", value: String(orders.length) }, { label: "fills", value: String(fills.length) }, { label: "freshness", value: profile.freshness }]}
-      accounting={[{ label: "cash free", value: text(performance?.cash_free) }, { label: "cash locked", value: text(performance?.cash_locked) }, { label: "margin initial", value: text(performance?.margin_initial) }, { label: "margin maintenance", value: text(performance?.margin_maintenance) }]}
-      quality={<ExecutionQualityTile quality={qualityState.value} transport={qualityState.status} reason={qualityState.reason} />}
-      contribution={analytics?.executionQuality ? Object.entries(analytics.executionQuality).slice(0, 4).map(([label, value]) => ({ label: label.replace(/_/g, " "), value: text(value) })) : []}
+      {...props}
       tab={tab}
       onTabChange={setTab}
-      orders={pageOf(orders.map(workbenchOrderRow), null)}
-      fills={pageOf(fills.map(workbenchFillRow), null)}
-      positions={pageOf(positions.map(workbenchPositionRow), null)}
+      // The profile publishes one bounded page per branch and no cursor, so
+      // there is no older page to ask for.
       onLoadOlder={() => undefined}
-      sessions={sessions.map(workbenchSessionRow)}
+      onRequestExit={() => navigate("/governance/exit-reviews")}
+      quality={<ExecutionQualityTile quality={qualityState.value} transport={qualityState.status} reason={qualityState.reason} />}
       calendar={null}
       operatorAdmin={false}
       onAdminActions={() => navigate("/administration/actions")}

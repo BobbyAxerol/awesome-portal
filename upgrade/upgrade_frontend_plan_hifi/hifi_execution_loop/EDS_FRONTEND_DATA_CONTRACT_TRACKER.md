@@ -1539,6 +1539,89 @@ Tile phụ của Portal (Exact query surface, Exposure profile, Trade replay jou
 
 **Còn treo cho goal sau:** tile 9/10/11 chờ nguồn (regime labels, deployment live, risk profile) — ghi `Soon`, không chặn; console dev còn 502/503 lẻ khi ba màn cùng drain (đã có retry + hạ cỡ trang, sẽ gộp cache ở Goal 6).
 
+## A13. GOAL 4 ĐÃ LÀM (07-09 khuya) — ba màn stage và ba workbench (P0-8, P0-9)
+
+Commit `94d099d` (4a) · `<4b>` (Live Full + Paper panel + gộp derivation). Ba ref
+cùng head; dev rebuild sau bước cuối.
+
+### A13.0 Chẩn đoán: không thiếu dữ liệu, thiếu đường dẫn tới panel
+
+Đo trước khi sửa cho thấy Paper Workbench trên dev **2/12 panel**, Sandbox
+Overview **0 panel / 0 nút**, Live **0 panel**. Nguyên nhân **không phải** thiếu
+nguồn. `GET /screens/paper/{deploymentId}` trả về đủ: `deployment`,
+`observation_gate`, 19 order, 10 fill, 1 247 dòng `performance`, 1 438 dòng
+`account_equity`, cùng **một envelope query-analytics đầy đủ cho từng
+deployment** (chart_series 1 438 điểm, execution_quality, order_funnel 770 lệnh,
+correlation 66 cặp, drawdown_overlap 43 alpha).
+
+Toàn bộ 12 panel của màn đã tồn tại từ phase 4 — nhưng nằm trong nhánh
+`{hifi ? …}`, mà `hifi` chỉ được truyền từ phòng lab. Sản phẩm không bao giờ
+truyền nó, nên dev rơi xuống nhánh dự phòng: một chart và không gì khác. **Đây
+không phải bản rút gọn của màn, mà là một màn khác.**
+
+### A13.1 Nguồn thật đã khai thác
+
+| Màn | Nguồn | Kết quả trên dev |
+|---|---|---|
+| Paper Workbench | `screens/paper/{id}` (deployment, observation_gate, orders, fills, positions, performance, account_equity, query_analytics) | 12 panel; chart equity **1 438 snapshot** kèm drawdown; gate 50/30 ngày · 10/300 lệnh |
+| Paper Overview | `derived_insights` (cumulative_return, order_funnel_7d) | 4 panel — panel 4 ghi `Soon` vì chưa có lịch sử rời stage |
+| Sandbox Overview | relation `broker-account-sync-current-state` (1 hàng), `reconciliation-findings` (3 hàng), `orders` (COMPLETE, 0 hàng) | 3 panel + bộ lọc theo `state` thật |
+| Live Overview | `screens/live` (mọi nhánh EMPTY — không có deployment live) | bộ lọc All/Full/Canary/Issues, chip 0 thì **disabled kèm lý do** |
+| Live Full | `deployments/{id}/live` (broker_consistency, projection_continuity, command_policy, lifecycle) | 2 panel: broker truth và protective actions |
+
+### A13.2 Ba lỗi trong container thật, chỉ lộ ra khi gộp derivation
+
+Container được route là `PaperWorkbenchRichContainer`, không phải
+`PaperWorkbenchContainer` (hàm này **không có ai gọi** — code chết, đã trả về
+nguyên trạng). Khi gộp về một `paperWorkbenchData` dùng chung thì ba lỗi lộ ra:
+
+1. **`active === true` được đọc thành `READY`** — đúng lỗi ACTIVE ≠ READY mà
+   guide §6 cấm. Trên dev nó *trông* đúng chỉ vì gate tình cờ có `reason_code`
+   đi kèm; nếu gate không phát mã lý do thì một deployment đang chạy sẽ hiện
+   READY. Nay readiness là verdict của server.
+2. **Tiêu chí chưa đạt chỉ liệt kê khi `NOT_MET`** — dev phát `PARTIAL`, nên nút
+   ghi "blocked: 1 gate criteria unmet" mà **không nêu tiêu chí nào**. Nay nêu
+   đủ, kể cả `window_bounded` (nguồn giữ ít lịch sử hơn policy hỏi — chờ thêm
+   cũng không đóng được gate).
+3. **Panel "Portfolio contribution" bị đổ 4 trường execution-quality đầu tiên** —
+   một phép đo khác dưới tiêu đề của người khác. Nay dùng correlation/drawdown
+   của chính nguồn, phần portfolio ghi `Soon`.
+
+### A13.3 Một quyết định đi ngược yêu cầu bề mặt, và lý do
+
+Goal 4 yêu cầu Live Full có Halt / Reduce / Emergency close **disabled kèm lý
+do**. Nhưng `command_policy` phát `visible: false` cho cả nhóm protective, và
+repo **đã có contract test** nói nhóm invisible thì phải **vắng mặt**, không
+phải làm mờ. Luật đó đúng và nó thắng: một nút chạm vào vốn thật mà vẫn tồn tại
+là nút người vận hành sẽ với tay tới giữa sự cố, và làm mờ chỉ dời thời điểm
+phát hiện sang lúc tệ nhất. Panel vì vậy **nói bằng chữ** ba nút nào đang bị
+giữ lại và trích mã blocker của chính policy (`PRODUCTION_COMMAND_INACTIVE`).
+Khi policy cho `visible: true` thì nút hiện như cũ, disabled cùng mã đó.
+
+### A13.4 Những chỗ ghi `Soon` (không chặn phase nào)
+
+| Chỗ | Mã nguồn phát |
+|---|---|
+| ACK latency (Paper Workbench, Sandbox connectivity) | `N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED` |
+| Drift vs approved research evidence | `N28_RESEARCH_EVIDENCE_JOIN_NOT_ACTIVATED` |
+| Portfolio contribution của deployment | `N28_PORTFOLIO_EQUITY_NOT_PUBLISHED` |
+| "Left paper 90d" và "Recently certified" | `N28_STAGE_EXIT_HISTORY_NOT_PUBLISHED` |
+| Canary Control Room | dev trả `CANARY_ENVELOPE_NOT_FOUND` — **không có deployment canary**, đây là sự thật chứ không phải lỗi |
+
+### A13.5 Evidence
+
+| Gate | Kết quả |
+|---|---|
+| FE vitest | **112 file · 1 972 pass · 1 skipped** |
+| `tsc --noEmit` | sạch |
+| `npm run build` | sạch |
+| Hook pre-commit | xanh cho 4a; 4b bị `br72_frontend_containers_sha256` drift một lần vì sửa file sau khi repin, gộp lại thành một commit sạch |
+| Trình duyệt (dev) | đo lại sau bước rebuild cuối — ghi vào A13.6 |
+
+### A13.6 Đo bằng trình duyệt sau rebuild
+
+_(điền sau khi chạy `measure-goal4.sh`)_
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

@@ -48,6 +48,13 @@ export function LiveActionGroup({ policy, title, gapDetected }: { policy: LiveAc
 const TABS = ["Exposure & orders", "Continuity", "Predecessor envelope", "Guard rules"] as const;
 type Tab = (typeof TABS)[number];
 
+/** The hi-fi's three protective controls, in its order. */
+const LIVE_PROTECTIVE_ACTIONS = [
+  { label: "Halt ▾", className: "exec-lf-halt" },
+  { label: "Reduce ▾", className: "exec-lf-danger" },
+  { label: "Emergency close ▾", className: "exec-lf-danger" },
+] as const;
+
 export function LiveFullOperationsScreen({
   live,
   status = "ok",
@@ -84,6 +91,14 @@ export function LiveFullOperationsScreen({
   const rules = liveGuardRules(live);
   const smoke = demo ?? null;
   const policy = live.commandPolicy;
+  // The reason a control is disabled is the policy's own, not a sentence
+  // written here: an operator who reads "PRODUCTION_COMMAND_INACTIVE" can look
+  // it up, and one who reads "not available" cannot.
+  const protectiveReason = policy?.protective?.blockerCodes.length
+    ? `Refused by the source: ${policy.protective.blockerCodes.join(" · ")}.`
+    : policy?.protective
+      ? "The command policy publishes no blocker and still refuses the action."
+      : "No command policy is published for this deployment.";
   const gap = live.projectionContinuity?.gapDetected ?? null;
   const consistency = live.brokerConsistency;
   const mismatch = consistency !== null && consistency.brokerValuesVisible === false;
@@ -271,7 +286,126 @@ export function LiveFullOperationsScreen({
             </div>
             <p className="exec-af-smoke">! {smoke.warning}</p>
           </>
-        ) : null}
+        ) : (
+          /*
+           * The reviewed panels on the published envelope (P0-8).
+           *
+           * The block above runs only in the lab, so the two panels a live
+           * operator actually needs — what the broker says, and what may be
+           * done about it — were missing from dev entirely. The protective
+           * controls are drawn here disabled, each naming the policy's own
+           * blocker codes: a control that is absent reads as a feature nobody
+           * built, and an operator hunting for the halt button during an
+           * incident is the worst possible moment to discover which it was.
+           */
+          <div className="exec-pf2-grid" data-ratio="1">
+            <section className="exec-pf2-panel" aria-label="Broker & reconciliation truth">
+              <header className="exec-pf2-head">
+                <span className="exec-pf2-title">Broker &amp; reconciliation truth</span>
+                <span className="exec-pf2-spacer" />
+                <span className="exec-a3-source"><b>BROKER</b> · {brokerPanel?.envelope.asOf ? `as_of ${brokerPanel.envelope.asOf}` : "no broker as_of published"}</span>
+              </header>
+              <div className="exec-lf-kv">
+                {/* While the mismatch banner is up it already states the state
+                    and the behaviour, in the slot the chart vacated. Repeating
+                    them here is the same alarm twice, and the copy out of the
+                    alert's context is the one a reader trusts less. */}
+                {mismatch ? (
+                  <>
+                    <span className="exec-bd-k">consistency</span>
+                    <span data-tone="bad">stated in the mismatch banner above</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="exec-bd-k">consistency</span>
+                    <span data-tone={consistency?.state === "CONSISTENT" ? "good" : consistency?.state ? "bad" : undefined}>{consistency?.state ?? "not stated"}</span>
+                    <span className="exec-bd-k">broker values</span>
+                    <span data-tone={consistency?.brokerValuesVisible ? "good" : "warn"}>
+                      {consistency?.brokerValuesVisible ? "visible" : "suppressed"}
+                      {consistency?.mismatchBehavior ? ` · ${consistency.mismatchBehavior}` : null}
+                    </span>
+                  </>
+                )}
+                <span className="exec-bd-k">suppressed fields</span>
+                <span>{live.suppressedBrokerFields.length === 0 ? "none" : `${live.suppressedBrokerFields.length} · ${live.suppressedBrokerFields.join(", ")}`}</span>
+                <span className="exec-bd-k">continuity</span>
+                <span data-tone={live.projectionContinuity?.gapDetected ? "bad" : undefined}>
+                  {live.projectionContinuity?.state ?? "not stated"}
+                  {live.projectionContinuity?.gapDetected ? " · gap detected" : null}
+                </span>
+                {mismatch ? null : (
+                  <>
+                    <span className="exec-bd-k">blockers</span>
+                    <span data-tone={(consistency?.blockerCodes.length ?? 0) > 0 ? "warn" : "good"}>
+                      {consistency?.blockerCodes.length ? consistency.blockerCodes.join(" · ") : "none published"}
+                    </span>
+                  </>
+                )}
+              </div>
+              <footer className="exec-pf2-foot">
+                {/* An unavailable broker is not a clean broker. Saying which it
+                    is decides whether an operator may act on these numbers. */}
+                {consistency?.state === "UNAVAILABLE"
+                  ? "The broker state is unreadable in this profile, so its values are withheld rather than shown as zero. Absence of a mismatch here is absence of evidence."
+                  : "Broker figures are the venue's own; the Portal never reconciles them in the browser."}
+              </footer>
+            </section>
+            <section className="exec-pf2-panel" aria-label="Incidents & protective actions">
+              <header className="exec-pf2-head">
+                <span className="exec-pf2-title">Incidents &amp; protective actions</span>
+                <span className="exec-pf2-spacer" />
+                <span className="exec-pf2-note">{policy?.protective?.riskTier ?? "risk tier not stated"}</span>
+              </header>
+              <div className="exec-lf-kv">
+                <span className="exec-bd-k">production command</span>
+                <span data-tone={live.productionCommandActive ? "good" : "mute"}>{live.productionCommandActive ? "active" : "inactive"}</span>
+                <span className="exec-bd-k">runtime</span>
+                <span>{live.runtimeState ?? "not stated"}{live.activatedAt ? ` · activated ${live.activatedAt}` : ""}</span>
+                <span className="exec-bd-k">lifecycle blockers</span>
+                <span data-tone={live.lifecycleBlockers.length > 0 ? "warn" : "good"}>{live.lifecycleBlockers.length ? live.lifecycleBlockers.join(" · ") : "none published"}</span>
+                <span className="exec-bd-k">realtime</span>
+                <span data-tone={live.realtimeActive ? "good" : "mute"}>
+                  {live.realtimeActive ? "streaming" : "not streaming"}
+                  {live.realtimeBlockers.length ? ` · ${live.realtimeBlockers.join(" · ")}` : ""}
+                </span>
+              </div>
+              {/*
+                * `visible` is not a styling hint. When the policy says the
+                * protective group is invisible the controls are absent, not
+                * greyed: a live-capital button that exists at all is one an
+                * operator can reach for in an incident, and the contract test
+                * for this screen holds the rule. The reason is stated in words
+                * instead, which is what a reader can act on.
+                */}
+              {policy?.protective?.visible ? (
+                <>
+                  <div className="exec-lf-actions exec-live-actions">
+                    {LIVE_PROTECTIVE_ACTIONS.map((action) => (
+                      <button
+                        key={action.label}
+                        type="button"
+                        className={action.className}
+                        disabled={!policy?.protective?.enabled}
+                        title={policy?.protective?.enabled ? "plan → apply → verify" : protectiveReason}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="exec-disabled-reason">{policy?.protective?.enabled ? "Every action runs plan → apply → verify, with step-up auth and dual approval." : protectiveReason}</p>
+                </>
+              ) : (
+                <p className="exec-disabled-reason">
+                  Halt, Reduce and Emergency close are withheld, not disabled: the command policy publishes them as invisible for this profile. {protectiveReason}
+                </p>
+              )}
+              <footer className="exec-pf2-foot">
+                Risk-increasing commands ({policy?.riskIncreasing?.riskTier ?? "tier not stated"}) are not drawn at all while the source refuses them:
+                {" "}{policy?.riskIncreasing?.blockerCodes.length ? policy.riskIncreasing.blockerCodes.join(" · ") : "no blocker published"}.
+              </footer>
+            </section>
+          </div>
+        )}
         <ExecutionTabs
           tabs={[
             { key: "Exposure & orders", label: "Exposure & orders" },
