@@ -659,9 +659,9 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | A-07 | EDS-07 chart DTO | DTO đầu tiên | 🟢 **A-07 CHẤM ĐẠT-CORE 05-09 (tối)** — paper account equity/drawdown READY 1946/51370 điểm `MIN_MAX_LAST_BUCKET_V1` (extrema+first/last giữ, gaps không publish); portfolio → UNAVAILABLE `MANAGER_V2_SOURCE_CONTRACT_REJECTED` (nguồn); live/sandbox → `EDS07_RELATION_NOT_MIRRORED` tới khi mirror có relation (**DR-20**); viewport ngoài 256–2048 bị 400 (FE clamp); risk-decisions typed EMPTY/UNAVAILABLE. **A-07b ✅ ĐÃ SHIP** `172ebdd` PrimusFinancialChart |
 | A-08 | EDS-08 asks packet | packet hợp nhất | ✅ **CHẤM ĐẠT 05-09** — addendum ghi parent MC-01, một kênh duy nhất → **DR-07 ĐÓNG** |
 | A-09 | EDS-09 observation-lane | reducer đầu ra đầu tiên | ✅ **ĐÃ CHẤM 05-09: ACCEPT-CORE / DR-13 OPEN** — xem phiếu |
-| A-10 | EDS-10 replay/candles | contract chấp nhận | ⬜ xa |
-| A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ xa |
-| A-12 | EDS-12 release | gói release | ⬜ xa |
+| A-10 | EDS-10 replay/candles | contract chấp nhận | 🟡 **06-09**: FE Trade Replay xong (OR-5, `f04dad8`) trên nến venue (OR-4); codex EDS-10b/11R4 market-context BFF ở nhánh riêng → hợp nhất nguồn nến ở A6.3 I3 |
+| A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ chờ I0 hợp nhánh (codex có 11R1/11R3/R4-R5 trên `feat/eds11r-r4-r5-activation`) |
+| A-12 | EDS-12 release | gói release | 🟡 **06-09 nghiệm thu**: static qualification ready (gate codex pass), deployed evidence pending, BR-EX-80/81 đóng băng thành gate nguồn — xem A6.2; FE cấp ma trận browser ở A6.3 I6 |
 
 **ĐANG Ở ĐÂY (05-09 tối) →** đợt goal 2 (G7+G4+G5) ĐÃ LÊN dev-portal — xem **§A4**; chờ Bobby goal cả đợt 1+2. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
 chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
@@ -849,7 +849,7 @@ xuất G7 (chart) nhảy trước G4/G5 vì không phụ thuộc chúng — ch�
 | G5 | A-05 + wire governance/ops | Inbox/R1/R2/Exit/Waivers/Queue/Incident có số + formula version hiện trên tile | 1 ngày | 🟡 **ĐỢT 2 (05-09 tối)** — 4 tile derivation lên Command Center / Paper Workbench / Portfolio 360 / Alpha 360, formula id+version hiện trên tile; governance/ops tile CHƯA (route governance đã probe) — chờ Bobby goal |
 | G6 | A-06 cutover từng màn (dual-read parity, DR-01 trả lời tại đây) | Cùng màn, số y hệt, payload NHẸ hẳn (đo byte trước/sau đính vào phiếu) | 1 ngày | ⬜ |
 | G7 | A-07 + **A-07b `PrimusFinancialChart` + chartTheme.ts (OR-3)** ăn chart DTO | Chart equity/perf/drawdown ĐÚNG LOOK artifact đã duyệt, sparkline fleet, hết cap 2000 | 1.5–2 ngày | ✅ **ĐỢT 2 (05-09 tối) — SHIP `172ebdd`**: mọi EquityChart (Paper Workbench, Alpha 360, Live Full, Canary, Insight tile) chạy uPlot; Account 360 ăn EDS-07 DTO; sparkline fleet + ECharts reskin CHƯA — chờ Bobby goal |
-| G8 | EDS-09b observation adapter (DR-13) + wire journal → EDS-11 SSE khi codex giao | Motion tick/flash nổ lại bằng revision thật | theo codex | ⬜ |
+| G8 | EDS-09b observation adapter (DR-13) + wire journal → EDS-11 SSE khi codex giao | Motion tick/flash nổ lại bằng revision thật | theo codex | ⬜ chờ I0 (A6.3) |
 
 Tổng: **~8–10 ngày làm việc** cho chuỗi goal G1→G7 (EDS-10 chờ gate trading,
 đúng chốt owner). Sau mỗi bước (5), §A0 lật trạng thái — Bobby dõi goal chỉ
@@ -1056,6 +1056,60 @@ Gate: `tsc -b` sạch · vitest **102 file / 1866 pass** · N29 re-pin 2 digest.
 `s5_probe2_*.png`, `s5_probe3_*.png` (scratchpad phiên).
 
 **Deploy dev 06-09 ~05:05 UTC**: `portal-control-api-1` + `portal-portal-web-1` recreate trên image `:dev` mới (control-api có route `/market/candles`, cờ `FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true` trong `.env` dev; bundle FE `assets/index-P0O2ckNK.js`). Commit FE trên `feat/eds-current-bff`: `7f6f5cb` (motion + insight charts) · `91bf468` (Trade Replay grammar hi-fi) · `743907e` (cửa sổ mở đầu) · `daa30a8` (nến venue: route klines có cờ + lớp nến hi-fi; push xong `feat/eds-current-bff`).
+
+## A6. SAU EDS-12 — CÒN GÌ, DỞ GÌ, GHÉP NỐI BE↔FE THẾ NÀO (owner hỏi 06-09 tối; đánh giá kết thúc bằng markdown theo §7.7)
+
+### A6.1 Trạng thái thật của hai bên (đo 06-09 tối)
+
+**Backend (codex) — nằm ở nhánh của codex, CHƯA có trên dev và chưa vào `feat/eds-current-bff`:**
+
+| Phase | Codex nói | Bằng chứng tôi kiểm | Nhánh |
+|---|---|---|---|
+| EDS-09b observation lane | closed (observed timeline BFF `bd05671`, safe local revalidation `e709b0d`, source-dark authoritative ledger receiver `50239f6`) | commit có; gate riêng chưa chạy được ngoài worktree codex | `feat/eds11r-r4-r5-activation` |
+| EDS-10b market context | "close R4 market context contract boundary" `e57404d`, source-dark market context BFF gate `fe595d2`, `EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED` | trùng phạm vi OR-4 (route venue của tôi) → phải hợp nhất một nguồn nến (§A6.3 I3) | cùng nhánh |
+| EDS-11R1 named relation BFF + hydrate rich panels | `6d3dde4`, `0e6a83a`, `22f6b71`, `d32cd8f` | codex re-apply commit replay bản 2/3 của tôi (`7ec17dd`, `97ab33f`) → conflict chắc chắn với `f04dad8` ở `TradeReplayEvents.tsx`/`recomposeContainers.tsx` | cùng nhánh |
+| EDS-11R3 local provenance | closed `5287c3b` | commit có | cùng nhánh |
+| R4/R5 manager lanes (bounded) | `b76d281`, `d63a650`, `5abd275`; pinned `98c47b3` | commit có; lease TTL 900 | cùng nhánh |
+| EDS-12 failure/DR/release | `EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`, `runtime_effect NONE` | **chạy gate của codex: pass** (N29 `RELEASE_CANDIDATE_READY` nhưng `product_release NO_GO`, blocker N29-REL-01; EDS-12 static ready, deployed evidence pending) | `feat/eds12-failure-dr-release` (mở từ `feat/execution-data-activation`, 18 ahead / 31 behind `feat/eds-current-bff`) |
+| BR-EX-80 / 81 | `SOURCE_OWNER_RETURN_REQUIRED` / `SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED` | **chưa giao** — 37/42 alpha vẫn trống replay | — |
+
+Khoảng cách nhánh: `feat/eds11r-r4-r5-activation` **+41 / −13** so với `feat/eds-current-bff`; `feat/eds12-failure-dr-release` **+18 / −31**. Dev hiện chạy `feat/eds-current-bff @ f04dad8` (FE đầy đủ + backend tới EDS-07/OR-4). Gate D2 của nhánh eds11r ("Imported Manager route template…") rớt 6/6 lúc 06-09 tối rồi tự pass khi chạy lại lẻ → gate phụ thuộc trạng thái runtime của codex, không tái lập được từ ngoài.
+
+**Frontend (Claude) — trên dev:**
+
+| Phiếu / goal | Trạng thái | Còn dở |
+|---|---|---|
+| G1–G3 (A-01…A-03) | ✅ chấm xong | — |
+| G4 (A-04) | 🟡 4/4 route, panel typed | ký từng màn (identity ngoài trang đầu, mixed-currency) |
+| G5 (A-05) | 🟡 4 tile derivation lên CC | governance/ops tile (Inbox/R1/R2/Exit/Waivers/Queue/Incident) |
+| G7 (A-07) | 🟢 core (uPlot, equity/drawdown) | live/sandbox/deployment typed tới khi mirror; fleet sparkline; ECharts reskin |
+| OR-5 R1–R4 Trade Replay | ✅ merge `f04dad8` | phụ thuộc nguồn: BR-EX-50/80/81 |
+| G6 (A-06 EDS-06 cutover, dual-read parity, DR-01) | ⬜ | chưa bắt đầu |
+| G8 (A-09 EDS-09b adapter + DR-13) | ⬜ | codex đã có BFF, chưa hợp nhánh |
+| A-10 (EDS-10 candles) | ⬜ | hợp nhất OR-4 ↔ EDS-10b |
+| A-11 (EDS-11 SSE + action graph) | ⬜ | chờ hợp nhánh |
+| A-12 (EDS-12) | 🟡 static ready | deployed evidence = ma trận browser từng màn (FE làm được) |
+| Parity showcase §A5.5 | 🟡 | Paper/Portfolio/Live Overview motion+chart, fleet sparkline, ECharts reskin |
+| e2e BFF double (DR-19) | ⬜ | route EDS-05/07 chưa có trong double |
+
+### A6.2 Nghiệm thu codex — kết luận
+EDS-12 **đạt ở mức khung tĩnh** (crate + contracts + failure matrix + runbook + mutation test), chưa có bằng chứng deploy, không đổi runtime; hai request nguồn của tôi bị đóng băng thành gate. Các phase 09b/10b/11R1/11R3/R4-R5 chỉ có commit trên nhánh codex — **chưa thể nghiệm thu bằng runtime** vì chưa ở trên dev và chưa hợp với `feat/eds-current-bff`. Điều kiện nghiệm thu thật cho từng phase ghi ở A6.3.
+
+### A6.3 Kế hoạch ghép nối BE↔FE sau EDS-12 (đề xuất, Bobby duyệt từng bước như trước)
+
+| Bước | Ai | Giao gì | Bobby thấy gì trên dev | Đóng khi |
+|---|---|---|---|---|
+| **I0 hợp nhánh** | codex (+Bobby chốt head) | merge `feat/eds-current-bff@f04dad8` vào `feat/eds11r-r4-r5-activation` (giữ bản của tôi ở TradeReplayEvents/recomposeContainers vì `7ec17dd`/`97ab33f` là bản re-apply cũ), rồi gộp `feat/eds12-failure-dr-release`; một head duy nhất (đề nghị `feat/execution-integration`) → deploy dev từ đó | mọi màn hiện tại y nguyên + backend 09b/11R có mặt | gate hook xanh trên head; dev chạy head; tracker ghi hash |
+| **G8 / I1** | Claude | EDS-09b observation adapter (DR-13) + observed timeline BFF → Command Center beat/journal/flash theo revision thật | motion trên CC/journal chạy bằng revision nguồn, không còn clock nội bộ | A-09 ký; test revision replay |
+| **G9 / I2** | Claude | EDS-11R1 named relation BFF thay đường đọc resource/N25 nơi BFF là authoritative; đóng DR-22 (facts scope theo subject) | Alpha/Account 360 số theo đúng subject, Overview không còn "profile-wide" | A-04/A-05 ký từng màn |
+| **G10 / I3** | Claude + codex | một nguồn nến: `EXECUTION_MARKET_CANDLES_SOURCE=data_layer` nối vào market-context BFF của EDS-10b/11R4; OR-4 giữ làm fallback typed | Trade Replay nến từ Trading System, footer ghi `TRADING_SYSTEM_DATA_LAYER` | A-10 ký; marker khớp feed hệ thống |
+| **G6 / I4** | Claude | EDS-06 cutover dual-read parity từng màn, DR-01 trả lời | cùng màn, số y hệt, payload nhẹ (đo byte) | A-06 ký |
+| **G11 / I5** | Claude | EDS-11 SSE + action graph; R4/R5 lanes bounded hiện typed | realtime SSE v2; hành động R4/R5 hiện đúng trạng thái bounded | A-11 ký |
+| **G12 / I6** | Claude → codex | ma trận browser có xác thực ready/empty/partial/stale/unavailable/denied/error từng màn (harness đã có) làm `deployed-evidence.v1` của EDS-12 | — (bằng chứng) | A-12: codex chuyển EDS-12 khỏi `DEPLOYED_EVIDENCE_PENDING` |
+| **P // song song** | Claude | parity §A5.5: Paper/Portfolio/Live Overview motion+chart, fleet sparkline uPlot, ECharts reskin; G4 ký từng màn; G5 governance tile; DR-19 BFF double | showcase↔dev từng màn | §A5 bảng đo trước/sau |
+| **S nguồn** | Bobby → codex/source owner | BR-EX-81 (drain orders/fills + đọc theo subject), BR-EX-80 (timeframe), BR-EX-50 (kline shard), DR-24/25/26 | replay/Orders & Fills đúng cho mọi alpha | mirror = source count; `delta_rsi_*` không rỗng khi nguồn có fill |
+
+Thứ tự đề xuất: **I0 → G8 → G9 → G10 → G6 → G11 → G12**, P chạy song song, S do Bobby giao. Không bước nào ký DONE khi Evidence trống (§A3).
 
 ## A3. Luật vận hành kế hoạch này
 
