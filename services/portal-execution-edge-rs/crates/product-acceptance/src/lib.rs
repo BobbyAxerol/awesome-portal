@@ -18,7 +18,10 @@ pub const DEBT_REVISION: &str = "portal.execution.product-debt-register.v1";
 // BR-EX-72 evidence package.  Keep these values exact instead of silently
 // accepting an arbitrary later expansion of the frozen release candidate.
 const N29_SCREEN_CONTRACT_COUNT: u64 = 25;
-const N29_EVIDENCE_COUNT: usize = 37;
+// The committed N29 verifier binds 38 exact evidence artifacts.  Keep this
+// Rust guard in lockstep so a valid closeout cannot be rejected merely because
+// the redundant immutable inventory lagged the checked-in contract.
+const N29_EVIDENCE_COUNT: usize = 38;
 
 const ACCEPTANCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
