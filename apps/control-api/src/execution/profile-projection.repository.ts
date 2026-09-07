@@ -712,37 +712,46 @@ function relationChanges(
 }
 
 function validateDocument(document: ProfileProjectionDocument): void {
+  const detail = documentInvalidReason(document);
+  if (detail !== null) throw Object.assign(new Error("N31_PROFILE_PROJECTION_DOCUMENT_INVALID"), { detail });
+}
+
+/**
+ * The first reason a projection document would be refused, or null. Named so a
+ * refused refresh is a readable fact in the worker log rather than a bare
+ * code (dev 2026-09-07: the paper projection was refused every cycle for an
+ * hour before anyone could say why). The checks are the ones the write path
+ * has always applied; only the reporting is new.
+ */
+export function documentInvalidReason(document: ProfileProjectionDocument): string | null {
   const expectedPrefix = `${document.environment.toUpperCase()}_`;
   const catalogue = document.source_catalogue_sha256;
   const hasCatalogue = catalogue !== undefined;
-  if (
-    document.schema_version !== "portal.execution.profile-projection.v1" ||
-    !document.profile_id.startsWith(expectedPrefix) ||
-    document.workspace_id.trim() === "" ||
-    document.source_contract_revision.trim() === "" ||
-    (hasCatalogue && !isSha256(catalogue)) ||
-    Object.keys(document.relations).length === 0 ||
-    Object.entries(document.relations).some(([key, relation]) =>
-      key !== `${relation.source_id}:${relation.relation}` ||
-      !["AVAILABLE", "UNAVAILABLE"].includes(relation.availability) ||
-      (hasCatalogue && !isSha256(relation.source_catalogue_sha256)) ||
-      (!hasCatalogue && relation.source_catalogue_sha256 !== undefined) ||
-      (relation.reason_code !== null && !/^[A-Z][A-Z0-9_]{1,95}$/.test(relation.reason_code)) ||
-      (relation.availability === "UNAVAILABLE" && (
-        relation.items.length !== 0 ||
-        typeof relation.reason_code !== "string" ||
-        relation.reason_code.length === 0
-      )) ||
-      relation.items.length > 2_000 ||
-      relation.items.some((row) =>
-        row.lineage.workspace_id !== document.workspace_id ||
-        row.lineage.profile_id !== document.profile_id ||
-        row.lineage.source_contract_revision.trim() === "" ||
-        (hasCatalogue && !isSha256(row.lineage.source_catalogue_sha256)) ||
-        (!hasCatalogue && row.lineage.source_catalogue_sha256 !== undefined)
-      )
-    )
-  ) throw new Error("N31_PROFILE_PROJECTION_DOCUMENT_INVALID");
+  if (document.schema_version !== "portal.execution.profile-projection.v1") return "schema_version";
+  if (!document.profile_id.startsWith(expectedPrefix)) return "profile_id does not match the environment";
+  if (document.workspace_id.trim() === "") return "workspace_id empty";
+  if (document.source_contract_revision.trim() === "") return "source_contract_revision empty";
+  if (hasCatalogue && !isSha256(catalogue)) return "source_catalogue_sha256 malformed";
+  if (Object.keys(document.relations).length === 0) return "no relations";
+  for (const [key, relation] of Object.entries(document.relations)) {
+    const at = `relation ${key}`;
+    if (key !== `${relation.source_id}:${relation.relation}`) return `${at}: key mismatch`;
+    if (!["AVAILABLE", "UNAVAILABLE"].includes(relation.availability)) return `${at}: availability`;
+    if (hasCatalogue && !isSha256(relation.source_catalogue_sha256)) return `${at}: relation catalogue missing under a catalogued document`;
+    if (!hasCatalogue && relation.source_catalogue_sha256 !== undefined) return `${at}: relation catalogue present under an uncatalogued document`;
+    if (relation.reason_code !== null && !/^[A-Z][A-Z0-9_]{1,95}$/.test(relation.reason_code)) return `${at}: reason_code format`;
+    if (relation.availability === "UNAVAILABLE" && (relation.items.length !== 0 || typeof relation.reason_code !== "string" || relation.reason_code.length === 0)) return `${at}: UNAVAILABLE with rows or without a reason`;
+    if (relation.items.length > 2_000) return `${at}: ${relation.items.length} rows over the 2000 cap`;
+    let foreign = 0;
+    let provenance = 0;
+    for (const row of relation.items) {
+      if (row.lineage.workspace_id !== document.workspace_id || row.lineage.profile_id !== document.profile_id || row.lineage.source_contract_revision.trim() === "") foreign += 1;
+      else if ((hasCatalogue && !isSha256(row.lineage.source_catalogue_sha256)) || (!hasCatalogue && row.lineage.source_catalogue_sha256 !== undefined)) provenance += 1;
+    }
+    if (foreign > 0) return `${at}: ${foreign} rows with foreign lineage`;
+    if (provenance > 0) return `${at}: ${provenance} rows whose lineage catalogue does not fit the document (${hasCatalogue ? "catalogued document, rows without a catalogue" : "uncatalogued document, rows with one"})`;
+  }
+  return null;
 }
 
 function isSha256(value: unknown): value is string {

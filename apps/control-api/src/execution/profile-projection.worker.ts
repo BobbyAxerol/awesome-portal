@@ -74,6 +74,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           environment: profile.environment,
           profile_id: profile.profileId,
           error_code: code,
+          ...(safeDetail(error) ? { detail: safeDetail(error) } : {}),
         }));
       }
     }
@@ -242,12 +243,17 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         const key = `${binding.sourceId}:${binding.relation}`;
         const carried = item.carryForward;
         if (carried) {
+          // Keep the retained row provenance intact.  The enclosing
+          // document gets the newly accepted catalogue and therefore a new
+          // local epoch, but a failed refresh may not relabel older source
+          // facts as though they arrived under that newer catalogue — rows
+          // that cannot stand next to it are left out, and the relation
+          // itself names the document's catalogue as every relation does.
+          const kept = provenanceCompatibleRows(carried.items, SOURCE_CATALOGUE_SHA256);
           return [key, {
-            // Keep the retained row provenance intact.  The enclosing
-            // document gets the newly accepted catalogue and therefore a new
-            // local epoch, but a failed refresh may not relabel older source
-            // facts as though they arrived under that newer catalogue.
             ...carried,
+            source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
+            items: kept.rows,
             reason_code: "N31_LADDER_REFRESH_DEFERRED",
             completeness: "PARTIAL" as const,
           }];
@@ -261,8 +267,26 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           },
           fields,
         }));
+        // Rows retained from the previous document are re-admitted only when
+        // their provenance fits this document's catalogue; a row written before
+        // the catalogue existed is dropped (the ladder re-reads it), never
+        // relabelled. Dev 2026-09-07: without this the paper projection was
+        // refused every cycle, and a refused document is never replaced.
+        const retained = binding.ladder && item.page
+          ? provenanceCompatibleRows(previous?.document.relations[key]?.items ?? [], SOURCE_CATALOGUE_SHA256)
+          : { rows: [], dropped: 0 };
+        if (retained.dropped > 0) {
+          this.logger.warn(JSON.stringify({
+            event: "execution_profile_projection_window_rows_dropped",
+            environment,
+            profile_id: profileId,
+            relation: binding.relation,
+            dropped: retained.dropped,
+            reason: "LINEAGE_CATALOGUE_DOES_NOT_FIT_DOCUMENT",
+          }));
+        }
         const merged = binding.ladder && item.page
-          ? mergeTimeSeriesWindow(fresh, previous?.document.relations[key]?.items ?? [], binding.ladder)
+          ? mergeTimeSeriesWindow(fresh, retained.rows, binding.ladder)
           : { items: fresh, truncated: false };
         return [key, {
           source_id: binding.sourceId,
@@ -480,6 +504,26 @@ function worseFreshness(left: ManagerPage["freshness"], right: ManagerPage["fres
 function worseCompleteness(left: ManagerPage["completeness"], right: ManagerPage["completeness"]): ManagerPage["completeness"] {
   const rank = { COMPLETE: 0, PARTIAL: 1, UNKNOWN: 2 };
   return rank[right] > rank[left] ? right : left;
+}
+
+/** A validator's named reason, kept to a plain character set and 200 characters — never a row, a value or a secret. */
+function safeDetail(error: unknown): string | undefined {
+  const detail = typeof error === "object" && error !== null && "detail" in error ? (error as { detail?: unknown }).detail : undefined;
+  return typeof detail === "string" && detail.length > 0 ? detail.replace(/[^A-Za-z0-9 _:.,()-]/g, "").slice(0, 200) : undefined;
+}
+
+/**
+ * Rows retained from an earlier document may enter a new one only when their
+ * provenance fits it: under an accepted catalogue every row must name a
+ * catalogue (any accepted one — rotation keeps older rows), and without one no
+ * row may claim one. Rows that do not fit are dropped, not relabelled; the
+ * ladder reads them again from the source.
+ */
+export function provenanceCompatibleRows<T extends { lineage: { source_catalogue_sha256?: string } }>(rows: readonly T[], catalogue: string | undefined): { rows: T[]; dropped: number } {
+  const kept = rows.filter((row) => catalogue === undefined
+    ? row.lineage.source_catalogue_sha256 === undefined
+    : typeof row.lineage.source_catalogue_sha256 === "string" && /^sha256:[0-9a-f]{64}$/.test(row.lineage.source_catalogue_sha256));
+  return { rows: kept, dropped: rows.length - kept.length };
 }
 
 function safeFailureCode(error: unknown): string {

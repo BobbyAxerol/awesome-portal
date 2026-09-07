@@ -11,6 +11,7 @@ import {
   ExecutionProfileReadAdapterService,
 } from "../src/execution/profile-read-adapter.service";
 import {
+  documentInvalidReason,
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
 } from "../src/execution/profile-projection.repository";
@@ -20,7 +21,7 @@ import {
   profileProjectionBindingAdmission,
   profileProjectionCatalog,
 } from "../src/execution/profile-projection.catalog";
-import { ExecutionProfileProjectionWorker, mergeTimeSeriesWindow } from "../src/execution/profile-projection.worker";
+import { ExecutionProfileProjectionWorker, mergeTimeSeriesWindow, provenanceCompatibleRows } from "../src/execution/profile-projection.worker";
 import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
 import { MAXIMUM_DATA_INTAKE_V1 } from "../src/execution/maximum-data-intake";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
@@ -1154,5 +1155,32 @@ describe("P4-D window ladder merge", () => {
     expect(merged.items).toHaveLength(WARM_WINDOW_MAX_ROWS);
     expect(merged.items.at(-1)?.fields.id).toBe("newest");
     expect(merged.items[0]?.fields.id).toBe("p1");
+  });
+});
+
+describe("row provenance across catalogues (dev 2026-09-07: a pre-catalogue warm window froze the paper projection)", () => {
+  const digest = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+  const base = { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" };
+  const bare = { lineage: { ...base }, fields: { id: "old", ts: "2026-09-01T00:00:00.000Z" } };
+  const stamped = { lineage: { ...base, source_catalogue_sha256: digest }, fields: { id: "new", ts: "2026-09-02T00:00:00.000Z" } };
+
+  it("drops rows without a catalogue under a catalogued document, rows with one under a bare document, and keeps the rest", () => {
+    expect(provenanceCompatibleRows([bare, stamped], digest)).toEqual({ rows: [stamped], dropped: 1 });
+    expect(provenanceCompatibleRows([bare, stamped], undefined)).toEqual({ rows: [bare], dropped: 1 });
+    expect(provenanceCompatibleRows([], digest)).toEqual({ rows: [], dropped: 0 });
+  });
+
+  it("names the refused check instead of a bare code, and accepts the same document once the rows fit", () => {
+    const relationKey = "manager.performance:account_equity_snapshots";
+    const document = {
+      schema_version: "portal.execution.profile-projection.v1", environment: "paper", profile_id: "PAPER_BINANCE_USDM",
+      workspace_id: "ws", source_contract_revision: "r", source_catalogue_sha256: digest,
+      relations: { [relationKey]: { source_id: "manager.performance", relation: "account_equity_snapshots", availability: "AVAILABLE", reason_code: null, as_of: null, freshness: "FRESH", completeness: "COMPLETE", source_catalogue_sha256: digest, items: [bare, stamped] } },
+    } as unknown as ProfileProjectionDocument;
+    expect(documentInvalidReason(document)).toBe(`relation ${relationKey}: 1 rows whose lineage catalogue does not fit the document (catalogued document, rows without a catalogue)`);
+    const repaired = { ...document, relations: { [relationKey]: { ...document.relations[relationKey], items: provenanceCompatibleRows([bare, stamped], digest).rows } } };
+    expect(documentInvalidReason(repaired)).toBeNull();
+    expect(documentInvalidReason({ ...document, relations: {} })).toBe("no relations");
+    expect(documentInvalidReason({ ...document, relations: { [relationKey]: { ...document.relations[relationKey], source_catalogue_sha256: undefined, items: [] } } })).toBe(`relation ${relationKey}: relation catalogue missing under a catalogued document`);
   });
 });
