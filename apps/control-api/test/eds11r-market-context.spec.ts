@@ -51,7 +51,7 @@ const base = {
   AUTH_MODE: "dev",
 };
 
-describe("EDS-11R4 Market Context owner-gated BFF", () => {
+describe("EDS-11R4 Market Context current-source BFF", () => {
   it("generates only the two exact bounded private paths", () => {
     expect(marketLatestPath({ venue: "BINANCE", instrument: "BTCUSDT" })).toBe(
       "/internal/v2/manager/market/latest?venue=BINANCE&instrument=BTCUSDT",
@@ -76,7 +76,7 @@ describe("EDS-11R4 Market Context owner-gated BFF", () => {
     })).toThrow(/MARKET_QUERY_INVALID/);
   });
 
-  it("cannot be activated by an environment flag before a digest-pinned owner return", async () => {
+  it("activates only through the checked-in Portal adapter manifest plus the runtime flag", async () => {
     const source = new FakeCurrentSource();
     const service = new MarketContextService(
       source as unknown as ExecutionCurrentSourceProxy,
@@ -84,8 +84,8 @@ describe("EDS-11R4 Market Context owner-gated BFF", () => {
     );
     await expect(service.latest(principal, {
       environment: "paper", venue: "BINANCE", instrument: "BTCUSDT",
-    })).rejects.toMatchObject({ code: "PENDING_MARKET_CONTEXT_ADAPTER", status: 503 });
-    expect(source.calls).toEqual([]);
+    })).resolves.toMatchObject({ state: "POPULATED" });
+    expect(source.calls).toHaveLength(1);
   });
 
   it("preserves typed source-dark and invalid-query HTTP failures", () => {
@@ -117,9 +117,14 @@ describe("EDS-11R4 Market Context owner-gated BFF", () => {
     });
   });
 
-  it("requires an accepted digest-pinned capability for each profile", () => {
-    expect(() => acceptedMarketContextCapability(
+  it("requires an accepted, manifest-pinned capability for each profile", () => {
+    expect(acceptedMarketContextCapability(
       MARKET_CONTEXT_PUBLICATION_INTAKE_V1,
+      "managerMarketContextLatestV1",
+      "paper",
+    )).toMatchObject({ operationId: "managerMarketContextLatestV1" });
+    expect(() => acceptedMarketContextCapability(
+      pendingPublication(),
       "managerMarketContextLatestV1",
       "paper",
     )).toThrow(/PENDING_MARKET_CONTEXT_ADAPTER/);
@@ -221,6 +226,18 @@ function acceptedPublication(): MarketContextPublicationIntake {
         responseSchemaSha256: digest, fixtureIndexSha256: digest, acceptanceSha256: digest,
       },
     },
+  };
+}
+
+function pendingPublication(): MarketContextPublicationIntake {
+  return {
+    schemaVersion: "portal.execution.eds11r.market-context-intake.v1",
+    status: "PENDING_OWNER_ADAPTER_IMPLEMENTATION",
+    requestManifestSha256: MARKET_CONTEXT_REQUEST_MANIFEST_SHA256,
+    ownerReturnManifestSha256: null,
+    sourceCommit: null,
+    sourceImageDigest: null,
+    capabilities: {},
   };
 }
 

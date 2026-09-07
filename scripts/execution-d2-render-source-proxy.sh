@@ -25,6 +25,7 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 template="${root_dir}/deploy/execution-d1/source-proxy/nginx.conf.template"
 manager_locations_template="${root_dir}/deploy/execution-d1/source-proxy/manager-v2-locations.conf.template"
 manager_extension_template="${root_dir}/deploy/execution-d1/source-proxy/manager-r4-r5-extension-locations.conf.template"
+manager_market_data_template="${root_dir}/deploy/execution-d1/source-proxy/manager-market-context-data-layer-locations.conf.template"
 "${root_dir}/scripts/execution-d2-preflight.sh" --env-file "${env_file}" --mode template >/dev/null
 
 read_value() {
@@ -76,6 +77,16 @@ case "${manager_extension_set:-none}" in
       exit 1
     }
     ;;
+  market-data-layer-v1)
+    [[ "${source_mode}" =~ ^(manager-paper-read|manager-profile-read)$ ]] || {
+      printf 'Market Context adapter requires a Manager read source mode.\n' >&2
+      exit 1
+    }
+    [[ -f "${manager_market_data_template}" ]] || {
+      printf 'Market Context adapter template is missing.\n' >&2
+      exit 1
+    }
+    ;;
   *) printf 'D2 renderer rejected an unknown Manager extension set.\n' >&2; exit 1 ;;
 esac
 
@@ -112,6 +123,9 @@ if [[ "${source_mode}" =~ ^(manager-paper-read|manager-profile-read)$ ]]; then
   if [[ "${manager_extension_set:-none}" == eds11r-r4-r5 ]]; then
     printf '\n# Appended exact EDS-11R4/R5 extension set.\n' >>"${manager_temporary}"
     cat -- "${manager_extension_template}" >>"${manager_temporary}"
+  elif [[ "${manager_extension_set:-none}" == market-data-layer-v1 ]]; then
+    printf '\n# Appended exact Portal-owned Market Context Data Layer adapter.\n' >>"${manager_temporary}"
+    cat -- "${manager_market_data_template}" >>"${manager_temporary}"
   fi
   if [[ "${source_mode}" == manager-profile-read ]]; then
     manager_facade_port="$(read_value SOURCE_PROXY_MANAGER_FACADE_PORT)"

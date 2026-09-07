@@ -199,7 +199,7 @@ if [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-profile-read ]] ||
   manager_profile_enabled=true
 fi
 manager_extension_set="${values[SOURCE_PROXY_MANAGER_EXTENSION_SET]:-none}"
-[[ "${manager_extension_set}" =~ ^(none|eds11r-r4-r5)$ ]] || {
+[[ "${manager_extension_set}" =~ ^(none|eds11r-r4-r5|market-data-layer-v1)$ ]] || {
   printf 'D2 preflight rejected an unknown Manager extension set.\n' >&2
   exit 1
 }
@@ -223,6 +223,12 @@ if [[ "${manager_extension_set}" == eds11r-r4-r5 ]]; then
       exit 1
     }
   fi
+fi
+if [[ "${manager_extension_set}" == market-data-layer-v1 ]]; then
+  [[ "${values[SOURCE_PROXY_SOURCE_MODE]}" == manager-profile-read ]] || {
+    printf 'Market Context Data Layer adapter requires the profile-bound Manager mode.\n' >&2
+    exit 1
+  }
 fi
 if [[ "${manager_profile_enabled}" == true ]]; then
   [[ "${values[EDGE_ENVIRONMENT]}" =~ ^(paper|sandbox|live)$ ]] || {

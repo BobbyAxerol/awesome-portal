@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# EDS-11R4 single-owner-campaign Market Context adapter request gate.
+# EDS-11R4 Market Context contract and Portal-owned Data Layer adapter gate.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -147,15 +147,19 @@ for forbidden in ("-----begin", "authorization: bearer", "client_secret", "priva
     assert forbidden not in serialized
 assert not re.search(r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}", serialized)
 
-# Portal's source-dark consumer must be ready without becoming a bypass.  The
-# detailed DTO and HTTP behaviour is exercised in Vitest; this static gate
-# binds that code to the immutable owner request as part of the wider contract
-# verifier run by pre-commit/CI.
+# The original owner request remains immutable evidence of the requested
+# Trading System contract.  Current activation, however, is delivered by a
+# separate Portal-owned adapter with exactly two Data Layer routes behind the
+# existing Source Proxy and Edge.  This is deliberately not an owner-return
+# bypass: the adapter has its own fixed manifest, profile bounds and static
+# route verifier.
 manifest_sha = (contract / "MANIFEST.sha256").read_bytes()
 import hashlib
 manifest_digest = "sha256:" + hashlib.sha256(manifest_sha).hexdigest()
 assert f'MARKET_CONTEXT_REQUEST_MANIFEST_SHA256 =\n  "{manifest_digest}"' in intake_source
-assert 'status: "PENDING_OWNER_ADAPTER_IMPLEMENTATION"' in intake_source
+assert 'status: "ACCEPTED_PORTAL_SOURCE_ADAPTER"' in intake_source
+assert 'MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION' in intake_source
+assert 'MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256' in intake_source
 assert 'acceptedMarketContextCapability' in intake_source
 for token in (
     'managerMarketContextLatestV1', 'managerMarketContextCandlesV1',
@@ -175,9 +179,9 @@ for token in ('@Controller("/api/v1/execution/market")', '@Get("/latest")', '@Ge
     assert token in controller_source, token
 assert 'fixedPathForNamedOperation' in proxy_source
 
-# The source-dark server consumer must also have a canonical browser contract.
-# This freezes only its two named same-origin DTOs; it does not make the source
-# adapter live or grant the browser a relation/Edge/credential escape hatch.
+# The server consumer has a canonical browser contract.  It freezes only two
+# named same-origin DTOs; it never grants the browser a relation, Edge,
+# credential or Data Layer escape hatch.
 assert portal_schema["$id"].endswith("execution-market-context.v1.schema.json")
 assert portal_schema["oneOf"] == [
     {"$ref": "#/$defs/LatestResponse"},
@@ -219,4 +223,4 @@ test -f "${PACKET_DIR}/contracts/eds11r-market-context-v1-request/schemas/market
 (cd "${PACKET_DIR}" && sha256sum --quiet -c INPUT_MANIFEST.sha256)
 
 bash -n "${ROOT_DIR}/scripts/execution-eds11r-market-context-test.sh"
-printf '%s\n' 'EDS-11R4 Market Context source-as-is adapter request, pending return and authority gates passed.'
+printf '%s\n' 'EDS-11R4 Market Context request, Portal-owned adapter and authority gates passed.'

@@ -1,0 +1,42 @@
+# Portal-owned Market Context adapter for the existing loopback Data Layer.
+#
+# This extension is appended only to the profile-bound Manager read location
+# pack.  It contains two exact GET routes; it does not expose a Data Layer
+# prefix, arbitrary URL, browser path, database, Redis, broker or command.
+# Edge has already sealed/validated every query input before it reaches this
+# mTLS-only listener. These Nginx checks are a second boundary, not a parser
+# for a generic provider API.
+
+location = /portal/execution/v2/manager/market/latest {
+    limit_except GET { deny all; }
+    limit_req zone=manager_v2_paper_read burst=8 nodelay;
+    limit_req_status 429;
+    auth_request /_manager_v2_issue;
+    if ($arg_venue != "BINANCE") { return 400; }
+    if ($arg_instrument !~ "^[A-Z0-9]{2,30}$") { return 400; }
+    proxy_pass_request_headers off;
+    proxy_set_header Host 127.0.0.1:8100;
+    proxy_set_header Accept application/json;
+    proxy_set_header X-Request-ID $request_id;
+    add_header X-Portal-Source-Adapter "portal.execution.market-context-data-layer.v1" always;
+    proxy_pass http://127.0.0.1:8100/v1/binance/price-last/$arg_instrument?market=usdm;
+}
+
+location = /portal/execution/v2/manager/market/candles {
+    limit_except GET { deny all; }
+    limit_req zone=manager_v2_paper_read burst=4 nodelay;
+    limit_req_status 429;
+    auth_request /_manager_v2_issue;
+    if ($arg_venue != "BINANCE") { return 400; }
+    if ($arg_instrument !~ "^[A-Z0-9]{2,30}$") { return 400; }
+    if ($arg_interval !~ "^(1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|1d|3d|1w|1M)$") { return 400; }
+    if ($arg_from_ms !~ "^[0-9]{1,16}$") { return 400; }
+    if ($arg_to_ms !~ "^[0-9]{1,16}$") { return 400; }
+    if ($arg_point_limit !~ "^([1-9][0-9]{0,2}|1[0-4][0-9]{2}|1500)$") { return 400; }
+    proxy_pass_request_headers off;
+    proxy_set_header Host 127.0.0.1:8100;
+    proxy_set_header Accept application/json;
+    proxy_set_header X-Request-ID $request_id;
+    add_header X-Portal-Source-Adapter "portal.execution.market-context-data-layer.v1" always;
+    proxy_pass http://127.0.0.1:8100/v1/binance/futures/klines/$arg_instrument?interval=$arg_interval&limit=$arg_point_limit&start_time=$arg_from_ms&end_time=$arg_to_ms;
+}

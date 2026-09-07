@@ -11,8 +11,9 @@ use std::{sync::Arc, time::Duration};
 
 use futures_util::StreamExt as _;
 use manager_extension_contract::{
-    decode_extension_success_for_profile, decode_extension_unavailable_for_profile,
-    ExtensionContractError, ManagerExtensionRead, ManagerExtensionRequest,
+    adapt_data_layer_market_response_for_profile, decode_extension_success_for_profile,
+    decode_extension_unavailable_for_profile, market_context_unavailable, ExtensionContractError,
+    ManagerExtensionRead, ManagerExtensionRequest, MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION,
 };
 #[cfg(test)]
 use manager_v2_contract::PROFILE_ID;
@@ -196,7 +197,14 @@ impl ManagerV2Client {
         .await
         .map_err(|_| ManagerV2ClientError::QueueSaturated)?
         .map_err(|_| ManagerV2ClientError::QueueClosed)?;
-        self.send_extension_once(request).await
+        match request {
+            ManagerExtensionRequest::MarketLatest { .. }
+            | ManagerExtensionRequest::MarketCandles { .. } => {
+                self.send_market_context_data_layer_once(request).await
+            }
+            ManagerExtensionRequest::EventAnchor { .. }
+            | ManagerExtensionRequest::EventTail { .. } => self.send_extension_once(request).await,
+        }
     }
 
     async fn send_once(
@@ -320,6 +328,75 @@ impl ManagerV2Client {
             _ => Err(ManagerV2ClientError::ExtensionUnexpectedHttpStatus(status)),
         }
     }
+
+    /// Calls the two sealed Portal-owned Market Context adapter routes.  The
+    /// Source Proxy alone can reach the loopback Data Layer; this client still
+    /// has only the private mTLS origin and validates a static response-header
+    /// revision before Rust converts raw provider JSON to the Edge envelope.
+    async fn send_market_context_data_layer_once(
+        &self,
+        request: &ManagerExtensionRequest,
+    ) -> Result<ManagerExtensionRead, ManagerV2ClientError> {
+        let blueprint = request.data_layer_blueprint();
+        let mut url = self.source_proxy_origin.clone();
+        url.set_path(blueprint.path());
+        if !blueprint.query().is_empty() {
+            url.query_pairs_mut().extend_pairs(
+                blueprint
+                    .query()
+                    .iter()
+                    .map(|(name, value)| (*name, value.as_str())),
+            );
+        }
+        let request_id = HeaderValue::from_str(&Uuid::now_v7().to_string())
+            .map_err(|_| ManagerV2ClientError::ClientConfiguration)?;
+        let response = self
+            .client
+            .get(url)
+            .header(ACCEPT, "application/json")
+            .header(HeaderName::from_static("x-request-id"), request_id)
+            .send()
+            .await
+            .map_err(|_| ManagerV2ClientError::RequestFailed)?;
+        if response.status().is_redirection() {
+            return Err(ManagerV2ClientError::RedirectDenied);
+        }
+        let status = response.status().as_u16();
+        if !matches!(status, 200 | 429 | 502 | 503) {
+            return Err(ManagerV2ClientError::MarketContextAdapterUnexpectedHttpStatus(status));
+        }
+        validate_market_context_adapter_headers(response.headers())?;
+        let maximum_response_bytes = request.maximum_response_bytes();
+        if response
+            .content_length()
+            .is_some_and(|length| length > maximum_response_bytes as u64)
+        {
+            return Err(ManagerV2ClientError::ResponseTooLarge);
+        }
+        let mut stream = response.bytes_stream();
+        let mut body = Vec::new();
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.map_err(|_| ManagerV2ClientError::RequestFailed)?;
+            if body.len().saturating_add(chunk.len()) > maximum_response_bytes {
+                return Err(ManagerV2ClientError::ResponseTooLarge);
+            }
+            body.extend_from_slice(&chunk);
+        }
+        match status {
+            200 => adapt_data_layer_market_response_for_profile(
+                request,
+                &body,
+                &self.profile_id,
+                chrono::Utc::now(),
+            )
+            .map_err(ManagerV2ClientError::Extension),
+            429 | 502 | 503 => Ok(market_context_unavailable(
+                &self.profile_id,
+                "MARKET_CONTEXT_SOURCE_UNAVAILABLE",
+            )),
+            _ => Err(ManagerV2ClientError::MarketContextAdapterUnexpectedHttpStatus(status)),
+        }
+    }
 }
 
 fn validate_origin(raw: &str, require_https: bool) -> Result<Url, ManagerV2ClientError> {
@@ -403,6 +480,25 @@ fn validate_extension_response_headers(
     Ok(())
 }
 
+fn validate_market_context_adapter_headers(
+    headers: &reqwest::header::HeaderMap,
+) -> Result<(), ManagerV2ClientError> {
+    let adapter = headers
+        .get(HeaderName::from_static("x-portal-source-adapter"))
+        .and_then(|value| value.to_str().ok());
+    if adapter != Some(MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION) {
+        return Err(ManagerV2ClientError::MarketContextAdapterHeaderMismatch);
+    }
+    let content_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_ascii_lowercase);
+    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
+        return Err(ManagerV2ClientError::InvalidContentType);
+    }
+    Ok(())
+}
+
 /// Bounded Manager-v2 client errors. They intentionally exclude source bodies,
 /// keys and transport credentials from their values and display text.
 #[derive(Debug, Error)]
@@ -435,6 +531,8 @@ pub enum ManagerV2ClientError {
     ContractHeaderMismatch,
     #[error("Manager extension response contract header drifted or was absent")]
     ExtensionContractHeaderMismatch,
+    #[error("Market Context source adapter revision drifted or was absent")]
+    MarketContextAdapterHeaderMismatch,
     #[error("Manager-v2 response content type is not JSON")]
     InvalidContentType,
     #[error("Manager-v2 response exceeded the owner-qualified byte limit")]
@@ -443,6 +541,8 @@ pub enum ManagerV2ClientError {
     UnexpectedHttpStatus(u16),
     #[error("Manager extension Source Proxy returned unexpected HTTP status {0}")]
     ExtensionUnexpectedHttpStatus(u16),
+    #[error("Market Context Source Proxy returned unexpected HTTP status {0}")]
+    MarketContextAdapterUnexpectedHttpStatus(u16),
     #[error(transparent)]
     Contract(#[from] manager_v2_contract::ContractError),
     #[error(transparent)]

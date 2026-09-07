@@ -45,8 +45,9 @@ The EDS-12 qualification explicitly carries both frontend-discovered requests:
 
 | Request | Final truthful behavior until source evidence exists |
 |---|---|
-| BR-EX-80 — published alpha timeframe | preserve visibly `DERIVED` interval; a source-published vocabulary value wins only after contract proof |
-| BR-EX-81 — full subject orders/fills | preserve current-page non-history disclosure; no alpha/account replay or funnel claim exceeds a verified relation/profile cursor drain and append-only mirror parity |
+| BR-EX-80 — published alpha timeframe | Portal may publish only a visibly `DERIVED` suffix interval until a source vocabulary field is available; a source value always wins when present |
+| BR-EX-81 — full subject orders/fills | Portal may publish only the verified retained current-source window and its coverage; no alpha/account replay or funnel claim exceeds cursor-drain and append-only mirror parity |
+| Market Context | the existing Data Layer is consumed only through the fixed Portal Edge/Source Proxy adapter described in [`EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md`](./EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md); current observations and bounded candles never claim lifecycle replay |
 
 These are named external source evidence gates, not hidden Portal technical
 debt.  A current bounded source page must never be relabelled full history.
@@ -72,7 +73,8 @@ immutable release:
 2. all seven browser states for Paper, Sandbox, Canary-over-Live and Live;
 3. all ten named failure/recovery paths, profile isolation and redaction;
 4. zero P0/P1 integrity issues and owner visual/data/action parity;
-5. accepted source contract/evidence for BR-EX-80 and BR-EX-81.
+5. deployed current-source evidence for BR-EX-80, BR-EX-81 and the Portal-owned
+   Market Context adapter.
 
 The verifier is intentionally unable to convert local or fixture evidence into
 this release decision.  The next owner action is to merge the qualified change

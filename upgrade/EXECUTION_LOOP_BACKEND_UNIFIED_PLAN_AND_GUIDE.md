@@ -4885,10 +4885,15 @@ waiting for unrelated external gaps.
   frontend bundle and source compatibility digests;
 - stage per operation/screen/profile: Paper, Sandbox, Canary-over-Live, Live;
 - remove expired adapters only after zero-use observation;
-- close BR-EX-80 only from a source-published strategy interval and close
-  BR-EX-81 only from a verified full retained order/fill drain through the
-  Execution Edge into the durable Portal mirror; a bounded current page is
-  never labelled subject history or replay;
+- close BR-EX-80 with an exact Portal-derived suffix interval now, visibly
+  marked `DERIVED`, and supersede it only when a source-published strategy
+  vocabulary field arrives; close BR-EX-81 only from a verified retained
+  order/fill cursor drain through the Execution Edge into the durable Portal
+  mirror, with its exact coverage rather than a false total-history claim;
+- activate Market Context from the existing Data Layer only through the fixed
+  Portal-owned Edge/Source Proxy adapter documented in
+  [`EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md`](./backend/EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md);
+  it remains current observation / bounded-series data, never lifecycle replay;
 - record any remaining external capability as a versioned next-campaign input,
   not hidden technical debt.
 
@@ -4911,9 +4916,17 @@ matrix, static mutation gate and isolated N17A DR harness are implemented in
 [`EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md`](./backend/EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md).
 Its current decision is deliberately
 `EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`: it is not a release
-claim.  The only remaining EDS-12 inputs are the real protected-main/deployed
-evidence packet and accepted source proof for BR-EX-80 / BR-EX-81.  No source,
-query, SSE, command or Live-mutation flag is widened by this static slice.
+claim.  The remaining EDS-12 inputs are the real protected-main/deployed
+evidence packet, Portal-derived BR-EX-80 proof, retained-window BR-EX-81
+mirror parity and live probes for the Market Context adapter.  No source,
+query, SSE, command or Live-mutation flag is widened by the static slice.
+
+**Implementation journal (2026-09-07):** Market Context is now implemented as
+a Portal-owned `portal.execution.market-context-data-layer.v1` adapter, rather
+than waiting for a separate Manager-v2 owner return.  The Rust Edge accepts
+only two Source Proxy-labelled Data Layer GET routes and emits browser-safe
+current-price / bounded-candle envelopes.  Static, Rust and Control API tests
+are green; deployment evidence remains mandatory before `PRODUCT_ACTIVE`.
 
 ### 17.6 Frontend collaboration lanes
 

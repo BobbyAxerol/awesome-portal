@@ -66,6 +66,10 @@ fn qualified_headers() -> &'static str {
     "content-type: application/json\r\nx-manager-contract: trading-system.portal-execution.manager-v2.runtime.v1\r\n"
 }
 
+fn market_data_layer_headers() -> &'static str {
+    "content-type: application/json\r\nx-portal-source-adapter: portal.execution.market-context-data-layer.v1\r\n"
+}
+
 #[tokio::test]
 async fn sends_only_fixed_manager_get_without_jwt_or_v1_api_key() {
     let captured = Arc::new(Mutex::new(Vec::new()));
@@ -314,6 +318,59 @@ async fn queue_is_bounded_before_an_unqualified_second_request_is_sent() {
         Err(ManagerV2ClientError::QueueSaturated)
     ));
     assert!(first.await.unwrap().is_ok());
+}
+
+#[tokio::test]
+async fn market_context_uses_the_sealed_data_layer_adapter_and_normalizes_the_body() {
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let raw = r#"{"symbol":"BTCUSDT","market":"usdm","is_live":true,"snapshot":{"symbol":"BTCUSDT","market":"usdm","price":"1.25","event_time":1788500000000,"provider":"data-layer"}}"#.to_owned();
+    let origin = one_response_server(
+        Arc::clone(&captured),
+        "200 OK",
+        market_data_layer_headers(),
+        raw,
+        Duration::ZERO,
+    )
+    .await;
+    let client = ManagerV2Client::new_for_test(&origin, ManagerV2ClientLimits::default()).unwrap();
+    let result = client
+        .execute_extension(&ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap())
+        .await
+        .unwrap();
+    let ManagerExtensionRead::Market(envelope) = result else {
+        panic!("expected normalized market envelope");
+    };
+    assert_eq!(envelope.wire()["data"]["items"][0]["value"], "1.25");
+    let request = captured.lock().unwrap().join("\n");
+    assert!(request.contains(
+        "GET /portal/execution/v2/manager/market/latest?venue=BINANCE&instrument=BTCUSDT HTTP/1.1"
+    ));
+    let lower = request.to_ascii_lowercase();
+    assert!(!lower.contains("authorization:"));
+    assert!(!lower.contains(" /v1/"));
+}
+
+#[tokio::test]
+async fn market_context_fails_closed_when_the_adapter_header_is_missing() {
+    let captured = Arc::new(Mutex::new(Vec::new()));
+    let raw = r#"{"symbol":"BTCUSDT","market":"usdm","snapshot":{"symbol":"BTCUSDT","market":"usdm","price":"1","event_time":1788500000000}}"#.to_owned();
+    let origin = one_response_server(
+        captured,
+        "200 OK",
+        "content-type: application/json\r\n",
+        raw,
+        Duration::ZERO,
+    )
+    .await;
+    let client = ManagerV2Client::new_for_test(&origin, ManagerV2ClientLimits::default()).unwrap();
+    assert!(matches!(
+        client
+            .execute_extension(
+                &ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap()
+            )
+            .await,
+        Err(ManagerV2ClientError::MarketContextAdapterHeaderMismatch)
+    ));
 }
 
 #[test]

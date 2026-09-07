@@ -2488,10 +2488,12 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
         | ManagerV2ClientError::RedirectDenied
         | ManagerV2ClientError::ContractHeaderMismatch
         | ManagerV2ClientError::ExtensionContractHeaderMismatch
+        | ManagerV2ClientError::MarketContextAdapterHeaderMismatch
         | ManagerV2ClientError::InvalidContentType
         | ManagerV2ClientError::ResponseTooLarge
         | ManagerV2ClientError::UnexpectedHttpStatus(_)
         | ManagerV2ClientError::ExtensionUnexpectedHttpStatus(_)
+        | ManagerV2ClientError::MarketContextAdapterUnexpectedHttpStatus(_)
         | ManagerV2ClientError::Contract(_)
         | ManagerV2ClientError::Extension(_) => manager_problem(
             StatusCode::BAD_GATEWAY,

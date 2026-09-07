@@ -13,6 +13,12 @@ use thiserror::Error;
 
 pub const MARKET_CONTEXT_CONTRACT_REVISION: &str =
     "trading-system.portal-execution.market-context.v1";
+/// Portal-owned source adapter revision for the already-running private Data
+/// Layer.  This is deliberately separate from the Manager read contract: the
+/// Data Layer does not pretend to be the Manager facade, while the Edge still
+/// publishes the one frozen Manager-facing market envelope to Portal.
+pub const MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION: &str =
+    "portal.execution.market-context-data-layer.v1";
 pub const EVENT_LEDGER_CONTRACT_REVISION: &str = "trading-system.portal-execution.event-ledger.v1";
 pub const MARKET_CONTEXT_LATEST_MAXIMUM_RESPONSE_BYTES: usize = 1_048_576;
 pub const MARKET_CONTEXT_CANDLES_MAXIMUM_RESPONSE_BYTES: usize = 8_388_608;
@@ -23,6 +29,11 @@ const MARKET_SCHEMA_VERSION: &str = "trading-system.portal-execution.market-cont
 const EVENT_SCHEMA_VERSION: &str = "trading-system.portal-execution.event-ledger-envelope.v1";
 const MAXIMUM_TOKEN_BYTES: usize = 4_096;
 const MAXIMUM_IDENTIFIER_BYTES: usize = 191;
+/// The running Data Layer bounds a single provider kline response at 1,500
+/// bars.  Portal's public contract may request up to 2,000 visual points; the
+/// sealed adapter asks the source for at most this many and marks the result
+/// `POLL_BOUNDED`/`UNKNOWN` rather than inventing missing candles.
+const DATA_LAYER_MAXIMUM_RAW_CANDLES: u16 = 1_500;
 
 /// One sealed fixed route, including only product-bounded query parameters.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -163,6 +174,41 @@ impl ManagerExtensionRequest {
                     ("page_rows", page_rows.to_string()),
                 ],
             },
+        }
+    }
+
+    /// Fixed source-adapter request.  Only Market Context uses this path; it
+    /// never changes the browser-facing product bound.  The provider's lower
+    /// page ceiling is explicit in the resulting envelope's completeness and
+    /// coverage rather than hidden by an invalid upstream request.
+    #[must_use]
+    pub fn data_layer_blueprint(&self) -> ExtensionRequestBlueprint {
+        match self {
+            Self::MarketCandles {
+                venue,
+                instrument,
+                interval,
+                from_ms,
+                to_ms,
+                point_limit,
+            } => ExtensionRequestBlueprint {
+                path: "/portal/execution/v2/manager/market/candles",
+                query: vec![
+                    ("venue", venue.clone()),
+                    ("instrument", instrument.clone()),
+                    ("interval", interval.clone()),
+                    ("from_ms", from_ms.to_string()),
+                    ("to_ms", to_ms.to_string()),
+                    (
+                        "point_limit",
+                        (*point_limit)
+                            .min(DATA_LAYER_MAXIMUM_RAW_CANDLES)
+                            .to_string(),
+                    ),
+                ],
+            },
+            Self::MarketLatest { .. } => self.blueprint(),
+            Self::EventAnchor { .. } | Self::EventTail { .. } => self.blueprint(),
         }
     }
 
@@ -361,6 +407,295 @@ pub fn decode_extension_unavailable_for_profile(
         profile_id: expected_profile_id.to_owned(),
         reason_code,
     })
+}
+
+/// Converts the bounded, existing Data Layer JSON response into the frozen
+/// Market Context envelope.  This is the Portal-owned compatibility adapter:
+/// it accepts no arbitrary path, source profile or query; it neither exposes
+/// the raw response nor adds any replay/history claim.
+pub fn adapt_data_layer_market_response_for_profile(
+    request: &ManagerExtensionRequest,
+    body: &[u8],
+    expected_profile_id: &str,
+    received_at: DateTime<Utc>,
+) -> Result<ManagerExtensionRead, ExtensionContractError> {
+    validate_profile_id(expected_profile_id)?;
+    let value: Value =
+        serde_json::from_slice(body).map_err(|_| ExtensionContractError::InvalidJson)?;
+    let wire = match request {
+        ManagerExtensionRequest::MarketLatest { venue, instrument } => {
+            adapt_data_layer_latest(venue, instrument, expected_profile_id, &value, received_at)?
+        }
+        ManagerExtensionRequest::MarketCandles {
+            venue,
+            instrument,
+            interval,
+            from_ms,
+            to_ms,
+            point_limit,
+        } => adapt_data_layer_candles(
+            venue,
+            instrument,
+            interval,
+            *from_ms,
+            *to_ms,
+            *point_limit,
+            expected_profile_id,
+            &value,
+            received_at,
+        )?,
+        ManagerExtensionRequest::EventAnchor { .. } | ManagerExtensionRequest::EventTail { .. } => {
+            return Err(ExtensionContractError::InvalidMarketData);
+        }
+    };
+    decode_extension_success_for_profile(request, wire.to_string().as_bytes(), expected_profile_id)
+}
+
+/// A typed source adapter failure still travels as an exact unavailable
+/// envelope.  No raw upstream HTTP error, host or source payload reaches the
+/// Portal browser.
+#[must_use]
+pub fn market_context_unavailable(profile_id: &str, reason_code: &str) -> ManagerExtensionRead {
+    ManagerExtensionRead::Unavailable(ManagerExtensionUnavailable {
+        profile_id: profile_id.to_owned(),
+        reason_code: reason_code.to_owned(),
+    })
+}
+
+fn adapt_data_layer_latest(
+    venue: &str,
+    instrument: &str,
+    expected_profile_id: &str,
+    value: &Value,
+    received_at: DateTime<Utc>,
+) -> Result<Value, ExtensionContractError> {
+    require_binance_usdm(venue, expected_profile_id)?;
+    let root = object(value)?;
+    if text(root, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
+        || text(root, "market", 32)?.to_ascii_lowercase() != "usdm"
+    {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    let snapshot = object(object_value(root, "snapshot")?)?;
+    if text(snapshot, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
+        || text(snapshot, "market", 32)?.to_ascii_lowercase() != "usdm"
+    {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    let price = decimal_text(object_value(snapshot, "price")?)?;
+    let observed_at_ms = utc_ms(
+        snapshot
+            .get("event_time")
+            .or_else(|| snapshot.get("trade_time")),
+    )?;
+    let provider = snapshot
+        .get("provider")
+        .or_else(|| root.get("provider"))
+        .and_then(Value::as_str)
+        .filter(|candidate| !candidate.is_empty() && candidate.len() <= 96)
+        .unwrap_or("data-layer")
+        .to_owned();
+    let is_live = root
+        .get("is_live")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    Ok(serde_json::json!({
+        "schema_version": MARKET_SCHEMA_VERSION,
+        "contract_revision": MARKET_CONTEXT_CONTRACT_REVISION,
+        "authority": "EXECUTION_CELL",
+        "profile_id": expected_profile_id,
+        "availability": "AVAILABLE",
+        "freshness": market_freshness(observed_at_ms, received_at, is_live),
+        "completeness": "POLL_BOUNDED",
+        "as_of_ms": observed_at_ms,
+        "data": {
+            "operation_id": "managerMarketContextLatestV1",
+            "items": [{
+                "venue": venue,
+                "instrument": instrument,
+                "value": price,
+                "observation_kind": "TRADE",
+                "observed_at_ms": observed_at_ms,
+                "quote_currency": quote_currency(instrument)?,
+                "provider": provider,
+            }]
+        }
+    }))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn adapt_data_layer_candles(
+    venue: &str,
+    instrument: &str,
+    interval: &str,
+    from_ms: i64,
+    to_ms: i64,
+    point_limit: u16,
+    expected_profile_id: &str,
+    value: &Value,
+    received_at: DateTime<Utc>,
+) -> Result<Value, ExtensionContractError> {
+    require_binance_usdm(venue, expected_profile_id)?;
+    let root = object(value)?;
+    if text(root, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
+        || text(root, "market", 32)?.to_ascii_lowercase() != "usdm"
+    {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    let params = object(object_value(root, "params")?)?;
+    if text(params, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
+        || text(params, "interval", 32)? != interval
+    {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    let records = array(object_value(root, "data")?)?;
+    if records.len() > usize::from(point_limit.min(DATA_LAYER_MAXIMUM_RAW_CANDLES)) {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    let mut previous_open = -1_i64;
+    let mut latest_close = from_ms;
+    let mut items = Vec::with_capacity(records.len());
+    for record in records {
+        let values = array(record)?;
+        if values.len() < 7 {
+            return Err(ExtensionContractError::InvalidMarketData);
+        }
+        let open_ms = utc_ms(Some(&values[0]))?;
+        let close_ms = utc_ms(Some(&values[6]))?;
+        if open_ms < from_ms || close_ms > to_ms || close_ms < open_ms || open_ms <= previous_open {
+            return Err(ExtensionContractError::InvalidMarketData);
+        }
+        previous_open = open_ms;
+        latest_close = latest_close.max(close_ms);
+        let open = decimal_text(&values[1])?;
+        let high = decimal_text(&values[2])?;
+        let low = decimal_text(&values[3])?;
+        let close = decimal_text(&values[4])?;
+        let volume = decimal_text(&values[5])?;
+        if compare_unsigned_decimal(&high, &open)? == std::cmp::Ordering::Less
+            || compare_unsigned_decimal(&high, &close)? == std::cmp::Ordering::Less
+            || compare_unsigned_decimal(&low, &open)? == std::cmp::Ordering::Greater
+            || compare_unsigned_decimal(&low, &close)? == std::cmp::Ordering::Greater
+        {
+            return Err(ExtensionContractError::InvalidMarketData);
+        }
+        items.push(serde_json::json!({
+            "open_ms": open_ms,
+            "close_ms": close_ms,
+            "open": open,
+            "high": high,
+            "low": low,
+            "close": close,
+            "volume": volume,
+        }));
+    }
+    Ok(serde_json::json!({
+        "schema_version": MARKET_SCHEMA_VERSION,
+        "contract_revision": MARKET_CONTEXT_CONTRACT_REVISION,
+        "authority": "EXECUTION_CELL",
+        "profile_id": expected_profile_id,
+        "availability": "AVAILABLE",
+        "freshness": market_freshness(latest_close, received_at, true),
+        "completeness": "POLL_BOUNDED",
+        "as_of_ms": latest_close,
+        "data": {
+            "operation_id": "managerMarketContextCandlesV1",
+            "venue": venue,
+            "instrument": instrument,
+            "interval": interval,
+            "coverage": "UNKNOWN",
+            "sampling": "SOURCE_BOUNDED",
+            "items": items,
+        }
+    }))
+}
+
+fn require_binance_usdm(venue: &str, profile_id: &str) -> Result<(), ExtensionContractError> {
+    if venue != "BINANCE" || !profile_id.ends_with("_BINANCE_USDM") {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    Ok(())
+}
+
+fn quote_currency(instrument: &str) -> Result<&'static str, ExtensionContractError> {
+    if instrument.ends_with("USDT") {
+        Ok("USDT")
+    } else {
+        Err(ExtensionContractError::InvalidMarketData)
+    }
+}
+
+fn market_freshness(
+    observed_at_ms: i64,
+    received_at: DateTime<Utc>,
+    is_live: bool,
+) -> &'static str {
+    let age_ms = received_at
+        .timestamp_millis()
+        .saturating_sub(observed_at_ms);
+    if !is_live || age_ms > 300_000 {
+        "STALE"
+    } else if age_ms > 60_000 {
+        "DEGRADED"
+    } else if age_ms > 15_000 {
+        "AGING"
+    } else {
+        "FRESH"
+    }
+}
+
+fn decimal_text(value: &Value) -> Result<String, ExtensionContractError> {
+    let value = value
+        .as_str()
+        .ok_or(ExtensionContractError::InvalidMarketData)?;
+    if !is_decimal(value) {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    Ok(value.to_owned())
+}
+
+fn is_decimal(value: &str) -> bool {
+    let digits = value.strip_prefix('-').unwrap_or(value);
+    let mut parts = digits.split('.');
+    let integer = parts.next().unwrap_or_default();
+    let fraction = parts.next();
+    parts.next().is_none()
+        && !integer.is_empty()
+        && integer.bytes().all(|byte| byte.is_ascii_digit())
+        && fraction
+            .is_none_or(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+}
+
+fn compare_unsigned_decimal(
+    left: &str,
+    right: &str,
+) -> Result<std::cmp::Ordering, ExtensionContractError> {
+    if left.starts_with('-') || right.starts_with('-') {
+        return Err(ExtensionContractError::InvalidMarketData);
+    }
+    let (left_integer, left_fraction) = left.split_once('.').unwrap_or((left, ""));
+    let (right_integer, right_fraction) = right.split_once('.').unwrap_or((right, ""));
+    let left_integer = left_integer.trim_start_matches('0');
+    let right_integer = right_integer.trim_start_matches('0');
+    let left_integer = if left_integer.is_empty() {
+        "0"
+    } else {
+        left_integer
+    };
+    let right_integer = if right_integer.is_empty() {
+        "0"
+    } else {
+        right_integer
+    };
+    let integer_order = left_integer
+        .len()
+        .cmp(&right_integer.len())
+        .then_with(|| left_integer.cmp(right_integer));
+    if integer_order != std::cmp::Ordering::Equal {
+        return Ok(integer_order);
+    }
+    let width = left_fraction.len().max(right_fraction.len());
+    Ok(format!("{left_fraction:0<width$}").cmp(&format!("{right_fraction:0<width$}")))
 }
 
 fn validate_market_data(

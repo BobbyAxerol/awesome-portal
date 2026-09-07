@@ -3,7 +3,7 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --profile paper|sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS [--manager-extension-set none|eds11r-r4-r5]\n' "$0" >&2
+  printf 'Usage: %s --profile paper|sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS [--manager-extension-set none|eds11r-r4-r5|market-data-layer-v1]\n' "$0" >&2
   exit 2
 }
 
@@ -21,7 +21,7 @@ done
 [[ "${EUID}" -eq 0 && "${profile}" =~ ^(paper|sandbox|live)$ && -f "${base_env}" &&
    "${output_env}" == /srv/primus/portal/runtime/* &&
    "${edge_image}" =~ ^portal-execution-edge-manager-v2@sha256:[a-f0-9]{64}$ &&
-   "${manager_extension_set}" =~ ^(none|eds11r-r4-r5)$ ]] || usage
+   "${manager_extension_set}" =~ ^(none|eds11r-r4-r5|market-data-layer-v1)$ ]] || usage
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 runtime_gid="$(getent group portal-runtime | cut -d: -f3)"
