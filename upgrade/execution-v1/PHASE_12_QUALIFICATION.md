@@ -16,8 +16,9 @@ promotion evidence-driven instead of a collection of undocumented flags.
 | Paper, Sandbox, Canary-over-Live, Live readers | staged | each profile needs its own deployed-image evidence; Canary uses the Live source profile but is a separate product stage |
 | Commands and Live mutation | disabled | not part of EDS-12 reader qualification |
 | P01 + R4/R5 | source-only integration | P01 base `f9e3d946`; verified integration `98c47b3` (portable-verification follow-up to `1c5a7fa`); both activation templates must retain lease TTL `900` |
-| BR-EX-80 timeframe | source-owner input | only a published source value replaces a visibly `DERIVED` suffix |
-| BR-EX-81 subject order/fill history | source-owner + Portal mirror input | full retained relation/profile cursor drain, append-only parity and subject cursor reads; a current page is never history |
+| BR-EX-80 timeframe | Portal-derived adapter | a published source value wins; otherwise the named subject BFF derives only a known suffix and visibly labels it `DERIVED` |
+| BR-EX-81 subject order/fill history | Portal retained-current-window adapter | the projection ladder drains existing Manager pages behind the Portal and exact subject BFFs read the durable mirror; this is never called authoritative replay |
+| Market Context | Portal-owned Edge/Data Layer adapter | current observations and bounded BINANCE candles travel through fixed mTLS routes; when selected, no public-venue fallback is allowed |
 
 ## Evidence ladder
 
@@ -81,6 +82,10 @@ The evidence must bind:
 - all ten failure/recovery scenarios and no P0/P1 integrity issue;
 - profile isolation/redaction, owner visual/data/action parity, and explicit
   command/Live-mutation non-activation.
+- deployed proofs for BR-EX-80 derived/published timeframe provenance,
+  BR-EX-81 retained-window parity and Market Context positive/negative chart
+  routes. These are Portal-owned adapters; no separate Edge owner return is a
+  prerequisite.
 
 Only the verified workflow output writes the ignored runtime artifact
 `artifacts/execution/release_manifest.json`. Its source template and validation

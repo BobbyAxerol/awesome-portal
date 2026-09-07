@@ -161,19 +161,51 @@ describe("venue public market candles — market context, never the source's his
 describe("market candles controller", () => {
   it("accepts only the fixed vocabulary and forwards the query", async () => {
     const candles = vi.fn(async () => ({ state: "READY" }));
-    const controller = new ExecutionMarketCandlesController({ candles } as never);
-    await controller.get({ symbol: "ETHUSDT", interval: "15m", from_ms: "1", to_ms: "2", limit: "40" });
+    const controller = new ExecutionMarketCandlesController(
+      { candles } as never,
+      { candles: vi.fn() } as never,
+      { isMember: vi.fn(async () => true) } as never,
+      testConfig({ EXECUTION_MARKET_CANDLES_SOURCE: "venue_public" }),
+    );
+    const request = { portalUser: { userId: "usr_bobby" }, portalSession: {}, portalWorkspaceId: "ws_test" } as never;
+    await controller.get(request, { symbol: "ETHUSDT", interval: "15m", from_ms: "1", to_ms: "2", limit: "40" });
     expect(candles).toHaveBeenCalledWith({ venue: "BINANCE", symbol: "ETHUSDT", interval: "15m", fromMs: 1, toMs: 2, limit: 40 });
-    await controller.get({ venue: "OKX", market: "SWAP", symbol: "ETH-USDT-SWAP", interval: "30m" });
+    await controller.get(request, { venue: "OKX", market: "SWAP", symbol: "ETH-USDT-SWAP", interval: "30m" });
     expect(candles).toHaveBeenLastCalledWith({ venue: "OKX", symbol: "ETH-USDT-SWAP", interval: "30m", fromMs: null, toMs: null, limit: 500 });
-    await controller.get({ venue: "OKX", symbol: "ETHUSDT" });
+    await controller.get(request, { venue: "OKX", symbol: "ETHUSDT" });
     expect(candles).toHaveBeenLastCalledWith(expect.objectContaining({ venue: "OKX", symbol: "ETHUSDT" }));
-    await expect(controller.get({ symbol: "eth-usdt" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID", status: 400 });
-    await expect(controller.get({ symbol: "ETHUSDT", interval: "3m" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
-    await expect(controller.get({ symbol: "ETHUSDT", venue: "OKX", market: "USDM" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
-    await expect(controller.get({ symbol: "ETH-USDT-SWAP", venue: "BINANCE" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
-    await expect(controller.get({ symbol: "ETHUSDT", venue: "DNSE" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
-    await expect(controller.get({ symbol: "ETHUSDT", from_ms: "5", to_ms: "1" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
-    await expect(controller.get({ symbol: "ETHUSDT", limit: "6001" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get(request, { symbol: "eth-usdt" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID", status: 400 });
+    await expect(controller.get(request, { symbol: "ETHUSDT", interval: "3m" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get(request, { symbol: "ETHUSDT", venue: "OKX", market: "USDM" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get(request, { symbol: "ETH-USDT-SWAP", venue: "BINANCE" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get(request, { symbol: "ETHUSDT", venue: "DNSE" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get(request, { symbol: "ETHUSDT", from_ms: "5", to_ms: "1" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+    await expect(controller.get(request, { symbol: "ETHUSDT", limit: "6001" })).rejects.toMatchObject({ code: "MARKET_CANDLES_QUERY_INVALID" });
+  });
+
+  it("uses the private Market Context BFF when Data Layer is selected, never a public fallback", async () => {
+    const source = {
+      schema_version: "portal.execution.market-context.candles.v1",
+      logical_operation_id: "managerMarketContextCandlesV1",
+      environment: "paper",
+      source_health: { as_of_ms: T0 + 7_200_000 },
+      range: { venue: "BINANCE", instrument: "ETHUSDT", interval: "1h" },
+      coverage: "COMPLETE",
+      state: "POPULATED",
+      candles: [{ open_ms: T0, close_ms: T0 + 3_599_999, open: "1", high: "2", low: "0.5", close: "1.5", volume: "3" }],
+    };
+    const marketContext = { candles: vi.fn(async () => source) };
+    const publicCandles = { candles: vi.fn() };
+    const controller = new ExecutionMarketCandlesController(
+      publicCandles as never,
+      marketContext as never,
+      { isMember: vi.fn(async () => true) } as never,
+      testConfig({ EXECUTION_MARKET_CANDLES_SOURCE: "data_layer" }),
+    );
+    const request = { portalUser: { userId: "usr_bobby" }, portalSession: {}, portalWorkspaceId: "ws_test" } as never;
+    const value = await controller.get(request, { environment: "paper", venue: "BINANCE", symbol: "ETHUSDT", interval: "1h", from_ms: T0, to_ms: T0 + 7_200_000, limit: 10 });
+    expect(publicCandles.candles).not.toHaveBeenCalled();
+    expect(marketContext.candles).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ environment: "paper", pointLimit: 10 }));
+    expect(value).toMatchObject({ state: "READY", source_authority: "TRADING_SYSTEM_DATA_LAYER", source: { kind: "data_layer" }, candles: [{ o: "1", c: "1.5" }] });
   });
 });

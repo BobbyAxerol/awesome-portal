@@ -28,7 +28,7 @@ describe("market candles reader", () => {
     expect(readMarketCandles({ state: "READY" })).toBeNull();
   });
   it("builds the query with the fixed venue/market and a clamped limit", () => {
-    expect(marketCandlesPath({ symbol: "ETHUSDT", interval: "15m", fromMs: 1.4, toMs: 2, limit: 9000 })).toBe("/market/venue-candles?venue=BINANCE&market=USDM&symbol=ETHUSDT&interval=15m&from_ms=1&to_ms=2&limit=6000");
+    expect(marketCandlesPath({ symbol: "ETHUSDT", interval: "15m", fromMs: 1.4, toMs: 2, limit: 9000 })).toBe("/market/venue-candles?environment=paper&venue=BINANCE&market=USDM&symbol=ETHUSDT&interval=15m&from_ms=1&to_ms=2&limit=6000");
   });
   it("keeps the alpha's interval while the range fits one read (6000 bars), then steps up", () => {
     expect(fittingInterval(3 * 86_400_000, "1h")).toBe("1h");

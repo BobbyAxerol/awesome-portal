@@ -4,7 +4,8 @@
 The static mode validates only committed non-secret contracts, runbooks and
 digest bindings.  The deployed mode consumes a separately supplied sanitized
 evidence object and fails closed until protected-main images, browser proof,
-failure proof and the two explicit source extensions are all present.
+failure proof and the three explicit Portal-owned source adapters are all
+present.
 """
 
 from __future__ import annotations
@@ -50,6 +51,16 @@ INPUTS = (
     ("manager_projection", "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs"),
     ("frontend_execution_route", "apps/portal/frontend/src/execution/ExecutionPreviewRoute.tsx"),
     ("frontend_product_boundary", "apps/portal/frontend/src/execution/productBoundary.test.ts"),
+    ("subject_activity_bff", "apps/control-api/src/execution/subject-activity.service.ts"),
+    ("subject_activity_ui", "apps/portal/frontend/src/execution/useSubjectActivityFacts.ts"),
+    ("projection_relation_ladder", "apps/control-api/src/execution/profile-projection.catalog.ts"),
+    ("projection_repository", "apps/control-api/src/execution/profile-projection.repository.ts"),
+    ("market_context_intake", "apps/control-api/src/execution/market-context.intake.ts"),
+    ("market_context_service", "apps/control-api/src/execution/market-context.service.ts"),
+    ("market_context_chart_bff", "apps/control-api/src/execution/market-candles.controller.ts"),
+    ("market_context_chart_translator", "apps/control-api/src/execution/market-candles.service.ts"),
+    ("market_context_adapter", "services/portal-execution-edge-rs/contracts/portal-market-context-data-layer-adapter-v1/market-context-data-layer-adapter.v1.json"),
+    ("market_context_proxy_template", "deploy/execution-d1/source-proxy/manager-market-context-data-layer-locations.conf.template"),
     ("phase12_qualification", "upgrade/execution-v1/PHASE_12_QUALIFICATION.md"),
     ("operations_runbook", "upgrade/execution-v1/OPERATIONS_RUNBOOK.md"),
     ("rollback_runbook", "upgrade/execution-v1/ROLLBACK_RUNBOOK.md"),
@@ -254,7 +265,7 @@ def validate_inputs(qualification: dict[str, Any]) -> None:
 
 def validate_source_extensions(qualification: dict[str, Any]) -> None:
     rows = qualification["source_extensions"]
-    require(isinstance(rows, list) and len(rows) == 2, "EDS-12 source extension count drifted")
+    require(isinstance(rows, list) and len(rows) == 3, "EDS-12 source extension count drifted")
     actual: dict[str, dict[str, Any]] = {}
     for row in rows:
         require(isinstance(row, dict), "source extension must be object")
@@ -262,10 +273,12 @@ def validate_source_extensions(qualification: dict[str, Any]) -> None:
         identifier = row["request_id"]
         require(identifier not in actual, "duplicate source extension")
         actual[identifier] = row
-    require(actual.get("BR-EX-80", {}).get("state") == "SOURCE_OWNER_RETURN_REQUIRED", "BR-EX-80 status drifted")
-    require(actual.get("BR-EX-81", {}).get("state") == "SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED", "BR-EX-81 status drifted")
+    require(actual.get("BR-EX-80", {}).get("state") == "PORTAL_DERIVED_ACTIVE_PENDING_DEPLOYMENT", "BR-EX-80 status drifted")
+    require(actual.get("BR-EX-81", {}).get("state") == "PORTAL_RETAINED_CURRENT_WINDOW_ACTIVE_PENDING_DEPLOYMENT", "BR-EX-81 status drifted")
+    require(actual.get("MARKET_CONTEXT", {}).get("state") == "PORTAL_EDGE_DATA_LAYER_ACTIVE_PENDING_DEPLOYMENT", "Market Context status drifted")
     require("DERIVED" in actual["BR-EX-80"]["fallback"], "BR-EX-80 fallback stopped being explicit")
-    require("non-historical" in actual["BR-EX-81"]["fallback"], "BR-EX-81 fallback stopped being explicit")
+    require("authoritative replay" in actual["BR-EX-81"]["fallback"], "BR-EX-81 fallback stopped being explicit")
+    require("public-venue fallback" in actual["MARKET_CONTEXT"]["fallback"], "Market Context fallback widened")
 
 
 def validate_release_and_authority(qualification: dict[str, Any]) -> None:
@@ -306,10 +319,10 @@ def validate_release_and_authority(qualification: dict[str, Any]) -> None:
 
 def validate_docs_and_workspace() -> None:
     docs = {
-        "upgrade/execution-v1/PHASE_12_QUALIFICATION.md": ["STATIC_QUALIFIED", "PRODUCT_ACTIVE", "BR-EX-81", "protected-main"],
+        "upgrade/execution-v1/PHASE_12_QUALIFICATION.md": ["STATIC_QUALIFIED", "PRODUCT_ACTIVE", "BR-EX-81", "Market Context", "protected-main"],
         "upgrade/execution-v1/OPERATIONS_RUNBOOK.md": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "CANARY_OVER_LIVE", "LIVE_BINANCE_USDM"],
         "upgrade/execution-v1/ROLLBACK_RUNBOOK.md": ["PROFILE_LOCAL_READER_ROLLBACK_ONLY", "projection", "Trading System"],
-        "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md": ["BR-EX-80", "BR-EX-81", "EDS-12"],
+        "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md": ["BR-EX-80", "BR-EX-81", "Market Context", "EDS-12"],
     }
     for relative, tokens in docs.items():
         path = safe_file(ROOT / relative)
@@ -348,7 +361,7 @@ def validate_static() -> dict[str, Any]:
         "decision": qualification["decision"],
         "profile_stages": len(PROFILE_STAGES),
         "failure_scenarios": len(FAILURE_IDS),
-        "source_extensions": ["BR-EX-80", "BR-EX-81"],
+        "source_extensions": ["BR-EX-80", "BR-EX-81", "MARKET_CONTEXT"],
         "product_active": False,
         "operations_qualified": False,
         "runtime_effect": "NONE",
@@ -426,16 +439,16 @@ def validate_deployed_payload(evidence: dict[str, Any]) -> dict[str, Any]:
     require(failure_ids == FAILURE_IDS, "deployed failure set drifted")
 
     extensions = evidence["source_extensions"]
-    require(isinstance(extensions, list) and len(extensions) == 2, "source extension evidence count drifted")
+    require(isinstance(extensions, list) and len(extensions) == 3, "source extension evidence count drifted")
     extension_ids: set[str] = set()
     for row in extensions:
         require(isinstance(row, dict), "source extension evidence row must be object")
         exact(row, {"request_id", "source_contract_revision", "evidence_sha256", "accepted"}, "source extension evidence")
-        require(row["request_id"] in {"BR-EX-80", "BR-EX-81"} and row["request_id"] not in extension_ids, "unexpected source extension evidence")
+        require(row["request_id"] in {"BR-EX-80", "BR-EX-81", "MARKET_CONTEXT"} and row["request_id"] not in extension_ids, "unexpected source extension evidence")
         require(isinstance(row["source_contract_revision"], str) and row["source_contract_revision"], "source extension has no revision")
         require(sha256(row["evidence_sha256"]) and row["accepted"] is True, "source extension is not accepted")
         extension_ids.add(row["request_id"])
-    require(extension_ids == {"BR-EX-80", "BR-EX-81"}, "source extension evidence set drifted")
+    require(extension_ids == {"BR-EX-80", "BR-EX-81", "MARKET_CONTEXT"}, "source extension evidence set drifted")
 
     require(evidence["p0_p1_open"] == 0 and evidence["owner_visual_data_action_parity"] is True, "integrity or owner parity gate failed")
     authority = evidence["authority"]

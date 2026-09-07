@@ -25,7 +25,7 @@
     "profiles": {"type": "array", "minItems": 4, "maxItems": 4},
     "browser_states": {"type": "array", "minItems": 28},
     "failure_scenarios": {"type": "array", "minItems": 10, "maxItems": 10},
-    "source_extensions": {"type": "array", "minItems": 2, "maxItems": 2},
+    "source_extensions": {"type": "array", "minItems": 3, "maxItems": 3},
     "p0_p1_open": {"const": 0},
     "owner_visual_data_action_parity": {"const": true},
     "authority": {"type": "object"}

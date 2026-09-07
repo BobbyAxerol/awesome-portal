@@ -1030,7 +1030,14 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
     const filtered = await service.read("paper", equityKey, { account_id: "acc_a" });
     expect(filtered.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_1", "eq_3"]);
 
-    await expect(service.read("paper", "manager.orders:orders", {}))
+    const retainedOrders = await service.read("paper", "manager.orders:orders", {});
+    expect(retainedOrders).toMatchObject({
+      authority: "PORTAL_SGP_HISTORY_MIRROR",
+      relation_key: "manager.orders:orders",
+      state: "EMPTY",
+      coverage: { row_count: 0 },
+    });
+    await expect(service.read("paper", "manager.strategies:strategies", {}))
       .rejects.toMatchObject({ code: "N33_HISTORY_RELATION_NOT_ACCEPTED" });
     await expect(service.read("paper", equityKey, { limit: 999_999 }))
       .rejects.toMatchObject({ code: "N33_HISTORY_LIMIT_INVALID" });

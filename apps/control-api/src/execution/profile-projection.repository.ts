@@ -240,15 +240,22 @@ export class ExecutionProfileProjectionRepository {
       after?: { ts: string; rowId: string } | null;
       entity?: { field: string; value: string } | null;
       limit: number;
+      /**
+       * Existing history callers keep ascending order.  Subject activity
+       * readers use descending order to give a live operator the newest
+       * retained records first; the cursor remains a Portal-local keyset.
+       */
+      order?: "ASC" | "DESC";
     },
   ): Promise<{ rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>; hasMore: boolean }> {
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey];
     if (query.from) { values.push(query.from); conditions.push(`ts >= $${values.length}::timestamptz`); }
     if (query.to) { values.push(query.to); conditions.push(`ts <= $${values.length}::timestamptz`); }
+    const order = query.order ?? "ASC";
     if (query.after) {
       values.push(query.after.ts, query.after.rowId);
-      conditions.push(`(ts, row_id) > ($${values.length - 1}::timestamptz, $${values.length})`);
+      conditions.push(`(ts, row_id) ${order === "ASC" ? ">" : "<"} ($${values.length - 1}::timestamptz, $${values.length})`);
     }
     if (query.entity) {
       values.push(query.entity.field, query.entity.value);
@@ -259,7 +266,7 @@ export class ExecutionProfileProjectionRepository {
       `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields
          FROM execution_timeseries_history
         WHERE ${conditions.join(" AND ")}
-        ORDER BY ts ASC, row_id ASC
+        ORDER BY ts ${order}, row_id ${order}
         LIMIT $${values.length}`,
       values,
     );
@@ -400,14 +407,21 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
+    entity: { field: string; value: string } | null = null,
   ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
+    const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
+    const values: unknown[] = [workspaceId, environment, profileId, relationKey];
+    if (entity) {
+      values.push(entity.field, entity.value);
+      conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
+    }
     const result = await this.pool.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
       `SELECT count(*)::text AS row_count,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
               to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
          FROM execution_timeseries_history
-        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4`,
-      [workspaceId, environment, profileId, relationKey],
+        WHERE ${conditions.join(" AND ")}`,
+      values,
     );
     const row = result.rows[0];
     return { rowCount: Number(row?.row_count ?? 0), oldestTs: row?.oldest_ts ?? null, newestTs: row?.newest_ts ?? null };

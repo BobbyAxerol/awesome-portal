@@ -37,6 +37,7 @@ import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth }
 import type { MarketCandlesPayload, MarketCandlesQuery } from "./marketCandles";
 import type { RelationPage, RelationPageQuery } from "./managerRelations";
 import type { ObservedTimeline, ObservedTimelineQuery } from "./observedTimeline";
+import type { SubjectActivityPage, SubjectActivityQuery } from "./subjectActivity";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
@@ -302,6 +303,12 @@ export interface ExecutionApi {
   getObservedTimeline(query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>>;
   /** EDS-11R1 named relation BFF (G9): one bounded page of a screen-bound Manager relation; the Portal continuation goes back unchanged. */
   getManagerRelationPage(query: RelationPageQuery): Promise<Result<RelationPage>>;
+  /**
+   * BR-EX-81 exact subject history through the Portal durable retained-current
+   * mirror.  This is deliberately separate from the generic relation page:
+   * callers cannot choose a Manager relation, source cursor or source host.
+   */
+  getSubjectActivity(query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */

@@ -15,9 +15,9 @@ export interface MarketContextAcceptedCapability {
 }
 
 /**
- * The initial shipped value is deliberately source-dark.  An owner return is
- * accepted only by replacing this checked-in, reviewable intake with all
- * manifest-pinned evidence; no environment flag can bypass this state.
+ * The initial v1 value was deliberately source-dark. This v2 intake accepts a
+ * checked-in Portal-owned adapter only when its exact manifest and profile
+ * bounds validate; no environment flag can bypass this state.
  */
 export interface MarketContextPublicationIntake {
   readonly schemaVersion:
@@ -28,8 +28,8 @@ export interface MarketContextPublicationIntake {
   readonly ownerReturnManifestSha256: string | null;
   readonly sourceCommit: string | null;
   readonly sourceImageDigest: string | null;
-  /** A Portal-owned source adapter can be accepted from a checked-in, exact
-   * contract manifest. It is deliberately not a substituted owner return. */
+  /** A Portal-owned source adapter is accepted from a checked-in, exact
+   * contract manifest. It does not grant direct source access. */
   readonly portalAdapterRevision?: string;
   readonly portalAdapterManifestSha256?: string;
   readonly capabilities: Readonly<Partial<Record<MarketContextOperationId, MarketContextAcceptedCapability>>>;

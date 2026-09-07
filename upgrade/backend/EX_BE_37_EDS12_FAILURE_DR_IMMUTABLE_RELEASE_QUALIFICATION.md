@@ -43,14 +43,15 @@ runtime flags.
 
 The EDS-12 qualification explicitly carries both frontend-discovered requests:
 
-| Request | Final truthful behavior until source evidence exists |
+| Request | Portal-owned implementation and truthful runtime behavior |
 |---|---|
-| BR-EX-80 — published alpha timeframe | Portal may publish only a visibly `DERIVED` suffix interval until a source vocabulary field is available; a source value always wins when present |
-| BR-EX-81 — full subject orders/fills | Portal may publish only the verified retained current-source window and its coverage; no alpha/account replay or funnel claim exceeds cursor-drain and append-only mirror parity |
-| Market Context | the existing Data Layer is consumed only through the fixed Portal Edge/Source Proxy adapter described in [`EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md`](./EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md); current observations and bounded candles never claim lifecycle replay |
+| BR-EX-80 — published alpha timeframe | The named subject BFF takes a source field when present and otherwise derives only a known suffix, visibly labelled `DERIVED`; browser inference never becomes source truth |
+| BR-EX-81 — subject orders/fills | The Portal projection ladder drains current Manager pages into its durable retained-current-window mirror, and exact Alpha/Account BFFs expose coverage, cursor/restart/dedupe parity and non-authoritative replay semantics |
+| Market Context | The existing Data Layer is consumed only through the fixed Portal Edge/Source Proxy adapter described in [`EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md`](./EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md); current observations and bounded candles never claim lifecycle replay or use a public-venue fallback when selected |
 
-These are named external source evidence gates, not hidden Portal technical
-debt.  A current bounded source page must never be relabelled full history.
+These are named Portal-owned adapter evidence gates, not external source-owner
+dependencies or hidden Portal technical debt. A current bounded source page
+must never be relabelled full history.
 
 ## Evidence completed by this source slice
 
@@ -73,8 +74,8 @@ immutable release:
 2. all seven browser states for Paper, Sandbox, Canary-over-Live and Live;
 3. all ten named failure/recovery paths, profile isolation and redaction;
 4. zero P0/P1 integrity issues and owner visual/data/action parity;
-5. deployed current-source evidence for BR-EX-80, BR-EX-81 and the Portal-owned
-   Market Context adapter.
+5. deployed current-source evidence for the Portal-owned BR-EX-80 derived
+   adapter, BR-EX-81 retained-window adapter and Market Context adapter.
 
 The verifier is intentionally unable to convert local or fixture evidence into
 this release decision.  The next owner action is to merge the qualified change

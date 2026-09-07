@@ -3034,6 +3034,23 @@ Append rows here. Do not create another active request file.
 | BR-EX-81 | 2026-09-06 | Alpha 360 Trade Replay + Orders/Fills · Account 360 · Full Blotter | A bounded profile-wide current page cannot honestly serve subject history: observed input held 812 orders from 11 strategies and 71 fills from 5 strategies across 42 deployed strategies, while strategy-level replay could be empty despite source fills. | Drain the complete retained `orders` and `fills` history of every approved profile only through the Execution Edge into an append-only Portal observation mirror: resumable relation-bound cursor drain, digest dedupe, gap ledger, exact source-vs-mirror counts. Serve subject reads at `alphas/{id}/orders|fills` and `accounts/{id}/orders|fills`, keyset `(updated_at, order_id)` / `(trade_time, fill_id)`, `limit ≤ 500`, exact total and `{completeness, coverage{from,to,rows}, as_of}`. Scope N25 source facts to that same subject. | `TRADING_SYSTEM` rows → `PORTAL_OBSERVATION`; no direct database, Redis, broker or browser source access | read-only · medium: presenting one retained current page as subject history is prohibited | 10³–10⁵ rows/subject; one in-flight drain/profile/relation; page ≤500 at Portal; cursor opaque and relation/profile-bound; a partial drain remains explicitly partial | current Manager relation pager must prove a stable full-retention cursor traversal; EDS-06/N24 mirror and EDS-04 envelope are reused | until verified, preserve the explicit current-page message and profile-wide funnel label; no client-side widening/filter is a substitute | mirror/source exact-count and duplicate/cursor-cycle/gap/restart tests; every strategy with source fills renders a marker; targeted replay remains empty only when source has none | Codex + Trading System owner | EDS-12 | `APPROVED_IMPLEMENTATION_PENDING_SOURCE_PROOF` | `TradeReplayLive` / `replayEvents` consumer is ready; remove the stopgap profile-page filter only after source/mirror parity | no runtime widening; commands and Live mutation remain separately gated | DR-22 · DR-24 · DR-25 · DR-26 · OR-5.12 · BR-EX-50 |
 | _next: BR-EX-82_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
 
+#### 7.2.1 Portal-owned source-adapter amendment — 2026-09-07
+
+The two historical rows above record the original discovery state. Their
+request-owner statuses are superseded for the accepted current-source scope:
+
+| Adapter | Current state | Exact Portal behavior | Production evidence still required |
+|---|---|---|---|
+| BR-EX-80 | `PORTAL_DERIVED_ACTIVE_PENDING_DEPLOYMENT` | A named Alpha/Account subject BFF takes an exact source vocabulary field when available; otherwise it derives only a recognised strategy-id suffix and emits `DERIVED` provenance. | Paper/Sandbox/Live browser proof for source-field precedence and every derived/invalid branch. |
+| BR-EX-81 | `PORTAL_RETAINED_CURRENT_WINDOW_ACTIVE_PENDING_DEPLOYMENT` | Existing Manager current pages are drained server-side into the durable Portal mirror. Exact Alpha/Account order/fill BFFs use Portal-signed continuations, expose coverage and never call the retained window authoritative replay. | Profile drain, duplicate/cycle/restart/count parity plus real subject-screen proof. |
+| Market Context | `PORTAL_EDGE_DATA_LAYER_ACTIVE_PENDING_DEPLOYMENT` | A fixed mTLS Edge/Source Proxy adapter wraps the existing AWS-HK Data Layer for BINANCE latest observation and bounded candles. Selected Data Layer mode has no public fallback. | Positive latest/candle probes, negative profile/venue probe, and real rich-chart proof. |
+
+No browser receives a Manager relation, source cursor, delegated JWT, mTLS
+input, Trading System DB/Redis/broker/CLI access or an unbounded source page.
+The only remaining gate for these three completed adapters is measured
+protected-main deployment evidence; it is not an Execution Edge feature
+request or untracked technical debt.
+
 ### 7.3 Request quality gate
 
 A request is returned as `NEEDS_CLARIFICATION` if it omits any of:
@@ -4927,6 +4944,18 @@ than waiting for a separate Manager-v2 owner return.  The Rust Edge accepts
 only two Source Proxy-labelled Data Layer GET routes and emits browser-safe
 current-price / bounded-candle envelopes.  Static, Rust and Control API tests
 are green; deployment evidence remains mandatory before `PRODUCT_ACTIVE`.
+
+**Implementation journal (2026-09-07, source-adapter closeout):** BR-EX-80
+and BR-EX-81 are now also implemented on the Portal side rather than held as
+requests for a new Execution Edge return. BR-EX-80 is a named Alpha/Account
+subject BFF: an exact source vocabulary field wins, otherwise only the known
+strategy-id suffix is emitted with `DERIVED` provenance. BR-EX-81 adds
+`orders` and `fills` to the server-side projection ladder and exposes exact,
+user-bound Portal continuations over the durable retained-current-window
+mirror. The browser neither drains Manager pages nor sees a source cursor.
+All three adapters are deployable through the existing private mTLS boundary;
+only protected-main and measured deployed evidence remain before
+`PRODUCT_ACTIVE`.
 
 ### 17.6 Frontend collaboration lanes
 

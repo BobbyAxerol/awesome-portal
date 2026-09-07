@@ -151,6 +151,20 @@ export const REPLAY_RELATIONS: Readonly<Record<string, RelationRoute>> = {
 
 export interface RelationFacts {
   environment: RelationEnvironment;
+  /**
+   * The reader's evidence boundary.  The original EDS-11R1 implementation
+   * walks a Manager current-page set from the browser.  BR-EX-81 replaces
+   * that on product subject screens with a bounded Portal-retained window.
+   * Keeping the distinction in the model prevents a rich replay from ever
+   * describing retained current data as an upstream total history.
+   */
+  origin?: "MANAGER_CURRENT_PAGESET" | "PORTAL_RETAINED_CURRENT_WINDOW";
+  /** BR-EX-80 timeframe from the named Portal subject BFF, never guessed by a component. */
+  timeframe?: {
+    value: "1m" | "5m" | "15m" | "30m" | "1h" | "4h" | "1d" | null;
+    provenance: "PUBLISHED_SOURCE" | "DERIVED_STRATEGY_ID_SUFFIX" | "UNAVAILABLE";
+    sourceField: string | null;
+  } | null;
   /** rows per N25 fact key; a relation that could not be read is absent (never an empty array standing in for it) */
   facts: Readonly<Record<string, readonly Record<string, unknown>[]>>;
   coverage: Readonly<Record<string, Drained>>;
@@ -206,7 +220,7 @@ export async function drainRelations(read: RelationRead, environment: RelationEn
     }
     if (d.reason) reasons.push(`${key}: ${d.reason}`);
   });
-  return { environment, facts, coverage, pages, exhausted, completeness, asOfMs, state: answered === 0 ? "UNAVAILABLE" : answered === entries.length ? "POPULATED" : "PARTIAL", reasons };
+  return { environment, origin: "MANAGER_CURRENT_PAGESET", facts, coverage, pages, exhausted, completeness, asOfMs, state: answered === 0 ? "UNAVAILABLE" : answered === entries.length ? "POPULATED" : "PARTIAL", reasons };
 }
 
 const text = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : typeof v === "number" && Number.isFinite(v) ? String(v) : null);

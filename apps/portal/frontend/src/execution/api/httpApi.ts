@@ -43,6 +43,7 @@ import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSou
 import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type MarketCandlesQuery } from "./marketCandles";
 import { readRelationPage, relationPagePath, type RelationPage, type RelationPageQuery } from "./managerRelations";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
+import { readSubjectActivity, subjectActivityPath, type SubjectActivityPage, type SubjectActivityQuery } from "./subjectActivity";
 import {
   commandPlanRequest,
   readCommandPlan,
@@ -325,6 +326,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     readGet(observedTimelinePath(query), readObservedTimeline, "The venue market candles");
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");
+  const getSubjectActivity = (query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>> =>
+    readGet(subjectActivityPath(query), readSubjectActivity, "The retained subject activity");
   const listParameters = (query: object) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
@@ -434,6 +437,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getMarketCandles,
     getObservedTimeline,
     getManagerRelationPage,
+    getSubjectActivity,
     getAlphaFleet,
     listPortfolios,
     getBindings,

@@ -509,7 +509,7 @@ const EDS11R_MARKET_CONTEXT_GATEWAY_CONTEXT: CurrentSourceGatewayContext = Objec
   capabilityIds: Object.freeze(["market.latest.v1", "market.candles.v1"]),
   sourceBindingIds: Object.freeze(["market.context"]),
   acceptance: Object.freeze({
-    decision: "EDS11R_MARKET_CONTEXT_OWNER_RETURN_ACCEPTED",
+    decision: "EDS11R_MARKET_CONTEXT_PORTAL_SOURCE_ADAPTER_ACCEPTED",
     adapter: "MARKET_CONTEXT_V1",
     sourceContract: "trading-system.portal-execution.market-context.v1",
     sourceMaximumRequestsPerSecond: 20,
@@ -782,8 +782,8 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
    * EDS-11R4's two fixed Market Context operations.  This intentionally does
    * not accept a source ID, relation, route, profile, or audience from a
    * browser caller.  The already-existing mTLS/delegated-JWT transport is
-   * reused unchanged and only after the Portal service has accepted the
-   * owner-return pack.
+   * reused unchanged and only after the Portal service has accepted the exact
+   * checked-in Portal-owned adapter manifest.
    */
   fixedPathForNamedOperation(
     principal: CurrentSourcePrincipal,

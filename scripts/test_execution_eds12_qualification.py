@@ -69,7 +69,11 @@ def deployed_evidence() -> dict:
                 "evidence_sha256": "sha256:" + character * 64,
                 "accepted": True,
             }
-            for request_id, character in (("BR-EX-80", "c"), ("BR-EX-81", "d"))
+            for request_id, character in (
+                ("BR-EX-80", "c"),
+                ("BR-EX-81", "d"),
+                ("MARKET_CONTEXT", "e"),
+            )
         ],
         "p0_p1_open": 0,
         "owner_visual_data_action_parity": True,
