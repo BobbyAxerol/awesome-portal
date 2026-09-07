@@ -4980,6 +4980,30 @@ gates cover both invariants.  This closes release-plumbing drift only; actual
 `PRODUCT_ACTIVE` still requires the exact signed image, private render,
 preflight, measured profile probes and recorded deployed evidence.
 
+**Production-active execution amendment (2026-09-07):** no further Execution
+Edge or Trading System owner return is required to release the Portal-owned
+BR-EX-80, BR-EX-81 and Market Context adapters. The release candidate binds
+only the named same-origin BFF operations, existing deployment-bound mTLS
+transport and the two fixed Data Layer routes. Its browser corpus now stubs
+those exact BFF operations (not generic `501` fallbacks), proves rich Alpha,
+Account and Trade Replay panels retain their composition under typed source
+states, and disables replay viewport controls when no candle series exists so
+there is no enabled no-op action. The long Admin Actions catalogue is captured
+as its defined shell-visible viewport rather than a fluctuating inert trailing
+scroll area; this is a deterministic evidence correction, not a product UI
+reduction.
+
+The remaining sequence is operational and entirely Portal-owned: merge the
+immutable candidate through protected `main`, consume the publisher's signed
+digest/SBOM/provenance, render a new immutable Portal release with
+`CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT=true` and
+`CONTROL_API_EXECUTION_MARKET_CANDLES_SOURCE=data_layer`, keep
+`EDGE_DEV_LOCAL_IMAGE_ALLOWED=false`, commands disabled and Live mutation
+disabled, then record authenticated Paper/Sandbox/Live probes, rollback and
+browser parity in the sanitized EDS-12 deployed-evidence packet. The
+qualification verifier, not a prose status, is the sole authority allowed to
+emit `PRODUCT_ACTIVE`.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:

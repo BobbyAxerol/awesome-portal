@@ -327,6 +327,204 @@ function alphaActivityEnvelope(alphaId: string, environment: "paper" | "sandbox"
   });
 }
 
+/**
+ * BR-EX-81's four exact named subject reads. The browser test double exposes
+ * the same bounded retained-current semantics as the Portal controller: it
+ * never presents a source lifecycle replay or an Edge relation selector.
+ */
+function subjectActivityEnvelope(
+  subjectKind: "alpha" | "account",
+  subjectId: string,
+  relation: "orders" | "fills",
+  search: URLSearchParams,
+): Record<string, unknown> {
+  const environment = validEnvironment(search.get("environment")) ? search.get("environment")! : "paper";
+  const strategyId = subjectKind === "alpha" ? subjectId : "adaptive_hma_cpp_00115m";
+  const accountId = subjectKind === "account" ? subjectId : "paper-binance-adaptive_hma_cpp_00115m";
+  const order = {
+    order_id: `ord-${subjectKind}-${subjectId}-entry`,
+    client_order_id: `${subjectId}-en1`,
+    execution_session_id: `session-${subjectId}`,
+    strategy_id: strategyId,
+    account_id: accountId,
+    instrument_id: "ETHUSDT.BINANCE",
+    symbol: "ETHUSDT",
+    side: "BUY",
+    order_type: "MARKET",
+    status: "FILLED",
+    price: "1859.89",
+    quantity: "0.08",
+    submitted_at: "2026-09-06T11:45:00.000Z",
+    updated_at: E2E_AS_OF,
+    reduce_only: false,
+    post_only: false,
+    time_in_force: "GTC",
+  };
+  const fill = {
+    fill_id: `fill-${subjectKind}-${subjectId}-entry`,
+    client_order_id: order.client_order_id,
+    execution_session_id: order.execution_session_id,
+    strategy_id: strategyId,
+    account_id: accountId,
+    instrument_id: order.instrument_id,
+    symbol: order.symbol,
+    side: order.side,
+    price: order.price,
+    quantity: order.quantity,
+    trade_time: "2026-09-06T11:45:01.000Z",
+    realized_pnl: "0",
+    commission: "0.02",
+    commission_currency: "USDT",
+    liquidity_side: "TAKER",
+    trade_id: `trade-${subjectKind}-${subjectId}-entry`,
+  };
+  const records = relation === "orders"
+    ? [{ record_id: order.order_id, values: order }]
+    : [{ record_id: fill.fill_id, values: fill }];
+  return {
+    schema_version: "portal.execution.subject-records.v1",
+    logical_operation_id: `execution${subjectKind === "alpha" ? "Alpha" : "Account"}${relation === "orders" ? "Orders" : "Fills"}V1`,
+    authority: "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+    source_authority: "TRADING_SYSTEM_CURRENT_SOURCE",
+    history_semantics: "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+    environment,
+    profile_id: e2eProfileId(environment),
+    resource: {
+      kind: subjectKind,
+      id: subjectId,
+      resolution: subjectKind === "account" ? "EXACT_ACCOUNT_ID" : "PUBLISHED_STRATEGY_ID",
+    },
+    timeframe: subjectKind === "alpha"
+      ? { value: "15m", provenance: "DERIVED_STRATEGY_ID_SUFFIX", source_field: null }
+      : { value: null, provenance: "UNAVAILABLE", source_field: null },
+    source_health: { availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of_ms: E2E_AS_OF_MS },
+    coverage: {
+      retained_row_count: records.length,
+      oldest_observed_at_ms: E2E_AS_OF_MS,
+      newest_observed_at_ms: E2E_AS_OF_MS,
+      source_completeness: "COMPLETE",
+      source_window: "CURRENT_SOURCE_CURSOR_TRAVERSAL",
+    },
+    state: "AVAILABLE",
+    page: { limit: Math.min(500, Math.max(1, Number(search.get("limit") ?? 200))), returned_count: records.length, has_more: false, next_cursor: null },
+    records,
+    projection: {
+      epoch_id: `e2e-${environment}`,
+      sequence: 1,
+      source_as_of_ms: E2E_AS_OF_MS,
+      last_successful_refresh_at_ms: E2E_READ_AT_MS,
+      completeness: "COMPLETE",
+    },
+  };
+}
+
+/** A typed Market Context absence: no transport error and no fabricated bar. */
+function unavailableMarketCandles(search: URLSearchParams): Record<string, unknown> {
+  const environment = validEnvironment(search.get("environment")) ? search.get("environment")! : "paper";
+  const venue = search.get("venue") ?? "BINANCE";
+  const market = search.get("market") ?? (venue === "OKX" ? "SWAP" : "USDM");
+  const symbol = search.get("symbol") ?? "ETHUSDT";
+  const interval = search.get("interval") ?? "1h";
+  const from = Number(search.get("from_ms"));
+  const to = Number(search.get("to_ms"));
+  return {
+    schema_version: "portal.execution.market-candles.v1",
+    logical_operation_id: "executionMarketCandlesV1",
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "VENUE_PUBLIC_MARKET_DATA",
+    environment,
+    profile_id: e2eProfileId(environment),
+    source: {
+      kind: "venue_public",
+      venue,
+      market,
+      endpoint: null,
+      instrument: symbol,
+      note: "The E2E contract doubles a typed absence; it does not fabricate OHLCV.",
+    },
+    symbol,
+    interval,
+    interval_ms: interval === "15m" ? 900_000 : interval === "1m" ? 60_000 : interval === "5m" ? 300_000 : interval === "30m" ? 1_800_000 : interval === "4h" ? 14_400_000 : interval === "1d" ? 86_400_000 : 3_600_000,
+    state: "UNAVAILABLE",
+    reason_code: "E5_MARKET_CANDLES_NOT_PUBLISHED",
+    retryable: false,
+    fetched_at_ms: null,
+    read_at_ms: E2E_READ_AT_MS,
+    coverage: {
+      from_ms: Number.isFinite(from) ? from : null,
+      to_ms: Number.isFinite(to) ? to : null,
+      requested_limit: Number(search.get("limit") ?? 500),
+      returned_count: 0,
+      truncated: false,
+      pages: 0,
+    },
+    last_candle_closed: null,
+    candles: [],
+  };
+}
+
+/** EDS-09 observation only: current rows with explicit non-replay semantics. */
+function observedTimelineEnvelope(search: URLSearchParams): Record<string, unknown> {
+  const environment = validEnvironment(search.get("environment")) ? search.get("environment")! : "paper";
+  const subjectKind = search.get("subject_kind") ?? "alpha";
+  const subjectId = search.get("subject_id") ?? "adaptive_hma_cpp_00115m";
+  const accountId = subjectKind === "account" ? subjectId : "paper-binance-adaptive_hma_cpp_00115m";
+  return {
+    schema_version: "portal.execution.observed-timeline-bff.v1",
+    logical_operation_id: "executionObservedTimelineV1",
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "TRADING_SYSTEM_CURRENT_STATE",
+    observation_authority: "PORTAL_OBSERVATION",
+    observation_semantics: "BOUNDED_CURRENT_PAGE",
+    environment,
+    profile_id: e2eProfileId(environment),
+    resource: { kind: subjectKind.toUpperCase(), id: subjectId },
+    projection: {
+      epoch_id: `e2e-${environment}`,
+      sequence: 1,
+      source_as_of_ms: E2E_AS_OF_MS,
+      received_at_ms: E2E_READ_AT_MS,
+      last_successful_refresh_at_ms: E2E_READ_AT_MS,
+      completeness: "COMPLETE",
+    },
+    observed_timeline: {
+      state: "READY",
+      reason_code: null,
+      retryable: false,
+      freshness: { as_of_ms: E2E_AS_OF_MS, read_at_ms: E2E_READ_AT_MS },
+      source_history_semantics: "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
+      data: {
+        label: "OBSERVED_TIMELINE",
+        ordering_rule: "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1",
+        entries: [{
+          observed_at_ms: E2E_AS_OF_MS,
+          source_clock: "ORDER_UPDATED_AT",
+          observation_type: "ORDER_OBSERVED",
+          source_record: { kind: "ORDER", id: `ord-${subjectId}` },
+          resource: { strategy_id: subjectKind === "alpha" ? subjectId : "adaptive_hma_cpp_00115m", account_id: accountId, instrument_id: "ETHUSDT.BINANCE" },
+          values: { price: "1859.89", quantity: "0.08", realized_pnl: null },
+          rejected_exact_value_fields: [],
+        }],
+        unavailable_segments: [
+          { segment: "BROKER_ACKNOWLEDGEMENT", state: "UNAVAILABLE", reason_code: "EDS10_BROKER_ACK_CLOCK_SOURCE_GAP_CONFIRMED" },
+          { segment: "AUTHORITATIVE_CORRECTION_TOMBSTONE", state: "UNAVAILABLE", reason_code: "EDS10_CORRECTION_TOMBSTONE_SOURCE_GAP_CONFIRMED" },
+          { segment: "GLOBAL_EVENT_SEQUENCE", state: "UNAVAILABLE", reason_code: "EDS10_GLOBAL_EVENT_SEQUENCE_SOURCE_GAP_CONFIRMED" },
+        ],
+      },
+    },
+    mark_context: {
+      state: "READY",
+      reason_code: null,
+      data: {
+        label: "DERIVED · mark-context",
+        marks: [{ position_id: `pos-${subjectId}`, instrument_id: "ETHUSDT.BINANCE", mark_price: "1861.00", mark_price_at_ms: E2E_AS_OF_MS }],
+        unavailable_market_context: { state: "UNAVAILABLE", reason_code: "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED" },
+      },
+    },
+    page: { limit: Math.min(200, Math.max(1, Number(search.get("limit") ?? 100))), has_more: false, next_cursor: null },
+  };
+}
+
 function financialChartEnvelope(search: URLSearchParams): Record<string, unknown> {
   const environment = validEnvironment(search.get("environment")) ? search.get("environment")! : "paper";
   const subjectKind = search.get("subject_kind") ?? "alpha";
@@ -565,6 +763,13 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
         },
       });
     }
+    if (
+      seg[0] === "resources" && seg.length === 4 &&
+      (seg[1] === "alphas" || seg[1] === "accounts") &&
+      (seg[3] === "orders" || seg[3] === "fills")
+    ) {
+      return ok(subjectActivityEnvelope(seg[1] === "alphas" ? "alpha" : "account", seg[2]!, seg[3], search));
+    }
     // EDS-04 rich detail screens use named resource BFFs.  The double serves
     // the same raw, wire-shaped fixture as Fixture Lab so browser journeys
     // exercise the real HTTP reader rather than a hidden client-side join.
@@ -602,6 +807,8 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
         return ok(alphaActivityEnvelope(seg[2], environment));
     }
     if (path === "/views/equity-chart") return ok(financialChartEnvelope(search));
+    if (path === "/views/observed-timeline") return ok(observedTimelineEnvelope(search));
+    if (path === "/market/venue-candles") return ok(unavailableMarketCandles(search));
     if ((seg[0] === "alphas" || seg[0] === "portfolios") && seg[2] === "query-analytics") return ok(QUERY_ANALYTICS_EMPTY);
     if (path === "/commands/tasks") return ok(COMMAND_TASKS);
     if (path === "/commands/catalog") return ok(COMMAND_CATALOGUE_FIXTURE);
