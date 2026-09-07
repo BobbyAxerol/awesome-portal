@@ -1,3 +1,6 @@
+# Keep the glibc Python runtime required by the published QuantBT, DuckDB and
+# Arrow wheels. The final stage removes the unused Perl interpreter that is
+# otherwise retained by Debian solely for package-manager maintenance.
 FROM python:3.12.14-slim@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a
 
 ARG PORTAL_HMD_READER_REQUIRED=false
@@ -36,6 +39,13 @@ RUN wheel="/tmp/hmd-reader/primus_historical_market_data-${PORTAL_HMD_READER_VER
          exit 1; \
        fi \
     && rm -rf /tmp/hmd-reader
+
+# This is an immutable application runtime: apt/dpkg are not used after build
+# and Portal executes no Perl. Removing this otherwise-essential package keeps
+# the release free of the base image's unfixed Critical perl-base findings;
+# Python, OpenSSL and all application libraries are verified by the image gate.
+RUN apt-get purge --allow-remove-essential -y perl-base \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV PORTAL_HMD_READER_VERSION=${PORTAL_HMD_READER_VERSION} \
     PORTAL_HMD_READER_WHEEL_SHA256=${PORTAL_HMD_READER_SHA256} \
