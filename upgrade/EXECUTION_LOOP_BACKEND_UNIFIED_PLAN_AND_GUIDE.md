@@ -4968,6 +4968,18 @@ chain.  The static adapter gate verifies this Compose wiring as well as the
 fixed proxy paths, so configuration drift cannot silently turn the release
 back into an unrelated public-data implementation.
 
+**Production release-plumbing amendment (2026-09-07):** the protected-main
+publisher now selects the `Validate Portal monorepo stack` check run only when
+its `head_sha` is the release commit; an older failed check can no longer
+reject a newer green release.  Profile preparation accepts either the explicit
+dev-local Edge content address (and writes the exception as `true`) or a
+signed immutable GHCR Edge digest (and writes the exception as `false`).  A
+production render therefore cannot accidentally carry the local-image
+exception into Paper, Sandbox or Live.  The static release and Market Context
+gates cover both invariants.  This closes release-plumbing drift only; actual
+`PRODUCT_ACTIVE` still requires the exact signed image, private render,
+preflight, measured profile probes and recorded deployed evidence.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:

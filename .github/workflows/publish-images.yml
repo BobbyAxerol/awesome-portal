@@ -63,7 +63,8 @@ jobs:
               > release-gates/portal-ci-check-runs.json
             conclusion="$(jq -r '
               [.check_runs[]
-                | select(.name == "Validate Portal monorepo stack")
+                | select(.name == "Validate Portal monorepo stack"
+                         and .head_sha == env.GITHUB_SHA)
                 | .conclusion] | last // "pending"
             ' release-gates/portal-ci-check-runs.json)"
             if [[ "${conclusion}" == "success" ]]; then

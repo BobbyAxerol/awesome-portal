@@ -43,6 +43,17 @@ assert template.count("location = /portal/execution/v2/manager/market/") == 2
 # render from silently falling back to the public candle adapter.
 assert 'FEATURE_EXECUTION_MARKET_CONTEXT: ${CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT:-false}' in control_overlay
 assert 'EXECUTION_MARKET_CANDLES_SOURCE: ${CONTROL_API_EXECUTION_MARKET_CANDLES_SOURCE:-venue_public}' in control_overlay
+
+profile_prepare = pathlib.Path(sys.argv[1]).parents[3] / "scripts" / "execution-profile-runtime-prepare.sh"
+profile_prepare_text = profile_prepare.read_text()
+for required in (
+    "local_edge_image_pattern='^portal-execution-edge-manager-v2@sha256:",
+    "signed_edge_image_pattern='^ghcr\\\\.io/[a-z0-9][a-z0-9._-]*/portal-execution-edge@sha256:",
+    "edge_dev_local_image_allowed=true",
+    "edge_dev_local_image_allowed=false",
+    '"EDGE_DEV_LOCAL_IMAGE_ALLOWED=${edge_dev_local_image_allowed}"',
+):
+    assert required in profile_prepare_text, required
 PY
 
 bash -n "${root_dir}/scripts/execution-d2-render-source-proxy.sh"

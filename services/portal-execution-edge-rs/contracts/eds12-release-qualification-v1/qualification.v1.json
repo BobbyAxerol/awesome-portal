@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:5217eaadb18fbc79bd3a5d9f8eca85b3b2861c9b797b4262cb1cd7404f48627d"
+      "sha256": "sha256:1591a7c9267a590df8ea18db2ad428626091cc9f50ce13c86f172c7f2ed68df9"
     },
     {
       "id": "n29_debt",
@@ -90,7 +90,27 @@
     {
       "id": "protected_release_workflow",
       "file": ".github/workflows/publish-images.yml",
-      "sha256": "sha256:a38c0664b40737532fba09f8b97ddc5ce729f7e9826275673136df01beaabbcd"
+      "sha256": "sha256:99e96b1a2481412dc9bfec90aea182872c3443a4ce730bddfc057c6b81d665d4"
+    },
+    {
+      "id": "image_publication_gate",
+      "file": "scripts/execution-image-publication-test.sh",
+      "sha256": "sha256:d2e890181e6a0f318b776cc89b356d722a6594be54b7e7aa4781990ed3ebd25c"
+    },
+    {
+      "id": "current_source_compose",
+      "file": "deploy/compose.execution-current-source.yaml",
+      "sha256": "sha256:9037586d2e4836db7fd392221a664abce835012843933646fff379004e4f6884"
+    },
+    {
+      "id": "profile_runtime_prepare",
+      "file": "scripts/execution-profile-runtime-prepare.sh",
+      "sha256": "sha256:3fd851db81c7fd60a955868afcd3138283bc0032ddf54de90ed763723e5b2189"
+    },
+    {
+      "id": "market_context_static_gate",
+      "file": "scripts/execution-market-context-data-layer-adapter-test.sh",
+      "sha256": "sha256:f12d7da2cabc704ed34845b46f97ca6021a7310fb10e210ee4889cf36e748bd9"
     },
     {
       "id": "current_source_proxy",

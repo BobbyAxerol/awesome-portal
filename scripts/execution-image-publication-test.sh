@@ -85,6 +85,15 @@ by_name = {
     if isinstance(step, dict) and isinstance(step.get("name"), str)
 }
 
+release_gate = by_name.get("Wait for commit-bound Portal CI release gates", {}).get("run", "")
+for required in (
+    'select(.name == "Validate Portal monorepo stack"',
+    "and .head_sha == env.GITHUB_SHA)",
+    'and .conclusion == "success")',
+):
+    if required not in release_gate:
+        raise SystemExit("Publication must select the Portal CI gate for the exact commit only.")
+
 edge_build = by_name.get("Build and publish execution edge image", {})
 proxy_build = by_name.get("Build and publish source proxy image", {})
 control_build = by_name.get("Build and publish Control API image", {})
