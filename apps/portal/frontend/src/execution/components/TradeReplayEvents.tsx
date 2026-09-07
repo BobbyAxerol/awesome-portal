@@ -20,6 +20,9 @@ export {
 } from "./tradeReplayModel";
 export type { Leg, LegRole, LogEvent, LogRow, ReplayFill, ReplayOrder, RoundTrip } from "./tradeReplayModel";
 
+/** Where the panel's orders and fills came from (G9): the drained relation page set, or the retained projection page. */
+export interface ReplaySource { label: string; detail: string | null; page: { orders: number; fills: number; strategies: number } | null }
+
 export interface TradeReplayEventsProps {
   orders: readonly ReplayOrder[];
   fills: readonly ReplayFill[];
@@ -47,6 +50,8 @@ export interface TradeReplayEventsProps {
   focusId?: string | null;
   /** what the retained projection page holds in total (all strategies), for an honest empty state */
   page?: { orders: number; fills: number; strategies: number } | null;
+  /** the source of the orders and fills, named in the legend and the empty state */
+  source?: ReplaySource | null;
   subjectLabel?: string | null;
   /** order groups / packages / ledgers as the source publishes them (read ahead of publication) */
   groups?: ReplayGroups;
@@ -93,7 +98,7 @@ export function resolveFocus(focus: string | null | undefined, orders: readonly 
   return (o.type ?? "").toUpperCase().includes("LIMIT") ? `ladder:${o.orderId}` : null;
 }
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS }: TradeReplayEventsProps) {
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
   const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
@@ -153,8 +158,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
       <section className="exec-rp-panel" aria-label="Trade replay">
         <header className="exec-rp-head"><span className="exec-rp-title">Trade replay — trade logs on candles</span></header>
         <div className="exec-gate-unverified">
-          No order or fill of {subjectLabel ?? "this subject"} is present in the retained projection page.
-          {page ? ` The page holds ${page.orders} orders and ${page.fills} fills across ${page.strategies} strateg${page.strategies === 1 ? "y" : "ies"} (bounded current page, all profiles) — none of them belongs here.` : ""}
+          No order or fill of {subjectLabel ?? "this subject"} is present in the {source?.label ?? "retained projection page"}.
+          {page ? ` The page holds ${page.orders} orders and ${page.fills} fills across ${page.strategies} strateg${page.strategies === 1 ? "y" : "ies"} (${source?.detail ?? "bounded current page, all profiles"}) — none of them belongs here.` : ""}
           {" "}Market candles are {candles.state?.toLowerCase() ?? "unavailable"} · {candles.reason ?? "source not published"}.
         </div>
         <p className="exec-rp-smoke">Counts on the Overview tab (orders, filled, rejected) are profile-wide analytics facts, not this alpha's — DR-22. A per-alpha order / fill read beyond the current page is a backend request (BR-EX-81).</p>
@@ -242,6 +247,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           <span>─ ─ <span data-tone="good">TP</span> / <span data-tone="bad">SL</span> leg at trigger_price · ◇ triggered · ⊣ cancelled · ┈ resting limit level</span>
           <span data-tone="bad">× rejected ({rejects})</span>
           <span className="exec-rp-mute">╌ round trip · {bars.length > 0 ? "▮ venue candle up / down" : "no candles"} · hover a marker for its card · click ↔ log row · ← → step fills</span>
+          <span className="exec-rp-mute" data-source={source?.page ? "relations" : "n25"}>source: {source?.label ?? "retained projection page (N25)"}{source?.detail ? ` · ${source.detail}` : ""}</span>
           <span className="exec-rp-mute" data-groups={groups.published.brackets ? "published" : "not-published"}>
             groups: {groups.published.brackets ? `brackets published (${groups.brackets.length}) — boxes from the source's groups` : "order_brackets not published — boxes paired by time (DERIVED)"}
             {" · "}{groups.published.conditional ? `OCO/OTO/OUO groups (${groups.conditional.length}) ⌐ brace` : "conditional_order_groups not published"}

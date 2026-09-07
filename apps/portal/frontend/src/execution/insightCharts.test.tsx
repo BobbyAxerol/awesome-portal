@@ -6,8 +6,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { RelationFacts } from "./api/managerRelations";
 import { readQueryAnalytics } from "./api/profileRead";
-import { SourceTradeReplay, analyticsTiles, replayEvents } from "./screens/recomposeContainers";
+import { SourceTradeReplay, analyticsTiles, relationAnalytics, replayEvents, replaySource } from "./screens/recomposeContainers";
 
 vi.mock("../charts/EChart", () => ({
   EChart: ({ option, height }: { option: unknown; height: number }) => <div data-echart data-height={height} data-series={JSON.stringify((option as { series: unknown[] }).series.length)} />,
@@ -124,5 +125,50 @@ describe("SourceTradeReplay — the hi-fi replay grammar on the alpha's own even
     const { container } = render(<SourceTradeReplay analytics={resource} additive={additive} alphaId="adaptive_hma_cpp_00115m" />);
     expect(container.querySelectorAll("table.exec-rp-table tbody tr")).toHaveLength(1);
     expect(screen.getByText("7")).toBeTruthy();
+  });
+});
+
+describe("G9 — the drained relation page set as the replay source", () => {
+  const facts = readQueryAnalytics(RAW)!;
+  const resource = { ...facts, sourceFacts: { deployments: [{ account_id: "acct-1", strategy_id: "alpha-1", venue: "BINANCE" }], orders: [], fills: [] } };
+  const relations: RelationFacts = {
+    environment: "paper", pages: 2, exhausted: true, completeness: "COMPLETE", asOfMs: 1788761101574, state: "POPULATED", reasons: [],
+    coverage: {},
+    facts: {
+      orders: [
+        { order_id: 1, strategy_id: "alpha-1", account_id: "acct-1", status: "FILLED", side: "BUY", symbol: "ETHUSDT", order_type: "MARKET", quantity: "1", client_order_id: "c1", submitted_at: "2026-08-08T12:00:00.000Z" },
+        { order_id: 2, strategy_id: "other", account_id: "acct-2", status: "NEW", side: "SELL", symbol: "BTCUSDT", order_type: "LIMIT", quantity: "1", client_order_id: "c2", submitted_at: "2026-08-08T12:00:00.000Z" },
+      ],
+      fills: [
+        { fill_id: 10, strategy_id: "alpha-1", account_id: "acct-1", instrument_id: "ETHUSDT.BINANCE", side: "BUY", price: "1", quantity: "1", trade_time: "2026-08-08T12:00:01.000Z", client_order_id: "c1" },
+        { fill_id: 11, strategy_id: "other", account_id: "acct-2", instrument_id: "BTCUSDT.BINANCE", side: "SELL", price: "1", quantity: "1", trade_time: "2026-08-08T12:00:01.000Z", client_order_id: "c2" },
+      ],
+      order_brackets: [{ bracket_id: "b1", account_id: "acct-2", entry_client_order_id: "c2" }],
+    },
+  };
+  it("keeps only the subject's orders and fills, passes group tables whole, dates the facts by the relations' as_of, and keeps the resource's deployments", () => {
+    const merged = relationAnalytics(resource, relations, { alphaId: "alpha-1" })!;
+    expect(merged.sourceFacts?.orders?.map((r) => r.order_id)).toEqual([1]);
+    expect(merged.sourceFacts?.fills?.map((r) => r.fill_id)).toEqual([10]);
+    expect(merged.sourceFacts?.order_brackets).toHaveLength(1);
+    expect(merged.sourceFacts?.deployments).toHaveLength(1);
+    expect(merged.asOf).toBe("2026-09-07T06:05:01.574Z");
+    const events = replayEvents(merged, null, "alpha-1");
+    expect(events.fills.map((f) => f.fillId)).toEqual(["10"]);
+    expect(events.orders.map((o) => o.orderId)).toEqual(["1"]);
+    expect(events.venue).toBe("BINANCE");
+    expect(relationAnalytics(resource, { ...relations, facts: { orders: relations.facts.orders } }, { alphaId: "alpha-1" })).toBeNull();
+    expect(relationAnalytics(resource, relations, { accountId: "acct-2" })!.sourceFacts?.fills?.map((r) => r.fill_id)).toEqual([11]);
+  });
+  it("names the source honestly: the page set with its walk and completeness, or the N25 page and why", () => {
+    const live = replaySource({ status: "ok", value: relations, refreshing: false }, true);
+    expect(live.label).toBe("Manager relation page set (EDS-11R1)");
+    expect(live.detail).toBe("2 pages · drained to the relations' end · COMPLETE");
+    expect(live.page).toEqual({ orders: 2, fills: 2, strategies: 2 });
+    const capped = replaySource({ status: "ok", value: { ...relations, exhausted: false, state: "PARTIAL", reasons: ["fills: page cap 40 reached"] }, refreshing: true }, true);
+    expect(capped.detail).toBe("2 pages · stopped early — a lower bound · COMPLETE · fills: page cap 40 reached · refreshing");
+    expect(replaySource({ status: "loading", value: null, refreshing: false }, false)).toEqual({ label: "retained projection page (N25)", detail: "relation page set loading — the bounded current page is shown meanwhile", page: null });
+    expect(replaySource({ status: "unavailable", value: { ...relations, state: "UNAVAILABLE", reasons: ["orders: EDS11R_SOURCE_UNAVAILABLE"] }, refreshing: false }, false).detail).toBe("relation page set unavailable · orders: EDS11R_SOURCE_UNAVAILABLE — bounded current page, all profiles");
+    expect(replaySource(null, false).detail).toBe("bounded current page, all profiles");
   });
 });

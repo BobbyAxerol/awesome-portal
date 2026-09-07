@@ -35,6 +35,7 @@ import type { TypedCondition } from "../components/conditions";
 import type { FinancialChartPayload, FinancialChartQuery, FinancialEnvironment } from "./financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth } from "./derivations";
 import type { MarketCandlesPayload, MarketCandlesQuery } from "./marketCandles";
+import type { RelationPage, RelationPageQuery } from "./managerRelations";
 import type { ObservedTimeline, ObservedTimelineQuery } from "./observedTimeline";
 
 export type Result<T> =
@@ -299,6 +300,8 @@ export interface ExecutionApi {
   getMarketCandles(query: MarketCandlesQuery): Promise<Result<MarketCandlesPayload>>;
   /** EDS-09b / EDS-10b observed timeline BFF (`/views/observed-timeline`) — a Portal observation, never a replay. */
   getObservedTimeline(query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>>;
+  /** EDS-11R1 named relation BFF (G9): one bounded page of a screen-bound Manager relation; the Portal continuation goes back unchanged. */
+  getManagerRelationPage(query: RelationPageQuery): Promise<Result<RelationPage>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */

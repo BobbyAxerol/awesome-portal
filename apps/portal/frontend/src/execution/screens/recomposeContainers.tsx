@@ -27,10 +27,12 @@ import { useParamState } from "../routeState";
 import { useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
-import { TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
+import { type ReplaySource, TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
 import { readReplayGroups, scopeGroups } from "../components/tradeReplayGroups";
 import { ObservedTimelinePanel } from "../components/ObservedTimelinePanel";
+import { subjectFunnel, subjectRows, type RelationFacts, type SubjectFunnel } from "../api/managerRelations";
 import { type ObservedEntry, type ObservedEnvironment, type ObservedSubjectKind, type ObservedTimeline, deployedEnvironments } from "../api/observedTimeline";
+import { useRelationFacts, type RelationFactsState } from "../useRelationFacts";
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { unavailable } from "../api/ports";
@@ -522,9 +524,16 @@ const TILE_TITLES = [
   "Paper vs live drift", "Fee load", "Win profile", "Capacity headroom",
 ] as const;
 
-function analyticsKpis(analytics: QueryAnalytics): Kpi[] {
+function analyticsKpis(analytics: QueryAnalytics, funnel: SubjectFunnel | null = null): Kpi[] {
   const kpis: Kpi[] = [];
-  if (analytics.orderFunnel && analytics.orderFunnel.totalOrders !== null) {
+  if (funnel) {
+    // G9 / DR-22: counted from the drained relation page set, this subject's rows only; a capped walk is a lower bound
+    const bound = (n: number) => (funnel.pageSet.exhausted ? String(n) : `≥${n}`);
+    kpis.push({ label: "orders (page set · this subject)", value: bound(funnel.totalOrders) });
+    for (const [status, count] of Object.entries(funnel.statusCounts)) {
+      kpis.push({ label: `${status.toLowerCase()} · this subject`, value: bound(count) });
+    }
+  } else if (analytics.orderFunnel && analytics.orderFunnel.totalOrders !== null) {
     // DR-22: the N25 funnel counts the whole profile's page, not this subject's rows — say so in the label
     kpis.push({ label: "orders (window · profile-wide)", value: String(analytics.orderFunnel.totalOrders) });
     for (const [status, count] of Object.entries(analytics.orderFunnel.statusCounts)) {
@@ -1035,6 +1044,44 @@ function analyticsEquity(analytics: QueryAnalytics | null | undefined) {
  * (exact, bounded) plus the analytics facts filtered to the alpha's accounts —
  * the N25 facts are profile-wide — deduplicated by id.
  */
+/**
+ * G9 (EDS-11R1): the replay's facts from the drained relation page set —
+ * orders and fills of this subject only, group tables whole (scopeGroups
+ * scopes them by the subject's accounts); deployments and strategies stay
+ * from the resource. Null until both orders and fills have been read.
+ */
+export function relationAnalytics(base: QueryAnalytics, relations: RelationFacts | null | undefined, subject: { alphaId?: string | null; accountId?: string | null }): QueryAnalytics | null {
+  if (!relations || !relations.facts.orders || !relations.facts.fills) return null;
+  const sourceFacts: Record<string, readonly SourceRow[]> = { ...(base.sourceFacts ?? {}) };
+  for (const [key, rows] of Object.entries(relations.facts)) sourceFacts[key] = key === "orders" || key === "fills" ? subjectRows(rows, subject) : rows;
+  return { ...base, sourceFacts, asOf: relations.asOfMs !== null ? new Date(relations.asOfMs).toISOString() : base.asOf };
+}
+
+/** With the relation page set in place, the profile analytics only lend deployments and strategies (accounts, venue, timeframe). */
+function additiveWithoutRows(additive: QueryAnalytics | null | undefined): QueryAnalytics | null {
+  if (!additive) return null;
+  const facts = additive.sourceFacts ?? {};
+  return { ...additive, sourceFacts: { deployments: facts.deployments ?? [], strategies: facts.strategies ?? [] } };
+}
+
+/** What the replay panel says about where its orders and fills came from. */
+export function replaySource(relations: RelationFactsState | null | undefined, active: boolean): ReplaySource {
+  const v = relations?.value ?? null;
+  if (active && v) {
+    const orders = new Set((v.facts.orders ?? []).map((r) => text(r.order_id) ?? text(r.client_order_id)).filter(Boolean)).size;
+    const fills = new Set((v.facts.fills ?? []).map((r) => text(r.fill_id)).filter(Boolean)).size;
+    const strategies = new Set([...(v.facts.orders ?? []), ...(v.facts.fills ?? [])].map((r) => text(r.strategy_id)).filter(Boolean)).size;
+    const walk = v.exhausted ? "drained to the relations' end" : "stopped early — a lower bound";
+    const why = v.reasons.length > 0 ? ` · ${v.reasons.join(" · ")}` : "";
+    return { label: "Manager relation page set (EDS-11R1)", detail: `${v.pages} pages · ${walk} · ${v.completeness ?? "completeness not published"}${why}${relations?.refreshing ? " · refreshing" : ""}`, page: { orders, fills, strategies } };
+  }
+  const why = !relations ? "bounded current page, all profiles"
+    : relations.status === "loading" ? "relation page set loading — the bounded current page is shown meanwhile"
+    : relations.status === "unavailable" ? `relation page set unavailable${v && v.reasons.length > 0 ? ` · ${v.reasons.join(" · ")}` : ""} — bounded current page, all profiles`
+    : "bounded current page, all profiles";
+  return { label: "retained projection page (N25)", detail: why, page: null };
+}
+
 export function replayEvents(analytics: QueryAnalytics | null | undefined, additive: QueryAnalytics | null | undefined, alphaId: string | null, accountId: string | null = null) {
   const facts = analytics?.sourceFacts ?? {};
   const extra = additive?.sourceFacts ?? {};
@@ -1111,9 +1158,14 @@ const readIntervalPref = (subject: string): MarketCandleInterval | null => {
 };
 const writeIntervalPref = (subject: string, interval: MarketCandleInterval): void => { try { window.localStorage.setItem(INTERVAL_PREF(subject), interval); } catch { /* per-viewer convenience only */ } };
 
-export function TradeReplayLive({ api, analytics, additive = null, alphaId, subjectId, focusId = null }: { api: ExecutionApi; analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId: string | null; subjectId?: string; focusId?: string | null }) {
+export function TradeReplayLive({ api, analytics, additive = null, alphaId, subjectId, focusId = null, relations = null }: { api: ExecutionApi; analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId: string | null; subjectId?: string; focusId?: string | null; relations?: RelationFactsState | null }) {
   const subject = subjectId ?? alphaId ?? "subject";
-  const events = useMemo(() => replayEvents(analytics, additive, alphaId, alphaId === null ? subjectId ?? null : null), [analytics, additive, alphaId, subjectId]);
+  const accountScope = alphaId === null ? subjectId ?? null : null;
+  // G9: the drained relation page set is the source once orders and fills have been read; the N25 page stands in before that and when the BFF is unavailable
+  const relationValue = relations?.value ?? null;
+  const fromRelations = useMemo(() => analytics && relationValue ? relationAnalytics(analytics, relationValue, { alphaId, accountId: accountScope }) : null, [analytics, relationValue, alphaId, accountScope]);
+  const events = useMemo(() => fromRelations ? replayEvents(fromRelations, additiveWithoutRows(additive), alphaId, accountScope) : replayEvents(analytics, additive, alphaId, accountScope), [fromRelations, analytics, additive, alphaId, accountScope]);
+  const source = useMemo(() => replaySource(relations, fromRelations !== null), [relations, fromRelations]);
   const symbols = useMemo(() => Array.from(new Set([...events.fills.map((f) => f.symbol), ...events.orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [events]);
   const [symbol, setSymbol] = useState<string | null>(null);
   const activeSymbol = symbol && symbols.includes(symbol) ? symbol : symbols[0] ?? null;
@@ -1207,7 +1259,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
         onRangeEdge={onRangeEdge}
         paging={pages.key === pageKey ? pages.loading : null}
         focusId={focusId}
-        page={events.page}
+        page={source.page ?? events.page}
+        source={source}
         subjectLabel={alphaId ?? subjectId ?? null}
         groups={events.groups}
       />
@@ -1285,6 +1338,9 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const activityEnv = resourceState.value?.selectedEnvironment ?? "paper";
   // G8: the observed timeline reads where the alpha is deployed; selected_environment is only the resolver default.
   const observedEnvs = deployedEnvironments(resourceState.value?.panels);
+  const factsEnv: ObservedEnvironment = observedEnvs.includes(activityEnv) ? activityEnv : observedEnvs[0] ?? activityEnv;
+  // G9 (EDS-11R1): the replay and the order funnel read the drained relation page set of the alpha's environment
+  const relations = useRelationFacts(api, factsEnv, resourceState.status === "ok");
   const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   // deep link from the Blotter / a shared URL: `?tab=Trade%20Replay&focus=order:123` (or fill:…)
@@ -1330,12 +1386,12 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       tab={tab}
       onTabChange={setTab}
       venues={item ? fleetVenues(item) : []}
-      kpis={analytics ? analyticsKpis(analytics) : item ? fleetKpis(item) : []}
+      kpis={analytics ? analyticsKpis(analytics, subjectFunnel(relations.value, { alphaId })) : item ? fleetKpis(item) : []}
       contributions={alphaContributions(viewFacts)}
       equity={resource ? profileEquity(resource) ?? analyticsEquity(analytics) : analyticsEquity(analytics)}
       deployments={deployments}
       tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      replay={viewFacts ? <TradeReplayLive api={api} analytics={viewFacts} additive={analytics} alphaId={alphaId} focusId={focus} /> : undefined}
+      replay={viewFacts ? <TradeReplayLive api={api} analytics={viewFacts} additive={analytics} alphaId={alphaId} focusId={focus} relations={relations} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
       audit={audit ? pageOf(audit) : null}
@@ -1343,7 +1399,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       sessions={alphaSessions(viewFacts)}
       accounting={alphaAccounting(viewFacts)}
       activity={<AlphaActivityTile activity={activityState.value} transport={activityState.status} reason={activityState.reason} />}
-      observedTimeline={<ObservedTimelineLive api={api} environment={observedEnvs.includes(activityEnv) ? activityEnv : observedEnvs[0] ?? activityEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} />}
+      observedTimeline={<ObservedTimelineLive api={api} environment={factsEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} />}
       reconciliation={alphaReconciliation(viewFacts)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
@@ -1498,6 +1554,8 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
   // resource resolved to; the server rejects any other workspace, so the id is
   // never guessed here. Viewport = the window width, clamped by the path builder.
   const chartEnv = state.value?.selectedEnvironment ?? "paper";
+  // G9 (EDS-11R1): the account replay reads the drained relation page set of the account's environment
+  const relations = useRelationFacts(api, chartEnv, state.status === "ok");
   const chartWorkspace = state.value?.workspaceId ?? null;
   // R3 reuse: the same Trade Replay on the account's own orders / fills — the
   // EDS-04 account resource (exact, bounded) plus the N25 facts of the strategy
@@ -1626,7 +1684,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
         physicalLabel: "free balance",
       } : null}
       exposure={profile ? { bindingId: text(profile.data.venue_accounts?.[0]?.binding_id) ?? accountId, aggregate: null, accountCount: 1, expectedAccountCount: 1, completeness: "COMPLETE", buckets: [] } : null}
-      tradeReplay={accountFacts ? <TradeReplayLive api={api} analytics={accountFacts} additive={accountAnalytics.value ?? null} alphaId={null} subjectId={accountId} /> : undefined}
+      tradeReplay={accountFacts ? <TradeReplayLive api={api} analytics={accountFacts} additive={accountAnalytics.value ?? null} alphaId={null} subjectId={accountId} relations={relations} /> : undefined}
       observedTimeline={<ObservedTimelineLive api={api} environment={chartEnv} subjectKind="account" subjectId={accountId} refreshKey={realtime.refreshKey} />}
       financialChart={
         <EquityChart
