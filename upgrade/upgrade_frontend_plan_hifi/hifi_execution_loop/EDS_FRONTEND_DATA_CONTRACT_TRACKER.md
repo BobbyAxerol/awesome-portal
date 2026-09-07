@@ -667,7 +667,7 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ chờ I0 hợp nhánh (codex có 11R1/11R3/R4-R5 trên `feat/eds11r-r4-r5-activation`) |
 | A-12 | EDS-12 release | gói release | 🟡 **06-09 nghiệm thu**: static qualification ready (gate codex pass), deployed evidence pending, BR-EX-80/81 đóng băng thành gate nguồn — xem A6.2; FE cấp ma trận browser ở A6.3 I6 |
 
-**ĐANG Ở ĐÂY (07-09 chiều) →** dev chạy head `feat/execution-integration@44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
+**ĐANG Ở ĐÂY (07-09 chiều, sau ff) →** một head `2a79b0c` trên 3 ref (§A8.1); còn 6 G + 4 P + 7 phiếu A (§A8.2), lộ trình 5 goal (§A8.3). Dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
 chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
 `/home/bobby/portal-eds-current-bff`). Bước kế: dựng runtime probe từ nhánh đó
 (compose project phụ, không đụng dev) rồi chấm lần lượt A-01→A-07 theo SLA
@@ -1238,6 +1238,42 @@ Thứ tự đề xuất: **G10 → G12-prep → G6 → G11**, G13/G14 nhỏ chen
 **Bobby kiểm tra gì:** Alpha 360 `fib_sl_tp_strength_0015m` → Overview (funnel theo subject sau khi page set drain xong ~30 s), Insight Charts (7 tile có số, tile còn lại typed), Trade Replay (nến 15m + marker; legend "source: Manager relation page set … COMPLETE" sau ~30 s, trước đó "retained projection page (N25) · loading"), Observed timeline; Command Center nhịp theo `read_at`. Với user khác Bobby: màn 360 vẫn 404 EDS-04 (DR-30, thiết kế hiện tại).
 
 **Enhance so với showcase (đợt này):** không thêm UI mới — đợt này là **khôi phục dữ liệu thật** cho Insight Charts/Trade Replay trên dev và làm drain page set đúng kỷ luật (1 walk, huỷ walk thừa). Backend hỗ trợ: projection worker tự hồi phục sau catalogue rotation; log nêu lý do từ chối document.
+
+## A8. SAU HOTFIX 07-09 — CÒN BAO NHIÊU PHASE ĐỂ NGHIỆM THU HẾT BACKEND BỔ SUNG VÀ GHÉP NỐI HOÀN HẢO THEO SHOWCASE (owner hỏi 07-09 chiều; §7.7)
+
+### A8.1 Nhánh — một head, ba tên
+| Ref | Commit | Ghi chú |
+|---|---|---|
+| `origin/feat/execution-integration` | `2a79b0c` | head làm việc (code `44c5715` + tracker) |
+| `origin/feat/execution-data-activation` | `2a79b0c` | **nhánh làm dở trước đó (tracker/phase) — ff 07-09** theo lệnh owner |
+| `origin/feat/eds-current-bff` | `2a79b0c` | nhánh code EDS trước đó — ff, worktree `portal-eds-current-bff` cùng head |
+| worktree `portal-dev` (cục bộ) | `dcc4eda` | **không ff được**: 5 file edge-service sửa dở không phải của Claude (P4-E cadence ladder) đè lên 2 file mà diff chạm (`compose.execution-edge.yaml`, `edge-service/src/main.rs`) → codex/Bobby commit hoặc bỏ WIP rồi `git merge --ff-only`. Tracker từ giờ sửa trên worktree integration (cùng nhánh), push cả ba ref |
+
+Dev đang chạy code `44c5715` (docs-only từ đó). Bobby merge head này vào `dev`/`main` là quyền của Bobby; `main` cần cho G12 final (image protected-main).
+
+### A8.2 Đếm — còn gì (trạng thái 07-09 chiều)
+| Nhóm | Còn | Chi tiết |
+|---|---|---|
+| **Phiếu nghiệm thu backend (A-xx) chưa ký** | **7** | A-04 (4 màn resource — ký từng màn trên dev), A-05 (derivations — DR-27 env), A-06 (EDS-06 mirror cutover parity, DR-01), A-09 (observation lane — chỉ còn ký), A-10 (candles một nguồn), A-11 (SSE v2 + action graph), A-12 (EDS-12 deployed evidence → `PRODUCT_ACTIVE`) |
+| **Phase ghép nối FE ↔ backend (G)** | **6** | G10 nến `data_layer`; G12-prep ma trận 4 profile × 7 state + payload `deployed-evidence.v1` nháp; G6 dual-read parity từng màn; G11 SSE v2 + action graph (R4/R5 lanes typed); G13 DR-27 env cho Activity/execution-quality; G14 BR-EX-82 (đọc theo subject) để replay mở < 3 s |
+| **Parity showcase (execution.primusspark.com) còn lệch — §A5.5** | **4** | P1 Paper Overview (funnel/runway từ profile thật + tick SSE); P2 Portfolio 360 Overview (**chặn nguồn BR-EX-79** `portfolio_equity` REJECTED — làm phần typed + layout, số khi nguồn trả); P3 Live Overview (không có deployment live → motion SSE + trạng thái trung thực, không demo); P4 fleet sparkline uPlot + ECharts reskin (OR-3) |
+| **Đã ngang showcase (không tính)** | — | Command Center motion + Promotion pipeline thật (A5.6: 32 phần tử động vs 24 demo), Alpha 360 Insight Charts 9 canvas từ số server, Trade Replay TradingView-grade (nến venue, marker, groups, log 200), Observed timeline (G8), funnel theo subject (G9) |
+| **Nguồn (S) — ngoài tay Portal, Bobby đẩy source owner** | **5** | BR-EX-50 kline shard, BR-EX-79 portfolio equity, BR-EX-80 timeframe, BR-EX-81 lịch sử orders/fills + khai retention/cursor, DR-24/25/26 |
+| **Bobby quyết** | 4 | DR-27 (env resolver), DR-30 (workspace đa người dùng), merge head → `main` (mở G12 final), WIP edge-service trong `portal-dev` |
+
+**Tổng để "hoàn hảo theo showcase" phía Portal: 6 phase G + 4 việc parity P, khép bằng 7 phiếu A.** Không phase nào ký DONE khi Evidence trống (§A3).
+
+### A8.3 Lộ trình goal (mỗi goal = rebuild dev + báo cáo: ghép nối được gì · enhance gì so với showcase · backend hỗ trợ gì)
+| Goal | Gồm | Đóng bằng | Enhance so với showcase |
+|---|---|---|---|
+| **Goal 1** | G10 + G13 | A-10 (một phần tới khi owner trả market-context), A-05 ký lại sau DR-27 | nến từ feed hệ thống khi có; Activity/execution-quality đúng env |
+| **Goal 2** | G11 | A-11 | CC/journal/lanes động theo SSE v2 như showcase, không smoke |
+| **Goal 3** | G6 | A-06, DR-01 | cùng màn, payload nhẹ, số y hệt |
+| **Goal 4** | P1 + P3 + P4 (+ P2 phần typed) | §A5 bảng đo trước/sau từng màn | Paper/Live/Portfolio Overview + fleet ngang showcase |
+| **Goal 5** | G12-prep + G14 (BR-EX-82 → codex) | A-12 (final sau `main`), replay < 3 s | — (bằng chứng + tốc độ) |
+| Song song | Bobby ký A-04/A-05/A-09 trên dev; đẩy S | — | — |
+
+5 goal, ~2–3 ngày làm việc phía FE nếu backend/nguồn không chặn thêm; P2 và A-10/A-12 final phụ thuộc nguồn/main.
 
 ## A3. Luật vận hành kế hoạch này
 
