@@ -667,7 +667,7 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ chờ I0 hợp nhánh (codex có 11R1/11R3/R4-R5 trên `feat/eds11r-r4-r5-activation`) |
 | A-12 | EDS-12 release | gói release | 🟡 **06-09 nghiệm thu**: static qualification ready (gate codex pass), deployed evidence pending, BR-EX-80/81 đóng băng thành gate nguồn — xem A6.2; FE cấp ma trận browser ở A6.3 I6 |
 
-**ĐANG Ở ĐÂY (07-09 chiều, sau ff) →** một head `2a79b0c` trên 3 ref (§A8.1); còn 6 G + 4 P + 7 phiếu A (§A8.2), lộ trình 5 goal (§A8.3). Dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
+**ĐANG Ở ĐÂY (07-09 tối) →** owner chỉnh cách hiểu: TS đã trả hết, chỗ thiếu ghi **Soon** chứ không blocked; mọi lệch showcase là **P0**. Đo lại 34 màn/tab → **15 nợ P0** (§A9.3) xếp thành **7 goal theo phase** (§A9.4). Head `2a79b0c` trên 3 ref, dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
 chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
 `/home/bobby/portal-eds-current-bff`). Bước kế: dựng runtime probe từ nhánh đó
 (compose project phụ, không đụng dev) rồi chấm lần lượt A-01→A-07 theo SLA
@@ -1258,7 +1258,7 @@ Dev đang chạy code `44c5715` (docs-only từ đó). Bobby merge head này và
 | **Phase ghép nối FE ↔ backend (G)** | **6** | G10 nến `data_layer`; G12-prep ma trận 4 profile × 7 state + payload `deployed-evidence.v1` nháp; G6 dual-read parity từng màn; G11 SSE v2 + action graph (R4/R5 lanes typed); G13 DR-27 env cho Activity/execution-quality; G14 BR-EX-82 (đọc theo subject) để replay mở < 3 s |
 | **Parity showcase (execution.primusspark.com) còn lệch — §A5.5** | **4** | P1 Paper Overview (funnel/runway từ profile thật + tick SSE); P2 Portfolio 360 Overview (**chặn nguồn BR-EX-79** `portfolio_equity` REJECTED — làm phần typed + layout, số khi nguồn trả); P3 Live Overview (không có deployment live → motion SSE + trạng thái trung thực, không demo); P4 fleet sparkline uPlot + ECharts reskin (OR-3) |
 | **Đã ngang showcase (không tính)** | — | Command Center motion + Promotion pipeline thật (A5.6: 32 phần tử động vs 24 demo), Alpha 360 Insight Charts 9 canvas từ số server, Trade Replay TradingView-grade (nến venue, marker, groups, log 200), Observed timeline (G8), funnel theo subject (G9) |
-| **Nguồn (S) — ngoài tay Portal, Bobby đẩy source owner** | **5** | BR-EX-50 kline shard, BR-EX-79 portfolio equity, BR-EX-80 timeframe, BR-EX-81 lịch sử orders/fills + khai retention/cursor, DR-24/25/26 |
+| ~~Nguồn (S) — ngoài tay Portal~~ → **Soon** (sửa 07-09 tối theo owner) | 0 chặn | BR-EX-50/79/80/81, DR-24/25/26 **không còn là blocker**: UI ghi `Soon · <mã>`, phase và phiếu nghiệm thu vẫn chạy — xem §A9.0 và §A9.5 |
 | **Bobby quyết** | 4 | DR-27 (env resolver), DR-30 (workspace đa người dùng), merge head → `main` (mở G12 final), WIP edge-service trong `portal-dev` |
 
 **Tổng để "hoàn hảo theo showcase" phía Portal: 6 phase G + 4 việc parity P, khép bằng 7 phiếu A.** Không phase nào ký DONE khi Evidence trống (§A3).
@@ -1274,6 +1274,92 @@ Dev đang chạy code `44c5715` (docs-only từ đó). Bobby merge head này và
 | Song song | Bobby ký A-04/A-05/A-09 trên dev; đẩy S | — | — |
 
 5 goal, ~2–3 ngày làm việc phía FE nếu backend/nguồn không chặn thêm; P2 và A-10/A-12 final phụ thuộc nguồn/main.
+
+## A9. ĐO LẠI TOÀN BỘ showcase ↔ dev (07-09 tối) — SỔ NỢ P0 VÀ GOAL THEO PHASE
+
+> **Owner chỉnh cách hiểu (07-09):** *"owner đã trả hết rồi… những gì portal execution edge bên kia, lẫn những gì mình có thể đọc và call về là toàn bộ rồi. Những chỗ TS chưa đáp ứng thì phải note là **Soon**, chứ blocked lại để các phase và nghiệm thu khác bị dừng lại. Không có kiểu ngoại trừ gì hết: chỗ nào không đúng yêu cầu showcase về UI/UX, tính động, tính chính xác, những nút ấn bên trong thì đều là technical debt, phải đẩy lệnh xử lý hết ngay Priority 0."*
+
+### A9.0 Luật mới (thay luật cũ trong A6.3/A7.3/A8.2)
+1. **Không còn trạng thái "blocked/chờ nguồn".** Mọi `BR-EX-*`/`DR-*` thuộc nhóm "TS chưa trả" đổi thành **`Soon`**: UI hiện chip `Soon · <mã>` ở đúng ô/panel đó, phase vẫn chạy, nghiệm thu vẫn ký cho phần đã có. Chỉ `DENIED` (quyền) và `ERROR` (lỗi thật) mới giữ nguyên tên.
+2. **Không có ngoại lệ.** Mọi sai lệch với showcase — bố cục, panel, tile, cột, chip, **nút bấm và hành vi của nút**, tính động, con số — đều là technical debt **P0**, ghi vào §A9.3, không dồn sang "đợt sau".
+3. **Đo trước khi nói.** Mỗi mục P0 phải có số đo showcase vs dev trong §A9.2/§A9.3; đóng mục phải đo lại cùng harness.
+
+### A9.1 Cách đo (tái lập được)
+Showcase = container `portal-showcase` `http://127.0.0.1:8081` (bản preview, smoke). Dev = `http://localhost:8080` head `44c5715`, đăng nhập `claude-probe` qua `context.request.post` (fetch trong trang từ `127.0.0.1` bị 403 origin). Harness `parity2.js` (scratchpad), viewport 1440×1100, `reducedMotion: no-preference`: đếm canvas/svg, phần tử có CSS animation + `document.getAnimations()`, **liệt kê từng nút** (nhãn + disabled), select và số option, tab, panel `section[aria-label]`, `tbody tr`, `data-state`/`data-tone`, đếm từ khoá (`Soon`/`unavailable`/`not published`/`pending`/`blocked`/`insufficient`), API 4xx/5xx, và 2 khung hình cách 1,6 s để bắt chuyển động. **34 route/tab mỗi bên** (13 màn danh sách + 11 màn chi tiết + 10 tab Alpha 360).
+
+### A9.2 Kết quả đo — bảng tổng (showcase / dev)
+| Màn | canvas | CSS-anim | nút | hàng | panel | Ghi chú đo được |
+|---|---|---|---|---|---|---|
+| Command Center | 0/0 | 24/**29** | 3/0 | 4/12 | 5/6 | dev hơn về động; thiếu 3 hàng "needs attention" (dữ liệu) |
+| Operations Queue | 1/0 | 4/1 | 10/4 | 7/0 | 1/1 | thiếu chart, "Needs attention", phân trang ▲▼ |
+| Approval Inbox | 0/0 | 2/0 | 12/9 | 6/0 | 1/1 | thiếu filter "Mine", 0 hàng (nguồn) |
+| Waivers | 0/0 | 3/0 | 12/7 | 5/1 | 1/1 | thiếu filter "All (8)", hàng mở rộng ▸ |
+| Exit Reviews | 0/0 | 0/0 | 4/0 | 0/0 | 1/1 | thiếu 4 nút hành động |
+| Portfolios | **4/0** | 2/0 | **11/0** | 10/2 | **3/0** | thiếu 6 tab, 3 panel, 4 chart, 3 nút cửa sổ |
+| Alpha Fleet | **4/0** | 2/0 | 9/51 | 16/48 | 0/0 | thiếu sparkline 30d, filter Venue/Owner, cột Next gate |
+| Paper Trading | **4/1** | 2/0 | 8/43 | 0/0 | 4/3 | thiếu 3 chart, filter venue/portfolio, panel "Left paper, last 90 days" |
+| Sandbox | 0/0 | 5/0 | 7/0 | 6/35 | **3/0** | thiếu 3 panel + 4 filter |
+| Live Operations | **4/0** | 3/0 | 6/0 | 8/0 | 0/0 | thiếu 4 chart + 4 filter |
+| Accounts & Bindings | 0/0 | 5/0 | 6/2 | 13/43 | 0/0 | thiếu 5 filter + hàng mở rộng binding |
+| Blotter | 0/0 | 3/0 | 24/60 | 23/49 | 0/0 | thiếu filter Brackets/Conditional, "load older", hàng mở rộng |
+| Gate R1 / R2 | 2/0 · 0/0 | 0/0 | **6/0** | 0/0 · 10/0 | 3/1 · 1/1 | thiếu **Approve / Approve with condition / Attach condition / Request changes / Deny** + link policy registry; 404 nguồn |
+| Exit Review detail | 0/0 | 0/0 | **4/0** | 0/0 | 1/1 | thiếu Approve promotion / Extend +14d / Reject / Copy |
+| Paper Workbench | **8/0** | 0/0 | **13/0** | 10/0 | **12/0** | 404 resource (DR-30) → mất cả màn |
+| Sandbox Workbench | 3/0 | 2/0 | 11/4 | 3/0 | 18/5 | thiếu 8 panel hi-fi + 7 nút |
+| Canary Control Room | **5/0** | 1/0 | 6/0 | 6/0 | **16/0** | 404 nguồn (không có deployment live) |
+| Live Full | **5/0** | 0/0 | 8/4 | 8/0 | 14/4 | thiếu Halt/Reduce/Emergency close ▾, 8 panel |
+| Portfolio 360 | **4/0** | 2/0 | 11/8 | 10/0 | 3/1 | thiếu 3 panel + nút 30d/90d/All |
+| Account 360 | 0/0 | 0/0 | 3/1 | 6/**100** | 0/3 | thiếu Sync now / Dry-run reconcile |
+| Incident Detail | 1/0 | 3/0 | 3/0 | 0/0 | **5/0** | 403 → mất 5 panel + Acknowledge / Mark RESOLVED |
+| Admin Action Drawer | 0/0 | 0/0 | **98/0** | 0/0 | 0/0 | 403 `commands/catalog` → mất toàn bộ 64 lệnh |
+| Alpha 360 · Overview | 3/2 | 0/0 | 16/18 | 7/100 | 1/4 | thiếu panel "Equity by stage · All · 30d" |
+| Alpha 360 · Insight Charts | **12/7** | 0/0 | 28/12 | 0/28 | 12/15 | **5 tile hi-fi vắng** (xem A9.3 P0-3) |
+| Alpha 360 · Trade Replay | 0/**7** | 0/0 | 17/17 | 8/200 | 2/3 | **dev vượt showcase** (nến thật + marker) |
+| Positions / Orders&Fills / Risk / Sessions / Accounting / Reconciliation / Audit | 0/0 | 0/0 | 10/10 | — | 0/1 | ngang bố cục; dev in "not published" 2–39 lần/tab → phải là `Soon` |
+
+**Hai con số nói nhiều nhất:** (a) **10/13 màn danh sách trên dev có 0 phần tử động** trong khi showcase có 2–5; (b) **scope bar của mọi màn 360 chỉ có 1 lựa chọn** mỗi trục (showcase: Portfolio 2 · Mode 4 · Venue 5 · Window 4) nên bốn ô Select bị `disabled` — người dùng bấm không được.
+
+### A9.3 SỔ NỢ P0 (không có mục nào là "để sau")
+| # | Nợ | Đo được | Sửa gì | Ai |
+|---|---|---|---|---|
+| **P0-1** | **Mọi user ≠ Bobby mất dữ liệu màn chi tiết**: `resources/*`, `derivations/*` trả 404 `EDS04_PROJECTION_WORKSPACE_NOT_FOUND` vì `SessionGuard` gán workspace **cá nhân**, còn projection gắn với workspace của Bobby | 404 ở Alpha/Portfolio/Account 360, Paper Workbench, Canary, Gate R1/R2, Exit detail; 403 ở Incident + `commands/catalog` | Resource/profile read chấp nhận workspace projection khi user **là member** (giữ nguyên kiểm tra membership); Admin drawer + Incident đọc được ở vai reader | Claude (backend scope) |
+| **P0-2** | **Scope bar chết** — Portfolio/Mode/Venue/Window mỗi trục 1 option, Select `disabled` | dev 1/1/1/1 · showcase 2/4/5/4 | Nạp option từ fleet + registry + profile (`ALL` + giá trị thật), Window `30d/90d/1y/All`; khi trục thật sự một giá trị thì ghi rõ lý do thay vì khoá câm | Claude |
+| **P0-3** | **Insight Charts lệch hi-fi**: thiếu 5 tile — *Trade return histogram · Execution density day × hour · Regime-shaded equity · Risk utilization · Cost drag waterfall*; và 4 tile dev đặt tên riêng không có trong hi-fi | 12 canvas showcase vs 7 dev; tên tile lệch 9/12 | Dựng đủ 12 tile theo tên và thứ tự hi-fi từ dữ liệu đã có; tile nào nguồn chưa trả → `Soon · <mã>`; tile phụ của Portal xuống hàng dưới, không chiếm chỗ tile hi-fi | Claude |
+| **P0-4** | **Portfolios + Portfolio 360 gần như trống**: thiếu 6 tab (Overview · Structure & Correlation · Capital Ledger · Approvals · Incidents · Audit), 3 panel (Equity vs benchmark · Cross-portfolio · Configuration log), 4 chart, nút 30d/90d/All, Rebalance plan ▾, Report pack | 11 nút → 0; 3 panel → 0; 4 canvas → 0 | Dựng đủ tab/panel/nút; `portfolio_equity` nguồn từ chối → panel ghi `Soon · MANAGER_V2_SOURCE_CONTRACT_REJECTED` (không chặn tab khác) | Claude |
+| **P0-5** | **Alpha Fleet**: thiếu sparkline equity 30d mỗi hàng, filter Venue/Owner, cột "Next gate" | 4 canvas → 0; 2 select → 0 | uPlot sparkline từ `account_equity_snapshots`; filter từ registry; cột next-gate từ governance | Claude |
+| **P0-6** | **Blotter**: thiếu filter Brackets/Conditional, nút "load older", hàng mở rộng ▸ chi tiết lệnh | 24 nút → 60 nhưng vắng 4 nhóm trên | Thêm 2 filter (đã có dữ liệu group từ G9), keyset "load older", hàng mở rộng | Claude |
+| **P0-7** | **Accounts & Bindings**: chỉ có Previous/Next; thiếu filter All/Issues/Live-bound/Paper/Testnet và hàng mở rộng binding | 6 nút → 2 | Thêm 5 filter + hàng mở rộng (binding detail) | Claude |
+| **P0-8** | **Paper/Sandbox/Live Overview**: thiếu 3–4 chart mỗi màn, filter venue/portfolio, panel *Left paper last 90 days*, *Venue connectivity*, *Testnet order execution*, *Recently certified*, filter Canary/Full/Issues | canvas 4/1 · 0/0 · 4/0 | Dựng chart + filter + panel từ dữ liệu profile; ô nào nguồn chưa trả → `Soon` | Claude |
+| **P0-9** | **Workbench/Canary/Live Full**: Paper Workbench mất cả màn (P0-1); Sandbox Workbench thiếu 8 panel + 7 nút (Sync broker, Dry-run reconcile, Open smoke window ⌄, Submit for review, Request Sandbox Exit Review, Copy full, Timeline); Canary thiếu 16 panel; Live Full thiếu Halt ▾ / Reduce ▾ / Emergency close ▾ + 8 panel | xem A9.2 | Dựng panel theo hi-fi; nút mutation hiện **disabled kèm lý do** đúng luật read-only, không được vắng mặt | Claude |
+| **P0-10** | **Gate R1/R2 + Exit Review detail**: vắng toàn bộ nút quyết định (Approve · Approve with condition · Attach condition · Request changes · Deny · Approve promotion · Extend +14d · Reject) và 2 panel bằng chứng | 6 nút → 0; 4 nút → 0 | Dựng nút + panel; chưa có hàng nào từ nguồn → hiện `Soon` chứ không để trang trắng | Claude |
+| **P0-11** | **Operations Queue · Incident Detail · Admin Action Drawer**: thiếu "Needs attention", phân trang ▲▼, chart; incident mất 5 panel + Acknowledge/Mark RESOLVED; drawer mất toàn bộ 64 lệnh (403 catalog) | 10→4 · 3→0 · **98→0** | Sau P0-1 mở quyền đọc; dựng panel + nút theo hi-fi | Claude |
+| **P0-12** | **Tính động**: 10/13 màn danh sách 0 animation trên dev | showcase 2–5 mỗi màn | Nhịp theo revision thật (đã có `useRevisionBeat`/`usePollTick` từ G8) cho fleet/blotter/accounts/paper/sandbox/live/portfolios/approvals/waivers/ops | Claude |
+| **P0-13** | **Ngôn ngữ trạng thái**: dev in "not published" 237 chỗ (99 ở Blotter, 48 ở Paper, 39 ở Orders & Fills) và "unavailable/pending/blocked" cho phần **TS sẽ trả** | đếm từ khoá A9.2 | Helper `soonLabel(reasonCode)`: nhóm "nguồn sẽ có" (`BR-EX-50/79/80/81`, `N28_*`, `EDS10_*_GAP_CONFIRMED`, `MANAGER_V2_SOURCE_CONTRACT_REJECTED`, `N23_SCREEN_OUTSIDE_RELEASE`) → **`Soon · <mã>`**; giữ `DENIED`/`ERROR` cho lỗi thật; ô giá trị trống của một bản ghi vẫn là "not published" (đúng nghĩa dữ liệu) | Claude |
+| **P0-14** | **Trạng thái rỗng câm**: Approvals/Exit Reviews/Operations/Live 0 hàng, không nói vì sao | rows 0/6, 0/0, 0/7, 0/8 | Empty state chuẩn: "Soon · nguồn chưa phát hành hàng nào cho profile này" + số hàng trang hiện tại, giữ nguyên bố cục và filter | Claude |
+| **P0-15** | **Alpha 360 Overview**: thiếu panel "Equity by stage · All · 30d" (showcase 3 canvas, dev 2) và 6 liên kết deployment/account trong hàng | 3/2 canvas | Bổ sung panel + liên kết | Claude |
+
+### A9.4 GOAL THEO PHASE (thứ tự thi hành; mỗi goal = gate xanh → commit → **rebuild dev** → báo cáo 7 mục + ảnh trước/sau)
+| Goal | Phase | Gồm | Đóng khi |
+|---|---|---|---|
+| **Goal 1 — Mở khoá & ngôn ngữ** | P0-1, P0-13, P0-14 | quyền đọc theo member; `soonLabel` toàn cục; empty state "Soon" | mọi màn chi tiết mở được bằng tài khoản bất kỳ; 0 chỗ dùng "blocked" cho nguồn; harness đo lại: apiErrors = 0 |
+| **Goal 2 — Điều khiển & danh sách** | P0-2, P0-5, P0-6, P0-7 | scope bar thật; fleet sparkline + filter + next gate; blotter 2 filter + load older + expand; accounts 5 filter + expand | số nút/select dev ≥ showcase trên 4 màn; scope đổi được và panel đổi theo |
+| **Goal 3 — Insight & Portfolio** | P0-3, P0-4, P0-15 | 12 tile hi-fi đúng tên/thứ tự; Portfolio 360 đủ 6 tab + 3 panel + chart; Overview thêm panel equity-by-stage | canvas Insight ≥ 12; Portfolio tab = 6; A-04/A-05 ký lại phần này |
+| **Goal 4 — Stage & Workbench** | P0-8, P0-9 | Paper/Sandbox/Live Overview chart + filter + panel; Workbench/Canary/Live Full panel + nút (mutation disabled kèm lý do) | panel/nút ≥ showcase từng màn; không màn nào trắng |
+| **Goal 5 — Governance & Operations** | P0-10, P0-11 | Gate R1/R2, Exit detail, Ops Queue, Incident Detail, Admin Action Drawer (64 lệnh) | nút quyết định hiện đủ, trạng thái quyền đúng; A-09/A-11 phần ops |
+| **Goal 6 — Động & nguồn nến** | P0-12, G10, G11 | nhịp thật 10 màn; `EXECUTION_MARKET_CANDLES_SOURCE=data_layer` qua market-context; SSE v2 + action graph | animation ≥ showcase từng màn; A-10, A-11 ký |
+| **Goal 7 — Parity & bằng chứng** | G6, G12-prep | dual-read parity (A-06, DR-01); ma trận 4 profile × 7 state + `deployed-evidence.v1` nháp | A-06 ký; A-12 sẵn payload chờ `main` |
+
+**Ghi chú thứ tự:** Goal 1 phải xong trước vì P0-1 đang che khuất 8 màn (không sửa thì các goal sau không đo được). Goal 6 phụ thuộc market-context của codex — nếu owner chưa trả thì đường dây vẫn giao, panel ghi `Soon`, **goal vẫn đóng**.
+
+### A9.5 Chuyển toàn bộ "blocked/chờ nguồn" sang `Soon` (áp dụng ngay cho tracker này)
+| Mục cũ | Trước | Từ 07-09 |
+|---|---|---|
+| BR-EX-50 (kline shard) | "chờ codex, chặn A-10" | **Soon** — Trade Replay vẫn chạy trên nến venue; footer ghi `Soon · BR-EX-50` |
+| BR-EX-79 (portfolio equity) | "chặn §A5.5 Portfolio Overview" | **Soon** — Portfolio 360 vẫn dựng đủ tab/panel; panel equity ghi `Soon · MANAGER_V2_SOURCE_CONTRACT_REJECTED` |
+| BR-EX-80 (timeframe) | `SOURCE_OWNER_RETURN_REQUIRED` | **Soon** — giữ suffix `DERIVED` hiển thị, không chặn A-10/A-12 |
+| BR-EX-81 (history orders/fills) | `SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED`, "chặn replay đúng alpha" | **Soon** — page set EDS-11R1 đã drain đủ 56 trang `COMPLETE`; nhãn "current page set" giữ nguyên |
+| DR-24 / DR-25 / DR-26 | "OPEN — @codex" | **Soon** — `delta_rsi_*` hiện `Soon` thay vì rỗng câm (P0-14) |
+| A-10 / A-11 / A-12 | "chờ hợp nhánh / chờ nguồn" | ký được phần đã giao; phần nguồn ghi `Soon` trong phiếu, **không giữ phiếu mở vì nguồn** |
 
 ## A3. Luật vận hành kế hoạch này
 
