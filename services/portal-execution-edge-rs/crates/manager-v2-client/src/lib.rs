@@ -186,6 +186,12 @@ impl ManagerV2Client {
     /// profile-bound Source Proxy as catalogue reads, but intentionally keep a
     /// distinct contract revision and response bound.  This method exposes no
     /// generic URL, method, header or caller-selected profile.
+    ///
+    /// # Errors
+    ///
+    /// Fails closed on queue saturation, redirect/header/content-type/body
+    /// drift, unexpected status, transport failure, or a typed extension
+    /// contract failure.
     pub async fn execute_extension(
         &self,
         request: &ManagerExtensionRequest,
