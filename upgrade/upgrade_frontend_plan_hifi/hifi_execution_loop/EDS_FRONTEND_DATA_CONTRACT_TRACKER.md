@@ -667,7 +667,7 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ chờ I0 hợp nhánh (codex có 11R1/11R3/R4-R5 trên `feat/eds11r-r4-r5-activation`) |
 | A-12 | EDS-12 release | gói release | 🟡 **06-09 nghiệm thu**: static qualification ready (gate codex pass), deployed evidence pending, BR-EX-80/81 đóng băng thành gate nguồn — xem A6.2; FE cấp ma trận browser ở A6.3 I6 |
 
-**ĐANG Ở ĐÂY (07-09 tối, sau Goal 1) →** Goal 1 xong (§A10): 8 màn chi tiết mở được cho mọi member, `Soon` thay cho "blocked"; kế tiếp **Goal 2** (§A9.4). Trước đó: owner chỉnh cách hiểu: TS đã trả hết, chỗ thiếu ghi **Soon** chứ không blocked; mọi lệch showcase là **P0**. Đo lại 34 màn/tab → **15 nợ P0** (§A9.3) xếp thành **7 goal theo phase** (§A9.4). Head `2a79b0c` trên 3 ref, dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
+**ĐANG Ở ĐÂY (07-09 tối, sau Goal 1) →** Goal 1 xong (§A10): 8 màn chi tiết mở được cho mọi member, `Soon` thay cho "blocked"; **Goal 2 xong** (§A11); kế tiếp **Goal 3** (§A9.4). Trước đó: owner chỉnh cách hiểu: TS đã trả hết, chỗ thiếu ghi **Soon** chứ không blocked; mọi lệch showcase là **P0**. Đo lại 34 màn/tab → **15 nợ P0** (§A9.3) xếp thành **7 goal theo phase** (§A9.4). Head `2a79b0c` trên 3 ref, dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
 chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
 `/home/bobby/portal-eds-current-bff`). Bước kế: dựng runtime probe từ nhánh đó
 (compose project phụ, không đụng dev) rồi chấm lần lượt A-01→A-07 theo SLA
@@ -1457,6 +1457,40 @@ Showcase = container `portal-showcase` `http://127.0.0.1:8081` (bản preview, s
 
 ### A10.4 Cho codex
 Đổi mặc định workspace là **thay đổi hành vi có chủ đích** ở 4 controller của codex: caller không nêu workspace nay đọc projection workspace thay vì workspace cá nhân. Hai tính chất cũ giữ nguyên và có test: (a) nêu workspace lạ → 404; (b) không phải member → 404. Nếu codex muốn luật khác (ví dụ chỉ owner được đọc), nói sớm — hiện tại luật này là điều kiện để bất kỳ ai ngoài Bobby dùng được Portal.
+
+## A11. GOAL 2 ĐÃ LÀM (07-09 tối) — điều khiển thật và các màn danh sách
+
+Commit `03ffec8` (chính) · `2d84032` (mặc định window) · `4c1ec3b` (hai lỗi đo được trên dev). Ba ref cùng head; dev rebuild sau mỗi bước.
+
+### A11.1 Giao gì
+| Nợ | Trước | Sau |
+|---|---|---|
+| **P0-2 scope bar** | 4 Select ghi vào state, state chỉ tới **2 caption**; mọi hàng đứng yên; Window hardcode `30d` | Lọc **trên facts, một lần**, trước khi mọi panel dẫn xuất → panel obey theo cấu trúc. Window `30d/90d/1y/All`. Thanh scope nói rõ trục đang lọc và **số hàng bị ẩn**. Không bịa chiều: hàng **không mang** trường đang lọc thì **giữ lại** (chỉ loại hàng mang trường và không khớp) |
+| **P0-5 Alpha Fleet** | không filter venue/owner, không sparkline | 2 select từ chính rows (Venue/Owner) + đếm "N of M alphas hidden"; **cột equity 30d**: mỗi hàng tự tải chuỗi **khi mở rộng** (1 request/alpha, không phải 48 khi vào màn), trước đó ghi "expand to load"; chuỗi là chuỗi **đã publish** mà Alpha 360 vẽ, không tính lại |
+| **P0-6 Blotter** | chip Brackets/Conditional **chỉ có ở bản smoke** | chip chạy trên **order groups đã publish** (EDS-11R1); ghi rõ: chip nhóm lọc **trang đã tải**, chip status **truy vấn lại server** |
+| **P0-7 Accounts & Bindings** | chỉ Previous/Next | 5 filter hi-fi kèm số đếm; phân biệt "không binding nào khớp filter" với "workspace không có binding nào" |
+| **P0-17 chip "Mine"** | tôi ghi là nợ | **không phải nợ** — chip đã có (filter `INBOX`, nhãn "Mine (N)" khi server trả `counts.mine`); `view=MINE` trong curl của tôi là **tôi gọi sai**, FE gửi `view=INBOX`. Ghi lại cho đúng |
+
+### A11.2 Ba lỗi chỉ lộ ra khi **đo bằng trình duyệt trên dev**, không phải khi đọc code
+1. **Window mặc định 30d ẩn 203/205 hàng.** Khi thanh scope còn là trang trí thì mặc định 30d vô hại; lọc thật thì nó giấu gần hết dữ liệu tháng 8 của dev ngay khi mở màn. Đổi mặc định **All** (`2d84032`) — màn không được nói dối trước khi người đọc bấm gì.
+2. **Chip Brackets khớp 0 hàng.** Nguồn có **404 bracket**, nhưng group đặt tên leg bằng `client_order_id` còn hàng Blotter chỉ mang `order_id` số → lọc 21 hàng còn 0. Hàng nay mang thêm client id (ẩn trong bảng, chỉ dùng để khớp nhóm).
+3. **Chip Brackets ghi 404 rồi lọc ra 0.** Số trên chip là tổng bracket **của nguồn**, còn chip lọc **trang đã tải** — hai dân số khác nhau đặt cạnh nhau. Nay chip đếm **số hàng của trang đang tải thuộc một nhóm**, và dòng hint nói đủ ba số: bao nhiêu hàng đã tải, bao nhiêu trong số đó thuộc nhóm, và nguồn có bao nhiêu nhóm — kèm lối đi tiếp ("load older rows").
+4. **Cả 43 binding bị coi là "Issues".** Vì `credential_state = NOT_PUBLISHED` bị tính là lỗi. "Issue" nay chỉ là trạng thái **nguồn tự gọi là sai** (SUSPENDED/REVOKED/EXPIRED/SYNC_FAILED/MISMATCH…); trường chưa publish thì không phải lỗi.
+
+### A11.3 Evidence (đo trên dev sau deploy)
+| Kiểm | Kết quả |
+|---|---|
+| Scope Alpha 360 | mở màn: "nothing is filtered out right now"; chọn Mode SANDBOX → "mode SANDBOX — 273 rows outside this scope are hidden", bảng Positions về 0 hàng đúng với dữ liệu |
+| Scope options | Portfolio 2 · Mode 3 · Venue 2 · **Window 4** (trước 1/1/1/1 → 4 Select bị khoá) |
+| Alpha Fleet | Venue/Owner select xuất hiện; lọc venue: 50 → 45 hàng, note "5 of 48 alphas hidden"; mở rộng hàng → **sparkline ECharts** vẽ từ 1 request/alpha |
+| Blotter | chip **"Brackets (404)"** hiện từ nguồn thật; hint đổi đúng theo chip đang dùng |
+| Accounts | 2 → 7 nút; "Testnet" lọc 43 → 1 hàng |
+| Gate | FE 110 file · **1948 test** · tsc sạch · build sạch; hook đầy đủ xanh mỗi commit |
+| Pack | script re-pin nay đọc **bảng EVIDENCE_PATHS của chính gate** — lần trước pin tay 2 khoá nên hook từ chối `br72_frontend_test_sha256` |
+
+### A11.4 Còn nợ trong nhóm màn danh sách (đưa sang Goal tương ứng)
+- **Cột "next gate" của Fleet**: dev hiện `attentionReasons` (thật) — showcase hiện gate governance ("R2 AP-352 OVERDUE 26h"). Khi governance có hàng thật thì cột này mới có nội dung tương đương → **Goal 5**.
+- **Blotter "load older"**: đã có sẵn keyset (`onLoadOlder`); cần kiểm khi trang có `next_cursor` thật → **Goal 5** cùng phân trang Ops.
 
 ## A3. Luật vận hành kế hoạch này
 

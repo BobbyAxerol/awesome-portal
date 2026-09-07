@@ -484,6 +484,15 @@ export function FullBlotter({
   const groupIds = groups ?? null;
   const inGroup = (row: BlotterRow, ids: ReadonlySet<string>) =>
     ids.has(row.orderId) || (row.clientOrderId !== null && row.clientOrderId !== undefined && ids.has(row.clientOrderId));
+  // The chip counts what it can actually show: rows of the loaded page that
+  // belong to a group. The source's own total (404 brackets on dev) is a
+  // different number and putting it on a chip that then filters to nothing is
+  // how a control lies while being technically correct.
+  const loadedInGroup = (ids: ReadonlySet<string>) => page.rows.filter((row) => inGroup(row, ids)).length;
+  const groupCounts = groupIds
+    ? { BRACKETS: loadedInGroup(groupIds.brackets), CONDITIONAL: loadedInGroup(groupIds.conditional) }
+    : null;
+  const groupTotals = groupIds ? { BRACKETS: groupIds.brackets.size, CONDITIONAL: groupIds.conditional.size } : null;
   const viewRows = view && groupIds
     ? page.rows.filter((row) => inGroup(row, view === "BRACKETS" ? groupIds.brackets : groupIds.conditional))
     : null;
@@ -540,8 +549,7 @@ export function FullBlotter({
           <div className="exec-bl-filters" role="group" aria-label="Order status">
             {HIFI_FILTERS.filter((f) => !f.smokeOnly || smoke || (groupIds && (f.key === "BRACKETS" ? groupIds.brackets.size : groupIds.conditional.size) > 0)).map((f) => {
               const n = counts[f.key as string]
-                ?? (groupIds && !smoke && f.key === "BRACKETS" ? groupIds.brackets.size
-                  : groupIds && !smoke && f.key === "CONDITIONAL" ? groupIds.conditional.size : undefined);
+                ?? (groupCounts && !smoke && (f.key === "BRACKETS" || f.key === "CONDITIONAL") ? groupCounts[f.key] : undefined);
               const active = activeKey === f.key;
               return (
                 <button key={f.key} type="button" className="exec-bl-chip" data-active={active ? "true" : undefined} aria-pressed={active} onClick={() => { if (f.smokeOnly) { setView(f.key as "CONDITIONAL" | "BRACKETS"); } else { setView(null); onFilterChange(f.key as BlotterFilter); } }}>
@@ -551,7 +559,7 @@ export function FullBlotter({
             })}
             <Hint>
               {view
-                ? `${view === "BRACKETS" ? "Brackets" : "Conditional"} narrows the ${page.rows.length} loaded rows by the source's published groups — the status chips re-query the server instead`
+                ? `${view === "BRACKETS" ? "Brackets" : "Conditional"} narrows the ${page.rows.length} loaded rows by the source's published groups: ${viewRows?.length ?? 0} of them belong to one, out of ${groupTotals?.[view] ?? "?"} such groups in the source — load older rows to reach the rest. The status chips re-query the server instead.`
                 : "applied by the server — the chips re-query, they do not hide loaded rows"}
             </Hint>
           </div>
