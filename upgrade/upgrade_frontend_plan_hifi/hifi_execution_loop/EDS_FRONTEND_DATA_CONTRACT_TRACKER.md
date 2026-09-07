@@ -667,7 +667,7 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ chờ I0 hợp nhánh (codex có 11R1/11R3/R4-R5 trên `feat/eds11r-r4-r5-activation`) |
 | A-12 | EDS-12 release | gói release | 🟡 **06-09 nghiệm thu**: static qualification ready (gate codex pass), deployed evidence pending, BR-EX-80/81 đóng băng thành gate nguồn — xem A6.2; FE cấp ma trận browser ở A6.3 I6 |
 
-**ĐANG Ở ĐÂY (07-09 tối) →** owner chỉnh cách hiểu: TS đã trả hết, chỗ thiếu ghi **Soon** chứ không blocked; mọi lệch showcase là **P0**. Đo lại 34 màn/tab → **15 nợ P0** (§A9.3) xếp thành **7 goal theo phase** (§A9.4). Head `2a79b0c` trên 3 ref, dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
+**ĐANG Ở ĐÂY (07-09 tối, sau Goal 1) →** Goal 1 xong (§A10): 8 màn chi tiết mở được cho mọi member, `Soon` thay cho "blocked"; kế tiếp **Goal 2** (§A9.4). Trước đó: owner chỉnh cách hiểu: TS đã trả hết, chỗ thiếu ghi **Soon** chứ không blocked; mọi lệch showcase là **P0**. Đo lại 34 màn/tab → **15 nợ P0** (§A9.3) xếp thành **7 goal theo phase** (§A9.4). Head `2a79b0c` trên 3 ref, dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
 chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
 `/home/bobby/portal-eds-current-bff`). Bước kế: dựng runtime probe từ nhánh đó
 (compose project phụ, không đụng dev) rồi chấm lần lượt A-01→A-07 theo SLA
@@ -1335,8 +1335,8 @@ Showcase = container `portal-showcase` `http://127.0.0.1:8081` (bản preview, s
 | **P0-11** | **Operations Queue · Incident Detail · Admin Action Drawer**: thiếu "Needs attention", phân trang ▲▼, chart; incident mất 5 panel + Acknowledge/Mark RESOLVED; drawer mất toàn bộ 64 lệnh (403 catalog) | 10→4 · 3→0 · **98→0** | **Đo lại cho đúng (07-09):** `commands/catalog`, `operations/incidents/*`, `/operations` trả **403 `ADMIN_ROLE_REQUIRED` / `QUERY_FORBIDDEN` cho tài khoản USER — đúng thiết kế**, và dev đã hiện typed "Withheld · The command catalogue is available to Admin operators only". Nợ thật ở đây là: (a) chưa ai đo ba màn này **bằng tài khoản ADMIN** nên không biết 64 lệnh/5 panel có dựng đủ không; (b) Ops Queue thiếu "Needs attention" + phân trang ▲▼ + chart. Việc: Bobby cấp một tài khoản ADMIN chỉ-đọc cho harness (hoặc Claude đo bằng phiên của Bobby), rồi dựng nốt | Claude + Bobby cấp tài khoản |
 | **P0-12** | **Tính động**: 10/13 màn danh sách 0 animation trên dev | showcase 2–5 mỗi màn | Nhịp theo revision thật (đã có `useRevisionBeat`/`usePollTick` từ G8) cho fleet/blotter/accounts/paper/sandbox/live/portfolios/approvals/waivers/ops | Claude |
 | **P0-13** | **Ngôn ngữ trạng thái**: dev in "not published" 237 chỗ (99 ở Blotter, 48 ở Paper, 39 ở Orders & Fills) và "unavailable/pending/blocked" cho phần **TS sẽ trả** | đếm từ khoá A9.2 | Helper `soonLabel(reasonCode)`: nhóm "nguồn sẽ có" (`BR-EX-50/79/80/81`, `N28_*`, `EDS10_*_GAP_CONFIRMED`, `MANAGER_V2_SOURCE_CONTRACT_REJECTED`, `N23_SCREEN_OUTSIDE_RELEASE`) → **`Soon · <mã>`**; giữ `DENIED`/`ERROR` cho lỗi thật; ô giá trị trống của một bản ghi vẫn là "not published" (đúng nghĩa dữ liệu) | Claude |
-| **P0-14** | **Trạng thái rỗng câm**: Approvals/Exit Reviews/Operations/Live 0 hàng, không nói vì sao | rows 0/6, 0/0, 0/7, 0/8 | Empty state chuẩn: "Soon · nguồn chưa phát hành hàng nào cho profile này" + số hàng trang hiện tại, giữ nguyên bố cục và filter | Claude |
-| **P0-16** | **Frontend gọi endpoint không tồn tại**: `GET /derivations/alphas/{id}/orders-fills` trả `404 REQUEST_REJECTED` cả khi có `?workspace_id=`; `GET /governance/exit-reviews` trả `REQUEST_REJECTED` | curl 07-09 | Đối chiếu lại đường dẫn với `FRONTEND_HANDOFF` §6.5/§8; sửa FE hoặc mở Backend request nếu route thật sự chưa có | Claude |
+| **P0-14** | **Trạng thái rỗng** — *đã đo lại 07-09 và thu hẹp*: Approval Inbox ("Inbox zero…"), Waivers ("an empty filter is a fact, not a failure"), Operations Queue ("The queue is empty, which is different from a queue that could not be read"), Live Overview ("the source published an empty set") **đã trung thực sẵn**. Đổi chúng thành "Soon" sẽ là **nói dối** (§3.3): rỗng-dữ-liệu ≠ chưa-có-tính-năng | rows 0/6, 0/0, 0/7, 0/8 | Giữ nguyên các câu trên. Chỉ dùng `soonEmptyLine()` ở nơi bảng rỗng **vì nguồn từ chối capability** (ví dụ quan hệ bị Manager từ chối). Việc còn lại của các màn này là chart/filter/panel — thuộc P0-8/P0-11 | Claude |
+| **P0-16** | **Frontend gọi endpoint không tồn tại** (đo lại sau Goal 1): `GET /derivations/alphas/{id}/orders-fills` → `404 REQUEST_REJECTED`; `GET /governance/exit-reviews` → `REQUEST_REJECTED`; `GET /portfolios/{id}/capital` → `404 REQUEST_REJECTED` dù controller khai `@Get("/portfolios/:portfolio_id/capital")` (sai prefix ở FE hoặc BE); `GET /portfolios/{id}/correlation` và `/capital-ledger` → `503 ANALYTICS_UPSTREAM_REJECTED` (phải phân loại: nguồn từ chối → `Soon`, hay lỗi thật → giữ UNAVAILABLE) | curl 07-09 | Đối chiếu lại đường dẫn với `FRONTEND_HANDOFF` §6.5/§8; sửa FE hoặc mở Backend request nếu route thật sự chưa có | Claude |
 | **P0-17** | **Chip \"Mine\" của Approval Inbox không dùng được**: `?view=MINE` trả `FILTER_NOT_ALLOWED` (showcase có \"Mine (3)\") | curl 07-09 | Hoặc BE allowlist `MINE`, hoặc FE ẩn chip kèm lý do — không được để nút bấm ra lỗi | Claude (+codex nếu cần allowlist) |
 | **P0-15** | **Alpha 360 Overview**: thiếu panel "Equity by stage · All · 30d" (showcase 3 canvas, dev 2) và 6 liên kết deployment/account trong hàng | 3/2 canvas | Bổ sung panel + liên kết | Claude |
 
@@ -1425,6 +1425,35 @@ Showcase = container `portal-showcase` `http://127.0.0.1:8081` (bản preview, s
 | BR-EX-81 (history orders/fills) | `SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED`, "chặn replay đúng alpha" | **Soon** — page set EDS-11R1 đã drain đủ 56 trang `COMPLETE`; nhãn "current page set" giữ nguyên |
 | DR-24 / DR-25 / DR-26 | "OPEN — @codex" | **Soon** — `delta_rsi_*` hiện `Soon` thay vì rỗng câm (P0-14) |
 | A-10 / A-11 / A-12 | "chờ hợp nhánh / chờ nguồn" | ký được phần đã giao; phần nguồn ghi `Soon` trong phiếu, **không giữ phiếu mở vì nguồn** |
+
+## A10. GOAL 1 ĐÃ LÀM (07-09 tối) — mở khoá dữ liệu & ngôn ngữ `Soon`
+
+**Commit `83da3a4`** trên `feat/execution-integration`, push cả ba ref; dev rebuild từ đó (`portal-web` bundle `index-CaaSY2AT.js`).
+
+### A10.1 Giao gì
+| Nợ | Sửa | File |
+|---|---|---|
+| **P0-1** | Bốn đường đọc gắn projection (`resource-read`, `portal-derivations`, `operational-composition`, `financial-chart`) trước đây mặc định lấy **workspace cá nhân của phiên**; projection lại nằm ở đúng một workspace (của Bobby) → mọi tài khoản khác nhận 404 trên 8 màn. Nay **đọc không nêu workspace = workspace của chính projection**; membership vẫn quyết định quyền, và caller **nêu** workspace lạ vẫn bị từ chối — đúng tính chất mà check gốc bảo vệ (không ai dán nhãn workspace khác lên dữ liệu projection) | 4 controller + 2 spec |
+| **P0-13** | `soon.ts`: phân loại mã nguồn (`BR-EX-50/79/80/81`, `N28_*`, `E5_MARKET_CANDLES*`, `EDS10_*_SOURCE_GAP_CONFIRMED`, `MARKET_CANDLES_SOURCE_NOT_WIRED`, `MANAGER_V2_SOURCE_CONTRACT_REJECTED`, `N17B_SOURCE_REJECTED`, `N23_*`) → panel hiện **`Soon · <mã>`**; `DENIED` giữ là quyền, `STALE`/`terminal` giữ là lỗi; **mã lạ vẫn UNAVAILABLE** để một lỗi mới không lẻn vào chữ "Soon". Footer/notice Trade Replay: `Trading System candles: Soon · <mã>` | `soon.ts`, `states.tsx`, `TradeReplayEvents.tsx` + test |
+| **P0-14** | Giữ nguyên các empty state đang trung thực (xem P0-14 đã chỉnh ở §A9.3) — không đổi rỗng-dữ-liệu thành "Soon" | — |
+
+### A10.2 Evidence (đo thật, không suy đoán)
+| Gate | Kết quả |
+|---|---|
+| `scripts/control-api-test.sh` | **50 file · 432 test pass** (gồm restore drill); lần đầu 1 fail do assertion thiếu tham số, đã sửa |
+| FE vitest + tsc + build | **109 file · 1933 pass · 1 skipped**; `tsc` sạch; build 6,9 s |
+| Hook pre-commit | xanh; push 3 ref |
+| **8 route trên dev bằng phiên `claude-probe` (không `?workspace_id`)** | `resources/alphas` · `resources/accounts` · `resources/portfolios` · `derivations/alphas/*/activity` · `views/equity-chart` · `query-analytics` · `views/observed-timeline` · `command-center` = **200/200 (trước: 404 ở 4 route đầu)**; số route lỗi: **0** |
+| Trình duyệt (harness A9.1, so trước/sau) | **Paper Workbench 0 → 15 nút, 0 → 2 panel** (trước là trang trắng); **Account 360 1 → 16 nút, 3 → 4 panel**; Alpha 360 Overview 18 → 22 nút; chữ **`Soon`** xuất hiện đúng chỗ: Insight Charts 8, Gate R1/R2 + Exit detail 6, Account 360 4, Overview 3, Trade Replay 1 |
+| Không đổi sai chỗ | các tab Positions…Audit mất banner "Alpha resource state" vì resource **đã đọc được** — đúng, không phải mất panel |
+
+### A10.3 Việc mở ra sau khi mở khoá (đưa vào Goal 3/5, đã ghi ở §A9.3)
+1. **Portfolio 360 vẫn trống** — nhưng **không phải** do workspace: `GET /portfolios/{id}/capital` trả `404 REQUEST_REJECTED` (sai prefix giữa FE và BE), `correlation` + `capital-ledger` trả `503 ANALYTICS_UPSTREAM_REJECTED`. → P0-16 mở rộng, làm ở **Goal 3**.
+2. **Canary / Gate R1 / Gate R2 / Exit detail** vẫn 404 vì id showcase không tồn tại trên dev (nguồn chưa phát hành) — đúng luật `Soon`, không chặn goal nào; nút quyết định vẫn phải dựng (**Goal 5**).
+3. **Incident Detail + Admin Action Drawer** vẫn `403 ADMIN_ROLE_REQUIRED` với tài khoản USER và đã hiện "Withheld" typed — **đúng thiết kế**. Cần Bobby cấp một tài khoản ADMIN chỉ-đọc để harness đo 64 lệnh và 5 panel (**Goal 5**).
+
+### A10.4 Cho codex
+Đổi mặc định workspace là **thay đổi hành vi có chủ đích** ở 4 controller của codex: caller không nêu workspace nay đọc projection workspace thay vì workspace cá nhân. Hai tính chất cũ giữ nguyên và có test: (a) nêu workspace lạ → 404; (b) không phải member → 404. Nếu codex muốn luật khác (ví dụ chỉ owner được đọc), nói sớm — hiện tại luật này là điều kiện để bất kỳ ai ngoài Bobby dùng được Portal.
 
 ## A3. Luật vận hành kế hoạch này
 
