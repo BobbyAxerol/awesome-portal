@@ -5,15 +5,17 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 template="${root_dir}/deploy/execution-d1/source-proxy/manager-market-context-data-layer-locations.conf.template"
 contract="${root_dir}/services/portal-execution-edge-rs/contracts/portal-market-context-data-layer-adapter-v1/market-context-data-layer-adapter.v1.json"
+control_overlay="${root_dir}/deploy/compose.execution-current-source.yaml"
 
 python3 -m json.tool "${contract}" >/dev/null
-python3 - "${template}" "${contract}" <<'PY'
+python3 - "${template}" "${contract}" "${control_overlay}" <<'PY'
 import json
 import pathlib
 import sys
 
 template = pathlib.Path(sys.argv[1]).read_text()
 contract = json.loads(pathlib.Path(sys.argv[2]).read_text())
+control_overlay = pathlib.Path(sys.argv[3]).read_text()
 
 assert contract["schema_version"] == "portal.execution.market-context-data-layer-adapter.v1"
 assert contract["adapter_revision"] == "portal.execution.market-context-data-layer.v1"
@@ -36,6 +38,11 @@ for route in (
 for forbidden in ("location /v1/", "proxy_pass $", "include /run/secrets/trading-system-read-header.conf"):
     assert forbidden not in template.lower(), forbidden
 assert template.count("location = /portal/execution/v2/manager/market/") == 2
+# The app configuration alone is insufficient: the current-source Compose
+# overlay must pass both switches into Control API.  This keeps a release
+# render from silently falling back to the public candle adapter.
+assert 'FEATURE_EXECUTION_MARKET_CONTEXT: ${CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT:-false}' in control_overlay
+assert 'EXECUTION_MARKET_CANDLES_SOURCE: ${CONTROL_API_EXECUTION_MARKET_CANDLES_SOURCE:-venue_public}' in control_overlay
 PY
 
 bash -n "${root_dir}/scripts/execution-d2-render-source-proxy.sh"

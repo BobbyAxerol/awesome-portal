@@ -4957,6 +4957,17 @@ All three adapters are deployable through the existing private mTLS boundary;
 only protected-main and measured deployed evidence remain before
 `PRODUCT_ACTIVE`.
 
+**Deployment wiring amendment (2026-09-07):**
+`compose.execution-current-source.yaml` now carries the two explicit
+Control-API inputs for the Portal-owned Market Context adapter:
+`CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT` and
+`CONTROL_API_EXECUTION_MARKET_CANDLES_SOURCE`.  Selecting `data_layer` is
+closed-world: the browser cannot fall back to a public venue request and the
+only permitted route is the existing mTLS Edge → Source Proxy → Data Layer
+chain.  The static adapter gate verifies this Compose wiring as well as the
+fixed proxy paths, so configuration drift cannot silently turn the release
+back into an unrelated public-data implementation.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
