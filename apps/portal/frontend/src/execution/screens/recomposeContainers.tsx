@@ -824,7 +824,12 @@ export function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): 
 }
 
 function useAnalyticsScope(): [AlphaScope, (scope: AlphaScope) => void] {
-  const [scope, setScope] = useState<AlphaScope>({ portfolio: "ALL", mode: "ALL", venue: "ALL", window: "30d" });
+  // Opens on "All". The hi-fi opens on 30d, but the hi-fi's cast is a fortnight
+  // old and this projection is not: a 30d default hid 203 of 205 position rows
+  // on dev the moment the window started filtering for real (measured
+  // 2026-09-07). A screen that hides most of its rows before the reader has
+  // touched anything is a screen that lies by default.
+  const [scope, setScope] = useState<AlphaScope>({ portfolio: "ALL", mode: "ALL", venue: "ALL", window: "All" });
   return [scope, setScope];
 }
 
