@@ -73,23 +73,43 @@ export interface AlphaFleetProps {
   reason?: string;
   onNextPage?: (cursor: string) => void;
   onPreviousPage?: (cursor: string) => void;
+  /**
+   * P0-5: the hi-fi draws an equity sparkline per row. One series per alpha is
+   * one request per alpha, so the fleet does not fetch 48 of them on load: the
+   * row asks for its own when it is expanded, and says so until then. The chart
+   * is the same published series Alpha 360 draws — never a second computation.
+   */
+  equity?: Readonly<Record<string, readonly number[] | "loading" | null>>;
+  onNeedEquity?: (alphaId: string) => void;
   /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
   demo?: FleetDemo | null;
   demoTick?: FleetTick;
 }
 
-export function AlphaFleet({ filter: controlled, onFilterChange, list = null, status = "ok", reason, onNextPage, onPreviousPage, demo, demoTick }: AlphaFleetProps) {
+export function AlphaFleet({ filter: controlled, onFilterChange, list = null, status = "ok", reason, onNextPage, onPreviousPage, equity, onNeedEquity, demo, demoTick }: AlphaFleetProps) {
   const smoke = demo ?? null;
   const { now, j } = demoTick ?? { now: new Date(0), j: 0 };
   const [local, setLocal] = useState<FleetFilter>("all");
+  const [venue, setVenue] = useState("ALL");
+  const [owner, setOwner] = useState("ALL");
   const [open, setOpen] = useState<Record<string, boolean>>({ av_2041: true });
   const filter = controlled ?? local;
   const setFilter = (f: FleetFilter) => { setLocal(f); onFilterChange?.(f); };
   if (!smoke) {
     const items = list?.page.rows ?? [];
     const summary = list?.summary;
-    const filteredItems = filter === "all" ? items : items.filter((item) =>
-      item.stages.some((stage) => stage.toLowerCase() === filter));
+    // P0-5: the hi-fi filters by venue and owner as well as by stage. Both come
+    // from the rows themselves — a hardcoded venue list is a release every time
+    // the desk adds an exchange (DS §3.2).
+    const venues = [...new Set(items.flatMap((item) => item.deployments.map((d) => d.venue)).filter(Boolean))].sort();
+    const owners = [...new Set(items.map((item) => item.owner).filter((owner): owner is string => Boolean(owner)))].sort();
+    const filteredItems = items.filter((item) => {
+      if (filter !== "all" && !item.stages.some((stage) => stage.toLowerCase() === filter)) return false;
+      if (venue !== "ALL" && !item.deployments.some((d) => d.venue === venue)) return false;
+      if (owner !== "ALL" && item.owner !== owner) return false;
+      return true;
+    });
+    const narrowed = items.length - filteredItems.length;
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
     const sourceReason = reason ?? (!list ? "No fleet list was published for this workspace." : undefined);
     return (
@@ -119,7 +139,24 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                       item.stages.some((stage) => stage.toLowerCase() === value)).length;
                 return <button key={value} type="button" className="exec-af-chip" data-active={filter === value ? "true" : undefined} aria-pressed={filter === value} onClick={() => setFilter(value)}>{FILTER_LABEL[value]} ({count})</button>;
               })}
-              <span className="exec-af-filternote">current source facts · exact decimals remain separated by currency</span>
+              <label className="exec-af-select">
+                <span className="sr-only">Venue</span>
+                <select value={venue} onChange={(e) => setVenue(e.target.value)} disabled={venues.length === 0}>
+                  <option value="ALL">Venue All</option>
+                  {venues.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <label className="exec-af-select">
+                <span className="sr-only">Owner</span>
+                <select value={owner} onChange={(e) => setOwner(e.target.value)} disabled={owners.length === 0}>
+                  <option value="ALL">Owner All</option>
+                  {owners.map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>
+              <span className="exec-af-filternote">
+                current source facts · exact decimals remain separated by currency
+                {narrowed > 0 ? ` · ${narrowed} of ${items.length} alphas hidden by these filters` : ""}
+              </span>
             </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
@@ -129,7 +166,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                       <th className="exec-af-th-mark" />
                       <th>alpha · version</th><th>owner · portfolio</th><th>stage presence (deployments)</th>
                       <th data-numeric="true">alloc Σ</th><th data-numeric="true">position pnl · current</th><th data-numeric="true">exposure · current</th>
-                      <th>account balance</th><th>health · source state</th><th className="exec-af-th-go" />
+                      <th>account balance</th><th>equity 30d</th><th>health · source state</th><th className="exec-af-th-go" />
                     </tr>
                   </thead>
                   <tbody>
@@ -138,7 +175,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                       const expandable = item.deployments.length > 0;
                       const isOpen = expandable && Boolean(open[item.alphaId]);
                       return (
-                        <FleetItemRows key={item.alphaId} item={item} href={href} expandable={expandable} isOpen={isOpen} onToggle={() => setOpen((m) => ({ ...m, [item.alphaId]: !isOpen }))} />
+                        <FleetItemRows key={item.alphaId} item={item} href={href} equity={equity?.[item.alphaId] ?? null} expandable={expandable} isOpen={isOpen} onToggle={() => { if (!isOpen) onNeedEquity?.(item.alphaId); setOpen((m) => ({ ...m, [item.alphaId]: !isOpen })); }} />
                       );
                     })}
                     {filteredItems.length === 0 ? <tr><td colSpan={10} className="exec-af-empty">No alpha is present for this stage filter — an empty set is a fact.</td></tr> : null}
@@ -296,7 +333,7 @@ function FleetKpi({ label, values, empty, tone }: { label: string; values: reado
 }
 
 /** One current-source fleet row, reduced by the server-owned v2 projection. */
-function FleetItemRows({ item, href, expandable, isOpen, onToggle }: { item: AlphaFleetItem; href: string; expandable: boolean; isOpen: boolean; onToggle: () => void }) {
+function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity }: { item: AlphaFleetItem; href: string; expandable: boolean; isOpen: boolean; onToggle: () => void; equity?: readonly number[] | "loading" | null }) {
   const mute = <span className="exec-af-mute">—</span>;
   const stageHref = (d: { deploymentId: string; stage: string }) =>
     d.stage.toLowerCase() === "paper" ? `/deployments/paper/${encodeURIComponent(d.deploymentId)}`
@@ -313,6 +350,7 @@ function FleetItemRows({ item, href, expandable, isOpen, onToggle }: { item: Alp
         <td data-numeric="true"><ExactLines values={item.positionPnl.map((value) => ({ currency: value.currency, value: value.net }))} empty="no position facts" tone="good" /></td>
         <td data-numeric="true"><ExactLines values={item.exposure} empty="flat" /></td>
         <td>{item.balances.length ? item.balances.map((balance) => <div key={balance.currency}>{exactDisplay(balance.total)} <span className="exec-af-mute">{balance.currency}</span><div className="exec-af-sub">free {exactDisplay(balance.free)} · locked {exactDisplay(balance.locked)}</div></div>) : mute}</td>
+        <td className="exec-af-spark">{equity === "loading" ? <span className="exec-af-mute">loading…</span> : equity && equity.length > 1 ? <SparkLine points={equity.map((value, index) => [String(index), value] as const)} tone={equity[equity.length - 1] >= equity[0] ? "good" : "bad"} height={18} width={72} /> : <span className="exec-af-mute" title="One series per alpha is one request; the row loads its own when it is expanded">expand to load</span>}</td>
         <td><span data-tone={item.health === "READY" ? "good" : item.health === "ATTENTION" ? "bad" : "warn"}>{item.health}</span><div className="exec-af-sub">{item.attentionReasons.length ? item.attentionReasons.join(" · ") : `updated ${utcStamp(item.updatedAt)}`}</div></td>
         <td className="exec-af-go"><a href={href} aria-label={`Open ${item.alphaLabel}`}>→</a></td>
       </tr>

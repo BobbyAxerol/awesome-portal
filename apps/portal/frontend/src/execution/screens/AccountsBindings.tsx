@@ -53,6 +53,21 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
     const sourceReason = reason ?? (!list ? "No bindings list was published for this workspace." : undefined);
     const mute = <span className="exec-af-mute">—</span>;
+    // P0-5/P0-7: the hi-fi filters bindings by the facts the rows carry. Each
+    // chip is derived from the rows themselves, so a venue or an environment
+    // the desk adds appears without a release; a chip whose set is empty is
+    // still shown with (0) rather than hidden, because "no live-bound account"
+    // is worth seeing.
+    const envOf = (item: typeof items[number]) => (item.accountId.split("-")[0] ?? "").toLowerCase();
+    const groups: { key: BindingFilter; label: string; match: (item: typeof items[number]) => boolean }[] = [
+      { key: "all", label: LABEL.all, match: () => true },
+      { key: "issues", label: LABEL.issues, match: (item) => item.state.toLowerCase() !== "active" || item.credentialState.toLowerCase() !== "active" },
+      { key: "live", label: LABEL.live, match: (item) => envOf(item) === "live" },
+      { key: "paper", label: LABEL.paper, match: (item) => envOf(item) === "paper" },
+      { key: "testnet", label: LABEL.testnet, match: (item) => envOf(item) === "sandbox" || item.venue.toUpperCase().includes("TESTNET") },
+    ];
+    const active = groups.find((group) => group.key === filter) ?? groups[0];
+    const shown = items.filter((item) => active.match(item));
     return (
       <ExecutionSurface kind="deployments" className="exec-ab exec-af" data-hifi-exact="accounts-bindings">
         <ExecutionWorkspace layout="dense">
@@ -65,12 +80,30 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
               <span className="exec-af-source"><b>BROKER</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
+            <div className="exec-af-filters" role="group" aria-label="Binding filter">
+              {groups.map((group) => {
+                const count = items.filter(group.match).length;
+                return (
+                  <button
+                    key={group.key}
+                    type="button"
+                    className="exec-af-chip"
+                    data-active={filter === group.key ? "true" : undefined}
+                    aria-pressed={filter === group.key}
+                    onClick={() => setFilter(group.key)}
+                  >
+                    {group.label} ({count})
+                  </button>
+                );
+              })}
+              <span className="exec-af-filternote">binding = one credentialed external account at a venue · environment read from the account id the source publishes</span>
+            </div>
             <div className="exec-af-panel">
               <div className="exec-scroll-x">
                 <table className="exec-af-table exec-ab-table" aria-label="Bindings">
                   <thead><tr><th>binding · venue</th><th>account</th><th>state</th><th>credential</th><th data-numeric="true">physical equity</th><th data-numeric="true">Σ virtual · headroom</th><th>updated</th></tr></thead>
                   <tbody>
-                    {items.map((item) => (
+                    {shown.map((item) => (
                       <tr key={item.bindingId} className="exec-af-row">
                         <td><a href={`/deployments/accounts?binding=${encodeURIComponent(item.bindingId)}`}><b>{item.bindingId}</b></a> · {item.venue}</td>
                         <td><a href={`/deployments/accounts/${encodeURIComponent(item.accountId)}`}>{item.accountId}</a></td>
@@ -81,7 +114,9 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
                         <td className="exec-af-mute">{utcStamp(item.updatedAt)}</td>
                       </tr>
                     ))}
-                    {items.length === 0 ? <tr><td colSpan={7}><span className="exec-af-empty">No binding exists in this workspace — the source published an empty set, and an empty set is a fact.</span></td></tr> : null}
+                    {shown.length === 0 ? <tr><td colSpan={7}><span className="exec-af-empty">{items.length === 0
+                      ? "No binding exists in this workspace — the source published an empty set, and an empty set is a fact."
+                      : `No binding matches ${active.label} — ${items.length} bindings exist under the other filters.`}</span></td></tr> : null}
                   </tbody>
                 </table>
               </div>

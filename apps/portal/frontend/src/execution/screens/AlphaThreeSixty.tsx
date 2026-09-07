@@ -158,6 +158,8 @@ export interface AlphaThreeSixtyProps {
   windowOptions: readonly string[];
   scope: AlphaScope;
   onScopeChange: (scope: AlphaScope) => void;
+  /** What the scope is actually doing to the rows below, in the bar's own words. */
+  scopeNote?: string | null;
   tab: AlphaTab;
   onTabChange: (tab: AlphaTab) => void;
   venues: readonly VenueRow[];
@@ -282,9 +284,10 @@ function ScopeBar({
   modeOptions,
   venueOptions,
   windowOptions,
+  scopeNote,
 }: Pick<
   AlphaThreeSixtyProps,
-  "scope" | "onScopeChange" | "portfolioOptions" | "modeOptions" | "venueOptions" | "windowOptions"
+  "scope" | "onScopeChange" | "portfolioOptions" | "modeOptions" | "venueOptions" | "windowOptions" | "scopeNote"
 >) {
   const set = (patch: Partial<AlphaScope>) => onScopeChange({ ...scope, ...patch });
   return (
@@ -296,7 +299,7 @@ function ScopeBar({
           desk adds an exchange. */}
       <Select label="Venue" value={scope.venue} options={venueOptions} onChange={(v) => set({ venue: v })} />
       <Select label="Window" value={scope.window} options={windowOptions} onChange={(v) => set({ window: v })} />
-      <span className="exec-a3-scopenote">every panel below obeys this scope · venue list from registry, never hardcoded</span>
+      <span className="exec-a3-scopenote">{scopeNote ?? "every panel below obeys this scope · venue list from registry, never hardcoded"}</span>
     </div>
   );
 }

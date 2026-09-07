@@ -100,7 +100,11 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
 
   it("keeps the reviewed rich Fleet composition and wires current-source facts and drill-downs", async () => {
     render(<AlphaFleetRichContainer api={createFixtureApi()} />);
-    expect(await screen.findByText("Bobby-001")).toBeTruthy();
+    // The owner appears twice now: once on the row, once as an option of the
+    // owner filter the hi-fi asks for (P0-5).
+    expect((await screen.findAllByText("Bobby-001")).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Owner")).toBeTruthy();
+    expect(screen.getByLabelText("Venue")).toBeTruthy();
     expect(screen.getAllByText("123.19605").length).toBeGreaterThan(0);
     expect(screen.getByText("SOURCE_LATEST_WINDOW_NOT_PUBLISHED")).toBeTruthy();
 

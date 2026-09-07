@@ -53,3 +53,53 @@ describe("Binding Detail (smoke until BR-EX-53)", () => {
     expect(screen.getByText(/No binding detail was published for nope/)).toBeTruthy();
   });
 });
+
+describe("Accounts & Bindings — filters over the published bindings (P0-7)", () => {
+  const binding = (bindingId: string, accountId: string, venue: string, state: string, credentialState: string) => ({
+    bindingId, accountId, venue, state, credentialState, updatedAt: "2026-09-07T00:00:00.000Z",
+  });
+  const list = {
+    environment: "paper", freshness: "FRESH", completeness: "COMPLETE",
+    sourceAsOf: "2026-09-07T00:00:00.000Z", readAt: "2026-09-07T00:00:10.000Z",
+    page: {
+      rows: [
+        binding("b_paper@BINANCE", "paper-binance-a", "BINANCE", "ACTIVE", "ACTIVE"),
+        binding("b_sbx@OKX", "sandbox-okx-b", "OKX TESTNET", "ACTIVE", "ACTIVE"),
+        binding("b_live@BINANCE", "live-binance-c", "BINANCE", "SUSPENDED", "ACTIVE"),
+      ],
+      totalCount: 3, filteredCount: 3, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false,
+    },
+  } as never;
+
+  it("counts each filter over the published rows and narrows the table when one is pressed", () => {
+    render(<AccountsBindings list={list} />);
+    expect(screen.getByRole("button", { name: "All (3)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Paper (1)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Testnet (1)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Live-bound (1)" })).toBeTruthy();
+    // one binding is SUSPENDED, so it is the only issue
+    expect(screen.getByRole("button", { name: "Issues (1)" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Paper (1)" }));
+    expect(screen.getAllByText("b_paper@BINANCE", { exact: false }).length).toBeGreaterThan(0);
+    expect(screen.queryByText("b_live@BINANCE")).toBeNull();
+  });
+
+  it("distinguishes a filter that matches nothing from a workspace with no bindings at all", () => {
+    const paperOnly = {
+      ...(list as never as Record<string, unknown>),
+      page: {
+        rows: [binding("b_paper@BINANCE", "paper-binance-a", "BINANCE", "ACTIVE", "ACTIVE")],
+        totalCount: 1, filteredCount: 1, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false,
+      },
+    } as never;
+    const { unmount } = render(<AccountsBindings list={paperOnly} />);
+    fireEvent.click(screen.getByRole("button", { name: "Live-bound (0)" }));
+    expect(screen.getByText("No binding matches Live-bound — 1 bindings exist under the other filters.")).toBeTruthy();
+    unmount();
+
+    const none = { ...(list as never as Record<string, unknown>), page: { rows: [], totalCount: 0, filteredCount: 0, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false } } as never;
+    render(<AccountsBindings list={none} />);
+    expect(screen.getByText(/the source published an empty set/)).toBeTruthy();
+  });
+});

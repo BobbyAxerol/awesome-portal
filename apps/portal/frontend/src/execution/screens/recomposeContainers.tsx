@@ -32,6 +32,8 @@ import { readReplayGroups, scopeGroups } from "../components/tradeReplayGroups";
 import { ObservedTimelinePanel } from "../components/ObservedTimelinePanel";
 import { subjectFunnel, subjectRows, type RelationFacts, type SubjectFunnel } from "../api/managerRelations";
 import { type ObservedEntry, type ObservedEnvironment, type ObservedSubjectKind, type ObservedTimeline, deployedEnvironments } from "../api/observedTimeline";
+import { SCOPE_WINDOWS, accountsOfPortfolio, rowInScope, scopeFacts, scopeSummary } from "../alphaScope";
+import type { BlotterGroups } from "./FullBlotter";
 import { useRelationFacts, type RelationFactsState } from "../useRelationFacts";
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
@@ -447,6 +449,7 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
     ...(cursor ? { after: cursor } : {}),
     ...(filter === "ALL" ? {} : { status_bucket: filter }),
   }), [api, cursor, filter, realtime.refreshKey]);
+  const blotterGroups = useBlotterGroups(api, "paper");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [funnel, setFunnel] = useState<{ orderId: string; funnel: OrderFunnel | null; status: PanelStatus; reason?: string } | null>(null);
   const onExpand = useCallback(
@@ -510,10 +513,38 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
       onExpand={onExpand}
       aggregates={null}
       statusCounts={statusCounts}
+      groups={blotterGroups}
       status={state.status}
       reason={state.reason}
     />
   );
+}
+
+/** Only the two relations the chips need — the blotter must not drain the whole replay set. */
+const BLOTTER_GROUP_RELATIONS = { order_brackets: "order-brackets", conditional_order_group_legs: "conditional-order-group-legs" } as const;
+
+/** P0-6: the order ids the source has grouped, for the Brackets and Conditional chips. */
+function useBlotterGroups(api: ExecutionApi, environment: ObservedEnvironment): BlotterGroups | null {
+  const relations = useRelationFacts(api, environment, true, BLOTTER_GROUP_RELATIONS);
+  return useMemo(() => {
+    const value = relations.value;
+    if (!value) return null;
+    const ids = (rows: readonly Record<string, unknown>[] | undefined, fields: readonly string[]) => {
+      const out = new Set<string>();
+      for (const row of rows ?? []) {
+        for (const field of fields) {
+          const id = row[field];
+          if (typeof id === "string" && id.length > 0) out.add(id);
+          else if (typeof id === "number" && Number.isFinite(id)) out.add(String(id));
+        }
+      }
+      return out;
+    };
+    return {
+      brackets: ids(value.facts.order_brackets, ["entry_client_order_id", "entry_order_id"]),
+      conditional: ids(value.facts.conditional_order_group_legs, ["client_order_id", "order_id"]),
+    };
+  }, [relations.value]);
 }
 
 /* ── alpha 360 ────────────────────────────────────────────────────────── */
@@ -1366,10 +1397,27 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
     : !item
       ? resource?.state === "empty" ? "empty" : "partial"
       : profilePanelStatus(resource, resourceState.status);
-  const deployments = item ? fleetDeployments(item) : [];
-  const positions = viewFacts ? alphaPositions(viewFacts) : null;
-  const orders = viewFacts ? alphaOrders(viewFacts) : null;
-  const audit = viewFacts ? alphaAudit(viewFacts) : null;
+  // P0-2: the scope bar narrows the facts once, here, so every panel derived
+  // below obeys it by construction. Before this it changed two chart captions
+  // and nothing else, which reads as a filter and is not one.
+  const portfolioAccounts = useMemo(
+    () => accountsOfPortfolio(viewFacts?.sourceFacts?.portfolio_allocations ?? null, scope.portfolio),
+    [viewFacts, scope.portfolio],
+  );
+  const scoped = useMemo(
+    () => scopeFacts(viewFacts?.sourceFacts, scope, { portfolioAccounts }),
+    [viewFacts, scope, portfolioAccounts],
+  );
+  const scopedFacts: QueryAnalytics | null = useMemo(
+    () => viewFacts ? { ...viewFacts, sourceFacts: scoped.facts } : null,
+    [viewFacts, scoped],
+  );
+  const deployments = item
+    ? fleetDeployments(item).filter((row) => rowInScope({ venue: row.venue, mode: row.mode, account_id: row.accountId }, scope, { portfolioAccounts }))
+    : [];
+  const positions = scopedFacts ? alphaPositions(scopedFacts) : null;
+  const orders = scopedFacts ? alphaOrders(scopedFacts) : null;
+  const audit = scopedFacts ? alphaAudit(scopedFacts) : null;
   return (
     <AlphaThreeSixty
       researchStatus={item?.health ?? null}
@@ -1381,27 +1429,28 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       venueOptions={["ALL", ...unique(item?.deployments.map((row) => row.venue) ?? [])]}
       portfolioOptions={["ALL", ...unique(item?.portfolios.map((row) => row.portfolioId) ?? [])]}
       modeOptions={["ALL", ...unique(item?.deployments.map((row) => row.stage) ?? [])]}
-      windowOptions={["30d"]}
+      windowOptions={[...SCOPE_WINDOWS]}
       scope={scope}
       onScopeChange={setScope}
+      scopeNote={scopeSummary(scope, scoped.removedTotal)}
       tab={tab}
       onTabChange={setTab}
       venues={item ? fleetVenues(item) : []}
       kpis={analytics ? analyticsKpis(analytics, subjectFunnel(relations.value, { alphaId })) : item ? fleetKpis(item) : []}
-      contributions={alphaContributions(viewFacts)}
+      contributions={alphaContributions(scopedFacts)}
       equity={resource ? profileEquity(resource) ?? analyticsEquity(analytics) : analyticsEquity(analytics)}
       deployments={deployments}
       tiles={analytics ? analyticsTiles(analytics, analytics.asOf) : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      replay={viewFacts ? <TradeReplayLive api={api} analytics={viewFacts} additive={analytics} alphaId={alphaId} focusId={focus} relations={relations} /> : undefined}
+      replay={scopedFacts ? <TradeReplayLive api={api} analytics={scopedFacts} additive={analytics} alphaId={alphaId} focusId={focus} relations={relations} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
       audit={audit ? pageOf(audit) : null}
-      risk={alphaRisk(viewFacts)}
-      sessions={alphaSessions(viewFacts)}
-      accounting={alphaAccounting(viewFacts)}
+      risk={alphaRisk(scopedFacts)}
+      sessions={alphaSessions(scopedFacts)}
+      accounting={alphaAccounting(scopedFacts)}
       activity={<AlphaActivityTile activity={activityState.value} transport={activityState.status} reason={activityState.reason} />}
       observedTimeline={<ObservedTimelineLive api={api} environment={factsEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} />}
-      reconciliation={alphaReconciliation(viewFacts)}
+      reconciliation={alphaReconciliation(scopedFacts)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
       onOpenAccount={(accountId) => navigate(`/deployments/accounts/${encodeURIComponent(accountId)}`)}
@@ -1720,12 +1769,34 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
   // the list in place (coalesced to at most one re-read per second).
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
   const state = useApiRead(() => api.getAlphaFleet(query), [api, query, realtime.refreshKey], { keepValue: true });
+  // P0-5: one equity series per alpha is one request per alpha. The row asks
+  // for its own when it is expanded and the answer is kept, so a fleet of 48
+  // costs nothing until someone looks — and each series is the published one,
+  // never a second computation of the same numbers.
+  const [equity, setEquity] = useState<Record<string, readonly number[] | "loading" | null>>({});
+  const needEquity = useCallback((alphaId: string) => {
+    setEquity((current) => {
+      if (current[alphaId] !== undefined) return current;
+      void api.getFinancialChart({ environment: "paper", subjectKind: "alpha", subjectId: alphaId, metric: "equity" })
+        .then((result) => {
+          const points = result.ok
+            ? (result.value.series?.[0]?.points ?? [])
+              .map(([, value]) => (value === null ? Number.NaN : Number(value)))
+              .filter((value) => Number.isFinite(value))
+            : [];
+          setEquity((map) => ({ ...map, [alphaId]: points.length > 1 ? points : null }));
+        });
+      return { ...current, [alphaId]: "loading" };
+    });
+  }, [api]);
   return (
     <AlphaFleet
       filter={filter}
       list={state.value}
       status={state.status}
       reason={state.reason}
+      equity={equity}
+      onNeedEquity={needEquity}
       onFilterChange={(next) => {
         setFilter(next);
         setQuery((current) => ({

@@ -40,3 +40,94 @@ describe("Alpha Fleet — entry screen for WF 2a (smoke until BR-EX-49)", () => 
     expect(screen.getByText(/USDC paper — not summed/)).toBeTruthy();
   });
 });
+
+describe("Alpha Fleet — venue and owner filters over the published rows (P0-5)", () => {
+  const deployment = (venue: string, stage: string) => ({
+    deploymentId: `dep-${venue}-${stage}`, stage, venue, accountId: `acct-${venue}`,
+    portfolioId: "PF-A", portfolioName: "PF-A", currency: "USDT",
+    allocation: "1000", balanceTotal: "1000", balanceFree: "1000", balanceLocked: "0",
+    positionFactCount: 0, realizedPnl: "0", unrealizedPnl: "0", netPnl: "0", exposure: "0",
+    state: "READY", active: true, health: "READY", updatedAt: "2026-09-07T00:00:00.000Z",
+  });
+  const item = (alphaId: string, owner: string, venues: readonly string[]) => ({
+    alphaId, alphaLabel: alphaId, version: "1", stage: "PAPER", stages: ["PAPER"], owner,
+    portfolios: [{ portfolioId: "PF-A", name: "PF-A", baseCurrency: "USDT" }],
+    deployments: venues.map((venue) => deployment(venue, "PAPER")),
+    allocations: [], balances: [], positionPnl: [], exposure: [],
+    health: "READY", attentionReasons: [], metricsAvailability: {},
+    updatedAt: "2026-09-07T00:00:00.000Z",
+  });
+  const list = {
+    environment: "paper", freshness: "FRESH", completeness: "COMPLETE",
+    sourceAsOf: "2026-09-07T00:00:00.000Z", readAt: "2026-09-07T00:00:10.000Z",
+    page: {
+      rows: [item("alpha_bin", "bobby", ["BINANCE"]), item("alpha_okx", "lan", ["OKX"])],
+      totalCount: 2, filteredCount: 2, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false,
+    },
+    summary: {
+      alphaCount: 2, deploymentCount: 2, portfolioCount: 1, needsAttentionCount: 0, researchOnlyCount: 0,
+      stageCounts: { PAPER: 2 }, exposureByCurrency: [], currentPositionPnlByCurrency: [],
+    },
+  } as never;
+
+  it("narrows by venue, then by owner, and says how many rows the filters hid", () => {
+    render(<AlphaFleet list={list} />);
+    expect(screen.getAllByText("alpha_bin").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("alpha_okx").length).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getByLabelText("Venue"), { target: { value: "OKX" } });
+    expect(screen.queryAllByText("alpha_bin")).toHaveLength(0);
+    expect(screen.getAllByText("alpha_okx").length).toBeGreaterThan(0);
+    expect(screen.getByText(/1 of 2 alphas hidden by these filters/)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Venue"), { target: { value: "ALL" } });
+    fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "bobby" } });
+    expect(screen.getAllByText("alpha_bin").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("alpha_okx")).toHaveLength(0);
+  });
+
+  it("offers only the venues and owners the rows actually carry", () => {
+    render(<AlphaFleet list={list} />);
+    const venues = [...(screen.getByLabelText("Venue") as HTMLSelectElement).options].map((o) => o.value);
+    expect(venues).toEqual(["ALL", "BINANCE", "OKX"]);
+    const owners = [...(screen.getByLabelText("Owner") as HTMLSelectElement).options].map((o) => o.value);
+    expect(owners).toEqual(["ALL", "bobby", "lan"]);
+  });
+});
+
+describe("Alpha Fleet — the equity sparkline is fetched per row, not per fleet (P0-5)", () => {
+  const item = {
+    alphaId: "alpha_1", alphaLabel: "alpha_1", version: "1", stage: "PAPER", stages: ["PAPER"], owner: "bobby",
+    portfolios: [], deployments: [{
+      deploymentId: "dep-1", stage: "PAPER", venue: "BINANCE", accountId: "acct-1", portfolioId: null, portfolioName: null,
+      currency: "USDT", allocation: "1", balanceTotal: "1", balanceFree: "1", balanceLocked: "0", positionFactCount: 0,
+      realizedPnl: "0", unrealizedPnl: "0", netPnl: "0", exposure: "0", state: "READY", active: true, health: "READY",
+      updatedAt: "2026-09-07T00:00:00.000Z",
+    }],
+    allocations: [], balances: [], positionPnl: [], exposure: [], health: "READY", attentionReasons: [],
+    metricsAvailability: {}, updatedAt: "2026-09-07T00:00:00.000Z",
+  };
+  const list = {
+    environment: "paper", freshness: "FRESH", completeness: "COMPLETE",
+    sourceAsOf: "2026-09-07T00:00:00.000Z", readAt: "2026-09-07T00:00:10.000Z",
+    page: { rows: [item], totalCount: 1, filteredCount: 1, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false },
+    summary: { alphaCount: 1, deploymentCount: 1, portfolioCount: 0, needsAttentionCount: 0, researchOnlyCount: 0, stageCounts: { PAPER: 1 }, exposureByCurrency: [], currentPositionPnlByCurrency: [] },
+  } as never;
+
+  it("says the row will load its own series, asks for it once when expanded, and draws it when it arrives", () => {
+    const asked: string[] = [];
+    const { rerender } = render(<AlphaFleet list={list} equity={{}} onNeedEquity={(id) => asked.push(id)} />);
+    expect(screen.getByText("expand to load")).toBeTruthy();
+    expect(asked).toEqual([]);
+
+    fireEvent.click(screen.getByText("▸"));
+    expect(asked).toEqual(["alpha_1"]);
+
+    rerender(<AlphaFleet list={list} equity={{ alpha_1: "loading" }} onNeedEquity={(id) => asked.push(id)} />);
+    expect(screen.getByText("loading…")).toBeTruthy();
+
+    rerender(<AlphaFleet list={list} equity={{ alpha_1: [10, 11, 12] }} onNeedEquity={(id) => asked.push(id)} />);
+    expect(screen.queryByText("expand to load")).toBeNull();
+    expect(screen.queryByText("loading…")).toBeNull();
+  });
+});

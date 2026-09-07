@@ -82,6 +82,14 @@ export interface BlotterRow {
   feeCurrency: string | null;
   /** Why the risk authority refused. Rendered inline on the row (§4c). */
   rejectReason?: string | null;
+  /** The source's own client id — how the published order groups name this order. */
+  clientOrderId?: string | null;
+}
+
+/** Order ids (or client order ids) the source has grouped, for the two hi-fi chips. */
+export interface BlotterGroups {
+  brackets: ReadonlySet<string>;
+  conditional: ReadonlySet<string>;
 }
 
 export const BLOTTER_FILTERS: readonly BlotterFilter[] = [
@@ -311,6 +319,8 @@ export interface FullBlotterProps {
   reason?: string;
   onLoadOlder: () => void;
   loading?: boolean;
+  /** Published order groups (EDS-11R1) — enables the Brackets and Conditional chips. */
+  groups?: BlotterGroups | null;
   /** The expanded row's funnel. Fetched per order, not with the page. */
   expandedOrderId?: string | null;
   funnel?: OrderFunnel | null;
@@ -418,6 +428,7 @@ export function FullBlotter({
   reason,
   onLoadOlder,
   loading,
+  groups = null,
   expandedOrderId = null,
   funnel = null,
   funnelStatus,
@@ -467,6 +478,18 @@ export function FullBlotter({
         return true;
       })
     : [];
+  // P0-6: with the published order groups (EDS-11R1) the two hi-fi chips work on
+  // real rows. They narrow the rows already loaded — the status chips re-query
+  // the server, these do not, and the note under them says which is which.
+  const groupIds = groups ?? null;
+  const inGroup = (row: BlotterRow, ids: ReadonlySet<string>) =>
+    ids.has(row.orderId) || (row.clientOrderId !== null && row.clientOrderId !== undefined && ids.has(row.clientOrderId));
+  const viewRows = view && groupIds
+    ? page.rows.filter((row) => inGroup(row, view === "BRACKETS" ? groupIds.brackets : groupIds.conditional))
+    : null;
+  const shownPage = viewRows
+    ? { ...page, rows: viewRows, filteredCount: viewRows.length, hasMore: false, nextCursor: null }
+    : page;
   const counts = smoke ? { OPEN: 3, CONDITIONAL: 2, BRACKETS: 1 } : statusCounts
     ? Object.fromEntries(Object.entries(BLOTTER_BUCKET).map(([bucket, statuses]) => [
         bucket, statuses.reduce((sum, item) => sum + (statusCounts[item] ?? 0), 0),
@@ -515,8 +538,10 @@ export function FullBlotter({
             {exported ? <span className="exec-bl-note" role="status">{exported}</span> : null}
           </div>
           <div className="exec-bl-filters" role="group" aria-label="Order status">
-            {HIFI_FILTERS.filter((f) => !f.smokeOnly || smoke).map((f) => {
-              const n = counts[f.key as string];
+            {HIFI_FILTERS.filter((f) => !f.smokeOnly || smoke || (groupIds && (f.key === "BRACKETS" ? groupIds.brackets.size : groupIds.conditional.size) > 0)).map((f) => {
+              const n = counts[f.key as string]
+                ?? (groupIds && !smoke && f.key === "BRACKETS" ? groupIds.brackets.size
+                  : groupIds && !smoke && f.key === "CONDITIONAL" ? groupIds.conditional.size : undefined);
               const active = activeKey === f.key;
               return (
                 <button key={f.key} type="button" className="exec-bl-chip" data-active={active ? "true" : undefined} aria-pressed={active} onClick={() => { if (f.smokeOnly) { setView(f.key as "CONDITIONAL" | "BRACKETS"); } else { setView(null); onFilterChange(f.key as BlotterFilter); } }}>
@@ -524,7 +549,11 @@ export function FullBlotter({
                 </button>
               );
             })}
-            <Hint>applied by the server — the chips re-query, they do not hide loaded rows</Hint>
+            <Hint>
+              {view
+                ? `${view === "BRACKETS" ? "Brackets" : "Conditional"} narrows the ${page.rows.length} loaded rows by the source's published groups — the status chips re-query the server instead`
+                : "applied by the server — the chips re-query, they do not hide loaded rows"}
+            </Hint>
           </div>
           {crossFilter ? (
             <div className="exec-bl-cross">
@@ -536,7 +565,7 @@ export function FullBlotter({
             <KeysetTable
               label="Orders and fills"
               columns={visibleColumns}
-              page={page}
+              page={shownPage}
               rowKey={(row) => row.orderId}
               status={status}
               reason={reason}
