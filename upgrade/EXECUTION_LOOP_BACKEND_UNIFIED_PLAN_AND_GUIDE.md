@@ -5020,6 +5020,12 @@ still requires exact digest pull/verification, full-stack render with the
 current-source/projection/realtime overlays, measured profile/browser matrix
 and recorded rollback before the deployed verifier may emit `PRODUCT_ACTIVE`.
 
+**Release-evidence refresh (2026-09-07):** regenerated public registry and
+BAR-05/BAR-16 artifacts after the current-source adapter release work, then
+re-pinned the dependent N29 and EDS-12 immutable manifests in dependency
+order. The N29 and EDS-12 static gates pass again; this restores provenance
+integrity only and does not itself authorize activation.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
