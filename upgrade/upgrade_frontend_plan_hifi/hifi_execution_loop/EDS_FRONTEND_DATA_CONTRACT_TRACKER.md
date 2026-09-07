@@ -1111,6 +1111,20 @@ EDS-12 **đạt ở mức khung tĩnh** (crate + contracts + failure matrix + ru
 
 Thứ tự đề xuất: **I0 → G8 → G9 → G10 → G6 → G11 → G12**, P chạy song song, S do Bobby giao. Không bước nào ký DONE khi Evidence trống (§A3).
 
+### A6.4 I0 — hợp nhánh ĐÃ LÀM 07-09 (owner giao cho Claude thay vì chờ codex)
+
+Head tích hợp duy nhất: **`feat/execution-integration`** (worktree `/home/bobby/portal-integration`), push `origin`.
+
+| Commit | Nội dung | Conflict giải thế nào |
+|---|---|---|
+| `636a92c` | merge `feat/eds-current-bff@f04dad8` vào `feat/eds11r-r4-r5-activation@5abd275` | 8 file: `TradeReplayEvents.tsx`, 2 test, `recomposeContainers.tsx` → **bản của tôi** (codex mang bản re-apply cũ `7ec17dd`/`97ab33f`); `app.module.ts` → union (AuthoritativeEventLedgerRepository + ExecutionMarketCandlesService); compose local-projection → giữ cờ candles; N29 pack → re-pin theo file đã merge. **Lỗi thật bắt được ở hook:** `FastifyError: GET /api/v1/execution/market/candles already declared` — `MarketContextController` của codex (EDS-10b/11R4, data_layer qua Manager) đã giữ route đó → route nến venue công khai của tôi đổi thành **`/market/venue-candles`** (FE + test + harness cập nhật); G10 hợp nhất hai nguồn sau `EXECUTION_MARKET_CANDLES_SOURCE`. Gate trên cây merge: FE tsc sạch, vitest 105 file / 1902 pass / 3 skipped; control-api build-tsc sạch, market-candles + eds11r-market-context spec 18/18; hook pre-commit xanh (control-api suite 50 file) |
+| `8f6aff5` | merge docs `118406c` (BR-EX-80/81 rows) | không conflict |
+| `8dc281e` | merge `feat/eds12-failure-dr-release@8a7bd6f` | plan backend → bản codex (EDS-12 viết lại rows BR-EX-80/81); FRONTEND_HANDOFF giữ cả 8.50 (EDS-09b observation-revision) và EDS-12 handoff đổi số **8.55**; tracking test giữ chuỗi bắt buộc; **EDS-12 pack "evidence digest drifted: n29_acceptance"** → re-pin `qualification.v1.json` (n29_acceptance + current_source_proxy của 11R1) + MANIFEST, đúng thực hành `8a7bd6f`; `verify-static` vẫn `EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING` |
+
+**Deploy dev:** script build phải truyền `--env-file /home/bobby/portal-dev/.env` vì compose của codex yêu cầu `PORTAL_RUNTIME_GID` (987) và `CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY` (đã có sẵn trong `.env` dev). Dòng deploy + kết quả route mới (`/views/observed-timeline`, `/manager/current/:op`, `/market/venue-candles`) ghi ở A6.5 sau khi build xong.
+
+**Cho codex:** hai nhánh của codex giờ nằm sau head tích hợp; mọi việc tiếp theo (G8/G9/G10…) làm trên `feat/execution-integration`; Bobby chốt khi nào head này vào `dev`.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
