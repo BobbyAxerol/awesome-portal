@@ -5038,6 +5038,16 @@ scan reports zero Critical findings for both. The retry must still pass the
 protected publisher's scan, signing, SBOM and provenance gates; this note is
 not deployed-evidence or a `PRODUCT_ACTIVE` assertion.
 
+**Security release correction — web runtime (2026-09-07):** the next
+protected-main publisher correctly stopped before signing when the final
+`nginx:1.27-alpine` Portal web runtime reported OpenSSL Critical findings.
+The replacement is the digest-pinned `nginx:1.29-alpine` manifest verified
+locally with the same tar-based Trivy method: zero Critical findings. The
+existing official nginx template/envsubst entrypoint is preserved; no UI,
+route, BFF, source authority or runtime activation behavior changes. The
+release remains non-active until the retry completes Trivy, Cosign, SBOM,
+provenance, exact-image deployment and EDS-12 deployed verification.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:

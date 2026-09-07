@@ -47,7 +47,11 @@ ENV VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=${ROADMAP_TASK_BOARD_LOCAL_ONLY} \
     VITE_ROADMAP_TASK_BOARD_API_BASE=${ROADMAP_TASK_BOARD_API_BASE}
 RUN npm run build -- --base=/roadmap-task-board/
 
-FROM nginx:1.27-alpine
+# Digest-pinned current nginx/Alpine runtime.  The former 1.27 Alpine line
+# carried unfixed OpenSSL Critical CVEs and was correctly rejected by the
+# protected-main image gate.  Keep the official envsubst entrypoint used by
+# the Portal template below while pinning the verified multi-arch manifest.
+FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
 
 # portal.conf is a template: the official nginx envsubst entrypoint renders
 # /etc/nginx/templates/*.template into /etc/nginx/conf.d/ using container env
