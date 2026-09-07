@@ -51,7 +51,7 @@ RUN npm run build -- --base=/roadmap-task-board/
 # carried unfixed OpenSSL Critical CVEs and was correctly rejected by the
 # protected-main image gate.  Keep the official envsubst entrypoint used by
 # the Portal template below while pinning the verified multi-arch manifest.
-FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+FROM nginx:1.31-alpine@sha256:72ba65eb42c10344912a84ff42408db7d34f2feb642204570ab8fc5ffd29f1d3
 
 # portal.conf is a template: the official nginx envsubst entrypoint renders
 # /etc/nginx/templates/*.template into /etc/nginx/conf.d/ using container env
