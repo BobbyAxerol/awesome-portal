@@ -66,21 +66,25 @@ describe("Accounts & Bindings — filters over the published bindings (P0-7)", (
         binding("b_paper@BINANCE", "paper-binance-a", "BINANCE", "ACTIVE", "ACTIVE"),
         binding("b_sbx@OKX", "sandbox-okx-b", "OKX TESTNET", "ACTIVE", "ACTIVE"),
         binding("b_live@BINANCE", "live-binance-c", "BINANCE", "SUSPENDED", "ACTIVE"),
+        // The source has not published this credential state yet. That is not
+        // an issue — before 2026-09-07 it counted as one and every dev binding
+        // showed up under Issues.
+        binding("b_paper2@BINANCE", "paper-binance-d", "BINANCE", "ACTIVE", "NOT_PUBLISHED"),
       ],
-      totalCount: 3, filteredCount: 3, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false,
+      totalCount: 4, filteredCount: 4, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false,
     },
   } as never;
 
   it("counts each filter over the published rows and narrows the table when one is pressed", () => {
     render(<AccountsBindings list={list} />);
-    expect(screen.getByRole("button", { name: "All (3)" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Paper (1)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "All (4)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Paper (2)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Testnet (1)" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Live-bound (1)" })).toBeTruthy();
     // one binding is SUSPENDED, so it is the only issue
     expect(screen.getByRole("button", { name: "Issues (1)" })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Paper (1)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Paper (2)" }));
     expect(screen.getAllByText("b_paper@BINANCE", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.queryByText("b_live@BINANCE")).toBeNull();
   });

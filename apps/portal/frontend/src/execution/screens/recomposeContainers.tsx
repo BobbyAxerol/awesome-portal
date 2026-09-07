@@ -422,6 +422,10 @@ function blotterRowOf(row: Record<string, unknown>): BlotterRow {
   const status = str(row.status);
   return {
     orderId: str(row.order_id) ?? "order id not published",
+    // The published order groups name their legs by client id, so the Blotter
+    // carries it (invisible in the table, used by the Brackets/Conditional
+    // chips). Without it those chips matched nothing at all.
+    clientOrderId: str(row.client_order_id),
     at: str(row.submitted_at) ?? str(row.updated_at) ?? str(row.created_at) ?? str(row.at) ?? "",
     deployment: str(row.deployment_id) ?? "—",
     // OR-5 R3: open this order on the alpha's Trade Replay — the blotter rows carry strategy_id (deployment_id is not published there)

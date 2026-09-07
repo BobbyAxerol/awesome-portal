@@ -16,6 +16,12 @@ import { StatusChip } from "../components/badges";
 
 export const BINDING_FILTERS = ["all", "live", "testnet", "paper", "issues"] as const;
 export type BindingFilter = (typeof BINDING_FILTERS)[number];
+/** States the source itself calls wrong — an unpublished field is not one of them. */
+const BINDING_ISSUE_STATES = new Set([
+  "SUSPENDED", "DISABLED", "REVOKED", "EXPIRED", "ERROR", "FAILED", "DEGRADED",
+  "SYNC_FAILED", "SYNC_STALE", "MISMATCH", "INACTIVE",
+]);
+
 const LABEL: Record<BindingFilter, string> = { all: "All", live: "Live-bound", testnet: "Testnet", paper: "Paper", issues: "Issues" };
 
 function ChipEl({ chip }: { chip: Chip }) {
@@ -61,7 +67,10 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
     const envOf = (item: typeof items[number]) => (item.accountId.split("-")[0] ?? "").toLowerCase();
     const groups: { key: BindingFilter; label: string; match: (item: typeof items[number]) => boolean }[] = [
       { key: "all", label: LABEL.all, match: () => true },
-      { key: "issues", label: LABEL.issues, match: (item) => item.state.toLowerCase() !== "active" || item.credentialState.toLowerCase() !== "active" },
+      // An issue is a state the source calls wrong, not a field it has yet to
+      // publish: NOT_PUBLISHED credentials made all 43 dev bindings "issues",
+      // which is the opposite of useful.
+      { key: "issues", label: LABEL.issues, match: (item) => BINDING_ISSUE_STATES.has(item.state.toUpperCase()) || BINDING_ISSUE_STATES.has(item.credentialState.toUpperCase()) },
       { key: "live", label: LABEL.live, match: (item) => envOf(item) === "live" },
       { key: "paper", label: LABEL.paper, match: (item) => envOf(item) === "paper" },
       { key: "testnet", label: LABEL.testnet, match: (item) => envOf(item) === "sandbox" || item.venue.toUpperCase().includes("TESTNET") },
