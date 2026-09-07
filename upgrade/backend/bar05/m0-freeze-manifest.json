@@ -5,14 +5,14 @@
     "portal_producer": "portal-api"
   },
   "file_digests": {
-    "compose": "sha256:bcbd2e089a6f68dfaf4f3cdbb55ca7a0b48257e71baaff69768c50026aaa442d",
-    "compose_production": "sha256:00978748ea10cd13d9289d133cefbc6f6bf37cc50566dea6d482ee612ae94915",
+    "compose": "sha256:4ce3f0b43a7291293cc9620c1385d1ab404619183639933b2ad30080af630047",
+    "compose_production": "sha256:7d22e9cd1a30d62f7e42e215ba8950b96f29bd43c7d99fe2bac5c1f20f9d2872",
     "constraints_portal": "sha256:a16dcc4c1a3ded5c03a742ce38f351f8d13e738255518a6629da42ad65b900b2",
     "control_api_migrations": "sha256:7af62e52e20e1340882c50f033ab0cd690de99231c3cc4dbd150b2a2f0a000b8",
     "control_api_package": "sha256:1334b64e840001dc8c1bcf4fd0934d4b5cf365c957b9a754c48e75ad672e9f96",
     "control_api_package_lock": "sha256:f33d9fe854d6b0d89376c6dac2a647a8d474e350c7fc089905238680f921eeb5",
     "control_api_tsconfig": "sha256:505f416ac474f249e52523f39a227669a2be931f491d39d67aa76f657de71200",
-    "env_template": "sha256:43606c1808bcce40af5d4144c8f2571ff60b2ed0bbf9ac47ff6846e987103b0b",
+    "env_template": "sha256:813f2e965d30b8ddbd35f02b2fc0916e8f0b04853d906670627a00a1344dca48",
     "golden_market": "sha256:16131e4d930bc78b8375ad3fb14584b5d5b8191d7f89bec29ce502470e4646ae",
     "golden_metadata": "sha256:13128530dc74744e2bf5dc562eb3792d49b2e942a8579dcd01fb1b74b7c9a725",
     "golden_signals": "sha256:5a24f1b35566b9755b4f3c2a4f863c0e12541ecb173a5e6cec24ca32fd293c0c",
@@ -24,16 +24,16 @@
     "planning_frontend_lock": "sha256:8d98e59a964741e0842fcd19d18179270d5e6c4934439ca8c2230b364f711f14",
     "planning_frontend_package": "sha256:2e53ca88ebbfeb25c2551ab29a2c45ef67c9b776595058b07e81d6caf5f59253",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
-    "planning_requirements_dev": "sha256:90928c1a46fe2de88771d85b92c4789d52f1a8ba9dffff08dea206d18de34783",
+    "planning_requirements_dev": "sha256:6b932715dbbe91092d3abd614cbb095f2d105ddce45eaa99f5c98159ec93156b",
     "portal_backend_pyproject": "sha256:82975f70a727453e452de81f21ffd25f671d3cc047b7fcbf7be769e908a313db",
-    "portal_frontend_lock": "sha256:754a0bf4847e64c1c86eed1642c33ccf10968b12ef9ffb0132963dfe184fd5c6",
-    "portal_frontend_package": "sha256:f775f56e473152a75144c294fca8e735a60d6a77dd773254695c1032fb51fc1e",
+    "portal_frontend_lock": "sha256:6a3e70dc30951f90e06ff4e9496903835be0f417ce2362d9a20a56ee2a511994",
+    "portal_frontend_package": "sha256:6cb36dce03b876fec5a08fd7ba36a9c0ea91e33d4b71b31d69480cbe6e71e9a3",
     "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
     "protected_kernel_main": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-    "registry_source": "sha256:7c233db639e6c7716baf5f70e4aac420ca89c974a4d17a02b5662e3579905c2f",
+    "registry_source": "sha256:8fdc342c79a8ad6a48830b860fbcc4206866c7afbe195d14d9e3d5fbe561df57",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "7eda9d9dfdbb46b0969c6087eda81457ff097158",
+  "frozen_at_commit": "fa1539fa6373387cbd5eedc2637e4b1b38240eb3",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
@@ -46,7 +46,7 @@
     "historical_market_data_reader": "primus-historical-market-data==0.1.0rc3",
     "quantbt_engine": "quantbt-engine==1.0.8"
   },
-  "registry_source_digest": "sha256:c70916a77e8f0373ebeac2f6758ddff4a994b6669cfe68d9d5433599a3a7fe59",
+  "registry_source_digest": "sha256:99248ac089a16734cb4f76991a46b58580a4a31b5640c647b289255f17eec4c0",
   "rollback": {
     "last_known_good_images": [
       "local/portal-portal-api:dev",

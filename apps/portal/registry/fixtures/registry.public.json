@@ -277,7 +277,7 @@
       "task_ids": []
     }
   ],
-  "content_digest": "sha256:57572f81a3b8cd9d1b52969e458f7e9b5662d2c7dd666b4dffd389efecb2cd41",
+  "content_digest": "sha256:2ed7dea41070700f7a82b3173a59c4087e82cc325a032995e63065680b7205ce",
   "feature_groups": [
     {
       "id": "command",
@@ -1130,7 +1130,7 @@
       "summary_source_ids": []
     },
     {
-      "activation_gate": "Alpha Fleet v2 current-source projection, exact-decimal reducer, same-origin BFF and workspace-isolation evidence pass.",
+      "activation_gate": "N29 BR-EX-72 bounded list projection, same-origin BFF and workspace-isolation evidence pass.",
       "canonical_route": "/deployments/alphas",
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
@@ -1433,7 +1433,7 @@
         "CONCERN_PORTAL_AUTHORIZATION",
         "CONCERN_COMMAND_CENTER_PERFORMANCE"
       ],
-      "contract_revision": 3,
+      "contract_revision": 2,
       "data_mode": "REAL",
       "delivery_policy": null,
       "delivery_profile": null,
@@ -2697,7 +2697,7 @@
       "screen_id": "EXECUTION_FULL_BLOTTER_SCREEN"
     },
     {
-      "activation_gate": "N29 BR-EX-72 bounded list projection, same-origin BFF and workspace-isolation evidence pass.",
+      "activation_gate": "Alpha Fleet v2 current-source projection, exact-decimal reducer, same-origin BFF and workspace-isolation evidence pass.",
       "backend_dependency_ids": [
         "portal_control_api",
         "execution_current_source"
@@ -2705,7 +2705,7 @@
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
       ],
-      "contract_revision": 2,
+      "contract_revision": 3,
       "data_mode": "REAL",
       "delivery_policy": {
         "governance_write_enabled": false,
