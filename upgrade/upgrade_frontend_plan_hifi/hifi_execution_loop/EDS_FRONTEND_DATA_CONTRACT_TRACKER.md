@@ -667,7 +667,7 @@ frontend == showcase về hành vi, chỉ khác một điều: **số là thật
 | A-11 | EDS-11 SSE + action graph | kênh SSE v2 | ⬜ chờ I0 hợp nhánh (codex có 11R1/11R3/R4-R5 trên `feat/eds11r-r4-r5-activation`) |
 | A-12 | EDS-12 release | gói release | 🟡 **06-09 nghiệm thu**: static qualification ready (gate codex pass), deployed evidence pending, BR-EX-80/81 đóng băng thành gate nguồn — xem A6.2; FE cấp ma trận browser ở A6.3 I6 |
 
-**ĐANG Ở ĐÂY (07-09 tối, sau Goal 1) →** Goal 1 xong (§A10): 8 màn chi tiết mở được cho mọi member, `Soon` thay cho "blocked"; **Goal 2 xong** (§A11); kế tiếp **Goal 3** (§A9.4). Trước đó: owner chỉnh cách hiểu: TS đã trả hết, chỗ thiếu ghi **Soon** chứ không blocked; mọi lệch showcase là **P0**. Đo lại 34 màn/tab → **15 nợ P0** (§A9.3) xếp thành **7 goal theo phase** (§A9.4). Head `2a79b0c` trên 3 ref, dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
+**ĐANG Ở ĐÂY (07-09 tối, sau Goal 1) →** Goal 1 xong (§A10): 8 màn chi tiết mở được cho mọi member, `Soon` thay cho "blocked"; **Goal 2 xong** (§A11), **Goal 3 xong** (§A12); kế tiếp **Goal 4** (§A9.4). Trước đó: owner chỉnh cách hiểu: TS đã trả hết, chỗ thiếu ghi **Soon** chứ không blocked; mọi lệch showcase là **P0**. Đo lại 34 màn/tab → **15 nợ P0** (§A9.3) xếp thành **7 goal theo phase** (§A9.4). Head `2a79b0c` trên 3 ref, dev chạy code `44c5715` = I0 + G8 + G9/G9b + hotfix DR-28/DR-29 (§A7.5–A7.6) sau khi Bobby báo Insight Charts/Trade Replay rỗng; **A-12 ACCEPT-STATIC**, phase bổ sung §A7.3; chờ Bobby kiểm tra lại dev, ký A-04/A-05/A-09, quyết DR-27/DR-30, đẩy source owner (BR-EX-80/81), rồi goal G10 → G12-prep → G6 → G11. Trước đó: đợt goal 2 (G7+G4+G5) — §A4. Lịch sử: L1 ✅ · A-08 ✅ · A-09 ✅(có điều kiện DR-13) · hàng đợi
 chấm: **A-01→A-07 đã đủ vật giao** trên nhánh `feat/eds-current-bff` (worktree
 `/home/bobby/portal-eds-current-bff`). Bước kế: dựng runtime probe từ nhánh đó
 (compose project phụ, không đụng dev) rồi chấm lần lượt A-01→A-07 theo SLA
@@ -1491,6 +1491,53 @@ Commit `03ffec8` (chính) · `2d84032` (mặc định window) · `4c1ec3b` (hai 
 ### A11.4 Còn nợ trong nhóm màn danh sách (đưa sang Goal tương ứng)
 - **Cột "next gate" của Fleet**: dev hiện `attentionReasons` (thật) — showcase hiện gate governance ("R2 AP-352 OVERDUE 26h"). Khi governance có hàng thật thì cột này mới có nội dung tương đương → **Goal 5**.
 - **Blotter "load older"**: đã có sẵn keyset (`onLoadOlder`); cần kiểm khi trang có `next_cursor` thật → **Goal 5** cùng phân trang Ops.
+
+## A12. GOAL 3 ĐÃ LÀM (07-09 tối) — 12 tile hi-fi và Portfolio 360 Overview
+
+Commit `65b3131` (chính) · `63da0d9` (ba lỗi thấy bằng mắt). Ba ref cùng head; dev rebuild sau mỗi bước.
+
+### A12.1 Insight Charts — đúng 12 tile hi-fi, đúng thứ tự (P0-3)
+| # | Tile | Nguồn thật dùng | Trạng thái trên dev |
+|---|---|---|---|
+| 1 | Equity by stage | `chart_series` equity | **chart** |
+| 2 | Drawdown & underwater | `drawdown_overlap.alphas[].series` + overlaps | **chart** (max drawdown −0.001037 @ 2026-07-08, 68d) |
+| 3 | Rolling corr vs benchmark | `correlation.pairs` (68d · 43 alphas) | **chart** + `Soon · BENCHMARK_SERIES_NOT_PUBLISHED` |
+| 4 | Venue contribution | **performance snapshot của nguồn** (ưu tiên) → fills là dự phòng | **chart** (BINANCE·USDT net −143.54583478) |
+| 5 | Execution quality by venue | orders/fills nhóm theo venue + `execution_quality.v1` | **chart** + `Soon · N28_BROKER_ACK_TIMESTAMPS_NOT_ACTIVATED` cho ack latency |
+| 6 | Order funnel | `order_funnel.v1` | **chart** |
+| 7 | Trade return histogram | `fills.realized_pnl` (page set EDS-11R1) | **chart** — đếm riêng số fill không có realized value, không coi là 0 |
+| 8 | Execution density day × hour | `fills.trade_time` → 7×24 UTC | **heatmap** + `Soon · VENUE_SESSION_CALENDAR_NOT_PUBLISHED` |
+| 9 | Regime-shaded equity | equity có, nhãn regime chưa | `Soon · REGIME_LABELS_NOT_PUBLISHED` |
+| 10 | Paper vs Live drift | cần cả hai phía; dev không có deployment live | `Soon · PAPER_LIVE_DRIFT_NOT_PUBLISHED` kèm danh sách mode thấy được |
+| 11 | Risk utilization | `risk-profiles` + `alpha-risk-config` đều bị Manager từ chối | `Soon · N17B_SOURCE_REJECTED` |
+| 12 | Cost drag waterfall | `fills.realized_pnl` + `fills.commission` theo **từng currency** | **chart** + `Soon` cho funding và slippage |
+
+Tile phụ của Portal (Exact query surface, Exposure profile, Trade replay journal, observed-timeline, mark-context, Market candles) xếp **sau** 12 tile, đánh số 13+; branch nào đã có tile hi-fi thì **không lặp lại** lần hai dưới tên khác.
+
+### A12.2 Portfolio 360 · Overview — ba panel hi-fi (P0-4)
+| Panel | Nguồn | Trên dev |
+|---|---|---|
+| Equity vs benchmark | `manager/current/portfolio-equity-snapshots` | **chart 4 snapshot**; đường benchmark ghi `Soon · BENCHMARK_SERIES_NOT_PUBLISHED` |
+| Cross-portfolio | cùng relation, mọi portfolio | **2 hàng** — first/last equity + **net của chính nguồn**; mỗi portfolio theo base currency riêng |
+| Configuration log | `manager/current/portfolio-capital-ledger` | **25 hàng thật**: thời điểm, movement, actor (`bobby`), amount, allocated before → after, reason |
+
+### A12.3 Năm lỗi tìm được, ba trong số đó chỉ thấy khi mở trình duyệt
+1. **Gộp facts làm mất dữ liệu**: `combinedFacts` để mảng rỗng của resource ghi đè mảng có dữ liệu của analytics → tile Venue contribution trống dù số nằm sẵn. Nay chỉ ghi đè khi resource **có hàng**.
+2. **Số học trên trường vốn**: bảng Cross-portfolio ban đầu lấy `last − first` trên `equity` — gate `analytics.test.ts` cấm đúng tên trường này. Snapshot đã có `net_pnl`, nên bỏ phép trừ và hiển thị số của nguồn.
+3. **Tile 1 nói "series not published"** dù chuỗi equity nằm ngay cạnh: tile trả trạng thái mà không trả series. Chỉ thấy bằng mắt.
+4. **16 nhãn band chồng lên nhau** trong tile 2 (150 px) thành một vệt xám: giữ nhãn khi ≤3 band, còn lại chuyển số xuống hàng fact.
+5. **Cỡ trang cố định 200 làm một relation đọc được thành "không đọc được"**: `portfolio-equity-snapshots` nhận trang **5** và từ chối **8** (`N17B_SOURCE_REJECTED`) — đo trên dev. Drain nay hạ dần **200 → 50 → 20 → 5**, và **không chờ retry** khi đang dò cỡ trang (một nguồn từ chối 200 sẽ từ chối lại sau 1,5 s).
+
+### A12.4 Evidence
+| Gate | Kết quả |
+|---|---|
+| FE vitest | **111 file · 1957 pass · 1 skipped** |
+| `tsc --noEmit` | sạch |
+| `npm run build` | sạch |
+| Hook pre-commit | xanh cho cả hai commit; ba ref cùng head |
+| Trình duyệt (dev, tài khoản không phải chủ workspace) | Insight Charts **18 tile · 10 chart**, 12 tile đầu đúng tên và thứ tự hi-fi; Portfolio Overview **3 panel** với chart 4 điểm, 2 hàng cross-portfolio, 25 hàng configuration log |
+
+**Còn treo cho goal sau:** tile 9/10/11 chờ nguồn (regime labels, deployment live, risk profile) — ghi `Soon`, không chặn; console dev còn 502/503 lẻ khi ba màn cùng drain (đã có retry + hạ cỡ trang, sẽ gộp cache ở Goal 6).
 
 ## A3. Luật vận hành kế hoạch này
 

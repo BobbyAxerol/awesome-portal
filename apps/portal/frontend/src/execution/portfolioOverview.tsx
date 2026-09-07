@@ -219,7 +219,7 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
         ) : (
           <PanelState status={status} reason={reason} />
         )}
-        <p className="exec-blotter-note">each portfolio in its own base currency · never summed across currencies · net is the source\u2019s own figure, not a browser subtraction</p>
+        <p className="exec-blotter-note">each portfolio in its own base currency · never summed across currencies · net is the source’s own figure, not a browser subtraction</p>
       </section>
     ),
     configurationLog: (
