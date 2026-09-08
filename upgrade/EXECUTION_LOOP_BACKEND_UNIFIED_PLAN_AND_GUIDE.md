@@ -5048,6 +5048,20 @@ route, BFF, source authority or runtime activation behavior changes. The
 release remains non-active until the retry completes Trivy, Cosign, SBOM,
 provenance, exact-image deployment and EDS-12 deployed verification.
 
+**Publisher attestation correction (2026-09-08):** the subsequent protected
+publisher built, scanned and keylessly signed all six immutable images, but
+the N14A candidate step incorrectly invoked `cosign verify-attestation` for
+Buildx's OCI-native SBOM/provenance manifests. Those are already bound to the
+signed OCI index; they are not separately published Cosign predicate
+attestations. `scripts/verify-buildx-attestations.py` now verifies the signed
+index's one linux/amd64 subject and its exact Buildx SPDX/SLSA in-toto layers
+by immutable digest, after the workflow has verified the index's keyless
+Cosign signature. The verifier has offline negative tests and was exercised
+against the already-published Portal API index. The retry remains fail-closed:
+it must still scan, sign, bind all six evidence sets, generate N14A/N14B and
+pass the deployed EDS-12 evidence gate before this plan may emit
+`PRODUCT_ACTIVE`.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:

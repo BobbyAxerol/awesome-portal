@@ -146,6 +146,18 @@ if (
 ):
     raise SystemExit("D3 Control API requires push, maximum provenance and SBOM attestations.")
 
+release_candidate = by_name.get("Verify all release images and generate N14A candidate", {}).get("run", "")
+for required in (
+    "verify-buildx-attestations.py",
+    "verify_release_signature",
+    "cosign-signed-oci-index-plus-buildx-attestation-subject-binding",
+    "signed index",
+):
+    if required not in release_candidate:
+        raise SystemExit(f"N14A release verification lost Buildx attestation binding: {required}.")
+if "cosign verify-attestation" in release_candidate:
+    raise SystemExit("N14A must not treat Buildx OCI attestations as Cosign predicate attestations.")
+
 required_actions = {
     "Install keyless image signer": "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6",
     "Upload execution D2 publication evidence": "actions/upload-artifact@v7",

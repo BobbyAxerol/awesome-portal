@@ -223,8 +223,10 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
     def test_publication_binds_all_six_images_to_ci_and_supply_chain_evidence(self):
         workflow = (MODULE.ROOT / ".github/workflows/publish-images.yml").read_text(encoding="utf-8")
         self.assertIn("Wait for commit-bound Portal CI release gates", workflow)
-        for suffix in ("signature", "sbom", "provenance"):
-            self.assertIn(f'${{service}}-{suffix}.json', workflow)
+        self.assertIn('${service}-signature.json', workflow)
+        self.assertIn("verify-buildx-attestations.py", workflow)
+        self.assertIn('--service "${service}"', workflow)
+        self.assertIn('--output-dir release/n14a-evidence', workflow)
         for service in MODULE.SERVICES:
             self.assertIn(f"{service}-trivy.json", workflow)
             self.assertIn(f"verify_release_image {service} ", workflow)

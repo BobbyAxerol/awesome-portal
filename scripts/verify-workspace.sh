@@ -664,6 +664,8 @@ for required in \
   "${ROOT_DIR}/deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md" \
   "${ROOT_DIR}/scripts/portal-release-authority.py" \
   "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/verify-buildx-attestations.py" \
+  "${ROOT_DIR}/scripts/test_verify_buildx_attestations.py" \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/.github/workflows/publish-images.yml" \
   "${ROOT_DIR}/deploy/execution-d1/README.md" \
@@ -1713,6 +1715,7 @@ python3 "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" --mode
 python3 "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
 python3 "${ROOT_DIR}/scripts/portal-release-authority.py" verify --mode template
 python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
+python3 "${ROOT_DIR}/scripts/test_verify_buildx_attestations.py"
 python3 "${ROOT_DIR}/scripts/test_portal_current_source_release.py"
 python3 "${ROOT_DIR}/scripts/execution-n18-census.py" --verify
 python3 "${ROOT_DIR}/scripts/test_execution_n18_census.py"

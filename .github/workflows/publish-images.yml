@@ -572,24 +572,42 @@ jobs:
           certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/publish-images.yml@${GITHUB_REF}"
           issuer="https://token.actions.githubusercontent.com"
 
+          verify_release_signature() {
+            service="$1"
+            image="$2"
+            for attempt in $(seq 1 12); do
+              temporary="$(mktemp)"
+              if cosign verify \
+                --certificate-identity "${certificate_identity}" \
+                --certificate-oidc-issuer "${issuer}" \
+                --output json "${image}" \
+                > "${temporary}"; then
+                mv "${temporary}" "release/n14a-evidence/${service}-signature.json"
+                return 0
+              fi
+              rm -f "${temporary}"
+              if [[ "${attempt}" == "12" ]]; then
+                printf 'Cosign signature did not become available for %s after bounded retry.\n' "${image}" >&2
+                return 1
+              fi
+              sleep 5
+            done
+          }
+
           verify_release_image() {
             service="$1"
             image="$2"
-            cosign verify \
-              --certificate-identity "${certificate_identity}" \
-              --certificate-oidc-issuer "${issuer}" \
-              --output json "${image}" \
-              > "release/n14a-evidence/${service}-signature.json"
-            cosign verify-attestation \
-              --certificate-identity "${certificate_identity}" \
-              --certificate-oidc-issuer "${issuer}" \
-              --type spdxjson "${image}" \
-              > "release/n14a-evidence/${service}-sbom.json"
-            cosign verify-attestation \
-              --certificate-identity "${certificate_identity}" \
-              --certificate-oidc-issuer "${issuer}" \
-              --type slsaprovenance "${image}" \
-              > "release/n14a-evidence/${service}-provenance.json"
+            # Buildx emits standard OCI attestation manifests attached to the
+            # signed index, rather than Cosign predicate attestations. Verify
+            # the keyless signed index first, then its exact subject-bound
+            # SPDX and SLSA in-toto metadata without treating it as a second
+            # signing format. Method:
+            # cosign-signed-oci-index-plus-buildx-attestation-subject-binding.
+            verify_release_signature "${service}" "${image}"
+            python3 scripts/verify-buildx-attestations.py \
+              --service "${service}" \
+              --image "${image}" \
+              --output-dir release/n14a-evidence
           }
 
           verify_release_image portal-api "${PORTAL_API_IMAGE}"

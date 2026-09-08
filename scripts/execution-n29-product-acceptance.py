@@ -401,7 +401,12 @@ def validate_release_authority(acceptance: dict[str, Any], debt: dict[str, Any])
     for key, path in EVIDENCE_PATHS.items():
         require(acceptance["evidence"][key] == digest(path), f"evidence digest drifted: {key}")
     workflow = EVIDENCE_PATHS["release_workflow_sha256"].read_text(encoding="utf-8")
-    for token in ["branches: [main]", "cosign sign --yes", "cosign verify-attestation", "type spdxjson", "type slsaprovenance"]:
+    for token in [
+        "branches: [main]",
+        "cosign sign --yes",
+        "verify-buildx-attestations.py",
+        "cosign-signed-oci-index-plus-buildx-attestation-subject-binding",
+    ]:
         require(token in workflow, f"protected release workflow lost: {token}")
     require(acceptance["release_gates"]["signed_immutable_images"] == "PENDING_PROTECTED_MAIN_WORKFLOW", "unsigned feature images were accepted")
     require(acceptance["release_gates"]["stable_release"] == "NOT_AUTHORIZED", "stable release authority widened")
