@@ -10,6 +10,7 @@
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
+import { useChangeFlash } from "../useChangeFlash";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
 import { fleetSparkSeries, fmt2 } from "../fleetFormat";
@@ -125,7 +126,14 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
               <span className="exec-af-sum">{summary?.alphaCount ?? list?.page.totalCount ?? items.length} alphas · {summary?.deploymentCount ?? 0} deployments · {(list?.environment ?? "unknown").toUpperCase()}</span>
               <span className="exec-af-wf">entry screen for WF 2a</span>
               <span className="exec-af-spacer" />
-              <span className="exec-af-source"><b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
+              {/* The masthead's own proof of life: the source clock lights when
+                  it advances, so a screen that has stopped receiving looks
+                  stopped rather than merely quiet. */}
+              <span className="exec-af-source">
+                <span className="exec-af-livedot" aria-hidden="true" data-live={list?.freshness === "FRESH" ? undefined : "false"} data-tone={list?.freshness === "FRESH" ? "good" : "warn"} />
+                <b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source{" "}
+                <SourceClock at={list?.sourceAsOf ?? null} />
+              </span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             {list ? <div className="exec-af-kpis">
@@ -324,12 +332,35 @@ function exactDisplay(value: string): string {
   return formatExact(value, "money").display;
 }
 
+/**
+ * One exact figure per currency, lit briefly when it changes.
+ *
+ * The flash is the fleet's only motion and it is driven by the value itself:
+ * a projection delta that leaves a figure untouched does not light it. Today
+ * these change when the equity projection publishes; when it publishes
+ * continuously they will move continuously, with nothing else to change here.
+ */
+/** The source clock, lit each time it advances. */
+function SourceClock({ at }: { at: string | number | null }) {
+  const flash = useChangeFlash(typeof at === "number" ? at : at ?? undefined);
+  return <span className="exec-af-num exec-flash" data-flash={flash.on ? "flash" : undefined}>{utcStamp(at)}</span>;
+}
+
+function ExactLine({ value, currency, lead, tone }: { value: string; currency: string; lead: boolean; tone?: "good" | "bad" }) {
+  const flash = useChangeFlash(value);
+  const actualTone = value.startsWith("-") ? "bad" : tone;
+  return (
+    <div className="exec-flash" data-flash={flash.data} data-tone={actualTone} title={flash.on ? `changed ${flash.direction === "same" ? "" : flash.direction} just now` : undefined}>
+      {lead ? "+ " : ""}{exactDisplay(value)} <span className="exec-af-mute">{currency}</span>
+    </div>
+  );
+}
+
 function ExactLines({ values, empty, tone }: { values: readonly { currency: string; value: string }[]; empty: string; tone?: "good" | "bad" }) {
   if (values.length === 0) return <span className="exec-af-mute">{empty}</span>;
-  return <>{values.map((value, index) => {
-    const actualTone = value.value.startsWith("-") ? "bad" : tone;
-    return <div key={value.currency} data-tone={actualTone}>{index > 0 ? "+ " : ""}{exactDisplay(value.value)} <span className="exec-af-mute">{value.currency}</span></div>;
-  })}</>;
+  return <>{values.map((value, index) => (
+    <ExactLine key={value.currency} value={value.value} currency={value.currency} lead={index > 0} tone={tone} />
+  ))}</>;
 }
 
 function FleetKpi({ label, values, empty, tone }: { label: string; values: readonly { currency: string; value: string }[]; empty: string; tone?: "good" | "bad" }) {

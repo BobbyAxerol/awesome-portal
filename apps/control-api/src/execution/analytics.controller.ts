@@ -98,8 +98,9 @@ export class ExecutionAnalyticsController {
   stageDrift(@Req() request: AnalyticsRequest, @Param("alphaId") id: string, @Query() raw: unknown) {
     const query = SparklineQuerySchema.safeParse(raw);
     if (!query.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    // No `days` means everything the mirror holds: the charts default to All.
     return this.invoke(() => this.localAnalytics.stageDrift(
-      { workspaceId: request.portalWorkspaceId }, id, query.data.days ?? 30,
+      { workspaceId: request.portalWorkspaceId }, id, query.data.days,
     ));
   }
 

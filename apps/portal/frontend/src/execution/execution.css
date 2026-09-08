@@ -5416,6 +5416,20 @@
 /* The currency beside a figure is a qualifier, not part of the number: it is
    quieter in ink and stays out of the tabular column the values line up in.
    Size is not used to say so — the role scale owns every size on this surface. */
+/* A value lights briefly when it actually changes — see `useChangeFlash`.
+   Colour carries the direction; the flash itself carries the fact that it
+   moved at all, which is what a reader glancing at a wall of figures needs. */
+.exec-flash[data-flash] { animation: exec-flash-fade 900ms ease-out; }
+.exec-flash[data-flash="up"] { color: var(--good); }
+.exec-flash[data-flash="down"] { color: var(--bad); }
+@keyframes exec-flash-fade {
+  0% { background: var(--surface-2); }
+  100% { background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The colour still says which way it moved; only the fade is dropped. */
+  .exec-flash[data-flash] { animation: none; }
+}
 .exec-cell-ccy { color: var(--ink-mute); }
 .exec-af-livedot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
 /* The dot carries the realtime channel's own phase. Green-and-pulsing is a

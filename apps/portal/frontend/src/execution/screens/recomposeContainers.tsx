@@ -1354,7 +1354,7 @@ function unavailableAnalyticsTiles(reason: string, envelope: Envelope): InsightT
     envelope: {
       authority: "DERIVED",
       asOf: envelope.asOf ?? "",
-      window: "30d",
+      window: "All",
       interval: "—",
       formulaVersion: null,
     },
@@ -1377,7 +1377,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   // Tile 10 compares the stages this alpha actually runs in, on one calendar.
-  const stageDrift = useApiRead(() => api.getStageDrift(alphaId, 30), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  const stageDrift = useApiRead(() => api.getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
   const activityEnv = resourceState.value?.selectedEnvironment ?? "paper";
   // G8: the observed timeline reads where the alpha is deployed; selected_environment is only the resolver default.

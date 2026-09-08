@@ -230,7 +230,18 @@ export class PaperReadService {
     const depth: { rows: Record<string, Record<string, unknown>[]>; windows: Record<string, unknown> } =
       { rows: {}, windows: {} };
     if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return depth;
-    const from = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    /*
+     * Everything the mirror holds, not a 30-day slice of it (owner,
+     * 2026-09-08: the analysis charts default to All).
+     *
+     * The window was fixed at 30 days while the mirror held 67, so a chart
+     * whose scope selector said "All" was drawing a month and calling it
+     * everything — the worst of both, because the reader had no way to tell.
+     * The mirror is bounded by its own retention, so "no lower bound" here
+     * means "as far back as this Portal kept", and the envelope below reports
+     * the span that actually came back rather than the span asked for.
+     */
+    const from = new Date(0).toISOString();
     /*
      * Only the series a screen actually plots earns its 30-day depth.
      *
@@ -257,8 +268,16 @@ export class PaperReadService {
         );
         if (page.rows.length > 0) {
           depth.rows[key] = page.rows.map((row) => row.fields);
+          // The span that came back, not the span requested: an envelope that
+          // reports 30 days over 67 days of rows describes a different chart.
+          const stamps = page.rows
+            .map((row) => Date.parse(String(row.fields.ts ?? row.fields.created_at ?? "")))
+            .filter((at) => Number.isFinite(at));
+          const spanDays = stamps.length > 1
+            ? Math.max(1, Math.round((Math.max(...stamps) - Math.min(...stamps)) / 86_400_000))
+            : 1;
           depth.windows[key] = {
-            days: 30,
+            days: spanDays,
             basis: "PORTAL_SGP_HISTORY_MIRROR",
             returned_rows: page.rows.length,
             source_rows: page.sourceRows,

@@ -338,8 +338,9 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     }, "The fleet equity sparklines");
 
   /** One alpha's equity in every stage it runs in, on one calendar (tile 10). */
-  const getStageDrift = (alphaId: string, days = 30): Promise<Result<StageDrift>> =>
-    readGet(`/alphas/${encodeURIComponent(alphaId)}/stage-drift?days=${days}`, (raw) => {
+  const getStageDrift = (alphaId: string, days?: number): Promise<Result<StageDrift>> =>
+    // No `days` asks for everything the mirror holds — the charts' default.
+    readGet(`/alphas/${encodeURIComponent(alphaId)}/stage-drift${days === undefined ? "" : `?days=${days}`}`, (raw) => {
       const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
       const stagesRaw = root && typeof root.stages === "object" && root.stages !== null ? root.stages as Record<string, unknown> : null;
       const calendar = Array.isArray(root?.calendar) ? (root!.calendar as unknown[]).filter((d): d is string => typeof d === "string") : null;
@@ -358,7 +359,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       }
       return {
         calendar,
-        windowDays: typeof window.days === "number" ? window.days : days,
+        windowDays: typeof window.days === "number" ? window.days : 0,
         dailyBasis: typeof window.daily_basis === "string" ? window.daily_basis : "daily close",
         researchReason: typeof binding.reason_code === "string" ? binding.reason_code : null,
         stages,

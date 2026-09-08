@@ -437,14 +437,17 @@ export class LocalQueryAnalyticsService {
   async stageDrift(
     principal: { workspaceId: string },
     alphaId: string,
-    days = 30,
+    /** Omitted means everything the history mirror holds — the charts' default. */
+    days?: number,
   ): Promise<Record<string, unknown>> {
     void principal;
     if (!/^[A-Za-z0-9._:-]{1,192}$/.test(alphaId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const from = new Date(Date.now() - days * 86_400_000).toISOString();
+    const from = days === undefined
+      ? new Date(0).toISOString()
+      : new Date(Date.now() - days * 86_400_000).toISOString();
     const stages: Record<string, { days: Record<string, number>; deployed: boolean; reason: string | null }> = {};
     const calendar = new Set<string>();
 
@@ -491,7 +494,16 @@ export class LocalQueryAnalyticsService {
     return {
       schema_version: "portal.execution.alpha-stage-drift.v1",
       alpha_id: alphaId,
-      window: { days, basis: "PORTAL_SGP_HISTORY_MIRROR", daily_basis: "LAST_CLOSE_PER_DAY_SUMMED_ACROSS_ACCOUNTS" },
+      // The span the stages actually cover, so the caption cannot claim a
+      // window wider than the rows behind it.
+      window: {
+        days: grid.length > 1
+          ? Math.max(1, Math.round((Date.parse(grid[grid.length - 1]) - Date.parse(grid[0])) / 86_400_000) + 1)
+          : grid.length,
+        requested_days: days ?? null,
+        basis: "PORTAL_SGP_HISTORY_MIRROR",
+        daily_basis: "LAST_CLOSE_PER_DAY_SUMMED_ACROSS_ACCOUNTS",
+      },
       calendar: grid,
       stages: Object.fromEntries(Object.entries(stages).map(([environment, entry]) => [environment, {
         deployed: entry.deployed,

@@ -22,6 +22,7 @@
  * hardcoded"*), so a new venue appears here without a frontend release.
  */
 import { useId } from "react";
+import { utcStamp } from "../time";
 import { Hint } from "../components/hint";
 import type { ReactNode } from "react";
 
@@ -453,17 +454,25 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
   const researchStatus = props.researchStatus ?? "RESEARCH_APPROVED";
   const clock = props.demoClock ?? null;
   const stagesNow = Array.from(new Set(deployments.map((d) => d.stage)));
+  const named = Boolean(alphaName) && alphaName !== "Unnamed alpha" && alphaName !== alphaId;
 
   return (
     <ExecutionSurface kind="deployments" className="exec-alpha exec-a3" data-hifi-exact="alpha-360">
       <ExecutionWorkspace layout="dense">
       <header className="exec-a3-masthead">
         <span className="exec-a3-kind">ALPHA</span>
-        <h1 className="exec-a3-h1">{alphaName} <span className="exec-a3-id">· {alphaId}</span></h1>
+        {/* The source publishes no label for most alphas and the resource
+            substitutes the words "Unnamed alpha". Printing that as a title
+            names the absence twice: the id below already says which alpha this
+            is, so an unnamed one leads with its id and says the label is
+            unpublished, quietly, where a name would have been. */}
+        <h1 className="exec-a3-h1">
+          {named ? <>{alphaName} <span className="exec-a3-id">· {alphaId}</span></> : <>{alphaId} <span className="exec-a3-id">· no label published</span></>}
+        </h1>
         {researchStatus ? <span className="exec-a3-status">{researchStatus}</span> : null}
         <span className="exec-a3-wf">WF 2a·2b</span>
         <span className="exec-a3-spacer" />
-        <span className="exec-a3-source"><b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span></span>
+        <span className="exec-a3-source"><b>{envelope.authority}</b> · as_of {envelope.asOf ? utcStamp(envelope.asOf) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span></span>
         {passportHref ? <a className="exec-a3-btn" href={passportHref}>Artifact passport →</a> : null}
       </header>
       {status !== "ok" && status !== "partial" ? (

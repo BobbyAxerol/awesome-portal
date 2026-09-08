@@ -21,6 +21,7 @@
  * between them, and the choice is always stated on screen.
  */
 import { useId, useState , type ReactNode } from "react";
+import { utcStamp } from "../time";
 
 import {
   compareAbsDecimal,
@@ -833,7 +834,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
               carries the stream's own phase, so it stops when the stream does. */}
           <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
           <span className="sr-only">{dot.title}</span>{" "}
-          <b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span>
+          <b>{envelope.authority}</b> · as_of {envelope.asOf ? utcStamp(envelope.asOf) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span>
         </span>
         {/* Active controls: each opens its plan preview; the Apply/Generate
             inside is the single point BR-EX-51's route will enable. */}
