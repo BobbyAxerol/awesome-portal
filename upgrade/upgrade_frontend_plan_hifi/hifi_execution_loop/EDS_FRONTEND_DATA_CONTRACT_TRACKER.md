@@ -1939,6 +1939,71 @@ nhưng chưa có tick giá theo từng giây. Ghi lại để làm, không nhậ
 font token mới, từ chối `text-transform: uppercase` ngoài role `th`, và từ chối
 một khai báo `font-size` lạc. Cả ba đều là lỗi của tôi và gate đều đúng.
 
+### A13.11 Vòng tinh chỉnh thứ hai (08-09) — All mặc định, tick động, và hai tile trống
+
+Commit `36dc7fa`, `bd58574`, `4fcd3f7`.
+
+#### 1. "All" trước đây là nói sai ✅
+
+Selector ghi **All** trong khi server **kẹp mọi lượt đọc phân tích ở 30 ngày**,
+mà mirror giữ **67 ngày**. Chart vẽ một tháng dưới caption ghi "All" là tệ nhất
+trong hai đằng, vì người đọc **không có cách nào biết**.
+
+| | Trước | Sau |
+|---|---:|---:|
+| Workbench equity | 30 ngày · 1 424 dòng | **49 ngày · 1 600 dòng** (từ 29 322 dòng nguồn) |
+| Stage drift | 28 ngày | **50 ngày** (18-07 → 05-09) |
+| Cột EQUITY 30D ở Fleet | 30 ngày | **giữ 30** — header của nó ghi ba mươi |
+
+Mỗi envelope nay báo **khoảng thật sự trả về**, không phải khoảng đã hỏi.
+
+#### 2. Tick động — `useChangeFlash` ✅ (equity liên tục: **additional, đang chờ nguồn**)
+
+Showcase tick liên tục vì được nuôi bằng đồng hồ demo. Chép y thế lên dữ liệu
+thật là **diễn**: nó nói "đang có chuyện" trong khi không có, và khi người đọc
+học được điều đó, họ **thôi nhìn đúng vào lúc thật sự có chuyện**.
+
+Nên chuyển động duy nhất là **nháy khi giá trị đổi thật**: hướng nằm ở màu, còn
+cái nháy mang thông tin "nó đã đổi". Delta nào không đụng tới một con số thì con
+số đó đứng yên. **Yêu cầu additional của owner được ghi nhận**: khi equity
+projection phát liên tục, chính những con số này sẽ động liên tục **mà không cần
+sửa thêm dòng nào** — cái nháy bám dữ liệu, không bám timer.
+
+**Một lỗi trong chính hook đó, do test của nó bắt**: `Number(null)` là 0, nên
+một con số **mất giá trị** bị đọc thành **rơi về 0** và nháy đỏ — đúng lỗi
+null-hiện-thành-0 khoác màu. Nay chỉ khẳng định hướng khi **cả hai vế đều thật
+sự là số**; mất giá trị vẫn nháy vì đó là thay đổi, nhưng **không có hướng**.
+
+#### 3. Hai tile Insight trống — soi từng cái ✅
+
+| Tile | Chẩn đoán | Kết quả |
+|---|---|---|
+| 9 regime-shaded | không nguồn nào phát regime label | `Soon` — đúng |
+| 11 risk utilization | Manager từ chối relation risk | `Soon` — đúng |
+| 15 replay journal | EDS10 replay source gap, đã xác nhận | `Soon` — đúng |
+| 18 market candles | EDS10 OHLCV source gap, đã xác nhận | `Soon` — đúng |
+| **16 observed-timeline** | khai PARTIAL mà **không có nhánh vẽ** | **đã sửa** |
+| **17 derived-mark-context** | khai PARTIAL mà **không có nhánh vẽ** | **đã sửa** |
+
+Hai cái cuối in "the branch answered with no rows for this window" **đè lên
+6 407 entries nằm cách đó một component** — payload của chúng không đi trong
+analytics envelope mà đến từ `/views/observed-timeline`, route mà **chính màn
+này đã đọc** cho panel bên dưới.
+
+**Và một lần sửa hụt, đo lại mới thấy**: lần đầu tôi cho panel *chuyền ngược*
+trang lên cho tile. Nhưng panel đó nằm ở **tab Trade Replay** — nên tile chỉ có
+dữ liệu sau khi ai đó mở đúng tab kia, một phụ thuộc không người đọc nào nhìn
+thấy hay suy ra được. Nay **màn sở hữu lần đọc**: một request, panel vẽ nó, hai
+tile lấy cùng trang, mở tab nào cũng có.
+
+#### 4. Hai lỗi từ ảnh chụp của owner ✅
+
+- Masthead Alpha/Portfolio 360 in `as_of 07:38:55.978714Z` — giờ trần kèm micro
+  giây, cắt thô từ chuỗi ISO. Nay dùng đồng hồ chung: `2026-09-08 08:24:01 UTC`.
+- Alpha không có label bị đặt tiêu đề **"Unnamed alpha · adaptive_hma_cpp_00115m"**
+  — gọi tên sự vắng mặt hai lần. Nay dẫn bằng chính id và ghi nhỏ
+  "no label published" ở chỗ đáng lẽ là tên.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
