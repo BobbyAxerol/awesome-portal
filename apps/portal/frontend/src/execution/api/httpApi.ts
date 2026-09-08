@@ -222,7 +222,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     try {
       response = await post("/governance/approvals", {
         schema_version: "governance.approval-create-request.v1",
-        workspace_id: "primary",
+        // No workspace named: this form reads no envelope that publishes one,
+        // and the literal "primary" was not a workspace id — every submit
+        // answered 404 WORKSPACE_NOT_FOUND. The server resolves an absent
+        // workspace to the caller's own and still checks membership, which is
+        // the right answer for "create this in my workspace".
         request_key: input.requestKey,
         gate: "R1",
         alpha_id: input.alphaId,
@@ -390,7 +394,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     try {
       response = await post(`/commands/tasks/${encodeURIComponent(taskId)}/run`, {
         schema_version: "execution.command-run-request.v1",
-        workspace_id: "primary",
+        // Same as the approval form above: absent and resolved by the server,
+        // rather than named and wrong.
         request_key: crypto.randomUUID(),
         params,
       }, signal);

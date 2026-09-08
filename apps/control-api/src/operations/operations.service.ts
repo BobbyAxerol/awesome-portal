@@ -142,7 +142,11 @@ export class ExecutionOperationsService {
   async runTask(
     user: PortalUser,
     taskId: string,
-    input: OperatorTaskRunRequest,
+    // The request schema makes `workspace_id` optional so the controller's
+    // resolver can fill it from the caller's session; by the time it reaches
+    // here the controller has always replaced it with the resolved id, and
+    // this type says so rather than leaving every use to guess.
+    input: OperatorTaskRunRequest & { workspace_id: string },
     requestId: string,
   ) {
     if (user.role !== "ADMIN") {

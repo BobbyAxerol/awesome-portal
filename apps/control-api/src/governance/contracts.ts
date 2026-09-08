@@ -379,7 +379,16 @@ export const ApplyOperationRequestSchema = z
 export const ApprovalCreateRequestSchema = z
   .object({
     schema_version: z.literal("governance.approval-create-request.v1"),
-    workspace_id: z.string().min(3).max(96),
+    /* Optional, because `this.workspace(request, raw)` already resolves an
+       absent value to the caller's own session workspace and then checks
+       membership — the branch was written for exactly this and the required
+       field made it unreachable. The client has no workspace to name here:
+       neither the New Approval form nor the Admin drawer reads an envelope
+       that publishes one, so it was sending the literal "primary", which is
+       not a workspace id and answered 404 on every submit. Absent and
+       resolved beats named and wrong; a caller that DOES know its workspace
+       still names it, and a non-member is still refused. */
+    workspace_id: z.string().min(3).max(96).optional(),
     request_key: RequestKey,
     gate: z.literal("R1"),
     alpha_id: z.string().trim().min(1).max(191),

@@ -402,9 +402,13 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
       const detail = state.value;
       if (!detail) return;
       dispatch({ type: "PLAN_REQUESTED" });
+      // The review must have named a workspace; the caller keeps the buttons
+      // disabled until it does, and this is the second gate on the same fact.
+      const workspaceId = detail.workspaceId;
+      if (!workspaceId) return;
       const planned = await api.planDecision({
         approvalId,
-        workspaceId: "default",
+        workspaceId,
         decision: verdict,
         reason,
         // The schema refuses this decision without conditions, and refuses
@@ -445,7 +449,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
       const applied = await api.applyPlan(
         planned.value.operationId,
         planned.value.applyToken,
-        "default",
+        workspaceId,
       );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
@@ -462,6 +466,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
   return (
     <>
       <GateR1Review
+        decisionsBlockedReason={state.value && !state.value.workspaceId ? "This review published no workspace, so a decision cannot be addressed to one. The controls stay closed rather than sending a request the server would refuse." : null}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         note={note}
         onNoteChange={setNote}
@@ -536,15 +541,19 @@ export function DecisionTrail({ decision }: { decision: DecisionState }) {
  * verdict is a plan/apply/poll like any other command, and a 202 means the same
  * thing on all three screens.
  */
-function useDecision(api: ExecutionApi) {
+function useDecision(api: ExecutionApi, workspaceId: string | null) {
   const [decision, dispatch] = useReducer(decisionReducer, undefined, () =>
     initialDecision(newRequestKey()),
   );
   const ref = useRef<DecisionState>(decision);
   ref.current = decision;
-  // Until a workspace reaches the client from the registry, one name that the
-  // BFF will reject loudly rather than a guess it might accept quietly.
-  const workspaceId = "default";
+  // The workspace the review was read from, published by the BFF on the review
+  // envelope. It used to be the literal "default", which is not a workspace id
+  // — every Approve/Deny answered 404 WORKSPACE_NOT_FOUND on the first press,
+  // and nothing on the screen said so beforehand. When the envelope carries
+  // none the caller disables the controls with a reason instead; a mutation
+  // resolves no workspace on the reader's behalf, because writing into a
+  // workspace nobody named is the failure this rule exists to prevent.
 
   useEffect(() => {
     if (!shouldPoll(decision) || !decision.operationId) return;
@@ -592,10 +601,15 @@ function useDecision(api: ExecutionApi) {
       expectedApprovalVersion: number | null,
       extra?: { conditions?: readonly TypedCondition[]; workspaceId?: string },
     ) => {
+      // No workspace, no decision. The caller keeps the controls disabled with
+      // a reason; this is the second gate on the same fact, so a decision can
+      // never be posted into a workspace nobody named.
+      const target = extra?.workspaceId ?? workspaceId;
+      if (!target) return;
       dispatch({ type: "PLAN_REQUESTED" });
       const planned = await api.planDecision({
         approvalId: subjectId,
-        workspaceId: extra?.workspaceId ?? workspaceId,
+        workspaceId: target,
         decision: verdict,
         reason,
         conditions: verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : [],
@@ -634,7 +648,7 @@ function useDecision(api: ExecutionApi) {
       const applied = await api.applyPlan(
         planned.value.operationId,
         planned.value.applyToken,
-        extra?.workspaceId ?? workspaceId,
+        target,
       );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
@@ -642,7 +656,10 @@ function useDecision(api: ExecutionApi) {
       }
       dispatch({ type: "APPLY_ACCEPTED", ...applied.value });
     },
-    [api],
+    // `workspaceId` belongs here: without it the callback closes over the
+    // value from first render — null, before the review had loaded — and every
+    // decision returns early for ever.
+    [api, workspaceId],
   );
 
   return { decision, decide };
@@ -684,7 +701,7 @@ export function GateR2ReviewContainer({
   const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [note, setNote] = useState("");
   const [preview, setPreview] = useState<CapitalPreviewState>(null);
-  const { decision, decide } = useDecision(api);
+  const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -754,6 +771,7 @@ export function GateR2ReviewContainer({
   return (
     <>
       <GateR2Review
+        decisionsBlockedReason={state.value && !state.value.workspaceId ? "This review published no workspace, so a decision cannot be addressed to one. The controls stay closed rather than sending a request the server would refuse." : null}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         note={note}
         onNoteChange={setNote}
@@ -823,7 +841,7 @@ export function GateR2ReviewContainer({
 
 export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi; reviewId: string | null }) {
   const [state, setState] = useState<LoadState<PaperExitDetail>>(loading);
-  const { decision, decide } = useDecision(api);
+  const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
 
   useEffect(() => {
     let cancelled = false;
@@ -911,7 +929,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
 export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
   const [state, setState] = useState<LoadState<LiveReviewPayload>>(loading);
   const [note, setNote] = useState("");
-  const { decision, decide } = useDecision(api);
+  const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
   useEffect(() => {
     let cancelled = false;
     setState(loading);

@@ -184,6 +184,14 @@ export class GovernanceService {
     return {
       schema_version: "governance.approval-inbox.v1",
       record_authority: "PORTAL",
+      /* The workspace this page was read from. Published so a decision taken on
+         these rows can name the same one instead of guessing: the client used
+         to post the literal "default", which is not a workspace id, so every
+         Approve/Deny answered 404 WORKSPACE_NOT_FOUND on the first press. The
+         controller's own resolver already accepts an absent workspace, but the
+         request schema requires the field, so the client must be able to say
+         it. */
+      workspace_id: workspaceId,
       delivery_profile: "fixture",
       read_at: new Date().toISOString(),
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
@@ -403,6 +411,7 @@ export class GovernanceService {
     return {
       schema_version: "governance.r1-review.v1",
       record_authority: "PORTAL",
+      workspace_id: workspaceId,
       delivery_profile: "fixture",
       read_at: new Date().toISOString(),
       data: {
@@ -531,6 +540,7 @@ export class GovernanceService {
     return {
       schema_version: "governance.r2-review.v1",
       record_authority: "PORTAL",
+      workspace_id: workspaceId,
       delivery_profile: "fixture",
       read_at: new Date().toISOString(),
       data: {
@@ -604,6 +614,7 @@ export class GovernanceService {
     return {
       schema_version: "governance.live-review.v1",
       record_authority: "PORTAL_CONTROL",
+      workspace_id: workspaceId,
       source_authority: "TRADING_SYSTEM",
       delivery_profile: "LIVE_BINANCE_USDM",
       read_at: new Date().toISOString(),

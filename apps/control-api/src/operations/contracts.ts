@@ -158,7 +158,16 @@ const OperatorTaskParamsSchema = z
 
 export const OperatorTaskRunRequestSchema = z.object({
   schema_version: z.literal("execution.command-run-request.v1"),
-  workspace_id: z.string().min(3).max(96),
+  /* Optional, because `this.workspace(request, raw)` already resolves an
+     absent value to the caller's own session workspace and then checks
+     membership — the branch was written for exactly this and the required
+     field made it unreachable. The client has no workspace to name here:
+     neither the New Approval form nor the Admin drawer reads an envelope
+     that publishes one, so it was sending the literal "primary", which is
+     not a workspace id and answered 404 on every submit. Absent and
+     resolved beats named and wrong; a caller that DOES know its workspace
+     still names it, and a non-member is still refused. */
+  workspace_id: z.string().min(3).max(96).optional(),
   request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/),
   params: OperatorTaskParamsSchema,
 }).strict();

@@ -16,6 +16,7 @@ import { OperationsQueueScreen } from "./screens/OperationsQueue";
 import { readOperationsQueue } from "./operations";
 import { blotterHandlers } from "./testHandlers";
 import { targetHrefFor } from "./idLinks";
+import { readGateR1Detail } from "./api/rows";
 import { OPERATIONS_QUEUE_FIXTURE } from "./operations.fixtures";
 import type { Envelope, KeysetPage } from "./contracts";
 
@@ -121,5 +122,28 @@ describe("targetHrefFor — routing by the type the source published", () => {
 
   it("escapes an id rather than letting it shape the path", () => {
     expect(targetHrefFor("ACCOUNT", "a/b?c")).toBe("/deployments/accounts/a%2Fb%3Fc");
+  });
+});
+
+describe("a governance decision names a workspace that exists", () => {
+  it("carries the workspace the review published", () => {
+    // The client used to post the literal "default". It is not a workspace id:
+    // measured against dev on 2026-09-08, `workspace_id=default` answers 404
+    // WORKSPACE_NOT_FOUND while the same read with the field omitted answers
+    // 200. So every Approve/Deny on R1, R2, Live and Exit Review failed on the
+    // first press, and nothing on the screen said so beforehand.
+    const detail = readGateR1Detail({
+      workspace_id: "ws_real",
+      data: { approval: { approval_id: "AP-201" } },
+    });
+    expect(detail?.workspaceId).toBe("ws_real");
+  });
+
+  it("reports no workspace rather than inventing one", () => {
+    // `null` is what makes the screen close its controls with a reason. A
+    // fallback string here would put the failure back one step, to the press.
+    const detail = readGateR1Detail({ data: { approval: { approval_id: "AP-201" } } });
+    expect(detail?.workspaceId).toBeNull();
+    expect(readGateR1Detail({ workspace_id: "", data: { approval: { approval_id: "AP-201" } } })?.workspaceId).toBeNull();
   });
 });

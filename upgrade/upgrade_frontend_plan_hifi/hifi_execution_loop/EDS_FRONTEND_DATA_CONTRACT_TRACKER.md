@@ -2346,6 +2346,96 @@ là đòi chú ý cho việc đã xong, nên chúng **không** pulse. 35 deploym
 đều `ACTIVE`. Approval Inbox, Waivers, Operations Queue **0 hàng** trên dev.
 Một màn không có gì đổi thì **trông như một màn không có gì đổi**.
 
+### A17. RÀ LẠI 6 GOAL + BA MÀN GOVERNANCE (08-09 chiều) — owner giao
+
+Owner: *"các màn Approval, Waivers, Exit review chưa đủ đúng với showcase và
+chưa đủ đẹp cả về bố cục lẫn font chữ, số, màu sắc"* và *"rà soát 6 goal đã đi
+qua xem còn technical debt, gap nào"*. **Chưa goal nào phủ phần này**: Goal 4 =
+P0-8/P0-9 (overview + workbench), Goal 5 = P0-10/P0-11/P0-16 (nút và panel),
+Goal 6 = chuyển động. Phần hình thức của Approval Inbox và Waivers rơi vào khe
+giữa P0-8 và P0-11 — **không mục P0 nào gọi tên chúng**. Đó là lỗ trong kế
+hoạch, không phải việc đã làm rồi.
+
+Đo bằng 10 agent (hi-fi ↔ code ↔ DOM dev, mỗi phát hiện qua một lượt phản
+biện): **69 chênh lệch**, còn **46 CONFIRMED / 21 PARTIAL / 2 REFUTED**; cộng
+17 việc xếp thứ tự, 9 việc bị chặn có lý do, **16 việc bị loại** — kể cả những
+đề xuất do chính agent đưa ra rồi tự bác (ví dụ: bỏ chip filter Paper/Sandbox —
+**sai**, `governance/contracts.ts:545` khai báo chúng; tô hổ phách cho "đúng một
+blocker" — **suy diễn từ hai hàng mẫu**; dùng tooltip cho nút mờ — **trái**
+`execution.css:838`).
+
+#### A17.1 Vì sao ba màn "chưa clear" — bốn màu không tồn tại
+
+Governance render `data-theme="research"` (owner chốt 30-08: một palette sáng
+dùng chung). Palette đó **không định nghĩa** `--warn`, `--ink-mute`,
+`--line-strong`, `--bad-bg-soft`. **Một biến CSS không có giá trị thì cả dòng
+khai báo bị bỏ** — không rơi về mặc định. Đo trên trình duyệt:
+
+| Token | `/governance/*` | `/execution/*` | Số chỗ dùng |
+|---|---|---|---|
+| `--warn` | **UNDEFINED** | `#f1c21b` | hàng chục |
+| `--ink-mute` | **UNDEFINED** | `#8c8c8c` | **282** |
+| `--line-strong` | **UNDEFINED** | `#4c4c4c` | **53** |
+| `--bad-bg-soft` | **UNDEFINED** | `#1f0507` | 1 |
+
+Nên trên ba màn đó: cảnh báo không hổ phách, dòng "không phải việc của bạn"
+không mờ, viền nét đứt không vẽ, dòng quá hạn không nền. **Thiếu sơn, không
+phải thiếu trau chuốt.** Thêm `--warn-strong`: dùng 4 chỗ, **định nghĩa ở 0
+theme**, luôn rơi về fallback — token ma, đã gỡ.
+
+Màu chọn bằng **đo tương phản**, không bằng mắt: `#8e6a00` (chính hi-fi) đạt
+**4,73 / 4,99 / 4,52** trên ba nền của palette; `#f1c21b` của carbon trên nền
+kem chỉ **1,53:1** — chữ không đọc được. `--accent-2 #9a6a1f` mà agent đề xuất
+chỉ **4,28** nên bị loại.
+
+Một sửa token này hồi sinh cả rail, lane fill, dot, viền chip của Waivers — CSS
+đã viết sẵn từ lâu và chạy vào hư không.
+
+#### A17.2 Nút quyết định không thể chạy — `workspace_id: "default"`
+
+**Mọi nút Approve / Deny / Request changes** ở R1, R2, Live, Exit Review gửi
+`workspace_id: "default"`; New Approval và Admin drawer gửi `"primary"`. Đo
+trực tiếp: cả hai trả **404 `WORKSPACE_NOT_FOUND`**, trong khi bỏ hẳn tham số
+trả **200**. Không nút nào chạy được, và **màn không nói gì trước khi bấm**.
+
+Gốc là mâu thuẫn giữa hai tầng của chính ta: `governance.controller.ts:437`
+**đã** viết nhánh `raw === undefined → request.portalWorkspaceId` rồi kiểm
+membership — nhưng zod schema **bắt buộc** trường đó nên nhánh ấy **không bao
+giờ chạy tới**.
+
+Vá theo hai hướng khác nhau, có chủ đích:
+- **Có nguồn đọc** (R1/R2/Live/Exit): BFF publish `workspace_id` trên envelope
+  review (dev đo được `ws_06G6NZ4GHWG2CVEFS88B85QWB7`); FE gửi **tường minh**.
+  Không có → nút **mờ kèm lý do**, không gửi lệnh chắc chắn hỏng.
+- **Không có nguồn** (New Approval, Admin drawer): hai màn không đọc envelope
+  nào — bỏ trường, để server phân giải về workspace của chính người dùng.
+  **Vắng-rồi-phân-giải tốt hơn gọi-tên-sai**; membership vẫn kiểm.
+
+**Test bắt một lỗi tôi vừa tự tạo**: `workspaceId` đóng băng trong `useCallback`
+vì thiếu deps → mọi quyết định `return` sớm vĩnh viễn.
+
+**Và một đính chính về chính báo cáo của tôi**: tôi từng ghi "control-api
+typecheck sạch" trong khi **check đó không chạy** — node_modules mount không có
+`typescript`, lệnh im lặng và tôi đọc im lặng thành xanh. Chạy tsc thật: **4
+lỗi**, do đúng thay đổi `.optional()` của tôi. Đã sửa; nay sạch thật.
+
+#### A17.3 Ba màn còn lại đã sửa gì
+
+Exit Review nhánh sản phẩm bị tước lớp `exec-px` (chỉ showcase mới có) nên mất
+toàn bộ thang chữ phòng review; hai class `exec-exit-panels` và
+`exec-gate-actions` **không có luật CSS nào**. Waivers: `PARTIAL` hiện y như
+`OK`; đếm-thất-bại bị làm phẳng thành `null` nên "không đếm được" trông hệt
+"nguồn không publish"; panel Runway có đầu không thân; filter nhét trong đầu
+bảng. Approval Inbox: bảng sans nên số không thẳng hàng; "Inbox zero" là chú
+thích nhỏ thay vì kết quả; dòng không-được-quyết bị **in nghiêng** thay vì làm
+mờ.
+
+**Còn treo, không giấu:** ~13 việc mức medium/low chưa làm (Command Center
+`cell.href`, Blotter empty-hiện-thành-unavailable, Portfolio 360 truncation,
+Account 360 in số thô, đọc `approvals/history`), và **9 việc chặn thật** —
+`Mine (3)`, `policy_version`, lịch sử waivers, thứ tự sort: nguồn **không
+publish**. Ký row-level của ba màn vẫn chờ governance có hàng.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

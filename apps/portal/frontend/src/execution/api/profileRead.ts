@@ -264,6 +264,9 @@ export function readOperatorTasks(raw: unknown): OperatorTaskCatalogue | null {
 
 export interface LiveReviewPayload {
   approvalId: string;
+  /** The workspace this review was read from; a decision must name the same
+   *  one, and the controls stay disabled with a reason when it is null. */
+  workspaceId: string | null;
   canaryDeploymentId: string | null;
   /** The full r2-review payload — decode with the existing `readGateR2Detail`. */
   governanceBackbone: unknown;
@@ -278,11 +281,13 @@ export interface LiveReviewPayload {
 export function readLiveReview(raw: unknown): LiveReviewPayload | null {
   const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
   if (!root || root.schema_version !== "governance.live-review.v1") return null;
+  const workspaceId = typeof root.workspace_id === "string" && root.workspace_id.length > 0 ? root.workspace_id : null;
   const approvalId = typeof root.approval_id === "string" ? root.approval_id : null;
   if (!approvalId) return null;
   const canary = typeof root.canary_ref === "object" && root.canary_ref !== null ? (root.canary_ref as Record<string, unknown>) : null;
   const actor = typeof root.actor === "object" && root.actor !== null ? (root.actor as Record<string, unknown>) : null;
   return {
+    workspaceId,
     approvalId,
     canaryDeploymentId: canary && typeof canary.deployment_id === "string" ? canary.deployment_id : null,
     governanceBackbone: root.governance_backbone ?? null,

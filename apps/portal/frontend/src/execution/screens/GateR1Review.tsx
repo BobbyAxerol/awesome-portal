@@ -92,6 +92,7 @@ export function GateR1Review({
   onNoteChange,
   trail,
   onAttachCondition,
+  decisionsBlockedReason = null,
   onApprove,
   onDeny,
   onRequestCondition,
@@ -127,6 +128,10 @@ export function GateR1Review({
   /** DecisionTrail from the container while a decision is in flight. */
   trail?: ReactNode;
   onAttachCondition?: (condition: TypedCondition) => void;
+  /** Set when the review published no workspace: a decision cannot be
+   *  addressed, so every control is locked and says so rather than posting a
+   *  request the server will refuse. */
+  decisionsBlockedReason?: string | null;
   onApprove?: () => void;
   onDeny?: () => void;
   onRequestCondition: () => void;
@@ -155,7 +160,7 @@ export function GateR1Review({
     ]),
   );
   const isDecided = Boolean(decided);
-  const locked = effectiveLocks.length > 0;
+  const locked = effectiveLocks.length > 0 || Boolean(decisionsBlockedReason);
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
@@ -173,6 +178,7 @@ export function GateR1Review({
     ...effectiveLocks.map((lock) => LOCK_REASON[lock]),
     ...denyLocks.map((lock) => DENY_LOCK_REASON[lock]),
   ];
+  if (decisionsBlockedReason) reasons.unshift(decisionsBlockedReason);
   if (!serverAllowsApprove && !locked) reasons.push("Approve blocked — the server did not grant it for this actor.");
   if (!serverAllowsDeny && !denyLocks.length) reasons.push("Deny blocked — the server did not grant it for this actor.");
 

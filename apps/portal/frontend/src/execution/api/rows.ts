@@ -284,6 +284,14 @@ export function readEligibility(raw: unknown): Eligibility {
 
 export interface GateR1Detail {
   approvalId: ApprovalId;
+  /**
+   * The workspace this review was read from, as the BFF publishes it.
+   *
+   * A decision must name the same one. `null` when the envelope carries none,
+   * and the screen then disables its decision controls with a reason rather
+   * than posting into a workspace nobody named.
+   */
+  workspaceId: string | null;
   alphaLabel: string;
   releaseCandidate: string | null;
   /** `null` when unpublished. Never 0: "nobody has approved" is a real claim. */
@@ -332,6 +340,7 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
   const eligibility = readEligibility(data.eligibility);
   const approvalId = readId(approval.approval_id ?? data.approval_id) as ApprovalId | null;
   if (!approvalId) return null;
+  const workspaceId = typeof o.workspace_id === "string" && o.workspace_id.length > 0 ? o.workspace_id : null;
 
   const gaps: string[] = [];
   const manifest = obj(data.evidence_manifest);
@@ -377,6 +386,7 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
   const decidedOutcome = decidedRaw ? readEnum(decidedRaw.outcome, DECIDED_OUTCOMES) : null;
 
   return {
+    workspaceId,
     approvalId,
     alphaLabel: str(approval.subject_label) ?? str(approval.alpha_label) ?? approvalId,
     releaseCandidate: str(approval.release_candidate),
@@ -484,6 +494,11 @@ export function readReadinessGroup(raw: unknown): ReadinessGroup | null {
 }
 
 export interface GateR2Detail {
+  /** The workspace this review was read from; a decision must name the same
+   *  one. `null` when the envelope carries none — the screen then disables the
+   *  decision controls with a reason rather than writing into a workspace
+   *  nobody named. */
+  workspaceId: string | null;
   approvalId: ApprovalId;
   subject: string;
   r1Id: ApprovalId | null;
@@ -529,6 +544,7 @@ export interface GateR2Detail {
 
 export function readGateR2Detail(raw: unknown): GateR2Detail | null {
   const o = obj(raw);
+  const workspaceId = typeof o?.workspace_id === "string" && o.workspace_id.length > 0 ? o.workspace_id : null;
   if (!o) return null;
   const data = obj(o.data) ?? o;
   const approval = obj(data.approval) ?? data;
@@ -576,6 +592,7 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
   }
 
   return {
+    workspaceId,
     portfolioId: readId(approval.portfolio_id ?? data.portfolio_id),
     currency: str(approval.currency ?? data.currency),
     requestedAmount: readDecimal(approval.requested_amount ?? data.requested_amount),
@@ -655,6 +672,11 @@ export interface LineageRef {
 }
 
 export interface PaperExitDetail {
+  /** The workspace this review was read from; a decision must name the same
+   *  one. `null` when the envelope carries none — the screen then disables the
+   *  decision controls with a reason rather than writing into a workspace
+   *  nobody named. */
+  workspaceId: string | null;
   reviewId: ApprovalId;
   deploymentId: string;
   /**
@@ -705,6 +727,7 @@ export interface PaperExitDetail {
 
 export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
   const o = obj(raw);
+  const workspaceId = typeof o?.workspace_id === "string" && o.workspace_id.length > 0 ? o.workspace_id : null;
   if (!o) return null;
   const data = obj(o.data) ?? o;
   const review = obj(data.review) ?? data;
@@ -732,6 +755,7 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
   if (typeof data.gate_met !== "boolean") gaps.push("gate_met was not published; treated as unmet");
 
   return {
+    workspaceId,
     reviewId,
     stage: (() => {
       const parsed = readEnum(review.stage ?? data.stage, STAGES);

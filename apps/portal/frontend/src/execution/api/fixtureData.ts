@@ -79,6 +79,9 @@ export const APPROVAL_ROWS: Record<string, unknown>[] = [
 ];
 
 export const R1_DETAIL: Record<string, unknown> = {
+  // The BFF publishes the workspace the review was read from; a decision
+  // must name the same one, so the fixture carries it too.
+  workspace_id: "ws_fixture_governance",
   approval: {
     approval_id: "AP-201",
     subject_label: "RSI v1.7",
@@ -124,6 +127,9 @@ export const R1_DETAIL: Record<string, unknown> = {
 };
 
 export const R2_DETAIL: Record<string, unknown> = {
+  // The BFF publishes the workspace the review was read from; a decision
+  // must name the same one, so the fixture carries it too.
+  workspace_id: "ws_fixture_governance",
   approval: {
     // §3 names the screen's data: AP-352 Carry v3.2 → PF-MAIN. The cast puts
     // that approval on dep_77, OKX TESTNET, sandbox — not on the BINANCE paper
@@ -178,6 +184,9 @@ export const R2_DETAIL: Record<string, unknown> = {
 };
 
 export const EXIT_DETAIL: Record<string, unknown> = {
+  // The BFF publishes the workspace the review was read from; a decision
+  // must name the same one, so the fixture carries it too.
+  workspace_id: "ws_fixture_governance",
   review: {
     review_id: "EX-771",
     // The stage being left, so the rail draws the right current step. The same
