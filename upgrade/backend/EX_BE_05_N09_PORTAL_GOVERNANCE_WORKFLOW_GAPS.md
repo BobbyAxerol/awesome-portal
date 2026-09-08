@@ -59,7 +59,7 @@ It is not an execution request, source command or promotion authority.
 
 ## 3. Persistence and repository boundary
 
-Migration `1723680000012_execution-n09-governance-workflow.sql` adds:
+Migration `1723680000028_execution-n09-governance-workflow.sql` adds:
 
 - `CHANGES_REQUESTED`, `REQUEST_CHANGES` and approval supersession lineage;
 - immutable `governance_approval_known_limitations`;

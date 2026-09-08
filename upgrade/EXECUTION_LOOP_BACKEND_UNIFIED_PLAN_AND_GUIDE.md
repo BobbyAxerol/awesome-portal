@@ -5128,6 +5128,17 @@ failures; it only prevents transient hosted-runner resource contention from
 obscuring a real result.  No runtime/image/source authority changes are part
 of this correction.
 
+**Control API migration-order correction (2026-09-08):** the first signed
+stable rollout stopped before the Control API could start because the N09
+governance migration had accidentally reused the numeric prefix of the
+already-applied session-activation migration. The Portal database was backed
+up before the attempt and no N09 SQL ran. N09 is therefore moved, byte-for-byte
+unchanged, to the next unused prefix `1723680000028`; the migration-history
+gate contains one explicit identical-blob collision correction and now rejects
+all duplicate numeric prefixes before CI or deployment. This is a forward
+release repair, not a schema rollback, source-authority change or command
+activation.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
