@@ -1832,6 +1832,17 @@ trơn — deployment HALTED và ACTIVE trông giống nhau tới khi đọc ch�
 từ trạng thái lạ được vẽ **trơn chứ không đoán** — tô xanh chỉ vì nó không nằm
 trong danh sách xấu chính là cách một màn nói dối rằng deployment đang khoẻ.
 
+**Một lỗi của chính tôi, sửa ngay sau khi đo**: lần đầu tôi khoá "cursor đã bị
+từ chối" theo **chính cursor**. Đo lại thì vẫn 1 lỗi mỗi lần vào — vì Portal
+**cấp continuation id mới mỗi lần đọc trang một**, nên khoá đó không bao giờ
+khớp lại chính nó. Nay khoá theo **relation** kèm **TTL 10 phút**: im lặng giữa
+các lần drain, nhưng vẫn tự thử lại, nên nguồn nào được sửa sẽ tự dùng lại mà
+không cần mở tab mới.
+
+**`om-pulse` — nhãn "cần chú ý"**: showcase nhấp nháy con số Halted / Findings /
+Issues. Dev nay cũng vậy, **nhưng chỉ khi con số khác 0**: một số 0 nhấp nháy
+dạy người vận hành bỏ qua đúng cái số đáng nhìn.
+
 Gate: FE **113 file · 1 981 test**, tsc sạch; control-api `src` build sạch.
 
 ## A3. Luật vận hành kế hoạch này

@@ -187,20 +187,24 @@ const PAGE_SIZE_STORE = "exec.relation.page-size.v1";
 const REFUSED_CURSOR_STORE = "exec.relation.refused-cursor.v1";
 
 /**
- * Cursors the source published and then refused, for this tab.
+ * Relations whose continuation the source refused, and when.
  *
  * `portfolio-equity-snapshots` holds five rows, reports `has_more: true` at the
  * end of them, and refuses the cursor it just handed out — at every page size,
  * down to one row (walked on dev 2026-09-08: 9 requests, 8 refusals, 5 rows).
- * Asking again on the next drain cannot produce a different answer, so the walk
- * stops at the rows it has and says the relation is partial.
  *
- * Keyed by the cursor itself, not by the relation: when the underlying data
- * moves, page one hands out a new cursor and that one is tried. A source that
- * starts honouring its continuations is picked up on the next change rather
- * than needing a new tab.
+ * Keyed by the relation, not by the cursor: the Portal mints a fresh
+ * continuation id on every page-one read, so a cursor key would never match
+ * itself twice and the walk would re-ask on every drain — which is what it did
+ * before this was measured.
+ *
+ * The timestamp is what keeps it honest. A refusal is respected for
+ * `REFUSAL_TTL_MS` and then tried again, so a source that starts honouring its
+ * continuations is picked up on its own without the operator opening a new
+ * tab; and until then the drain is quiet instead of failing once a minute.
  */
-const refusedCursors = new Set<string>();
+const refusedContinuations = new Map<string, number>();
+const REFUSAL_TTL_MS = 10 * 60_000;
 
 function readStoredSizes(): void {
   try {
@@ -212,21 +216,27 @@ function readStoredSizes(): void {
     }
     const refused = window.sessionStorage?.getItem(REFUSED_CURSOR_STORE);
     if (refused) {
-      for (const cursor of JSON.parse(refused) as unknown[]) {
-        if (typeof cursor === "string") refusedCursors.add(cursor);
+      for (const [key, at] of Object.entries(JSON.parse(refused) as Record<string, unknown>)) {
+        if (typeof at === "number") refusedContinuations.set(key, at);
       }
     }
   } catch { /* a lesson we cannot read is a lesson we re-learn */ }
 }
 
-function rememberRefusedCursor(key: string): void {
-  if (refusedCursors.has(key)) return;
-  refusedCursors.add(key);
+function rememberRefusedContinuation(key: string): void {
+  refusedContinuations.set(key, Date.now());
   try {
-    // Bounded: the newest few are what a walk will meet again.
-    const kept = [...refusedCursors].slice(-64);
-    window.sessionStorage?.setItem(REFUSED_CURSOR_STORE, JSON.stringify(kept));
-  } catch { /* storage refused; the in-memory set still spares this tab */ }
+    window.sessionStorage?.setItem(REFUSED_CURSOR_STORE, JSON.stringify(Object.fromEntries(refusedContinuations)));
+  } catch { /* storage refused; the in-memory map still spares this tab */ }
+}
+
+/** True while a recent refusal still stands. An expired one is forgotten here. */
+function continuationRefused(key: string): boolean {
+  const at = refusedContinuations.get(key);
+  if (at === undefined) return false;
+  if (Date.now() - at < REFUSAL_TTL_MS) return true;
+  refusedContinuations.delete(key);
+  return false;
 }
 
 function rememberSize(key: string, size: number): void {
@@ -242,7 +252,7 @@ if (typeof window !== "undefined") readStoredSizes();
 /** Forget the learned page sizes. Exported for tests, which must not leak state between cases. */
 export function resetAcceptedPageSizes(): void {
   acceptedPageSize.clear();
-  refusedCursors.clear();
+  refusedContinuations.clear();
   try {
     window.sessionStorage?.removeItem(PAGE_SIZE_STORE);
     window.sessionStorage?.removeItem(REFUSED_CURSOR_STORE);
@@ -262,7 +272,7 @@ export async function drainRelation(read: RelationRead, routeId: RelationRoute |
     // A cursor this source already refused is not asked for again: the answer
     // cannot have changed while the cursor has not. The walk ends on the rows
     // it holds and reports the relation partial, which is what it is.
-    if (cursor !== null && refusedCursors.has(`${environment}:${routeId}:${cursor}`)) {
+    if (cursor !== null && continuationRefused(`${environment}:${routeId}`)) {
       return { rows, pages, exhausted: false, state: "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: CONTINUATION_REFUSED };
     }
     const stepping = pages === 0 && sizeIndex < PAGE_SIZES.length - 1;
@@ -278,7 +288,7 @@ export async function drainRelation(read: RelationRead, routeId: RelationRoute |
       // A continuation refused on contract is a cursor that will keep being
       // refused; remember it so the next drain reads page one and stops there.
       if (cursor !== null && refusedOnContract(result.reason)) {
-        rememberRefusedCursor(`${environment}:${routeId}:${cursor}`);
+        rememberRefusedContinuation(`${environment}:${routeId}`);
       }
       return { rows, pages, exhausted: false, state: pages === 0 ? result.status.toUpperCase() : last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: result.reason };
     }

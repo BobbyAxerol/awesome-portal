@@ -127,13 +127,23 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                 <div className="exec-af-kpival">{deployments.length}</div>
                 <div className="exec-af-kpisub">published deployments</div>
               </div>
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Halted</div><div className="exec-af-kpival" data-tone={halted > 0 ? "warn" : undefined}>{halted}</div><div className="exec-af-kpisub">returned deployment rows</div></div>
+              <div className="exec-af-kpi" data-tint={halted > 0 ? "true" : undefined}>
+                <div className="exec-af-kpilabel" data-tone={halted > 0 ? "warn" : undefined}>Halted</div>
+                {/* The reviewed screen pulses this figure. It pulses here only
+                    when there is something to look at: a nought that throbs
+                    teaches an operator to ignore the one that matters. */}
+                <div className={halted > 0 ? "exec-af-kpival exec-af-pulse" : "exec-af-kpival"} data-tone={halted > 0 ? "warn" : undefined}>{halted}</div>
+                <div className="exec-af-kpisub">returned deployment rows</div>
+              </div>
               <div className="exec-af-kpi">
                 <div className="exec-af-kpilabel">Open findings</div>
                 {/* The overview profile publishes an empty reconciliation
                     branch; the findings relation answers for the same
                     environment, so the count comes from whichever spoke. */}
-                <div className="exec-af-kpival" data-tone={(panels?.openFindings ?? openFindings) > 0 ? "bad" : undefined}>
+                <div
+                  className={(panels?.openFindings ?? openFindings) > 0 ? "exec-af-kpival exec-af-pulse" : "exec-af-kpival"}
+                  data-tone={(panels?.openFindings ?? openFindings) > 0 ? "bad" : undefined}
+                >
                   {panels?.openFindings ?? (findings.length > 0 ? openFindings : notPublished)}
                 </div>
                 <div className="exec-af-kpisub">{panels?.openFindings !== null && panels?.openFindings !== undefined ? "unresolved reconciliation findings" : "returned reconciliation rows"}</div>
