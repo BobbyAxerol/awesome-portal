@@ -371,6 +371,54 @@ export class LocalQueryAnalyticsService {
     return { statistics, strategies: [...strategies], version };
   }
 
+  /**
+   * One 30-day equity sparkline per strategy, in a single read.
+   *
+   * The Alpha Fleet drew these lazily, one request per row on expand, because
+   * fifty rows meant fifty chart reads. They all come from the same daily
+   * closes the fleet statistics already load, so this returns every series at
+   * once — and hits the statistics cache when correlation has been asked for,
+   * which the 360 screens do on the way in.
+   *
+   * Daily closes, not raw snapshots: a sparkline 90 px wide cannot show more,
+   * and the value on each day is that day's last published equity, which is
+   * the figure the row's other columns are consistent with.
+   */
+  async equitySparklines(
+    principal: { workspaceId: string },
+    environment: ProjectionEnvironment,
+    days = 30,
+  ): Promise<{ series: Record<string, number[]>; days: number; basis: string }> {
+    void principal;
+    if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
+    if (typeof this.repository.timeSeriesDailyCloses !== "function") {
+      return { series: {}, days, basis: "PORTAL_SGP_HISTORY_MIRROR" };
+    }
+    const context = await this.localContext(environment);
+    const closes = await this.repository.timeSeriesDailyCloses(
+      context.workspaceId, environment, context.profileId,
+      "manager.performance:account_equity_snapshots",
+      { from: new Date(Date.now() - days * 86_400_000).toISOString(), valueField: "equity" },
+    );
+    // One strategy can run on several accounts; the row's line is the strategy's
+    // total for that day, which is what its equity column already reports.
+    const byStrategyDay = new Map<string, Map<string, number>>();
+    for (const row of closes) {
+      const value = Number(row.value);
+      if (!Number.isFinite(value)) continue;
+      const days_ = byStrategyDay.get(row.strategyId) ?? new Map<string, number>();
+      days_.set(row.day, (days_.get(row.day) ?? 0) + value);
+      byStrategyDay.set(row.strategyId, days_);
+    }
+    const series: Record<string, number[]> = {};
+    for (const [strategyId, dayMap] of byStrategyDay) {
+      const points = [...dayMap.entries()].sort((left, right) => left[0].localeCompare(right[0])).map(([, value]) => value);
+      // A single point draws no line; the row says so rather than showing a dot.
+      if (points.length > 1) series[strategyId] = points;
+    }
+    return { series, days, basis: "PORTAL_SGP_HISTORY_MIRROR" };
+  }
+
   private async portfolioStatistics(
     workspaceId: string,
     environment: ProjectionEnvironment,

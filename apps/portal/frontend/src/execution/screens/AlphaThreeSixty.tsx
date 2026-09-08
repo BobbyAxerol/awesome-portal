@@ -35,6 +35,7 @@ import type {
   Readiness,
 } from "../contracts";
 import { BrokerSyncChip, EnvironmentBadge, StatusChip } from "../components/badges";
+import { Money, Qty, Stamp } from "../components/cells";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
@@ -760,10 +761,10 @@ function Positions({ positions, onLoadOlder }: AlphaThreeSixtyProps) {
     { key: "where", header: "deployment · venue", width: "13rem", render: (r) => `${r.deploymentId} · ${r.venue}` },
     { key: "symbol", header: "symbol", width: "9rem", render: (r) => r.symbol },
     { key: "side", header: "side", width: "6rem", render: (r) => r.side },
-    { key: "qty", header: "qty", width: "8rem", render: (r) => <span className="exec-num">{r.quantity}</span> },
-    { key: "entry", header: "entry", width: "9rem", render: (r) => <Num value={r.entry} absent="not published" /> },
-    { key: "mark", header: "mark", width: "9rem", render: (r) => <Num value={r.mark} absent="not marked" /> },
-    { key: "upnl", header: "uPnL", width: "9rem", render: (r) => <Num value={r.unrealised} absent="not published" /> },
+    { key: "qty", header: "qty", width: "8rem", render: (r) => <Qty value={r.quantity} /> },
+    { key: "entry", header: "entry", width: "9rem", render: (r) => <Money value={r.entry} /> },
+    { key: "mark", header: "mark", width: "9rem", render: (r) => <Money value={r.mark} absent="not marked" /> },
+    { key: "upnl", header: "uPnL", width: "9rem", render: (r) => <Money value={r.unrealised} /> },
     { key: "ccy", header: "ccy", width: "6rem", render: (r) => r.currency },
   ];
   return positions && positions.rows.length === 0 ? (
@@ -784,11 +785,11 @@ function Positions({ positions, onLoadOlder }: AlphaThreeSixtyProps) {
 
 function Orders({ orders, onLoadOlder }: AlphaThreeSixtyProps) {
   const columns: readonly Column<OrderRow>[] = [
-    { key: "at", header: "time (UTC)", width: "12rem", render: (r) => <span className="exec-num">{r.at}</span> },
+    { key: "at", header: "time (UTC)", width: "12rem", render: (r) => <Stamp at={r.at} /> },
     { key: "where", header: "deployment · venue", width: "13rem", render: (r) => `${r.deploymentId} · ${r.venue}` },
     { key: "symbol", header: "symbol", width: "9rem", render: (r) => r.symbol },
-    { key: "qty", header: "qty", width: "8rem", render: (r) => <span className="exec-num">{r.quantity}</span> },
-    { key: "price", header: "price", width: "9rem", render: (r) => <Num value={r.price} absent="no limit price" /> },
+    { key: "qty", header: "qty", width: "8rem", render: (r) => <Qty value={r.quantity} /> },
+    { key: "price", header: "price", width: "9rem", render: (r) => <Money value={r.price} absent="no limit price" /> },
     { key: "status", header: "status", width: "10rem", render: (r) => r.status },
   ];
   return orders && orders.rows.length === 0 ? (
@@ -809,7 +810,7 @@ function Orders({ orders, onLoadOlder }: AlphaThreeSixtyProps) {
 
 function Audit({ audit, onLoadOlder }: AlphaThreeSixtyProps) {
   const columns: readonly Column<AuditRow>[] = [
-    { key: "at", header: "time (UTC)", width: "12rem", render: (r) => <span className="exec-num">{r.at}</span> },
+    { key: "at", header: "time (UTC)", width: "12rem", render: (r) => <Stamp at={r.at} /> },
     { key: "actor", header: "actor", width: "9rem", render: (r) => r.actor },
     { key: "command", header: "command", width: "16rem", render: (r) => r.command },
     { key: "target", header: "target", width: "12rem", render: (r) => r.target },
@@ -881,7 +882,7 @@ function Sessions({ rows }: { rows: readonly SessionRow[] }) {
           {shown.shown.map((row) => (
             <tr key={`${row.at}-${row.deploymentId}`} data-status={row.complete ? "OK" : "STALE"}>
               <th scope="row">
-                <span className="exec-num">{row.at}</span>
+                <Stamp at={row.at} />
               </th>
               <td>{row.deploymentId}</td>
               <td>{row.event}</td>

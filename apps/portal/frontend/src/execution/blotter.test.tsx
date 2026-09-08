@@ -55,10 +55,10 @@ describe("Full Blotter — numbers say what they mean", () => {
     expect(screen.getByText(/0\.4899/)).toBeTruthy();
   });
 
-  it("keeps a partial fill's two quantities together", () => {
+  it("keeps a partial fill's two quantities together, at the shared decimal display", () => {
     render(blotter());
     // "0.9000" alone would read as the order size.
-    expect(screen.getByText("0.9000/1.2000")).toBeTruthy();
+    expect(screen.getByText("0.9/1.2")).toBeTruthy();
   });
 
   it("states a market order's missing limit price rather than inventing one", () => {

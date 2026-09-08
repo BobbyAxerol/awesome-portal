@@ -269,6 +269,8 @@ export interface ExecutionApi {
   getScreenProfile(screen: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>>;
   /** Exact, server-filtered Paper blotter page. */
   getBlotterProfile(query?: BlotterQuery): Promise<Result<ProfileEnvelope>>;
+  /** `GET /alphas/equity-sparklines` — every alpha's 30-day series in one read. */
+  getEquitySparklines(environment?: "paper" | "sandbox" | "live"): Promise<Result<Record<string, readonly number[]>>>;
   /** `GET /screens/paper/{id}[/vn-market]` — the workbench envelope. */
   getPaperWorkbenchProfile(deploymentId: string, variant?: "paper" | "vnm"): Promise<Result<ProfileEnvelope>>;
   /** `GET /{alphas|portfolios}/{id}/query-analytics` — N25 envelope. */

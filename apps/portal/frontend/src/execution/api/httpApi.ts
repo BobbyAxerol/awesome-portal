@@ -323,6 +323,19 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     readGet(marketCandlesPath(query), readMarketCandles, "The venue market candles");
   const getObservedTimeline = (query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>> =>
     readGet(observedTimelinePath(query), readObservedTimeline, "The venue market candles");
+  /** Every alpha's 30-day equity sparkline in one read (Fleet inline column). */
+  const getEquitySparklines = (environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<Record<string, readonly number[]>>> =>
+    readGet(`/alphas/equity-sparklines?environment=${environment}`, (raw) => {
+      const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
+      const series = root && typeof root.series === "object" && root.series !== null ? root.series as Record<string, unknown> : null;
+      if (!series) return null;
+      const out: Record<string, readonly number[]> = {};
+      for (const [key, value] of Object.entries(series)) {
+        if (Array.isArray(value) && value.every((n) => typeof n === "number" && Number.isFinite(n))) out[key] = value as number[];
+      }
+      return out;
+    }, "The fleet equity sparklines");
+
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");
   const listParameters = (query: object) => {
@@ -434,6 +447,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getMarketCandles,
     getObservedTimeline,
     getManagerRelationPage,
+    getEquitySparklines,
     getAlphaFleet,
     listPortfolios,
     getBindings,

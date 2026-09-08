@@ -161,7 +161,7 @@ export function formatUtcEpochMs(value: UtcEpochMs): string {
   if (Number.isNaN(date.getTime())) return "—";
   const pad = (part: number, width = 2) => String(part).padStart(width, "0");
   return `${pad(date.getUTCFullYear(), 4)}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ` +
-    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}.${pad(date.getUTCMilliseconds(), 3)} UTC`;
+    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`;
 }
 
 /** Financial values and large sequences must not cross the browser as numbers. */

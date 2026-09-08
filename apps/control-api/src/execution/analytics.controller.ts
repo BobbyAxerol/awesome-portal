@@ -80,6 +80,19 @@ export class ExecutionAnalyticsController {
    * already draws. The proxy stays as the fallback for deployments where the
    * upstream does serve them.
    */
+  /**
+   * Every alpha's 30-day equity sparkline in one read, so the Fleet can draw
+   * the column inline instead of one request per row on expand.
+   */
+  @Get("/alphas/equity-sparklines")
+  equitySparklines(@Req() request: AnalyticsRequest, @Query() raw: unknown) {
+    const query = SparklineQuerySchema.safeParse(raw);
+    if (!query.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    return this.invoke(() => this.localAnalytics.equitySparklines(
+      { workspaceId: request.portalWorkspaceId }, query.data.environment ?? "paper", query.data.days ?? 30,
+    ));
+  }
+
   @Get("/portfolios/:portfolioId/correlation")
   portfolioCorrelation(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
     if (this.portfolio360?.enabled()) {
@@ -198,6 +211,11 @@ export class ExecutionAnalyticsController {
 function local(request: AnalyticsRequest) {
   return { user: request.portalUser, session: request.portalSession, workspaceId: request.portalWorkspaceId };
 }
+
+const SparklineQuerySchema = z.object({
+  environment: z.enum(["paper", "sandbox", "live"]).optional(),
+  days: z.coerce.number().int().min(2).max(365).optional(),
+}).strict();
 
 const CapitalPreviewRequestSchema = z.object({
   portfolio_id: z.string().regex(/^[A-Za-z0-9._-]{1,128}$/),

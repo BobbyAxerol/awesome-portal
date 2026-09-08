@@ -41,6 +41,7 @@ import { AuthorityBadge, StatusChip } from "../components/badges";
 import { LifecycleRail, ObservationProgress, stageRail } from "../components/lifecycle";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
+import { Money, Qty, Stamp } from "../components/cells";
 import { capNotice, capPreserving } from "../components/cap";
 import { formatUntil, sessionState, type VenueCalendar } from "../vnCalendar";
 import { ExecutionSurface } from "../ExecutionSurface";
@@ -983,7 +984,7 @@ function Orders({
   onLoadOlder,
 }: Pick<PaperWorkbenchProps, "orders" | "onLoadOlder">) {
   const columns: readonly Column<WorkbenchOrder>[] = [
-    { key: "at", header: "time (UTC)", width: "10rem", render: (r) => <span className="exec-num">{r.at}</span> },
+    { key: "at", header: "time (UTC)", width: "10rem", render: (r) => <Stamp at={r.at} /> },
     { key: "symbol", header: "symbol", width: "8rem", render: (r) => r.symbol },
     { key: "type", header: "type / side", width: "9rem", render: (r) => `${r.orderType} ${r.side}` },
     {
@@ -1036,10 +1037,10 @@ function Orders({
 
 function Fills({ fills, onLoadOlder }: Pick<PaperWorkbenchProps, "fills" | "onLoadOlder">) {
   const columns: readonly Column<WorkbenchFill>[] = [
-    { key: "at", header: "time (UTC)", width: "10rem", render: (r) => <span className="exec-num">{r.at}</span> },
+    { key: "at", header: "time (UTC)", width: "10rem", render: (r) => <Stamp at={r.at} /> },
     { key: "symbol", header: "symbol", width: "8rem", render: (r) => r.symbol },
-    { key: "qty", header: "qty", width: "9rem", render: (r) => <span className="exec-num">{r.quantity}</span> },
-    { key: "price", header: "price", width: "9rem", render: (r) => <span className="exec-num">{r.price}</span> },
+    { key: "qty", header: "qty", width: "9rem", render: (r) => <Qty value={r.quantity} /> },
+    { key: "price", header: "price", width: "9rem", render: (r) => <Money value={r.price} /> },
     { key: "fee", header: "fee", width: "8rem", render: (r) => <Num value={r.fee} /> },
     { key: "liq", header: "liquidity", width: "8rem", render: (r) => <Num value={r.liquidity} absent="not stated" /> },
   ];
@@ -1064,7 +1065,7 @@ function Positions({
   const columns: readonly Column<WorkbenchPosition>[] = [
     { key: "symbol", header: "symbol", width: "9rem", render: (r) => r.symbol },
     { key: "side", header: "side", width: "6rem", render: (r) => r.side },
-    { key: "qty", header: "qty", width: "9rem", render: (r) => <span className="exec-num">{r.quantity}</span> },
+    { key: "qty", header: "qty", width: "9rem", render: (r) => <Qty value={r.quantity} /> },
     { key: "entry", header: "entry", width: "9rem", render: (r) => <Num value={r.entry} /> },
     { key: "mark", header: "mark", width: "9rem", render: (r) => <Num value={r.mark} absent="not marked" /> },
     { key: "upnl", header: "uPnL", width: "9rem", render: (r) => <Num value={r.unrealised} /> },

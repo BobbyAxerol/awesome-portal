@@ -128,7 +128,10 @@ export function EquityChart({
   const gapCount = data.missing;
   const presets = RANGE_PRESETS.filter((p) => presetAvailable(data.xs, p));
   const plotHeight = expanded ? EXPANDED_HEIGHT : height;
-  const footer = `${envelope.authority} · as of ${envelope.asOf}${envelope.formulaVersion ? ` · ${envelope.formulaVersion}` : ""}`;
+  // The tile's caption below already carries the envelope's as_of; repeating it
+  // inside the hover box states the same fact twice and pushes the value the
+  // reader opened the box for out of the corner of their eye.
+  const footer = `${envelope.authority}${envelope.formulaVersion ? ` · ${envelope.formulaVersion}` : ""}`;
   return (
     <section className={`exec-chart-tile exec-equity${expanded ? " exec-chart-expanded" : ""}`} aria-label={title}>
       <div className="exec-chart-head">

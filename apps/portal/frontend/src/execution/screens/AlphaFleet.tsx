@@ -74,12 +74,16 @@ export interface AlphaFleetProps {
   onNextPage?: (cursor: string) => void;
   onPreviousPage?: (cursor: string) => void;
   /**
-   * P0-5: the hi-fi draws an equity sparkline per row. One series per alpha is
-   * one request per alpha, so the fleet does not fetch 48 of them on load: the
-   * row asks for its own when it is expanded, and says so until then. The chart
-   * is the same published series Alpha 360 draws — never a second computation.
+   * P0-5: the hi-fi draws an equity sparkline per row, and it is drawn inline
+   * (owner, 2026-09-08 — show it, do not make the reader expand for it).
+   *
+   * It was one chart request per alpha, fired on expand, because fifty rows
+   * meant fifty reads. `alphas/equity-sparklines` returns every series from
+   * the daily closes the fleet statistics already load, so the whole column
+   * costs one request. Still the published series, never a second computation.
    */
   equity?: Readonly<Record<string, readonly number[] | "loading" | null>>;
+  /** Retained for the lab, which still loads one row at a time. */
   onNeedEquity?: (alphaId: string) => void;
   /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
   demo?: FleetDemo | null;
@@ -350,7 +354,7 @@ function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity }: { i
         <td data-numeric="true"><ExactLines values={item.positionPnl.map((value) => ({ currency: value.currency, value: value.net }))} empty="no position facts" tone="good" /></td>
         <td data-numeric="true"><ExactLines values={item.exposure} empty="flat" /></td>
         <td>{item.balances.length ? item.balances.map((balance) => <div key={balance.currency}>{exactDisplay(balance.total)} <span className="exec-af-mute">{balance.currency}</span><div className="exec-af-sub">free {exactDisplay(balance.free)} · locked {exactDisplay(balance.locked)}</div></div>) : mute}</td>
-        <td className="exec-af-spark">{equity === "loading" ? <span className="exec-af-mute">loading…</span> : equity && equity.length > 1 ? <SparkLine points={equity.map((value, index) => [String(index), value] as const)} tone={equity[equity.length - 1] >= equity[0] ? "good" : "bad"} height={18} width={72} /> : <span className="exec-af-mute" title="One series per alpha is one request; the row loads its own when it is expanded">expand to load</span>}</td>
+        <td className="exec-af-spark">{equity === "loading" ? <span className="exec-af-mute">loading…</span> : equity && equity.length > 1 ? <SparkLine points={equity.map((value, index) => [String(index), value] as const)} tone={equity[equity.length - 1] >= equity[0] ? "good" : "bad"} height={18} width={72} /> : <span className="exec-af-mute" title="The equity history mirror holds fewer than two daily closes for this alpha">no series</span>}</td>
         <td><span data-tone={item.health === "READY" ? "good" : item.health === "ATTENTION" ? "bad" : "warn"}>{item.health}</span><div className="exec-af-sub">{item.attentionReasons.length ? item.attentionReasons.join(" · ") : `updated ${utcStamp(item.updatedAt)}`}</div></td>
         <td className="exec-af-go"><a href={href} aria-label={`Open ${item.alphaLabel}`}>→</a></td>
       </tr>

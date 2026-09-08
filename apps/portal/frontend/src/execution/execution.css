@@ -273,6 +273,8 @@
   white-space: nowrap;
 }
 
+/* The masthead's stage badge is the same word as every other stage label. */
+.exec-chip[data-axis="stage"] { font: 400 10px/14px var(--font-mono); letter-spacing: 0.06em; padding: 0 5px; }
 .exec-chip[data-tone="good"] {
   color: var(--good);
   border-color: var(--good);
@@ -314,21 +316,43 @@
  * so it survives a monochrome print and a colour-blind reader.
  * ------------------------------------------------------------------------ */
 
-.exec-env {
-  font: var(--exec-font-meta);
+/* ── Stage labels — one size everywhere ──────────────────────────────────
+ *
+ * PAPER, SANDBOX, CANARY and LIVE name the same four things wherever they
+ * appear, so they are drawn the same everywhere: a stage that is 12px on one
+ * screen and 10px on the next reads as two different kinds of label, and the
+ * larger one wins the eye for no reason anybody chose.
+ *
+ * The measurements are the Alpha Fleet's, which is the balanced one: 10px mono
+ * with a hairline outline in the stage's own colour. Emphasis is spent on
+ * weight, border and a pulse — never on size, because a bigger chip pushes
+ * everything around it out of alignment.
+ */
+.exec-env,
+.exec-stage {
+  font: 400 10px/14px var(--font-mono);
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: 1px var(--space-2);
+  gap: 4px;
+  padding: 0 5px;
   border: 1px solid currentColor;
   letter-spacing: 0.06em;
   background: transparent;
+  white-space: nowrap;
 }
 
-.exec-env[data-stage="PAPER_OBSERVATION"] { color: var(--env-paper); }
-.exec-env[data-stage="SANDBOX_VALIDATION"] { color: var(--env-sandbox); }
-.exec-env[data-stage="LIVE_CANARY"] { color: var(--env-canary); }
-.exec-env[data-stage="LIVE_FULL"] { color: var(--env-live); }
+.exec-env[data-stage="PAPER_OBSERVATION"], .exec-stage[data-stage="PAPER_OBSERVATION"] { color: var(--env-paper); }
+.exec-env[data-stage="SANDBOX_VALIDATION"], .exec-stage[data-stage="SANDBOX_VALIDATION"] { color: var(--env-sandbox); }
+.exec-env[data-stage="LIVE_CANARY"], .exec-stage[data-stage="LIVE_CANARY"] { color: var(--env-canary); }
+.exec-env[data-stage="LIVE_FULL"], .exec-stage[data-stage="LIVE_FULL"] { color: var(--env-live); }
+/* The current stage of the thing being read: heavier, not larger. */
+.exec-env[data-current="true"], .exec-stage[data-current="true"] { font-weight: 700; border-width: 2px; padding: 0 4px; }
+/* A dot for a stage that is running now. It only pulses where the screen knows
+   the stream is delivering — a dot that always throbs proves nothing. */
+.exec-stage-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .exec-stage-dot[data-live="true"] { animation: om-tick 1.2s infinite; }
+}
 
 /* N29 envelope screens — the server's sparse truth in the governance panel
  * idiom: masthead facts, one panel per published branch, one honest row per
@@ -5389,6 +5413,10 @@
 .exec-af-wf { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); border: 1px dashed var(--line-strong); padding: 1px 6px; }
 .exec-af-source { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--paper-raised); padding: 2px 8px; display: inline-flex; align-items: center; gap: 6px; }
 .exec-af-source b { color: var(--ink); font-weight: 600; }
+/* The currency beside a figure is a qualifier, not part of the number: it is
+   quieter in ink and stays out of the tabular column the values line up in.
+   Size is not used to say so — the role scale owns every size on this surface. */
+.exec-cell-ccy { color: var(--ink-mute); }
 .exec-af-livedot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
 /* The dot carries the realtime channel's own phase. Green-and-pulsing is a
    claim that deltas are arriving; a closed stream must not make it. */
@@ -5430,12 +5458,14 @@
 .exec-af-table [data-tone="good"] { color: var(--good); } .exec-af-table [data-tone="bad"] { color: var(--bad); } .exec-af-table [data-tone="warn"] { color: var(--warn); } .exec-af-table [data-tone="mute"] { color: var(--ink-faint); }
 .exec-af-sum [data-tone="bad"] { color: var(--bad); }
 .exec-af-stages { display: inline-flex; flex-wrap: wrap; gap: 4px; }
-.exec-af-stage { font: 400 10px/14px var(--font-mono); padding: 0 5px; border: 1px solid var(--line-strong); color: var(--ink-soft); white-space: nowrap; }
-.exec-af-stage[data-tone="live"], .exec-af-stage[data-tone="canary"] { color: var(--bad); border-color: var(--bad); }
-.exec-af-stage[data-strong="true"] { font-weight: 700; }
-.exec-af-stage[data-tone="canary"][data-strong="true"] { border-width: 2px; }
-.exec-af-stage[data-tone="sandbox"] { color: var(--warn); border-color: var(--warn); }
-.exec-af-stage[data-tone="paper"] { color: var(--stage-paper); border-color: var(--stage-paper); }
+/* Same size and the same four colours as `.exec-stage`, from the same tokens,
+   so the Fleet's chips and every other screen's cannot drift apart. */
+.exec-af-stage { font: 400 10px/14px var(--font-mono); padding: 0 5px; border: 1px solid currentColor; color: var(--ink-soft); white-space: nowrap; letter-spacing: 0.06em; }
+.exec-af-stage[data-tone="live"] { color: var(--env-live); }
+.exec-af-stage[data-tone="canary"] { color: var(--env-canary); }
+.exec-af-stage[data-strong="true"] { font-weight: 700; border-width: 2px; padding: 0 4px; }
+.exec-af-stage[data-tone="sandbox"] { color: var(--env-sandbox); }
+.exec-af-stage[data-tone="paper"] { color: var(--env-paper); }
 .exec-af-stage[data-tone="research"] { color: var(--ink-faint); }
 .exec-af-stage[data-tone="blocked"] { color: var(--bad); border-color: var(--bad); }
 .exec-af-stage[data-dashed="true"] { border-style: dashed; }

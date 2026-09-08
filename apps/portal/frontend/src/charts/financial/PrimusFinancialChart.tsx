@@ -13,6 +13,7 @@
  * a chart that swallows scroll is a trap at the top of a long screen.
  */
 import type uPlot from "uplot";
+import { tooltipStamp } from "../../execution/chartTooltip";
 import "uplot/dist/uPlot.min.css";
 import { useEffect, useRef } from "react";
 
@@ -263,7 +264,8 @@ function buildOptions(b: Build): uPlot.Options {
       return;
     }
     const format = latest.current.formatValue ?? ((s: string) => s);
-    const rows = [`<div class="exec-chart-tip-t">${esc(raw.t)}</div>`];
+    // One stamp shape everywhere: seconds, no milliseconds, no `T`.
+    const rows = [`<div class="exec-chart-tip-t">${esc(tooltipStamp(raw.t))}</div>`];
     rows.push(
       `<div class="exec-fc-tip-row"><span class="exec-chart-tip-k"><span class="exec-fc-sw" style="background:${color}"></span>${esc(data.label)}</span><span class="exec-chart-tip-v">${
         raw.value === null ? "gap — not published" : esc(format(raw.value))

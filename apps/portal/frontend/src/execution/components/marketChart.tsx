@@ -16,6 +16,7 @@
 import { useMemo } from "react";
 import type { EChartsOption, SeriesOption } from "echarts";
 import { EChart } from "../../charts/EChart";
+import { chartTooltip } from "../chartTooltip";
 import { baseOption, chartTokens } from "../../charts/theme";
 import { withAlpha } from "../../styles/tokens";
 
@@ -35,10 +36,6 @@ function toneColor(tone: ChartTone): string {
 }
 
 /** timestamp · series · exact value · authority · as_of · formula (§12). */
-function provenanceLines(provenance: { authority: string; asOf: string; formula: string }): string {
-  return `${provenance.authority} · as_of ${provenance.asOf} · ${provenance.formula}`;
-}
-
 export interface Candle { t: string; o: number; h: number; l: number; c: number }
 export interface CandleMarker {
   kind: "BUY" | "SELL" | "FILL";
@@ -83,7 +80,11 @@ export function CandlesChart({
       tooltip: {
         formatter: (p) => {
           const d = p as unknown as { name: string; value: [string, number] };
-          return `${d.value[0]} · ${kind} · ${d.name}<br/>${provenanceLines(provenance)}`;
+          return chartTooltip({
+            head: d.value[0],
+            rows: [{ label: kind, value: String(d.value[1]), note: d.name }],
+            provenance,
+          });
         },
       },
     });
@@ -101,7 +102,16 @@ export function CandlesChart({
           if (!k) return "";
           // ECharts candlestick value: [idx, open, close, low, high]
           const [, o, c, l, h] = k.value;
-          return `${k.name} · O ${o} · H ${h} · L ${l} · C ${c}<br/>${provenanceLines(provenance)}`;
+          return chartTooltip({
+            head: k.name,
+            rows: [
+              { label: "open", value: String(o) },
+              { label: "high", value: String(h) },
+              { label: "low", value: String(l) },
+              { label: "close", value: String(c) },
+            ],
+            provenance,
+          });
         },
       },
       series: [
@@ -281,11 +291,15 @@ export function LinesChart({
       tooltip: {
         formatter: (params) => {
           const list = (Array.isArray(params) ? params : [params]) as unknown as { seriesName: string; value: [string, number]; marker: string }[];
-          const rows = list
-            .filter((p) => !p.seriesName.startsWith("__"))
-            .map((p) => `${p.marker}${p.seriesName} · ${yFormatter ? yFormatter(p.value[1]) : p.value[1]}`);
-          const at = list[0]?.value?.[0] ?? "";
-          return `${at}<br/>${rows.join("<br/>")}<br/>${provenanceLines(provenance)}`;
+          return chartTooltip({
+            head: list[0]?.value?.[0] ?? null,
+            rows: list.filter((p) => !p.seriesName.startsWith("__")).map((p) => ({
+              marker: p.marker,
+              label: p.seriesName,
+              value: yFormatter ? yFormatter(p.value[1]) : String(p.value[1]),
+            })),
+            provenance,
+          });
         },
       },
       series: out,
@@ -330,7 +344,11 @@ export function BarsChart({
       tooltip: {
         formatter: (params) => {
           const p = (Array.isArray(params) ? params[0] : params) as { name: string; value: number };
-          return `${p.name} · ${yFormatter ? yFormatter(p.value) : p.value}<br/>${provenanceLines(provenance)}`;
+          return chartTooltip({
+            headText: p.name,
+            rows: [{ label: "value", value: yFormatter ? yFormatter(p.value) : String(p.value) }],
+            provenance,
+          });
         },
       },
       series: [{
@@ -429,9 +447,21 @@ export function InfluenceGraph({
         trigger: "item",
         formatter: (p) => {
           const d = p as unknown as { dataType: string; name: string; data: { value?: number; sharePct?: number | null; insufficient?: boolean } };
-          if (d.dataType === "edge") return `ρ ${(d.data.value ?? 0).toFixed(2)}<br/>${provenanceLines(provenance)}`;
-          if (d.data.insufficient) return `${d.name} · INSUFFICIENT_DATA — no verdict, not a zero<br/>${provenanceLines(provenance)}`;
-          return `${d.name} · exposure ${d.data.sharePct ?? "—"}%<br/>${provenanceLines(provenance)}`;
+          if (d.dataType === "edge") {
+            return chartTooltip({ rows: [{ label: "ρ", value: (d.data.value ?? 0).toFixed(2) }], provenance });
+          }
+          if (d.data.insufficient) {
+            return chartTooltip({
+              headText: d.name,
+              rows: [{ label: "verdict", value: "INSUFFICIENT_DATA", note: "no verdict, not a zero" }],
+              provenance,
+            });
+          }
+          return chartTooltip({
+            headText: d.name,
+            rows: [{ label: "exposure", value: d.data.sharePct === undefined || d.data.sharePct === null ? "—" : `${d.data.sharePct}%` }],
+            provenance,
+          });
         },
       },
       series: [{
@@ -527,7 +557,14 @@ export function EpisodesChart({
         formatter: (p) => {
           const d = (p as unknown as { value: [number, string, string, string] }).value;
           if (!Array.isArray(d)) return "";
-          return `${cats[d[0]]} · ${d[1]} → ${d[2]} · depth ${d[3]}<br/>${provenanceLines(provenance)}`;
+          return chartTooltip({
+            headText: cats[d[0]],
+            rows: [
+              { label: "from → to", value: `${d[1]} → ${d[2]}` },
+              { label: "depth", value: String(d[3]) },
+            ],
+            provenance,
+          });
         },
       },
       series: [
@@ -625,7 +662,11 @@ export function DensityHeatmap({
         formatter: (p) => {
           const d = p as unknown as { data: [number, number, number | null] };
           const [h, dy, v] = d.data;
-          return `${days[dy]} ${hours[h]}:00 UTC · ${v === null ? "no data" : `${v} fills`}<br/>${provenanceLines(provenance)}`;
+          return chartTooltip({
+            headText: `${days[dy]} ${hours[h]}:00 UTC`,
+            rows: [{ label: "fills", value: v === null ? "no data" : String(v) }],
+            provenance,
+          });
         },
       },
       series: [{

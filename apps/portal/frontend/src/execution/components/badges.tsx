@@ -287,10 +287,40 @@ const STAGE_LABEL: Record<PromotionStage, string> = {
  * `CANARY` because it IS live money (decision D2); shortening it would be the
  * one abbreviation on this surface that could cost real capital.
  */
-export function EnvironmentBadge({ stage }: { stage: PromotionStage }) {
+export function EnvironmentBadge({ stage, current = false, live = false }: {
+  stage: PromotionStage;
+  /** The stage the thing being read is in: heavier and outlined, never larger. */
+  current?: boolean;
+  /** Draw the running dot, and pulse it only where the stream is delivering. */
+  live?: boolean;
+}) {
   return (
-    <span className="exec-env" data-stage={stage} title={stage}>
+    <span className="exec-env" data-stage={stage} data-current={current ? "true" : undefined} title={stage}>
+      {live ? <span className="exec-stage-dot" data-live="true" aria-hidden="true" /> : null}
       {STAGE_LABEL[stage]}
+    </span>
+  );
+}
+
+/**
+ * A stage word the source published as a plain string.
+ *
+ * Same treatment as `EnvironmentBadge` — the two exist because some rows carry
+ * a typed `PromotionStage` and others carry whatever the source wrote. An
+ * unrecognised word still gets the chip, in the neutral ink: the label is the
+ * source's, only the drawing is ours.
+ */
+export function StageLabel({ stage, current = false }: { stage: string; current?: boolean }) {
+  const word = stage.trim().toUpperCase();
+  const key = (Object.keys(STAGE_LABEL) as PromotionStage[])
+    .find((candidate) => candidate === word || STAGE_LABEL[candidate] === word)
+    ?? (word.startsWith("PAPER") ? "PAPER_OBSERVATION"
+      : word.startsWith("SANDBOX") ? "SANDBOX_VALIDATION"
+        : word.includes("CANARY") ? "LIVE_CANARY"
+          : word.startsWith("LIVE") ? "LIVE_FULL" : null);
+  return (
+    <span className="exec-stage" data-stage={key ?? undefined} data-current={current ? "true" : undefined} title={stage}>
+      {key ? STAGE_LABEL[key] : stage}
     </span>
   );
 }

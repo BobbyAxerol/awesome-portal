@@ -1804,22 +1804,28 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
   // for its own when it is expanded and the answer is kept, so a fleet of 48
   // costs nothing until someone looks — and each series is the published one,
   // never a second computation of the same numbers.
-  const [equity, setEquity] = useState<Record<string, readonly number[] | "loading" | null>>({});
-  const needEquity = useCallback((alphaId: string) => {
-    setEquity((current) => {
-      if (current[alphaId] !== undefined) return current;
-      void api.getFinancialChart({ environment: "paper", subjectKind: "alpha", subjectId: alphaId, metric: "equity" })
-        .then((result) => {
-          const points = result.ok
-            ? (result.value.series?.[0]?.points ?? [])
-              .map(([, value]) => (value === null ? Number.NaN : Number(value)))
-              .filter((value) => Number.isFinite(value))
-            : [];
-          setEquity((map) => ({ ...map, [alphaId]: points.length > 1 ? points : null }));
-        });
-      return { ...current, [alphaId]: "loading" };
-    });
-  }, [api]);
+  /*
+   * Every row's 30-day line, in one read (owner, 2026-09-08: show it, do not
+   * make the reader expand for it).
+   *
+   * It used to be one chart request per alpha, fired on expand, because fifty
+   * rows meant fifty reads. `alphas/equity-sparklines` returns them all from
+   * the daily closes the fleet statistics already load, so the column is drawn
+   * inline at the cost of a single request.
+   */
+  const sparklines = useApiRead(
+    () => api.getEquitySparklines("paper"),
+    [api, realtime.refreshKey],
+    { keepValue: true },
+  );
+  const equity = useMemo(() => {
+    const out: Record<string, readonly number[] | "loading" | null> = {};
+    for (const item of state.value?.page.rows ?? []) {
+      out[item.alphaId] = sparklines.status === "loading" ? "loading" : sparklines.value?.[item.alphaId] ?? null;
+    }
+    return out;
+  }, [state.value, sparklines.status, sparklines.value]);
+
   return (
     <AlphaFleet
       filter={filter}
@@ -1827,7 +1833,6 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
       status={state.status}
       reason={state.reason}
       equity={equity}
-      onNeedEquity={needEquity}
       onFilterChange={(next) => {
         setFilter(next);
         setQuery((current) => ({

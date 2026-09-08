@@ -3,7 +3,14 @@
  *
  * Raw ISO-8601 (`2026-08-22T12:00:20Z`) is machine punctuation, not a
  * timestamp a reviewer reads under time pressure. Every visible instant
- * renders as `datetime64[ms]`: `2026-08-22 12:00:20.000 UTC`.
+ * renders to the second: `2026-08-22 12:00:20 UTC`.
+ *
+ * Seconds, not milliseconds — owner decision 2026-09-08, replacing the
+ * `datetime64[ms]` form chosen on 08-30. Three trailing digits appeared on
+ * every row of every table and were read by nobody; they cost a column of
+ * width and pushed the values that are read out of alignment. Where a
+ * sub-second instant genuinely matters the exact source string is still
+ * carried in the element's title, so nothing is lost, only unprinted.
  *
  * Timezone policy (owner, 2026-08-30): the venue data standard is UTC+0 and
  * the UI never converts to the reader's local offset — with venues across
@@ -25,6 +32,5 @@ export function utcStamp(iso: string | number | null | undefined): string {
   if (!iso) return "—";
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?(?:\.(\d{1,3})\d*)?(Z)?$/.exec(iso.trim());
   if (!m) return iso;
-  const ms = (m[4] ?? "").padEnd(3, "0");
-  return `${m[1]} ${m[2]}:${m[3] ?? "00"}.${ms}${m[5] ? " UTC" : ""}`;
+  return `${m[1]} ${m[2]}:${m[3] ?? "00"}${m[5] ? " UTC" : ""}`;
 }

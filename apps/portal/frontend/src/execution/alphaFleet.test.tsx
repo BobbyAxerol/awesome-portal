@@ -95,7 +95,7 @@ describe("Alpha Fleet — venue and owner filters over the published rows (P0-5)
   });
 });
 
-describe("Alpha Fleet — the equity sparkline is fetched per row, not per fleet (P0-5)", () => {
+describe("Alpha Fleet — the equity sparkline is drawn inline for every row (P0-5)", () => {
   const item = {
     alphaId: "alpha_1", alphaLabel: "alpha_1", version: "1", stage: "PAPER", stages: ["PAPER"], owner: "bobby",
     portfolios: [], deployments: [{
@@ -114,20 +114,20 @@ describe("Alpha Fleet — the equity sparkline is fetched per row, not per fleet
     summary: { alphaCount: 1, deploymentCount: 1, portfolioCount: 0, needsAttentionCount: 0, researchOnlyCount: 0, stageCounts: { PAPER: 1 }, exposureByCurrency: [], currentPositionPnlByCurrency: [] },
   } as never;
 
-  it("says the row will load its own series, asks for it once when expanded, and draws it when it arrives", () => {
-    const asked: string[] = [];
-    const { rerender } = render(<AlphaFleet list={list} equity={{}} onNeedEquity={(id) => asked.push(id)} />);
-    expect(screen.getByText("expand to load")).toBeTruthy();
-    expect(asked).toEqual([]);
-
-    fireEvent.click(screen.getByText("▸"));
-    expect(asked).toEqual(["alpha_1"]);
-
-    rerender(<AlphaFleet list={list} equity={{ alpha_1: "loading" }} onNeedEquity={(id) => asked.push(id)} />);
+  it("draws the row's series inline, without waiting for anyone to expand it", () => {
+    // Owner, 2026-09-08: show the 30-day line, do not make the reader open the
+    // row for it. The whole column now arrives in one read, so there is no
+    // per-row request left to defer and no "expand to load" state to show.
+    const { rerender } = render(<AlphaFleet list={list} equity={{ alpha_1: "loading" }} />);
     expect(screen.getByText("loading…")).toBeTruthy();
 
-    rerender(<AlphaFleet list={list} equity={{ alpha_1: [10, 11, 12] }} onNeedEquity={(id) => asked.push(id)} />);
-    expect(screen.queryByText("expand to load")).toBeNull();
+    rerender(<AlphaFleet list={list} equity={{ alpha_1: [10, 11, 12] }} />);
     expect(screen.queryByText("loading…")).toBeNull();
+    expect(screen.queryByText("expand to load")).toBeNull();
+  });
+
+  it("says the mirror has no series rather than blaming the reader for not expanding", () => {
+    render(<AlphaFleet list={list} equity={{ alpha_1: null }} />);
+    expect(screen.getByText("no series")).toBeTruthy();
   });
 });

@@ -439,6 +439,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getMarketCandles() { return unavailable("Venue market candles are not part of the fixture set."); },
     async getObservedTimeline() { return unavailable("The observed timeline BFF is not part of the fixture set."); },
     async getManagerRelationPage() { return unavailable("The Manager relation BFF is not part of the fixture set."); },
+    async getEquitySparklines() { return unavailable("The fleet equity sparklines are not part of the fixture set."); },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
       return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");

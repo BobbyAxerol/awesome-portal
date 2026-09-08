@@ -25,6 +25,7 @@ import type { BindingExposure } from "../analytics";
 import { isFullPopulation } from "../analytics";
 import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badges";
 import { PanelState } from "../components/states";
+import { Stamp } from "../components/cells";
 import { capNotice, capPreserving } from "../components/cap";
 
 /**
@@ -521,7 +522,7 @@ export function AccountBroker360({
               {shownSync.shown.map((row) => (
                 <tr key={`${row.at}-${row.source}`} data-status={row.status}>
                   <th scope="row">
-                    <span className="exec-num">{row.at}</span>
+                    <Stamp at={row.at} />
                   </th>
                   <td>{row.source}</td>
                   <td>

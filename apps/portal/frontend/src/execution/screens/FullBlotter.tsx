@@ -38,6 +38,8 @@ import type { CurrencyAggregate } from "../blotterAggregates";
 import { useState } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
+import { Money, Qty } from "../components/cells";
+import { formatExact } from "../formatExact";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionWorkspace } from "../components/workspace";
 import { fmtBlotterAge } from "../clock";
@@ -450,8 +452,13 @@ export function FullBlotter({
     { key: "where", header: "deployment · venue", width: "11rem", render: (row) => <span className="exec-bl-dim">{row.deployment} · {row.venue}</span> },
     { key: "symbol", header: "symbol", width: "7rem", render: (row) => row.symbol },
     { key: "type", header: "type · tif · flags", width: "12rem", render: (row) => <Flags flags={[{ text: row.orderType }, { text: row.side, tone: row.side === "BUY" ? "good" : "bad" }]} /> },
-    { key: "price", header: "price / trigger", width: "9rem", numeric: true, render: (row) => (row.price ? <span><span className="exec-num">{row.price}</span><span className="exec-bl-mute"> / —</span></span> : <span className="exec-gate-unverified">no limit price</span>) },
-    { key: "qty", header: "qty filled / total", width: "9rem", numeric: true, render: (row) => (row.filledQuantity ? <span className="exec-num">{row.filledQuantity}/{row.quantity}</span> : <span className="exec-num">{row.quantity}</span>) },
+    { key: "price", header: "price / trigger", width: "9rem", numeric: true, render: (row) => (row.price ? <span><Money value={row.price} /><span className="exec-bl-mute"> / —</span></span> : <span className="exec-gate-unverified">no limit price</span>) },
+    { key: "qty", header: "qty filled / total", width: "9rem", numeric: true, render: (row) => (row.filledQuantity
+      // One text node, not two spans with a slash between them: the pair is a
+      // single reading ("this much of that much") and splitting it lets a line
+      // break land in the middle of the fraction.
+      ? <span className="exec-num" title={`${row.filledQuantity}/${row.quantity}`}>{formatExact(row.filledQuantity, "qty").display}/{formatExact(row.quantity, "qty").display}</span>
+      : <Qty value={row.quantity} />) },
     { key: "avg", header: "avg px · slip · fee", width: "10rem", numeric: true, render: (row) => (row.fee ? <span>— · —<div className="exec-bl-sub">fee {row.fee}{row.feeCurrency ? ` ${row.feeCurrency}` : ""}</div></span> : <span className="exec-gate-unverified">not published</span>) },
     { key: "status", header: "status", width: "10rem", render: (row) => (<><OrderStatusChip status={row.status} />{row.rejectReason ? <span className="exec-blotter-reason"> {row.rejectReason}</span> : null}</>) },
     { key: "age", header: "age", width: "5rem", numeric: true, render: () => <span className="exec-bl-dim">—</span> },

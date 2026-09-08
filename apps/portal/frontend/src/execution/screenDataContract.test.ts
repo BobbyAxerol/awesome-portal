@@ -47,8 +47,8 @@ describe("EDS-02 frozen frontend generated contract decoder", () => {
     const marchDstBoundary = readUtcEpochMs(Date.UTC(2026, 2, 8, 7, 30, 0, 0));
     expect(august).not.toBeNull();
     expect(marchDstBoundary).not.toBeNull();
-    expect(formatUtcEpochMs(august!)).toBe("2026-08-22 12:00:20.417 UTC");
-    expect(formatUtcEpochMs(marchDstBoundary!)).toBe("2026-03-08 07:30:00.000 UTC");
+    expect(formatUtcEpochMs(august!)).toBe("2026-08-22 12:00:20 UTC");
+    expect(formatUtcEpochMs(marchDstBoundary!)).toBe("2026-03-08 07:30:00 UTC");
     expect(readUtcEpochMs("1788540677303")).toBeNull();
     expect(readUtcEpochMs(1788540677303.1)).toBeNull();
     expect(readUtcEpochMs(8_640_000_000_000_001)).toBeNull();
