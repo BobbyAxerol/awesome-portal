@@ -15,6 +15,7 @@ import { FullBlotter, type BlotterRow } from "./screens/FullBlotter";
 import { OperationsQueueScreen } from "./screens/OperationsQueue";
 import { readOperationsQueue } from "./operations";
 import { blotterHandlers } from "./testHandlers";
+import { targetHrefFor } from "./idLinks";
 import { OPERATIONS_QUEUE_FIXTURE } from "./operations.fixtures";
 import type { Envelope, KeysetPage } from "./contracts";
 
@@ -86,5 +87,39 @@ describe("operations queue source line", () => {
       />,
     );
     expect(screen.getByRole("status").textContent).toMatch(/owf_9 is not on this page/);
+  });
+});
+
+describe("targetHrefFor — routing by the type the source published", () => {
+  it("routes each addressable kind to its own register", () => {
+    expect(targetHrefFor("ACCOUNT", "acct-live-01")).toBe("/deployments/accounts/acct-live-01");
+    expect(targetHrefFor("PORTFOLIO", "PF-MAIN")).toBe("/deployments/portfolios/PF-MAIN");
+    expect(targetHrefFor("BROKER_BINDING", "binance_main_01")).toBe("/deployments/accounts?binding=binance_main_01");
+  });
+
+  it("links ids the old prefix rule silently dropped", () => {
+    // The queue routed by sniffing for an `acct-` prefix, so an ACCOUNT whose
+    // id is named anything else was left as plain text — inference losing to
+    // the answer the source had already given.
+    expect(targetHrefFor("ACCOUNT", "binance_testnet_main")).toBe("/deployments/accounts/binance_testnet_main");
+  });
+
+  it("needs the environment before it can address a deployment", () => {
+    // The same deployment id exists under three books; without the environment
+    // there is no way to know which route resolves, and a link to a route that
+    // does not resolve is worse than plain text.
+    expect(targetHrefFor("DEPLOYMENT", "dep_1")).toBeNull();
+    expect(targetHrefFor("DEPLOYMENT", "dep_1", "SANDBOX")).toBe("/deployments/sandbox/dep_1");
+  });
+
+  it("sends nobody to a route that does not exist", () => {
+    expect(targetHrefFor("SYSTEM", "trading-system")).toBeNull();
+    expect(targetHrefFor("ORDER", "ord_9")).toBeNull();
+    expect(targetHrefFor("ACCOUNT", null)).toBeNull();
+    expect(targetHrefFor(null, "acct-1")).toBeNull();
+  });
+
+  it("escapes an id rather than letting it shape the path", () => {
+    expect(targetHrefFor("ACCOUNT", "a/b?c")).toBe("/deployments/accounts/a%2Fb%3Fc");
   });
 });

@@ -2265,6 +2265,45 @@ nguồn. Test đúng. Nay **giữ cả hai**: chữ của hợp đồng, cộng 
 `delivery_profile` bị ghim `const "fixture"` trong `execution-operations.v1` —
 schema của codex, **tôi không tự đổi**. Ghi lại ở đây để bên phát quyết định.
 
+#### Nối màn với màn — `idLinks.tsx` (owner giao thêm trong goal 6)
+
+Blotter tự viết luật ở footer của chính nó: **"every id navigates"**. Sản phẩm
+giữ đúng một nửa — deployment id là link, còn **account id và portfolio id in
+ngay cạnh đó là chữ thường**. Bất đối xứng kiểu này đắt: người đọc thấy một
+deployment `HALTED` thì muốn mở đúng cái account nó giao dịch qua, và một dòng
+gọi tên account mà không tới được bắt họ sang register gõ tay lại chuỗi **đang
+nằm trước mắt**.
+
+Nay một bảng route duy nhất, ba màn overview dùng chung: đổi tên route thì mọi
+link đổi cùng lúc, không còn màn nào trỏ vào đường đã chết.
+
+**Và một chỗ suy diễn bị bỏ.** Operations Queue chọn đích bằng cách **ngửi tiền
+tố `acct-`** của id. Đó là suy diễn đúng nghĩa rule §3.5: nó nối được những id
+tình cờ đặt tên kiểu đó, **âm thầm bỏ** những id khác, và gãy ngay ngày nguồn
+đổi cách đặt tên — trên dev, `binance_testnet_main` là một ACCOUNT thật và
+**không hề được nối** vì không bắt đầu bằng `acct-`. Hợp đồng đã publish
+`target.type` với **sáu** giá trị (`ACCOUNT · BROKER_BINDING · DEPLOYMENT ·
+ORDER · PORTFOLIO · SYSTEM`); nay đọc câu trả lời nguồn đã đưa.
+
+`null` ở đúng chỗ Portal **thật sự không có nơi để tới**: `SYSTEM` không phải
+một chủ thể, `ORDER` chưa có route riêng, và `DEPLOYMENT` chỉ địa chỉ hoá được
+khi `environment` nói nó ở sổ nào trong ba sổ. **Một link tới route không
+resolve còn tệ hơn chữ thường.** Incident detail cũng nối target theo cùng luật.
+
+**6 test** khoá bộ định tuyến này, gồm cả trường hợp id chứa `/` và `?` (escape,
+không để id nắn đường dẫn).
+
+**Đo trên dev** (trừ 12 link nav của sidebar có ở mọi trang):
+
+| Màn | account id nối được | portfolio id nối được | trước |
+|---|---|---|---|
+| Paper overview | **43** | **42** | 0 · 0 |
+| Sandbox overview | **35** | **35** | 0 · 0 |
+| Live overview | 0 | 0 | 0 · 0 — hàng live duy nhất **không publish** account/portfolio, nên in "not published", không bịa link |
+| Operations Queue | — | — | 0 hàng |
+
+**155 link mới**, mỗi cái trỏ tới một route resolve được.
+
 #### Đo trên dev — harness `gate6.js`, 10 màn, hai chế độ
 
 | Màn | Phần tử động trước | Sau | `prefers-reduced-motion` | Tuổi thật hiện ra |

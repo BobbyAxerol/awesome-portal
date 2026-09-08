@@ -19,6 +19,7 @@ import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { liveDot, sourceTone } from "../sourceTone";
 import { pulses, useArrivals, useIds } from "../listMotion";
+import { ID_ROUTES, IdLink } from "../idLinks";
 
 export const LIVE_FILTERS = ["all", "full", "canary", "issues"] as const;
 export type LiveFilter = (typeof LIVE_FILTERS)[number];
@@ -147,7 +148,7 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
                           <td className="exec-lv-edge"><a href={`/deployments/live/${encodeURIComponent(id)}`}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-af-dim">· {id}</span></td>
                           <td>{str(row.mode) ?? notPublished}</td>
                           <td data-tone={sourceTone(str(row.state)) ?? undefined} data-pulse={pulses(sourceTone(str(row.state))) ? "true" : undefined}>{str(row.state) ?? "runtime state not published"}</td>
-                          <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · {str(row.account_id) ?? "account not published"} · {str(row.portfolio_id) ?? "portfolio not published"}</td>
+                          <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · <IdLink id={str(row.account_id)} href={ID_ROUTES.account} absent="account not published" /> · <IdLink id={str(row.portfolio_id)} href={ID_ROUTES.portfolio} absent="portfolio not published" /></td>
                         </tr>
                       );
                     })}

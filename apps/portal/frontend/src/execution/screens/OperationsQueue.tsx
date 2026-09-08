@@ -38,6 +38,7 @@ import { fmtAge, throughputSeries } from "../clock";
 import type { DetailPart, QueueDemo, QueueSmokeRow } from "../operationsQueue.smoke";
 import { pulses, useArrivals, useIds, useNow } from "../listMotion";
 import { sourceTone } from "../sourceTone";
+import { targetHrefFor } from "../idLinks";
 
 /** The hi-fi's three chips. Applied server-side; they never filter loaded rows. */
 export const QUEUE_FILTERS = ["NEEDS_ATTENTION", "MINE", "ALL_24H"] as const;
@@ -134,7 +135,7 @@ function SmokeRow({ item, elapsed, sub, onOpen, selected }: { item: QueueSmokeRo
         <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri={item.priority}>{item.priority}</span></td>
         <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(item.row)}>{item.row.operationId}</button></th>
         <td className="exec-oq-cmd">{item.row.commandKey}<PhaseTrail phases={item.phases} /></td>
-        <td className="exec-oq-target">{targetHref(item.row.target.id) ? <a href={targetHref(item.row.target.id)!}>{item.row.target.id}</a> : item.row.target.id}</td>
+        <td className="exec-oq-target">{targetHrefFor(item.row.target.type, item.row.target.id, item.row.environment) ? <a href={targetHrefFor(item.row.target.type, item.row.target.id, item.row.environment)!}>{item.row.target.id}</a> : item.row.target.id}</td>
         <td><span className="exec-oq-state" data-tone={item.stateChip.tone} data-pulse={item.stateChip.pulse ? "true" : undefined}>{item.stateChip.label}{item.progress ? "" : ""}</span></td>
         <td className="exec-oq-age" data-tone={item.ageTone}>{fmtAge(age)}</td>
         <td className="exec-oq-next" data-muted={item.next.muted ? "true" : undefined}>{item.next.href ? <a href={item.next.href}>{item.next.label}</a> : item.next.label}</td>
@@ -159,7 +160,7 @@ function ContractRow({ row, now, onOpen, selected, arrived }: { row: QueueRow; n
       <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri="—">—</span></td>
       <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(row)}>{row.operationId}</button></th>
       <td className="exec-oq-cmd">{row.commandKey || "—"}</td>
-      <td className="exec-oq-target">{targetHref(row.target.id) ? <a href={targetHref(row.target.id)!}>{row.target.id}</a> : (row.target.id ?? "—")}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
+      <td className="exec-oq-target">{targetHrefFor(row.target.type, row.target.id, row.environment) ? <a href={targetHrefFor(row.target.type, row.target.id, row.environment)!}>{row.target.id}</a> : (row.target.id ?? "—")}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
       <td className="exec-oq-three"><span className="exec-oq-state" data-tone={sourceTone(row.sourceStatus) ?? "mute"} data-pulse={pulses(sourceTone(row.sourceStatus)) ? "true" : undefined} data-col="source">{row.sourceStatus ?? "not stated"}</span> <span className="exec-oq-dim">verify <span data-col="verify">{row.verificationResult ?? "not stated"}</span></span> <span className="exec-oq-dim" data-col="triage">{row.triageState ? TRIAGE_LABEL[row.triageState] : "not stated"}</span></td>
       <td className="exec-oq-age" data-tone="mute">{ageFrom(row.createdAt, now)}</td>
       <td className="exec-oq-next" data-muted="true">{row.acknowledgedBy ?? row.resolvedBy ?? "—"}</td>
@@ -167,8 +168,7 @@ function ContractRow({ row, now, onOpen, selected, arrived }: { row: QueueRow; n
   );
 }
 
-const targetHref = (id: string | null | undefined): string | null =>
-  id && id.startsWith("acct-") ? `/deployments/accounts/${id}` : null;
+
 
 export function OperationsQueueScreen({
   queue,

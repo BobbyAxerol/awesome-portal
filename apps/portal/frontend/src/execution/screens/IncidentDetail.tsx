@@ -17,6 +17,7 @@ import type { PanelStatus } from "../contracts";
 import { blockerText, incidentRail, type IncidentCollection, type IncidentDetail as Incident } from "../operations";
 import { hhmm, incidentSparkSeries, mmss } from "../clock";
 import type { GateRow, IncidentDemo, IncidentLive, OpRow } from "../incident.smoke";
+import { targetHrefFor } from "../idLinks";
 
 const PANEL_TITLE: Record<string, string> = {
   findings: "Findings",
@@ -201,7 +202,19 @@ export function IncidentDetailScreen({
             {conflict ? <span className="exec-inc2-state" data-tone="bad">CHANGED — reload</span> : null}
             <span className="exec-inc2-spacer" />
             <span className="exec-inc2-meta">
-              {smoke ? `opened ${smoke.openedAt} · owner ${smoke.owner} · ${smoke.origin} · ${smoke.slaAck}` : `${incident.target.id ?? "target not stated"}${incident.assignedTo ? ` · owner ${incident.assignedTo}` : " · no assignee"}`}
+              {smoke ? `opened ${smoke.openedAt} · owner ${smoke.owner} · ${smoke.origin} · ${smoke.slaAck}` : (
+                <>
+                  {/* The subject of the incident was printed as text. An
+                      operator reading it wants to open it, and copying the id
+                      into another screen's search box is a step the row can
+                      take for them — when the published type says where it
+                      goes, and plain text when it does not. */}
+                  {targetHrefFor(incident.target.type, incident.target.id)
+                    ? <a href={targetHrefFor(incident.target.type, incident.target.id)!}>{incident.target.id}</a>
+                    : (incident.target.id ?? "target not stated")}
+                  {incident.assignedTo ? ` · owner ${incident.assignedTo}` : " · no assignee"}
+                </>
+              )}
             </span>
           </header>
 

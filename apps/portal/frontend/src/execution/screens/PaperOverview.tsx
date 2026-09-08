@@ -26,6 +26,7 @@ import { utcStamp } from "../time";
 import { soonReason } from "../soon";
 import { liveDot, sourceTone } from "../sourceTone";
 import { pulses, useArrivals, useIds } from "../listMotion";
+import { ID_ROUTES, IdLink } from "../idLinks";
 
 export interface PaperOverviewProps {
   /** `execution.paper-overview.v1` — the published truth for this stage. */
@@ -206,7 +207,7 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                     >
                       <div className="exec-po-id">
                         <div className="exec-po-alpha"><a href={href} onClick={(e) => e.stopPropagation()}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-po-dim">· {str(row.venue) ?? "venue not published"}</span></div>
-                        <div className="exec-po-idline">deployment {id} · portfolio {str(row.portfolio_id) ?? "not published"} · account {str(row.account_id) ?? "not published"}</div>
+                        <div className="exec-po-idline">deployment {id} · portfolio <IdLink id={str(row.portfolio_id)} href={ID_ROUTES.portfolio} absent="not published" /> · account <IdLink id={str(row.account_id)} href={ID_ROUTES.account} absent="not published" /></div>
                       </div>
                       <div className="exec-po-days">
                         <div className="exec-po-gateline"><span data-tone={sourceTone(str(row.state)) ?? undefined} data-pulse={pulses(sourceTone(str(row.state))) ? "true" : undefined}>{str(row.state) ?? "runtime state not published"}</span></div>

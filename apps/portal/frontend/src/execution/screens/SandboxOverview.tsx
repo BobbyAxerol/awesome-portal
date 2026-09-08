@@ -22,6 +22,7 @@ import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { liveDot, sourceTone } from "../sourceTone";
 import { pulses, useArrivals, useIds } from "../listMotion";
+import { ID_ROUTES, IdLink } from "../idLinks";
 
 export const SANDBOX_FILTERS = ["all", "halted", "findings"] as const;
 export type SandboxFilter = (typeof SANDBOX_FILTERS)[number];
@@ -188,7 +189,7 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                       return (
                         <tr key={id} className="exec-af-row" data-arrived={arrivals.has(id) ? "true" : undefined}>
                           <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-af-dim">· {id}</span></td>
-                          <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · {str(row.account_id) ?? "account not published"} · {str(row.portfolio_id) ?? "portfolio not published"}</td>
+                          <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · <IdLink id={str(row.account_id)} href={ID_ROUTES.account} absent="account not published" /> · <IdLink id={str(row.portfolio_id)} href={ID_ROUTES.portfolio} absent="portfolio not published" /></td>
                           <td data-tone={sourceTone(str(row.state)) ?? undefined} data-pulse={pulses(sourceTone(str(row.state))) ? "true" : undefined}>{str(row.state) ?? str(row.mode) ?? notPublished}</td>
                           <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}>Open certification →</a></td>
                         </tr>
