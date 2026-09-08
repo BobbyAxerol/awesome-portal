@@ -41,6 +41,7 @@ import type { BlotterGroups } from "./FullBlotter";
 import { useRelationFacts, type RelationFactsState } from "../useRelationFacts";
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
+import { candleProvenanceLine, type MarketContextCandles } from "../api/marketContext";
 import { unavailable } from "../api/ports";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
@@ -1254,7 +1255,18 @@ const readIntervalPref = (subject: string): MarketCandleInterval | null => {
 };
 const writeIntervalPref = (subject: string, interval: MarketCandleInterval): void => { try { window.localStorage.setItem(INTERVAL_PREF(subject), interval); } catch { /* per-viewer convenience only */ } };
 
-export function TradeReplayLive({ api, analytics, additive = null, alphaId, subjectId, focusId = null, relations = null }: { api: ExecutionApi; analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId: string | null; subjectId?: string; focusId?: string | null; relations?: RelationFactsState | null }) {
+export function TradeReplayLive({ api, analytics, additive = null, alphaId, subjectId, focusId = null, relations = null, environment = null }: { api: ExecutionApi; analytics: QueryAnalytics | null | undefined; additive?: QueryAnalytics | null; alphaId: string | null; subjectId?: string; focusId?: string | null; relations?: RelationFactsState | null;
+  /**
+   * Which book these events belong to, from the caller that knows.
+   *
+   * The market-context route requires it, and the environment is NOT derived
+   * from the account id here even though the id happens to contain it: reading
+   * meaning out of the shape of a string is the same inference that left the
+   * operations queue linking only the ids that happened to start with `acct-`.
+   * Absent, the Trading System's series is simply not asked for and the panel
+   * says which source it drew.
+   */
+  environment?: "paper" | "sandbox" | "live" | null }) {
   const subject = subjectId ?? alphaId ?? "subject";
   const accountScope = alphaId === null ? subjectId ?? null : null;
   // G9: the drained relation page set is the source once orders and fills have been read; the N25 page stands in before that and when the BFF is unavailable
@@ -1285,6 +1297,27 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   }, [events]);
   const interval = range ? fittingInterval(range.hi - range.lo, wanted) : wanted;
   const limit = range ? Math.min(MARKET_CANDLES_MAX_LIMIT, Math.ceil((range.hi - range.lo) / MARKET_CANDLE_INTERVAL_MS[interval]) + 2) : 500;
+  // Goal 7 (G10): the Trading System's own bars are asked for first, and the
+  // venue series stays as the typed fallback. Two sources, never merged — the
+  // venue says what the exchange published and this says what the Trading
+  // System recorded, and a fill that does not sit on the same bar in both is
+  // the finding, not a rendering problem to smooth over. The footer names
+  // whichever one was drawn.
+  const context = useApiRead<MarketContextCandles>(
+    () => !activeSymbol || !range || !venue || !environment
+      ? Promise.resolve(unavailable("No symbol, range or environment to read the Trading System's candles for."))
+      : api.getMarketContextCandles({
+          environment,
+          venue,
+          instrument: activeSymbol,
+          interval,
+          fromMs: range.lo,
+          toMs: range.hi,
+          pointLimit: Math.min(2000, limit),
+        }),
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, environment],
+    { keepValue: true },
+  );
   const market = useApiRead<MarketCandlesPayload>(
     () => !activeSymbol || !range
       ? Promise.resolve(unavailable("No symbol among this alpha's events to read candles for."))
@@ -1341,7 +1374,18 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
       <TradeReplayEvents
         orders={events.orders}
         fills={events.fills}
-        candles={events.candles}
+        candles={
+          // The live answer from the market-context source, not the field the
+          // analytics payload carried: that one lags the source it describes,
+          // and this panel's whole job is to say what is true right now. A
+          // typed refusal keeps its own code so `soon.ts` can classify it —
+          // `PENDING_MARKET_CONTEXT_ADAPTER` is a date, not a fault.
+          context.status === "ok" && context.value
+            ? { state: context.value.state, reason: candleProvenanceLine(context.value) }
+            : context.status === "loading"
+              ? { state: null, reason: null }
+              : { state: events.candles.state, reason: context.reason ?? events.candles.reason }
+        }
         asOf={events.asOf}
         accounts={events.accounts}
         market={marketMerged}
@@ -1559,7 +1603,11 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
               .map((tile, index) => ({ ...tile, index: HIFI_TILES.length + index + 1 })),
           ]
         : unavailableAnalyticsTiles(analyticsReason, envelope)}
-      replay={scopedFacts ? <TradeReplayLive api={api} analytics={scopedFacts} additive={analytics} alphaId={alphaId} focusId={focus} relations={relations} /> : undefined}
+      replay={scopedFacts ? <TradeReplayLive api={api} analytics={scopedFacts} additive={analytics} alphaId={alphaId} focusId={focus} relations={relations}
+        // The book these events were drawn from — the same one the relation
+        // page set was read for, so the Trading System's bars and the events
+        // on them come from one environment rather than two.
+        environment={factsEnv} /> : undefined}
       positions={positions ? pageOf(positions) : null}
       orders={orders ? pageOf(orders) : null}
       audit={audit ? pageOf(audit) : null}

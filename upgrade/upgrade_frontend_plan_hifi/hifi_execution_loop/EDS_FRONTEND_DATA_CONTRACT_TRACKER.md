@@ -2524,6 +2524,62 @@ Nguyên tắc chốt trước khi làm:
 Khảo sát bằng agent với **mạng bị bóp** (latency 1,2 s, 150 KB/s) để nhìn thấy
 đúng khoảnh khắc đang đọc — không đo được trạng thái này trên máy nhanh.
 
+### A19. GOAL 7 ĐÃ LÀM (08-09 tối) — nguồn nến thứ hai, và backoff của nguồn
+
+#### A19.1 G10 — nến của Trading System là **nguồn thứ hai**, không phải nguồn thay thế
+
+`market-context` là một trong hai contract Goal 7 mà **FE chưa hề đọc** (lệnh
+kiểm §7.8 câu 3). Nay có `api/marketContext.ts` đọc
+`portal.execution.market-context.candles.v1`.
+
+**Hai nguồn không hoán đổi cho nhau**: venue nói *sàn công bố gì*, data_layer
+nói *Trading System ghi nhận gì*. Một fill không nằm đúng nến ở cả hai bên
+**chính là phát hiện** — nên reader giữ chúng tách biệt và **mỗi panel nói rõ
+nó vẽ bằng nguồn nào**. Trade Replay hỏi Trading System trước, venue là fallback
+**có kiểu**.
+
+Đo trên dev: route validate đúng và trả **`PENDING_MARKET_CONTEXT_ADAPTER` 503**
+— adapter chưa được owner nối. Đúng tình huống gate Goal 7 đã lường: **ghi
+`Soon` và vẫn đóng goal**. Mã này nay nằm trong từ vựng `soon.ts` (lịch trình,
+không phải lỗi).
+
+Footer nay in **câu của chính nguồn**: `TRADING_SYSTEM_DATA_LAYER · coverage
+PARTIAL · SOURCE_BOUNDED · AGING · provider series — not a replay-grade
+history`. Ba từ sức khoẻ giữ **tách rời** vì chúng trả lời ba câu khác nhau —
+một chuỗi có thể vừa `AVAILABLE`, vừa `AGING`, vừa `POLL_BOUNDED`.
+
+**Không suy diễn environment từ hình dạng id.** Route cần `environment`;
+container không có. Id tài khoản *tình cờ* chứa nó (`…:paper:BINANCE`) nhưng
+đọc nghĩa từ hình dạng chuỗi đúng là kiểu suy diễn vừa bị gỡ ở Operations Queue
+(§A17.2). Nhận qua prop từ nơi thật sự biết; vắng thì **không hỏi** nguồn đó và
+panel nói mình vẽ bằng gì.
+
+#### A19.2 G11 — SSE v2, và một backoff nguồn công bố mà client đang bỏ qua
+
+Dev **đang publish** `execution.manager-realtime-snapshot.v2`; FE **không đọc
+schema đó** ở đâu cả. Nay:
+
+- **Kiểm phiên bản**. Lấy resume point từ một envelope chưa từng nhận mình là
+  contract này là cách một client resume từ cursor mang nghĩa khác — mà cursor
+  thì **opaque**, nên không chỗ nào phía sau nhận ra.
+- **`resnapshot_not_before` được tôn trọng.** Trước đây sau một projection gap
+  client chờ **cứng 1 giây**, bất kể nguồn nói gì — tức là client tự quyết ép
+  một nguồn vừa bảo nó chờ. Nay chờ đúng mốc nguồn đưa; `null` hoặc mốc đã qua
+  = quay lại ngay; chặn trên 60 s **để phòng giá trị hỏng**, không phải để có ý
+  kiến thứ hai về backoff.
+- **`stream_available` / `data_state`** được đọc. Vắng mặt đọc là *không đang
+  phát* — một stream nguồn không buồn mô tả thì không phải thứ để vẽ dot sống.
+
+#### A19.3 Ba lần tôi tự dò sai, ghi lại để khỏi lặp
+
+`market/candles` cần `from_ms`/`to_ms`/`point_limit`; `venue-candles` cần
+`symbol` chứ không phải `instrument`. Tôi gọi sai và **suýt báo cáo 500
+INTERNAL_ERROR như một bug backend** — nó là câu trả lời đúng cho một truy vấn
+sai của tôi. Cùng loại với `orders-fills` (§A15) và `activity` 400 (§A13). Test
+mới khẳng định đường dẫn dùng **đúng tên tham số của route này**.
+
+**Gate:** 2 051 test (10 test mới), tsc sạch.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

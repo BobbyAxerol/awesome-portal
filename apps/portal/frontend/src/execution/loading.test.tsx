@@ -7,6 +7,8 @@
  * already left. Each of those is a test here.
  */
 import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -156,5 +158,28 @@ describe("a screen that is still reading asserts nothing", () => {
     // The opposite mistake would be as bad: a real refusal must still be shown.
     render(<MemoryRouter><AlphaFleet status="unavailable" reason="source down" /></MemoryRouter>);
     expect(screen.queryByText(/reading…/)).toBeNull();
+  });
+});
+
+describe("the shapes are actually visible, and cost one animation per region", () => {
+  it("fills with a token that can be seen against the panel it sits on", () => {
+    // Measured on the deployed build before this was fixed: --surface-2 on
+    // --paper-raised is 1.11:1 on carbon and 1.12:1 on the light palette, and
+    // the sweep used --surface-3, which on carbon IS the panel background —
+    // a highlight darker than the bar it crossed. Fifty-five animations ran
+    // and not one of them could be seen. --line is 1.46:1 / 1.32:1.
+    const css = readFileSync(join(__dirname, "execution.css"), "utf8");
+    const rule = css.slice(css.indexOf(".exec-sk-line {"), css.indexOf("}", css.indexOf(".exec-sk-line {")));
+    expect(rule).toContain("background: var(--line)");
+    expect(rule).not.toContain("--surface-2");
+  });
+
+  it("sweeps once per region, not once per bar", () => {
+    // The first cut animated every line independently: sixty-six in-phase
+    // compositor animations on a six-by-eleven grid, which costs more than one
+    // wave and reads as none.
+    const css = readFileSync(join(__dirname, "execution.css"), "utf8");
+    expect(css).not.toContain(".exec-sk-line::after");
+    expect(css).toContain(".exec-sk-table::after");
   });
 });

@@ -156,11 +156,18 @@ describe("the product container opens the stream once it is published (P4-H)", (
       ...createFixtureApi(),
       getCommandCenterSnapshot: async () => ({ ok: true as const, value: published as unknown }),
     };
+    // The version the dev BFF actually publishes. The container checks it now:
+    // a resume point read out of an envelope that never claimed to be this
+    // contract is how a client resumes from a cursor meaning something else,
+    // and cursors are opaque so nothing downstream would notice.
     vi.stubGlobal("fetch", async () => new Response(JSON.stringify({
-      schema_version: "execution.realtime-snapshot.v1",
+      schema_version: "execution.manager-realtime-snapshot.v2",
       cursor: "sha256:resume",
       projection_epoch: "e1",
       projection_sequence: 7,
+      stream_available: true,
+      data_state: "POPULATED",
+      resnapshot_not_before: null,
     }), { status: 200, headers: { "content-type": "application/json" } }));
     render(<MemoryRouter><CommandCenterSnapshotContainer api={api} sseFactory={factory} /></MemoryRouter>);
     await waitFor(() => expect(opened).toHaveLength(1));

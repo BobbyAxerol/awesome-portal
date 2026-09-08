@@ -2078,13 +2078,23 @@ describe("Approval Inbox — the full state set", () => {
     // SHOW_AFTER_MS: a read that returns faster than that shows nothing at all,
     // because a flash of grey between two good frames is worse than waiting.
     vi.useFakeTimers();
-    const { container } = render(
-      <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
-    );
-    act(() => { vi.advanceTimersByTime(SHOW_AFTER_MS + 20); });
-    expect(container.querySelectorAll(".exec-sk-row").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Inbox zero/)).toBeNull();
-    vi.useRealTimers();
+    try {
+      const { container } = render(
+        <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
+      );
+      act(() => { vi.advanceTimersByTime(SHOW_AFTER_MS + 20); });
+      // The placeholder rows live inside the real `<tbody>`, so the column
+      // headers stay put — hence `tr[aria-hidden]` rather than a stand-in
+      // element that replaced the table.
+      expect(container.querySelectorAll('tbody tr[aria-hidden="true"]').length).toBeGreaterThan(0);
+      expect(container.querySelector("thead")).not.toBeNull();
+      expect(screen.queryByText(/Inbox zero/)).toBeNull();
+    } finally {
+      // Without the finally, a failure here leaves fake timers installed for
+      // every test after it in this file — one broken assertion took 97 others
+      // with it.
+      vi.useRealTimers();
+    }
   });
 
   it("keeps the rows on a partial read and says what is missing", () => {
@@ -3072,7 +3082,7 @@ describe("containers — the port meets the screens", () => {
     // What must never happen either way is the screen asserting "Inbox zero"
     // before it has been told anything.
     const { container } = render(<ApprovalInboxContainer api={createFixtureApi()} />);
-    expect(container.querySelectorAll(".exec-sk-row").length).toBe(0);
+    expect(container.querySelectorAll('tbody tr[aria-hidden="true"]').length).toBe(0);
     expect(screen.queryByText(/Inbox zero/)).toBeNull();
     // Settle the container's trailing async dispatch inside act — the N29
     // acceptance requires a warning-free suite.

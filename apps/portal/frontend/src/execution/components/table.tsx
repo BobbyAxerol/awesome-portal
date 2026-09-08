@@ -34,7 +34,7 @@ import type { KeysetPage, PanelStatus } from "../contracts";
 import { emptyMeansEmpty, RetentionNotice, retentionReason } from "./retention";
 import { PanelState } from "./states";
 import { useArrivals } from "../listMotion";
-import { TableSkeleton, useDeferredLoading } from "./loading";
+import { SkeletonRows, useDeferredLoading } from "./loading";
 
 /** DS §8: 7px vertical padding, ~16px line, 1px hairline. */
 export const ROW_HEIGHT = 32;
@@ -194,28 +194,18 @@ export function KeysetTable<T>({
   // missing two of five linked facts still holds three that are complete.
   // Replacing either with a state box withholds work that can be done.
   if (status !== "ok" && status !== "partial" && status !== "stale") {
-    // A reading table keeps its own geometry: the same column count and the
-    // same fixed widths, so the head does not move and the panel does not grow
-    // when the rows land. The generic three-bar skeleton stood in for every
-    // panel on the surface and matched the shape of none of them, which is how
-    // a table mid-read came to look exactly like an empty one.
-    if (status === "loading" && showSkeleton) {
-      return (
-        // Inside the same scroll container and at the same `minWidth` as the
-        // real table: without it the placeholder rows ran past the panel's
-        // right edge, so the one thing the skeleton exists to promise — that
-        // the layout will not move — was the first thing it broke.
-        <div className="exec-table-scroll">
-          <div style={{ minWidth }}>
-            <TableSkeleton columns={columns.map((c) => c.width)} rows={skeletonRows} label={`Loading ${label}`} />
-          </div>
-        </div>
-      );
-    }
-    if (status === "loading") return null;
-    return <PanelState status={status} reason={reason} />;
+    // Loading falls through to the real table below, which then draws
+    // placeholder rows inside its own `<tbody>`. Returning a skeleton INSTEAD
+    // of the table — which is what the first cut did — removed the `<thead>`
+    // for the length of the read, so the column headers vanished and came
+    // back. That is the layout shift the skeleton exists to prevent, caused
+    // by the skeleton.
+    if (status !== "loading") return <PanelState status={status} reason={reason} />;
   }
-  if (rows.length === 0) {
+  // Not while reading. Zero rows during a read is not an empty result — it is
+  // the absence of a result — and letting this branch run first is how a
+  // loading table came out the far side declaring itself empty.
+  if (rows.length === 0 && status !== "loading") {
     // Zero rows because a filter matched nothing, and zero rows because the
     // range is archived, look identical and mean opposite things. The server
     // says which; absent is not "everything is online" (EX-BE-04b §3).
@@ -259,6 +249,10 @@ export function KeysetTable<T>({
 
       <div
         className="exec-table-scroll"
+        // The wave needs a host. The placeholder rows live inside the real
+        // `<tbody>` now, so there is no skeleton container to carry it; the
+        // scroller is the one element that spans exactly the region being read.
+        data-reading={status === "loading" && showSkeleton ? "true" : undefined}
         ref={scrollRef}
         onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       >
@@ -282,6 +276,9 @@ export function KeysetTable<T>({
             </tr>
           </thead>
           <tbody>
+            {status === "loading" ? (
+              showSkeleton ? <SkeletonRows columns={columns.length} rows={skeletonRows} /> : null
+            ) : null}
             {padTop > 0 ? (
               <tr aria-hidden="true" className="exec-table-pad" style={{ height: padTop }}>
                 <td colSpan={columns.length} />
@@ -355,6 +352,7 @@ export function KeysetTable<T>({
         isFiltered={isFiltered}
         filtered={filtered}
         loading={loading}
+        reading={status === "loading"}
         onLoadOlder={onLoadOlder}
         onLoadNewer={onLoadNewer}
       />
@@ -376,6 +374,7 @@ function TableFooter<T>({
   isFiltered,
   filtered,
   loading,
+  reading,
   onLoadOlder,
   onLoadNewer,
 }: {
@@ -387,6 +386,9 @@ function TableFooter<T>({
   isFiltered: boolean;
   filtered: number | null;
   loading: boolean;
+  /** The first read, not a page fetch. During pagination the counts on screen
+   *  are still the server's and stay; before the first answer there are none. */
+  reading: boolean;
   onLoadOlder?: () => void;
   onLoadNewer?: () => void;
 }) {
@@ -395,7 +397,12 @@ function TableFooter<T>({
 
   return (
     <div className="exec-table-foot">
+      {/* Nothing here is knowable until the page returns. The counts row was
+          printing "0 total · 0 resident" over placeholder rows — the one
+          number a reader would take at face value, asserted before the read
+          had answered. */}
       <div className="exec-table-counts">
+        {reading ? <span className="exec-table-meta">reading…</span> : <>
         {isFiltered && filtered !== null ? (
           <>
             <strong>{grouped(filtered)}</strong> in selection ·{" "}
@@ -415,6 +422,7 @@ function TableFooter<T>({
           {grouped(resident)} resident
           {virtualized ? " · virtualized" : ""}
         </span>
+        </>}
       </div>
 
       {/* What the SERVER applied, not what the client asked for. If a filter was

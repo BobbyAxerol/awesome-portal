@@ -41,6 +41,7 @@ import type { WorkflowResult } from "../operations";
 import { financialChartPath, readFinancialChart, type FinancialChartPayload, type FinancialChartQuery, type FinancialEnvironment } from "./financialChart";
 import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSourceHealth } from "./derivations";
 import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type MarketCandlesQuery } from "./marketCandles";
+import { marketContextCandlesPath, readMarketContextCandles, type MarketContextCandles, type MarketContextQuery } from "./marketContext";
 import { readRelationPage, relationPagePath, type RelationPage, type RelationPageQuery } from "./managerRelations";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
 import {
@@ -327,6 +328,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     derivation(`/alphas/${encodeURIComponent(alphaId)}/activity`, environment, readAlphaActivity, "The alpha-activity derivation");
   const getMarketCandles = (query: MarketCandlesQuery): Promise<Result<MarketCandlesPayload>> =>
     readGet(marketCandlesPath(query), readMarketCandles, "The venue market candles");
+  // The Trading System's own bars. A typed refusal travels back as it is —
+  // `PENDING_MARKET_CONTEXT_ADAPTER` is a date, not a fault, and the caller
+  // decides whether to fall back to the venue series and say which it drew.
+  const getMarketContextCandles = (query: MarketContextQuery): Promise<Result<MarketContextCandles>> =>
+    readGet(marketContextCandlesPath(query), readMarketContextCandles, "The Trading System market candles");
   const getObservedTimeline = (query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>> =>
     readGet(observedTimelinePath(query), readObservedTimeline, "The venue market candles");
   /** Every alpha's 30-day equity sparkline in one read (Fleet inline column). */
@@ -485,6 +491,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getPortfolioCapital,
     getAlphaActivity,
     getMarketCandles,
+    getMarketContextCandles,
     getObservedTimeline,
     getManagerRelationPage,
     getOperationalComposition,

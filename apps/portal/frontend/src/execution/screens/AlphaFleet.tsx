@@ -22,7 +22,7 @@ import { utcStamp } from "../time";
 import { StatusChip } from "../components/badges";
 import { useArrivals, useIds } from "../listMotion";
 import { liveDot } from "../sourceTone";
-import { SkeletonRows } from "../components/loading";
+import { SkeletonRows, StripSkeleton } from "../components/loading";
 
 export const FLEET_FILTERS = ["all", "live", "canary", "sandbox", "paper", "research"] as const;
 export type FleetFilter = (typeof FLEET_FILTERS)[number];
@@ -157,7 +157,12 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                 <SourceClock at={list?.sourceAsOf ?? null} />
               </span>
             </header>
-            {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
+            {/* Reading: the strip stands in its own five-cell shape, so the
+                filters and the table below do not slide up and then back down
+                when the figures arrive. A refusal is still a refusal and gets
+                the state box. */}
+            {reading ? <StripSkeleton cells={5} label="Loading fleet figures" /> : null}
+            {sourceStatus && !reading ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             {list ? <div className="exec-af-kpis">
               <FleetKpi label="Current exposure" values={summary?.exposureByCurrency ?? []} empty="No open notional" />
               <FleetKpi label="Current position PnL" values={(summary?.currentPositionPnlByCurrency ?? []).map((value) => ({ currency: value.currency, value: value.net }))} empty="No current position PnL" tone="good" />

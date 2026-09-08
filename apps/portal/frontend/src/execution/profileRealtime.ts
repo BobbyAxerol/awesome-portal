@@ -58,6 +58,7 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
       return;
     }
     let disposed = false;
+    let resnapshotNotBefore: string | null = null;
     let source: EventSource | null = null;
     let recoveryTimer: ReturnType<typeof setTimeout> | null = null;
     let recoveryUsed = false;
@@ -147,6 +148,11 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         return;
       }
       updateFrom(snapshot, recovering);
+      // Kept for the next gap: the snapshot that opened this stream is the one
+      // that says when a resnapshot would be welcome.
+      resnapshotNotBefore = typeof (snapshot.payload?.resnapshot_not_before ?? null) === "string"
+        ? String(snapshot.payload?.resnapshot_not_before)
+        : null;
       const stream = new EventSource(`/api/v1/execution/profiles/${environment}/stream?cursor=${encodeURIComponent(snapshot.cursor)}`);
       source = stream;
 
@@ -158,7 +164,14 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         }
         recoveryUsed = true;
         setState((current) => ({ ...current, phase: "recovering", reason }));
-        recoveryTimer = setTimeout(() => { if (!disposed) void bootstrap(true); }, 1_000);
+        // The source publishes `resnapshot_not_before` on the snapshot that
+        // preceded this gap. Waiting a hardcoded second regardless was the
+        // client deciding for itself how hard to push a source that had just
+        // said when to come back.
+        recoveryTimer = setTimeout(
+          () => { if (!disposed) void bootstrap(true); },
+          resnapshotDelayMs(resnapshotNotBefore, Date.now(), RECOVERY_FALLBACK_MS),
+        );
       };
       const ordinary = (message: MessageEvent<string>) => {
         const event = decode(message);
@@ -220,6 +233,24 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
 }
 
 /** One re-read per second is the ceiling a delta burst can ask of a screen. */
+/** Used only when the source published no `resnapshot_not_before`. */
+export const RECOVERY_FALLBACK_MS = 1_000;
+
+/**
+ * How long to wait before resnapshotting, given the source's own instruction.
+ *
+ * `null` or a time already past means "now"; a future time is honoured to the
+ * millisecond. Capped at a minute so a malformed far-future stamp cannot park
+ * the stream for ever — the cap guards against a bad value, it is not a second
+ * opinion about the backoff.
+ */
+export function resnapshotDelayMs(notBefore: string | null, now: number, fallbackMs: number): number {
+  if (!notBefore) return fallbackMs;
+  const at = Date.parse(notBefore);
+  if (!Number.isFinite(at)) return fallbackMs;
+  return Math.max(0, Math.min(60_000, at - now));
+}
+
 export const REALTIME_COALESCE_MS = 1_000;
 
 export interface ProfilesRealtimeState {

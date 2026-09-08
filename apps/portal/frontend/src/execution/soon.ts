@@ -31,6 +31,11 @@ const SOURCE_PENDING_PATTERNS: readonly RegExp[] = [
   /\bE5_MARKET_CANDLES[A-Z0-9_]*\b/,
   /\bEDS10_[A-Z0-9_]*_(SOURCE_GAP_CONFIRMED|NOT_ACTIVATED)\b/,
   /\bMARKET_CANDLES_SOURCE_NOT_WIRED\b/,
+  // The market-context BFF validates the query and answers 503 with this
+  // code until the source owner wires its adapter. That is a date, not a
+  // fault: the route is right, the caller is right, and the series is not
+  // there yet. Measured on dev 2026-09-08.
+  /\bPENDING_MARKET_CONTEXT_ADAPTER\b/,
   // Relations the Manager envelope refuses today (portfolio equity, sizing
   // decisions, risk grants): a contract the source has still to widen.
   /\bMANAGER_V2_SOURCE_CONTRACT_REJECTED\b/,

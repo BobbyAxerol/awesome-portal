@@ -37,6 +37,7 @@ import type { TypedCondition } from "../components/conditions";
 import type { FinancialChartPayload, FinancialChartQuery, FinancialEnvironment } from "./financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth } from "./derivations";
 import type { MarketCandlesPayload, MarketCandlesQuery } from "./marketCandles";
+import type { MarketContextCandles, MarketContextQuery } from "./marketContext";
 import type { RelationPage, RelationPageQuery } from "./managerRelations";
 import type { ObservedTimeline, ObservedTimelineQuery } from "./observedTimeline";
 
@@ -306,6 +307,15 @@ export interface ExecutionApi {
   getAlphaActivity(alphaId: string, environment: FinancialEnvironment): Promise<Result<AlphaActivity>>;
   /** `GET /market/venue-candles` — venue public klines (Trade Replay market context; `/market/candles` is the Manager market context). */
   getMarketCandles(query: MarketCandlesQuery): Promise<Result<MarketCandlesPayload>>;
+  /**
+   * The Trading System's own bars (market-context BFF, EDS-10b/11R4).
+   *
+   * A second source, not a replacement: the venue series says what the exchange
+   * published and this one says what the Trading System recorded, and where a
+   * fill sits between them is the finding. Callers try this first and fall back
+   * to the venue reading, naming which one they drew.
+   */
+  getMarketContextCandles(query: MarketContextQuery): Promise<Result<MarketContextCandles>>;
   /** EDS-09b / EDS-10b observed timeline BFF (`/views/observed-timeline`) — a Portal observation, never a replay. */
   getObservedTimeline(query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>>;
   /** EDS-11R1 named relation BFF (G9): one bounded page of a screen-bound Manager relation; the Portal continuation goes back unchanged. */

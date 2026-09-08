@@ -67,19 +67,58 @@ const COMMAND_CENTER_REALTIME_SNAPSHOT = "/api/v1/execution/command-center/realt
  * stream. Same-origin, cookie-authenticated, and small by contract — the rich
  * panel data stays in the canonical snapshot response.
  */
-async function fetchCommandCenterResume(): Promise<{ cursor: string; epoch: string; sequence: number; asOf?: string | null }> {
+/**
+ * The resume point for the Command Centre stream (`execution.manager-realtime-
+ * snapshot.v2`, Goal 7 · G11).
+ *
+ * The version is checked. Reading a resume point out of an envelope that never
+ * claimed to be this contract is how a client ends up resuming from a cursor
+ * that means something else — and cursors are opaque, so nothing downstream
+ * would notice.
+ *
+ * `resnapshot_not_before` is the server's own backoff, and it used to be
+ * ignored: recovery waited a hardcoded second regardless of what the source
+ * asked for, which is a client deciding for itself how hard to push a source
+ * that has just told it to wait. `stream_available` and `data_state` are read
+ * for the same reason — the source says whether it is delivering and whether
+ * empty is valid, and neither is ours to infer.
+ */
+async function fetchCommandCenterResume(): Promise<{
+  cursor: string;
+  epoch: string;
+  sequence: number;
+  asOf?: string | null;
+  streamAvailable: boolean;
+  dataState: string | null;
+  resnapshotNotBefore: string | null;
+}> {
   const response = await fetch(COMMAND_CENTER_REALTIME_SNAPSHOT, {
     credentials: "same-origin",
     headers: { accept: "application/json" },
   });
   if (!response.ok) throw new Error(`realtime snapshot ${response.status}`);
   const body = await response.json() as Record<string, unknown>;
+  if (body.schema_version !== "execution.manager-realtime-snapshot.v2") {
+    throw new Error(`realtime snapshot is not manager-realtime-snapshot.v2 (${String(body.schema_version)})`);
+  }
   const cursor = typeof body.cursor === "string" ? body.cursor : null;
   const epoch = typeof body.projection_epoch === "string" ? body.projection_epoch : null;
   const sequence = typeof body.projection_sequence === "number" ? body.projection_sequence : null;
   if (!cursor || !epoch || sequence === null) throw new Error("realtime snapshot missing resume point");
-  return { cursor, epoch, sequence, asOf: typeof body.source_read_at === "string" ? body.source_read_at : null };
+  return {
+    cursor,
+    epoch,
+    sequence,
+    asOf: typeof body.source_read_at === "string" ? body.source_read_at : null,
+    // Absent is read as "not delivering". A stream the source declined to
+    // describe is not one to draw a live dot for.
+    streamAvailable: body.stream_available === true,
+    dataState: typeof body.data_state === "string" ? body.data_state : null,
+    resnapshotNotBefore: typeof body.resnapshot_not_before === "string" ? body.resnapshot_not_before : null,
+  };
 }
+
+
 
 export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: ExecutionApi; sseFactory?: SseFactory | null }) {
   // G8: re-read on the projection cadence so the masthead beat follows a real revision (as_of), not a clock
