@@ -5107,6 +5107,17 @@ routes and proves an `8101` alteration fails.  This makes the Portal-owned
 adapter deployable; it neither calls the browser/Data Layer directly nor
 claims deployed evidence before the signed candidate and live probes exist.
 
+**Durable-projection preflight correction (2026-09-08):** a Paper
+render-only activation rehearsal exposed that the fail-closed D2 parser had
+omitted two existing, documented durable-projection inputs:
+`EDGE_MANAGER_PROJECTION_OWNER_DIGEST` and
+`EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS`.  The allowlist now admits exactly
+those optional overlay-owned keys; it does not require them for a base D2
+shape, relax any other unknown-key rejection, or alter their values.  The
+offline D2 fixture proves that a `60_000` ms cadence and digest-shaped worker
+identity survive the immutable configuration boundary.  No service restart,
+source request, command, or Trading System change occurred during discovery.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
