@@ -115,7 +115,9 @@ export class LocalQueryAnalyticsService {
     const depth = await this.subjectDepth(
       context.snapshot, context.workspaceId, environment, context.profileId, subjectKind, subjectId,
     );
-    const statistics = await this.portfolioStatistics(context.workspaceId, environment, context.profileId);
+    const statistics = await this.portfolioStatistics(
+      context.workspaceId, environment, context.profileId, projectionVersion(context.snapshot),
+    );
     if (statistics && depth) depth.queries += 1;
     return composeAnalytics(context.snapshot, principal.workspaceId, subjectKind, subjectId, depth, statistics, options);
   }
@@ -321,23 +323,54 @@ export class LocalQueryAnalyticsService {
    * every accepted equity point, so the N25 "insufficient multi-alpha
    * history" tiles compute locally the moment two alphas overlap ten days.
    */
+  /**
+   * Fleet-wide correlation and drawdown overlap, memoised per projection version.
+   *
+   * These are a pure function of one projection's 90-day daily closes: the
+   * subject does not enter the computation at all, so every deployment's
+   * workbench and every alpha's 360 recomputed the same 43-alpha, 903-pair
+   * result. Measured on dev 2026-09-08 it was 3.1s of a 4.6s workbench read.
+   *
+   * The key is the projection's own epoch and sequence, so this is not a
+   * time-based cache that can serve a figure older than the data: a refreshed
+   * projection has a new sequence and misses. Only the newest version is kept
+   * — an operator moving between deployments reads one projection, and holding
+   * older ones would be memory spent on answers nobody will ask for again.
+   */
+  private statisticsCache: { key: string; value: PortfolioStatistics | null } | null = null;
+
   private async portfolioStatistics(
     workspaceId: string,
     environment: ProjectionEnvironment,
     profileId: string,
+    version: string,
   ): Promise<PortfolioStatistics | null> {
     if (typeof this.repository.timeSeriesDailyCloses !== "function") return null;
+    const key = `${workspaceId}:${environment}:${profileId}:${version}`;
+    if (this.statisticsCache?.key === key) return this.statisticsCache.value;
     try {
       const closes = await this.repository.timeSeriesDailyCloses(
         workspaceId, environment, profileId,
         "manager.performance:account_equity_snapshots",
         { from: new Date(Date.now() - 90 * 86_400_000).toISOString(), valueField: "equity" },
       );
-      return computePortfolioStatistics(closes);
+      const value = computePortfolioStatistics(closes);
+      this.statisticsCache = { key, value };
+      return value;
     } catch {
+      // A failure is not cached: the next read should try again rather than
+      // inherit one bad minute for the life of the projection version.
       return null;
     }
   }
+}
+
+/**
+ * Identifies one build of the projection: a changed epoch or sequence means
+ * different rows, and anything derived from the old ones is void.
+ */
+function projectionVersion(snapshot: ProfileProjectionSnapshot): string {
+  return `${snapshot.projectionEpoch}:${snapshot.projectionSequence}`;
 }
 
 interface SubjectDepth {
