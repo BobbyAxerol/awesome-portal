@@ -271,7 +271,10 @@ function combinedFacts(resource: QueryAnalytics | null, additive: QueryAnalytics
 
 export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
   const realtime = useProfileRealtime("paper");
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey]);
+  // The realtime channel bumps `refreshKey`; without `keepValue` every bump
+  // tore the painted screen back down to a skeleton, which is the exact
+  // "live data feels broken" failure `useApiRead` documents.
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true });
   return <PaperOverview envelope={state.value} status={state.status} reason={state.reason} />;
 }
 
@@ -287,7 +290,10 @@ export const SANDBOX_RELATIONS = {
 
 export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
   const realtime = useProfileRealtime("sandbox");
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api, realtime.refreshKey]);
+  // The realtime channel bumps `refreshKey`; without `keepValue` every bump
+  // tore the painted screen back down to a skeleton, which is the exact
+  // "live data feels broken" failure `useApiRead` documents.
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("sandbox"), [api, realtime.refreshKey], { keepValue: true });
   const relations = useRelationFacts(api, "sandbox", state.status !== "loading", SANDBOX_RELATIONS);
   const panels = sandboxPanels({
     relations: relations.value,
@@ -299,7 +305,10 @@ export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
 
 export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
   const realtime = useProfileRealtime("live");
-  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey]);
+  // The realtime channel bumps `refreshKey`; without `keepValue` every bump
+  // tore the painted screen back down to a skeleton, which is the exact
+  // "live data feels broken" failure `useApiRead` documents.
+  const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey], { keepValue: true });
   return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} />;
 }
 
@@ -307,7 +316,16 @@ export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
 
 export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "paper" }: { api: ExecutionApi; deploymentId: string; variant?: "paper" | "vnm" }) {
   const realtime = useProfileRealtime("paper");
-  const state = useApiRead<ProfileEnvelope>(() => api.getPaperWorkbenchProfile(deploymentId, variant), [api, deploymentId, variant, realtime.refreshKey]);
+  // `keepValue` matters more here than anywhere else on the surface: this
+  // profile is 7.4 MB on dev and takes ~6s to answer, and the realtime channel
+  // bumps `refreshKey` shortly after it connects. Without it the second read
+  // tore the whole workbench back down to a skeleton, so the screen showed
+  // "Loading" for ~20s — two full fetches — before it ever painted.
+  const state = useApiRead<ProfileEnvelope>(
+    () => api.getPaperWorkbenchProfile(deploymentId, variant),
+    [api, deploymentId, variant, realtime.refreshKey],
+    { keepValue: true },
+  );
   const qualityState = useApiRead<DeploymentQuality>(() => api.getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const navigate = useNavigate();
