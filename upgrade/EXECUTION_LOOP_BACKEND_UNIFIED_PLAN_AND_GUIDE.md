@@ -5142,6 +5142,14 @@ sentinel. The migration-history gate permits only this exact three-file prefix
 triple and rejects every other duplicate. It is a tested forward recovery, not
 a schema rollback, source-authority change or command activation.
 
+**BAR-05 release-freeze refresh (2026-09-08):** the forward-recovery wrapper
+intentionally changes `compose.yaml`, `deploy/compose.production.yaml` and
+`apps/control-api/package.json`, all of which are protected inputs in
+`upgrade/backend/bar05/m0-freeze-manifest.json`. The manifest was regenerated
+at the exact protected-main recovery revision and re-verified with the Python
+3.12 BAR-05 freeze suite. This is an evidence-artifact refresh only: it adds no
+runtime authority, source connectivity, command capability or product scope.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
