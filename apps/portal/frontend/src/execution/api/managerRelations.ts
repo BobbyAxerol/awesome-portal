@@ -107,19 +107,41 @@ export const RETRY_DELAYS_MS: readonly number[] = [400, 1500];
 const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
 
 /**
+ * A refusal that waiting cannot change.
+ *
+ * These codes mean the source read the request and declined its shape — it
+ * publishes `retryable: false` beside them. `portfolio-equity-snapshots`
+ * serves its first page of 5 and then refuses the continuation cursor with
+ * exactly this, so each drain spent three requests and two seconds learning
+ * the same answer.
+ */
+const CONTRACT_REJECTIONS = [
+  "N17B_SOURCE_REJECTED",
+  "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+  "EDS11R_SOURCE_CONTRACT_REJECTED",
+  "EDS01_SOURCE_CONTRACT_REJECTED",
+] as const;
+
+function refusedOnContract(reason: string | null | undefined): boolean {
+  return typeof reason === "string" && CONTRACT_REJECTIONS.some((code) => reason.includes(code));
+}
+
+/**
  * One page, retried after each pause in `RETRY_DELAYS_MS`.
  *
  * `retry: false` is for the probe reads that step the page size down: a source
  * refusing a page of 200 will refuse it again in 1.5 seconds, and waiting four
- * times over is how a walk that should take a second takes eight.
+ * times over is how a walk that should take a second takes eight. A contract
+ * rejection is the same argument at any page size, so it also returns at once.
  */
 async function readPage(read: RelationRead, q: RelationPageQuery, retry = true): Promise<Awaited<ReturnType<RelationRead>>> {
   let result = await read(q);
-  if (!retry) return result;
+  if (!retry || (!result.ok && refusedOnContract(result.reason))) return result;
   for (const delay of RETRY_DELAYS_MS) {
     if (result.ok) return result;
     await sleep(delay);
     result = await read(q);
+    if (!result.ok && refusedOnContract(result.reason)) return result;
   }
   return result;
 }
