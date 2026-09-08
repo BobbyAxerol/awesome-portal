@@ -1661,6 +1661,50 @@ panel còn lại phụ thuộc **chưa có certification record** (`workflow_sta
 NOT_COMMISSIONED`, cả 7 bước `PHASE2_CERTIFICATION_RECORD_NOT_CREATED`) → Goal 5;
 Canary Control Room chờ có deployment canary.
 
+### A13.7 Kiểm lại trước Goal 5 — một lỗi hiệu năng tìm được bằng đồng hồ
+
+Rebuild xong tôi bấm lại từng màn thay vì tin bảng số. Paper Workbench **20.6
+giây** mới hiện panel đầu, suốt thời gian đó chỉ có chữ "Loading". Dấu vết đo
+trên dev:
+
+```
+ 413ms  GET /screens/paper/{id}        <- màn tự đọc
+ 968ms  GET /screens/paper/{id}        <- đọc lại, y hệt
+7536ms  200, 7.02 MB                   <- phản hồi lần 1, bị vứt
+20628ms 200, 7.02 MB                   <- phản hồi lần 2
+20630ms panel đầu tiên hiện
+```
+
+**Nguyên nhân**: `bootstrap` của kênh realtime lấy snapshot để lấy cursor cho
+stream, rồi đẩy nó qua `updateFrom` — hàm này bump `refreshKey` cho mọi thứ
+không phải heartbeat. Mọi màn profile khoá lần đọc theo `refreshKey`, nên **chỉ
+cần stream kết nối là tất cả đọc lại**, đúng lúc lần đọc đầu còn đang bay; mà
+`useApiRead` huỷ lần đọc đang bay khi deps đổi, nên phản hồi đầu bị vứt. Hai
+lần đọc 7 MB xếp hàng ở server và người dùng chờ cả hai.
+
+Snapshot bootstrap là **cái bắt tay, không phải delta**: nó nói chưa có gì xảy
+ra, và màn vừa tự đọc dữ liệu xong. Nay nó không refresh nữa. Bootstrap **sau
+một gap** thì vẫn refresh, vì dữ liệu có thể đã đổi lúc stream chết.
+
+| | Trước | Sau |
+|---|---|---|
+| Paper Workbench, panel đầu | 20.6s | **6.1s** |
+| Số lần đọc profile khi mở | 2 | **1** |
+
+Kèm theo: `keepValue` cho workbench và ba màn overview, để một tick sau đó
+refresh tại chỗ thay vì kéo màn về skeleton — đúng cái `useApiRead` đã tự ghi
+trong comment là "live data feels broken".
+
+**Chưa sửa, và không sửa ở frontend được**: 7 MB + ~6s cho workbench của **một**
+deployment. Màn cần snapshot mới nhất và một chuỗi đã downsample, không cần
+1 438 dòng × 29 cột. Đây là việc của contract → **Backend request cho codex**,
+vì cắt ở trình duyệt nghĩa là đã tải về rồi mới cắt.
+
+**Còn một chỗ nữa Bobby sẽ thấy trong console**: Portfolio 360 có 502/503 ở
+`capital-ledger`, `correlation` và `portfolio-equity-snapshots` khi ba màn cùng
+drain. Retry phục hồi được nên **ba panel vẫn có dữ liệu thật**, nhưng tiếng ồn
+là thật → gộp cache ở **Goal 6**.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
