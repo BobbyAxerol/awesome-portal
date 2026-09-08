@@ -239,7 +239,9 @@ for required in \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000007_execution-operations-f0-hardening.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000008_execution-operations-queue.sql" \
   "${ROOT_DIR}/apps/control-api/migrations/1723680000009_execution-incidents.sql" \
-  "${ROOT_DIR}/apps/control-api/migrations/1723680000028_execution-n09-governance-workflow.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000012_execution-n09-governance-workflow.sql" \
+  "${ROOT_DIR}/apps/control-api/migrations/1723680000012_z_n09-governance-workflow-legacy-compatibility.sql" \
+  "${ROOT_DIR}/apps/control-api/src/cli/migrate.ts" \
   "${ROOT_DIR}/apps/control-api/src/id.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/workspaces.ts" \
   "${ROOT_DIR}/apps/control-api/src/repos/runs.ts" \

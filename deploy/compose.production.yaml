@@ -149,7 +149,7 @@ services:
   control-api-migrate:
     <<: [*control-api-image, *control-api-hardening]
     restart: "no"
-    command: ["./node_modules/.bin/node-pg-migrate", "-m", "migrations", "up"]
+    command: ["node", "dist/cli/migrate.js"]
     environment: *control-api-environment
     depends_on:
       portal-postgres:

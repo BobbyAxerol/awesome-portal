@@ -29,21 +29,20 @@ scopes=(
   services/portal-execution-edge-rs/crates/projection-store-pg/migrations
 )
 
-# This is a one-time, source-only correction. The N09 file reached Git with a
-# numeric prefix already used by an earlier *applied* session migration, which
-# makes node-pg-migrate refuse every database upgrade before N09 can run. The
-# replacement has identical SQL and a fresh forward-only prefix. Do not add
-# generic rename exemptions here.
-declare -A collision_renames=(
-  ["apps/control-api/migrations/1723680000012_execution-n09-governance-workflow.sql"]="apps/control-api/migrations/1723680000028_execution-n09-governance-workflow.sql"
-)
+# N09 reached Git after an already-deployed equally-prefixed session migration.
+# The historic N09 file itself must remain byte-for-byte immutable because dev
+# and probe ledgers have already applied it.  A controlled migrator preflight
+# repairs only legacy stable ledgers, and this tail sentinel records that
+# recovery before later migrations consume the schema.  This exact triple is
+# the only allowed duplicate prefix; every other duplicate is a release error.
+readonly N09_PREFIX="1723680000012"
+readonly N09_ORIGINAL="apps/control-api/migrations/1723680000012_execution-n09-governance-workflow.sql"
+readonly N09_SESSION="apps/control-api/migrations/1723680000012_session-activation-proof.sql"
+readonly N09_SENTINEL="apps/control-api/migrations/1723680000012_z_n09-governance-workflow-legacy-compatibility.sql"
 
-# node-pg-migrate orders and identifies migrations by the numeric prefix. A
-# duplicate prefix can pass an append-only Git check yet make an already
-# deployed database impossible to upgrade. Reject it before CI or a release
-# workflow reaches a runtime migration step.
 for scope in "${scopes[@]}"; do
   declare -A seen_prefixes=()
+  declare -A duplicate_paths=()
   while IFS= read -r migration; do
     filename="$(basename "${migration}")"
     prefix="${filename%%_*}"
@@ -52,12 +51,29 @@ for scope in "${scopes[@]}"; do
       exit 1
     }
     if [[ -n "${seen_prefixes[${prefix}]:-}" ]]; then
-      printf 'Duplicate migration numeric prefix %s: %s and %s\n' \
-        "${prefix}" "${seen_prefixes[${prefix}]}" "${migration}" >&2
-      exit 1
+      duplicate_paths["${prefix}"]+=" ${migration}"
+    else
+      duplicate_paths["${prefix}"]="${migration}"
     fi
     seen_prefixes["${prefix}"]="${migration}"
   done < <(find "${ROOT_DIR}/${scope}" -maxdepth 1 -type f -name '*.sql' -printf "${scope}/%f\n" | sort)
+
+  for prefix in "${!duplicate_paths[@]}"; do
+    read -r -a paths <<< "${duplicate_paths[${prefix}]}"
+    if [[ "${#paths[@]}" -le 1 ]]; then
+      continue
+    fi
+    if [[ "${scope}" == "apps/control-api/migrations" && "${prefix}" == "${N09_PREFIX}" \
+      && "${#paths[@]}" -eq 3 \
+      && "${paths[0]}" == "${N09_ORIGINAL}" \
+      && "${paths[1]}" == "${N09_SESSION}" \
+      && "${paths[2]}" == "${N09_SENTINEL}" ]]; then
+      continue
+    fi
+    printf 'Unexpected duplicate migration numeric prefix %s: %s\n' \
+      "${prefix}" "${duplicate_paths[${prefix}]}" >&2
+    exit 1
+  done
 done
 
 mapfile -t base_migrations < <(
@@ -67,9 +83,14 @@ mapfile -t base_migrations < <(
 for migration in "${base_migrations[@]}"; do
   base_blob="$(git -C "${ROOT_DIR}" rev-parse "${base_ref}:${migration}")"
   if ! git -C "${ROOT_DIR}" cat-file -e "HEAD:${migration}" 2>/dev/null; then
-    replacement="${collision_renames[${migration}]:-}"
-    if [[ -n "${replacement}" ]] && git -C "${ROOT_DIR}" cat-file -e "HEAD:${replacement}" 2>/dev/null; then
-      replacement_blob="$(git -C "${ROOT_DIR}" rev-parse "HEAD:${replacement}")"
+    # The short-lived 0028 rename was never deployed.  Its only permitted
+    # removal restores the original immutable 0012 blob and adds the tail
+    # compatibility sentinel.  This is intentionally narrower than a generic
+    # migration rename exemption.
+    if [[ "${migration}" == "apps/control-api/migrations/1723680000028_execution-n09-governance-workflow.sql" ]] \
+      && git -C "${ROOT_DIR}" cat-file -e "HEAD:${N09_ORIGINAL}" 2>/dev/null \
+      && git -C "${ROOT_DIR}" cat-file -e "HEAD:${N09_SENTINEL}" 2>/dev/null; then
+      replacement_blob="$(git -C "${ROOT_DIR}" rev-parse "HEAD:${N09_ORIGINAL}")"
       if [[ "${base_blob}" == "${replacement_blob}" ]]; then
         continue
       fi
