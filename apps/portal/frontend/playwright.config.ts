@@ -81,7 +81,11 @@ export default defineConfig({
     },
     {
       name: "chromium-preview",
-      testMatch: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts"],
+      // `_probe*.spec.ts` are ad-hoc diagnostics: some deliberately write
+      // local screenshots or crawl an intentionally partial fixture map. They
+      // are useful when run explicitly by a maintainer, but are not product
+      // journeys and must never participate in the immutable visual baseline.
+      testMatch: ["**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4175" },
     },
   ],
