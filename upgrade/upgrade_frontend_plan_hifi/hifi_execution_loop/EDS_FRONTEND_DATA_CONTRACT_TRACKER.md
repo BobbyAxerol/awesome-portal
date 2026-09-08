@@ -2436,6 +2436,61 @@ Account 360 in số thô, đọc `approvals/history`), và **9 việc chặn th�
 `Mine (3)`, `policy_version`, lịch sử waivers, thứ tự sort: nguồn **không
 publish**. Ký row-level của ba màn vẫn chờ governance có hàng.
 
+### A18. GOAL 6B — TRẠNG THÁI ĐANG ĐỌC (owner giao thêm 08-09, nằm TRONG kế hoạch)
+
+Owner: *"màn chưa kịp hiện dữ liệu thì có vòng hay hiệu ứng loading gì đó để
+hiện một phát là trusted data chứ không phải họ lướt qua họ tưởng bị lỗi, không
+có dữ liệu"*. **Ghi vào đây để không bị coi là ngoài showcase** — đây là yêu cầu
+bổ sung có chủ đích của owner, đứng ngang hàng với các goal khác.
+
+#### A18.1 Bug owner bắt được: vạch xanh khi tải trang — **lỗi của tôi, từ Goal 6**
+
+Ảnh chụp Alpha Fleet lúc vừa tải: một vạch xanh dọc ở **mép trái mỗi cột**. Hai
+lỗi chồng nhau, cả hai đều do tôi:
+
+1. **Vạch vẽ sai chỗ.** Luật là `tr[data-arrived="true"] > td, ... > th`, tức là
+   `box-shadow` chạy trên **mọi ô** — nên thay vì một rail ở mép trái *hàng*, nó
+   kẻ một đường dọc ở trái *từng cột*, thành một cái lưới mà bảng vốn không có.
+   Nay chỉ còn `> :first-child`.
+2. **Cả trang bị coi là "hàng mới".** `useArrivals` gieo mốc so sánh ở lần
+   effect đầu — mà lần đầu đó là lúc bảng **mount rỗng trong khi đang đọc**. Khi
+   dữ liệu về, mọi hàng đều "chưa từng thấy" → nháy hết. Đúng cái ồn ào mà chính
+   hook này được viết ra để tránh: *"finishing a load is not an event"* — tôi
+   viết luật đó rồi vi phạm nó ở đúng đường đi này.
+
+   Nay hook nhận thêm `ready`: **không có gì là arrival cho tới khi hàng thật sự
+   là của nguồn**. `KeysetTable` truyền `status === ok|partial|stale`; bảy màn
+   danh sách truyền `Boolean(nguồn) && status === "ok"`. Test mới dựng lại đúng
+   kịch bản rỗng→ready→thêm-hàng và khẳng định: lần đầu **0 arrival**, hàng thêm
+   sau **vẫn nháy**.
+
+**Bài học ghi lại:** một cơ chế "chỉ nháy khi có thay đổi thật" vẫn sai nếu mốc
+so sánh được gieo **trước khi dữ liệu tồn tại**. Trạng thái rỗng-vì-đang-đọc và
+rỗng-vì-nguồn-trả-rỗng phải tách nhau **ở cả cơ chế động**, không chỉ ở chữ hiển
+thị — đây là cùng một luật §3.4, áp vào chuyển động.
+
+#### A18.2 Việc chính: hệ thống trạng thái đang đọc cho toàn bộ màn
+
+Hiện trạng: `PanelSkeleton` là **ba thanh xám tĩnh 30%/60%/90%, giống hệt nhau ở
+mọi panel**, không khớp hình dạng cái nó thay thế và không chuyển động. Nên một
+bảng đang đọc trông **y hệt** một bảng rỗng — đúng điều owner mô tả.
+
+Nguyên tắc chốt trước khi làm:
+- **Giữ khung.** Masthead, hàng filter, đầu panel, header cột **ở nguyên**; chỉ
+  vùng dữ liệu được thay. Trang xám toàn bộ nói "app hỏng"; trang này với dữ
+  liệu đang về nói "màn này, đang tải".
+- **Không nhảy layout.** Skeleton chiếm đúng chiều cao nội dung thật sẽ chiếm.
+- **Không chớp.** Đọc nhanh thì **không được** loé skeleton; skeleton đã hiện thì
+  không được biến mất sau vài chục ms.
+- **Đang đọc ≠ rỗng**, phân biệt được **bằng mắt**, không chỉ bằng chữ.
+- `prefers-reduced-motion`: tắt shimmer, **giữ** hình khối và chữ "loading".
+- Một `role="status"` cho mỗi vùng, không phải mỗi thanh.
+- Gate typography giữ nguyên; hai palette (carbon tối / research sáng) đều phải
+  đặt tên token, không hex thô.
+
+Khảo sát bằng agent với **mạng bị bóp** (latency 1,2 s, 150 KB/s) để nhìn thấy
+đúng khoảnh khắc đang đọc — không đo được trạng thái này trên máy nhanh.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

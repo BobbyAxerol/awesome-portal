@@ -61,6 +61,23 @@ describe("useArrivals", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
+  it("does not flash the first real list when the table mounted empty", () => {
+    // Reported from the browser on 2026-09-08: loading any list screen drew a
+    // coloured rail on every row for a second. A table mounts with no rows
+    // while it reads, that empty render seeded the baseline, and the first real
+    // page then counted as forty arrivals. `ready` is false until the rows are
+    // the source's, so the first real list is the baseline, not an event.
+    const { result, rerender } = renderHook(
+      ({ ids, ready }) => useArrivals(ids, ready),
+      { initialProps: { ids: [] as string[], ready: false } },
+    );
+    act(() => { rerender({ ids: ["a", "b", "c"], ready: true }); });
+    expect(result.current.size).toBe(0);
+    // and a row that arrives after that still flashes
+    act(() => { rerender({ ids: ["a", "b", "c", "d"], ready: true }); });
+    expect([...result.current]).toEqual(["d"]);
+  });
+
   it("does not flash the first list — finishing a load is not an event", () => {
     const { result } = renderHook(({ ids }) => useArrivals(ids), { initialProps: { ids: ["a", "b", "c"] } });
     expect(result.current.size).toBe(0);

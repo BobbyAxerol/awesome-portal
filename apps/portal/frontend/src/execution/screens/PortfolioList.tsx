@@ -36,7 +36,7 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
   const items = list?.items ?? [];
   // Goal 6: a portfolio that appears between two reads flashes once. Hooks run
   // before every early return, so the mechanism is identical in each branch.
-  const arrivals = useArrivals(useIds(items, (item) => item.portfolioId));
+  const arrivals = useArrivals(useIds(items, (item) => item.portfolioId), Boolean(list) && status === "ok");
   // The absolute stamp stays; the age beside it answers "is this stale?"
   // without making the reader do subtraction against a clock they cannot see.
   const clock = useNow();

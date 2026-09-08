@@ -98,7 +98,7 @@ export interface AlphaFleetProps {
 export function AlphaFleet({ filter: controlled, onFilterChange, list = null, status = "ok", reason, onNextPage, onPreviousPage, equity, onNeedEquity, demo, demoTick, realtimePhase = null }: AlphaFleetProps) {
   const dot = liveDot(realtimePhase);
   // Goal 6: an alpha entering the register flashes once on arrival.
-  const arrivals = useArrivals(useIds(list?.page.rows ?? [], (item) => item.alphaId));
+  const arrivals = useArrivals(useIds(list?.page.rows ?? [], (item) => item.alphaId), Boolean(list) && status === "ok");
   const smoke = demo ?? null;
   const { now, j } = demoTick ?? { now: new Date(0), j: 0 };
   const [local, setLocal] = useState<FleetFilter>("all");

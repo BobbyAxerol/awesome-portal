@@ -89,7 +89,7 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
   // Goal 6: deployments that appear between two projection reads flash once.
   // Declared above the smoke branch — a hook inside it would run in one
   // branch and not the other.
-  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)));
+  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)), Boolean(envelope) && status === "ok");
   const navigate = useNavigate();
   if (!smoke) {
     // Product: the reviewed layout over the published envelope, panel by panel.

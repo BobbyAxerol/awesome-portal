@@ -221,7 +221,7 @@ export function OperationsQueueScreen({
   // later, which is the reassuring direction to be wrong in.
   const clock = useNow();
   const at = nowProp ?? clock;
-  const arrivals = useArrivals(useIds(rows, (row) => row.operationId));
+  const arrivals = useArrivals(useIds(rows, (row) => row.operationId), Boolean(queue) && status === "ok");
   const attentionRows = rows.filter(needsAttention);
   const attention = smoke ? smoke.attentionCount : attentionRows.length;
   const critical = smoke?.criticalCount ?? 0;

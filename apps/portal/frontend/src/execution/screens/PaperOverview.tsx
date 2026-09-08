@@ -57,7 +57,7 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
   const [venue, setVenue] = useState("All");
   // Goal 6: a paper deployment that appears between two projection reads
   // flashes once. Above the smoke branch, so both branches call it.
-  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)));
+  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)), Boolean(envelope) && status === "ok");
   const navigate = useNavigate();
   if (!PO) {
     // Product: the reviewed layout over the published envelope, panel by panel.

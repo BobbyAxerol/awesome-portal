@@ -59,7 +59,7 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
   const [open, setOpen] = useState<Record<string, boolean>>({ binance_main_01: true });
   // Goal 6. Declared above the smoke branch: a hook inside `if (!smoke)` would
   // run in one branch and not the other, which is the rules-of-hooks trap.
-  const arrivals = useArrivals(useIds(list?.page.rows ?? [], (item) => item.bindingId));
+  const arrivals = useArrivals(useIds(list?.page.rows ?? [], (item) => item.bindingId), Boolean(list) && status === "ok");
   // The absolute stamp stays; the age beside it answers "is this stale?"
   // without making the reader do subtraction against a clock they cannot see.
   const clock = useNow();

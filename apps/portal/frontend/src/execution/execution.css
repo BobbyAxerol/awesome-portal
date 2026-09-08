@@ -6879,8 +6879,12 @@
 @keyframes exec-drain-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 /* An arrived row keeps a left edge for the length of the flash, so a reader
-   who looked away during the fade can still see which row is new. */
-tr[data-arrived="true"] > td, tr[data-arrived="true"] > th,
+   who looked away during the fade can still see which row is new.
+
+   On the leading cell only. Put on every cell, this drew a line down the left
+   of every column — a grid the table does not have, appearing for a second on
+   every page load and reading as a rendering fault. */
+tr[data-arrived="true"] > :first-child,
 .exec-po-row[data-arrived="true"] { box-shadow: inset 3px 0 0 -1px var(--accent); }
 
 .exec-deadline { font-variant-numeric: tabular-nums; }

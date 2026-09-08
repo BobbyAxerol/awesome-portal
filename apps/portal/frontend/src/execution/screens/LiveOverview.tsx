@@ -53,7 +53,7 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
   // Goal 6: deployments that appear between two projection reads flash once.
   // Declared above the smoke branch — a hook inside it would run in one
   // branch and not the other.
-  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)));
+  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)), Boolean(envelope) && status === "ok");
   const chrome = usePresentationChrome();
   useEffect(() => {
     if (!smoke) return;

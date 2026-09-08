@@ -169,7 +169,13 @@ export function KeysetTable<T>({
   // Goal 6: rows that arrived since the previous read flash once. Placed on
   // the shared table rather than in each screen so the blotter, the inbox
   // and every other keyset list report an arrival the same way.
-  const arrivals = useArrivals(useMemo(() => rows.map(rowKey), [rows, rowKey]));
+  // `ready` is what stops a page-load from reading as forty arrivals: the
+  // table mounts empty while it reads, and only these three statuses mean the
+  // rows on screen are the ones the source returned.
+  const arrivals = useArrivals(
+    useMemo(() => rows.map(rowKey), [rows, rowKey]),
+    status === "ok" || status === "partial" || status === "stale",
+  );
 
   // A panel with nothing to show says which kind of nothing it is. `empty` and
   // `insufficient_data` are different claims and both are different from a
