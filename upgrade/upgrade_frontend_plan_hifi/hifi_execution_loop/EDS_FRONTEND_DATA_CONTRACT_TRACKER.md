@@ -1845,6 +1845,100 @@ dạy người vận hành bỏ qua đúng cái số đáng nhìn.
 
 Gate: FE **113 file · 1 981 test**, tsc sạch; control-api `src` build sạch.
 
+### A13.10 Pass tinh chỉnh UI theo 5 điểm owner đưa (08-09)
+
+Đo trước, sửa sau. Commit `26e6c4b`, `3c838ec` (+ commit số thập phân).
+
+#### 1. Nhãn stage — một cỡ ở mọi màn ✅
+
+Audit từng màn cho bốn chữ PAPER / SANDBOX / CANARY / LIVE:
+
+| Nơi | Trước | Sau |
+|---|---|---|
+| Alpha Fleet (`exec-af-stage`) | **10px mono** ← mẫu anh chọn | 10px mono |
+| Masthead workbench (`exec-chip[data-axis=stage]`) | 12px, letter-spacing khác | **10px mono** |
+| 360 (`exec-env`) | 12px | **10px mono** |
+
+Cùng một token màu (`--env-*`) nên không thể lệch lại. **Nhấn mạnh bằng weight,
+viền và chấm chạy — không bao giờ bằng cỡ**, vì chip to hơn đẩy cả hàng lệch.
+Thêm `StageLabel` cho các dòng nguồn ghi stage bằng chuỗi tự do.
+
+#### 2. Chart Insight — tile 10 dựng lại trên dữ liệu thật ✅ (9/11 vẫn thiếu nguồn)
+
+Tile 10 trước ghi `Soon · PAPER_LIVE_DRIFT_NOT_PUBLISHED · modes seen: paper` —
+**sai hai lần**: alpha này deploy ở **cả paper và sandbox**, và không thiếu công
+thức mà thiếu đầu vào.
+
+Hai sự thật quyết định tile này được vẽ gì:
+- **Không relation execution nào mang research run id hay artifact digest** mà
+  deployment được duyệt theo. Nên drift-vs-approved-evidence **không tính được**,
+  và được **nêu tên** chứ không xấp xỉ từ các stage — xấp xỉ là một phép đo khác
+  dưới tiêu đề của tile.
+- Nhưng **cùng một strategy có chạy giống nhau ở từng stage không** thì tính
+  được, và đó mới là câu người vận hành hỏi ở đây.
+
+`alphas/{id}/stage-drift` đọc daily closes của mọi stage **trên cùng một lưới
+ngày**: ngày thiếu ở một stage là lỗ của stage đó, không phải dịch chuyển của
+stage kia, và để `null` chứ **không carry-forward** — đường phẳng vẽ đè lên lỗ
+là lời khẳng định ổn định mà không ai đo.
+
+Trên dev nó nói ngay điều đáng biết:
+
+| stage | kết quả |
+|---|---|
+| paper | 28 daily closes, 19 997.87 → 20 000 |
+| sandbox | **có deployment, nhưng không phát equity nào trong cửa sổ** |
+| live | không có deployment |
+
+Tile 9 (regime labels) và 11 (risk profile) **thật sự chưa có nguồn** — giữ
+`Soon` kèm mã.
+
+#### 3. Tooltip chart — một hộp duy nhất ✅
+
+Trước mỗi chart tự viết: ISO thô kèm ms và `Z`, `as_of` lặp lại **bên trong hộp
+mà người đọc mở ra để xem một con số**, hàng canh lệch nhau ở từng tile.
+`chartTooltip` nay là hộp duy nhất: **dấu thời gian tới giây**, giá trị
+**canh phải, tabular** nên hai series đọc thành một cột, provenance một dòng
+lặng. **Bỏ `as_of`** — caption của tile đã mang envelope rồi.
+
+#### 4. Datetime và số ✅ (realtime giá/PnL: **chưa**)
+
+- **`utcStamp` bỏ millisecond** (owner 2026-09-08, thay quyết định 08-30). Ba
+  chữ số đuôi có ở mọi hàng của mọi bảng, không ai đọc, mà tốn đúng phần canh
+  hàng của những số có đọc. Chuỗi gốc chính xác vẫn nằm ở `title`.
+- **`components/cells`**: `Stamp · Money · Qty · Ratio · Count` — Alpha 360
+  từng hiện `2026-07-28T00:30:06.551061Z` và `0.079000000000000000` cạnh một
+  workbench hiện cùng hai sự kiện đó bằng hai cách khác. Nay một bộ.
+- **Tiền tối đa 4 chữ số thập phân**: cột PnL từng xếp `123.19605`, `89.3469`,
+  `4,332.5415`, `28,579.6057488` chồng lên nhau — bốn thang trong một cột cùng
+  đơn vị. **Ngoại lệ giữ cho trung thực**: giá trị nhỏ tới mức 4 số sẽ làm tròn
+  thành 0 thì **giữ thang riêng tới 8** — in `0.0000` cho một phí thật
+  `0.00001234` chính là lỗi null-hiện-thành-0 mà surface này cấm.
+
+#### 5. Alpha Fleet — equity 30D hiện luôn ✅
+
+Trước: một request cho **mỗi** alpha, chỉ bắn khi expand (50 dòng = 50 lượt
+đọc), cột ghi "expand to load". Nay `alphas/equity-sparklines` trả **toàn bộ 43
+series trong một lượt đọc** từ chính daily closes mà fleet statistics đã nạp —
+**0.96s, một request**.
+
+**Và một lỗi im lặng lộ ra khi nhìn**: dù đã có dữ liệu, cột vẫn **trống** —
+43 canvas trong DOM, không nét nào. `SparkLine` đặt điểm trên **trục thời gian**
+mà Fleet truyền `"0"`, `"1"`, `"2"` — vị trí trong dãy, không phải mốc thời
+gian. Mọi điểm rơi vào cùng một toạ độ không đọc được, ECharts vẽ đường dài 0 và
+**không báo lỗi gì**. Nay dãy chỉ-là-hình-dạng dùng trục category. Chuỗi phẳng
+(equity không đổi) cũng từng vô hình vì min = max — nay được chừa chỗ, vì
+"equity alpha này không đổi" **là một câu trả lời** và phải trông như một câu
+trả lời.
+
+**Chưa làm**: giá và PnL nhảy realtime ở Alpha Fleet / Portfolio. Hiện hai màn
+đã re-đọc theo delta của projection stream (`keepValue`, không giật về skeleton),
+nhưng chưa có tick giá theo từng giây. Ghi lại để làm, không nhận là đã xong.
+
+**Ba gate bắt đúng lỗi của tôi trong pass này**: type-role scale từ chối một
+font token mới, từ chối `text-transform: uppercase` ngoài role `th`, và từ chối
+một khai báo `font-size` lạc. Cả ba đều là lỗi của tôi và gate đều đúng.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
