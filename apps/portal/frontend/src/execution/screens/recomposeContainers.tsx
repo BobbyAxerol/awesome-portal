@@ -8,7 +8,7 @@
  * screen is never swapped for a generic envelope view, and no fixture value
  * is reachable from this module.
  */
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
@@ -21,6 +21,7 @@ import type {
 } from "../api/profileRead";
 import { readAlphaFleetItem, readBindingItem, readQueryAnalytics } from "../api/profileRead";
 import { formatExact } from "../formatExact";
+import { utcStamp } from "../time";
 import { pageOf } from "../api/profileRows";
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
@@ -599,6 +600,8 @@ const ANALYTICS_TILE_TITLES: Readonly<Record<string, string>> = {
   "market-candles": "Market candles",
   "portfolio-drawdown-overlap": "Drawdown overlap",
   "portfolio-correlation": "Correlation matrix",
+  "observed-timeline": "Observed timeline",
+  "derived-mark-context": "Mark context",
   "portfolio-rho-timeline": "\u03c1 vs benchmark timeline",
   "canary-drift": "Paper vs live drift",
 };
@@ -626,7 +629,21 @@ function factRows(rows: readonly (readonly [string, string])[], label: string): 
  * frame with the served state and reason code.
  */
 /** Exported for tests: the tile set is the contract between the analytics branch and the Insight grid. */
-export function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): InsightTile[] {
+export function analyticsTiles(
+  analytics: QueryAnalytics,
+  asOf: string | null,
+  /**
+   * The observed-timeline read this screen already makes.
+   *
+   * Two capabilities — `observed-timeline` and `derived-mark-context` —
+   * declared PARTIAL and drew nothing, because their payload does not travel
+   * in the analytics envelope: it comes from `/views/observed-timeline`, which
+   * the screen was already reading for its own panel. So both tiles said "the
+   * branch answered with no rows for this window" over 6,407 entries sitting
+   * one component away.
+   */
+  observed?: ObservedTimeline | null,
+): InsightTile[] {
   const factCount = (key: string) => analytics.sourceFacts?.[key]?.length ?? 0;
   const provenance = (formula: string | null | undefined) => ({
     authority: "DERIVED",
@@ -703,6 +720,38 @@ export function analyticsTiles(analytics: QueryAnalytics, asOf: string | null): 
             {factRows(rows, "Venue contribution from latest source performance")}
           </>
         );
+      }
+      case "observed-timeline": {
+        const entries = observed?.timeline.entries ?? [];
+        if (entries.length === 0) {
+          return factRows([["timeline", observed ? `no entry in the current page · ${observed.timeline.state}` : "the timeline read has not answered yet"]], "Observed timeline");
+        }
+        // What kind of observation, and how many of each — a reader wants the
+        // shape of the page before any single row in it.
+        const byType = new Map<string, number>();
+        for (const entry of entries) byType.set(entry.observationType, (byType.get(entry.observationType) ?? 0) + 1);
+        const newest = [...entries].sort((left, right) => right.observedAtMs - left.observedAtMs)[0];
+        return factRows([
+          ["entries in page", count(entries.length)],
+          ...[...byType.entries()].sort((left, right) => right[1] - left[1]).slice(0, 5)
+            .map(([type, n]) => [type.toLowerCase().replace(/_/g, " "), count(n)] as const),
+          ["newest", utcStamp(newest.observedAtMs)],
+          ["ordering", observed?.timeline.orderingRule ?? "not stated"],
+        ], "Observed timeline");
+      }
+      case "derived-mark-context": {
+        const marks = observed?.mark.marks ?? [];
+        if (marks.length === 0) {
+          const why = observed?.mark.reasonCode ?? observed?.mark.marketContext.reasonCode;
+          return factRows([["marks", why ? `${observed?.mark.state ?? "UNAVAILABLE"} · ${why}` : "no position carries a published mark"]], "Mark context");
+        }
+        return factRows([
+          ...marks.slice(0, 6).map((mark) => [
+            mark.instrumentId ?? mark.positionId ?? "instrument not published",
+            `${mark.markPrice === null ? "not marked" : formatExact(mark.markPrice, "money").display}${mark.markPriceAtMs === null ? "" : ` · ${utcStamp(mark.markPriceAtMs)}`}`,
+          ] as const),
+          ["market context", `${observed?.mark.marketContext.state ?? "not stated"}${observed?.mark.marketContext.reasonCode ? ` · ${observed.mark.marketContext.reasonCode}` : ""}`],
+        ], "Mark context");
       }
       case "order-funnel": {
         const funnel = analytics.orderFunnel;
@@ -1316,13 +1365,32 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
  * beat follows the projection sequence — a real revision — not a clock.
  * Older pages are appended with the Portal continuation, passed back unchanged.
  */
-export function ObservedTimelineLive({ api, environment, environments, subjectKind, subjectId, refreshKey = 0 }: { api: ExecutionApi; environment: ObservedEnvironment; environments?: readonly ObservedEnvironment[]; subjectKind: ObservedSubjectKind; subjectId: string; refreshKey?: number }) {
+export function ObservedTimelineLive({ api, environment, environments, subjectKind, subjectId, refreshKey = 0, onLoaded }: {
+  api: ExecutionApi;
+  environment: ObservedEnvironment;
+  environments?: readonly ObservedEnvironment[];
+  subjectKind: ObservedSubjectKind;
+  subjectId: string;
+  refreshKey?: number;
+  /**
+   * Hands the page it just read back to the screen.
+   *
+   * The Observed timeline and Mark context tiles draw from this same route.
+   * Reading it a second time for them would be the double-read this surface
+   * spent a day removing from the workbench, so the panel reports what it has
+   * instead of anyone asking again.
+   */
+  onLoaded?: (timeline: ObservedTimeline | null) => void;
+}) {
   // The environments the subject is deployed in; the reader follows the chosen one and resets when the subject changes.
   const choices = environments && environments.length > 0 ? environments : [environment];
   const [chosen, setChosen] = useState<{ subject: string; env: ObservedEnvironment } | null>(null);
   const env: ObservedEnvironment = chosen?.subject === subjectId && choices.includes(chosen.env) ? chosen.env : environment;
   const tick = usePollTick(PROJECTION_POLL_MS);
   const state = useApiRead<ObservedTimeline>(() => api.getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100 }), [api, env, subjectKind, subjectId, refreshKey, tick], { keepValue: true });
+  const latest = useRef(onLoaded);
+  latest.current = onLoaded;
+  useEffect(() => { latest.current?.(state.value); }, [state.value]);
   const [older, setOlder] = useState<{ key: string; entries: ObservedEntry[]; loading: boolean }>({ key: "", entries: [], loading: false });
   const pageKey = `${env}|${subjectKind}|${subjectId}`;
   const onLoadMore = (after: string) => {
@@ -1376,6 +1444,9 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
   const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  // The Observed timeline and Mark context tiles read the same page the panel
+  // below already fetched; it hands it up rather than anyone reading twice.
+  const [observedForTiles, setObservedForTiles] = useState<ObservedTimeline | null>(null);
   // Tile 10 compares the stages this alpha actually runs in, on one calendar.
   const stageDrift = useApiRead(() => api.getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
@@ -1459,7 +1530,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
         // that already has a hi-fi tile is not repeated further down.
         ? [
             ...hifiInsightTiles({ analytics: scopedFacts, relations: relations.value, asOf: scopedFacts.asOf, window: scope.window, analyticsUnavailable: analyticsState.status === "ok" ? null : analyticsReason, published: analytics, stageDrift: stageDrift.value }),
-            ...analyticsTiles(scopedFacts, scopedFacts.asOf)
+            ...analyticsTiles(scopedFacts, scopedFacts.asOf, observedForTiles)
               .filter((tile) => !HIFI_COVERED_TITLES.has(tile.title))
               .map((tile, index) => ({ ...tile, index: HIFI_TILES.length + index + 1 })),
           ]
@@ -1472,7 +1543,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       sessions={alphaSessions(scopedFacts)}
       accounting={alphaAccounting(scopedFacts)}
       activity={<AlphaActivityTile activity={activityState.value} transport={activityState.status} reason={activityState.reason} />}
-      observedTimeline={<ObservedTimelineLive api={api} environment={factsEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} />}
+      observedTimeline={<ObservedTimelineLive api={api} environment={factsEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} onLoaded={setObservedForTiles} />}
       reconciliation={alphaReconciliation(scopedFacts)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}
