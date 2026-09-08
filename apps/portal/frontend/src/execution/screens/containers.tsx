@@ -138,11 +138,21 @@ export const INBOX_SCOPE_SORT = "sla_due_at:asc,approval_id:asc";
 export function useAnalyticsRead<T>(
   read: () => Promise<Result<T>>,
   deps: readonly unknown[],
+  options?: { keepValue?: boolean },
 ): LoadState<T> {
   const [state, setState] = useState<LoadState<T>>(loading);
+  const keepValue = options?.keepValue === true;
   useEffect(() => {
     let cancelled = false;
-    setState(loading);
+    // A re-read is not a first read. Once a dependency is a live one — a poll
+    // tick, a realtime refresh key — dropping the screen back to a skeleton on
+    // every beat makes working data look like it keeps breaking, and hides the
+    // rows for as long as the round trip takes. `keepValue` holds the last
+    // answer on screen while the next one is fetched; the very first read
+    // still shows loading, because then there is genuinely nothing to hold.
+    // `loading` is a function, so the old `setState(loading)` used it as an
+    // updater; called explicitly here, or the state would become the function.
+    setState((current) => (keepValue && current.value !== null ? current : loading<T>()));
     void read().then((result) => {
       if (cancelled) return;
       setState(
@@ -1091,6 +1101,9 @@ export function OperationsQueueContainer({
         triageState,
       }),
     [api, workspaceId, cursor.after, cursor.before, triageState, tick],
+    // Goal 6 put a 15-second tick in these dependencies. Without this the queue
+    // collapsed to a skeleton and rebuilt itself four times a minute.
+    { keepValue: true },
   );
 
   const queue = state.value;

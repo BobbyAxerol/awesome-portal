@@ -22,6 +22,7 @@ import { utcStamp } from "../time";
 import { StatusChip } from "../components/badges";
 import { useArrivals, useIds } from "../listMotion";
 import { liveDot } from "../sourceTone";
+import { SkeletonRows } from "../components/loading";
 
 export const FLEET_FILTERS = ["all", "live", "canary", "sandbox", "paper", "research"] as const;
 export type FleetFilter = (typeof FLEET_FILTERS)[number];
@@ -110,6 +111,12 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
   if (!smoke) {
     const items = list?.page.rows ?? [];
     const summary = list?.summary;
+    // Nothing on this screen may assert a fact while the read is in flight.
+    // It used to say "0 alphas · 0 deployments", stamp the source
+    // UNAVAILABLE, count every filter chip to zero and print "an empty set
+    // is a fact" — four claims, none of them known yet, all of them shown
+    // before anybody had answered.
+    const reading = status === "loading";
     // P0-5: the hi-fi filters by venue and owner as well as by stage. Both come
     // from the rows themselves — a hardcoded venue list is a release every time
     // the desk adds an exchange (DS §3.2).
@@ -130,7 +137,9 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
           <div className="exec-af-page">
             <header className="exec-af-masthead">
               <h1 className="exec-af-h1">Alpha Fleet</h1>
-              <span className="exec-af-sum">{summary?.alphaCount ?? list?.page.totalCount ?? items.length} alphas · {summary?.deploymentCount ?? 0} deployments · {(list?.environment ?? "unknown").toUpperCase()}</span>
+              <span className="exec-af-sum">{reading
+                ? "reading…"
+                : <>{summary?.alphaCount ?? list?.page.totalCount ?? items.length} alphas · {summary?.deploymentCount ?? "—"} deployments · {(list?.environment ?? "unknown").toUpperCase()}</>}</span>
               <span className="exec-af-wf">entry screen for WF 2a</span>
               <span className="exec-af-spacer" />
               {/* The masthead's own proof of life: the source clock lights when
@@ -142,7 +151,9 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                     over a closed stream is a real state, and one dot cannot
                     say both. */}
                 <span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
-                <b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source{" "}
+                <b>EXECUTION</b> · {reading
+                  ? <StatusChip label="READING" tone="mute" />
+                  : <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} />} · source{" "}
                 <SourceClock at={list?.sourceAsOf ?? null} />
               </span>
             </header>
@@ -150,9 +161,9 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
             {list ? <div className="exec-af-kpis">
               <FleetKpi label="Current exposure" values={summary?.exposureByCurrency ?? []} empty="No open notional" />
               <FleetKpi label="Current position PnL" values={(summary?.currentPositionPnlByCurrency ?? []).map((value) => ({ currency: value.currency, value: value.net }))} empty="No current position PnL" tone="good" />
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Deployments</div><div className="exec-af-kpival">{summary?.deploymentCount ?? 0}</div><div className="exec-af-kpisub">current Trading System deployment rows</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Deployments</div><div className="exec-af-kpival">{summary?.deploymentCount ?? "—"}</div><div className="exec-af-kpisub">current Trading System deployment rows</div></div>
               <div className="exec-af-kpi" data-tint={(summary?.needsAttentionCount ?? 0) > 0 ? "true" : undefined}><div className="exec-af-kpilabel" data-tone={(summary?.needsAttentionCount ?? 0) > 0 ? "warn" : undefined}>Needs attention</div><div className="exec-af-kpival" data-tone={(summary?.needsAttentionCount ?? 0) > 0 ? "bad" : "good"}>{summary?.needsAttentionCount ?? 0}</div><div className="exec-af-kpisub">source health and reconciliation</div></div>
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Portfolios</div><div className="exec-af-kpival">{summary?.portfolioCount ?? 0}</div><div className="exec-af-kpisub">allocation authority in current profile</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Portfolios</div><div className="exec-af-kpival">{summary?.portfolioCount ?? "—"}</div><div className="exec-af-kpisub">allocation authority in current profile</div></div>
             </div> : null}
             <div className="exec-af-filters" role="group" aria-label="Stage">
               {FLEET_FILTERS.map((value) => {
@@ -160,7 +171,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                   : value === "research" ? (summary?.researchOnlyCount ?? items.filter((item) => item.stage === "RESEARCH").length)
                     : summary?.stageCounts[value.toUpperCase()] ?? items.filter((item) =>
                       item.stages.some((stage) => stage.toLowerCase() === value)).length;
-                return <button key={value} type="button" className="exec-af-chip" data-active={filter === value ? "true" : undefined} aria-pressed={filter === value} onClick={() => setFilter(value)}>{FILTER_LABEL[value]} ({count})</button>;
+                return <button key={value} type="button" className="exec-af-chip" data-active={filter === value ? "true" : undefined} aria-pressed={filter === value} onClick={() => setFilter(value)}>{FILTER_LABEL[value]}{reading ? "" : ` (${count})`}</button>;
               })}
               <label className="exec-af-select">
                 <span className="sr-only">Venue</span>
@@ -201,19 +212,37 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                         <FleetItemRows key={item.alphaId} item={item} href={href} arrived={arrivals.has(item.alphaId)} equity={equity?.[item.alphaId] ?? null} expandable={expandable} isOpen={isOpen} onToggle={() => { if (!isOpen) onNeedEquity?.(item.alphaId); setOpen((m) => ({ ...m, [item.alphaId]: !isOpen })); }} />
                       );
                     })}
-                    {filteredItems.length === 0 ? <tr><td colSpan={10} className="exec-af-empty">No alpha is present for this stage filter — an empty set is a fact.</td></tr> : null}
+                    {/* Reading: placeholder rows in the table's own geometry, so
+                        the ten columns keep their widths and nothing moves when
+                        the alphas land. Settled and genuinely empty: the
+                        sentence, which is a different claim entirely. */}
+                    {reading ? <SkeletonRows columns={10} rows={5} /> : null}
+                    {filteredItems.length === 0 && !reading
+                      ? <tr><td colSpan={10} className="exec-af-empty">No alpha is present for this stage filter — an empty set is a fact.</td></tr>
+                      : null}
                   </tbody>
                 </table>
               </div>
               <footer className="exec-af-foot">
                 <span>source: strategies ⋈ deployments ⋈ accounts/balances ⋈ portfolios/allocations ⋈ current positions ⋈ reconciliation</span>
                 <span className="exec-af-spacer" />
-                <span>30d equity and max drawdown: <b>SOURCE_LATEST_WINDOW_NOT_PUBLISHED</b> · current facts remain usable</span>
+                {/* The join above is how this screen is built and is true before
+                    anyone answers. The line below is a verdict about what the
+                    source published, so it waits until the source has. */}
+                {reading ? null : (
+                  <span>30d equity and max drawdown: <b>SOURCE_LATEST_WINDOW_NOT_PUBLISHED</b> · current facts remain usable</span>
+                )}
               </footer>
             </div>
             <nav className="exec-table-pager" aria-label="Result pages">
-              <button type="button" disabled={!list?.page.prevCursor} onClick={() => list?.page.prevCursor && onPreviousPage?.(list.page.prevCursor)}>Previous</button>
-              <button type="button" disabled={!list?.page.nextCursor} onClick={() => list?.page.nextCursor && onNextPage?.(list.page.nextCursor)}>Next</button>
+              {/* A closed direction says why. The contract publishes only the two
+                  cursors, so the sentence is ours and reads as ours. */}
+              <button type="button" disabled={!list?.page.prevCursor}
+                title={list?.page.prevCursor ? undefined : "this is the first page of the fleet"}
+                onClick={() => list?.page.prevCursor && onPreviousPage?.(list.page.prevCursor)}>Previous</button>
+              <button type="button" disabled={!list?.page.nextCursor}
+                title={list?.page.nextCursor ? undefined : "no further page — the fleet ends here"}
+                onClick={() => list?.page.nextCursor && onNextPage?.(list.page.nextCursor)}>Next</button>
             </nav>
           </div>
         </ExecutionWorkspace>

@@ -11,6 +11,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { SHOW_AFTER_MS } from "./components/loading";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExecutionSurface } from "./ExecutionSurface";
@@ -312,10 +313,11 @@ describe("panel states", () => {
 
   it("keeps the loading skeleton out of the accessibility tree", () => {
     const { container } = render(<PanelState status="loading" />);
-    const blocks = container.querySelectorAll(".exec-skeleton-block");
-    expect(blocks.length).toBeGreaterThan(0);
-    for (const block of blocks) {
-      expect(block.getAttribute("aria-hidden")).toBe("true");
+    // The mark and the placeholder lines are shape, not content.
+    const shapes = container.querySelectorAll(".exec-pulse, .exec-sk-line");
+    expect(shapes.length).toBeGreaterThan(0);
+    for (const shape of shapes) {
+      expect(shape.getAttribute("aria-hidden")).toBe("true");
     }
     // Exactly one spoken announcement, in words.
     expect(container.querySelectorAll('[role="status"]').length).toBe(1);
@@ -2071,13 +2073,18 @@ describe("Approval Inbox — the full state set", () => {
   });
 
   it("renders a skeleton while loading, not an empty queue", () => {
+    // The skeleton is deliberately not an `.exec-state` box — it is aria-hidden
+    // scaffolding with one spoken announcement beside it. It appears only after
+    // SHOW_AFTER_MS: a read that returns faster than that shows nothing at all,
+    // because a flash of grey between two good frames is worse than waiting.
+    vi.useFakeTimers();
     const { container } = render(
       <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([])} counts={null} filter="INBOX" status="loading" />,
     );
-    // The skeleton is deliberately not an `.exec-state` box — it is aria-hidden
-    // scaffolding with one spoken announcement beside it.
-    expect(container.querySelectorAll(".exec-skeleton-block").length).toBeGreaterThan(0);
+    act(() => { vi.advanceTimersByTime(SHOW_AFTER_MS + 20); });
+    expect(container.querySelectorAll(".exec-sk-row").length).toBeGreaterThan(0);
     expect(screen.queryByText(/Inbox zero/)).toBeNull();
+    vi.useRealTimers();
   });
 
   it("keeps the rows on a partial read and says what is missing", () => {
@@ -2138,7 +2145,7 @@ describe("Gate R1 — the full state set", () => {
     // state box.
     const loading = render(gate({ status: "loading" })).container;
     expect(loading.querySelector(".exec-gate-decision")).toBeNull();
-    expect(loading.querySelectorAll(".exec-skeleton-block").length).toBeGreaterThan(0);
+    expect(loading.querySelectorAll(".exec-sk-line").length).toBeGreaterThan(0);
   });
 
   it("keeps the gate identifiable even when it cannot be shown", () => {
@@ -3059,9 +3066,13 @@ describe("containers — the port meets the screens", () => {
     expect(pending?.querySelectorAll("tbody tr").length).toBe(3);
   });
 
-  it("renders a loading skeleton before the first answer, not an empty queue", async () => {
+  it("never claims an empty queue before the first answer", async () => {
+    // The fixture answers immediately, so the honest thing is to draw no
+    // skeleton at all — flashing one between two good frames reads as a fault.
+    // What must never happen either way is the screen asserting "Inbox zero"
+    // before it has been told anything.
     const { container } = render(<ApprovalInboxContainer api={createFixtureApi()} />);
-    expect(container.querySelectorAll(".exec-skeleton-block").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(".exec-sk-row").length).toBe(0);
     expect(screen.queryByText(/Inbox zero/)).toBeNull();
     // Settle the container's trailing async dispatch inside act — the N29
     // acceptance requires a warning-free suite.

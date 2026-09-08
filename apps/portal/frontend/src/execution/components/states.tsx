@@ -13,6 +13,7 @@ import type { PanelStatus } from "../contracts";
 import type { ReactNode } from "react";
 
 import { soonReason, soonTitle } from "../soon";
+import { ExecutionPulse, SkeletonLine } from "./loading";
 
 const TITLE: Record<Exclude<PanelStatus, "ok">, string> = {
   loading: "Loading",
@@ -35,13 +36,15 @@ const TITLE: Record<Exclude<PanelStatus, "ok">, string> = {
  */
 export function PanelSkeleton({ label = "Loading" }: { label?: string }) {
   return (
-    <div className="exec-skeleton">
-      <span className="sr-only" role="status">
-        {label}
-      </span>
-      <div className="exec-skeleton-block" data-w="short" aria-hidden="true" />
-      <div className="exec-skeleton-block" data-w="long" aria-hidden="true" />
-      <div className="exec-skeleton-block" data-w="medium" aria-hidden="true" />
+    <div className="exec-skeleton" role="status" aria-label={label}>
+      <span className="sr-only">{label}</span>
+      {/* The mark first, then the shape of a couple of lines. Three static grey
+          bars — what this used to be — looked exactly like an empty panel, and
+          that is the whole complaint: a screen mid-read read as a screen with
+          nothing in it. The mark moves, and an empty panel never does. */}
+      <ExecutionPulse />
+      <SkeletonLine w="long" />
+      <SkeletonLine w="medium" />
     </div>
   );
 }

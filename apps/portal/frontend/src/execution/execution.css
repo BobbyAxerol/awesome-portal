@@ -728,7 +728,9 @@
 .exec-skeleton {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-2);
+  padding: var(--space-4) 0;
 }
 
 .exec-skeleton-block {
@@ -6900,4 +6902,104 @@ tr[data-arrived="true"] > :first-child,
   .exec-drain > span { animation: exec-drain-fill 600ms ease-out; }
   .exec-deadline[data-overdue="true"] { animation: exec-inbox-pulse 1.8s infinite; }
   .exec-af-row [data-pulse="true"], .exec-po-row [data-pulse="true"] { animation: om-pulse 1.6s infinite; }
+}
+
+/* ---------------------------------------------------------------------------
+   Reading states (owner 2026-09-08 — §A18).
+
+   The mark is three square cells rocking on a shared baseline. Square, because
+   this surface is built of rules and cells and a spinning circle would be the
+   one round thing in it; rocking rather than spinning, because a ledger being
+   written is what is actually happening. The same mark works at 14px inside a
+   button and at 22px in the middle of a panel.
+
+   Every rule here uses tokens both palettes define, so the carbon routes and
+   the light governance routes each get their own weight without a second
+   stylesheet. Nothing below sets a font.
+--------------------------------------------------------------------------- */
+@keyframes exec-pulse-rock {
+  0%, 100% { transform: scaleY(0.34); opacity: 0.45; }
+  50%      { transform: scaleY(1);    opacity: 1; }
+}
+@keyframes exec-sk-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+.exec-pulse { display: inline-flex; align-items: flex-end; gap: 2px; height: 22px; vertical-align: -4px; }
+.exec-pulse[data-size="sm"] { height: 14px; gap: 2px; }
+.exec-pulse > i {
+  display: block; width: 5px; height: 100%;
+  background: var(--accent);
+  transform-origin: bottom center;
+  transform: scaleY(0.34);
+  opacity: 0.45;
+}
+.exec-pulse[data-size="sm"] > i { width: 3px; }
+/* The floor the cells stand on: without it the shortest cell reads as floating. */
+.exec-pulse::after { content: ""; align-self: flex-end; width: 0; }
+
+.exec-sk-line {
+  display: block; position: relative; overflow: hidden;
+  height: 9px; background: var(--surface-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-sk-line[data-w="xshort"] { width: 18%; }
+.exec-sk-line[data-w="short"]  { width: 34%; }
+.exec-sk-line[data-w="medium"] { width: 58%; }
+.exec-sk-line[data-w="long"]   { width: 78%; }
+.exec-sk-line[data-w="full"]   { width: 94%; }
+
+.exec-sk-table { display: flex; flex-direction: column; }
+.exec-sk-row {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: 11px var(--space-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-sk-cell { flex: 1 1 0; min-width: 0; }
+
+.exec-sk-chart {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-soft);
+  background: linear-gradient(to top, var(--surface-2) 1px, transparent 1px) 0 100% / 100% 25% repeat-y;
+}
+
+.exec-sk-strip { display: flex; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); }
+.exec-sk-stripcell {
+  flex: 1 1 0; min-width: 0;
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--paper-raised);
+}
+
+.exec-sk-inline { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--ink-soft); }
+
+/* The class existed in the markup with no rule anywhere, so the two controls
+   rendered as bare browser buttons run together — "PreviousNext" — under the
+   panel. They are the same keyset pair the rest of the surface draws. */
+.exec-table-pager { display: flex; gap: var(--space-2); align-items: center; padding: var(--space-2) 0; }
+.exec-table-pager button {
+  font: var(--exec-font-control);
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.exec-table-pager button:disabled { color: var(--ink-faint); cursor: default; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .exec-pulse > i { animation: exec-pulse-rock 1.05s ease-in-out infinite; }
+  .exec-pulse > i:nth-child(2) { animation-delay: 0.14s; }
+  .exec-pulse > i:nth-child(3) { animation-delay: 0.28s; }
+  /* The sweep is the second channel only: it says "still working" on a shape
+     that already says "not yet". It is deliberately faint — a bright shimmer
+     over a whole table is the thing that makes a loading page feel cheap. */
+  .exec-sk-line::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, var(--surface-3, var(--paper-raised)), transparent);
+    opacity: 0.55;
+    animation: exec-sk-sweep 1.4s linear infinite;
+  }
 }

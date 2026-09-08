@@ -619,7 +619,13 @@ export function FullBlotter({
               leadingRows={leading}
             />
             <footer className="exec-bl-foot">
-              <span>{smoke && crossFilter ? `${smoke.crossFilter.selection.toLocaleString("en-US")} rows in selection · ${smoke.crossFilter.total.toLocaleString("en-US")} total` : `${page.totalCount ?? "—"} rows total`}</span>
+              {/* While the page is being read there is no count to state. The loading
+                  branch hands this screen an empty page, so the footer was printing
+                  "0 rows total" over a table that had not answered yet — a number
+                  asserted before anyone knew it. */}
+              <span>{smoke && crossFilter
+                ? `${smoke.crossFilter.selection.toLocaleString("en-US")} rows in selection · ${smoke.crossFilter.total.toLocaleString("en-US")} total`
+                : status === "loading" ? "reading…" : `${page.totalCount ?? "—"} rows total`}</span>
               <span className="exec-bl-spacer" />
               <span>◇ conditional · ▸/▾ expandable (bracket legs, fills) · WORKING rows re-price live · every id navigates</span>
             </footer>

@@ -441,7 +441,10 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
     limit: 50,
     ...(cursor ? { after: cursor } : {}),
     ...(filter === "ALL" ? {} : { status_bucket: filter }),
-  }), [api, cursor, filter, realtime.refreshKey]);
+  }), [api, cursor, filter, realtime.refreshKey],
+    // The paper stream ticks this key; without keepValue the blotter emptied
+    // itself on every delta and re-drew, which reads as the table failing.
+    { keepValue: true });
   const blotterGroups = useBlotterGroups(api, "paper");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [funnel, setFunnel] = useState<{ orderId: string; funnel: OrderFunnel | null; status: PanelStatus; reason?: string } | null>(null);
@@ -1957,7 +1960,10 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
   // portfolio register follow. This was the last of the ten list screens with
   // no subscription at all: it re-read only when the operator changed a filter.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
-  const listState = useApiRead(() => api.getBindings(query), [api, query, realtime.refreshKey]);
+  const listState = useApiRead(() => api.getBindings(query), [api, query, realtime.refreshKey],
+    // The subscription added today ticks this key; the register must not
+    // blank itself every time one of the three projections advances.
+    { keepValue: true });
   const detailState = useApiRead<ProfileEnvelope | null>(
     () => (bindingId ? api.getBindingResource(bindingId) : Promise.resolve({ ok: true as const, value: null })),
     [api, bindingId],

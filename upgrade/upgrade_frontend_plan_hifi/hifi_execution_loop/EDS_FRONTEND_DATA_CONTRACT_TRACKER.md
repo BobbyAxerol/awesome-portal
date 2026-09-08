@@ -2469,6 +2469,39 @@ so sánh được gieo **trước khi dữ liệu tồn tại**. Trạng thái r
 rỗng-vì-nguồn-trả-rỗng phải tách nhau **ở cả cơ chế động**, không chỉ ở chữ hiển
 thị — đây là cùng một luật §3.4, áp vào chuyển động.
 
+#### A18.3 Đã dựng — và ba lỗi chỉ lộ ra khi nhìn đúng khoảnh khắc đang đọc
+
+**Bộ primitive** (`components/loading.tsx`): `useDeferredLoading` (180 ms mới vẽ,
+đã hiện thì giữ tối thiểu 420 ms), `ExecutionPulse` (mark ba ô vuông lúc lắc
+trên một đường sàn — vuông góc như toàn bộ ngôn ngữ Portal; một spinner tròn sẽ
+là thứ duy nhất tròn trong console dựng bằng đường kẻ và ô), `TableSkeleton`
+(khớp đúng số cột và bề rộng thật), `SkeletonRows` (cho màn tự dựng `<table>`),
+`ChartSkeleton` (giữ đúng chiều cao), `StripSkeleton`, `InlineLoading`.
+`PanelSkeleton` cũ được nâng lên cùng ngôn ngữ nên **mọi màn đi qua
+`PanelState status="loading"` hưởng ngay**, không phải sửa 17 màn.
+
+**Ba lỗi ảnh chụp lôi ra** — đều là *khẳng định sai*, không phải thẩm mỹ:
+
+| Chỗ | Lúc đang đọc màn nói gì | Sửa |
+|---|---|---|
+| Alpha Fleet | `0 alphas · 0 deployments`, badge **UNAVAILABLE**, mọi chip `(0)`, và **"an empty set is a fact"** — bốn điều chưa hề biết | `reading…` / `READING`, không đếm, không phán, không in câu về tập rỗng |
+| Bảng dùng chung | skeleton **tràn khỏi mép phải panel** vì không nằm trong scroll container — phá đúng lời hứa "layout không nhảy" mà nó sinh ra để giữ | đặt trong `.exec-table-scroll` cùng `minWidth` của bảng thật |
+| Full Blotter | footer ghi **"0 rows total"** khi chưa có câu trả lời | `reading…` cho tới khi nguồn trả lời |
+
+**Ba lỗi logic tải tìm được khi rà** — `useAnalyticsRead` **không có**
+`keepValue` như `useApiRead`, nên mỗi khi deps sống đổi thì cả màn sập về
+skeleton: **Operations Queue** (tick 15 s — *lỗi tôi tạo ở Goal 6*, sập 4
+lần/phút), **Accounts** (*lỗi tôi tạo hôm nay*), **Full Blotter** (có sẵn). Nay
+**đọc lại không phải đọc lần đầu**: giữ câu trả lời cũ trên màn trong lúc lấy
+câu mới. Một bẫy nhỏ tsc bắt: `loading` là một **hàm**, `setState(loading)` cũ
+dùng nó làm updater — suýt để state trở thành chính cái hàm.
+
+**Ba class chết nữa gặp trên đường**: `.exec-table-pager` không có luật CSS nào
+(nên hai nút hiện thành `PreviousNext` dính liền) — dùng ở 3 màn; hai nút phân
+trang mờ mà không nói lý do; bốn chỗ `?? 0` in số 0 cho giá trị vắng mặt (§3.3).
+
+**Gate:** 2 039 test (14 test mới cho riêng phần này), tsc sạch.
+
 #### A18.2 Việc chính: hệ thống trạng thái đang đọc cho toàn bộ màn
 
 Hiện trạng: `PanelSkeleton` là **ba thanh xám tĩnh 30%/60%/90%, giống hệt nhau ở

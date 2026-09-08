@@ -34,6 +34,7 @@ import type { KeysetPage, PanelStatus } from "../contracts";
 import { emptyMeansEmpty, RetentionNotice, retentionReason } from "./retention";
 import { PanelState } from "./states";
 import { useArrivals } from "../listMotion";
+import { TableSkeleton, useDeferredLoading } from "./loading";
 
 /** DS §8: 7px vertical padding, ~16px line, 1px hairline. */
 export const ROW_HEIGHT = 32;
@@ -94,6 +95,9 @@ export interface KeysetTableProps<T> {
   selectedKey?: string | null;
   /** Per-row emphasis, e.g. an overdue queue item. Rendered as a data attribute. */
   rowEmphasis?: (row: T) => string | undefined;
+  /** Placeholder rows while reading. Default 6 — about a screenful without
+   *  claiming the page will be longer than it is. */
+  skeletonRows?: number;
   /** The screen's own name for "no rows", when it has a better one than the
    *  shared vocabulary — the inbox says "Inbox zero", which is an outcome
    *  rather than an absence. */
@@ -139,6 +143,7 @@ export function KeysetTable<T>({
   onRowClick,
   selectedKey = null,
   rowEmphasis,
+  skeletonRows = 6,
   emptyTitle,
   minWidth = 880,
   viewportRows,
@@ -165,6 +170,9 @@ export function KeysetTable<T>({
     return () => ro.disconnect();
   }, []);
 
+  // Below `SHOW_AFTER_MS` nothing is drawn at all: a skeleton between two good
+  // frames is a flash of grey, and a read this fast is perceived as instant.
+  const showSkeleton = useDeferredLoading(status === "loading");
   const rows = page.rows;
   // Goal 6: rows that arrived since the previous read flash once. Placed on
   // the shared table rather than in each screen so the blotter, the inbox
@@ -186,6 +194,25 @@ export function KeysetTable<T>({
   // missing two of five linked facts still holds three that are complete.
   // Replacing either with a state box withholds work that can be done.
   if (status !== "ok" && status !== "partial" && status !== "stale") {
+    // A reading table keeps its own geometry: the same column count and the
+    // same fixed widths, so the head does not move and the panel does not grow
+    // when the rows land. The generic three-bar skeleton stood in for every
+    // panel on the surface and matched the shape of none of them, which is how
+    // a table mid-read came to look exactly like an empty one.
+    if (status === "loading" && showSkeleton) {
+      return (
+        // Inside the same scroll container and at the same `minWidth` as the
+        // real table: without it the placeholder rows ran past the panel's
+        // right edge, so the one thing the skeleton exists to promise — that
+        // the layout will not move — was the first thing it broke.
+        <div className="exec-table-scroll">
+          <div style={{ minWidth }}>
+            <TableSkeleton columns={columns.map((c) => c.width)} rows={skeletonRows} label={`Loading ${label}`} />
+          </div>
+        </div>
+      );
+    }
+    if (status === "loading") return null;
     return <PanelState status={status} reason={reason} />;
   }
   if (rows.length === 0) {
