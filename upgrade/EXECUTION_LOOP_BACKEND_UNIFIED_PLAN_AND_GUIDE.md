@@ -5084,6 +5084,17 @@ input pin prevent a future array/object mismatch. This repairs release
 evidence serialization only; it neither widens runtime authority nor makes a
 `PRODUCT_ACTIVE` claim.
 
+**Cosign v3 bundle compatibility correction (2026-09-08):** a live
+read-only verification of the signed Execution Edge OCI index showed that
+Cosign v3 records `critical.identity.docker-reference` as the complete
+digest-pinned image reference, while v2 records only its repository.  The
+evidence adapter now accepts exactly either form, and in both cases still
+requires the separately recorded immutable manifest digest to match.  Tags,
+unrelated repositories and mismatched subjects remain rejected.  A focused
+v3-shaped regression test and the re-pinned EDS-12 qualification manifest
+bind this correction.  This is a publisher compatibility fix, not a source,
+command, database or runtime-authority expansion.
+
 **Market Context render correction (2026-09-08):** the production renderer
 already accepted `market-data-layer-v1`, but its readiness preflight still
 compared every profile-bound Manager locations pack to the old facade-only

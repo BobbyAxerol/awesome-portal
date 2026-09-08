@@ -95,7 +95,7 @@
     {
       "id": "cosign_signature_adapter",
       "file": "scripts/verify-cosign-signature.py",
-      "sha256": "sha256:8563f1c00a5348888de94c5de1f81be3475e69b33e76c490763acc419ddb690e"
+      "sha256": "sha256:d4e3624dc0bb8ba5ee09a11a2b949c5a421eba079b223259d8f5e0c37454b67d"
     },
     {
       "id": "image_publication_gate",

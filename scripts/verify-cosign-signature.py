@@ -63,7 +63,11 @@ def parse_records(raw: bytes, image: str) -> list[dict[str, Any]]:
         subject = critical.get("image")
         if not isinstance(identity, dict) or not isinstance(subject, dict):
             raise SignatureError("Cosign signature record binding is malformed")
-        if identity.get("docker-reference") != repository:
+        # Cosign v2 emits the repository here, while Cosign v3's OCI bundle
+        # records the complete digest-pinned subject.  Both representations
+        # are safe only together with the exact subject digest check below.
+        # Never accept a tag or an unrelated repository.
+        if identity.get("docker-reference") not in {repository, image}:
             raise SignatureError("Cosign signature repository binding drifted")
         if subject.get("docker-manifest-digest") != digest:
             raise SignatureError("Cosign signature digest binding drifted")
