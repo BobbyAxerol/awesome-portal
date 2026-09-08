@@ -28,6 +28,7 @@ import {
   currentSourcePath,
   currentSourceUpstreamError,
   eds11rManagerV2Path,
+  nextAdaptiveManagerRelationPagePath,
 } from "../src/execution/current-source.proxy";
 import {
   managerRelationOperationByRelation,
@@ -377,6 +378,37 @@ describe("N17B exact current-set production acceptance", () => {
         retryable: false,
       }),
     });
+
+    const responseTooLarge = currentSourceUpstreamError(Buffer.from(JSON.stringify({
+      error: { code: "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE", message: "upstream detail" },
+    })), true, 413);
+    expect(responseTooLarge).toMatchObject({
+      code: "N17B_SOURCE_RESPONSE_TOO_LARGE",
+      status: 413,
+      details: {
+        availability: "DEGRADED",
+        reason_code: "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE",
+        retryable: false,
+      },
+    });
+    expect(nextAdaptiveManagerRelationPagePath(
+      "/internal/v2/manager/relations/public/sizing_decisions?limit=200&cursor=opaque%2B%2F%3D",
+      responseTooLarge,
+    )).toBe(
+      "/internal/v2/manager/relations/public/sizing_decisions?limit=100&cursor=opaque%2B%2F%3D",
+    );
+    expect(nextAdaptiveManagerRelationPagePath(
+      "/internal/v2/manager/relations/public/sizing_decisions?limit=1",
+      responseTooLarge,
+    )).toBeNull();
+    expect(nextAdaptiveManagerRelationPagePath(
+      "/internal/v2/manager/projections/fill?limit=200",
+      responseTooLarge,
+    )).toBeNull();
+    expect(nextAdaptiveManagerRelationPagePath(
+      "/internal/v2/manager/relations/public/sizing_decisions?limit=200",
+      new CurrentSourceProxyError("N13B_UPSTREAM_UNAVAILABLE", 502),
+    )).toBeNull();
   });
 });
 

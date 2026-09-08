@@ -25,6 +25,9 @@ const RELATION = /^[a-z][a-z0-9_]{1,127}$/;
 const TYPED_UPSTREAM_CODE = /^CURRENT_SOURCE_[A-Z0-9_]{1,80}$/;
 const TYPED_MANAGER_CODE = /^MANAGER_V2_[A-Z0-9_]{1,80}$/;
 const CANARY_SCREEN = "EXECUTION_CANARY_CONTROL_ROOM_SCREEN";
+const MANAGER_RELATION_PAGE_PATH = /^\/internal\/v2\/manager\/relations\/public\/[a-z][a-z0-9_]{1,127}$/;
+const MAXIMUM_MANAGER_PAGE_LIMIT = 200;
+const MAXIMUM_ADAPTIVE_MANAGER_PAGE_ATTEMPTS = 8;
 
 const N17B_PAPER_RELATIONS = Object.freeze({
   "manager.deployments": Object.freeze(["strategy_deployments"]),
@@ -956,13 +959,32 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         authenticationMethods: principal.authenticationMethods,
       });
       const session = await this.getSession(profile);
-      const source = await this.sendRequest(
-        session,
-        assertion,
-        path,
-        operationPolicy?.maximumResponseBytes,
-        operationPolicy ? "EDS01_RESPONSE_TOO_LARGE" : "N13B_RESPONSE_TOO_LARGE",
-      );
+      // A Manager relation response may legitimately exceed the immutable
+      // 1 MiB wire budget at a 200-row page despite each record being valid.
+      // This is not a retry of the same source request: it is a bounded,
+      // cursor-preserving reduction in the server-owned page size.  The
+      // browser still receives the source-issued opaque continuation and is
+      // never told about a relation, route, credential, or source failure.
+      let source: unknown;
+      let candidatePath = path;
+      for (let attempt = 0; ; attempt += 1) {
+        try {
+          source = await this.sendRequest(
+            session,
+            assertion,
+            candidatePath,
+            operationPolicy?.maximumResponseBytes,
+            operationPolicy ? "EDS01_RESPONSE_TOO_LARGE" : "N13B_RESPONSE_TOO_LARGE",
+          );
+          break;
+        } catch (error) {
+          const reducedPath = operationPolicy && attempt < MAXIMUM_ADAPTIVE_MANAGER_PAGE_ATTEMPTS
+            ? nextAdaptiveManagerRelationPagePath(candidatePath, error)
+            : null;
+          if (!reducedPath) throw error;
+          candidatePath = reducedPath;
+        }
+      }
       const value = await this.sharedReads.complete(scope, shared, source);
       sharedCompleted = true;
       return this.composedResponse(
@@ -1662,7 +1684,7 @@ export function currentSourceUpstreamError(
   responseIsJson: boolean,
   upstreamStatus: number,
 ): CurrentSourceProxyError {
-  const safeStatus = [400, 401, 403, 404, 409, 422, 429, 503, 504].includes(upstreamStatus)
+  const safeStatus = [400, 401, 403, 404, 409, 413, 422, 429, 503, 504].includes(upstreamStatus)
     ? upstreamStatus
     : 502;
   if (responseIsJson && body.byteLength <= 64 * 1024) {
@@ -1686,15 +1708,18 @@ export function currentSourceUpstreamError(
             });
           }
           if (typeof value.code === "string" && TYPED_MANAGER_CODE.test(value.code)) {
+            const responseTooLarge = value.code === "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE";
             return new CurrentSourceProxyError(
-              upstreamStatus === 429
+              responseTooLarge
+                ? "N17B_SOURCE_RESPONSE_TOO_LARGE"
+                : upstreamStatus === 429
                 ? "N17B_SOURCE_RATE_LIMITED"
                 : upstreamStatus === 404
                   ? "N17B_SOURCE_RELATION_UNAVAILABLE"
                   : "N17B_SOURCE_REJECTED",
-              upstreamStatus === 429 ? 503 : safeStatus,
+              responseTooLarge ? 413 : upstreamStatus === 429 ? 503 : safeStatus,
               {
-                availability: upstreamStatus === 429 ? "DEGRADED" : "UNAVAILABLE",
+                availability: responseTooLarge || upstreamStatus === 429 ? "DEGRADED" : "UNAVAILABLE",
                 reason_code: value.code,
                 retryable: false,
               },
@@ -1714,6 +1739,27 @@ export function currentSourceUpstreamError(
       : "N13B_UPSTREAM_REJECTED",
     upstreamStatus === 429 ? 503 : safeStatus,
   );
+}
+
+/**
+ * Returns the next smaller *server-owned* Manager relation page request only
+ * for the one typed wire-size failure.  It does not retry authentication,
+ * transport, cursor, contract, or arbitrary upstream errors.  Halving gives
+ * at most eight reductions from the contractual maximum of 200 to one row.
+ */
+export function nextAdaptiveManagerRelationPagePath(path: string, error: unknown): string | null {
+  if (!(error instanceof CurrentSourceProxyError) || error.code !== "N17B_SOURCE_RESPONSE_TOO_LARGE") {
+    return null;
+  }
+  const parsed = new URL(path, "https://portal.invalid");
+  if (!MANAGER_RELATION_PAGE_PATH.test(parsed.pathname)) return null;
+  const limits = parsed.searchParams.getAll("limit");
+  const cursors = parsed.searchParams.getAll("cursor");
+  if (limits.length !== 1 || cursors.length > 1) return null;
+  const limit = Number(limits[0]);
+  if (!Number.isInteger(limit) || limit <= 1 || limit > MAXIMUM_MANAGER_PAGE_LIMIT) return null;
+  parsed.searchParams.set("limit", String(Math.max(1, Math.floor(limit / 2))));
+  return `${parsed.pathname}${parsed.search}`;
 }
 
 export class CurrentSourceProxyError extends Error {

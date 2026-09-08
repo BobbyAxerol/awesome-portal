@@ -5207,6 +5207,26 @@ stale evidence manifest. The dependent N29 BR-EX-72 source-boundary evidence
 and its immutable manifest were re-pinned in the same change; qualification
 now fails closed if either release layer becomes stale.
 
+**Current-source page-density correction (2026-09-08):** live source probes
+then isolated the remaining `sizing_decisions` partial to a valid 200-row
+Manager relation page whose dense evidence payload exceeds the immutable 1 MiB
+source-response ceiling. This is neither a missing relation nor permission,
+schema, cursor or Trading System capability gap. The Rust Edge now classifies
+only this exact source condition as the typed HTTP `413`
+`MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE`; the Portal maps it to
+`N17B_SOURCE_RESPONSE_TOO_LARGE` and retries only a named, catalogued
+`/internal/v2/manager/relations/public/<relation>` page with a bounded
+server-owned halving sequence (`200 → … → 1`). The original opaque
+relation-bound cursor, profile pin, decimal strings, mTLS/delegated assertion,
+admission limits and 1 MiB source bound are unchanged. Authentication,
+transport, contract, arbitrary paths and a one-row oversized record are never
+retried or rewritten. The same boundary is shared by direct BFF reads and the
+projection worker; therefore the correction restores rich screens without
+exposing source relation/cursor inputs to the browser. Control API plus
+PostgreSQL restore and focused Rust mapping tests are green. A new signed
+immutable release and deployed Paper/Sandbox/Live probe matrix remain required
+before this plan can emit `PRODUCT_ACTIVE`.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:

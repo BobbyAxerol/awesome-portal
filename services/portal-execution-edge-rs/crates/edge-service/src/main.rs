@@ -2471,6 +2471,17 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
             "MANAGER_V2_SOURCE_UNAVAILABLE",
             "Manager source is temporarily unavailable.",
         ),
+        // A fixed relation page can be made smaller without widening a route,
+        // cursor, profile, or byte budget.  Preserve this distinction so the
+        // Portal BFF can make one bounded server-owned page-size adjustment
+        // instead of misclassifying valid high-density evidence as a contract
+        // failure.
+        ManagerV2ClientError::ResponseTooLarge
+        | ManagerV2ClientError::UnexpectedHttpStatus(413) => manager_problem(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE",
+            "Manager relation page exceeded the published byte limit.",
+        ),
         ManagerV2ClientError::InvalidSourceProxyOrigin
         | ManagerV2ClientError::InvalidProfileId
         | ManagerV2ClientError::MissingTrustAnchor
@@ -2484,7 +2495,6 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
         | ManagerV2ClientError::ExtensionContractHeaderMismatch
         | ManagerV2ClientError::MarketContextAdapterHeaderMismatch
         | ManagerV2ClientError::InvalidContentType
-        | ManagerV2ClientError::ResponseTooLarge
         | ManagerV2ClientError::UnexpectedHttpStatus(_)
         | ManagerV2ClientError::ExtensionUnexpectedHttpStatus(_)
         | ManagerV2ClientError::MarketContextAdapterUnexpectedHttpStatus(_)
@@ -5087,6 +5097,15 @@ mod tests {
         assert_eq!(
             manager_client_error_response(&ManagerV2ClientError::ContractHeaderMismatch).status(),
             StatusCode::BAD_GATEWAY
+        );
+        assert_eq!(
+            manager_client_error_response(&ManagerV2ClientError::ResponseTooLarge).status(),
+            StatusCode::PAYLOAD_TOO_LARGE
+        );
+        assert_eq!(
+            manager_client_error_response(&ManagerV2ClientError::UnexpectedHttpStatus(413))
+                .status(),
+            StatusCode::PAYLOAD_TOO_LARGE
         );
     }
 
