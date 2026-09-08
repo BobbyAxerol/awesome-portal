@@ -1705,6 +1705,69 @@ vì cắt ở trình duyệt nghĩa là đã tải về rồi mới cắt.
 drain. Retry phục hồi được nên **ba panel vẫn có dữ liệu thật**, nhưng tiếng ồn
 là thật → gộp cache ở **Goal 6**.
 
+### A13.8 Owner giao làm backend hai chỗ (08-09) — payload và tiếng ồn 5xx
+
+Bobby: *"Bạn cũng là backend mà, làm luôn chỗ này nhé"*. Cả hai đã sửa ở đúng
+tầng, không đẩy sang codex.
+
+#### 1. Payload workbench 7.0 MB → 1.88 MB
+
+Đo theo từng khoá trước khi cắt:
+
+| Phần | Trước | Sau | Vì sao |
+|---|---:|---:|---|
+| `query_analytics.analytics.source_facts` | 3.88 MB | **0** | 15 nhóm fact phục vụ Trade Replay ở màn 360; workbench **không đọc nhóm nào**. `query()` nay nhận `sourceFacts: false`; nhóm được **làm rỗng, không xoá** để reader kiểm `source_facts.orders.length` không phải kiểm thêm sự tồn tại của trường |
+| `performance` depth 30 ngày | 1.32 MB | **0** | Không panel nào vẽ chuỗi performance; panel Accounting đọc **dòng mới nhất**, mà trang relation bounded đã có. Còn **một** history query thay vì hai |
+| `account_equity` depth | 1.44 MB | 1.44 MB | **Giữ nguyên** — đây là chuỗi chart equity thật sự vẽ, và directive của owner 2026-09-03 nói rõ màn phân tích hiện chuỗi sâu nhất có thật |
+
+#### 2. Correlation toàn fleet tính lại cho mọi subject
+
+Payload xuống 1.88 MB rồi mà vẫn 4.6s, và thời gian **không phải** ở truyền tải:
+
+```
+/screens/paper                     0.79s
+/deployments/{id}/query-analytics  3.13s
+/screens/paper/{id}                4.57s
+```
+
+3.1s là `portfolioStatistics`: 90 ngày daily closes toàn fleet, correlation 43
+alpha (**903 cặp**), drawdown overlap. **Subject không hề tham gia phép tính
+đó** — mọi workbench và mọi alpha 360 đều tính lại y hệt. Nay memo hoá theo
+**epoch + sequence của chính projection**, nên cache **không thể** trả số cũ hơn
+dữ liệu nó mô tả (projection refresh → sequence mới → miss). Lỗi không được
+cache.
+
+#### Kết quả đo trên dev
+
+| | Trước | Sau |
+|---|---:|---:|
+| Payload workbench | 7.00 MB | **1.88 MB** |
+| Panel đầu tiên hiện (browser) | 20.6s | **4.1s** |
+| `/alphas/{id}/query-analytics` | 2.90s | **1.19s** |
+| Workbench warm | 6.6s | **3.5s** |
+
+#### 3. Còn lại: một defect của nguồn, không vá sâu
+
+`portfolio-equity-snapshots` nhận **đúng 5 dòng** và từ chối **6** trở lên
+(`N17B_SOURCE_REJECTED` / `MANAGER_V2_SOURCE_CONTRACT_REJECTED`) — bisect trên
+dev 2026-09-08 — **trong khi tự khai `maximum_page_rows: 200` và
+`has_more: true`**. Projection worker cũng vấp đúng chỗ này
+(`execution_profile_projection_relation_failed`), và đó là lý do relation này
+không có trong local projection.
+
+Tôi **không** dựng thang retry trong đường dẫn nguồn dùng chung để che: đoán sai
+cỡ trang thì trả về trang thiếu mà vẫn báo khoẻ. Thay vào đó walk **nhớ cỡ trang
+nguồn đã nhận**, lưu `sessionStorage` để sống qua reload — dò một lần thay vì
+một lần mỗi drain.
+
+**Backend request cho codex (kèm bằng chứng):**
+1. `portfolio_equity_snapshots` và `sizing_decisions` bị Manager v2 từ chối —
+   relation tự mâu thuẫn với manifest của nó.
+2. `/internal/v1/screens/portfolio-360/{id}/correlation` và `/capital-ledger`
+   trả **503** trên profile này. Portal đang hiện typed state trung thực (panel
+   Overview vẫn có dữ liệu thật từ relation), nhưng hai route này chưa phục vụ
+   được. Không che 503 thành 200 vì upstream **thật sự** đang nói unavailable.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

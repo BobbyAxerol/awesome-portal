@@ -150,9 +150,41 @@ export const PAGE_SIZES: readonly number[] = [200, 50, 20, 5];
  */
 const acceptedPageSize = new Map<string, number>();
 
+/**
+ * `sessionStorage`, so the lesson survives a reload.
+ *
+ * A module Map alone is reset by every full page load, which is exactly when
+ * an operator is most likely to be watching the console. Per tab, never
+ * shared, and holding one small integer per relation: if it is unavailable or
+ * throws — a private window, storage blocked — the walk simply probes as it
+ * did before.
+ */
+const PAGE_SIZE_STORE = "exec.relation.page-size.v1";
+
+function readStoredSizes(): void {
+  try {
+    const raw = window.sessionStorage?.getItem(PAGE_SIZE_STORE);
+    if (!raw) return;
+    for (const [key, size] of Object.entries(JSON.parse(raw) as Record<string, unknown>)) {
+      if (typeof size === "number" && PAGE_SIZES.includes(size)) acceptedPageSize.set(key, size);
+    }
+  } catch { /* a lesson we cannot read is a lesson we re-learn */ }
+}
+
+function rememberSize(key: string, size: number): void {
+  if (acceptedPageSize.get(key) === size) return;
+  acceptedPageSize.set(key, size);
+  try {
+    window.sessionStorage?.setItem(PAGE_SIZE_STORE, JSON.stringify(Object.fromEntries(acceptedPageSize)));
+  } catch { /* storage refused; the in-memory map still spares this tab */ }
+}
+
+if (typeof window !== "undefined") readStoredSizes();
+
 /** Forget the learned page sizes. Exported for tests, which must not leak state between cases. */
 export function resetAcceptedPageSizes(): void {
   acceptedPageSize.clear();
+  try { window.sessionStorage?.removeItem(PAGE_SIZE_STORE); } catch { /* nothing to forget */ }
 }
 
 /** Walk a relation's current page set with the Portal continuation, stepping the page size down when the source refuses one; a cancelled walk stops before its next page and says so. */
@@ -176,7 +208,7 @@ export async function drainRelation(read: RelationRead, routeId: RelationRoute |
     }
     if (!result.ok) return { rows, pages, exhausted: false, state: pages === 0 ? result.status.toUpperCase() : last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: result.reason };
     pages += 1;
-    if (pages === 1) acceptedPageSize.set(`${environment}:${routeId}`, PAGE_SIZES[sizeIndex]);
+    if (pages === 1) rememberSize(`${environment}:${routeId}`, PAGE_SIZES[sizeIndex]);
     last = result.value;
     rows.push(...result.value.records.map(relationRow));
     if (!result.value.page.hasMore || !result.value.page.nextCursor) {
