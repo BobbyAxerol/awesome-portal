@@ -75,7 +75,7 @@
     "frontend_same_origin_bff_double_sha256": "sha256:d4af733262f1e07bdef8cfbb871264116497a6542d6e1f06d802cd5001ae6f0a",
     "frontend_same_origin_bff_contract_test_sha256": "sha256:eab8b1bd714f215c54f68efe9d1a1ecb457ecaa78a003e9fdea251125e1f295c",
     "n17b_real_paper_acceptance_sha256": "sha256:1edb878b3330227a5ae7f34119980916e8eed78f31b592dfabd876e0d4281065",
-    "release_workflow_sha256": "sha256:99f1a9502f45f5a87b1188450d856cb9b812972ff69fd095f71011039823519f",
+    "release_workflow_sha256": "sha256:9978355433f5061b0c2d2a4b73299bc1e6955d6e453de8d3f0348e3404657959",
     "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
     "governance_product_migration_sha256": "sha256:e9193e9baaa1886dd882d1e6b806dd117b6f6a08d0862bc386ac20c81c679383",
     "governance_product_schema_sha256": "sha256:432b1fd69b5fd3c57687f2e96c9e1803f3a09f6f5f3068379c0a2a7b59bebe3e",

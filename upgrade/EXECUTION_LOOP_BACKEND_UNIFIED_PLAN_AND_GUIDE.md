@@ -5062,6 +5062,16 @@ it must still scan, sign, bind all six evidence sets, generate N14A/N14B and
 pass the deployed EDS-12 evidence gate before this plan may emit
 `PRODUCT_ACTIVE`.
 
+**Publisher registry-consistency correction (2026-09-08):** the same release
+attempt then reached the N14A candidate step before GHCR had made the
+OCI-native Buildx attestation manifests readable on every registry replica.
+The publisher now retries only the exact digest-bound SBOM/provenance verifier
+for up to 12 attempts with a five-second interval.  Each attempt writes into a
+fresh temporary directory; evidence is moved into the N14A pack only after the
+complete pair verifies.  Signature, scan, image digest and all fail-closed
+candidate checks remain unchanged.  This is bounded registry-read resilience,
+not a relaxation or a deployed-evidence claim.
+
 **Market Context render correction (2026-09-08):** the production renderer
 already accepted `market-data-layer-v1`, but its readiness preflight still
 compared every profile-bound Manager locations pack to the old facade-only

@@ -226,7 +226,14 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
         self.assertIn('${service}-signature.json', workflow)
         self.assertIn("verify-buildx-attestations.py", workflow)
         self.assertIn('--service "${service}"', workflow)
-        self.assertIn('--output-dir release/n14a-evidence', workflow)
+        # Attestations are fetched through a bounded GHCR-consistency retry.
+        # Each attempt must be isolated until both SBOM and provenance verify,
+        # then atomically promoted into the canonical release evidence folder.
+        self.assertIn('verify_buildx_attestations()', workflow)
+        self.assertIn('temporary="$(mktemp -d)"', workflow)
+        self.assertIn('--output-dir "${temporary}"', workflow)
+        self.assertIn('"release/n14a-evidence/${service}-sbom.json"', workflow)
+        self.assertIn('"release/n14a-evidence/${service}-provenance.json"', workflow)
         for service in MODULE.SERVICES:
             self.assertIn(f"{service}-trivy.json", workflow)
             self.assertIn(f"verify_release_image {service} ", workflow)

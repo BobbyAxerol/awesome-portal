@@ -1810,3 +1810,18 @@ durable run/attempt events. Detailed evidence:
   profile activation and containers are unchanged.
 - Detail:
   [`EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md`](./EDS_11_LOCAL_BFF_HYDRATION_AND_REALTIME.md).
+
+## Backend state — 2026-09-08 (EDS-12 immutable publisher retry)
+
+- The protected publisher's image build, vulnerability scan and keyless
+  signatures completed, but its candidate step observed GHCR before the
+  OCI-native Buildx SBOM/provenance manifests had converged across registry
+  replicas.  The publisher now performs a bounded, digest-bound retry for that
+  verifier only.
+- Every failed attempt is isolated in a fresh temporary directory.  The SBOM
+  and provenance files enter the canonical N14A evidence directory together
+  only after both verify; scan/signature/digest gates remain fail-closed.
+- This fixes a registry eventual-consistency race.  It does not activate
+  source reads, commands or Live mutation, and EDS-12 remains
+  `DEPLOYED_EVIDENCE_PENDING` until the new signed release is deployed and its
+  actual profile/browser/rollback evidence passes the deployed verifier.

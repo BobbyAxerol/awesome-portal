@@ -594,6 +594,37 @@ jobs:
             done
           }
 
+          verify_buildx_attestations() {
+            service="$1"
+            image="$2"
+            # GHCR can publish the signed OCI index before its Buildx
+            # attestation manifest is readable on every registry replica.
+            # Keep the retry bounded and stage each attempt separately so a
+            # partial SBOM/provenance pair can never enter release evidence.
+            for attempt in $(seq 1 12); do
+              temporary="$(mktemp -d)"
+              if python3 scripts/verify-buildx-attestations.py \
+                --service "${service}" \
+                --image "${image}" \
+                --output-dir "${temporary}"; then
+                mv "${temporary}/${service}-sbom.json" \
+                  "release/n14a-evidence/${service}-sbom.json"
+                mv "${temporary}/${service}-provenance.json" \
+                  "release/n14a-evidence/${service}-provenance.json"
+                rmdir "${temporary}"
+                return 0
+              fi
+              rm -f "${temporary}/${service}-sbom.json" \
+                "${temporary}/${service}-provenance.json"
+              rmdir "${temporary}" || true
+              if [[ "${attempt}" == "12" ]]; then
+                printf 'Buildx attestations did not become available for %s after bounded retry.\n' "${image}" >&2
+                return 1
+              fi
+              sleep 5
+            done
+          }
+
           verify_release_image() {
             service="$1"
             image="$2"
@@ -604,10 +635,7 @@ jobs:
             # signing format. Method:
             # cosign-signed-oci-index-plus-buildx-attestation-subject-binding.
             verify_release_signature "${service}" "${image}"
-            python3 scripts/verify-buildx-attestations.py \
-              --service "${service}" \
-              --image "${image}" \
-              --output-dir release/n14a-evidence
+            verify_buildx_attestations "${service}" "${image}"
           }
 
           verify_release_image portal-api "${PORTAL_API_IMAGE}"
