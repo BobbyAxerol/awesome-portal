@@ -73,6 +73,26 @@ fn data_layer_latest_is_normalized_without_exposing_raw_source_shape() {
 }
 
 #[test]
+fn data_layer_current_wire_number_and_real_snapshot_market_alias_are_normalized() {
+    let request = ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap();
+    let raw = br#"{"symbol":"BTCUSDT","market":"usdm","is_live":true,"snapshot":{"symbol":"BTCUSDT","market":"binance_usdm","price":78668.4,"event_time":1788500000000,"provider":"data-layer"}}"#;
+    let ManagerExtensionRead::Market(envelope) = adapt_data_layer_market_response_for_profile(
+        &request,
+        raw,
+        "PAPER_BINANCE_USDM",
+        Utc.timestamp_millis_opt(1_788_500_005_000)
+            .single()
+            .unwrap(),
+    )
+    .unwrap() else {
+        panic!("expected market envelope");
+    };
+    let wire = envelope.into_wire();
+    assert_eq!(wire["data"]["items"][0]["value"], "78668.4");
+    assert!(wire.get("snapshot").is_none());
+}
+
+#[test]
 fn data_layer_candles_use_provider_bound_and_unknown_coverage() {
     let request =
         ManagerExtensionRequest::market_candles("BINANCE", "BTCUSDT", "1m", 1_000, 3_000, 2_000)
@@ -98,12 +118,19 @@ fn data_layer_candles_use_provider_bound_and_unknown_coverage() {
 }
 
 #[test]
-fn data_layer_adapter_rejects_profile_venue_and_decimal_drift() {
+fn data_layer_adapter_rejects_profile_venue_and_non_decimal_drift() {
     let request = ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap();
-    let raw = br#"{"symbol":"BTCUSDT","market":"usdm","snapshot":{"symbol":"BTCUSDT","market":"usdm","price":1,"event_time":1788500000000}}"#;
+    let raw = br#"{"symbol":"BTCUSDT","market":"spot","snapshot":{"symbol":"BTCUSDT","market":"spot","price":1,"event_time":1788500000000}}"#;
     assert!(adapt_data_layer_market_response_for_profile(
         &request,
         raw,
+        "PAPER_BINANCE_USDM",
+        Utc::now(),
+    )
+    .is_err());
+    assert!(adapt_data_layer_market_response_for_profile(
+        &request,
+        br#"{"symbol":"BTCUSDT","market":"usdm","snapshot":{"symbol":"BTCUSDT","market":"usdm","price":true,"event_time":1788500000000}}"#,
         "PAPER_BINANCE_USDM",
         Utc::now(),
     )

@@ -53,6 +53,7 @@ INPUTS = (
     ("profile_runtime_prepare", "scripts/execution-profile-runtime-prepare.sh"),
     ("market_context_static_gate", "scripts/execution-market-context-data-layer-adapter-test.sh"),
     ("current_source_proxy", "apps/control-api/src/execution/current-source.proxy.ts"),
+    ("market_context_rust_adapter", "services/portal-execution-edge-rs/crates/manager-extension-contract/src/lib.rs"),
     ("manager_projection", "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs"),
     ("frontend_execution_route", "apps/portal/frontend/src/execution/ExecutionPreviewRoute.tsx"),
     ("frontend_product_boundary", "apps/portal/frontend/src/execution/productBoundary.test.ts"),

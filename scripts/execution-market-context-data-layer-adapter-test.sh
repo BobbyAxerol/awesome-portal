@@ -23,6 +23,11 @@ assert contract["authority_boundary"]["browser_direct_data_layer"] is False
 assert contract["authority_boundary"]["portal_direct_data_layer"] is False
 assert contract["authority_boundary"]["direct_trading_system_database"] is False
 assert contract["authority_boundary"]["source_commands"] is False
+assert contract["source_wire_compatibility"] == {
+    "accepted_binance_usdm_market_values": ["usdm", "usdm_futures", "binance_usdm"],
+    "accepted_decimal_json_types": ["string", "number"],
+    "decimal_handling": "BOUNDED_LEXICAL_NORMALIZATION_NO_ARITHMETIC",
+}
 assert [op["operation_id"] for op in contract["fixed_operations"]] == [
     "managerMarketContextLatestV1", "managerMarketContextCandlesV1"
 ]

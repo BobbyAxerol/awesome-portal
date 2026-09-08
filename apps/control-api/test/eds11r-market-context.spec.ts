@@ -205,6 +205,31 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
     expect(config.FEATURE_EXECUTION_MARKET_CONTEXT).toBe("true");
     expect(config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES).toBe(8_388_608);
   });
+
+  it("keeps the generic 2 MiB relation limit while admitting only the sealed 8 MiB candle operation", async () => {
+    const policy = marketCandlesPolicy("paper", {
+      venue: "BINANCE", instrument: "BTCUSDT", interval: "1m", fromMs: 1_000, toMs: 2_000, pointLimit: 200,
+    });
+    const proxy = Object.create(ExecutionCurrentSourceProxy.prototype) as ExecutionCurrentSourceProxy;
+    const request = vi.fn(async () => ({ ok: true }));
+    Object.assign(proxy as unknown as Record<string, unknown>, {
+      config: { EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES: 2 * 1024 * 1024 },
+      request,
+    });
+    await expect(proxy.fixedPathForNamedOperation(principal, "paper", policy)).resolves.toEqual({ ok: true });
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({ principalId: user.userId }),
+      "paper",
+      "EDS11R_MARKET_CONTEXT_BFF",
+      expect.stringContaining("/internal/v2/manager/market/candles?"),
+      policy,
+      expect.objectContaining({ screenId: "EDS11R_MARKET_CONTEXT_BFF" }),
+    );
+    expect(() => proxy.fixedPathForNamedOperation(principal, "paper", {
+      ...policy,
+      maximumResponseBytes: 2 * 1024 * 1024,
+    })).toThrow(/EDS11R4_MARKET_OPERATION_POLICY_INVALID/);
+  });
 });
 
 function acceptedPublication(): MarketContextPublicationIntake {
