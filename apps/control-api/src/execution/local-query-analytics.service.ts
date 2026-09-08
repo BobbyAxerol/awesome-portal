@@ -339,6 +339,38 @@ export class LocalQueryAnalyticsService {
    */
   private statisticsCache: { key: string; value: PortfolioStatistics | null } | null = null;
 
+  /**
+   * What Portfolio 360 needs from the local projection in one read: the
+   * strategies this portfolio deploys, the fleet statistics its coefficients
+   * come from, and the projection version both were taken at.
+   *
+   * Separate from `query()` because the 360's correlation panel wants the
+   * pairs and nothing else — routing it through the broad analytics payload
+   * would download megabytes of facts to read a list of coefficients.
+   */
+  async portfolioView(
+    principal: { workspaceId: string },
+    portfolioId: string,
+  ): Promise<{ statistics: PortfolioStatistics | null; strategies: string[]; version: string }> {
+    void principal;
+    if (!/^[A-Za-z0-9._:-]{1,192}$/.test(portfolioId)) {
+      throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
+    }
+    if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
+    const context = await this.localContext("paper");
+    const strategies = new Set<string>();
+    for (const row of context.snapshot.document.relations[SOURCE.deployments]?.items ?? []) {
+      if (row.fields.portfolio_id !== portfolioId) continue;
+      const strategyId = row.fields.strategy_id;
+      if (typeof strategyId === "string" && strategyId.length > 0) strategies.add(strategyId);
+    }
+    const version = projectionVersion(context.snapshot);
+    const statistics = await this.portfolioStatistics(
+      context.workspaceId, "paper", context.profileId, version,
+    );
+    return { statistics, strategies: [...strategies], version };
+  }
+
   private async portfolioStatistics(
     workspaceId: string,
     environment: ProjectionEnvironment,

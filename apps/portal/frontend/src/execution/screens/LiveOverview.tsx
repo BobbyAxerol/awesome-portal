@@ -17,6 +17,7 @@ import type { LiveDemo, LiveRow, LiveTick } from "../live.smoke";
 import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
+import { liveDot, sourceTone } from "../sourceTone";
 
 export const LIVE_FILTERS = ["all", "full", "canary", "issues"] as const;
 export type LiveFilter = (typeof LIVE_FILTERS)[number];
@@ -38,9 +39,12 @@ export interface LiveOverviewProps {
   /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
   demo?: LiveDemo | null;
   demoTick?: LiveTick;
+  /** The projection stream's phase, for the masthead dot. */
+  realtimePhase?: string | null;
 }
 
-export function LiveOverview({ envelope = null, status = "ok", reason, demo, demoTick }: LiveOverviewProps) {
+export function LiveOverview({ envelope = null, status = "ok", reason, demo, demoTick, realtimePhase = null }: LiveOverviewProps) {
+  const dot = liveDot(realtimePhase);
   const smoke = demo ?? null;
   const { now, j, price, prev, sp } = demoTick ?? { now: new Date(0), j: 0, price: 0, prev: 0, sp: [] };
   const [filter, setFilter] = useState<LiveFilter>("all");
@@ -87,7 +91,11 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
               <span className="exec-af-sum">{deployments.length} live deployment{deployments.length === 1 ? "" : "s"} published</span>
               <span className="exec-af-wf">entry screen for WF 1f/1e</span>
               <span className="exec-af-spacer" />
-              <span className="exec-af-source"><b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · current source · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()}</span>
+              <span className="exec-af-source">
+                <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
+                <span className="sr-only">{dot.title}</span>
+                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · current source · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
+              </span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             <div className="exec-af-kpis exec-lv-kpis">
@@ -133,7 +141,7 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
                         <tr key={id} className="exec-af-row exec-lv-row">
                           <td className="exec-lv-edge"><a href={`/deployments/live/${encodeURIComponent(id)}`}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-af-dim">· {id}</span></td>
                           <td>{str(row.mode) ?? notPublished}</td>
-                          <td>{str(row.state) ?? "runtime state not published"}</td>
+                          <td data-tone={sourceTone(str(row.state)) ?? undefined}>{str(row.state) ?? "runtime state not published"}</td>
                           <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · {str(row.account_id) ?? "account not published"} · {str(row.portfolio_id) ?? "portfolio not published"}</td>
                         </tr>
                       );

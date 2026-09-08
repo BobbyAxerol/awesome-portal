@@ -24,6 +24,7 @@ import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { soonReason } from "../soon";
+import { liveDot, sourceTone } from "../sourceTone";
 
 export interface PaperOverviewProps {
   /** `execution.paper-overview.v1` — the published truth for this stage. */
@@ -34,6 +35,8 @@ export interface PaperOverviewProps {
   demo?: PaperOverviewDemo | null;
   demoWarning?: string;
   demoTick?: { now: Date };
+  /** The projection stream's phase, for the masthead dot. */
+  realtimePhase?: string | null;
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
@@ -45,7 +48,8 @@ const count = (value: unknown): number | null => typeof value === "number" && Nu
   ? value : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : null;
 const chartTones = ["accent", "good", "warn", "paper", "mute"] as const;
 
-export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick }: PaperOverviewProps) {
+export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick, realtimePhase = null }: PaperOverviewProps) {
+  const dot = liveDot(realtimePhase);
   const PO = demo ?? null;
   const now = demoTick?.now ?? new Date(0);
   const [venue, setVenue] = useState("All");
@@ -89,8 +93,12 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
               <h1 className="exec-po-h1">Paper</h1>
               <span className="exec-po-spacer" />
               <span className="exec-po-source">
+                {/* Bound to the stream's own phase: a still, muted dot when it
+                    is closed, rather than a green one that implies delivery. */}
+                <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
+                <span className="sr-only">{dot.title}</span>{" "}
                 <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of{" "}
-                <span className="exec-po-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()} · {envelope?.freshness ?? "freshness not stated"}
+                <span className="exec-po-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span> · <span data-tone={sourceTone(envelope?.freshness) ?? undefined}>{envelope?.freshness ?? "freshness not stated"}</span>
               </span>
             </header>
 
@@ -196,7 +204,7 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                         <div className="exec-po-idline">deployment {id} · portfolio {str(row.portfolio_id) ?? "not published"} · account {str(row.account_id) ?? "not published"}</div>
                       </div>
                       <div className="exec-po-days">
-                        <div className="exec-po-gateline"><span>{str(row.state) ?? "runtime state not published"}</span></div>
+                        <div className="exec-po-gateline"><span data-tone={sourceTone(str(row.state)) ?? undefined}>{str(row.state) ?? "runtime state not published"}</span></div>
                       </div>
                       <div className="exec-po-next">
                         <a href={href} onClick={(e) => e.stopPropagation()}>Open workbench →</a>

@@ -5390,6 +5390,11 @@
 .exec-af-source { font: 400 10px/14px var(--font-mono); color: var(--ink-soft); border: 1px solid var(--line); background: var(--paper-raised); padding: 2px 8px; display: inline-flex; align-items: center; gap: 6px; }
 .exec-af-source b { color: var(--ink); font-weight: 600; }
 .exec-af-livedot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+/* The dot carries the realtime channel's own phase. Green-and-pulsing is a
+   claim that deltas are arriving; a closed stream must not make it. */
+.exec-af-livedot[data-tone="warn"] { background: var(--warn); }
+.exec-af-livedot[data-tone="bad"] { background: var(--bad); }
+.exec-af-livedot[data-tone="mute"] { background: var(--ink-mute); }
 .exec-af-num { font-variant-numeric: tabular-nums; }
 .exec-af-kpis { display: flex; flex-wrap: wrap; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); margin-bottom: 12px; }
 .exec-af-kpi { flex: 1 1 130px; min-width: 120px; background: var(--paper-raised); padding: 9px 12px; }
@@ -5444,7 +5449,9 @@
 .exec-af-smoke { margin: 10px 0 0; font: 400 10px/14px var(--font-mono); color: var(--warn); }
 @media (max-width: 767px) { .exec-af-page { padding: 16px 12px 48px; } }
 @media (prefers-reduced-motion: no-preference) {
-  .exec-af-livedot { animation: om-tick 1.2s infinite; }
+  /* `data-live="false"` is the only thing that stops it: the reviewed screens
+     render the dot with no attribute at all and must keep their pulse. */
+  .exec-af-livedot:not([data-live="false"]) { animation: om-tick 1.2s infinite; }
   .exec-af-pulse { animation: om-pulse 1.6s infinite; }
 }
 

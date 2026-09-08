@@ -20,6 +20,7 @@ import type { SandboxDemo, SandboxTick, SbLink, SbRow } from "../sandbox.smoke";
 import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
+import { liveDot, sourceTone } from "../sourceTone";
 
 export const SANDBOX_FILTERS = ["all", "halted", "findings"] as const;
 export type SandboxFilter = (typeof SANDBOX_FILTERS)[number];
@@ -73,9 +74,12 @@ export interface SandboxOverviewProps {
     recentlyCertified: ReactNode;
     openFindings: number | null;
   } | null;
+  /** The projection stream's phase, for the masthead dot. */
+  realtimePhase?: string | null;
 }
 
-export function SandboxOverview({ envelope = null, status = "ok", reason, demo, demoTick, panels = null }: SandboxOverviewProps) {
+export function SandboxOverview({ envelope = null, status = "ok", reason, demo, demoTick, panels = null, realtimePhase = null }: SandboxOverviewProps) {
+  const dot = liveDot(realtimePhase);
   const smoke = demo ?? null;
   const { now, orders, filled, ack, fill } = demoTick ?? { now: new Date(0), orders: 0, filled: 0, ack: 0, fill: 0 };
   const [filter, setFilter] = useState<SandboxFilter>("all");
@@ -108,7 +112,12 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
               <span className="exec-af-wf">entry for WF 1d</span>
               <span className="exec-af-spacer" />
               <span className="exec-af-source">
-                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · {(envelope?.state ?? "unavailable").toUpperCase()}
+                {/* The reviewed masthead pulses a dot beside the authority. It
+                    is bound to the stream's own phase here, so a closed stream
+                    shows a still, muted dot instead of claiming to be live. */}
+                <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
+                <span className="sr-only">{dot.title}</span>
+                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
               </span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
@@ -165,7 +174,7 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                         <tr key={id} className="exec-af-row">
                           <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-af-dim">· {id}</span></td>
                           <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · {str(row.account_id) ?? "account not published"} · {str(row.portfolio_id) ?? "portfolio not published"}</td>
-                          <td>{str(row.state) ?? str(row.mode) ?? notPublished}</td>
+                          <td data-tone={sourceTone(str(row.state)) ?? undefined}>{str(row.state) ?? str(row.mode) ?? notPublished}</td>
                           <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}>Open certification →</a></td>
                         </tr>
                       );

@@ -1768,6 +1768,72 @@ một lần mỗi drain.
    Overview vẫn có dữ liệu thật từ relation), nhưng hai route này chưa phục vụ
    được. Không che 503 thành 200 vì upstream **thật sự** đang nói unavailable.
 
+### A13.9 Owner: *"đừng request nữa, cùng nhau làm rồi viết vào"* — ba lỗi đã sửa, và pass động/màu
+
+Bobby bác việc đẩy sang codex. Ba lỗi của Portfolio 360 đã **sửa trong Portal**,
+không còn request nào treo.
+
+#### 1 & 2. `capital-ledger` và `correlation` — phục vụ tại chỗ
+
+Upstream `/internal/v1/screens/portfolio-360/{id}/…` trả **503** trên profile
+này. Nhưng Portal **đã có** cả hai dữ kiện, nên nay tự phục vụ
+(`Portfolio360LocalService`), upstream chỉ còn là dự phòng:
+
+| Route | Nguồn Portal | Kết quả trên dev |
+|---|---|---|
+| `correlation` | cùng 90 ngày daily closes mà analytics envelope dùng, lọc theo strategy của portfolio | **42 label · 55 cặp**, hệ số thật (0.997 giữa `combine_weight_sl_tp_0011h` và `sl_tp_map_ma_00115m_binance` trên 66 ngày chung) |
+| `capital-ledger` | relation `portfolio-capital-ledger` — đúng cái Configuration log đang vẽ | **1 bucket USDT · 42 entry**, gross increase 11 360 000, before → after đầy đủ |
+
+Hai luật giữ trong file đó, vì chúng quyết định số có đáng tin không:
+- **`direction` đọc từ allocation, không từ dấu của `amount`.** Reader của hợp
+  đồng cấm đoán direction; ở đây nó do so `before_allocated` với
+  `after_allocated` — hai số nguồn tự phát. Thiếu một trong hai thì **bỏ dòng**,
+  không đoán.
+- **Cộng số thập phân bằng BigInt trên chuỗi** — không float nào chạm vào một
+  con số vốn.
+- Clustering để **rỗng**: không nguồn nào phát, và suy ra cụm từ hệ số là
+  service tự quyết định cấu trúc của portfolio.
+
+#### 3. Cursor bị từ chối — tìm ra quy luật thật
+
+Đi hết relation bằng thang cỡ trang (dev 2026-09-08: 9 request, 8 từ chối, 5
+dòng): `portfolio-equity-snapshots` có **đúng 5 dòng**, khai `has_more: true` ở
+cuối, rồi **từ chối chính cursor nó vừa phát — ở mọi cỡ trang, xuống tận 1**.
+Không phải "limit > số dòng còn lại" như tôi đoán lúc đầu.
+
+Portal nay **không hỏi lại một cursor đã bị từ chối**. Khoá theo **chính
+cursor**, không theo relation: dữ liệu đổi thì trang một phát cursor mới và
+cursor đó được thử — nguồn nào sửa được sẽ tự động dùng lại, không cần mở tab
+mới. Đã ghi lý do `CONTINUATION_REFUSED_BY_SOURCE` thay cho một 502 lặp.
+
+#### 4. Pass động, màu, highlight so với showcase
+
+Đo cả hai bên. Showcase có **`om-tick` + `om-pulse`** trên gần hết màn danh
+sách (chấm sống cạnh authority); dev có **0**. Nguyên nhân: `exec-af-livedot`
+chỉ được render **trong nhánh demo** — nhánh dữ liệu thật không có.
+
+Không chép chấm xanh nhấp nháy một cách vô điều kiện, vì đó là kiểu chuyển động
+tệ nhất: **màn trông sống trong khi stream đã chết**. Chấm nay buộc vào
+**phase thật của kênh realtime**:
+
+| phase | chấm | ý nghĩa |
+|---|---|---|
+| `live` | xanh, **nhấp nháy** | stream đang giao delta |
+| `connecting` / `recovering` | vàng, đứng yên | giá trị là lần đọc gần nhất |
+| `closed` / `auth_expired` | đỏ, đứng yên | sẽ **không** tự cập nhật nữa |
+| không có | xám, đứng yên | không có stream nào mở |
+
+Portfolio 360 đọc cả ba book nên lấy **phase tệ nhất** — một live stream chết
+không được nấp sau một paper stream khoẻ.
+
+**Màu**: showcase tô trạng thái trong bảng (`good/warn/bad/mute`), dev để chữ
+trơn — deployment HALTED và ACTIVE trông giống nhau tới khi đọc chữ. Thêm
+`sourceTone()`: **màu là kênh thứ hai chồng lên chữ, không thay chữ**, và một
+từ trạng thái lạ được vẽ **trơn chứ không đoán** — tô xanh chỉ vì nó không nằm
+trong danh sách xấu chính là cách một màn nói dối rằng deployment đang khoẻ.
+
+Gate: FE **113 file · 1 981 test**, tsc sạch; control-api `src` build sạch.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

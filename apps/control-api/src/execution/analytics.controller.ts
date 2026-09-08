@@ -1,5 +1,5 @@
 import { Logger } from "@nestjs/common";
-import { Body, Controller, Get, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Optional, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { AuthSession, PortalUser } from "../domain";
@@ -18,6 +18,7 @@ import {
   LocalQueryAnalyticsService,
   type ObservedTimelineRequest,
 } from "./local-query-analytics.service";
+import { Portfolio360LocalService } from "./portfolio360-local.service";
 
 interface AnalyticsRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -33,6 +34,9 @@ export class ExecutionAnalyticsController {
     @Inject(ExecutionAnalyticsProxy) private readonly proxy: ExecutionAnalyticsProxy,
     @Inject(GovernanceRepository) private readonly governance: GovernanceRepository,
     @Inject(LocalQueryAnalyticsService) private readonly localAnalytics: LocalQueryAnalyticsService,
+    @Optional()
+    @Inject(Portfolio360LocalService)
+    private readonly portfolio360?: Portfolio360LocalService,
   ) {}
 
   @Post("/approvals/:approvalId/capital-preview")
@@ -66,13 +70,29 @@ export class ExecutionAnalyticsController {
     return this.invoke(() => this.proxy.insightPreviews(principal(request), id, body));
   }
 
+  /*
+   * Portfolio 360's two panels, local first.
+   *
+   * The upstream analytics cell answers 503 for both on this profile, and the
+   * Portal already holds what they need: the correlation pairs come from the
+   * same daily closes the analytics envelope uses, and the ledger from the
+   * `portfolio-capital-ledger` relation the Overview's Configuration log
+   * already draws. The proxy stays as the fallback for deployments where the
+   * upstream does serve them.
+   */
   @Get("/portfolios/:portfolioId/correlation")
   portfolioCorrelation(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
+    if (this.portfolio360?.enabled()) {
+      return this.invoke(() => this.portfolio360!.correlation(local(request), id));
+    }
     return this.invoke(() => this.proxy.portfolioCorrelation(principal(request), id));
   }
 
   @Get("/portfolios/:portfolioId/capital-ledger")
   capitalLedger(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
+    if (this.portfolio360?.enabled()) {
+      return this.invoke(() => this.portfolio360!.capitalLedger(local(request), id));
+    }
     return this.invoke(() => this.proxy.capitalLedger(principal(request), id));
   }
 
@@ -172,6 +192,11 @@ export class ExecutionAnalyticsController {
       this.proxy.managerQueryAnalytics(principal(request), subjectKind, subjectId),
     );
   }
+}
+
+/** The workspace-scoped principal the local Portfolio 360 reads take. */
+function local(request: AnalyticsRequest) {
+  return { user: request.portalUser, session: request.portalSession, workspaceId: request.portalWorkspaceId };
 }
 
 const CapitalPreviewRequestSchema = z.object({

@@ -36,6 +36,7 @@ import { ExecutionContractAuthorityController } from "./execution/contract-autho
 import { ExecutionContractAuthorityService } from "./execution/contract-authority.service";
 import { MaximumDataOperationController } from "./execution/maximum-data-operation.controller";
 import { MaximumDataOperationService } from "./execution/maximum-data-operation.service";
+import { Portfolio360LocalService } from "./execution/portfolio360-local.service";
 import { MaximumDataContinuationRepository } from "./execution/maximum-data-continuation.repository";
 import { ExecutionSharedReadRepository } from "./execution/shared-read.repository";
 import { ExecutionProfileProjectionRepository } from "./execution/profile-projection.repository";
@@ -190,6 +191,7 @@ export class AppModule {
         ExecutionContractAuthorityService,
         MaximumDataContinuationRepository,
         MaximumDataOperationService,
+        Portfolio360LocalService,
         ExecutionDurableMirrorRepository,
         ExecutionDurableFinancialRepository,
         ExecutionFinancialQueryCursorRepository,

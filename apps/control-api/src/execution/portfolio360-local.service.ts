@@ -1,0 +1,314 @@
+/**
+ * Portfolio 360's correlation and capital ledger, served from the Portal's own
+ * data instead of an upstream that answers 503 on this profile.
+ *
+ * Both screens' panels were typed-unavailable on dev because
+ * `/internal/v1/screens/portfolio-360/{id}/correlation` and `/capital-ledger`
+ * return 503 there. The facts, though, are already inside the Portal:
+ *
+ *   * correlation comes from the same 90-day daily closes the analytics
+ *     envelope computes its pairs from, scoped to the strategies this
+ *     portfolio actually deploys;
+ *   * the capital ledger comes from the `portfolio-capital-ledger` relation,
+ *     which answers — it is what the Overview's Configuration log already
+ *     draws.
+ *
+ * Two rules this file holds to, because both decide whether a number is
+ * trustworthy rather than merely present:
+ *
+ *   1. **`direction` is read from the allocation, not the amount.** The
+ *      contract's own reader refuses a direction the client would have to
+ *      guess, and warns that the sign of `amount` is not the movement. Here it
+ *      is decided by comparing the published `before_allocated` with the
+ *      published `after_allocated` — two figures the source states — and where
+ *      either is missing the entry is dropped rather than guessed at.
+ *   2. **Gross totals describe the validated population**, not the page. A
+ *      screen saying "12 of 4,180" beside a total is only honest if the total
+ *      counts all 4,180, so the counts and the totals are taken from the same
+ *      set of rows the walk actually validated, and `has_more` says whether
+ *      more exist.
+ */
+import { Inject, Injectable, Optional } from "@nestjs/common";
+
+import { AnalyticsProxyError } from "./analytics.proxy";
+import {
+  LocalQueryAnalyticsService,
+  type PortfolioStatistics,
+} from "./local-query-analytics.service";
+import {
+  MaximumDataOperationError,
+  MaximumDataOperationService,
+} from "./maximum-data-operation.service";
+import type { AuthSession, PortalUser } from "../domain";
+
+export interface Portfolio360Principal {
+  user: PortalUser;
+  session: AuthSession;
+  workspaceId: string;
+}
+
+/** One relation page's worth of rows, already unwrapped from the record envelope. */
+type Row = Record<string, unknown>;
+
+const text = (row: Row, key: string): string | null => {
+  const value = row[key];
+  return typeof value === "string" && value.length > 0 ? value
+    : typeof value === "number" && Number.isFinite(value) ? String(value) : null;
+};
+
+const DECIMAL = /^-?\d+(\.\d+)?$/;
+
+/** A published decimal, or null. Never coerced: a value we cannot read is absent. */
+const decimalOf = (row: Row, key: string): string | null => {
+  const raw = text(row, key);
+  return raw !== null && DECIMAL.test(raw) ? raw : null;
+};
+
+const millis = (row: Row, key: string): number | null => {
+  const value = row[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const at = Date.parse(value);
+    if (Number.isFinite(at)) return at;
+  }
+  return null;
+};
+
+/** Exact decimal addition on strings — no float ever touches a capital figure. */
+function addExact(left: string, right: string): string {
+  const scale = Math.max(
+    (left.split(".")[1] ?? "").length,
+    (right.split(".")[1] ?? "").length,
+  );
+  const lift = (value: string): bigint => {
+    const negative = value.startsWith("-");
+    const [whole, fraction = ""] = (negative ? value.slice(1) : value).split(".");
+    const digits = BigInt(whole + fraction.padEnd(scale, "0"));
+    return negative ? -digits : digits;
+  };
+  const total = lift(left) + lift(right);
+  if (scale === 0) return total.toString();
+  const negative = total < 0n;
+  const digits = (negative ? -total : total).toString().padStart(scale + 1, "0");
+  return `${negative ? "-" : ""}${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
+}
+
+const MOVEMENTS = new Set(["INITIAL_ALLOCATE", "ALLOCATE", "WITHDRAW", "REBALANCE", "ADJUST"]);
+
+/** The relation page cap this service walks with. */
+const LEDGER_PAGE = 200;
+const LEDGER_MAX_PAGES = 8;
+
+@Injectable()
+export class Portfolio360LocalService {
+  constructor(
+    @Inject(LocalQueryAnalyticsService) private readonly analytics: LocalQueryAnalyticsService,
+    @Optional()
+    @Inject(MaximumDataOperationService)
+    private readonly operations?: MaximumDataOperationService,
+  ) {}
+
+  enabled(): boolean {
+    return this.analytics.enabled();
+  }
+
+  /**
+   * Pairwise return correlation among the strategies this portfolio deploys.
+   *
+   * The coefficients are the ones the analytics envelope already publishes;
+   * nothing is recomputed here, only selected. A portfolio deploying fewer
+   * than two strategies with overlapping history has no pair to show, and says
+   * so as an empty ranked set rather than an error.
+   */
+  async correlation(principal: Portfolio360Principal, portfolioId: string): Promise<Record<string, unknown>> {
+    const { statistics, strategies, version, readAt } = await this.portfolioContext(principal, portfolioId);
+    const mine = new Set(strategies);
+    const pairs = (statistics?.correlation.pairs ?? [])
+      .filter((pair) => mine.has(pair.left_alpha) && mine.has(pair.right_alpha))
+      .sort((left, right) => Math.abs(right.correlation) - Math.abs(left.correlation))
+      .map((pair) => ({
+        left_id: pair.left_alpha,
+        right_id: pair.right_alpha,
+        // The reader takes coefficients as exact decimal strings.
+        coefficient: pair.correlation.toFixed(6),
+        sample_count: pair.overlapping_days,
+      }));
+
+    return this.envelope({
+      formulaVersion: "portfolio-correlation-returns.v1",
+      panelState: pairs.length > 0 ? "ok" : "empty",
+      version,
+      readAt,
+      windowDays: statistics?.window.days ?? null,
+      data: {
+        portfolio_id: portfolioId,
+        labels: [...mine].sort().map((id) => ({ entity_id: id, display_name: id })),
+        // Clustering is a judgement about which alphas belong together, and no
+        // source publishes one. An empty list is the honest answer; inventing
+        // clusters from the coefficients would be this service deciding the
+        // portfolio's structure.
+        clusters: [],
+        representation: { kind: "RANKED_PAIRS", pairs },
+      },
+    });
+  }
+
+  /**
+   * The portfolio's capital movements, bucketed by the currency they were
+   * moved in — never summed across currencies.
+   */
+  async capitalLedger(principal: Portfolio360Principal, portfolioId: string): Promise<Record<string, unknown>> {
+    const { version, readAt } = await this.portfolioContext(principal, portfolioId);
+    const { rows, hasMore } = await this.ledgerRows(principal, portfolioId);
+
+    const buckets = new Map<string, {
+      entries: Record<string, unknown>[];
+      grossIncrease: string;
+      grossDecrease: string;
+    }>();
+    for (const row of rows) {
+      const currency = text(row, "currency");
+      const ledgerId = text(row, "capital_ledger_id") ?? text(row, "ledger_id");
+      const accountId = text(row, "account_id");
+      const movement = text(row, "movement_type");
+      const amount = decimalOf(row, "amount");
+      const before = decimalOf(row, "before_allocated");
+      const after = decimalOf(row, "after_allocated");
+      if (!currency || !ledgerId || !accountId || !movement || !MOVEMENTS.has(movement)) continue;
+      if (amount === null || before === null || after === null) continue;
+
+      // Direction from the two published allocations, never from the amount's
+      // sign: a withdrawal and a deposit can both carry a positive amount.
+      const delta = Number(after) - Number(before);
+      const direction = delta > 0 ? "INCREASE" : delta < 0 ? "DECREASE" : "UNCHANGED";
+
+      const bucket = buckets.get(currency) ?? { entries: [], grossIncrease: "0", grossDecrease: "0" };
+      bucket.entries.push({
+        ledger_id: ledgerId,
+        allocation_id: text(row, "allocation_id"),
+        account_id: accountId,
+        movement_type: movement,
+        direction,
+        amount,
+        before_allocated: before,
+        after_allocated: after,
+        occurred_at: millis(row, "created_at") === null
+          ? null
+          : new Date(millis(row, "created_at")!).toISOString(),
+      });
+      if (direction === "INCREASE") bucket.grossIncrease = addExact(bucket.grossIncrease, amount);
+      if (direction === "DECREASE") bucket.grossDecrease = addExact(bucket.grossDecrease, amount);
+      buckets.set(currency, bucket);
+    }
+
+    const entryCount = [...buckets.values()].reduce((total, bucket) => total + bucket.entries.length, 0);
+    return this.envelope({
+      formulaVersion: "portfolio-capital-ledger.v1",
+      panelState: entryCount > 0 ? "ok" : "empty",
+      version,
+      readAt,
+      windowDays: null,
+      data: {
+        portfolio_id: portfolioId,
+        buckets: [...buckets.entries()]
+          .sort((left, right) => right[1].entries.length - left[1].entries.length)
+          .map(([currency, bucket]) => ({
+            currency,
+            entry_count: bucket.entries.length,
+            gross_increase: bucket.grossIncrease,
+            gross_decrease: bucket.grossDecrease,
+            // Newest first: an operator asking what changed reads downwards.
+            entries: [...bucket.entries].sort((left, right) =>
+              String(right.occurred_at ?? "").localeCompare(String(left.occurred_at ?? ""))),
+          })),
+        entry_count: entryCount,
+        returned_entry_count: entryCount,
+        has_more: hasMore,
+      },
+    });
+  }
+
+  /** Walk the ledger relation for one portfolio, bounded. */
+  private async ledgerRows(
+    principal: Portfolio360Principal,
+    portfolioId: string,
+  ): Promise<{ rows: Row[]; hasMore: boolean }> {
+    if (!this.operations) return { rows: [], hasMore: false };
+    const rows: Row[] = [];
+    let cursor: string | undefined;
+    for (let page = 0; page < LEDGER_MAX_PAGES; page += 1) {
+      let response: Record<string, unknown>;
+      try {
+        response = await this.operations.relationPage(
+          principal,
+          "portfolio-capital-ledger",
+          { environment: "paper", limit: LEDGER_PAGE, ...(cursor ? { cursor } : {}) },
+        ) as Record<string, unknown>;
+      } catch (error) {
+        // A refused page is not an empty ledger. Rows already read are kept and
+        // reported as incomplete; nothing is invented for the pages we lost.
+        if (error instanceof MaximumDataOperationError) return { rows, hasMore: true };
+        throw error;
+      }
+      const records = Array.isArray(response.records) ? response.records : [];
+      for (const record of records) {
+        const values = (record as Record<string, unknown> | null)?.values;
+        if (typeof values !== "object" || values === null) continue;
+        const row = values as Row;
+        if (text(row, "portfolio_id") === portfolioId) rows.push(row);
+      }
+      const pageInfo = (response.page ?? {}) as Record<string, unknown>;
+      const next = typeof pageInfo.next_cursor === "string" ? pageInfo.next_cursor : null;
+      if (pageInfo.has_more !== true || !next) return { rows, hasMore: false };
+      cursor = next;
+    }
+    return { rows, hasMore: true };
+  }
+
+  /** The portfolio's strategies and the fleet statistics, from one snapshot read. */
+  private async portfolioContext(principal: Portfolio360Principal, portfolioId: string): Promise<{
+    statistics: PortfolioStatistics | null;
+    strategies: string[];
+    version: string;
+    readAt: string;
+  }> {
+    if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
+    const view = await this.analytics.portfolioView({ workspaceId: principal.workspaceId }, portfolioId);
+    return { ...view, readAt: new Date().toISOString() };
+  }
+
+  /** The analytics envelope every 360 panel reads its provenance from. */
+  private envelope(input: {
+    formulaVersion: string;
+    panelState: string;
+    version: string;
+    readAt: string;
+    windowDays: number | null;
+    data: Record<string, unknown>;
+  }): Record<string, unknown> {
+    const [epoch, sequence] = input.version.split(":");
+    return {
+      schema_version: "portal.execution.portfolio-360-local.v1",
+      epoch_id: epoch ?? null,
+      source_snapshot_id: input.version,
+      capability_snapshot_id: input.version,
+      // Named so a reader can tell this apart from the upstream analytics cell
+      // without having to compare numbers to find out.
+      source_profile: "PORTAL_LOCAL_PROJECTION",
+      projection_sequence: Number.isFinite(Number(sequence)) ? Number(sequence) : null,
+      freshness_policy_version: "portal.execution.local-projection.v1",
+      read_at: input.readAt,
+      analytics: {
+        formula_version: input.formulaVersion,
+        source_authority: "DERIVED",
+        input_freshness_floor: "OK",
+        panel_state: input.panelState,
+        input_completeness: "PARTIAL",
+        input_as_of: input.readAt,
+        ...(input.windowDays === null ? {} : { window: `${input.windowDays}d` }),
+        warnings: [],
+        data: input.data,
+      },
+    };
+  }
+}

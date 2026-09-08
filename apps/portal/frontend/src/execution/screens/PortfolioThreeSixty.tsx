@@ -33,6 +33,7 @@ import {
 } from "../analytics";
 import type { Envelope, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badges";
+import { liveDot } from "../sourceTone";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionSurface } from "../ExecutionSurface";
@@ -165,6 +166,8 @@ export interface ApprovalRow {
 }
 
 export interface PortfolioThreeSixtyProps {
+  /** The projection stream's phase, for the masthead dot. */
+  realtimePhase?: string | null;
   portfolioId: string;
   portfolioName: string;
   envelope: Envelope;
@@ -767,6 +770,7 @@ function Ledger({
 
 export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
   const {
+    realtimePhase = null,
     overviewPanels,
     portfolioId,
     portfolioName,
@@ -795,6 +799,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
     status = "ok",
     reason,
   } = props;
+  const dot = liveDot(realtimePhase);
 
   const [localLens, setLocalLens] = useState<number | null>(null);
   // `useId`, not a literal. The tab ids and the panel id were hardcoded, so any
@@ -823,7 +828,13 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
         <span className="exec-pf2-facts">{smoke ? smoke.facts : portfolioName}</span>
         <span className="exec-a3-wf">WF 3a</span>
         <span className="exec-a3-spacer" />
-        <span className="exec-a3-source"><b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span></span>
+        <span className="exec-a3-source">
+          {/* The reviewed masthead pulses beside the authority; here the dot
+              carries the stream's own phase, so it stops when the stream does. */}
+          <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
+          <span className="sr-only">{dot.title}</span>{" "}
+          <b>{envelope.authority}</b> · as_of {envelope.asOf ? envelope.asOf.slice(11) : "not stated"} · <span data-tone={envelope.freshness === "OK" ? "good" : envelope.freshness === "STALE" ? "bad" : "warn"}>{clock ? `age ${clock}` : envelope.freshness}</span>
+        </span>
         {/* Active controls: each opens its plan preview; the Apply/Generate
             inside is the single point BR-EX-51's route will enable. */}
         <button type="button" className="exec-a3-btn" aria-pressed={action === "report"} onClick={() => setAction(action === "report" ? null : "report")}>Report pack</button>

@@ -48,6 +48,7 @@ import type { ChartEnvelope } from "../contracts";
 import { PaperOverview } from "./PaperOverview";
 import { SandboxOverview } from "./SandboxOverview";
 import { sandboxPanels } from "../sandboxPanels";
+import { worstPhase } from "../sourceTone";
 import { workbenchProps } from "../paperWorkbenchData";
 import { LiveOverview } from "./LiveOverview";
 import { PaperWorkbench, WORKBENCH_TABS, type WorkbenchTab } from "./PaperWorkbench";
@@ -275,7 +276,7 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
   const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true });
-  return <PaperOverview envelope={state.value} status={state.status} reason={state.reason} />;
+  return <PaperOverview envelope={state.value} status={state.status} reason={state.reason} realtimePhase={realtime.phase} />;
 }
 
 /**
@@ -300,7 +301,7 @@ export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
     loading: relations.status === "loading",
     deployments: state.value?.data.deployments ?? [],
   });
-  return <SandboxOverview envelope={state.value} status={state.status} reason={state.reason} panels={panels} />;
+  return <SandboxOverview envelope={state.value} status={state.status} reason={state.reason} panels={panels} realtimePhase={realtime.phase} />;
 }
 
 export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
@@ -309,7 +310,7 @@ export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
   const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey], { keepValue: true });
-  return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} />;
+  return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} realtimePhase={realtime.phase} />;
 }
 
 /* ── paper workbench ──────────────────────────────────────────────────── */
@@ -1574,6 +1575,9 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
       : profilePanelStatus(resource, resourceState.status);
   return (
     <PortfolioThreeSixty
+      // A 360 reads all three books; the dot takes the worst of the three,
+      // so a closed live stream cannot hide behind a healthy paper one.
+      realtimePhase={worstPhase([realtime.states.paper.phase, realtime.states.sandbox.phase, realtime.states.live.phase])}
       overviewPanels={portfolioOverviewPanels({
         portfolioId,
         relations: portfolioRelations.value,
