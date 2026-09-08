@@ -321,6 +321,15 @@ sed -i \
   "${tmp_dir}/candidate.env"
 chmod 0600 "${tmp_dir}/candidate.env"
 
+# The durable-projection overlay owns these optional runtime inputs.  They are
+# not required for the base D2 shape, but an immutable profile release must
+# not be rejected merely because it retains its documented worker identity
+# and bounded source poll cadence.
+printf '%s\n' \
+  'EDGE_MANAGER_PROJECTION_OWNER_DIGEST=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+  'EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS=60000' \
+  >> "${tmp_dir}/candidate.env"
+
 "${renderer}" --env-file "${tmp_dir}/candidate.env" --output "${proxy_config}" >/dev/null
 [[ "$(stat -c '%a' "${proxy_config}")" == 640 ]]
 [[ "$(stat -c '%g' "${proxy_config}")" == "${runtime_gid}" ]]
