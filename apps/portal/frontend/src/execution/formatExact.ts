@@ -33,8 +33,19 @@ export interface ExactDisplay {
 
 const DECIMAL = /^-?\d+(\.\d+)?$/;
 
-const CLASS: Readonly<Record<ExactUnit, { floor: number; cap: number }>> = {
-  money: { floor: 2, cap: 8 },
+const CLASS: Readonly<Record<ExactUnit, { floor: number; cap: number; rescue?: number }>> = {
+  /*
+   * Money shows at most four decimals — owner, 2026-09-08, after a Fleet column
+   * read `123.19605`, `89.3469`, `4,332.5415` and `28,579.6057488` one under
+   * the other. Cents and sub-cent fees survive four places; a seven-digit tail
+   * is noise that costs the column its alignment.
+   *
+   * `rescue` is the exception that keeps it honest: a value small enough that
+   * four places would round it to zero keeps its own scale instead, up to
+   * eight. Printing 0.0000 for a real 0.00001234 would be the null-renders-as
+   * -zero failure this surface bans everywhere else.
+   */
+  money: { floor: 2, cap: 4, rescue: 8 },
   qty: { floor: 0, cap: 8 },
   pct: { floor: 2, cap: 4 },
   ratio: { floor: 2, cap: 4 },
@@ -63,6 +74,10 @@ function group(integer: string): string {
   return integer.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+const isZeroValue = (value: string): boolean => /^-?0*(\.0*)?$/.test(value);
+const isZeroDisplay = (r: { integer: string; fraction: string }): boolean =>
+  /^0*$/.test(r.integer) && /^0*$/.test(r.fraction);
+
 export function formatExact(value: string, unit: ExactUnit = "money", options?: { dp?: number }): ExactDisplay {
   if (!DECIMAL.test(value)) return { display: value, full: value };
   const klass = CLASS[unit];
@@ -71,8 +86,14 @@ export function formatExact(value: string, unit: ExactUnit = "money", options?: 
     : unit === "qty"
       ? Math.min((value.split(".")[1] ?? "").length, klass.cap)
       : klass.cap;
-  const scale = Math.min((value.split(".")[1] ?? "").length, cap);
-  const rounded = roundExact(value, Math.max(scale, klass.floor));
+  let scale = Math.min((value.split(".")[1] ?? "").length, cap);
+  let rounded = roundExact(value, Math.max(scale, klass.floor));
+  // A non-zero value must never print as zero. Where the class cap would do
+  // that, the value keeps its own scale up to the rescue cap instead.
+  if (klass.rescue !== undefined && options?.dp === undefined && isZeroDisplay(rounded) && !isZeroValue(value)) {
+    scale = Math.min((value.split(".")[1] ?? "").length, klass.rescue);
+    rounded = roundExact(value, Math.max(scale, klass.floor));
+  }
   // Trim trailing zeros down to the class floor, never below it.
   let fraction = rounded.fraction;
   while (fraction.length > klass.floor && fraction.endsWith("0")) fraction = fraction.slice(0, -1);

@@ -105,7 +105,9 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     expect((await screen.findAllByText("Bobby-001")).length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Owner")).toBeTruthy();
     expect(screen.getByLabelText("Venue")).toBeTruthy();
-    expect(screen.getAllByText("123.19605").length).toBeGreaterThan(0);
+    // The source's exact 123.19605 at the money class's four-decimal display
+    // cap (owner, 2026-09-08). The full value stays in the cell's title.
+    expect(screen.getAllByText("123.1961").length).toBeGreaterThan(0);
     expect(screen.getByText("SOURCE_LATEST_WINDOW_NOT_PUBLISHED")).toBeTruthy();
 
     const alphaId = screen.getByText("alpha_a");

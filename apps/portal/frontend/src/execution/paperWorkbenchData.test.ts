@@ -97,10 +97,10 @@ describe("money arrives as published", () => {
     const props = workbenchProps(envelopeOf(), null);
     const net = props.accounting.find((row) => row.label === "net pnl");
     // 122.305193732 is the source's own net — nothing here subtracts one equity
-    // from another. It is shown at the money class's 8 dp display cap, which is
-    // the same scale every other screen uses; the exact original is what the
-    // formatter keeps, not something this module rounds off on its own.
-    expect(net?.value).toContain("122.30519373");
+    // from another. It is shown at the money class's four-decimal display cap
+    // (owner, 2026-09-08), the same scale every other screen uses; the exact
+    // original is what the formatter keeps, not something this module rounds.
+    expect(net?.value).toContain("122.3052");
     expect(net?.value).toContain("USDT");
     // Equity is 20000 exactly, and it is not dressed up as 20,000.00000000.
     expect(props.accounting.find((row) => row.label === "equity")?.value).toBe("20,000.00 USDT");

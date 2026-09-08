@@ -690,17 +690,39 @@ export function DensityHeatmap({
  * one line, no chrome. Decoration for the row's numbers, so it is
  * aria-hidden; the numbers beside it are the accessible reading.
  */
+/** Room around a series whose values never change, so its line is visible. */
+function flatBounds(points: readonly (readonly [string, number | null])[]): { min?: number; max?: number } {
+  const values = points.map((p) => p[1]).filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (values.length === 0) return {};
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  if (low !== high) return {};
+  const pad = Math.abs(low) > 0 ? Math.abs(low) * 0.01 : 1;
+  return { min: low - pad, max: high + pad };
+}
+
 export function SparkLine({
   points,
   tone = "good",
   height = 20,
   width,
+  xKind = "time",
 }: {
   points: readonly (readonly [string, number | null])[];
   tone?: ChartTone;
   height?: number;
   /** Cell width; a string ("100%") stretches with the container. */
   width?: number | string;
+  /**
+   * What the x values are.
+   *
+   * A time axis silently draws nothing when the x values are not instants, and
+   * that is exactly how the Alpha Fleet's equity column came to be blank: it
+   * passed "0", "1", "2" — positions in a series, not timestamps — into a time
+   * axis, so every point landed on the same unparseable coordinate. A series
+   * that is only a shape says so and gets a category axis.
+   */
+  xKind?: "time" | "category";
 }) {
   const option = useMemo<EChartsOption>(() => {
     const color = toneColor(tone);
@@ -708,8 +730,13 @@ export function SparkLine({
       animation: false,
       backgroundColor: "transparent",
       grid: { left: 1, right: 1, top: 2, bottom: 2 },
-      xAxis: { type: "time", show: false },
-      yAxis: { type: "value", show: false, scale: true },
+      xAxis: xKind === "category"
+        ? { type: "category", show: false, boundaryGap: false, data: points.map((p) => p[0]) }
+        : { type: "time", show: false },
+      // A flat series is a real answer — equity that has not moved. `scale`
+      // alone leaves min === max, which draws nothing at all, so a flat line is
+      // given room to sit in the middle of the cell where it can be seen.
+      yAxis: { type: "value", show: false, scale: true, ...flatBounds(points) },
       tooltip: { show: false },
       series: [{
         type: "line",
@@ -719,7 +746,7 @@ export function SparkLine({
         data: points.map((p) => [p[0], p[1]]),
       }],
     };
-  }, [points, tone]);
+  }, [points, tone, xKind]);
   return (
     <span className="exec-mc-spark" aria-hidden="true" style={width !== undefined ? { width } : undefined}>
       <EChart option={option} height={height} />

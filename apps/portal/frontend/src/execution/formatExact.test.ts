@@ -22,8 +22,25 @@ describe("formatExact display authority (P4-B / F8)", () => {
   });
 
   it("never abbreviates and returns non-decimals verbatim", () => {
-    expect(formatExact("123456789.987654321", "money").display).toBe("123,456,789.98765432");
+    // Grouped, never k/M. Four decimals is the money class's display cap
+    // (owner, 2026-09-08); the exact original stays in `full`.
+    const big = formatExact("123456789.987654321", "money");
+    expect(big.display).toBe("123,456,789.9877");
+    expect(big.full).toBe("123456789.987654321");
     expect(formatExact("not published", "money")).toEqual({ display: "not published", full: "not published" });
+  });
+
+  it("keeps a small value's own scale rather than rounding it away to zero", () => {
+    // A fee of 0.00001234 is a real figure. Four places would print 0.0000,
+    // which is the null-renders-as-zero failure this surface bans.
+    expect(formatExact("0.00001234", "money").display).toBe("0.00001234");
+    expect(formatExact("0.0595", "money").display).toBe("0.0595");
+    // A value that really is zero still reads as zero.
+    expect(formatExact("0", "money").display).toBe("0.00");
+    // The rescue reaches eight places and no further: below that the display
+    // cannot hold the figure at all, and the exact original in `full` is the
+    // only place it survives. Saying so here so the limit is known, not found.
+    expect(formatExact("0.000000001", "money")).toEqual({ display: "0.00", full: "0.000000001" });
   });
 
   it("carries the currency beside the display while full keeps the exact pair", () => {
