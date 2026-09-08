@@ -609,6 +609,32 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(() => profileProjectionBindingAdmission({ relation: "venue_credentials" }))
       .toThrow("EDS11R projection relation is not admissible");
   });
+
+  it("routes catalogued projection relations through fixed EDS-11R operations", async () => {
+    const policies: Array<{ relation: string; policy?: { relation: string; sourceId: string } }> = [];
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string, _query: unknown,
+        policy?: { relation: string; sourceId: string },
+      ) => {
+        policies.push({ relation, policy });
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+
+    for (const relation of ["portfolio_equity_snapshots", "sizing_decisions", "risk_grants"]) {
+      expect(policies.find((call) => call.relation === relation)?.policy).toMatchObject({
+        relation,
+        sourceId: expect.stringMatching(/^manager\.current\./),
+      });
+    }
+    expect(profileProjectionCatalog("sandbox").find((binding) => binding.relation === "risk_grants"))
+      .toMatchObject({ screenId: "EXECUTION_GATE_R2_REVIEW_SCREEN" });
+    await worker.onApplicationShutdown();
+  });
 });
 
 function document(alphaId: string): ProfileProjectionDocument {

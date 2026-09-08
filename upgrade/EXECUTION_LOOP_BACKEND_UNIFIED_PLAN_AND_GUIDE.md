@@ -2508,7 +2508,7 @@ the losses are at the seam and in policy constants.
 | F4 | Fleet/360/Blotter/Command Center "chưa đủ động" — static until reload | only the three profile overview containers subscribe to `useProfileRealtime`; Fleet, Alpha/Portfolio 360, Blotter and the Command Center container have no stream binding. The hook itself only bumps `refreshKey` (full refetch per delta) — correct at today's cadence, a refetch storm at production delta rates | FE realtime coverage + delta application |
 | F5 | Orders/fills/balances marked `PARTIAL · N30_PROFILE_LINEAGE_REJECTED` (364/55/42 rows survive) | `enforceProfileLineage` drops child rows whose parent (account/strategy/deployment) is not in the profile's accepted parent set. With a single `PAPER_BINANCE_USDM` profile, every non-BINANCE-USDM paper parent (e.g. the DNSE/VN market family) is structurally rejected — correct fail-closed behavior, wrong profile taxonomy. There is no rejected-row diagnostic, so nobody can see *which* parents are missing | Rust/TS profile taxonomy + observability |
 | F6 | History panels thin | time-series relations are hard-capped at 400 rows (`SOURCE_PARTIAL`) — a bounded snapshot window, no warm-history path; 30d rollups/sparks for Fleet remain typed-dark because no window aggregation exists | ingestion window policy |
-| F7 | `portfolio_equity_snapshots` = `MANAGER_V2_SOURCE_CONTRACT_REJECTED` | genuine owner-side contract gap (recorded); meanwhile portfolio equity is derivable server-side from `account_equity_snapshots` × allocations as a declared `DERIVED` formula | owner gap + DERIVED candidate |
+| F7 | `portfolio_equity_snapshots` / `sizing_decisions` = `MANAGER_V2_SOURCE_CONTRACT_REJECTED`; Sandbox `risk_grants` = typed partial | not a source-data gap: (a) the projection worker still used the legacy N13B screen-map route instead of the fixed EDS-11R operation; (b) `risk_grants` was incorrectly bound to Live Review rather than Sandbox R2; (c) the Manager record decoder incorrectly parsed high-precision source observation decimals through the fixed-width arithmetic decimal, rejecting valid nested `capital_model` / `request` / `response` fields | Portal Control API + Portal-owned Edge compatibility boundary |
 | F8 | Raw exact decimals rendered verbatim (`28,579.60574880000000` USDT; `0.002500000000000000` qty) | no display-precision rule exists. Exact strings are the correct wire/storage form; the UI lacks a single formatting authority | FE design system |
 | F9 | VNM workbench dark | no `PAPER_DNSE_VNM` (or equivalent) profile exists; venue calendar capability typed-dark — same taxonomy decision as F5 | profile taxonomy + owner |
 | F10 | Several relations truthfully empty (`venue_accounts`, `broker_account_sync_effective`, `reconciliation_findings`, all Live transactional rows) | must stay empty-as-fact; each screen must show the empty state with the relation's own name so an operator can distinguish "no findings" from "not consumed" | verification only |
@@ -5165,6 +5165,47 @@ intentionally changes `compose.yaml`, `deploy/compose.production.yaml` and
 at the exact protected-main recovery revision and re-verified with the Python
 3.12 BAR-05 freeze suite. This is an evidence-artifact refresh only: it adds no
 runtime authority, source connectivity, command capability or product scope.
+
+**Current-source partial remediation (2026-09-08):** the three observed
+relation partials are not three missing Trading System capabilities. The
+source responds to the fixed Manager-v2 contract, but the Portal projection
+worker still selected the older N13B screen-map route even where the checked-in
+EDS-11R registry already owns a named, direct Manager operation. The worker
+now selects that generated operation for every registry-covered projection
+relation, retaining the legacy route only for explicitly
+`PORTAL_PROJECTION_ONLY` relations. It continues to use the same
+deployment-bound mTLS, short-lived delegated read assertion, profile binding,
+shared admission and 200-row/opaque-cursor bounds; it introduces neither a
+browser relation selector nor a direct Trading System store path.
+
+The Sandbox `risk_grants` projection binding is corrected from the unrelated
+Live Review screen to `EXECUTION_GATE_R2_REVIEW_SCREEN`, the exact accepted
+Sandbox risk screen. `portfolio_equity_snapshots`, `sizing_decisions` and
+`risk_grants` are regression-pinned to their fixed EDS-11R operation paths.
+The exact Edge decoder was then exercised against one live `sizing_decisions`
+page in memory only: it isolated the original rejection to valid
+high-precision decimal leaves inside `capital_model`, `request` and
+`response`. The Manager-read boundary now preserves its bounded lexical
+base-10 string (maximum 256 bytes) via `ManagerDecimalString`; it no longer
+forces observational source data through `execution_contracts::DecimalString`,
+which remains the bounded type for Portal-owned arithmetic. The same live page
+is accepted by the revised decoder with no source body, record key, credential
+or business value persisted in the Portal workspace.
+
+The complete isolated Control API/PostgreSQL restore gate and focused Rust
+contract suite pass. This is not a fabricated runtime result: `PRODUCT_ACTIVE`
+still requires one protected-main signed release containing both the Control
+API worker and the Edge decoder, followed by the deployed Paper/Sandbox/Live
+probe matrix. No Trading System change is required for these three relations.
+A genuine future source rejection remains a typed partial/unavailable state;
+it is never rewritten to empty or available.
+
+The re-pinned EDS-12 qualification pack now separately binds the current
+source proxy, projection relation ladder, projection worker and Manager-v2
+decoder, so this exact compatibility correction cannot be promoted through a
+stale evidence manifest. The dependent N29 BR-EX-72 source-boundary evidence
+and its immutable manifest were re-pinned in the same change; qualification
+now fails closed if either release layer becomes stale.
 
 ### 17.6 Frontend collaboration lanes
 

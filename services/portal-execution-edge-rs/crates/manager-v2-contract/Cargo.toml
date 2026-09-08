@@ -9,7 +9,6 @@ build = "build.rs"
 
 [dependencies]
 chrono.workspace = true
-execution-contracts = { path = "../execution-contracts" }
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

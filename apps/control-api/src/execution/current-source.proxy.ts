@@ -817,7 +817,39 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     sourceId: string,
     relation: string,
     query: CurrentSourcePageQuery,
+    operationPolicy?: CurrentSourceCataloguedOperationPolicy,
   ): Promise<unknown> {
+    if (operationPolicy) {
+      // The projection worker may consume only an operation selected by the
+      // checked-in EDS-11R catalogue.  This bypasses the older screen-map
+      // compatibility bridge while preserving the same deployment-bound mTLS,
+      // delegated read token, admission limits, and opaque-page bounds used by
+      // browser BFF reads.  The worker never accepts a relation or route from
+      // an external caller.
+      assertNamedOperationPolicy(operationPolicy, operationPolicy.sourceId, this.config);
+      assertCataloguedOperationPolicy(operationPolicy);
+      if (operationPolicy.relation !== relation) {
+        throw new CurrentSourceProxyError("EDS11R_PROJECTION_RELATION_MISMATCH", 500);
+      }
+      return this.request(
+        {
+          principalId: "portal-execution-projection-worker",
+          sessionId: `projection-${environment}`,
+          workspaceId,
+          role: "ADMIN",
+          authenticationTime: new Date(),
+          authenticationMethods: ["service_identity", "mtls"],
+        },
+        environment,
+        EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT.screenId,
+        eds11rManagerV2Path(operationPolicy, query),
+        operationPolicy,
+        {
+          ...EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT,
+          sourceBindingIds: [operationPolicy.sourceId],
+        },
+      );
+    }
     assertAcceptedProfileRead(environment, screenId);
     const path = acceptedManagerV2Path(environment, screenId, sourceId, relation, query);
     return this.request({

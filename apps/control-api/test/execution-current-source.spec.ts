@@ -30,6 +30,7 @@ import {
   eds11rManagerV2Path,
 } from "../src/execution/current-source.proxy";
 import {
+  managerRelationOperationByRelation,
   managerRelationOperationByRoute,
   managerRelationOperationPolicy,
 } from "../src/execution/eds11r-manager-relation.registry";
@@ -468,6 +469,21 @@ describe("EDS-07 retained financial read acceptance", () => {
     expect(() => retainedFinancialManagerV2Path(
       "sandbox", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", { limit: 201 },
     )).toThrowError(expect.objectContaining({ code: "EDS07_PAGE_INVALID" }));
+  });
+
+  it("keeps projection-worker Manager reads on the same fixed EDS-11R route", () => {
+    const portfolio = managerRelationOperationByRelation("portfolio_equity_snapshots");
+    const riskGrants = managerRelationOperationByRelation("risk_grants");
+    const sizing = managerRelationOperationByRelation("sizing_decisions");
+    expect(portfolio).not.toBeNull();
+    expect(riskGrants).not.toBeNull();
+    expect(sizing).not.toBeNull();
+    expect(eds11rManagerV2Path(managerRelationOperationPolicy(portfolio!, "paper"), { limit: 200 }))
+      .toBe("/internal/v2/manager/relations/public/portfolio_equity_snapshots?limit=200");
+    expect(eds11rManagerV2Path(managerRelationOperationPolicy(riskGrants!, "sandbox"), { limit: 1 }))
+      .toBe("/internal/v2/manager/relations/public/risk_grants?limit=1");
+    expect(eds11rManagerV2Path(managerRelationOperationPolicy(sizing!, "live"), { limit: 1 }))
+      .toBe("/internal/v2/manager/relations/public/sizing_decisions?limit=1");
   });
 });
 

@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:5743030c5c2845e61e3f3d835ebd5cc25cf66256acc738cfffbe2c9aeeb449eb"
+      "sha256": "sha256:3b4a1a01f6c11d0ed2fe546852c6f28d4a9e37a07eaa0cca96ffa586dbd6e6c5"
     },
     {
       "id": "n29_debt",
@@ -120,7 +120,12 @@
     {
       "id": "current_source_proxy",
       "file": "apps/control-api/src/execution/current-source.proxy.ts",
-      "sha256": "sha256:980bb8fa38c5a04b724ea2eb33cfb674d21c9237220b879f54f245fb0dc3fe9b"
+      "sha256": "sha256:f576bacb4f991570c25b27d62ee8caaa2d83858e3b267a766ba6dc22354239dc"
+    },
+    {
+      "id": "manager_v2_contract_decoder",
+      "file": "services/portal-execution-edge-rs/crates/manager-v2-contract/src/lib.rs",
+      "sha256": "sha256:1d9a526294be46a6861abcd8333d7aff8714954b432b0d4bbbdac2a3515777c6"
     },
     {
       "id": "market_context_rust_adapter",
@@ -155,7 +160,12 @@
     {
       "id": "projection_relation_ladder",
       "file": "apps/control-api/src/execution/profile-projection.catalog.ts",
-      "sha256": "sha256:8bbb28c0ea697031fa83e1f425364effab646b398fd895eb6bcbc500b4668290"
+      "sha256": "sha256:dca663c6d4779c25d13adb3ebf5c37b300f301029bef4f9763f641f8820862c1"
+    },
+    {
+      "id": "projection_worker",
+      "file": "apps/control-api/src/execution/profile-projection.worker.ts",
+      "sha256": "sha256:f0dea94fa3090e48ce8125a5052b5ea51653f9110d383ec7dd1ed7d24adc909c"
     },
     {
       "id": "projection_repository",

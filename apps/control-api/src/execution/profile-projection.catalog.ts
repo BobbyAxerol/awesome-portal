@@ -468,7 +468,7 @@ const SANDBOX: readonly ProfileProjectionBinding[] = [
   bind("margin_balances", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "manager.accounts", "margin_balances", MARGIN),
   bind("account_sync", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC),
   bind("sizing_decisions", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", SIZING_DECISION),
-  bind("risk_grants", "EXECUTION_GATE_LIVE_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
+  bind("risk_grants", "EXECUTION_GATE_R2_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
 ];
 
 const LIVE: readonly ProfileProjectionBinding[] = [

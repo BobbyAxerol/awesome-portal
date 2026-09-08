@@ -1825,3 +1825,33 @@ durable run/attempt events. Detailed evidence:
   source reads, commands or Live mutation, and EDS-12 remains
   `DEPLOYED_EVIDENCE_PENDING` until the new signed release is deployed and its
   actual profile/browser/rollback evidence passes the deployed verifier.
+
+## Backend state — 2026-09-08 (current-source partial remediation)
+
+- The three observed current-source partials are remediated at the Portal
+  boundary, not by adding a Trading System dependency: the profile projection
+  worker now chooses the existing generated EDS-11R named Manager operation
+  whenever a projection relation is registry-covered. Its legacy N13B route
+  remains only for explicit Portal-only projection inputs.
+- Sandbox `manager.risk:risk_grants` is bound to the accepted R2 Review
+  screen, rather than the unrelated Live Review screen. The fixed operation
+  paths for `portfolio_equity_snapshots`, `sizing_decisions` and `risk_grants`
+  are covered by regression tests.
+- A metadata-only live decoder probe proved that `sizing_decisions` is not
+  absent or malformed at the source: the current record's nested
+  `capital_model`, `request` and `response` contain valid exact decimals beyond
+  the fixed-width arithmetic decimal range. `ManagerDecimalString` now keeps
+  the bounded source lexeme intact at the Manager read boundary; it does not
+  relax, round or change the canonical decimal used by Portal arithmetic.
+- The full Control API build/test and PostgreSQL dump/restore gate, the focused
+  Rust Manager contract suite and the revised decoder's live in-memory probe
+  pass. No profile, command, direct source store or stable runtime changed.
+  The remaining step is operational: publish one signed image set containing
+  both Control API and Edge, then capture the deployed Paper/Sandbox/Live
+  matrix. The deployed verifier remains the sole authority that may emit
+  `PRODUCT_ACTIVE`; a future real source rejection stays typed rather than
+  being hidden.
+- The EDS-12 static pack separately pins the proxy, relation ladder,
+  projection worker and Manager decoder that implement this correction; a
+  stale manifest cannot qualify it for promotion. Its dependent N29 BR-EX-72
+  source-boundary evidence is re-pinned in the same commit.
