@@ -21,11 +21,11 @@ SPEC.loader.exec_module(MODULE)
 IMAGE = "ghcr.io/bobbyaxerol/portal-execution-edge@sha256:" + "a" * 64
 
 
-def record(image: str = IMAGE) -> dict:
+def record(image: str = IMAGE, *, v3_identity: bool = False) -> dict:
     repository, digest = image.split("@", 1)
     return {
         "critical": {
-            "identity": {"docker-reference": repository},
+            "identity": {"docker-reference": image if v3_identity else repository},
             "image": {"docker-manifest-digest": digest},
             "type": "cosign container image signature",
         },
@@ -47,6 +47,10 @@ class VerifyCosignSignatureTest(unittest.TestCase):
         wrong_repository["critical"]["identity"]["docker-reference"] = "ghcr.io/other/edge"
         with self.assertRaisesRegex(MODULE.SignatureError, "repository binding"):
             MODULE.parse_records(json.dumps([wrong_repository]).encode(), IMAGE)
+
+    def test_accepts_cosign_v3_digest_pinned_identity(self):
+        payload = MODULE.parse_records(json.dumps([record(v3_identity=True)]).encode(), IMAGE)
+        self.assertEqual(len(payload), 1)
 
     def test_verify_writes_exact_object_envelope(self):
         args = type("Args", (), {
