@@ -48,21 +48,31 @@ const obj = (v: unknown): Record<string, unknown> =>
 const str = (v: unknown): string | null =>
   (typeof v === "string" && v.length > 0 ? v : typeof v === "number" && Number.isFinite(v) ? String(v) : null);
 
-/** One journal row, field-mapped loosely because the source names vary by lane. */
+/**
+ * One journal row.
+ *
+ * The journal is redacted by contract, and the shape says so: it carries
+ * `command_id`, `accepted_at`, `state`, `venue` and `environment` — and no
+ * actor at all. So `actor` is read where a lane does publish one and left null
+ * otherwise, which the table then prints as "actor redacted" rather than as a
+ * blank cell that could be mistaken for an unattributed command.
+ */
 function journalRow(raw: unknown): JournalRow | null {
   const row = obj(raw);
-  const at = str(row.at) ?? str(row.occurred_at) ?? str(row.created_at)
+  const at = str(row.accepted_at) ?? str(row.updated_at) ?? str(row.at) ?? str(row.occurred_at) ?? str(row.created_at)
+    ?? str(row.as_of)
     ?? (typeof row.created_at_ms === "number" ? new Date(row.created_at_ms).toISOString() : null);
-  const command = str(row.command) ?? str(row.command_key) ?? str(row.action) ?? str(row.task_id) ?? str(row.kind);
+  const command = str(row.command_id) ?? str(row.command) ?? str(row.command_key) ?? str(row.action) ?? str(row.task_id) ?? str(row.kind);
   // A row with neither a clock nor a command names nothing and is dropped
   // rather than rendered as a blank line in an audit trail.
   if (!at && !command) return null;
+  const where = [str(row.venue), str(row.environment), str(row.relation_state)].filter(Boolean).join(" · ");
   return {
     at,
     command,
     actor: str(row.actor) ?? str(row.actor_user_id) ?? str(row.username),
-    outcome: str(row.outcome) ?? str(row.status) ?? str(row.result) ?? str(row.state),
-    detail: str(row.reason_code) ?? str(row.detail) ?? str(row.message),
+    outcome: str(row.state) ?? str(row.outcome) ?? str(row.status) ?? str(row.result),
+    detail: str(row.reason_code) ?? str(row.detail) ?? str(row.message) ?? (where || null),
   };
 }
 
@@ -71,7 +81,15 @@ export function readOperationalComposition(raw: unknown): OperationalComposition
   const schemaVersion = str(root.schema_version);
   if (!schemaVersion) return null;
   const journal = obj(root.redacted_command_journal);
-  const authority = obj(root.command_authority);
+  /*
+   * Two blocks carry the command authority and they do not say the same thing:
+   * the top-level one has `state: UNCHANGED_FAIL_CLOSED` and no relay field,
+   * while `data.command_authority` has `FAIL_CLOSED` and the relay itself. The
+   * richer one wins. Read the other way round, the missing relay field failed
+   * closed to "relay active" — loudly wrong on screen, which is the point of
+   * failing closed, but wrong all the same.
+   */
+  const authority = { ...obj(root.command_authority), ...obj(obj(root.data).command_authority) };
   const health = obj(root.source_health);
   const twin = obj(root.canary_twin_comparison);
   const profiles = obj(health.profiles);
