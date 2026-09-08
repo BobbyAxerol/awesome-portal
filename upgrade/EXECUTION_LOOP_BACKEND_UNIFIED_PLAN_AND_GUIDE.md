@@ -5107,6 +5107,22 @@ routes and proves an `8101` alteration fails.  This makes the Portal-owned
 adapter deployable; it neither calls the browser/Data Layer directly nor
 claims deployed evidence before the signed candidate and live probes exist.
 
+**Current-wire compatibility correction (2026-09-08):** post-rollout probes
+against the existing loopback Data Layer found two current, source-owned wire
+variants: latest-trade price is a JSON number, candle payloads identify the
+same Binance USD-M market as `usdm_futures`, and the current-trade snapshot
+uses the provider-bound `binance_usdm` label. The sealed Rust Market Context
+adapter now normalizes only a bounded JSON decimal number or decimal string,
+and accepts only `usdm` / `usdm_futures` / `binance_usdm` inside its fixed
+Binance USD-M adapter. It performs no arithmetic, admits no extra venue,
+route, profile or upstream. The TypeScript BFF now permits the fixed 8 MiB
+candle bound only after the two-operation fixed-path contract validates; the
+generic Manager relation ceiling remains 2 MiB. The adapter contract records
+that exact source-wire set, while EDS-12 now digest-binds the Rust adapter
+itself as well as the BFF and proxy template. Focused Rust and TypeScript
+regressions bind all cases. This correction needs a new signed Edge image and
+deployed probes before EDS-12 can emit `PRODUCT_ACTIVE`.
+
 **Durable-projection preflight correction (2026-09-08):** a Paper
 render-only activation rehearsal exposed that the fail-closed D2 parser had
 omitted two existing, documented durable-projection inputs:

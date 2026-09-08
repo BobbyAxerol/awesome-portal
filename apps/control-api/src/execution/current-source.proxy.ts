@@ -790,8 +790,11 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     environment: Exclude<CurrentSourceEnvironment, "canary">,
     policy: CurrentSourceFixedPathOperationPolicy,
   ): Promise<unknown> {
-    assertNamedOperationPolicy(policy, policy.sourceId, this.config);
-    assertMarketContextFixedPathPolicy(policy);
+    // Market Context has exactly two sealed operations. Their 1 MiB / 8 MiB
+    // response bounds are part of that fixed contract, not permission to
+    // enlarge the generic Manager relation response ceiling.
+    const maximumResponseBytes = assertMarketContextFixedPathPolicy(policy);
+    assertNamedOperationPolicy(policy, policy.sourceId, this.config, maximumResponseBytes);
     return this.request(
       browserIdentity(principal),
       environment,
@@ -1137,6 +1140,7 @@ function assertNamedOperationPolicy(
   policy: CurrentSourceOperationPolicy,
   sourceId: string,
   config: ControlApiConfig,
+  maximumResponseBytesCeiling = config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES,
 ): void {
   if (
     !/^[A-Za-z][A-Za-z0-9]{2,127}$/.test(policy.operationId) ||
@@ -1145,7 +1149,7 @@ function assertNamedOperationPolicy(
     !/^[A-Za-z0-9][A-Za-z0-9._:-]{2,190}$/.test(policy.adapterRevision) ||
     !Number.isInteger(policy.maximumResponseBytes) ||
     policy.maximumResponseBytes < 64 * 1024 ||
-    policy.maximumResponseBytes > config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES ||
+    policy.maximumResponseBytes > maximumResponseBytesCeiling ||
     !Number.isInteger(policy.sourceMaximumConcurrency) ||
     !Number.isInteger(policy.profileMaximumConcurrency) ||
     policy.sourceMaximumConcurrency < 1 || policy.sourceMaximumConcurrency > 512 ||
@@ -1168,7 +1172,7 @@ function assertCataloguedOperationPolicy(
 
 function assertMarketContextFixedPathPolicy(
   policy: CurrentSourceFixedPathOperationPolicy,
-): void {
+): number {
   if (
     policy.sourceId !== "market.context" ||
     ![
@@ -1182,12 +1186,14 @@ function assertMarketContextFixedPathPolicy(
   if (parsed.origin !== "https://portal-edge.invalid" || parsed.hash !== "") {
     throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
   }
-  const allowed = policy.operationId === "managerMarketContextLatestV1"
+  const latest = policy.operationId === "managerMarketContextLatestV1";
+  const allowed = latest
     ? ["venue", "instrument"]
     : ["venue", "instrument", "interval", "from_ms", "to_ms", "point_limit"];
   const expectedPath = policy.operationId === "managerMarketContextLatestV1"
     ? "/internal/v2/manager/market/latest"
     : "/internal/v2/manager/market/candles";
+  const maximumResponseBytes = latest ? 1_048_576 : 8_388_608;
   const seen = new Set<string>();
   for (const [key, value] of parsed.searchParams.entries()) {
     if (!allowed.includes(key) || seen.has(key) || value.length < 1 || value.length > 256) {
@@ -1198,10 +1204,14 @@ function assertMarketContextFixedPathPolicy(
   if (
     parsed.pathname !== expectedPath ||
     seen.size !== allowed.length ||
-    !allowed.every((key) => seen.has(key))
+    !allowed.every((key) => seen.has(key)) ||
+    policy.adapterRevision !== "trading-system.portal-execution.market-context.v1" ||
+    policy.maximumResponseBytes !== maximumResponseBytes ||
+    policy.sourceMaximumConcurrency !== 2
   ) {
     throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
   }
+  return maximumResponseBytes;
 }
 
 export function eds11rManagerV2Path(

@@ -504,13 +504,13 @@ fn adapt_data_layer_latest(
     require_binance_usdm(venue, expected_profile_id)?;
     let root = object(value)?;
     if text(root, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
-        || !text(root, "market", 32)?.eq_ignore_ascii_case("usdm")
+        || !is_data_layer_usdm_market(&text(root, "market", 32)?)
     {
         return Err(ExtensionContractError::InvalidMarketData);
     }
     let snapshot = object(object_value(root, "snapshot")?)?;
     if text(snapshot, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
-        || !text(snapshot, "market", 32)?.eq_ignore_ascii_case("usdm")
+        || !is_data_layer_usdm_market(&text(snapshot, "market", 32)?)
     {
         return Err(ExtensionContractError::InvalidMarketData);
     }
@@ -570,7 +570,7 @@ fn adapt_data_layer_candles(
     require_binance_usdm(venue, expected_profile_id)?;
     let root = object(value)?;
     if text(root, "symbol", MAXIMUM_IDENTIFIER_BYTES)? != instrument
-        || !text(root, "market", 32)?.eq_ignore_ascii_case("usdm")
+        || !is_data_layer_usdm_market(&text(root, "market", 32)?)
     {
         return Err(ExtensionContractError::InvalidMarketData);
     }
@@ -649,6 +649,16 @@ fn require_binance_usdm(venue: &str, profile_id: &str) -> Result<(), ExtensionCo
     Ok(())
 }
 
+/// The existing loopback Data Layer publishes these three stable spellings for
+/// Binance USD-M across its current-observation and kline endpoints. Keep
+/// the compatibility allowance local to this sealed adapter; it must never
+/// become a generic venue/market alias accepted by the Edge.
+fn is_data_layer_usdm_market(value: &str) -> bool {
+    value.eq_ignore_ascii_case("usdm")
+        || value.eq_ignore_ascii_case("usdm_futures")
+        || value.eq_ignore_ascii_case("binance_usdm")
+}
+
 fn quote_currency(instrument: &str) -> Result<&'static str, ExtensionContractError> {
     if instrument.ends_with("USDT") {
         Ok("USDT")
@@ -677,13 +687,19 @@ fn market_freshness(
 }
 
 fn decimal_text(value: &Value) -> Result<String, ExtensionContractError> {
-    let value = value
-        .as_str()
-        .ok_or(ExtensionContractError::InvalidMarketData)?;
-    if !is_decimal(value) {
+    // Data Layer's current-trade endpoint serializes price as a JSON number,
+    // while its OHLCV endpoint serializes price fields as JSON strings. This
+    // adapter canonicalizes either bounded decimal representation to the
+    // Portal exact-decimal text wire form without doing arithmetic.
+    let value = match value {
+        Value::String(value) => value.clone(),
+        Value::Number(value) => value.to_string(),
+        _ => return Err(ExtensionContractError::InvalidMarketData),
+    };
+    if value.len() > 128 || !is_decimal(&value) {
         return Err(ExtensionContractError::InvalidMarketData);
     }
-    Ok(value.to_owned())
+    Ok(value)
 }
 
 fn is_decimal(value: &str) -> bool {

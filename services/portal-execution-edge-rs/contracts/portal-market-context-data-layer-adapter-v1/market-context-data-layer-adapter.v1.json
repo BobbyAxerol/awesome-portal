@@ -42,6 +42,11 @@
     "candles_sampling": "SOURCE_BOUNDED",
     "derived": false
   },
+  "source_wire_compatibility": {
+    "accepted_binance_usdm_market_values": ["usdm", "usdm_futures", "binance_usdm"],
+    "accepted_decimal_json_types": ["string", "number"],
+    "decimal_handling": "BOUNDED_LEXICAL_NORMALIZATION_NO_ARITHMETIC"
+  },
   "activation": {
     "runtime_feature": "FEATURE_EXECUTION_MARKET_CONTEXT",
     "source_proxy_response_header": "X-Portal-Source-Adapter: portal.execution.market-context-data-layer.v1",
