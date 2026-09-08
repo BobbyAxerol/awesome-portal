@@ -47,6 +47,7 @@ INPUTS = (
     ("n17b_current_acceptance", "scripts/execution-n17b-current-acceptance-test.sh"),
     ("n29_release_profile", "deploy/manifests/execution-manager-product-release-profile.v1.json"),
     ("protected_release_workflow", ".github/workflows/publish-images.yml"),
+    ("cosign_signature_adapter", "scripts/verify-cosign-signature.py"),
     ("image_publication_gate", "scripts/execution-image-publication-test.sh"),
     ("current_source_compose", "deploy/compose.execution-current-source.yaml"),
     ("profile_runtime_prepare", "scripts/execution-profile-runtime-prepare.sh"),

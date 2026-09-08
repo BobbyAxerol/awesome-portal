@@ -491,16 +491,16 @@ jobs:
           mkdir -p release/execution-d2
           certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/publish-images.yml@${GITHUB_REF}"
           issuer="https://token.actions.githubusercontent.com"
-          cosign verify \
+          python3 scripts/verify-cosign-signature.py \
             --certificate-identity "${certificate_identity}" \
             --certificate-oidc-issuer "${issuer}" \
-            --output json "${EXECUTION_EDGE_IMAGE}" \
-            > release/execution-d2/execution-edge-signature.json
-          cosign verify \
+            --image "${EXECUTION_EDGE_IMAGE}" \
+            --output release/execution-d2/execution-edge-signature.json
+          python3 scripts/verify-cosign-signature.py \
             --certificate-identity "${certificate_identity}" \
             --certificate-oidc-issuer "${issuer}" \
-            --output json "${SOURCE_PROXY_IMAGE}" \
-            > release/execution-d2/source-proxy-signature.json
+            --image "${SOURCE_PROXY_IMAGE}" \
+            --output release/execution-d2/source-proxy-signature.json
           cp execution-edge-trivy.json source-proxy-trivy.json release/execution-d2/
           {
             printf 'SOURCE_COMMIT=%s\n' "${GITHUB_SHA}"
@@ -532,11 +532,11 @@ jobs:
           mkdir -p release/execution-d3
           certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/publish-images.yml@${GITHUB_REF}"
           issuer="https://token.actions.githubusercontent.com"
-          cosign verify \
+          python3 scripts/verify-cosign-signature.py \
             --certificate-identity "${certificate_identity}" \
             --certificate-oidc-issuer "${issuer}" \
-            --output json "${CONTROL_API_IMAGE}" \
-            > release/execution-d3/control-api-signature.json
+            --image "${CONTROL_API_IMAGE}" \
+            --output release/execution-d3/control-api-signature.json
           cp control-api-trivy.json release/execution-d3/
           {
             printf 'SOURCE_COMMIT=%s\n' "${GITHUB_SHA}"
@@ -577,11 +577,11 @@ jobs:
             image="$2"
             for attempt in $(seq 1 12); do
               temporary="$(mktemp)"
-              if cosign verify \
+              if python3 scripts/verify-cosign-signature.py \
                 --certificate-identity "${certificate_identity}" \
                 --certificate-oidc-issuer "${issuer}" \
-                --output json "${image}" \
-                > "${temporary}"; then
+                --image "${image}" \
+                --output "${temporary}"; then
                 mv "${temporary}" "release/n14a-evidence/${service}-signature.json"
                 return 0
               fi

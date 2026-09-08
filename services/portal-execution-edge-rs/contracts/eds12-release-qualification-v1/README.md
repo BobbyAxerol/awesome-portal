@@ -45,6 +45,11 @@ python3 ./scripts/execution-eds12-qualification.py verify-deployed \
 secret-shaped or runtime-widening evidence. It does not deploy, restart,
 migrate, activate a source, dispatch a command or mutate Live.
 
+The protected publisher converts Cosign's array output into the exact
+`portal.cosign-signature-evidence.v1` object before it enters the immutable
+N14A evidence pack. The EDS-12 input pin includes that converter, so a future
+release cannot silently return to an array-shaped artifact the pack rejects.
+
 ## BR-EX-80 / BR-EX-81 / Market Context boundary
 
 BR-EX-80 is a Portal-owned derived adapter. The named subject BFF takes a

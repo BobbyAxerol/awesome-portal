@@ -5072,6 +5072,18 @@ complete pair verifies.  Signature, scan, image digest and all fail-closed
 candidate checks remain unchanged.  This is bounded registry-read resilience,
 not a relaxation or a deployed-evidence claim.
 
+**Publisher evidence-shape correction (2026-09-08):** the next candidate run
+proved that Cosign verification itself was green, but its native `--output
+json` is an array while the immutable N14A pack correctly accepts only
+object-shaped JSON evidence. `scripts/verify-cosign-signature.py` now invokes
+the same keyless verification, checks the exact repository and immutable
+subject digest in every returned record, and writes the bounded
+`portal.cosign-signature-evidence.v1` envelope. The protected publisher uses
+it for D2, D3 and all six N14A images; focused mutation tests and the EDS-12
+input pin prevent a future array/object mismatch. This repairs release
+evidence serialization only; it neither widens runtime authority nor makes a
+`PRODUCT_ACTIVE` claim.
+
 **Market Context render correction (2026-09-08):** the production renderer
 already accepted `market-data-layer-v1`, but its readiness preflight still
 compared every profile-bound Manager locations pack to the old facade-only
