@@ -73,7 +73,7 @@ describe("Phase 3 rich-profile adapters", () => {
     expect(FakeEventSource.instances[0].url).toBe("/api/v1/execution/profiles/paper/stream?cursor=pc1.fixture");
     FakeEventSource.instances[0].fail();
     expect(FakeEventSource.instances[0].closed).toBe(true);
-    expect(screen.getByText(/closed:1:REALTIME_TRANSPORT_CLOSED/)).toBeTruthy();
+    expect(screen.getByText(/closed:0:REALTIME_TRANSPORT_CLOSED/)).toBeTruthy();
   });
 
   it("treats an expired session as terminal and never creates EventSource", async () => {
@@ -88,7 +88,7 @@ describe("Phase 3 rich-profile adapters", () => {
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     FakeEventSource.instances[0].emit("heartbeat", frame("heartbeat", 1, true));
     expect(FakeEventSource.instances[0].closed).toBe(true);
-    expect(screen.getByText(/closed:1:REALTIME_TERMINAL_EVENT/)).toBeTruthy();
+    expect(screen.getByText(/closed:0:REALTIME_TERMINAL_EVENT/)).toBeTruthy();
     await new Promise((resolve) => setTimeout(resolve, 5));
     expect(FakeEventSource.instances).toHaveLength(1);
   });
@@ -116,9 +116,13 @@ describe("P4-C bounded delta coalescing", () => {
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     expect(FakeEventSource.instances).toHaveLength(1);
     const stream = FakeEventSource.instances[0];
-    // The snapshot itself was the first bump of its window: refreshKey 1.
-    expect(screen.getByText(/live:1:/)).toBeTruthy();
-    // A burst of three deltas inside the window: nothing immediate…
+    // The bootstrap snapshot does not bump: it is the stream's handshake, and
+    // the screen has just read its data independently. Bumping there made every
+    // profile screen re-read about a second into its own first read, which the
+    // hook then cancelled — 13 wasted seconds on the 7 MB workbench profile.
+    expect(screen.getByText(/live:0:/)).toBeTruthy();
+    // A burst of three deltas: the first is the leading edge of a fresh
+    // window and refreshes at once…
     stream.emit("delta", frame("delta", 2));
     stream.emit("delta", frame("delta", 3));
     stream.emit("delta", frame("delta", 4));
@@ -150,7 +154,7 @@ describe("P4-C bounded delta coalescing", () => {
       "/api/v1/execution/profiles/sandbox/stream?cursor=pc1.fixture",
     ]);
     // Three snapshots = three first-window bumps summed.
-    await waitFor(() => expect(screen.getByText(/^3:live:live:live$/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/^0:live:live:live$/)).toBeTruthy());
   });
 });
 

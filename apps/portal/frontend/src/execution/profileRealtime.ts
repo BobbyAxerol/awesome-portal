@@ -89,7 +89,22 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         if (!disposed) setState((current) => ({ ...current, refreshKey: current.refreshKey + 1 }));
       }, REALTIME_COALESCE_MS - elapsed);
     };
-    const updateFrom = (event: RealtimeEnvelope) => {
+    /**
+     * `refresh` is false for the snapshot that bootstraps the stream.
+     *
+     * That snapshot is a handshake, not a delta: it carries the cursor the
+     * stream resumes from and says nothing has happened. Bumping on it made
+     * every profile screen re-read the moment the stream connected — about a
+     * second after its first read, while that read was still in flight. The
+     * hook cancels an in-flight read when its deps change, so the first
+     * response was discarded and the screen waited for the second.
+     *
+     * On the Paper Workbench, whose profile is 7 MB, the two reads queued on
+     * the server and the first panel appeared after 20.6s instead of 7.5s.
+     * A bootstrap after a gap is different and does refresh: data can have
+     * changed while the stream was down.
+     */
+    const updateFrom = (event: RealtimeEnvelope, refresh = true) => {
       if (event.projection_epoch !== null) epoch = event.projection_epoch;
       if (event.projection_sequence !== null) sequence = event.projection_sequence;
       setState((current) => ({
@@ -99,7 +114,7 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         reason: null,
       }));
       // A heartbeat proves liveness; it never triggers a full data reread.
-      if (event.event_type !== "heartbeat") bumpRefresh();
+      if (refresh && event.event_type !== "heartbeat") bumpRefresh();
     };
     const decode = (message: MessageEvent<string>): RealtimeEnvelope | null => {
       try { return readProfileRealtime(JSON.parse(message.data)); } catch { return null; }
@@ -131,7 +146,7 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         setState((current) => ({ ...current, phase: "closed", reason: "REALTIME_SNAPSHOT_INVALID" }));
         return;
       }
-      updateFrom(snapshot);
+      updateFrom(snapshot, recovering);
       const stream = new EventSource(`/api/v1/execution/profiles/${environment}/stream?cursor=${encodeURIComponent(snapshot.cursor)}`);
       source = stream;
 
