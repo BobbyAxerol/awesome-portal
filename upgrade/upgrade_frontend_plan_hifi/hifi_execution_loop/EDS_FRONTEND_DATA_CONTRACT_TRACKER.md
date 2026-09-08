@@ -2004,6 +2004,149 @@ tile lấy cùng trang, mở tab nào cũng có.
   — gọi tên sự vắng mặt hai lần. Nay dẫn bằng chính id và ghi nhỏ
   "no label published" ở chỗ đáng lẽ là tên.
 
+### A13.12 KIỂM KÊ BACKEND ↔ FRONTEND (08-09) — 102 route, khoảng trống đo được
+
+Đếm tận nơi, không suy đoán: control-api phơi **102 route execution**. Dò từng
+route bằng phiên `claude-probe` rồi đối chiếu với số lần frontend tham chiếu.
+
+#### Khoảng trống lớn nhất: 4 route `compositions/*` — **158 KB, frontend gọi 0 lần**
+
+| Route | Byte | FE gọi | Bên trong có gì mà route lẻ **không** có |
+|---|---:|---:|---|
+| `compositions/command-center` | 35 KB | **0** | `command_center` (mode QUIET, 4 panel: fleet_health · needs_you · pinned_watchlist · today) **+** journal · source_health · lineage |
+| `compositions/operations` | 31 KB | **0** | `operations_queue` **+** ba khối chéo dưới |
+| `compositions/waivers` | 31 KB | **0** | `waivers_register` **+** ba khối chéo dưới |
+| `compositions/admin-action-drawer` | 60 KB | **0** | `task_catalogue` (**24 task · 6 nhóm**) + `command_authority` |
+
+Bốn route đều kèm **bốn khối chéo mà các route lẻ không mang**:
+- **`redacted_command_journal`: 100 dòng, state AVAILABLE** — nhật ký lệnh đã
+  redact. **Không màn nào đang hiện nó.**
+- `source_health` theo từng profile · `canary_twin_comparison` ·
+  `command_authority` (**state `FAIL_CLOSED`, `relay_active: false`**) ·
+  `lineage` kèm digest.
+
+Frontend đang gọi các route **lẻ** (`/command-center`, `/operations`,
+`/commands/tasks`) nên **mất toàn bộ bằng chứng chéo** — đúng thứ trả lời câu
+"vì sao nút này khoá".
+
+#### Bốn route khác chưa ai gọi
+
+| Route | Byte | Dùng được vào việc gì |
+|---|---:|---|
+| `/history/{env}/{relationKey}` | **475 KB** | lịch sử sâu cho **mọi** relation — nguồn cho "All" của các chart chưa có |
+| `/screen-contracts` | 24 KB | catalogue từng màn kèm `dataApi.status` → trạng thái "hợp đồng màn này chưa phát hành" nói bằng lời của server |
+| `/runtime-manifest` | 3.3 KB | trần trang/byte/cursor server tự khai — caption degradation §8 đang tự viết |
+| `/governance/approvals/history` | 500 B | lịch sử quyết định approval |
+
+#### Ba route trả 400/pending — phân loại đúng
+
+- `/derivations/alphas/{id}/activity` → **không phải lỗi**, chỉ thiếu
+  `environment` trong phép dò của tôi; frontend gửi đúng.
+- `/market/latest` → `PENDING_MARKET_CONTEXT_ADAPTER` — **thượng nguồn chưa nối**.
+- `/views/risk-decisions` → `EDS07_DECISION_QUERY_INVALID` với mọi
+  `decision_kind` tôi thử; **cần đọc schema, chưa kết luận**.
+
+#### P0-16 kiểm lại
+
+| Route | Trước | Nay |
+|---|---|---|
+| `derivations/portfolios/{id}/capital` | REQUEST_REJECTED | **200 OK** |
+| `governance/exit-reviews/{id}` | REQUEST_REJECTED | **404 typed** `EXIT_REVIEW_NOT_FOUND` — đúng |
+| `derivations/alphas/{id}/orders-fills` | REQUEST_REJECTED | **vẫn REQUEST_REJECTED** ← lỗi thật còn lại |
+
+#### Sự thật quyết định phạm vi Goal 5
+
+| Nguồn | Trên dev |
+|---|---|
+| `operations` | **0 hàng · `delivery_profile: fixture` · `source_integration_state: UNAVAILABLE`** |
+| `governance/approvals` | **0 hàng** |
+| `governance/waivers` | **0 hàng** |
+| `commands/tasks` | **24 task · 6 nhóm · relay `LOCAL_R0_ONLY`** · phân loại **4 CONNECTED / 13 SUPPORTED_BUT_INACTIVE / 7 SEMANTICALLY_INCOMPATIBLE** |
+
+Nghĩa là: **governance chưa có hàng nào trên dev**, còn **catalogue lệnh thì
+có thật**. Goal 5 phải viết theo sự thật đó, không hứa nghiệm thu trên hàng
+không tồn tại.
+
+---
+
+## A14. GOAL 5 CHI TIẾT VÀ BỐN GOAL MỚI (viết 08-09 sau kiểm kê §A13.12)
+
+> Luật chung giữ nguyên §A9.4: mỗi goal đóng bằng **gate xanh → commit từng bước
+> → rebuild dev → báo cáo 7 mục**; thiếu nguồn thì ghi `Soon · <mã>` chứ không
+> hoãn; mọi nút mutation **disabled kèm lý do**, không được vắng mặt.
+
+### Goal 5 — Governance & Operations (P0-10 · P0-11 · P0-16)
+
+**Sự thật nền:** governance trên dev **0 hàng** ở cả ba bảng, Operations Queue
+đang chạy `delivery_profile: fixture`. Nên goal này chia làm hai phần rạch ròi:
+phần **làm được ngay trên dữ liệu thật**, và phần chỉ nghiệm thu được **bằng
+trạng thái rỗng trung thực** cho tới khi nguồn có hàng.
+
+#### 5A — Làm được ngay, có dữ liệu thật
+
+| # | Việc | Nguồn thật |
+|---|---|---|
+| 5A-1 | **Admin Action Drawer** hiện **24 task theo 6 nhóm**, mỗi task nói rõ vì sao khoá bằng **phân loại của server**: `CONNECTED` (4) chạy được · `SUPPORTED_BUT_INACTIVE` (13) · `SEMANTICALLY_INCOMPATIBLE` (7). Thêm chip lọc theo phân loại (showcase còn thiếu ~4 chip) | `compositions/admin-action-drawer` |
+| 5A-2 | **Command authority** hiện thẳng: `FAIL_CLOSED · relay LOCAL_R0_ONLY · relay_active false` — đây là câu trả lời cho "vì sao mọi nút mutation đều mờ", nay đang bị giấu | cùng route |
+| 5A-3 | **Command journal panel** — **100 dòng đã redact** chưa màn nào hiện. Đặt ở Operations Queue và Admin drawer: ai chạy lệnh gì, lúc nào, kết quả gì | `redacted_command_journal` trong cả 4 composition |
+| 5A-4 | **Command Center 4 panel thật**: fleet_health · needs_you · pinned_watchlist · today, kèm `mode` (QUIET) | `compositions/command-center` |
+| 5A-5 | **P0-16 còn lại**: sửa `derivations/alphas/{id}/orders-fills` đang `REQUEST_REJECTED` (backend — tôi làm) | — |
+
+**Gate 5A:** Admin drawer ≥ 24 task + 4 chip phân loại + dòng command authority; Operations Queue có panel journal ≥ 100 dòng; Command Center 4 panel có tên đúng; `orders-fills` trả 200.
+
+#### 5B — Chỉ nghiệm thu được bằng trạng thái rỗng trung thực
+
+| # | Việc | Vì sao chưa đóng được |
+|---|---|---|
+| 5B-1 | **Gate R1/R2**: 6 nút (Approve · Approve with condition · Attach condition · Request changes · Deny + policy registry) | `governance/approvals` **0 hàng** — không có approval thật để mở |
+| 5B-2 | **Exit Review detail**: 4 nút (Approve promotion · Extend +14d · Reject → Paper HELD · Copy) | không có review id thật |
+| 5B-3 | **Operations Queue**: chart phân bố + phân trang keyset + đủ 10 nút | `delivery_profile: fixture`, 0 hàng |
+| 5B-4 | **Incident Detail**: 5 panel trên **một incident id thật** | dev chưa có incident nào |
+
+**Gate 5B (nghiệm thu được ngay):** mỗi màn giữ **nguyên bố cục, filter, cột và
+nút**, mỗi nút **disabled kèm lý do đọc được**, và bảng rỗng nói `Soon · nguồn
+chưa phát hành hàng nào cho profile này` kèm số hàng trang hiện tại. **Không
+màn nào được biến mất vì rỗng.** Khi nguồn có hàng thì mở lại 5B để ký.
+
+---
+
+### Goal 9 — Bằng chứng chéo mà 4 composition đang giữ (MỚI)
+
+| Mục | Nội dung |
+|---|---|
+| **Giao gì** | Chuyển 4 màn (Command Center · Operations Queue · Waivers · Admin drawer) sang đọc `compositions/*` thay vì route lẻ, và **hiện bốn khối chéo** hiện đang bị bỏ: `source_health` theo profile · `redacted_command_journal` 100 dòng · `canary_twin_comparison` · `command_authority`, kèm `lineage` digest trong drawer provenance |
+| **Gate đóng** | 4 màn đọc composition; mỗi màn hiện đủ 4 khối; **số request không tăng** (composition thay route lẻ, không cộng thêm); journal ≥ 100 dòng có actor/lệnh/kết quả |
+| **Enhance so showcase** | showcase không có journal và không giải thích vì sao nút khoá; dev nói bằng chính chữ của server |
+| **Backend hỗ trợ** | đã có sẵn, **0 dòng backend mới** |
+
+### Goal 10 — "All" thật cho mọi chart, qua `/history/{env}/{relation}` (MỚI)
+
+| Mục | Nội dung |
+|---|---|
+| **Giao gì** | Route lịch sử **475 KB chưa ai gọi** phục vụ mọi relation. Nối vào các chart còn đang bị bó: Portfolio 360 equity (nay 4 điểm), Account 360, Blotter theo thời gian; và thêm bộ chọn cửa sổ thật (30d · 90d · All) **có số ngày thật sự trả về** trong caption |
+| **Gate đóng** | mỗi chart nêu **khoảng thật** chứ không phải khoảng đã hỏi; Portfolio 360 equity > 4 điểm; không chart nào ghi "All" mà vẽ ít hơn cái mirror có |
+| **Backend hỗ trợ** | `/history/{environment}/{relationKey}` — đã có |
+
+### Goal 11 — Server tự khai giới hạn, thay vì frontend tự viết (MỚI)
+
+| Mục | Nội dung |
+|---|---|
+| **Giao gì** | `/runtime-manifest` (trần trang · byte · cursor) và `/screen-contracts` (`dataApi.status` từng màn) đang **không ai gọi**. Dùng chúng để: (a) caption degradation §8 trích **trần server tự khai** thay vì hằng số viết tay trong FE; (b) màn có `dataApi.status != AVAILABLE` hiện trạng thái **bằng lời của server** thay vì đoán; (c) `PAGE_SIZES` của drain lấy từ manifest thay vì thang 200/50/20/5 đoán mò |
+| **Gate đóng** | không còn hằng số trần nào viết tay trong FE cho những gì manifest đã khai; một relation đổi trần ở server thì FE đổi theo mà không cần sửa code |
+| **Enhance** | đây là chỗ **frontend đang tự nói thay server** — sửa xong thì hết một lớp nói dối tiềm tàng |
+
+### Goal 12 — Ba nguồn còn từ chối, đóng bằng backend (MỚI, tôi làm cả hai phía)
+
+| # | Việc | Trạng thái đo được |
+|---|---|---|
+| 12-1 | `derivations/alphas/{id}/orders-fills` | `REQUEST_REJECTED` — **lỗi thật, tôi sửa** |
+| 12-2 | `views/risk-decisions` | `EDS07_DECISION_QUERY_INVALID` với mọi `decision_kind` đã thử — đọc schema, sửa hoặc ghi `Soon` kèm mã đúng |
+| 12-3 | `market/latest` | `PENDING_MARKET_CONTEXT_ADAPTER` — thượng nguồn chưa nối; ghi `Soon` và **không** giả lập |
+| 12-4 | `portfolio_equity_snapshots` từ chối cursor của chính nó; `sizing_decisions` bị Manager từ chối | ngoài Portal (edge `10.70.0.2`) — ghi rõ là biên giới, không vá sâu |
+
+**Gate đóng:** 12-1 trả 200 với dữ liệu thật; 12-2 hoặc trả 200 hoặc có mã
+`Soon` đúng của nguồn; 12-3/12-4 ghi biên giới trong §A13 kèm bằng chứng.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
