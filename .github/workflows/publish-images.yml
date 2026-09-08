@@ -491,16 +491,38 @@ jobs:
           mkdir -p release/execution-d2
           certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/publish-images.yml@${GITHUB_REF}"
           issuer="https://token.actions.githubusercontent.com"
-          python3 scripts/verify-cosign-signature.py \
-            --certificate-identity "${certificate_identity}" \
-            --certificate-oidc-issuer "${issuer}" \
-            --image "${EXECUTION_EDGE_IMAGE}" \
-            --output release/execution-d2/execution-edge-signature.json
-          python3 scripts/verify-cosign-signature.py \
-            --certificate-identity "${certificate_identity}" \
-            --certificate-oidc-issuer "${issuer}" \
-            --image "${SOURCE_PROXY_IMAGE}" \
-            --output release/execution-d2/source-proxy-signature.json
+          # GHCR can expose the signed OCI index before its Rekor-backed
+          # signature is readable from every registry replica.  N14A already
+          # handles that bounded propagation window; D2 evidence must apply
+          # the same rule rather than spuriously failing one second after a
+          # successful `cosign sign`.
+          verify_signature_with_retry() {
+            image="$1"
+            output="$2"
+            for attempt in $(seq 1 12); do
+              temporary="$(mktemp)"
+              if python3 scripts/verify-cosign-signature.py \
+                --certificate-identity "${certificate_identity}" \
+                --certificate-oidc-issuer "${issuer}" \
+                --image "${image}" \
+                --output "${temporary}"; then
+                mv "${temporary}" "${output}"
+                return 0
+              fi
+              rm -f "${temporary}"
+              if [[ "${attempt}" == "12" ]]; then
+                printf 'Cosign signature did not become available for %s after bounded retry.\n' "${image}" >&2
+                return 1
+              fi
+              sleep 5
+            done
+          }
+          verify_signature_with_retry \
+            "${EXECUTION_EDGE_IMAGE}" \
+            release/execution-d2/execution-edge-signature.json
+          verify_signature_with_retry \
+            "${SOURCE_PROXY_IMAGE}" \
+            release/execution-d2/source-proxy-signature.json
           cp execution-edge-trivy.json source-proxy-trivy.json release/execution-d2/
           {
             printf 'SOURCE_COMMIT=%s\n' "${GITHUB_SHA}"
@@ -532,11 +554,23 @@ jobs:
           mkdir -p release/execution-d3
           certificate_identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/publish-images.yml@${GITHUB_REF}"
           issuer="https://token.actions.githubusercontent.com"
-          python3 scripts/verify-cosign-signature.py \
-            --certificate-identity "${certificate_identity}" \
-            --certificate-oidc-issuer "${issuer}" \
-            --image "${CONTROL_API_IMAGE}" \
-            --output release/execution-d3/control-api-signature.json
+          for attempt in $(seq 1 12); do
+            temporary="$(mktemp)"
+            if python3 scripts/verify-cosign-signature.py \
+              --certificate-identity "${certificate_identity}" \
+              --certificate-oidc-issuer "${issuer}" \
+              --image "${CONTROL_API_IMAGE}" \
+              --output "${temporary}"; then
+              mv "${temporary}" release/execution-d3/control-api-signature.json
+              break
+            fi
+            rm -f "${temporary}"
+            if [[ "${attempt}" == "12" ]]; then
+              printf 'Cosign signature did not become available for %s after bounded retry.\n' "${CONTROL_API_IMAGE}" >&2
+              exit 1
+            fi
+            sleep 5
+          done
           cp control-api-trivy.json release/execution-d3/
           {
             printf 'SOURCE_COMMIT=%s\n' "${GITHUB_SHA}"

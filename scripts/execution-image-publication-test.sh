@@ -188,8 +188,14 @@ verify = by_name.get("Verify keyless signatures and write D2 evidence", {}).get(
 for command in ('cosign sign --yes "${EXECUTION_EDGE_IMAGE}"', 'cosign sign --yes "${SOURCE_PROXY_IMAGE}"'):
     if command not in sign:
         raise SystemExit("Both D2 images must be signed by digest.")
-if verify.count("scripts/verify-cosign-signature.py") != 2:
-    raise SystemExit("Both D2 signatures must use object-shaped verified publication evidence.")
+if (
+    verify.count("scripts/verify-cosign-signature.py") != 1
+    or "verify_signature_with_retry" not in verify
+    or '"${EXECUTION_EDGE_IMAGE}"' not in verify
+    or '"${SOURCE_PROXY_IMAGE}"' not in verify
+    or "seq 1 12" not in verify
+):
+    raise SystemExit("Both D2 signatures must use bounded object-shaped verified publication evidence.")
 for boundary in ("--certificate-identity", "--certificate-oidc-issuer", "SOURCE_COMMIT", "SHA256SUMS"):
     if boundary not in verify:
         raise SystemExit(f"D2 publication evidence is missing {boundary}.")
@@ -197,8 +203,8 @@ d3_sign = by_name.get("Sign D3 Control API by immutable digest", {}).get("run", 
 d3_verify = by_name.get("Verify keyless signature and write D3 Control API evidence", {}).get("run", "")
 if 'cosign sign --yes "${CONTROL_API_IMAGE}"' not in d3_sign:
     raise SystemExit("D3 Control API must be signed by digest.")
-if d3_verify.count("scripts/verify-cosign-signature.py") != 1:
-    raise SystemExit("D3 Control API must use object-shaped verified publication evidence.")
+if d3_verify.count("scripts/verify-cosign-signature.py") != 1 or "seq 1 12" not in d3_verify:
+    raise SystemExit("D3 Control API must use bounded object-shaped verified publication evidence.")
 for boundary in ("--certificate-identity", "--certificate-oidc-issuer", "SOURCE_COMMIT", "SHA256SUMS"):
     if boundary not in d3_verify:
         raise SystemExit(f"D3 publication evidence is missing {boundary}.")
