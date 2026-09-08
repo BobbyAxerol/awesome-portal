@@ -60,6 +60,7 @@ import type {
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
 import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
+import type { StageDrift } from "../hifiInsight";
 import type { AlphaFleetQuery, BindingListQuery, BlotterQuery } from "./ports";
 import { readApprovalCreated, readConditionsPage } from "./rows";
 import {
@@ -336,6 +337,34 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return out;
     }, "The fleet equity sparklines");
 
+  /** One alpha's equity in every stage it runs in, on one calendar (tile 10). */
+  const getStageDrift = (alphaId: string, days = 30): Promise<Result<StageDrift>> =>
+    readGet(`/alphas/${encodeURIComponent(alphaId)}/stage-drift?days=${days}`, (raw) => {
+      const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
+      const stagesRaw = root && typeof root.stages === "object" && root.stages !== null ? root.stages as Record<string, unknown> : null;
+      const calendar = Array.isArray(root?.calendar) ? (root!.calendar as unknown[]).filter((d): d is string => typeof d === "string") : null;
+      if (!root || !stagesRaw || !calendar) return null;
+      const window = typeof root.window === "object" && root.window !== null ? root.window as Record<string, unknown> : {};
+      const binding = typeof root.research_binding === "object" && root.research_binding !== null ? root.research_binding as Record<string, unknown> : {};
+      const stages: Record<string, { deployed: boolean; reasonCode: string | null; series: (number | null)[] }> = {};
+      for (const [key, value] of Object.entries(stagesRaw)) {
+        const entry = typeof value === "object" && value !== null ? value as Record<string, unknown> : null;
+        if (!entry) continue;
+        stages[key] = {
+          deployed: entry.deployed === true,
+          reasonCode: typeof entry.reason_code === "string" ? entry.reason_code : null,
+          series: (Array.isArray(entry.series) ? entry.series : []).map((v) => (typeof v === "number" && Number.isFinite(v) ? v : null)),
+        };
+      }
+      return {
+        calendar,
+        windowDays: typeof window.days === "number" ? window.days : days,
+        dailyBasis: typeof window.daily_basis === "string" ? window.daily_basis : "daily close",
+        researchReason: typeof binding.reason_code === "string" ? binding.reason_code : null,
+        stages,
+      };
+    }, "The alpha stage drift");
+
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");
   const listParameters = (query: object) => {
@@ -448,6 +477,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getObservedTimeline,
     getManagerRelationPage,
     getEquitySparklines,
+    getStageDrift,
     getAlphaFleet,
     listPortfolios,
     getBindings,

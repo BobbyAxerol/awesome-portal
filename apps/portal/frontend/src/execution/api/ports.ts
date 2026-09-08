@@ -15,6 +15,7 @@ import type {
   OperatorTaskCatalogue, OperatorTaskRunResult, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
 import type { KeysetPage, PanelStatus } from "../contracts";
+import type { StageDrift } from "../hifiInsight";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
 import type {
@@ -269,6 +270,8 @@ export interface ExecutionApi {
   getScreenProfile(screen: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>>;
   /** Exact, server-filtered Paper blotter page. */
   getBlotterProfile(query?: BlotterQuery): Promise<Result<ProfileEnvelope>>;
+  /** `GET /alphas/{id}/stage-drift` — one alpha's equity per stage, one calendar. */
+  getStageDrift(alphaId: string, days?: number): Promise<Result<StageDrift>>;
   /** `GET /alphas/equity-sparklines` — every alpha's 30-day series in one read. */
   getEquitySparklines(environment?: "paper" | "sandbox" | "live"): Promise<Result<Record<string, readonly number[]>>>;
   /** `GET /screens/paper/{id}[/vn-market]` — the workbench envelope. */

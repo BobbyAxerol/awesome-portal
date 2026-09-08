@@ -93,6 +93,16 @@ export class ExecutionAnalyticsController {
     ));
   }
 
+  /** One alpha's equity in every stage it runs in, on one calendar. */
+  @Get("/alphas/:alphaId/stage-drift")
+  stageDrift(@Req() request: AnalyticsRequest, @Param("alphaId") id: string, @Query() raw: unknown) {
+    const query = SparklineQuerySchema.safeParse(raw);
+    if (!query.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    return this.invoke(() => this.localAnalytics.stageDrift(
+      { workspaceId: request.portalWorkspaceId }, id, query.data.days ?? 30,
+    ));
+  }
+
   @Get("/portfolios/:portfolioId/correlation")
   portfolioCorrelation(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
     if (this.portfolio360?.enabled()) {

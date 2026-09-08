@@ -419,6 +419,99 @@ export class LocalQueryAnalyticsService {
     return { series, days, basis: "PORTAL_SGP_HISTORY_MIRROR" };
   }
 
+  /**
+   * One alpha's equity across every stage it is deployed in, on one calendar.
+   *
+   * This is what "paper vs live drift" has to be built from, and why the tile
+   * said `Soon` before: nothing publishes a research artifact digest beside a
+   * deployment, so a drift against the approved run cannot be computed at all.
+   * What *can* be computed, and is the question an operator actually asks, is
+   * whether the same strategy behaves the same in each stage it runs in — this
+   * alpha is live in paper and sandbox at once.
+   *
+   * Every stage is read on the same day grid so the two lines are comparable:
+   * a day missing from one stage is a hole in that stage, not a shift of the
+   * other. Stages the strategy is not deployed in come back empty and named,
+   * because "no live deployment" and "live equity is zero" are different facts.
+   */
+  async stageDrift(
+    principal: { workspaceId: string },
+    alphaId: string,
+    days = 30,
+  ): Promise<Record<string, unknown>> {
+    void principal;
+    if (!/^[A-Za-z0-9._:-]{1,192}$/.test(alphaId)) {
+      throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
+    }
+    if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
+    const from = new Date(Date.now() - days * 86_400_000).toISOString();
+    const stages: Record<string, { days: Record<string, number>; deployed: boolean; reason: string | null }> = {};
+    const calendar = new Set<string>();
+
+    for (const environment of ["paper", "sandbox", "live"] as const) {
+      const entry: { days: Record<string, number>; deployed: boolean; reason: string | null } =
+        { days: {}, deployed: false, reason: null };
+      stages[environment] = entry;
+      let context;
+      try {
+        context = await this.localContext(environment);
+      } catch (error) {
+        // A profile that is not configured or not ready is named, not blanked:
+        // "we did not look" and "we looked and found nothing" are different.
+        entry.reason = error instanceof AnalyticsProxyError ? error.code : "PROFILE_UNAVAILABLE";
+        continue;
+      }
+      const strategyId = resolveStrategyId(context.snapshot, alphaId);
+      entry.deployed = (context.snapshot.document.relations[SOURCE.deployments]?.items ?? [])
+        .some((row) => row.fields.strategy_id === strategyId);
+      if (!entry.deployed) {
+        entry.reason = "NO_DEPLOYMENT_IN_STAGE";
+        continue;
+      }
+      if (typeof this.repository.timeSeriesDailyCloses !== "function") {
+        entry.reason = "HISTORY_MIRROR_NOT_AVAILABLE";
+        continue;
+      }
+      const closes = await this.repository.timeSeriesDailyCloses(
+        context.workspaceId, environment, context.profileId,
+        "manager.performance:account_equity_snapshots",
+        { from, valueField: "equity" },
+      );
+      for (const row of closes) {
+        if (row.strategyId !== strategyId) continue;
+        const value = Number(row.value);
+        if (!Number.isFinite(value)) continue;
+        entry.days[row.day] = (entry.days[row.day] ?? 0) + value;
+        calendar.add(row.day);
+      }
+      if (Object.keys(entry.days).length === 0) entry.reason = "NO_EQUITY_IN_WINDOW";
+    }
+
+    const grid = [...calendar].sort();
+    return {
+      schema_version: "portal.execution.alpha-stage-drift.v1",
+      alpha_id: alphaId,
+      window: { days, basis: "PORTAL_SGP_HISTORY_MIRROR", daily_basis: "LAST_CLOSE_PER_DAY_SUMMED_ACROSS_ACCOUNTS" },
+      calendar: grid,
+      stages: Object.fromEntries(Object.entries(stages).map(([environment, entry]) => [environment, {
+        deployed: entry.deployed,
+        reason_code: entry.reason,
+        // Null where the stage published nothing that day — never carried
+        // forward, because a flat line drawn over a gap is a claim of
+        // stability that nobody measured.
+        series: grid.map((day) => (day in entry.days ? entry.days[day] : null)),
+      }])),
+      /*
+       * The research side of the reviewed tile. No execution relation carries
+       * the run id or artifact digest a deployment was approved against, so
+       * the drift against approved evidence cannot be computed here at all —
+       * and is named rather than approximated from the stages above, which
+       * would be a different measurement under the reviewed tile's title.
+       */
+      research_binding: { state: "UNAVAILABLE", reason_code: "N28_RESEARCH_EVIDENCE_JOIN_NOT_ACTIVATED", run_id: null, artifact_digest: null },
+    };
+  }
+
   private async portfolioStatistics(
     workspaceId: string,
     environment: ProjectionEnvironment,

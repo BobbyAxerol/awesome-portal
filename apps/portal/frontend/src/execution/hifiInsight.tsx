@@ -19,6 +19,7 @@ import { BarsChart, DensityHeatmap, LinesChart } from "./components/marketChart"
 import { HistogramChart } from "./components/visuals";
 import { analyticsEquity } from "./screens/recomposeContainers";
 import { formatExact } from "./formatExact";
+import { soonReason } from "./soon";
 import {
   DENSITY_DAYS, HIFI_TILES, costDrag, densityGrid, returnHistogram, venueContribution, venueQuality,
 } from "./hifiTiles";
@@ -74,8 +75,28 @@ interface TileOutcome {
 const missing = (reason: string): TileOutcome => ({ state: "unavailable", reason });
 const thin = (reason: string): TileOutcome => ({ state: "insufficient_data", reason });
 
+/** The stages a drift tile compares, in promotion order. */
+const STAGE_ORDER = ["paper", "sandbox", "live"] as const;
+
+/** The server's reason codes, in words a reader can act on. */
+const STAGE_REASON: Readonly<Record<string, string>> = {
+  NO_DEPLOYMENT_IN_STAGE: "no deployment in this stage",
+  NO_EQUITY_IN_WINDOW: "deployed, but published no equity in the window",
+  HISTORY_MIRROR_NOT_AVAILABLE: "the history mirror is not available",
+};
+
+export interface StageDrift {
+  calendar: readonly string[];
+  windowDays: number;
+  dailyBasis: string;
+  researchReason: string | null;
+  stages: Readonly<Record<string, { deployed: boolean; reasonCode: string | null; series: readonly (number | null)[] }>>;
+}
+
 export interface HifiInsightInput {
   analytics: QueryAnalytics;
+  /** One alpha's equity in every stage it runs in, for the drift tile. */
+  stageDrift?: StageDrift | null;
   /** the drained relation page set (EDS-11R1); fills and orders drive five tiles */
   relations?: RelationFacts | null;
   asOf: string | null;
@@ -369,10 +390,59 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
           : missing("EQUITY_SERIES_NOT_PUBLISHED");
       }
       case 10: {
-        const modes = new Set(orders.map((order) => String(order.mode ?? "").toLowerCase()).filter(Boolean));
-        return thin(modes.has("live")
-          ? "paper and live rows exist but the drift formula is not published · Soon · PAPER_LIVE_DRIFT_NOT_PUBLISHED"
-          : `no live deployment exists for this subject — the drift needs both sides · Soon · PAPER_LIVE_DRIFT_NOT_PUBLISHED · modes seen: ${[...modes].join(", ") || "none"}`);
+        /*
+         * The reviewed tile compares paper against live. Two facts decide what
+         * it can honestly draw:
+         *
+         *   * nothing in the execution data carries the research run or
+         *     artifact a deployment was approved against, so a drift against
+         *     approved evidence is not computable at all — it is named, never
+         *     approximated from the stages, which would be a different
+         *     measurement under this tile's title;
+         *   * an alpha usually runs in more than one stage at once, and
+         *     whether it behaves the same in each is the question an operator
+         *     actually asks here.
+         *
+         * So this draws the stages it has, on one day grid, and names the ones
+         * it does not — including the case that matters most on dev today: a
+         * sandbox deployment that exists and has published no equity at all.
+         */
+        const drift = input.stageDrift;
+        if (!drift) return thin("the stage series are still loading");
+        const drawn = STAGE_ORDER.filter((stage) => drift.stages[stage]?.series.some((v) => v !== null));
+        const missingStages = STAGE_ORDER.filter((stage) => !drawn.includes(stage))
+          .map((stage) => `${stage}: ${STAGE_REASON[drift.stages[stage]?.reasonCode ?? ""] ?? drift.stages[stage]?.reasonCode ?? "not read"}`);
+        if (drawn.length === 0) {
+          return thin(`no stage published equity in the last ${drift.windowDays} days · ${missingStages.join(" · ")}`);
+        }
+        return {
+          // One stage drawn is a real answer, not a partial one: the tile
+          // says which stages it could not draw and why, right below.
+          state: "ok",
+          body: (
+            <>
+              <LinesChart
+                series={drawn.map((stage) => ({
+                  name: stage,
+                  tone: stage === "paper" ? "accent" : stage === "sandbox" ? "warn" : "bad",
+                  points: drift.calendar.flatMap((day, index) => {
+                    const value = drift.stages[stage]!.series[index];
+                    return value === null ? [] : [[day, value] as const];
+                  }),
+                }))}
+                height={150}
+                yFormatter={money}
+                provenance={provenance(`stage equity · ${drift.dailyBasis}`)}
+                ariaLabel="Equity per stage on one day grid"
+              />
+              {factRows([
+                ["stages drawn", drawn.join(" · ")],
+                ...(missingStages.length > 0 ? [["not drawn", missingStages.join(" · ")] as const] : []),
+                ["vs approved research", soonReason(drift.researchReason) ?? drift.researchReason ?? "Soon"],
+              ], "Stage drift")}
+            </>
+          ),
+        };
       }
       case 11: {
         return missing("Soon · N17B_SOURCE_REJECTED — risk profiles and alpha risk config are refused by the Manager envelope today");
