@@ -25,6 +25,7 @@ import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { soonReason } from "../soon";
 import { liveDot, sourceTone } from "../sourceTone";
+import { pulses, useArrivals, useIds } from "../listMotion";
 
 export interface PaperOverviewProps {
   /** `execution.paper-overview.v1` — the published truth for this stage. */
@@ -53,6 +54,9 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
   const PO = demo ?? null;
   const now = demoTick?.now ?? new Date(0);
   const [venue, setVenue] = useState("All");
+  // Goal 6: a paper deployment that appears between two projection reads
+  // flashes once. Above the smoke branch, so both branches call it.
+  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)));
   const navigate = useNavigate();
   if (!PO) {
     // Product: the reviewed layout over the published envelope, panel by panel.
@@ -193,6 +197,7 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                     <div
                       key={id}
                       className="exec-po-row"
+                      data-arrived={arrivals.has(id) ? "true" : undefined}
                       role="button"
                       tabIndex={0}
                       aria-label={`${id} — open the workbench`}
@@ -204,7 +209,7 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                         <div className="exec-po-idline">deployment {id} · portfolio {str(row.portfolio_id) ?? "not published"} · account {str(row.account_id) ?? "not published"}</div>
                       </div>
                       <div className="exec-po-days">
-                        <div className="exec-po-gateline"><span data-tone={sourceTone(str(row.state)) ?? undefined}>{str(row.state) ?? "runtime state not published"}</span></div>
+                        <div className="exec-po-gateline"><span data-tone={sourceTone(str(row.state)) ?? undefined} data-pulse={pulses(sourceTone(str(row.state))) ? "true" : undefined}>{str(row.state) ?? "runtime state not published"}</span></div>
                       </div>
                       <div className="exec-po-next">
                         <a href={href} onClick={(e) => e.stopPropagation()}>Open workbench →</a>

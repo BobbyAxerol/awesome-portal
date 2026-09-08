@@ -16,7 +16,7 @@
  */
 import { Fragment, type ReactNode } from "react";
 
-import { preciseAge, useInboxTick } from "../liveTick";
+import { preciseAge, useAgeTick } from "../liveTick";
 
 import type { LiveGateDemo } from "../governance.smoke";
 import type { BranchCapability, ProfileEnvelope } from "../api/profileRead";
@@ -76,7 +76,7 @@ export function GateLiveReview({
   demo?: LiveGateDemo | null;
 }) {
   const smoke = demo ?? null;
-  const tick = useInboxTick();
+  const tick = useAgeTick();
   if (status !== "ok" && status !== "partial") {
     return (
       <section className="exec-gate exec-gov" aria-label={`Gate LIVE review ${approvalId}`}>

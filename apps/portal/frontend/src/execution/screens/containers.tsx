@@ -75,6 +75,7 @@ import { ApprovalInbox, type ApprovalRow, type DecidedRow, type InboxCounts, typ
 import { GateR1Review } from "./GateR1Review";
 import { GateR2Review } from "./GateR2Review";
 import { PaperExitReview, type ExitOutcome } from "./PaperExitReview";
+import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 
 const EMPTY_PAGE: KeysetPage<ApprovalRow> = { rows: [], totalCount: 0 };
 
@@ -1026,20 +1027,42 @@ export function OperationsQueueContainer({
   // projection's own workspace on the server, which is what this screen wants.
   workspaceId,
   now,
+  requestedOperation = null,
 }: {
   api: ExecutionApi;
   workspaceId?: string;
   now?: Date;
+  /**
+   * The operation named by `?operation=`, passed in by the route.
+   *
+   * The Admin Action Drawer and the binding detail both link here naming the
+   * operation a command produced, and this screen used to ignore the name —
+   * every one of those links dropped the reader on an unfiltered queue to find
+   * the row by eye. A link that names a record and then does not open it is
+   * worse than no link, because it looks like it worked.
+   *
+   * It arrives as a prop rather than through `useSearchParams` so the container
+   * does not require a Router to be rendered, which is also what lets it be
+   * tested on its own.
+   */
+  requestedOperation?: string | null;
 }) {
   const [filter, setFilter] = useState<QueueFilter>("NEEDS_ATTENTION");
   const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
   const [selected, setSelected] = useState<QueueRow | null>(null);
+  const [followedOperation, setFollowedOperation] = useState<string | null>(null);
   const [effect, setEffect] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const requestKey = useRef(newRequestKey());
 
   const triageState =
     filter === "NEEDS_ATTENTION" ? "UNACKNOWLEDGED" : filter === "MINE" ? undefined : undefined;
+
+  // Goal 6: the queue re-reads on the projection's own cadence, so a row that
+  // arrives upstream appears here and flashes. Without it the arrival flash
+  // would be a mechanism with nothing to report — the list only ever changed
+  // when the operator changed a filter.
+  const tick = usePollTick(PROJECTION_POLL_MS);
 
   const state = useAnalyticsRead(
     () =>
@@ -1049,11 +1072,28 @@ export function OperationsQueueContainer({
         before: cursor.before,
         triageState,
       }),
-    [api, workspaceId, cursor.after, cursor.before, triageState],
+    [api, workspaceId, cursor.after, cursor.before, triageState, tick],
   );
 
   const queue = state.value;
   const roles = queue?.actorRoles ?? [];
+
+  // Follow the requested operation once per id: select it when this page holds
+  // it, and remember that we tried so a reader who clicks another row is not
+  // dragged back by the next render.
+  useEffect(() => {
+    if (!requestedOperation || !queue || followedOperation === requestedOperation) return;
+    const match = queue.page.rows.find((row) => row.operationId === requestedOperation) ?? null;
+    setFollowedOperation(requestedOperation);
+    if (match) setSelected(match);
+  }, [requestedOperation, queue, followedOperation]);
+
+  // The keyset page genuinely may not hold it. Saying so — with the id — is the
+  // honest answer; silently showing an unfiltered queue would let the reader
+  // believe the operation is absent from the source rather than from this page.
+  const requestedMissing = requestedOperation !== null
+    && queue !== null
+    && !queue.page.rows.some((row) => row.operationId === requestedOperation);
 
   const runTriage = async (run: () => Promise<Result<WorkflowResult>>) => {
     setConflict(false);
@@ -1082,6 +1122,7 @@ export function OperationsQueueContainer({
         reason={state.reason}
         filter={filter}
         now={now}
+        followNotice={requestedMissing ? `Operation ${requestedOperation} is not on this page of the queue — load older rows or clear the filter to reach it.` : null}
         onFilterChange={(next) => {
           // The cursor belongs to the previous query.
           setCursor({});

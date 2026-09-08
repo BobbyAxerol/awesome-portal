@@ -28,11 +28,12 @@
  * chose a drawer for the blotter funnel precisely because variable-height rows
  * make virtualization at 182,000 rows unworkable.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import type { KeysetPage, PanelStatus } from "../contracts";
 import { emptyMeansEmpty, RetentionNotice, retentionReason } from "./retention";
 import { PanelState } from "./states";
+import { useArrivals } from "../listMotion";
 
 /** DS §8: 7px vertical padding, ~16px line, 1px hairline. */
 export const ROW_HEIGHT = 32;
@@ -160,6 +161,10 @@ export function KeysetTable<T>({
   }, []);
 
   const rows = page.rows;
+  // Goal 6: rows that arrived since the previous read flash once. Placed on
+  // the shared table rather than in each screen so the blotter, the inbox
+  // and every other keyset list report an arrival the same way.
+  const arrivals = useArrivals(useMemo(() => rows.map(rowKey), [rows, rowKey]));
 
   // A panel with nothing to show says which kind of nothing it is. `empty` and
   // `insufficient_data` are different claims and both are different from a
@@ -247,6 +252,7 @@ export function KeysetTable<T>({
                 <tr
                   key={key}
                   data-selected={key === selectedKey ? "true" : undefined}
+                  data-arrived={arrivals.has(key) ? "true" : undefined}
                   data-emphasis={rowEmphasis?.(row)}
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   // A row that opens a review was reachable by mouse only.

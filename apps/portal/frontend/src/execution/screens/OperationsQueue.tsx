@@ -36,6 +36,8 @@ import type { PanelStatus } from "../contracts";
 import type { OperationsQueue, QueueRow, TriageState } from "../operations";
 import { fmtAge, throughputSeries } from "../clock";
 import type { DetailPart, QueueDemo, QueueSmokeRow } from "../operationsQueue.smoke";
+import { pulses, useArrivals, useIds, useNow } from "../listMotion";
+import { sourceTone } from "../sourceTone";
 
 /** The hi-fi's three chips. Applied server-side; they never filter loaded rows. */
 export const QUEUE_FILTERS = ["NEEDS_ATTENTION", "MINE", "ALL_24H"] as const;
@@ -151,14 +153,14 @@ function SmokeRow({ item, elapsed, sub, onOpen, selected }: { item: QueueSmokeRo
   );
 }
 
-function ContractRow({ row, now, onOpen, selected }: { row: QueueRow; now: Date; onOpen: (row: QueueRow) => void; selected: boolean }) {
+function ContractRow({ row, now, onOpen, selected, arrived }: { row: QueueRow; now: Date; onOpen: (row: QueueRow) => void; selected: boolean; arrived?: boolean }) {
   return (
-    <tr className="exec-oq-row exec-oq-contract" data-attention={needsAttention(row) ? "true" : undefined} data-selected={selected ? "true" : undefined} aria-selected={selected || undefined}>
+    <tr className="exec-oq-row exec-oq-contract" data-arrived={arrived ? "true" : undefined} data-attention={needsAttention(row) ? "true" : undefined} data-selected={selected ? "true" : undefined} aria-selected={selected || undefined}>
       <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri="—">—</span></td>
       <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(row)}>{row.operationId}</button></th>
       <td className="exec-oq-cmd">{row.commandKey || "—"}</td>
       <td className="exec-oq-target">{targetHref(row.target.id) ? <a href={targetHref(row.target.id)!}>{row.target.id}</a> : (row.target.id ?? "—")}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
-      <td className="exec-oq-three"><span className="exec-oq-state" data-tone="mute" data-col="source">{row.sourceStatus ?? "not stated"}</span> <span className="exec-oq-dim">verify <span data-col="verify">{row.verificationResult ?? "not stated"}</span></span> <span className="exec-oq-dim" data-col="triage">{row.triageState ? TRIAGE_LABEL[row.triageState] : "not stated"}</span></td>
+      <td className="exec-oq-three"><span className="exec-oq-state" data-tone={sourceTone(row.sourceStatus) ?? "mute"} data-pulse={pulses(sourceTone(row.sourceStatus)) ? "true" : undefined} data-col="source">{row.sourceStatus ?? "not stated"}</span> <span className="exec-oq-dim">verify <span data-col="verify">{row.verificationResult ?? "not stated"}</span></span> <span className="exec-oq-dim" data-col="triage">{row.triageState ? TRIAGE_LABEL[row.triageState] : "not stated"}</span></td>
       <td className="exec-oq-age" data-tone="mute">{ageFrom(row.createdAt, now)}</td>
       <td className="exec-oq-next" data-muted="true">{row.acknowledgedBy ?? row.resolvedBy ?? "—"}</td>
     </tr>
@@ -177,7 +179,8 @@ export function OperationsQueueScreen({
   onOpen,
   onLoadNext,
   onLoadPrevious,
-  now = new Date(),
+  now: nowProp,
+  followNotice = null,
   alertRail,
   triage,
   selectedId = null,
@@ -193,7 +196,10 @@ export function OperationsQueueScreen({
   onOpen: (row: QueueRow) => void;
   onLoadNext?: () => void;
   onLoadPrevious?: () => void;
+  /** Fixed clock for tests and the fixtures page; absent = a live one-second clock. */
   now?: Date;
+  /** Set when `?operation=` named a row this page does not hold. */
+  followNotice?: string | null;
   alertRail?: ReactNode;
   /** Triage of the selected row — the rail follows the selection (EL-V2-07). */
   triage?: ReactNode;
@@ -209,6 +215,13 @@ export function OperationsQueueScreen({
   const chrome = usePresentationChrome();
   const page = queue?.page;
   const rows = page?.rows ?? [];
+  // Goal 6: ages count against a clock that actually advances. The route used
+  // to hand this screen a `new Date()` evaluated once, so every age froze at
+  // first paint — an eleven-minute-old operation still read "11m" an hour
+  // later, which is the reassuring direction to be wrong in.
+  const clock = useNow();
+  const at = nowProp ?? clock;
+  const arrivals = useArrivals(useIds(rows, (row) => row.operationId));
   const attentionRows = rows.filter(needsAttention);
   const attention = smoke ? smoke.attentionCount : attentionRows.length;
   const critical = smoke?.criticalCount ?? 0;
@@ -233,6 +246,7 @@ export function OperationsQueueScreen({
         <>
           <section className="exec-oq-triage" aria-label="Triage">
             <div className="exec-oq-triagehead">{selectedId ? `Triage · ${selectedId}` : "Select an operation"}</div>
+            {followNotice ? <p className="exec-oq-dim" role="status">{followNotice}</p> : null}
             {triage ?? <p className="exec-oq-dim">Pick a row to acknowledge or resolve it.</p>}
           </section>
           <div className="exec-oq-cards">
@@ -249,7 +263,7 @@ export function OperationsQueueScreen({
                 )}
             {attentionRows.map((r) => (
               <a key={r.operationId} className="exec-oq-card" data-level="WARN" href="#" onClick={(e) => { e.preventDefault(); onOpen(r); }}>
-                <div className="exec-oq-cardlevel">WARN · {ageFrom(r.createdAt, now)}</div>
+                <div className="exec-oq-cardlevel">WARN · {ageFrom(r.createdAt, at)}</div>
                 <div className="exec-oq-cardtitle">{r.operationId} {r.verificationResult ?? r.sourceStatus ?? ""}</div>
                 <div className="exec-oq-cardmeta">{r.commandKey || "—"} · {r.target.id ?? "—"}</div>
               </a>
@@ -276,7 +290,19 @@ export function OperationsQueueScreen({
             </header>
             {queue ? (
               <p className="exec-oq-sub">
-                {page?.filteredCount ?? "—"} in this view · {page?.totalCount ?? "—"} total · source {queue.sourceIntegrationState ?? "not stated"} · profile {queue.deliveryProfile ?? "not stated"}
+                {page?.filteredCount ?? "—"} in this view · {page?.totalCount ?? "—"} total · source {queue.sourceIntegrationState ?? "not stated"}
+                {/* The contract pins `delivery_profile` to the literal
+                    "fixture" for this queue (execution-operations.v1), and
+                    the word stays — §7 keeps it visible so nobody
+                    mistakes this for source data — but on its own it told an
+                    operator the rows were made up. They are not: they are the
+                    Portal's own triage records, and the queue is empty because
+                    nothing has been filed. That is a different fact, and it is
+                    the one that decides whether they go looking elsewhere. */}
+                {` · profile ${queue.deliveryProfile ?? "not stated"}`}
+                {queue.deliveryProfile === "fixture"
+                  ? " — Portal-authored triage records; no source integration publishes into this queue yet"
+                  : null}
               </p>
             ) : null}
             {smoke ? (
@@ -336,7 +362,7 @@ export function OperationsQueueScreen({
                       </thead>
                       <tbody>
                         {smokeRows.map((item) => <SmokeRow key={item.row.operationId} item={item} elapsed={elapsed} sub={sub} onOpen={onOpen} selected={item.row.operationId === selectedId} />)}
-                        {rows.map((row) => <ContractRow key={row.operationId} row={row} now={now} onOpen={onOpen} selected={row.operationId === selectedId} />)}
+                        {rows.map((row) => <ContractRow key={row.operationId} row={row} now={at} onOpen={onOpen} selected={row.operationId === selectedId} arrived={arrivals.has(row.operationId)} />)}
                         {rows.length === 0 ? (
                           <tr className="exec-oq-emptyrow"><td colSpan={7}>{smokeRows.length > 0 ? "published rows: none — " : ""}No operations match this view. The queue is empty, which is different from a queue that could not be read.</td></tr>
                         ) : null}

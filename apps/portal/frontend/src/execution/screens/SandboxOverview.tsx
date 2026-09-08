@@ -21,6 +21,7 @@ import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { liveDot, sourceTone } from "../sourceTone";
+import { pulses, useArrivals, useIds } from "../listMotion";
 
 export const SANDBOX_FILTERS = ["all", "halted", "findings"] as const;
 export type SandboxFilter = (typeof SANDBOX_FILTERS)[number];
@@ -84,6 +85,10 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
   const { now, orders, filled, ack, fill } = demoTick ?? { now: new Date(0), orders: 0, filled: 0, ack: 0, fill: 0 };
   const [filter, setFilter] = useState<SandboxFilter>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
+  // Goal 6: deployments that appear between two projection reads flash once.
+  // Declared above the smoke branch — a hook inside it would run in one
+  // branch and not the other.
+  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)));
   const navigate = useNavigate();
   if (!smoke) {
     // Product: the reviewed layout over the published envelope, panel by panel.
@@ -181,10 +186,10 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                     {shown.map((row, i) => {
                       const id = typeof row.deployment_id === "string" ? row.deployment_id : `row ${i + 1}`;
                       return (
-                        <tr key={id} className="exec-af-row">
+                        <tr key={id} className="exec-af-row" data-arrived={arrivals.has(id) ? "true" : undefined}>
                           <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-af-dim">· {id}</span></td>
                           <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · {str(row.account_id) ?? "account not published"} · {str(row.portfolio_id) ?? "portfolio not published"}</td>
-                          <td data-tone={sourceTone(str(row.state)) ?? undefined}>{str(row.state) ?? str(row.mode) ?? notPublished}</td>
+                          <td data-tone={sourceTone(str(row.state)) ?? undefined} data-pulse={pulses(sourceTone(str(row.state))) ? "true" : undefined}>{str(row.state) ?? str(row.mode) ?? notPublished}</td>
                           <td><a href={`/deployments/sandbox/${encodeURIComponent(id)}`}>Open certification →</a></td>
                         </tr>
                       );

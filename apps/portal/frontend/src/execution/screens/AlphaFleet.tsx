@@ -20,6 +20,8 @@ import type { AlphaFleetItem, ManagerListEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { StatusChip } from "../components/badges";
+import { useArrivals, useIds } from "../listMotion";
+import { liveDot } from "../sourceTone";
 
 export const FLEET_FILTERS = ["all", "live", "canary", "sandbox", "paper", "research"] as const;
 export type FleetFilter = (typeof FLEET_FILTERS)[number];
@@ -88,10 +90,15 @@ export interface AlphaFleetProps {
   onNeedEquity?: (alphaId: string) => void;
   /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
   demo?: FleetDemo | null;
+  /** The projection stream's phase, worst of the three profiles. */
+  realtimePhase?: string | null;
   demoTick?: FleetTick;
 }
 
-export function AlphaFleet({ filter: controlled, onFilterChange, list = null, status = "ok", reason, onNextPage, onPreviousPage, equity, onNeedEquity, demo, demoTick }: AlphaFleetProps) {
+export function AlphaFleet({ filter: controlled, onFilterChange, list = null, status = "ok", reason, onNextPage, onPreviousPage, equity, onNeedEquity, demo, demoTick, realtimePhase = null }: AlphaFleetProps) {
+  const dot = liveDot(realtimePhase);
+  // Goal 6: an alpha entering the register flashes once on arrival.
+  const arrivals = useArrivals(useIds(list?.page.rows ?? [], (item) => item.alphaId));
   const smoke = demo ?? null;
   const { now, j } = demoTick ?? { now: new Date(0), j: 0 };
   const [local, setLocal] = useState<FleetFilter>("all");
@@ -130,7 +137,11 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                   it advances, so a screen that has stopped receiving looks
                   stopped rather than merely quiet. */}
               <span className="exec-af-source">
-                <span className="exec-af-livedot" aria-hidden="true" data-live={list?.freshness === "FRESH" ? undefined : "false"} data-tone={list?.freshness === "FRESH" ? "good" : "warn"} />
+                {/* The dot is the stream's phase; the chip beside it is the
+                    data's freshness. They are different facts — a fresh read
+                    over a closed stream is a real state, and one dot cannot
+                    say both. */}
+                <span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
                 <b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source{" "}
                 <SourceClock at={list?.sourceAsOf ?? null} />
               </span>
@@ -187,7 +198,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                       const expandable = item.deployments.length > 0;
                       const isOpen = expandable && Boolean(open[item.alphaId]);
                       return (
-                        <FleetItemRows key={item.alphaId} item={item} href={href} equity={equity?.[item.alphaId] ?? null} expandable={expandable} isOpen={isOpen} onToggle={() => { if (!isOpen) onNeedEquity?.(item.alphaId); setOpen((m) => ({ ...m, [item.alphaId]: !isOpen })); }} />
+                        <FleetItemRows key={item.alphaId} item={item} href={href} arrived={arrivals.has(item.alphaId)} equity={equity?.[item.alphaId] ?? null} expandable={expandable} isOpen={isOpen} onToggle={() => { if (!isOpen) onNeedEquity?.(item.alphaId); setOpen((m) => ({ ...m, [item.alphaId]: !isOpen })); }} />
                       );
                     })}
                     {filteredItems.length === 0 ? <tr><td colSpan={10} className="exec-af-empty">No alpha is present for this stage filter — an empty set is a fact.</td></tr> : null}
@@ -368,7 +379,7 @@ function FleetKpi({ label, values, empty, tone }: { label: string; values: reado
 }
 
 /** One current-source fleet row, reduced by the server-owned v2 projection. */
-function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity }: { item: AlphaFleetItem; href: string; expandable: boolean; isOpen: boolean; onToggle: () => void; equity?: readonly number[] | "loading" | null }) {
+function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity, arrived }: { item: AlphaFleetItem; href: string; expandable: boolean; isOpen: boolean; onToggle: () => void; equity?: readonly number[] | "loading" | null; arrived?: boolean }) {
   const mute = <span className="exec-af-mute">—</span>;
   const stageHref = (d: { deploymentId: string; stage: string }) =>
     d.stage.toLowerCase() === "paper" ? `/deployments/paper/${encodeURIComponent(d.deploymentId)}`
@@ -376,7 +387,7 @@ function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity }: { i
     : `/deployments/live/${encodeURIComponent(d.deploymentId)}`;
   return (
     <>
-      <tr className="exec-af-row" onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
+      <tr className="exec-af-row" data-arrived={arrived ? "true" : undefined} onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
         <td className="exec-af-mark">{expandable ? (isOpen ? "▾" : "▸") : ""}</td>
         <td><A href={href} bold>{item.alphaLabel}</A><div className="exec-af-sub"><A href={href}>{item.alphaId}</A> · v{item.version}</div></td>
         <td className="exec-af-dim">{item.owner ?? mute}{item.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{item.portfolios.map((portfolio, index) => <span key={portfolio.portfolioId}>{index ? " · " : ""}<A href={`/deployments/portfolios/${encodeURIComponent(portfolio.portfolioId)}`}>{portfolio.name}</A></span>)}</div> : null}</td>

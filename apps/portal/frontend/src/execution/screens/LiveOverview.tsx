@@ -18,6 +18,7 @@ import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { liveDot, sourceTone } from "../sourceTone";
+import { pulses, useArrivals, useIds } from "../listMotion";
 
 export const LIVE_FILTERS = ["all", "full", "canary", "issues"] as const;
 export type LiveFilter = (typeof LIVE_FILTERS)[number];
@@ -48,6 +49,10 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
   const smoke = demo ?? null;
   const { now, j, price, prev, sp } = demoTick ?? { now: new Date(0), j: 0, price: 0, prev: 0, sp: [] };
   const [filter, setFilter] = useState<LiveFilter>("all");
+  // Goal 6: deployments that appear between two projection reads flash once.
+  // Declared above the smoke branch — a hook inside it would run in one
+  // branch and not the other.
+  const arrivals = useArrivals(useIds(envelope?.data.deployments ?? [], (row) => (typeof row.deployment_id === "string" ? row.deployment_id : null)));
   const chrome = usePresentationChrome();
   useEffect(() => {
     if (!smoke) return;
@@ -138,10 +143,10 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
                     {shown.map((row, i) => {
                       const id = typeof row.deployment_id === "string" ? row.deployment_id : `row ${i + 1}`;
                       return (
-                        <tr key={id} className="exec-af-row exec-lv-row">
+                        <tr key={id} className="exec-af-row exec-lv-row" data-arrived={arrivals.has(id) ? "true" : undefined}>
                           <td className="exec-lv-edge"><a href={`/deployments/live/${encodeURIComponent(id)}`}><b>{str(row.strategy_id) ?? id}</b></a> <span className="exec-af-dim">· {id}</span></td>
                           <td>{str(row.mode) ?? notPublished}</td>
-                          <td data-tone={sourceTone(str(row.state)) ?? undefined}>{str(row.state) ?? "runtime state not published"}</td>
+                          <td data-tone={sourceTone(str(row.state)) ?? undefined} data-pulse={pulses(sourceTone(str(row.state))) ? "true" : undefined}>{str(row.state) ?? "runtime state not published"}</td>
                           <td className="exec-af-dim">{str(row.venue) ?? "venue not published"} · {str(row.account_id) ?? "account not published"} · {str(row.portfolio_id) ?? "portfolio not published"}</td>
                         </tr>
                       );

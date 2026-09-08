@@ -44,6 +44,8 @@ import { capNotice, capPreserving } from "../components/cap";
 import { ExecutionWorkspace } from "../components/workspace";
 import { fmtBlotterAge } from "../clock";
 import type { BlotterDemo, BlotterTick, Flag, SmokeOrder } from "../blotter.smoke";
+import { ageState, useNow } from "../listMotion";
+import { liveDot } from "../sourceTone";
 
 /**
  * Fills shown per funnel stage before capping.
@@ -301,6 +303,8 @@ export function OrderFunnelStrip({
 }
 
 export interface FullBlotterProps {
+  /** The paper projection stream's phase, from the container's own subscription. */
+  realtimePhase?: string | null;
   envelope: Envelope;
   page: KeysetPage<BlotterRow>;
   /** Applied server-side. The chips report; they do not filter. */
@@ -440,11 +444,19 @@ export function FullBlotter({
   statusCounts = null,
   demo,
   demoTick,
+  realtimePhase = null,
 }: FullBlotterProps) {
   const smoke = demo ?? null;
   const tick: BlotterTick = demoTick ?? { elapsed: 0, price: smoke?.basePrice ?? 0, prev: smoke?.basePrice ?? 0, slice: 0 };
   const [view, setView] = useState<"CONDITIONAL" | "BRACKETS" | null>(null);
   const [openSmoke, setOpenSmoke] = useState<Record<string, boolean>>({ br_0092: true });
+  // Goal 6: the age column rendered a dash on every row while `at` — the
+  // published timestamp — sat unread two columns to its left. A blotter whose
+  // ages never move cannot answer the one question an operator asks of a
+  // still-open order: how long has it been sitting there. The clock is shared,
+  // and the table virtualises, so only the visible rows recompute.
+  const clock = useNow();
+  const dot = liveDot(realtimePhase);
   const columns: readonly Column<BlotterRow>[] = [
     { key: "mark", header: "", width: "26px", render: () => "" },
     { key: "at", header: "time (UTC)", width: "8rem", render: (row) => <span className="exec-bl-time">{row.at}</span> },
@@ -461,7 +473,17 @@ export function FullBlotter({
       : <Qty value={row.quantity} />) },
     { key: "avg", header: "avg px · slip · fee", width: "10rem", numeric: true, render: (row) => (row.fee ? <span>— · —<div className="exec-bl-sub">fee {row.fee}{row.feeCurrency ? ` ${row.feeCurrency}` : ""}</div></span> : <span className="exec-gate-unverified">not published</span>) },
     { key: "status", header: "status", width: "10rem", render: (row) => (<><OrderStatusChip status={row.status} />{row.rejectReason ? <span className="exec-blotter-reason"> {row.rejectReason}</span> : null}</>) },
-    { key: "age", header: "age", width: "5rem", numeric: true, render: () => <span className="exec-bl-dim">—</span> },
+    {
+      key: "age", header: "age", width: "5rem", numeric: true,
+      render: (row) => {
+        const aged = ageState(row.at, clock);
+        // An unparseable or absent timestamp keeps the dash: an age of zero
+        // would claim the order was placed this instant.
+        return aged
+          ? <span className="exec-bl-dim exec-num" title={`placed ${row.at}`}>{aged.label}</span>
+          : <span className="exec-bl-dim">—</span>;
+      },
+    },
   ];
   const [hidden, setHidden] = useState<readonly string[]>([]);
   const visibleColumns = columns.filter((c) => !hidden.includes(c.key));
@@ -531,7 +553,11 @@ export function FullBlotter({
                 <span className="exec-bl-lastfill">last fill <span className="exec-bl-good">{fmtBlotterAge(2 + tick.elapsed)}</span> ago</span>
               </>
             ) : null}
-            <span className="exec-bl-source"><b>{envelope.authority}</b> · orders_v2 + fills_v2 · {envelope.freshness}</span>
+            {/* Goal 6: this container holds a paper subscription already. The
+                dot reports that channel; the freshness word beside it reports
+                the data. A blotter that looks live while its stream is closed
+                is the one kind of motion worth less than none. */}
+            <span className="exec-bl-source"><span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} /><b>{envelope.authority}</b> · orders_v2 + fills_v2 · {envelope.freshness}</span>
           </header>
           {scope ? <div className="exec-blotter-scope">{scope}</div> : null}
           <div className="exec-bl-toolbar" role="group" aria-label="Scope">

@@ -15,7 +15,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import type { ConditionRow, ConditionsPage, ExecutionApi, WaiverStateCode } from "../api/ports";
-import { useInboxTick } from "../liveTick";
+import { useAgeTick } from "../liveTick";
 import { ExecutionDecisionStrip } from "../components/workspace";
 import { PanelState } from "../components/states";
 import { reviewRouteFor, type ApprovalGate } from "./ApprovalInbox";
@@ -128,7 +128,7 @@ export function WaiversRegisterScreen({
   reason?: string;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const tick = useInboxTick();
+  const tick = useAgeTick();
   const rows = page?.rows ?? [];
   const readAt = page?.readAt ?? null;
 

@@ -13,6 +13,8 @@ import type { BindingItem, ManagerListEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { StatusChip } from "../components/badges";
+import { ageState, useArrivals, useIds, useNow } from "../listMotion";
+import { liveDot } from "../sourceTone";
 
 export const BINDING_FILTERS = ["all", "live", "testnet", "paper", "issues"] as const;
 export type BindingFilter = (typeof BINDING_FILTERS)[number];
@@ -35,6 +37,8 @@ function Note({ text, links }: { text: string; links?: { label: string; href: st
 }
 
 export interface AccountsBindingsProps {
+  /** The projection stream's phase, worst of the three profiles. */
+  realtimePhase?: string | null;
   /** BR-EX-72 `GET /broker-bindings` — the published bindings projection. */
   list?: ManagerListEnvelope<BindingItem> | null;
   status?: PanelStatus;
@@ -46,11 +50,19 @@ export interface AccountsBindingsProps {
   demoTick?: AccountsTick;
 }
 
-export function AccountsBindings({ list = null, status = "ok", reason, onNextPage, onPreviousPage, demo, demoTick }: AccountsBindingsProps) {
+export function AccountsBindings({ list = null, status = "ok", reason, onNextPage, onPreviousPage, demo, demoTick, realtimePhase = null }: AccountsBindingsProps) {
+  // The dot is the stream; the stamp beside it is when the source last read.
+  const dot = liveDot(realtimePhase);
   const smoke = demo ?? null;
   const { now, j } = demoTick ?? { now: new Date(0), j: 0, snaps: [] };
   const [filter, setFilter] = useState<BindingFilter>("all");
   const [open, setOpen] = useState<Record<string, boolean>>({ binance_main_01: true });
+  // Goal 6. Declared above the smoke branch: a hook inside `if (!smoke)` would
+  // run in one branch and not the other, which is the rules-of-hooks trap.
+  const arrivals = useArrivals(useIds(list?.page.rows ?? [], (item) => item.bindingId));
+  // The absolute stamp stays; the age beside it answers "is this stale?"
+  // without making the reader do subtraction against a clock they cannot see.
+  const clock = useNow();
   if (!smoke) {
     // Product: the reviewed bindings table over the BR-EX-72 projection.
     // `venue_credentials` is excluded server-side; the credential column
@@ -86,7 +98,7 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
               <span className="exec-af-sum">{list?.page.filteredCount ?? items.length}/{list?.page.totalCount ?? "?"} bindings · {(list?.environment ?? "unknown").toUpperCase()}</span>
               <span className="exec-af-wf">entry screen for WF 1g</span>
               <span className="exec-af-spacer" />
-              <span className="exec-af-source"><b>BROKER</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
+              <span className="exec-af-source"><span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} /><b>BROKER</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             <div className="exec-af-filters" role="group" aria-label="Binding filter">
@@ -113,14 +125,14 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
                   <thead><tr><th>binding · venue</th><th>account</th><th>state</th><th>credential</th><th data-numeric="true">physical equity</th><th data-numeric="true">Σ virtual · headroom</th><th>updated</th></tr></thead>
                   <tbody>
                     {shown.map((item) => (
-                      <tr key={item.bindingId} className="exec-af-row">
+                      <tr key={item.bindingId} className="exec-af-row" data-arrived={arrivals.has(item.bindingId) ? "true" : undefined}>
                         <td><a href={`/deployments/accounts?binding=${encodeURIComponent(item.bindingId)}`}><b>{item.bindingId}</b></a> · {item.venue}</td>
                         <td><a href={`/deployments/accounts/${encodeURIComponent(item.accountId)}`}>{item.accountId}</a></td>
                         <td><ChipEl chip={{ label: item.state.toUpperCase(), tone: item.state.toLowerCase() === "active" ? "paper" : "warn" }} /></td>
                         <td className="exec-af-dim">{item.credentialState.toUpperCase()}</td>
                         <td data-numeric="true">{mute}</td>
                         <td data-numeric="true">{mute}</td>
-                        <td className="exec-af-mute">{utcStamp(item.updatedAt)}</td>
+                        <td className="exec-af-mute">{utcStamp(item.updatedAt)}{ageState(item.updatedAt, clock) ? <span className="exec-af-dim"> · {ageState(item.updatedAt, clock)!.label} ago</span> : null}</td>
                       </tr>
                     ))}
                     {shown.length === 0 ? <tr><td colSpan={7}><span className="exec-af-empty">{items.length === 0

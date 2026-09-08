@@ -203,7 +203,10 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = <CommandCenterSnapshotContainer api={api} />;
       break;
     case "EXECUTION_OPERATIONS_QUEUE_SCREEN":
-      content = <OperationsQueueContainer api={api} now={new Date()} />;
+      // The clock belongs to the screen, not to this render. `new Date()` here
+      // was evaluated once and then never again, so every age on the queue
+      // froze at first paint.
+      content = <OperationsQueueContainer api={api} requestedOperation={search.get("operation")} />;
       break;
     case "EXECUTION_INCIDENT_DETAIL_SCREEN":
       content = <IncidentDetailContainer api={api} incidentId={incidentId} />;

@@ -2208,6 +2208,105 @@ thẳng như vậy.
 phần quyết định (Gate R1/R2, Exit Review, Operations Queue chart/phân trang) —
 nay đã có khung trung thực để ký ngay khi có hàng.
 
+### A16. GOAL 6 ĐANG LÀM (08-09) — tính động toàn hệ, gắn vào dữ liệu chứ không vào đồng hồ
+
+**Bốn cơ chế viết một lần** ở `listMotion.ts` (§8: mechanism dùng chung không để
+17 màn mỗi màn nghĩ một kiểu), cộng hai cơ chế đã có (`useChangeFlash`,
+`liveDot`) — **không dựng bản thứ hai của cái nào**.
+
+| Cơ chế | Bật bằng gì | Bẫy mà test giữ |
+|---|---|---|
+| `useNow` | đồng hồ thật 1 s | **không** gate bằng `smokeMotionAllowed()` — cái đó tắt dưới webdriver, tức là mọi tuổi sẽ đóng băng đúng trong môi trường gate đo, và màn sẽ **đạt một bài kiểm mà người thật vẫn hỏng**. Cũng không gate bằng `prefers-reduced-motion`: đó là tắt *hiệu ứng*, không phải tắt *thông tin*. Đứng yên khi tab ẩn, và **đứng yên trên `/_fixtures`** (dùng lại `pollAllowed()`, không đẻ luật thứ hai) để 46/100 snapshot baseline giữ tính xác định |
+| `useArrivals` | id mới so với lần đọc trước | danh sách **đầu tiên không nháy** — nạp xong không phải là một sự kiện, và "mọi thứ đều mới" không mang thông tin gì. Hàng chỉ đổi vị trí không nháy. Hàng **rời đi** không đánh dấu: nó không còn trên màn để mà nháy |
+| `deadlineState` | `due_at` nguồn publish | **không có due thì không đếm ngược**. Một deadline bịa làm người vận hành vội vì một lý do không tồn tại, hoặc yên tâm vì cái đồng hồ tưởng tượng vẫn còn giờ |
+| `pulses` | chỉ mức **nặng nhất** | nếu warning cũng pulse thì chín warning và một critical thành **mười lời đòi chú ý ngang nhau**, và cái critical là cái khó tìm nhất — ngược hẳn mục đích của chuyển động |
+
+**Ba chỗ dữ liệu đã có sẵn mà màn vứt đi** — đây mới là phần đáng giá của goal này:
+
+1. **Blotter: cột `age` render `—` cho *mọi* hàng** trong khi `at` — timestamp đã
+   publish, đã parse, đang hiển thị cách đó hai cột — không ai đọc. Người vận
+   hành hỏi "lệnh này treo bao lâu rồi" thì nhận một dấu gạch. Nay **49/49 hàng
+   có tuổi thật** (`22d 10h`), tính theo đồng hồ sống, `title` giữ giờ đặt lệnh.
+2. **Fleet, Portfolios, Blotter đã `useProfilesRealtime` rồi mà không nói với
+   màn.** Dot masthead buộc vào chữ `freshness` thay vì vào phase của stream,
+   nên một màn đang đọc stream sống vẫn **vẽ dot chết**. Nay dot = stream, chip
+   bên cạnh = freshness — **hai sự thật khác nhau**, và một chấm không nói được
+   cả hai (Fleet trên dev: dot `live`, freshness `STALE` — đúng là hai điều khác
+   nhau).
+3. **Operations Queue nhận `now={new Date()}` tính đúng một lần lúc render đầu.**
+   Mọi tuổi đóng băng ở lần sơn đầu tiên: một sự cố 11 phút tuổi vẫn đọc là
+   "11m" một giờ sau — **sai đúng theo hướng dễ chịu**. Đồng hồ nay thuộc về màn.
+
+**Một link chết được nối lại.** `?operation=` do Admin Action Drawer và binding
+detail phát ra để trỏ tới operation mà một lệnh sinh ra; Operations Queue **bỏ
+qua** tham số đó, nên mọi link ấy thả người đọc xuống một queue không lọc để tự
+tìm hàng bằng mắt. **Một link gọi tên một bản ghi rồi không mở nó còn tệ hơn
+không có link, vì nó trông như đã chạy.** Nay queue chọn đúng hàng; hàng không
+nằm trong trang keyset thì **nói thẳng là không nằm trong trang này**, kèm id —
+im lặng sẽ khiến người đọc kết luận operation không có ở *nguồn*.
+
+Tham số đi vào bằng **prop từ route**, không bằng `useSearchParams` trong
+container: container không cần Router mới render được, và đó cũng là thứ khiến
+nó test được một mình.
+
+**`useInboxTick` → `useAgeTick` ở ba màn** (Approval Inbox, Waivers, Gate Live).
+Tuổi SLA là **thông tin**, mà `smokeMotionAllowed()` tắt nó dưới
+`prefers-reduced-motion` — giấu một deadline đang tới khỏi đúng người không có
+cách nào khác để nhận ra nó.
+
+**Một chỗ tôi định sửa rồi dừng lại.** Operations Queue in `profile fixture`,
+đọc như "mấy dòng này là bịa". Sự thật ngược lại: đó là **bản ghi triage của
+chính Portal**, và queue rỗng vì **chưa ai ghi vào** — bảng
+`execution_operation_queue_read` **0 hàng, không workspace nào** (đo trực tiếp
+trên DB, nên **không phải** lỗi workspace kiểu P0-1). Tôi bỏ chữ `fixture` đi,
+rồi **test cũ §7 bắt lại**: nó giữ chữ đó cố ý để không ai nhầm đây là dữ liệu
+nguồn. Test đúng. Nay **giữ cả hai**: chữ của hợp đồng, cộng câu giải thích.
+
+`delivery_profile` bị ghim `const "fixture"` trong `execution-operations.v1` —
+schema của codex, **tôi không tự đổi**. Ghi lại ở đây để bên phát quyết định.
+
+#### Đo trên dev — harness `gate6.js`, 10 màn, hai chế độ
+
+| Màn | Phần tử động trước | Sau | `prefers-reduced-motion` | Tuổi thật hiện ra |
+|---|---|---|---|---|
+| Alpha Fleet | 0 | **1** | 0 | — |
+| Full Blotter | 0 | **1** | 0 | **49** (`22d 10h`) |
+| Portfolios | 0 | **1** | 0 | 2 (`· 23d 04h ago`) |
+| Accounts | 0 | **1** | 0 | **43** (`· 23d 04h ago`) |
+| Paper · Sandbox · Live · Ops Queue | 1 mỗi màn | 1 | 0 | — |
+| Approval Inbox · Waivers | 0 | 0 | 0 | 0 hàng trên dev |
+| **Tổng** | **4** | **8** | **0** | **156** |
+
+**Điều kiện 3 của gate đạt tuyệt đối**: dưới `prefers-reduced-motion` là **0/10
+màn có animation**, trong khi **cả 156 tuổi vẫn hiện nguyên, từng con một** —
+tắt hiệu ứng, không tắt thông tin. Hai lượt đo trên **cùng một bản build**.
+
+**Điều kiện 1 (dev ≥ showcase từng màn) — chưa đạt ở hai màn, và lý do là dữ
+liệu chứ không phải code.** Approval Inbox và Waivers đứng ở 0 vì governance
+**không có hàng nào** trên dev; showcase có 2–5 vì nó tự nuôi cast. Khung, cột,
+chip SLA và luật pulse đã tại chỗ — có hàng là chúng động, không phải sửa thêm
+dòng nào. Tám màn còn lại đều có phần tử động buộc vào nguồn thật.
+
+**Điều kiện 2 (hai khung cách 1,6 s phải khác nhau) — nói thẳng là chưa chứng
+minh được bằng tuổi, và vì sao.** Nhãn tuổi rút gọn theo độ lớn: dưới một giờ là
+`m` và `s`, trên đó là `h`, trên nữa là `d`. Hàng mới nhất trên dev **22 ngày
+tuổi**, nên nhãn là `22d 10h` và nó chỉ đổi sau một giờ. Đó là **độ chi tiết
+đúng** — in giây cho một lệnh hai mươi hai ngày tuổi là nhiễu, không phải thông
+tin. Cái đổi được trong 1,6 s trên dev là **dot của stream**, và chúng đổi.
+Phần tuổi theo giây sẽ tự chứng minh khi Operations Queue và Approval Inbox có
+hàng — ở đó nhãn là `Xm YYs`. `useNow` được khoá bằng **4 unit test** riêng
+(chạy dưới webdriver, đứng yên khi tab ẩn, đứng yên trên `/_fixtures`).
+
+**Rủi ro baseline đã kiểm, không phải đoán**: đo `/execution/_fixtures` sau khi
+deploy — **0 phần tử có tuổi, 0 animation, cả 4 dot đều `data-live="false"`**.
+Trang bằng chứng vẫn tĩnh, 46/100 snapshot theme `operations` không bị đụng.
+
+**Không bịa chuyển động ở chỗ không có gì xảy ra.** Ba `ERROR` trên Sandbox nằm
+ở panel Reconciliation findings và đều **RESOLVED** — pulse một finding đã đóng
+là đòi chú ý cho việc đã xong, nên chúng **không** pulse. 35 deployment sandbox
+đều `ACTIVE`. Approval Inbox, Waivers, Operations Queue **0 hàng** trên dev.
+Một màn không có gì đổi thì **trông như một màn không có gì đổi**.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

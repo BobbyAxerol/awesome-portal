@@ -17,16 +17,29 @@ import type { PortfolioListEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { formatExactMoney } from "../formatExact";
 import type React from "react";
+import { ageState, useArrivals, useIds, useNow } from "../listMotion";
+import { liveDot } from "../sourceTone";
 
 export interface PortfolioListProps {
   list?: PortfolioListEnvelope | null;
   status?: PanelStatus;
   reason?: string;
   onOpenPortfolio?: (portfolioId: string) => void;
+  /** The projection stream's phase, worst of the three profiles. */
+  realtimePhase?: string | null;
 }
 
-export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfolio }: PortfolioListProps) {
+export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfolio, realtimePhase = null }: PortfolioListProps) {
+  // Goal 6: the container already subscribes to all three projections; the
+  // register never showed it. The dot is the stream, the chip is freshness.
+  const dot = liveDot(realtimePhase);
   const items = list?.items ?? [];
+  // Goal 6: a portfolio that appears between two reads flashes once. Hooks run
+  // before every early return, so the mechanism is identical in each branch.
+  const arrivals = useArrivals(useIds(items, (item) => item.portfolioId));
+  // The absolute stamp stays; the age beside it answers "is this stale?"
+  // without making the reader do subtraction against a clock they cannot see.
+  const clock = useNow();
   const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
   const sourceReason = reason ?? (!list ? "No portfolio list was published for this workspace." : undefined);
   const mute = <span className="exec-af-mute">—</span>;
@@ -44,6 +57,7 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
             <span className="exec-af-wf">entry screen for Portfolio 360°</span>
             <span className="exec-af-spacer" />
             <span className="exec-af-source">
+              <span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
               <b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span>
             </span>
           </header>
@@ -62,7 +76,7 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
                 <thead><tr><th>portfolio</th><th>owner</th><th>state</th><th>profiles</th><th data-numeric="true">allocations</th><th data-numeric="true">deployments</th><th data-numeric="true">allocated capital</th><th>updated</th></tr></thead>
                 <tbody>
                   {items.map((item) => (
-                    <tr key={item.portfolioId} className="exec-af-row">
+                    <tr key={item.portfolioId} className="exec-af-row" data-arrived={arrivals.has(item.portfolioId) ? "true" : undefined}>
                       <td>
                         <a
                           href={`/deployments/portfolios/${encodeURIComponent(item.portfolioId)}`}
@@ -81,7 +95,7 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
                           return <span key={entry.currency} title={money.full}>{money.display}</span>;
                         }).reduce<React.ReactNode[]>((out, node, index) => index === 0 ? [node] : [...out, " · ", node], [])
                         : mute}</td>
-                      <td className="exec-af-mute">{utcStamp(item.updatedAt)}</td>
+                      <td className="exec-af-mute">{utcStamp(item.updatedAt)}{ageState(item.updatedAt, clock) ? <span className="exec-af-dim"> · {ageState(item.updatedAt, clock)!.label} ago</span> : null}</td>
                     </tr>
                   ))}
                   {items.length === 0 && !sourceStatus ? <tr><td colSpan={8}><span className="exec-af-empty">No portfolio exists in the projected population — the source published an empty set, and an empty set is a fact.</span></td></tr> : null}

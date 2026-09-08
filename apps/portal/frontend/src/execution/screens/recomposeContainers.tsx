@@ -462,6 +462,7 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   if (!state.value) {
     return (
       <FullBlotter
+        realtimePhase={realtime.phase}
         envelope={{ authority: "PORTAL", asOf: null, freshness: "UNKNOWN" }}
         page={pageOf<BlotterRow>([])}
         filter={filter}
@@ -485,6 +486,7 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   const previousCursor = text(page.previous_cursor);
   return (
     <FullBlotter
+      realtimePhase={realtime.phase}
       envelope={screenEnvelope(profile)}
       page={{
         rows,
@@ -1620,6 +1622,7 @@ export function PortfolioListRichContainer({ api }: { api: ExecutionApi }) {
   const status: PanelStatus = state.status === "ok" && state.value?.completeness === "PARTIAL" ? "partial" : state.status;
   return (
     <PortfolioList
+      realtimePhase={worstPhase([realtime.states.paper.phase, realtime.states.sandbox.phase, realtime.states.live.phase])}
       list={state.value}
       status={status}
       reason={state.reason}
@@ -1925,6 +1928,12 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
       status={state.status}
       reason={state.reason}
       equity={equity}
+      // Goal 6: this container already subscribes to all three projections —
+      // it just never told the screen. The masthead dot was bound to the
+      // list's `freshness` word instead, so a fleet reading a live stream
+      // still drew a dead dot. The worst of the three wins: a closed live
+      // stream must not hide behind a healthy paper one.
+      realtimePhase={worstPhase([realtime.states.paper.phase, realtime.states.sandbox.phase, realtime.states.live.phase])}
       onFilterChange={(next) => {
         setFilter(next);
         setQuery((current) => ({
@@ -1942,7 +1951,13 @@ export function AlphaFleetRichContainer({ api }: { api: ExecutionApi }) {
 
 export function AccountsBindingsRichContainer({ api, bindingId }: { api: ExecutionApi; bindingId?: string | null }) {
   const [query, setQuery] = useState<BindingListQuery>({ limit: 50 });
-  const listState = useApiRead(() => api.getBindings(query), [api, query]);
+  // Goal 6: a binding is a credentialed account at a venue, and the same
+  // credential backs deployments in all three books — so the register's truth
+  // is the union of the three streams, the same rule the Fleet and the
+  // portfolio register follow. This was the last of the ten list screens with
+  // no subscription at all: it re-read only when the operator changed a filter.
+  const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
+  const listState = useApiRead(() => api.getBindings(query), [api, query, realtime.refreshKey]);
   const detailState = useApiRead<ProfileEnvelope | null>(
     () => (bindingId ? api.getBindingResource(bindingId) : Promise.resolve({ ok: true as const, value: null })),
     [api, bindingId],
@@ -1961,6 +1976,7 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
   }
   return (
     <AccountsBindings
+      realtimePhase={worstPhase([realtime.states.paper.phase, realtime.states.sandbox.phase, realtime.states.live.phase])}
       list={listState.value}
       status={listState.status}
       reason={listState.reason}

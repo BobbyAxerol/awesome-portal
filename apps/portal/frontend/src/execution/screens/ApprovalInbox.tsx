@@ -27,7 +27,7 @@ import { StatusChip } from "../components/badges";
 import { SlaCell } from "../components/evidence";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
-import { preciseAge, useInboxTick } from "../liveTick";
+import { preciseAge, useAgeTick } from "../liveTick";
 
 /** The gate a request is asking to pass. Portal-owned workflow vocabulary. */
 export type ApprovalGate = "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
@@ -331,8 +331,11 @@ export function ApprovalInbox({
   /** Kept in the contract for the container; the hi-fi page has no provenance drawer. */
   onCopyProvenance?: (full: string) => void;
 }) {
-  // SMOKE motion — ages and the breach countdown tick; 0 under fixtures/gates.
-  const tick = useInboxTick();
+  // Goal 6: a real clock, not the smoke one. An approval's SLA age is
+  // information, and `useInboxTick` froze it under `prefers-reduced-motion` —
+  // hiding an approaching deadline from the one reader who has no other way to
+  // notice it. Still 0 on the fixtures page, where baselines must be still.
+  const tick = useAgeTick();
   const emptyInThisView =
     page.rows.length === 0 &&
     ((page.filteredCount ?? 0) === 0) &&

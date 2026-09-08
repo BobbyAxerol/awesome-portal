@@ -6821,3 +6821,42 @@
 .exec-obs-more { padding: 6px 12px; }
 .exec-rp-more { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-top: 1px solid var(--line-soft); font: 400 11px/16px var(--font-mono); }
 @media (prefers-reduced-motion: reduce) { .exec-obs-beat[data-motion="on"], .exec-obs-table tr[data-new="true"] td { animation: none; } }
+
+/* ---------------------------------------------------------------------------
+   Goal 6 — the shared motion vocabulary for list screens.
+
+   Four mechanisms, defined once. Every one of them is switched on by an
+   attribute the screen sets from published data: `data-arrived` when a row
+   appeared since the previous read, `data-pulse` when the source graded a row
+   at its worst severity, `data-overdue` when a real deadline has passed, and
+   `data-live` on a dot bound to the stream's own phase.
+
+   Under `prefers-reduced-motion` every animation here is dropped and the
+   second channel — colour, weight, the word itself — carries the same fact.
+   Motion is never the only way this surface says something.
+--------------------------------------------------------------------------- */
+@keyframes exec-arrive {
+  0%   { background: var(--accent-bg, var(--surface-2)); }
+  100% { background: transparent; }
+}
+@keyframes exec-drain-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* An arrived row keeps a left edge for the length of the flash, so a reader
+   who looked away during the fade can still see which row is new. */
+tr[data-arrived="true"] > td, tr[data-arrived="true"] > th,
+.exec-po-row[data-arrived="true"] { box-shadow: inset 3px 0 0 -1px var(--accent); }
+
+.exec-deadline { font-variant-numeric: tabular-nums; }
+.exec-deadline[data-overdue="true"] { color: var(--bad); font-weight: 600; }
+.exec-deadline[data-overdue="false"] { color: var(--ink-soft); }
+.exec-drain { display: block; height: 3px; background: var(--line); overflow: hidden; }
+.exec-drain > span { display: block; height: 100%; background: var(--accent); transform-origin: left center; }
+.exec-drain[data-overdue="true"] > span { background: var(--bad); }
+
+@media (prefers-reduced-motion: no-preference) {
+  tr[data-arrived="true"] > td, tr[data-arrived="true"] > th,
+  .exec-po-row[data-arrived="true"] { animation: exec-arrive 900ms ease-out; }
+  .exec-drain > span { animation: exec-drain-fill 600ms ease-out; }
+  .exec-deadline[data-overdue="true"] { animation: exec-inbox-pulse 1.8s infinite; }
+  .exec-af-row [data-pulse="true"], .exec-po-row [data-pulse="true"] { animation: om-pulse 1.6s infinite; }
+}
