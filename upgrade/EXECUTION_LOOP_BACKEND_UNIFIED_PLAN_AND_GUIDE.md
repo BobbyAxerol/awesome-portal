@@ -5062,6 +5062,18 @@ it must still scan, sign, bind all six evidence sets, generate N14A/N14B and
 pass the deployed EDS-12 evidence gate before this plan may emit
 `PRODUCT_ACTIVE`.
 
+**Market Context render correction (2026-09-08):** the production renderer
+already accepted `market-data-layer-v1`, but its readiness preflight still
+compared every profile-bound Manager locations pack to the old facade-only
+shape.  That would reject the two explicitly approved loopback Data Layer
+routes at activation.  The preflight now reconstructs the exact base-plus-
+Market-Context pack, allows exactly one latest and one bounded-candles
+`127.0.0.1:8100` upstream, and continues to reject every other HTTP upstream,
+legacy credential, route, port or byte drift.  The D2 fixture renders both
+routes and proves an `8101` alteration fails.  This makes the Portal-owned
+adapter deployable; it neither calls the browser/Data Layer directly nor
+claims deployed evidence before the signed candidate and live probes exist.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:

@@ -582,6 +582,33 @@ if "${preflight}" --env-file "${manager_active_env}" --mode manager-active-offli
 fi
 "${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
   --manager-locations-output "${manager_locations}" >/dev/null
+
+# EDS-12 Market Context is Portal-owned but shares the profile-bound Manager
+# transport.  Its two exact loopback Data Layer routes are the only permitted
+# HTTP upstream exception; test the rendered pack and reject a port drift.
+manager_market_env="${tmp_dir}/manager-market.env"
+manager_market_config="${tmp_dir}/srv/primus/portal/source-proxy/nginx.manager-market.conf"
+cp "${manager_active_env}" "${manager_market_env}"
+sed -i \
+  -e 's/^SOURCE_PROXY_MANAGER_EXTENSION_SET=eds11r-r4-r5$/SOURCE_PROXY_MANAGER_EXTENSION_SET=market-data-layer-v1/' \
+  -e "s#^SOURCE_PROXY_CONFIG_FILE=.*#SOURCE_PROXY_CONFIG_FILE=${manager_market_config}#" \
+  "${manager_market_env}"
+chmod 0600 "${manager_market_env}"
+"${renderer}" --env-file "${manager_market_env}" --output "${manager_market_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
+"${preflight}" --env-file "${manager_market_env}" --mode manager-active-offline >/dev/null
+[[ "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations}")" -eq 7 ]]
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8223;' "${manager_locations}")" -eq 5 ]]
+[[ "$(grep -Fxc '    proxy_pass http://127.0.0.1:8100/v1/binance/price-last/$arg_instrument?market=usdm;' "${manager_locations}")" -eq 1 ]]
+[[ "$(grep -Fxc '    proxy_pass http://127.0.0.1:8100/v1/binance/futures/klines/$arg_instrument?interval=$arg_interval&limit=$arg_point_limit&start_time=$arg_from_ms&end_time=$arg_to_ms;' "${manager_locations}")" -eq 1 ]]
+sed -i 's#127\.0\.0\.1:8100#127.0.0.1:8101#' "${manager_locations}"
+if "${preflight}" --env-file "${manager_market_env}" --mode manager-active-offline \
+    >/dev/null 2>&1; then
+  printf 'Manager preflight unexpectedly accepted a widened Market Context Data Layer upstream.\n' >&2
+  exit 1
+fi
+"${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
 manager_proxy_syntax_config="${tmp_dir}/source-proxy.manager.syntax-test.conf"
 sed 's/listen 172\.23\.0\.1:8444 ssl;/listen 127.0.0.1:18445 ssl;/' \
   "${manager_active_config}" > "${manager_proxy_syntax_config}"

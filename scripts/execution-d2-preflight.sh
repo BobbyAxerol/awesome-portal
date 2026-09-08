@@ -676,6 +676,7 @@ PY
     manager_locations_file="${values[SOURCE_PROXY_MANAGER_LOCATIONS_FILE]:-${proxy_dir}/manager-v2-locations.conf}"
     manager_locations_template="${root_dir}/deploy/execution-d1/source-proxy/manager-v2-locations.conf.template"
     manager_extension_template="${root_dir}/deploy/execution-d1/source-proxy/manager-r4-r5-extension-locations.conf.template"
+    manager_market_data_template="${root_dir}/deploy/execution-d1/source-proxy/manager-market-context-data-layer-locations.conf.template"
     [[ "$(grep -Fxc '        include /run/secrets/manager-v2-locations.conf;' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 &&
        "$(grep -Fc 'manager-v2-locations.conf' "${values[SOURCE_PROXY_CONFIG_FILE]}")" -eq 1 ]] || {
       printf 'Manager read preflight requires the one exact Manager locations include.\n' >&2
@@ -705,6 +706,9 @@ PY
           sed \
             -e "s#127\\.0\\.0\\.1:8023#127.0.0.1:${manager_facade_port}#g" \
             "${manager_extension_template}"
+        elif [[ "${manager_extension_set}" == market-data-layer-v1 ]]; then
+          printf '\n# Appended exact Portal-owned Market Context Data Layer adapter.\n'
+          cat -- "${manager_market_data_template}"
         fi
       ) "${manager_locations_file}" || {
         printf 'Manager profile overlay may change only the dedicated upstream ports.\n' >&2
@@ -715,21 +719,39 @@ PY
     expected_manager_auth_requests=5
     expected_manager_facade_passes=5
     expected_manager_tls_locations=6
+    expected_manager_latest_data_layer_passes=0
+    expected_manager_candles_data_layer_passes=0
     if [[ "${manager_extension_set}" == eds11r-r4-r5 ]]; then
       expected_manager_locations=10
       expected_manager_auth_requests=9
       expected_manager_facade_passes=9
       expected_manager_tls_locations=10
+    elif [[ "${manager_extension_set}" == market-data-layer-v1 ]]; then
+      # The Market Context adapter is intentionally the sole exception to the
+      # Manager facade upstream: its two fixed GET locations terminate at the
+      # Execution Cell's loopback-only Data Layer.  The exact rendered pack is
+      # compared above; these counts make that narrow exception explicit.
+      expected_manager_locations=8
+      expected_manager_auth_requests=7
+      expected_manager_latest_data_layer_passes=1
+      expected_manager_candles_data_layer_passes=1
     fi
-    [[ "$(grep -Ec '^location ' "${manager_locations_file}")" -eq "${expected_manager_locations}" &&
+    if ! [[ "$(grep -Ec '^location ' "${manager_locations_file}")" -eq "${expected_manager_locations}" &&
        "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations_file}")" -eq "${expected_manager_auth_requests}" &&
        "$(grep -Fxc "    proxy_pass https://127.0.0.1:${manager_facade_port};" "${manager_locations_file}")" -eq "${expected_manager_facade_passes}" &&
        "$(grep -Fxc "    proxy_pass https://127.0.0.1:${manager_issuer_port}/internal/issue;" "${manager_locations_file}")" -eq 1 &&
-       "$(grep -Fxc '    proxy_ssl_protocols TLSv1.3;' "${manager_locations_file}")" -eq "${expected_manager_tls_locations}" ]] || {
+       "$(grep -Fxc '    proxy_ssl_protocols TLSv1.3;' "${manager_locations_file}")" -eq "${expected_manager_tls_locations}" &&
+       "$(grep -Fxc '    proxy_pass http://127.0.0.1:8100/v1/binance/price-last/$arg_instrument?market=usdm;' "${manager_locations_file}")" -eq "${expected_manager_latest_data_layer_passes}" &&
+       "$(grep -Fxc '    proxy_pass http://127.0.0.1:8100/v1/binance/futures/klines/$arg_instrument?interval=$arg_interval&limit=$arg_point_limit&start_time=$arg_from_ms&end_time=$arg_to_ms;' "${manager_locations_file}")" -eq "${expected_manager_candles_data_layer_passes}" ]]; then
       printf 'Manager read preflight rejected the bounded mTLS route set.\n' >&2
       exit 1
-    }
-    if grep -Eq 'X-API-Key|/v1/|proxy_pass[[:space:]]+http:' "${manager_locations_file}"; then
+    fi
+    if grep -Fq 'X-API-Key' "${manager_locations_file}"; then
+      printf 'Manager read preflight rejected a legacy credential or upstream in Manager routes.\n' >&2
+      exit 1
+    fi
+    if [[ "${manager_extension_set}" != market-data-layer-v1 ]] &&
+       grep -Eq '/v1/|proxy_pass[[:space:]]+http:' "${manager_locations_file}"; then
       printf 'Manager read preflight rejected a legacy credential or upstream in Manager routes.\n' >&2
       exit 1
     fi

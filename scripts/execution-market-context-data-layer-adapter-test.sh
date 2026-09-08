@@ -54,6 +54,20 @@ for required in (
     '"EDGE_DEV_LOCAL_IMAGE_ALLOWED=${edge_dev_local_image_allowed}"',
 ):
     assert required in profile_prepare_text, required
+
+# The runtime renderer and its preflight must agree that this is a narrow,
+# profile-bound loopback exception.  A template that cannot pass preflight is
+# not a deployable adapter.
+preflight_text = (profile_prepare.parent / "execution-d2-preflight.sh").read_text()
+for required in (
+    'manager_market_data_template=',
+    'manager_extension_set}" == market-data-layer-v1',
+    'expected_manager_latest_data_layer_passes=1',
+    'expected_manager_candles_data_layer_passes=1',
+    'proxy_pass http://127.0.0.1:8100/v1/binance/price-last/$arg_instrument?market=usdm;',
+    'proxy_pass http://127.0.0.1:8100/v1/binance/futures/klines/$arg_instrument?interval=$arg_interval&limit=$arg_point_limit&start_time=$arg_from_ms&end_time=$arg_to_ms;',
+):
+    assert required in preflight_text, required
 PY
 
 # Execute the image-address expression rather than merely pinning its source

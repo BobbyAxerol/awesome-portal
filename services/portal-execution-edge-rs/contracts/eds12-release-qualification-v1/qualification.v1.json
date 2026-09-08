@@ -110,7 +110,7 @@
     {
       "id": "market_context_static_gate",
       "file": "scripts/execution-market-context-data-layer-adapter-test.sh",
-      "sha256": "sha256:8c608be6c6e97ec92c524128b98c2e138d431c90e1474d274232918e933f24f9"
+      "sha256": "sha256:16e28c803137300098c8205192f2b4c3506514f2126333a2e82c214eebf9c487"
     },
     {
       "id": "current_source_proxy",
