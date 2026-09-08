@@ -68,7 +68,7 @@
     "n28_registry_sha256": "sha256:93b6e3f4cae8709b4e7ed0c2f34d798076802a3026c155acc90e0f03437010b8",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
     "screen_bff_catalogue_sha256": "sha256:8cf2a5f0a6f6c8d5c9ceb264dbf4a0a111a1c38e8189d491d364b80c32362e3e",
-    "frontend_product_route_sha256": "sha256:076a02316ca14254ce4c04e11e96671d7b9967c8c0e922e16c7302bccba13277",
+    "frontend_product_route_sha256": "sha256:2b6597111044b50937268c8a3521b16a9ae700bf7989f329bbf27db5ddef82b5",
     "frontend_product_boundary_test_sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
     "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",

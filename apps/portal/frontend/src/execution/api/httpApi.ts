@@ -61,6 +61,7 @@ import type {
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
 import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
 import type { StageDrift } from "../hifiInsight";
+import { readOperationalComposition, type CompositionName, type OperationalComposition } from "../operationalComposition";
 import type { AlphaFleetQuery, BindingListQuery, BlotterQuery } from "./ports";
 import { readApprovalCreated, readConditionsPage } from "./rows";
 import {
@@ -366,6 +367,10 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       };
     }, "The alpha stage drift");
 
+  /** One of the four `compositions/*` reads — the screen's payload plus its evidence. */
+  const getOperationalComposition = (name: CompositionName): Promise<Result<OperationalComposition>> =>
+    readGet(`/compositions/${name}`, readOperationalComposition, `The ${name} composition`);
+
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");
   const listParameters = (query: object) => {
@@ -477,6 +482,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getMarketCandles,
     getObservedTimeline,
     getManagerRelationPage,
+    getOperationalComposition,
     getEquitySparklines,
     getStageDrift,
     getAlphaFleet,

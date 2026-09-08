@@ -31,6 +31,9 @@ import {
 } from "../adminCatalog";
 import type { CliAction } from "../adminCli.smoke";
 import type { OperatorTask, OperatorTaskCatalogue, OperatorTaskRunResult } from "../api/profileRead";
+import type { CommandAuthority, JournalRow } from "../operationalComposition";
+import { sourceTone } from "../sourceTone";
+import { utcStamp } from "../time";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { planApplicable, planOutcomeText, type CommandPlan } from "../commandPlan";
@@ -184,6 +187,16 @@ export const TIER_FILTERS = [
   "R4_LIVE_RISK_INCREASING",
 ] as const;
 export type TierFilter = (typeof TIER_FILTERS)[number];
+
+/** The N27 acceptance vocabulary, as a filter. `ALL` is not one of its words. */
+const CLASSIFICATION_FILTERS = ["ALL", "CONNECTED", "SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"] as const;
+type ClassificationFilter = (typeof CLASSIFICATION_FILTERS)[number];
+const CLASSIFICATION_LABEL: Record<ClassificationFilter, string> = {
+  ALL: "All",
+  CONNECTED: "Connected",
+  SUPPORTED_BUT_INACTIVE: "Supported, inactive",
+  SEMANTICALLY_INCOMPATIBLE: "Incompatible",
+};
 
 const TIER_FILTER_LABEL: Record<TierFilter, string> = {
   ALL: "All",
@@ -406,6 +419,8 @@ export function AdminActionDrawerScreen({
   operationRef = null,
   actionRef = null,
   demoCli = null,
+  authority = null,
+  journal = null,
   onRunTask,
   children,
 }: {
@@ -429,11 +444,20 @@ export function AdminActionDrawerScreen({
   actionRef?: { action: string; binding: string | null } | null;
   /** The reviewed WF 1i machine — the lab passes it; the product never does. */
   demoCli?: CliDemoInjection | null;
+  /**
+   * The command authority and the redacted journal, from the drawer's own
+   * composition. Absent in the lab; the product always passes them.
+   */
+  authority?: CommandAuthority | null;
+  journal?: { state: string | null; reasonCode: string | null; rows: readonly JournalRow[] } | null;
   /** Present only on the product route; the server still classifies authority. */
   onRunTask?: (taskId: string, params: Readonly<Record<string, string>>) => Promise<TaskRunOutcome>;
   children?: ReactNode;
 }) {
   const [cliSelected, setCliSelected] = useState<string | null>(initialCommand);
+  const [classification, setClassification] = useState<ClassificationFilter>("ALL");
+  // The catalogue the reader is looking at, after the classification filter.
+  const shownTasks = (tasks?.tasks ?? []).filter((t) => classification === "ALL" || t.state === classification);
   const groups = catalogue ? groupEntries(catalogue.entries) : [];
   const reachable = catalogue ? catalogue.entries.filter((e) => e.portalReachable).length : 0;
   const relayDisabled = catalogue?.capabilityState === "DISABLED";
@@ -532,10 +556,18 @@ export function AdminActionDrawerScreen({
                 : tasksStatus !== "ok"
                   ? <PanelState status={tasksStatus} reason={tasksReason} />
                   : tasks
-                    ? (tasks.taskGroups.length > 0 ? tasks.taskGroups : [...new Set(tasks.tasks.map((t) => t.taskGroup))]).map((group) => (
+                    ? (tasks.taskGroups.length > 0 ? tasks.taskGroups : [...new Set(shownTasks.map((t) => t.taskGroup))])
+                      // A group with nothing left after the filter is dropped
+                      // rather than shown empty: an empty heading reads as a
+                      // group whose tasks failed to load.
+                      .filter((group) => shownTasks.some((t) => t.taskGroup === group))
+                      .map((group) => (
                         <section className="exec-cli-group" key={group}>
-                          <h2 className="exec-cli-groupname">{group.replace(/_/g, " ")}</h2>
-                          {tasks.tasks.filter((t) => t.taskGroup === group).map((t) => (
+                          <h2 className="exec-cli-groupname">
+                            {group.replace(/_/g, " ")}
+                            <span className="exec-af-dim"> · {shownTasks.filter((t) => t.taskGroup === group).length}</span>
+                          </h2>
+                          {shownTasks.filter((t) => t.taskGroup === group).map((t) => (
                             <TaskRow
                               key={t.taskId}
                               task={t}
@@ -550,11 +582,86 @@ export function AdminActionDrawerScreen({
                       ))
                     : <PanelState status="unavailable" reason="The operator task catalogue was not returned." />}
               {!demoCli && tasks ? (
-                <p className="exec-cli-hint">
-                  {tasks.counts.connected ?? 0} connected · {tasks.counts.inactive ?? "?"} supported
-                  but inactive · {tasks.counts.incompatible ?? "?"} semantically incompatible — only
-                  a CONNECTED task can ever carry a control
-                </p>
+                <>
+                  {/*
+                   * Why every control here is dark, in the server's own words.
+                   *
+                   * `command_authority` and `relay_state` were parsed and then
+                   * dropped, so the drawer showed 24 disabled tasks and no
+                   * reason for any of them. FAIL_CLOSED with the relay
+                   * inactive is the reason, and it belongs above the catalogue
+                   * rather than inside each task's tooltip.
+                   */}
+                  <p className="exec-cli-hint" data-tone={authority?.state === "OPEN" ? "good" : "warn"}>
+                    <b>Command authority: {authority?.state ?? "not stated"}</b>
+                    {" · "}relay {tasks.relayState ?? "not stated"}
+                    {authority ? ` · relay ${authority.relayActive ? "active" : "inactive"}` : ""}
+                    {" — "}
+                    {authority?.state === "OPEN"
+                      ? "a CONNECTED task can be run through plan → apply → verify"
+                      : "no task can be run from this Portal until the relay is opened; the catalogue below is what would run"}
+                  </p>
+                  {/* Classification is the other half of the answer, and it is a
+                      filter rather than a sentence: an operator looking for
+                      something they can actually run should be able to ask. */}
+                  <div className="exec-admin-tiers" role="group" aria-label="Filter by task classification">
+                    {CLASSIFICATION_FILTERS.map((option) => {
+                      const n = option === "ALL" ? (tasks.totalTasks ?? tasks.tasks.length)
+                        : option === "CONNECTED" ? tasks.counts.connected
+                          : option === "SUPPORTED_BUT_INACTIVE" ? tasks.counts.inactive
+                            : tasks.counts.incompatible;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          className="exec-inbox-filter"
+                          aria-pressed={option === classification}
+                          disabled={n === 0}
+                          title={n === 0 ? "No task in the published catalogue carries this classification." : undefined}
+                          onClick={() => setClassification(option)}
+                        >
+                          {CLASSIFICATION_LABEL[option]} <span className="exec-af-dim">{n ?? "?"}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="exec-cli-hint">only a CONNECTED task can ever carry a control</p>
+                  {/*
+                   * What has actually been run. The composition carries a
+                   * redacted command journal and no screen was showing it, so
+                   * the surface could say what MAY be run and never what WAS.
+                   */}
+                  <details className="exec-cli-published">
+                    <summary>
+                      Command journal — {journal ? `${journal.rows.length} redacted entries · ${journal.state ?? "state not stated"}` : "not read"}
+                    </summary>
+                    {journal && journal.rows.length > 0 ? (
+                      <div className="exec-scroll-x">
+                        <table className="exec-360-sync" aria-label="Redacted command journal">
+                          <thead>
+                            <tr><th scope="col">when (UTC)</th><th scope="col">actor</th><th scope="col">command</th><th scope="col">outcome</th><th scope="col">detail</th></tr>
+                          </thead>
+                          <tbody>
+                            {journal.rows.slice(0, 100).map((row, index) => (
+                              <tr key={`${row.at ?? index}-${row.command ?? index}`}>
+                                <td className="exec-num">{row.at ? utcStamp(row.at) : <span className="exec-gate-unverified">no clock published</span>}</td>
+                                <td>{row.actor ?? <span className="exec-gate-unverified">actor redacted</span>}</td>
+                                <td>{row.command ?? "not published"}</td>
+                                <td data-tone={sourceTone(row.outcome) ?? undefined}>{row.outcome ?? "—"}</td>
+                                <td className="exec-role-meta">{row.detail ?? ""}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <PanelState
+                        status={journal ? "empty" : "unavailable"}
+                        reason={journal ? `The journal answered with no entry${journal.reasonCode ? ` · ${journal.reasonCode}` : ""}.` : "The composition that carries the journal has not been read."}
+                      />
+                    )}
+                  </details>
+                </>
               ) : null}
 
               <details className="exec-cli-published">

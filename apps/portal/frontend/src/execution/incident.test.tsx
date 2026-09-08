@@ -8,7 +8,7 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { IncidentDetailScreen } from "./screens/IncidentDetail";
@@ -247,12 +247,18 @@ describe("the container fetches through the port", () => {
     expect(await screen.findByText(/inc_fixture_44/)).toBeTruthy();
   });
 
-  it("shows the port's failure rather than an empty incident", async () => {
+  it("keeps the frame on a port failure, and lets no panel pass for content", async () => {
+    // The screen no longer collapses to one line (owner, 2026-09-08: a screen
+    // must not disappear because it has nothing) — but the frame must stay
+    // unmistakably a frame. Timeline is present and says there is no incident;
+    // the failure itself is stated above it.
     render(<MemoryRouter><IncidentDetailContainer
         api={createFixtureApi({ unavailableEndpoints: ["getIncident"] })}
         incidentId="inc_fixture_44"
       /></MemoryRouter>);
-    await waitFor(() => expect(screen.queryByLabelText("Timeline")).toBeNull());
+    const timeline = await screen.findByLabelText("Timeline");
+    expect(timeline.textContent).toMatch(/No incident is published/);
+    expect(screen.getAllByText(/no incident is published/i).length).toBeGreaterThan(0);
   });
 });
 

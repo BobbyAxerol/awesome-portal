@@ -441,6 +441,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getManagerRelationPage() { return unavailable("The Manager relation BFF is not part of the fixture set."); },
     async getEquitySparklines() { return unavailable("The fleet equity sparklines are not part of the fixture set."); },
     async getStageDrift() { return unavailable("The alpha stage drift is not part of the fixture set."); },
+    async getOperationalComposition() { return unavailable("The operational compositions are not part of the fixture set."); },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
       return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");

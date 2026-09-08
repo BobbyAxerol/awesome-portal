@@ -154,8 +154,17 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   const { setEntityLabel } = usePresentation();
   const approvalId = params.approvalId ?? (screenId.includes("R2") ? "AP-352" : "AP-201");
   const deploymentId = params.deploymentId ?? (screenId.includes("SANDBOX") ? "dep_77" : "dep_88");
-  const reviewId = params.reviewId ?? "EX-771";
-  const incidentId = params.incidentId ?? "inc_fixture_44";
+  /*
+   * No identifier in the URL means no subject — not a showcase one.
+   *
+   * These fell back to `EX-771` and `inc_fixture_44`, ids from the reviewed
+   * cast. Entering the register at its own route therefore fetched a review
+   * that has never existed on dev, got a 404, and told the operator that a
+   * specific review was missing. The register being empty and one review being
+   * gone are different facts, and only the second was ever shown.
+   */
+  const reviewId = params.reviewId ?? null;
+  const incidentId = params.incidentId ?? null;
 
   // The breadcrumb tail (§4.3): the entity this preview resolved, by the name
   // an operator uses. Only set where the fixture cast has one — an invented

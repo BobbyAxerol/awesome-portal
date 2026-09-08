@@ -16,6 +16,7 @@ import type {
 } from "./profileRead";
 import type { KeysetPage, PanelStatus } from "../contracts";
 import type { StageDrift } from "../hifiInsight";
+import type { CompositionName, OperationalComposition } from "../operationalComposition";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
 import type {
@@ -270,6 +271,8 @@ export interface ExecutionApi {
   getScreenProfile(screen: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>>;
   /** Exact, server-filtered Paper blotter page. */
   getBlotterProfile(query?: BlotterQuery): Promise<Result<ProfileEnvelope>>;
+  /** `GET /compositions/{name}` — a screen's payload plus its cross-cutting evidence. */
+  getOperationalComposition(name: CompositionName): Promise<Result<OperationalComposition>>;
   /** `GET /alphas/{id}/stage-drift` — one alpha's equity per stage, one calendar. */
   getStageDrift(alphaId: string, days?: number): Promise<Result<StageDrift>>;
   /** `GET /alphas/equity-sparklines` — every alpha's 30-day series in one read. */

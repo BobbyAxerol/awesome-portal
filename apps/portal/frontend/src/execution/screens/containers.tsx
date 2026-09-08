@@ -820,13 +820,19 @@ export function GateR2ReviewContainer({
   );
 }
 
-export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi; reviewId: string }) {
+export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi; reviewId: string | null }) {
   const [state, setState] = useState<LoadState<PaperExitDetail>>(loading);
   const { decision, decide } = useDecision(api);
 
   useEffect(() => {
     let cancelled = false;
     setState(loading);
+    if (reviewId === null) {
+      // The register's own route names no review. Saying so is not the same as
+      // reporting one missing, and the screen keeps its frame either way.
+      setState({ status: "empty", reason: "No exit review is named in this route, and none is published for this workspace.", value: null, warnings: [] });
+      return undefined;
+    }
     void api.getPaperExit(reviewId).then((result) => {
       if (cancelled) return;
       setState(
@@ -848,9 +854,9 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
         onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         eligibility={d?.eligibility}
-        reviewId={d?.reviewId ?? reviewId}
+        reviewId={d?.reviewId ?? reviewId ?? "no review named"}
         deploymentId={d?.deploymentId ?? "unknown"}
-        subject={d?.subject ?? reviewId}
+        subject={d?.subject ?? reviewId ?? "the exit review register"}
         promoteTo={d?.promoteTo ?? "the next stage"}
         // Never inferred from the coverage numbers beside it: the policy can
         // require more than they show, and absent means unmet.
@@ -883,9 +889,12 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
         status={state.status}
         reason={state.reason}
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
-        onDecide={(outcome: ExitOutcome) =>
-          void decide(reviewId, outcome, `Exit review decision: ${outcome}.`, d?.expectedVersion ?? null)
-        }
+        onDecide={(outcome: ExitOutcome) => {
+          // No review named, nothing to decide on. The control is already
+          // disabled in that state; this is the second lock.
+          if (reviewId === null) return;
+          void decide(reviewId, outcome, `Exit review decision: ${outcome}.`, d?.expectedVersion ?? null);
+        }}
       />
     </>
   );
@@ -964,6 +973,9 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
     [api, tier],
   );
   const taskState = useAnalyticsRead(() => api.getOperatorTasks(), [api]);
+  // The drawer's own composition: the command authority that explains why every
+  // control here is dark, and the redacted journal of what has been run.
+  const composition = useAnalyticsRead(() => api.getOperationalComposition("admin-action-drawer"), [api]);
   return (
     <AdminActionDrawerScreen
       catalogue={state.value}
@@ -981,6 +993,8 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
       tasks={taskState.value}
       tasksStatus={taskState.status}
       tasksReason={taskState.reason}
+      authority={composition.value?.commandAuthority ?? null}
+      journal={composition.value?.journal ?? null}
       initialCommand={cmd}
       operationRef={search.get("operation")}
       actionRef={search.get("action") ? { action: search.get("action")!, binding: search.get("binding") } : null}
@@ -1132,19 +1146,24 @@ export function IncidentDetailContainer({
   workspaceId,
 }: {
   api: ExecutionApi;
-  incidentId: string;
+  /** `null` when the route names no incident — the queue's own entry point. */
+  incidentId: string | null;
   workspaceId?: string;
 }) {
   const navigateIncident = useNavigate();
   const state = useAnalyticsRead(
-    () => api.getIncident(incidentId, workspaceId),
+    () => (incidentId === null
+      // Naming no incident and failing to find one are different facts; the
+      // screen keeps its frame for both, and says which this is.
+      ? Promise.resolve({ ok: false as const, status: "empty" as const, reason: "No incident is named in this route, and none is published for this workspace." })
+      : api.getIncident(incidentId, workspaceId)),
     [api, incidentId, workspaceId],
   );
   return (
     <IncidentDetailScreen
       // The route names the incident; the fixture's own id (inc_fixture_44)
       // is a fixture fact. The breadcrumb and the masthead must agree.
-      incident={{ ...(state.value as NonNullable<typeof state.value>), incidentId }}
+      incident={{ ...(state.value as NonNullable<typeof state.value>), incidentId: incidentId ?? "no incident named" }}
       status={state.status}
       reason={state.reason}
     onOpenOperation={(operationId) => navigateIncident(`/administration/actions?operation=${encodeURIComponent(operationId)}`)}

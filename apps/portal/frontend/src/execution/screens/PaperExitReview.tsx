@@ -133,6 +133,13 @@ function Findings({ panel }: { panel: EvidencePanelSpec }) {
   );
 }
 
+/** The four decisions this screen carries, in the reviewed order. */
+const EXIT_DECISIONS = ["Approve promotion", "Extend observation +14d", "Reject — back to Paper HELD", "Copy provenance"] as const;
+
+/** The evidence a published review shows. Named even when there is none, so an
+ *  empty register reads as empty rather than as a screen that failed to load. */
+const EXIT_EVIDENCE_PANELS = ["Observation coverage", "Drift vs approved evidence", "Execution quality", "Risk and reconciliation"] as const;
+
 export function PaperExitReview({
   eligibility,
   reviewId,
@@ -217,11 +224,57 @@ export function PaperExitReview({
   const [note, setNote] = useState("");
   const [copied, setCopied] = useState(false);
   const smoke = demo ?? null;
+  if (status === "loading") return <PanelState status="loading" reason="Loading the review." />;
   if (status !== "ok" && status !== "partial" && status !== "stale") {
+    /*
+     * A review that is not there must not take the screen with it.
+     *
+     * This branch used to render one line — `Unavailable · EXIT_REVIEW_NOT
+     * _FOUND` — and nothing else, so an operator arriving at the register saw
+     * a blank page and could not tell an empty register from a broken one.
+     * The frame stays: the four decisions in their places, each disabled and
+     * saying why, and the evidence panels named so the reader knows what a
+     * review will show when one exists.
+     */
+    const why = reason ?? "This review cannot be shown.";
+    /*
+     * Absence and refusal are drawn differently, and the difference matters.
+     *
+     * `denied` is a permission answer: the controls are ABSENT, because a
+     * disabled Approve shown to someone who may not approve is an invitation
+     * to ask why, and the surface's rule is that a control nobody may press is
+     * not drawn at all. Every other state here means the review is not there —
+     * and then the frame stays, with its controls disabled and saying so, or
+     * an operator cannot tell an empty register from a broken screen.
+     */
+    // Loading is not absence: a skeleton says "wait", while a frame of dead
+    // controls says "there is nothing here", and during a read that is not
+    // yet known. `PanelState` draws the skeleton on its own.
+    const refused = status === "denied";
     return (
       <section className="exec-exit" aria-label={`Paper exit review ${reviewId}`}>
         <div className="exec-gate-kicker">PAPER_EXIT · {reviewId}</div>
-        <PanelState status={status} reason={reason ?? "This review cannot be shown."} />
+        <PanelState status={status} reason={why} />
+        {refused ? null : (
+        <div className="exec-gate-actions" role="group" aria-label="Exit review decisions">
+          {EXIT_DECISIONS.map((label) => (
+            <button key={label} type="button" className="exec-role-control exec-btn-ghost" disabled title={why}>
+              {label}
+            </button>
+          ))}
+        </div>
+        )}
+        <p className="exec-disabled-reason">
+          {refused ? why : `No decision can be taken on a review that is not published. ${why}`}
+        </p>
+        <div className="exec-exit-panels">
+          {EXIT_EVIDENCE_PANELS.map((title) => (
+            <section className="exec-gate-panel" key={title} aria-label={title}>
+              <ExecutionSectionTitle>{title}</ExecutionSectionTitle>
+              <PanelState status="empty" reason="No review is published, so this panel has no evidence to show." />
+            </section>
+          ))}
+        </div>
       </section>
     );
   }
