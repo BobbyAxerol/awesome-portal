@@ -92,10 +92,16 @@ export class LocalQueryAnalyticsService {
     return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true";
   }
 
+  /**
+   * `options.sourceFacts: false` returns the derived branches with the raw
+   * fact groups emptied — for callers that draw no Trade Replay and would
+   * otherwise pay megabytes to ignore them.
+   */
   async query(
     principal: AnalyticsPrincipal,
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
+    options: { sourceFacts?: boolean } = {},
   ): Promise<Record<string, unknown>> {
     // Composite deployment ids are colon-joined by the source
     // (strategy:mode:venue:account — finding F13); the id never leaves this
@@ -111,7 +117,7 @@ export class LocalQueryAnalyticsService {
     );
     const statistics = await this.portfolioStatistics(context.workspaceId, environment, context.profileId);
     if (statistics && depth) depth.queries += 1;
-    return composeAnalytics(context.snapshot, principal.workspaceId, subjectKind, subjectId, depth, statistics);
+    return composeAnalytics(context.snapshot, principal.workspaceId, subjectKind, subjectId, depth, statistics, options);
   }
 
   /**
@@ -358,6 +364,7 @@ function composeAnalytics(
   subjectId: string,
   depth: SubjectDepth | null = null,
   statistics: PortfolioStatistics | null = null,
+  options: { sourceFacts?: boolean } = {},
 ): Record<string, unknown> {
   const all = sourceFacts(snapshot);
   // The mirror rows carry the same ids the snapshot rows do, so the subject
@@ -498,12 +505,23 @@ function composeAnalytics(
         pairs: [],
       },
       positions: selected.positions.slice(0, 500),
-      // Screen-ready, bounded current-source facts. These rows come from the
-      // same atomic local projection read as the derived branches above; the
-      // browser must not open a second AWS-HK read or reconstruct lineage.
-      source_facts: Object.fromEntries(
-        Object.entries(sourceFactGroups).map(([key, rows]) => [key, rows.slice(0, 1_000)]),
-      ),
+      /*
+       * Screen-ready, bounded current-source facts. These rows come from the
+       * same atomic local projection read as the derived branches above; the
+       * browser must not open a second AWS-HK read or reconstruct lineage.
+       *
+       * They exist for the Trade Replay on the 360 screens, which walk the
+       * orders and fills themselves. A caller that draws none of that says so
+       * and gets the derived branches alone: on the Paper Workbench these
+       * groups were 3.9 MB of the 7 MB response and the screen read none of
+       * them. Empty groups, not a missing key — a reader that checks
+       * `source_facts.orders.length` must not have to also check for the field.
+       */
+      source_facts: options.sourceFacts === false
+        ? Object.fromEntries(Object.keys(sourceFactGroups).map((key) => [key, []]))
+        : Object.fromEntries(
+          Object.entries(sourceFactGroups).map(([key, rows]) => [key, rows.slice(0, 1_000)]),
+        ),
     },
   };
 }

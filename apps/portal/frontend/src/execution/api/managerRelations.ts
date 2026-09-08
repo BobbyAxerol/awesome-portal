@@ -137,13 +137,32 @@ export const DRAIN_CANCELLED = "DRAIN_CANCELLED";
  */
 export const PAGE_SIZES: readonly number[] = [200, 50, 20, 5];
 
+/**
+ * The page size a relation was last seen to accept, for this tab's lifetime.
+ *
+ * Without it the walk re-probes from 200 on every drain, and a relation that
+ * refuses 200 produces one guaranteed 502 per refresh — on dev the Portfolio
+ * 360 console filled with them while the panels beside it were showing real
+ * rows the retry had fetched. Remembering the size makes that probe happen
+ * once. It is a cache of the source's answer, never of the rows: a relation
+ * that starts accepting 200 again is only ever read in smaller pages, which
+ * costs pages, not truth.
+ */
+const acceptedPageSize = new Map<string, number>();
+
+/** Forget the learned page sizes. Exported for tests, which must not leak state between cases. */
+export function resetAcceptedPageSizes(): void {
+  acceptedPageSize.clear();
+}
+
 /** Walk a relation's current page set with the Portal continuation, stepping the page size down when the source refuses one; a cancelled walk stops before its next page and says so. */
 export async function drainRelation(read: RelationRead, routeId: RelationRoute | string, environment: RelationEnvironment, maxPages = 40, isCancelled: () => boolean = () => false): Promise<Drained> {
   const rows: Record<string, unknown>[] = [];
   let cursor: string | null = null;
   let pages = 0;
   let last: RelationPage | null = null;
-  let sizeIndex = 0;
+  const learned = acceptedPageSize.get(`${environment}:${routeId}`);
+  let sizeIndex = learned === undefined ? 0 : Math.max(0, PAGE_SIZES.indexOf(learned));
   for (let i = 0; i < maxPages; i += 1) {
     if (isCancelled()) return { rows, pages, exhausted: false, state: last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: DRAIN_CANCELLED };
     const stepping = pages === 0 && sizeIndex < PAGE_SIZES.length - 1;
@@ -157,6 +176,7 @@ export async function drainRelation(read: RelationRead, routeId: RelationRoute |
     }
     if (!result.ok) return { rows, pages, exhausted: false, state: pages === 0 ? result.status.toUpperCase() : last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: result.reason };
     pages += 1;
+    if (pages === 1) acceptedPageSize.set(`${environment}:${routeId}`, PAGE_SIZES[sizeIndex]);
     last = result.value;
     rows.push(...result.value.records.map(relationRow));
     if (!result.value.page.hasMore || !result.value.page.nextCursor) {

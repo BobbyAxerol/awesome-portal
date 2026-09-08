@@ -403,9 +403,12 @@ describe("N22 full Paper read product BFF", () => {
       days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 720,
       source_rows: 720, truncated: false,
     });
-    // performance had no mirrored rows: the bounded snapshot fallback serves.
+    // Performance is not fetched at depth at all: no workbench panel plots a
+    // performance series, and the accounting panel reads the newest row, which
+    // the bounded relation page already carries. One history query, not two.
     expect(result.data.history_windows.performance).toBeUndefined();
-    expect(historyCalls).toHaveLength(2);
+    expect(historyCalls).toHaveLength(1);
+    expect(historyCalls[0][3]).toBe("manager.performance:account_equity_snapshots");
 
     // Without a mirror at all, the envelope is exactly the pre-depth shape.
     const bare = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;

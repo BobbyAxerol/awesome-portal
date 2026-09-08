@@ -164,6 +164,29 @@ const WORKBENCH_SPECS: readonly RelationSpec[] = [
   spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 200),
 ];
 
+/**
+ * The analytics envelope with every `source_facts` group emptied.
+ *
+ * Emptied, not removed: a reader that checks `source_facts.orders.length`
+ * must not have to check for the field's existence as well.
+ */
+function withoutSourceFacts(envelope: unknown): unknown {
+  if (typeof envelope !== "object" || envelope === null) return envelope;
+  const root = envelope as Record<string, unknown>;
+  const analytics = root.analytics;
+  if (typeof analytics !== "object" || analytics === null) return envelope;
+  const block = analytics as Record<string, unknown>;
+  const facts = block.source_facts;
+  if (typeof facts !== "object" || facts === null) return envelope;
+  return {
+    ...root,
+    analytics: {
+      ...block,
+      source_facts: Object.fromEntries(Object.keys(facts as Record<string, unknown>).map((key) => [key, []])),
+    },
+  };
+}
+
 @Injectable()
 export class PaperReadService {
   private readonly cursors: KeysetCursorCodec;
@@ -208,9 +231,17 @@ export class PaperReadService {
       { rows: {}, windows: {} };
     if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return depth;
     const from = new Date(Date.now() - 30 * 86_400_000).toISOString();
+    /*
+     * Only the series a screen actually plots earns its 30-day depth.
+     *
+     * `performance` was fetched at full depth too and cost 1.3 MB, but no
+     * workbench panel draws a performance series: the accounting panel reads
+     * the newest row, which the bounded relation page already carries. Depth
+     * for a series nobody plots is transfer, parse and render time spent on
+     * rows that reach no pixel.
+     */
     const bindings = [
       ["account_equity", "account_equity_snapshots", "account_id"],
-      ["performance", "performance_snapshots", "instrument_id"],
     ] as const;
     for (const [key, relation, seriesField] of bindings) {
       try {
@@ -282,7 +313,15 @@ export class PaperReadService {
     let analyticsReason = "N25_DERIVED_ANALYTICS_NOT_ACTIVE";
     if (this.localAnalytics?.enabled()) {
       try {
-        queryAnalytics = await this.localAnalytics.query(principal, "deployment", deploymentId);
+        /*
+         * No source facts here. They exist for the Trade Replay on the 360
+         * screens, which walks orders and fills itself; this workbench draws
+         * the derived branches only. Measured on dev 2026-09-08: they were
+         * 3.9 MB of a 7.0 MB response the screen never read.
+         */
+        queryAnalytics = await this.localAnalytics.query(
+          principal, "deployment", deploymentId, { sourceFacts: false },
+        );
       } catch (error) {
         analyticsReason = error instanceof AnalyticsProxyError
           ? error.code
@@ -290,11 +329,15 @@ export class PaperReadService {
       }
     } else if (this.analytics) {
       try {
-        queryAnalytics = await this.analytics.managerQueryAnalytics(
+        // The upstream envelope carries the same fact groups; the workbench
+        // reads none of them, so they are emptied before they reach a browser.
+        // The upstream transfer is not saved — only this hop is — but the
+        // screen's payload is then the same whichever path served it.
+        queryAnalytics = withoutSourceFacts(await this.analytics.managerQueryAnalytics(
           principal,
           "deployment",
           deploymentId,
-        );
+        ));
       } catch (error) {
         analyticsReason = error instanceof AnalyticsProxyError
           ? error.code
