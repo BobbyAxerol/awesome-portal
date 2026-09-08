@@ -5227,6 +5227,20 @@ PostgreSQL restore and focused Rust mapping tests are green. A new signed
 immutable release and deployed Paper/Sandbox/Live probe matrix remain required
 before this plan can emit `PRODUCT_ACTIVE`.
 
+**Frontend audit-lock correction (2026-09-08):** the first protected-main
+release retry stopped before publication because the CI's required
+`npm audit --package-lock-only --audit-level=moderate` correctly rejected the
+dev-only Vitest 4.1.10 graph (`GHSA-82fw-gwwq-j7x9`). Both Portal and embedded
+Roadmap frontend graphs now pin the minimal compatible patch release,
+Vitest 4.1.11, including its matching internal packages. No application
+runtime dependency, source contract, browser behavior, image authority or
+Execution scope was widened. A clean Node 22 run proves `npm ci`, the
+moderate audit (zero findings), Portal 1,934-test suite and production build,
+then Roadmap 80-test suite and production build. The protected publisher must
+still produce the new signed image/SBOM/provenance set before activation; this
+entry records the exact CI hygiene repair rather than a `PRODUCT_ACTIVE`
+claim.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
