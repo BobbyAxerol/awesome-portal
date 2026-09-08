@@ -5128,16 +5128,19 @@ failures; it only prevents transient hosted-runner resource contention from
 obscuring a real result.  No runtime/image/source authority changes are part
 of this correction.
 
-**Control API migration-order correction (2026-09-08):** the first signed
-stable rollout stopped before the Control API could start because the N09
-governance migration had accidentally reused the numeric prefix of the
-already-applied session-activation migration. The Portal database was backed
-up before the attempt and no N09 SQL ran. N09 is therefore moved, byte-for-byte
-unchanged, to the next unused prefix `1723680000028`; the migration-history
-gate contains one explicit identical-blob collision correction and now rejects
-all duplicate numeric prefixes before CI or deployment. This is a forward
-release repair, not a schema rollback, source-authority change or command
-activation.
+**Control API legacy-ledger recovery (2026-09-08):** the first signed stable
+rollout stopped before the Control API could start because the stable v1.0.1
+ledger already contained `1723680000012_session-activation-proof` while it
+lacked the later-added, equally-prefixed N09 migration. The Portal database was
+backed up before the attempt and no N09 SQL ran. The initial source-only rename
+to `0028` was rejected by a fresh PostgreSQL smoke because N29 (`0015`) depends
+on N09 and would run first. The final repair retains the original N09 file
+byte-for-byte, adds a narrowly scoped Control API migrator preflight that
+installs and records N09 only for that proven legacy ledger state, then records
+`1723680000012_z_n09-governance-workflow-legacy-compatibility` as a schema
+sentinel. The migration-history gate permits only this exact three-file prefix
+triple and rejects every other duplicate. It is a tested forward recovery, not
+a schema rollback, source-authority change or command activation.
 
 ### 17.6 Frontend collaboration lanes
 
