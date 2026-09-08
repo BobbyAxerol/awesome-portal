@@ -245,7 +245,7 @@ const COLUMNS: readonly Column<ApprovalRow>[] = [
         <span className="exec-inbox-nocount">blocker count not published</span>
       ) : (
         <span data-blocking={r.blockerCount > 0 ? "true" : undefined}>
-          {r.blockerSummary ? `${r.blockerCount} → ${r.blockerSummary}` : String(r.blockerCount)}
+          {r.blockerSummary ? `${r.blockerCount} — ${r.blockerSummary}` : String(r.blockerCount)}
         </span>
       ),
   },
@@ -417,6 +417,7 @@ export function ApprovalInbox({
           rowKey={(r) => r.id}
           rowEmphasis={rowEmphasis}
           neverVirtualize
+          emptyTitle={status === "ok" && page.rows.length === 0 && !emptyInThisView ? "Inbox zero" : undefined}
           overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
           status={status}
           reason={
@@ -424,7 +425,7 @@ export function ApprovalInbox({
             (status === "ok" && page.rows.length === 0
               ? emptyInThisView
                 ? `Nothing in ${FILTER_LABEL[filter]}. ${counts?.pending ?? 0} still pending in the queue.`
-                : "Inbox zero. Nothing waits on you — pending requests owned by other approvers stay in All."
+                : "Nothing waits on you — pending requests owned by other approvers stay in All."
               : undefined)
           }
           onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id, r.gate) : undefined}

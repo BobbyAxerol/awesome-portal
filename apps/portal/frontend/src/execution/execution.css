@@ -1182,6 +1182,25 @@
   font-weight: 600;
 }
 
+/* ── Governance room typography (hi-fi: IBM Plex Mono end to end).
+   The register tables rendered sans, so the numbers in the age/SLA and quorum
+   columns did not line up with each other and the head did not read as a head.
+   `font:` shorthand, existing tokens only — no new face, no size literal
+   outside a shorthand, and `uppercase` stays on `th` where the gate allows it. */
+.exec-gov .exec-table table { font: 400 12px/18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.exec-gov .exec-table thead th { font: 500 10px/14px var(--font-mono); }
+.exec-gov .exec-inbox-strip { font: 400 10px/14px var(--font-mono); padding: 9px 14px; gap: 4px 18px; }
+.exec-gov .exec-inbox-decided .exec-chip { font: 600 11px/16px var(--font-mono); border-color: transparent; padding: 1px 8px; letter-spacing: 0; }
+.exec-gov .exec-inbox-filter { font: 400 11px/16px var(--font-mono); background: var(--paper-raised); }
+.exec-gov .exec-inbox-filter[data-active="true"] { font-weight: 600; }
+/* The hi-fi's empty register is its own bordered block, centred, with the
+   outcome as the largest words on the page — "Inbox zero" is a result, and
+   the reader should be able to read it from across a desk. Dev drew it as a
+   small left-aligned notice, which reads as a footnote about a table that
+   failed. Existing tokens and `font:` shorthand only. */
+.exec-gov .exec-state[data-status="empty"] { padding: 48px 20px; text-align: center; align-items: center; }
+.exec-gov .exec-state[data-status="empty"] .exec-state-title { font: 300 22px/1.3 var(--font-body); color: var(--ink); text-transform: none; letter-spacing: 0; }
+
 .exec-inbox-sort {
   font: var(--exec-font-meta);
   margin-left: auto;
@@ -1191,8 +1210,10 @@
 /* A row the actor cannot act on stays visible and legible. Dimmed, not hidden:
  * hiding it would make the queue lie about its own size. */
 .exec-inbox-inert {
+  /* Dimmed, not slanted. The hi-fi's separation-of-duty row is the same face as
+     every other row — italics read as an aside, and this row is not an aside,
+     it is a request somebody else must decide. */
   color: var(--ink-mute);
-  font-style: italic;
 }
 
 .exec-inbox-decided {
@@ -1673,7 +1694,7 @@
 .exec-gov-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 2px; }
 .exec-gov-h1 { margin: 0; font: 300 22px/1.3 var(--font-body); color: var(--ink); }
 .exec-gov-chip { font: 600 11px/16px var(--font-mono); padding: 1px 8px; }
-.exec-gov-chip[data-fill="warn"] { background: var(--warn-bg); color: var(--warn-strong, var(--warn)); }
+.exec-gov-chip[data-fill="warn"] { background: var(--warn-bg); color: var(--warn); }
 .exec-gov-chip[data-fill="bad"] { background: var(--bad-bg); color: var(--bad); }
 .exec-gov-chip[data-fill="good"] { background: var(--good-bg); color: var(--good); }
 .exec-gov-chip[data-pulse="true"] { animation: exec-inbox-pulse 1.8s infinite; }
@@ -1732,7 +1753,6 @@
 }
 
 .exec-inbox-strip strong {
-  margin-left: auto;
   color: var(--ink-soft);
   letter-spacing: 0.06em;
 }
@@ -6706,10 +6726,19 @@
 .exec-gov-headlink { font: 400 11px/1.6 var(--font-mono); color: var(--accent); text-decoration: none; }
 .exec-gov-headlink:hover { text-decoration: underline; }
 .exec-gov .exec-role-control select, .exec-gov select.exec-role-control { width: 100%; max-width: 100%; background: var(--paper-sunken); color: var(--ink); border: 1px solid var(--line); border-bottom-color: var(--accent); padding: 4px 8px; font: 400 12px/1.5 var(--font-mono); }
-.exec-gate-wvfilters { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 .exec-gate-wvtable th[scope="row"] { overflow-wrap: anywhere; text-transform: none; letter-spacing: 0; font: 400 12px/1.6 var(--font-mono); color: var(--ink); }
-.exec-gate-wvtable td[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-gate-wvtable td[data-tone="warn"] { color: var(--warn); }
 .exec-gate-wvtable td[data-tone="bad"] { color: var(--bad); }
+/* The register printed sans where the hi-fi is mono end to end, so the numbers
+   in the due column did not line up with each other. Copied from
+   `.exec-oq-table thead th` rather than invented, and `uppercase` sits on a
+   `th`, which is where the typography gate allows it. */
+.exec-gate-wvtable thead th { font: 500 10px/14px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-faint); text-align: left; border-bottom: 1px solid var(--line); padding: 8px 12px; }
+.exec-gate-wvtable tbody th, .exec-gate-wvtable tbody td { font: 400 12px/1.6 var(--font-mono); font-variant-numeric: tabular-nums; }
+/* The wrapper class existed in the markup with no rule anywhere, so a narrow
+   viewport pushed the whole page sideways instead of scrolling the table. */
+.exec-gate-criteriawrap { overflow-x: auto; max-width: 100%; }
+.exec-gate-wvtable { min-width: 880px; }
 .exec-gov-v[data-tone="good"] { color: var(--good); }
 
 /* ── Waivers register polish (owner 2026-08-30: "sáng tạo, kỹ, động hơn").
@@ -6723,13 +6752,16 @@
 .exec-wv-lanefill { position: absolute; inset: 0 auto 0 0; background: var(--line-strong); opacity: 0.55; transition: width 600ms ease; }
 .exec-wv-lanefill[data-tone="warn"] { background: var(--warn); opacity: 0.8; }
 .exec-wv-lanefill[data-tone="good"] { background: var(--good); opacity: 0.5; }
+.exec-wv-lanefill[data-tone="bad"] { background: var(--bad); opacity: 0.8; }
 .exec-wv-lanedot { position: absolute; top: 50%; width: 8px; height: 8px; transform: translate(-50%, -50%); background: var(--ink-mute); border: 1px solid var(--paper); }
 .exec-wv-lanedot[data-tone="warn"] { background: var(--warn); }
 .exec-wv-lanedot[data-tone="good"] { background: var(--good); }
+.exec-wv-lanedot[data-tone="bad"] { background: var(--bad); }
 .exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanedot { background: var(--bad); animation: exec-inbox-pulse 1.4s infinite; }
 .exec-wv-lane[data-state="EXPIRING"] .exec-wv-lanefill { background: var(--bad); opacity: 0.75; }
 .exec-wv-lanedue { font: var(--exec-font-num, 500 12px/1.4 var(--font-mono)); font-variant-numeric: tabular-nums; color: var(--ink-soft); text-align: right; white-space: nowrap; }
-.exec-wv-lanedue[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-wv-lanedue[data-tone="warn"] { color: var(--warn); }
+.exec-wv-lanedue[data-tone="bad"] { color: var(--bad); }
 .exec-wv-lanedue[data-live] { color: var(--bad); }
 .exec-wv-lanetext { font: var(--exec-font-meta); color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .exec-wv-debtrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 2px 0; }
@@ -6740,6 +6772,11 @@
 .exec-wv-row[data-state="OPEN"] { border-left-color: var(--warn); }
 .exec-wv-row[data-state="EXPIRING"] { border-left-color: var(--bad); }
 .exec-wv-row[data-state="WAIVED"], .exec-wv-row[data-state="SATISFIED"] { border-left-color: var(--good); }
+/* LAPSED had no rail and no tint, so the one state that is already blocking
+   read quieter than EXPIRING, which is only about to. The ladder now tops out
+   at the worst state, which is where a reader's eye should land first. */
+.exec-wv-row[data-state="LAPSED"] { border-left-color: var(--bad); }
+.exec-wv-row[data-state="LAPSED"] > th, .exec-wv-row[data-state="LAPSED"] > td { background: var(--bad-bg-soft); }
 .exec-wv-row:hover th, .exec-wv-row:hover td { background: var(--paper-raised); }
 .exec-wv-row[data-expanded] th, .exec-wv-row[data-expanded] td { background: var(--paper-raised); }
 .exec-wv-rowbtn { display: flex; align-items: baseline; gap: 7px; width: 100%; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; }
@@ -6769,7 +6806,7 @@
 
 /* ── Gate LIVE + New-request polish (freeze pass 2026-08-30). */
 .exec-gate-criteria tbody tr:hover th, .exec-gate-criteria tbody tr:hover td { background: var(--paper-raised); }
-.exec-gate-note[data-tone="warn"] { color: var(--warn-strong, var(--warn)); }
+.exec-gate-note[data-tone="warn"] { color: var(--warn); }
 .exec-gate-note[data-tone="mute"] { color: var(--ink-mute); }
 .exec-gate-capstep { display: flex; flex-direction: column; gap: 18px; margin-top: 10px; }
 .exec-gate-capsteptrack { position: relative; height: 8px; background: var(--paper-sunken); border: 1px solid var(--line-strong); }

@@ -24,7 +24,12 @@
   --ink: #1c2532;
   --ink-soft: #4e5a6e;
   --ink-faint: #939db0;
+  /* One step below `--ink-soft`, still readable: the tone for a row the reader
+     may act on but is not being asked to. */
+  --ink-mute: #68738a;
   --line: #e3e0d7;
+  /* A border meant to be read as a boundary rather than a hairline. */
+  --line-strong: #c6c2b6;
   --line-soft: #efede4;
   --accent: #0f4c5c;
   --accent-contrast: #ffffff;
@@ -50,11 +55,33 @@
   --accent-2-soft: #f4ecdb;
   --good: #1e7b4f;
   --good-bg: #e3f1e9;
+  /* The light palette shipped `--warn-bg` with no `--warn` to draw on it, and
+     the same for `--ink-mute` and `--line-strong` above. A CSS variable with no
+     value does not fall back to anything — the whole declaration is dropped —
+     so on every governance route (which renders `data-theme="research"`, i.e.
+     this palette) three sets of rules did nothing at all: warnings were not
+     amber, the separation-of-duty row was not dimmed, and the dashed markers
+     drew no border. Measured in the browser on 2026-09-08: `--warn`,
+     `--ink-mute` and `--line-strong` all resolved to the empty string on
+     /governance/approvals, /governance/waivers and /governance/exit-reviews,
+     while resolving normally on the execution routes.
+
+     `#8e6a00` is the hi-fi's own amber. It clears 4.5:1 on all three grounds
+     this palette uses — paper 4.73, raised 4.99, and 4.52 on the `--warn-bg`
+     tint — where the carbon theme's `#f1c21b` would have managed 1.53:1 on
+     that tint, which is text nobody can read. */
+  --warn: #8e6a00;
   --warn-bg: #fcf4d6;
   --gov-exit: #8a3ffc;
   --gov-inverse-line: #393939;
   --bad: #b43a3a;
   --bad-bg: #f7e8e8;
+  /* One step below the banner fill, for a tinted row. The carbon theme has had
+     this since the overdue row was drawn; the light palette never did, so on the
+     governance routes the overdue row carried no tint at all and the only signal
+     left was the left rail. The hi-fi's own value is #fff8f8; --ink still reads
+     at 14.7:1 on it and --bad at 5.6:1. */
+  --bad-bg-soft: #fff8f8;
   --ink-panel: #161e2a;
   --ink-panel-fg: #c9d4e3;
 

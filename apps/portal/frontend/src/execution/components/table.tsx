@@ -94,6 +94,10 @@ export interface KeysetTableProps<T> {
   selectedKey?: string | null;
   /** Per-row emphasis, e.g. an overdue queue item. Rendered as a data attribute. */
   rowEmphasis?: (row: T) => string | undefined;
+  /** The screen's own name for "no rows", when it has a better one than the
+   *  shared vocabulary — the inbox says "Inbox zero", which is an outcome
+   *  rather than an absence. */
+  emptyTitle?: string;
   /** DS §8 keeps a minimum width so columns do not collapse; the panel scrolls. */
   minWidth?: number;
   /** Test seam and escape hatch for environments that report no height. */
@@ -135,6 +139,7 @@ export function KeysetTable<T>({
   onRowClick,
   selectedKey = null,
   rowEmphasis,
+  emptyTitle,
   minWidth = 880,
   viewportRows,
   notice,
@@ -182,14 +187,19 @@ export function KeysetTable<T>({
     // range is archived, look identical and mean opposite things. The server
     // says which; absent is not "everything is online" (EX-BE-04b §3).
     if (!emptyMeansEmpty(page.retention)) {
+      // The screen's own name for zero rows belongs only to the `empty`
+      // outcome. On `unavailable` it would be a claim the data does not
+      // support — "Inbox zero" over a range we could not read says the queue
+      // is clear when nobody knows that.
       return (
         <PanelState
           status={page.retention ? "unavailable" : "empty"}
+          title={page.retention ? undefined : emptyTitle}
           reason={reason ?? retentionReason(page.retention) ?? undefined}
         />
       );
     }
-    return <PanelState status="empty" reason={reason ?? "No rows match this filter."} />;
+    return <PanelState status="empty" title={emptyTitle} reason={reason ?? "No rows match this filter."} />;
   }
 
   const virtualized = !neverVirtualize && rows.length > VIRTUALIZE_ABOVE;

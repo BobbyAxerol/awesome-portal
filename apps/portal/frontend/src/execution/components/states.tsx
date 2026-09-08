@@ -62,18 +62,27 @@ export function PanelState({
   reason,
   lastGood,
   actions,
+  title: ownTitle,
 }: {
   status: Exclude<PanelStatus, "ok">;
   reason?: string;
   lastGood?: ReactNode;
   actions?: ReactNode;
+  /**
+   * A screen's own name for this state, when it has a better one than the
+   * shared vocabulary. "Inbox zero" says something "Nothing to show" does not:
+   * that the queue is clear, which is the outcome the reader wanted. The
+   * shared TITLE map stays as it is — every other panel still needs the
+   * neutral word.
+   */
+  title?: string;
 }) {
   if (status === "loading") return <PanelSkeleton />;
 
   // A capability the source has not published yet is a schedule, not a fault:
   // it reads "Soon" and keeps its code, so nobody pages an engineer over it and
   // nobody holds a phase open waiting for it (owner ruling 2026-09-07).
-  const title = soonTitle(status, reason, TITLE[status]);
+  const title = ownTitle ?? soonTitle(status, reason, TITLE[status]);
   const line = soonReason(reason);
 
   return (

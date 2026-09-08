@@ -1897,7 +1897,10 @@ describe("Approval Inbox", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByText("0 → observation gate met")).toBeTruthy();
+    // Em dash, matching the hi-fi: "0 — observation gate met" reads as an
+    // apposition ("nought, namely: the gate is met"), where the arrow read as
+    // a transition into a blocker that is not there.
+    expect(screen.getByText("0 — observation gate met")).toBeTruthy();
   });
 });
 
