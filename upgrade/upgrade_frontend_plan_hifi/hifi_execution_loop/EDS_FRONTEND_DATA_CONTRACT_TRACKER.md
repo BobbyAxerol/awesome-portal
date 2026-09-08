@@ -2147,6 +2147,67 @@ màn nào được biến mất vì rỗng.** Khi nguồn có hàng thì mở l�
 **Gate đóng:** 12-1 trả 200 với dữ liệu thật; 12-2 hoặc trả 200 hoặc có mã
 `Soon` đúng của nguồn; 12-3/12-4 ghi biên giới trong §A13 kèm bằng chứng.
 
+### A15. GOAL 5 ĐÃ LÀM (08-09) — 5A trên dữ liệu thật, 5B trên trạng thái rỗng trung thực
+
+Commit `f9d12cc` · `2d490d5`. Ba ref cùng head, dev rebuild sau mỗi bước.
+
+#### 5A — đo được trên dev
+
+| Việc | Trước | Sau |
+|---|---|---|
+| Admin drawer · **dòng command authority** | không hiện (đã parse rồi bỏ) | **`FAIL_CLOSED · relay LOCAL_R0_ONLY · relay inactive`** kèm câu giải thích |
+| Admin drawer · **chip phân loại N27** | chỉ là một câu văn | **4 chip lọc**: All 24 · Connected 4 · Supported inactive 13 · Incompatible 7 |
+| Admin drawer · **panel command journal** | **không màn nào hiện** | **100 dòng**: `2026-08-30 12:20:02 UTC · actor redacted · 29dd25a6… · ACKNOWLEDGED · BINANCE · paper · PARTIAL` |
+| Command Center 4 panel | — | **6 panel · 15 hàng**; `fleet_health` READY **78 deployment · 6 cell**, ba panel kia rỗng trung thực (governance 0 hàng) |
+| Bộ lọc drawer | 6 (chỉ risk tier) | **10** |
+
+**`orders-fills` — không phải lỗi.** Backend **không có** route đó và **không
+màn nào gọi** nó; `REQUEST_REJECTED` là câu trả lời đúng cho một path lạ. Đường
+dẫn đó do chính tôi dựng lúc dò ở §A13.12. Đã gạch khỏi P0-16.
+
+#### 5B — màn không được biến mất vì rỗng
+
+| Màn | Trước | Sau |
+|---|---|---|
+| `/governance/exit-reviews` | **1 dòng**, `len=77` · 0 panel · 0 nút | **5 panel · 4 nút mờ kèm lý do** · `len=757` |
+| Incident detail | **1 dòng**, `len=67` · 0 panel | **5 panel · 2 nút mờ kèm lý do** · `len=646` |
+| Incident với id không tồn tại | trắng | cùng khung đó |
+
+**Và một lỗi nặng hơn cả trang trắng**: vào route gốc của register, Portal
+**mượn id của showcase** (`EX-771`, `inc_fixture_44`), fetch một review chưa
+từng tồn tại trên dev, rồi báo rằng **review cụ thể đó** bị thiếu. "Register
+rỗng" và "một review biến mất" là hai sự thật khác nhau, và chỉ cái thứ hai
+từng được hiện. Nay không có id trên URL nghĩa là **không có subject**, nói
+thẳng như vậy.
+
+**Hai phân biệt mà test cũ giữ đúng, tôi tôn trọng:**
+- **`denied` là câu trả lời về quyền** → nút **vắng mặt**, không phải mờ. Một
+  nút Approve mờ chìa ra cho người không có quyền là **mời họ hỏi tại sao** thay
+  vì trả lời. Đúng luật §3.
+- **`loading` không phải là rỗng** → giữ skeleton. Một khung đầy nút chết trong
+  lúc đang đọc nói "ở đây không có gì" khi điều đó còn chưa biết.
+
+#### Ba lỗi của chính tôi, do gate và do đo lại mà ra
+
+1. **Fail-closed gate bắt hai cờ an toàn**: tôi đọc
+   `source_side_effect_requested` và `relay_active` bằng `=== true`, nên một
+   trường không đọc được sẽ nói "không có gì chạm tới Trading System" và "relay
+   đã đóng" — đều là **cách đọc dễ chịu**. Nay `!== false`, và `relay_active`
+   được **đăng ký vào gate** để người sau không lặp lại.
+2. **Đọc nhầm khối authority**: có **hai** khối và chúng không khớp — top-level
+   `UNCHANGED_FAIL_CLOSED` không có trường relay, `data.command_authority` có
+   `FAIL_CLOSED` + relay. Tôi đọc khối nghèo, nên relay vắng mặt **fail-closed
+   thành "active"** — sai to trên màn, mà đó đúng là tác dụng của fail-closed.
+3. **Journal map sai tên trường**: journal là bản **đã redact**, mang
+   `command_id · accepted_at · state · venue`, **không có actor**. Mapper của
+   tôi tìm `command`/`occurred_at`/`actor`, không thấy, và **bỏ cả 100 dòng**.
+   Nay đọc đúng hình dạng nguồn phát, và in "actor redacted" ở chỗ hợp đồng
+   giấu tên — không để ô trống có thể bị hiểu là lệnh vô chủ.
+
+**Gate:** FE **115 file · 1 995 test**, tsc sạch. 5B chờ nguồn có hàng để ký
+phần quyết định (Gate R1/R2, Exit Review, Operations Queue chart/phân trang) —
+nay đã có khung trung thực để ký ngay khi có hàng.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
