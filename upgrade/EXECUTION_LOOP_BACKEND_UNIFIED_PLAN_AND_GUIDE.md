@@ -5118,6 +5118,16 @@ offline D2 fixture proves that a `60_000` ms cadence and digest-shaped worker
 identity survive the immutable configuration boundary.  No service restart,
 source request, command, or Trading System change occurred during discovery.
 
+**Rust release-gate reliability correction (2026-09-08):** one protected-main
+CI attempt ended in the isolated Rust Edge fixture with Cargo exit `101`, while
+the identical commit subsequently passed the same Rust gate on a parallel CI
+run and passed locally through format, tests, clippy, N06 and PostgreSQL
+restore.  The fixture now bounds Cargo build jobs and Rust test threads to two
+by default (validated override range `1..16`).  It neither retries nor ignores
+failures; it only prevents transient hosted-runner resource contention from
+obscuring a real result.  No runtime/image/source authority changes are part
+of this correction.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
