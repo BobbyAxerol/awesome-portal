@@ -25,7 +25,7 @@ import { utcStamp } from "../time";
 import { pageOf } from "../api/profileRows";
 import type { Authority, Envelope, FreshnessState, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { useParamState } from "../routeState";
-import { useApiRead } from "./profileContainers";
+import { type Loaded, useApiRead } from "./profileContainers";
 import { EquityChart } from "../components/EquityChart";
 import { BarsChart, LinesChart } from "../components/marketChart";
 import { type ReplaySource, TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
@@ -1365,29 +1365,41 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
  * beat follows the projection sequence — a real revision — not a clock.
  * Older pages are appended with the Portal continuation, passed back unchanged.
  */
-export function ObservedTimelineLive({ api, environment, environments, subjectKind, subjectId, refreshKey = 0, onLoaded }: {
+export function ObservedTimelineLive({ api, environment, environments, subjectKind, subjectId, refreshKey = 0, onLoaded, preloaded }: {
   api: ExecutionApi;
   environment: ObservedEnvironment;
   environments?: readonly ObservedEnvironment[];
   subjectKind: ObservedSubjectKind;
   subjectId: string;
   refreshKey?: number;
-  /**
-   * Hands the page it just read back to the screen.
-   *
-   * The Observed timeline and Mark context tiles draw from this same route.
-   * Reading it a second time for them would be the double-read this surface
-   * spent a day removing from the workbench, so the panel reports what it has
-   * instead of anyone asking again.
-   */
+  /** Kept for the account 360, which owns no tiles and still reads here. */
   onLoaded?: (timeline: ObservedTimeline | null) => void;
+  /** The page the screen already read; when given, this panel reads nothing. */
+  preloaded?: Loaded<ObservedTimeline>;
 }) {
   // The environments the subject is deployed in; the reader follows the chosen one and resets when the subject changes.
   const choices = environments && environments.length > 0 ? environments : [environment];
   const [chosen, setChosen] = useState<{ subject: string; env: ObservedEnvironment } | null>(null);
   const env: ObservedEnvironment = chosen?.subject === subjectId && choices.includes(chosen.env) ? chosen.env : environment;
-  const tick = usePollTick(PROJECTION_POLL_MS);
-  const state = useApiRead<ObservedTimeline>(() => api.getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100 }), [api, env, subjectKind, subjectId, refreshKey, tick], { keepValue: true });
+  const tick = usePollTick(PROJECTION_POLL_MS, preloaded === undefined);
+  /*
+   * The panel reads only when nobody has read for it.
+   *
+   * The Observed timeline and Mark context tiles need the same page, and they
+   * live on a different tab — so a panel that owns the read hands them nothing
+   * until someone opens the tab it sits on, which is why both tiles said the
+   * read "has not answered yet" over a route that answers in 200ms. The screen
+   * reads once and passes it here; this hook stays for the account 360, which
+   * has no tiles to feed.
+   */
+  const own = useApiRead<ObservedTimeline>(
+    () => (preloaded === undefined
+      ? api.getObservedTimeline({ environment: env, subjectKind, subjectId, limit: 100 })
+      : Promise.resolve({ ok: false as const, status: "empty" as const, reason: "read by the screen" })),
+    [api, env, subjectKind, subjectId, refreshKey, tick, preloaded === undefined],
+    { keepValue: true },
+  );
+  const state = preloaded ?? own;
   const latest = useRef(onLoaded);
   latest.current = onLoaded;
   useEffect(() => { latest.current?.(state.value); }, [state.value]);
@@ -1444,9 +1456,6 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
   const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
-  // The Observed timeline and Mark context tiles read the same page the panel
-  // below already fetched; it hands it up rather than anyone reading twice.
-  const [observedForTiles, setObservedForTiles] = useState<ObservedTimeline | null>(null);
   // Tile 10 compares the stages this alpha actually runs in, on one calendar.
   const stageDrift = useApiRead(() => api.getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
@@ -1454,6 +1463,16 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   // G8: the observed timeline reads where the alpha is deployed; selected_environment is only the resolver default.
   const observedEnvs = deployedEnvironments(resourceState.value?.panels);
   const factsEnv: ObservedEnvironment = observedEnvs.includes(activityEnv) ? activityEnv : observedEnvs[0] ?? activityEnv;
+  // One read of the observed timeline for the whole screen: the panel renders
+  // it, and the Observed timeline and Mark context tiles draw from the same
+  // page. Neither waits on the other's tab being open.
+  const observedTick = usePollTick(PROJECTION_POLL_MS);
+  const observedState = useApiRead<ObservedTimeline>(
+    () => api.getObservedTimeline({ environment: factsEnv, subjectKind: "alpha", subjectId: alphaId, limit: 100 }),
+    [api, factsEnv, alphaId, realtime.refreshKey, observedTick],
+    { keepValue: true },
+  );
+  const observedForTiles = observedState.value;
   // G9 (EDS-11R1): the replay and the order funnel read the drained relation page set of the alpha's environment
   // Drains once the resource read has answered — ok or not: a subject whose resource is denied or absent still has its rows in the page set (env falls back to the rollup default)
   const relations = useRelationFacts(api, factsEnv, resourceState.status !== "loading");
@@ -1543,7 +1562,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       sessions={alphaSessions(scopedFacts)}
       accounting={alphaAccounting(scopedFacts)}
       activity={<AlphaActivityTile activity={activityState.value} transport={activityState.status} reason={activityState.reason} />}
-      observedTimeline={<ObservedTimelineLive api={api} environment={factsEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} onLoaded={setObservedForTiles} />}
+      observedTimeline={<ObservedTimelineLive api={api} environment={factsEnv} environments={observedEnvs.length > 0 ? observedEnvs : [activityEnv]} subjectKind="alpha" subjectId={alphaId} refreshKey={realtime.refreshKey} preloaded={observedState} />}
       reconciliation={alphaReconciliation(scopedFacts)}
       onLoadOlder={() => undefined}
       onOpenDeployment={(deployment) => navigate(deploymentHref(deployment))}

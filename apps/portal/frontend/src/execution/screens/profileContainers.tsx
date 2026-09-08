@@ -27,7 +27,7 @@ import type { PanelStatus } from "../contracts";
 import { StatusChip } from "../components/badges";
 import { utcStamp } from "../time";
 
-type Loaded<T> =
+export type Loaded<T> =
   | { status: "ok"; reason?: undefined; value: T }
   | { status: Exclude<PanelStatus, "ok">; reason?: string; value: null };
 
