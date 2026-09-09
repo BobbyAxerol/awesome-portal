@@ -5270,6 +5270,21 @@ Trading System change; the formal EDS-12 `PRODUCT_ACTIVE` decision still
 requires the separately defined sanitized browser/failure deployed-evidence
 packet and is not asserted from database rows alone.
 
+**Relation-scoped panel-state correction (2026-09-09):** the runtime profile
+envelope may truthfully remain `PARTIAL` when an unrelated source relation is
+unavailable (currently Sandbox `broker_account_sync_effective` exceeds the
+immutable Manager response budget).  The screen composer previously copied
+that envelope-level state onto every panel, so a panel backed by an
+`AVAILABLE`/`EMPTY` relation could be rendered as `partial` even though its
+own source contract was complete.  The composer now derives `panel_state` and
+`source_verification_state` from the panel's named capability states only;
+profile-level `PARTIAL` remains present in the envelope for qualification and
+analytics.  A regression test covers an `EMPTY` risk-grant panel, an
+`AVAILABLE` sizing panel and the independently typed broker-sync
+`UNAVAILABLE` panel.  This is a truth-preserving UI/BFF correction: it does
+not turn any source refusal into empty data, does not hide the profile gap,
+and does not relax the EDS-12 protected-main/deployed-evidence requirement.
+
 **Frontend audit-lock correction (2026-09-08):** the first protected-main
 release retry stopped before publication because the CI's required
 `npm audit --package-lock-only --audit-level=moderate` correctly rejected the
