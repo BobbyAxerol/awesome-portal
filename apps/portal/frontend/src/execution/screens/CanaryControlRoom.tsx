@@ -110,7 +110,9 @@ export function CanaryControlRoomScreen({
   const { now, j } = demoTick ?? { now: new Date(0), j: 0 };
   const secs = now.getTime() / 1000;
   const wsAge = `${(0.4 + (secs % 4.6)).toFixed(1)}s`;
-  const left = demoExitIn ?? "—";
+  // The demo tick's countdown; outside the reviewed demo there is none to show
+  // and the word says which of the two the reader is looking at.
+  const left = demoExitIn ?? "no exit countdown published";
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-canary">

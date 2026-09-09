@@ -332,7 +332,7 @@ export function OperationsQueueScreen({
                 {[
                   ["In this view", page?.filteredCount], ["Total", page?.totalCount], ["Need attention", attention], ["PARTIAL", rows.filter((r) => r.verificationResult === "PARTIAL").length],
                 ].map(([label, v]) => (
-                  <div className="exec-oq-kpi" key={String(label)}><div className="exec-oq-kpilabel" data-tone="mute">{String(label)}</div><div className="exec-oq-kpivalue" data-tone="ink">{v === null || v === undefined ? "—" : String(v)}</div></div>
+                  <div className="exec-oq-kpi" key={String(label)}><div className="exec-oq-kpilabel" data-tone="mute">{String(label)}</div><div className="exec-oq-kpivalue" data-tone="ink">{v === null || v === undefined ? <span className="exec-queue-dim">not published</span> : String(v)}</div></div>
                 ))}
               </div>
             )}

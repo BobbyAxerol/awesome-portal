@@ -62,12 +62,18 @@ describe("no dash stands in for an unpublished value", () => {
   });
 
   it("keeps every allowlisted file's dash to the one kind it documents", () => {
-    // An allowlist entry is not a licence for the whole file: each of these
-    // holds exactly one such dash, and a second one has to be argued for.
+    /*
+     * An allowlist entry is a licence for ONE line, not for the file.
+     *
+     * It was a file-level pass, and that is how `OperationsQueue.tsx` kept a
+     * second dash — the queue's KPI strip printing "—" for a count the server
+     * had not published — hidden behind the entry that covers its phase
+     * glyph. One line each, and a second has to be argued for here.
+     */
     for (const [file, reason] of Object.entries(ALLOWED)) {
       const body = readFileSync(join(root, file), "utf8");
       const hits = body.split("\n").filter((line) => /"—"|>—</.test(line)).length;
-      expect(hits, `${file} (${reason})`).toBeLessThanOrEqual(2);
+      expect(hits, `${file} (${reason})`).toBeLessThanOrEqual(file === "screens/PortfolioThreeSixty.tsx" ? 2 : 1);
     }
   });
 });

@@ -163,7 +163,7 @@ export function IncidentDetailScreen({
   const isAdmin = incident.actorRoles.includes("ADMIN");
   const gatesRows = smoke ? (resolved ? smoke.resolved.gates : smoke.gates) : [];
   const gatesDone = gatesRows.filter((g) => g.state === "done").length;
-  const gateCount = smoke ? `${gatesDone}/${gatesRows.length}` : gate ? (gate.eligible ? "OPEN" : `${gate.blockerCodes.length} blocked`) : "—";
+  const gateCount = smoke ? `${gatesDone}/${gatesRows.length}` : gate ? (gate.eligible ? "OPEN" : `${gate.blockerCodes.length} blocked`) : "gate not published";
   const opsRows = smoke ? (resolved ? smoke.resolved.ops : smoke.ops) : [];
   const budget = smoke?.resolveBudgetSeconds ?? 0;
   const left = Math.max(0, budget - live.openSeconds);

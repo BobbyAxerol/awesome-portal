@@ -3776,6 +3776,72 @@ probe có bấm, tốn nhất, để cuối.
    **0 link chết**. Đúng họ với lỗi "13 broken links" đã ghi ở §A22.3 — lần này
    bắt được trước khi báo.
 
+## A33. SAU 5 PHASE — ba chỗ chưa ký, gap còn lại, và codex đang làm gì (09-09)
+
+### A33.1 Ba chỗ **chưa ký được**, owner yêu cầu ghi lại
+
+| # | Chỗ | Vì sao chưa ký | Ký được khi nào |
+|---|---|---|---|
+| 1 | **Sandbox Certification** | 13 chỗ `—` đã sửa và **có test phủ**, nhưng dev **chưa từng chạy sandbox certification** nên màn chỉ ra khung rỗng (`len=2371`). Không có bằng chứng mắt trên dữ liệu thật | khi nguồn chạy một chu kỳ sandbox certification |
+| 2 | **Binding Detail** | Route `/broker-bindings/{id}` vừa được nối (BR-EX-72, đúng route mà prop của màn vẫn ghi). Dev **có** dữ liệu binding, nhưng tôi **chưa chụp riêng màn này** — 25 màn của sweep không có route `:bindingId` | một lượt chụp `/deployments/accounts` → mở một binding |
+| 3 | **Panel Conditional (Blotter)** | Chỉ ký được **trạng thái rỗng**: dev publish **0 conditional group**, nên panel mới chỉ chứng minh được câu "nguồn chưa phát hành nhóm nào" | khi nguồn phát hành một group thật, phải xem lại bảng legs và hai câu an toàn |
+
+### A33.2 Rà lại gap sau 5 phase
+
+| Kiểm | Kết quả hôm nay |
+|---|---|
+| §7.8 lệnh 3 — contract chưa đọc | **rỗng** |
+| Dấu gạch giả trong đường code thật | **0** — nhưng xem A33.3, guard vừa bắt thêm 3 chỗ |
+| Nút mờ không nêu lý do / 25 màn | **0** |
+| Nút mutation bấm thật | 12 nút · **0 write** |
+| Route được 25 màn gọi | **49/104** (gate tôi tự đặt là ≥57 — **không đạt**, §A32.5 giải thích từng route) |
+| Payload analytics / màn | **183 KB** (từ 4,06 MB) |
+
+### A33.3 Guard của chính tôi có lỗ, và nó giấu 3 chỗ
+
+`absentValues.test.ts` cho allowlist **tha cả file**, nên một file đã được tha
+vì *một* dấu gạch hợp lệ (glyph) thì dấu thứ hai đi lọt. Ba chỗ lọt:
+
+- `OperationsQueue.tsx` — dải **KPI của queue** in `—` khi count chưa publish
+  (`In this view` / `Total`). Đây là **vi phạm thật**, đứng ngay cạnh glyph
+  hợp lệ.
+- `IncidentDetail.tsx` — `gateCount` in `—` khi không có gate.
+- `CanaryControlRoom.tsx` — đồng hồ đếm ngược của demo.
+
+Đã sửa cả ba và **siết guard**: allowlist nay chỉ tha **một dòng** mỗi file
+(riêng heatmap tương quan hai dòng, vì nó có hai nhánh), thay vì tha cả file.
+
+### A33.4 Nhánh của codex — đọc rồi, và **nó ảnh hưởng tới tôi**
+
+`fix/stable-release-takeover-transition` (đã vào `main`, head `4291c5d`) chủ
+yếu là **mạch deploy/release**: giữ SSH channel khi rollout, giữ digest ảnh đã
+ký qua `sudo`, giữ loopback `127.0.0.1:18081`, nhận layout overlay bất biến,
+resume runtime bootstrap dở dang, và hai commit về keyring — commit cuối
+`4291c5d` **từ chối keyring runtime sai định dạng** thay vì bê nguyên giá trị
+hỏng sang release mới (`valid_keyring_json` kiểm JSON object + khoá active ≥32
+byte). Không đụng frontend.
+
+**Nhưng ba commit trong đó chạm code execution đang chạy, và nhánh tôi chưa
+có:**
+
+| Commit | Sửa gì | Nghĩa với màn của tôi |
+|---|---|---|
+| `617bcba` scope panel completeness to named relations | Bỏ `this.completeness === "PARTIAL"` khỏi điều kiện panel partial | Đây đúng là **Fix C** §16.3: một gap không liên quan (ví dụ broker sync của Sandbox) sẽ **không còn kéo mọi panel xuống PARTIAL**. Nhiều panel sẽ chuyển `partial → ready` |
+| `d832bd3` isolate typed source availability gaps | worker cô lập gap khả dụng theo kiểu | ảnh hưởng state màn đọc được |
+| `67ba5e8` isolate oversized projection relations | worker cô lập quan hệ quá khổ | ảnh hưởng quan hệ nào vào được projection |
+
+**Do đó: dev đang chạy control-api của nhánh tôi, chưa có ba commit này.** Mọi
+số state (`ready`/`partial`) tôi đo hôm nay là **trước Fix C**.
+
+Thử merge `origin/main` vào nhánh tôi trong một worktree tạm: **1 xung đột duy
+nhất**, ở file pin `eds12-release-qualification-v1/MANIFEST.sha256` (hai bên
+cùng re-pin `qualification.v1.json`); **`apps/` sạch tuyệt đối**. Giải bằng
+lấy bản của main rồi chạy lại `repin.py`.
+
+**Tôi không tự merge.** Lần trước merge `origin/main` vào nhánh này đã làm sập
+dev (sự cố ledger migration, §A2x). Việc này cần owner gật, và tôi làm từng
+bước có kiểm chứng.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
