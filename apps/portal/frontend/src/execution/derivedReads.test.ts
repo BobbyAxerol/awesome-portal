@@ -12,7 +12,7 @@ import {
   readConditionalGroup,
   readSourceHealthRead,
 } from "./derivedReads";
-import { APPROVAL_HISTORY, CONDITIONAL_GROUP, SOURCE_HEALTH_READ } from "./derivedReads.fixtures";
+import { APPROVAL_HISTORY, CONDITIONAL_GROUP, CONDITIONAL_GROUP_EMPTY, SOURCE_HEALTH_READ } from "./derivedReads.fixtures";
 import { createFixtureApi } from "./api/fixtureApi";
 
 describe("source health, read directly rather than inferred", () => {
@@ -79,5 +79,40 @@ describe("the port answers all four", () => {
     expect(typeof api.getConditionalGroup).toBe("function");
     const health = await api.getSourceHealthRead();
     expect(health.ok && health.value.profiles).toHaveLength(3);
+  });
+});
+
+describe("owner-approved wiring · the two panels must not misstate the Trading System", () => {
+  it("carries the group's own two safety sentences, and fails closed on both", () => {
+    const group = readConditionalGroup(CONDITIONAL_GROUP)!;
+    expect(group.currentStructureOnly).toBe(true);
+    expect(group.sourceSideEffectRequested).toBe(false);
+    expect(group.groupFound).toBe(true);
+    // Absent means "we cannot say it did not", for both.
+    const stripped = structuredClone(CONDITIONAL_GROUP) as Record<string, unknown>;
+    delete stripped.source_side_effect_requested;
+    delete (stripped.data as Record<string, unknown>).current_structure_only;
+    const guessed = readConditionalGroup(stripped)!;
+    expect(guessed.sourceSideEffectRequested).toBe(true);
+    expect(guessed.currentStructureOnly).toBe(true);
+  });
+
+  it("tells a missing group apart from a group with no legs", () => {
+    // Dev's real answer today. Drawing an empty leg table here would say the
+    // group exists — it does not.
+    const empty = readConditionalGroup(CONDITIONAL_GROUP_EMPTY)!;
+    expect(empty.groupFound).toBe(false);
+    expect(empty.legs).toEqual([]);
+    expect(empty.envelopeState).toBe("EMPTY");
+    expect(empty.reasonCode).toBe("EDS05_CONDITIONAL_GROUP_NOT_FOUND");
+  });
+
+  it("reads the activation capabilities through the port", async () => {
+    const result = await createFixtureApi().getActivationCapabilities();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.sourceIntegrationState).toBe("DARK");
+      expect(result.value.capabilities.length).toBeGreaterThan(0);
+    }
   });
 });

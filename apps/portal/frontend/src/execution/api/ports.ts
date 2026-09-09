@@ -31,6 +31,7 @@ import type {
 } from "../analytics";
 import type { ConditionalGroupRead, SourceHealthRead } from "../derivedReads";
 import type { RuntimeManifest } from "../runtimeManifest";
+import type { StagedActivation } from "../stagedActivation";
 import type { ScreenContract } from "../screenContracts";
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
@@ -490,6 +491,12 @@ export interface ExecutionApi {
   getApprovalHistory(): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>>;
   /** `GET /derivations/conditional-groups/{groupId}` — the legs of one group. */
   getConditionalGroup(groupId: string, environment: string): Promise<Result<ConditionalGroupRead>>;
+  /**
+   * `GET /activation/capabilities` — what the owner has switched on.
+   *
+   * A read, never a grant: nothing in this Portal changes an activation.
+   */
+  getActivationCapabilities(): Promise<Result<StagedActivation>>;
   getRuntimeManifest(): Promise<Result<RuntimeManifest>>;
   /**
    * `GET /api/v1/execution/screen-contracts`

@@ -4360,6 +4360,92 @@ Cùng họ với ba lỗi ở §A15. Đã sửa thành `!== false`, thêm test, 
 cờ enable mới (`source_enabled`, `runtime_enabled`) đọc `=== true` — vắng là
 **tắt**, vì bật mới là điều phải chứng minh.
 
+### A32.7 OWNER DUYỆT (a) VÀ (b) — nối hai panel, và bấm nút thật trên dev (09-09)
+
+Owner trả lời hai câu treo: **(a) cho phép bấm nút mutation thật trên dev**;
+**(b) nối `conditional-groups` và `activation/capabilities` vào màn, "miễn sao
+hiển thị không sai hành vi lệnh của Trading System, clear, rõ ràng"**.
+
+#### (b) Hai panel, và đúng bốn câu giữ cho chúng không nói sai
+
+**Blotter · Conditional group structure.** Panel đọc
+`/derivations/conditional-groups/{id}?environment=`. Payload thật của dev mang
+hai trường mà **thiếu chúng thì panel này thành nói sai**, nên cả hai được in
+ra ngay dưới tiêu đề:
+
+| Trường | Câu in trên màn | Vì sao bắt buộc |
+|---|---|---|
+| `current_structure_only` | *"current structure only — not the group's history, and not a record of what executed"* | Một bảng legs không kèm câu này mời người đọc hiểu là "đây là các leg **đã chạy**" |
+| `source_side_effect_requested` | *"reading this asked the Trading System to do nothing"* | Đây là câu về **hành vi lệnh**; nếu server nói `true` thì panel in đậm cảnh báo, và trường vắng mặt đọc là **`true`** (fail-closed) |
+
+Thêm hai phân biệt nữa: **"nguồn không có group id này"** (dev hôm nay:
+`EDS05_CONDITIONAL_GROUP_NOT_FOUND`) **khác** với "group có mà không có leg" —
+vẽ bảng rỗng cho ca thứ nhất là nói group tồn tại; và panel ghi rõ
+*"TRADING_SYSTEM record, shown read-only — the Portal issues no command from
+this panel"*.
+
+**Admin drawer · Staged activation.** Panel đọc `/activation/capabilities` và
+đứng **ngay cạnh dòng command authority**, vì đó là hai nửa của cùng một câu
+trả lời cho "vì sao tôi không chạy được lệnh này": relay (authority) và **cái
+owner đã bật** (activation). Câu đầu tiên của panel: *"this Portal switches
+nothing on or off here; it reads what the server publishes"*. Mỗi capability
+hiện `effective` / `desired` và **lý do đầu tiên** khiến nó chưa sống, theo
+đúng thứ tự quyết định: kill switch → source → runtime.
+
+Cờ đọc fail-closed đúng luật đã đăng ký: `kill_switch_engaged` vắng = **đang
+bật**; `source_enabled`/`runtime_enabled` vắng = **tắt**;
+`runtime_activation_requested`/`source_side_effect_requested` vắng = **có thể
+đã xin**.
+
+#### (a) Bấm nút thật trên dev — 12 nút, **0 nút ghi được gì**
+
+Owner cho phép, nên probe bấm từng nút sáng có nhãn mutation trên 25 màn, mỗi
+nút **một lần**, và **tải lại màn giữa hai lần bấm** để cái này không dọn
+đường cho cái kia.
+
+| Chỉ số | Kết quả |
+|---|---|
+| Nút đã bấm | **12** |
+| Nút phát sinh `POST/PUT/PATCH/DELETE` | **0** |
+| Write chạm dev trong suốt lượt đo (đọc log control-api) | **0** |
+
+Bấm "Create portfolio" (lớp **MUTATION · R1 · paper**) mở đúng khung tác vụ và
+in **lý do của chính server**:
+
+> `reason SOURCE_ROUTE_MAPPING_AMBIGUOUS · The server has not connected this task to a runnable route; nothing here can run`
+> `Authority ADMIN · R1_PAPER_MUTATION` · `Ceremony step-up · PLAN · APPLY`
+
+Đây là fail-closed đang giữ đúng: relay `LOCAL_R0_ONLY`, authority
+`FAIL_CLOSED`, nên **không nút nào trong Portal phát được lệnh** — và màn nói
+ra bằng chữ của server thay vì im lặng.
+
+**Một lỗi đo của tôi trong chính lượt này:** cột "outcome" ban đầu in
+`→ Planning` cho **mọi** nút. Đó không phải câu màn hình trả lời — regex của
+tôi bắt trúng mục nav **PLANNING** ở sidebar. Đã kiểm lại bằng mắt (ảnh chụp
+toàn trang + dump text trước/sau khi bấm) và thay bằng câu thật ở trên.
+
+#### Một chỗ nối hỏng, tự bắt bằng mắt
+
+Panel conditional **không hiện được trên dev**: chip `Conditional` chỉ xuất
+hiện khi nguồn có ≥1 nhóm, mà dev không có nhóm nào — nên câu trả lời trung
+thực cũng biến mất theo. Đúng thứ luật §A15 5B cấm ("không màn nào được biến
+mất vì rỗng"). Đã cho chip **luôn hiện khi quan hệ trả lời**, đếm trung thực
+(0), và panel nói thẳng. Đo lại sau khi sửa:
+
+> `Conditional groups`
+> `TRADING_SYSTEM record, shown read-only — the Portal issues no command from this panel`
+> `the source published no conditional order group in this page set`
+
+Panel activation trên dev (ảnh chụp toàn trang, ngay dưới dòng command authority):
+
+> `Staged activation (owner-controlled) — this Portal switches nothing on or off here; it reads what the server publishes`
+> `source integration DARK · no runtime activation requested · no source side effect requested · no owner artifact imported`
+> 7 capability (`PROJECTION` · `QUERY` · `SSE` · `COMMAND_R1..R4`), tất cả **kill switch engaged**
+
+**Một dấu gạch tôi tự viết ra rồi tự bắt:** nhánh "nguồn không publish group
+nào" tôi đặt `groupId: "—"`, tức là đúng thứ phase 2 vừa dọn. Đã đổi thành
+`null` và tiêu đề nói "Conditional groups" thay vì bịa một id.
+
 ### A32.1 Điều owner cần phê duyệt
 
 1. **Thứ tự 1→5 như trên** có đúng ý không. (Tôi xếp "sửa cái đang hỏng" lên

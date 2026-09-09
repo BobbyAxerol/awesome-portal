@@ -37,6 +37,7 @@ import { utcStamp } from "../time";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { planApplicable, planOutcomeText, type CommandPlan } from "../commandPlan";
+import { activationSentence, type StagedActivation } from "../stagedActivation";
 import type { PanelStatus } from "../contracts";
 
 /* ---------------------------------------------------------------------------
@@ -422,6 +423,7 @@ export function AdminActionDrawerScreen({
   authority = null,
   journal = null,
   crossEvidence = null,
+  activation = null,
   onRunTask,
   children,
 }: {
@@ -453,6 +455,12 @@ export function AdminActionDrawerScreen({
   journal?: { state: string | null; reasonCode: string | null; rows: readonly JournalRow[] } | null;
   /** Goal 9: the composition's other two blocks, which this screen fetched and never showed. */
   crossEvidence?: ReactNode;
+  /**
+   * Phase 5 · `execution.staged-activation-capabilities.v1`, read from
+   * `/activation/capabilities`. It is a **state display**: nothing here can be
+   * switched from this Portal, and the panel says so in as many words.
+   */
+  activation?: { read: StagedActivation | null; status: PanelStatus; reason?: string } | null;
   /** Present only on the product route; the server still classifies authority. */
   onRunTask?: (taskId: string, params: Readonly<Record<string, string>>) => Promise<TaskRunOutcome>;
   children?: ReactNode;
@@ -604,6 +612,66 @@ export function AdminActionDrawerScreen({
                       ? "a CONNECTED task can be run through plan → apply → verify"
                       : "no task can be run from this Portal until the relay is opened; the catalogue below is what would run"}
                   </p>
+                  {activation ? (
+                    <section className="exec-cli-activation" aria-label="Staged activation capabilities">
+                      <p className="exec-cli-hint">
+                        <b>Staged activation (owner-controlled)</b>
+                        {" — "}
+                        {/*
+                          * The sentence that stops this panel being read as a
+                          * control. Activation is an owner action taken
+                          * outside the Portal; this is a read of what the
+                          * server says the state is, and nothing on this
+                          * screen can change it.
+                          */}
+                        this Portal switches nothing on or off here; it reads what the server publishes
+                      </p>
+                      {activation.status !== "ok" || !activation.read ? (
+                        <PanelState
+                          status={activation.status === "ok" ? "unavailable" : activation.status}
+                          reason={activation.reason ?? "The activation capabilities could not be read."}
+                        />
+                      ) : (
+                        <>
+                          <p className="exec-blotter-note">
+                            source integration {activation.read.sourceIntegrationState ?? "not published"}
+                            {" · "}
+                            {activation.read.runtimeActivationRequested
+                              ? "a runtime activation may have been requested"
+                              : "no runtime activation requested"}
+                            {" · "}
+                            {activation.read.sourceSideEffectRequested
+                              ? <b data-tone="bad">a source side effect may have been requested</b>
+                              : "no source side effect requested"}
+                            {" · "}
+                            {activation.read.ownerArtifactImported ? "owner artifact imported" : "no owner artifact imported"}
+                          </p>
+                          {activation.read.capabilities.length === 0 ? (
+                            <PanelState status="empty" reason="the server published no capability row" />
+                          ) : (
+                            <table className="exec-360-sync">
+                              <caption className="exec-blotter-note">
+                                what each capability is doing now, and the first reason it is not live
+                              </caption>
+                              <thead>
+                                <tr><th scope="col">capability</th><th scope="col">effective</th><th scope="col">desired</th><th scope="col">state</th></tr>
+                              </thead>
+                              <tbody>
+                                {activation.read.capabilities.map((capability) => (
+                                  <tr key={capability.capabilityKey}>
+                                    <th scope="row">{capability.capabilityKey}</th>
+                                    <td>{capability.effectiveProfile ?? <span className="exec-blotter-note">not published</span>}</td>
+                                    <td>{capability.desiredProfile ?? <span className="exec-blotter-note">not published</span>}</td>
+                                    <td data-tone={capability.killSwitchEngaged ? "warn" : undefined}>{activationSentence(capability)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                        </>
+                      )}
+                    </section>
+                  ) : null}
                   {/* Classification is the other half of the answer, and it is a
                       filter rather than a sentence: an operator looking for
                       something they can actually run should be able to ask. */}

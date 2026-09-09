@@ -46,13 +46,132 @@ export const CONDITIONAL_GROUP = {
   schema_version: "execution.derivation.conditional-legs.v1",
   logical_operation_id: "executionConditionalLegsV1",
   record_authority: "PORTAL_CONTROL",
+  state: "AVAILABLE",
+  reason_code: null,
+  source_side_effect_requested: false,
   data: {
     group_id: "1",
-    contingency: "OCO",
-    state: "WORKING",
+    group: { contingency: "OCO", state: "WORKING" },
+    current_structure_only: true,
     legs: [
       { leg_id: "leg_1", role: "TAKE_PROFIT", order_id: "ord_1", state: "WORKING" },
       { leg_id: "leg_2", role: "STOP", order_id: "ord_2", state: "WORKING" },
     ],
   },
+};
+
+/**
+ * What dev actually answers today: the relation holds no conditional group, so
+ * the envelope says EMPTY and names the reason. The panel must show this as
+ * "the source published no such group", never as a group that exists and has
+ * no legs.
+ */
+export const CONDITIONAL_GROUP_EMPTY = {
+  schema_version: "execution.derivation.conditional-legs.v1",
+  logical_operation_id: "executionConditionalLegsV1",
+  record_authority: "PORTAL_CONTROL",
+  source_authority: "TRADING_SYSTEM",
+  environment: "paper",
+  state: "EMPTY",
+  reason_code: "EDS05_CONDITIONAL_GROUP_NOT_FOUND",
+  source_side_effect_requested: false,
+  data: { group_id: "1", group: null, legs: [], current_structure_only: true },
+};
+
+/** The canonical published activation fixture (packages/contracts/fixtures). */
+export const ACTIVATION_CAPABILITIES = {
+  "schema_version": "execution.staged-activation-capabilities.v1",
+  "record_authority": "PORTAL",
+  "delivery_profile": "fixture",
+  "source_integration_state": "DARK",
+  "runtime_activation_requested": false,
+  "source_side_effect_requested": false,
+  "owner_artifact_imported": false,
+  "read_at": "2026-08-26T15:00:00.000Z",
+  "actor": {
+    "user_id": "usr_n13a",
+    "username": "bobby",
+    "roles": [
+      "ADMIN"
+    ]
+  },
+  "capabilities": [
+    {
+      "capability_key": "PROJECTION",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "updated_at": null
+    },
+    {
+      "capability_key": "QUERY",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "updated_at": null
+    },
+    {
+      "capability_key": "SSE",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "updated_at": null
+    },
+    {
+      "capability_key": "COMMAND_R1",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "updated_at": null
+    },
+    {
+      "capability_key": "COMMAND_R2",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "updated_at": null
+    },
+    {
+      "capability_key": "COMMAND_R3",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "updated_at": null
+    },
+    {
+      "capability_key": "COMMAND_R4",
+      "effective_profile": "fixture",
+      "desired_profile": "fixture",
+      "capability_version": 1,
+      "source_enabled": false,
+      "runtime_enabled": false,
+      "kill_switch_engaged": true,
+      "last_plan_id": null,
+      "updated_at": null
+    }
+  ]
 };

@@ -84,6 +84,7 @@ import {
   type SourceHealthRead,
 } from "../derivedReads";
 import { readRuntimeManifest } from "../runtimeManifest";
+import { readStagedActivation, type StagedActivation } from "../stagedActivation";
 import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
@@ -319,6 +320,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       readQueryAnalytics,
       "The query-analytics envelope",
     );
+  const getActivationCapabilities = (): Promise<Result<StagedActivation>> =>
+    readGet("/activation/capabilities", readStagedActivation, "The activation capabilities");
   const getSourceHealthRead = (): Promise<Result<SourceHealthRead>> =>
     readGet("/derivations/source-health", readSourceHealthRead, "The source health envelope");
   const getApprovalHistory = (): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>> =>
@@ -537,6 +540,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getBlotterProfile,
     getPaperWorkbenchProfile,
     getQueryAnalytics,
+    getActivationCapabilities,
     getSourceHealthRead,
     getApprovalHistory,
     getConditionalGroup,

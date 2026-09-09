@@ -37,6 +37,7 @@ import { AggregatesFooter } from "../components/AggregatesFooter";
 import type { CurrencyAggregate } from "../blotterAggregates";
 import { useState } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
+import type { ConditionalGroupRead } from "../derivedReads";
 import { PanelState } from "../components/states";
 import { Money, Qty } from "../components/cells";
 import { formatExact } from "../formatExact";
@@ -94,6 +95,8 @@ export interface BlotterRow {
 export interface BlotterGroups {
   brackets: ReadonlySet<string>;
   conditional: ReadonlySet<string>;
+  /** Phase 5: the group ids the source published, for the structure drill. */
+  conditionalGroupIds?: ReadonlySet<string>;
 }
 
 export const BLOTTER_FILTERS: readonly BlotterFilter[] = [
@@ -337,6 +340,19 @@ export interface FullBlotterProps {
   aggregates?: readonly CurrencyAggregate[] | null;  /** Reviewed hi-fi demo bundle — the lab passes it; the product never does. */
   /** Exact counts over the whole server population, keyed by wire status. */
   statusCounts?: Readonly<Record<string, number>> | null;
+  /**
+   * Phase 5 · the legs of one conditional group, read from
+   * `/derivations/conditional-groups/{id}` when the operator opens the
+   * Conditional view. `null` = the container asked for none.
+   */
+  conditionalGroup?: {
+    /** `null` when the source published no group at all — there is no id to name. */
+    groupId: string | null;
+    read: ConditionalGroupRead | null;
+    /** `PanelState` refuses "ok" by type: it is what stands in for data. */
+    status: Exclude<PanelStatus, "ok"> | "ok";
+    reason?: string;
+  } | null;
   demo?: BlotterDemo | null;
   demoTick?: BlotterTick;
 }
@@ -442,6 +458,7 @@ export function FullBlotter({
   onExpand,
   aggregates,
   statusCounts = null,
+  conditionalGroup = null,
   demo,
   demoTick,
   realtimePhase = null,
@@ -580,7 +597,18 @@ export function FullBlotter({
             {exported ? <span className="exec-bl-note" role="status">{exported}</span> : null}
           </div>
           <div className="exec-bl-filters" role="group" aria-label="Order status">
-            {HIFI_FILTERS.filter((f) => !f.smokeOnly || smoke || (groupIds && (f.key === "BRACKETS" ? groupIds.brackets.size : groupIds.conditional.size) > 0)).map((f) => {
+            {/*
+              * Conditional stays reachable even at zero.
+              *
+              * It used to disappear when the source published no group, so the
+              * operator asking "what conditional structure is there" got no
+              * control at all — and no control reads as "nothing to ask",
+              * which is a different claim from "the source published none".
+              * The chip's count stays honest (0) and the panel below says
+              * which of the two it is. Brackets keeps its old rule; it has no
+              * such panel to explain itself with.
+              */}
+            {HIFI_FILTERS.filter((f) => !f.smokeOnly || smoke || (f.key === "CONDITIONAL" ? groupIds !== null : (groupIds && groupIds.brackets.size > 0))).map((f) => {
               const n = counts[f.key as string]
                 ?? (groupCounts && !smoke && (f.key === "BRACKETS" || f.key === "CONDITIONAL") ? groupCounts[f.key] : undefined);
               const active = activeKey === f.key;
@@ -596,6 +624,71 @@ export function FullBlotter({
                 : "applied by the server — the chips re-query, they do not hide loaded rows"}
             </Hint>
           </div>
+          {view === "CONDITIONAL" && conditionalGroup ? (
+            <section className="exec-bl-cond" aria-label="Conditional group structure">
+              <h3 className="exec-section-title">
+                {conditionalGroup.groupId ? `Conditional group ${conditionalGroup.groupId}` : "Conditional groups"}
+              </h3>
+              {/*
+                * Two sentences the Trading System's own payload publishes, and
+                * this panel would be misleading without either: what it is
+                * showing (the structure as it stands, not what the group did),
+                * and what reading it did (nothing).
+                */}
+              <p className="exec-blotter-note">
+                {conditionalGroup.read
+                  ? <>
+                      {conditionalGroup.read.currentStructureOnly
+                        ? "current structure only — not the group's history, and not a record of what executed"
+                        : "the source did not say whether this is current structure or history"}
+                      {" · "}
+                      {conditionalGroup.read.sourceSideEffectRequested
+                        ? <b data-tone="bad">this read asked the Trading System to act</b>
+                        : "reading this asked the Trading System to do nothing"}
+                      {" · TRADING_SYSTEM record, shown read-only — the Portal issues no command from this panel"}
+                    </>
+                  : "TRADING_SYSTEM record, shown read-only — the Portal issues no command from this panel"}
+              </p>
+              {conditionalGroup.status !== "ok" ? (
+                <PanelState status={conditionalGroup.status as Exclude<PanelStatus, "ok">} reason={conditionalGroup.reason} />
+              ) : !conditionalGroup.read ? (
+                <PanelState status="unavailable" reason="The conditional group response could not be read." />
+              ) : !conditionalGroup.read.groupFound ? (
+                /*
+                 * The distinction dev makes today: the source holds no group
+                 * with this id. That is not "a group with no legs", and
+                 * drawing an empty leg table would say the second.
+                 */
+                <PanelState
+                  status="empty"
+                  reason={`the source published no conditional group ${conditionalGroup.groupId ?? "in this page set"}${conditionalGroup.read.reasonCode ? ` · ${conditionalGroup.read.reasonCode}` : ""}`}
+                />
+              ) : conditionalGroup.read.legs.length === 0 ? (
+                <PanelState status="empty" reason="the group exists and the source published no leg for it" />
+              ) : (
+                <table className="exec-360-sync">
+                  <caption className="exec-blotter-note">
+                    {conditionalGroup.read.contingency ?? "contingency not published"}
+                    {conditionalGroup.read.state ? ` · ${conditionalGroup.read.state}` : " · state not published"}
+                    {` · ${conditionalGroup.read.legs.length} legs`}
+                  </caption>
+                  <thead>
+                    <tr><th scope="col">leg</th><th scope="col">role</th><th scope="col">order</th><th scope="col">state</th></tr>
+                  </thead>
+                  <tbody>
+                    {conditionalGroup.read.legs.map((leg) => (
+                      <tr key={leg.legId}>
+                        <th scope="row">{leg.legId}</th>
+                        <td>{leg.role ?? <span className="exec-blotter-note">role not published</span>}</td>
+                        <td>{leg.orderId ?? <span className="exec-blotter-note">order not published</span>}</td>
+                        <td>{leg.state ?? <span className="exec-blotter-note">state not published</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
+          ) : null}
           {crossFilter ? (
             <div className="exec-bl-cross">
               <button type="button" className="exec-bl-crosschip" onClick={onResetCrossFilter} aria-label={`Reset the cross-filter ${crossFilter}`}>✕ {smoke ? smoke.crossFilter.label : crossFilter}</button>

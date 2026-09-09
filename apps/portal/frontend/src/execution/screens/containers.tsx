@@ -1025,6 +1025,7 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
   // The drawer's own composition: the command authority that explains why every
   // control here is dark, and the redacted journal of what has been run.
   const composition = useAnalyticsRead(() => api.getOperationalComposition("admin-action-drawer"), [api]);
+  const activation = useAnalyticsRead(() => api.getActivationCapabilities(), [api]);
   return (
     <AdminActionDrawerScreen
       catalogue={state.value}
@@ -1044,6 +1045,13 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
       tasksReason={taskState.reason}
       authority={composition.value?.commandAuthority ?? null}
       journal={composition.value?.journal ?? null}
+      /*
+       * Phase 5: the staged-activation state, beside the command authority it
+       * explains. The drawer is where an operator asks "why can I not run
+       * this", and the answer has two halves — the relay (authority, above)
+       * and what the owner has switched on (this). Neither is a control.
+       */
+      activation={{ read: activation.value ?? null, status: activation.status, reason: activation.reason }}
       // Goal 9: the drawer already renders the authority and the journal of the
       // four blocks it fetches. Only the two nobody was showing are added here
       // — passing the whole set would print the journal twice, which the

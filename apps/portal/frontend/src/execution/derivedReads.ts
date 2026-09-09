@@ -112,9 +112,27 @@ export interface ConditionalGroupLeg {
 
 export interface ConditionalGroupRead {
   groupId: string;
+  /** `null` when the source holds no such group — not the same as a group with no legs. */
   contingency: string | null;
   state: string | null;
+  /** The envelope's own state word: `AVAILABLE`, `EMPTY`, `UNAVAILABLE`. */
+  envelopeState: string | null;
+  reasonCode: string | null;
+  groupFound: boolean;
   legs: readonly ConditionalGroupLeg[];
+  /**
+   * The two facts that decide whether this panel can mislead an operator about
+   * the Trading System, so both are read and both are shown:
+   *
+   *  * `currentStructureOnly` — this is the group's **structure right now**,
+   *    not the history of how it got here. A panel that shows legs without
+   *    saying so invites "these are the legs that ran".
+   *  * `sourceSideEffectRequested` — whether reading it asked the Trading
+   *    System to do anything. It must read `false`, and the screen says so
+   *    rather than leaving the reader to assume it.
+   */
+  currentStructureOnly: boolean;
+  sourceSideEffectRequested: boolean;
 }
 
 export function readConditionalGroup(raw: unknown): ConditionalGroupRead | null {
@@ -123,11 +141,21 @@ export function readConditionalGroup(raw: unknown): ConditionalGroupRead | null 
   const data = obj(body.data) ?? body;
   const groupId = str(data.group_id) ?? str(body.group_id);
   if (!groupId) return null;
+  const group = obj(data.group);
   const legs = Array.isArray(data.legs) ? data.legs : [];
   return {
     groupId,
-    contingency: str(data.contingency),
-    state: str(data.state),
+    contingency: group ? str(group.contingency) : str(data.contingency),
+    state: group ? str(group.state) : str(data.state),
+    envelopeState: str(body.state),
+    reasonCode: str(body.reason_code),
+    groupFound: group !== null,
+    // `!== false`: a claim that nothing reached the Trading System is one this
+    // reader must never make on a missing field.
+    sourceSideEffectRequested: body.source_side_effect_requested !== false,
+    // `!== false` again: assuming a panel shows full history when the field is
+    // absent is the flattering reading; assume the narrow one.
+    currentStructureOnly: data.current_structure_only !== false,
     legs: legs.flatMap((entry) => {
       const leg = obj(entry);
       const legId = leg && (str(leg.leg_id) ?? str(leg.client_order_id) ?? str(leg.order_id));

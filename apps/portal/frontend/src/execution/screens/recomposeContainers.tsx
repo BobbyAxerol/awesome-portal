@@ -471,6 +471,24 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
     // itself on every delta and re-drew, which reads as the table failing.
     { keepValue: true });
   const blotterGroups = useBlotterGroups(api, "paper");
+  /*
+   * Phase 5 · the conditional-group drill.
+   *
+   * The first group id the source published, read from
+   * `/derivations/conditional-groups/{id}`. On dev the relation holds none, so
+   * `groupId` is null and no request is made — the panel then says the source
+   * published no group rather than showing a group with no legs.
+   */
+  const conditionalGroupId = useMemo(
+    () => [...(blotterGroups?.conditionalGroupIds ?? [])].sort()[0] ?? null,
+    [blotterGroups],
+  );
+  const conditionalGroup = useApiRead(
+    () => (conditionalGroupId
+      ? api.getConditionalGroup(conditionalGroupId, "paper")
+      : Promise.resolve({ ok: true as const, value: null })),
+    [api, conditionalGroupId],
+  );
   const [expanded, setExpanded] = useState<string | null>(null);
   const [funnel, setFunnel] = useState<{ orderId: string; funnel: OrderFunnel | null; status: PanelStatus; reason?: string } | null>(null);
   const onExpand = useCallback(
@@ -537,6 +555,19 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
       aggregates={null}
       statusCounts={statusCounts}
       groups={blotterGroups}
+      conditionalGroup={conditionalGroupId
+        ? {
+            groupId: conditionalGroupId,
+            read: conditionalGroup.value ?? null,
+            status: conditionalGroup.status,
+            reason: conditionalGroup.reason,
+          }
+        : {
+            groupId: null,
+            read: null,
+            status: "empty",
+            reason: "the source published no conditional order group in this page set",
+          }}
       status={state.status}
       reason={state.reason}
     />
@@ -579,6 +610,10 @@ function useBlotterGroups(api: ExecutionApi, environment: ObservedEnvironment): 
     return {
       brackets: ids(value.facts.order_brackets, ["entry_client_order_id", "entry_order_id"]),
       conditional: ids(value.facts.conditional_order_group_legs, ["client_order_id", "order_id"]),
+      // Phase 5: the group ids themselves, which the chip never needed and the
+      // drill does. Dev publishes none today, and the panel says exactly that
+      // rather than drawing an empty group.
+      conditionalGroupIds: ids(value.facts.conditional_order_group_legs, ["group_id", "conditional_order_group_id"]),
     };
   }, [relations.value]);
 }

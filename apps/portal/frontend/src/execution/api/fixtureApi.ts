@@ -39,6 +39,8 @@ import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetai
 import { readApprovalHistoryEnvelope, readConditionalGroup, readSourceHealthRead } from "../derivedReads";
 import { APPROVAL_HISTORY, CONDITIONAL_GROUP, SOURCE_HEALTH_READ } from "../derivedReads.fixtures";
 import { readRuntimeManifest } from "../runtimeManifest";
+import { readStagedActivation } from "../stagedActivation";
+import { ACTIVATION_CAPABILITIES } from "../derivedReads.fixtures";
 import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import { SCREEN_CONTRACTS } from "../screenContracts.fixtures";
 import {
@@ -884,6 +886,13 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return correlation && envelope
         ? { ok: true as const, value: { correlation, envelope } }
         : unavailable("The correlation response could not be read.");
+    },
+
+    async getActivationCapabilities() {
+      const blocked = gate<never>("getActivationCapabilities");
+      if (blocked) return blocked as Result<never>;
+      const value = readStagedActivation(ACTIVATION_CAPABILITIES);
+      return value ? { ok: true as const, value } : unavailable("The activation capabilities could not be read.");
     },
 
     async getSourceHealthRead() {
