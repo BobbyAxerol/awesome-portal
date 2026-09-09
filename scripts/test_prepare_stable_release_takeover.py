@@ -241,6 +241,25 @@ class StableTakeoverTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("durable service portal-postgres", result.stderr)
 
+    def test_release_layout_overlay_paths_remain_accepted(self):
+        release_layout = fixture()
+        release_files = ",".join(
+            f"/srv/portal/releases/ab891c56/compose/{pathlib.PurePosixPath(name).name}"
+            for name in (
+                "compose.production.yaml",
+                "compose.production.stable-runtime.yaml",
+                "deploy/compose.execution-current-source.yaml",
+                "deploy/compose.execution-local-projection.yaml",
+                "deploy/compose.execution-manager-analytics.yaml",
+                "deploy/compose.execution-manager-realtime.yaml",
+            )
+        )
+        release_layout["containers"]["control-api"]["Config"]["Labels"][
+            "com.docker.compose.project.config_files"
+        ] = release_files
+        result, _ = self.run_helper(release_layout)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

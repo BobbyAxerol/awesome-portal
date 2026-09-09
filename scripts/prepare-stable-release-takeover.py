@@ -332,7 +332,21 @@ def assert_identity(
                 fail(f"stable durable service {service} must remain running for partial resume")
 
     config_files = labels(containers["control-api"]).get("com.docker.compose.project.config_files", "").split(",")
-    if not all(any(item.endswith(expected) for item in config_files) for expected in REQUIRED_EXECUTION_OVERLAYS):
+    # Compose records absolute config paths.  The legacy stack used
+    # `deploy/...`, while an immutable release records the same files under
+    # `/srv/portal/releases/<commit>/compose/`.  Authority is the exact
+    # basename, never a substring or a caller-provided path; this preserves
+    # the four active overlays across the stable transition without binding
+    # the gate to one release directory layout.
+    observed_overlay_names = {
+        pathlib.PurePosixPath(item.strip()).name
+        for item in config_files
+        if item.strip()
+    }
+    expected_overlay_names = {
+        pathlib.PurePosixPath(item).name for item in REQUIRED_EXECUTION_OVERLAYS
+    }
+    if not expected_overlay_names.issubset(observed_overlay_names):
         fail("stable execution overlay graph is incomplete; refusing to drop an active overlay")
 
     ports = containers["portal-web"].get("NetworkSettings", {}).get("Ports", {})
