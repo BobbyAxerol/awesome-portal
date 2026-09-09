@@ -154,3 +154,22 @@ export function candleProvenanceLine(payload: MarketContextCandles): string {
   }
   return parts.join(" · ");
 }
+
+/**
+ * What a panel should say when the Trading System's series is refused.
+ *
+ * `PENDING_MARKET_CONTEXT_ADAPTER` on its own tells a reader nothing they can
+ * act on. Measured against dev on 2026-09-09: the Trading System publishes 54
+ * named operations and not one of them is a market or candle operation, so the
+ * intake gate in `market-context.intake.ts` is not an unflipped switch — it is
+ * guarding a source that does not exist upstream yet. Accepting an "owner
+ * return" would mean pinning the digests of a return nobody made.
+ *
+ * So the panel says the part that changes what the reader does: these bars are
+ * the venue's, and nothing is missing from the chart in front of them.
+ */
+export function candleRefusalLine(reason: string | null | undefined): string | null {
+  if (!reason) return null;
+  if (!reason.includes("PENDING_MARKET_CONTEXT_ADAPTER")) return reason;
+  return "Soon · PENDING_MARKET_CONTEXT_ADAPTER — the Trading System publishes no market-data operation yet; these bars are the venue's public klines";
+}

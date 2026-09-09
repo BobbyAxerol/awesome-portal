@@ -2,6 +2,7 @@
  * The hover box shows the value the reader came for, and says the stamp once.
  */
 import { describe, expect, it } from "vitest";
+import { baseOption } from "../charts/theme";
 
 import { chartTooltip, tooltipStamp } from "./chartTooltip";
 
@@ -45,5 +46,29 @@ describe("the box", () => {
   it("drops the head entirely when a chart has no x value to name", () => {
     const html = chartTooltip({ rows: [{ label: "a", value: "1" }] });
     expect(html.startsWith("<table")).toBe(true);
+  });
+});
+
+describe("the hover box is the same box on every chart", () => {
+  it("keeps the themed styling when a caller only asks for a trigger", () => {
+    // The histogram, bar and heatmap charts passed `tooltip: { trigger: "axis",
+    // axisPointer: { type: "shadow" } }`, which replaced the whole themed block
+    // and left the browser default: a white box with 14px sans, on a dark
+    // console, larger than the value it was explaining.
+    const option = baseOption({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" } } }) as {
+      tooltip: { backgroundColor?: string; textStyle?: { fontSize?: number; fontFamily?: string }; axisPointer?: { type?: string; lineStyle?: unknown } };
+    };
+    expect(option.tooltip.backgroundColor).toBeTruthy();
+    expect(option.tooltip.textStyle?.fontSize).toBe(11);
+    expect(option.tooltip.textStyle?.fontFamily).toMatch(/Mono/);
+  });
+
+  it("still honours the field the caller actually named", () => {
+    const option = baseOption({ tooltip: { axisPointer: { type: "shadow" } } }) as {
+      tooltip: { axisPointer?: { type?: string; lineStyle?: unknown } };
+    };
+    expect(option.tooltip.axisPointer?.type).toBe("shadow");
+    // and keeps the themed parts of the pointer it did not name
+    expect(option.tooltip.axisPointer?.lineStyle).toBeTruthy();
   });
 });

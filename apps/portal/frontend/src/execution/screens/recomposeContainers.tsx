@@ -41,7 +41,7 @@ import type { BlotterGroups } from "./FullBlotter";
 import { useRelationFacts, type RelationFactsState } from "../useRelationFacts";
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
-import { candleProvenanceLine, type MarketContextCandles } from "../api/marketContext";
+import { candleProvenanceLine, candleRefusalLine, type MarketContextCandles } from "../api/marketContext";
 import { unavailable } from "../api/ports";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
@@ -1384,7 +1384,7 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
             ? { state: context.value.state, reason: candleProvenanceLine(context.value) }
             : context.status === "loading"
               ? { state: null, reason: null }
-              : { state: events.candles.state, reason: context.reason ?? events.candles.reason }
+              : { state: events.candles.state, reason: candleRefusalLine(context.reason) ?? events.candles.reason }
         }
         asOf={events.asOf}
         accounts={events.accounts}

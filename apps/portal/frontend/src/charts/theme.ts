@@ -89,7 +89,17 @@ function mergeAxis(
  * a frame behind the page around it.
  */
 export function baseOption(extra: EChartsOption = {}, theme?: ThemeName): EChartsOption {
-  const { xAxis: xOverride, yAxis: yOverride, ...rest } = extra;
+  // `tooltip` is merged, not replaced. A caller that only wanted
+  // `trigger: "axis"` used to overwrite the whole themed block — background,
+  // border, mono type, axis-pointer label — and got the browser-default white
+  // box with 14px sans, which is what every histogram, bar and heatmap on the
+  // surface was drawing. Callers still override any single field they name.
+  const { xAxis: xOverride, yAxis: yOverride, tooltip: tooltipOverride, ...rest } = extra;
+  // The caller's `axisPointer` is merged into the themed one rather than
+  // replacing it, so asking for `type: "shadow"` on a bar chart keeps the
+  // dashed line colours and the axis label styling with it.
+  const callerTooltip = (tooltipOverride && typeof tooltipOverride === "object" ? tooltipOverride : {}) as Record<string, unknown>;
+  const { axisPointer: callerPointer, ...callerTooltipRest } = callerTooltip as { axisPointer?: Record<string, unknown> };
   const { ink, inkFaint, lineSoft, accent, paperRaised, paperSunken, line, legendInactive } =
     chartTokens(theme);
   const accentFill = withAlpha(accent, 0.08);
@@ -106,7 +116,13 @@ export function baseOption(extra: EChartsOption = {}, theme?: ThemeName): EChart
       trigger: "axis",
       backgroundColor: paperRaised,
       borderColor: line,
-      textStyle: { color: ink, fontSize: 11, fontFamily: "JetBrains Mono, monospace" },
+      borderWidth: 1,
+      padding: [6, 9],
+      // Small, quiet, and the same on every chart. The box is apparatus around
+      // one value; at 14px sans on white it competed with the chart it was
+      // explaining.
+      extraCssText: "border-radius:2px;box-shadow:none;",
+      textStyle: { color: ink, fontSize: 11, lineHeight: 16, fontFamily: "JetBrains Mono, monospace" },
       // A crosshair that snaps to the sample, with the axis value spelled out on
       // the axis itself: reading a point off a 3000-point series by eye was the
       // one interaction the charts did not support.
@@ -116,7 +132,9 @@ export function baseOption(extra: EChartsOption = {}, theme?: ThemeName): EChart
         lineStyle: { color: inkFaint, type: "dashed" },
         crossStyle: { color: inkFaint, type: "dashed" },
         label: { backgroundColor: paperRaised, color: ink, borderColor: line, borderWidth: 1 },
+        ...(callerPointer ?? {}),
       },
+      ...callerTooltipRest,
     },
     legend: {
       top: 0,

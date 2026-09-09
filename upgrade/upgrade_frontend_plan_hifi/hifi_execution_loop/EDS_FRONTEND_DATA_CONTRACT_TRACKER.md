@@ -2548,6 +2548,62 @@ Nguyên tắc chốt trước khi làm:
 Khảo sát bằng agent với **mạng bị bóp** (latency 1,2 s, 150 KB/s) để nhìn thấy
 đúng khoảnh khắc đang đọc — không đo được trạng thái này trên máy nhanh.
 
+### A20. HỘP HOVER, VÀ VÌ SAO `PENDING_MARKET_CONTEXT_ADAPTER` KHÔNG PHẢI VIỆC TÔI NÉ (09-09)
+
+#### A20.1 Hộp trắng ở mọi chart không dùng `chartTooltip`
+
+`baseOption` (charts/theme.ts) **đã** có tooltip theo theme: nền `--ink-panel`,
+viền `--line`, mono 11px, axis-pointer có nhãn. Nhưng các chart trong
+`visuals.tsx` và `ContributionChart` truyền `tooltip: { trigger: "axis", … }`
+— và spread **ghi đè trọn cả khối**, nên rơi về mặc định trình duyệt: **trắng,
+sans 14px**, rộng gần 780 px, to hơn cả giá trị nó giải thích.
+
+Sửa ở chỗ hợp nhất, **một lần cho mọi chart trên mọi màn**: `baseOption` nay
+tách `tooltip` ra khỏi `...rest` và **merge** — caller vẫn đổi được đúng trường
+nó gọi tên (`trigger`, `formatter`, `axisPointer.type`), phần còn lại giữ theme;
+`axisPointer` cũng merge sâu nên xin `type: "shadow"` vẫn giữ màu và nhãn.
+
+Đo sau deploy trên ba chart từng trắng:
+
+| Chart | nền | chữ | hộp |
+|---|---|---|---|
+| Execution quality by venue | `rgb(22,30,42)` | 11px JetBrains Mono | gọn |
+| Order funnel | `rgb(22,30,42)` | 11px Mono | 195×75 |
+| Trade return histogram | `rgb(22,30,42)` | 11px Mono | 182×56 |
+
+**2 test** khoá: caller chỉ xin `trigger` thì vẫn giữ nền/mono/cỡ; caller xin
+`axisPointer.type` thì được đúng cái đó và giữ phần còn lại.
+
+#### A20.2 `PENDING_MARKET_CONTEXT_ADAPTER` — đã đi kiểm, không phải công tắc quên bật
+
+Owner hỏi thẳng vì sao tôi để "chờ owner". Đã kiểm tận nơi:
+
+- `market-context.service.ts` **cài đặt đầy đủ** — gọi `currentSource`, dịch,
+  trả đúng envelope. Không thiếu code nào.
+- Chặn duy nhất là `market-context.intake.ts`: cổng đòi manifest có chữ ký của
+  **chủ nguồn** (`ownerReturnManifestSha256`, `sourceCommit`,
+  `sourceImageDigest`, ba digest mỗi capability). Comment của nó nói rõ: *"no
+  environment flag can bypass this state"*.
+- **Đo quyết định:** Trading System publish **54 named operation và không có
+  cái nào về market/candle**. Cổng đang chặn một nguồn **chưa tồn tại ở thượng
+  nguồn**. Handoff N25 của codex cũng ghi: *"candles remain unavailable until a
+  real market-data source is added"*.
+
+Mở cổng = Portal gọi endpoint Trading System không có; "chấp nhận owner return"
+= ghim digest của một lần trả lời **chưa từng xảy ra**. Đó là **bịa bằng
+chứng**, không phải sửa lỗi.
+
+Cái làm được thì đã làm: footer Trade Replay nay nói câu đọc được thay vì mã
+trống — *"Trading System chưa publish operation market nào; các nến này là
+klines công khai của sàn"* — để người đọc biết biểu đồ trước mắt **không thiếu
+gì**. Việc còn lại là một yêu cầu tới chủ Trading System, đã có sẵn hồ sơ
+`TRADING_SYSTEM_OWNER_REQUEST_2026-08-22.md`.
+
+#### A20.3 `0MONEY` — đã hết từ commit trước ảnh owner chụp
+
+Đo lại trên dev sau deploy: **không còn chuỗi `MONEY` nào**; 13 ô `ok`, 3 ô
+`unavailable` (từ chối thật của nguồn), 0 ô kẹt loading.
+
 ### A19. GOAL 7 ĐÃ LÀM (08-09 tối) — nguồn nến thứ hai, và backoff của nguồn
 
 #### A19.1 G10 — nến của Trading System là **nguồn thứ hai**, không phải nguồn thay thế
