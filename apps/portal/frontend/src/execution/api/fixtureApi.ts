@@ -465,7 +465,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       if (blocked) return blocked;
       return fixtureRead(variant === "vnm" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL, readProfileEnvelope, "The paper workbench");
     },
-    async getQueryAnalytics(_subject: "alphas" | "portfolios", _subjectId: string) {
+    async getQueryAnalytics(_subject: "alphas" | "portfolios" | "deployments", _subjectId: string, _options: { sourceFacts?: boolean } = {}) {
       const blocked = gate<QueryAnalytics>("getQueryAnalytics");
       if (blocked) return blocked;
       return fixtureRead(QUERY_ANALYTICS_EMPTY, readQueryAnalytics, "The query-analytics envelope");

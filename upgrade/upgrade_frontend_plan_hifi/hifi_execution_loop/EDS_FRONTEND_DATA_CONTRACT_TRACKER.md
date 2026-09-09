@@ -4283,6 +4283,83 @@ Guard `absentValues.test.ts` chỉ quét `?? "—"`, nên **12 chỗ** dạng
 deployment), `CommandCenter.tsx`, `clock.ts` (4 chỗ), `time.ts`,
 `marketChart.tsx`. Đã sửa hết và **nới guard sang cả hai dạng**.
 
+### A32.6 PHASE 5 ĐÃ LÀM (09-09) — payload 22×, năm contract đóng, và phần bấm nút **tôi không tự cho phép**
+
+#### Payload — gate đạt, và rộng hơn ngưỡng nhiều
+
+| Màn | Trước | Sau | Ngưỡng gate |
+|---|---|---|---|
+| Alpha 360 · nhánh analytics | **4 061 283 B** | **183 356 B** | < 500 KB ✅ |
+| Portfolio 360 · nhánh analytics | **4 318 631 B** | **182 969 B** | < 500 KB ✅ |
+
+Không mất tile nào: đo lại bằng trình duyệt sau khi deploy — Alpha 360 **10
+tile · 28 chart · 3 bảng · 103 dòng · text 30 157 ký tự** (bằng đúng số trước
+khi sửa), Portfolio 360 **5 tile · 27 chart · text 5 789**.
+
+**Vì sao 4 MB đó là thừa.** `source_facts` mang **4 500 dòng** (Alpha) và
+**4 731 dòng** (Portfolio) — `sessions` 1 000, `accountEquity` 1 000,
+`portfolioEquity` 1 000, `performance` 769–1 000, `journal` 407… — trong khi
+`hifiInsight.subjectRows()` **ưu tiên relation page set** và chỉ rơi về
+`sourceFacts` khi không có. Hai màn đó **luôn** đọc subject BFF, nên 4 MB kia
+tải về rồi bị bỏ.
+
+Dạng gọn **đã tồn tại từ lâu** (`options.sourceFacts: false` — Paper Workbench
+dùng nó để cắt 3,9 MB trong 7 MB), nhưng **chỉ caller phía server gọi được**:
+route công khai không có tham số nào để trình duyệt xin. Phase 5 thêm
+`?source_facts=false` (schema `.strict()`, **mặc định không đổi** nên không
+caller cũ nào thấy khác), và hai màn đó xin dạng gọn.
+
+**Đánh đổi ghi rõ:** nếu subject BFF hỏng, hai màn này **không còn** nhánh
+`sourceFacts` để rơi về — tile sẽ nói rỗng trung thực thay vì vẽ bằng nguồn
+khác. Cái fallback cũ trộn hai nguồn mà không nói, nên mất nó là được chứ
+không phải mất.
+
+#### Năm contract "chưa đọc" — đọc xong thì hoá ra là ba loại khác nhau
+
+| Contract | Sự thật |
+|---|---|
+| `staged-activation` | **Có route sống**: `/activation/capabilities` → 200 · 1 981 B. Đã viết reader `stagedActivation.ts`, đọc **fixture canonical**, và `activationSentence()` nói **lý do đầu tiên** khiến một capability chưa sống (kill switch → source → runtime). Cờ đọc fail-closed: kill switch không đọc được = **đang bật**; enable không đọc được = **tắt**. **Nói rõ: mới là "đã đọc", chưa "đã hiện"** — reader hiện chỉ test dùng, chưa màn nào gọi (§7.8: đọc ≠ làm) |
+| `canary-live-facts` | Contract của màn Canary, dev **chưa có canary envelope** (404). Test khoá ba điều fixture tự nói: `composition = PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS`, `state = empty`, `completeness = COMPLETE` — để không ai biến "empty" thành "chưa có dữ liệu" |
+| `emergency-routing` · `intercell-gateway` · `production-readiness` | **Không phải contract của trình duyệt.** Không file backend nào phục vụ chúng, và payload tự khai `source_dark: true` / `fixture_only: true` — chúng là **corpus bằng chứng của EDS-12**, gate và release đọc, màn hình không. Đây là lý do §7.8 gọi tên chúng mãi mà không màn nào đóng được |
+
+**`§7.8 lệnh 3` nay trả về rỗng** — không còn contract nào chưa đọc.
+
+#### Nút mutation — làm nửa được phép, không làm nửa chưa được phép
+
+Owner **chưa trả lời** câu 3 ở §A32.1 (có cho probe bấm nút thật trên dev
+không). Bấm Acknowledge/Resolve/Approve là **ghi vào dev**, nên tôi làm đúng
+nửa không cần xin phép: kiểm kê mọi control mutation trên 25 màn.
+
+| Chỉ số | Kết quả |
+|---|---|
+| Control mutation tìm thấy | **18** trên 25 màn |
+| Sáng (bấm được) | 12 |
+| Mờ **kèm lý do** | 6 |
+| Mờ **không có lý do** | **0** |
+
+Sáu cái mờ đều nói đúng lý do của nguồn: Incident Detail ×2
+(`INCIDENT_NOT_FOUND`), Paper Exit Review ×3 (`EXIT_REVIEW_NOT_FOUND`), New
+Approval Request ×1 (đủ 8 ký tự summary).
+
+**Đính chính con số của chính tôi:** §A31 ghi "24 mutation" — đó là số **POST
+route của backend**, không phải số nút trên màn. Trên 25 màn có **18** control
+mang chữ mutation; phần còn lại nằm sau id thật mà dev chưa có (approval,
+incident, certification).
+
+**Còn chờ owner:** cho phép bấm thật thì tôi chạy nốt nửa kia và ghi bảng kết
+quả từng nút.
+
+#### Một lỗi của tôi, gate bắt trước khi nó ra dev
+
+Reader activation đầu tiên tôi viết `runtime_activation_requested === true` và
+`source_side_effect_requested === true` với lý lẽ "vắng nghĩa là không ai xin".
+Đó đúng là **cách đọc dễ chịu** mà `failClosed.test.ts` đã đăng ký hai cờ này
+để cấm: vắng phải đọc là **"có thể đã xin"**, vì câu "không có gì chạm tới
+Trading System" là câu màn hình không bao giờ được nói dựa trên phỏng đoán.
+Cùng họ với ba lỗi ở §A15. Đã sửa thành `!== false`, thêm test, và đăng ký hai
+cờ enable mới (`source_enabled`, `runtime_enabled`) đọc `=== true` — vắng là
+**tắt**, vì bật mới là điều phải chứng minh.
+
 ### A32.1 Điều owner cần phê duyệt
 
 1. **Thứ tự 1→5 như trên** có đúng ý không. (Tôi xếp "sửa cái đang hỏng" lên

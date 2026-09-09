@@ -117,6 +117,11 @@ const DESCRIPTIVE: Record<string, string> = {
   // opposite would make an older catalogue look like it demanded resources it
   // never mentioned.
   resource_required: "describes a screen in the server catalogue; compared and displayed, gates nothing",
+  // Phase 5: two enabling flags from `execution.staged-activation-capabilities.v1`.
+  // Enabling is the claim, so absent must read as OFF — the opposite would
+  // draw a capability as live because a field failed to arrive.
+  source_enabled: "staged-activation capability enable; absent reads as off, which is the safe side",
+  runtime_enabled: "staged-activation capability enable; absent reads as off, which is the safe side",
 };
 
 function readerFiles(): { path: string; source: string }[] {

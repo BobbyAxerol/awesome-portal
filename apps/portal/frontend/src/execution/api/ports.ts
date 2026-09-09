@@ -286,7 +286,16 @@ export interface ExecutionApi {
   /** `GET /screens/paper/{id}[/vn-market]` — the workbench envelope. */
   getPaperWorkbenchProfile(deploymentId: string, variant?: "paper" | "vnm"): Promise<Result<ProfileEnvelope>>;
   /** `GET /{alphas|portfolios}/{id}/query-analytics` — N25 envelope. */
-  getQueryAnalytics(subject: "alphas" | "portfolios" | "deployments", subjectId: string): Promise<Result<QueryAnalytics>>;
+  /**
+   * `options.sourceFacts: false` asks the server to leave the raw fact groups
+   * empty — for screens that read those rows from the subject BFF and would
+   * otherwise download them twice.
+   */
+  getQueryAnalytics(
+    subject: "alphas" | "portfolios" | "deployments",
+    subjectId: string,
+    options?: { sourceFacts?: boolean },
+  ): Promise<Result<QueryAnalytics>>;
   /** `GET /commands/tasks` — the N27 operator task catalogue. */
   getOperatorTasks(): Promise<Result<OperatorTaskCatalogue>>;
   /** Runs only a server-classified CONNECTED R0 task. */

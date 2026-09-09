@@ -143,21 +143,23 @@ export class ExecutionAnalyticsController {
   deploymentQueryAnalytics(
     @Req() request: AnalyticsRequest,
     @Param("deploymentId") id: string,
+    @Query() query: unknown,
   ) {
-    return this.queryAnalytics(request, "deployment", id);
+    return this.queryAnalytics(request, "deployment", id, query);
   }
 
   @Get("/alphas/:alphaId/query-analytics")
-  alphaQueryAnalytics(@Req() request: AnalyticsRequest, @Param("alphaId") id: string) {
-    return this.queryAnalytics(request, "alpha", id);
+  alphaQueryAnalytics(@Req() request: AnalyticsRequest, @Param("alphaId") id: string, @Query() query: unknown) {
+    return this.queryAnalytics(request, "alpha", id, query);
   }
 
   @Get("/portfolios/:portfolioId/query-analytics")
   portfolioQueryAnalytics(
     @Req() request: AnalyticsRequest,
     @Param("portfolioId") id: string,
+    @Query() query: unknown,
   ) {
-    return this.queryAnalytics(request, "portfolio", id);
+    return this.queryAnalytics(request, "portfolio", id, query);
   }
 
   @Get("/live-gates/:approvalId/query-analytics")
@@ -218,13 +220,33 @@ export class ExecutionAnalyticsController {
     }
   }
 
+  /**
+   * Phase 5: a caller may now say it draws no raw facts.
+   *
+   * The narrow form has existed since the Paper Workbench needed it — 3.9 MB
+   * of 7 MB there were raw groups the screen never read — but only a
+   * server-side caller could ask for it. A browser could not, so Alpha 360 and
+   * Portfolio 360 downloaded 4 500 and 4 731 rows they then ignored, because
+   * both screens read the same rows from the subject BFF instead.
+   *
+   * The default is unchanged: `source_facts` omitted means the full form, so
+   * no existing caller sees a different answer.
+   */
   private queryAnalytics(
     request: AnalyticsRequest,
     subjectKind: QueryAnalyticsSubjectKind,
     subjectId: string,
+    rawQuery: unknown = {},
   ) {
+    const query = QueryAnalyticsQuerySchema.safeParse(rawQuery ?? {});
+    if (!query.success) {
+      return this.invoke(() => Promise.reject(new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400)));
+    }
     if (this.localAnalytics.enabled()) {
-      return this.invoke(() => this.localAnalytics.query(principal(request), subjectKind, subjectId));
+      return this.invoke(() => this.localAnalytics.query(
+        principal(request), subjectKind, subjectId,
+        { sourceFacts: query.data.source_facts !== false },
+      ));
     }
     return this.invoke(() =>
       this.proxy.managerQueryAnalytics(principal(request), subjectKind, subjectId),
@@ -236,6 +258,16 @@ export class ExecutionAnalyticsController {
 function local(request: AnalyticsRequest) {
   return { user: request.portalUser, session: request.portalSession, workspaceId: request.portalWorkspaceId };
 }
+
+/**
+ * `source_facts=false` asks for the derived branches with the raw groups
+ * emptied. Strict: an unknown key is a caller believing in a parameter that
+ * does not exist, and answering it as if it did is how a screen ends up sure
+ * it filtered something.
+ */
+const QueryAnalyticsQuerySchema = z.object({
+  source_facts: z.enum(["true", "false"]).transform((value) => value === "true").optional(),
+}).strict();
 
 const SparklineQuerySchema = z.object({
   environment: z.enum(["paper", "sandbox", "live"]).optional(),

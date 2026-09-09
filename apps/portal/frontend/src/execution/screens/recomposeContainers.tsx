@@ -1588,7 +1588,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   // never searches its first bounded page in the browser.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
   const resourceState = useApiRead<ProfileEnvelope>(() => api.getAlpha360Resource(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
+  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("alphas", alphaId, { sourceFacts: false }), [api, alphaId, realtime.refreshKey], { keepValue: true });
   // Tile 10 compares the stages this alpha actually runs in, on one calendar.
   const stageDrift = useApiRead(() => api.getStageDrift(alphaId), [api, alphaId, realtime.refreshKey], { keepValue: true });
   // EDS-05: the rollup is read in the environment the resource resolved to; paper until it says otherwise.
@@ -1772,7 +1772,7 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   // former portfolio/alpha join.
   const realtime = useProfilesRealtime(["paper", "sandbox", "live"]);
   const resourceState = useApiRead<ProfileEnvelope>(() => api.getPortfolio360Resource(portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
-  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
+  const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId, { sourceFacts: false }), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
   const crossEquityState = useApiRead(() => api.getCrossEquity(portfolioId), [api, portfolioId]);

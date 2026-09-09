@@ -309,8 +309,16 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       readProfileEnvelope,
       "The paper workbench",
     );
-  const getQueryAnalytics = (subject: "alphas" | "portfolios" | "deployments", subjectId: string): Promise<Result<QueryAnalytics>> =>
-    readGet(`/${subject}/${encodeURIComponent(subjectId)}/query-analytics`, readQueryAnalytics, "The query-analytics envelope");
+  const getQueryAnalytics = (
+    subject: "alphas" | "portfolios" | "deployments",
+    subjectId: string,
+    options: { sourceFacts?: boolean } = {},
+  ): Promise<Result<QueryAnalytics>> =>
+    readGet(
+      `/${subject}/${encodeURIComponent(subjectId)}/query-analytics${options.sourceFacts === false ? "?source_facts=false" : ""}`,
+      readQueryAnalytics,
+      "The query-analytics envelope",
+    );
   const getSourceHealthRead = (): Promise<Result<SourceHealthRead>> =>
     readGet("/derivations/source-health", readSourceHealthRead, "The source health envelope");
   const getApprovalHistory = (): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>> =>
