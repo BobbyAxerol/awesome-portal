@@ -5285,6 +5285,17 @@ analytics.  A regression test covers an `EMPTY` risk-grant panel, an
 not turn any source refusal into empty data, does not hide the profile gap,
 and does not relax the EDS-12 protected-main/deployed-evidence requirement.
 
+**Typed source-unavailability cycle hardening (2026-09-09):** a later
+source observation showed `MANAGER_V2_SOURCE_UNAVAILABLE` on the optional
+Paper command-journal relation and `CURSOR_REJECTED` on a stale persisted
+time-series cursor.  Both are bounded source-owned outcomes, not Portal
+process failures.  The worker now isolates exactly those reason codes as
+relation-local `UNAVAILABLE`, after clearing the rejected cursor, and commits
+the remaining accepted relations in the same cycle.  It does not broaden the
+rule to arbitrary `N17B_SOURCE_REJECTED`, transport failures, authorization
+failures or schema errors.  Regression coverage proves the cycle completes,
+the relation remains typed, and the cursor is cleared for a clean re-seek.
+
 **Frontend audit-lock correction (2026-09-08):** the first protected-main
 release retry stopped before publication because the CI's required
 `npm audit --package-lock-only --audit-level=moderate` correctly rejected the

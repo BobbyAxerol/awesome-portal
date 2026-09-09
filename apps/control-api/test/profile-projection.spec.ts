@@ -981,8 +981,34 @@ describe("P4-D follow-on: resumable time-series drains", () => {
       },
     };
     const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
-    await worker.runOnce().catch(() => undefined);
+    await expect(worker.runOnce()).resolves.toBeUndefined();
     expect(await repository.relationCursor(workspaceId, "paper", profileId, "manager.performance:account_equity_snapshots")).toBeNull();
+    await worker.onApplicationShutdown();
+  });
+
+  it("isolates a typed source-unavailable relation without aborting the profile cycle", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        if (relation === "command_journal") {
+          const error = new Error("source unavailable") as Error & { code: string; details: Record<string, unknown> };
+          error.code = "N17B_SOURCE_REJECTED";
+          error.details = { availability: "UNAVAILABLE", reason_code: "MANAGER_V2_SOURCE_UNAVAILABLE", retryable: false };
+          throw error;
+        }
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await expect(worker.runOnce()).resolves.toBeUndefined();
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(snapshot?.document.relations["manager.command-journal:command_journal"]).toMatchObject({
+      availability: "UNAVAILABLE",
+      reason_code: "MANAGER_V2_SOURCE_UNAVAILABLE",
+      items: [],
+    });
     await worker.onApplicationShutdown();
   });
 });
