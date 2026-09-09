@@ -3784,3 +3784,280 @@ probe có bấm, tốn nhất, để cuối.
    MỘT file biết toàn cục; tracker §2/§4 lật ô tương ứng cùng commit.
 3. Thứ tự chấm = thứ tự codex giao; không chấm chay khi chưa có vật giao —
    trừ L1 (đã xong) và A-07b (việc FE độc lập).
+
+---
+
+## A32. NĂM PHASE TIẾP THEO — bản để owner phê duyệt (09-09)
+
+Owner nhận xét đúng: các mục trên viết dài và khó theo. Mục này viết lại gọn.
+Toàn bộ việc còn lại của §A31 được xếp thành **5 phase**, làm lần lượt từ 1 đến
+5. Mỗi phase có đúng 6 ô: **Làm gì · Mục tiêu · Exit gate · Nhìn bằng mắt ·
+Test · Backend khai thác**.
+
+Một luật chung cho cả 5 phase, không nhắc lại từng phase:
+
+- Mỗi phase là **một commit trở lên**, hook chạy đủ, không `--no-verify`.
+- Kết quả đo ghi lại vào file này ngay dưới phase đó, kèm số thật.
+- Không phase nào được đánh "xong" nếu chưa có ảnh chụp trình duyệt trên dev.
+- Đo trên **`http://127.0.0.1:8080`** (dev). 8090 là stack probe — không phải dev.
+
+Bảng tổng để owner nhìn một lượt:
+
+| Phase | Tên ngắn | Vì sao nó đứng ở vị trí này | Ước lượng |
+|---|---|---|---|
+| **1** | Sửa cái đang hỏng trước mắt | Người dùng nhìn thấy ngay; một panel kẹt `Loading` là vi phạm luật trạng thái | 1 ngày |
+| **2** | Bỏ dấu `—`, nói thật | Cùng họ với phase 1: màn đang nói sai, sửa trước khi thêm dữ liệu mới | 1 ngày |
+| **3** | Server tự khai giới hạn | Nền cho phase 4 và 5: biết trần thật rồi mới sửa được cách hỏi | 1 ngày |
+| **4** | Khai thác 11 route đang bỏ không | Đây là phần "khai thác tối đa backend" theo đúng nghĩa | 2 ngày |
+| **5** | Payload, contract chưa đọc, nghiệm thu nút | Nặng nhất và cần probe có bấm; để cuối | 2 ngày |
+
+---
+
+### PHASE 1 — Sửa cái đang hỏng trước mắt
+
+**Làm gì**
+
+1. Portfolio 360: hai panel `Cross-portfolio` và `Configuration log` đang kẹt
+   `Loading` mãi mãi. Bỏ cách lấy dữ liệu hiện tại (duyệt 35 trang trong trình
+   duyệt) và đọc bằng một lượt gọi server.
+2. Màn New Approval Request: nút `Submit for R1 review` đang mờ mà **không nói
+   vì sao**. Thêm lý do đọc được, đúng §3.5.
+3. Rà cả 25 màn xem còn nút mờ nào thiếu lý do không.
+
+**Mục tiêu**
+
+Không màn nào để người đọc treo lơ lửng. `Loading` phải kết thúc: hoặc ra dữ
+liệu, hoặc ra một câu nói rõ vì sao không có.
+
+**Exit gate**
+
+| Điều kiện | Cách đo |
+|---|---|
+| Mở Portfolio 360, sau **≤10 giây** không còn chữ `Loading` nào | probe đếm chữ `Loading` trong `innerText` |
+| Hai panel đó lấy dữ liệu bằng **≤2 request** (nay 35) | đếm request trong probe |
+| **0** nút mờ thiếu lý do trên cả 25 màn | quét lại như §A31.4 |
+
+**Nhìn bằng mắt**
+
+1. Mở `/deployments/portfolios/portfolio_types_pool`, đợi 10 giây, chụp toàn
+   trang. Hai khối `CROSS-PORTFOLIO` và `CONFIGURATION LOG` phải có bảng, hoặc
+   có câu giải thích — **không được còn thanh xám**.
+2. Mở `/governance/approvals/new`, di chuột vào nút `Submit for R1 review`:
+   phải đọc được lý do nó mờ.
+3. So với ảnh chụp hôm nay (`pf360.png`) để thấy rõ trước/sau.
+
+**Test**
+
+- `tsc` sạch, **toàn bộ file test** xanh (nay 120 file).
+- Thêm test: panel rời `loading` khi nguồn trả rỗng, và **không** quay lại
+  `loading` khi re-render.
+- Thêm test: nút mutation mờ thì luôn kèm chuỗi lý do khác rỗng.
+- Visual baseline chạy lại (46/100 snapshot thuộc theme operations).
+
+**Backend khai thác**
+
+Dùng `/history/{environment}/{relationKey}` — route 475 KB đã có, chưa ai gọi.
+Nếu nó không đủ để dựng bảng cross-portfolio thì viết **Backend request** xin
+một aggregate, **không** quay lại duyệt 35 trang trong trình duyệt.
+
+---
+
+### PHASE 2 — Bỏ dấu `—`, nói thật
+
+**Làm gì**
+
+Rà **91 chỗ** đang in `—` cho một giá trị vắng mặt (28 file). Mỗi chỗ trả lời
+đúng một câu hỏi: dấu này nghĩa là **"không áp dụng"** hay **"chưa publish"**?
+
+- "Không áp dụng" → giữ `—`, và thêm chú thích cột nói rõ.
+- "Chưa publish" → thay bằng lời của server (`not published`, hoặc mã `Soon`).
+
+Nặng nhất: `SandboxCertification.tsx` (13), `recomposeContainers.tsx` (11),
+`OperationsQueue.tsx` (6), `ReplayCandleChart.tsx` (6).
+
+**Mục tiêu**
+
+Người đọc không bao giờ phải đoán một dấu gạch nghĩa là gì. Đây là luật §3.3,
+đang bị vi phạm ở chỗ nhìn thấy được: `SESSION_STARTED_AT — — —`.
+
+**Exit gate**
+
+| Điều kiện | Cách đo |
+|---|---|
+| 0 chỗ `?? "—"` còn lại cho giá trị **chưa publish** trong đường code thật | grep, loại `.smoke.`/`Fixtures`/`lab/`/`demo` |
+| Mỗi `—` còn lại đều có chú thích "không áp dụng" | rà tay, ghi bảng vào file này |
+| Ảnh Alpha 360 và Account 360 không còn dãy `— — —` | chụp màn |
+
+**Nhìn bằng mắt**
+
+1. `/deployments/alphas/adaptive_hma_cpp_00115m` — kéo tới bảng session, chụp.
+2. `/deployments/accounts/paper-binance-adaptive_hma_cpp_00115m` — bảng sync.
+3. `/deployments/sandbox/<id>` — màn nhiều `—` nhất.
+
+**Test**
+
+- Test chặn tái phát: quét source, fail nếu xuất hiện `?? "—"` mới ngoài danh
+  sách "không áp dụng" đã duyệt.
+- Test hiển thị: giá trị `null` từ nguồn phải ra chữ, không ra dấu.
+- `tsc` + toàn bộ test + visual baseline.
+
+**Backend khai thác**
+
+Không cần route mới. Nhưng chỗ nào server **đã** gửi `reason_code` mà FE đang
+vứt đi thì phải hiện — đó là dữ liệu đã trả tiền mà không dùng.
+
+---
+
+### PHASE 3 — Server tự khai giới hạn
+
+**Làm gì** (chính là goal 11 ở §A30)
+
+1. Gọi `/runtime-manifest` một lần cho mỗi workspace, dùng làm nguồn trần duy
+   nhất (số dòng/trang, số byte, số byte cursor).
+2. Thang trang của drain lấy nấc đầu từ manifest, bỏ số `200` viết tay.
+3. `screenDataContract` thôi so **giá trị** trần, chỉ so **hình dạng và kiểu**.
+4. `maximumPageRows` và `truncated` phải hiện ra caption, nay đang bị bỏ.
+5. `/screen-contracts` thành **gate đối chiếu**: 25 route của server phải khớp
+   router thật của FE.
+
+**Mục tiêu**
+
+Frontend thôi nói thay server. Server đổi trần thì màn đổi theo, không phải sửa
+code.
+
+**Exit gate**
+
+| Điều kiện | Cách đo |
+|---|---|
+| Đổi trần ở backend → FE hỏi `limit` mới, **0 dòng FE bị sửa** | test hai giá trị khác nhau |
+| Server nâng trần → contract vẫn hợp lệ; payload sai hình dạng vẫn bị từ chối | test hai chiều |
+| Gate parity **đỏ** khi router FE lệch danh sách 25 màn | cố tình đổi 1 route, test phải fail |
+| FE không hỏi quá trần server khai (nay hỏi `limit=500` khi trần là 200) | probe đọc query thật |
+
+**Nhìn bằng mắt**
+
+1. Mở Blotter và Alpha Fleet, xem caption có ghi trần server khai không.
+2. Mở màn nào chạm trần: phải đọc được "200/200 dòng — trần server", không im.
+
+**Test**
+
+- `tsc` + toàn bộ test.
+- Test gate parity FE↔`/screen-contracts`.
+- Test fallback: manifest lỗi thì FE dùng mặc định **có nhãn**, không im lặng.
+
+**Backend khai thác**
+
+`/runtime-manifest` (3 341 B) và `/screen-contracts` (24 269 B, 25 màn) — hai
+route hôm nay **chưa ai gọi một lần nào**.
+
+**Owner cần quyết trước khi làm** (đã hỏi ở §A30.4): (a) có đồng ý nới validator
+theo hướng chỉ-so-hình-dạng không; (b) manifest hỏng thì dùng mặc định có nhãn
+hay chặn màn.
+
+---
+
+### PHASE 4 — Khai thác 11 route đang bỏ không
+
+**Làm gì**
+
+Mỗi route dưới đây gắn vào **đúng một màn**, hiện dữ liệu thật:
+
+| Route | Gắn vào màn | Hiện cái gì |
+|---|---|---|
+| `/derivations/source-health` | Command Center | sức khoẻ từng profile, thay vì suy từ màn khác |
+| `/governance/approvals/history` | Approval Inbox | lịch sử quyết định, nay không có |
+| `/broker-bindings/:id` + `/exposure` | Binding Detail | phơi bày mức phơi nhiễm của từng binding |
+| `/screens/accounts/:id` | Account 360 | bản đọc do server soạn sẵn |
+| `/deployments/:id/query-analytics` | Paper Workbench | phân tích theo deployment |
+| `/live-gates/:id/query-analytics` | Gate Live Review | phân tích cổng live |
+| `/derivations/conditional-groups/:id` | Blotter (nhóm lệnh) | nhóm điều kiện của một lệnh |
+| `/deployments/paper/:id/projection/:panel` | Paper Workbench | panel chiếu riêng |
+| `/contract-authority` | Admin drawer (provenance) | thẩm quyền hợp đồng |
+
+**Mục tiêu**
+
+Đây là câu "khai thác tối đa backend" của owner, đo được: hôm nay mở 25 màn chỉ
+chạm **46/104** route.
+
+**Exit gate**
+
+| Điều kiện | Cách đo |
+|---|---|
+| Số route được gọi tăng **46 → ≥57** | chạy lại sweep 25 màn, so bảng |
+| Mỗi route mới có **ít nhất một khối hiển thị** trên màn | ảnh chụp từng màn |
+| Số request mỗi màn **không tăng quá 2** so với hôm nay | probe đếm |
+| Route trả rỗng thì màn nói rỗng, không biến mất | test trạng thái |
+
+**Nhìn bằng mắt**
+
+Chụp 9 màn ở bảng trên, mỗi màn một ảnh trước/sau. Ảnh "sau" phải thấy khối mới
+và thấy nó có số thật, không phải khung trống.
+
+**Test**
+
+- `tsc` + toàn bộ test.
+- Mỗi route mới: một test nạp **fixture canonical đã publish** (không tự dựng
+  object), phủ `ready/empty/partial/denied/unavailable`.
+- Sweep 25 màn chạy lại, lưu bảng số vào file này.
+
+**Backend khai thác**
+
+11 route, **0 dòng backend mới**.
+
+---
+
+### PHASE 5 — Payload, contract chưa đọc, nghiệm thu nút
+
+**Làm gì**
+
+1. **Payload**: Alpha 360 tải **4,1 MB** và Portfolio 360 **4,3 MB** mỗi lần
+   mở. Dùng nhánh hẹp (`sourceFacts: false`) hoặc panel BFF; thiếu trường thì
+   viết Backend request, không tự chế.
+2. **5 contract chưa đọc**: `canary-live-facts`, `emergency-routing`,
+   `intercell-gateway`, `production-readiness`, `staged-activation`.
+3. **Nghiệm thu 24 mutation**: probe **có bấm**, không chỉ mở màn. Mỗi nút hoặc
+   chạy được, hoặc mờ kèm lý do.
+
+**Mục tiêu**
+
+Màn nhẹ, không còn hợp đồng nào nằm chờ, và mọi nút đều đã được bấm thử một lần
+bởi máy chứ không phải bởi niềm tin.
+
+**Exit gate**
+
+| Điều kiện | Cách đo |
+|---|---|
+| Alpha 360 và Portfolio 360 mỗi màn **< 500 KB** cho nhánh analytics | `size_download` thật |
+| Không tile nào biến mất sau khi giảm payload | so ảnh trước/sau |
+| §7.8 lệnh 3 trả về **rỗng** | chạy lệnh |
+| Bảng 24 mutation, mỗi dòng có kết quả thật | probe có bấm |
+
+**Nhìn bằng mắt**
+
+1. Alpha 360 và Portfolio 360: chụp trước/sau, đếm số tile — phải bằng nhau.
+2. Mở DevTools-style probe ghi tổng byte mỗi màn, ghi số vào file này.
+3. Với mỗi nút mutation: chụp trạng thái mờ + lý do, hoặc kết quả sau khi bấm.
+
+**Test**
+
+- `tsc` + toàn bộ test + visual baseline.
+- 5 contract: mỗi gói một test nạp fixture đã publish, gồm cả phần "required
+  tests" ở cuối gói (luật §7.8 — gói F0 từng bị bỏ §4).
+- Probe mutation: 24 dòng, chạy trong CI được.
+
+**Backend khai thác**
+
+Không xin route mới trước khi đo. Nếu sau khi đo vẫn thiếu trường thì viết
+Backend request theo mẫu §5, gắn @codex.
+
+---
+
+### A32.1 Điều owner cần phê duyệt
+
+1. **Thứ tự 1→5 như trên** có đúng ý không. (Tôi xếp "sửa cái đang hỏng" lên
+   trước "thêm dữ liệu mới" — nếu owner muốn khai thác backend trước thì đảo
+   phase 4 lên, nhưng phase 1 nên giữ ở đầu.)
+2. **Hai câu hỏi của phase 3** (nới validator; fallback khi manifest hỏng).
+3. **Phase 5 có được bấm nút mutation trên dev không** — probe sẽ chạy lệnh
+   thật lên dữ liệu dev. Nếu owner không muốn, tôi chỉ nghiệm thu phần "mờ kèm
+   lý do" và để phần bấm lại chờ.
