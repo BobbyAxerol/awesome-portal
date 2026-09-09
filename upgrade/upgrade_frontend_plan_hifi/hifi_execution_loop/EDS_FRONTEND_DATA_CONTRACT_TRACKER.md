@@ -3600,12 +3600,20 @@ kê việc, tôi đo hai route đó trên dev và đếm xem frontend đang tự
 | Route | Kết quả thật |
 |---|---|
 | `GET /api/v1/execution/runtime-manifest` | **200 · 3 341 B**. `bounds`: `maximum_page_rows 200` · `maximum_response_bytes 1 048 576` · `maximum_cursor_bytes 4 096`. Thêm `source_semantics` 5 dòng (`global_event_ordering: NOT_ASSERTED`, `total_history: NOT_ASSERTED`…), `external_gates` 4 mục `OWNER_ACTION_REQUIRED`, `runtime_delivery.profiles` 3 profile |
-| `GET /api/v1/execution/screen-contracts` | **200 · 23 375 B · 24 màn**. Mỗi màn có `ui_route_template`, `required_roles`, `resource_required`, `read_capabilities`, `supported_ui_states`, `composition_policy` (7 khoá `SERVER_ONLY`), `data_api{status, operation_id, method, path_template, response_contract, unavailable_reason, delivery_phase}` |
+| `GET /api/v1/execution/screen-contracts` | **200 · 24 269 B · 25 màn**. Mỗi màn có `ui_route_template`, `required_roles`, `resource_required`, `read_capabilities`, `supported_ui_states`, `composition_policy` (7 khoá `SERVER_ONLY`), `data_api{status, operation_id, method, path_template, response_contract, unavailable_reason, delivery_phase}` |
 | Frontend gọi hai route này | **0 lần** — `grep -rn "runtime-manifest\|screen-contracts" apps/portal/frontend/src` không có hit nào |
 
-**`data_api.status` hôm nay: 24/24 `AVAILABLE`, `unavailable_reason` đều `null`.**
+**`data_api.status` hôm nay: 25/25 `AVAILABLE`, `unavailable_reason` đều `null`.**
 Đây là dữ kiện quyết định phạm vi 11-6 bên dưới — hôm nay **không có ca thật**
 để nghiệm thu bằng mắt.
+
+**Sửa số đo của chính mục này (cùng ngày).** Lần đo đầu tôi gọi cổng **8090**,
+tưởng là dev. 8090 là stack **`portal-probe`**; dev ở **8080**. Trên probe:
+24 màn, 23 375 B, và bốn nhóm route analytics trả **503
+`PHASE2_PROJECTION_STALE_CEILING_EXCEEDED`** vì projection paper của stack đó
+đứng từ 03:49. Đo lại trên dev: **25 màn, 24 269 B, tất cả 200**. Số trong bảng
+trên đã là số dev. Ghi lại vì đây là lần đo sai thứ sáu cùng họ với §A22.3,
+§A27.4, §A29.4 — và lần này suýt biến một stack phụ thành "gap của dev".
 
 Frontend đang tự viết những gì (đo bằng grep, không ước lượng):
 
@@ -3625,7 +3633,7 @@ Frontend đang tự viết những gì (đo bằng grep, không ước lượng)
 | 11-2 | Thang drain lấy nấc đầu từ `bounds.maximum_page_rows` thay vì số 200 viết tay (các nấc lùi 50/20/5 **giữ nguyên** — chúng là chiến thuật khi server từ chối một trang, không phải trần) | đổi `MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumRows` ở backend → frontend hỏi `limit` mới **mà không sửa dòng frontend nào**; test chứng minh bằng hai giá trị khác nhau |
 | 11-3 | `screenDataContract` bỏ so **giá trị**, giữ so **hình dạng + kiểu**; trần đọc được thì đem đi dùng | server nâng trần → contract vẫn hợp lệ, màn vẫn ready; payload sai hình dạng vẫn bị từ chối như cũ (test giữ cả hai chiều) |
 | 11-4 | `maximumPageRows` và `truncated` phải **nói ra** trong caption drain, thay vì im lặng | trang chạm trần nói rõ "200/200 dòng — trần server khai"; `truncated: true` không bao giờ bị nuốt |
-| 11-5 | `screen-contracts` thành **gate parity FE↔server**: 24 `ui_route_template` khớp router thật; `required_roles`/`resource_required` khớp guard; `supported_ui_states` khớp state màn render được | test parity **đỏ khi lệch**; liệt kê được màn nào server khai mà FE chưa có và ngược lại |
+| 11-5 | `screen-contracts` thành **gate parity FE↔server**: 25 `ui_route_template` khớp router thật; `required_roles`/`resource_required` khớp guard; `supported_ui_states` khớp state màn render được | test parity **đỏ khi lệch**; liệt kê được màn nào server khai mà FE chưa có và ngược lại |
 | 11-6 | Cơ chế `data_api.status != AVAILABLE` → hiện `unavailable_reason` **bằng lời server**, thay cho câu FE tự đoán | có test trên fixture; **trên dev chưa ký được bằng mắt** vì 24/24 đang `AVAILABLE` — ghi thẳng là chưa ký, không tô thành đã chứng minh |
 
 **Backend: 0 dòng mới.** Cả hai route đã publish và đã trả 200 hôm nay.
@@ -3651,6 +3659,122 @@ Frontend đang tự viết những gì (đo bằng grep, không ước lượng)
 Và nếu owner muốn **nhìn thấy** 11-6 hoạt động trên dev thì cần cho một màn tạm
 ở trạng thái không `AVAILABLE` — việc đó chạm dữ liệu dev nên tôi hỏi trước,
 không tự làm.
+
+### A31. AUDIT GAP TOÀN CẢNH BE↔FE + PHÂN BỔ GOAL 12→16 (09-09, owner yêu cầu)
+
+Owner hỏi ba câu cùng lúc: backend còn gì frontend chưa khai thác, showcase còn
+khác dev chỗ nào về UI/UX và nút/link/API, và phân bổ phần còn lại vào goal.
+Mục này trả lời bằng đo, trên **dev `127.0.0.1:8080`**, không bằng đọc code đoán.
+
+#### A31.1 Đã đo bằng gì
+
+| Phép đo | Cách làm | Kết quả thô |
+|---|---|---|
+| Kho route backend | trích `@Controller`+`@Get/@Post` toàn `apps/control-api/src` | **104 route execution** (117 toàn control-api) |
+| Route thật sự được gọi | Playwright mở **25 màn** của `/screen-contracts`, ghi mọi request `/api/v1/**` | **46/104 được gọi**; 34 GET và 24 POST chưa route nào chạm |
+| Sức khoẻ từng màn | cùng lượt: text length, số panel, nút, nút disabled có/không lý do, hàng bảng, link | bảng A31.4 |
+| Link chết | gom **231 link nội bộ** → **31 hình dạng**, mở từng hình dạng | **0 link chết** (xem A31.9) |
+| Khác biệt với showcase | so nhãn hiển thị từng file màn `showcase/execution-uiux-frozen` ↔ dev | **30 nhãn showcase-only**, chỉ **2** thật sự vắng |
+| Contract chưa đọc | §7.8 lệnh 3 | **5 gói** |
+
+#### A31.2 Kết luận ngắn trước khi vào chi tiết
+
+**Khác biệt phong cách/UI-UX với showcase gần như đã đóng** — dev là **tập cha**
+của showcase ở mức nhãn (ví dụ `AccountsBindings` showcase 7 nhãn / dev 23;
+`AlphaFleet` 8/21; `LiveOverview` 7/13). Việc còn lại **không nằm ở giao diện**,
+nó nằm ở ba chỗ: **dữ liệu backend chưa ai gọi**, **vài lỗi nhìn thấy được trên
+dev**, và **thói quen hiển thị `—` thay cho lời nói thật**.
+
+#### A31.3 Gap 1 — backend đã có, frontend chưa gọi (34 GET)
+
+Không phải cả 34 đều là thiếu sót: một số chỉ chạy sau khi bấm (tab, drawer,
+preset), một số là route cũ đã bị composition thay. Chia đúng ba nhóm:
+
+| Nhóm | Route | Ghi chú |
+|---|---|---|
+| **Chưa ai gọi, có giá trị rõ** | `/runtime-manifest` · `/screen-contracts(/:id)` · `/contract-authority` · `/derivations/source-health` · `/governance/approvals/history` · `/derivations/conditional-groups/:id` · `/broker-bindings/:id` + `/exposure` · `/screens/accounts/:id` · `/deployments/:id/query-analytics` · `/live-gates/:id/query-analytics` · `/deployments/paper/:id/projection/:panel` | đây là phần **khai thác thêm được ngay**, không cần backend mới |
+| **Chỉ chạy sau tương tác** | `/history/:env/:relation` (bấm preset) · `/market/candles`, `/market/latest` (tab Trade Replay) · `/orders/:id/funnel` (bấm 1 lệnh) · `/compositions/{approvals,exit-reviews,incidents}/:id` (cần id thật) | không phải gap; cần probe có bấm mới ký được |
+| **Có chủ đích không gọi** | `/activation/*` (5) · `/adapters/:env/:cap` · `/current-source/*` (2) · `/manager/{deployments,operations}` · `/command-center` (bản cũ, đã thay bằng `/compositions/command-center`) | ghi rõ là **cố ý**, để lần sau không ai đếm nhầm thành nợ |
+
+24 POST chưa chạm là **mutation** — chúng chỉ chạy khi người dùng bấm, và phần
+lớn đang **disabled kèm lý do** đúng §3.5. Không đếm là gap; đếm là *chưa nghiệm
+thu bằng tay*.
+
+#### A31.4 Gap 2 — lỗi nhìn thấy được trên dev hôm nay
+
+| # | Lỗi | Bằng chứng đo được |
+|---|---|---|
+| **G-1** | **Portfolio 360: hai panel `Cross-portfolio` và `Configuration log` kẹt `Loading` vĩnh viễn** | chờ **40 giây** vẫn `Loading`; ảnh chụp toàn trang xác nhận hai khối skeleton; mọi request của màn đều **200** |
+| **G-2** | Nguyên nhân G-1: hai panel đó chờ **drain 35 trang** quan hệ `portfolio-equity-snapshots` | đo tay: **35 trang × 200 dòng = 6 909 dòng, 37 giây**. Trình duyệt đang làm việc của server |
+| **G-3** | `query-analytics` **4,1 MB** (Alpha 360) và **4,3 MB** (Portfolio 360) mỗi lần mở màn | `size_download` thật; đúng gap "R2 payload" codex ghi ở §16.4 của plan backend, **vẫn còn** |
+| **G-4** | New Approval Request: nút **`Submit for R1 review` disabled mà không nêu lý do** | quét 25 màn: đây là **nút duy nhất** vi phạm §3.5 |
+| **G-5** | FE hỏi `limit=500` trong khi manifest khai trần **200**; route `resources/*` trả `maximum_page_rows: null` | `resources/alphas/:id/orders?limit=500` → `page.limit 500`, `maximum_page_rows null` |
+
+G-1 là lỗi nặng nhất: `loading` không bao giờ chuyển trạng thái là đúng thứ luật
+§3.4 cấm — người đọc không phân biệt được "đang tải" với "sẽ không bao giờ có".
+
+#### A31.5 Gap 3 — `—` thay cho một câu nói thật
+
+**91 chỗ** trong đường code thật (đã loại `.smoke.`, `Fixtures`, `lab/`, `demo`)
+dùng `?? "—"` hoặc `: "—"` cho một giá trị vắng mặt, trải trên **28 file**; nặng
+nhất `SandboxCertification.tsx` (13), `recomposeContainers.tsx` (11),
+`OperationsQueue.tsx` (6), `ReplayCandleChart.tsx` (6). Nhìn thấy trên màn:
+`SESSION_STARTED_AT — — —` ở Alpha 360 và Account 360.
+
+Không phải cả 91 đều sai: `—` cho **"không áp dụng"** là hợp lệ; `—` cho **"chưa
+publish"** là nói dối theo §3.3. Việc là rà từng chỗ và tách hai nghĩa đó ra.
+
+#### A31.6 So với showcase — chỗ nào còn khác
+
+| File màn | nhãn showcase | nhãn dev | showcase-only |
+|---|---|---|---|
+| `AdminActionDrawer` | 24 | 24 | 12 (đều là chip trạng thái, dev chuyển sang file khác) |
+| `containers` | 21 | 17 | 5 (`ADMIN/OPERATOR/VIEWER/PARTIAL/VERIFIED`) |
+| `PaperWorkbench` | 46 | 42 | 4 |
+| `GateR2Review` | 17 | 15 | 3 |
+| `PaperExitReview` | 29 | 33 | 3 |
+| `GateR1Review` | 13 | 11 | 2 |
+| `PortfolioThreeSixty` | 18 | 18 | 1 |
+| 18 file còn lại | — | — | **0** |
+
+Kiểm từng nhãn "showcase-only" trong toàn bộ `src/`: **chỉ 2 nhãn thật sự không
+còn ở dev** — `"Activation plan"` và `"Exit review sections"` (Paper Exit
+Review). 28/30 nhãn kia chỉ **đổi chỗ** sang file khác, không mất.
+
+Nói thẳng: **câu hỏi "còn khác biệt lớn về phong cách không" — không còn.** Chỗ
+đáng lo không phải giao diện, mà là A31.4 và A31.5.
+
+#### A31.7 Contract đã publish mà frontend chưa đọc (§7.8 lệnh 3)
+
+`canary-live-facts` · `emergency-routing` · `intercell-gateway` ·
+`production-readiness` · `staged-activation` — **5 gói**.
+
+#### A31.8 Phân bổ vào goal
+
+| Goal | Nội dung | Gate đóng |
+|---|---|---|
+| **11** (đã lên kế hoạch, §A30) | manifest + screen-contracts thành nguồn trần và gate parity | như §A30.2; thêm **G-5** vào 11-4: FE không được hỏi quá trần server khai, và route nào không khai trần thì nói ra |
+| **12 — Ba lỗi nhìn thấy được** | **G-1/G-2**: Portfolio 360 hai panel phải rời `loading` trong ngân sách; đọc server-side thay vì drain 35 trang (dùng `/history/:env/:relation` hoặc xin aggregate). **G-4**: nút `Submit for R1 review` phải có lý do | mở Portfolio 360, sau **≤10 s** không còn chữ `Loading` nào; số request giảm từ 35 xuống ≤2; quét lại 25 màn: **0 nút disabled không lý do** |
+| **13 — `—` thành lời nói thật** | rà **91 chỗ**: tách "không áp dụng" khỏi "chưa publish"; chỗ nào là chưa publish thì nói bằng chữ của server | 0 chỗ `?? "—"` còn lại trong đường code thật cho giá trị *chưa publish*; test chặn tái phát; ảnh chụp Alpha 360 không còn `— — —` |
+| **14 — Khai thác 11 route đã có** | nhóm 1 của A31.3: `source-health` (đã có UI ở §A27 nhưng chưa gọi route riêng), `approvals/history`, `broker-bindings/:id`+`exposure`, `screens/accounts/:id`, `deployments/:id/query-analytics`, `live-gates/:id/query-analytics`, `conditional-groups/:id`, `projection/:panel` | mỗi route được **một màn cụ thể** đọc và hiển thị; sweep lại: số route được gọi tăng từ 46 lên ≥57 |
+| **15 — Payload** | G-3: 4,1 MB + 4,3 MB mỗi lần mở màn. FE dùng `sourceFacts:false` hoặc panel BFF hẹp; nếu cần trường mới thì viết Backend request | Alpha 360 và Portfolio 360 mỗi màn **< 500 KB** cho nhánh analytics, mà không mất tile nào |
+| **16 — 5 contract chưa đọc + nghiệm thu mutation** | đọc 5 gói; probe **có bấm** cho 24 POST: mỗi nút hoặc chạy được, hoặc disabled kèm lý do | §7.8 lệnh 3 trả về rỗng; bảng 24 mutation, mỗi dòng có kết quả thật |
+
+Thứ tự đề xuất: **12 → 13 → 11 → 14 → 15 → 16**. Lý do: 12 và 13 là *người dùng
+nhìn thấy ngay*; 11 là nền cho 14/15 (biết trần rồi mới sửa cách hỏi); 16 cần
+probe có bấm, tốn nhất, để cuối.
+
+#### A31.9 Hai lần đo sai của chính tôi trong lượt này
+
+1. **Đo nhầm stack.** Lượt sweep đầu tôi gọi cổng **8090** — đó là stack
+   `portal-probe`, không phải dev (dev ở **8080**). Trên probe có 4 nhóm route
+   trả 503 `PHASE2_PROJECTION_STALE_CEILING_EXCEEDED` vì projection paper của
+   nó đứng từ 03:49. Suýt báo cáo "dev hỏng analytics". Đã đo lại toàn bộ trên
+   8080: **200 hết**. (§A30 cũng đã được sửa số theo dev.)
+2. **Regex `404` lại kêu oan.** Bộ dò link báo 3 màn "NOTFOUND"; mở từng màn ra
+   xem thì `404` khớp bên trong **dữ liệu** (`...1784404800000`, `ord 4047`).
+   **0 link chết**. Đúng họ với lỗi "13 broken links" đã ghi ở §A22.3 — lần này
+   bắt được trước khi báo.
 
 ## A3. Luật vận hành kế hoạch này
 
