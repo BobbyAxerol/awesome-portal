@@ -349,8 +349,19 @@ def assert_identity(
     if not expected_overlay_names.issubset(observed_overlay_names):
         fail("stable execution overlay graph is incomplete; refusing to drop an active overlay")
 
-    ports = containers["portal-web"].get("NetworkSettings", {}).get("Ports", {})
-    bindings = ports.get("80/tcp") if isinstance(ports, dict) else None
+    network_ports = containers["portal-web"].get("NetworkSettings", {}).get("Ports", {})
+    bindings = network_ports.get("80/tcp") if isinstance(network_ports, dict) else None
+    # Docker omits NetworkSettings.Ports for an exited container even though
+    # the declared HostConfig binding remains immutable.  Recovery may use
+    # that declaration only for a stopped portal-web; normal mode still
+    # requires the live network binding.
+    if (
+        allow_partial_resume
+        and containers["portal-web"].get("State", {}).get("Running") is not True
+        and not bindings
+    ):
+        host_ports = containers["portal-web"].get("HostConfig", {}).get("PortBindings", {})
+        bindings = host_ports.get("80/tcp") if isinstance(host_ports, dict) else None
     expected_binding = {"HostIp": "127.0.0.1", "HostPort": str(port)}
     if not isinstance(bindings, list) or expected_binding not in bindings:
         fail("stable portal-web is not bound to the expected loopback port")

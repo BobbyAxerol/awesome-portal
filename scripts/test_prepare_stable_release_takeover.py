@@ -260,6 +260,19 @@ class StableTakeoverTest(unittest.TestCase):
         result, _ = self.run_helper(release_layout)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_partial_resume_uses_declared_loopback_binding_when_web_is_stopped(self):
+        partial = fixture()
+        for service, container in partial["containers"].items():
+            if service not in {"portal-postgres", "portal-nats", "portal-minio"}:
+                container["State"] = {"Running": False, "Status": "exited"}
+        web = partial["containers"]["portal-web"]
+        web["NetworkSettings"]["Ports"] = {}
+        web["HostConfig"]["PortBindings"] = {
+            "80/tcp": [{"HostIp": "127.0.0.1", "HostPort": str(PORT)}]
+        }
+        result, _ = self.run_partial_helper(partial)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
