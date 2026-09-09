@@ -2877,6 +2877,13 @@ Bảng Reconciliation ngay dưới vẫn chạy: *0 open of 3*, ba finding
 (Lần quét đầu tôi đếm `[data-status="unavailable"]` và ra 0 ở màn này — màn dùng
 markup khác. **Bộ đếm sai, không phải màn sai**; đã đọc lại bằng text.)
 
+> **CẬP NHẬT 09-09 sau bản sửa §A23.7 — YÊU CẦU NÀY ĐÃ HẾT HIỆU LỰC.**
+> Đo lại: `http=200`, `state: POPULATED`, 1 record; màn Sandbox từ 4 dòng lên
+> **39 dòng**, không còn 413 trong `api4xx`. Cơ chế giảm trang của codex
+> (`082e988`) rốt cuộc **có** nuốt được — lúc tôi đo `limit=2` vẫn 413 là trạng
+> thái tại thời điểm đó, không phải một ranh giới cứng như tôi đã kết luận.
+> Giữ nguyên phần dưới để thấy tôi đã kết luận vội ở đâu.
+
 ```text
 Backend request (@codex)
 - Quan hệ: manager.current.broker-account-sync-current-state, profile SANDBOX
