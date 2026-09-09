@@ -2576,6 +2576,11 @@ nó gọi tên (`trigger`, `formatter`, `axisPointer.type`), phần còn lại g
 
 #### A20.2 `PENDING_MARKET_CONTEXT_ADAPTER` — đã đi kiểm, không phải công tắc quên bật
 
+> **MỤC NÀY SAI — xem §A21.5.** Tôi đo trên một nhánh đi sau `main` 39 commit.
+> Trên HEAD đã merge, intake có status `ACCEPTED_PORTAL_SOURCE_ADAPTER`: Portal
+> tự sở hữu adapter, và dev trả `MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED` — một cờ,
+> không phải một bức tường. Giữ nguyên chữ ở đây để thấy tôi đã sai chỗ nào.
+
 Owner hỏi thẳng vì sao tôi để "chờ owner". Đã kiểm tận nơi:
 
 - `market-context.service.ts` **cài đặt đầy đủ** — gọi `currentSource`, dịch,
@@ -2659,6 +2664,133 @@ sai của tôi. Cùng loại với `orders-fills` (§A15) và `activity` 400 (§
 mới khẳng định đường dẫn dùng **đúng tên tham số của route này**.
 
 **Gate:** 2 051 test (10 test mới), tsc sạch.
+
+### A21. DEV SẬP VÌ MỘT DÒNG SỔ, VÀ HAI CÂU TÔI NÓI SAI VỀ NẾN (09-09)
+
+#### A21.1 Vì sao phải merge `origin/main` — và vì sao nó làm dev sập
+
+Blotter rỗng trên dev là do vòng projection chết ở `MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE`;
+codex đã vá ở `082e988 adapt oversized manager relation pages`. Muốn cái vá đó
+thì phải merge `origin/main` — và bản merge mang theo một migration **đổi tên**:
+N09 rời `1723680000028_…` về lại `1723680000012_execution-n09-governance-workflow`,
+kèm một **sentinel** `1723680000012_z_n09-governance-workflow-legacy-compatibility`.
+
+Sổ của dev đã chạy N09 dưới tên gốc, đã chạy `1723680000013_execution-staged-activation`,
+và **chưa bao giờ thấy sentinel**. Tên file của sentinel nằm giữa hai cái đó, nên
+`node-pg-migrate` từ chối **cả lượt chạy**:
+
+```
+Not run migration 1723680000012_z_n09-…-legacy-compatibility
+is preceding already run migration 1723680000013_execution-staged-activation
+```
+
+`control-api-migrate` exit 1 → compose không dựng `control-api` → **dev down**.
+Đây là tình trạng của **mọi database sống lâu hơn lần đổi tên**, không riêng dev.
+
+#### A21.2 Ba lần sai trước khi đúng — và cái đã bắt được lần thứ ba
+
+| Lần | Tôi làm gì | Vì sao hỏng |
+|---|---|---|
+| 1 | `INSERT` một dòng sổ mới ở cuối bảng | `node-pg-migrate` kiểm **thứ tự id đã chạy**, không chỉ tên. Dòng mới lấy id lớn nhất → đúng y lỗi cũ. Chính codex đã ghi điều này trong comment của nó |
+| 2 | Đưa sentinel về đúng **id** (dịch đuôi sổ lên 1) | Lỗi đảo hai cái tên. `getRunMigrations` đọc `ORDER BY run_on, id` — **`run_on` quyết định trước**, id chỉ phá hoà. Sentinel mang `staged.run_on − 1µs` nên rơi lên **trước** N09 |
+| 3 | Đúng id, `run_on` copy từ `staged` qua **driver** | `pg` trả `timestamp` thành `Date` của JavaScript — **chỉ có mili-giây**. `.811198` về thành `.811`, thấp hơn cả ba anh em → lại tụt lên đầu |
+
+Lần 3 **không làm hỏng sổ**: hậu-điều kiện tôi thêm ở lần 2 đã đọc lại thứ tự
+thật của Postgres ngay trong transaction, thấy không khớp và `ROLLBACK`. Thông
+điệp trong log là câu của chính nó — *"the recorded row did not land between its
+neighbours"* — chứ không phải một stack trace của node-pg-migrate.
+
+Bản đúng: **không cho timestamp đi qua driver**, copy trong Postgres:
+
+```sql
+INSERT INTO pgmigrations (id, name, run_on)
+SELECT $1, $2, run_on FROM pgmigrations WHERE name = $3
+```
+
+`.810999` trong bảng chính là dấu vân tay của lần 2: `.811` (Date) trừ 1µs.
+
+#### A21.3 Chứng minh **trước** khi deploy, không phải sau
+
+Mỗi lượt build+deploy tốn ~8 phút; ba lượt sai là ~25 phút dev nằm. Trước lượt
+thứ tư tôi đo **read-only trên chính sổ của dev**: mô phỏng bằng một `SELECT`
+có `CASE` đổi `run_on` của sentinel, so 30 dòng với 30 tên file đã sort.
+
+```
+SIMULATED ORDER MATCHES FILES EXACTLY
+```
+
+Sau deploy, sổ thật:
+
+| id | name | run_on |
+|---|---|---|
+| 13 | `…012_execution-n09-governance-workflow` | `05:44:26.811198` |
+| 14 | `…012_session-activation-proof` | `05:44:26.811198` |
+| 15 | `…012_z_n09-…-legacy-compatibility` | `05:44:26.811198` |
+| 16 | `…013_execution-staged-activation` | `05:44:26.811198` |
+
+Log: `Recorded the N09 release ledger sentinel in its filename position.` →
+`No migrations to run!` — `control-api` healthy, `portal-web` healthy, web 200,
+mirror 731 302 dòng. **Dev lên lại.**
+
+#### A21.4 Test khoá cái đã sập
+
+`test/migration-recovery.spec.ts` thêm một ca dựng đúng hình dạng của dev: slice
+migration tới `staged-activation`, **không có** sentinel. Ca này ban đầu **báo
+xanh giả**: `migrate()` chạy mới đóng dấu mỗi dòng bằng một lần đọc đồng hồ
+riêng, nên các `run_on` cách nhau xa và dịch 1µs chẳng đổi được thứ tự gì. Sổ
+sống thì ngược lại — cả slice chạy trong **một transaction**, dùng chung đúng một
+`run_on`, và thứ tự chỉ còn phá hoà bằng id. Test giờ ép về đúng hình đó trước
+khi chấm, rồi kiểm cả hai chiều: từ trạng thái thiếu sentinel, và từ trạng thái
+**nửa vời** (có dòng nhưng sớm 1µs) — chính là cái đã làm dev sập lần 2.
+
+**Gate:** 2/2 xanh (`vitest run test/migration-recovery.spec.ts`), `tsc -p
+tsconfig.build.json` sạch.
+
+#### A21.5 §A20.2 SAI — owner đúng, tôi ghi đè lại ở đây
+
+Tôi viết ở §A20.2 rằng `PENDING_MARKET_CONTEXT_ADAPTER` là "ranh giới thật" và
+mở nó là "bịa bằng chứng". Owner bảo đọc nhánh codex đang làm dở. Đọc rồi —
+**tôi sai**, và sai vì suy luận trên một nhánh đi sau `main` 39 commit.
+
+Trên HEAD đã merge, `market-context.intake.ts` có **status thứ ba**:
+`ACCEPTED_PORTAL_SOURCE_ADAPTER`. Portal **tự sở hữu** adapter, không cần chữ ký
+của chủ Trading System nữa. Manifest
+`market-context-data-layer-adapter.v1.json` ghi thẳng đường đi của nến:
+
+```
+managerMarketContextCandlesV1
+  edge         /internal/v2/manager/market/candles
+  source proxy /portal/execution/v2/manager/market/candles
+  data layer   /v1/binance/futures/klines/{instrument}
+  profiles     PAPER · SANDBOX · LIVE
+```
+
+Đo trên dev sau khi lên lại: cả `market/latest` lẫn `market/candles` trả
+`MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED` — **một cái cờ**
+(`FEATURE_EXECUTION_MARKET_CONTEXT`), không phải một bức tường. Cổng intake đã mở.
+
+#### A21.6 Và nến sàn thì **đã chạy sẵn** — câu thứ hai tôi nói sai
+
+Owner nói: *"market candle thì mày call rest api của sàn cũng đc"*. Đúng, và
+việc đó đã có sẵn trên dev: `EXECUTION_MARKET_CANDLES_SOURCE=venue_public`,
+`FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES=true`.
+
+```
+GET /api/v1/execution/market/venue-candles?venue=BINANCE&symbol=BTCUSDT&interval=1m…
+→ "state":"READY", source.kind "venue_public",
+   endpoint https://fapi.binance.com/fapi/v1/klines
+```
+
+Nên hai nguồn nến là **hai bậc khác nhau**, và chỉ bậc hai còn treo:
+
+| Nguồn | Đường | Trạng thái dev |
+|---|---|---|
+| Klines công khai của sàn | `/market/venue-candles` | **READY**, đang phục vụ Trade Replay |
+| Data Layer qua Portal adapter | `/market/candles` | cổng đã mở, chờ bật `FEATURE_EXECUTION_MARKET_CONTEXT` |
+
+Bật cờ đó là việc còn lại, và nó cần đúng bằng chứng mà manifest đòi
+(`positive-latest-probe`, `positive-candles-probe`, `negative-venue-or-profile-probe`)
+— probe thật qua edge `10.70.0.2:8445`, không phải bật rồi xem sau.
 
 ## A3. Luật vận hành kế hoạch này
 

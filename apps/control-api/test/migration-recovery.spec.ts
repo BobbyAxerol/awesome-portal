@@ -7,7 +7,9 @@ import { runner as migrate } from "node-pg-migrate";
 import { Pool } from "pg";
 import {
   N09_GOVERNANCE_MIGRATION,
+  N09_LEDGER_SENTINEL_MIGRATION,
   SESSION_ACTIVATION_MIGRATION,
+  STAGED_ACTIVATION_MIGRATION,
   runControlApiMigrations,
 } from "../src/cli/migrate";
 
@@ -22,6 +24,31 @@ function databaseUrlFor(name: string): string {
   const url = new URL(DATABASE_URL);
   url.pathname = `/${name}`;
   return url.toString();
+}
+
+const prerenameDatabase = `portal_prerename_n09_${randomUUID().replaceAll("-", "")}`;
+const prerenameDir = mkdtempSync(join(tmpdir(), "portal-n09-prerename-"));
+
+/**
+ * Everything a pre-rename ledger had already applied: through the staged
+ * activation migration, without the sentinel that the rename brought with it.
+ * This is dev's shape, and every long-lived database's.
+ */
+function copyPreRenameMigrationSlice(): void {
+  for (const filename of readdirSync(allMigrations)) {
+    if (filename === `${N09_LEDGER_SENTINEL_MIGRATION}.sql`) continue;
+    if (filename <= `${STAGED_ACTIVATION_MIGRATION}.sql`) {
+      cpSync(join(allMigrations, filename), join(prerenameDir, filename));
+    }
+  }
+}
+
+/** The migration names in the order node-pg-migrate loads them off disk. */
+function migrationNamesInFileOrder(): string[] {
+  return readdirSync(allMigrations)
+    .filter((filename) => filename.endsWith(".sql"))
+    .map((filename) => filename.slice(0, -".sql".length))
+    .sort();
 }
 
 function copyLegacyMigrationSlice(): void {
@@ -40,9 +67,11 @@ describe("stable N09 migration-ledger recovery", () => {
     const admin = new Pool({ connectionString: databaseUrlFor("postgres") });
     try {
       await admin.query(`DROP DATABASE IF EXISTS ${legacyDatabase} WITH (FORCE)`);
+      await admin.query(`DROP DATABASE IF EXISTS ${prerenameDatabase} WITH (FORCE)`);
     } finally {
       await admin.end();
       rmSync(legacyDir, { recursive: true, force: true });
+      rmSync(prerenameDir, { recursive: true, force: true });
     }
   });
 
@@ -117,6 +146,69 @@ describe("stable N09 migration-ledger recovery", () => {
       expect(ledgerOrder.rows[0]?.n09_id).toBeLessThan(ledgerOrder.rows[0]?.session_id ?? 0);
     } finally {
       await after.end();
+    }
+  });
+
+  it("places the release sentinel where the read order puts it, and repairs a half-placed one", async () => {
+    const admin = new Pool({ connectionString: databaseUrlFor("postgres") });
+    try {
+      await admin.query(`CREATE DATABASE ${prerenameDatabase}`);
+    } finally {
+      await admin.end();
+    }
+
+    copyPreRenameMigrationSlice();
+    const prerenameUrl = databaseUrlFor(prerenameDatabase);
+    await migrate({
+      databaseUrl: prerenameUrl,
+      dir: prerenameDir,
+      direction: "up",
+      migrationsTable: "pgmigrations",
+      count: Infinity,
+      noLock: true,
+      log: () => {},
+    });
+
+    // node-pg-migrate reads the ledger with `ORDER BY run_on, id` and walks it
+    // against the sorted filenames, so this is the sequence that has to match.
+    const readOrder = async (pool: Pool): Promise<string[]> => {
+      const result = await pool.query<{ name: string }>(
+        `SELECT name FROM pgmigrations ORDER BY run_on, id`,
+      );
+      return result.rows.map((row) => row.name);
+    };
+
+    const db = new Pool({ connectionString: prerenameUrl });
+    try {
+      // A long-lived ledger applied this slice in one transaction, so every row
+      // in it carries the same timestamp and the read order is decided by id
+      // alone. That is the hard case and the one dev is in; a fresh migrate()
+      // happens to stamp each row off its own clock read, which would let a
+      // wrongly-placed sentinel pass by accident.
+      await db.query(`UPDATE pgmigrations SET run_on = (SELECT min(run_on) FROM pgmigrations)`);
+
+      const before = await readOrder(db);
+      expect(before).toContain(STAGED_ACTIVATION_MIGRATION);
+      expect(before).not.toContain(N09_LEDGER_SENTINEL_MIGRATION);
+
+      await expect(runControlApiMigrations(prerenameUrl, allMigrations, () => {})).resolves.toBeUndefined();
+      expect(await readOrder(db)).toEqual(migrationNamesInFileOrder());
+
+      // The half-placement that took dev down: the row is present and its id is
+      // right, but it carries an earlier timestamp, so it sorts ahead of the
+      // same-prefix siblings it has to follow and the refusal comes back with
+      // the two names swapped. A microsecond is all it takes, which is why the
+      // repair must never round-trip the timestamp through a JavaScript Date.
+      await db.query(
+        `UPDATE pgmigrations SET run_on = run_on - interval '1 microsecond' WHERE name = $1`,
+        [N09_LEDGER_SENTINEL_MIGRATION],
+      );
+      expect(await readOrder(db)).not.toEqual(migrationNamesInFileOrder());
+
+      await expect(runControlApiMigrations(prerenameUrl, allMigrations, () => {})).resolves.toBeUndefined();
+      expect(await readOrder(db)).toEqual(migrationNamesInFileOrder());
+    } finally {
+      await db.end();
     }
   });
 });
