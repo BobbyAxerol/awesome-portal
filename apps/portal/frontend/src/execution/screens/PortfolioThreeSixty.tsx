@@ -34,6 +34,7 @@ import {
 } from "../analytics";
 import type { Envelope, PanelStatus, PromotionStage, Readiness } from "../contracts";
 import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badges";
+import { Num, Published } from "../components/cells";
 import { liveDot } from "../sourceTone";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
@@ -244,14 +245,6 @@ export interface PortfolioThreeSixtyProps {
     ddOverlapChart?: ReactNode;
   } | null;
   demoClock?: string | null;
-}
-
-function Num({ value, absent = "not available" }: { value: string | null; absent?: string }) {
-  return value !== null ? (
-    <span className="exec-num">{value}</span>
-  ) : (
-    <span className="exec-gate-unverified">{absent}</span>
-  );
 }
 
 /**
@@ -613,7 +606,9 @@ function Leaders({ lists }: { lists: readonly LeaderList[] }) {
               <div key={row.label} className="exec-alpha-contrib">
                 <dt>{row.label}</dt>
                 <dd>
-                  <Num value={row.value} />
+                  {/* A ranked leader figure: the list carries no currency and
+                      no class, so it is shown in the scale the source chose. */}
+                  <Published value={row.value} absent="not available" />
                   {row.detail ? <span className="exec-blotter-note"> {row.detail}</span> : null}
                 </dd>
               </div>
@@ -935,7 +930,12 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                 <div key={kpi.label} className="exec-alpha-kpi">
                   <div className="exec-blotter-note">{kpi.label}</div>
                   <div>
-                    <Num value={kpi.value} />
+                    {/* The KPI strip carries whatever the analytics contract published —
+                        counts, rates, latencies — under an open record whose
+                        numeric classes the Portal does not know. Formatting
+                        them as money printed a count of 0 as "0.00". They are
+                        shown in the scale the source chose. */}
+                    <Published value={kpi.value} absent="not available" />
                     {kpi.value !== null && kpi.unit ? (
                       <span className="exec-blotter-note"> {kpi.unit}</span>
                     ) : null}
@@ -1010,7 +1010,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                         <Num value={row.exposure} absent="not published" />
                       </td>
                       <td>
-                        <Num value={row.exposurePct} absent="not published" />
+                        <Num value={row.exposurePct} unit="pct" absent="not published" />
                       </td>
                       <td>
                         <EnvironmentBadge stage={row.stage} />
@@ -1113,7 +1113,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                     <td>{row.decision}</td>
                     <td>{row.approvers}</td>
                     <td>
-                      <Num value={row.decidedAt} absent="not decided" />
+                      <Published value={row.decidedAt} absent="not decided" />
                     </td>
                     <td>{row.conditions}</td>
                   </tr>
@@ -1159,7 +1159,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                     {incidents.open.map((row) => (
                       <tr key={row.id}>
                         <th scope="row">{row.id}</th>
-                        <td><Num value={row.at} absent="time not stated" /></td>
+                        <td><Published value={row.at} absent="time not stated" /></td>
                         <td>{row.severity}</td>
                         <td>{row.summary}</td>
                       </tr>
@@ -1183,7 +1183,7 @@ export function PortfolioThreeSixty(props: PortfolioThreeSixtyProps) {
                     {incidents.resolved.map((row) => (
                       <tr key={row.id}>
                         <th scope="row">{row.id}</th>
-                        <td><Num value={row.at} absent="time not stated" /></td>
+                        <td><Published value={row.at} absent="time not stated" /></td>
                         {/* The drawing asks for what closed each one, because
                             "resolved" without a cause is an assertion. */}
                         <td>

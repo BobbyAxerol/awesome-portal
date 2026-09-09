@@ -152,7 +152,11 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     expect(screen.getByText("owner Bobby-001")).toBeTruthy();
     expect(screen.getByRole("button", { name: "dep_a" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "acc_a" })).toBeTruthy();
-    expect(screen.getAllByText("123.19605").length).toBeGreaterThan(0);
+    // Published as "123.19605"; the money class shows four places and keeps the
+    // exact string in `title`, the same as every other capital figure.
+    const pnl = screen.getAllByText("123.1961");
+    expect(pnl.length).toBeGreaterThan(0);
+    expect(pnl[0]?.getAttribute("title")).toBe("123.19605");
 
     fireEvent.click(screen.getByRole("tab", { name: "Insight Charts" }));
     // P0-3: the hi-fi's twelve come first and carry their own reasons; the
@@ -212,7 +216,8 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Sessions" }));
     expect(await screen.findByText("1 accounting recoveries")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Accounting" }));
-    expect(await screen.findByText("20000")).toBeTruthy();
+    // Allocated capital is published as "20000" and shown in its display scale.
+    expect(await screen.findByText("20,000.00")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Reconciliation" }));
     expect(await screen.findByText("POSITION")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));

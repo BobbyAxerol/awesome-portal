@@ -36,7 +36,7 @@ import type {
   Readiness,
 } from "../contracts";
 import { BrokerSyncChip, EnvironmentBadge, StatusChip } from "../components/badges";
-import { Money, Qty, Stamp } from "../components/cells";
+import { Money, Num, Published, Qty, Stamp } from "../components/cells";
 import { KeysetTable, type Column } from "../components/table";
 import { PanelState } from "../components/states";
 import { capNotice, capPreserving } from "../components/cap";
@@ -303,16 +303,6 @@ export interface RiskRow {
   canaryEnvelope?: boolean;
 }
 
-function Num({ value, absent = "not available" }: { value: string | null; absent?: string }) {
-  return value !== null ? (
-    <span className="exec-num">{value}</span>
-  ) : (
-    // Never a zero. On a screen of performance figures a zero is a claim of
-    // flat performance, which is the opposite of not knowing.
-    <span className="exec-gate-unverified">{absent}</span>
-  );
-}
-
 function ScopeBar({
   scope,
   onScopeChange,
@@ -562,7 +552,12 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 <div key={kpi.label} className="exec-alpha-kpi">
                   <div className="exec-blotter-note">{kpi.label}</div>
                   <div>
-                    <Num value={kpi.value} absent={kpi.absentReason ?? "not available"} />
+                    {/* The KPI strip carries whatever the analytics contract published —
+                        counts, rates, latencies — under an open record whose
+                        numeric classes the Portal does not know. Formatting
+                        them as money printed a count of 0 as "0.00". They are
+                        shown in the scale the source chose. */}
+                    <Published value={kpi.value} absent={kpi.absentReason ?? "not available"} />
                     {kpi.value !== null && kpi.unit ? (
                       <span className="exec-blotter-note"> {kpi.unit}</span>
                     ) : null}
@@ -1015,11 +1010,11 @@ function Reconciliation({ rows }: { rows: readonly ReconciliationRow[] }) {
               <td>{row.policy}</td>
               <td>{/* "never" is a claim that reconciliation has not run. An absent
                   timestamp is not that claim. */}
-              <Num value={row.lastRun} absent="not published" /></td>
+              <Published value={row.lastRun} absent="not published" /></td>
               <td>{row.freshness}</td>
               <td>
                 {/* Zero findings is a real result; an unknown count is not. */}
-                <Num value={row.findings !== null ? String(row.findings) : null} absent="not counted" />
+                <Num value={row.findings !== null ? String(row.findings) : null} absent="not counted" unit="count" />
               </td>
             </tr>
           ))}

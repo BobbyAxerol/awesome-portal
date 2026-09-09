@@ -230,4 +230,18 @@ describe("TradeReplayEvents panel", () => {
     expect(note.textContent).toContain("812 orders and 71 fills across 11 strategies");
     expect(screen.getByText(/profile-wide analytics facts, not this alpha's — DR-22/)).toBeTruthy();
   });
+  it("stops the candle sentence once, whether the reason is a bare code or already a sentence", () => {
+    const { container, rerender } = render(
+      <TradeReplayEvents orders={[]} fills={[]} asOf={null} subjectLabel="a"
+        candles={{ state: "UNAVAILABLE", reason: "No symbol, range or environment to read the Trading System's candles for." }} />,
+    );
+    // Alpha 360 read "…candles for.." before this: the reason ends itself and the template ended it again.
+    expect(container.textContent).toContain("candles for.");
+    expect(container.textContent).not.toContain("candles for..");
+    rerender(
+      <TradeReplayEvents orders={[]} fills={[]} asOf={null} subjectLabel="a"
+        candles={{ state: "UNAVAILABLE", reason: "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED" }} />,
+    );
+    expect(container.textContent).toContain("N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED.");
+  });
 });

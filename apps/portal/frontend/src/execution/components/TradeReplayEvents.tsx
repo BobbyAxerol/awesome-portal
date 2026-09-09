@@ -102,6 +102,16 @@ export function resolveFocus(focus: string | null | undefined, orders: readonly 
 /** Scale (§8): the trade log shows this many rows at a time, newest first; older rows come on request, and a selected marker reveals its own row. */
 export const LOG_PAGE = 200;
 
+/**
+ * Ends a sentence exactly once. A refusal reason is sometimes a bare code
+ * (`N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED`) and sometimes a written sentence
+ * that already stops itself, and appending a full stop to the second produced
+ * "…candles for.." on Alpha 360.
+ */
+export function sentence(text: string): string {
+  return /[.!?]$/.test(text.trimEnd()) ? text.trimEnd() : `${text.trimEnd()}.`;
+}
+
 export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
@@ -173,7 +183,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
         <div className="exec-gate-unverified">
           No order or fill of {subjectLabel ?? "this subject"} is present in the {source?.label ?? "retained projection page"}.
           {page ? ` The page holds ${page.orders} orders and ${page.fills} fills across ${page.strategies} strateg${page.strategies === 1 ? "y" : "ies"} (${source?.detail ?? "bounded current page, all profiles"}) — none of them belongs here.` : ""}
-          {" "}Market candles are {candles.state?.toLowerCase() ?? "unavailable"} · {candles.reason ?? "source not published"}.
+          {" "}{sentence(`Market candles are ${candles.state?.toLowerCase() ?? "unavailable"} · ${candles.reason ?? "source not published"}`)}
         </div>
         <p className="exec-rp-smoke">Counts on the Overview tab (orders, filled, rejected) are profile-wide analytics facts, not this alpha's — DR-22. A per-alpha order / fill read beyond the current page is a backend request (BR-EX-81).</p>
       </section>

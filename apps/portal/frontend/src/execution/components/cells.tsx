@@ -29,7 +29,21 @@ export function Stamp({ at, absent = "not published" }: { at: string | number | 
   return <span className="exec-num" title={String(at)}>{shown}</span>;
 }
 
-function Exact({ value, unit, absent, dp }: { value: string | null | undefined; unit: ExactUnit; absent: string; dp?: number }) {
+/**
+ * A published figure, in the display scale of its class.
+ *
+ * The source hands these over as exact decimal strings and some carry eighteen
+ * places, tail float noise included — Alpha 360 was printing
+ * `16436.209421702120000063 USDT`. Rendering that verbatim is not extra
+ * honesty: it claims a precision the source does not have, and it costs the
+ * reader the magnitude, which is what they opened the screen for. `formatExact`
+ * rounds half-up on the string and never in float, refuses to show a non-zero
+ * as zero, and the exact original stays one hover away in `title`.
+ *
+ * Exported because three screens had each grown their own copy that printed
+ * the raw string.
+ */
+export function Num({ value, unit = "money", absent = "not available", dp }: { value: string | null | undefined; unit?: ExactUnit; absent?: string; dp?: number }) {
   if (value === null || value === undefined || value === "") {
     // Never a zero. On a screen of money a zero is a claim of no money, which
     // is the opposite of not knowing.
@@ -38,6 +52,20 @@ function Exact({ value, unit, absent, dp }: { value: string | null | undefined; 
   const shown = formatExact(value, unit, dp === undefined ? undefined : { dp });
   return <span className="exec-num" title={shown.full === shown.display ? undefined : shown.full}>{shown.display}</span>;
 }
+
+/**
+ * A value that is published as text, not as a quantity — a timestamp already
+ * rendered by its source, an identifier — with the same absent branch. It must
+ * never be grouped or rounded, which is why it does not go through `Num`.
+ */
+export function Published({ value, absent = "not published" }: { value: string | null | undefined; absent?: string }) {
+  if (value === null || value === undefined || value === "") {
+    return <span className="exec-gate-unverified">{absent}</span>;
+  }
+  return <span className="exec-num">{value}</span>;
+}
+
+const Exact = Num;
 
 /** A capital figure: grouped, two decimals minimum, eight at most. */
 export function Money({ value, absent = "not published", currency }: { value: string | null | undefined; absent?: string; currency?: string | null }) {

@@ -2792,6 +2792,180 @@ Bật cờ đó là việc còn lại, và nó cần đúng bằng chứng mà m
 (`positive-latest-probe`, `positive-candles-probe`, `negative-venue-or-profile-probe`)
 — probe thật qua edge `10.70.0.2:8445`, không phải bật rồi xem sau.
 
+### A22. QUÉT TRÌNH DUYỆT SAU KHI DEV LÊN LẠI (09-09) — 14 màn, đo chứ không nhìn
+
+Owner: *"Làm kỹ, test kỹ bằng browser nhé, an toàn nhé."* Đây là số đo, không
+phải ấn tượng. Đăng nhập `claude-probe`, viewport 1440×1200, chờ 11–18 s mỗi màn.
+
+#### A22.1 Bảng quét — không màn nào kẹt loading, không màn nào bịa số
+
+| Màn | rows | canvas | kẹt loading | `unavailable` giả | API ≥400 |
+|---|---|---|---|---|---|
+| Alpha Fleet | 48 | 43 | 0 | 0 | — |
+| **Blotter** | **21** | — | 0 | 0 | — |
+| Accounts & Bindings | 43 | — | 0 | 0 | — |
+| Command Center | 15 | — | 0 | 0 | — |
+| Portfolios | 2 | — | 0 | 0 | — |
+| Paper Trading | 0 | 1 | 0 | 0 | — |
+| Sandbox | 4 | — | 0 | 0 | **413** |
+| Live Operations | 0 | — | 0 | 0 | — |
+| Operations Queue | 1 | — | 0 | 0 | — |
+| Approval Inbox · Waivers · Exit Reviews | 0 · 1 · 0 | — | 0 | 0 | — |
+
+**Blotter 21 dòng** là bằng chứng cái vá `082e988` của codex đã ăn: vòng
+projection không còn chết ở `MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE`, và đó chính
+là lý do đáng để merge `main` dù nó làm tôi sập dev một tiếng.
+
+Mọi ô rỗng đều **có lý do đọc được**, không có `0`/`—` trần:
+
+- Approval Inbox — *"Inbox zero — nothing waits on you"*
+- Paper — *"The published current window contains no order activity."*
+- Sandbox — *"No deployment is in certification — the source published an empty
+  set, and an empty set is a fact."*
+- Alpha 360 — *"Soon · BROKER_ACKNOWLEDGEMENT · UNAVAILABLE ·
+  EDS10_BROKER_ACK_CLOCK_SOURCE_GAP_CONFIRMED"*
+
+#### A22.2 Paper workbench trên deployment thật — vẽ đủ, không ô nào rỗng câm
+
+`adaptive_hma_cpp_00115m` (id thật, lấy từ `/manager/deployments`): equity vẽ từ
+**6 375 bucket / 49 ngày**, `PER_SERIES_BUCKET_EXTREMA`, as_of 2026-09-09
+05:03:10Z. Rail vòng đời R1 ✓ → R2 ✓ → ● PAPER 23/30 ngày · 0/300 trade →
+SANDBOX/CANARY/LIVE mờ. Observation gate có ba thanh tiến độ thật. Runtime
+health, accounting, portfolio contribution, execution quality đều có số.
+
+#### A22.3 Ba kết luận trước đó của tôi là **lỗi đo của tôi**, không phải lỗi màn
+
+| Tôi báo | Sự thật |
+|---|---|
+| Trade Replay không gọi nến | Trade Replay là **một tab** của Alpha 360; tôi đo tab OVERVIEW mặc định |
+| `/deployments/trade-replay` 0 canvas | Route đó **không tồn tại** |
+| `/execution/incidents` rỗng | Cũng không tồn tại — chỉ có `/execution/operations/incidents/<id>` |
+
+Ghi ra đây vì nó là cùng một thói quen đã làm tôi báo `500 INTERNAL_ERROR` như
+bug backend ở §A19: **gọi sai rồi đọc câu trả lời đúng như một lỗi.**
+
+#### A22.4 Lỗi thật duy nhất tìm được: `broker_account_sync_current_state` ở sandbox
+
+```
+GET /manager/current/broker-account-sync-current-state?environment=sandbox
+→ 413 N17B_SOURCE_RESPONSE_TOO_LARGE
+  details { availability: DEGRADED, reason_code: MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE }
+```
+
+`paper` 200, `live` 200 — **chỉ sandbox**. Tôi đã thử xem cơ chế giảm trang mới
+của codex có nuốt được không: **không**.
+
+| limit | kết quả |
+|---|---|
+| không truyền | 413 |
+| 200 | 413 |
+| **2** | **413** |
+
+`limit=2` vẫn 413 ⇒ đây **không** phải chuyện chia trang. Halving của
+`nextAdaptiveManagerRelationPagePath` không cứu được, và cũng không nên sửa ở
+Portal: nguồn từ chối quan hệ này ở mọi cỡ trang. → **Backend request** dưới.
+
+Màn **có** nói thật với người đọc, không nuốt lỗi vào console:
+
+> BROKER SYNC · **UNKNOWN** · envelope freshness · PARTIAL
+> VENUE CONNECTIVITY — broker sync relation · **Unavailable** ·
+> Soon · `BROKER_ACCOUNT_SYNC_NOT_READABLE`
+
+Bảng Reconciliation ngay dưới vẫn chạy: *0 open of 3*, ba finding
+`PHYSICAL_BROKER_*_MISSING_IN_DB` với giờ raise/resolve thật.
+
+(Lần quét đầu tôi đếm `[data-status="unavailable"]` và ra 0 ở màn này — màn dùng
+markup khác. **Bộ đếm sai, không phải màn sai**; đã đọc lại bằng text.)
+
+```text
+Backend request (@codex)
+- Quan hệ: manager.current.broker-account-sync-current-state, profile SANDBOX
+- Triệu chứng: 413 MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE ở mọi limit, kể cả 2
+- Vì sao không tự vá được ở Portal: giảm trang đã có (082e988) và không ăn;
+  một dòng đơn lẻ đã vượt ngân sách wire, hoặc nguồn từ chối trước khi phân trang
+- Ảnh hưởng: panel VENUE CONNECTIVITY của Sandbox mất toàn bộ nội dung;
+  paper/live không sao
+```
+
+#### A22.5 Tab Trade Replay của Alpha 360 — nói thật, và một dấu chấm thừa
+
+Mở đúng tab trên `gridcombine001_4h` (alpha **có** fill trong quan hệ nguồn):
+
+> No order or fill of gridcombine001_4h is present in the Portal retained
+> current-source window (BR-EX-81). The page holds 0 orders and 0 fills across 0
+> strategies (2 pages · retained current window covered · PARTIAL · refreshing)
+> — none of them belongs here. Market candles are unavailable · No symbol, range
+> or environment to read the Trading System's candles for**..**
+
+Tôi đã đi kiểm câu đó có đúng không, vì `/manager/current/fills` **có** trả fill
+mang `strategy_id: gridcombine001_4h`:
+
+- `/resources/alphas/gridcombine001_4h/orders` → `AUTHORITATIVE_EMPTY`, 0 record
+- `/resources/alphas/gridcombine001_4h/fills` → `AUTHORITATIVE_EMPTY`, 0 record
+- các fill kia có `trade_time` **2026-06-30**, ngoài cửa sổ current giữ lại
+
+Vậy panel **đúng**, và nó còn chỉ thẳng ra việc cần làm để có dữ liệu (BR-EX-81).
+Không sửa gì.
+
+Lỗi thật ở đây là **của tôi và nhỏ**: `candles.reason` khi là câu viết sẵn thì đã
+tự kết thúc, template lại chấm thêm lần nữa → `candles for..`. Thêm `sentence()`
+kết câu đúng một lần, và **2 test** khoá cả hai dạng reason (mã trần thì vẫn được
+chấm, câu viết sẵn thì không chấm hai lần).
+#### A22.6 `16436.209421702120000063 USDT` — số thô 18 chữ số ở Alpha 360 và Portfolio 360
+
+Nhìn ảnh chụp Alpha 360 mới thấy, không phải test nào bắt được:
+
+| Chỗ | Đang in | Phải là |
+|---|---|---|
+| Per-venue contribution | `16436.209421702120000063` | `16,436.2094` |
+| Deployments in scope · PNL | `17881.324271500000000063` | `17,881.3243` |
+
+In nguyên chuỗi **không phải trung thực hơn**: đuôi `…0000063` là nhiễu float
+của nguồn, nên bản in đang **khẳng định một độ chính xác nguồn không có**, đồng
+thời cướp mất của người đọc cái họ mở màn ra để xem — độ lớn.
+
+Gốc rễ là **trùng lặp**: `components/cells.tsx` đã có sẵn đúng primitive cần
+(`Exact` — nhóm chữ số, trần thập phân theo lớp, **không bao giờ** làm một số
+khác 0 in ra thành 0, và giữ giá trị gốc trong `title`), nhưng **ba màn mỗi màn
+tự mọc một `Num` riêng in thẳng chuỗi thô**. Tôi suýt thêm bản sao thứ tư.
+
+Đã làm: export `Exact` thành `Num` (mặc định lớp `money`) và thêm `Published`
+cho thứ vốn là chữ chứ không phải lượng (mốc thời gian, định danh) — hai màn
+Alpha 360 và Portfolio 360 nay dùng chung, bỏ bản sao riêng. `exposurePct` gắn
+`unit="pct"`, ba ô thời gian gắn `Published`.
+
+**Gate bắt đúng hai chỗ tôi vừa đổi** — và đó là dấu hiệu tốt: hai test đang
+neo vào chuỗi thô (`"20000"`, `"123.19605"`). Sửa sang display scale, và một
+trong hai giờ khẳng định luôn `title` mang giá trị gốc `123.19605` — tức là
+**khoá luôn lời hứa trung thực**, không chỉ khoá định dạng.
+
+**Nợ còn lại (cố ý):** `PaperWorkbench.tsx` vẫn giữ bản sao `Num` thứ ba. Số ở
+màn đó tới nơi **đã được format sẵn** nên không lộ lỗi, mà màn lại nằm dưới
+visual baseline — đổi để gộp code sẽ mạo hiểm baseline mà người dùng không được
+gì. Ghi ra đây để lần gộp sau không phải tìm lại.
+
+**Gate:** tsc sạch, **120/120 file test** xanh.
+
+**Và trình duyệt bắt được cái test không bắt được.** Deploy xong đo lại: 0 chuỗi
+thập phân dài còn sót, `16,436.2094` và `17,881.3243` đúng như mong đợi,
+`title` giữ `16436.209421702120000063`. Nhưng cùng lúc lộ ra **`0.00` xuất hiện
+5 lần** — đó là các **đếm** của execution quality (submitted / filled /
+rejected), bị tôi cho vào lớp `money` vì `Num` mặc định là money.
+
+Nguồn của chúng là `executionQuality: Record<string, unknown>` — **một record
+mở, Portal không biết lớp số của từng trường**. Format chúng là **đoán**, đúng
+cái lỗi tôi vừa viết ra ở §A22.3. Đã sửa thành luật rõ ràng:
+
+> **Chỉ format cái đã biết lớp** (allocation, pnl, drawdown, contribution,
+> accounting — đều có `currency` trong type). Còn lại giữ **nguyên scale nguồn
+> chọn**.
+
+Theo luật đó, ba chỗ chuyển sang `Published`: KPI strip của Alpha 360, KPI strip
+của Portfolio 360, và **leader figure** của Portfolio 360 (`LeaderList.rows`
+không mang currency, không mang lớp).
+
+Không test nào bắt được vì không test nào neo vào giá trị KPI. **Chỉ mở trình
+duyệt lên nhìn mới thấy** — đúng lý do owner bắt test bằng browser.
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
