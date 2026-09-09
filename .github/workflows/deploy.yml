@@ -290,6 +290,19 @@ jobs:
               "${compose_args[@]}" "$@"
           }
 
+          # Keep a failed takeover diagnosable without printing host env,
+          # credentials or mounted secret material.  These commands expose
+          # only Compose state and bounded service stdout/stderr.
+          release_failure_diagnostics() {
+            local status=$?
+            set +e
+            printf 'Stable release takeover failed; bounded service diagnostics follow.\n' >&2
+            compose_next ps >&2 || true
+            compose_next logs --tail 120 control-api-migrate control-api-bootstrap control-api >&2 || true
+            exit "${status}"
+          }
+          trap release_failure_diagnostics ERR
+
           compose_next config -q
 
           timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
