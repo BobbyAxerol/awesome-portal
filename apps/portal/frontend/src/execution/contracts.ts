@@ -459,6 +459,12 @@ export interface ChartEnvelope {
   coverage?: number | null;
   /** Named only when the server had to reduce beyond bucket selection. */
   downsampleMethod?: string | null;
+  /**
+   * What the store holds, as against `window`, which is what this read
+   * returned. Without it a narrowed window reads as the whole history, and
+   * "ALL" cannot be checked against anything.
+   */
+  retained?: string | null;
   warnings?: readonly string[];
 }
 

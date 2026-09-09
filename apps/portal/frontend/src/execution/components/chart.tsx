@@ -41,6 +41,9 @@ export function envelopeCaption(envelope: ChartEnvelope): string {
     );
   }
 
+  // Only worth saying when it differs: repeating the same dates as `window`
+  // adds noise and teaches the reader to stop reading the caption.
+  if (envelope.retained && envelope.retained !== envelope.window) parts.push(`retained ${envelope.retained}`);
   if (envelope.downsampleMethod) parts.push(`downsample ${envelope.downsampleMethod}`);
   if (envelope.coverage !== null && envelope.coverage !== undefined) {
     parts.push(`coverage ${Math.round(envelope.coverage * 100)}%`);

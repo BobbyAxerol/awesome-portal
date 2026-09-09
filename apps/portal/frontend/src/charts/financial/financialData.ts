@@ -105,6 +105,13 @@ export const RANGE_PRESETS: readonly RangePreset[] = ["1W", "1M", "3M", "ALL"];
 const DAY_MS = 86_400_000;
 const SPAN_MS: Record<Exclude<RangePreset, "ALL">, number> = { "1W": 7 * DAY_MS, "1M": 30 * DAY_MS, "3M": 90 * DAY_MS };
 
+/**
+ * The same spans, for a caller that turns a preset into a server query rather
+ * than a crop. `ALL` is absent on purpose: it is "no bound", not a number, and
+ * a caller must send no range at all rather than invent one.
+ */
+export const PRESET_SPAN_MS: Partial<Record<RangePreset, number>> = SPAN_MS;
+
 /** The x window a preset selects, anchored on the newest bucket. `null` = whole series. */
 export function presetRange(xs: readonly number[], preset: RangePreset): [number, number] | null {
   if (preset === "ALL" || xs.length < 2) return null;

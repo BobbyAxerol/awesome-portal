@@ -154,6 +154,17 @@ export interface PortfolioOverviewInput {
   relations: RelationFacts | null | undefined;
   loading: boolean;
   asOf: string | null;
+  /**
+   * Goal 10: the server-backed equity chart, when the caller reads one.
+   *
+   * The relation drain gives this panel whatever fits in its bounded page —
+   * 134 points for `portfolio_types_pool` on dev — while the EDS-07 chart
+   * route answers the same portfolio with 1,278 points drawn from 4,592 source
+   * rows, downsampled with extrema preserved and a window selector that
+   * re-queries. Callers that pass none (tests, fixtures) keep the drained
+   * series, which is still honest, just shorter.
+   */
+  equityChart?: ReactNode;
 }
 
 /** The three Overview panels, or honest states in their place. */
@@ -177,7 +188,7 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
     equityVsBenchmark: (
       <section className="exec-gate-panel" aria-label="Equity vs benchmark">
         <h3 className="exec-section-title">Equity vs benchmark</h3>
-        {equity && equity.points.length > 1 ? (
+        {input.equityChart ? input.equityChart : equity && equity.points.length > 1 ? (
           <>
             <LinesChart
               series={[{ name: `portfolio equity${equity.currency ? ` · ${equity.currency}` : ""}`, tone: "good", points: equity.points.map((point) => [new Date(point.t).toISOString(), point.equity] as const) }]}

@@ -41,6 +41,7 @@ import type { BlotterGroups } from "./FullBlotter";
 import { useRelationFacts, type RelationFactsState } from "../useRelationFacts";
 import { useSubjectActivityFacts } from "../useSubjectActivityFacts";
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
+import type { RangePreset } from "../../charts/financial/financialData";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { candleProvenanceLine, candleRefusalLine, type MarketContextCandles } from "../api/marketContext";
 import { unavailable } from "../api/ports";
@@ -1520,6 +1521,24 @@ function deploymentHref(deployment: DeploymentRow): string {
   return `/deployments/live/${encodeURIComponent(deployment.deploymentId)}`;
 }
 
+/**
+ * The window an unbounded read covered — the store's extent as this screen
+ * measured it, remembered so a narrowed window can be shown against it.
+ *
+ * It is deliberately not read from the envelope's `retention`: on dev that
+ * field reports the *requested* window's bounds, so using it would print the
+ * same dates twice under two names and tell the reader nothing.
+ */
+function useRetainedExtent(view: { envelope: { window: string } } | null, ranged: boolean): string | null {
+  const [extent, setExtent] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ranged && view?.envelope.window && view.envelope.window !== "window not stated") {
+      setExtent(view.envelope.window);
+    }
+  }, [ranged, view?.envelope.window]);
+  return extent;
+}
+
 export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionApi; alphaId: string }) {
   // EDS-04: exact resource identity and all current source rows arrive through
   // one named server BFF. Fleet remains the root register only; a detail route
@@ -1720,6 +1739,26 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const capitalSandbox = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "sandbox"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const capitalLive = useApiRead<PortfolioCapital>(() => api.getPortfolioCapital(portfolioId, "live"), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const portfolioRelations = useRelationFacts(api, "paper", true, PORTFOLIO_RELATIONS);
+  // Goal 10: the equity panel drew whatever the relation drain happened to
+  // carry — 134 points here — while the EDS-07 route answers the same portfolio
+  // with 1,278 from 4,592 source rows. The relation stays for the
+  // cross-portfolio standings, which need every portfolio's snapshots.
+  const [pfRange, setPfRange] = useState<{ fromMs: number; toMs: number } | null>(null);
+  const [pfPreset, setPfPreset] = useState<RangePreset | null>("ALL");
+  const pfChartState = useApiRead<FinancialChartPayload>(
+    () => api.getFinancialChart({
+      environment: "paper",
+      subjectKind: "portfolio",
+      subjectId: portfolioId,
+      metric: "equity",
+      viewportPx: typeof window !== "undefined" ? window.innerWidth : undefined,
+      ...(pfRange ? { fromMs: pfRange.fromMs, toMs: pfRange.toMs } : {}),
+    }),
+    [api, portfolioId, pfRange?.fromMs, pfRange?.toMs, realtime.refreshKey],
+    { keepValue: true },
+  );
+  const pfChart = pfChartState.value ? financialChartView(pfChartState.value) : null;
+  const pfExtent = useRetainedExtent(pfChart, pfRange !== null);
   const [tab, setTab] = useParamState<PortfolioTab>("tab", PORTFOLIO_TABS, "Overview");
   const [lens, setLens] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -1751,6 +1790,25 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
         relations: portfolioRelations.value,
         loading: portfolioRelations.status === "loading",
         asOf: analytics?.asOf ?? resource?.asOf ?? null,
+        // Only when the route actually answered; a failed read falls back to
+        // the drained series rather than replacing a short chart with none.
+        ...(pfChart?.series ? {
+          equityChart: (
+            <EquityChart
+              title="Portfolio equity"
+              envelope={{ ...pfChart.envelope, retained: pfExtent }}
+              series={pfChart.series}
+              height={170}
+              serverPreset={pfPreset}
+              onRangeChange={(range) => {
+                setPfRange(range);
+                setPfPreset(range === null ? "ALL"
+                  : range.toMs - range.fromMs <= 7 * 86_400_000 ? "1W"
+                    : range.toMs - range.fromMs <= 30 * 86_400_000 ? "1M" : "3M");
+              }}
+            />
+          ),
+        } : {}),
       })}
       portfolioId={portfolioId}
       portfolioName={text(portfolio?.name) ?? portfolioId}
@@ -1819,6 +1877,12 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
     [api, accountStrategy, realtime.refreshKey],
     { keepValue: true },
   );
+  // Goal 10: the window preset is a server query, not a crop of what was
+  // already downloaded. Asking the server for one week returns that week's real
+  // rows — 672 of them, undownsampled — where cropping the full-range series
+  // showed 2.7-hour buckets of it. `null` is the whole retained range.
+  const [chartRange, setChartRange] = useState<{ fromMs: number; toMs: number } | null>(null);
+  const [chartPreset, setChartPreset] = useState<RangePreset | null>("ALL");
   const chartState = useApiRead<FinancialChartPayload>(
     () => api.getFinancialChart({
       environment: chartEnv,
@@ -1827,11 +1891,15 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
       metric: "equity",
       viewportPx: typeof window !== "undefined" ? window.innerWidth : undefined,
       workspaceId: chartWorkspace,
+      ...(chartRange ? { fromMs: chartRange.fromMs, toMs: chartRange.toMs } : {}),
     }),
-    [api, accountId, chartEnv, chartWorkspace, realtime.refreshKey],
+    [api, accountId, chartEnv, chartWorkspace, realtime.refreshKey, chartRange?.fromMs, chartRange?.toMs],
+    // Without this the chart tears down to a skeleton on every window change,
+    // which reads as a failure rather than a narrower question.
     { keepValue: true },
   );
   const chart = chartState.value ? financialChartView(chartState.value) : null;
+  const chartExtent = useRetainedExtent(chart, chartRange !== null);
   const profile = state.value;
   const account = profile?.data.accounts?.[0] ?? null;
   const balances = profile?.data.account_balances ?? [];
@@ -1938,11 +2006,18 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
       financialChart={
         <EquityChart
           title={`Account equity · ${chartEnv}`}
-          envelope={chart?.envelope ?? chartFallbackEnvelope(sourceEnvelope.asOf)}
+          envelope={chart ? { ...chart.envelope, retained: chartExtent } : chartFallbackEnvelope(sourceEnvelope.asOf)}
           series={chart?.series ?? null}
           unavailableReason={chart?.reason ?? chartState.reason ?? "The EDS-07 chart panel published no points for this account."}
           live={sourceEnvelope.freshness === "OK"}
           height={280}
+          serverPreset={chartPreset}
+          onRangeChange={(range) => {
+            setChartRange(range);
+            setChartPreset(range === null ? "ALL"
+              : range.toMs - range.fromMs <= 7 * 86_400_000 ? "1W"
+                : range.toMs - range.fromMs <= 30 * 86_400_000 ? "1M" : "3M");
+          }}
         />
       }
       syncPolicy={reason ?? `current-source ${environment} profile`}

@@ -3448,6 +3448,124 @@ Lỗi 3 là nghiêm trọng nhất: chỉ `data.command_authority` của **drawe
 `relayActive` nay là **ba trạng thái** `true | false | null`: quyết định an toàn vẫn coi `null` là hướng nguy hiểm, còn hiển thị thì nói *"relay state not published"*.
 
 **Gate:** `tsc` sạch · **120/120 file test** FE · đo lại trên dev: 4 khối đủ, source health 3 profile (trước 0), drawer journal 100 (trước 200).
+### A28. GOAL 10 — RÀ TRƯỚC KHI LÀM (09-09, owner hỏi việc gì)
+
+Kiểm bằng backend thật trên dev. **Tiền đề của kế hoạch đã lỗi thời ở một chỗ lớn, và việc thật thì nằm chỗ khác.**
+
+#### A28.1 "Portfolio 360 equity nay 4 điểm" — KHÔNG còn đúng
+
+| Subject | Điểm vẽ | Từ nguồn | Downsample |
+|---|---|---|---|
+| `portfolio_types_pool` | **1 278** | 4 592 dòng | `MIN_MAX_LAST_BUCKET_V1`, target 1920 |
+| account `paper-binance-gridcombine001_4h` | **1 555** | **51 720** dòng | như trên |
+
+`/views/equity-chart` (EDS-07) **đã** đọc mirror và downsample trung thực, có `sampling`/`coverage`/`retention` trong envelope. Con số "4 điểm" trong kế hoạch thuộc về thời trước EDS-07 + trước bản absorb §A25.1.
+
+#### A28.2 Việc thật: **bộ chọn cửa sổ đang là zoom phía client, không phải truy vấn server**
+
+`RANGE_PRESETS = ["1W","1M","3M","ALL"]`, nhưng `presetRange()` chỉ cắt trên mảng `xs` **đã tải**:
+
+```ts
+// financialData.ts:109
+export function presetRange(xs: readonly number[], preset: RangePreset): [number, number] | null {
+  if (preset === "ALL" || xs.length < 2) return null;   // ← thuần client
+```
+
+Trong khi route **đã nhận** `from_ms`/`to_ms` và trả kết quả tốt hơn hẳn:
+
+| Truy vấn | source_rows | returned | bucket_seconds |
+|---|---|---|---|
+| toàn dải | 51 720 | 1 555 | 9 621 (~2,7 giờ) |
+| `from_ms` = 7 ngày trước | 672 | **672** | **không downsample** |
+
+⇒ Người dùng bấm **1W** hôm nay đang xem **bucket 2,7 giờ** của bản downsample toàn dải, trong khi server sẵn sàng trả **672 dòng thật, không downsample** cho đúng tuần đó. Đây là **mất độ phân giải không cần thiết**, và caption thì đang mô tả sampling của **toàn dải** chứ không phải của cửa sổ đang xem — tức caption nói về một thứ khác với thứ đang vẽ.
+
+#### A28.3 `/history/{env}/{relation}` — vẫn chưa ai gọi, và nay giàu hơn trước
+
+`grep` toàn `apps/portal/frontend/src`: **0 chỗ gọi**. Sau bản absorb §A25.1 nó phục vụ:
+
+| relation | dòng | khoảng |
+|---|---|---|
+| `manager.performance:account_equity_snapshots` | **596 106** | 30-06 → 09-09 |
+| `manager.performance:performance_snapshots` | 129 178 | 30-06 → 17-08 |
+| `manager.performance:portfolio_equity_snapshots` | 6 888 | 16-08 → 09-09 |
+| `manager.fills:fills` | 280 | 01-07 → 17-08 |
+| `manager.risk:sizing_decisions` | 545 | 01-07 → 30-08 |
+| `manager.orders:orders` · `manager.risk:risk_grants` | 0 | — |
+
+Giá trị riêng của route này: nó phục vụ **bất kỳ relation nào**, còn `/views/equity-chart` chỉ phục vụ equity. Nên nó là đường cho **fills/sizing_decisions theo thời gian** (Blotter), không phải để thay chart equity.
+
+(Lần probe đầu tôi ghép `manager.performance:fills` và đọc 404 như "route không phục vụ" — sai tiền tố, không phải lỗi route. Cùng loại lỗi đo đã ghi ở §A22.3 và §A27.4.)
+
+#### A28.4 Việc Goal 10, sau khi rà
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| 10-1 | Bộ chọn cửa sổ **gửi `from_ms`/`to_ms` lên server** thay vì zoom client; 1W/1M/3M lấy đúng độ phân giải của cửa sổ | backend **đã sẵn sàng**, đo được |
+| 10-2 | Caption nêu **khoảng và sampling của cửa sổ đang xem**, không phải của toàn dải | phụ thuộc 10-1 |
+| 10-3 | `ALL` phải nói đúng phạm vi mirror đang có (`retention.oldest_available_ms`/`newest_available_ms` đã có sẵn trong envelope) | dữ liệu có |
+| 10-4 | Nối `/history/{env}/{relation}` cho chart theo thời gian của **fills / sizing_decisions** (Blotter) | route sẵn sàng, 280 + 545 dòng |
+| 10-5 | Gate: không chart nào ghi `All` mà vẽ ít hơn mirror có; mỗi chart nêu **khoảng thật** | đo bằng harness §A9.1 |
+
+**Không mục nào chờ backend.** Đây là goal thuần frontend — trái với Goal 9 (phải mở cổng query) và Goal 8 (phải sửa kho đọc).
+### A29. GOAL 10 ĐÃ LÀM (09-09) — preset thành truy vấn, và một lời nói dối suýt lọt vào caption
+
+#### A29.1 Việc thật không phải "chart bị bó" mà là **preset chỉ cắt cái đã tải**
+
+`RANGE_PRESETS` có `1W/1M/3M/ALL`, nhưng `presetRange()` chỉ cắt mảng `xs` **đã tải về**. Server thì **đã** nhận `from_ms`/`to_ms` từ lâu và trả tốt hơn hẳn:
+
+| Truy vấn | source_rows | returned | bucket |
+|---|---|---|---|
+| toàn dải | 51 720 | 1 555 | 9 621 s (~2,7 giờ) |
+| 1 tuần | 672 | **672** | **không downsample** |
+
+⇒ Bấm **1W** trước đây cho xem **bucket 2,7 giờ** của bản downsample toàn dải, trong khi server sẵn sàng trả **dòng thật, không downsample** cho đúng tuần đó.
+
+#### A29.2 Cách sửa — **thuần cộng thêm**, không đụng màn nào khác
+
+`EquityChart` nhận thêm hai prop **tuỳ chọn**: `onRangeChange` và `serverPreset`.
+Màn nào không truyền (fixtures, test, mọi chart khác) **giữ nguyên** zoom client cũ; chỉ màn có server đứng sau mới đổi sang truy vấn. Visual baseline phủ Research/Planning/Admin — không phủ Execution — nhưng nguyên tắc vẫn là không đổi hành vi mặc định.
+
+Span của preset **export từ chính chỗ định nghĩa `SPAN_MS`** (`PRESET_SPAN_MS`), nên `1W` phía client và `1W` gửi lên server không thể lệch nhau. Cửa sổ **neo vào điểm cuối server publish**, không vào đồng hồ trình duyệt — đo "1 tuần từ bây giờ" trên chuỗi kết thúc hôm qua là hỏi một khoảng rỗng.
+
+#### A29.3 Portfolio 360 — kế hoạch nói "4 điểm", thực tế là **134**, và nay là **1 918**
+
+Panel *Equity vs benchmark* vẽ bằng `LinesChart` từ **quan hệ đã drain** (`portfolio_equity_snapshots`, trang giới hạn → 134 điểm cho `portfolio_types_pool`), trong khi route EDS-07 trả **1 918 điểm từ 4 594 dòng** cho đúng portfolio đó.
+
+Nay panel nhận `equityChart` tuỳ chọn; quan hệ **giữ nguyên** cho bảng cross-portfolio (bảng đó cần snapshot của mọi portfolio). Có **fallback**: route không trả series thì quay về chuỗi drain — thay một chart ngắn bằng *không có gì* thì tệ hơn.
+
+#### A29.4 Suýt để lại một lời nói dối trong caption
+
+Tôi thêm `retained <oldest → newest>` lấy từ `retention.oldest_available_ms`. Đo mới thấy: **khi hỏi một tuần, server báo `oldest_available_ms` = đầu tuần đó**, không phải điểm cũ nhất kho giữ.
+
+```
+hỏi 1 tuần → coverage 2026-09-02 → 2026-09-09
+             retention oldest 2026-09-02   ← không phải 2026-06-30
+```
+
+Tức `retention` nghĩa là *"cũ nhất trong phản hồi này"*. Dùng nó làm "phạm vi kho" sẽ in **cùng một khoảng hai lần dưới hai cái tên**, và nói với người đọc rằng kho chỉ có một tuần. Đã bỏ, thay bằng phạm vi **màn tự đo được từ lần đọc không giới hạn của chính nó** (`useRetainedExtent`) — một sự thật đã đo, không phải suy diễn.
+
+**Và kiểm tra đầu của tôi dương tính giả:** `'retained' in caption` khớp trúng chữ trong `eds07.direct-**retained**-financial-series`. Đã siết regex về đúng phần caption.
+
+#### A29.5 Đo trên dev sau deploy
+
+| | Account 360 | Portfolio 360 |
+|---|---|---|
+| ALL | `2026-06-30 → 09-09` · 51 721 → **2 313** mẫu | `2026-08-16 → 09-09` · 4 594 → **1 918** mẫu *(trước 134)* |
+| bấm 1W | **request mới**, `2026-09-02 → 09-09`, **673 mẫu, bucket not stated** | **request mới**, **1 346 mẫu** |
+| `retained` | `2026-06-30 → 2026-09-09` | `2026-08-16 → 2026-09-09` |
+
+| Gate | Kết quả |
+|---|---|
+| 10-1 preset là truy vấn server | ✅ `newReq=true`, query mang `from_ms`/`to_ms` |
+| 10-2 caption nêu khoảng **thật trả về** | ✅ đổi theo cửa sổ |
+| 10-3 `ALL` kiểm được | ✅ `retained` hiện khi khác `window` |
+| 10-4 chart bị bó nối vào nguồn giàu hơn | ✅ Portfolio 360 134 → 1 918 |
+| 10-5 không chart nào ghi nhiều hơn cái nó vẽ | ✅ caption nêu `source → returned` và bucket thật |
+
+**10-4 phần Blotter chưa làm:** thêm chart thời gian cho Blotter là **tính năng mới**, không phải nối lại nguồn cho chart đang bó. Để tránh "sửa cái này hỏng cái kia", tôi không dựng nó trong đợt này; `/history/{env}/{relation}` vẫn sẵn sàng (fills 280 dòng, sizing_decisions 545).
+
+**Gate:** `tsc` sạch · **120/120 file test** FE.
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

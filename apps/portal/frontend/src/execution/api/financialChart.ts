@@ -238,6 +238,16 @@ export function financialChartView(p: FinancialChartPayload): FinancialChartView
   if (p.benchmark?.requested && p.benchmark.state !== "READY") warnings.push(`Benchmark ${p.benchmark.state ?? "not published"}${p.benchmark.reasonCode ? ` · ${p.benchmark.reasonCode}` : ""}.`);
   const envelope: ChartEnvelope = {
     window: p.coverage.fromMs !== null && p.coverage.toMs !== null ? `${iso(p.coverage.fromMs)!.slice(0, 10)} → ${iso(p.coverage.toMs)!.slice(0, 10)}` : "window not stated",
+    /*
+     * NOT taken from `retention`. Measured on dev: asking for one week makes
+     * the server report `oldest_available_ms` as that week's start, so
+     * `retention` means "oldest in THIS response", not "oldest the store
+     * holds". Reading it as the store's extent would print the window twice
+     * under two different names. The caller supplies the extent from its own
+     * unbounded read instead, which is a fact it measured rather than one
+     * inferred here.
+     */
+    retained: null,
     interval: bucketLabel(p.sampling?.bucketSeconds ?? null),
     currency: first?.currency ?? null,
     asOf: iso(p.clocks.asOfMs) ?? "as_of not stated",

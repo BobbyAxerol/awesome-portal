@@ -16,7 +16,7 @@
 import { useCallback, useId, useMemo, useState } from "react";
 
 import { PrimusFinancialChart, type FinancialMarker } from "../../charts/financial/PrimusFinancialChart";
-import { RANGE_PRESETS, presetAvailable, presetRange, toFinancialData, type RangePreset } from "../../charts/financial/financialData";
+import { PRESET_SPAN_MS, RANGE_PRESETS, presetAvailable, presetRange, toFinancialData, type RangePreset } from "../../charts/financial/financialData";
 import type { ChartEnvelope } from "../contracts";
 import { formatExact } from "../formatExact";
 import { envelopeCaption } from "./chart";
@@ -75,6 +75,20 @@ export interface EquityChartProps {
   live?: boolean;
   /** Time markers drawn on the canvas (risk decisions, halts) — labels are the server's. */
   markers?: readonly FinancialMarker[];
+  /**
+   * Goal 10: when a caller can re-read the window from the server, a preset
+   * stops being a zoom and becomes a query.
+   *
+   * Without it a preset only crops what was already downloaded, so "1W" shows
+   * the 2.7-hour buckets of a full-range downsample while the server would
+   * answer that same week with 672 exact rows and no downsampling at all. The
+   * caller re-fetches and hands back a denser series; `null` asks for the whole
+   * retained range. Callers that pass a static series leave this undefined and
+   * keep the client-side crop, which is right for a fixture.
+   */
+  onRangeChange?: (range: { fromMs: number; toMs: number } | null) => void;
+  /** The window the caller last asked the server for; drives which preset reads as pressed. */
+  serverPreset?: RangePreset | null;
 }
 
 const EXPANDED_HEIGHT = 560;
@@ -91,6 +105,8 @@ export function EquityChart({
   compact = false,
   live = false,
   markers,
+  onRangeChange,
+  serverPreset = null,
 }: EquityChartProps) {
   const [exported, setExported] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
@@ -157,7 +173,23 @@ export function EquityChart({
               {presets.length > 1 ? (
                 <span className="exec-chart-seg" role="group" aria-label="Window">
                   {presets.map((p) => (
-                    <button key={p} type="button" className="exec-btn-ghost" aria-pressed={preset === p} onClick={() => setPreset(p)}>
+                    <button
+                      key={p}
+                      type="button"
+                      className="exec-btn-ghost"
+                      aria-pressed={onRangeChange ? serverPreset === p : preset === p}
+                      onClick={() => {
+                        if (!onRangeChange) { setPreset(p); return; }
+                        // Anchor on the newest point the server published, not on
+                        // the browser clock: a window measured from "now" over a
+                        // series that ends yesterday asks for a range with
+                        // nothing in it.
+                        const last = data.xs[data.xs.length - 1];
+                        const span = PRESET_SPAN_MS[p];
+                        onRangeChange(span === undefined || last === undefined ? null : { fromMs: last - span, toMs: last });
+                        setPreset(p);
+                      }}
+                    >
                       {p}
                     </button>
                   ))}
