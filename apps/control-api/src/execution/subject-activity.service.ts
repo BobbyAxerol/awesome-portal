@@ -9,6 +9,7 @@ import {
   type ProjectionRelation,
   type ProjectionScalar,
 } from "./profile-projection.repository";
+import { ExecutionDurableMirrorRepository } from "./durable-mirror.repository";
 
 const SUBJECT_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
 const MAXIMUM_PAGE_ROWS = 500;
@@ -61,6 +62,7 @@ export class ExecutionSubjectActivityService {
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
+    @Inject(ExecutionDurableMirrorRepository) private readonly mirror: ExecutionDurableMirrorRepository,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -97,14 +99,15 @@ export class ExecutionSubjectActivityService {
       return unavailableResponse(request, profileId, subject, relation, snapshot, limit);
     }
 
+    // The rows come from the durable mirror, which is the only store the worker
+    // still writes once FEATURE_EXECUTION_DURABLE_MIRROR is on — and
+    // assertEnabled() above has already refused unless it is. Reading the
+    // retained-history table here answered AUTHORITATIVE_EMPTY for every
+    // subject while 280 fills and 812 orders sat in the mirror.
+    const scope = { workspaceId, environment: request.environment, profileId };
     const [page, coverage] = await Promise.all([
-      this.repository.timeSeriesHistory(workspaceId, request.environment, profileId, relationKey(request.relation), {
-        entity,
-        after: cursor,
-        limit,
-        order: "DESC",
-      }),
-      this.repository.timeSeriesHistoryCoverage(workspaceId, request.environment, profileId, relationKey(request.relation), entity),
+      this.mirror.subjectRows(scope, relationKey(request.relation), { entity, after: cursor, limit }),
+      this.mirror.subjectCoverage(scope, relationKey(request.relation), entity),
     ]);
     const last = page.rows.at(-1) ?? null;
     const nextCursor = page.hasMore && last

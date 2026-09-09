@@ -2966,6 +2966,179 @@ không mang currency, không mang lớp).
 
 Không test nào bắt được vì không test nào neo vào giá trị KPI. **Chỉ mở trình
 duyệt lên nhìn mới thấy** — đúng lý do owner bắt test bằng browser.
+### A23. TRADE REPLAY RỖNG VÀ MẤY TILE INSIGHT MẤT DỮ LIỆU — TRUY RA GỐC (09-09, owner báo)
+
+Owner: *"Bạn sửa kiểu gì mà 1 số chart trong Insight Chart lại mất dữ liệu và Trade Replay lại k hiện thị nữa"*. Đã đo tận nơi. **Không phải commit format số của tôi** — nhưng **là hệ quả của bản merge do tôi thực hiện**. Chi tiết dưới đây, kèm bằng chứng từng bước.
+
+#### A23.1 Loại trừ commit `0aa40ce` của tôi — bằng chứng, không phải lời khai
+
+| Kiểm | Kết quả |
+|---|---|
+| File `0aa40ce` chạm | `cells.tsx`, `TradeReplayEvents.tsx`, `AlphaThreeSixty.tsx`, `PortfolioThreeSixty.tsx` |
+| File tính state của tile / dữ liệu replay | `recomposeContainers.tsx`, `hifiInsight.ts` — **không nằm trong commit** |
+| Lỗi render trên trình duyệt | `pageErrors: []`, `consoleErrors: []` |
+| API lỗi | `api4xx: []` |
+| Chính API trả gì | `replay.state = UNAVAILABLE`, `trade_log: []`, `markers: []` |
+
+Frontend đang vẽ **đúng** cái backend trả. Tile 18 `unavailable` khớp
+`market-candles → UNAVAILABLE EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED`, tile 15
+khớp `replay-journal → UNAVAILABLE`, từng chữ.
+
+#### A23.2 Gốc thật: merge đổi **đường đọc dữ liệu** của Trade Replay
+
+`git cat-file` trên `e50fe0d` (HEAD của tôi **trước** merge):
+
+| Thứ | Trước merge | Sau merge |
+|---|---|---|
+| `apps/control-api/.../subject-activity.service.ts` | **KHÔNG TỒN TẠI** | có |
+| `apps/portal/frontend/.../useSubjectActivityFacts.ts` | **KHÔNG TỒN TẠI** | có |
+| Alpha 360 lấy orders/fills bằng | `useRelationFacts(...)` → `/manager/current/{orders,fills}` (proxy tới nguồn sống) | `useSubjectActivityFacts(...)` → `/resources/alphas/<id>/{orders,fills}` |
+
+Đường cũ đọc thẳng nguồn nên **có dòng**. Đường mới đọc kho retained của Portal.
+
+#### A23.3 Kho retained mà đường mới đọc thì **rỗng** — và vì sao
+
+`profile-projection.worker.ts`:
+
+```ts
+// The old history table remains a compatible rollback read while EDS-06 is dark.
+if (this.config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true") {
+  … appendTimeSeriesHistory(...)   // ghi execution_timeseries_history
+}
+```
+
+Dev đang bật `FEATURE_EXECUTION_DURABLE_MIRROR=true` ⇒ worker **không ghi**
+`execution_timeseries_history` nữa, mà ghi **durable mirror**.
+
+Nhưng `subject-activity.service.ts` lại đọc `repository.timeSeriesHistory(...)`
+→ đúng cái bảng **không còn được ghi**.
+
+Đo trên DB dev:
+
+| Kho | fills | orders |
+|---|---|---|
+| `execution_durable_mirror_range_rows` | **280 dòng** (01-07 → 17-08) | 0 |
+| `execution_timeseries_history` (cái reader đọc) | **0** | **0** |
+
+`execution_timeseries_history` chỉ còn `account_equity_snapshots` (581 357) và
+`performance_snapshots` (129 178), và **ngừng nhận ghi từ 2026-09-05 20:15** —
+đúng lúc mirror được bật, **trước** merge của tôi.
+
+Hệ quả: **mọi alpha** đều `AUTHORITATIVE_EMPTY`, không riêng cái owner mở. Đã
+thử 3 alpha, kể cả `sl_tp_map_ma_00115m_binance` — alpha **duy nhất** có fill
+trong snapshot:
+
+```
+sl_tp_map_ma_00115m_binance  orders AUTHORITATIVE_EMPTY retained=0
+                             fills  AUTHORITATIVE_EMPTY retained=0
+gridcombine001_4h            orders/fills  cùng vậy
+adaptive_hma_cpp_0011h       orders/fills  cùng vậy
+```
+
+#### A23.4 Đây là **nửa chừng trong chính migration EDS-06 của codex**
+
+Hai service cùng một cổng cờ, **khác kho**:
+
+| Service | Cổng | Đọc từ | Kết quả trên dev |
+|---|---|---|---|
+| `financial-chart.service.ts` | đòi `DURABLE_MIRROR` + `..._READS` = true | `mirror.rangePage(...)` | **chạy** (equity chart vẽ được) |
+| `subject-activity.service.ts` | **đòi y hệt** | `repository.timeSeriesHistory(...)` | **rỗng** |
+
+Reader của mirror (`rangePage`) **đã có sẵn và đã được dùng** — chỉ
+`subject-activity` chưa nối vào. Đây là lỗi nối dây, không phải thiếu thiết kế.
+
+#### A23.5 Vì sao tile Insight cũng "mất dữ liệu"
+
+Cùng một gốc: tile 5, 7, 8, 9, 12 đều cần **fill**. Với kho retained rỗng, chúng
+báo `insufficient_data` kèm lý do thật (*"no fill in the loaded page set carries
+a trade time"*). Không tile nào bịa số — nhưng câu chữ khiến người đọc tưởng
+**alpha không có giao dịch**, trong khi sự thật là **kho reader đang đọc rỗng
+với mọi alpha**. Đó là phần thuộc trách nhiệm của tôi, ghi ở §A23.6.
+
+#### A23.6 Việc phải làm, và ai làm
+
+```text
+Backend request (@codex) — EDS-06 / BR-EX-81
+- Chỗ: apps/control-api/src/execution/subject-activity.service.ts
+- Triệu chứng: mọi /resources/{alphas,accounts}/<id>/{orders,fills} trả
+  AUTHORITATIVE_EMPTY retained=0 trong khi mirror có 280 fills
+- Nguyên nhân: assertEnabled() đòi DURABLE_MIRROR + DURABLE_MIRROR_READS = true
+  (đúng), nhưng thân hàm đọc repository.timeSeriesHistory() — bảng mà worker
+  ngừng ghi khi mirror bật
+- Sửa đề xuất: đọc mirror.rangePage() đúng như financial-chart.service.ts đã
+  làm; cần map subject.field/value (strategy_id | account_id) sang
+  resource {kind,id}, và thống nhất cursor (rangePage dùng chuỗi opaque qua
+  cursors.resolve, subject-activity đang tự ký keyset ts+rowId)
+- Bán kính ảnh hưởng: chỉ các màn đang hỏng — subject-activity là service MỚI
+  (không tồn tại trước merge), consumer duy nhất là Trade Replay
+```
+
+**Phần của tôi (FE):** khi subject read trả `AUTHORITATIVE_EMPTY` mà kho retained
+rỗng với *mọi* subject, câu "No order or fill of X is present…" là đúng chữ
+nhưng **gây hiểu sai**. Cần phân biệt *alpha không có giao dịch* với *kho chưa
+phục vụ được*, để người đọc không kết luận nhầm về alpha.
+
+#### A23.7 ĐÃ SỬA — subject read nay đọc mirror (owner chọn "tôi làm, có test")
+
+Không đụng cursor signing, không đổi contract, **không** chuyển `orders` từ
+current sang range (làm thế sẽ làm hỏng Blotter). Thay vào đó thêm hai reader
+**cùng chữ ký, cùng kiểu trả về** với cặp cũ, nên cursor/coverage/envelope của
+caller không đổi một dòng:
+
+| Thêm ở `durable-mirror.repository.ts` | Đọc | Lọc subject bằng |
+|---|---|---|
+| `subjectRows()` | fills → `..._range_rows` (có cột `ts` + index) · orders → `..._current_entities` (sắp theo `updated_at` đã publish) | cột promote `strategy_id` / `account_id` — **đều có index sẵn** |
+| `subjectCoverage()` | như trên | như trên |
+
+Mọi định danh SQL lấy từ **hai bảng hằng số checked-in**, không bao giờ từ
+request — `subjectStorageShape()` và `subjectEntityColumn()` là hai cửa duy nhất.
+Dòng nào có timestamp không cast được thì bỏ qua (regex `CASTABLE_TIMESTAMP`),
+đúng luật worker áp dụng trước khi nhận một ladder row.
+
+**Bán kính:** chỉ `subject-activity` — service mới sau merge, consumer duy nhất
+là Trade Replay, và đang rỗng với **mọi** alpha. Không thể hỏng thêm màn nào.
+
+**Đo trước/sau trên API (cùng alpha owner mở):**
+
+| Alpha | trước | sau |
+|---|---|---|
+| `gridcombine001_4h` | orders 0 · fills 0 | orders 1 · **fills 30** |
+| `sl_tp_map_ma_00115m_binance` | orders 0 · fills 0 | orders 2 · fills 1 |
+
+**Đo trên trình duyệt — Insight Charts hồi 4 tile, canvas 7 → 12:**
+
+| Tile | trước | sau |
+|---|---|---|
+| 5 · Execution quality by venue | insufficient_data | **ok** — 1 submitted · 30 fills · reject 0.0% |
+| 7 · Trade return histogram | insufficient_data | **ok** — P50 0.76 · P95 21.88, 30 trades priced |
+| 8 · Execution density day × hour | insufficient_data | **ok** — 30 fills, busiest Mon 04:00 UTC |
+| 12 · Cost drag waterfall | insufficient_data | **ok** — gross 170.25 · fees 39.81 · net 130.44 |
+
+Còn `unavailable` là **khoảng trống nguồn thật**, không đổi: 9 (regime labels
+chưa publish), 11 (`N17B_SOURCE_REJECTED`), 15 (`EDS10_AUTHORITATIVE_REPLAY_SOURCE_GAP_CONFIRMED`), 18 (`EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED`).
+
+**Trade Replay:** vẽ được nến, 30 fill có marker và position box, trade log 31
+dòng với order/fill id, giá, phí thật. `pageErrors: []`, `consoleErrors` chỉ còn
+404 của `/market/candles` — đúng như dự kiến vì cờ Trading System đang tắt
+(`MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED`), và footer nói thẳng điều đó.
+
+**Gate:** `tsc` sạch; `subject-activity.spec.ts` 4/4 với **test mới khoá đúng
+chỗ** — phải gọi mirror, và **không được** chạm bảng retained-history nữa. SQL
+mới còn được chạy tay trên dữ liệu thật của dev trước khi deploy.
+
+#### A23.8 Phát hiện thêm (CÓ TRƯỚC, không phải hồi quy): equity 50 tỷ ở tile 1
+
+Tile 1 "Equity by stage" của Alpha 360 hiện `50,000,000,000.00`. Đã truy:
+
+- `chart_series` của API trả đúng `max=50000000000` ⇒ frontend vẽ trung thực
+- nguồn `account_equity_snapshots` max thật là **1 151 548.36**
+- nhưng `portfolio_equity_snapshots` max là **150 000 000 000** — tức **nguồn tự publish** con số đó
+- `local-query-analytics.service.ts` (chỗ dựng series) **không nằm trong bản merge**, cũng không nằm trong hai commit của tôi
+
+Nên đây **không phải hồi quy**. Vấn đề thật: trộn portfolio equity (1.5e11) vào
+series của **một alpha** (equity tài khoản ~2e4) làm biểu đồ không đọc được —
+một trục không thể mang hai đại lượng lệch nhau 7 bậc. Ghi lại để xử lý riêng,
+chưa sửa trong đợt này.
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

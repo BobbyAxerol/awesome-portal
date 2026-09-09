@@ -11,6 +11,7 @@ import type {
   ProjectionRelation,
   ProjectionScalar,
 } from "../src/execution/profile-projection.repository";
+import type { ExecutionDurableMirrorRepository } from "../src/execution/durable-mirror.repository";
 import { testConfig } from "./harness";
 
 const workspaceId = "ws_subject_activity";
@@ -80,9 +81,15 @@ function snapshot(): ProfileProjectionSnapshot {
 
 function service() {
   const snap = snapshot();
-  const timeSeriesHistory = vi.fn(async (_workspace: string, _environment: string, _profile: string, relationKey: string, query: { entity?: { field: string; value: string } | null; after?: unknown; order?: string }) => {
+  // The rows live in the durable mirror. The retained-history doubles stay on
+  // the repository so a regression that reaches for them again is visible as a
+  // call count, not as a silently empty page.
+  const subjectRows = vi.fn(async (
+    _scope: { workspaceId: string; environment: string; profileId: string },
+    relationKey: string,
+    query: { entity?: { field: string; value: string } | null; after?: unknown; limit: number },
+  ) => {
     expect(query.entity).toEqual({ field: "strategy_id", value: "adaptive_hma_cpp_00115m" });
-    expect(query.order).toBe("DESC");
     if (relationKey.endsWith("orders")) {
       return {
         rows: [{ rowId: "ord_2", ts: "2026-09-07T12:00:00.000Z", fields: { order_id: "ord_2", strategy_id: "adaptive_hma_cpp_00115m", account_id: "acc_a", status: "FILLED", updated_at: "2026-09-07T12:00:00.000Z" } }],
@@ -91,9 +98,20 @@ function service() {
     }
     return { rows: [], hasMore: false };
   });
-  const timeSeriesHistoryCoverage = vi.fn(async () => ({ rowCount: 1, oldestTs: "2026-09-07T12:00:00.000Z", newestTs: "2026-09-07T12:00:00.000Z" }));
+  const subjectCoverage = vi.fn(async () => ({ rowCount: 1, oldestTs: "2026-09-07T12:00:00.000Z", newestTs: "2026-09-07T12:00:00.000Z" }));
+  const timeSeriesHistory = vi.fn(async () => ({ rows: [], hasMore: false }));
+  const timeSeriesHistoryCoverage = vi.fn(async () => ({ rowCount: 0, oldestTs: null, newestTs: null }));
   const repository = { snapshot: vi.fn(async () => snap), timeSeriesHistory, timeSeriesHistoryCoverage };
-  return { service: new ExecutionSubjectActivityService(config(), repository as unknown as ExecutionProfileProjectionRepository), repository };
+  const mirror = { subjectRows, subjectCoverage };
+  return {
+    service: new ExecutionSubjectActivityService(
+      config(),
+      repository as unknown as ExecutionProfileProjectionRepository,
+      mirror as unknown as ExecutionDurableMirrorRepository,
+    ),
+    repository,
+    mirror,
+  };
 }
 
 describe("BR-EX-80 / BR-EX-81 retained subject BFF", () => {
@@ -104,12 +122,12 @@ describe("BR-EX-80 / BR-EX-81 retained subject BFF", () => {
   });
 
   it("returns newest retained subject rows through a Portal-signed continuation without leaking an Edge cursor", async () => {
-    const { service: read, repository } = service();
+    const { service: read, mirror } = service();
     const value = await read.read(
       { workspaceId, userId: "usr_bobby" },
       { environment: "paper", subjectKind: "alpha", subjectId: "adaptive_hma_cpp_00115m", relation: "orders", limit: 1 },
     );
-    expect(repository.timeSeriesHistory).toHaveBeenCalledTimes(1);
+    expect(mirror.subjectRows).toHaveBeenCalledTimes(1);
     expect(value).toMatchObject({
       schema_version: "portal.execution.subject-records.v1",
       authority: "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
@@ -129,6 +147,28 @@ describe("BR-EX-80 / BR-EX-81 retained subject BFF", () => {
     // it is signed by the Portal and cannot be replayed by another user or
     // operation (asserted below).  It is intentionally not an Edge cursor.
     expect((value.page as { next_cursor: string | null }).next_cursor).toMatch(/^kc1\.subject-k1\./);
+  });
+
+  it("reads the durable mirror, not the retained-history table the worker stops writing", async () => {
+    // The mirror migration left this half undone: once
+    // FEATURE_EXECUTION_DURABLE_MIRROR is on the worker writes only the mirror,
+    // while this service kept reading execution_timeseries_history — so every
+    // subject answered AUTHORITATIVE_EMPTY on dev while 280 fills and 812
+    // orders sat in the mirror. assertEnabled() already refuses unless the
+    // mirror is on, so reading the old table is wrong in every configuration
+    // this service can serve at all.
+    const { service: read, repository, mirror } = service();
+    const value = await read.read(
+      { workspaceId, userId: "usr_bobby" },
+      { environment: "paper", subjectKind: "alpha", subjectId: "adaptive_hma_cpp_00115m", relation: "orders", limit: 1 },
+    );
+    expect(mirror.subjectRows).toHaveBeenCalledTimes(1);
+    expect(mirror.subjectCoverage).toHaveBeenCalledTimes(1);
+    expect(repository.timeSeriesHistory).not.toHaveBeenCalled();
+    expect(repository.timeSeriesHistoryCoverage).not.toHaveBeenCalled();
+    // The rows still arrive, which is the whole point of the fix.
+    expect((value.records as unknown[]).length).toBe(1);
+    expect(value.state).toBe("AVAILABLE");
   });
 
   it("binds a continuation to the Portal user and exact subject operation", async () => {

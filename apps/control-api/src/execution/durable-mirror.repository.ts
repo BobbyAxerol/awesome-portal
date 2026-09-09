@@ -106,6 +106,70 @@ const RANGE_RELATIONS: Readonly<Record<string, { idField: string; timestampField
   "manager.risk:sizing_decisions": { idField: "decision_id", timestampField: "created_at" },
 };
 
+/**
+ * Current-entity relations a subject read may page in time order, with the
+ * field that orders them.
+ *
+ * Orders are mirrored as current entities, not as range rows, so they have no
+ * `ts` column of their own — the order is read out of the published field the
+ * projection catalogue already names as this relation's ladder timestamp. Kept
+ * deliberately narrow: this is not a generic "sort any relation by any field".
+ */
+const SUBJECT_CURRENT_RELATIONS: Readonly<Record<string, { timestampField: string }>> = {
+  "manager.orders:orders": { timestampField: "updated_at" },
+};
+
+/** The promoted entity columns a subject read may filter on. Never interpolated from a request. */
+const SUBJECT_ENTITY_COLUMNS: Readonly<Record<string, string>> = {
+  strategy_id: "strategy_id",
+  account_id: "account_id",
+};
+
+/**
+ * Where a subject-readable relation's rows live, and how to order them.
+ *
+ * Every identifier below comes from these two checked-in tables — never from a
+ * request — so the SQL that embeds them cannot be steered by a caller.
+ */
+function subjectStorageShape(relationKey: string):
+  | { kind: "RANGE"; table: string; rowIdColumn: string; tsExpression: string }
+  | { kind: "CURRENT"; table: string; rowIdColumn: string; tsExpression: string; timestampField: string }
+  | null {
+  if (RANGE_RELATIONS[relationKey]) {
+    return {
+      kind: "RANGE",
+      table: "execution_durable_mirror_range_rows",
+      rowIdColumn: "row_id",
+      tsExpression: "ts",
+    };
+  }
+  const current = SUBJECT_CURRENT_RELATIONS[relationKey];
+  if (current) {
+    return {
+      kind: "CURRENT",
+      table: "execution_durable_mirror_current_entities",
+      rowIdColumn: "entity_key",
+      tsExpression: `(fields->>'${current.timestampField}')::timestamptz`,
+      timestampField: current.timestampField,
+    };
+  }
+  return null;
+}
+
+/** The promoted column for a subject filter, or null when the field is not one we promote. */
+function subjectEntityColumn(entity: { field: string; value: string } | null | undefined): string | null {
+  if (!entity) return null;
+  return SUBJECT_ENTITY_COLUMNS[entity.field] ?? null;
+}
+
+/**
+ * A published timestamp that Postgres can cast. The mirror stores `fields`
+ * exactly as the source published them, and a row whose timestamp is not a
+ * timestamp must be skipped rather than abort the page — the same rule the
+ * projection worker applies before it admits a ladder row.
+ */
+const CASTABLE_TIMESTAMP = "^[0-9]{4}-[0-9]{2}-[0-9]{2}[T ]";
+
 const CURRENT_KEY_FIELDS: Readonly<Record<string, readonly string[]>> = {
   "manager.strategies:strategies": ["strategy_id"],
   "manager.deployments:strategy_deployments": ["deployment_id"],
@@ -291,6 +355,89 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
   }
 
   /** Range reads use exact (timestamp,row-id) keysets and one declared resource dimension. */
+  /**
+   * A subject's rows out of the mirror, newest first, on the same `(ts, rowId)`
+   * keyset the retained-history reader used.
+   *
+   * This exists because the mirror migration left one half undone: the worker
+   * stops writing `execution_timeseries_history` as soon as
+   * `FEATURE_EXECUTION_DURABLE_MIRROR` is on, while the subject reader kept
+   * reading it — so every subject read answered AUTHORITATIVE_EMPTY while the
+   * rows sat in the mirror. Matching the old signature and return shape keeps
+   * the caller's Portal-signed cursor, coverage and envelope untouched.
+   *
+   * Two storage shapes, one contract: fills are range rows with a real `ts`
+   * column and a `(strategy_id, ts, row_id)` index; orders are current
+   * entities keyed by `entity_key`, ordered by their published timestamp.
+   */
+  async subjectRows(
+    scope: DurableMirrorScope,
+    relationKey: string,
+    query: {
+      entity?: { field: string; value: string } | null;
+      after?: { ts: string; rowId: string } | null;
+      limit: number;
+    },
+  ): Promise<{ rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>; hasMore: boolean }> {
+    const shape = subjectStorageShape(relationKey);
+    if (!shape) return { rows: [], hasMore: false };
+    const values: unknown[] = [scope.workspaceId, scope.environment, scope.profileId, relationKey];
+    const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
+    const entityColumn = subjectEntityColumn(query.entity);
+    if (entityColumn) {
+      values.push(query.entity!.value);
+      conditions.push(`${entityColumn} = $${values.length}`);
+    }
+    if (shape.kind === "CURRENT") conditions.push(`fields->>'${shape.timestampField}' ~ '${CASTABLE_TIMESTAMP}'`);
+    if (query.after) {
+      values.push(query.after.ts, query.after.rowId);
+      conditions.push(`(${shape.tsExpression}, ${shape.rowIdColumn}) < ($${values.length - 1}::timestamptz, $${values.length})`);
+    }
+    values.push(query.limit + 1);
+    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
+      `SELECT ${shape.rowIdColumn} AS row_id,
+              to_char(${shape.tsExpression} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts,
+              fields
+         FROM ${shape.table}
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY ${shape.tsExpression} DESC, ${shape.rowIdColumn} DESC
+        LIMIT $${values.length}`,
+      values,
+    );
+    return {
+      rows: result.rows.slice(0, query.limit).map((row) => ({ rowId: row.row_id, ts: row.ts, fields: row.fields })),
+      hasMore: result.rows.length > query.limit,
+    };
+  }
+
+  /** The subject's retained coverage in the mirror, on the same contract as the rows above. */
+  async subjectCoverage(
+    scope: DurableMirrorScope,
+    relationKey: string,
+    entity: { field: string; value: string } | null = null,
+  ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
+    const shape = subjectStorageShape(relationKey);
+    if (!shape) return { rowCount: 0, oldestTs: null, newestTs: null };
+    const values: unknown[] = [scope.workspaceId, scope.environment, scope.profileId, relationKey];
+    const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
+    const entityColumn = subjectEntityColumn(entity);
+    if (entityColumn) {
+      values.push(entity!.value);
+      conditions.push(`${entityColumn} = $${values.length}`);
+    }
+    if (shape.kind === "CURRENT") conditions.push(`fields->>'${shape.timestampField}' ~ '${CASTABLE_TIMESTAMP}'`);
+    const result = await this.pool.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
+      `SELECT count(*)::text AS row_count,
+              to_char(min(${shape.tsExpression}) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
+              to_char(max(${shape.tsExpression}) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
+         FROM ${shape.table}
+        WHERE ${conditions.join(" AND ")}`,
+      values,
+    );
+    const row = result.rows[0];
+    return { rowCount: Number(row?.row_count ?? 0), oldestTs: row?.oldest_ts ?? null, newestTs: row?.newest_ts ?? null };
+  }
+
   async rangePage(input: DurableMirrorScope & {
     relationKey: string;
     resource?: { kind: ResourceKind; id: string };
