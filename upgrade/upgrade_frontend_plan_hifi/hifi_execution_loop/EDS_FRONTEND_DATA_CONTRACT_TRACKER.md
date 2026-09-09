@@ -3566,6 +3566,30 @@ Tức `retention` nghĩa là *"cũ nhất trong phản hồi này"*. Dùng nó l
 **10-4 phần Blotter chưa làm:** thêm chart thời gian cho Blotter là **tính năng mới**, không phải nối lại nguồn cho chart đang bó. Để tránh "sửa cái này hỏng cái kia", tôi không dựng nó trong đợt này; `/history/{env}/{relation}` vẫn sẵn sàng (fills 280 dòng, sizing_decisions 545).
 
 **Gate:** `tsc` sạch · **120/120 file test** FE.
+
+#### A29.6 Owner hỏi "sao không khác gì" và bắt được một cái bẫy tôi vừa đặt
+
+Số đo của tôi nói cả 5 gate đạt. Nhưng tôi chỉ kiểm *bấm 1W có gọi server không* — **không** kiểm *bấm xong có quay lại được không*.
+
+```ts
+const presets = RANGE_PRESETS.filter((p) => presetAvailable(data.xs, p));
+{presets.length > 1 ? ( …hàng nút… ) : null}
+```
+
+`presetAvailable` đo trên **chuỗi đã tải**. Với zoom client thì đúng: một preset rộng hơn dữ liệu chỉ là "ALL" lần nữa. Nhưng khi range do server quyết, `data.xs` **chính là cửa sổ** — nên sau khi lấy 1 tuần, mọi preset đều "phủ hết chuỗi", danh sách còn đúng một mục, guard `length > 1` **giấu cả hàng nút**, và người đọc **kẹt trong 1W không có đường về**.
+
+Sửa: khi có `onRangeChange`, luôn hiện đủ preset — cửa sổ là việc của server, còn người đọc phải luôn mở rộng lại được.
+
+**Đo lại trọn vòng** (mở → 1W → ALL), thứ probe cũ không làm:
+
+| Màn | mở | sau 1W | về ALL |
+|---|---|---|---|
+| Account 360 | `[1W,1M,3M,ALL]` | `[1W,1M,3M,ALL]` | `2026-06-30 → 09-09 · 6412s bucket` — đúng view ban đầu |
+| Portfolio 360 | `[1W,1M,3M,ALL]` | `[1W,1M,3M,ALL]` | `2026-08-16 → 09-09 · 4326s bucket` — đúng view ban đầu |
+
+**Và câu hỏi của owner có lý ở chỗ khác nữa:** khi mới mở màn, giao diện **đúng là không khác** — `ALL` vẫn vẽ như cũ, đó là chủ ý. Riêng Portfolio 360 tăng 134 → 1 918 điểm nhưng **nhìn không ra**, vì đường equity của portfolio này đang phẳng ở 22 220 000: thêm điểm trên một đường phẳng thì trông y hệt.
+
+**Bài học ghi lại:** một gate đo "hành động có tác dụng không" mà không đo "có hoàn tác được không" là gate nửa vời. Cùng họ với bốn lần đo sai đã ghi ở §A22.3, §A27.4, §A29.4.
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

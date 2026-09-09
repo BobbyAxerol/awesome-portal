@@ -142,7 +142,15 @@ export function EquityChart({
     );
   }
   const gapCount = data.missing;
-  const presets = RANGE_PRESETS.filter((p) => presetAvailable(data.xs, p));
+  /*
+   * With a client-side crop, a preset wider than the data is just "ALL" again,
+   * so it is hidden. With a server range that test is wrong and traps the
+   * reader: `data.xs` IS the window, so after fetching one week every preset
+   * "covers the whole series", the row collapses to a single entry, the
+   * `length > 1` guard hides it — and there is no way back to ALL. The window
+   * is the server's to decide; the reader must always be able to widen it.
+   */
+  const presets = onRangeChange ? RANGE_PRESETS : RANGE_PRESETS.filter((p) => presetAvailable(data.xs, p));
   const plotHeight = expanded ? EXPANDED_HEIGHT : height;
   // The tile's caption below already carries the envelope's as_of; repeating it
   // inside the hover box states the same fact twice and pushes the value the
