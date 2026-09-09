@@ -17,7 +17,7 @@ export function PfLiveStrip() {
   const { now, j } = usePfTick();
   if (!smoke) return null;
   const p2 = (n: number) => String(n).padStart(2, "0");
-  const asOf = now.getTime() === 0 ? "—" : `${p2(now.getUTCHours())}:${p2(now.getUTCMinutes())}:${p2(now.getUTCSeconds())}Z`;
+  const asOf = now.getTime() === 0 ? "clock not started" : `${p2(now.getUTCHours())}:${p2(now.getUTCMinutes())}:${p2(now.getUTCSeconds())}Z`;
   const k = smoke.kpis;
   return (
     <div className="exec-pf2-kpis" data-smoke="true">

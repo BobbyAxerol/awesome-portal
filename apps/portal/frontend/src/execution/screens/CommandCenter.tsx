@@ -192,7 +192,7 @@ export function FleetHealth({ panel, demo, demoTick = 0 }: { panel: FleetPanel; 
               <div className="exec-cc-cell" key={cell.label}>
                 <div className="exec-cc-celllabel">{cell.label}</div>
                 <div className="exec-cc-cellvalue" data-absent={cell.value === null ? "true" : undefined} data-tone={cell.value === null ? undefined : x?.tone}>
-                  {cell.value === null ? "—" : String(cell.value)}
+                  {cell.value === null ? <span className="exec-role-meta">not published</span> : String(cell.value)}
                   {cell.value !== null && (x?.sub || liveSub) ? <span className="exec-cc-cellsub" data-tone={x?.subTone} data-smoke={liveSub ? "true" : undefined}> {x?.sub ?? liveSub}</span> : null}
                 </div>
               </div>

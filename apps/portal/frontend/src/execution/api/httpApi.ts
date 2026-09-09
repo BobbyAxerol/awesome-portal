@@ -21,7 +21,8 @@ import {
   readProblem,
 } from "../adapter";
 import { governanceWriteBlocked, type DeliveryPolicy } from "../profile";
-import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
+import { readApprovalRow, readDecidedRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "./rows";
+import type { DecidedRow } from "../screens/ApprovalInbox";
 import {
   INSIGHT_BATCH_LIMIT,
   readAnalyticsEnvelope,
@@ -75,6 +76,13 @@ import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
   OperatorTaskCatalogue, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
+import {
+  readApprovalHistoryEnvelope,
+  readConditionalGroup,
+  readSourceHealthRead,
+  type ConditionalGroupRead,
+  type SourceHealthRead,
+} from "../derivedReads";
 import { readRuntimeManifest } from "../runtimeManifest";
 import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
@@ -301,8 +309,32 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       readProfileEnvelope,
       "The paper workbench",
     );
-  const getQueryAnalytics = (subject: "alphas" | "portfolios", subjectId: string): Promise<Result<QueryAnalytics>> =>
+  const getQueryAnalytics = (subject: "alphas" | "portfolios" | "deployments", subjectId: string): Promise<Result<QueryAnalytics>> =>
     readGet(`/${subject}/${encodeURIComponent(subjectId)}/query-analytics`, readQueryAnalytics, "The query-analytics envelope");
+  const getSourceHealthRead = (): Promise<Result<SourceHealthRead>> =>
+    readGet("/derivations/source-health", readSourceHealthRead, "The source health envelope");
+  const getApprovalHistory = (): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>> =>
+    readGet(
+      "/governance/approvals/history",
+      (raw) => {
+        const envelope = readApprovalHistoryEnvelope(raw);
+        if (!envelope) return null;
+        // A row the shared reader refuses is dropped rather than half-drawn;
+        // the count below still describes the population the server stated.
+        const rows = envelope.rawRows.flatMap((row) => {
+          const parsed = readDecidedRow(row);
+          return parsed.row ? [parsed.row] : [];
+        });
+        return { rows, totalCount: envelope.totalCount, deliveryProfile: envelope.deliveryProfile };
+      },
+      "The approval history",
+    );
+  const getConditionalGroup = (groupId: string, environment: string): Promise<Result<ConditionalGroupRead>> =>
+    readGet(
+      `/derivations/conditional-groups/${encodeURIComponent(groupId)}?environment=${encodeURIComponent(environment)}`,
+      readConditionalGroup,
+      "The conditional order group",
+    );
   const getOperatorTasks = (): Promise<Result<OperatorTaskCatalogue>> =>
     readGet("/commands/tasks", readOperatorTasks, "The operator task catalogue");
   const getLiveReview = (approvalId: string): Promise<Result<LiveReviewPayload>> =>
@@ -497,6 +529,9 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getBlotterProfile,
     getPaperWorkbenchProfile,
     getQueryAnalytics,
+    getSourceHealthRead,
+    getApprovalHistory,
+    getConditionalGroup,
     getOperatorTasks,
     runOperatorTask,
     getLiveReview,

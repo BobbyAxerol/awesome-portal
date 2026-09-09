@@ -29,6 +29,8 @@ import { pulses, useArrivals, useIds } from "../listMotion";
 import { ID_ROUTES, IdLink } from "../idLinks";
 
 export interface PaperOverviewProps {
+  /** Phase 4: what `/derivations/source-health` says about the paper profile. */
+  sourceHealth?: string | null;
   /** `execution.paper-overview.v1` — the published truth for this stage. */
   envelope?: ProfileEnvelope | null;
   status?: PanelStatus;
@@ -50,7 +52,7 @@ const count = (value: unknown): number | null => typeof value === "number" && Nu
   ? value : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : null;
 const chartTones = ["accent", "good", "warn", "paper", "mute"] as const;
 
-export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick, realtimePhase = null }: PaperOverviewProps) {
+export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick, realtimePhase = null, sourceHealth = null }: PaperOverviewProps) {
   const dot = liveDot(realtimePhase);
   const PO = demo ?? null;
   const now = demoTick?.now ?? new Date(0);
@@ -106,6 +108,14 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                 <span className="exec-po-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span> · <span data-tone={sourceTone(envelope?.freshness) ?? undefined}>{envelope?.freshness ?? "freshness not stated"}</span>
               </span>
             </header>
+
+            {/*
+              * Phase 4: the profile's own health, from the read that answers
+              * for it. The masthead above states the envelope's freshness;
+              * this states the projection profile's, and they are different
+              * facts about different things.
+              */}
+            {sourceHealth ? <p className="exec-po-note exec-role-meta" data-source-health="true">{sourceHealth}</p> : null}
 
             {sourceStatus ? (
               <section className="exec-po-panel" aria-label="Paper source status">

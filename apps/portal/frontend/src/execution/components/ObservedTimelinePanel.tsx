@@ -36,7 +36,7 @@ export interface ObservedTimelinePanelProps {
 const money = (v: string | null) => (v ? formatExact(v, "money").display : "not published");
 const qty = (v: string | null) => (v ? formatExact(v, "qty").display : "not published");
 const stamp = (ms: number) => new Date(ms).toISOString().replace("T", " ").slice(0, 19) + "Z";
-const ago = (ms: number | null, now: number) => (ms === null ? "—" : `${Math.max(0, Math.round((now - ms) / 1000))}s ago`);
+const ago = (ms: number | null, now: number) => (ms === null ? "age not published" : `${Math.max(0, Math.round((now - ms) / 1000))}s ago`);
 
 const TYPE_CHIP: Record<string, { label: string; tone: "good" | "accent" | "mute" | "warn" }> = {
   ORDER_OBSERVED: { label: "ORDER", tone: "accent" },

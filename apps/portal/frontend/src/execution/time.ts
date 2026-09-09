@@ -27,7 +27,7 @@ import { formatUtcEpochMs, readUtcEpochMs } from "./screenDataContract";
 export function utcStamp(iso: string | number | null | undefined): string {
   if (typeof iso === "number") {
     const epoch = readUtcEpochMs(iso);
-    return epoch === null ? "—" : formatUtcEpochMs(epoch);
+    return epoch === null ? "not published" : formatUtcEpochMs(epoch);
   }
   if (!iso) return "—";
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?(?:\.(\d{1,3})\d*)?(Z)?$/.exec(iso.trim());

@@ -34,17 +34,17 @@ export function hhmm(seconds: number): string {
   return `${h}h ${m}m`;
 }
 
-export const clockZ = (d: Date) => (d.getTime() === 0 ? "—" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}Z`);
+export const clockZ = (d: Date) => (d.getTime() === 0 ? "clock not started" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}Z`);
 
 
 export const fmtPlus = (v: number) => `+${v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const sbClock = (d: Date, z = true) =>
   d.getTime() === 0
-    ? "—"
+    ? "clock not started"
     : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}${z ? "Z" : ""}`;
 
-export const sbAge = (d: Date) => (d.getTime() === 0 ? "—" : `${sbAgeSeconds(d)}s`);
+export const sbAge = (d: Date) => (d.getTime() === 0 ? "clock not started" : `${sbAgeSeconds(d)}s`);
 
 /** REST snapshot age against the venue policy — the hi-fi's `now % 58`. */
 export const sbAgeSeconds = (d: Date) => (d.getTime() === 0 ? 0 : Math.floor((d.getTime() / 1000) % 58));
@@ -105,9 +105,13 @@ export function jitter(tick: number, seed = 1): number {
   return ((x - Math.floor(x)) - 0.5) * 2;
 }
 
-/** `HH:MM:SSZ` from a Date; epoch-zero (frozen demo clock) renders as a dash. */
+/**
+ * `HH:MM:SSZ` from a Date. Epoch zero is the demo tick before it starts — a
+ * clock that has not begun, which is not the same as a time nobody published,
+ * and neither of them is a dash.
+ */
 export const clockOfDate = (d: Date, z = true): string =>
-  d.getTime() === 0 ? "—" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}${z ? "Z" : ""}`;
+  d.getTime() === 0 ? "clock not started" : `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}:${String(d.getUTCSeconds()).padStart(2, "0")}${z ? "Z" : ""}`;
 
 /** Whether a UTC instant falls inside the ICT (UTC+7) 09:00–14:45 session. */
 export const inIctSession = (d: Date): boolean => {

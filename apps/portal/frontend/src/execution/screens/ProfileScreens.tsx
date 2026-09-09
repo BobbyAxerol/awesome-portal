@@ -96,7 +96,7 @@ export function DataBranches({ envelope }: { envelope: ProfileEnvelope }) {
                   {rows.map((row, i) => (
                     <tr key={i}>
                       {Object.keys(rows[0]).map((k) => (
-                        <td key={k} className="exec-num">{row[k] === null || row[k] === undefined ? "—" : String(row[k])}</td>
+                        <td key={k} className="exec-num">{row[k] === null || row[k] === undefined ? <span className="exec-role-meta">not published</span> : String(row[k])}</td>
                       ))}
                     </tr>
                   ))}
@@ -116,6 +116,7 @@ export function ProfileEnvelopeScreen({
   status,
   reason,
   intro,
+  sourceHealth,
   children,
 }: {
   title: string;
@@ -123,6 +124,8 @@ export function ProfileEnvelopeScreen({
   status: PanelStatus;
   reason?: string;
   intro?: ReactNode;
+  /** Phase 4: what `/derivations/source-health` says about this stage's profile. */
+  sourceHealth?: ReactNode;
   children?: ReactNode;
 }) {
   if (status !== "ok" && status !== "partial") {
@@ -137,13 +140,14 @@ export function ProfileEnvelopeScreen({
   return (
     <section className="exec-envelope" aria-label={title}>
       <EnvelopeMasthead title={title} envelope={envelope} />
+      {sourceHealth}
       {intro}
       {envelope.objects.deployment ? (
         <section className="exec-envelope-panel">
           <ExecutionSectionTitle>deployment</ExecutionSectionTitle>
           <dl className="exec-admin-facts">
             {Object.entries(envelope.objects.deployment).map(([k, v]) => (
-              <div key={k}><dt>{k.replace(/_/g, " ")}</dt><dd>{v === null ? "—" : String(v)}</dd></div>
+              <div key={k}><dt>{k.replace(/_/g, " ")}</dt><dd>{v === null ? <span className="exec-role-meta">not published</span> : String(v)}</dd></div>
             ))}
           </dl>
         </section>
@@ -231,7 +235,7 @@ export function QueryAnalyticsScreen({
         {analytics.executionQuality ? (
           <dl className="exec-admin-facts">
             {Object.entries(analytics.executionQuality).map(([k, v]) => (
-              <div key={k}><dt>{k.replace(/_/g, " ")}</dt><dd className="exec-num">{v === null ? "—" : String(v)}</dd></div>
+              <div key={k}><dt>{k.replace(/_/g, " ")}</dt><dd className="exec-num">{v === null ? <span className="exec-role-meta">not published</span> : String(v)}</dd></div>
             ))}
           </dl>
         ) : (

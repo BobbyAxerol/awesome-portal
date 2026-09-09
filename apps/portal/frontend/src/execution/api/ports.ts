@@ -29,6 +29,7 @@ import type {
   InsightBatch,
   OrderFunnel,
 } from "../analytics";
+import type { ConditionalGroupRead, SourceHealthRead } from "../derivedReads";
 import type { RuntimeManifest } from "../runtimeManifest";
 import type { ScreenContract } from "../screenContracts";
 import type { CommandCatalogue } from "../adminCatalog";
@@ -285,7 +286,7 @@ export interface ExecutionApi {
   /** `GET /screens/paper/{id}[/vn-market]` — the workbench envelope. */
   getPaperWorkbenchProfile(deploymentId: string, variant?: "paper" | "vnm"): Promise<Result<ProfileEnvelope>>;
   /** `GET /{alphas|portfolios}/{id}/query-analytics` — N25 envelope. */
-  getQueryAnalytics(subject: "alphas" | "portfolios", subjectId: string): Promise<Result<QueryAnalytics>>;
+  getQueryAnalytics(subject: "alphas" | "portfolios" | "deployments", subjectId: string): Promise<Result<QueryAnalytics>>;
   /** `GET /commands/tasks` — the N27 operator task catalogue. */
   getOperatorTasks(): Promise<Result<OperatorTaskCatalogue>>;
   /** Runs only a server-classified CONNECTED R0 task. */
@@ -469,6 +470,17 @@ export interface ExecutionApi {
    * The server's own page/byte/cursor bounds. Read once per session; the
    * screens take their limits from it instead of writing them down.
    */
+  /** `GET /derivations/source-health` — per-profile health, in one read. */
+  getSourceHealthRead(): Promise<Result<SourceHealthRead>>;
+  /**
+   * `GET /governance/approvals/history` — decisions already taken.
+   *
+   * Rows come back as `DecidedRow`, read by the same parser the inbox has
+   * always used for this contract.
+   */
+  getApprovalHistory(): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>>;
+  /** `GET /derivations/conditional-groups/{groupId}` — the legs of one group. */
+  getConditionalGroup(groupId: string, environment: string): Promise<Result<ConditionalGroupRead>>;
   getRuntimeManifest(): Promise<Result<RuntimeManifest>>;
   /**
    * `GET /api/v1/execution/screen-contracts`

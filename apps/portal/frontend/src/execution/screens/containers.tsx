@@ -201,6 +201,24 @@ export function ApprovalInboxContainer({
     scope: CursorScope | null;
   }>({ scope: null });
   const [cursorReset, setCursorReset] = useState<string | null>(null);
+  /*
+   * Phase 4: `/governance/approvals/history` answered 200 for weeks with no
+   * caller, and the inbox's decided section had no source — the approvals read
+   * publishes no `decided` on dev, so the section stayed empty for want of a
+   * request, not for want of decisions. Rows are read by the same parser the
+   * section has always used for this contract.
+   */
+  const [history, setHistory] = useState<KeysetPage<DecidedRow> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void api.getApprovalHistory().then((result) => {
+      if (cancelled) return;
+      // `totalCount` is the server's own population, not `rows.length`: a page
+      // is not a count, and the section's footer says which it is showing.
+      setHistory(result.ok ? { rows: result.value.rows, totalCount: result.value.totalCount } : null);
+    });
+    return () => { cancelled = true; };
+  }, [api]);
   const [state, setState] = useState<
     LoadState<{
       page: KeysetPage<ApprovalRow>;
@@ -293,7 +311,7 @@ export function ApprovalInboxContainer({
       actor={state.value?.actor?.username}
       actorRoles={state.value?.actor?.roles}
       inertCount={state.value?.inertCount ?? null}
-      decided={state.value?.decided ?? null}
+      decided={state.value?.decided ?? history}
       filter={filter}
       onFilterChange={changeFilter}
       status={state.status}

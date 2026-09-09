@@ -19,7 +19,7 @@ import type {
   ProfileEnvelope,
   QueryAnalytics,
 } from "../api/profileRead";
-import { readAlphaFleetItem, readBindingItem, readQueryAnalytics } from "../api/profileRead";
+import { readAlphaFleetItem, readQueryAnalytics, type BindingItem } from "../api/profileRead";
 import { formatExact } from "../formatExact";
 import { utcStamp } from "../time";
 import { pageOf } from "../api/profileRows";
@@ -280,7 +280,29 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
   const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true });
-  return <PaperOverview envelope={state.value} status={state.status} reason={state.reason} realtimePhase={realtime.phase} />;
+  /*
+   * Phase 4: `/derivations/source-health` answered 200 for weeks with no
+   * caller. Command Center gets the same facts inside its composition, so a
+   * call there would be a second copy — but this screen had nothing at all to
+   * say about the profile feeding it, and it is the busiest screen in the
+   * loop. The read is shared for the session by `useApiRead`'s own memo per
+   * container, one request per visit.
+   */
+  const health = useApiRead(() => api.getSourceHealthRead(), [api]);
+  const paper = health.value?.profiles.find((row) => row.environment === "paper") ?? null;
+  return (
+    <PaperOverview
+      envelope={state.value}
+      status={state.status}
+      reason={state.reason}
+      realtimePhase={realtime.phase}
+      sourceHealth={health.status !== "ok"
+        ? `source health not read · ${health.reason ?? "no reason published"}`
+        : paper
+          ? `source ${paper.state}${paper.reasonCode ? ` · ${paper.reasonCode}` : ""} · freshness ${paper.freshness ?? "not published"} · completeness ${paper.completeness ?? "not published"} · profile ${paper.profileId ?? "not published"}`
+          : "the source-health envelope published no paper profile"}
+    />
+  );
 }
 
 /**
@@ -2136,19 +2158,25 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
     // The subscription added today ticks this key; the register must not
     // blank itself every time one of the three projections advances.
     { keepValue: true });
-  const detailState = useApiRead<ProfileEnvelope | null>(
-    () => (bindingId ? api.getBindingResource(bindingId) : Promise.resolve({ ok: true as const, value: null })),
+  /*
+   * Phase 4: the screen's own prop says these facts come from
+   * `GET /broker-bindings/{id}` (BR-EX-72), and they did not — the container
+   * dug them out of the generic resource envelope instead, so the dedicated
+   * route answered 200 for weeks with no caller while the screen missed the
+   * `freshness` and `source_as_of` only that route publishes. Same request
+   * count, the documented route.
+   */
+  const detailState = useApiRead<BindingItem | null>(
+    () => (bindingId ? api.getBindingDetail(bindingId) : Promise.resolve({ ok: true as const, value: null })),
     [api, bindingId],
   );
   if (bindingId) {
-    const profile = detailState.value;
-    const detail = profile ? readBindingItem(profile.objects.binding) : null;
     return (
       <BindingDetail
         bindingId={bindingId}
-        detail={detail}
-        status={profilePanelStatus(profile, detailState.status)}
-        reason={resourceReason(profile, detailState.reason)}
+        detail={detailState.value}
+        status={detailState.status === "ok" && !detailState.value ? "empty" : detailState.status}
+        reason={detailState.reason}
       />
     );
   }

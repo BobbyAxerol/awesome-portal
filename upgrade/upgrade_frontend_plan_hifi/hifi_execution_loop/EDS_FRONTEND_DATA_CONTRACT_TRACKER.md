@@ -4245,6 +4245,44 @@ ngoài việc bị từ chối — và FE đã chép cứng 500 để khớp. Na
    đường dẫn kiểu `src/x.ts(15,7): error TS...`, không khớp mẫu của tôi. Cái
    bắt được lỗi là `npm run build`, không phải cái đếm của tôi.
 
+### A32.5 PHASE 4 ĐÃ LÀM (09-09) — và gate của chính tôi **không đạt**, nói thẳng
+
+Gate tôi tự đặt ở §A32 là "route được gọi tăng 46 → **≥57**". Đo lại sau khi
+làm: **49/104**. **Không đạt.** Con số 57 là tôi ước lượng sai khi viết kế
+hoạch — nó giả định 11 route đều gắn được vào một trong 25 màn của sweep, và
+điều đó không đúng.
+
+#### Sự thật từng route, đo trên dev
+
+| Route | Trạng thái sau phase 4 |
+|---|---|
+| `/runtime-manifest` | **gọi trên 25/25 màn** (phase 3) |
+| `/screen-contracts` | **gọi trên 25/25 màn** (phase 3) |
+| `/derivations/source-health` | **gọi**, ở Paper Overview — màn bận nhất mà trước đó **không nói gì** về profile đang nuôi nó. Command Center **cố ý không gọi**: composition đã mang sẵn, gọi thêm chỉ là bản sao thứ hai |
+| `/governance/approvals/history` | **gọi**, ở Approval Inbox. Phát hiện kèm theo: mục "recently decided" của inbox **rỗng vĩnh viễn không phải vì chưa có quyết định** mà vì `governance/approvals` trên dev **không publish `decided`** và không ai gọi route lịch sử |
+| `/broker-bindings/:id` | **đã nối** — và hoá ra prop của chính màn Binding Detail ghi "BR-EX-72 `GET /broker-bindings/{id}`" trong khi container lại moi từ resource envelope, nên màn thiếu `freshness` và `source_as_of` mà chỉ route đó publish. Sweep **không đếm được** vì 25 màn không có route `:bindingId` |
+| `/derivations/conditional-groups/:id` | **cổng đã dựng và test**, *chưa có màn gọi* — drill nhóm lệnh ở Blotter là việc UI riêng, nối nửa vời còn tệ hơn không nối |
+| `/screens/accounts/:id` | method đã có sẵn (`getAccountBroker360`), **không màn nào gọi** — trùng vai với `/resources/accounts/:id` đang dùng |
+| `/deployments/:id/query-analytics` · `/contract-authority` | **cố ý hoãn sang phase 5**: 87 KB và **220 KB**. Nối trước khi làm payload là tự làm hỏng số của phase 5 |
+| `/live-gates/:id/query-analytics` | dev **không có approval nào** — không có id thật để gọi |
+| `/deployments/paper/:id/projection/:panel` | `404 N07_SHADOW_SCREEN_DISABLED` — **tắt có chủ đích**, không phải nợ |
+| `/broker-bindings/:id/exposure` | **chặn thật**: `IDENTIFIER` của Portal từ chối dấu `@` mà **mọi binding id thật trên dev đều có** (`...@BINANCE`), và route này proxy lên edge mà dev không với tới. Nới một guard chống path-injection cho một route không chạy được trên dev là cái giá sai — ghi thành biên giới |
+
+#### Số đo
+
+| Chỉ số | Trước | Sau |
+|---|---|---|
+| Route được 25 màn gọi | 46 | **49** |
+| Request nhiều nhất trên một màn | 13 | **15** (+2, đúng trần gate cho phép) |
+| `tsc` · vitest | — | **0 lỗi · 123 file · 2 096 pass · 1 skipped** (thêm 8 test) |
+
+#### Việc phụ mà phase 2 để lọt, bắt được ở đây
+
+Guard `absentValues.test.ts` chỉ quét `?? "—"`, nên **12 chỗ** dạng
+`x === null ? "—" : …` lọt qua — trong đó có `ProfileScreens.tsx` (bảng
+deployment), `CommandCenter.tsx`, `clock.ts` (4 chỗ), `time.ts`,
+`marketChart.tsx`. Đã sửa hết và **nới guard sang cả hai dạng**.
+
 ### A32.1 Điều owner cần phê duyệt
 
 1. **Thứ tự 1→5 như trên** có đúng ý không. (Tôi xếp "sửa cái đang hỏng" lên

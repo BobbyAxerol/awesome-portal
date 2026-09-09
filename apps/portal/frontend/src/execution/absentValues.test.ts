@@ -53,7 +53,9 @@ describe("no dash stands in for an unpublished value", () => {
         // `N/A` and a bare `-` are the same lie in different type. `0` is not
         // scanned here: it is a legal value, and only its *source* can say
         // whether a zero was published or invented.
-        if (/\?\?\s*"(—|-|N\/A|n\/a)"/.test(line)) offenders.push(`${file}:${index + 1}`);
+        // Both shapes: `x ?? "—"` and `x === null ? "—" : …`. The second is how
+        // one survived phase 2 — the scan only knew the first.
+        if (/(\?\?|\?)\s*"(—|N\/A|n\/a)"/.test(line)) offenders.push(`${file}:${index + 1}`);
       }
     }
     expect(offenders).toEqual([]);

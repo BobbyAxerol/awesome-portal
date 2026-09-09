@@ -255,7 +255,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
     );
   }
   const p2 = (n: number) => String(n).padStart(2, "0");
-  const asOf = now.getTime() === 0 ? "—" : `${p2(now.getUTCHours())}:${p2(now.getUTCMinutes())}:${p2(now.getUTCSeconds())}Z`;
+  const asOf = now.getTime() === 0 ? "clock not started" : `${p2(now.getUTCHours())}:${p2(now.getUTCMinutes())}:${p2(now.getUTCSeconds())}Z`;
   const hICT = (now.getUTCHours() + 7) % 24;
   const inSession = hICT >= 9 && (hICT < 14 || (hICT === 14 && now.getUTCMinutes() <= 45));
   const syncAge = `${(0.4 + ((now.getTime() / 1000) % 4.6)).toFixed(1)}s`;

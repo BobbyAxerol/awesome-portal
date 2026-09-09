@@ -36,6 +36,8 @@ import type {
   OperatorTaskCatalogue, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail, readDecidedRow, readApprovalCreated, readConditionsPage } from "./rows";
+import { readApprovalHistoryEnvelope, readConditionalGroup, readSourceHealthRead } from "../derivedReads";
+import { APPROVAL_HISTORY, CONDITIONAL_GROUP, SOURCE_HEALTH_READ } from "../derivedReads.fixtures";
 import { readRuntimeManifest } from "../runtimeManifest";
 import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import { SCREEN_CONTRACTS } from "../screenContracts.fixtures";
@@ -882,6 +884,32 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return correlation && envelope
         ? { ok: true as const, value: { correlation, envelope } }
         : unavailable("The correlation response could not be read.");
+    },
+
+    async getSourceHealthRead() {
+      const blocked = gate<never>("getSourceHealthRead");
+      if (blocked) return blocked as Result<never>;
+      const value = readSourceHealthRead(SOURCE_HEALTH_READ);
+      return value ? { ok: true as const, value } : unavailable("The source health envelope could not be read.");
+    },
+
+    async getApprovalHistory() {
+      const blocked = gate<never>("getApprovalHistory");
+      if (blocked) return blocked as Result<never>;
+      const envelope = readApprovalHistoryEnvelope(APPROVAL_HISTORY);
+      if (!envelope) return unavailable("The approval history could not be read.");
+      const rows = envelope.rawRows.flatMap((row) => {
+        const parsed = readDecidedRow(row);
+        return parsed.row ? [parsed.row] : [];
+      });
+      return { ok: true as const, value: { rows, totalCount: envelope.totalCount, deliveryProfile: envelope.deliveryProfile } };
+    },
+
+    async getConditionalGroup(_groupId: string, _environment: string) {
+      const blocked = gate<never>("getConditionalGroup");
+      if (blocked) return blocked as Result<never>;
+      const value = readConditionalGroup(CONDITIONAL_GROUP);
+      return value ? { ok: true as const, value } : unavailable("The conditional order group could not be read.");
     },
 
     async getRuntimeManifest() {

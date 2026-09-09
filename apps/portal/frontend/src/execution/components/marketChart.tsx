@@ -459,7 +459,7 @@ export function InfluenceGraph({
           }
           return chartTooltip({
             headText: d.name,
-            rows: [{ label: "exposure", value: d.data.sharePct === undefined || d.data.sharePct === null ? "—" : `${d.data.sharePct}%` }],
+            rows: [{ label: "exposure", value: d.data.sharePct === undefined || d.data.sharePct === null ? "share not published" : `${d.data.sharePct}%` }],
             provenance,
           });
         },

@@ -214,12 +214,30 @@ const OVERVIEW_TITLE = {
 
 export function StageOverviewContainer({ api, screen }: { api: ExecutionApi; screen: "paper" | "sandbox" | "live" | "blotter" }) {
   const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile(screen), [api, screen]);
+  /*
+   * Phase 4: `/derivations/source-health` had answered 200 for weeks with no
+   * caller. Command Center gets the same facts inside its composition, so
+   * calling it there would only add a request — but a stage overview has no
+   * composition and said nothing at all about the profile feeding it. This is
+   * the screen where the read is new information rather than a second copy.
+   */
+  const health = useApiRead(() => api.getSourceHealthRead(), [api]);
+  const profile = health.value?.profiles.find((row) => row.environment === screen) ?? null;
   return (
     <ProfileEnvelopeScreen
       title={OVERVIEW_TITLE[screen]}
       envelope={state.value}
       status={state.status}
       reason={state.reason}
+      sourceHealth={screen === "blotter" ? null : (
+        <p className="exec-role-meta" data-source-health={profile?.state ?? undefined}>
+          {health.status !== "ok"
+            ? `source health not read · ${health.reason ?? "no reason published"}`
+            : profile
+              ? `source ${profile.state}${profile.reasonCode ? ` · ${profile.reasonCode}` : ""} · freshness ${profile.freshness ?? "not published"} · completeness ${profile.completeness ?? "not published"} · profile ${profile.profileId ?? "not published"}`
+              : `the source-health envelope published no ${screen} profile`}
+        </p>
+      )}
       intro={
         screen === "live" && state.value?.state === "empty" ? (
           <p className="exec-role-meta exec-envelope-empty">
@@ -324,7 +342,7 @@ export function AlphaFleetContainer({ api }: { api: ExecutionApi }) {
               <td><a className="exec-link" href={`/deployments/alphas/${encodeURIComponent(row.alphaId)}`}>{row.alphaLabel}</a><div className="exec-role-meta">{row.alphaId}</div></td>
               <td className="exec-role-num">{row.version}</td>
               <td><StatusChip label={row.stage} tone="mute" /></td>
-              <td>{row.deployments.length === 0 ? "—" : row.deployments.map((deployment) => `${deployment.deploymentId} · ${deployment.venue}`).join("; ")}</td>
+              <td>{row.deployments.length === 0 ? "no deployment bound" : row.deployments.map((deployment) => `${deployment.deploymentId} · ${deployment.venue}`).join("; ")}</td>
               <td className="exec-role-meta">{utcStamp(row.updatedAt)}</td>
             </tr>
           ))}</tbody>
