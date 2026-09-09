@@ -37,6 +37,18 @@ REQUIRED_SERVICES = (
     "portal-minio",
     "quant-worker-py",
 )
+# A failed application bootstrap may leave the durable data plane running while
+# the application/one-shot containers are stopped.  Recovery is intentionally
+# narrow: these are the only services allowed to be non-running in the
+# explicit partial-resume mode; the durable companions must still be running.
+DURABLE_SERVICES = (
+    "portal-postgres",
+    "portal-nats",
+    "portal-minio",
+)
+PARTIAL_RESUME_SERVICES = tuple(
+    service for service in REQUIRED_SERVICES if service not in DURABLE_SERVICES
+)
 REQUIRED_EXECUTION_OVERLAYS = (
     "deploy/compose.execution-current-source.yaml",
     "deploy/compose.execution-local-projection.yaml",
@@ -291,7 +303,13 @@ def fixture_containers(path: pathlib.Path) -> dict[str, dict[str, Any]]:
     return containers
 
 
-def assert_identity(containers: dict[str, dict[str, Any]], project: str, port: int) -> tuple[dict[str, str], dict[str, str]]:
+def assert_identity(
+    containers: dict[str, dict[str, Any]],
+    project: str,
+    port: int,
+    *,
+    allow_partial_resume: bool = False,
+) -> tuple[dict[str, str], dict[str, str]]:
     source_names: dict[str, str] = {}
     for service, container in containers.items():
         container_labels = labels(container)
@@ -299,9 +317,19 @@ def assert_identity(containers: dict[str, dict[str, Any]], project: str, port: i
             fail(f"stable {service} is not owned by the expected Compose project")
         if container_labels.get("com.docker.compose.service") != service:
             fail(f"stable {service} label drifted")
-        if container.get("State", {}).get("Running") is not True:
-            fail(f"stable {service} is not running")
+        running = container.get("State", {}).get("Running") is True
+        if not running:
+            if allow_partial_resume and service in DURABLE_SERVICES:
+                fail(f"stable durable service {service} must remain running for partial resume")
+            status = container.get("State", {}).get("Status")
+            if not allow_partial_resume or service not in PARTIAL_RESUME_SERVICES or status not in {"created", "exited"}:
+                fail(f"stable {service} is not running")
         source_names[service] = container_name(container, service)
+
+    if allow_partial_resume:
+        for service in DURABLE_SERVICES:
+            if containers[service].get("State", {}).get("Running") is not True:
+                fail(f"stable durable service {service} must remain running for partial resume")
 
     config_files = labels(containers["control-api"]).get("com.docker.compose.project.config_files", "").split(",")
     if not all(any(item.endswith(expected) for item in config_files) for expected in REQUIRED_EXECUTION_OVERLAYS):
@@ -490,6 +518,11 @@ def main() -> int:
     parser.add_argument("--expected-port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--fixture", type=pathlib.Path, help="test-only sanitized Docker inspect fixture")
     parser.add_argument("--check", action="store_true", help="validate only; do not create or change files")
+    parser.add_argument(
+        "--resume-partial-runtime",
+        action="store_true",
+        help="allow only stopped application/one-shot containers while durable data services remain running",
+    )
     args = parser.parse_args()
     try:
         if args.legacy_project != DEFAULT_PROJECT:
@@ -509,7 +542,12 @@ def main() -> int:
             fail("deployment path is not a directory")
 
         containers = fixture_containers(args.fixture) if args.fixture else real_containers(args.legacy_project)
-        names, volumes = assert_identity(containers, args.legacy_project, args.expected_port)
+        names, volumes = assert_identity(
+            containers,
+            args.legacy_project,
+            args.expected_port,
+            allow_partial_resume=args.resume_partial_runtime,
+        )
         runtime_env, features, keyring_sources = build_environment(containers, args.legacy_project, args.expected_port)
 
         env_path = deployment / ".env.production"
@@ -533,7 +571,11 @@ def main() -> int:
 
         state = {
             "schema_version": "portal.stable-release-takeover-state.v1",
-            "decision": "STABLE_RELEASE_TAKEOVER_PREFLIGHT_PASSED",
+            "decision": (
+                "STABLE_RELEASE_TAKEOVER_PARTIAL_RESUME_PREFLIGHT_PASSED"
+                if args.resume_partial_runtime
+                else "STABLE_RELEASE_TAKEOVER_PREFLIGHT_PASSED"
+            ),
             "mode": mode,
             "prepared_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "project": args.legacy_project,

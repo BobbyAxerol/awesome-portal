@@ -25,6 +25,11 @@ on:
         required: true
         default: /srv/portal
         type: string
+      resume_partial_runtime:
+        description: Resume only when durable stable services remain running after a bounded application bootstrap failure
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -52,6 +57,7 @@ jobs:
       EXPECTED_RELEASE_MANIFEST_SHA256: ${{ inputs.release_manifest_sha256 }}
       ACCEPT_VULNERABILITY_EVIDENCE: ${{ inputs.accept_vulnerability_evidence }}
       DEPLOY_PATH: ${{ inputs.deployment_path }}
+      RESUME_PARTIAL_RUNTIME: ${{ inputs.resume_partial_runtime }}
 
     steps:
       - name: Check out deployment definition
@@ -91,6 +97,10 @@ jobs:
           fi
           if [[ "${ACCEPT_VULNERABILITY_EVIDENCE}" != "true" ]]; then
             echo 'Production owner must explicitly accept the exact vulnerability evidence.' >&2
+            exit 1
+          fi
+          if [[ "${RESUME_PARTIAL_RUNTIME}" != "true" && "${RESUME_PARTIAL_RUNTIME}" != "false" ]]; then
+            echo 'resume_partial_runtime must be true or false.' >&2
             exit 1
           fi
           if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
@@ -228,15 +238,20 @@ jobs:
           # after a bounded ten-minute no-response window.
           ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
             -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' PORTAL_API_IMAGE='${PORTAL_API_IMAGE}' PORTAL_WEB_IMAGE='${PORTAL_WEB_IMAGE}' PORTAL_CONTROL_API_IMAGE='${PORTAL_CONTROL_API_IMAGE}' PORTAL_ROADMAP_API_IMAGE='${PORTAL_ROADMAP_API_IMAGE}' N14_RELEASE_MANIFEST_SHA256='${N14_RELEASE_MANIFEST_SHA256}' N14_RELEASE_DECISION_SHA256='${N14_RELEASE_DECISION_SHA256}' bash -s" <<'REMOTE'
+            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' PORTAL_API_IMAGE='${PORTAL_API_IMAGE}' PORTAL_WEB_IMAGE='${PORTAL_WEB_IMAGE}' PORTAL_CONTROL_API_IMAGE='${PORTAL_CONTROL_API_IMAGE}' PORTAL_ROADMAP_API_IMAGE='${PORTAL_ROADMAP_API_IMAGE}' N14_RELEASE_MANIFEST_SHA256='${N14_RELEASE_MANIFEST_SHA256}' N14_RELEASE_DECISION_SHA256='${N14_RELEASE_DECISION_SHA256}' RESUME_PARTIAL_RUNTIME='${RESUME_PARTIAL_RUNTIME}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
 
           # First rollout only: derive host-only runtime settings from the
           # verified stable containers.  Later runs validate the same stable
           # namespace and never overwrite its environment file.
-          python3 "${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py" \
+          takeover_preflight=(
             --deployment-path "${DEPLOY_PATH}"
+          )
+          if [[ "${RESUME_PARTIAL_RUNTIME}" == "true" ]]; then
+            takeover_preflight+=(--resume-partial-runtime)
+          fi
+          python3 "${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py" "${takeover_preflight[@]}"
           test -f .env.production
           test -f "${DEPLOY_PATH}/transition/stable-takeover.env"
 

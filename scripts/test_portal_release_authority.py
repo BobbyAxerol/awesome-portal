@@ -273,6 +273,7 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
             "portal-stable-v1-0-1", "sudo -n env \\",
             "compose_next pull \\", "control-api-migrate control-api-bootstrap quant-worker-py",
             "--pull never", "portal-control.dump", "roadmap-task-board.db",
+            "resume_partial_runtime", "RESUME_PARTIAL_RUNTIME", "--resume-partial-runtime",
         ):
             self.assertIn(required, workflow)
         self.assertNotIn("compose_next pull\n", workflow)

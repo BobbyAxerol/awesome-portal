@@ -12,9 +12,15 @@ The protected workflow performs these steps in order:
 
 1. Verify the protected-main candidate, image signatures, SBOM, provenance,
    vulnerability decision and the ordered deployment Compose bundle.
-2. Run `prepare-stable-release-takeover.py` against live Docker metadata. It
-   requires all eight established services, port `127.0.0.1:18081`, exact named
-   volumes, four execution overlays and command relay `false`.
+2. Run `prepare-stable-release-takeover.py` against live Docker metadata. In
+   the normal path it requires all eight established services, port
+   `127.0.0.1:18081`, exact named volumes, four execution overlays and command
+   relay `false`. If a bounded bootstrap failure has already stopped only the
+   application/one-shot services, the protected workflow may be dispatched
+   with `resume_partial_runtime=true`; that mode still requires PostgreSQL,
+   NATS and MinIO to be running and performs every identity, volume, overlay,
+   secret and port check before recovery. It cannot be used to bypass a
+   missing or stopped durable companion.
 3. Create `/srv/portal/.env.production` only when absent. It maps current host
    settings without logging them; pre-existing keyring files are retained. If
    the legacy runtime exposes no query/governance keyring, it creates fresh

@@ -173,6 +173,24 @@ class StableTakeoverTest(unittest.TestCase):
             command.append("--check")
         return subprocess.run(command, text=True, capture_output=True, check=False), deployment
 
+    def run_partial_helper(self, fixture_payload: dict) -> tuple[subprocess.CompletedProcess[str], pathlib.Path]:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        root = pathlib.Path(temporary.name)
+        fixture_path = root / "fixture.json"
+        fixture_path.write_text(json.dumps(fixture_payload), encoding="utf-8")
+        deployment = root / "portal"
+        command = [
+            sys.executable,
+            str(SCRIPT),
+            "--fixture",
+            str(fixture_path),
+            "--deployment-path",
+            str(deployment),
+            "--resume-partial-runtime",
+        ]
+        return subprocess.run(command, text=True, capture_output=True, check=False), deployment
+
     def test_writes_private_env_and_sanitized_state(self):
         result, deployment = self.run_helper(fixture())
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -204,6 +222,24 @@ class StableTakeoverTest(unittest.TestCase):
         result, deployment = self.run_helper(fixture(), check=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((deployment / ".env.production").exists())
+
+    def test_partial_resume_accepts_stopped_application_services_only(self):
+        partial = fixture()
+        for service, container in partial["containers"].items():
+            if service not in {"portal-postgres", "portal-nats", "portal-minio"}:
+                container["State"] = {"Running": False, "Status": "exited"}
+        result, deployment = self.run_partial_helper(partial)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("STABLE_RELEASE_TAKEOVER_PARTIAL_RESUME_PREFLIGHT_PASSED", result.stdout)
+        state = json.loads((deployment / "transition/stable-takeover-state.json").read_text())
+        self.assertEqual(state["decision"], "STABLE_RELEASE_TAKEOVER_PARTIAL_RESUME_PREFLIGHT_PASSED")
+
+    def test_partial_resume_rejects_stopped_durable_service(self):
+        partial = fixture()
+        partial["containers"]["portal-postgres"]["State"] = {"Running": False, "Status": "exited"}
+        result, _ = self.run_partial_helper(partial)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("durable service portal-postgres", result.stderr)
 
 
 if __name__ == "__main__":
