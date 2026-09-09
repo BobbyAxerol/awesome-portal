@@ -5241,6 +5241,19 @@ still produce the new signed image/SBOM/provenance set before activation; this
 entry records the exact CI hygiene repair rather than a `PRODUCT_ACTIVE`
 claim.
 
+**CI freeze-manifest hermeticity correction (2026-09-09):** the audit-lock
+patch correctly changed both frontend package manifests and lockfiles, but the
+BAR-05 manifest that cryptographically freezes those four inputs had not yet
+been refreshed.  The manifest is now regenerated from the checked-in exporter
+and records all four new SHA-256 values.  Its deterministic tests also stub
+only the provenance resolver while exercising every frozen file digest and
+every stable environment field; this removes an accidental dependency on a
+`git` executable from source-archive test runners without weakening release
+provenance (the real exporter still resolves Git HEAD in a release checkout).
+The clean Python 3.12 gate must pass before a signed image is published.  This
+is a CI evidence repair only: no runtime authority, source access, command
+plane or profile activation changes.
+
 ### 17.6 Frontend collaboration lanes
 
 Claude can work in parallel without source/runtime authority:
