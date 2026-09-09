@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { ExecutionApi } from "./api/ports";
 import { drainRelations, REPLAY_RELATIONS, type RelationEnvironment, type RelationFacts, type RelationRoute } from "./api/managerRelations";
+import { loadExecutionRuntime } from "./useExecutionRuntime";
 import { PROJECTION_POLL_MS, usePollTick } from "./useRevision";
 
 export const RELATION_REFRESH_MS = 4 * PROJECTION_POLL_MS;
@@ -32,6 +33,10 @@ export function useRelationFacts(api: ExecutionApi, environment: RelationEnviron
   useEffect(() => {
     if (!on) return undefined;
     let cancelled = false;
+    // Bounds first, and only once per page load: a drain that starts before
+    // the manifest answers uses the labelled default, which is what it used to
+    // use always.
+    void loadExecutionRuntime(api);
     setState((current) => (current.value ? { ...current, refreshing: true } : { status: "loading", value: null, refreshing: false }));
     // A superseded walk stops before its next page; its result is discarded.
     void drainRelations((q) => api.getManagerRelationPage(q), environment, routes, 40, () => cancelled).then((facts) => {

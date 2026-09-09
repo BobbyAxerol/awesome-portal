@@ -10,6 +10,8 @@
  * a page set drained to its end is the relation's current page set, not
  * subject history (BR-EX-81 still owns that).
  */
+import { DEFAULT_PAGE_BOUNDS } from "../runtimeManifest";
+
 export const RELATION_ROUTES = {
   orders: "orders", fills: "fills", strategies: "strategies", strategyDeployments: "strategy-deployments",
   orderBrackets: "order-brackets", orderBracketLegs: "order-bracket-legs",
@@ -100,6 +102,34 @@ export interface Drained {
   freshness: string | null;
   asOfMs: number | null;
   reason: string | null;
+  /**
+   * Phase 3 · 11-4. The walk knew these three and threw them away.
+   *
+   * `pageLimit` is the size it settled on, `maximumPageRows` is what the
+   * server's own page envelope declared, and `truncated` is the server saying
+   * it cut the page. A screen that prints rows without them cannot tell a
+   * reader whether it is looking at everything or at one page's worth.
+   */
+  pageLimit: number | null;
+  maximumPageRows: number | null;
+  truncated: boolean;
+}
+
+/**
+ * The sentence a panel prints beside drained rows.
+ *
+ * Silence here is what let "200 rows" read as "all the rows" on five screens.
+ */
+export function drainCoverageNote(drained: Drained): string {
+  const parts: string[] = [];
+  if (drained.pageLimit !== null) {
+    parts.push(drained.maximumPageRows !== null && drained.pageLimit >= drained.maximumPageRows
+      ? `${drained.pageLimit}/${drained.maximumPageRows} rows per page — the server's declared maximum`
+      : `${drained.pageLimit} rows per page`);
+  }
+  parts.push(drained.exhausted ? "the relation's current page set, complete" : "more pages exist than were read");
+  if (drained.truncated) parts.push("the server truncated a page");
+  return parts.join(" · ");
 }
 
 /** Retry pauses for one page — the Manager connection is shared with the projection worker, so a page can fail for a second or two. */
@@ -162,6 +192,39 @@ export const CONTINUATION_REFUSED = "CONTINUATION_REFUSED_BY_SOURCE";
 export const PAGE_SIZES: readonly number[] = [200, 50, 20, 5];
 
 /**
+ * The rungs the walk steps down to when a source refuses the top page.
+ *
+ * Phase 3: the top rung is no longer written here. It is whatever
+ * `/runtime-manifest` declares as `maximum_page_rows`; these three are the
+ * retreat, and they are frontend tactics — a source's refusal of one page size
+ * is not a bound the server publishes, so nothing below the top is the
+ * server's to state.
+ */
+export const PAGE_SIZE_RUNGS: readonly number[] = [50, 20, 5];
+
+/** `null` until the manifest has been read; `boundsOf()` names the fallback. */
+let declaredMaximumPageRows: number | null = null;
+
+/** Set once per session from the manifest; `null` restores the default ladder. */
+export function setDeclaredPageBound(maximumPageRows: number | null): void {
+  declaredMaximumPageRows = maximumPageRows;
+}
+
+export function declaredPageBound(): number | null {
+  return declaredMaximumPageRows;
+}
+
+/**
+ * The ladder for this walk: the server's declared page first, then the rungs
+ * that are strictly smaller. A server that raises its bound to 500 is asked
+ * for 500 without a line of this file changing.
+ */
+export function pageSizeLadder(maximumPageRows: number | null = declaredMaximumPageRows): readonly number[] {
+  const top = maximumPageRows ?? DEFAULT_PAGE_BOUNDS.maximumPageRows;
+  return [top, ...PAGE_SIZE_RUNGS.filter((rung) => rung < top)];
+}
+
+/**
  * The page size a relation was last seen to accept, for this tab's lifetime.
  *
  * Without it the walk re-probes from 200 on every drain, and a relation that
@@ -211,7 +274,7 @@ function readStoredSizes(): void {
     const raw = window.sessionStorage?.getItem(PAGE_SIZE_STORE);
     if (raw) {
       for (const [key, size] of Object.entries(JSON.parse(raw) as Record<string, unknown>)) {
-        if (typeof size === "number" && PAGE_SIZES.includes(size)) acceptedPageSize.set(key, size);
+        if (typeof size === "number" && pageSizeLadder().includes(size)) acceptedPageSize.set(key, size);
       }
     }
     const refused = window.sessionStorage?.getItem(REFUSED_CURSOR_STORE);
@@ -265,19 +328,20 @@ export async function drainRelation(read: RelationRead, routeId: RelationRoute |
   let cursor: string | null = null;
   let pages = 0;
   let last: RelationPage | null = null;
+  const ladder = pageSizeLadder();
   const learned = acceptedPageSize.get(`${environment}:${routeId}`);
-  let sizeIndex = learned === undefined ? 0 : Math.max(0, PAGE_SIZES.indexOf(learned));
+  let sizeIndex = learned === undefined ? 0 : Math.max(0, ladder.indexOf(learned));
   for (let i = 0; i < maxPages; i += 1) {
-    if (isCancelled()) return { rows, pages, exhausted: false, state: last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: DRAIN_CANCELLED };
+    if (isCancelled()) return { rows, pages, exhausted: false, state: last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: DRAIN_CANCELLED, pageLimit: ladder[sizeIndex] ?? null, maximumPageRows: last?.page.maximumPageRows ?? null, truncated: last?.page.truncated === true };
     // A cursor this source already refused is not asked for again: the answer
     // cannot have changed while the cursor has not. The walk ends on the rows
     // it holds and reports the relation partial, which is what it is.
     if (cursor !== null && continuationRefused(`${environment}:${routeId}`)) {
-      return { rows, pages, exhausted: false, state: "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: CONTINUATION_REFUSED };
+      return { rows, pages, exhausted: false, state: "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: CONTINUATION_REFUSED, pageLimit: ladder[sizeIndex] ?? null, maximumPageRows: last?.page.maximumPageRows ?? null, truncated: last?.page.truncated === true };
     }
-    const stepping = pages === 0 && sizeIndex < PAGE_SIZES.length - 1;
-    const result = await readPage(read, { routeId, environment, limit: PAGE_SIZES[sizeIndex], cursor }, !stepping);
-    if (!result.ok && pages === 0 && sizeIndex < PAGE_SIZES.length - 1) {
+    const stepping = pages === 0 && sizeIndex < ladder.length - 1;
+    const result = await readPage(read, { routeId, environment, limit: ladder[sizeIndex], cursor }, !stepping);
+    if (!result.ok && pages === 0 && sizeIndex < ladder.length - 1) {
       // The source refused this page size and has given us nothing yet: try a
       // smaller one before calling the relation unavailable.
       sizeIndex += 1;
@@ -290,18 +354,18 @@ export async function drainRelation(read: RelationRead, routeId: RelationRoute |
       if (cursor !== null && refusedOnContract(result.reason)) {
         rememberRefusedContinuation(`${environment}:${routeId}`);
       }
-      return { rows, pages, exhausted: false, state: pages === 0 ? result.status.toUpperCase() : last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: result.reason };
+      return { rows, pages, exhausted: false, state: pages === 0 ? result.status.toUpperCase() : last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: result.reason, pageLimit: ladder[sizeIndex] ?? null, maximumPageRows: last?.page.maximumPageRows ?? null, truncated: last?.page.truncated === true };
     }
     pages += 1;
-    if (pages === 1) rememberSize(`${environment}:${routeId}`, PAGE_SIZES[sizeIndex]);
+    if (pages === 1) rememberSize(`${environment}:${routeId}`, ladder[sizeIndex]);
     last = result.value;
     rows.push(...result.value.records.map(relationRow));
     if (!result.value.page.hasMore || !result.value.page.nextCursor) {
-      return { rows, pages, exhausted: true, state: result.value.state, completeness: result.value.sourceHealth.completeness, freshness: result.value.sourceHealth.freshness, asOfMs: result.value.sourceHealth.asOfMs, reason: null };
+      return { rows, pages, exhausted: true, state: result.value.state, completeness: result.value.sourceHealth.completeness, freshness: result.value.sourceHealth.freshness, asOfMs: result.value.sourceHealth.asOfMs, reason: null, pageLimit: ladder[sizeIndex] ?? null, maximumPageRows: result.value.page.maximumPageRows, truncated: result.value.page.truncated === true };
     }
     cursor = result.value.page.nextCursor;
   }
-  return { rows, pages, exhausted: false, state: last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: `page cap ${maxPages} reached` };
+  return { rows, pages, exhausted: false, state: last?.state ?? "PARTIAL", completeness: last?.sourceHealth.completeness ?? null, freshness: last?.sourceHealth.freshness ?? null, asOfMs: last?.sourceHealth.asOfMs ?? null, reason: `page cap ${maxPages} reached`, pageLimit: ladder[sizeIndex] ?? null, maximumPageRows: last?.page.maximumPageRows ?? null, truncated: last?.page.truncated === true };
 }
 
 /** The relations the Trade Replay and the subject funnel read, keyed by the N25 fact name they replace. */

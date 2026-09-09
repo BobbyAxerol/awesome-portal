@@ -31,7 +31,7 @@ import { BarsChart, LinesChart } from "../components/marketChart";
 import { type ReplaySource, TradeReplayEvents, readReplayFills, readReplayOrders } from "../components/TradeReplayEvents";
 import { readReplayGroups, scopeGroups } from "../components/tradeReplayGroups";
 import { ObservedTimelinePanel } from "../components/ObservedTimelinePanel";
-import { RELATION_ROUTES, subjectFunnel, subjectRows, type RelationFacts, type SubjectFunnel } from "../api/managerRelations";
+import { drainCoverageNote, RELATION_ROUTES, subjectFunnel, subjectRows, type RelationFacts, type SubjectFunnel } from "../api/managerRelations";
 import { type ObservedEntry, type ObservedEnvironment, type ObservedSubjectKind, type ObservedTimeline, deployedEnvironments } from "../api/observedTimeline";
 import { SCOPE_WINDOWS, accountsOfPortfolio, rowInScope, scopeFacts, scopeSummary } from "../alphaScope";
 import { hifiInsightTiles } from "../hifiInsight";
@@ -1185,9 +1185,20 @@ export function replaySource(relations: RelationFactsState | null | undefined, a
       ? v.exhausted ? "retained current window covered" : "retained current window page — a lower bound"
       : v.exhausted ? "drained to the relations' end" : "stopped early — a lower bound";
     const why = v.reasons.length > 0 ? ` · ${v.reasons.join(" · ")}` : "";
+    /*
+     * Phase 3 · 11-4: the page size the walk settled on, the server's own
+     * declared maximum, and whether the server truncated a page. The walk has
+     * always known all three and printed none of them, so "N pages" read as
+     * "everything" — the reader had no way to tell a full page from a capped
+     * one.
+     */
+    const widest = [v.coverage.orders, v.coverage.fills]
+      .filter((d): d is NonNullable<typeof d> => Boolean(d))
+      .sort((left, right) => (right.pageLimit ?? 0) - (left.pageLimit ?? 0))[0];
+    const bound = widest ? ` · ${drainCoverageNote(widest)}` : "";
     return {
       label: retained ? "Portal retained current-source window (BR-EX-81)" : "Manager relation page set (EDS-11R1)",
-      detail: `${v.pages} pages · ${walk} · ${v.completeness ?? "completeness not published"}${why}${relations?.refreshing ? " · refreshing" : ""}`,
+      detail: `${v.pages} pages · ${walk} · ${v.completeness ?? "completeness not published"}${bound}${why}${relations?.refreshing ? " · refreshing" : ""}`,
       page: { orders, fills, strategies },
     };
   }

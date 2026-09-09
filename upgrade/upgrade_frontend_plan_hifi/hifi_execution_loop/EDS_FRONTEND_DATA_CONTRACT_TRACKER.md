@@ -4182,6 +4182,69 @@ chạy sandbox certification** nên màn chỉ hiện khung rỗng (`len=2371`).
 chỗ đó **chỉ được test phủ** qua `certification.test.tsx`, **không** được nhìn
 bằng mắt trên dữ liệu thật. Khi nguồn có certification thật thì phải xem lại.
 
+### A32.4 PHASE 3 ĐÃ LÀM (09-09) — trần là lời của server, và hai câu owner chưa trả lời tôi tự chọn
+
+Owner nói "làm luôn" mà chưa trả lời hai câu ở §A30.4, nên tôi lấy đúng hai
+phương án tôi đã đề xuất và ghi ở đây để owner bác nếu không đồng ý:
+
+1. **Validator nới theo hình dạng.** `screenDataContract` thôi so *giá trị*
+   trần (200 / 1 048 576 / 4 096) và giữ nguyên độ chặt về **khoá thừa, kiểu,
+   và `total_history_cap !== false`**. Lý do: bản cũ khiến một server **nâng**
+   trần bị chính màn hình vứt cả contract — server tốt lên thì màn hình hỏng.
+2. **Manifest hỏng → mặc định có nhãn.** `boundsOf(null)` trả
+   `FRONTEND_DEFAULT`; thang trang vẫn chạy, và không chỗ nào được phép nói đó
+   là lời của server.
+
+#### Gate đo trên dev (một lần tải trang, bốn màn, điều hướng trong app)
+
+| Điều kiện | Ngưỡng | Đo được |
+|---|---|---|
+| Manifest đọc mấy lần | 1 / phiên | **1** |
+| Screen-contracts đọc mấy lần | 1 / phiên | **1** |
+| Có xin quá trần server khai không | 0 | **0** — các limit là 500 · 100 · 50, và 500 nay **chính server khai** |
+| Caption có nói trần không | có | `… · **500/500 rows per page — the server's declared maximum** · the relation's current page set, complete` |
+
+#### Làm gì
+
+| # | Việc | Kết quả |
+|---|---|---|
+| 11-1 | `runtimeManifest.ts` + `useExecutionRuntime.ts`: đọc manifest **và** catalogue một lần cho cả phiên, chia cho mọi màn | 2 request/phiên thay vì 2×25 |
+| 11-2 | Thang drain lấy nấc đầu từ `bounds.maximum_page_rows`; các nấc lùi 50/20/5 là **chiến thuật của FE**, không phải trần của server | test đổi trần 200 → 500 → 20 mà **không sửa dòng FE nào** |
+| 11-3 | Validator so hình dạng, không so giá trị | test hai chiều: nâng trần vẫn hợp lệ; sai kiểu/thừa khoá vẫn bị từ chối |
+| 11-4 | `pageLimit` · `maximumPageRows` · `truncated` vào `Drained` và ra caption | thấy trên Trade Replay |
+| 11-5 | `screenContracts.ts` + gate parity registry ↔ catalogue | 25/25 khớp; test **đỏ** khi đổi một route hoặc thêm một màn lạ |
+| 11-6 | `ExecutionPreviewRoute` hiện `unavailable_reason` **bằng chữ của server** khi `data_api.status != AVAILABLE` | test trên fixture canonical `TYPED_UNAVAILABLE` + `N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED` |
+
+**Một chỗ backend phải sửa mới đóng được 11-4.** FE đang xin `limit=500` ở
+subject BFF trong khi manifest khai 200 — nhìn thì như FE vượt trần. Đo kỹ thì
+**không phải**: đó là operation khác, controller cho tới 500, nhưng **envelope
+chỉ in lại limit người gọi xin**, nên trình duyệt không có cách nào biết trần
+ngoài việc bị từ chối — và FE đã chép cứng 500 để khớp. Nay
+`subject-activity.service.ts` **tự khai `maximum_page_rows: 500`**, và FE bỏ số
+500 chép tay, học trần từ chính câu trả lời.
+
+#### Gate đã chạy
+
+| Gate | Kết quả |
+|---|---|
+| `tsc` frontend | **0 lỗi** |
+| vitest | **122 file · 2 088 pass · 1 skipped** (trước phase 3: 121 · 2 069) — **19 test mới** |
+| `npm run build` control-api | **0 lỗi** |
+| Trình duyệt trên dev | bảng gate ở trên |
+
+#### Ba lần đo sai của tôi trong phase này
+
+1. **Đếm manifest bằng `p.goto`.** Mỗi `goto` tải lại app và xoá bộ nhớ phiên,
+   nên "2 request cho 3 màn" chẳng chứng minh gì. Đo lại bằng **điều hướng
+   trong app**, một lần tải trang: 1 và 1.
+2. **Deploy hỏng mà tôi tưởng xong.** `deploy-int.sh` trả exit 1 (control-api
+   build lỗi: tôi khai trùng `MAXIMUM_PAGE_ROWS`), nhưng container cũ vẫn chạy
+   nên `dev web http=200` vẫn xanh và tôi đo **bản cũ hai lần**. Nay đối chiếu
+   `docker inspect` thời điểm build ảnh với thời điểm sửa file.
+3. **`grep -c "^src/.*error TS"` trả 0** vì `tsc -p tsconfig.build.json` in
+   đường dẫn kiểu `src/x.ts(15,7): error TS...`, không khớp mẫu của tôi. Cái
+   bắt được lỗi là `npm run build`, không phải cái đếm của tôi.
+
 ### A32.1 Điều owner cần phê duyệt
 
 1. **Thứ tự 1→5 như trên** có đúng ý không. (Tôi xếp "sửa cái đang hỏng" lên

@@ -111,6 +111,12 @@ const DESCRIPTIVE: Record<string, string> = {
   apply_required: "describes the command protocol; renders a chip, gates nothing",
   verify_required: "describes the command protocol; renders a chip, gates nothing",
   owner_review_required: "describes the command protocol; renders a chip, gates nothing",
+  // Phase 3: the screen catalogue's own description of a screen. It is carried
+  // for the parity gate and printed; no control is opened or closed by it, so
+  // `=== true` (absent reads as "not required") is the right operator — the
+  // opposite would make an older catalogue look like it demanded resources it
+  // never mentioned.
+  resource_required: "describes a screen in the server catalogue; compared and displayed, gates nothing",
 };
 
 function readerFiles(): { path: string; source: string }[] {

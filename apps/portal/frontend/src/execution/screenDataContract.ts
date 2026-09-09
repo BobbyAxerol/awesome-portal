@@ -19,6 +19,9 @@ type PanelState = (typeof EDS02_PANEL_STATES)[number];
 
 const DECIMAL = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
 const DATE_RANGE_MS = 8_640_000_000_000_000;
+const positiveInteger = (value: unknown): boolean =>
+  typeof value === "number" && Number.isInteger(value) && value > 0;
+
 const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const UTC_CLOCK_FIELDS = [
   "event_time_ms",
@@ -289,7 +292,27 @@ export function readContractAuthority(value: unknown): ContractAuthorityResponse
   const digests = record(item.generated_digests);
   if (!screenManifest || !actionManifest || !Array.isArray(screens) || !Array.isArray(actions) || !redaction || !actor || !pageBounds || !clocks || !exactValues || !panelContract || !digests) return null;
   if (!exactKeys(actor, ["user_id", "username", "roles"]) || !identifier(actor.user_id) || !boundedText(actor.username, 64) || !Array.isArray(actor.roles) || actor.roles.length !== 1 || !["ADMIN", "USER"].includes(actor.roles[0] as string)) return null;
-  if (!exactKeys(pageBounds, ["maximum_page_rows", "maximum_response_bytes", "maximum_cursor_bytes", "total_history_cap"]) || pageBounds.maximum_page_rows !== 200 || pageBounds.maximum_response_bytes !== 1_048_576 || pageBounds.maximum_cursor_bytes !== 4_096 || pageBounds.total_history_cap !== false) return null;
+  /*
+   * Phase 3: shape, not values.
+   *
+   * This line used to demand exactly 200 / 1 048 576 / 4 096, which made a
+   * server that RAISED a bound fail its own contract — the screen would drop
+   * the whole authority payload and render unavailable because the source got
+   * better. What matters here is that the server states three positive integer
+   * bounds and claims no total-history cap; which integers they are is the
+   * server's to decide, and `/runtime-manifest` is where the screens read them.
+   *
+   * Everything else about this object stays as strict as it was: an unknown
+   * key, a missing bound, a string where a number belongs, or a
+   * `total_history_cap` of `true` (a claim no source has made) still voids it.
+   */
+  if (
+    !exactKeys(pageBounds, ["maximum_page_rows", "maximum_response_bytes", "maximum_cursor_bytes", "total_history_cap"])
+    || !positiveInteger(pageBounds.maximum_page_rows)
+    || !positiveInteger(pageBounds.maximum_response_bytes)
+    || !positiveInteger(pageBounds.maximum_cursor_bytes)
+    || pageBounds.total_history_cap !== false
+  ) return null;
   if (!exactKeys(clocks, ["wire_type", "fields", "display_policy"]) || clocks.wire_type !== "UTC_EPOCH_MS" || clocks.display_policy !== "FRONTEND_UTC_FORMATTER_ONLY" || !exactMembers(clocks.fields, UTC_CLOCK_FIELDS)) return null;
   if (!exactKeys(exactValues, ["identifier", "sequence_and_large_identifier", "monetary_and_financial_value"]) || exactValues.identifier !== "OPAQUE_STRING_ONLY" || exactValues.sequence_and_large_identifier !== "STRING_ONLY" || exactValues.monetary_and_financial_value !== "EXACT_DECIMAL_STRING_WITH_CURRENCY_AND_SCALE") return null;
   if (!exactKeys(panelContract, ["states", "ready_requires_non_null_data", "partial_and_stale_require_non_null_data", "terminal_absence_requires_null_data"]) || !exactMembers(panelContract.states, EDS02_PANEL_STATES) || panelContract.ready_requires_non_null_data !== true || panelContract.partial_and_stale_require_non_null_data !== true || panelContract.terminal_absence_requires_null_data !== true) return null;

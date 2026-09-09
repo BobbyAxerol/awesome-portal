@@ -13,6 +13,7 @@ import type { ExecutionApi } from "./api/ports";
 import type { SubjectActivityKind, SubjectActivityPage } from "./api/subjectActivity";
 import { RELATION_REFRESH_MS, type RelationFactsState } from "./useRelationFacts";
 import { usePollTick } from "./useRevision";
+import { loadExecutionRuntime } from "./useExecutionRuntime";
 
 export interface SubjectActivityTarget {
   kind: SubjectActivityKind;
@@ -29,6 +30,13 @@ function drained(page: SubjectActivityPage): Drained {
     freshness: page.sourceHealth.freshness,
     asOfMs: page.sourceHealth.asOfMs,
     reason: page.state === "UNAVAILABLE" ? "subject retained activity unavailable" : null,
+    // The subject BFF serves one page and states its own limit; there is no
+    // ladder here to settle on, so the limit is the page's own.
+    pageLimit: page.page.limit ?? null,
+    maximumPageRows: page.page.maximumPageRows,
+    // This operation publishes no truncation flag; `false` here would be the
+    // reader asserting something the source did not say.
+    truncated: false,
   };
 }
 
@@ -91,6 +99,10 @@ export function useSubjectActivityFacts(
   const cadence = usePollTick(RELATION_REFRESH_MS, on);
   const [state, setState] = useState<RelationFactsState>({ status: "loading", value: null, refreshing: false });
   useEffect(() => {
+    // Phase 3: subject screens never touch `useRelationFacts`, so without this
+    // the manifest was never read on Alpha 360 or Account 360 — measured on
+    // dev as zero manifest requests across four screens.
+    void loadExecutionRuntime(api);
     if (!on) return undefined;
     let cancelled = false;
     setState((current) => current.value ? { ...current, refreshing: true } : { status: "loading", value: null, refreshing: false });

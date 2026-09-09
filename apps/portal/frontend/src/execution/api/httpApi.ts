@@ -75,6 +75,8 @@ import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
   OperatorTaskCatalogue, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
+import { readRuntimeManifest } from "../runtimeManifest";
+import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
@@ -896,6 +898,28 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return ledger && envelope
         ? { ok: true as const, value: { ledger, envelope } }
         : unavailable("The capital ledger response could not be read.");
+    },
+
+    async getRuntimeManifest() {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get("/runtime-manifest", signal);
+      if (!response.ok) return analyticsProblem(response);
+      const manifest = readRuntimeManifest(await response.json());
+      return manifest
+        ? { ok: true as const, value: manifest }
+        : unavailable("The runtime manifest could not be read.");
+    },
+
+    async getScreenContracts() {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get("/screen-contracts", signal);
+      if (!response.ok) return analyticsProblem(response);
+      const contracts = readScreenContracts(await response.json());
+      return contracts
+        ? { ok: true as const, value: contracts as readonly ScreenContract[] }
+        : unavailable("The screen contract catalogue could not be read.");
     },
 
     async getCrossEquity(portfolioId: string) {

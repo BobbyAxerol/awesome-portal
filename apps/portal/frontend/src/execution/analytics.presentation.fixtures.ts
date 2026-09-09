@@ -471,6 +471,35 @@ export const PACKED_LENGTH_AT_LIMIT = packedLength(CORRELATION_PACK_LIMIT);
 
 /** Two currencies, each with its own gross totals. Nothing crosses between them. */
 /**
+ * The runtime manifest, shaped as dev answers it (measured 2026-09-09):
+ * 200 rows, 1 MiB, 4 KiB cursor, with the four gates the owner still holds.
+ */
+export const RUNTIME_MANIFEST = {
+  schema_version: "portal.execution.runtime-manifest.v1",
+  record_authority: "PORTAL_CONTROL",
+  workspace_id: "ws_fixture",
+  read_at_ms: 1788952479136,
+  bounds: {
+    maximum_page_rows: 200,
+    maximum_response_bytes: 1048576,
+    maximum_cursor_bytes: 4096,
+  },
+  source_semantics: {
+    manager_read: "CURRENT_CATALOGUE_BOUND_PAGE_ONLY",
+    global_event_ordering: "NOT_ASSERTED",
+    correction_replay: "NOT_ASSERTED",
+    total_history: "NOT_ASSERTED",
+    authoritative_empty: "AUTHORITATIVE_EMPTY_WHEN_SOURCE_ENVELOPE_SAYS_COMPLETE",
+  },
+  external_gates: [
+    { requirement_id: "GLOBAL_SEQUENCE_AND_GAP_RATE", status: "OWNER_ACTION_REQUIRED" },
+    { requirement_id: "RETAINED_EVENT_REPLAY_AND_CORRECTION", status: "OWNER_ACTION_REQUIRED" },
+    { requirement_id: "CROSS_CELL_SGP_INGEST", status: "OWNER_ACTION_REQUIRED" },
+    { requirement_id: "ONE_FIVE_THIRTY_MINUTE_SOURCE_OUTAGE", status: "OWNER_ACTION_REQUIRED" },
+  ],
+};
+
+/**
  * Cross-portfolio standings, shaped exactly as dev answers them: one row per
  * (portfolio, currency), so the pool that publishes both a USDT and a VND
  * series appears twice rather than once with two currencies mixed.

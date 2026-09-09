@@ -29,6 +29,8 @@ import type {
   InsightBatch,
   OrderFunnel,
 } from "../analytics";
+import type { RuntimeManifest } from "../runtimeManifest";
+import type { ScreenContract } from "../screenContracts";
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
@@ -461,6 +463,20 @@ export interface ExecutionApi {
   getCapitalLedger(
     portfolioId: string,
   ): Promise<Result<{ ledger: CapitalLedger; envelope: AnalyticsEnvelope }>>;
+  /**
+   * `GET /api/v1/execution/runtime-manifest`
+   *
+   * The server's own page/byte/cursor bounds. Read once per session; the
+   * screens take their limits from it instead of writing them down.
+   */
+  getRuntimeManifest(): Promise<Result<RuntimeManifest>>;
+  /**
+   * `GET /api/v1/execution/screen-contracts`
+   *
+   * The catalogue the parity gate compares against the registry, and the place
+   * a screen learns that the server does not serve it.
+   */
+  getScreenContracts(): Promise<Result<readonly ScreenContract[]>>;
   /**
    * `GET /api/v1/execution/portfolios/{portfolioId}/cross-equity`
    *

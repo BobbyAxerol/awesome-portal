@@ -29,6 +29,8 @@ import { reviewRouteFor } from "./screens/ApprovalInbox";
 import { usePresentation } from "../app/presentation";
 
 import { createHttpApi } from "./api/httpApi";
+import { contractFor, useExecutionRuntime } from "./useExecutionRuntime";
+import { isAvailable, unavailableSentence } from "./screenContracts";
 import type { DeliveryPolicy } from "./profile";
 import { NewApprovalRequestContainer } from "./screens/NewApprovalRequest";
 import { WaiversRegisterContainer } from "./screens/WaiversRegister";
@@ -150,6 +152,15 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   // data for a fixture on a product route; the fixture port lives on only in
   // unit tests and the fixture lab.
   const api = useMemo(() => createHttpApi({ policy }), [policy]);
+  /*
+   * Phase 3 · 11-6. The server publishes, per screen, whether it serves it and
+   * why not. Every screen on dev reads AVAILABLE today, so this branch cannot
+   * be signed off by eye here — but the mechanism has to exist before the
+   * first TYPED_UNAVAILABLE arrives, or the screen will invent a sentence for
+   * it. The catalogue is read once per page load, shared with every screen.
+   */
+  const runtime = useExecutionRuntime(api);
+  const contract = contractFor(runtime, screenId);
 
   const { setEntityLabel } = usePresentation();
   const approvalId = params.approvalId ?? (screenId.includes("R2") ? "AP-352" : "AP-201");
@@ -298,5 +309,18 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = null;
   }
 
-  return <PreviewFrame screenId={screenId} profile={profile}>{content}</PreviewFrame>;
+  return (
+    <PreviewFrame screenId={screenId} profile={profile}>
+      {/*
+        * The server's own word about this screen, above the screen. It is a
+        * note, not a replacement: a screen the server declares unserved may
+        * still hold panels fed by other routes, and blanking them would hide
+        * data the reader can still use.
+        */}
+      {contract && !isAvailable(contract)
+        ? <p className="exec-disabled-reason" data-screen-contract={contract.dataApi.status}>{unavailableSentence(contract)}</p>
+        : null}
+      {content}
+    </PreviewFrame>
+  );
 }

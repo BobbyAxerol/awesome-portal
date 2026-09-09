@@ -12,6 +12,14 @@ import {
 import { ExecutionDurableMirrorRepository } from "./durable-mirror.repository";
 
 const SUBJECT_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
+/**
+ * The ceiling this operation enforces — and, since phase 3, publishes.
+ *
+ * It was already here, and already matched the controller's schema cap, but
+ * the page envelope stated only the limit the caller had asked for. A browser
+ * could therefore learn the ceiling only by being refused, which is exactly
+ * why the frontend ended up hard-coding 500 of its own.
+ */
 const MAXIMUM_PAGE_ROWS = 500;
 const DEFAULT_PAGE_ROWS = 200;
 const TIMEFRAMES = new Set(["1m", "5m", "15m", "30m", "1h", "4h", "1d"]);
@@ -142,6 +150,7 @@ export class ExecutionSubjectActivityService {
       state,
       page: {
         limit,
+        maximum_page_rows: MAXIMUM_PAGE_ROWS,
         returned_count: page.rows.length,
         has_more: page.hasMore,
         next_cursor: nextCursor,
@@ -359,7 +368,7 @@ function unavailableResponse(
       source_window: "CURRENT_SOURCE_CURSOR_TRAVERSAL",
     },
     state: "UNAVAILABLE",
-    page: { limit, returned_count: 0, has_more: false, next_cursor: null },
+    page: { limit, maximum_page_rows: MAXIMUM_PAGE_ROWS, returned_count: 0, has_more: false, next_cursor: null },
     records: [],
     projection: projectionMetadata(snapshot),
   };

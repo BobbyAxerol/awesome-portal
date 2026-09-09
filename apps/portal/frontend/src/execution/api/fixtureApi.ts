@@ -36,6 +36,9 @@ import type {
   OperatorTaskCatalogue, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
 } from "./profileRead";
 import { readApprovalRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail, readDecidedRow, readApprovalCreated, readConditionsPage } from "./rows";
+import { readRuntimeManifest } from "../runtimeManifest";
+import { readScreenContracts, type ScreenContract } from "../screenContracts";
+import { SCREEN_CONTRACTS } from "../screenContracts.fixtures";
 import {
   readAnalyticsEnvelope,
   readBindingExposure,
@@ -68,6 +71,7 @@ import {
   CAPITAL_PREVIEW_STALE,
   CORRELATION_ABOVE_LIMIT,
   CROSS_EQUITY,
+  RUNTIME_MANIFEST,
   CORRELATION_AT_LIMIT,
   EXPOSURE_COMPLETE,
   FUNNEL_BOUNDED,
@@ -878,6 +882,24 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return correlation && envelope
         ? { ok: true as const, value: { correlation, envelope } }
         : unavailable("The correlation response could not be read.");
+    },
+
+    async getRuntimeManifest() {
+      const blocked = gate<never>("getRuntimeManifest");
+      if (blocked) return blocked as Result<never>;
+      const manifest = readRuntimeManifest(RUNTIME_MANIFEST);
+      return manifest
+        ? { ok: true as const, value: manifest }
+        : unavailable("The runtime manifest could not be read.");
+    },
+
+    async getScreenContracts() {
+      const blocked = gate<never>("getScreenContracts");
+      if (blocked) return blocked as Result<never>;
+      const contracts = readScreenContracts(SCREEN_CONTRACTS);
+      return contracts
+        ? { ok: true as const, value: contracts as readonly ScreenContract[] }
+        : unavailable("The screen contract catalogue could not be read.");
     },
 
     async getCrossEquity(_portfolioId: string) {
