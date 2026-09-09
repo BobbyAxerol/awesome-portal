@@ -212,9 +212,15 @@ def copy_signing_material(
         # takeover chooses the root-owned file and intentionally omits JSON.
         return "ROOT_OWNED_FILE"
     if json_value:
-        output[json_destination] = json_value
-        return "RUNTIME_JSON"
-    # The legacy container exposes no signing material at all.  Query cursors
+        active_key_id = output.get(active_key_destination)
+        if active_key_id and valid_keyring_json(json_value, active_key_id):
+            output[json_destination] = json_value
+            return "RUNTIME_JSON"
+        # Some legacy stable images exposed a bare token under the JSON
+        # setting.  Treat that as malformed compatibility input and create a
+        # fresh, correctly shaped ephemeral keyring below; never transfer the
+        # malformed value into the new release environment.
+    # The legacy container exposes no usable signing material.  Query cursors
     # and governance plans are bounded, ephemeral artifacts; a fresh keyring
     # is safer than retaining an implicit image default.  This does not alter
     # identities, passwords, database rows, execution credentials or sessions.
