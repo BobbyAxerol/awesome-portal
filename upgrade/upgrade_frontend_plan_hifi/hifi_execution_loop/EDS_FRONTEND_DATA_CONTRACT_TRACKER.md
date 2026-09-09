@@ -3590,6 +3590,68 @@ Sửa: khi có `onRangeChange`, luôn hiện đủ preset — cửa sổ là vi�
 **Và câu hỏi của owner có lý ở chỗ khác nữa:** khi mới mở màn, giao diện **đúng là không khác** — `ALL` vẫn vẽ như cũ, đó là chủ ý. Riêng Portfolio 360 tăng 134 → 1 918 điểm nhưng **nhìn không ra**, vì đường equity của portfolio này đang phẳng ở 22 220 000: thêm điểm trên một đường phẳng thì trông y hệt.
 
 **Bài học ghi lại:** một gate đo "hành động có tác dụng không" mà không đo "có hoàn tác được không" là gate nửa vời. Cùng họ với bốn lần đo sai đã ghi ở §A22.3, §A27.4, §A29.4.
+### A30. GOAL 11 — RÀ TRƯỚC KHI LÀM (09-09, owner xin list để duyệt)
+
+Goal 11 nói "server tự khai giới hạn, thay vì frontend tự viết". Trước khi liệt
+kê việc, tôi đo hai route đó trên dev và đếm xem frontend đang tự viết những gì.
+
+#### A30.1 Đo được gì hôm nay (09-09, dev, `ws_06G19F61YB8CFR7TEWMS7HQ660`)
+
+| Route | Kết quả thật |
+|---|---|
+| `GET /api/v1/execution/runtime-manifest` | **200 · 3 341 B**. `bounds`: `maximum_page_rows 200` · `maximum_response_bytes 1 048 576` · `maximum_cursor_bytes 4 096`. Thêm `source_semantics` 5 dòng (`global_event_ordering: NOT_ASSERTED`, `total_history: NOT_ASSERTED`…), `external_gates` 4 mục `OWNER_ACTION_REQUIRED`, `runtime_delivery.profiles` 3 profile |
+| `GET /api/v1/execution/screen-contracts` | **200 · 23 375 B · 24 màn**. Mỗi màn có `ui_route_template`, `required_roles`, `resource_required`, `read_capabilities`, `supported_ui_states`, `composition_policy` (7 khoá `SERVER_ONLY`), `data_api{status, operation_id, method, path_template, response_contract, unavailable_reason, delivery_phase}` |
+| Frontend gọi hai route này | **0 lần** — `grep -rn "runtime-manifest\|screen-contracts" apps/portal/frontend/src` không có hit nào |
+
+**`data_api.status` hôm nay: 24/24 `AVAILABLE`, `unavailable_reason` đều `null`.**
+Đây là dữ kiện quyết định phạm vi 11-6 bên dưới — hôm nay **không có ca thật**
+để nghiệm thu bằng mắt.
+
+Frontend đang tự viết những gì (đo bằng grep, không ước lượng):
+
+| Chỗ | Hằng số | Nó là gì |
+|---|---|---|
+| `execution/api/managerRelations.ts:162` | `PAGE_SIZES = [200, 50, 20, 5]` | nấc đầu **trùng** `maximum_page_rows` của server — trùng bằng tay, không phải bằng hợp đồng |
+| `execution/screenDataContract.ts:292` | `maximum_page_rows !== 200 \|\| maximum_response_bytes !== 1_048_576 \|\| maximum_cursor_bytes !== 4_096` → `return null` | validator **chốt cứng giá trị**: server nâng trần thì frontend **vứt cả contract**, màn thành unavailable vì server tốt lên |
+| `execution/api/managerRelations.ts:68` | `maximumPageRows` | parse xong **không ai dùng** — số của server nằm trong bộ nhớ và chết ở đó |
+| `execution/series.ts:32` | `MAX_POINTS = 5000` | **ngân sách render của trình duyệt**, không phải trần server — xem A30.3 |
+| `execution/components/table.tsx:43` | `VIRTUALIZE_ABOVE = 200` | cũng là ngân sách client |
+
+#### A30.2 Việc của goal 11
+
+| # | Việc | Gate đóng (đo được) |
+|---|---|---|
+| 11-1 | Đọc `runtime-manifest` **một lần cho cả app**, cache theo workspace, và phơi ra một nguồn trần duy nhất cho frontend | route được gọi đúng 1 lần/workspace; số request của các màn hiện có **không tăng** |
+| 11-2 | Thang drain lấy nấc đầu từ `bounds.maximum_page_rows` thay vì số 200 viết tay (các nấc lùi 50/20/5 **giữ nguyên** — chúng là chiến thuật khi server từ chối một trang, không phải trần) | đổi `MAXIMUM_DATA_INTAKE_V1.pageBounds.maximumRows` ở backend → frontend hỏi `limit` mới **mà không sửa dòng frontend nào**; test chứng minh bằng hai giá trị khác nhau |
+| 11-3 | `screenDataContract` bỏ so **giá trị**, giữ so **hình dạng + kiểu**; trần đọc được thì đem đi dùng | server nâng trần → contract vẫn hợp lệ, màn vẫn ready; payload sai hình dạng vẫn bị từ chối như cũ (test giữ cả hai chiều) |
+| 11-4 | `maximumPageRows` và `truncated` phải **nói ra** trong caption drain, thay vì im lặng | trang chạm trần nói rõ "200/200 dòng — trần server khai"; `truncated: true` không bao giờ bị nuốt |
+| 11-5 | `screen-contracts` thành **gate parity FE↔server**: 24 `ui_route_template` khớp router thật; `required_roles`/`resource_required` khớp guard; `supported_ui_states` khớp state màn render được | test parity **đỏ khi lệch**; liệt kê được màn nào server khai mà FE chưa có và ngược lại |
+| 11-6 | Cơ chế `data_api.status != AVAILABLE` → hiện `unavailable_reason` **bằng lời server**, thay cho câu FE tự đoán | có test trên fixture; **trên dev chưa ký được bằng mắt** vì 24/24 đang `AVAILABLE` — ghi thẳng là chưa ký, không tô thành đã chứng minh |
+
+**Backend: 0 dòng mới.** Cả hai route đã publish và đã trả 200 hôm nay.
+
+#### A30.3 Không làm, và vì sao
+
+- **`MAX_POINTS = 5000` và `VIRTUALIZE_ABOVE = 200` giữ nguyên.** Chúng trả lời
+  "trình duyệt này vẽ nổi bao nhiêu", **server không khai và không thể khai**.
+  Kéo chúng vào goal 11 là đổi một hằng số đúng chỗ lấy một hằng số sai chỗ.
+- Không đụng token dùng chung, Research, Planning (§0).
+
+#### A30.4 Hai chỗ owner cần quyết trước khi tôi làm
+
+1. **Nới validator ở 11-3 là nới một cái guard.** `screenDataContract` đang từ
+   chối payload lạ bằng cách so từng giá trị. Tôi đề xuất giữ nguyên độ chặt về
+   *hình dạng, kiểu, khoá thừa* và chỉ thả *giá trị số của trần* — nhưng đây là
+   đánh đổi thật, nên tôi hỏi chứ không tự quyết.
+2. **Manifest fetch hỏng thì frontend làm gì?** Đề xuất: giữ hằng số hiện tại
+   làm **fallback có nhãn**, và caption phải nói trần đang là "server khai" hay
+   "chưa đọc được, đang dùng mặc định". Phương án còn lại là chặn màn — chặt hơn
+   nhưng biến một lỗi metadata thành mất màn. Tôi nghiêng về fallback có nhãn.
+
+Và nếu owner muốn **nhìn thấy** 11-6 hoạt động trên dev thì cần cho một màn tạm
+ở trạng thái không `AVAILABLE` — việc đó chạm dữ liệu dev nên tôi hỏi trước,
+không tự làm.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa
