@@ -267,13 +267,29 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
             "N14_RELEASE_MANIFEST_SHA256", "N14_RELEASE_DECISION_SHA256",
             "publication-workflow-run.json", ".github/workflows/publish-images.yml",
             "deployment-compose-bundle.json", "prepare-stable-release-takeover.py",
-            "portal-stable-v1-0-1", "sudo -n docker compose",
+            "portal-stable-v1-0-1", "sudo -n env \\",
             "compose_next pull \\", "control-api-migrate control-api-bootstrap quant-worker-py",
             "--pull never", "portal-control.dump", "roadmap-task-board.db",
         ):
             self.assertIn(required, workflow)
         self.assertNotIn("compose_next pull\n", workflow)
         self.assertNotIn("PORTAL_IMAGE_TAG=\"${IMAGE_TAG}\" docker compose", workflow)
+        compose_next = workflow.split("compose_next() {", 1)[1].split(
+            "\n          }\n\n          compose_next config", 1
+        )[0]
+        # The remote deploy user intentionally runs Docker through sudo. Its
+        # env_reset would otherwise silently remove the reviewed digest
+        # coordinates before Compose interpolates the production bundle.
+        self.assertIn("sudo -n env \\", compose_next)
+        self.assertNotIn("sudo -n docker compose", compose_next)
+        for destination, source in (
+            ("PORTAL_IMAGE_TAG", "IMAGE_TAG"),
+            ("PORTAL_API_IMAGE", "PORTAL_API_IMAGE"),
+            ("PORTAL_WEB_IMAGE", "PORTAL_WEB_IMAGE"),
+            ("PORTAL_CONTROL_API_IMAGE", "PORTAL_CONTROL_API_IMAGE"),
+            ("PORTAL_ROADMAP_API_IMAGE", "PORTAL_ROADMAP_API_IMAGE"),
+        ):
+            self.assertIn(f'{destination}="${{{source}}}"', compose_next)
 
 
 if __name__ == "__main__":

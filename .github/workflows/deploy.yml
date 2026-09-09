@@ -265,12 +265,18 @@ jobs:
             for compose_file in "${next_compose_files[@]}"; do
               compose_args+=( -f "${compose_file}" )
             done
-            PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
-            PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
-            PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
-            PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
-            PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
-            sudo -n docker compose \
+            # sudo's default env_reset intentionally drops caller variables.
+            # Pass only reviewed, non-secret immutable image coordinates as
+            # arguments to env so Compose receives the exact candidate
+            # digests while all host-only runtime settings still come from
+            # .env.production.
+            sudo -n env \
+              PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
+              PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
+              PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
+              PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
+              PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
+              docker compose \
               --env-file .env.production \
               "${compose_args[@]}" "$@"
           }
