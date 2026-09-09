@@ -197,7 +197,8 @@ jobs:
 
       - name: Transfer immutable production Compose bundle
         run: |
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "install -d -m 0750 '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose' '${DEPLOY_PATH}/scripts'"
           for compose_file in \
             deploy/compose.production.yaml \
@@ -206,19 +207,27 @@ jobs:
             deploy/compose.execution-local-projection.yaml \
             deploy/compose.execution-manager-analytics.yaml \
             deploy/compose.execution-manager-realtime.yaml; do
-            scp -P "${DEPLOY_PORT}" "${compose_file}" \
+            scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+              -P "${DEPLOY_PORT}" "${compose_file}" \
               "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/${compose_file##*/}"
           done
-          scp -P "${DEPLOY_PORT}" scripts/prepare-stable-release-takeover.py \
+          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -P "${DEPLOY_PORT}" scripts/prepare-stable-release-takeover.py \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py"
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "chmod 0750 '${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py'"
-          scp -P "${DEPLOY_PORT}" -r release-pack/. \
+          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -P "${DEPLOY_PORT}" -r release-pack/. \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/"
 
       - name: Back up, migrate and start immutable images
         run: |
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          # Pulling digest-pinned images and Compose readiness can be silent
+          # for minutes. Keep the pinned SSH channel alive, but fail closed
+          # after a bounded ten-minute no-response window.
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' PORTAL_API_IMAGE='${PORTAL_API_IMAGE}' PORTAL_WEB_IMAGE='${PORTAL_WEB_IMAGE}' PORTAL_CONTROL_API_IMAGE='${PORTAL_CONTROL_API_IMAGE}' PORTAL_ROADMAP_API_IMAGE='${PORTAL_ROADMAP_API_IMAGE}' N14_RELEASE_MANIFEST_SHA256='${N14_RELEASE_MANIFEST_SHA256}' N14_RELEASE_DECISION_SHA256='${N14_RELEASE_DECISION_SHA256}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "${DEPLOY_PATH}"

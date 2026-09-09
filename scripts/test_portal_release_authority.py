@@ -267,6 +267,8 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
             "N14_RELEASE_MANIFEST_SHA256", "N14_RELEASE_DECISION_SHA256",
             "publication-workflow-run.json", ".github/workflows/publish-images.yml",
             "deployment-compose-bundle.json", "prepare-stable-release-takeover.py",
+            "-o ServerAliveInterval=20", "-o ServerAliveCountMax=30",
+            "-o ConnectTimeout=20",
             "portal-stable-v1-0-1", "sudo -n env \\",
             "compose_next pull \\", "control-api-migrate control-api-bootstrap quant-worker-py",
             "--pull never", "portal-control.dump", "roadmap-task-board.db",
@@ -274,6 +276,13 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
             self.assertIn(required, workflow)
         self.assertNotIn("compose_next pull\n", workflow)
         self.assertNotIn("PORTAL_IMAGE_TAG=\"${IMAGE_TAG}\" docker compose", workflow)
+        # Pulling digest-pinned images and waiting for Compose can be quiet
+        # long enough for a network device to reap an idle SSH TCP flow.
+        # Keepalives apply to each transfer and the rollout channel without
+        # relaxing pinned host verification or retrying a failed deployment.
+        self.assertEqual(workflow.count("-o ServerAliveInterval=20"), 6)
+        self.assertEqual(workflow.count("-o ServerAliveCountMax=30"), 6)
+        self.assertEqual(workflow.count("-o ConnectTimeout=20"), 6)
         compose_next = workflow.split("compose_next() {", 1)[1].split(
             "\n          }\n\n          compose_next config", 1
         )[0]
