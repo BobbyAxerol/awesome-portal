@@ -1,7 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CONTROL_API_POOL, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
+import { CONTROL_API_POOL, CONTROL_API_CONFIG, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
+import type { ControlApiConfig } from "../config";
 import type {
   DurableMirrorRelationCursor,
   DurableMirrorRetainedRangeRows,
@@ -127,7 +128,32 @@ export class ExecutionProfileProjectionRepository {
     @Inject(CONTROL_API_POOL) readonly pool: Pool,
     @Optional() @Inject(EXECUTION_DURABLE_MIRROR_WRITER)
     private readonly durableMirror?: DurableMirrorWriter,
+    @Optional() @Inject(CONTROL_API_CONFIG)
+    private readonly config?: Pick<ControlApiConfig, "FEATURE_EXECUTION_DURABLE_MIRROR">,
   ) {}
+
+  /**
+   * The one place that decides which store a retained-history read comes from —
+   * DR-01's absorb answer.
+   *
+   * EDS-06 introduced the mirror while `execution_timeseries_history` was still
+   * live, and nothing declared which one wins. The worker resolved it in
+   * practice: it stops writing the history table the moment
+   * `FEATURE_EXECUTION_DURABLE_MIRROR` is on. Readers were never told, so on dev
+   * the history table froze on 2026-09-05 while the mirror kept moving, and the
+   * subject reads returned empty against a store nobody writes (§A23).
+   *
+   * Both tables carry the same columns for every predicate these reads use
+   * (`workspace_id, environment, profile_id, relation_key, row_id, ts, fields`),
+   * so the store is a name, chosen once, and every reader follows it. Relations
+   * the mirror keeps as current entities are not range rows in either store, so
+   * this swap adds no row a caller could not already see.
+   */
+  private historyTable(): string {
+    return this.config?.FEATURE_EXECUTION_DURABLE_MIRROR === "true"
+      ? "execution_durable_mirror_range_rows"
+      : "execution_timeseries_history";
+  }
 
   async tryAcquireLease(
     workspaceId: string,
@@ -264,7 +290,7 @@ export class ExecutionProfileProjectionRepository {
     values.push(query.limit + 1);
     const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
       `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields
-         FROM execution_timeseries_history
+         FROM ${this.historyTable()}
         WHERE ${conditions.join(" AND ")}
         ORDER BY ts ${order}, row_id ${order}
         LIMIT $${values.length}`,
@@ -325,7 +351,7 @@ export class ExecutionProfileProjectionRepository {
               count(DISTINCT fields->>($${seriesParam}))::text AS k,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS t0,
               to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS t1
-         FROM execution_timeseries_history WHERE ${base.join(" AND ")}`,
+         FROM ${this.historyTable()} WHERE ${base.join(" AND ")}`,
       values,
     );
     const inputRows = Number(meta.rows[0]?.n ?? 0);
@@ -352,7 +378,7 @@ export class ExecutionProfileProjectionRepository {
                                    ORDER BY (fields->>($${valueParam}))::numeric DESC, ts, row_id) AS rn_max,
                 row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
                                    ORDER BY ts DESC, row_id DESC) AS rn_last
-           FROM execution_timeseries_history WHERE ${base.join(" AND ")}
+           FROM ${this.historyTable()} WHERE ${base.join(" AND ")}
        ) ranked
        WHERE rn_min = 1 OR rn_max = 1 OR rn_last = 1
        ORDER BY ts ASC, row_id ASC`,
@@ -389,7 +415,7 @@ export class ExecutionProfileProjectionRepository {
               fields->>'account_id' AS account_id,
               to_char(date_trunc('day', ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day,
               fields->>($6) AS value
-         FROM execution_timeseries_history
+         FROM ${this.historyTable()}
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
           AND ts >= $5::timestamptz
           AND fields->>'strategy_id' IS NOT NULL AND fields->>'account_id' IS NOT NULL
@@ -419,7 +445,7 @@ export class ExecutionProfileProjectionRepository {
       `SELECT count(*)::text AS row_count,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
               to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
-         FROM execution_timeseries_history
+         FROM ${this.historyTable()}
         WHERE ${conditions.join(" AND ")}`,
       values,
     );

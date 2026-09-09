@@ -12,6 +12,8 @@ import type {
   ProjectionScalar,
 } from "../src/execution/profile-projection.repository";
 import type { ExecutionDurableMirrorRepository } from "../src/execution/durable-mirror.repository";
+import { ExecutionProfileProjectionRepository as ProjectionRepository } from "../src/execution/profile-projection.repository";
+import type { Pool } from "pg";
 import { testConfig } from "./harness";
 
 const workspaceId = "ws_subject_activity";
@@ -182,5 +184,41 @@ describe("BR-EX-80 / BR-EX-81 retained subject BFF", () => {
       { workspaceId, userId: "usr_stan" },
       { environment: "paper", subjectKind: "alpha", subjectId: "adaptive_hma_cpp_00115m", relation: "orders", limit: 1, after: token },
     )).rejects.toMatchObject({ code: expect.stringMatching(/^EDS12_SUBJECT_ACTIVITY_/) });
+  });
+});
+
+/**
+ * DR-01 asked which store wins now that EDS-06 runs a mirror beside the
+ * retained-history table. The worker answered it in practice — it stops writing
+ * the history table the moment the mirror is on — but readers were never told,
+ * which is how the history table froze on dev while the mirror kept moving.
+ * These lock the answer at the single place that decides it.
+ */
+describe("DR-01 — retained-history reads follow the store the worker writes", () => {
+  const capture = () => {
+    const queries: string[] = [];
+    const pool = {
+      query: async (text: string) => {
+        queries.push(text);
+        return { rows: [{ row_count: "0", oldest_ts: null, newest_ts: null }] };
+      },
+    };
+    return { queries, pool: pool as unknown as Pool };
+  };
+
+  it("reads the mirror while the mirror is the store being written", async () => {
+    const { queries, pool } = capture();
+    const repository = new ProjectionRepository(pool, undefined, { FEATURE_EXECUTION_DURABLE_MIRROR: "true" });
+    await repository.timeSeriesHistoryCoverage("ws", "paper", "PAPER_P", "manager.performance:account_equity_snapshots");
+    expect(queries[0]).toContain("execution_durable_mirror_range_rows");
+    expect(queries[0]).not.toContain("execution_timeseries_history");
+  });
+
+  it("keeps the legacy table while the mirror is off, because that is what the worker still writes", async () => {
+    const { queries, pool } = capture();
+    const repository = new ProjectionRepository(pool, undefined, { FEATURE_EXECUTION_DURABLE_MIRROR: "false" });
+    await repository.timeSeriesHistoryCoverage("ws", "paper", "PAPER_P", "manager.performance:account_equity_snapshots");
+    expect(queries[0]).toContain("execution_timeseries_history");
+    expect(queries[0]).not.toContain("execution_durable_mirror_range_rows");
   });
 });
