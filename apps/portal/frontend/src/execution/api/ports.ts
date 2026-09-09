@@ -25,6 +25,7 @@ import type {
   CapitalLedger,
   CapitalPreview,
   Correlation,
+  CrossEquity,
   InsightBatch,
   OrderFunnel,
 } from "../analytics";
@@ -460,6 +461,15 @@ export interface ExecutionApi {
   getCapitalLedger(
     portfolioId: string,
   ): Promise<Result<{ ledger: CapitalLedger; envelope: AnalyticsEnvelope }>>;
+  /**
+   * `GET /api/v1/execution/portfolios/{portfolioId}/cross-equity`
+   *
+   * The Cross-portfolio panel's standings, aggregated by the store. The screen
+   * used to build these by draining the whole equity relation in the browser.
+   */
+  getCrossEquity(
+    portfolioId: string,
+  ): Promise<Result<{ crossEquity: CrossEquity; envelope: AnalyticsEnvelope }>>;
   /** `GET /api/v1/execution/broker-bindings/{bindingId}/exposure` */
   getBindingExposure(
     bindingId: string,

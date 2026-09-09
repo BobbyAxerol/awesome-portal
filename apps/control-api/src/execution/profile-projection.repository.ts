@@ -428,6 +428,83 @@ export class ExecutionProfileProjectionRepository {
     }));
   }
 
+  /**
+   * Phase 1: the cross-portfolio standing of every portfolio in one query.
+   *
+   * The browser used to compute this by draining the whole relation — 35 pages
+   * and 37 seconds on dev for 6,918 rows — which left two panels in `loading`
+   * long after the reader had given up. The aggregate belongs here: the store
+   * can answer it with two index walks.
+   *
+   * Grouped by **(portfolio, currency)**, not by portfolio. `portfolio_types_pool`
+   * publishes both a USDT and a VND series on dev, so a per-portfolio group
+   * would take its first equity from one currency and its last from the other
+   * and call the pair a comparison. The panel's own caption promises the
+   * opposite ("never summed across currencies"); this keeps that promise.
+   *
+   * No arithmetic: first equity, last equity and the source's own `net_pnl`
+   * travel as the published decimal strings.
+   */
+  async portfolioEquityStandings(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    relationKey: string,
+  ): Promise<Array<{
+    portfolioId: string; currency: string | null;
+    firstEquity: string; lastEquity: string; netPnl: string | null;
+    points: number; firstTs: string; lastTs: string;
+  }>> {
+    const result = await this.pool.query<{
+      portfolio_id: string; currency: string | null;
+      first_equity: string; last_equity: string; net_pnl: string | null;
+      points: string; first_ts: Date; last_ts: Date;
+    }>(
+      `WITH scoped AS (
+         SELECT fields->>'portfolio_id' AS portfolio_id,
+                fields->>'currency' AS currency,
+                fields->>'equity' AS equity,
+                fields->>'net_pnl' AS net_pnl,
+                ts, row_id
+           FROM ${this.historyTable()}
+          WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
+            AND fields->>'portfolio_id' IS NOT NULL
+            AND fields->>'equity' ~ '^-?[0-9]+(\\.[0-9]+)?$'
+       ),
+       oldest AS (
+         SELECT DISTINCT ON (portfolio_id, currency) portfolio_id, currency, equity, ts
+           FROM scoped ORDER BY portfolio_id, currency, ts ASC, row_id ASC
+       ),
+       newest AS (
+         SELECT DISTINCT ON (portfolio_id, currency) portfolio_id, currency, equity, net_pnl, ts
+           FROM scoped ORDER BY portfolio_id, currency, ts DESC, row_id DESC
+       ),
+       counted AS (
+         SELECT portfolio_id, currency, count(*) AS points FROM scoped GROUP BY 1, 2
+       )
+       SELECT counted.portfolio_id, counted.currency, counted.points::text AS points,
+              oldest.equity AS first_equity, oldest.ts AS first_ts,
+              newest.equity AS last_equity, newest.net_pnl, newest.ts AS last_ts
+         FROM counted
+         JOIN oldest ON oldest.portfolio_id = counted.portfolio_id
+                    AND oldest.currency IS NOT DISTINCT FROM counted.currency
+         JOIN newest ON newest.portfolio_id = counted.portfolio_id
+                    AND newest.currency IS NOT DISTINCT FROM counted.currency
+        ORDER BY counted.points DESC, counted.portfolio_id ASC, counted.currency ASC`,
+      [workspaceId, environment, profileId, relationKey],
+    );
+    return result.rows.map((row) => ({
+      portfolioId: row.portfolio_id,
+      currency: row.currency,
+      firstEquity: row.first_equity,
+      lastEquity: row.last_equity,
+      netPnl: row.net_pnl,
+      points: Number(row.points),
+      firstTs: row.first_ts.toISOString(),
+      lastTs: row.last_ts.toISOString(),
+    }));
+  }
+
   async timeSeriesHistoryCoverage(
     workspaceId: string,
     environment: ProjectionEnvironment,

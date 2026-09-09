@@ -470,6 +470,36 @@ export const PACKED_LENGTH_AT_LIMIT = packedLength(CORRELATION_PACK_LIMIT);
  * ---------------------------------------------------------------------- */
 
 /** Two currencies, each with its own gross totals. Nothing crosses between them. */
+/**
+ * Cross-portfolio standings, shaped exactly as dev answers them: one row per
+ * (portfolio, currency), so the pool that publishes both a USDT and a VND
+ * series appears twice rather than once with two currencies mixed.
+ */
+export const CROSS_EQUITY = screen("portfolio-cross-equity.v1", {
+  portfolio_id: "portfolio_types_pool",
+  rows: [
+    {
+      portfolio_id: "portfolio_types_pool", currency: "USDT",
+      first_equity: "2000000.000000000000000000", last_equity: "22220000.000000000000000000",
+      net_pnl: "26135.723399168080000374", point_count: 2306,
+      first_at: "2026-08-16T11:15:00.000Z", last_at: "2026-09-09T12:30:00.000Z", is_self: true,
+    },
+    {
+      portfolio_id: "portfolio_types_pool", currency: "VND",
+      first_equity: "25000000000.000000000000000000", last_equity: "50000000000.000000000000000000",
+      net_pnl: "0.000000000000000000", point_count: 2306,
+      first_at: "2026-08-16T11:15:00.000Z", last_at: "2026-09-09T12:30:00.000Z", is_self: true,
+    },
+    {
+      portfolio_id: "portfolio_types_pool_VN", currency: "VND",
+      first_equity: "25000000000.000000000000000000", last_equity: "150000000000.000000000000000000",
+      net_pnl: "19472304.000000000000000000", point_count: 2306,
+      first_at: "2026-08-16T11:15:00.000Z", last_at: "2026-09-09T12:30:00.000Z", is_self: false,
+    },
+  ],
+  row_count: 3,
+});
+
 export const CAPITAL_LEDGER = screen("capital-ledger.v1", {
   portfolio_id: "PF-1",
   buckets: [

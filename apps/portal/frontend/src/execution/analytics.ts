@@ -774,6 +774,61 @@ export interface CapitalLedger {
   window: AnalyticsWindow | null;
 }
 
+/**
+ * One row of the Cross-portfolio panel: a portfolio's first and last published
+ * equity **in one currency**.
+ *
+ * The currency is part of the key, not a decoration. A portfolio may publish
+ * more than one equity series (`portfolio_types_pool` publishes USDT and VND
+ * on dev), and a row that took its first figure from one and its last from the
+ * other would read as a gain of five orders of magnitude.
+ */
+export interface CrossEquityRow {
+  portfolioId: string;
+  currency: string | null;
+  firstEquity: Decimal;
+  lastEquity: Decimal;
+  /** the engine's own figure; the browser subtracts nothing */
+  netPnl: Decimal | null;
+  pointCount: number;
+  firstAt: string | null;
+  lastAt: string | null;
+  isSelf: boolean;
+}
+
+export interface CrossEquity {
+  portfolioId: string;
+  rows: readonly CrossEquityRow[];
+}
+
+export function readCrossEquity(raw: unknown): CrossEquity | null {
+  const data = payload(raw);
+  if (!data) return null;
+  const portfolioId = readId(data.portfolio_id);
+  if (!portfolioId) return null;
+  return {
+    portfolioId,
+    rows: arr(data.rows).flatMap((r) => {
+      const row = obj(r);
+      const id = row && readId(row.portfolio_id);
+      const firstEquity = row && readDecimal(row.first_equity);
+      const lastEquity = row && readDecimal(row.last_equity);
+      if (!id || firstEquity === null || lastEquity === null) return [];
+      return [{
+        portfolioId: id,
+        currency: str(row!.currency),
+        firstEquity,
+        lastEquity,
+        netPnl: readDecimal(row!.net_pnl),
+        pointCount: int(row!.point_count) ?? 0,
+        firstAt: str(row!.first_at),
+        lastAt: str(row!.last_at),
+        isSelf: row!.is_self === true,
+      }];
+    }),
+  };
+}
+
 const MOVEMENTS: readonly LedgerMovement[] = [
   "INITIAL_ALLOCATE", "ALLOCATE", "WITHDRAW", "REBALANCE", "ADJUST",
 ];

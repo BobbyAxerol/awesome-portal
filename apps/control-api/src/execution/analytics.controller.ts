@@ -120,6 +120,20 @@ export class ExecutionAnalyticsController {
     return this.invoke(() => this.proxy.capitalLedger(principal(request), id));
   }
 
+  /**
+   * Phase 1: the Cross-portfolio panel, answered by the store instead of by a
+   * 35-page walk in the browser. There is no upstream equivalent to fall back
+   * to, so when the local projection is off this says so in its own words
+   * rather than proxying a request the cell has never accepted.
+   */
+  @Get("/portfolios/:portfolioId/cross-equity")
+  portfolioCrossEquity(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string) {
+    if (!this.portfolio360?.enabled()) {
+      return this.invoke(() => Promise.reject(new AnalyticsProxyError("ANALYTICS_DISABLED", 404)));
+    }
+    return this.invoke(() => this.portfolio360!.crossEquity(local(request), id));
+  }
+
   @Get("/broker-bindings/:bindingId/exposure")
   bindingExposure(@Req() request: AnalyticsRequest, @Param("bindingId") id: string) {
     return this.invoke(() => this.proxy.bindingExposure(principal(request), id));

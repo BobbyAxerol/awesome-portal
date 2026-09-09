@@ -24,10 +24,17 @@ export interface DecisionBarProps {
   trail?: ReactNode;
   /** One sentence of model, e.g. "approve = grants authorization only". */
   footnote?: ReactNode;
+  /**
+   * DOM id for the reasons block, so a disabled action can point at it with
+   * `aria-describedby`. A reason printed near a dead button is not the same as
+   * a reason attached to it: the reader who asks the button why it is dead
+   * gets an answer only in the second case.
+   */
+  reasonsId?: string;
   label: string;
 }
 
-export function ExecutionDecisionBar({ verdict, tone, reasons = [], note, actions, trail, footnote, label }: DecisionBarProps) {
+export function ExecutionDecisionBar({ verdict, tone, reasons = [], note, actions, trail, footnote, label, reasonsId }: DecisionBarProps) {
   const [first, ...rest] = reasons;
   return (
     <div className="exec-decision-bar" role="region" aria-label={label} data-tone={tone}>
@@ -49,7 +56,7 @@ export function ExecutionDecisionBar({ verdict, tone, reasons = [], note, action
         <div className="exec-decision-bar-actions">{actions}</div>
       </div>
       {first ? (
-        <div className="exec-decision-bar-reasons exec-role-body">
+        <div className="exec-decision-bar-reasons exec-role-body" id={reasonsId}>
           <span>{first}</span>
           {rest.length ? (
             <details>

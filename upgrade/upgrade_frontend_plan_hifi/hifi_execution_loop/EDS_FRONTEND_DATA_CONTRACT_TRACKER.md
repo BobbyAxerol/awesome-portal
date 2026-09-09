@@ -4052,6 +4052,78 @@ Backend request theo mẫu §5, gắn @codex.
 
 ---
 
+### A32.2 PHASE 1 ĐÃ LÀM (09-09) — hai panel rời `loading`, và một nút biết nói vì sao nó chết
+
+Gate của phase 1 (§A32) có ba điều kiện. Cả ba đo được trên dev, bằng trình
+duyệt, sau khi deploy.
+
+| Điều kiện | Ngưỡng | Đo được |
+|---|---|---|
+| Portfolio 360 hết chữ `Loading` | ≤ 10 giây | **4 096 ms** (lần đo trước bản format: 5 193 ms). Trước phase 1: **vẫn còn sau 40 giây** |
+| Hai panel dùng bao nhiêu request | ≤ 2 | **2** — `.../cross-equity` và một trang `portfolio-capital-ledger`. Trước: **35 trang, 37 giây** |
+| Nút mờ không nêu lý do, trên 25 màn | 0 | **0** |
+
+Nội dung màn cũng đổi thật, không chỉ nhanh hơn: `textLen` **1 568 → 5 789**,
+và hai khối xám trở thành hai bảng — 3 dòng cross-portfolio, 25 dòng ledger có
+đủ actor và lý do.
+
+#### Làm gì
+
+**Backend (tôi làm, backend scope owner giao 2026-09-02).**
+
+`profile-projection.repository.ts` thêm `portfolioEquityStandings()` — một truy
+vấn duy nhất trả về first/last equity + `net_pnl` + số điểm cho **từng
+(portfolio, currency)**. `portfolio360-local.service.ts` thêm `crossEquity()`,
+`analytics.controller.ts` thêm `GET /portfolios/:id/cross-equity`.
+
+Đo: SQL **60 ms**, HTTP **446 ms** (lần gọi nguội sau deploy 2,4 s), **1 602 B**
+— thay cho 35 trang và 457 KB mà trình duyệt từng tải về để tự cộng.
+
+**Và một lời nói dối được phát hiện khi chuyển sang server.** Bản cũ gom theo
+`portfolio_id`, trong khi `portfolio_types_pool` publish **hai chuỗi**: USDT và
+VND. Gom kiểu đó lấy first equity của chuỗi này ghép với last equity của chuỗi
+kia — `2 000 000` → `50 000 000 000` — rồi gọi đó là một phép so sánh, ngay bên
+dưới câu caption của chính panel: *"never summed across currencies"*. Bản mới
+khoá theo **(portfolio, currency)**, nên `portfolio_types_pool` xuất hiện hai
+dòng, mỗi dòng một đồng tiền.
+
+**Frontend.** `portfolioOverview.tsx` nhận `crossEquity` từ server và vẽ từ đó;
+`recomposeContainers.tsx` gọi route mới và **bỏ `portfolio-equity-snapshots`
+khỏi vòng drain**, chỉ còn ledger. Đây là chỗ chữa gốc: hai panel trước đây
+cùng chờ **một bundle**, nên Configuration log — mà quan hệ của nó chỉ có **42
+dòng, một trang** — phải nằm chờ sau 6 918 dòng equity.
+
+**Nút `Submit for R1 review`.** Câu lý do vốn **đã có trên màn**, trong decision
+bar; cái thiếu là nó không **gắn vào nút**. `decisionBar.tsx` nhận `reasonsId`,
+và nút mang `aria-describedby` + `title` khi bị khoá. Một câu in gần một cái nút
+chết không trả lời được câu hỏi của người đọc — họ phải đoán dòng nào giải thích
+cho cái gì.
+
+**Một lỗi nữa chỉ lộ ra vì panel sống lại.** Configuration log in số thô của
+nguồn: `20000.000000000000000000`, và `—` cho ô vắng. Đã format qua
+`formatExact` (`20,000.00`) và thay `—` bằng câu nói thật (`amount not
+published`). Tám mươi tám chỗ `—` còn lại là việc của **phase 2**, không gộp
+vào đây.
+
+#### Gate đã chạy
+
+| Gate | Kết quả |
+|---|---|
+| `tsc` frontend | **0 lỗi** |
+| vitest frontend | **120 file · 2 066 test pass · 1 skipped** (trước phase 1: 2 057) — **9 test mới** |
+| `tsc` control-api | **0 lỗi trong `src/`**. 28 lỗi trong `test/` là **có sẵn**: đo lại trên worktree sạch tại HEAD ra **đúng 28** |
+| Trình duyệt trên dev | 3 điều kiện gate ở bảng trên, kèm ảnh chụp toàn trang |
+
+#### Còn treo, nói thẳng
+
+- Bỏ `portfolio-equity-snapshots` khỏi drain nghĩa là: nếu route EDS-07
+  `/views/equity-chart` hỏng, panel equity **không còn chuỗi ngắn để vẽ tạm** —
+  nó sẽ nói unavailable kèm lý do. Đây là đánh đổi có chủ ý: giữ 35 trang chỉ để
+  phòng khi một route khác hỏng là cái giá quá đắt, và trả bằng đúng thứ vừa
+  hỏng ở đây (`loading` không bao giờ kết thúc).
+- `2 307` snapshot mỗi dòng cross-portfolio là số điểm **trong mirror**, không
+  phải toàn bộ lịch sử nguồn — caption của panel nói đúng như vậy.
+
 ### A32.1 Điều owner cần phê duyệt
 
 1. **Thứ tự 1→5 như trên** có đúng ý không. (Tôi xếp "sửa cái đang hỏng" lên

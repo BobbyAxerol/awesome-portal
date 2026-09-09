@@ -24,9 +24,10 @@ import {
   portfolio360,
   rankedFixture,
 } from "./portfolio360.fixtures";
-import { CAPITAL_LEDGER } from "./analytics.presentation.fixtures";
-import { readCapitalLedger } from "./analytics";
+import { CAPITAL_LEDGER, CROSS_EQUITY } from "./analytics.presentation.fixtures";
+import { readCapitalLedger, readCrossEquity } from "./analytics";
 import { portfolioHandlers } from "./testHandlers";
+import { portfolioOverviewPanels } from "./portfolioOverview";
 
 afterEach(cleanup);
 
@@ -292,5 +293,95 @@ describe("the bounded-window sentence states neither count it was not given", ()
     const note = container.querySelector(".exec-ledger-bounded")?.textContent ?? "";
     expect(note).toContain("an unstated number of");
     expect(note).not.toMatch(/—\s*0\s*of/);
+  });
+});
+
+describe("phase 1 · Cross-portfolio is answered by the store, not by a drain", () => {
+  const panels = (crossEquity: Parameters<typeof portfolioOverviewPanels>[0]["crossEquity"]) =>
+    portfolioOverviewPanels({
+      portfolioId: "portfolio_types_pool",
+      relations: null,
+      loading: true,
+      asOf: null,
+      crossEquity,
+    });
+
+  const served = readCrossEquity(CROSS_EQUITY)!;
+
+  it("keys a row by portfolio AND currency, so one pool can hold two series", () => {
+    // portfolio_types_pool publishes a USDT and a VND series on dev. Keyed by
+    // portfolio alone, its row took a first equity of 2,000,000 (USDT) and a
+    // last of 50,000,000,000 (VND) and called that a comparison.
+    render(<>{panels({ rows: served.rows, status: "empty", reason: null }).crossPortfolio}</>);
+    const rows = screen.getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain("USDT");
+    expect(rows[1].textContent).toContain("VND");
+    expect(screen.getByText("22,220,000.00")).toBeTruthy();
+  });
+
+  it("leaves loading even while the relation drain is still running", () => {
+    // The panel used to take its state from the drain, so it stayed in
+    // `loading` for the 37 seconds that drain took — and `loading` is the one
+    // state a reader cannot act on.
+    const { container } = render(<>{panels({ rows: served.rows, status: "empty", reason: null }).crossPortfolio}</>);
+    expect(container.querySelector(".exec-panel-state")).toBeNull();
+    expect(container.textContent).not.toContain("Loading");
+  });
+
+  it("says the store holds nothing rather than showing an empty table", () => {
+    const { container } = render(<>{panels({ rows: [], status: "empty", reason: null }).crossPortfolio}</>);
+    expect(container.querySelector("table")).toBeNull();
+    expect(container.textContent).toContain("no equity snapshot");
+  });
+
+  it("keeps the read's own reason when the read failed", () => {
+    const { container } = render(<>{panels({ rows: [], status: "unavailable", reason: "PHASE2_PROJECTION_NOT_READY" }).crossPortfolio}</>);
+    expect(container.textContent).toContain("PHASE2_PROJECTION_NOT_READY");
+  });
+
+  it("falls back to the drained computation when no read was made", () => {
+    // Fixtures and tests pass no served rows; the older path must still work.
+    const rows = [
+      { portfolio_id: "p1", ts: "2026-09-01T00:00:00Z", equity: "100", currency: "USDT", net_pnl: "1" },
+      { portfolio_id: "p1", ts: "2026-09-02T00:00:00Z", equity: "120", currency: "USDT", net_pnl: "2" },
+    ];
+    const drained = portfolioOverviewPanels({
+      portfolioId: "p1",
+      relations: { facts: { portfolio_equity_snapshots: rows } } as never,
+      loading: false,
+      asOf: null,
+    });
+    render(<>{drained.crossPortfolio}</>);
+    expect(screen.getAllByRole("row").slice(1)).toHaveLength(1);
+  });
+});
+
+describe("phase 1 · the configuration log prints money, not the wire", () => {
+  const ledgerRows = [
+    { portfolio_id: "p1", created_at: "2026-09-01T00:00:00Z", movement_type: "ALLOCATE", actor: "bobby",
+      amount: "20000.000000000000000000", currency: "USDT",
+      before_allocated: "0.000000000000000000", after_allocated: "20000.000000000000000000", reason: "grant" },
+    { portfolio_id: "p1", created_at: "2026-09-02T00:00:00Z", movement_type: "ADJUST", actor: null,
+      amount: null, currency: "USDT", before_allocated: null, after_allocated: null, reason: null },
+  ];
+  const log = () => portfolioOverviewPanels({
+    portfolioId: "p1",
+    relations: { facts: { portfolio_capital_ledger: ledgerRows } } as never,
+    loading: false,
+    asOf: null,
+  }).configurationLog;
+
+  it("formats the source's 18-decimal strings instead of printing them raw", () => {
+    render(<>{log()}</>);
+    expect(screen.getByText("20,000.00")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("20000.000000000000000000");
+  });
+
+  it("says which figure is missing rather than drawing a dash", () => {
+    const { container } = render(<>{log()}</>);
+    expect(container.textContent).toContain("amount not published");
+    expect(container.textContent).toContain("before not published");
+    expect(container.textContent).toContain("after not published");
   });
 });

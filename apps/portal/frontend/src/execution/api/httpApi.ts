@@ -29,6 +29,7 @@ import {
   readCapitalLedger,
   readCapitalPreview,
   readCorrelation,
+  readCrossEquity,
   readInsightBatch,
   readOrderFunnel,
 } from "../analytics";
@@ -895,6 +896,22 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return ledger && envelope
         ? { ok: true as const, value: { ledger, envelope } }
         : unavailable("The capital ledger response could not be read.");
+    },
+
+    async getCrossEquity(portfolioId: string) {
+      const blocked = readBlocked();
+      if (blocked) return unavailable(blocked);
+      const response = await get(
+        `/portfolios/${encodeURIComponent(portfolioId)}/cross-equity`,
+        signal,
+      );
+      if (!response.ok) return analyticsProblem(response);
+      const body = await response.json();
+      const crossEquity = readCrossEquity(body);
+      const envelope = readAnalyticsEnvelope(body);
+      return crossEquity && envelope
+        ? { ok: true as const, value: { crossEquity, envelope } }
+        : unavailable("The cross-portfolio response could not be read.");
     },
 
     async getBindingExposure(bindingId: string) {

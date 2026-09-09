@@ -21,6 +21,9 @@ import { ExecutionDecisionBar } from "../components/decisionBar";
 
 const MIN_SUMMARY = 8;
 
+/** The decision bar's reasons block, which the submit button points at when it is dead. */
+const LOCK_REASON_ID = "new-approval-lock-reason";
+
 /**
  * Options mirror the ids the server-owned registries hold for the canonical
  * cast — a picks endpoint does not exist yet, and the POST is the validator:
@@ -214,6 +217,7 @@ export function NewApprovalRequestScreen({
 
       <ExecutionDecisionBar
         label="Submit decision"
+        reasonsId={LOCK_REASON_ID}
         verdict={settled ? "SUBMITTED" : submitting ? "SENDING" : ready ? "READY" : "DRAFT"}
         tone={settled ? "good" : submitting ? "warn" : ready ? "good" : "mute"}
         reasons={[
@@ -238,6 +242,15 @@ export function NewApprovalRequestScreen({
               type="button"
               className="exec-role-control exec-btn-apply"
               disabled={!ready || submitting}
+              // The sentence is already on screen in the decision bar; these
+              // two attributes attach it to the control that is dead, so the
+              // reader does not have to guess which line explains it.
+              aria-describedby={!ready || submitting ? LOCK_REASON_ID : undefined}
+              title={submitting
+                ? "Submitting — the button stays down so a double-click cannot create two approvals."
+                : ready
+                  ? undefined
+                  : `The summary needs at least ${MIN_SUMMARY} characters before this can be submitted.`}
               onClick={() => onSubmit({ alphaId, evidenceRunId: runId, methodologyClaimId: claimId, summary: summary.trim() })}
             >
               {outcome?.kind === "failed" ? "Retry submit" : "Submit for R1 review"}

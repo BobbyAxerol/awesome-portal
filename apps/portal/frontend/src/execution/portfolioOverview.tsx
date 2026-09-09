@@ -17,6 +17,8 @@
  */
 import type { ReactNode } from "react";
 
+import type { CrossEquityRow } from "./analytics";
+import type { PanelStatus } from "./contracts";
 import { LinesChart } from "./components/marketChart";
 import { PanelState } from "./components/states";
 import { formatExact } from "./formatExact";
@@ -165,6 +167,20 @@ export interface PortfolioOverviewInput {
    * series, which is still honest, just shorter.
    */
   equityChart?: ReactNode;
+  /**
+   * Phase 1: the standings the store aggregated, when the caller read them.
+   *
+   * The browser used to compute these from the drained equity relation — 35
+   * pages and 37 seconds on dev, during which the panel said `loading` and the
+   * reader had nothing to act on. Callers that pass none (tests, fixtures)
+   * keep the drained computation, which is correct on a page-sized set.
+   */
+  crossEquity?: {
+    rows: readonly CrossEquityRow[];
+    /** `PanelState` refuses "ok" by type: a state panel is what stands in for data. */
+    status: Exclude<PanelStatus, "ok">;
+    reason: string | null;
+  } | null;
 }
 
 /** The three Overview panels, or honest states in their place. */
@@ -180,6 +196,9 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
     : "Soon · PORTFOLIO_EQUITY_SNAPSHOTS_NOT_READABLE";
   const status = input.loading ? "loading" as const : "unavailable" as const;
 
+  // A served answer replaces the drained one outright: mixing the two would
+  // put a page-sized standing beside a whole-store one in the same table.
+  const served = input.crossEquity ?? null;
   const equity = snapshots ? equitySeriesOf(snapshots, input.portfolioId) : null;
   const standings = snapshots ? crossPortfolioStandings(snapshots) : [];
   const movements = ledger ? configurationLogOf(ledger, input.portfolioId) : [];
@@ -209,7 +228,34 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
     crossPortfolio: (
       <section className="exec-gate-panel" aria-label="Cross-portfolio">
         <h3 className="exec-section-title">Cross-portfolio</h3>
-        {standings.length > 0 ? (
+        {served ? (
+          served.rows.length > 0 ? (
+            <table className="exec-360-sync">
+              <caption className="sr-only">Every portfolio series the store retains, first and last published equity</caption>
+              <thead>
+                <tr><th scope="col">portfolio</th><th scope="col">first equity</th><th scope="col">last equity</th><th scope="col">net · source</th><th scope="col">snapshots</th></tr>
+              </thead>
+              <tbody>
+                {served.rows.map((row) => (
+                  <tr key={`${row.portfolioId}·${row.currency ?? ""}`} data-self={row.isSelf ? "true" : undefined}>
+                    <th scope="row">
+                      {row.portfolioId}
+                      {row.currency
+                        ? <span className="exec-blotter-note"> · {row.currency}</span>
+                        : <span className="exec-blotter-note"> · currency not published</span>}
+                    </th>
+                    <td className="exec-num">{formatExact(row.firstEquity, "money").display}</td>
+                    <td className="exec-num">{formatExact(row.lastEquity, "money").display}</td>
+                    <td className="exec-num">{row.netPnl === null ? <span className="exec-blotter-note">net not published</span> : formatExact(row.netPnl, "money").display}</td>
+                    <td className="exec-num">{row.pointCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <PanelState status={served.status} reason={served.reason ?? "the store retains no equity snapshot for any portfolio"} />
+          )
+        ) : standings.length > 0 ? (
           <table className="exec-360-sync">
             <caption className="sr-only">Every portfolio in the drained snapshots, first and last equity</caption>
             <thead>
@@ -248,8 +294,29 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
                   <td className="exec-num">{utcStamp(new Date(row.at).toISOString())}</td>
                   <td>{row.movement}{row.strategyId ? <span className="exec-blotter-note"> · {row.strategyId}</span> : null}</td>
                   <td>{row.actor ?? <span className="exec-blotter-note">actor not published</span>}</td>
-                  <td className="exec-num">{row.amount ?? "—"}{row.currency ? <span className="exec-blotter-note"> {row.currency}</span> : null}</td>
-                  <td className="exec-num">{row.before ?? "—"} → {row.after ?? "—"}</td>
+                  {/*
+                    * Two things this panel got wrong while it was invisible.
+                    * The amounts arrived as the source's 18-decimal strings and
+                    * were printed raw ("20000.000000000000000000"), and an
+                    * absent figure became an em dash — a mark that reads as
+                    * zero, or as nothing, or as not-applicable, and settles
+                    * none of the three.
+                    */}
+                  <td className="exec-num">
+                    {row.amount === null
+                      ? <span className="exec-blotter-note">amount not published</span>
+                      : formatExact(row.amount, "money").display}
+                    {row.currency ? <span className="exec-blotter-note"> {row.currency}</span> : null}
+                  </td>
+                  <td className="exec-num">
+                    {row.before === null
+                      ? <span className="exec-blotter-note">before not published</span>
+                      : formatExact(row.before, "money").display}
+                    {" → "}
+                    {row.after === null
+                      ? <span className="exec-blotter-note">after not published</span>
+                      : formatExact(row.after, "money").display}
+                  </td>
                   <td>{row.reason ?? <span className="exec-blotter-note">reason not published</span>}</td>
                 </tr>
               ))}

@@ -39,6 +39,9 @@ import {
   MaximumDataOperationError,
   MaximumDataOperationService,
 } from "./maximum-data-operation.service";
+import { ExecutionProfileProjectionRepository } from "./profile-projection.repository";
+import { CONTROL_API_CONFIG } from "../tokens";
+import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 
 export interface Portfolio360Principal {
@@ -99,10 +102,16 @@ const MOVEMENTS = new Set(["INITIAL_ALLOCATE", "ALLOCATE", "WITHDRAW", "REBALANC
 const LEDGER_PAGE = 200;
 const LEDGER_MAX_PAGES = 8;
 
+/** The retained relation the equity standings are read from. */
+const PORTFOLIO_EQUITY_RELATION = "manager.performance:portfolio_equity_snapshots";
+
 @Injectable()
 export class Portfolio360LocalService {
   constructor(
     @Inject(LocalQueryAnalyticsService) private readonly analytics: LocalQueryAnalyticsService,
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Inject(ExecutionProfileProjectionRepository)
+    private readonly projections: ExecutionProfileProjectionRepository,
     @Optional()
     @Inject(MaximumDataOperationService)
     private readonly operations?: MaximumDataOperationService,
@@ -149,6 +158,55 @@ export class Portfolio360LocalService {
         // portfolio's structure.
         clusters: [],
         representation: { kind: "RANKED_PAIRS", pairs },
+      },
+    });
+  }
+
+  /**
+   * Phase 1: every portfolio's first and last published equity, in one read.
+   *
+   * The Overview's Cross-portfolio panel used to build this in the browser by
+   * draining the whole equity relation. On dev that is 6,918 rows over 35
+   * pages and 37 seconds, and the panel sat in `loading` the whole time — the
+   * one state a reader cannot act on, because it promises an answer that never
+   * came. The store answers the same question with two ordered index walks.
+   *
+   * Rows are keyed by **(portfolio, currency)**. `portfolio_types_pool`
+   * publishes a USDT and a VND series on dev, and a per-portfolio row would
+   * pair a first equity in one currency with a last equity in the other.
+   */
+  async crossEquity(principal: Portfolio360Principal, portfolioId: string): Promise<Record<string, unknown>> {
+    const { version, readAt } = await this.portfolioContext(principal, portfolioId);
+    const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    const profileId = this.config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+    if (!workspaceId || !profileId) {
+      throw new AnalyticsProxyError("PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED", 503);
+    }
+    const standings = await this.projections.portfolioEquityStandings(
+      workspaceId, "paper", profileId, PORTFOLIO_EQUITY_RELATION,
+    );
+    return this.envelope({
+      formulaVersion: "portfolio-cross-equity.v1",
+      panelState: standings.length > 0 ? "ok" : "empty",
+      version,
+      readAt,
+      windowDays: null,
+      data: {
+        portfolio_id: portfolioId,
+        // The reader takes every figure as the source published it; this
+        // service does no subtraction, and `net_pnl` is the engine's own.
+        rows: standings.map((row) => ({
+          portfolio_id: row.portfolioId,
+          currency: row.currency,
+          first_equity: row.firstEquity,
+          last_equity: row.lastEquity,
+          net_pnl: row.netPnl,
+          point_count: row.points,
+          first_at: row.firstTs,
+          last_at: row.lastTs,
+          is_self: row.portfolioId === portfolioId,
+        })),
+        row_count: standings.length,
       },
     });
   }

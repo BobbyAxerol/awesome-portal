@@ -523,7 +523,17 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
 
 /** Only the two relations the chips need — the blotter must not drain the whole replay set. */
 /** P0-4: the two relations Portfolio 360's Overview panels read. */
-const PORTFOLIO_RELATIONS = { portfolio_equity_snapshots: "portfolio-equity-snapshots", portfolio_capital_ledger: "portfolio-capital-ledger" } as const;
+/*
+ * Phase 1: the ledger alone.
+ *
+ * `portfolio-equity-snapshots` used to be drained here too, for the
+ * Cross-portfolio standings. On dev that is 6,918 rows over 35 pages and 37
+ * seconds, and BOTH Overview panels waited on the whole bundle — the
+ * Configuration log, whose own relation is a single 42-row page, sat in
+ * `loading` behind it. The standings now come from `/cross-equity`, which the
+ * store aggregates in one query, and the ledger resolves on its first page.
+ */
+const PORTFOLIO_RELATIONS = { portfolio_capital_ledger: "portfolio-capital-ledger" } as const;
 
 const BLOTTER_GROUP_RELATIONS = { order_brackets: "order-brackets", conditional_order_group_legs: "conditional-order-group-legs" } as const;
 
@@ -1732,6 +1742,7 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
   const analyticsState = useApiRead<QueryAnalytics>(() => api.getQueryAnalytics("portfolios", portfolioId), [api, portfolioId, realtime.refreshKey], { keepValue: true });
   const correlationState = useApiRead(() => api.getCorrelation(portfolioId), [api, portfolioId]);
   const ledgerState = useApiRead(() => api.getCapitalLedger(portfolioId), [api, portfolioId]);
+  const crossEquityState = useApiRead(() => api.getCrossEquity(portfolioId), [api, portfolioId]);
   // EDS-05 capital is a separate book per environment; all three are read and
   // shown as partitions, never folded (the resource's selected environment
   // alone would hide a paper book behind an empty live one).
@@ -1789,6 +1800,11 @@ export function PortfolioThreeSixtyRichContainer({ api, portfolioId }: { api: Ex
         portfolioId,
         relations: portfolioRelations.value,
         loading: portfolioRelations.status === "loading",
+        crossEquity: {
+          rows: crossEquityState.value?.crossEquity.rows ?? [],
+          status: crossEquityState.status === "ok" ? "empty" : crossEquityState.status,
+          reason: crossEquityState.status === "ok" ? null : crossEquityState.reason ?? null,
+        },
         asOf: analytics?.asOf ?? resource?.asOf ?? null,
         // Only when the route actually answered; a failed read falls back to
         // the drained series rather than replacing a short chart with none.

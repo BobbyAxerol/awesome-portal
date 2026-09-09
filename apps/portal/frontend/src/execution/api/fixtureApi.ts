@@ -42,6 +42,7 @@ import {
   readCapitalLedger,
   readCapitalPreview,
   readCorrelation,
+  readCrossEquity,
   readInsightBatch,
   readOrderFunnel,
 } from "../analytics";
@@ -66,6 +67,7 @@ import {
   CAPITAL_PREVIEW_OK,
   CAPITAL_PREVIEW_STALE,
   CORRELATION_ABOVE_LIMIT,
+  CROSS_EQUITY,
   CORRELATION_AT_LIMIT,
   EXPOSURE_COMPLETE,
   FUNNEL_BOUNDED,
@@ -876,6 +878,16 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return correlation && envelope
         ? { ok: true as const, value: { correlation, envelope } }
         : unavailable("The correlation response could not be read.");
+    },
+
+    async getCrossEquity(_portfolioId: string) {
+      const blocked = gate<never>("getCrossEquity");
+      if (blocked) return blocked as Result<never>;
+      const crossEquity = readCrossEquity(CROSS_EQUITY);
+      const envelope = readAnalyticsEnvelope(CROSS_EQUITY);
+      return crossEquity && envelope
+        ? { ok: true as const, value: { crossEquity, envelope } }
+        : unavailable("The cross-portfolio response could not be read.");
     },
 
     async getCapitalLedger(_portfolioId: string) {

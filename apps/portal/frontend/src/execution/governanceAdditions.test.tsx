@@ -302,3 +302,33 @@ describe("the HTTP consumer — same-origin, CSRF, typed failures", () => {
     expect(seenUrl).toContain("limit=5");
   });
 });
+
+describe("phase 1 · a dead submit button carries its own reason", () => {
+  const submitButton = () =>
+    [...document.querySelectorAll("button")].find((b) => /Submit for R1 review/.test(b.textContent ?? ""))!;
+
+  it("points at the sentence that explains the lock, and names it in the title", () => {
+    // A reason printed a few lines above a dead button is not attached to it.
+    // The 25-screen sweep found this button by looking for exactly that: a
+    // disabled control with no describedby, no title and no reason element
+    // inside its own block.
+    render(<NewApprovalRequestContainer api={createFixtureApi()} />);
+    const button = submitButton();
+    expect(button.disabled).toBe(true);
+    const describedBy = button.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy!)?.textContent).toContain("summary needs at least");
+    expect(button.getAttribute("title")).toContain("at least");
+  });
+
+  it("drops the reason once the control is live", () => {
+    render(<NewApprovalRequestContainer api={createFixtureApi()} />);
+    const summary = document.querySelector("textarea, input[type=text][name=summary]")
+      ?? [...document.querySelectorAll("textarea")][0];
+    fireEvent.change(summary as HTMLElement, { target: { value: "a summary long enough to submit" } });
+    const button = submitButton();
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute("aria-describedby")).toBeNull();
+    expect(button.getAttribute("title")).toBeNull();
+  });
+});
