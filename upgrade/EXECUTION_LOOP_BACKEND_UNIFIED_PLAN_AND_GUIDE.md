@@ -5241,6 +5241,35 @@ fail-closed truth-preservation fix; it is not a claim that the relation has
 become available and still needs the normal signed-image/deployed-evidence
 gate for `PRODUCT_ACTIVE`.
 
+**Signed runtime activation correction (2026-09-09):** the protected-main
+release `67ba5e81481ed7c0a3c2fa35cbfdf9bff7c5cc68` was pulled and deployed to
+the existing stable SGP stack with digest-pinned Control API/Web/API/Roadmap
+images. The first read-only activation attempt exposed a deployment-input
+drift, not a source or relation defect: the ignored stable `.env` supplied
+`EXECUTION_EDGE_KEY_ID=execution-k1`, while the root-owned non-secret key-id
+file is `portal-d3-b69d63fc1a88a0a4`. AWS-HK therefore returned the expected
+`401/403` delegated-identity rejection before relation reads. The stable
+deployment state now pins the exact key id, private Paper/Sandbox/Live origins
+(`10.70.0.2:8443/8444/8445`), enables read-only current-source projection,
+Market Context (`data_layer`) and SSE, and keeps command relay, command-center
+mutation, durable mirror and Live mutation disabled.
+
+The deployed projection worker now completes cycles without
+`N13B_DELEGATED_IDENTITY_REJECTED` or `N31_PROFILE_PROJECTION_CYCLE_FAILED`.
+Direct Portal-owned PostgreSQL evidence shows the previously reported three
+relations are no longer rejected: Paper
+`portfolio_equity_snapshots` is `AVAILABLE/COMPLETE` (2,000 retained rows),
+Paper `sizing_decisions` is `AVAILABLE/COMPLETE` (417 rows), and Sandbox
+`risk_grants` is `AVAILABLE/COMPLETE` with an authoritative empty set (zero
+rows, not a refusal). Live/Paper/Sandbox target relation envelopes carry the
+same typed truth; the unrelated oversized Sandbox
+`broker_account_sync_effective` remains isolated as typed `UNAVAILABLE` and
+does not poison accepted relations. Stable services, migrations and health
+checks are green. This closes the three-relation runtime blocker without a
+Trading System change; the formal EDS-12 `PRODUCT_ACTIVE` decision still
+requires the separately defined sanitized browser/failure deployed-evidence
+packet and is not asserted from database rows alone.
+
 **Frontend audit-lock correction (2026-09-08):** the first protected-main
 release retry stopped before publication because the CI's required
 `npm audit --package-lock-only --audit-level=moderate` correctly rejected the
