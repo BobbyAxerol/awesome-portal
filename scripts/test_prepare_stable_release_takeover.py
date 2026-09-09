@@ -204,6 +204,27 @@ class StableTakeoverTest(unittest.TestCase):
         self.assertNotIn("fixture-password", json.dumps(state))
         self.assertFalse(state["command_relay"])
 
+    def test_missing_legacy_keyrings_are_valid_json_objects(self):
+        legacy = fixture()
+        legacy_env = env()
+        legacy["containers"]["control-api"]["Config"]["Env"] = [
+            value for value in legacy_env
+            if not value.startswith(("QUERY_CURSOR_KEYS_JSON=", "GOVERNANCE_APPLY_KEYS_JSON="))
+        ]
+        result, deployment = self.run_helper(legacy)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        generated = {
+            line.split("=", 1)[0]: line.split("=", 1)[1].strip("'")
+            for line in (deployment / ".env.production").read_text().splitlines()
+            if "=" in line
+        }
+        query = json.loads(generated["CONTROL_API_QUERY_CURSOR_KEYS_JSON"])
+        governance = json.loads(generated["CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON"])
+        self.assertIn("query-k1", query)
+        self.assertIn("governance-k1", governance)
+        self.assertGreaterEqual(len(query["query-k1"]), 32)
+        self.assertGreaterEqual(len(governance["governance-k1"]), 32)
+
     def test_rejects_command_relay_and_wrong_volume(self):
         unsafe = fixture()
         control = unsafe["containers"]["control-api"]

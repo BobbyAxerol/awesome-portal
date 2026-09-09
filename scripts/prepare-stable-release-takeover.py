@@ -199,6 +199,7 @@ def copy_signing_material(
     file_source: str,
     json_destination: str,
     file_destination: str,
+    active_key_destination: str,
 ) -> str:
     json_value = values.get(json_source, "")
     file_value = values.get(file_source, "")
@@ -217,7 +218,17 @@ def copy_signing_material(
     # and governance plans are bounded, ephemeral artifacts; a fresh keyring
     # is safer than retaining an implicit image default.  This does not alter
     # identities, passwords, database rows, execution credentials or sessions.
-    output[json_destination] = secrets.token_hex(32)
+    active_key_id = output.get(active_key_destination)
+    if not active_key_id:
+        fail(f"stable runtime is missing required signing key id: {active_key_destination}")
+    # The old stable image may not have a persisted keyring at all.  The
+    # fallback must still be a JSON object keyed by the active id; a bare
+    # token would pass dotenv serialization but fail the Control API config
+    # parser during bootstrap.
+    output[json_destination] = json.dumps(
+        {active_key_id: secrets.token_hex(32)},
+        separators=(",", ":"),
+    )
     return "FRESH_EPHEMERAL_KEYRING"
 
 
@@ -435,6 +446,7 @@ def build_environment(containers: dict[str, dict[str, Any]], project: str, port:
         file_source="QUERY_CURSOR_KEYS_FILE",
         json_destination="CONTROL_API_QUERY_CURSOR_KEYS_JSON",
         file_destination="CONTROL_API_QUERY_CURSOR_KEYS_FILE",
+        active_key_destination="CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID",
     )
     governance_keyring = copy_signing_material(
         control,
@@ -443,6 +455,7 @@ def build_environment(containers: dict[str, dict[str, Any]], project: str, port:
         file_source="GOVERNANCE_APPLY_KEYS_FILE",
         json_destination="CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON",
         file_destination="CONTROL_API_GOVERNANCE_APPLY_KEYS_FILE",
+        active_key_destination="CONTROL_API_GOVERNANCE_APPLY_ACTIVE_KEY_ID",
     )
     for key in CONTROL_SAME_NAME:
         optional_value(control, key, output)
@@ -536,6 +549,68 @@ def write_private(path: pathlib.Path, contents: str) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def valid_keyring_json(value: str, active_key_id: str) -> bool:
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return False
+    return (
+        isinstance(parsed, dict)
+        and not isinstance(parsed, list)
+        and isinstance(parsed.get(active_key_id), str)
+        and len(parsed[active_key_id].encode("utf-8")) >= 32
+    )
+
+
+def repair_existing_keyrings(
+    path: pathlib.Path,
+    existing: dict[str, str],
+    runtime_env: dict[str, str],
+) -> list[str]:
+    """Repair only malformed JSON fallback keyrings in the generated env.
+
+    A previous failed transition could have serialized the ephemeral fallback
+    as a bare hex token.  Preserve a valid JSON keyring or root-owned key file;
+    rewrite only the malformed/missing JSON fields needed for bootstrap.
+    """
+
+    replacements: dict[str, str] = {}
+    for json_key, active_key in (
+        ("CONTROL_API_QUERY_CURSOR_KEYS_JSON", "CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID"),
+        ("CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON", "CONTROL_API_GOVERNANCE_APPLY_ACTIVE_KEY_ID"),
+    ):
+        if existing.get(json_key) and valid_keyring_json(existing[json_key], existing.get(active_key, "")):
+            continue
+        file_key = json_key.replace("_JSON", "_FILE")
+        if existing.get(file_key):
+            # The mounted file is authoritative; Compose intentionally leaves
+            # the JSON field empty in this mode.
+            continue
+        candidate = runtime_env.get(json_key)
+        if not candidate or not valid_keyring_json(candidate, existing.get(active_key, "")):
+            fail(f"generated fallback keyring is invalid: {json_key}")
+        replacements[json_key] = candidate
+
+    if not replacements:
+        return []
+
+    raw_lines = path.read_text(encoding="utf-8").splitlines()
+    seen: set[str] = set()
+    rewritten: list[str] = []
+    for line in raw_lines:
+        key = line.split("=", 1)[0] if "=" in line else ""
+        if key in replacements:
+            rewritten.append(f"{key}={quote_env(replacements[key])}")
+            seen.add(key)
+        else:
+            rewritten.append(line)
+    for key, value in replacements.items():
+        if key not in seen:
+            rewritten.append(f"{key}={quote_env(value)}")
+    write_private(path, "\n".join(rewritten) + "\n")
+    return sorted(replacements)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--deployment-path", type=pathlib.Path, required=True)
@@ -576,13 +651,15 @@ def main() -> int:
         runtime_env, features, keyring_sources = build_environment(containers, args.legacy_project, args.expected_port)
 
         env_path = deployment / ".env.production"
+        repaired_keyrings: list[str] = []
         if env_path.exists():
             if env_path.is_symlink() or not env_path.is_file():
                 fail("existing production environment file is unsafe")
             existing = read_dotenv_scalar(env_path)
             if existing.get("PORTAL_STACK_NAME") != args.legacy_project or existing.get("PORTAL_HTTP_PORT") != str(args.expected_port):
                 fail("existing production environment does not target the verified stable project and port")
-            mode = "EXISTING_ENV_VALIDATED"
+            repaired_keyrings = repair_existing_keyrings(env_path, existing, runtime_env)
+            mode = "EXISTING_ENV_VALIDATED_WITH_KEYRING_REPAIR" if repaired_keyrings else "EXISTING_ENV_VALIDATED"
         elif args.check:
             mode = "ENV_WOULD_BE_CREATED"
         else:
@@ -610,6 +687,7 @@ def main() -> int:
             "execution_overlays": list(REQUIRED_EXECUTION_OVERLAYS),
             "execution_features": features,
             "keyring_sources": keyring_sources,
+            "repaired_keyrings": repaired_keyrings,
             "command_relay": False,
         }
         if not args.check:
