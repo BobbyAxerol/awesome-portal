@@ -483,6 +483,33 @@ describe("Phase 1 SGP-local profile projection", () => {
     await worker.onApplicationShutdown();
   });
 
+  it("isolates a source relation that remains over the wire budget after bounded page reduction", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        if (relation === "broker_account_sync_effective") {
+          throw new CurrentSourceProxyError("N17B_SOURCE_RESPONSE_TOO_LARGE", 413, {
+            reason_code: "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE",
+          });
+        }
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await expect(worker.runOnce()).resolves.toBeUndefined();
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+    expect(snapshot?.completeness).toBe("PARTIAL");
+    expect(snapshot?.document.relations["manager.accounts:broker_account_sync_effective"]).toMatchObject({
+      availability: "UNAVAILABLE",
+      reason_code: "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE",
+      items: [],
+    });
+    expect(snapshot?.document.relations["manager.strategies:strategies"]?.availability).toBe("AVAILABLE");
+    await worker.onApplicationShutdown();
+  });
+
   it("fails a paced refresh closed when durable observation admission quarantines", async () => {
     const quarantiningMirror: DurableMirrorWriter = {
       commitAcceptedProjection: async () => ({

@@ -567,5 +567,11 @@ function isSourceContractUnavailable(error: unknown): boolean {
   return code === "N17B_SOURCE_RELATION_UNAVAILABLE" ||
     code === "N22_PROFILE_READ_NOT_ACCEPTED" ||
     code === "N23_PROFILE_READ_NOT_ACCEPTED" ||
-    (code === "N17B_SOURCE_REJECTED" && reason === "MANAGER_V2_SOURCE_CONTRACT_REJECTED");
+    (code === "N17B_SOURCE_REJECTED" && reason === "MANAGER_V2_SOURCE_CONTRACT_REJECTED") ||
+    // A source-owned row can remain larger than the immutable 1 MiB page
+    // budget even after the bounded 200→1 reduction.  Keep that relation's
+    // truth typed and isolated; one oversized relation must not discard the
+    // other accepted relations in the same profile projection cycle.
+    (code === "N17B_SOURCE_RESPONSE_TOO_LARGE" &&
+      reason === "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE");
 }

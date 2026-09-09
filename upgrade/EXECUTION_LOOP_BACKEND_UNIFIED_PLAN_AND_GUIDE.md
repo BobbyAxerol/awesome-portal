@@ -5227,6 +5227,20 @@ PostgreSQL restore and focused Rust mapping tests are green. A new signed
 immutable release and deployed Paper/Sandbox/Live probe matrix remain required
 before this plan can emit `PRODUCT_ACTIVE`.
 
+**Projection-cycle isolation hardening (2026-09-09):** a second, distinct
+source-owned page-density case was observed on Sandbox
+`broker_account_sync_effective`. When that named relation remains over the
+immutable 1 MiB budget after the bounded page ladder, the worker now records
+only that relation as typed `UNAVAILABLE` with
+`MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE`; it no longer escalates the relation
+failure into `N31_PROFILE_PROJECTION_CYCLE_FAILED` or discards accepted rows
+from the same profile. The source limit, retry ladder, mTLS/delegated read
+authority and browser contract are unchanged. A PostgreSQL-isolated worker
+run passes 33 projection tests, including the regression. This is a
+fail-closed truth-preservation fix; it is not a claim that the relation has
+become available and still needs the normal signed-image/deployed-evidence
+gate for `PRODUCT_ACTIVE`.
+
 **Frontend audit-lock correction (2026-09-08):** the first protected-main
 release retry stopped before publication because the CI's required
 `npm audit --package-lock-only --audit-level=moderate` correctly rejected the
