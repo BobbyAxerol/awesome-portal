@@ -109,7 +109,7 @@ jobs:
       - name: Derive API image metadata
         id: api-meta
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-portal-api
           tags: |
@@ -121,7 +121,7 @@ jobs:
       - name: Derive web image metadata
         id: web-meta
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-portal-web
           tags: |
@@ -133,7 +133,7 @@ jobs:
       - name: Derive Control API image metadata
         id: control-api-meta
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all' || inputs.scope == 'execution-d3'
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-control-api
           tags: |
@@ -145,7 +145,7 @@ jobs:
       - name: Derive Roadmap & Task Board API image metadata
         id: roadmap-task-board-api-meta
         if: github.event_name != 'workflow_dispatch' || inputs.scope == 'all'
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-roadmap-task-board-api
           tags: |
@@ -156,7 +156,7 @@ jobs:
 
       - name: Derive execution edge image metadata
         id: execution-edge-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-execution-edge
           tags: |
@@ -167,7 +167,7 @@ jobs:
 
       - name: Derive source proxy image metadata
         id: source-proxy-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image-prefix.outputs.value }}-source-proxy
           tags: |
