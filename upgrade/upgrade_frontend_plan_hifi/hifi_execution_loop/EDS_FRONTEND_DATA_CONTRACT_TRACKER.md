@@ -3329,6 +3329,27 @@ Chưa dựng UI cho `staged-activation` — nằm ngoài phạm vi Goal 8 (parit
 | `owner_visual_data_action_parity: true` | Owner ký sau khi xem dev | Chữ ký của owner |
 
 **Gate:** `tsc` sạch · `subject-activity.spec.ts` **6/6** (2 test mới khoá lựa chọn kho) · sweep 14 màn: 0 kẹt loading, 0 console error, 0 API lỗi.
+
+#### A25.6 Nút bấm và link giữa màn lớn ↔ màn con (owner giao kèm Goal 8)
+
+**Link: 40/40 target nội bộ resolve, 0 hỏng.** Đo trên 11 màn, tổng 606 link
+(`Paper` 110 · `Accounts` 109 · `Sandbox` 94 · `Alpha Fleet` 72 · `Blotter` 44 …).
+
+**Nút:** 87 nút, 17 disabled. Bốn nút disabled **không nói lý do** — Accounts
+(`Previous`/`Next`) và Operations Queue (`▲ newer`/`▼ older`). Kiểm ra: đây là
+**nút phân trang**, không phải mutation, nên **không vi phạm §3.5**. Nhưng với
+trình đọc màn hình chúng chỉ đọc thành *"Previous, dimmed"* — không nói vì sao.
+Đã thêm lý do đúng ngữ cảnh cho cả bốn (*"This is the first page of the
+published set."*, *"No older operation is published beyond this page."* …).
+
+**Hai lần probe của tôi sai, ghi lại để không lặp:**
+
+| Tôi báo | Sự thật |
+|---|---|
+| `ready` trượt cả 4 profile | Tôi tìm `data-status="ok"`, nhưng `PanelState` **cố ý** khai `Exclude<PanelStatus,"ok">` — "ready" là panel vẽ **nội dung thật**, không phải hộp trạng thái |
+| 13 link hỏng | Regex `404\|Not Found` khớp nhầm trong 19–26k ký tự nội dung hợp lệ. Siết về đúng câu của registry → **0 hỏng** |
+
+**Gate:** `tsc` sạch · **120/120 file test** FE xanh.
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

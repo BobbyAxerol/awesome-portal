@@ -147,9 +147,16 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
                 <span>binding row → binding detail · account → Account 360°</span>
               </footer>
             </div>
+            {/* A disabled control still owes the reader a reason. Dimmed with
+                no title reads to a screen reader as "Previous, dimmed" and
+                says nothing about why — here it is always the page boundary. */}
             <nav className="exec-table-pager" aria-label="Result pages">
-              <button type="button" disabled={!list?.page.prevCursor} onClick={() => list?.page.prevCursor && onPreviousPage?.(list.page.prevCursor)}>Previous</button>
-              <button type="button" disabled={!list?.page.nextCursor} onClick={() => list?.page.nextCursor && onNextPage?.(list.page.nextCursor)}>Next</button>
+              <button type="button" disabled={!list?.page.prevCursor}
+                title={list?.page.prevCursor ? undefined : "This is the first page of the published set."}
+                onClick={() => list?.page.prevCursor && onPreviousPage?.(list.page.prevCursor)}>Previous</button>
+              <button type="button" disabled={!list?.page.nextCursor}
+                title={list?.page.nextCursor ? undefined : "This is the last page the source published."}
+                onClick={() => list?.page.nextCursor && onNextPage?.(list.page.nextCursor)}>Next</button>
             </nav>
           </div>
         </ExecutionWorkspace>

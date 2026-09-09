@@ -374,8 +374,12 @@ export function OperationsQueueScreen({
                     <span className="exec-oq-spacer" />
                     <span>every row links its audit evidence</span>
                     <span className="exec-oq-nav">
-                      <button type="button" className="exec-oq-filter" disabled={!page?.hasPrevious || !onLoadPrevious} onClick={onLoadPrevious}>▲ newer</button>
-                      <button type="button" className="exec-oq-filter" disabled={!page?.hasMore || !onLoadNext} onClick={onLoadNext}>▼ older</button>
+                      <button type="button" className="exec-oq-filter" disabled={!page?.hasPrevious || !onLoadPrevious}
+                        title={page?.hasPrevious && onLoadPrevious ? undefined : "Already at the newest operation in the published window."}
+                        onClick={onLoadPrevious}>▲ newer</button>
+                      <button type="button" className="exec-oq-filter" disabled={!page?.hasMore || !onLoadNext}
+                        title={page?.hasMore && onLoadNext ? undefined : "No older operation is published beyond this page."}
+                        onClick={onLoadNext}>▼ older</button>
                     </span>
                   </footer>
                 </>
