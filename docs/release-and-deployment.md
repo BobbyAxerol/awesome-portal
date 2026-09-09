@@ -67,8 +67,14 @@ change.
 ## Prepare a deployment host
 
 1. Install Docker Engine and the Docker Compose plugin.
-2. Create `/srv/portal`, then copy `deploy/compose.production.yaml` and create
-   `/srv/portal/.env.production` from `deploy/.env.production.example`.
+2. For a new host, create `/srv/portal` and provision `.env.production` from
+   `deploy/.env.production.example`. For the established SGP stable host, do
+   **not** manually invent a second project, port or volume namespace. The
+   protected deploy workflow runs `scripts/prepare-stable-release-takeover.py`
+   first. It proves the existing `portal-stable-v1-0-1` project, loopback port
+   `18081`, five mutable stable volumes and all four active execution overlays,
+   then atomically writes a host-only mode-`0600` `.env.production`. It never
+   prints credentials, starts containers or contacts Trading System.
 3. Set a lowercase `PORTAL_IMAGE_PREFIX`, an immutable image tag, all four SGP
    `PORTAL_*_IMAGE=image@sha256` references from the accepted manifest, canonical
    `PORTAL_HISTORICAL_DATA_DIR=/srv/primus/historical-market-data/storage` and
@@ -89,7 +95,24 @@ change.
 5. Put TLS, authentication and public-network policy in a reverse proxy or load
    balancer in front of the web service. Do not expose either API container.
 
-Run manually on the host:
+The signed deployment uses one ordered Compose bundle rather than the base
+file alone:
+
+1. `compose.production.yaml`
+2. `compose.production.stable-runtime.yaml`
+3. current-source, local-projection, analytics and realtime overlays
+
+The bundle is SHA-256-bound by the release candidate. This preserves the
+existing NATS, MinIO, worker, stable volumes and read-only execution runtime;
+it does not enable the command relay or any live mutation.
+
+Do not run the base Compose file manually against the established stable host.
+Use the protected workflow. If emergency inspection is needed, source the
+non-secret `COMPOSE_RELEASE_DIR` from `deployed-release.env` and pass the same
+ordered file list. The rollout always makes a PostgreSQL custom dump and a
+Roadmap SQLite backup first.
+
+For a genuinely new isolated host only, the minimal manual command is:
 
 ```bash
 cd /srv/portal
@@ -132,8 +155,10 @@ keyless-signs and verifies both manifest and decision, and selects all stable
 service bytes by digest. That decision cannot enable Projection, Query, SSE,
 commands or accept a Trading System release.
 
-The host must already contain `.env.production` and be authenticated to pull
-the registry. The workflow transfers the non-secret Compose definition and
+For a new isolated host, the host must already contain `.env.production` and
+be authenticated to pull the registry. For the established stable host, the
+takeover helper creates that host-only file only after proving the existing
+runtime identity. The workflow transfers the non-secret Compose definition and
 signed release pack.
 Before pulling or migrating it writes a timestamped, mode-`0700` backup under
 `<deployment_path>/backups/`: a PostgreSQL custom-format dump and, when the
