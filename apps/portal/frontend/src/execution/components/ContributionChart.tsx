@@ -19,7 +19,8 @@ export interface ContributionRow {
 
 export interface ContributionProvenance {
   authority: string;
-  asOf: string;
+  /** `null` when the envelope published no `as_of`; the line says so in words. */
+  asOf: string | null;
   formula: string;
 }
 
@@ -31,7 +32,7 @@ export function contributionOption(
   const tokens = chartTokens(activeTheme());
   const mine = rows.filter((r) => r.currency === currency);
   const provLine = provenance
-    ? `<br/><span style="color:${tokens.inkFaint}">${provenance.authority} · as_of ${provenance.asOf} · ${provenance.formula}</span>`
+    ? `<br/><span style="color:${tokens.inkFaint}">${provenance.authority} · as_of ${provenance.asOf ?? "not published"} · ${provenance.formula}</span>`
     : "";
   return baseOption({
     animation: false,

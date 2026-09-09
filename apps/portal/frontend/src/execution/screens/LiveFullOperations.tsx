@@ -437,7 +437,7 @@ export function LiveFullOperationsScreen({
                 <tbody>
                   <tr><th scope="row">state</th><td>{live.projectionContinuity?.state ?? "not stated"}</td></tr>
                   <tr><th scope="row">gap</th><td>{gap === null ? "not stated" : gap ? "detected" : "none"}</td></tr>
-                  <tr><th scope="row">epoch · sequence</th><td className="exec-num">{live.projectionContinuity?.epoch ?? "—"} · {live.projectionContinuity?.sequence ?? "—"}</td></tr>
+                  <tr><th scope="row">epoch · sequence</th><td className="exec-num">{live.projectionContinuity?.epoch ?? "epoch not published"} · {live.projectionContinuity?.sequence ?? "sequence not published"}</td></tr>
                   <tr><th scope="row">affected authorities</th><td>{live.projectionContinuity?.affectedAuthorities.join(", ") || "—"}</td></tr>
                 </tbody>
               </table>
@@ -464,7 +464,7 @@ export function LiveFullOperationsScreen({
                     {([["capital cap", live.predecessorEnvelope.capitalCap], ["gross notional cap", live.predecessorEnvelope.grossNotionalCap], ["daily loss cap", live.predecessorEnvelope.dailyLossCap]] as const).map(([label, value]) => (
                       <tr key={label}>
                         <th scope="row">{label}</th>
-                        <td className="exec-num">{value ?? "—"}{value && live.predecessorEnvelope?.currency ? ` ${live.predecessorEnvelope.currency}` : ""}</td>
+                        <td className="exec-num">{value ?? "not published"}{value && live.predecessorEnvelope?.currency ? ` ${live.predecessorEnvelope.currency}` : ""}</td>
                       </tr>
                     ))}
                   </tbody>

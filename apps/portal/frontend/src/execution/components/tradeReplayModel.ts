@@ -226,8 +226,8 @@ export interface LogRow {
   noteTone: "good" | "bad" | "warn" | "mute" | null;
 }
 
-export const money = (v: string | null | undefined) => (v ? formatExact(v, "money").display : "—");
-export const qtyFmt = (v: string | null | undefined) => (v ? formatExact(v, "qty").display : "—");
+export const money = (v: string | null | undefined) => (v ? formatExact(v, "money").display : "not published");
+export const qtyFmt = (v: string | null | undefined) => (v ? formatExact(v, "qty").display : "not published");
 
 function clock(t: number, sameDayAs: number): string {
   const d = new Date(t);

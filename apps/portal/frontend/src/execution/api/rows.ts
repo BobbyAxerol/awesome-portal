@@ -131,7 +131,7 @@ export function readApprovalRow(raw: Record<string, unknown>): ApprovalRowRead {
       id,
       gate: gateParsed.value,
       subject: str(raw.subject) ?? id,
-      target: str(raw.target) ?? "—",
+      target: str(raw.target) ?? "target not published",
       // A count the server did not send is not zero. Zero blockers is a
       // cleared gate, which is a claim; absence is not.
       blockerCount: int(raw.blocker_count) ?? -1,
@@ -174,7 +174,7 @@ export function readDecidedRow(raw: Record<string, unknown>): { row: DecidedRow 
       subject: str(raw.subject) ?? id,
       outcome: outcomeParsed.value,
       decidedBy: (by && str(by.username)) ?? "decider not published",
-      decidedAt: decidedAt ?? "—",
+      decidedAt: decidedAt ?? "not published",
       policyVersion: str(raw.policy_version),
     },
     gaps,

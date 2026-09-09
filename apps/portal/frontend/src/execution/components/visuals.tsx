@@ -159,7 +159,7 @@ export function SparkTile({ spark, height = 72, warning }: { spark: Spark; heigh
       <div className="exec-spark-head">
         <span className="exec-role-meta">{spark.label}</span>
         <span className="exec-role-num">
-          {last ?? "—"}{spark.unit ? ` ${spark.unit}` : ""}
+          {last ?? <span className="exec-role-meta">not published</span>}{last !== null && last !== undefined && spark.unit ? ` ${spark.unit}` : ""}
           {spark.ceiling !== null && spark.ceiling !== undefined ? <span className="exec-role-meta"> / {spark.ceiling}{spark.unit ? ` ${spark.unit}` : ""}</span> : null}
         </span>
       </div>
@@ -228,8 +228,8 @@ export function PositionsTable({ rows, warning, caption }: { rows: PositionRow[]
                 <td className="exec-num">{r.qty}</td>
                 <td className="exec-num">{r.entry}</td>
                 <td className="exec-num" data-sign={r.uPnl.startsWith("−") || r.uPnl.startsWith("-") ? "neg" : "pos"}>{r.uPnl}</td>
-                {showLev ? <td className="exec-num">{r.leverage ?? "—"}</td> : null}
-                {showAck ? <td className="exec-num">{r.ackLatencyMs !== undefined ? `p50 ${r.ackLatencyMs}ms` : "—"}</td> : null}
+                {showLev ? <td className="exec-num">{r.leverage ?? <span className="exec-role-meta">not published</span>}</td> : null}
+                {showAck ? <td className="exec-num">{r.ackLatencyMs !== undefined ? `p50 ${r.ackLatencyMs}ms` : <span className="exec-role-meta">not published</span>}</td> : null}
               </tr>
             ))}
           </tbody>

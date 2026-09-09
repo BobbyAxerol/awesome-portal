@@ -366,7 +366,7 @@ function TaskDetail({
             ) : (
               <div className="exec-cli-paramrow" key={p.key}>
                 <span className="exec-cli-paramk">{p.key}{p.required ? " *" : ""}</span>
-                <span className="exec-cli-paramv">{p.defaultValue ?? "—"}</span>
+                <span className="exec-cli-paramv">{p.defaultValue ?? "no default published"}</span>
                 <span className="exec-cli-paramsrc">{p.sourceRegistry ?? p.constraint ?? "source not stated"}</span>
               </div>
             ))}
@@ -650,7 +650,7 @@ export function AdminActionDrawerScreen({
                                 <td className="exec-num">{row.at ? utcStamp(row.at) : <span className="exec-gate-unverified">no clock published</span>}</td>
                                 <td>{row.actor ?? <span className="exec-gate-unverified">actor redacted</span>}</td>
                                 <td>{row.command ?? "not published"}</td>
-                                <td data-tone={sourceTone(row.outcome) ?? undefined}>{row.outcome ?? "—"}</td>
+                                <td data-tone={sourceTone(row.outcome) ?? undefined}>{row.outcome ?? "outcome not published"}</td>
                                 <td className="exec-role-meta">{row.detail ?? ""}</td>
                               </tr>
                             ))}

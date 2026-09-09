@@ -91,10 +91,12 @@ const TRIAGE_LABEL: Record<TriageState, string> = {
 function ageFrom(createdAt: string | null, now: Date): string {
   if (!createdAt) return "age not stated";
   const ms = now.getTime() - Date.parse(createdAt);
-  return Number.isNaN(ms) ? "age not stated" : (formatAge(Math.floor(ms / 1000)) ?? "—");
+  return Number.isNaN(ms) ? "age not stated" : (formatAge(Math.floor(ms / 1000)) ?? "age not stated");
 }
 
 function PhaseTrail({ phases }: { phases: QueueSmokeRow["phases"] }) {
+  // A glyph, not a value: the phase name is printed beside it, so the dash
+  // decorates the word "pending" rather than standing in for a missing one.
   const glyph = { done: "✓", active: "◐", pending: "—", failed: "◐" } as const;
   return (
     <span className="exec-oq-phases">
@@ -157,13 +159,19 @@ function SmokeRow({ item, elapsed, sub, onOpen, selected }: { item: QueueSmokeRo
 function ContractRow({ row, now, onOpen, selected, arrived }: { row: QueueRow; now: Date; onOpen: (row: QueueRow) => void; selected: boolean; arrived?: boolean }) {
   return (
     <tr className="exec-oq-row exec-oq-contract" data-arrived={arrived ? "true" : undefined} data-attention={needsAttention(row) ? "true" : undefined} data-selected={selected ? "true" : undefined} aria-selected={selected || undefined}>
-      <td className="exec-oq-pri"><span className="exec-oq-prichip" data-pri="—">—</span></td>
+      {/*
+        * The contract row has no priority: `execution-operations.v1` publishes
+        * none, and the smoke row above it does. A dash in this column looked
+        * like a priority that happened to be blank; the word says which of the
+        * two it is.
+        */}
+      <td className="exec-oq-pri"><span className="exec-queue-dim">no priority published</span></td>
       <th scope="row"><button type="button" className="exec-linkbtn exec-oq-oplink" onClick={() => onOpen(row)}>{row.operationId}</button></th>
-      <td className="exec-oq-cmd">{row.commandKey || "—"}</td>
-      <td className="exec-oq-target">{targetHrefFor(row.target.type, row.target.id, row.environment) ? <a href={targetHrefFor(row.target.type, row.target.id, row.environment)!}>{row.target.id}</a> : (row.target.id ?? "—")}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
+      <td className="exec-oq-cmd">{row.commandKey || <span className="exec-queue-dim">command not published</span>}</td>
+      <td className="exec-oq-target">{targetHrefFor(row.target.type, row.target.id, row.environment) ? <a href={targetHrefFor(row.target.type, row.target.id, row.environment)!}>{row.target.id}</a> : (row.target.id ?? <span className="exec-queue-dim">target not published</span>)}{row.target.type ? <span className="exec-queue-dim"> · {row.target.type}</span> : null}</td>
       <td className="exec-oq-three"><span className="exec-oq-state" data-tone={sourceTone(row.sourceStatus) ?? "mute"} data-pulse={pulses(sourceTone(row.sourceStatus)) ? "true" : undefined} data-col="source">{row.sourceStatus ?? "not stated"}</span> <span className="exec-oq-dim">verify <span data-col="verify">{row.verificationResult ?? "not stated"}</span></span> <span className="exec-oq-dim" data-col="triage">{row.triageState ? TRIAGE_LABEL[row.triageState] : "not stated"}</span></td>
       <td className="exec-oq-age" data-tone="mute">{ageFrom(row.createdAt, now)}</td>
-      <td className="exec-oq-next" data-muted="true">{row.acknowledgedBy ?? row.resolvedBy ?? "—"}</td>
+      <td className="exec-oq-next" data-muted="true">{row.acknowledgedBy ?? row.resolvedBy ?? <span className="exec-queue-dim">nobody yet</span>}</td>
     </tr>
   );
 }
@@ -265,7 +273,7 @@ export function OperationsQueueScreen({
               <a key={r.operationId} className="exec-oq-card" data-level="WARN" href="#" onClick={(e) => { e.preventDefault(); onOpen(r); }}>
                 <div className="exec-oq-cardlevel">WARN · {ageFrom(r.createdAt, at)}</div>
                 <div className="exec-oq-cardtitle">{r.operationId} {r.verificationResult ?? r.sourceStatus ?? ""}</div>
-                <div className="exec-oq-cardmeta">{r.commandKey || "—"} · {r.target.id ?? "—"}</div>
+                <div className="exec-oq-cardmeta">{r.commandKey || "command not published"} · {r.target.id ?? "target not published"}</div>
               </a>
             ))}
           </div>
@@ -290,7 +298,7 @@ export function OperationsQueueScreen({
             </header>
             {queue ? (
               <p className="exec-oq-sub">
-                {page?.filteredCount ?? "—"} in this view · {page?.totalCount ?? "—"} total · source {queue.sourceIntegrationState ?? "not stated"}
+                {page?.filteredCount ?? "an unstated number of"} in this view · {page?.totalCount ?? "an unstated number of"} total · source {queue.sourceIntegrationState ?? "not stated"}
                 {/* The contract pins `delivery_profile` to the literal
                     "fixture" for this queue (execution-operations.v1), and
                     the word stays — §7 keeps it visible so nobody

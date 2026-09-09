@@ -25,6 +25,7 @@ import { ExecutionSurface } from "../ExecutionSurface";
 import { PanelState } from "../components/states";
 import { AuthorityWord } from "../components/badges";
 import { SourceTile } from "../components/stageWorkbench";
+import { Published } from "../components/cells";
 import { ExecutionSectionTitle } from "../components/typography";
 import { sbAge, sbAgeSeconds, sbClock } from "../clock";
 import type { CertDemo, CertKV, CertSmoke } from "../sandbox.smoke";
@@ -65,6 +66,11 @@ function groupStepReasons(reasons: readonly string[]): RailBlocker[] {
   return [...grouped, ...rest.map((code) => ({ label: code, detail: "certification gate", severity: "blocking" as const }))];
 }
 
+/*
+ * A glyph, not a value: every use prints the state word beside it
+ * (`{EVAL_GLYPH[state]} {state.toLowerCase()}`), so the dash decorates a
+ * sentence that already says "unavailable" rather than standing in for it.
+ */
 const EVAL_GLYPH: Record<string, string> = { PASS: "✓", FAIL: "✕", STALE: "!", UNAVAILABLE: "—" };
 
 /** OKX testnet REST policy from the hi-fi; BR-EX-61 publishes it per venue. */
@@ -239,7 +245,7 @@ export function SandboxCertificationScreen({
     { label: `source ${certification.sourceIntegrationState ?? "not stated"}`, axis: "broker-sync", tone: byId.get("broker")?.panelState === "ok" ? "good" : "warn" },
   ];
   const blockers: RailBlocker[] = [
-    ...criticalOpen.map((f) => ({ label: `CRITICAL ${f.identity ?? f.findingId}`, detail: `local ${f.localValue ?? "—"} · broker ${f.brokerValue ?? "—"} · ${f.status ?? "open"}`, severity: "blocking" as const })),
+    ...criticalOpen.map((f) => ({ label: `CRITICAL ${f.identity ?? f.findingId}`, detail: `local ${f.localValue ?? "not published"} · broker ${f.brokerValue ?? "not published"} · ${f.status ?? "open"}`, severity: "blocking" as const })),
     ...groupStepReasons(gate.reasons),
     ...certification.steps.filter((s) => s.evaluationState === "FAIL" || s.evaluationState === "STALE").map((s) => ({ label: `${s.label} ${s.evaluationState}`, detail: s.blockerCode ?? s.summary ?? null, severity: (s.evaluationState === "FAIL" ? "blocking" : "watch") as "blocking" | "watch" })),
   ];
@@ -560,11 +566,11 @@ export function SandboxCertificationScreen({
                       <tbody>
                         {certification.findings.rows.map((f) => (
                           <tr key={f.findingId} data-severity={f.severity ?? undefined}>
-                            <td>{f.status ?? "—"}</td>
-                            <td>{f.severity ?? "—"}</td>
-                            <td>{f.identity ?? "—"}</td>
-                            <td className="exec-num">{f.localValue ?? "—"}</td>
-                            <td className="exec-num">{f.brokerValue ?? "—"}</td>
+                            <td><Published value={f.status} /></td>
+                            <td><Published value={f.severity} /></td>
+                            <td><Published value={f.identity} /></td>
+                            <td className="exec-num"><Published value={f.localValue} /></td>
+                            <td className="exec-num"><Published value={f.brokerValue} /></td>
                           </tr>
                         ))}
                       </tbody>
@@ -595,9 +601,9 @@ export function SandboxCertificationScreen({
                       <td className="exec-num">{(s.ordinal ?? i) + 1}</td>
                       <td>{s.label}{s.summary ? <span className="exec-gate-note"> — {s.summary}</span> : null}</td>
                       <td>{s.evaluationState ?? "not stated"}{s.blockerCode ? <span className="exec-gate-note"> · {s.blockerCode}</span> : null}</td>
-                      <td>{s.authority ?? "—"}</td>
-                      <td className="exec-num">{s.evidenceHash ? shortDigest(s.evidenceHash) : "—"}</td>
-                      <td className="exec-num">{s.expiresAt ?? "—"}</td>
+                      <td><Published value={s.authority} /></td>
+                      <td className="exec-num"><Published value={s.evidenceHash ? shortDigest(s.evidenceHash) : null} /></td>
+                      <td className="exec-num"><Published value={s.expiresAt} absent="no expiry published" /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -635,9 +641,9 @@ export function SandboxCertificationScreen({
                   <tbody>
                     {certification.timeline.rows.map((e) => (
                       <tr key={e.eventId}>
-                        <td className="exec-num">{e.createdAt ?? "—"}</td>
-                        <td>{e.action ?? "—"}</td>
-                        <td>{e.actor ?? "—"}</td>
+                        <td className="exec-num"><Published value={e.createdAt} absent="time not published" /></td>
+                        <td><Published value={e.action} /></td>
+                        <td><Published value={e.actor} absent="actor not published" /></td>
                       </tr>
                     ))}
                   </tbody>

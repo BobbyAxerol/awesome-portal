@@ -33,8 +33,8 @@ export interface ObservedTimelinePanelProps {
   onEnvironment?: (environment: string) => void;
 }
 
-const money = (v: string | null) => (v ? formatExact(v, "money").display : "—");
-const qty = (v: string | null) => (v ? formatExact(v, "qty").display : "—");
+const money = (v: string | null) => (v ? formatExact(v, "money").display : "not published");
+const qty = (v: string | null) => (v ? formatExact(v, "qty").display : "not published");
 const stamp = (ms: number) => new Date(ms).toISOString().replace("T", " ").slice(0, 19) + "Z";
 const ago = (ms: number | null, now: number) => (ms === null ? "—" : `${Math.max(0, Math.round((now - ms) / 1000))}s ago`);
 
@@ -107,7 +107,7 @@ export function ObservedTimelinePanel({ timeline, transport, reason = null, subj
                     <td className="exec-rp-dim">{stamp(e.observedAtMs)}</td>
                     <td><span className="exec-rp-ev" data-tone={chip.tone}>{chip.label}</span></td>
                     <td><span className="exec-rp-mute">{e.record.kind.toLowerCase()} </span><span className="exec-num">{e.record.id}</span></td>
-                    <td className="exec-rp-dim">{e.sourceClock ?? "—"}</td>
+                    <td className="exec-rp-dim">{e.sourceClock ?? "source clock not published"}</td>
                     <td data-numeric="true">{money(e.values.price)}</td>
                     <td data-numeric="true">{qty(e.values.quantity)}</td>
                     <td data-numeric="true" data-tone={e.values.realizedPnl ? (Number(e.values.realizedPnl) >= 0 ? "good" : "bad") : undefined}>{money(e.values.realizedPnl)}</td>
@@ -135,7 +135,7 @@ export function ObservedTimelinePanel({ timeline, transport, reason = null, subj
         </div>
       ) : null}
       <footer className="exec-rp-foot">
-        {timeline?.timeline.historySemantics ?? "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY"} · ordering {timeline?.timeline.orderingRule ?? "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1"} · read_at {timeline?.timeline.readAtMs ? stamp(timeline.timeline.readAtMs) : "—"} · continuation is a Portal token, passed back unchanged
+        {timeline?.timeline.historySemantics ?? "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY"} · ordering {timeline?.timeline.orderingRule ?? "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1"} · read_at {timeline?.timeline.readAtMs ? stamp(timeline.timeline.readAtMs) : "not published"} · continuation is a Portal token, passed back unchanged
       </footer>
     </section>
   );

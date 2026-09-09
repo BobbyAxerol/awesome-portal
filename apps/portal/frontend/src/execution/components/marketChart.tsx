@@ -60,7 +60,7 @@ export function CandlesChart({
   candles: readonly Candle[];
   markers: readonly CandleMarker[];
   height?: number;
-  provenance: { authority: string; asOf: string; formula: string };
+  provenance: { authority: string; asOf: string | null; formula: string };
   ariaLabel: string;
 }) {
   const option = useMemo<EChartsOption>(() => {
@@ -183,7 +183,7 @@ export function LinesChart({
   annotation?: { t: string; v: number; label: string; tone: ChartTone };
   height?: number;
   yFormatter?: (v: number) => string;
-  provenance: { authority: string; asOf: string; formula: string };
+  provenance: { authority: string; asOf: string | null; formula: string };
   ariaLabel: string;
 }) {
   const option = useMemo<EChartsOption>(() => {
@@ -329,7 +329,7 @@ export function BarsChart({
   thresholdLine?: { y: number; label: string; tone: ChartTone };
   /** One bar called out — the worst fold, the breach. Label printed under it. */
   highlight?: { index: number; label: string; tone: ChartTone };
-  provenance: { authority: string; asOf: string; formula: string };
+  provenance: { authority: string; asOf: string | null; formula: string };
   ariaLabel: string;
 }) {
   const option = useMemo<EChartsOption>(() => {
@@ -419,7 +419,7 @@ export function InfluenceGraph({
   nodes: readonly InfluenceNode[];
   edges: readonly InfluenceEdge[];
   height?: number;
-  provenance: { authority: string; asOf: string; formula: string };
+  provenance: { authority: string; asOf: string | null; formula: string };
   ariaLabel: string;
 }) {
   const option = useMemo<EChartsOption>(() => {
@@ -532,7 +532,7 @@ export function EpisodesChart({
   joint?: { from: string; to: string; label: string };
   window: { from: string; to: string };
   height?: number;
-  provenance: { authority: string; asOf: string; formula: string };
+  provenance: { authority: string; asOf: string | null; formula: string };
   ariaLabel: string;
 }) {
   const option = useMemo<EChartsOption>(() => {
@@ -638,7 +638,7 @@ export function DensityHeatmap({
   hours: readonly string[];
   cells: readonly (readonly [number, number, number | null])[];
   height?: number;
-  provenance: { authority: string; asOf: string; formula: string };
+  provenance: { authority: string; asOf: string | null; formula: string };
   ariaLabel: string;
 }) {
   const option = useMemo<EChartsOption>(() => {

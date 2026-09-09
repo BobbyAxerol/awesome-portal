@@ -62,7 +62,7 @@ export function CommandJournal({ journal }: { journal: OperationalComposition["j
                       unattributed command. */}
                   <td>{row.actor ?? <span className="exec-gate-unverified">actor redacted</span>}</td>
                   <td>{row.command ?? "not published"}</td>
-                  <td data-tone={sourceTone(row.outcome) ?? undefined}>{row.outcome ?? "—"}</td>
+                  <td data-tone={sourceTone(row.outcome) ?? undefined}>{row.outcome ?? <span className="exec-role-meta">outcome not published</span>}</td>
                   <td className="exec-role-meta">{row.detail ?? ""}</td>
                 </tr>
               ))}
@@ -99,7 +99,7 @@ export function SourceHealthStrip({ sourceHealth }: { sourceHealth: OperationalC
               <td data-tone={sourceTone(row.state) ?? undefined}>{row.state ?? "not stated"}</td>
               {/* A source gap is a schedule, not a fault: soonReason keeps the
                   code and lets the shared vocabulary decide the wording. */}
-              <td className="exec-role-meta">{row.reasonCode ? soonReason(row.reasonCode) ?? row.reasonCode : "—"}</td>
+              <td className="exec-role-meta">{row.reasonCode ? soonReason(row.reasonCode) ?? row.reasonCode : "no reason published"}</td>
             </tr>
           ))}
         </tbody>

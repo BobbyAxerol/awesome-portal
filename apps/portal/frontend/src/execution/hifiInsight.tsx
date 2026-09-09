@@ -161,14 +161,14 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
   const { fills, orders, source } = subjectRows(input);
   const provenance = (formula: string) => ({
     authority: "DERIVED",
-    asOf: asOf ?? "—",
+    asOf: asOf,
     formula,
   });
   const envelopeOf = (formula: string | null): ChartEnvelope => ({
     authority: "DERIVED" as Authority,
     asOf: asOf ?? "",
     window: input.window ?? analytics.completeness ?? "window not stated",
-    interval: "—",
+    interval: "not published",
     formulaVersion: formula ?? analytics.formulaVersion,
   });
 
@@ -209,7 +209,7 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
                 ariaLabel="Daily drawdown of this alpha with the portfolio's joint-drawdown windows shaded"
               />
               {factRows([
-                ["max drawdown", `${mine.maxDrawdown ?? "not published"} @ ${mine.maxDrawdownAt ?? "—"}`],
+                ["max drawdown", `${mine.maxDrawdown ?? "not published"} @ ${mine.maxDrawdownAt ?? "a time the source did not publish"}`],
                 ["window", `${dd.windowDays ?? "?"}d · no smoothing`],
                 ["joint drawdown windows", `${dd.overlaps.length} shaded · ${dd.alphas.length} alphas in the set`],
               ], "Drawdown and underwater")}
@@ -377,7 +377,7 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
               />
               {factRows([
                 ["fills placed", count(grid.total)],
-                ["busiest cell", grid.busiest ? `${grid.busiest.day} ${String(grid.busiest.hour).padStart(2, "0")}:00 UTC · ${count(grid.busiest.count)} fills` : "—"],
+                ["busiest cell", grid.busiest ? `${grid.busiest.day} ${String(grid.busiest.hour).padStart(2, "0")}:00 UTC · ${count(grid.busiest.count)} fills` : "no busiest cell published"],
                 ["venue calendars", "Soon · VENUE_SESSION_CALENDAR_NOT_PUBLISHED"],
               ], "Execution density")}
             </>

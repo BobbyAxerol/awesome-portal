@@ -280,7 +280,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
         <footer className="exec-rp-foot">
           source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
           {market && market.state === "READY"
-            ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? new Date(market.fetchedAtMs).toISOString().slice(11, 19) : "—"}Z, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
+            ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? `${new Date(market.fetchedAtMs).toISOString().slice(11, 19)}Z` : "at a time not published"}, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
             : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
           {" "}· Trading System candles: {soonReason(candles.reason) ?? "Soon · BR-EX-50"} · as_of {asOf ?? "not stated"}
           <span className="exec-rp-attrib"> · charting: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener">TradingView Lightweight Charts™</a> © TradingView, Inc.</span>
@@ -309,10 +309,10 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
                   <td className="exec-rp-dim">{r.time}</td>
                   <td><span className="exec-rp-ev" data-tone={r.eventTone}>{r.event}</span></td>
                   <td><span className="exec-rp-mute">{r.event === "FILL" ? "fill " : "ord "}</span><span className="exec-num">{r.ref}</span>{r.tail}</td>
-                  <td>{r.type} · <span data-tone={r.side === "BUY" ? "good" : r.side === "SELL" ? "bad" : undefined}>{r.side ?? "—"}</span></td>
+                  <td>{r.type} · <span data-tone={r.side === "BUY" ? "good" : r.side === "SELL" ? "bad" : undefined}>{r.side ?? "side not published"}</span></td>
                   <td data-numeric="true">{r.qty}</td>
                   <td data-numeric="true">{r.price}</td>
-                  <td data-numeric="true" className={r.fee ? undefined : "exec-rp-mute"}>{r.fee ?? "—"}</td>
+                  <td data-numeric="true" className={r.fee ? undefined : "exec-rp-mute"}>{r.fee ?? "fee not published"}</td>
                   <td data-tone={r.noteTone ?? undefined}>{r.note}</td>
                 </tr>
                 );

@@ -153,7 +153,7 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                       yFormatter={(value) => `${value.toFixed(1)}%`}
                       provenance={{
                         authority: "DERIVED",
-                        asOf: str(insightBlock?.as_of) ?? envelope?.asOf ?? envelope?.readAt ?? "—",
+                        asOf: str(insightBlock?.as_of) ?? envelope?.asOf ?? envelope?.readAt ?? null,
                         formula: str(insightBlock?.formula_version) ?? "paper-overview-insights.v1",
                       }}
                       ariaLabel="Cumulative return per deployment, own currency"

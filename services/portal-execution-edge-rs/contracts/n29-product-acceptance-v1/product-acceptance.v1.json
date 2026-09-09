@@ -97,8 +97,8 @@
     "br72_registry_public_sha256": "sha256:c29957927f5cdf82e69b79a5c92c0a65379663efa0b40bc6e2fa30aa6f2c1e38",
     "br72_frontend_test_sha256": "sha256:9ba52954b42f995d9ec4adaaaf84b0ca3a66ada1c6899adfbe870185eecc20e0",
     "br72_frontend_containers_sha256": "sha256:890b0eb12c20766a30f7f00c7a9fa11284a3713522cc2ccb9211199a5f5e7dc8",
-    "br72_frontend_alpha_fleet_sha256": "sha256:1e1420c906f43725831d323634e8ba20d07a8cf4b673e6c64b615be235dce2ca",
-    "br72_frontend_recompose_sha256": "sha256:16b0dd460ca9b812c94acc22ad5c887e2f223d82b2b8fdfcb0c77f4c18d93c8c",
+    "br72_frontend_alpha_fleet_sha256": "sha256:4da47b1c7443007ca9e81e54cdd71ad883b7f4cd4700e3b5062da77ef277e4a4",
+    "br72_frontend_recompose_sha256": "sha256:a0e06afa15a91050260e6b8576f45a3757d3e07ef92ab7d43827d62fa1b6a9e4",
     "br72_frontend_registry_sha256": "sha256:5cdce2394aa31e7f68ed556bfe831c90d6a027e368ee8ddb54a282458b527b2e",
     "br76_schema_sha256": "sha256:ef90f2844cd9e92818e6921271c4fd5b5ec2f8b5d7f5cd71ce99df4a546b8244",
     "br76_fixture_sha256": "sha256:23db8c70822e109af7ca54be9ee21a900adc1dec550191eea2f0a40125bc1961"

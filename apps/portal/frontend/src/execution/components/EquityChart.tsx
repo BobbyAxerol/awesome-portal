@@ -285,7 +285,7 @@ export function EquityChart({
                   >
                     <th scope="row"><span className="exec-num">{p.t}</span></th>
                     <td><span className="exec-num">{p.equity ?? "gap"}</span></td>
-                    {series.band ? <td><span className="exec-num">{b ? `${b.lower} … ${b.upper}` : "—"}</span></td> : null}
+                    {series.band ? <td><span className="exec-num">{b ? `${b.lower} … ${b.upper}` : "no band published"}</span></td> : null}
                   </tr>
                 );
               })}

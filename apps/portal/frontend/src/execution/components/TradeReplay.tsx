@@ -138,7 +138,7 @@ export function TradeReplay() {
                   <td>{r.type} · <span data-tone={r.side === "BUY" ? "good" : "bad"}>{r.side}</span></td>
                   <td data-numeric="true">{r.qty}</td>
                   <td data-numeric="true">{r.price}</td>
-                  <td data-numeric="true" className={r.fee ? undefined : "exec-rp-mute"}>{r.fee ?? "—"}</td>
+                  <td data-numeric="true" className={r.fee ? undefined : "exec-rp-mute"}>{r.fee ?? "fee not published"}</td>
                   <td data-tone={r.noteTone}>{r.note}</td>
                 </tr>
               ))}

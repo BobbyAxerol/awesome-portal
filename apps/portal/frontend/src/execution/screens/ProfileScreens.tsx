@@ -59,7 +59,7 @@ export function CapabilityTable({ capabilities, label }: { capabilities: readonl
               <tr key={c.capabilityId} data-state={c.state}>
                 <th scope="row">{c.capabilityId}</th>
                 <td><StatusChip label={c.state} tone={c.state === "AVAILABLE" || c.state === "READY" ? "good" : "bad"} /></td>
-                <td className="exec-role-meta">{c.reasonCode ?? "—"}{c.retryable ? " · retryable" : ""}</td>
+                <td className="exec-role-meta">{c.reasonCode ?? "no reason code published"}{c.retryable ? " · retryable" : ""}</td>
               </tr>
             ))}
           </tbody>

@@ -213,7 +213,7 @@ export function portfolioOverviewPanels(input: PortfolioOverviewInput): {
               series={[{ name: `portfolio equity${equity.currency ? ` · ${equity.currency}` : ""}`, tone: "good", points: equity.points.map((point) => [new Date(point.t).toISOString(), point.equity] as const) }]}
               height={170}
               yFormatter={money}
-              provenance={{ authority: "EXECUTION", asOf: input.asOf ?? "—", formula: "portfolio_equity_snapshots" }}
+              provenance={{ authority: "EXECUTION", asOf: input.asOf, formula: "portfolio_equity_snapshots" }}
               ariaLabel="Portfolio equity over the drained snapshot window"
             />
             <p className="exec-blotter-note">

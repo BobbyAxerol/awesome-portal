@@ -210,7 +210,7 @@ export function costDrag(fills: readonly Row[]): CostDrag[] {
   for (const fill of fills) {
     const pnl = decimal(fill.realized_pnl);
     const fee = decimal(fill.commission);
-    const currency = text(fill.commission_currency) ?? text(fill.currency) ?? "—";
+    const currency = text(fill.commission_currency) ?? text(fill.currency) ?? "currency not published";
     if (pnl === null && fee === null) continue;
     const row = byCurrency.get(currency) ?? { currency, gross: 0, fees: 0, net: 0, fundingPublished: false, fills: 0 };
     row.gross += pnl ?? 0;
@@ -235,7 +235,7 @@ export function venueContribution(fills: readonly Row[]): VenueContribution[] {
     const venue = text(fill.venue);
     const pnl = decimal(fill.realized_pnl);
     if (!venue || pnl === null) continue;
-    const currency = text(fill.commission_currency) ?? "—";
+    const currency = text(fill.commission_currency) ?? "currency not published";
     const key = `${venue}|${currency}`;
     const row = rows.get(key) ?? { venue, currency, realized: 0, fills: 0 };
     row.realized += pnl;

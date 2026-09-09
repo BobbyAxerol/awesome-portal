@@ -347,7 +347,7 @@ export function SourceHealthPanel({ health, transport, reason }: { health: Sourc
             <tbody>
               {health.data.profiles.map((p) => (
                 <tr key={`${p.environment}:${p.profileId}`}>
-                  <th scope="row">{p.environment ?? "—"}</th>
+                  <th scope="row">{p.environment ?? "environment not published"}</th>
                   <td><span className="exec-num">{p.profileId ?? "not stated"}</span></td>
                   <td><StatusChip label={p.state} tone={TONE[p.state]} title={p.reasonCode ?? undefined} /></td>
                   <td>{p.availability ?? "not stated"}</td>

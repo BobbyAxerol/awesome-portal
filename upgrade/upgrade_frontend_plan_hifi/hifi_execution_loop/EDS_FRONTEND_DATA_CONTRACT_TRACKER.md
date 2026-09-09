@@ -4124,6 +4124,64 @@ vào đây.
 - `2 307` snapshot mỗi dòng cross-portfolio là số điểm **trong mirror**, không
   phải toàn bộ lịch sử nguồn — caption của panel nói đúng như vậy.
 
+### A32.3 PHASE 2 ĐÃ LÀM (09-09) — 89 dấu gạch, còn lại 6 và mỗi cái có lý do
+
+Gate của phase 2 (§A32) có ba điều kiện.
+
+| Điều kiện | Đo được |
+|---|---|
+| 0 chỗ `?? "—"` cho giá trị **chưa publish** trong đường code thật | **0** — test `absentValues.test.ts` quét cây nguồn và fail nếu có cái mới |
+| Mỗi `—` còn lại đều là "không áp dụng" và có chú thích | **6 chỗ**, bảng bên dưới |
+| Ảnh Alpha 360 / Account 360 không còn dãy `— — —` | Account 360 **0**; Alpha 360 còn **2 ô**, đúng là bản đồ deployment, đã có caption giải thích |
+
+Đo trên dev sau deploy, đếm **ô chỉ chứa đúng một dấu gạch**:
+
+| Màn | trước | sau | số lần nói "not published" |
+|---|---|---|---|
+| Account 360 | `SESSION_STARTED_AT — — —` | **0 ô** | 329 |
+| Alpha 360 | `— — —` trong bảng session | **2 ô** (bản đồ venue × stage) | 304 |
+| Full Blotter | — | **0 ô** | 64 |
+| Operations Queue | — | **0 ô** | 1 |
+| Live Operations | — | **0 ô** | 1 |
+
+#### Sáu chỗ giữ lại dấu gạch, và vì sao
+
+| Chỗ | Nó là gì |
+|---|---|
+| `OperationsQueue.tsx` glyph pha | ✓ / ◐ / — đứng **cạnh tên pha**; dấu gạch trang trí chữ "pending", không thay nó |
+| `SandboxCertification.tsx` `EVAL_GLYPH` | mỗi lần dùng đều in `{glyph} {state.toLowerCase()}` — chữ "unavailable" đã có |
+| `IncidentDetail.tsx` glyph cổng | như trên, trạng thái cổng in kèm |
+| `PortfolioThreeSixty.tsx` ô heatmap tương quan | N² ô cỡ 40px: không viết được câu vào ô mà không phá lưới. Nay **hai lý do khác nhau** — chưa publish hệ số, hay dưới sàn mẫu — được tách ra trong `aria-label` và `title` |
+| `AlphaThreeSixty.tsx` bản đồ venue × stage | venue **thật sự không chạy gì** ở stage đó. Caption nay nói thẳng: *"a dash means this venue runs nothing at that stage — not a reading we failed to get"* |
+| `CanaryControlRoom.tsx` | một em dash trong câu văn, không phải giá trị |
+
+#### Ba thứ sửa được vì đọc kỹ chứ không thay máy móc
+
+1. **`clockOf()` in `as_of —`** khi envelope không có `as_of` — đọc như một cái
+   đồng hồ chết. Nay: `not published`.
+2. **`provenance.asOf` kiểu `string`** buộc 8 chỗ gọi phải bịa ra một chuỗi.
+   Nới thành `string | null` ở `marketChart` (6 khai báo) và `ContributionChart`,
+   nơi nó **thật sự được in ra** thì in `as_of not published`. Đây là §11: sửa
+   một lần ở chỗ dùng chung thay vì tám lần ở chỗ gọi.
+3. **Danh sách cặp tương quan** (không phải heatmap) cũng in `—`; ở đó **có
+   chỗ** cho câu chữ, nên nó nói `no coefficient published`.
+
+#### Gate đã chạy
+
+| Gate | Kết quả |
+|---|---|
+| `tsc` frontend | **0 lỗi** |
+| vitest | **121 file · 2 069 pass · 1 skipped** (trước: 120 file · 2 066) |
+| Test chặn tái phát | `absentValues.test.ts` — 3 test: quét cây thật (≥60 file), 0 vi phạm ngoài allowlist, và mỗi file trong allowlist chỉ được giữ **≤2** dấu gạch |
+| Trình duyệt trên dev | 6 màn, bảng đo ở trên, kèm ảnh chụp |
+
+#### Nói thẳng phần chưa ký được bằng mắt
+
+`SandboxCertification.tsx` là file nhiều nhất (13 chỗ), nhưng dev **chưa từng
+chạy sandbox certification** nên màn chỉ hiện khung rỗng (`len=2371`). Mười ba
+chỗ đó **chỉ được test phủ** qua `certification.test.tsx`, **không** được nhìn
+bằng mắt trên dữ liệu thật. Khi nguồn có certification thật thì phải xem lại.
+
 ### A32.1 Điều owner cần phê duyệt
 
 1. **Thứ tự 1→5 như trên** có đúng ý không. (Tôi xếp "sửa cái đang hỏng" lên

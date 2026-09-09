@@ -139,7 +139,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
               <h1 className="exec-af-h1">Alpha Fleet</h1>
               <span className="exec-af-sum">{reading
                 ? "reading…"
-                : <>{summary?.alphaCount ?? list?.page.totalCount ?? items.length} alphas · {summary?.deploymentCount ?? "—"} deployments · {(list?.environment ?? "unknown").toUpperCase()}</>}</span>
+                : <>{summary?.alphaCount ?? list?.page.totalCount ?? items.length} alphas · {summary?.deploymentCount ?? "an unstated number of"} deployments · {(list?.environment ?? "unknown").toUpperCase()}</>}</span>
               <span className="exec-af-wf">entry screen for WF 2a</span>
               <span className="exec-af-spacer" />
               {/* The masthead's own proof of life: the source clock lights when
@@ -166,9 +166,9 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
             {list ? <div className="exec-af-kpis">
               <FleetKpi label="Current exposure" values={summary?.exposureByCurrency ?? []} empty="No open notional" />
               <FleetKpi label="Current position PnL" values={(summary?.currentPositionPnlByCurrency ?? []).map((value) => ({ currency: value.currency, value: value.net }))} empty="No current position PnL" tone="good" />
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Deployments</div><div className="exec-af-kpival">{summary?.deploymentCount ?? "—"}</div><div className="exec-af-kpisub">current Trading System deployment rows</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Deployments</div><div className="exec-af-kpival">{summary?.deploymentCount ?? <span className="exec-af-mute">not published</span>}</div><div className="exec-af-kpisub">current Trading System deployment rows</div></div>
               <div className="exec-af-kpi" data-tint={(summary?.needsAttentionCount ?? 0) > 0 ? "true" : undefined}><div className="exec-af-kpilabel" data-tone={(summary?.needsAttentionCount ?? 0) > 0 ? "warn" : undefined}>Needs attention</div><div className="exec-af-kpival" data-tone={(summary?.needsAttentionCount ?? 0) > 0 ? "bad" : "good"}>{summary?.needsAttentionCount ?? 0}</div><div className="exec-af-kpisub">source health and reconciliation</div></div>
-              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Portfolios</div><div className="exec-af-kpival">{summary?.portfolioCount ?? "—"}</div><div className="exec-af-kpisub">allocation authority in current profile</div></div>
+              <div className="exec-af-kpi"><div className="exec-af-kpilabel">Portfolios</div><div className="exec-af-kpival">{summary?.portfolioCount ?? <span className="exec-af-mute">not published</span>}</div><div className="exec-af-kpisub">allocation authority in current profile</div></div>
             </div> : null}
             <div className="exec-af-filters" role="group" aria-label="Stage">
               {FLEET_FILTERS.map((value) => {
@@ -338,8 +338,8 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
         <td><span className="exec-af-stages">{row.stages.map((c) => <Chip key={c.label} chip={c} />)}</span></td>
         <td data-numeric="true">{row.alloc ?? <span className="exec-af-mute">—</span>}{row.allocCcy ? <> <span data-tone="warn">{row.allocCcy}</span></> : null}</td>
         <td data-numeric="true">{pnl ? <><span data-tone="good">{pnl}</span> <span className="exec-af-mute" data-tone={row.pnlCcy === "VND" ? "warn" : undefined}>{row.pnlCcy}</span>{row.pnlNote ? <div className="exec-af-sub" data-tone="warn">{row.pnlNote}</div> : null}</> : <span className="exec-af-mute">—</span>}</td>
-        <td data-numeric="true" data-tone={row.ddTone}>{row.dd ?? <span className="exec-af-mute">—</span>}</td>
-        <td>{row.spark ? <Spark pts={row.spark} /> : <span className="exec-af-mute">{row.sparkNote ?? "—"}</span>}</td>
+        <td data-numeric="true" data-tone={row.ddTone}>{row.dd ?? <span className="exec-af-mute">not published</span>}</td>
+        <td>{row.spark ? <Spark pts={row.spark} /> : <span className="exec-af-mute">{row.sparkNote ?? "no series published"}</span>}</td>
         <td>
           {health.sessionClock ? <span className="exec-af-mute">{inSession ? "market OPEN · session live" : "SUSPENDED_BY_CALENDAR — resumes 09:00 ICT"}</span> : (
             <><span data-tone={health.tone}>{health.text}</span>{health.link ? <>{health.text.endsWith(" ") ? null : health.tail}<a href={health.link.href}>{health.link.label}</a>{health.text.endsWith(" ") ? health.tail : null}</> : health.tail}</>

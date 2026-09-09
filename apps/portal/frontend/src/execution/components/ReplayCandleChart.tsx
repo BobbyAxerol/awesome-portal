@@ -135,7 +135,7 @@ export const BRACKET_PAIRING_MS = 180_000;
 const fillCard = (f: ReplayFill, o: ReplayOrder | undefined, trip: RoundTrip | undefined): CardRow[] => {
   const rows: CardRow[] = [
     ["fill", f.fillId],
-    ["side · qty", `${f.side ?? "—"} ${qtyFmt(f.qty)}`],
+    ["side · qty", `${f.side ?? "side not published"} ${qtyFmt(f.qty)}`],
     ["price", money(f.price)],
     ["fee", f.commission ? `${money(f.commission)} ${f.commissionCurrency ?? ""} · ${(f.liquidity ?? "").toLowerCase() || "fee"}` : "not published", f.commission ? undefined : "mute"],
   ];
@@ -208,7 +208,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
     return [{
       id: `reject:${o.orderId}`, t, price,
       title: `rejected · order ${o.orderId} · ${o.type ?? ""} ${o.side ?? ""} ${qtyFmt(o.qty)} · ${o.errorCode ?? o.status ?? ""}${o.errorMessage ? ` · ${o.errorMessage}` : ""} · ${stamp(t)}`,
-      card: [["order", `${o.orderId} · ${o.type ?? "ORDER"}`], ["side · qty", `${o.side ?? "—"} ${qtyFmt(o.qty)}`], ["rejected", `${o.errorCode ?? o.status ?? "REJECTED"}`, "bad"], ...(o.errorMessage ? [["reason", o.errorMessage, "bad"] as CardRow] : []), ["drawn at", `${money(String(price))}${num(o.price) === null && num(o.trigger) === null ? " (nearest fill · DERIVED)" : ""}`, "mute"], ["time", stamp(t)]],
+      card: [["order", `${o.orderId} · ${o.type ?? "ORDER"}`], ["side · qty", `${o.side ?? "side not published"} ${qtyFmt(o.qty)}`], ["rejected", `${o.errorCode ?? o.status ?? "REJECTED"}`, "bad"], ...(o.errorMessage ? [["reason", o.errorMessage, "bad"] as CardRow] : []), ["drawn at", `${money(String(price))}${num(o.price) === null && num(o.trigger) === null ? " (nearest fill · DERIVED)" : ""}`, "mute"], ["time", stamp(t)]],
     }];
   });
   // brackets: the source's own bracket groups first (entry_client_order_id → legs by client_order_id), the time heuristic for the rest
@@ -287,8 +287,8 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
     const attention = groupNeedsAttention(g.state);
     return [{
       id: `group:${g.groupId}`, kind: g.contingency, state: g.state, t0, t1: live ? null : ms(g.updatedAt), levels, attention,
-      title: `${g.contingency} group ${g.groupId} · ${g.state ?? ""} · ${g.legs.length} legs · trigger ${g.executionTrigger ?? "—"}${attention ? " · NEEDS ATTENTION" : ""}`,
-      card: [["group", `${g.groupId} · ${g.contingency}`], ["state", g.state ?? "—", attention ? "bad" : live ? "warn" : undefined], ["execution trigger", g.executionTrigger ?? "—"], ["late fill", g.lateFillPolicy ?? "—"], ["remainder", g.remainderPolicy ?? "—"], ["legs", g.legs.map((l) => `${l.side ?? ""} ${l.orderType ?? ""} ${money(l.trigger ?? l.price)} · ${l.state ?? ""}`).join(" | ") || "none"], ["created", stamp(t0)], ...(g.errorMessage ? [["error", g.errorMessage, "bad"] as CardRow] : [])],
+      title: `${g.contingency} group ${g.groupId} · ${g.state ?? ""} · ${g.legs.length} legs · trigger ${g.executionTrigger ?? "not published"}${attention ? " · NEEDS ATTENTION" : ""}`,
+      card: [["group", `${g.groupId} · ${g.contingency}`], ["state", g.state ?? "not published", attention ? "bad" : live ? "warn" : undefined], ["execution trigger", g.executionTrigger ?? "not published"], ["late fill", g.lateFillPolicy ?? "not published"], ["remainder", g.remainderPolicy ?? "not published"], ["legs", g.legs.map((l) => `${l.side ?? ""} ${l.orderType ?? ""} ${money(l.trigger ?? l.price)} · ${l.state ?? ""}`).join(" | ") || "none"], ["created", stamp(t0)], ...(g.errorMessage ? [["error", g.errorMessage, "bad"] as CardRow] : [])],
     }];
   });
   // atomic packages: a band across the pane; legs on other symbols are named in the card
@@ -301,7 +301,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
     return [{
       id: `package:${p.packageId}`, policy: p.policy, state: p.state, t0, t1: live ? null : ms(p.completedAt) ?? ms(p.updatedAt), legCount: p.legCount, symbols, atomic: packageIsAtomic(p.policy), attention,
       title: `${p.policy ?? "package"} ${p.packageId} · ${p.state ?? ""} · ${p.legCount ?? p.plannedOrders.length} legs${symbols.length ? ` · ${symbols.join(" ")}` : ""}`,
-      card: [["package", p.packageId], ["policy", p.policy ?? "—"], ["state", p.state ?? "—", attention ? "bad" : live ? "warn" : undefined], ["legs", String(p.legCount ?? p.plannedOrders.length)], ["gross / net notional", `${money(p.grossNotional)} / ${money(p.netNotional)}`], ["imbalance bps", p.imbalanceBps ?? "—"], ["planned", p.plannedOrders.map((o) => `${o.side ?? ""} ${o.quantity ?? ""} ${o.symbol ?? ""} @ ${o.price ? money(o.price) : "mkt"}`).join(" | ") || "none"], ["created", stamp(t0)]],
+      card: [["package", p.packageId], ["policy", p.policy ?? "not published"], ["state", p.state ?? "not published", attention ? "bad" : live ? "warn" : undefined], ["legs", String(p.legCount ?? p.plannedOrders.length)], ["gross / net notional", `${money(p.grossNotional)} / ${money(p.netNotional)}`], ["imbalance bps", p.imbalanceBps ?? "not published"], ["planned", p.plannedOrders.map((o) => `${o.side ?? ""} ${o.quantity ?? ""} ${o.symbol ?? ""} @ ${o.price ? money(o.price) : "mkt"}`).join(" | ") || "none"], ["created", stamp(t0)]],
     }];
   });
   // ledger: capital movements and settlements on the time axis
@@ -344,7 +344,7 @@ export function buildScene(fills: readonly ReplayFill[], orders: readonly Replay
     return [{
       id: `ladder:${o.orderId}`, price, from, to, side,
       title: `resting ${o.type ?? "LIMIT"} ${o.side ?? ""} ${qtyFmt(o.qty)} @ ${money(o.price)} · order ${o.orderId} · ${o.status ?? ""} · ${stamp(from)}${to ? ` → ${stamp(to)}` : " → working"}`,
-      card: [["order", `${o.orderId} · ${o.type ?? "LIMIT"} · ${o.status ?? ""}`], ["side · qty", `${o.side ?? "—"} ${qtyFmt(o.qty)}`], ["price", money(o.price)], ["armed", stamp(from)], ["ended", to ? stamp(to) : "working", to ? undefined : "warn"]],
+      card: [["order", `${o.orderId} · ${o.type ?? "LIMIT"} · ${o.status ?? ""}`], ["side · qty", `${o.side ?? "side not published"} ${qtyFmt(o.qty)}`], ["price", money(o.price)], ["armed", stamp(from)], ["ended", to ? stamp(to) : "working", to ? undefined : "warn"]],
     }];
   });
   const times = [...markers.map((m) => m.t), ...sceneLegs.map((l) => l.to ?? l.from), ...rejects.map((r) => r.t), ...ladder.map((l) => l.to ?? l.from), ...contingencies.map((c) => c.t1 ?? c.t0), ...packages.map((p) => p.t1 ?? p.t0), ...ledger.map((l) => l.t)];

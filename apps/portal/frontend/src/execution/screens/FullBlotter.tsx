@@ -599,7 +599,7 @@ export function FullBlotter({
           {crossFilter ? (
             <div className="exec-bl-cross">
               <button type="button" className="exec-bl-crosschip" onClick={onResetCrossFilter} aria-label={`Reset the cross-filter ${crossFilter}`}>✕ {smoke ? smoke.crossFilter.label : crossFilter}</button>
-              <span className="exec-bl-note">cross-filter active — <b>{smoke ? smoke.crossFilter.selection.toLocaleString("en-US") : (page.filteredCount ?? "—")} rows in selection</b> of {smoke ? smoke.crossFilter.total.toLocaleString("en-US") : (page.totalCount ?? "—")}</span>
+              <span className="exec-bl-note">cross-filter active — <b>{smoke ? smoke.crossFilter.selection.toLocaleString("en-US") : (page.filteredCount ?? "an unstated number of")} rows in selection</b> of {smoke ? smoke.crossFilter.total.toLocaleString("en-US") : (page.totalCount ?? "an unstated number of")}</span>
             </div>
           ) : null}
           <div className="exec-bl-panel">
@@ -625,7 +625,7 @@ export function FullBlotter({
                   asserted before anyone knew it. */}
               <span>{smoke && crossFilter
                 ? `${smoke.crossFilter.selection.toLocaleString("en-US")} rows in selection · ${smoke.crossFilter.total.toLocaleString("en-US")} total`
-                : status === "loading" ? "reading…" : `${page.totalCount ?? "—"} rows total`}</span>
+                : status === "loading" ? "reading…" : `${page.totalCount ?? "an unstated number of"} rows total`}</span>
               <span className="exec-bl-spacer" />
               <span>◇ conditional · ▸/▾ expandable (bracket legs, fills) · WORKING rows re-price live · every id navigates</span>
             </footer>

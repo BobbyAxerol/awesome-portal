@@ -399,7 +399,7 @@ function DeploymentMap({ venues }: { venues: readonly VenueRow[] }) {
       </div>
       <div className="exec-scroll-x">
       <table className="exec-alpha-map">
-        <caption className="exec-blotter-note">Venue by stage</caption>
+        <caption className="exec-blotter-note">Venue by stage · a dash means this venue runs nothing at that stage — not a reading we failed to get</caption>
         <thead>
           <tr>
             <th scope="col">venue</th>
@@ -586,7 +586,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                         height={200}
                         series={props.demoStageSeries ?? []}
                         yFormatter={(v) => v.toFixed(3)}
-                        provenance={{ authority: "DERIVED", asOf: equity.envelope.asOf ?? "—", formula: equity.envelope.formulaVersion ?? "equity_projection.v1" }}
+                        provenance={{ authority: "DERIVED", asOf: equity.envelope.asOf, formula: equity.envelope.formulaVersion ?? "equity_projection.v1" }}
                         ariaLabel={`Equity by stage, normalized at stage entry — ${scope.venue}, ${scope.window}`}
                       />
                       <p className="exec-af-smoke">! SMOKE DATA — normalized 1.0 at stage entry · series joined by artifact digest · reference shape for the BR-EX-41 stage equity series. Delete when BR-EX-41/34 ship</p>
@@ -600,7 +600,7 @@ export function AlphaThreeSixty(props: AlphaThreeSixtyProps) {
                 />
               )}
               <div data-scope-panel="contribution">
-                <ContributionChart rows={contributions} provenance={{ authority: "DERIVED", asOf: envelope.asOf ?? "—", formula: "contribution.v1 (BR-EX-41)" }} />
+                <ContributionChart rows={contributions} provenance={{ authority: "DERIVED", asOf: envelope.asOf, formula: "contribution.v1 (BR-EX-41)" }} />
                 <Contribution rows={contributions} />
               </div>
             </div>
@@ -742,7 +742,7 @@ export function Tiles({ tiles, demoTiles = null }: { tiles: readonly InsightTile
               days={demoTiles.density.days}
               hours={demoTiles.density.hours}
               cells={demoTiles.density.cells}
-              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "execution.v1 (BR-EX-40 heatmap)" }}
+              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf, formula: "execution.v1 (BR-EX-40 heatmap)" }}
               ariaLabel="Execution density by day and hour, fills per bucket"
             />
             <p className="exec-af-smoke">! SMOKE DATA — {demoTiles.density.foot} · reference shape for the BR-EX-40 heatmap tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>
@@ -755,7 +755,7 @@ export function Tiles({ tiles, demoTiles = null }: { tiles: readonly InsightTile
               height={200}
               series={demoTiles.drift.series}
               yFormatter={(v) => v.toFixed(3)}
-              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf ?? "—", formula: "paper.v1 (BR-EX-40 line pair)" }}
+              provenance={{ authority: "DERIVED", asOf: tile.envelope.asOf, formula: "paper.v1 (BR-EX-40 line pair)" }}
               ariaLabel="Paper versus live equity on the same artifact digest, normalized at window start"
             />
             <p className="exec-af-smoke">! SMOKE DATA — {demoTiles.drift.foot} · reference shape for the BR-EX-40 line-pair tile. Delete when BR-EX-40/34 ship{tile.reason ? ` · real feed: ${tile.reason}` : ""}</p>

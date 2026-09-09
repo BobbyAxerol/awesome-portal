@@ -260,16 +260,25 @@ function cellText(
   matrix: PackedCorrelation,
   row: number,
   column: number,
-): { text: string; insufficient: boolean; samples: number | null } {
+): { text: string; insufficient: boolean; samples: number | null; note: string | null } {
   const value = correlationAt(matrix, row, column);
   const samples = samplesAt(matrix, row, column);
-  if (value === null) return { text: "—", insufficient: true, samples };
+  /*
+   * The dash stays in the cell and the sentence moves to the label.
+   *
+   * This is a heatmap: N² cells at ~40px, where "no coefficient published"
+   * cannot be written without destroying the grid the reader came for. So the
+   * cell keeps a mark, and the two reasons a mark appears — nothing published,
+   * or too few samples to publish one — are told apart in the accessible name
+   * and the tooltip, where there is room to be exact.
+   */
+  if (value === null) return { text: "—", insufficient: true, samples, note: "no coefficient published for this pair" };
   // Only a published count below the floor is insufficiency. A count that was
   // never published means the rule cannot be applied, not that it failed.
   if (samples !== null && samples < SAMPLE_FLOOR) {
-    return { text: "—", insufficient: true, samples };
+    return { text: "—", insufficient: true, samples, note: `below the ${SAMPLE_FLOOR}-sample floor` };
   }
-  return { text: value, insufficient: false, samples };
+  return { text: value, insufficient: false, samples, note: null };
 }
 
 /** |ρ| → 0..4 for the heatmap tint. Colour is presentation; the coefficient itself is never rewritten. */
@@ -362,12 +371,13 @@ function CorrelationMatrix({
                     data-lens={row === lensIndex || column === lensIndex ? "true" : undefined}
                     data-self={row === column ? "true" : undefined}
                     data-abs={cell.insufficient || row === column ? undefined : absBucket(cell.text)}
-                    title={
-                      cell.samples !== null ? `${cell.samples} samples` : "sample count not published"
-                    }
+                    title={[
+                      cell.note,
+                      cell.samples !== null ? `${cell.samples} samples` : "sample count not published",
+                    ].filter(Boolean).join(" · ")}
                   >
                     {/* Heatmap: the tint is |ρ| bucketed for colour only; the number stays the server's string. Click drills into the column's lens. */}
-                    <button type="button" className="exec-pf-cellbtn" onClick={() => onLensChange(column === lensIndex ? null : column)} aria-label={`${rowLabel.displayName} × ${labels[column].displayName}: ${cell.text}`}>
+                    <button type="button" className="exec-pf-cellbtn" onClick={() => onLensChange(column === lensIndex ? null : column)} aria-label={`${rowLabel.displayName} × ${labels[column].displayName}: ${cell.note ?? cell.text}`}>
                       <span className="exec-num">{cell.text}</span>
                     </button>
                   </td>
@@ -490,7 +500,10 @@ function RankedPairs({ ranked }: { ranked: RankedCorrelation }) {
                   {pair.leftId} ↔ {pair.rightId}
                 </th>
                 <td>
-                  <span className="exec-num">{insufficient ? "—" : pair.coefficient}</span>
+                  {/* A list, not the heatmap: there is room here for the sentence. */}
+                  {insufficient
+                    ? <span className="exec-gate-unverified">no coefficient published</span>
+                    : <span className="exec-num">{pair.coefficient}</span>}
                 </td>
                 <td>
                   {pair.sampleCount !== null ? (

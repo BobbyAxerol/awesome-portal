@@ -238,7 +238,7 @@ export function PinnedWatchlist({ panel, demo, demoTick = 0 }: { panel: PinnedPa
                     </>
                   ) : (
                     <>
-                      <span className="exec-cc-pintarget">{pin.targetLabel ?? "—"}</span>
+                      <span className="exec-cc-pintarget">{pin.targetLabel ?? "target not published"}</span>
                       {pin.targetAuthority ? <AuthorityWord authority={pin.targetAuthority} /> : null}
                     </>
                   )}
@@ -264,7 +264,7 @@ export function Today({ panel }: { panel: TodayPanel }) {
         <ul className="exec-cc-today">
           {panel.items.map((item) => (
             <li key={item.id}>
-              <span className="exec-cc-todaykind">{item.kind ?? "—"}</span>
+              <span className="exec-cc-todaykind">{item.kind ?? "kind not published"}</span>
               <a
                 href={
                   // N29 item 6: a condition-expiry item is an obligation — its

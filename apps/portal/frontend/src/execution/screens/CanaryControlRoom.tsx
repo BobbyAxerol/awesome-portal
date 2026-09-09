@@ -157,7 +157,7 @@ export function CanaryControlRoomScreen({
         title: "Promotion decision — via Canary Exit Review",
         detail: (
           <span className="exec-role-body">
-            hold · reduce · rollback · request scale — evidence pack → Canary Exit Review; elapsed time alone never promotes (day {room.dayIndex ?? "—"} / {room.durationDays ?? "—"}).
+            hold · reduce · rollback · request scale — evidence pack → Canary Exit Review; elapsed time alone never promotes (day {room.dayIndex ?? "not published—"} / {room.durationDays ?? "—"}).
           </span>
         ),
         action: policy?.protective?.visible ? (
@@ -356,7 +356,7 @@ export function CanaryControlRoomScreen({
                       {limits.map(([label, value, unit]) => (
                         <tr key={label as string}>
                           <th scope="row">{label}</th>
-                          <td className="exec-num">{value ?? "—"}{value && unit ? ` ${unit}` : ""}</td>
+                          <td className="exec-num">{value ?? "not published"}{value && unit ? ` ${unit}` : ""}</td>
                           <td className="exec-gate-unverified">unavailable</td>
                         </tr>
                       ))}

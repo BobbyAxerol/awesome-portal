@@ -72,7 +72,9 @@ export function fmtBlotterAge(t: number): string {
  * who wants it goes looking.
  */
 export function clockOf(asOf: string | null | undefined): string {
-  if (!asOf) return "—";
+  // Not a dash: "as_of —" reads as a clock that stopped, when the truth is
+  // that the envelope carried no `as_of` at all.
+  if (!asOf) return "not published";
   const m = /(\d{2}:\d{2}:\d{2})/.exec(asOf);
   return m ? `${m[1]}${asOf.endsWith("Z") ? "Z" : ""}` : asOf;
 }

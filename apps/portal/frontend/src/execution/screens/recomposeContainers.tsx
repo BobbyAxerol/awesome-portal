@@ -419,11 +419,11 @@ function blotterRowOf(row: Record<string, unknown>): BlotterRow {
     // chips). Without it those chips matched nothing at all.
     clientOrderId: str(row.client_order_id),
     at: str(row.submitted_at) ?? str(row.updated_at) ?? str(row.created_at) ?? str(row.at) ?? "",
-    deployment: str(row.deployment_id) ?? "—",
+    deployment: str(row.deployment_id) ?? "not published",
     // OR-5 R3: open this order on the alpha's Trade Replay — the blotter rows carry strategy_id (deployment_id is not published there)
     chartHref: (() => { const alpha = str(row.strategy_id) ?? str(row.deployment_id)?.split(":")[0] ?? null; const id = str(row.order_id); return alpha && id ? `/deployments/alphas/${encodeURIComponent(alpha)}?tab=Trade%20Replay&focus=order:${encodeURIComponent(id)}` : null; })(),
-    venue: str(row.venue) ?? "—",
-    symbol: str(row.symbol) ?? "—",
+    venue: str(row.venue) ?? "not published",
+    symbol: str(row.symbol) ?? "not published",
     orderType: (str(row.order_type) as BlotterRow["orderType"]) ?? "LIMIT",
     side: str(row.side) === "SELL" ? "SELL" : "BUY",
     quantity: str(row.quantity) ?? "",
@@ -665,7 +665,7 @@ export function analyticsTiles(
   const factCount = (key: string) => analytics.sourceFacts?.[key]?.length ?? 0;
   const provenance = (formula: string | null | undefined) => ({
     authority: "DERIVED",
-    asOf: asOf ?? "—",
+    asOf: asOf,
     formula: formula ?? analytics.formulaVersion ?? "manager-query-analytics.v1",
   });
   const count = (v: number) => formatExact(String(Math.round(v)), "count").display;
@@ -803,8 +803,8 @@ export function analyticsTiles(
             <BarsChart points={bars} height={140} yFormatter={count} provenance={provenance("client count of published journal events per UTC day")} ariaLabel="Journal events per UTC day (orders and fills), counted from the published journal" />
             {factRows([
               ["journal events", formatExact(String(log.length), "count").display],
-              ["first", first ?? "—"],
-              ["last", last ?? "—"],
+              ["first", first ?? "not published"],
+              ["last", last ?? "not published"],
             ], "Trade replay journal coverage")}
           </>
         );
@@ -816,7 +816,7 @@ export function analyticsTiles(
         const rows: (readonly [string, string])[] = [
           ["window", `${dd.windowDays ?? "?"}d · ${dd.alphas.length} alphas`],
           ["joint drawdown windows", count(dd.overlaps.length)],
-          ...(mine ? [["max drawdown", `${mine.maxDrawdown ?? "not published"} @ ${mine.maxDrawdownAt ?? "—"}`] as const] : []),
+          ...(mine ? [["max drawdown", `${mine.maxDrawdown ?? "not published"} @ ${mine.maxDrawdownAt ?? "a time the source did not publish"}`] as const] : []),
         ];
         if (!mine || mine.series.length === 0) return factRows(rows, "Drawdown overlap (portfolio)");
         return (
@@ -871,7 +871,7 @@ export function analyticsTiles(
       authority: "DERIVED" as Authority,
       asOf: asOf ?? "",
       window: analytics.completeness ?? "window not stated",
-      interval: "—",
+      interval: "interval not published",
       formulaVersion: analytics.formulaVersion,
     };
     if (cap.capabilityId === "stage-equity" && available) {
@@ -1517,7 +1517,7 @@ function placeholderAnalyticsTiles(
       authority: "DERIVED",
       asOf: envelope.asOf ?? "",
       window: "All",
-      interval: "—",
+      interval: "interval not published",
       formulaVersion: null,
     },
     state,
@@ -1990,7 +1990,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
       stage={stage}
       venue={text(account?.venue) ?? text(deployment?.venue) ?? "not published"}
       marginMode={text(account?.account_type) ?? "not published"}
-      settleCurrency={text(account?.base_currency) ?? text(balance?.currency) ?? "—"}
+      settleCurrency={text(account?.base_currency) ?? text(balance?.currency) ?? "currency not published"}
       accountRevision={text(account?.updated_at) ? `updated ${text(account?.updated_at)}` : "revision not published"}
       internal={internal}
       broker={broker}
@@ -2010,7 +2010,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
         virtualTotal: text(headroom.maintenance) ?? "not published",
         physicalTotal: text(headroom.free) ?? "not published",
         headroom: text(headroom.headroom) ?? "not published",
-        currency: text(headroom.currency) ?? text(balance?.currency) ?? "—",
+        currency: text(headroom.currency) ?? text(balance?.currency) ?? "currency not published",
         verdict: text(headroom.verdict) === "AVAILABLE" ? "OK" : text(headroom.verdict) === "BREACHED" ? "EXCEEDED" : "UNKNOWN",
         envelope: { ...sourceEnvelope, authority: "PORTAL" },
         virtualLabel: "maintenance requirement",

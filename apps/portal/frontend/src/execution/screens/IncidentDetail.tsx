@@ -61,6 +61,7 @@ function OpLine({ op }: { op: OpRow }) {
 }
 
 function GateLine({ g }: { g: GateRow }) {
+  // A glyph beside the gate's own words, not a value: the state is printed next to it.
   const glyph = g.state === "done" ? "✓" : g.state === "open" ? "✗" : "—";
   return (
     <span className="exec-inc2-gate" data-state={g.state}>
@@ -313,7 +314,7 @@ export function IncidentDetailScreen({
                 {incident.correlatedOperations.rows.filter((op) => !opsRows.some((o) => o.id === op.operationId)).map((op) => (
                   <span className="exec-inc2-op" key={op.operationId}>
                     <button type="button" className="exec-linkbtn" onClick={() => onOpenOperation(op.operationId)}>{op.operationId}</button>{" "}
-                    <span className="exec-inc2-dim">{op.relationship ?? "link not stated"} · {op.commandKey ?? "—"} · verify {op.verificationResult ?? "not stated"}</span>
+                    <span className="exec-inc2-dim">{op.relationship ?? "link not stated"} · {op.commandKey ?? "command not published"} · verify {op.verificationResult ?? "not stated"}</span>
                   </span>
                 ))}
                 <CountNote collection={incident.correlatedOperations} noun="operations" />
@@ -336,7 +337,7 @@ export function IncidentDetailScreen({
                 {smoke && !resolved ? <span className="exec-inc2-waiting">{smoke.waitingLine}</span> : null}
                 {incident.timeline.rows.map((event) => (
                   <span key={event.eventId} className="exec-inc2-dim">
-                    {event.createdAt ? utcStamp(event.createdAt) : "time not stated"} · {event.action ?? "action not stated"} · {event.actor ?? "actor not stated"} · v{event.versionBefore ?? "—"}→v{event.versionAfter ?? "—"}
+                    {event.createdAt ? utcStamp(event.createdAt) : "time not stated"} · {event.action ?? "action not stated"} · {event.actor ?? "actor not stated"} · {event.versionBefore === null || event.versionBefore === undefined ? "version before not published" : `v${event.versionBefore}`}→{event.versionAfter === null || event.versionAfter === undefined ? "version after not published" : `v${event.versionAfter}`}
                   </span>
                 ))}
                 <CountNote collection={incident.timeline} noun="events" />
