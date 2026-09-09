@@ -313,6 +313,14 @@ const TIME_SERIES_LADDER: Readonly<Record<string, ProfileProjectionBinding["ladd
   performance_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
   account_equity_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
   portfolio_equity_snapshots: { class: "TIME_SERIES", idField: "id", timestampField: "ts" },
+  // BR-EX-81: orders and fills are admitted into the same Portal-owned
+  // append-only retained-current-window store as equity.  This does *not*
+  // claim a Trading-System lifecycle/event-replay contract: every consumer
+  // receives the retained coverage and current-source completeness explicitly.
+  // The worker's persisted, relation-bound cursor is server-only; browsers
+  // use only a named subject BFF and Portal-signed continuations.
+  orders: { class: "TIME_SERIES", idField: "order_id", timestampField: "updated_at" },
+  fills: { class: "TIME_SERIES", idField: "fill_id", timestampField: "trade_time" },
   // EDS-07 retains the source's decision records exactly as records.  They
   // are not promoted to an event/replay authority: the current Manager-v2
   // contract does not publish ordering, correction, or full-history claims.
@@ -460,7 +468,7 @@ const SANDBOX: readonly ProfileProjectionBinding[] = [
   bind("margin_balances", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "manager.accounts", "margin_balances", MARGIN),
   bind("account_sync", "EXECUTION_SANDBOX_CERTIFICATION_SCREEN", "manager.accounts", "account_sync_effective", ACCOUNT_SYNC),
   bind("sizing_decisions", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", SIZING_DECISION),
-  bind("risk_grants", "EXECUTION_GATE_LIVE_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
+  bind("risk_grants", "EXECUTION_GATE_R2_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
 ];
 
 const LIVE: readonly ProfileProjectionBinding[] = [

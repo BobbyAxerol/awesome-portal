@@ -24,7 +24,9 @@ use manager_extension_contract::{
     EventAnchor, EventTail, LedgerEvent, LedgerOperation, ManagerExtensionRead,
     ManagerExtensionRequest, EVENT_LEDGER_CONTRACT_REVISION,
 };
-use manager_v2_client::{ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError};
+use manager_v2_client::{
+    ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError, ManagerV2ClientLimits,
+};
 use projection_core::canonical_value_digest;
 use projection_store_pg::{
     AuthoritativeAnchorOutcome, AuthoritativeAppendOutcome, AuthoritativeResumeState,
@@ -356,7 +358,7 @@ async fn establish_anchor(
     )
     .await?;
     let ManagerExtensionRead::EventAnchor(anchor) = read else {
-        return Err(unexpected_extension_read(read));
+        return Err(unexpected_extension_read(&read));
     };
     validate_anchor(&anchor, admission)?;
     let session = EventLedgerSession::from_anchor(&anchor, binding_digest)?;
@@ -459,7 +461,7 @@ async fn tail_once(
     )?;
     let read = admitted_extension_execute(config, profile_id, store, client, &request).await?;
     let ManagerExtensionRead::EventTail(tail) = read else {
-        return Err(unexpected_extension_read(read));
+        return Err(unexpected_extension_read(&read));
     };
     validate_tail(&tail, &session, admission)?;
     if tail.events.is_empty() {
@@ -692,7 +694,7 @@ fn manager_client(
         profile_id,
         root_ca_pem: &ca,
         client_identity_pem: &identity,
-        limits: Default::default(),
+        limits: ManagerV2ClientLimits::default(),
     })?)
 }
 
@@ -734,7 +736,7 @@ async fn admitted_extension_execute(
     Ok(result?)
 }
 
-fn unexpected_extension_read(read: ManagerExtensionRead) -> ManagerEventLedgerCommandError {
+fn unexpected_extension_read(read: &ManagerExtensionRead) -> ManagerEventLedgerCommandError {
     match read {
         ManagerExtensionRead::Unavailable(_) => ManagerEventLedgerCommandError::SourceUnavailable,
         ManagerExtensionRead::Market(_)

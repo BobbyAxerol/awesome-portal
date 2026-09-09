@@ -1,0 +1,61 @@
+{
+  "schema_version": "portal.execution.market-context-data-layer-adapter.v1",
+  "adapter_revision": "portal.execution.market-context-data-layer.v1",
+  "status": "PORTAL_OWNED_CURRENT_SOURCE_ADAPTER",
+  "authority_boundary": {
+    "portal_to_edge": "TLS_1_3_MTLS_AND_SHORT_LIVED_DELEGATED_JWT",
+    "edge_to_source_proxy": "TLS_1_3_MTLS",
+    "source_proxy_to_data_layer": "LOOPBACK_ONLY_HTTP",
+    "browser_direct_data_layer": false,
+    "portal_direct_data_layer": false,
+    "direct_trading_system_database": false,
+    "source_commands": false
+  },
+  "fixed_operations": [
+    {
+      "operation_id": "managerMarketContextLatestV1",
+      "edge_path": "/internal/v2/manager/market/latest",
+      "source_proxy_path": "/portal/execution/v2/manager/market/latest",
+      "data_layer_path": "/v1/binance/price-last/{instrument}?market=usdm",
+      "profiles": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"],
+      "venue": "BINANCE",
+      "maximum_items": 200,
+      "maximum_response_bytes": 1048576,
+      "history_semantics": "CURRENT_MARKET_OBSERVATION_NO_REPLAY_CLAIM"
+    },
+    {
+      "operation_id": "managerMarketContextCandlesV1",
+      "edge_path": "/internal/v2/manager/market/candles",
+      "source_proxy_path": "/portal/execution/v2/manager/market/candles",
+      "data_layer_path": "/v1/binance/futures/klines/{instrument}",
+      "profiles": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM"],
+      "venue": "BINANCE",
+      "provider_maximum_raw_bars": 1500,
+      "portal_maximum_visual_points": 2000,
+      "maximum_response_bytes": 8388608,
+      "history_semantics": "BOUNDED_PROVIDER_SERIES_NO_REPLAY_CLAIM"
+    }
+  ],
+  "truth_labels": {
+    "latest_completeness": "POLL_BOUNDED",
+    "candles_coverage": "UNKNOWN",
+    "candles_sampling": "SOURCE_BOUNDED",
+    "derived": false
+  },
+  "source_wire_compatibility": {
+    "accepted_binance_usdm_market_values": ["usdm", "usdm_futures", "binance_usdm"],
+    "accepted_decimal_json_types": ["string", "number"],
+    "decimal_handling": "BOUNDED_LEXICAL_NORMALIZATION_NO_ARITHMETIC"
+  },
+  "activation": {
+    "runtime_feature": "FEATURE_EXECUTION_MARKET_CONTEXT",
+    "source_proxy_response_header": "X-Portal-Source-Adapter: portal.execution.market-context-data-layer.v1",
+    "required_evidence": [
+      "source-proxy-config-digest",
+      "edge-image-digest",
+      "positive-latest-probe",
+      "positive-candles-probe",
+      "negative-venue-or-profile-probe"
+    ]
+  }
+}

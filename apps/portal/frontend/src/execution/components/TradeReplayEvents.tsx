@@ -220,11 +220,11 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             <span className="exec-rp-mark">{markLabel} <b data-tone={upTick ? "good" : "bad"}>{money(markPrice)}</b> <span data-tone={upTick ? "good" : "bad"}>{upTick ? "▲" : "▼"}</span></span>
           ) : null}
           <span className="exec-rp-ctl" role="group" aria-label="Replay window">
-            <button type="button" className="exec-rp-chip" onClick={() => chart.current?.zoom(0.6)} aria-label="Zoom in">+</button>
-            <button type="button" className="exec-rp-chip" onClick={() => chart.current?.zoom(1 / 0.6)} aria-label="Zoom out">−</button>
-            <button type="button" className="exec-rp-chip" onClick={() => chart.current?.pan(-1)} aria-label="Pan left">◀</button>
-            <button type="button" className="exec-rp-chip" onClick={() => chart.current?.pan(1)} aria-label="Pan right">▶</button>
-            <button type="button" className="exec-rp-chip" onClick={() => chart.current?.fit()}>Fit</button>
+            <button type="button" className="exec-rp-chip" disabled={bars.length === 0} title={bars.length === 0 ? "No candle window is available to zoom." : undefined} onClick={() => chart.current?.zoom(0.6)} aria-label="Zoom in">+</button>
+            <button type="button" className="exec-rp-chip" disabled={bars.length === 0} title={bars.length === 0 ? "No candle window is available to zoom." : undefined} onClick={() => chart.current?.zoom(1 / 0.6)} aria-label="Zoom out">−</button>
+            <button type="button" className="exec-rp-chip" disabled={bars.length === 0} title={bars.length === 0 ? "No candle window is available to pan." : undefined} onClick={() => chart.current?.pan(-1)} aria-label="Pan left">◀</button>
+            <button type="button" className="exec-rp-chip" disabled={bars.length === 0} title={bars.length === 0 ? "No candle window is available to pan." : undefined} onClick={() => chart.current?.pan(1)} aria-label="Pan right">▶</button>
+            <button type="button" className="exec-rp-chip" disabled={bars.length === 0} title={bars.length === 0 ? "No candle window is available to fit." : undefined} onClick={() => chart.current?.fit()}>Fit</button>
             <button type="button" className="exec-rp-chip" onClick={() => { setTall(!tall); writeTall(!tall); }} aria-pressed={tall} aria-label={tall ? "Compact chart" : "Expand chart"}>{tall ? "Compact" : "Expand"}</button>
           </span>
           <span className="exec-rp-win">{paging ? `loading ${paging === "left" ? "earlier" : "later"} candles · ` : ""}{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"} · crosshair · drag · wheel zoom · drag the price axis · ← → step fills</span>

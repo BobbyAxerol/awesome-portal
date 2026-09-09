@@ -45,17 +45,30 @@ python3 ./scripts/execution-eds12-qualification.py verify-deployed \
 secret-shaped or runtime-widening evidence. It does not deploy, restart,
 migrate, activate a source, dispatch a command or mutate Live.
 
-## BR-EX-80 / BR-EX-81 boundary
+The protected publisher converts Cosign's array output into the exact
+`portal.cosign-signature-evidence.v1` object before it enters the immutable
+N14A evidence pack. The EDS-12 input pin includes that converter, so a future
+release cannot silently return to an array-shaped artifact the pack rejects.
 
-BR-EX-80 is closed only when the source publishes a validated strategy
-`timeframe`/`bar_interval`. Until then the frontend suffix rule remains visibly
-`DERIVED`.
+## BR-EX-80 / BR-EX-81 / Market Context boundary
 
-BR-EX-81 is closed only when the Portal drains complete retained order/fill
-history through the private Manager relation pager into its append-only mirror,
-with cursor/restart/dedupe/count parity proof. A current bounded profile page
-is not subject history and must never be rendered as replay evidence.
+BR-EX-80 is a Portal-owned derived adapter. The named subject BFF takes a
+source-published `timeframe`/`bar_interval` when it exists; otherwise it may
+derive only a known strategy-id suffix and labels it visibly `DERIVED`. It does
+not require a new source return to be useful.
 
-Both are explicit, versioned source-owner inputs rather than unnamed Portal
-technical debt. They do not authorize direct Trading System DB, Redis, broker
-or CLI access.
+BR-EX-81 is a Portal-owned retained-current-window adapter. The projection
+ladder drains the existing Manager current pages behind the Portal, then exact
+Alpha/Account orders and fills BFFs read the durable Portal mirror with
+cursor/restart/dedupe/count parity proof. Its history is visibly not
+authoritative replay: a current retained window must never be rendered as
+global lifecycle replay evidence.
+
+Market Context is a fixed Portal-owned mTLS Edge/Source Proxy adapter around
+the existing Data Layer. It supplies current observations and bounded candles;
+when selected it has no public-venue fallback, and it never claims lifecycle
+replay.
+
+All three require actual protected-main deployed evidence before
+`PRODUCT_ACTIVE`, but none requires direct Trading System DB, Redis, broker or
+CLI access.

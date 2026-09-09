@@ -10,8 +10,10 @@ python3 - \
   "${workflow}" \
   "${root_dir}/deploy/images/execution-edge.Dockerfile" \
   "${root_dir}/deploy/images/source-proxy.Dockerfile" \
-  "${root_dir}/deploy/images/control-api.Dockerfile" <<'PY'
+  "${root_dir}/deploy/images/control-api.Dockerfile" \
+  "${root_dir}/deploy/compose.signed-images.yaml" <<'PY'
 import pathlib
+import re
 import sys
 
 import yaml
@@ -21,6 +23,7 @@ raw = path.read_text(encoding="utf-8")
 edge_dockerfile = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
 proxy_dockerfile = pathlib.Path(sys.argv[3]).read_text(encoding="utf-8")
 control_dockerfile = pathlib.Path(sys.argv[4]).read_text(encoding="utf-8")
+signed_overlay = pathlib.Path(sys.argv[5]).read_text(encoding="utf-8")
 document = yaml.safe_load(raw)
 if not isinstance(document, dict):
     raise SystemExit("Image publication workflow is not a YAML object.")
@@ -63,6 +66,33 @@ for build_only_runtime_path in (
     if build_only_runtime_path not in control_dockerfile:
         raise SystemExit("Control API runtime package-manager removal boundary drifted.")
 
+# A production release applies this overlay after the complete monorepo graph,
+# retaining private supporting services and state while clearing every mutable
+# application build source.
+expected_signed_services = {
+    "portal-api": "PORTAL_API_IMAGE",
+    "roadmap-task-board-api": "PORTAL_ROADMAP_API_IMAGE",
+    "portal-web": "PORTAL_WEB_IMAGE",
+    "control-api-migrate": "PORTAL_CONTROL_API_IMAGE",
+    "control-api-bootstrap": "PORTAL_CONTROL_API_IMAGE",
+    "control-api": "PORTAL_CONTROL_API_IMAGE",
+    "quant-worker-py": "PORTAL_API_IMAGE",
+}
+for service, variable in expected_signed_services.items():
+    match = re.search(
+        rf"(?ms)^  {re.escape(service)}:\n(?P<section>.*?)(?=^  [A-Za-z0-9_-]+:|\Z)",
+        signed_overlay,
+    )
+    if match is None:
+        raise SystemExit(f"Full-stack signed-image override is missing {service}.")
+    section = match.group("section")
+    if f"${{{variable}:?" not in section:
+        raise SystemExit(f"Signed-image override does not bind {service} to {variable}.")
+    if service != "quant-worker-py" and "build: !reset null" not in section:
+        raise SystemExit(f"Signed-image override does not clear the local build for {service}.")
+if "PORTAL_IMAGE_TAG" in signed_overlay or "PORTAL_IMAGE_PREFIX" in signed_overlay:
+    raise SystemExit("Signed-image override must not permit mutable local image tags.")
+
 permissions = document.get("permissions")
 expected_permissions = {
     "actions": "read",
@@ -85,6 +115,15 @@ by_name = {
     if isinstance(step, dict) and isinstance(step.get("name"), str)
 }
 
+release_gate = by_name.get("Wait for commit-bound Portal CI release gates", {}).get("run", "")
+for required in (
+    'select(.name == "Validate Portal monorepo stack"',
+    "and .head_sha == env.GITHUB_SHA)",
+    'and .conclusion == "success")',
+):
+    if required not in release_gate:
+        raise SystemExit("Publication must select the Portal CI gate for the exact commit only.")
+
 edge_build = by_name.get("Build and publish execution edge image", {})
 proxy_build = by_name.get("Build and publish source proxy image", {})
 control_build = by_name.get("Build and publish Control API image", {})
@@ -106,6 +145,18 @@ if (
     or control_options.get("sbom") is not True
 ):
     raise SystemExit("D3 Control API requires push, maximum provenance and SBOM attestations.")
+
+release_candidate = by_name.get("Verify all release images and generate N14A candidate", {}).get("run", "")
+for required in (
+    "verify-buildx-attestations.py",
+    "verify_release_signature",
+    "cosign-signed-oci-index-plus-buildx-attestation-subject-binding",
+    "signed index",
+):
+    if required not in release_candidate:
+        raise SystemExit(f"N14A release verification lost Buildx attestation binding: {required}.")
+if "cosign verify-attestation" in release_candidate:
+    raise SystemExit("N14A must not treat Buildx OCI attestations as Cosign predicate attestations.")
 
 required_actions = {
     "Install keyless image signer": "sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6",
@@ -137,8 +188,14 @@ verify = by_name.get("Verify keyless signatures and write D2 evidence", {}).get(
 for command in ('cosign sign --yes "${EXECUTION_EDGE_IMAGE}"', 'cosign sign --yes "${SOURCE_PROXY_IMAGE}"'):
     if command not in sign:
         raise SystemExit("Both D2 images must be signed by digest.")
-if verify.count("cosign verify") != 2:
-    raise SystemExit("Both D2 signatures must be verified before publication evidence.")
+if (
+    verify.count("scripts/verify-cosign-signature.py") != 1
+    or "verify_signature_with_retry" not in verify
+    or '"${EXECUTION_EDGE_IMAGE}"' not in verify
+    or '"${SOURCE_PROXY_IMAGE}"' not in verify
+    or "seq 1 12" not in verify
+):
+    raise SystemExit("Both D2 signatures must use bounded object-shaped verified publication evidence.")
 for boundary in ("--certificate-identity", "--certificate-oidc-issuer", "SOURCE_COMMIT", "SHA256SUMS"):
     if boundary not in verify:
         raise SystemExit(f"D2 publication evidence is missing {boundary}.")
@@ -146,8 +203,8 @@ d3_sign = by_name.get("Sign D3 Control API by immutable digest", {}).get("run", 
 d3_verify = by_name.get("Verify keyless signature and write D3 Control API evidence", {}).get("run", "")
 if 'cosign sign --yes "${CONTROL_API_IMAGE}"' not in d3_sign:
     raise SystemExit("D3 Control API must be signed by digest.")
-if d3_verify.count("cosign verify") != 1:
-    raise SystemExit("D3 Control API signature must be verified before evidence publication.")
+if d3_verify.count("scripts/verify-cosign-signature.py") != 1 or "seq 1 12" not in d3_verify:
+    raise SystemExit("D3 Control API must use bounded object-shaped verified publication evidence.")
 for boundary in ("--certificate-identity", "--certificate-oidc-issuer", "SOURCE_COMMIT", "SHA256SUMS"):
     if boundary not in d3_verify:
         raise SystemExit(f"D3 publication evidence is missing {boundary}.")

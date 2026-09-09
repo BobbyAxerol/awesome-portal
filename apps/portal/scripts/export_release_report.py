@@ -51,6 +51,11 @@ SCAN_ALLOWLIST = {
     "apps/portal/backend/src/portal_api/repositories/portal_registry.py",
     "apps/portal/backend/src/portal_api/repositories/portal_links.py",
     "scripts/control-api-provision-keyrings.sh",
+    # This verification script contains literal private-key markers solely to
+    # reject them from imported contract artifacts.  Scanning the checker
+    # itself would turn the release hygiene gate into a permanent false
+    # positive; its runtime assertion remains in force.
+    "scripts/execution-d2-test.sh",
 }
 
 

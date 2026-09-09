@@ -11,6 +11,21 @@ PG_CONTAINER="execution-edge-test-postgres"
 REUSE_IMAGE="${EXECUTION_EDGE_CI_IMAGE_REUSE:-false}"
 INTERNAL_NETWORK="${EXECUTION_EDGE_INTERNAL_NETWORK:-false}"
 CARGO_CACHE_VOLUME="${EXECUTION_EDGE_CARGO_CACHE_VOLUME:-}"
+# The full Edge workspace is intentionally broad. Bound local/CI compiler and
+# test concurrency so a transiently busy hosted runner cannot turn resource
+# contention into an opaque Rust exit-101 release failure. This does not retry
+# or suppress any test; every failing test still fails the gate.
+CARGO_BUILD_JOBS="${EXECUTION_EDGE_CARGO_BUILD_JOBS:-2}"
+RUST_TEST_THREADS="${EXECUTION_EDGE_RUST_TEST_THREADS:-2}"
+
+[[ "${CARGO_BUILD_JOBS}" =~ ^[1-9][0-9]*$ && "${CARGO_BUILD_JOBS}" -le 16 ]] || {
+  printf 'EXECUTION_EDGE_CARGO_BUILD_JOBS must be an integer from 1 to 16.\n' >&2
+  exit 2
+}
+[[ "${RUST_TEST_THREADS}" =~ ^[1-9][0-9]*$ && "${RUST_TEST_THREADS}" -le 16 ]] || {
+  printf 'EXECUTION_EDGE_RUST_TEST_THREADS must be an integer from 1 to 16.\n' >&2
+  exit 2
+}
 
 command -v docker >/dev/null 2>&1 || {
   printf 'Docker CLI is required.\n' >&2
@@ -86,27 +101,30 @@ if [[ -n "${CARGO_CACHE_VOLUME}" ]]; then
   cargo_cache_mount=(-v "${CARGO_CACHE_VOLUME}:/cargo:ro")
 fi
 
+# Keep compiler artifacts off the runner's RAM-backed tmpfs. The anonymous
+# Docker volume is scoped to the --rm test container and Docker removes it
+# with the container; source stays read-only and no cache survives the gate.
 "${DOCKER[@]}" run --rm \
   --network "${NETWORK}" \
-  --user "${HOST_UID:-$(id -u)}:${HOST_GID:-$(id -g)}" \
   --read-only \
   --cap-drop ALL \
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m \
   "${cargo_cache_mount[@]}" \
-  --tmpfs /target:rw,exec,mode=1777,size=4096m \
+  --mount type=volume,dst=/target \
   -e HOME=/tmp \
   -e CARGO_HOME=/cargo \
   -e CARGO_TARGET_DIR=/target/build \
+  -e "CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS}" \
+  -e "RUST_TEST_THREADS=${RUST_TEST_THREADS}" \
   -e TEST_PROJECTION_DATABASE_URL="postgres://portal:portal@${PG_CONTAINER}:5432/portal_projection_test" \
   -v "${ROOT_DIR}:/repo:ro" \
   -w /repo/services/portal-execution-edge-rs \
   "${IMAGE}" sh -eu -c '
     cargo fmt --all -- --check
     cargo test --locked --all-targets
-    # The read-only CI container uses a bounded /target tmpfs. Test binaries
-    # and a full-workspace clippy cache together exceed that boundary; release
-    # test artifacts before rebuilding the independent lint gate.
+    # Release test artifacts before rebuilding the independent lint gate. The
+    # anonymous /target volume is destroyed with this one-shot container.
     cargo clean
     cargo clippy --locked --all-targets -- -D warnings
     n06_template_report="$(cargo run --locked -q -p source-qualification --bin n06_verify -- \

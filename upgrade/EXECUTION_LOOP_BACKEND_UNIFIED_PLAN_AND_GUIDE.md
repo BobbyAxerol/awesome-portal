@@ -2508,7 +2508,7 @@ the losses are at the seam and in policy constants.
 | F4 | Fleet/360/Blotter/Command Center "chưa đủ động" — static until reload | only the three profile overview containers subscribe to `useProfileRealtime`; Fleet, Alpha/Portfolio 360, Blotter and the Command Center container have no stream binding. The hook itself only bumps `refreshKey` (full refetch per delta) — correct at today's cadence, a refetch storm at production delta rates | FE realtime coverage + delta application |
 | F5 | Orders/fills/balances marked `PARTIAL · N30_PROFILE_LINEAGE_REJECTED` (364/55/42 rows survive) | `enforceProfileLineage` drops child rows whose parent (account/strategy/deployment) is not in the profile's accepted parent set. With a single `PAPER_BINANCE_USDM` profile, every non-BINANCE-USDM paper parent (e.g. the DNSE/VN market family) is structurally rejected — correct fail-closed behavior, wrong profile taxonomy. There is no rejected-row diagnostic, so nobody can see *which* parents are missing | Rust/TS profile taxonomy + observability |
 | F6 | History panels thin | time-series relations are hard-capped at 400 rows (`SOURCE_PARTIAL`) — a bounded snapshot window, no warm-history path; 30d rollups/sparks for Fleet remain typed-dark because no window aggregation exists | ingestion window policy |
-| F7 | `portfolio_equity_snapshots` = `MANAGER_V2_SOURCE_CONTRACT_REJECTED` | genuine owner-side contract gap (recorded); meanwhile portfolio equity is derivable server-side from `account_equity_snapshots` × allocations as a declared `DERIVED` formula | owner gap + DERIVED candidate |
+| F7 | `portfolio_equity_snapshots` / `sizing_decisions` = `MANAGER_V2_SOURCE_CONTRACT_REJECTED`; Sandbox `risk_grants` = typed partial | not a source-data gap: (a) the projection worker still used the legacy N13B screen-map route instead of the fixed EDS-11R operation; (b) `risk_grants` was incorrectly bound to Live Review rather than Sandbox R2; (c) the Manager record decoder incorrectly parsed high-precision source observation decimals through the fixed-width arithmetic decimal, rejecting valid nested `capital_model` / `request` / `response` fields | Portal Control API + Portal-owned Edge compatibility boundary |
 | F8 | Raw exact decimals rendered verbatim (`28,579.60574880000000` USDT; `0.002500000000000000` qty) | no display-precision rule exists. Exact strings are the correct wire/storage form; the UI lacks a single formatting authority | FE design system |
 | F9 | VNM workbench dark | no `PAPER_DNSE_VNM` (or equivalent) profile exists; venue calendar capability typed-dark — same taxonomy decision as F5 | profile taxonomy + owner |
 | F10 | Several relations truthfully empty (`venue_accounts`, `broker_account_sync_effective`, `reconciliation_findings`, all Live transactional rows) | must stay empty-as-fact; each screen must show the empty state with the relation's own name so an operator can distinguish "no findings" from "not consumed" | verification only |
@@ -3030,9 +3030,26 @@ Append rows here. Do not create another active request file.
 | BR-EX-77 | 2026-09-02 | Fleet/lists freshness + realtime coverage | Fleet chip pinned STALE (5 s constant vs 15–60 s cadence); Fleet/360/Blotter/CC have no stream binding; delta handling is refetch-per-event | Envelope-declared freshness budgets per ingestion class with AGING tier; extend profile-realtime to remaining read screens; bounded delta coalescing | `PORTAL_PROJECTION` envelopes | read-only · low | existing SSE bounds; coalesce ≥1 s | Phase 1 five-kind contract | budget absent → UNKNOWN never fake-FRESH | unit + SSE + journey with motion assertions | Claude (backend co-impl) | Phase 4 / P4-C | `RECEIVED` | all rich read screens | dev read only | Phase 4 §P4-C; findings F3/F4 |
 | BR-EX-78 | 2026-09-02 | Profile taxonomy + lineage observability + window ladder | N30 lineage guard structurally rejects non-BINANCE paper parents (DNSE/VN) with no diagnostics; flat 400-row windows block 30 d rollups/history | Owner profile-set decision (recommend `PAPER_DNSE_VNM`); reject counters by missing-parent class in envelope; per-class ingestion windows + warm SGP history; DERIVED portfolio-equity while MC gap stays typed | `TRADING_SYSTEM` via `PORTAL_PROJECTION`; derived `DERIVED` | read-only · medium (taxonomy touches isolation proofs) | window ladder per N29-RTA budget table | Phase 1 lineage guard; owner decision | strict rejection retained; counters bounded | taxonomy negatives + migration/restore + parity | Codex + Claude | Phase 4 / P4-D | `APPROVED_IMPLEMENTATION_IN_PROGRESS` (2026-09-03, Bobby approved `PAPER_DNSE_VNM`) | VNM workbench, Fleet rollups, history charts | dev read only | Phase 4 §P4-D; findings F5/F6/F7/F9 |
 | BR-EX-79 | 2026-09-03 | Source publication set for full-data screens | Live sweep: equity/performance relations empty (`SOURCE_PARTIAL`, 0 rows), `portfolio_equity` contract-rejected since Phase 1, live balances published without live accounts, cross-family rows in the BINANCE paper feed, `venue_accounts`/margin/sync zero, candles/benchmark/twin-join not activated, no ≥30 d retention | Detailed publication request to the Execution Cell agent: `upgrade/backend/EXECUTION_SOURCE_PUBLICATION_REQUEST_2026-09-03.md` (13 items P0–P2 + 1 question; restates MC-01…09; DNSE deferred by owner) | `TRADING_SYSTEM` / Execution Cell | read-only · none Portal-side | per-item bounds in the request | none (Portal seams delivered Phase 4) | typed states stay until verified | live projection inventory before/after | Execution Cell agent | Phase 4 follow-on | `EXTERNAL_CONTRACT_PENDING` | every data-bearing screen | n/a | request doc §0 table |
-| BR-EX-80 | 2026-09-06 | Alpha 360 · Trade Replay candle interval · Account 360 | The current `strategies` relation only publishes `active`, `trader_id`, `created_at` and `strategy_id`; the replay therefore derives an interval from an id suffix and labels it `DERIVED`. | Publish `strategies[].timeframe` (or `bar_interval`) and carry it through the Fleet register. Vocabulary is `1m\|5m\|15m\|30m\|1h\|4h\|1d`; a published value always wins over the derived suffix. | `TRADING_SYSTEM` | read-only · low | 42 strategies; static per source revision; exact string vocabulary | `strategies` relation / Fleet register; no browser inference becomes source truth | absent → retain the suffix rule and its `DERIVED` label; invalid → typed unavailable field | contract fixture and `replayCandleChart` proof that published timeframe wins | Codex + Trading System owner | EDS-12 | `APPROVED_OWNER_RETURN_REQUIRED` | `TradeReplayLive.publishedTimeframe()` is consumer-ready | no runtime widening | OR-5.6 · DR-21 |
-| BR-EX-81 | 2026-09-06 | Alpha 360 Trade Replay + Orders/Fills · Account 360 · Full Blotter | A bounded profile-wide current page cannot honestly serve subject history: observed input held 812 orders from 11 strategies and 71 fills from 5 strategies across 42 deployed strategies, while strategy-level replay could be empty despite source fills. | Drain the complete retained `orders` and `fills` history of every approved profile only through the Execution Edge into an append-only Portal observation mirror: resumable relation-bound cursor drain, digest dedupe, gap ledger, exact source-vs-mirror counts. Serve subject reads at `alphas/{id}/orders|fills` and `accounts/{id}/orders|fills`, keyset `(updated_at, order_id)` / `(trade_time, fill_id)`, `limit ≤ 500`, exact total and `{completeness, coverage{from,to,rows}, as_of}`. Scope N25 source facts to that same subject. | `TRADING_SYSTEM` rows → `PORTAL_OBSERVATION`; no direct database, Redis, broker or browser source access | read-only · medium: presenting one retained current page as subject history is prohibited | 10³–10⁵ rows/subject; one in-flight drain/profile/relation; page ≤500 at Portal; cursor opaque and relation/profile-bound; a partial drain remains explicitly partial | current Manager relation pager must prove a stable full-retention cursor traversal; EDS-06/N24 mirror and EDS-04 envelope are reused | until verified, preserve the explicit current-page message and profile-wide funnel label; no client-side widening/filter is a substitute | mirror/source exact-count and duplicate/cursor-cycle/gap/restart tests; every strategy with source fills renders a marker; targeted replay remains empty only when source has none | Codex + Trading System owner | EDS-12 | `APPROVED_IMPLEMENTATION_PENDING_SOURCE_PROOF` | `TradeReplayLive` / `replayEvents` consumer is ready; remove the stopgap profile-page filter only after source/mirror parity | no runtime widening; commands and Live mutation remain separately gated | DR-22 · DR-24 · DR-25 · DR-26 · OR-5.12 · BR-EX-50 |
+| BR-EX-80 | 2026-09-06 | Alpha 360 · Trade Replay candle interval · Account 360 | The current `strategies` relation may omit timeframe, so replay derives an interval only from a recognised strategy-id suffix and labels it `DERIVED`. | Portal adapter accepts `strategies[].timeframe`/`bar_interval` now, validates the fixed vocabulary and lets a published value win. No separate Edge return is required. | `TRADING_SYSTEM` current relation → `PORTAL_DERIVED` only when absent | read-only · low | 42 strategies; static per source revision; exact string vocabulary | named Alpha/Account BFF; no browser inference becomes source truth | absent → explicit `DERIVED`; invalid → typed unavailable field | contract fixture + deployed Paper/Sandbox/Live precedence/derived/invalid probes | Codex | EDS-12 | `PORTAL_ADAPTER_READY_DEPLOYED_PROBE_PENDING` | `TradeReplayLive.publishedTimeframe()` consumes the BFF now | command and Live mutation remain disabled | OR-5.6 · DR-21 |
+| BR-EX-81 | 2026-09-06 | Alpha 360 Trade Replay + Orders/Fills · Account 360 · Full Blotter | A bounded profile-wide current page cannot honestly be called total subject history. | Existing current `orders`/`fills` pages are drained only through Edge into the append-only Portal observation mirror; Alpha/Account BFFs use Portal-signed keyset continuations and report exact current-window coverage/completeness. No separate Edge return is required. | `TRADING_SYSTEM` current rows → `PORTAL_OBSERVATION`; no direct database, Redis, broker or browser source access | read-only · medium | one in-flight drain/profile/relation; page ≤500 at Portal; cursor opaque and relation/profile-bound | current Manager relation pager plus EDS-06/N24 mirror | partial/current window stays explicit; no false total-history or browser-side widening | deployed mirror/source count, duplicate/cycle/gap/restart and subject-screen probes | Codex | EDS-12 | `PORTAL_ADAPTER_READY_DEPLOYED_PARITY_PENDING` | `TradeReplayLive` / `replayEvents` consume exact window metadata; authoritative replay remains separately typed, not a release blocker | command and Live mutation remain disabled | DR-22 · DR-24 · DR-25 · DR-26 · OR-5.12 · BR-EX-50 |
 | _next: BR-EX-82_ | — | — | — | — | — | — | — | — | — | — | — | — | `RECEIVED` | — | none until approved | — |
+
+#### 7.2.1 Portal-owned source-adapter amendment — 2026-09-07
+
+The two historical rows above record the original discovery state. Their
+request-owner statuses are superseded for the accepted current-source scope:
+
+| Adapter | Current state | Exact Portal behavior | Production evidence still required |
+|---|---|---|---|
+| BR-EX-80 | `PORTAL_DERIVED_ACTIVE_PENDING_DEPLOYMENT` | A named Alpha/Account subject BFF takes an exact source vocabulary field when available; otherwise it derives only a recognised strategy-id suffix and emits `DERIVED` provenance. | Paper/Sandbox/Live browser proof for source-field precedence and every derived/invalid branch. |
+| BR-EX-81 | `PORTAL_RETAINED_CURRENT_WINDOW_ACTIVE_PENDING_DEPLOYMENT` | Existing Manager current pages are drained server-side into the durable Portal mirror. Exact Alpha/Account order/fill BFFs use Portal-signed continuations, expose coverage and never call the retained window authoritative replay. | Profile drain, duplicate/cycle/restart/count parity plus real subject-screen proof. |
+| Market Context | `PORTAL_EDGE_DATA_LAYER_ACTIVE_PENDING_DEPLOYMENT` | A fixed mTLS Edge/Source Proxy adapter wraps the existing AWS-HK Data Layer for BINANCE latest observation and bounded candles. Selected Data Layer mode has no public fallback. | Positive latest/candle probes, negative profile/venue probe, and real rich-chart proof. |
+
+No browser receives a Manager relation, source cursor, delegated JWT, mTLS
+input, Trading System DB/Redis/broker/CLI access or an unbounded source page.
+The only remaining gate for these three completed adapters is measured
+protected-main deployment evidence; it is not an Execution Edge feature
+request or untracked technical debt.
 
 ### 7.3 Request quality gate
 
@@ -4885,10 +4902,15 @@ waiting for unrelated external gaps.
   frontend bundle and source compatibility digests;
 - stage per operation/screen/profile: Paper, Sandbox, Canary-over-Live, Live;
 - remove expired adapters only after zero-use observation;
-- close BR-EX-80 only from a source-published strategy interval and close
-  BR-EX-81 only from a verified full retained order/fill drain through the
-  Execution Edge into the durable Portal mirror; a bounded current page is
-  never labelled subject history or replay;
+- close BR-EX-80 with an exact Portal-derived suffix interval now, visibly
+  marked `DERIVED`, and supersede it only when a source-published strategy
+  vocabulary field arrives; close BR-EX-81 only from a verified retained
+  order/fill cursor drain through the Execution Edge into the durable Portal
+  mirror, with its exact coverage rather than a false total-history claim;
+- activate Market Context from the existing Data Layer only through the fixed
+  Portal-owned Edge/Source Proxy adapter documented in
+  [`EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md`](./backend/EX_BE_38_PORTAL_OWNED_MARKET_CONTEXT_ADAPTER.md);
+  it remains current observation / bounded-series data, never lifecycle replay;
 - record any remaining external capability as a versioned next-campaign input,
   not hidden technical debt.
 
@@ -4911,9 +4933,326 @@ matrix, static mutation gate and isolated N17A DR harness are implemented in
 [`EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md`](./backend/EX_BE_37_EDS12_FAILURE_DR_IMMUTABLE_RELEASE_QUALIFICATION.md).
 Its current decision is deliberately
 `EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`: it is not a release
-claim.  The only remaining EDS-12 inputs are the real protected-main/deployed
-evidence packet and accepted source proof for BR-EX-80 / BR-EX-81.  No source,
-query, SSE, command or Live-mutation flag is widened by this static slice.
+claim.  The remaining EDS-12 inputs are the real protected-main/deployed
+evidence packet, Portal-derived BR-EX-80 proof, retained-window BR-EX-81
+mirror parity and live probes for the Market Context adapter.  No source,
+query, SSE, command or Live-mutation flag is widened by the static slice.
+
+**Implementation journal (2026-09-07):** Market Context is now implemented as
+a Portal-owned `portal.execution.market-context-data-layer.v1` adapter, rather
+than waiting for a separate Manager-v2 owner return.  The Rust Edge accepts
+only two Source Proxy-labelled Data Layer GET routes and emits browser-safe
+current-price / bounded-candle envelopes.  Static, Rust and Control API tests
+are green; deployment evidence remains mandatory before `PRODUCT_ACTIVE`.
+
+**Implementation journal (2026-09-07, source-adapter closeout):** BR-EX-80
+and BR-EX-81 are now also implemented on the Portal side rather than held as
+requests for a new Execution Edge return. BR-EX-80 is a named Alpha/Account
+subject BFF: an exact source vocabulary field wins, otherwise only the known
+strategy-id suffix is emitted with `DERIVED` provenance. BR-EX-81 adds
+`orders` and `fills` to the server-side projection ladder and exposes exact,
+user-bound Portal continuations over the durable retained-current-window
+mirror. The browser neither drains Manager pages nor sees a source cursor.
+All three adapters are deployable through the existing private mTLS boundary;
+only protected-main and measured deployed evidence remain before
+`PRODUCT_ACTIVE`.
+
+**Deployment wiring amendment (2026-09-07):**
+`compose.execution-current-source.yaml` now carries the two explicit
+Control-API inputs for the Portal-owned Market Context adapter:
+`CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT` and
+`CONTROL_API_EXECUTION_MARKET_CANDLES_SOURCE`.  Selecting `data_layer` is
+closed-world: the browser cannot fall back to a public venue request and the
+only permitted route is the existing mTLS Edge → Source Proxy → Data Layer
+chain.  The static adapter gate verifies this Compose wiring as well as the
+fixed proxy paths, so configuration drift cannot silently turn the release
+back into an unrelated public-data implementation.
+
+**Production release-plumbing amendment (2026-09-07):** the protected-main
+publisher now selects the `Validate Portal monorepo stack` check run only when
+its `head_sha` is the release commit; an older failed check can no longer
+reject a newer green release.  Profile preparation accepts either the explicit
+dev-local Edge content address (and writes the exception as `true`) or a
+signed immutable GHCR Edge digest (and writes the exception as `false`).  A
+production render therefore cannot accidentally carry the local-image
+exception into Paper, Sandbox or Live.  The GHCR registry expression is now
+executed by the release gate (not merely source-text matched), preventing an
+escape-level regression from rejecting a valid signed image during the AWS
+render. The static release and Market Context gates cover both invariants.
+This closes release-plumbing drift only; actual
+`PRODUCT_ACTIVE` still requires the exact signed image, private render,
+preflight, measured profile probes and recorded deployed evidence.
+
+**Production-active execution amendment (2026-09-07):** no further Execution
+Edge or Trading System owner return is required to release the Portal-owned
+BR-EX-80, BR-EX-81 and Market Context adapters. The release candidate binds
+only the named same-origin BFF operations, existing deployment-bound mTLS
+transport and the two fixed Data Layer routes. Its browser corpus now stubs
+those exact BFF operations (not generic `501` fallbacks), proves rich Alpha,
+Account and Trade Replay panels retain their composition under typed source
+states, and disables replay viewport controls when no candle series exists so
+there is no enabled no-op action. The long Admin Actions catalogue is captured
+as its defined shell-visible viewport rather than a fluctuating inert trailing
+scroll area; this is a deterministic evidence correction, not a product UI
+reduction.
+
+The remaining sequence is operational and entirely Portal-owned: merge the
+immutable candidate through protected `main`, consume the publisher's signed
+digest/SBOM/provenance, render a new immutable Portal release with
+`CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT=true` and
+`CONTROL_API_EXECUTION_MARKET_CANDLES_SOURCE=data_layer`, keep
+`EDGE_DEV_LOCAL_IMAGE_ALLOWED=false`, commands disabled and Live mutation
+disabled, then record authenticated Paper/Sandbox/Live probes, rollback and
+browser parity in the sanitized EDS-12 deployed-evidence packet. The
+qualification verifier, not a prose status, is the sole authority allowed to
+emit `PRODUCT_ACTIVE`.
+
+**Full-stack immutable deployment amendment (2026-09-07):**
+`deploy/compose.signed-images.yaml` is the mandatory overlay for the existing
+stable Portal stack. It is applied *after* canonical `compose.yaml`, preserves
+NATS, MinIO, the quant worker, named volumes, private network and service
+identities, and clears every application `build` definition before binding the
+six protected-main image digests. This prevents the unsafe shortcut of
+replacing the full stack with the smaller production example or rebuilding
+from a mutable worktree. The publication gate rejects a release if this
+override loses an image binding or build-reset invariant. Actual activation
+still requires exact digest pull/verification, full-stack render with the
+current-source/projection/realtime overlays, measured profile/browser matrix
+and recorded rollback before the deployed verifier may emit `PRODUCT_ACTIVE`.
+
+**Release-evidence refresh (2026-09-07):** regenerated public registry and
+BAR-05/BAR-16 artifacts after the current-source adapter release work, then
+re-pinned the dependent N29 and EDS-12 immutable manifests in dependency
+order. The N29 and EDS-12 static gates pass again; this restores provenance
+integrity only and does not itself authorize activation.
+
+**Security release correction (2026-09-07):** the first protected-main
+publisher build correctly rejected the Portal API before signing because the
+pinned Debian 13 Python base retained three unfixed `perl-base` Critical CVEs.
+The immutable application images do not execute Perl or use `apt`/`dpkg` after
+construction, so both Python service Dockerfiles now purge that unused package
+after dependency installation. The glibc Python base remains pinned because
+QuantBT, DuckDB and Arrow consume its published binary wheels. Local rebuilt
+Portal API and Roadmap API smoke imports pass, and an isolated tar-based Trivy
+scan reports zero Critical findings for both. The retry must still pass the
+protected publisher's scan, signing, SBOM and provenance gates; this note is
+not deployed-evidence or a `PRODUCT_ACTIVE` assertion.
+
+**Security release correction — web runtime (2026-09-07):** the next
+protected-main publisher correctly stopped before signing when the final
+`nginx:1.27-alpine` Portal web runtime reported OpenSSL Critical findings.
+The replacement is the digest-pinned `nginx:1.29-alpine` manifest verified
+locally with the same tar-based Trivy method: zero Critical findings. The
+existing official nginx template/envsubst entrypoint is preserved; no UI,
+route, BFF, source authority or runtime activation behavior changes. The
+release remains non-active until the retry completes Trivy, Cosign, SBOM,
+provenance, exact-image deployment and EDS-12 deployed verification.
+
+**Publisher attestation correction (2026-09-08):** the subsequent protected
+publisher built, scanned and keylessly signed all six immutable images, but
+the N14A candidate step incorrectly invoked `cosign verify-attestation` for
+Buildx's OCI-native SBOM/provenance manifests. Those are already bound to the
+signed OCI index; they are not separately published Cosign predicate
+attestations. `scripts/verify-buildx-attestations.py` now verifies the signed
+index's one linux/amd64 subject and its exact Buildx SPDX/SLSA in-toto layers
+by immutable digest, after the workflow has verified the index's keyless
+Cosign signature. The verifier has offline negative tests and was exercised
+against the already-published Portal API index. The retry remains fail-closed:
+it must still scan, sign, bind all six evidence sets, generate N14A/N14B and
+pass the deployed EDS-12 evidence gate before this plan may emit
+`PRODUCT_ACTIVE`.
+
+**Publisher registry-consistency correction (2026-09-08):** the same release
+attempt then reached the N14A candidate step before GHCR had made the
+OCI-native Buildx attestation manifests readable on every registry replica.
+The publisher now retries only the exact digest-bound SBOM/provenance verifier
+for up to 12 attempts with a five-second interval.  Each attempt writes into a
+fresh temporary directory; evidence is moved into the N14A pack only after the
+complete pair verifies.  Signature, scan, image digest and all fail-closed
+candidate checks remain unchanged.  This is bounded registry-read resilience,
+not a relaxation or a deployed-evidence claim.
+
+**Publisher evidence-shape correction (2026-09-08):** the next candidate run
+proved that Cosign verification itself was green, but its native `--output
+json` is an array while the immutable N14A pack correctly accepts only
+object-shaped JSON evidence. `scripts/verify-cosign-signature.py` now invokes
+the same keyless verification, checks the exact repository and immutable
+subject digest in every returned record, and writes the bounded
+`portal.cosign-signature-evidence.v1` envelope. The protected publisher uses
+it for D2, D3 and all six N14A images; focused mutation tests and the EDS-12
+input pin prevent a future array/object mismatch. This repairs release
+evidence serialization only; it neither widens runtime authority nor makes a
+`PRODUCT_ACTIVE` claim.
+
+**Cosign v3 bundle compatibility correction (2026-09-08):** a live
+read-only verification of the signed Execution Edge OCI index showed that
+Cosign v3 records `critical.identity.docker-reference` as the complete
+digest-pinned image reference, while v2 records only its repository.  The
+evidence adapter now accepts exactly either form, and in both cases still
+requires the separately recorded immutable manifest digest to match.  Tags,
+unrelated repositories and mismatched subjects remain rejected.  A focused
+v3-shaped regression test and the re-pinned EDS-12 qualification manifest
+bind this correction.  This is a publisher compatibility fix, not a source,
+command, database or runtime-authority expansion.
+
+**Market Context render correction (2026-09-08):** the production renderer
+already accepted `market-data-layer-v1`, but its readiness preflight still
+compared every profile-bound Manager locations pack to the old facade-only
+shape.  That would reject the two explicitly approved loopback Data Layer
+routes at activation.  The preflight now reconstructs the exact base-plus-
+Market-Context pack, allows exactly one latest and one bounded-candles
+`127.0.0.1:8100` upstream, and continues to reject every other HTTP upstream,
+legacy credential, route, port or byte drift.  The D2 fixture renders both
+routes and proves an `8101` alteration fails.  This makes the Portal-owned
+adapter deployable; it neither calls the browser/Data Layer directly nor
+claims deployed evidence before the signed candidate and live probes exist.
+
+**Current-wire compatibility correction (2026-09-08):** post-rollout probes
+against the existing loopback Data Layer found two current, source-owned wire
+variants: latest-trade price is a JSON number, candle payloads identify the
+same Binance USD-M market as `usdm_futures`, and the current-trade snapshot
+uses the provider-bound `binance_usdm` label. The sealed Rust Market Context
+adapter now normalizes only a bounded JSON decimal number or decimal string,
+and accepts only `usdm` / `usdm_futures` / `binance_usdm` inside its fixed
+Binance USD-M adapter. It performs no arithmetic, admits no extra venue,
+route, profile or upstream. The TypeScript BFF now permits the fixed 8 MiB
+candle bound only after the two-operation fixed-path contract validates; the
+generic Manager relation ceiling remains 2 MiB. The adapter contract records
+that exact source-wire set, while EDS-12 now digest-binds the Rust adapter
+itself as well as the BFF and proxy template. Focused Rust and TypeScript
+regressions bind all cases. This correction needs a new signed Edge image and
+deployed probes before EDS-12 can emit `PRODUCT_ACTIVE`.
+
+**Durable-projection preflight correction (2026-09-08):** a Paper
+render-only activation rehearsal exposed that the fail-closed D2 parser had
+omitted two existing, documented durable-projection inputs:
+`EDGE_MANAGER_PROJECTION_OWNER_DIGEST` and
+`EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS`.  The allowlist now admits exactly
+those optional overlay-owned keys; it does not require them for a base D2
+shape, relax any other unknown-key rejection, or alter their values.  The
+offline D2 fixture proves that a `60_000` ms cadence and digest-shaped worker
+identity survive the immutable configuration boundary.  No service restart,
+source request, command, or Trading System change occurred during discovery.
+
+**Rust release-gate reliability correction (2026-09-08):** one protected-main
+CI attempt ended in the isolated Rust Edge fixture with Cargo exit `101`, while
+the identical commit subsequently passed the same Rust gate on a parallel CI
+run and passed locally through format, tests, clippy, N06 and PostgreSQL
+restore.  The fixture now bounds Cargo build jobs and Rust test threads to two
+by default (validated override range `1..16`).  It neither retries nor ignores
+failures; it only prevents transient hosted-runner resource contention from
+obscuring a real result.  No runtime/image/source authority changes are part
+of this correction.
+
+**Control API legacy-ledger recovery (2026-09-08):** the first signed stable
+rollout stopped before the Control API could start because the stable v1.0.1
+ledger already contained `1723680000012_session-activation-proof` while it
+lacked the later-added, equally-prefixed N09 migration. The Portal database was
+backed up before the attempt and no N09 SQL ran. The initial source-only rename
+to `0028` was rejected by a fresh PostgreSQL smoke because N29 (`0015`) depends
+on N09 and would run first. The final repair retains the original N09 file
+byte-for-byte, adds a narrowly scoped Control API migrator preflight that
+installs and records N09 only for that proven legacy ledger state, then records
+`1723680000012_z_n09-governance-workflow-legacy-compatibility` as a schema
+sentinel. The migration-history gate permits only this exact three-file prefix
+triple and rejects every other duplicate. It is a tested forward recovery, not
+a schema rollback, source-authority change or command activation.
+
+**BAR-05 release-freeze refresh (2026-09-08):** the forward-recovery wrapper
+intentionally changes `compose.yaml`, `deploy/compose.production.yaml` and
+`apps/control-api/package.json`, all of which are protected inputs in
+`upgrade/backend/bar05/m0-freeze-manifest.json`. The manifest was regenerated
+at the exact protected-main recovery revision and re-verified with the Python
+3.12 BAR-05 freeze suite. This is an evidence-artifact refresh only: it adds no
+runtime authority, source connectivity, command capability or product scope.
+
+**Current-source partial remediation (2026-09-08):** the three observed
+relation partials are not three missing Trading System capabilities. The
+source responds to the fixed Manager-v2 contract, but the Portal projection
+worker still selected the older N13B screen-map route even where the checked-in
+EDS-11R registry already owns a named, direct Manager operation. The worker
+now selects that generated operation for every registry-covered projection
+relation, retaining the legacy route only for explicitly
+`PORTAL_PROJECTION_ONLY` relations. It continues to use the same
+deployment-bound mTLS, short-lived delegated read assertion, profile binding,
+shared admission and 200-row/opaque-cursor bounds; it introduces neither a
+browser relation selector nor a direct Trading System store path.
+
+The Sandbox `risk_grants` projection binding is corrected from the unrelated
+Live Review screen to `EXECUTION_GATE_R2_REVIEW_SCREEN`, the exact accepted
+Sandbox risk screen. `portfolio_equity_snapshots`, `sizing_decisions` and
+`risk_grants` are regression-pinned to their fixed EDS-11R operation paths.
+The exact Edge decoder was then exercised against one live `sizing_decisions`
+page in memory only: it isolated the original rejection to valid
+high-precision decimal leaves inside `capital_model`, `request` and
+`response`. The Manager-read boundary now preserves its bounded lexical
+base-10 string (maximum 256 bytes) via `ManagerDecimalString`; it no longer
+forces observational source data through `execution_contracts::DecimalString`,
+which remains the bounded type for Portal-owned arithmetic. The same live page
+is accepted by the revised decoder with no source body, record key, credential
+or business value persisted in the Portal workspace.
+
+The complete isolated Control API/PostgreSQL restore gate and focused Rust
+contract suite pass. This is not a fabricated runtime result: `PRODUCT_ACTIVE`
+still requires one protected-main signed release containing both the Control
+API worker and the Edge decoder, followed by the deployed Paper/Sandbox/Live
+probe matrix. No Trading System change is required for these three relations.
+A genuine future source rejection remains a typed partial/unavailable state;
+it is never rewritten to empty or available.
+
+The re-pinned EDS-12 qualification pack now separately binds the current
+source proxy, projection relation ladder, projection worker and Manager-v2
+decoder, so this exact compatibility correction cannot be promoted through a
+stale evidence manifest. The dependent N29 BR-EX-72 source-boundary evidence
+and its immutable manifest were re-pinned in the same change; qualification
+now fails closed if either release layer becomes stale.
+
+**Current-source page-density correction (2026-09-08):** live source probes
+then isolated the remaining `sizing_decisions` partial to a valid 200-row
+Manager relation page whose dense evidence payload exceeds the immutable 1 MiB
+source-response ceiling. This is neither a missing relation nor permission,
+schema, cursor or Trading System capability gap. The Rust Edge now classifies
+only this exact source condition as the typed HTTP `413`
+`MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE`; the Portal maps it to
+`N17B_SOURCE_RESPONSE_TOO_LARGE` and retries only a named, catalogued
+`/internal/v2/manager/relations/public/<relation>` page with a bounded
+server-owned halving sequence (`200 → … → 1`). The original opaque
+relation-bound cursor, profile pin, decimal strings, mTLS/delegated assertion,
+admission limits and 1 MiB source bound are unchanged. Authentication,
+transport, contract, arbitrary paths and a one-row oversized record are never
+retried or rewritten. The same boundary is shared by direct BFF reads and the
+projection worker; therefore the correction restores rich screens without
+exposing source relation/cursor inputs to the browser. Control API plus
+PostgreSQL restore and focused Rust mapping tests are green. A new signed
+immutable release and deployed Paper/Sandbox/Live probe matrix remain required
+before this plan can emit `PRODUCT_ACTIVE`.
+
+**Frontend audit-lock correction (2026-09-08):** the first protected-main
+release retry stopped before publication because the CI's required
+`npm audit --package-lock-only --audit-level=moderate` correctly rejected the
+dev-only Vitest 4.1.10 graph (`GHSA-82fw-gwwq-j7x9`). Both Portal and embedded
+Roadmap frontend graphs now pin the minimal compatible patch release,
+Vitest 4.1.11, including its matching internal packages. No application
+runtime dependency, source contract, browser behavior, image authority or
+Execution scope was widened. A clean Node 22 run proves `npm ci`, the
+moderate audit (zero findings), Portal 1,934-test suite and production build,
+then Roadmap 80-test suite and production build. The protected publisher must
+still produce the new signed image/SBOM/provenance set before activation; this
+entry records the exact CI hygiene repair rather than a `PRODUCT_ACTIVE`
+claim.
+
+**CI freeze-manifest hermeticity correction (2026-09-09):** the audit-lock
+patch correctly changed both frontend package manifests and lockfiles, but the
+BAR-05 manifest that cryptographically freezes those four inputs had not yet
+been refreshed.  The manifest is now regenerated from the checked-in exporter
+and records all four new SHA-256 values.  Its deterministic tests also stub
+only the provenance resolver while exercising every frozen file digest and
+every stable environment field; this removes an accidental dependency on a
+`git` executable from source-archive test runners without weakening release
+provenance (the real exporter still resolves Git HEAD in a release checkout).
+The clean Python 3.12 gate must pass before a signed image is published.  This
+is a CI evidence repair only: no runtime authority, source access, command
+plane or profile activation changes.
 
 ### 17.6 Frontend collaboration lanes
 

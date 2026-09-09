@@ -126,7 +126,16 @@ def test_registry_fixture_exposes_revision_6_delivery_contract() -> None:
         "EXECUTION_WAIVERS_REGISTER_SCREEN": {"query_enabled"},
     }
     for screen in execution_screens:
-        assert screen["contract_revision"] == 2
+        # The bounded Alpha Fleet list is the sole Revision-6 screen promoted
+        # by BR-EX-72 to the current-source contract.  The public handoff must
+        # preserve that distinction rather than misrepresent every execution
+        # screen as the same revision.
+        expected_contract_revision = (
+            3
+            if screen["screen_id"] == "EXECUTION_ALPHA_FLEET_LIST_SCREEN"
+            else 2
+        )
+        assert screen["contract_revision"] == expected_contract_revision
         policy = screen["delivery_policy"]
         enabled = {
             key

@@ -42,11 +42,16 @@ def _digest(path: Path) -> str:
     return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
 
 
-def _regenerate_manifest() -> dict[str, object]:
+def _regenerate_manifest(frozen_at_commit: str) -> dict[str, object]:
     spec = importlib.util.spec_from_file_location("export_m0_freeze", FREEZE_EXPORTER)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    # Regeneration verifies every frozen input.  The commit resolver itself is
+    # intentionally outside that deterministic comparison: source archives
+    # used by hermetic CI/test runners need not carry a Git executable or
+    # repository metadata.  A release exporter still resolves HEAD normally.
+    module._git_commit = lambda: frozen_at_commit
     return module.build_manifest()  # type: ignore[no-any-return]
 
 
@@ -73,7 +78,9 @@ def test_freeze_manifest_digests_verify_every_frozen_file() -> None:
 
 def test_freeze_manifest_regenerates_identically() -> None:
     committed = _load_json(MANIFEST_PATH)
-    regenerated = _regenerate_manifest()
+    frozen_at_commit = committed["frozen_at_commit"]
+    assert isinstance(frozen_at_commit, str)
+    regenerated = _regenerate_manifest(frozen_at_commit)
 
     assert regenerated["file_digests"] == committed["file_digests"]
     assert regenerated["python_pins"] == committed["python_pins"]
@@ -151,9 +158,16 @@ def test_environment_report_stable_subset_is_deterministic() -> None:
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    regenerated = module.build_report()  # type: ignore[no-any-return]
 
     committed = _load_json(REPORT_PATH)
+    git_commit = committed["git_commit"]
+    assert isinstance(git_commit, str)
+    # See the corresponding freeze-manifest test: package/platform output is
+    # the contract here, while Git provenance is exercised by the exporter in
+    # release environments and must not make an otherwise hermetic test suite
+    # depend on a host binary.
+    module._git_commit = lambda: git_commit
+    regenerated = module.build_report()  # type: ignore[no-any-return]
     assert regenerated["packages"] == committed["packages"]
     assert regenerated["python_version"] == committed["python_version"]
     assert regenerated["platform"] == committed["platform"]

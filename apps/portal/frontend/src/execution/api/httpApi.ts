@@ -44,6 +44,7 @@ import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type M
 import { marketContextCandlesPath, readMarketContextCandles, type MarketContextCandles, type MarketContextQuery } from "./marketContext";
 import { readRelationPage, relationPagePath, type RelationPage, type RelationPageQuery } from "./managerRelations";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
+import { readSubjectActivity, subjectActivityPath, type SubjectActivityPage, type SubjectActivityQuery } from "./subjectActivity";
 import {
   commandPlanRequest,
   readCommandPlan,
@@ -383,6 +384,8 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
 
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");
+  const getSubjectActivity = (query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>> =>
+    readGet(subjectActivityPath(query), readSubjectActivity, "The retained subject activity");
   const listParameters = (query: object) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
@@ -497,6 +500,7 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     getOperationalComposition,
     getEquitySparklines,
     getStageDrift,
+    getSubjectActivity,
     getAlphaFleet,
     listPortfolios,
     getBindings,

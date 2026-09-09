@@ -240,10 +240,17 @@ fn validate_source_extensions(qualification: &Value) -> Result<usize, Qualificat
         .map(|row| (text(row, "/request_id"), text(row, "/state")))
         .collect();
     let expected = BTreeSet::from([
-        (Some("BR-EX-80"), Some("SOURCE_OWNER_RETURN_REQUIRED")),
+        (
+            Some("BR-EX-80"),
+            Some("PORTAL_DERIVED_ACTIVE_PENDING_DEPLOYMENT"),
+        ),
         (
             Some("BR-EX-81"),
-            Some("SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED"),
+            Some("PORTAL_RETAINED_CURRENT_WINDOW_ACTIVE_PENDING_DEPLOYMENT"),
+        ),
+        (
+            Some("MARKET_CONTEXT"),
+            Some("PORTAL_EDGE_DATA_LAYER_ACTIVE_PENDING_DEPLOYMENT"),
         ),
     ]);
     if actual != expected || rows.len() != expected.len() {

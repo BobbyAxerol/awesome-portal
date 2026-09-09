@@ -47,11 +47,11 @@ export class MarketContextError extends Error {
 }
 
 /**
- * Named same-origin BFF for the two EDS-11R4 routes.  The compiled intake is
- * pending until Trading System returns a digest-pinned adapter pack, so this
- * service cannot create an mTLS connection merely because a deployment flag
- * was toggled.  Once accepted, it reuses the existing private Manager-v2
- * transport and strips its source envelope before returning to the browser.
+ * Named same-origin BFF for the two EDS-11R4 routes. The compiled intake is
+ * bound to the checked-in Portal-owned Data Layer adapter manifest, so an
+ * environment flag alone cannot create an mTLS connection. Once the exact
+ * adapter is admitted, it reuses the existing private Manager-v2 transport
+ * and strips its source envelope before returning to the browser.
  */
 @Injectable()
 export class MarketContextService {

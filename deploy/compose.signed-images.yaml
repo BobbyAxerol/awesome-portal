@@ -1,0 +1,38 @@
+# Immutable-image override for the *full* Portal compose graph.
+#
+# Apply this after compose.yaml, never instead of it. It deliberately keeps
+# NATS, MinIO, the quant worker, named volumes, service names and network
+# topology from the canonical stack while replacing every application build
+# with the protected-main, content-addressed image signed by the publisher.
+#
+# Docker Compose's !reset tag is required: setting image alone does not clear
+# an inherited build stanza, and a later `up --build` could otherwise replace
+# a verified image with a mutable local worktree.
+services:
+  portal-api:
+    image: ${PORTAL_API_IMAGE:?Set PORTAL_API_IMAGE to the signed immutable digest}
+    build: !reset null
+
+  roadmap-task-board-api:
+    image: ${PORTAL_ROADMAP_API_IMAGE:?Set PORTAL_ROADMAP_API_IMAGE to the signed immutable digest}
+    build: !reset null
+
+  portal-web:
+    image: ${PORTAL_WEB_IMAGE:?Set PORTAL_WEB_IMAGE to the signed immutable digest}
+    build: !reset null
+
+  control-api-migrate:
+    image: ${PORTAL_CONTROL_API_IMAGE:?Set PORTAL_CONTROL_API_IMAGE to the signed immutable digest}
+    build: !reset null
+
+  control-api-bootstrap:
+    image: ${PORTAL_CONTROL_API_IMAGE:?Set PORTAL_CONTROL_API_IMAGE to the signed immutable digest}
+    build: !reset null
+
+  control-api:
+    image: ${PORTAL_CONTROL_API_IMAGE:?Set PORTAL_CONTROL_API_IMAGE to the signed immutable digest}
+    build: !reset null
+
+  quant-worker-py:
+    # Quant workers run the Portal API image by design; bind that image too.
+    image: ${PORTAL_API_IMAGE:?Set PORTAL_API_IMAGE to the signed immutable digest}

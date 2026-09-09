@@ -14,6 +14,11 @@ services:
       FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: ${CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE:-false}
       FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: ${CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX:-false}
       FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: ${CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_LIVE:-false}
+      # EDS-12 Portal-owned Market Context is independently opt-in even when
+      # a profile is readable.  `data_layer` has no public-venue fallback:
+      # it remains on the private Edge -> Source Proxy -> Data Layer path.
+      FEATURE_EXECUTION_MARKET_CONTEXT: ${CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT:-false}
+      EXECUTION_MARKET_CANDLES_SOURCE: ${CONTROL_API_EXECUTION_MARKET_CANDLES_SOURCE:-venue_public}
       FEATURE_EXECUTION_COMMAND_RELAY: "false"
       EXECUTION_EDGE_PRIVATE_KEY_FILE: /run/secrets/execution-edge/delegation-private-key.pem
       EXECUTION_EDGE_KEY_ID: ${EXECUTION_EDGE_KEY_ID:-execution-k1}

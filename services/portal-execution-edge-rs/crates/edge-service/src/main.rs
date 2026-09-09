@@ -1883,15 +1883,12 @@ async fn manager_market_latest(
         Ok(access) => access,
         Err(response) => return response,
     };
-    let request = match ManagerExtensionRequest::market_latest(query.venue, query.instrument) {
-        Ok(request) => request,
-        Err(_) => {
-            return manager_problem(
-                StatusCode::BAD_REQUEST,
-                "MANAGER_MARKET_QUERY_INVALID",
-                "The market observation query is outside the fixed contract.",
-            );
-        }
+    let Ok(request) = ManagerExtensionRequest::market_latest(query.venue, query.instrument) else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_MARKET_QUERY_INVALID",
+            "The market observation query is outside the fixed contract.",
+        );
     };
     manager_extension_read_response(
         admitted_manager_extension_execute(&state, access.profile_id, access.client, &request)
@@ -1915,22 +1912,19 @@ async fn manager_market_candles(
         Ok(access) => access,
         Err(response) => return response,
     };
-    let request = match ManagerExtensionRequest::market_candles(
+    let Ok(request) = ManagerExtensionRequest::market_candles(
         query.venue,
         query.instrument,
         query.interval,
         query.from_ms,
         query.to_ms,
         query.point_limit,
-    ) {
-        Ok(request) => request,
-        Err(_) => {
-            return manager_problem(
-                StatusCode::BAD_REQUEST,
-                "MANAGER_MARKET_QUERY_INVALID",
-                "The market candle query is outside the fixed contract.",
-            );
-        }
+    ) else {
+        return manager_problem(
+            StatusCode::BAD_REQUEST,
+            "MANAGER_MARKET_QUERY_INVALID",
+            "The market candle query is outside the fixed contract.",
+        );
     };
     manager_extension_read_response(
         admitted_manager_extension_execute(&state, access.profile_id, access.client, &request)
@@ -2477,6 +2471,17 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
             "MANAGER_V2_SOURCE_UNAVAILABLE",
             "Manager source is temporarily unavailable.",
         ),
+        // A fixed relation page can be made smaller without widening a route,
+        // cursor, profile, or byte budget.  Preserve this distinction so the
+        // Portal BFF can make one bounded server-owned page-size adjustment
+        // instead of misclassifying valid high-density evidence as a contract
+        // failure.
+        ManagerV2ClientError::ResponseTooLarge
+        | ManagerV2ClientError::UnexpectedHttpStatus(413) => manager_problem(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE",
+            "Manager relation page exceeded the published byte limit.",
+        ),
         ManagerV2ClientError::InvalidSourceProxyOrigin
         | ManagerV2ClientError::InvalidProfileId
         | ManagerV2ClientError::MissingTrustAnchor
@@ -2488,10 +2493,11 @@ fn manager_client_error_response(error: &ManagerV2ClientError) -> Response {
         | ManagerV2ClientError::RedirectDenied
         | ManagerV2ClientError::ContractHeaderMismatch
         | ManagerV2ClientError::ExtensionContractHeaderMismatch
+        | ManagerV2ClientError::MarketContextAdapterHeaderMismatch
         | ManagerV2ClientError::InvalidContentType
-        | ManagerV2ClientError::ResponseTooLarge
         | ManagerV2ClientError::UnexpectedHttpStatus(_)
         | ManagerV2ClientError::ExtensionUnexpectedHttpStatus(_)
+        | ManagerV2ClientError::MarketContextAdapterUnexpectedHttpStatus(_)
         | ManagerV2ClientError::Contract(_)
         | ManagerV2ClientError::Extension(_) => manager_problem(
             StatusCode::BAD_GATEWAY,
@@ -5091,6 +5097,15 @@ mod tests {
         assert_eq!(
             manager_client_error_response(&ManagerV2ClientError::ContractHeaderMismatch).status(),
             StatusCode::BAD_GATEWAY
+        );
+        assert_eq!(
+            manager_client_error_response(&ManagerV2ClientError::ResponseTooLarge).status(),
+            StatusCode::PAYLOAD_TOO_LARGE
+        );
+        assert_eq!(
+            manager_client_error_response(&ManagerV2ClientError::UnexpectedHttpStatus(413))
+                .status(),
+            StatusCode::PAYLOAD_TOO_LARGE
         );
     }
 

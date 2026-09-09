@@ -16,7 +16,6 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use execution_contracts::DecimalString;
 use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use thiserror::Error;
@@ -31,6 +30,7 @@ const MAXIMUM_TEXT_BYTES: usize = MAXIMUM_RESPONSE_BYTES;
 const MAXIMUM_STRUCTURED_DEPTH: usize = 16;
 const MAXIMUM_OBJECT_MEMBERS: usize = 1_600;
 const MAXIMUM_RELATIONS: usize = 10_000;
+const MAXIMUM_MANAGER_DECIMAL_BYTES: usize = 256;
 
 const MANAGER_PREFIX: &str = "/portal/execution/v2/manager";
 const EXPECTED_CAPABILITIES: [(&str, &str); 5] = [
@@ -627,13 +627,54 @@ impl ManagerUnavailable {
     }
 }
 
+/// An exact Manager-source decimal retained as a lexical base-10 string.
+///
+/// Manager catalogue records are an observation/read boundary. They can carry
+/// a higher precision than the fixed-width decimal used for Portal-owned
+/// arithmetic, so decoding must preserve the source lexeme rather than round
+/// or reject an otherwise valid value. Callers that need arithmetic must
+/// explicitly convert to a bounded numeric type in their own contract.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(transparent)]
+pub struct ManagerDecimalString(String);
+
+impl ManagerDecimalString {
+    /// Validates and preserves an exact, non-scientific Manager decimal.
+    ///
+    /// The bounded lexical form is intentionally separate from
+    /// `execution_contracts::DecimalString`: this type is never a license to
+    /// perform Portal financial arithmetic at unbounded source precision.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ContractError::InvalidManagerValue`] when `raw` is not a
+    /// bounded plain base-10 decimal string.
+    pub fn parse(raw: &str) -> Result<Self, ContractError> {
+        if !is_exact_decimal(raw) || raw.len() > MAXIMUM_MANAGER_DECIMAL_BYTES {
+            return Err(ContractError::InvalidManagerValue);
+        }
+        Ok(Self(raw.to_owned()))
+    }
+
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for ManagerDecimalString {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
 /// Recursively redacted, exact tagged value from a manager record.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ManagerValue {
     Null,
     Boolean(bool),
     Integer(i64),
-    Decimal(DecimalString),
+    Decimal(ManagerDecimalString),
     Text(String),
     Timestamp(DateTime<Utc>),
     Array(Vec<Self>),
@@ -1502,12 +1543,7 @@ fn decode_manager_value(
                 .value
                 .as_str()
                 .ok_or(ContractError::InvalidManagerValue)?;
-            if !is_exact_decimal(value) || value.len() > 256 {
-                return Err(ContractError::InvalidManagerValue);
-            }
-            DecimalString::parse(value)
-                .map(ManagerValue::Decimal)
-                .map_err(|_| ContractError::InvalidManagerValue)
+            ManagerDecimalString::parse(value).map(ManagerValue::Decimal)
         }
         ManagerValueKind::Text => {
             let value = wire

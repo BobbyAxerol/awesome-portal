@@ -321,6 +321,15 @@ sed -i \
   "${tmp_dir}/candidate.env"
 chmod 0600 "${tmp_dir}/candidate.env"
 
+# The durable-projection overlay owns these optional runtime inputs.  They are
+# not required for the base D2 shape, but an immutable profile release must
+# not be rejected merely because it retains its documented worker identity
+# and bounded source poll cadence.
+printf '%s\n' \
+  'EDGE_MANAGER_PROJECTION_OWNER_DIGEST=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
+  'EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS=60000' \
+  >> "${tmp_dir}/candidate.env"
+
 "${renderer}" --env-file "${tmp_dir}/candidate.env" --output "${proxy_config}" >/dev/null
 [[ "$(stat -c '%a' "${proxy_config}")" == 640 ]]
 [[ "$(stat -c '%g' "${proxy_config}")" == "${runtime_gid}" ]]
@@ -578,6 +587,33 @@ sed -i 's#127\.0\.0\.1:8223#127.0.0.1:8225#' "${manager_locations}"
 if "${preflight}" --env-file "${manager_active_env}" --mode manager-active-offline \
     >/dev/null 2>&1; then
   printf 'Manager profile overlay preflight accepted an unapproved facade upstream.\n' >&2
+  exit 1
+fi
+"${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
+
+# EDS-12 Market Context is Portal-owned but shares the profile-bound Manager
+# transport.  Its two exact loopback Data Layer routes are the only permitted
+# HTTP upstream exception; test the rendered pack and reject a port drift.
+manager_market_env="${tmp_dir}/manager-market.env"
+manager_market_config="${tmp_dir}/srv/primus/portal/source-proxy/nginx.manager-market.conf"
+cp "${manager_active_env}" "${manager_market_env}"
+sed -i \
+  -e 's/^SOURCE_PROXY_MANAGER_EXTENSION_SET=eds11r-r4-r5$/SOURCE_PROXY_MANAGER_EXTENSION_SET=market-data-layer-v1/' \
+  -e "s#^SOURCE_PROXY_CONFIG_FILE=.*#SOURCE_PROXY_CONFIG_FILE=${manager_market_config}#" \
+  "${manager_market_env}"
+chmod 0600 "${manager_market_env}"
+"${renderer}" --env-file "${manager_market_env}" --output "${manager_market_config}" \
+  --manager-locations-output "${manager_locations}" >/dev/null
+"${preflight}" --env-file "${manager_market_env}" --mode manager-active-offline >/dev/null
+[[ "$(grep -Fxc '    auth_request /_manager_v2_issue;' "${manager_locations}")" -eq 7 ]]
+[[ "$(grep -Fxc '    proxy_pass https://127.0.0.1:8223;' "${manager_locations}")" -eq 5 ]]
+[[ "$(grep -Fxc '    proxy_pass http://127.0.0.1:8100/v1/binance/price-last/$arg_instrument?market=usdm;' "${manager_locations}")" -eq 1 ]]
+[[ "$(grep -Fxc '    proxy_pass http://127.0.0.1:8100/v1/binance/futures/klines/$arg_instrument?interval=$arg_interval&limit=$arg_point_limit&start_time=$arg_from_ms&end_time=$arg_to_ms;' "${manager_locations}")" -eq 1 ]]
+sed -i 's#127\.0\.0\.1:8100#127.0.0.1:8101#' "${manager_locations}"
+if "${preflight}" --env-file "${manager_market_env}" --mode manager-active-offline \
+    >/dev/null 2>&1; then
+  printf 'Manager preflight unexpectedly accepted a widened Market Context Data Layer upstream.\n' >&2
   exit 1
 fi
 "${renderer}" --env-file "${manager_active_env}" --output "${manager_active_config}" \

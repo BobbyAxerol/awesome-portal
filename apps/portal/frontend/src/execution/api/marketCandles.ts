@@ -53,6 +53,8 @@ export function timeframeFromStrategyId(id: string | null | undefined): MarketCa
 }
 
 export interface MarketCandlesQuery {
+  /** The selected private Edge profile when Data Layer is the configured source. */
+  environment?: "paper" | "sandbox" | "live";
   /** defaults to BINANCE; the deployment's venue when the events carry one */
   venue?: MarketVenue;
   symbol: string;
@@ -129,7 +131,7 @@ export function readMarketCandles(raw: unknown): MarketCandlesPayload | null {
 
 export function marketCandlesPath(q: MarketCandlesQuery): string {
   const venue = q.venue ?? "BINANCE";
-  const params = new URLSearchParams({ venue, market: MARKET_OF_VENUE[venue], symbol: q.symbol, interval: q.interval });
+  const params = new URLSearchParams({ environment: q.environment ?? "paper", venue, market: MARKET_OF_VENUE[venue], symbol: q.symbol, interval: q.interval });
   if (q.fromMs !== undefined) params.set("from_ms", String(Math.round(q.fromMs)));
   if (q.toMs !== undefined) params.set("to_ms", String(Math.round(q.toMs)));
   params.set("limit", String(Math.min(MARKET_CANDLES_MAX_LIMIT, Math.max(1, Math.round(q.limit ?? 500)))));

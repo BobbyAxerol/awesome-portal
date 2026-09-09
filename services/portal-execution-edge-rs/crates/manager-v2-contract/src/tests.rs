@@ -294,6 +294,46 @@ fn tagged_values_preserve_exact_decimal_and_reject_invalid_nested_values() {
 }
 
 #[test]
+fn manager_values_preserve_high_precision_source_decimals_without_rounding() {
+    // This is deliberately longer than the fixed-width decimal used by
+    // Portal-owned arithmetic. A Manager read is observational, so the source
+    // lexeme must survive intact rather than being rounded or rejected.
+    let source_decimal = "0.123456789012345678901234567890123456789012345678901234567890";
+    let catalogue = catalogue();
+    let orders = catalogue.relation("public", "orders").unwrap();
+    let request = ManagerV2Request::relation_records(orders, None, PageLimit::default()).unwrap();
+    let mut nested = record("public", "orders", "record-key");
+    nested["fields"]["amount"] = json!({
+        "kind": "OBJECT",
+        "value": {
+            "source_precision": {"kind": "DECIMAL", "value": source_decimal}
+        }
+    });
+    let body = envelope(json!({
+        "relation": {"schema": "public", "relation": "orders"},
+        "items": [nested],
+        "next_cursor": null
+    }));
+    let ManagerPayload::RelationRecords(parsed) =
+        decode_success(&request, &serde_json::to_vec(&body).unwrap()).unwrap()
+    else {
+        panic!("expected relation page");
+    };
+    let ManagerValue::Object(values) = &parsed.data().items()[0].fields()["amount"] else {
+        panic!("expected object");
+    };
+    let ManagerValue::Decimal(value) = &values["source_precision"] else {
+        panic!("expected decimal");
+    };
+    assert_eq!(value.as_str(), source_decimal);
+    assert_eq!(value.to_string(), source_decimal);
+    assert_eq!(
+        serde_json::to_string(value).unwrap(),
+        format!("\"{source_decimal}\"")
+    );
+}
+
+#[test]
 fn unavailable_and_capabilities_are_typed_and_runtime_qualified() {
     let unavailable = json!({
         "contract_version": RUNTIME_CONTRACT_REVISION,

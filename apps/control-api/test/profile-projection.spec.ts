@@ -609,6 +609,32 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(() => profileProjectionBindingAdmission({ relation: "venue_credentials" }))
       .toThrow("EDS11R projection relation is not admissible");
   });
+
+  it("routes catalogued projection relations through fixed EDS-11R operations", async () => {
+    const policies: Array<{ relation: string; policy?: { relation: string; sourceId: string } }> = [];
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string, _query: unknown,
+        policy?: { relation: string; sourceId: string },
+      ) => {
+        policies.push({ relation, policy });
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+
+    for (const relation of ["portfolio_equity_snapshots", "sizing_decisions", "risk_grants"]) {
+      expect(policies.find((call) => call.relation === relation)?.policy).toMatchObject({
+        relation,
+        sourceId: expect.stringMatching(/^manager\.current\./),
+      });
+    }
+    expect(profileProjectionCatalog("sandbox").find((binding) => binding.relation === "risk_grants"))
+      .toMatchObject({ screenId: "EXECUTION_GATE_R2_REVIEW_SCREEN" });
+    await worker.onApplicationShutdown();
+  });
 });
 
 function document(alphaId: string): ProfileProjectionDocument {
@@ -1030,7 +1056,14 @@ describe("Full-depth time-series history store (owner directive 2026-09-03)", ()
     const filtered = await service.read("paper", equityKey, { account_id: "acc_a" });
     expect(filtered.items.map((item: Record<string, unknown>) => item.id)).toEqual(["eq_1", "eq_3"]);
 
-    await expect(service.read("paper", "manager.orders:orders", {}))
+    const retainedOrders = await service.read("paper", "manager.orders:orders", {});
+    expect(retainedOrders).toMatchObject({
+      authority: "PORTAL_SGP_HISTORY_MIRROR",
+      relation_key: "manager.orders:orders",
+      state: "EMPTY",
+      coverage: { row_count: 0 },
+    });
+    await expect(service.read("paper", "manager.strategies:strategies", {}))
       .rejects.toMatchObject({ code: "N33_HISTORY_RELATION_NOT_ACCEPTED" });
     await expect(service.read("paper", equityKey, { limit: 999_999 }))
       .rejects.toMatchObject({ code: "N33_HISTORY_LIMIT_INVALID" });

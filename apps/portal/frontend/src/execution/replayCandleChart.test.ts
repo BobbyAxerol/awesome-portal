@@ -224,7 +224,7 @@ describe("interval from the strategy id (DERIVED until BR-EX-80)", () => {
     expect(timeframeFromStrategyId(null)).toBeNull();
   });
   it("routes the candles query to the deployment's venue", () => {
-    expect(marketCandlesPath({ venue: "OKX", symbol: "ETHUSDT", interval: "30m" })).toBe("/market/venue-candles?venue=OKX&market=SWAP&symbol=ETHUSDT&interval=30m&limit=500");
+    expect(marketCandlesPath({ venue: "OKX", symbol: "ETHUSDT", interval: "30m" })).toBe("/market/venue-candles?environment=paper&venue=OKX&market=SWAP&symbol=ETHUSDT&interval=30m&limit=500");
     expect(marketCandlesPath({ symbol: "ETHUSDT", interval: "1h" })).toContain("venue=BINANCE&market=USDM");
   });
 });

@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:0efd98d1f14acaae3c3c2fd756867d7c1a7e97f0db5157ad1ab2464a70918811"
+      "sha256": "sha256:bfa17dfd12de76755df6057eb9ea6f0ec27b5ee6637802b5bb6506d719031e97"
     },
     {
       "id": "n29_debt",
@@ -90,12 +90,47 @@
     {
       "id": "protected_release_workflow",
       "file": ".github/workflows/publish-images.yml",
-      "sha256": "sha256:a38c0664b40737532fba09f8b97ddc5ce729f7e9826275673136df01beaabbcd"
+      "sha256": "sha256:d820535230e0d5da6462ef23f8445de143666e16ac30d9a7127443638a75e9e8"
+    },
+    {
+      "id": "cosign_signature_adapter",
+      "file": "scripts/verify-cosign-signature.py",
+      "sha256": "sha256:d4e3624dc0bb8ba5ee09a11a2b949c5a421eba079b223259d8f5e0c37454b67d"
+    },
+    {
+      "id": "image_publication_gate",
+      "file": "scripts/execution-image-publication-test.sh",
+      "sha256": "sha256:90c2d2f6404a4c8dd697bc4de91b64ff92925ca9a2203a91f2f4ba26e130f600"
+    },
+    {
+      "id": "current_source_compose",
+      "file": "deploy/compose.execution-current-source.yaml",
+      "sha256": "sha256:9037586d2e4836db7fd392221a664abce835012843933646fff379004e4f6884"
+    },
+    {
+      "id": "profile_runtime_prepare",
+      "file": "scripts/execution-profile-runtime-prepare.sh",
+      "sha256": "sha256:3543d6fafa098b505edb8a9db21c66378f63b097a801a8568948b81b399543ed"
+    },
+    {
+      "id": "market_context_static_gate",
+      "file": "scripts/execution-market-context-data-layer-adapter-test.sh",
+      "sha256": "sha256:e9125b40b1f43cff0e32b6662646c0a1bb74a9235e00634f0ccc0e325699c17a"
     },
     {
       "id": "current_source_proxy",
       "file": "apps/control-api/src/execution/current-source.proxy.ts",
-      "sha256": "sha256:8313eb9c4f390a9df2397ffda2241dd18a89a14667dc0a673ff2d1cf27a132fa"
+      "sha256": "sha256:ff776fedbabfa778110d371bf9470ddc249486bad82d166e9d2a59797fee9618"
+    },
+    {
+      "id": "manager_v2_contract_decoder",
+      "file": "services/portal-execution-edge-rs/crates/manager-v2-contract/src/lib.rs",
+      "sha256": "sha256:1d9a526294be46a6861abcd8333d7aff8714954b432b0d4bbbdac2a3515777c6"
+    },
+    {
+      "id": "market_context_rust_adapter",
+      "file": "services/portal-execution-edge-rs/crates/manager-extension-contract/src/lib.rs",
+      "sha256": "sha256:f53352c2bd254ff7c3202193ebcf89035c9aa51dc2e92e1799e6d64d212d1d39"
     },
     {
       "id": "manager_projection",
@@ -113,9 +148,64 @@
       "sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795"
     },
     {
+      "id": "subject_activity_bff",
+      "file": "apps/control-api/src/execution/subject-activity.service.ts",
+      "sha256": "sha256:c3daa42f15b493155ae35bc1365420294c737255fe2fa22e79e0641b17d99394"
+    },
+    {
+      "id": "subject_activity_ui",
+      "file": "apps/portal/frontend/src/execution/useSubjectActivityFacts.ts",
+      "sha256": "sha256:5faf1d6f7f1593a6a4dddbcc6e59cc918445023055027d760571b3afb300fcd6"
+    },
+    {
+      "id": "projection_relation_ladder",
+      "file": "apps/control-api/src/execution/profile-projection.catalog.ts",
+      "sha256": "sha256:dca663c6d4779c25d13adb3ebf5c37b300f301029bef4f9763f641f8820862c1"
+    },
+    {
+      "id": "projection_worker",
+      "file": "apps/control-api/src/execution/profile-projection.worker.ts",
+      "sha256": "sha256:f0dea94fa3090e48ce8125a5052b5ea51653f9110d383ec7dd1ed7d24adc909c"
+    },
+    {
+      "id": "projection_repository",
+      "file": "apps/control-api/src/execution/profile-projection.repository.ts",
+      "sha256": "sha256:25849770cdd88fc5995e729badb6e190340784fa785a42793251522599670cbb"
+    },
+    {
+      "id": "market_context_intake",
+      "file": "apps/control-api/src/execution/market-context.intake.ts",
+      "sha256": "sha256:326ae9a675565feab92c7431ae461549a7b1bf0600fbf490aaa313fa8ae9fcf1"
+    },
+    {
+      "id": "market_context_service",
+      "file": "apps/control-api/src/execution/market-context.service.ts",
+      "sha256": "sha256:f5798574b05a65a55709920bc509c0cb453aee55eb27133b5fc4852c64585c25"
+    },
+    {
+      "id": "market_context_chart_bff",
+      "file": "apps/control-api/src/execution/market-candles.controller.ts",
+      "sha256": "sha256:4f8c27beab4cfb27068a980041aa84175c7361d5d23d2175be932fb88604b0d8"
+    },
+    {
+      "id": "market_context_chart_translator",
+      "file": "apps/control-api/src/execution/market-candles.service.ts",
+      "sha256": "sha256:589494a4f046fbc851a9c8c5b9e55a51b3066bbfb4dc37aeb093d171d06a9f47"
+    },
+    {
+      "id": "market_context_adapter",
+      "file": "services/portal-execution-edge-rs/contracts/portal-market-context-data-layer-adapter-v1/market-context-data-layer-adapter.v1.json",
+      "sha256": "sha256:1cd7f3ca37cc0e8ab4fe2bb4e9426a2a67ac22d32672c32570828b5eb66aafdf"
+    },
+    {
+      "id": "market_context_proxy_template",
+      "file": "deploy/execution-d1/source-proxy/manager-market-context-data-layer-locations.conf.template",
+      "sha256": "sha256:0ae4f81e480219e7f74138bc460ba7d51780ac594ae073443dd094dfa642db2b"
+    },
+    {
       "id": "phase12_qualification",
       "file": "upgrade/execution-v1/PHASE_12_QUALIFICATION.md",
-      "sha256": "sha256:c8bb67e6140953ee00f750a11bcdc70596337c94787a3b10473ba2a046ed5d02"
+      "sha256": "sha256:0845cb8560e9165d2de903fd2f8bea24fd2a6b1b65abbaca1ce985bdc95187b4"
     },
     {
       "id": "operations_runbook",
@@ -136,15 +226,21 @@
   "source_extensions": [
     {
       "request_id": "BR-EX-80",
-      "state": "SOURCE_OWNER_RETURN_REQUIRED",
-      "required_proof": "published strategies timeframe or bar_interval vocabulary and Fleet propagation",
-      "fallback": "frontend displays only a DERIVED suffix-based interval"
+      "state": "PORTAL_DERIVED_ACTIVE_PENDING_DEPLOYMENT",
+      "required_proof": "named Portal subject BFF validates source vocabulary precedence, derives only the known strategy-id suffix, and passes deployed profile/browser proof",
+      "fallback": "frontend displays only a DERIVED suffix-based interval until a source vocabulary field wins"
     },
     {
       "request_id": "BR-EX-81",
-      "state": "SOURCE_PAGING_AND_DRAIN_PROOF_REQUIRED",
-      "required_proof": "complete relation/profile cursor drain, append-only mirror parity and subject-scoped order/fill cursor APIs",
-      "fallback": "bounded profile page remains explicitly non-historical and non-subject-authoritative"
+      "state": "PORTAL_RETAINED_CURRENT_WINDOW_ACTIVE_PENDING_DEPLOYMENT",
+      "required_proof": "profile projection ladder drains Manager current pages behind the Portal, durable mirror parity/cursor/restart proof passes, and exact subject orders/fills BFF has deployed evidence",
+      "fallback": "retained current window stays visibly non-authoritative replay; partial or empty source states remain typed"
+    },
+    {
+      "request_id": "MARKET_CONTEXT",
+      "state": "PORTAL_EDGE_DATA_LAYER_ACTIVE_PENDING_DEPLOYMENT",
+      "required_proof": "fixed mTLS Edge and Source Proxy Data Layer adapter, positive latest/candles probes, negative venue/profile probe, and deployed chart-path evidence",
+      "fallback": "when Data Layer is selected the chart returns a typed state with no public-venue fallback"
     }
   ],
   "release_gates": {

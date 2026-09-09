@@ -367,7 +367,15 @@ def test_revision_6_commissions_execution_routes_with_bounded_shadow_policy() ->
     }
     for screen_id in EXECUTION_LOOP_REVISION_6_ROUTES:
         screen = screens[screen_id]
-        assert screen["contract_revision"] == 2
+        # BR-EX-72 promoted the Alpha Fleet list to its bounded current-source
+        # contract revision while the other Revision-6 screens retain the
+        # original fixture/shadow contract.  Keep that one intentional
+        # difference explicit so a future registry edit cannot silently
+        # flatten the delivery boundary.
+        expected_contract_revision = (
+            3 if screen_id == "EXECUTION_ALPHA_FLEET_LIST_SCREEN" else 2
+        )
+        assert screen["contract_revision"] == expected_contract_revision
         assert screen["maturity"] == "COMMISSIONED"
         assert DELIVERY_POLICY_FLAGS <= screen["delivery_policy"].keys()
         enabled = {

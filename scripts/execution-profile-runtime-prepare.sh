@@ -3,7 +3,7 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: %s --profile paper|sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS [--manager-extension-set none|eds11r-r4-r5]\n' "$0" >&2
+  printf 'Usage: %s --profile paper|sandbox|live --base-env PATH --output-env PATH --edge-image CONTENT_ADDRESS [--manager-extension-set none|eds11r-r4-r5|market-data-layer-v1]\n' "$0" >&2
   exit 2
 }
 
@@ -20,8 +20,24 @@ while [[ $# -gt 0 ]]; do
 done
 [[ "${EUID}" -eq 0 && "${profile}" =~ ^(paper|sandbox|live)$ && -f "${base_env}" &&
    "${output_env}" == /srv/primus/portal/runtime/* &&
-   "${edge_image}" =~ ^portal-execution-edge-manager-v2@sha256:[a-f0-9]{64}$ &&
-   "${manager_extension_set}" =~ ^(none|eds11r-r4-r5)$ ]] || usage
+   "${manager_extension_set}" =~ ^(none|eds11r-r4-r5|market-data-layer-v1)$ ]] || usage
+
+# A local content-addressed image is only permitted for an explicitly dev-local
+# render.  Production must use the immutable GHCR image published, attested and
+# signed by the protected-main workflow; its env must never retain the local
+# exception.  Preflight verifies the same distinction before a compose apply.
+local_edge_image_pattern='^portal-execution-edge-manager-v2@sha256:[a-f0-9]{64}$'
+# Keep exactly one regex escape before the registry dot. This variable is
+# expanded unquoted by Bash's =~ operator; two literal backslashes would make
+# it look for a backslash in the image name and reject every valid GHCR digest.
+signed_edge_image_pattern='^ghcr\.io/[a-z0-9][a-z0-9._-]*/portal-execution-edge@sha256:[a-f0-9]{64}$'
+if [[ "${edge_image}" =~ ${local_edge_image_pattern} ]]; then
+  edge_dev_local_image_allowed=true
+elif [[ "${edge_image}" =~ ${signed_edge_image_pattern} ]]; then
+  edge_dev_local_image_allowed=false
+else
+  usage
+fi
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 runtime_gid="$(getent group portal-runtime | cut -d: -f3)"
@@ -87,7 +103,7 @@ sed -i \
   -e "s#^EDGE_SOURCE_ORIGIN=.*#EDGE_SOURCE_ORIGIN=https://${bridge_gateway}:8444#" \
   "${output_env}"
 printf '%s\n' \
-  'EDGE_DEV_LOCAL_IMAGE_ALLOWED=true' \
+  "EDGE_DEV_LOCAL_IMAGE_ALLOWED=${edge_dev_local_image_allowed}" \
   "EDGE_PRIVATE_PORT=${edge_port}" \
   "SOURCE_PROXY_MANAGER_PROFILE_ID=${profile_id}" \
   "SOURCE_PROXY_MANAGER_FACADE_PORT=${facade_port}" \

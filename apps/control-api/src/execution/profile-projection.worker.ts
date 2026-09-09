@@ -14,6 +14,10 @@ import {
   ProjectionEnvironment,
   projectionDigest, ProjectionRow } from "./profile-projection.repository";
 import { DurableMirrorRelationCursor, DurableMirrorRetainedRangeRows } from "./durable-mirror.contract";
+import {
+  managerRelationOperationByRelation,
+  managerRelationOperationPolicy,
+} from "./eds11r-manager-relation.registry";
 
 const SOURCE_CONTRACT_REVISION = MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision;
 const SOURCE_CATALOGUE_SHA256 = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
@@ -359,6 +363,15 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     context: ManagerReadContext,
     resumeCursor: string | null = null,
   ): Promise<{ page: ManagerPage; resumePoint: string | null }> {
+    // A projection binding is itself checked in, but older N13B source-screen
+    // bindings predate the complete EDS-11R Manager registry.  Prefer the
+    // generated named operation whenever it covers this relation; retain the
+    // legacy projection-only route for the relations deliberately outside that
+    // static browser-safe catalogue.
+    const operation = managerRelationOperationByRelation(binding.relation);
+    const operationPolicy = operation
+      ? managerRelationOperationPolicy(operation, environment)
+      : undefined;
     const items: ManagerPage["items"] = [];
     const cursors = new Set<string>();
     let cursor: string | undefined = resumeCursor ?? undefined;
@@ -374,6 +387,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       const response = await this.source.relationForProjection(
         workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
         { limit: SOURCE_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+        operationPolicy,
       );
       const page = managerPage(response, binding.relation, binding.fields, context);
       items.push(...page.items);
@@ -393,6 +407,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             const refresh = await this.source.relationForProjection(
               workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
               { limit: page.items.length - 1, cursor },
+              operationPolicy,
             );
             const refreshed = managerPage(refresh, binding.relation, binding.fields, context);
             if (refreshed.nextCursor) tailCursor = refreshed.nextCursor;

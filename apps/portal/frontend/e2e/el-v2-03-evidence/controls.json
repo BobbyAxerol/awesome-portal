@@ -618,6 +618,36 @@
   "verdict": "changed"
  },
  {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 7,
+  "tag": "SELECT",
+  "text": "Candle interval",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Expand chart",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 9,
+  "tag": "A",
+  "text": "",
+  "verdict": "skipped:external",
+  "detail": "https://www.tradingview.com/?utm_medium=lwc-link&utm_campaign=lwc-chart&utm_source=127.0.0.1/deployments/accounts/acct-live-grid-v21"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 10,
+  "tag": "A",
+  "text": "TradingView Lightweight Charts™",
+  "verdict": "skipped:external",
+  "detail": "https://www.tradingview.com/"
+ },
+ {
   "route": "/deployments/alphas/av_2041",
   "index": 0,
   "tag": "A",

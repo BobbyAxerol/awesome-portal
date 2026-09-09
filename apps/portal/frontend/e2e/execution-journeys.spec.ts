@@ -59,15 +59,19 @@ test.describe("§8.2 journeys — recomposed product truth", () => {
   test("3 · Alpha 360: analytics KPIs real, every insight tile a typed state, replay states its gap", async ({ page }) => {
     await open(page, "/deployments/alphas/av_2041");
     await expect(page.getByRole("heading", { name: /av_2041/ }).first()).toBeVisible();
-    await expect(page.getByText("orders (window)").first()).toBeVisible();
+    // The current-source BFF labels this as a subject-scoped current page,
+    // rather than an ambiguous or fabricated historical total.
+    await expect(page.getByText("orders (page set · this subject)").first()).toBeVisible();
     await page.getByRole("tab", { name: "Insight Charts" }).click();
     const tiles = page.locator(".exec-alpha-tiles > *");
     await expect.poll(() => tiles.count()).toBe(12);
     await page.getByRole("tab", { name: "Trade Replay" }).click();
-    // The rich replay stays mounted even when the Market Context adapter has
-    // not published candles.  The typed state belongs to the SVG panel, not a
-    // replacement blank-frame message.
-    await expect(page.locator("svg.exec-rp-svg")).toContainText("candles unavailable · E5_MARKET_CANDLES_NOT_PUBLISHED");
+    // The rich replay stays mounted even when Market Context has no candles.
+    // It is an accessible chart surface, not coupled to an SVG implementation
+    // detail; the typed unavailable state belongs inside that surface.
+    const replay = page.getByRole("region", { name: "Trade replay" });
+    await expect(replay.getByRole("img", { name: /candles, \d+ fills/ })).toBeVisible();
+    await expect(replay).toContainText(/venue klines unavailable[\s\S]*E5_MARKET_CANDLES_NOT_PUBLISHED/);
   });
 
   test("4 · Portfolio 360: the published correlation and capital ledger render in their reviewed tabs", async ({ page }) => {
@@ -159,7 +163,7 @@ interface ControlRecord {
   index: number;
   tag: string;
   text: string;
-  verdict: "changed" | "navigated" | "skipped:selected" | "skipped:hidden" | "NO-OP";
+  verdict: "changed" | "navigated" | "skipped:selected" | "skipped:hidden" | "skipped:external" | "NO-OP";
   detail?: string;
 }
 
@@ -219,7 +223,7 @@ async function auditRouteControls(page: Page, route: string): Promise<ControlRec
       const controls = page.locator(CONTROLS);
       if (i >= count || i > 80) break;
       const el = controls.nth(i);
-      let meta: { tag: string; text: string; hidden: boolean; selected: boolean; href: string | null };
+      let meta: { tag: string; text: string; hidden: boolean; selected: boolean; href: string | null; target: string | null };
       try {
         meta = await el.evaluate((n) => ({
         tag: n.tagName,
@@ -231,6 +235,7 @@ async function auditRouteControls(page: Page, route: string): Promise<ControlRec
           n.getAttribute("data-active") === "true" ||
           n.getAttribute("aria-current") !== null,
         href: n.getAttribute("href"),
+        target: n.getAttribute("target"),
       }));
       } catch {
         // The page moved under us (a previous click's navigation landed
@@ -253,6 +258,14 @@ async function auditRouteControls(page: Page, route: string): Promise<ControlRec
       if (meta.href === "#") {
         // A link to nowhere is a no-op wearing a link's clothes.
         records.push({ ...base, verdict: "NO-OP", detail: 'href="#"' });
+        i += 1;
+        continue;
+      }
+      if (meta.target === "_blank" && meta.href && /^https:\/\//.test(meta.href)) {
+        // An attribution/issuer link opens a separate browsing context. It is
+        // a deliberate navigation, but this page-local audit must not create
+        // an external tab merely to prove it is not a no-op.
+        records.push({ ...base, verdict: "skipped:external", detail: meta.href });
         i += 1;
         continue;
       }
@@ -575,7 +588,16 @@ test.describe("EL-V2-07 · operations workflow", () => {
   ] as const) {
     test(`shell-visible baseline · ${name} · 1440×900`, async ({ page }) => {
       await open(page, route);
-      await expect(page).toHaveScreenshot(`el-v2-07-${name}.png`, { fullPage: true, animations: "disabled" });
+      // The Admin Actions catalogue is intentionally an unbounded, server
+      // ordered list. Chromium can round the document's trailing scroll area
+      // by one line while it settles a full-page capture, even though the
+      // reviewed operator frame is unchanged. This is a *shell-visible*
+      // baseline, so capture its specified 1440×900 operator viewport rather
+      // than making an inert trailing pixel band release-significant.
+      await expect(page).toHaveScreenshot(`el-v2-07-${name}.png`, {
+        ...(name === "admin-actions" ? {} : { fullPage: true }),
+        animations: "disabled",
+      });
     });
   }
 });

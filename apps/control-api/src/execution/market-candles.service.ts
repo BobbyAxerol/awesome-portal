@@ -101,6 +101,121 @@ export interface MarketCandlesEnvelope {
   candles: MarketCandle[];
 }
 
+/**
+ * The private Manager Market Context BFF has a deliberately different wire
+ * contract.  This adapter is the one place that translates it into the frozen
+ * Trade Replay chart DTO.  It is pure, exact-decimal preserving, and makes no
+ * network call — the controller has already authenticated and bounded the
+ * named Manager operation before it reaches here.
+ */
+export function marketContextToCandlesEnvelope(
+  query: MarketCandlesQuery,
+  raw: unknown,
+  now = Date.now(),
+): MarketCandlesEnvelope {
+  const source = object(raw);
+  const range = object(source.range);
+  const sourceHealth = object(source.source_health);
+  const rows = Array.isArray(source.candles) ? source.candles : null;
+  if (
+    source.schema_version !== "portal.execution.market-context.candles.v1" ||
+    source.logical_operation_id !== "managerMarketContextCandlesV1" ||
+    source.environment === undefined ||
+    range.venue !== query.venue ||
+    range.instrument !== query.symbol ||
+    range.interval !== query.interval ||
+    !rows
+  ) {
+    return dataLayerUnavailable(query, now, "MARKET_CONTEXT_CONTRACT_REJECTED");
+  }
+  const candles: MarketCandle[] = [];
+  for (const candidate of rows) {
+    const row = object(candidate);
+    const open = integer(row.open_ms);
+    const close = integer(row.close_ms);
+    const o = decimalString(row.open), h = decimalString(row.high), l = decimalString(row.low), c = decimalString(row.close), v = decimalString(row.volume);
+    if (open === null || close === null || close < open || !o || !h || !l || !c || !v) {
+      return dataLayerUnavailable(query, now, "MARKET_CONTEXT_CONTRACT_REJECTED");
+    }
+    candles.push({ t: open, o, h, l, c, v, close_t: close, trades: null });
+  }
+  const state = source.state === "POPULATED" ? "READY" as const
+    : source.state === "AUTHORITATIVE_EMPTY" ? "EMPTY" as const
+      : "UNAVAILABLE" as const;
+  const coverage = typeof source.coverage === "string" ? source.coverage : "UNKNOWN";
+  const asOf = integer(sourceHealth.as_of_ms);
+  return {
+    schema_version: "portal.execution.market-candles.v1",
+    logical_operation_id: "executionMarketCandlesV1",
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "TRADING_SYSTEM_DATA_LAYER",
+    source: {
+      kind: "data_layer",
+      venue: query.venue,
+      market: MARKET_OF_VENUE[query.venue],
+      endpoint: "portal-execution-edge:/internal/v2/manager/market/candles",
+      instrument: query.symbol,
+      note: "Trading System Data Layer candles through the Portal mTLS Manager adapter; bounded provider series, not lifecycle replay.",
+    },
+    symbol: query.symbol,
+    interval: query.interval,
+    interval_ms: MARKET_CANDLE_INTERVAL_MS[query.interval],
+    state,
+    reason_code: state === "UNAVAILABLE" ? "MARKET_CONTEXT_UNAVAILABLE" : state === "EMPTY" ? "MARKET_CONTEXT_NONE_IN_WINDOW" : null,
+    retryable: state === "UNAVAILABLE",
+    fetched_at_ms: asOf,
+    read_at_ms: now,
+    coverage: {
+      from_ms: candles[0]?.t ?? query.fromMs,
+      to_ms: candles.at(-1)?.close_t ?? query.toMs,
+      requested_limit: query.limit,
+      returned_count: candles.length,
+      truncated: coverage !== "COMPLETE",
+      pages: 1,
+    },
+    last_candle_closed: candles.length > 0 ? candles.at(-1)!.close_t < now : null,
+    candles,
+  };
+}
+
+/** A typed chart payload when Data Layer is selected but its exact BFF cannot answer. */
+export function dataLayerUnavailable(query: MarketCandlesQuery, now: number, reason: string): MarketCandlesEnvelope {
+  return {
+    schema_version: "portal.execution.market-candles.v1",
+    logical_operation_id: "executionMarketCandlesV1",
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "TRADING_SYSTEM_DATA_LAYER",
+    source: {
+      kind: "data_layer", venue: query.venue, market: MARKET_OF_VENUE[query.venue],
+      endpoint: "portal-execution-edge:/internal/v2/manager/market/candles", instrument: query.symbol,
+      note: "Trading System Data Layer is selected; no public-venue fallback is made for this request.",
+    },
+    symbol: query.symbol,
+    interval: query.interval,
+    interval_ms: MARKET_CANDLE_INTERVAL_MS[query.interval],
+    state: "UNAVAILABLE",
+    reason_code: reason,
+    retryable: reason !== "MARKET_CONTEXT_VENUE_UNSUPPORTED" && reason !== "MARKET_CONTEXT_RANGE_REQUIRED",
+    fetched_at_ms: null,
+    read_at_ms: now,
+    coverage: { from_ms: query.fromMs, to_ms: query.toMs, requested_limit: query.limit, returned_count: 0, truncated: false, pages: 0 },
+    last_candle_closed: null,
+    candles: [],
+  };
+}
+
+function object(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function integer(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) ? value : null;
+}
+
+function decimalString(value: unknown): string | null {
+  return typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value) ? value : null;
+}
+
 export type MarketCandlesFetch = (
   url: string,
   init: { signal: AbortSignal; headers: Record<string, string> },

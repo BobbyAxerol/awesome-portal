@@ -28,7 +28,7 @@
     "profiles": {"type": "array", "minItems": 4, "maxItems": 4},
     "failure_matrix": {"type": "object"},
     "evidence_inputs": {"type": "array", "minItems": 1},
-    "source_extensions": {"type": "array", "minItems": 2, "maxItems": 2},
+    "source_extensions": {"type": "array", "minItems": 3, "maxItems": 3},
     "release_gates": {"type": "object"},
     "authority": {"type": "object"},
     "rollback": {"type": "object"},

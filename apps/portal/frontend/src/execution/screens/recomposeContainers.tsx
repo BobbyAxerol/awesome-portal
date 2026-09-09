@@ -39,6 +39,7 @@ import { portfolioOverviewPanels } from "../portfolioOverview";
 import { HIFI_TILES } from "../hifiTiles";
 import type { BlotterGroups } from "./FullBlotter";
 import { useRelationFacts, type RelationFactsState } from "../useRelationFacts";
+import { useSubjectActivityFacts } from "../useSubjectActivityFacts";
 import { PROJECTION_POLL_MS, usePollTick } from "../useRevision";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { candleProvenanceLine, candleRefusalLine, type MarketContextCandles } from "../api/marketContext";
@@ -1168,9 +1169,16 @@ export function replaySource(relations: RelationFactsState | null | undefined, a
     const orders = new Set((v.facts.orders ?? []).map((r) => text(r.order_id) ?? text(r.client_order_id)).filter(Boolean)).size;
     const fills = new Set((v.facts.fills ?? []).map((r) => text(r.fill_id)).filter(Boolean)).size;
     const strategies = new Set([...(v.facts.orders ?? []), ...(v.facts.fills ?? [])].map((r) => text(r.strategy_id)).filter(Boolean)).size;
-    const walk = v.exhausted ? "drained to the relations' end" : "stopped early — a lower bound";
+    const retained = v.origin === "PORTAL_RETAINED_CURRENT_WINDOW";
+    const walk = retained
+      ? v.exhausted ? "retained current window covered" : "retained current window page — a lower bound"
+      : v.exhausted ? "drained to the relations' end" : "stopped early — a lower bound";
     const why = v.reasons.length > 0 ? ` · ${v.reasons.join(" · ")}` : "";
-    return { label: "Manager relation page set (EDS-11R1)", detail: `${v.pages} pages · ${walk} · ${v.completeness ?? "completeness not published"}${why}${relations?.refreshing ? " · refreshing" : ""}`, page: { orders, fills, strategies } };
+    return {
+      label: retained ? "Portal retained current-source window (BR-EX-81)" : "Manager relation page set (EDS-11R1)",
+      detail: `${v.pages} pages · ${walk} · ${v.completeness ?? "completeness not published"}${why}${relations?.refreshing ? " · refreshing" : ""}`,
+      page: { orders, fills, strategies },
+    };
   }
   const why = !relations ? "bounded current page, all profiles"
     : relations.status === "loading" ? "relation page set loading — the bounded current page is shown meanwhile"
@@ -1179,7 +1187,7 @@ export function replaySource(relations: RelationFactsState | null | undefined, a
   return { label: "retained projection page (N25)", detail: why, page: null };
 }
 
-export function replayEvents(analytics: QueryAnalytics | null | undefined, additive: QueryAnalytics | null | undefined, alphaId: string | null, accountId: string | null = null) {
+export function replayEvents(analytics: QueryAnalytics | null | undefined, additive: QueryAnalytics | null | undefined, alphaId: string | null, accountId: string | null = null, timeframeOverride: MarketCandleInterval | null = null) {
   const facts = analytics?.sourceFacts ?? {};
   const extra = additive?.sourceFacts ?? {};
   const accounts = new Set<string>();
@@ -1199,10 +1207,11 @@ export function replayEvents(analytics: QueryAnalytics | null | undefined, addit
     }
   }
   // BR-EX-80: the strategy's timeframe, if the source ever publishes it (strategies or deployments rows)
-  const timeframe = publishedTimeframe([
+  const published = publishedTimeframe([
     ...own,
     ...[...(facts.strategies ?? []), ...(extra.strategies ?? [])].filter((r) => alphaId === null || text(r.strategy_id) === alphaId || text(r.id) === alphaId),
   ]);
+  const timeframe = timeframeOverride ?? published;
   const scoped = (rows: readonly Record<string, unknown>[]) =>
     rows.filter((r) => accounts.size === 0 || accounts.has(text(r.account_id) ?? "") || (alphaId !== null && text(r.strategy_id) === alphaId));
   const replay = analytics?.replay ?? additive?.replay ?? null;
@@ -1272,7 +1281,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   // G9: the drained relation page set is the source once orders and fills have been read; the N25 page stands in before that and when the BFF is unavailable
   const relationValue = relations?.value ?? null;
   const fromRelations = useMemo(() => analytics && relationValue ? relationAnalytics(analytics, relationValue, { alphaId, accountId: accountScope }) : null, [analytics, relationValue, alphaId, accountScope]);
-  const events = useMemo(() => fromRelations ? replayEvents(fromRelations, additiveWithoutRows(additive), alphaId, accountScope) : replayEvents(analytics, additive, alphaId, accountScope), [fromRelations, analytics, additive, alphaId, accountScope]);
+  const relationTimeframe = relationValue?.timeframe ?? null;
+  const events = useMemo(() => fromRelations ? replayEvents(fromRelations, additiveWithoutRows(additive), alphaId, accountScope, relationTimeframe?.value ?? null) : replayEvents(analytics, additive, alphaId, accountScope), [fromRelations, analytics, additive, alphaId, accountScope, relationTimeframe?.value]);
   const source = useMemo(() => replaySource(relations, fromRelations !== null), [relations, fromRelations]);
   const symbols = useMemo(() => Array.from(new Set([...events.fills.map((f) => f.symbol), ...events.orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [events]);
   const [symbol, setSymbol] = useState<string | null>(null);
@@ -1323,8 +1333,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
       ? Promise.resolve(unavailable("No symbol among this alpha's events to read candles for."))
       : venue === null
         ? Promise.resolve(unavailable(`No public klines for venue ${events.venue ?? "(not published)"} — MARKET_CANDLES_VENUE_UNSUPPORTED.`))
-        : api.getMarketCandles({ venue, symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit }),
-    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue],
+        : api.getMarketCandles({ environment: relationValue?.environment ?? "paper", venue, symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit }),
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue, relationValue?.environment],
     { keepValue: true },
   );
   // Edge paging: when the reader reaches an end of the loaded candles, one
@@ -1345,8 +1355,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
     const first = merged[0]!, last = merged[merged.length - 1]!;
     const stepMs = MARKET_CANDLE_INTERVAL_MS[interval];
     const q = edge === "left"
-      ? { venue, symbol: activeSymbol, interval, toMs: first.t - 1, limit: 1500 }
-      : { venue, symbol: activeSymbol, interval, fromMs: last.closeT + 1, toMs: Math.min(Date.now(), last.closeT + 1500 * stepMs), limit: 1500 };
+      ? { environment: relationValue?.environment ?? "paper", venue, symbol: activeSymbol, interval, toMs: first.t - 1, limit: 1500 }
+      : { environment: relationValue?.environment ?? "paper", venue, symbol: activeSymbol, interval, fromMs: last.closeT + 1, toMs: Math.min(Date.now(), last.closeT + 1500 * stepMs), limit: 1500 };
     if (edge === "right" && last.closeT >= Date.now() - stepMs) return; // already at the live edge
     setPages((p) => ({ key: pageKey, candles: p.key === pageKey ? p.candles : [], exhausted: p.key === pageKey ? p.exhausted : { left: false, right: false }, loading: edge }));
     void api.getMarketCandles(q).then((result) => {
@@ -1367,7 +1377,7 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
     return { ...market.value, candles: merged, coverage: { ...market.value.coverage, fromMs: merged[0]?.t ?? null, toMs: merged[merged.length - 1]?.closeT ?? null, returnedCount: merged.length, pages: (market.value.coverage.pages ?? 1) + pages.candles.length } };
   }, [market.value, merged, pages.candles.length]);
   const intervalNote = chosen === null
-    ? events.timeframe ? `${events.timeframe} · strategy timeframe (published)` : inferred ? `${inferred} inferred from the strategy id · DERIVED` : "1h default · timeframe not published"
+    ? events.timeframe ? `${events.timeframe} · ${relationTimeframe?.provenance === "PUBLISHED_SOURCE" ? "strategy timeframe (published source)" : relationTimeframe?.provenance === "DERIVED_STRATEGY_ID_SUFFIX" ? "derived from strategy id · DERIVED" : "strategy timeframe (published)"}` : inferred ? `${inferred} inferred from the strategy id · DERIVED` : "1h default · timeframe not published"
     : interval !== chosen ? `${chosen} requested · ${interval} fits one read` : `${chosen} · remembered`;
   return (
     <div className="exec-rp-source">
@@ -1536,7 +1546,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const observedForTiles = observedState.value;
   // G9 (EDS-11R1): the replay and the order funnel read the drained relation page set of the alpha's environment
   // Drains once the resource read has answered — ok or not: a subject whose resource is denied or absent still has its rows in the page set (env falls back to the rollup default)
-  const relations = useRelationFacts(api, factsEnv, resourceState.status !== "loading");
+  const relations = useSubjectActivityFacts(api, factsEnv, { kind: "alpha", id: alphaId }, resourceState.status !== "loading", realtime.refreshKey);
   const activityState = useApiRead<AlphaActivity>(() => api.getAlphaActivity(alphaId, activityEnv), [api, alphaId, activityEnv, realtime.refreshKey], { keepValue: true });
   const [tab, setTab] = useParamState<AlphaTab>("tab", ALPHA_TABS, "Overview");
   // deep link from the Blotter / a shared URL: `?tab=Trade%20Replay&focus=order:123` (or fill:…)
@@ -1794,7 +1804,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
   // never guessed here. Viewport = the window width, clamped by the path builder.
   const chartEnv = state.value?.selectedEnvironment ?? "paper";
   // G9 (EDS-11R1): the account replay reads the drained relation page set of the account's environment
-  const relations = useRelationFacts(api, chartEnv, state.status !== "loading");
+  const relations = useSubjectActivityFacts(api, chartEnv, { kind: "account", id: accountId }, state.status !== "loading", realtime.refreshKey);
   const chartWorkspace = state.value?.workspaceId ?? null;
   // R3 reuse: the same Trade Replay on the account's own orders / fills — the
   // EDS-04 account resource (exact, bounded) plus the N25 facts of the strategy

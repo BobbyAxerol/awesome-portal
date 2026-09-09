@@ -22,11 +22,18 @@ offline verifier still checks both bytes and their safety invariants; this
 evidence correction changes neither accepted scope nor runtime authority.
 
 On 2026-09-06 the same boundary was deliberately extended with the two
-source-dark, named EDS-11R4 Market Context BFF operations.  The re-pinned
+source-dark, named EDS-11R4 Market Context BFF operations. The re-pinned
 digest proves that extension remains inside the existing server-only
-mTLS/delegated-JWT boundary; its compiled intake is still pending the Trading
-System owner return, so it changes neither N29 release authority nor source
-runtime activation.
+mTLS/delegated-JWT boundary. Its v2 compiled intake now binds the exact
+Portal-owned Data Layer adapter manifest, so it changes neither N29 release
+authority nor source runtime activation until EDS-12 deployment evidence.
+
+On 2026-09-07 the rich composition seam was re-pinned after it moved
+Alpha/Account subject activity from browser relation-page draining to the
+named Portal retained-current-window BFF. The N29 screen inventory, product
+route ownership and runtime authority do not change; this makes the existing
+accepted rich UI consume a safer source-backed path rather than fixture or
+browser-amplified data.
 
 The `RELEASE_CANDIDATE_READY_PROTECTED_RELEASE_PENDING` decision is deliberate.
 BR-EX-72 is complete and the reviewed campaign branch may proceed through

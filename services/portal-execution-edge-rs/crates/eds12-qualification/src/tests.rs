@@ -21,7 +21,7 @@ fn embedded_contract_is_static_and_complete() {
     let result = validate_embedded_qualification().unwrap();
     assert_eq!(result.profile_stage_count, 4);
     assert_eq!(result.failure_scenario_count, 10);
-    assert_eq!(result.source_extension_count, 2);
+    assert_eq!(result.source_extension_count, 3);
     assert!(!result.product_active);
     assert!(!result.operations_qualified);
 }

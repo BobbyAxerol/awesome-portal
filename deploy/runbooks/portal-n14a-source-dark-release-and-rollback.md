@@ -11,7 +11,9 @@ never deploys a Trading System release.
 1. The source commit is an exact `main` commit and every service image uses an
    immutable `@sha256:` reference produced from that commit.
 2. `portal-release-authority.py verify --mode candidate` accepts the complete
-   pack. Cosign verifies every image signature, SBOM and provenance attestation.
+   pack. Cosign verifies every image's signed OCI index; the release verifier
+   then validates the exact Buildx SPDX and SLSA provenance manifests bound to
+   that index and its linux/amd64 subject.
 3. Trivy reports zero CRITICAL findings. HIGH findings, if any, are visible in
    the exact evidence digest reviewed by the Portal owner.
 4. The production environment approval creates an exact
