@@ -3350,6 +3350,104 @@ published set."*, *"No older operation is published beyond this page."* …).
 | 13 link hỏng | Regex `404\|Not Found` khớp nhầm trong 19–26k ký tự nội dung hợp lệ. Siết về đúng câu của registry → **0 hỏng** |
 
 **Gate:** `tsc` sạch · **120/120 file test** FE xanh.
+### A26. GOAL 9 — RÀ TRƯỚC KHI LÀM (09-09, owner xin list để chuẩn bị)
+
+Kiểm bằng backend thật trên dev, không chép kế hoạch.
+
+#### A26.1 Bốn route composition **đã chạy**, và mang đủ bốn khối chéo
+
+| Route | http | bytes | source_health | journal | canary_twin | command_authority |
+|---|---|---|---|---|---|---|
+| `/compositions/command-center` | 200 | 35 753 | 13 | 7 | 3 | 2 |
+| `/compositions/operations` | 200 | 30 897 | 13 | 7 | 3 | 2 |
+| `/compositions/waivers` | 200 | 30 867 | 13 | 7 | 3 | 2 |
+| `/compositions/admin-action-drawer` | 200 | 60 248 | 13 | 7 | 3 | 2 |
+
+Kế hoạch ghi *"Backend hỗ trợ: đã có sẵn, **0 dòng backend mới**"* — **đúng**, đã xác nhận.
+
+#### A26.2 Frontend mới dùng **1/4 màn** — đó là khối lượng thật của Goal 9
+
+| Màn | Đang đọc gì |
+|---|---|
+| Admin Action Drawer | ✅ `getOperationalComposition("admin-action-drawer")` (`containers.tsx:1007`) |
+| Command Center · Operations Queue · Waivers | ❌ **chưa gọi** — vẫn route lẻ |
+
+Client đã có sẵn (`operationalComposition.ts`, `ports.ts:276`, `httpApi.ts:381`), nên việc còn lại là **nối 3 màn + render 4 khối**, không phải viết lớp đọc mới.
+
+#### A26.3 Hai điều kiện gate **không đạt được bằng dữ liệu dev hiện tại**
+
+1. **`journal ≥ 100 dòng`** — builder đã `.slice(0, 100)` (trần đúng), nhưng dev chỉ sinh **7 entry** dù quan hệ `command_journal` có **407 dòng** trong mirror. Trần không phải chỗ chặn; **dữ liệu đủ tư cách mới là chỗ chặn**. Cùng loại với 2 ô `ready` của LIVE ở §A25.2 — không được đánh dấu đạt.
+2. **`canary_twin_comparison`** trả `unavailable("E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED")` — một envelope **từ chối trung thực**, không phải số. Màn sẽ hiện đủ 4 khối nhưng khối này là `Soon · <mã>`, đúng luật §A9.5.
+
+#### A26.4 Một mục của Goal 12 đã lỗi thời
+
+Goal 12-3 ghi `market/latest` → `PENDING_MARKET_CONTEXT_ADAPTER`. Đo hôm nay (§A21.5): nay là **`MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED`** — một **cờ**, không phải cổng intake. Khi tới Goal 12 phải đọc lại mục này thay vì tin bản cũ.
+
+#### A26.5 Việc Goal 9, sau khi rà
+
+| # | Việc | Trạng thái |
+|---|---|---|
+| 9-1 | Nối **Command Center** vào `/compositions/command-center` | backend sẵn sàng |
+| 9-2 | Nối **Operations Queue** vào `/compositions/operations` | backend sẵn sàng |
+| 9-3 | Nối **Waivers** vào `/compositions/waivers` | backend sẵn sàng |
+| 9-4 | Render 4 khối chéo trên cả 4 màn + `lineage` digest trong drawer provenance | dữ liệu có, trừ `canary_twin` là `Soon` |
+| 9-5 | Chứng minh **số request không tăng** (composition **thay** route lẻ, không cộng thêm) | đo bằng harness §A9.1 |
+| 9-6 | Journal ≥ 100 dòng | ~~chặn bởi dữ liệu~~ → **SAI, xem §A27.4**: journal có đủ **100 dòng**; tôi đã đếm số khoá của object chứ không đếm `rows` |
+### A27. GOAL 9 ĐÃ LÀM (09-09) — bốn màn đọc composition, và ba lỗi chỉ mắt mới thấy
+
+#### A27.1 Gap backend phải đóng trước, nếu không gate 9-5 là bất khả
+
+`/compositions/waivers` và `/compositions/operations` hardcode `limit: 50`, không nhận filter/cursor. Hai màn kia **có** phân trang và lọc, nên composition **không thể thay** route lẻ — chỉ có thể *cộng thêm*, tức vi phạm đúng điều 9-5 cấm.
+
+Đã cho hai route nhận **đúng query mà route lẻ nhận**, và chuyển thẳng vào **cùng builder** (`governanceConditionsQuery`, `OperationQueueQuerySchema`) — không tự chế validation. `QuerySchema.strict()` giữ nguyên cho 5 route còn lại; chỉ hai route chuyển tiếp dùng `PrincipalOnlySchema`, vì query của màn được chính schema của màn kiểm.
+
+Đo trên dev sau deploy:
+
+| Gọi | Kết quả |
+|---|---|
+| `waivers?state=LAPSED&limit=5` | **200** |
+| `operations?triage_state=UNACKNOWLEDGED` | **200** |
+| `operations?triage_state=BOGUS` | **400** |
+| `operations?bogus=1` | **400** |
+
+Validation **không** bị nới: query sai vẫn bị từ chối.
+
+#### A27.2 9-5 số request — không màn nào tăng, một màn giảm
+
+| Màn | Trước | Sau |
+|---|---|---|
+| Command Center | 5 (snapshot + **3** source-health + fleet) | **4** |
+| Operations Queue | 1 | **1** |
+| Waivers | 5 (1 page + 4 probe đếm) | **5** |
+| Admin drawer | 3 | **3** |
+
+Command Center giảm vì composition mang **cùng envelope** `source-health.v1` cho cả ba môi trường trong một lần đọc, thay cho ba lần gọi `getSourceHealth`. Profile được nhóm theo `environment` của chính nó nên `SourceHealthBoard` giữ nguyên attribution.
+
+#### A27.3 9-4 bốn khối chéo — đủ trên cả bốn màn
+
+Đo bằng browser sau deploy: `authority=true`, `journal 100 dòng`, `source health 3 profile`, `canary twin` — trên **cả bốn** màn.
+
+Theo §11 tôi **tách component dùng chung** `components/CrossEvidence.tsx` thay vì chép markup: drawer đang có authority + journal viết inline, và **không màn nào** render `source_health` hay `canary_twin` dù cả bốn đều đang tải chúng.
+
+#### A27.4 9-6 KHÔNG bị chặn — §A26.3 tôi viết sai
+
+Tôi đã báo owner rằng journal chỉ có 7 entry nên gate ≥100 bất khả. **Sai.** Journal có **100 dòng, `state: AVAILABLE`**, trần `maximum_rows: 100` đúng thiết kế. Lần đó tôi đếm **số khoá của object** (`schema_version, state, reason_code, retention, profile_revisions, rows, digest` = 7) chứ không đếm `rows`.
+
+Mỗi dòng mang `command_id` · `state` (kết quả) · `venue` · `accepted_at`/`updated_at`. **`actor` thì nguồn redact theo hợp đồng** ở mọi lane — component hiện "actor redacted" thay vì ô trống, vì ô trống đọc thành "lệnh không có người chịu trách nhiệm".
+
+#### A27.5 Ba lỗi mà 120 file test không thấy, chỉ mở trình duyệt mới thấy
+
+| # | Lỗi | Gốc |
+|---|---|---|
+| 1 | `source health` luôn rỗng, màn nói *"no per-profile source health was published"* | Model đọc `obj(health.profiles)` nhưng API trả **mảng**; `obj()` biến mảng thành `{}`. Lỗi **có sẵn**, nằm im vì không màn nào render khối đó |
+| 2 | Drawer in journal **200 dòng** thay vì 100 | Nó đã có block inline, tôi lại đưa cả `CrossEvidence` vào |
+| 3 | Màn in **"relay active"** trong khi nguồn **không publish** trường đó | `relayActive: authority.relay_active !== false` biến *vắng mặt* thành `true` |
+
+Lỗi 3 là nghiêm trọng nhất: chỉ `data.command_authority` của **drawer** có `relay_active`; ba composition kia publish `{state, source_side_effect_requested}` và hết. Suy `true` để **fail-closed cho một quyết định** là đúng; nhưng **in ra màn** thành "relay active", ngay cạnh câu "no command can be run until the relay is opened", là một suy đoán mặc áo sự thật — đúng thứ §3.3 cấm.
+
+`relayActive` nay là **ba trạng thái** `true | false | null`: quyết định an toàn vẫn coi `null` là hướng nguy hiểm, còn hiển thị thì nói *"relay state not published"*.
+
+**Gate:** `tsc` sạch · **120/120 file test** FE · đo lại trên dev: 4 khối đủ, source health 3 profile (trước 0), drawer journal 100 (trước 200).
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

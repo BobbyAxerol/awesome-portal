@@ -47,6 +47,7 @@ import {
 } from "../analytics";
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
+import { readOperationalComposition, type OperationalComposition } from "../operationalComposition";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { CANARY_ROOM_FIXTURE, LIVE_FULL_FIXTURE, SANDBOX_CERTIFICATION_FIXTURE } from "../certification.fixtures";
 import { readLiveFullOperations } from "../liveFull";
@@ -336,6 +337,35 @@ function resourceFixture(kind: "alpha" | "portfolio" | "account" | "binding", id
   };
 }
 
+/**
+ * The waivers register body, built once so the standalone read and the
+ * composition cannot drift apart in the fixture surface.
+ */
+function waiversRegisterRaw(
+  filtered: readonly Record<string, unknown>[],
+  window: readonly Record<string, unknown>[],
+  start: number,
+): Record<string, unknown> {
+  return {
+    schema_version: "governance.conditions-register.v1",
+    record_authority: "PORTAL_CONTROL",
+    delivery_profile: "portal",
+    read_at: "2026-08-31T12:00:00.000Z",
+    actor: { user_id: "usr_bobby", username: "bobby", roles: ["ADMIN"] },
+    page: {
+      rows: window,
+      total_count: CONDITION_FIXTURES.length,
+      filtered_count: filtered.length,
+      next_cursor: start + window.length < filtered.length ? (window[window.length - 1]?.condition_id as string) ?? null : null,
+      prev_cursor: start > 0 ? (window[0]?.condition_id as string) ?? null : null,
+      has_more: start + window.length < filtered.length,
+      has_previous: start > 0,
+      applied_filters: [],
+      applied_sort: [],
+    },
+  };
+}
+
 export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi {
   const down = new Set(options.unavailableEndpoints ?? []);
   let polls = 0;
@@ -367,6 +397,45 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
 
   return {
     /* N29-FE-01 lab/test port — serves the canonical contract fixtures. */
+    /**
+     * Goal 9: the four screens now read their payload through the composition,
+     * so the fixture surface has to serve it too — from the same fixtures the
+     * standalone reads use, or a screen would pass here and fail on dev.
+     */
+    async getOperationalComposition(name: string, query?: Readonly<Record<string, string | number | undefined>>) {
+      const blocked = gate<OperationalComposition>("getOperationalComposition");
+      if (blocked) return blocked;
+      const state = query?.state === undefined ? undefined : String(query.state);
+      const filtered = CONDITION_FIXTURES.filter((c) => !state || c.state === state);
+      const ids = filtered.map((c) => c.condition_id as string);
+      const limit = query?.limit === undefined ? 50 : Number(query.limit);
+      let start = 0;
+      let end = filtered.length;
+      if (query?.after) start = ids.indexOf(String(query.after)) + 1;
+      if (query?.before) { end = ids.indexOf(String(query.before)); start = Math.max(0, end - limit); }
+      const window = filtered.slice(start, Math.min(end, start + limit));
+      const data =
+        name === "waivers" ? { waivers_register: waiversRegisterRaw(filtered, window, start) }
+          : name === "operations" ? { operations_queue: OPERATIONS_QUEUE_FIXTURE }
+            : name === "command-center" ? { command_center: CC_SNAPSHOT_BUSY }
+              : {};
+      const composition = readOperationalComposition({
+        schema_version: "execution.operational-composition.v1",
+        read_at: "2026-08-31T12:00:00.000Z",
+        composite_revision: "sha256:fixture",
+        // FAIL_CLOSED with the relay inactive is the fixture's honest default:
+        // no fixture surface may imply a command could be sent.
+        command_authority: { state: "FAIL_CLOSED", relay_active: false, source_side_effect_requested: false },
+        redacted_command_journal: { state: "AVAILABLE", reason_code: null, retention: null, entries: [] },
+        source_health: { schema_version: "execution.derivation.source-health.v1", requested_environment: "all", state: "PARTIAL", profiles: [] },
+        canary_twin_comparison: { state: "UNAVAILABLE", reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED" },
+        data,
+      });
+      return composition
+        ? { ok: true as const, value: composition }
+        : unavailable("The composition fixture could not be read.");
+    },
+
     async getCommandCenterSnapshot() {
       const blocked = gate<unknown>("getCommandCenterSnapshot");
       if (blocked) return blocked;
@@ -442,7 +511,6 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getManagerRelationPage() { return unavailable("The Manager relation BFF is not part of the fixture set."); },
     async getEquitySparklines() { return unavailable("The fleet equity sparklines are not part of the fixture set."); },
     async getStageDrift() { return unavailable("The alpha stage drift is not part of the fixture set."); },
-    async getOperationalComposition() { return unavailable("The operational compositions are not part of the fixture set."); },
     async getSubjectActivity() { return unavailable("The retained subject activity BFF is not part of the fixture set."); },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
@@ -510,24 +578,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       if (query.after) start = ids.indexOf(query.after) + 1;
       if (query.before) { end = ids.indexOf(query.before); start = Math.max(0, end - limit); }
       const window = filtered.slice(start, Math.min(end, start + limit));
-      const page = readConditionsPage({
-        schema_version: "governance.conditions-register.v1",
-        record_authority: "PORTAL_CONTROL",
-        delivery_profile: "portal",
-        read_at: "2026-08-31T12:00:00.000Z",
-        actor: { user_id: "usr_bobby", username: "bobby", roles: ["ADMIN"] },
-        page: {
-          rows: window,
-          total_count: CONDITION_FIXTURES.length,
-          filtered_count: filtered.length,
-          next_cursor: start + window.length < filtered.length ? (window[window.length - 1]?.condition_id as string) ?? null : null,
-          prev_cursor: start > 0 ? (window[0]?.condition_id as string) ?? null : null,
-          has_more: start + window.length < filtered.length,
-          has_previous: start > 0,
-          applied_filters: [],
-          applied_sort: [],
-        },
-      });
+      const page = readConditionsPage(waiversRegisterRaw(filtered, window, start));
       return page ? { ok: true as const, value: page } : unavailable("The conditions-register fixture could not be read.");
     },
 

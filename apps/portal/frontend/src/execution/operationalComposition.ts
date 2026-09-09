@@ -26,7 +26,19 @@ export interface JournalRow {
 export interface CommandAuthority {
   /** `FAIL_CLOSED` while no relay is open. */
   state: string;
-  relayActive: boolean;
+  /**
+   * `null` when the block does not publish the field at all.
+   *
+   * Only the drawer's `data.command_authority` carries it; the other three
+   * compositions publish `{state, source_side_effect_requested}` and nothing
+   * else. Collapsing that absence into `true` fails closed for a *decision*,
+   * which is right — but printed on screen it became "relay active" beside a
+   * sentence saying no command can run, which is an assumption wearing the
+   * clothes of a published fact. Callers making a safety decision must still
+   * treat `null` as the dangerous reading; callers rendering it must say the
+   * source did not state it.
+   */
+  relayActive: boolean | null;
   /** true when the read itself asked the source to do something; always false here. */
   sideEffectRequested: boolean;
 }
@@ -38,6 +50,15 @@ export interface OperationalComposition {
   commandAuthority: CommandAuthority | null;
   journal: { state: string | null; reasonCode: string | null; rows: readonly JournalRow[]; retention: string | null };
   sourceHealth: { profiles: readonly { profile: string; state: string | null; reasonCode: string | null }[] };
+  /**
+   * The untouched `execution.derivation.source-health.v1` envelope.
+   *
+   * The projection above is enough for a strip, but the composition carries the
+   * same envelope the per-environment route returns — for every environment, in
+   * one read. Screens that already render the full board feed this to
+   * `readSourceHealth` and drop three requests rather than settle for less.
+   */
+  sourceHealthEnvelope: unknown;
   canaryTwin: { state: string | null; reasonCode: string | null };
   /** The screen's own payload, untouched — each screen reads its own shape. */
   data: Readonly<Record<string, unknown>>;
@@ -103,7 +124,7 @@ export function readOperationalComposition(raw: unknown): OperationalComposition
       // relay must be assumed open, and an unreadable side-effect bit must be
       // assumed to have reached the Trading System. Saying "nothing happened"
       // on the strength of a field we could not parse is the reassuring lie.
-      relayActive: authority.relay_active !== false,
+      relayActive: authority.relay_active === undefined ? null : authority.relay_active !== false,
       sideEffectRequested: authority.source_side_effect_requested !== false,
     },
     journal: {
@@ -115,12 +136,28 @@ export function readOperationalComposition(raw: unknown): OperationalComposition
         return parsed ? [parsed] : [];
       }),
     },
+    sourceHealthEnvelope: root.source_health ?? null,
     sourceHealth: {
-      profiles: Object.entries(profiles).flatMap(([profile, value]) => {
-        const entry = obj(value);
-        const state = str(entry.state) ?? str(entry.availability);
-        return state === null ? [] : [{ profile, state, reasonCode: str(entry.reason_code) }];
-      }),
+      /*
+       * The envelope publishes `profiles` as an ARRAY of rows, each naming its
+       * own `profile_id`. Reading it as an object silently produced an empty
+       * list — which nobody saw while no screen rendered this block, and which
+       * became the sentence "no per-profile source health was published" the
+       * moment one did. The keyed shape is still accepted because a lane that
+       * publishes it that way is not wrong, just different.
+       */
+      profiles: (Array.isArray(health.profiles)
+        ? (health.profiles as unknown[]).flatMap((value) => {
+          const entry = obj(value);
+          const profile = str(entry.profile_id) ?? str(entry.environment);
+          const state = str(entry.state) ?? str(entry.availability);
+          return profile === null || state === null ? [] : [{ profile, state, reasonCode: str(entry.reason_code) }];
+        })
+        : Object.entries(profiles).flatMap(([profile, value]) => {
+          const entry = obj(value);
+          const state = str(entry.state) ?? str(entry.availability);
+          return state === null ? [] : [{ profile, state, reasonCode: str(entry.reason_code) }];
+        })),
     },
     canaryTwin: { state: str(twin.state), reasonCode: str(twin.reason_code) },
     data: obj(root.data),

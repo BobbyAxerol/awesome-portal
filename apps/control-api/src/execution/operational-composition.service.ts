@@ -91,21 +91,36 @@ export class OperationalCompositionService {
     });
   }
 
-  async waiversRegister(principal: PortalDerivationPrincipal): Promise<Record<string, unknown>> {
+  /**
+   * Goal 9: the composition has to be able to *replace* the standalone read,
+   * not sit beside it, or a screen that pages or filters would have to fetch
+   * both and the request count would grow. So it accepts the same query the
+   * standalone route accepts and hands it to the same builder — the default
+   * stays exactly what it was when a caller sends nothing.
+   */
+  async waiversRegister(
+    principal: PortalDerivationPrincipal,
+    query: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
     return this.compose(principal, "waivers_register", {
       waivers_register: await this.governance.conditions(
         principal.user,
         principal.workspaceId,
-        governanceConditionsQuery({ limit: 50 }),
+        governanceConditionsQuery({ limit: 50, ...query }),
       ),
     });
   }
 
-  async operationsQueue(principal: PortalDerivationPrincipal): Promise<Record<string, unknown>> {
+  /** Same substitution rule as the waivers register above. */
+  async operationsQueue(
+    principal: PortalDerivationPrincipal,
+    query: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
     return this.compose(principal, "operations_queue", {
       operations_queue: await this.workflows.list(principal.user, principal.workspaceId, {
         limit: 50,
         sort: "created_at:desc",
+        ...query,
       }),
     });
   }

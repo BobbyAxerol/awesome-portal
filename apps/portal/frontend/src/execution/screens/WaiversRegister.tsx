@@ -15,6 +15,9 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 
 import type { ConditionRow, ConditionsPage, ExecutionApi, WaiverStateCode } from "../api/ports";
+import { readConditionsPage } from "../api/rows";
+import { CrossEvidence } from "../components/CrossEvidence";
+import type { OperationalComposition } from "../operationalComposition";
 import { useAgeTick } from "../liveTick";
 import { ExecutionDecisionStrip } from "../components/workspace";
 import { PanelState } from "../components/states";
@@ -353,18 +356,29 @@ export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
   const [status, setStatus] = useState<PanelStatus>("loading");
   const [reason, setReason] = useState<string | undefined>(undefined);
   const [counts, setCounts] = useState<WaiverCounts>({ total: null, byState: {} });
+  const [composition, setComposition] = useState<OperationalComposition | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setStatus("loading");
+    // Goal 9: the composition carries this register *and* the four
+    // cross-cutting blocks, and it takes the same filter and cursor, so it
+    // replaces the standalone read instead of joining it — the per-state count
+    // probes below are unchanged and the request count stays where it was.
     void api
-      .getWaivers({ state: filter === "ALL" ? undefined : filter, limit: PAGE_SIZE, ...cursor })
+      .getOperationalComposition("waivers", {
+        state: filter === "ALL" ? undefined : filter,
+        limit: PAGE_SIZE,
+        ...cursor,
+      })
       .then((result) => {
         if (cancelled) return;
         if (result.ok) {
-          setPage(result.value);
+          setComposition(result.value);
+          setPage(readConditionsPage(result.value.data.waivers_register));
           setStatus("ok");
         } else {
+          setComposition(null);
           setPage(null);
           setStatus(result.status);
           setReason(result.reason);
@@ -396,6 +410,12 @@ export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
   }, [api]);
 
   return (
+    <>
+      {/* Goal 9: the composition behind this register also carries the command
+          authority that explains why every waiver control is dark, the redacted
+          journal of what has run, per-profile source health and the canary twin
+          comparison — all four were being fetched and none shown. */}
+      <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
     <WaiversRegisterScreen
       page={page}
       counts={counts}
@@ -409,5 +429,6 @@ export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
       status={status}
       reason={reason}
     />
+    </>
   );
 }

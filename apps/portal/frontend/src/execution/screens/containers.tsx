@@ -32,6 +32,8 @@ import {
 } from "../decision";
 
 import type { CapitalPreviewInput, ExecutionApi, Result } from "../api/ports";
+import { readOperationsQueue } from "../operations";
+import { CanaryTwinNote, CrossEvidence, SourceHealthStrip } from "../components/CrossEvidence";
 import type { LiveReviewPayload } from "../api/profileRead";
 import { AdminActionDrawerScreen, type TierFilter } from "./AdminActionDrawer";
 import {
@@ -1024,6 +1026,18 @@ export function AdminCatalogueContainer({ api }: { api: ExecutionApi }) {
       tasksReason={taskState.reason}
       authority={composition.value?.commandAuthority ?? null}
       journal={composition.value?.journal ?? null}
+      // Goal 9: the drawer already renders the authority and the journal of the
+      // four blocks it fetches. Only the two nobody was showing are added here
+      // — passing the whole set would print the journal twice, which the
+      // browser check caught as 200 rows where there are 100.
+      crossEvidence={
+        <section className="exec-gate-panel" aria-label="Cross-profile evidence behind this drawer">
+          <div className="exec-tile-title">Source health by profile</div>
+          <SourceHealthStrip sourceHealth={composition.value?.sourceHealth ?? null} />
+          <div className="exec-tile-title">Canary twin</div>
+          <CanaryTwinNote canaryTwin={composition.value?.canaryTwin ?? null} />
+        </section>
+      }
       initialCommand={cmd}
       operationRef={search.get("operation")}
       actionRef={search.get("action") ? { action: search.get("action")!, binding: search.get("binding") } : null}
@@ -1092,13 +1106,17 @@ export function OperationsQueueContainer({
   // when the operator changed a filter.
   const tick = usePollTick(PROJECTION_POLL_MS);
 
+  // Goal 9: the composition carries this queue *and* the four cross-cutting
+  // blocks, and it now takes the same filter and cursor the standalone read
+  // takes — so it replaces that read rather than joining it and the screen
+  // still issues one request per page.
   const state = useAnalyticsRead(
     () =>
-      api.listOperations({
-        workspaceId,
+      api.getOperationalComposition("operations", {
+        workspace_id: workspaceId,
         after: cursor.after,
         before: cursor.before,
-        triageState,
+        triage_state: triageState,
       }),
     [api, workspaceId, cursor.after, cursor.before, triageState, tick],
     // Goal 6 put a 15-second tick in these dependencies. Without this the queue
@@ -1106,7 +1124,8 @@ export function OperationsQueueContainer({
     { keepValue: true },
   );
 
-  const queue = state.value;
+  const composition = state.value ?? null;
+  const queue = readOperationsQueue(composition?.data.operations_queue) ?? null;
   const roles = queue?.actorRoles ?? [];
 
   // Follow the requested operation once per id: select it when this page holds
@@ -1147,6 +1166,10 @@ export function OperationsQueueContainer({
 
   return (
     <>
+      {/* Goal 9: the same composition that carries the queue carries the four
+          cross-cutting blocks. The command authority here is the reason the
+          triage controls below are dark. */}
+      <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
       <OperationsQueueScreen
         queue={queue}
         status={state.status}
@@ -1338,6 +1361,7 @@ export function CommandCenterLive({
   fetchSnapshot,
   sourceHealth,
   pipeline = null,
+  evidence = null,
 }: {
   snapshot: CommandCenter;
   factory?: SseFactory | null;
@@ -1346,6 +1370,8 @@ export function CommandCenterLive({
   sourceHealth?: ReactNode;
   /** Real promotion pipeline from the Fleet register; the fixtures surface passes none. */
   pipeline?: Pipeline | null;
+  /** Goal 9 cross-cutting evidence from the composition; the fixtures surface passes none. */
+  evidence?: ReactNode;
 }) {
   const { live } = useCommandCentreStream({
     snapshot,
@@ -1360,5 +1386,5 @@ export function CommandCenterLive({
   const navigate = useNavigate();
   // Every ranked row links to its owning screen (HiFi 5a). The href is the
   // server's; a row without one renders disabled inside the screen.
-  return <CommandCenterScreen snapshot={snapshot} live={live} sourceHealth={sourceHealth} pipeline={pipeline} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
+  return <CommandCenterScreen snapshot={snapshot} live={live} sourceHealth={sourceHealth} pipeline={pipeline} evidence={evidence} onOpen={(item) => { const href = canonicalHref(item.href); if (href) navigate(href); }} />;
 }

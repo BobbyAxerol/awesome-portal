@@ -20,8 +20,9 @@ import { CommandCenterLive } from "./containers";
 import type { SseFactory } from "../sse";
 import { PanelState } from "../components/states";
 import { SourceHealthBoard } from "../components/DerivationTile";
+import { CrossEvidence } from "../components/CrossEvidence";
 import { fleetPipeline } from "../fleetPipeline";
-import type { SourceHealth } from "../api/derivations";
+import { readSourceHealth, type SourceHealth } from "../api/derivations";
 import { ProfileEnvelopeScreen, QueryAnalyticsScreen, TypedUnavailableScreen } from "./ProfileScreens";
 import type { PanelStatus } from "../contracts";
 import { StatusChip } from "../components/badges";
@@ -123,7 +124,14 @@ async function fetchCommandCenterResume(): Promise<{
 export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: ExecutionApi; sseFactory?: SseFactory | null }) {
   // G8: re-read on the projection cadence so the masthead beat follows a real revision (as_of), not a clock
   const tick = usePollTick(PROJECTION_POLL_MS);
-  const state = useApiRead(() => api.getCommandCenterSnapshot(), [api, tick], { keepValue: true });
+  // Goal 9: the composition carries this screen's own snapshot *and* the four
+  // cross-cutting blocks the standalone route drops — per-profile source
+  // health, the redacted command journal, the canary twin comparison and the
+  // command authority that explains why every control here is dark. It
+  // replaces the standalone read rather than joining it, so the screen still
+  // issues exactly one request for its snapshot.
+  const state = useApiRead(() => api.getOperationalComposition("command-center"), [api, tick], { keepValue: true });
+  const composition = state.value ?? null;
   // The promotion pipeline is the Fleet register read once per visit (BR-EX-72
   // bounded page, 50 alphas); a failed read simply leaves the panel out.
   const fleet = useApiRead(() => api.getAlphaFleet({ limit: 50 }), [api]);
@@ -142,7 +150,7 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
       </section>
     );
   }
-  const snapshot: CommandCenter | null = readCommandCenter(state.value);
+  const snapshot: CommandCenter | null = readCommandCenter(composition?.data.command_center);
   if (!snapshot) {
     return (
       <section className="exec-envelope" aria-label="Command Center">
@@ -151,13 +159,28 @@ export function CommandCenterSnapshotContainer({ api, sseFactory }: { api: Execu
       </section>
     );
   }
+  // Goal 9: the composition already carries the source-health envelope for
+  // every environment, so the three per-environment reads become none. The
+  // board still wants one read per environment for its chips, so the profiles
+  // are grouped by the environment each one names — attribution comes from the
+  // row itself, not from which request happened to fetch it.
+  const health = readSourceHealth(composition?.sourceHealthEnvelope);
+  const healthReads = (["paper", "sandbox", "live"] as const).map((environment) => ({
+    environment,
+    value: health
+      ? { ...health, data: { ...health.data, profiles: health.data.profiles.filter((row) => row.environment === environment) } }
+      : null,
+    transport: state.status,
+    reason: state.reason,
+  }));
   return (
     <CommandCenterLive
       snapshot={snapshot}
       factory={factory}
       fetchSnapshot={fetchCommandCenterResume}
-      sourceHealth={<SourceHealthLiveTiles api={api} />}
+      sourceHealth={<SourceHealthBoard reads={healthReads} />}
       pipeline={fleet.value ? fleetPipeline(fleet.value) : null}
+      evidence={<CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />}
     />
   );
 }

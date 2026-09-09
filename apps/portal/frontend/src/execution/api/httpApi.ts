@@ -378,9 +378,23 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       };
     }, "The alpha stage drift");
 
-  /** One of the four `compositions/*` reads — the screen's payload plus its evidence. */
-  const getOperationalComposition = (name: CompositionName): Promise<Result<OperationalComposition>> =>
-    readGet(`/compositions/${name}`, readOperationalComposition, `The ${name} composition`);
+  /**
+   * One of the four `compositions/*` reads — the screen's payload plus its
+   * evidence. The query is the screen's own filter and cursor: the route takes
+   * the same one the standalone read takes, which is what lets a paging screen
+   * replace that read instead of fetching both.
+   */
+  const getOperationalComposition = (
+    name: CompositionName,
+    query?: Readonly<Record<string, string | number | undefined>>,
+  ): Promise<Result<OperationalComposition>> => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query ?? {})) {
+      if (value !== undefined && value !== "") params.set(key, String(value));
+    }
+    const suffix = params.size > 0 ? `?${params.toString()}` : "";
+    return readGet(`/compositions/${name}${suffix}`, readOperationalComposition, `The ${name} composition`);
+  };
 
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");

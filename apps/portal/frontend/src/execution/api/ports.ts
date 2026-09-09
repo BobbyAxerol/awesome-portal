@@ -274,7 +274,7 @@ export interface ExecutionApi {
   /** Exact, server-filtered Paper blotter page. */
   getBlotterProfile(query?: BlotterQuery): Promise<Result<ProfileEnvelope>>;
   /** `GET /compositions/{name}` — a screen's payload plus its cross-cutting evidence. */
-  getOperationalComposition(name: CompositionName): Promise<Result<OperationalComposition>>;
+  getOperationalComposition(name: CompositionName, query?: Readonly<Record<string, string | number | undefined>>): Promise<Result<OperationalComposition>>;
   /** `GET /alphas/{id}/stage-drift` — one alpha's equity per stage, one calendar. */
   getStageDrift(alphaId: string, days?: number): Promise<Result<StageDrift>>;
   /** `GET /alphas/equity-sparklines` — every alpha's 30-day series in one read. */

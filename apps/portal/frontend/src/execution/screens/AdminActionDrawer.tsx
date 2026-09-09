@@ -421,6 +421,7 @@ export function AdminActionDrawerScreen({
   demoCli = null,
   authority = null,
   journal = null,
+  crossEvidence = null,
   onRunTask,
   children,
 }: {
@@ -450,6 +451,8 @@ export function AdminActionDrawerScreen({
    */
   authority?: CommandAuthority | null;
   journal?: { state: string | null; reasonCode: string | null; rows: readonly JournalRow[] } | null;
+  /** Goal 9: the composition's other two blocks, which this screen fetched and never showed. */
+  crossEvidence?: ReactNode;
   /** Present only on the product route; the server still classifies authority. */
   onRunTask?: (taskId: string, params: Readonly<Record<string, string>>) => Promise<TaskRunOutcome>;
   children?: ReactNode;
@@ -595,7 +598,7 @@ export function AdminActionDrawerScreen({
                   <p className="exec-cli-hint" data-tone={authority?.state === "OPEN" ? "good" : "warn"}>
                     <b>Command authority: {authority?.state ?? "not stated"}</b>
                     {" · "}relay {tasks.relayState ?? "not stated"}
-                    {authority ? ` · relay ${authority.relayActive ? "active" : "inactive"}` : ""}
+                    {authority ? ` · relay ${authority.relayActive === null ? "state not published" : authority.relayActive ? "active" : "inactive"}` : ""}
                     {" — "}
                     {authority?.state === "OPEN"
                       ? "a CONNECTED task can be run through plan → apply → verify"
@@ -661,6 +664,7 @@ export function AdminActionDrawerScreen({
                       />
                     )}
                   </details>
+                  {crossEvidence}
                 </>
               ) : null}
 

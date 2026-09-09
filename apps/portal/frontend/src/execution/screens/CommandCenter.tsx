@@ -388,7 +388,7 @@ function useElapsedSince(iso: string | null, active: boolean): number {
   return elapsed;
 }
 
-export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0, sourceHealth, pipeline = null }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null; demo?: CcDemo | null; demoTick?: number; /** EDS-05 source-health tiles; absent = the container did not request them. */ sourceHealth?: ReactNode; /** Real promotion pipeline built from the Fleet register; absent = not fetched. */ pipeline?: Pipeline | null }) {
+export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0, sourceHealth, pipeline = null, evidence = null }: { snapshot: CommandCenterSnapshot; onOpen: (item: TriageItem) => void; live?: SubscriptionState | null; demo?: CcDemo | null; demoTick?: number; /** EDS-05 source-health tiles; absent = the container did not request them. */ sourceHealth?: ReactNode; /** Real promotion pipeline built from the Fleet register; absent = not fetched. */ pipeline?: Pipeline | null; /** Goal 9 cross-cutting evidence; absent = the container did not request it. */ evidence?: ReactNode }) {
   const gate = streamGate(snapshot);
   const smoke = demo ?? null;
   const clock = demoTick;
@@ -454,6 +454,7 @@ export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0
             {snapshot.pinned ? <PinnedWatchlist panel={snapshot.pinned} demo={demo} demoTick={demoTick} /> : null}
           </div>
           {smoke ? <PromotionPipeline pipeline={smoke.pipeline} warning={smoke.warning} /> : pipeline ? <PromotionPipeline pipeline={pipeline} /> : null}
+          {evidence}
           {snapshot.today ? <Today panel={snapshot.today} /> : null}
         </div>
       </ExecutionWorkspace>

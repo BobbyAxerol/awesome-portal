@@ -16,6 +16,7 @@ import { CC_FIXTURES } from "./commandCenter.fixtures";
 import { jitterFor, useCommandCentreStream } from "./commandCenterStream";
 import { CommandCenterScreen } from "./screens/CommandCenter";
 import { MemoryRouter } from "react-router-dom";
+import type { CompositionName } from "./operationalComposition";
 import { createFixtureApi } from "./api/fixtureApi";
 import { CommandCenterSnapshotContainer } from "./screens/profileContainers";
 
@@ -152,9 +153,18 @@ describe("the product container opens the stream once it is published (P4-H)", (
       projection_epoch: "e1",
       projection_sequence: 7,
     };
+    const fixture = createFixtureApi();
     const api = {
-      ...createFixtureApi(),
-      getCommandCenterSnapshot: async () => ({ ok: true as const, value: published as unknown }),
+      ...fixture,
+      // Goal 9: the Command Center reads its snapshot through the composition,
+      // which also carries the source health this screen used to fetch three
+      // times. The stream contract under test is unchanged.
+      getOperationalComposition: async (name: CompositionName, query?: Readonly<Record<string, string | number | undefined>>) => {
+        const base = await fixture.getOperationalComposition(name, query);
+        return base.ok
+          ? { ok: true as const, value: { ...base.value, data: { command_center: published } } }
+          : base;
+      },
     };
     // The version the dev BFF actually publishes. The container checks it now:
     // a resume point read out of an envelope that never claimed to be this

@@ -8,6 +8,12 @@ import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { OperationalCompositionService } from "./operational-composition.service";
 import { PortalDerivationError } from "./portal-derivations.service";
+import { OperationQueueQuerySchema } from "../operations/contracts";
+
+/** The raw query as an object; the guards below decide what any of it means. */
+function asQuery(raw: unknown): Record<string, unknown> {
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+}
 
 interface CompositionRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -19,6 +25,18 @@ const QuerySchema = z.object({
   workspace_id: z.string().trim().min(1).max(96).optional(),
   view: z.enum(["r1", "r2", "live"]).optional(),
 }).strict();
+
+/**
+ * The two routes that stand in for a paging screen also carry that screen's
+ * own filter and cursor, so the principal cannot be parsed strictly here — it
+ * would reject the screen's query before the screen's own schema ever saw it.
+ * Only `workspace_id` is read; every other key is handed to the builder that
+ * owns it (`OperationQueueQuerySchema`, `governanceConditionsQuery`), which is
+ * where it is validated. The other five routes keep the strict schema.
+ */
+const PrincipalOnlySchema = z.object({
+  workspace_id: z.string().trim().min(1).max(96).optional(),
+}).passthrough();
 const RESOURCE_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
 
 @UseGuards(SessionGuard)
@@ -43,14 +61,27 @@ export class OperationalCompositionController {
     return this.compositions.exitReview(await this.principal(request, raw), reviewId);
   }
 
+  /**
+   * The register's own filter and cursor come through unchanged, so this route
+   * can stand in for the standalone one instead of being fetched beside it.
+   * Validation stays where it already lives — `governanceConditionsQuery`
+   * rejects anything it does not recognise.
+   */
   @Get("/waivers")
   async waivers(@Req() request: CompositionRequest, @Query() raw: unknown) {
-    return this.compositions.waiversRegister(await this.principal(request, raw));
+    const principal = await this.principal(request, raw, PrincipalOnlySchema);
+    return this.compositions.waiversRegister(principal, asQuery(raw));
   }
 
+  /** Same substitution rule; the queue's triage filter and keyset come through. */
   @Get("/operations")
   async operations(@Req() request: CompositionRequest, @Query() raw: unknown) {
-    return this.compositions.operationsQueue(await this.principal(request, raw));
+    const principal = await this.principal(request, raw, PrincipalOnlySchema);
+    const parsed = OperationQueueQuerySchema.safeParse(asQuery(raw));
+    if (!parsed.success) {
+      throw new PortalDerivationError("EDS05_OPERATION_QUEUE_QUERY_INVALID", 400, "Invalid operation queue query.");
+    }
+    return this.compositions.operationsQueue(principal, parsed.data as Record<string, unknown>);
   }
 
   @Get("/incidents/:incident_id")
@@ -73,8 +104,8 @@ export class OperationalCompositionController {
     if (!RESOURCE_ID.test(value)) throw new PortalDerivationError("EDS05_RESOURCE_ID_INVALID", 400, "Invalid resource id.");
   }
 
-  private async principal(request: CompositionRequest, raw: unknown) {
-    const parsed = QuerySchema.safeParse(raw);
+  private async principal(request: CompositionRequest, raw: unknown, schema: z.ZodTypeAny = QuerySchema) {
+    const parsed = schema.safeParse(raw);
     if (!parsed.success) throw new PortalDerivationError("EDS05_QUERY_INVALID", 400, "Invalid composition query.");
     // An unqualified read means the projection's own workspace, not the
     // session's personal one (DR-30); membership still decides access.

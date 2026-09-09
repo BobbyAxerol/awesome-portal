@@ -392,9 +392,11 @@ describe("the queue names no workspace of its own", () => {
     const queries: unknown[] = [];
     const api: ExecutionApi = {
       ...fixture,
-      async listOperations(query) {
+      // Goal 9 moved the queue onto its composition; the rule under test is
+      // unchanged and belongs to whichever read the screen makes.
+      async getOperationalComposition(name, query) {
         queries.push(query);
-        return fixture.listOperations(query);
+        return fixture.getOperationalComposition(name, query);
       },
     };
     // Before 2026-09-07 this container defaulted to the literal "default",
@@ -402,7 +404,7 @@ describe("the queue names no workspace of its own", () => {
     // nothing at all on dev.
     render(<OperationsQueueContainer api={api} now={NOW} />);
     expect(await screen.findByRole("button", { name: "op_fixture_queue_1" })).toBeTruthy();
-    expect((queries[0] as { workspaceId?: string }).workspaceId).toBeUndefined();
+    expect((queries[0] as { workspace_id?: string }).workspace_id).toBeUndefined();
 
     fireEvent.click(await screen.findByRole("button", { name: "op_fixture_queue_1" }));
     const acknowledge = await screen.findByRole("button", { name: "Acknowledge" });
