@@ -309,14 +309,14 @@ jobs:
           # credentials or mounted secret material.  These commands expose
           # only Compose state and bounded service stdout/stderr.
           release_failure_diagnostics() {
-            local status=$?
+            local status="${1:-$?}"
             set +e
             printf 'Stable release takeover failed; bounded service diagnostics follow.\n' >&2
             compose_next ps >&2 || true
             compose_next logs --tail 120 control-api-migrate control-api-bootstrap control-api >&2 || true
             exit "${status}"
           }
-          trap release_failure_diagnostics ERR
+          trap 'release_failure_diagnostics "$?"' ERR
 
           compose_next config -q
 
@@ -361,7 +361,13 @@ jobs:
           compose_next pull \
             portal-api roadmap-task-board-api portal-web \
             control-api control-api-migrate control-api-bootstrap quant-worker-py
+          set +e
           compose_next up -d --remove-orphans --wait --wait-timeout 180 --pull never
+          compose_up_status=$?
+          set -e
+          if (( compose_up_status != 0 )); then
+            release_failure_diagnostics "${compose_up_status}"
+          fi
           compose_next exec -T control-api node -e \
             "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
           compose_next exec -T portal-api python -c \

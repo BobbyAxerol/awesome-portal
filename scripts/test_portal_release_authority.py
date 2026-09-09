@@ -285,7 +285,8 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
         self.assertEqual(workflow.count("-o ServerAliveInterval=20"), 6)
         self.assertEqual(workflow.count("-o ServerAliveCountMax=30"), 6)
         self.assertEqual(workflow.count("-o ConnectTimeout=20"), 6)
-        self.assertIn("trap release_failure_diagnostics ERR", workflow)
+        self.assertIn("trap 'release_failure_diagnostics \"$?\"' ERR", workflow)
+        self.assertIn("compose_up_status=$?", workflow)
         compose_next = workflow.split("compose_next() {", 1)[1].split(
             "\n          }\n\n          compose_next config", 1
         )[0]
