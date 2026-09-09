@@ -46,6 +46,7 @@ import { EnvelopeCaption, EquityChart, type EquitySeries } from "../components/E
 import { ContributionChart } from "../components/ContributionChart";
 import { DensityHeatmap, LinesChart } from "../components/marketChart";
 import { ExecutionWorkspace, shortDigest } from "../components/workspace";
+import { ChartSkeleton, useDeferredLoading } from "../components/loading";
 
 /**
  * Row budgets for the bounded panels.
@@ -128,11 +129,44 @@ export interface VenueContribution {
  * DERIBIT with too few fills to judge execution quality, beside BINANCE with
  * enough. A tile that hid the first would imply the venue was fine.
  */
+/**
+ * A tile whose own read has not answered yet.
+ *
+ * The plot area is held at the height the chart will take, so the grid does not
+ * reflow when twelve tiles land one after another; the number, the title and
+ * the envelope caption stay, because they are true before the data arrives.
+ * Below `SHOW_AFTER_MS` nothing is drawn at all — a fast read should not blink
+ * a placeholder between two good frames.
+ */
+function TileReading({ tile }: { tile: InsightTile }) {
+  const show = useDeferredLoading(true);
+  return (
+    <section className="exec-chart-tile" aria-label={`${tile.index} · ${tile.title}`} data-state="loading">
+      <div className="exec-chart-head">
+        <h3 className="exec-section-title">{tile.index} · {tile.title}</h3>
+      </div>
+      {/* 320px: the measured body of a settled tile (422 tall, 36 of it head,
+          the rest caption and padding). Holding the real height is the point —
+          twelve tiles landing one after another must not walk the grid down
+          the page while the reader is looking at it. */}
+      {show ? <ChartSkeleton height={320} label={`Reading ${tile.title}`} /> : <div style={{ height: 320 }} />}
+      <EnvelopeCaption envelope={tile.envelope} compact />
+    </section>
+  );
+}
+
 export interface InsightTile {
   index: number;
   title: string;
   envelope: ChartEnvelope;
-  state: "ok" | "insufficient_data" | "unavailable";
+  /**
+   * `loading` is its own answer, not a flavour of `unavailable`.
+   *
+   * Before this, a tile whose read was still in flight rendered the
+   * unavailable box with a reason — so twelve tiles told the reader the
+   * source had refused, while it was still being asked.
+   */
+  state: "ok" | "insufficient_data" | "unavailable" | "loading";
   /** Why there is not enough, in the server's words. */
   reason?: string | null;
   body?: ReactNode;
@@ -697,7 +731,7 @@ function Deployments({ onOpenDeployment, onOpenAccount, rows, scope }: { rows: r
   );
 }
 
-function Tiles({ tiles, demoTiles }: { tiles: readonly InsightTile[]; demoTiles: AlphaDemoTiles | null }) {
+export function Tiles({ tiles, demoTiles = null }: { tiles: readonly InsightTile[]; demoTiles?: AlphaDemoTiles | null }) {
   // Twelve tiles, each a real chart or an explicit state — never a frame with a caption.
   return (
     <div className="exec-alpha-tiles" data-scope-panel="tiles">
@@ -750,6 +784,11 @@ function Tiles({ tiles, demoTiles }: { tiles: readonly InsightTile[]; demoTiles:
             compact
             unavailableReason="Series not published for this scope — BR-EX-34."
           />
+        ) : tile.state === "loading" ? (
+          /* The tile keeps its number, its title and its caption; only the plot
+             is stood in for. A tile that vanished into a grey box while its own
+             read was running is the same mistake the tables used to make. */
+          <TileReading key={tile.index} tile={tile} />
         ) : (
           <section key={tile.index} className="exec-chart-tile exec-chart-unavailable" aria-label={`${tile.index} · ${tile.title}`} data-state={tile.state}>
             <div className="exec-chart-head">

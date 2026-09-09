@@ -6965,9 +6965,14 @@ tr[data-arrived="true"] > :first-child,
 .exec-sk-cell { flex: 1 1 0; min-width: 0; }
 
 .exec-sk-chart {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-3);
   border: 1px solid var(--line-soft);
   background: linear-gradient(to top, var(--surface-2) 1px, transparent 1px) 0 100% / 100% 25% repeat-y;
+}
+.exec-sk-chartbars {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  width: 100%; padding: 0 var(--space-4);
 }
 
 .exec-sk-strip { display: flex; gap: 1px; background: var(--line-soft); border: 1px solid var(--line); }

@@ -2502,6 +2502,30 @@ trang mờ mà không nói lý do; bốn chỗ `?? 0` in số 0 cho giá trị v
 
 **Gate:** 2 039 test (14 test mới cho riêng phần này), tsc sạch.
 
+#### A18.4 Từng ô insight chart, và một `0MONEY` owner bắt được
+
+**`0MONEY` — lỗi thật.** `Histogram.unit` được khai báo là **hậu tố chữ** (`ms`,
+`%`), nhưng nơi gọi truyền `unit: "money"` với ý *"định dạng kiểu tiền"*.
+Component nối thẳng chữ đó sau số → `0money`, CSS viết hoa thành **`0MONEY`**:
+một **tên lớp định dạng rò ra thành chữ hiển thị**, trên mọi alpha. Nay bên gọi
+tự định dạng (nó là bên duy nhất biết đơn vị tiền) và `unit` chỉ còn đúng nghĩa
+hậu tố, ghi rõ trong type để không ai lặp lại.
+
+**Ô insight có trạng thái đọc riêng.** `InsightTile.state` thêm `loading` —
+**không phải một biến thể của `unavailable`**. Trước đó ô nào chưa đọc xong đều
+vẽ hộp `unavailable` kèm lý do: **mười hai ô nói nguồn đã từ chối, trong khi
+nguồn vẫn đang được hỏi**. Đúng lỗi vừa gỡ ở Alpha Fleet, ở một tầng khác.
+
+Ô đang đọc **giữ số thứ tự, tiêu đề và caption** (những thứ đúng trước khi dữ
+liệu về), chỉ vùng vẽ được thay: các **vạch ngang có một sóng lướt qua** — cùng
+ngôn ngữ với bảng, vì người đã học được "bảng đang tải trông thế nào" không nên
+phải học thêm thứ thứ hai cho biểu đồ. Chiều cao giữ **320 px** = thân thật của
+một ô đã đo (422 tổng, 36 là đầu) nên mười hai ô lần lượt về **không kéo lưới
+trôi xuống** dưới mắt người đang nhìn.
+
+Đo trên dev, bắt đúng lúc đang đọc: **12 ô `loading`, 12 chart skeleton, 0 ô
+`unavailable`**; không còn chuỗi `MONEY` nào trên trang.
+
 #### A18.2 Việc chính: hệ thống trạng thái đang đọc cho toàn bộ màn
 
 Hiện trạng: `PanelSkeleton` là **ba thanh xám tĩnh 30%/60%/90%, giống hệt nhau ở

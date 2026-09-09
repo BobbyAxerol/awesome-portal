@@ -13,6 +13,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AlphaFleet } from "./screens/AlphaFleet";
+import { Tiles } from "./screens/AlphaThreeSixty";
 
 import {
   ChartSkeleton,
@@ -181,5 +182,33 @@ describe("the shapes are actually visible, and cost one animation per region", (
     const css = readFileSync(join(__dirname, "execution.css"), "utf8");
     expect(css).not.toContain(".exec-sk-line::after");
     expect(css).toContain(".exec-sk-table::after");
+  });
+});
+
+describe("an insight tile that is still reading", () => {
+  it("keeps its number, title and caption, and draws no verdict", () => {
+    // Before this a tile whose read was in flight rendered the unavailable box
+    // with a reason, so twelve tiles told the reader the source had refused
+    // while it was still being asked.
+    const tile = {
+      index: 7,
+      title: "Trade return histogram",
+      envelope: { authority: "DERIVED" as const, asOf: "2026-09-08T12:00:00Z", window: "All", interval: "—", formulaVersion: null },
+      state: "loading" as const,
+    };
+    vi.useFakeTimers();
+    try {
+      const { container } = render(<MemoryRouter><Tiles tiles={[tile]} /></MemoryRouter>);
+      act(() => { vi.advanceTimersByTime(SHOW_AFTER_MS + 20); });
+      expect(container.querySelector('[data-state="loading"]')).not.toBeNull();
+      // The title appears in the heading and again in the announced wait.
+      expect(screen.getAllByText(/Trade return histogram/).length).toBeGreaterThan(0);
+      expect(container.querySelector(".exec-sk-chart")).not.toBeNull();
+      // No refusal words while the read is running.
+      expect(screen.queryByText(/unavailable/i)).toBeNull();
+      expect(screen.queryByText(/insufficient/i)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

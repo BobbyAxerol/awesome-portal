@@ -25,10 +25,21 @@ export interface CapGaugeItem {
 
 export interface Histogram {
   label: string;
+  /**
+   * A literal suffix printed after the figure — `ms`, `%`, `bps`.
+   *
+   * NOT a formatting class. Passing "money" here printed `0MONEY` on the Alpha
+   * 360 histogram for every alpha: a caller meant "format these as money" and
+   * the component appended the word. When the figures need formatting the
+   * caller does it and passes `display`, because only the caller knows the
+   * currency.
+   */
   unit: string;
   buckets: { from: number; to: number; count: number }[];
   p50: number;
   p95: number;
+  /** Already-formatted p50/p95, when the raw numbers are not what to show. */
+  display?: { p50: string; p95: string };
 }
 
 export interface Spark {

@@ -157,9 +157,18 @@ export function ChartSkeleton({
   height?: number;
   label?: string;
 }) {
+  // Horizontal bars with one wave crossing them — the same language the tables
+  // read in, because a reader who has learnt what a loading table looks like
+  // should not have to learn a second thing for a loading chart. The bars sit
+  // on the baseline at descending widths so the block reads as a plot filling
+  // rather than as a paragraph of text.
+  const bars = ["full", "long", "medium", "long", "short"] as const;
   return (
     <div className="exec-sk-chart" style={{ height }} role="status" aria-label={label}>
       <span className="sr-only">{label}</span>
+      <div className="exec-sk-chartbars" aria-hidden="true">
+        {bars.map((w, i) => <span className="exec-sk-line" data-w={w} key={i} />)}
+      </div>
       <ExecutionPulse />
     </div>
   );

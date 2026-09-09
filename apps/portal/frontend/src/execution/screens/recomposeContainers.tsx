@@ -1476,7 +1476,19 @@ export function ObservedTimelineLive({ api, environment, environments, subjectKi
   );
 }
 
-function unavailableAnalyticsTiles(reason: string, envelope: Envelope): InsightTile[] {
+/**
+ * The twelve tiles when there are no facts to draw them from.
+ *
+ * `state` is the caller's, because "the source refused" and "the source has not
+ * answered yet" are different sentences and only the caller knows which one is
+ * true. Every tile used to say `unavailable` regardless — twelve claims that
+ * the source had refused, made while it was still being asked.
+ */
+function placeholderAnalyticsTiles(
+  reason: string,
+  envelope: Envelope,
+  state: "unavailable" | "loading",
+): InsightTile[] {
   return TILE_TITLES.map((title, index) => ({
     index: index + 1,
     title,
@@ -1487,8 +1499,8 @@ function unavailableAnalyticsTiles(reason: string, envelope: Envelope): InsightT
       interval: "—",
       formulaVersion: null,
     },
-    state: "unavailable",
-    reason,
+    state,
+    reason: state === "loading" ? null : reason,
   }));
 }
 
@@ -1602,7 +1614,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
               .filter((tile) => !HIFI_COVERED_TITLES.has(tile.title))
               .map((tile, index) => ({ ...tile, index: HIFI_TILES.length + index + 1 })),
           ]
-        : unavailableAnalyticsTiles(analyticsReason, envelope)}
+        : placeholderAnalyticsTiles(analyticsReason, envelope, analyticsState.status === "loading" ? "loading" : "unavailable")}
       replay={scopedFacts ? <TradeReplayLive api={api} analytics={scopedFacts} additive={analytics} alphaId={alphaId} focusId={focus} relations={relations}
         // The book these events were drawn from — the same one the relation
         // page set was read for, so the Trading System's bars and the events

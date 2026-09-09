@@ -117,9 +117,9 @@ export function HistogramChart({ hist, height = 180, warning }: { hist: Histogra
     <section className="exec-chart-tile exec-visual" aria-label={hist.label}>
       <div className="exec-chart-head">
         <h3 className="exec-section-title">{hist.label}</h3>
-        <span className="exec-role-num exec-visual-stat">p50 {hist.p50}{hist.unit} · p95 {hist.p95}{hist.unit}</span>
+        <span className="exec-role-num exec-visual-stat">p50 {hist.display?.p50 ?? `${hist.p50}${hist.unit}`} · p95 {hist.display?.p95 ?? `${hist.p95}${hist.unit}`}</span>
       </div>
-      <div className="exec-chart-body" role="img" aria-label={`${hist.label} distribution, p50 ${hist.p50}${hist.unit}, p95 ${hist.p95}${hist.unit}`}>
+      <div className="exec-chart-body" role="img" aria-label={`${hist.label} distribution, p50 ${hist.display?.p50 ?? `${hist.p50}${hist.unit}`}, p95 ${hist.display?.p95 ?? `${hist.p95}${hist.unit}`}`}>
         <EChart option={option} height={height} />
       </div>
       <SmokeNote warning={warning} />

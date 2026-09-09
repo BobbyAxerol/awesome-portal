@@ -348,7 +348,7 @@ export function hifiInsightTiles(input: HifiInsightInput): InsightTile[] {
           body: (
             <>
               <HistogramChart
-                hist={{ label: "realized per fill", unit: "money", buckets: hist.buckets, p50: hist.p50, p95: hist.p95 }}
+                hist={{ label: "realized per fill", unit: "", buckets: hist.buckets, p50: hist.p50, p95: hist.p95, display: { p50: money(hist.p50), p95: money(hist.p95) } }}
                 height={150}
               />
               {factRows([
