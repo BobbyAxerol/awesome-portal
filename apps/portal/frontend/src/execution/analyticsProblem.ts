@@ -219,5 +219,10 @@ export function readAnalyticsFailure(
  * concatenate one in.
  */
 export function analyticsFailureReason(failure: AnalyticsFailure): string {
-  return failure.action ? `${failure.title} ${failure.action}` : failure.title;
+  const sentence = failure.action ? `${failure.title} ${failure.action}` : failure.title;
+  // PHASE 2 (round 2): a failure this build has no sentence for still owes the
+  // reader the machine code, or "a reason this screen does not recognise" is
+  // all anyone ever learns — including whoever has to go and look it up.
+  // The code is our own vocabulary, never the server's prose.
+  return failure.kind === "unknown" && failure.code ? `${sentence} (${failure.code})` : sentence;
 }

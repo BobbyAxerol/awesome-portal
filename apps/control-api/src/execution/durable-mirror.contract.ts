@@ -58,3 +58,40 @@ export interface DurableMirrorScope {
   environment: ProjectionEnvironment;
   profileId: string;
 }
+
+/**
+ * PHASE 2B (round 2) · the mirror's own account of its completeness.
+ *
+ * Deliberately an aggregate. `entity_key`, `row_id` and the payload digests
+ * that the gap and conflict tables carry are forensic: they name a specific
+ * order or position, and no operator screen needs them to learn that a
+ * relation is incomplete.
+ */
+export interface DurableMirrorIntegrityFinding {
+  /** A relation that did not arrive, or a row that arrived twice differently. */
+  readonly kind: "GAP" | "CONFLICT";
+  readonly relation_key: string;
+  readonly reason_code: string;
+  readonly findings: number;
+  readonly first_detected_at_ms: number | null;
+  readonly last_detected_at_ms: number | null;
+}
+
+export interface DurableMirrorIntegrity {
+  /**
+   * `READY` only with a current measured revision behind it — a zero count
+   * without one would claim a clean mirror that was never looked at.
+   * `PARTIAL` when anything was recorded. `UNAVAILABLE` when the mirror is
+   * off, has never been measured, or could not be read.
+   */
+  readonly state: "READY" | "PARTIAL" | "UNAVAILABLE";
+  readonly reason_code: string | null;
+  readonly measured_revision: string | null;
+  readonly measured_at_ms: number | null;
+  readonly read_at_ms: number;
+  /** Null, never zero, when there is no measurement to count. */
+  readonly gap_findings: number | null;
+  readonly conflict_findings: number | null;
+  readonly total_findings: number | null;
+  readonly findings: readonly DurableMirrorIntegrityFinding[];
+}

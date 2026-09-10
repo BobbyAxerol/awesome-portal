@@ -10,6 +10,7 @@
  * stale and partial provoke different responses from a human, and collapsing
  * them into `catch (e)` is how they end up as one grey error box.
  */
+import type { MirrorIntegrity } from "../mirrorIntegrity";
 import type {
   AlphaFleetItem, BindingItem, LiveReviewPayload, ManagerListEnvelope,
   OperatorTaskCatalogue, OperatorTaskRunResult, PortfolioListEnvelope, ProfileEnvelope, QueryAnalytics,
@@ -514,6 +515,8 @@ export interface ExecutionApi {
   getCrossEquity(
     portfolioId: string,
   ): Promise<Result<{ crossEquity: CrossEquity; envelope: AnalyticsEnvelope }>>;
+  /** `GET /durable-mirror/integrity` — the mirror's own gap and conflict aggregate. */
+  getMirrorIntegrity(environment: "paper" | "sandbox" | "live"): Promise<Result<MirrorIntegrity>>;
   /** `GET /api/v1/execution/broker-bindings/{bindingId}/exposure` */
   getBindingExposure(
     bindingId: string,

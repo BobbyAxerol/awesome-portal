@@ -2,7 +2,19 @@ import { readFile } from "node:fs/promises";
 import { importPKCS8, SignJWT, type KeyLike } from "jose";
 import type { Role } from "../domain";
 
-const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:(?:command-center|manager-v2:read|manager-realtime)|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|account-broker-360|paper-workbench):[A-Za-z0-9._-]{1,128})$/;
+/*
+ * PHASE 2 (round 2) · account-broker-360 is split out with its own id grammar.
+ *
+ * A binding id is `<local>@<VENUE>` and the shared id grammar has no `@`, so
+ * the delegated resource for that screen could never be issued even once the
+ * route's own parser accepted the id. This is the second gate on that path,
+ * and it is widened for that one screen only — the other screens keep the
+ * grammar they had, because nothing asked for their subject ids to change.
+ *
+ * The binding half mirrors `parseBindingId` in analytics.proxy.ts exactly, and
+ * a test asserts the two stay in step.
+ */
+const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:(?:command-center|manager-v2:read|manager-realtime)|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|paper-workbench):[A-Za-z0-9._-]{1,128}|execution:screen:account-broker-360:[A-Za-z0-9][A-Za-z0-9._-]{0,126}@[A-Z][A-Z0-9_]{1,31})$/;
 export const MANAGER_V2_READ_RESOURCE = "execution:manager-v2:read";
 export const MANAGER_REALTIME_RESOURCE = "execution:manager-realtime";
 const PROFILE_ID_PATTERN = /^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/;
@@ -159,6 +171,15 @@ function validatePrincipal(principal: ExecutionReadPrincipal): void {
   ) {
     throw new Error("execution read principal is invalid");
   }
+}
+
+/**
+ * Exported so a test can prove the two gates on the binding path agree: a
+ * resource the proxy builds must be one the issuer will actually sign, or the
+ * route is dead in a different place.
+ */
+export function isDelegatableResource(resource: string): boolean {
+  return validResource(resource);
 }
 
 function validResource(resource: string): boolean {

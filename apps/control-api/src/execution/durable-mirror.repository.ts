@@ -7,6 +7,8 @@ import { KeysetCursorCodec, queryFingerprint } from "../query";
 import {
   DurableMirrorCommitInput,
   DurableMirrorCommitResult,
+  DurableMirrorIntegrity,
+  DurableMirrorIntegrityFinding,
   DurableMirrorScope,
   DurableMirrorWriter,
 } from "./durable-mirror.contract";
@@ -746,6 +748,76 @@ export class ExecutionDurableMirrorRepository implements DurableMirrorWriter {
     );
   }
 
+  /**
+   * PHASE 2B (round 2) · what the mirror already knows about itself.
+   *
+   * The mirror records a gap when a relation it expected did not arrive, and a
+   * conflict when the same row arrived twice with different content. Both were
+   * written and neither was ever read: no route, no screen. A system that
+   * detects its own holes and files them where nobody looks is worse than one
+   * that does not detect them, because it reads as healthy.
+   *
+   * This returns an aggregate only. `entity_key`, `row_id` and the digests stay
+   * in the database: they identify a customer's order or position, and an
+   * operator needs to know a relation is incomplete, not which row it was.
+   */
+  async integrity(scope: DurableMirrorScope): Promise<DurableMirrorIntegrity> {
+    if (this.config.FEATURE_EXECUTION_DURABLE_MIRROR !== "true") {
+      return unavailableIntegrity("EDS06_MIRROR_DISABLED");
+    }
+    try {
+      return await this.stableRead(async (client) => {
+        const revision = await this.currentRevision(client, scope);
+        // No current revision means nothing has been measured. That is not an
+        // empty result — an empty result would claim a clean mirror.
+        if (!revision) return unavailableIntegrity("EDS06_MIRROR_NEVER_MEASURED");
+        const [gaps, conflicts] = await Promise.all([
+          client.query<{ relation_key: string; reason_code: string; findings: string; oldest: Date; newest: Date }>(
+            `SELECT relation_key,reason_code,count(*)::text AS findings,
+                    min(detected_at) AS oldest,max(detected_at) AS newest
+               FROM execution_durable_mirror_gaps
+              WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
+              GROUP BY relation_key,reason_code
+              ORDER BY relation_key,reason_code`,
+            [scope.workspaceId, scope.environment, scope.profileId],
+          ),
+          client.query<{ relation_key: string; reason_code: string; findings: string; oldest: Date; newest: Date }>(
+            `SELECT relation_key,reason_code,count(*)::text AS findings,
+                    min(detected_at) AS oldest,max(detected_at) AS newest
+               FROM execution_durable_mirror_conflicts
+              WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
+              GROUP BY relation_key,reason_code
+              ORDER BY relation_key,reason_code`,
+            [scope.workspaceId, scope.environment, scope.profileId],
+          ),
+        ]);
+        const findings = [
+          ...gaps.rows.map((row) => integrityFinding("GAP", row)),
+          ...conflicts.rows.map((row) => integrityFinding("CONFLICT", row)),
+        ];
+        const total = findings.reduce((sum, finding) => sum + finding.findings, 0);
+        return {
+          // READY with a zero count is a claim, and it is only true because a
+          // current revision exists to have counted.
+          state: total === 0 ? "READY" as const : "PARTIAL" as const,
+          reason_code: total === 0 ? null : "EDS06_MIRROR_INTEGRITY_FINDINGS",
+          measured_revision: revision.read_model_revision,
+          // `received_at` crosses the contract as an ISO string; an unparseable
+          // one becomes null rather than an invented instant.
+          measured_at_ms: epochOrNull(revision.received_at),
+          read_at_ms: Date.now(),
+          gap_findings: findings.filter((finding) => finding.kind === "GAP").length,
+          conflict_findings: findings.filter((finding) => finding.kind === "CONFLICT").length,
+          total_findings: total,
+          findings,
+        };
+      });
+    } catch {
+      // A read that failed is not a clean mirror either.
+      return unavailableIntegrity("EDS06_MIRROR_READ_FAILED");
+    }
+  }
+
   private async currentRevision(
     client: PoolClient,
     scope: DurableMirrorScope,
@@ -1030,4 +1102,49 @@ function emptyRange(
     rows: [],
     next_cursor: null,
   };
+}
+
+
+/** One aggregate line: a relation, why it was flagged, and how many times. */
+function integrityFinding(
+  kind: "GAP" | "CONFLICT",
+  row: { relation_key: string; reason_code: string; findings: string; oldest: Date; newest: Date },
+): DurableMirrorIntegrityFinding {
+  return {
+    kind,
+    relation_key: row.relation_key,
+    reason_code: row.reason_code,
+    findings: Number(row.findings),
+    first_detected_at_ms: epochOrNull(row.oldest),
+    last_detected_at_ms: epochOrNull(row.newest),
+  };
+}
+
+/**
+ * Unavailable carries its reason and no counts at all. A zero here would be
+ * indistinguishable from a measured clean mirror, which is the lie this whole
+ * read exists to avoid.
+ */
+function unavailableIntegrity(reasonCode: string): DurableMirrorIntegrity {
+  return {
+    state: "UNAVAILABLE",
+    reason_code: reasonCode,
+    measured_revision: null,
+    measured_at_ms: null,
+    read_at_ms: Date.now(),
+    gap_findings: null,
+    conflict_findings: null,
+    total_findings: null,
+    findings: [],
+  };
+}
+
+/** An instant we cannot read is null, never a zero and never "now". */
+function epochOrNull(value: unknown): number | null {
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.getTime();
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }

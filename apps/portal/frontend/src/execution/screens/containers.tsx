@@ -1118,6 +1118,9 @@ export function OperationsQueueContainer({
   const [filter, setFilter] = useState<QueueFilter>("NEEDS_ATTENTION");
   const [cursor, setCursor] = useState<{ after?: string; before?: string }>({});
   const [selected, setSelected] = useState<QueueRow | null>(null);
+  // PHASE 2B (round 2): a read of its own, so a mirror report that fails does
+  // not take the queue down with it.
+  const mirrorState = useAnalyticsRead(() => api.getMirrorIntegrity("paper"), [api]);
   const [followedOperation, setFollowedOperation] = useState<string | null>(null);
   const [effect, setEffect] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
@@ -1197,6 +1200,7 @@ export function OperationsQueueContainer({
           triage controls below are dark. */}
       <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
       <OperationsQueueScreen
+        mirrorIntegrity={mirrorState.value ?? null}
         queue={queue}
         status={state.status}
         reason={state.reason}

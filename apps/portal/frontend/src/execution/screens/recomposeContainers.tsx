@@ -8,6 +8,7 @@
  * screen is never swapped for a generic envelope view, and no fixture value
  * is reachable from this module.
  */
+import { useAnalyticsRead } from "./containers";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -2207,7 +2208,8 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
   );
   if (bindingId) {
     return (
-      <BindingDetail
+      <BindingDetailWithExposure
+        api={api}
         bindingId={bindingId}
         detail={detailState.value}
         status={detailState.status === "ok" && !detailState.value ? "empty" : detailState.status}
@@ -2223,6 +2225,34 @@ export function AccountsBindingsRichContainer({ api, bindingId }: { api: Executi
       reason={listState.reason}
       onNextPage={(cursor) => setQuery((q) => ({ ...q, after: cursor, before: undefined }))}
       onPreviousPage={(cursor) => setQuery((q) => ({ ...q, before: cursor, after: undefined }))}
+    />
+  );
+}
+
+/**
+ * PHASE 2A (round 2) · the exposure read the screen never made.
+ *
+ * `getBindingExposure` has existed on the client for as long as the route has,
+ * and only the lab ever called it — the route answered 400 for every binding
+ * that exists. It is a second hook rather than part of the detail read so an
+ * exposure that fails takes the panel unavailable and not the whole screen.
+ */
+function BindingDetailWithExposure({ api, bindingId, detail, status, reason }: {
+  api: ExecutionApi; bindingId: string; detail: BindingItem | null;
+  status: PanelStatus; reason?: string;
+}) {
+  const exposureState = useAnalyticsRead(() => api.getBindingExposure(bindingId), [api, bindingId]);
+  return (
+    <BindingDetail
+      bindingId={bindingId}
+      detail={detail}
+      status={status}
+      reason={reason}
+      exposure={exposureState.value?.exposure ?? null}
+      // This branch only renders when there is no bucket to draw, so a
+      // successful read here is an empty one.
+      exposureStatus={exposureState.status === "ok" ? "empty" : exposureState.status}
+      exposureReason={exposureState.reason}
     />
   );
 }

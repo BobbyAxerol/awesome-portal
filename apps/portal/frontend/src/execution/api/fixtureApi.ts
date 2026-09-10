@@ -959,6 +959,22 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The capital ledger response could not be read.");
     },
 
+    /** The fixture mirror has never been measured — that is a state, not a zero. */
+    async getMirrorIntegrity(_environment: "paper" | "sandbox" | "live") {
+      const blocked = gate<never>("getMirrorIntegrity");
+      if (blocked) return blocked;
+      return {
+        ok: true as const,
+        value: {
+          state: "UNAVAILABLE" as const,
+          reasonCode: "EDS06_MIRROR_NEVER_MEASURED",
+          measuredRevision: null, measuredAtMs: null, readAtMs: Date.now(),
+          gapFindings: null, conflictFindings: null, totalFindings: null,
+          findings: [],
+        },
+      };
+    },
+
     async getBindingExposure(_bindingId: string) {
       const blocked = gate<never>("getBindingExposure");
       if (blocked) return blocked as Result<never>;

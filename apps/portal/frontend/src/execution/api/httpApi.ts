@@ -14,6 +14,7 @@
  * When `EX-BE-05a` publishes its contract, what changes here is the row
  * mapping. The transport, the error mapping and the policy gate are done.
  */
+import { readMirrorIntegrity } from "../mirrorIntegrity";
 import { normaliseScreenBody, SCREEN_CONTRACT_MISMATCH, SCREEN_V2_MEDIA_TYPE } from "./screenV2";
 import {
   panelStatusForHttp,
@@ -996,6 +997,21 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       return crossEquity && envelope
         ? { ok: true as const, value: { crossEquity, envelope } }
         : unavailable("The cross-portfolio response could not be read.");
+    },
+
+    /**
+     * PHASE 2B (round 2) · what the mirror knows it is missing.
+     *
+     * The reader returns null for anything that is not the integrity envelope,
+     * so a shape we did not ask for becomes an unavailable panel and never a
+     * clean one.
+     */
+    async getMirrorIntegrity(environment: "paper" | "sandbox" | "live") {
+      return readGet(
+        `/durable-mirror/integrity?environment=${encodeURIComponent(environment)}`,
+        readMirrorIntegrity,
+        "The durable mirror integrity report",
+      );
     },
 
     async getBindingExposure(bindingId: string) {

@@ -5,6 +5,7 @@
  * its published facts in the reviewed frame; every unpublished panel states
  * itself. The lab passes `demo` for the full hi-fi.
  */
+import type { BindingExposure } from "../analytics";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
@@ -24,9 +25,30 @@ export interface BindingDetailProps {
   /** Reviewed hi-fi bundle — the lab passes it; the product never does. */
   demo?: AccountsDemo | null;
   demoTick?: AccountsTick;
+  /**
+   * PHASE 2A (round 2) · `GET /broker-bindings/{id}/exposure`.
+   *
+   * The route existed and the client method existed, and no product screen
+   * ever called it — every binding id carries an `@`, the identifier grammar
+   * had none, so it answered 400 for every binding that exists. Now that it
+   * can answer, this panel states what it says, or why it still cannot.
+   */
+  exposure?: BindingExposure | null;
+  /** `PanelState` never renders `ok`; a successful read with no bucket is `empty`. */
+  exposureStatus?: Exclude<PanelStatus, "ok">;
+  exposureReason?: string;
 }
 
-export function BindingDetail({ bindingId, detail = null, status = "ok", reason, demo, demoTick }: BindingDetailProps) {
+
+/** A figure the exposure route did not publish still has to say so. */
+const absentFigure = (
+  <span className="exec-af-absent" title="The exposure route published no figure for this currency.">not published</span>
+);
+
+export function BindingDetail({
+  bindingId, detail = null, status = "ok", reason, demo, demoTick,
+  exposure = null, exposureStatus = "unavailable", exposureReason,
+}: BindingDetailProps) {
   const smoke = demo && bindingId === demo.binding.id ? demo : null;
   const { now, j, snaps } = demoTick ?? { now: new Date(0), j: 0, snaps: [] };
   if (!smoke) {
@@ -59,7 +81,28 @@ export function BindingDetail({ bindingId, detail = null, status = "ok", reason,
           </section>
           <section className="exec-pf2-panel" aria-label="Capital invariant">
             <header className="exec-pf2-head"><span className="exec-pf2-title">Capital invariant — Σ virtual ≤ physical</span></header>
-            <PanelState status="unavailable" reason="Physical equity and the virtual-allocation ledger are not published on this projection (N28 exposure population)." />
+            {exposure && exposure.buckets.length > 0
+              ? (
+                <table className="exec-af-table" aria-label="Capital invariant by currency">
+                  <thead><tr><th>currency</th><th data-numeric="true">used</th>
+                    <th data-numeric="true">reserved</th><th data-numeric="true">available</th>
+                    <th data-numeric="true">headroom</th></tr></thead>
+                  <tbody>
+                    {exposure.buckets.map((bucket) => (
+                      <tr key={bucket.currency}>
+                        <td>{bucket.currency}</td>
+                        <td data-numeric="true">{bucket.used ?? absentFigure}</td>
+                        <td data-numeric="true">{bucket.reserved ?? absentFigure}</td>
+                        <td data-numeric="true">{bucket.available ?? absentFigure}</td>
+                        <td data-numeric="true" data-tone={bucket.headroom?.startsWith("-") ? "bad" : undefined}>
+                          {bucket.headroom ?? absentFigure}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+              : <PanelState status={exposureStatus} reason={exposureReason
+                  ?? "Physical equity and the virtual-allocation ledger are not published on this projection (N28 exposure population)."} />}
           </section>
           <section className="exec-pf2-panel" aria-label="Sync and policy">
             <header className="exec-pf2-head"><span className="exec-pf2-title">Sync · policy</span></header>

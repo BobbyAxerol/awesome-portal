@@ -6569,3 +6569,162 @@ khi 4 test React đỏ với `ReferenceError: mute is not defined`. Chỉ khi đ
 `AlphaFleet.tsx:437:300` trong stack trace mới tìm ra.
 
 Bài học: khi đang tìm **sự vắng mặt** của một thứ, cắt cột là tự làm mù mình.
+
+## A42. PHASE 2 (VÒNG 2) ĐÃ LÀM (10-09) — hai cửa trên một đường, và cái hệ thống tự giấu
+
+Bám **A38.6 của codex**, không bám bản Phase 2 tôi tự viết ở §A38.
+
+### A42.1 2A — route không chết vì một cửa, mà vì hai
+
+Tôi từng viết ở §A37.8 rằng regex `IDENTIFIER` chặn `@`. Đúng, nhưng **chưa đủ**.
+Trace theo A38.6 mục 2 (bắt buộc trace, không đoán) lộ ra **hai cửa** trên cùng
+một đường:
+
+| Cửa | Ở đâu | Grammar |
+| --- | --- | --- |
+| 1. proxy | `analytics.proxy.ts` — `segment()` dòng 468 **và** `analyticsResource()` dòng 49 | `/^[A-Za-z0-9._-]{1,128}$/` |
+| 2. delegation | `delegation.ts` — `RESOURCE_PATTERN` | `execution:screen:account-broker-360:[A-Za-z0-9._-]{1,128}` |
+
+Nếu chỉ sửa cửa 1, assertion uỷ quyền vẫn bị từ chối ở cửa 2 — **route vẫn chết,
+chỉ đổi mã lỗi**. Đây đúng là thứ chỉ trace mới thấy.
+
+**Grammar suy từ dữ liệu thật, không bịa.** Đọc 43 binding trên paper và 35 trên
+sandbox: đúng **một** dấu `@` mỗi id; vế trái là chữ thường, số, `-`, `_` (hai id
+có chữ hoa: `regressionportfolioA001_1d`); vế phải là venue viết hoa
+(`BINANCE`, và hệ còn có `OKX`, `PAPER_DNSE_VNM`); dài 37–58 ký tự.
+
+`parseBindingId` nhận đúng grammar đó và **từ chối trước khi chạm transport**:
+slash, backslash, whitespace/control, `..`, `%` (đã encode một lần hoặc hai lần),
+nhiều hơn một `@`, venue viết thường, thiếu vế trái, quá 128 ký tự.
+
+Nới **chỉ một màn**: `managerQueryAnalyticsTarget()` và analytics local giữ
+nguyên validator cũ, vì trace chứng minh binding **không** đi qua chúng. Nới
+`IDENTIFIER` chung sẽ vô tình nới cả subject id của deployment, alpha và
+portfolio — thứ không ai yêu cầu và không ai để ý khi hỏng.
+
+Encode **đúng một lần**: `encodeURIComponent(canonical)` ngay tại chỗ dựng path,
+từ dạng canonical. Resource uỷ quyền dùng id canonical; assertion vốn đã mang
+`principalId`, `sessionId`, `workspaceId`, `roles` nên phạm vi đã đủ, và không
+chỗ nào log id thô.
+
+### A42.2 2B — mirror ghi lỗ của chính nó rồi cất vào chỗ không ai nhìn
+
+`execution_durable_mirror_gaps` và `_conflicts` được production code ghi từ khi
+có, và **không route nào, không màn nào đọc**. Hệ thống phát hiện được lỗ hổng
+của mình rồi để đó — tệ hơn không phát hiện, vì nó **đọc ra là khoẻ**.
+
+Route mới `GET /api/v1/execution/durable-mirror/integrity`, và **chỉ trả
+aggregate**. Ba cột trong hai bảng đó là dữ liệu pháp y: `entity_key`, `row_id`,
+`existing_digest`/`incoming_digest` — chúng chỉ đích danh một lệnh hoặc một vị
+thế của khách. Người vận hành cần biết **một relation không đầy đủ**, không cần
+biết đó là dòng nào.
+
+Ngữ nghĩa theo đúng A38.6 mục 6:
+
+| State | Khi nào | Đếm |
+| --- | --- | --- |
+| `READY` | có current measured revision **và** không finding nào | `0` — con số này là một **lời khẳng định đo được** |
+| `PARTIAL` | có gap hoặc conflict được ghi | số finding thật |
+| `UNAVAILABLE` | mirror tắt · chưa từng đo · đọc DB lỗi · profile chưa cấu hình | **`null`, không phải `0`** |
+
+`null` chứ không `0` là điểm mấu chốt: một số 0 ở trạng thái UNAVAILABLE không
+phân biệt được với một mirror sạch đã đo. **Không dùng `EMPTY`** để che "chưa
+từng đo" — A38.6 cấm đúng điều đó.
+
+### A42.3 Test — và mấy lần schema dạy lại tôi
+
+9 test mới trong `phase2-binding-and-integrity.spec.ts`, **465/465 test
+control-api xanh**.
+
+2A: 6 shape thật được nhận; **17 shape xấu** bị từ chối `400` kèm mã
+`ANALYTICS_IDENTIFIER_INVALID`; resource dựng ra phải là resource mà tầng
+delegation **thật sự ký được** (`isDelegatableResource`); và không nới grammar
+cho alpha/portfolio.
+
+2B: bốn trạng thái, cộng một test khẳng định **không giá trị pháp y nào lọt ra**
+— quét cả `entity_key`, `row_id`, hai digest và `cursor` trong body.
+
+Bốn lần schema bác seed của tôi, và mỗi lần đều dạy một sự thật:
+
+1. `execution_durable_mirror_batches` cần 17 cột NOT NULL, không phải 9 như tôi đoán.
+2. `payload_digest` phải khớp `^sha256:[0-9a-f]{64}$` — digest tôi viết tắt bị bác.
+3. `revisions.state` chỉ nhận `COMMITTED` hoặc `QUARANTINED`, không có `ACCEPTED`.
+4. `conflicts.reason_code` bị ràng buộc bằng **đúng một** giá trị:
+   `EDS06_EXACT_RANGE_DIGEST_CONFLICT`. Tôi từng bịa `EDS06_ROW_DIGEST_MISMATCH`;
+   giờ test dùng từ vựng thật của hệ.
+
+### A42.4 Frontend — khai thác route đã có, không dựng thêm
+
+**2A.** `getBindingExposure` đã tồn tại trong `httpApi.ts` từ lâu, và **chỉ có
+`lab/` gọi** — màn production chưa bao giờ. Panel "Capital invariant" của
+Binding Detail thì hard-code `PanelState status="unavailable"`.
+
+Nay panel đọc route thật, dùng đúng contract `BindingExposure.buckets` đã có
+(currency · used · reserved · available · headroom), không bịa shape mới. Đọc
+bằng **hook riêng** để một exposure hỏng chỉ làm mờ panel, không kéo cả màn
+xuống. Ô nào nguồn không publish thì nói `not published` kèm title — không dấu gạch.
+
+**2B.** Panel "Mirror integrity" trên Operations Queue, cũng hook riêng. `0
+finding` **chỉ hiện cho `READY`**; các trạng thái khác hiện câu nói rõ vì sao
+không có con số nào.
+
+### A42.5 Guard R2-0 bắt đúng việc nó sinh ra để bắt
+
+Thêm route mới thì `r2Ledger.test.ts` **fail ngay**:
+
+```
+FAIL R2-0 · capability inventory > covers exactly the routes the controllers publish
+```
+
+Nó tự dựng lại danh sách route từ controller và so với ledger. Đã cập nhật
+inventory: 121 → **122 route**, và `broker-bindings/{id}/exposure` chuyển từ
+"published, chưa có consumer" sang `INTERACTION_READ` có consumer thật.
+
+### A42.6 Exit gate — đo trên dev, không suy đoán
+
+| Điều kiện A38.6 | Đo được | |
+| --- | --- | --- |
+| 43 id hợp lệ không còn `ANALYTICS_IDENTIFIER_INVALID` | gọi thật cả 43 · **0/43** còn bị chặn | đạt |
+| negative identifier matrix pass | 17 shape xấu → `400 ANALYTICS_IDENTIFIER_INVALID`, chặn **trước** transport | đạt |
+| fixture: chưa đo · sạch · có gap/conflict | 4 trạng thái có test (thêm cả "mirror tắt") | đạt |
+| browser không thấy giá trị pháp y | quét body: `entity_key`, `row_id`, hai digest, `cursor`, `payload_digest` — **không cái nào** | đạt |
+| `0 gaps` chỉ cho READY | `READY` kèm `measured_revision` thật; `UNAVAILABLE` trả `null`, không phải `0` | đạt |
+
+Route 2B chạy trên **cả ba environment**: paper/sandbox/live đều `state=READY`,
+`total_findings=0`, mỗi cái kèm `measured_revision` riêng. Số 0 đó là **lời
+khẳng định đo được**, không phải chỗ trống.
+
+**Nói thẳng phần chưa xong của 2A.** Sau khi mở hai cửa, 43 binding đi tới được
+Edge và Edge **từ chối**: `ANALYTICS_UPSTREAM_REJECTED`. Chặn phía Portal đã hết;
+phần từ chối còn lại nằm ở Trading System, ngoài quyền Portal quyết. Panel vì thế
+vẫn `Unavailable` — nhưng nay nó nói **đúng nguyên nhân thật** thay vì câu
+hard-code "not published on this projection" trước đây.
+
+### A42.7 Một gap tôi tìm ra khi nhìn màn, không phải khi đọc code
+
+Panel Capital invariant hiện `"This computation failed for a reason this screen
+does not recognise."` — **không nêu mã**. A38.6 bắt panel phải mang code. Câu đó
+để lại đúng con số không cho người đọc: không biết tra gì.
+
+Sửa ở `analyticsFailureReason`: lỗi mà build không có câu mô tả nay kèm **mã
+máy** trong ngoặc — `(ANALYTICS_UPSTREAM_REJECTED)`. Vẫn là từ vựng của mình;
+quy tắc "không bao giờ in prose của server" giữ nguyên.
+
+Kiểm lại trên trình duyệt sau khi sửa:
+
+- Operations Queue → `MIRROR INTEGRITY · READY · 0 finding(s) · The mirror
+  measured itself against its current revision and recorded no gap and no conflict.`
+- Binding Detail → `CAPITAL INVARIANT — Σ VIRTUAL ≤ PHYSICAL · Unavailable ·
+  This computation failed for a reason this screen does not recognise.
+  (ANALYTICS_UPSTREAM_REJECTED)`
+
+### A42.8 Còn lại, và ai làm được
+
+1. **Edge từ chối exposure.** Cần codex hoặc chủ Trading System xác nhận
+   `/internal/v1/screens/account-broker-360/{id}/exposure` có được triển khai ở
+   Edge không. Portal đã sẵn sàng: id parse đúng, resource ký được, encode một lần.
+2. **Mirror integrity mới đọc `paper`.** Panel gọi cố định `environment=paper`;
+   route đã phục vụ cả ba. Nối bộ chọn environment là việc nhỏ của phase sau.
+3. **Chưa có route liệt kê finding theo thời gian.** Aggregate hiện đủ để biết
+   *có* vấn đề; muốn điều tra sâu thì cần một đường riêng, và đường đó phải tự
+   quyết mức phơi bày dữ liệu pháp y — không mở rộng route này.

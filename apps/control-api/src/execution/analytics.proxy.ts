@@ -51,6 +51,58 @@ export function analyticsResource(screen: Screen, id: string): string {
   return `execution:screen:${screen}:${id}`;
 }
 
+/*
+ * PHASE 2 (round 2) · a binding id is not the generic identifier.
+ *
+ * `IDENTIFIER` above has no `@`, and every binding the source publishes has
+ * exactly one: `paper-binance-dynamic_grid_long_short_1h@BINANCE`. All 43 on
+ * dev and all 35 in sandbox carry it, so this route has never served a binding
+ * that exists — not sometimes, never.
+ *
+ * The fix is a parser for this path only. Widening `IDENTIFIER` would also
+ * widen deployment, alpha and portfolio subject ids, which nothing asked for
+ * and which nobody would notice going wrong (A38.6 item 2).
+ */
+
+/** Left of the `@`: what the published ids actually use, anchored and bounded. */
+const BINDING_LOCAL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,126}$/;
+/** Right of the `@`: the venue, upper case — BINANCE, OKX, PAPER_DNSE_VNM. */
+const BINDING_VENUE = /^[A-Z][A-Z0-9_]{1,31}$/;
+
+/**
+ * Accept the one delimiter the grammar has, and refuse everything that could
+ * change the meaning of a path or a resource string. Order matters: the
+ * explicit refusals run before the shape test, so a rejection reason is always
+ * the specific one, and `..` is refused even though `.` is a legal character.
+ */
+export function parseBindingId(raw: string): string {
+  const invalid = () => new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
+  if (typeof raw !== "string" || raw.length === 0 || raw.length > 128) throw invalid();
+  // Control characters and whitespace never appear in a published id and are
+  // how a header or a path gets split.
+  if (/[\s\u0000-\u001f\u007f]/.test(raw)) throw invalid();
+  // A percent means the caller encoded it, or encoded it twice; this layer
+  // encodes exactly once and must receive the raw form.
+  if (raw.includes("%")) throw invalid();
+  if (raw.includes("/") || raw.includes("\\")) throw invalid();
+  if (raw.includes("..")) throw invalid();
+  const at = raw.indexOf("@");
+  if (at < 0 || at !== raw.lastIndexOf("@")) throw invalid();
+  const local = raw.slice(0, at);
+  const venue = raw.slice(at + 1);
+  if (!BINDING_LOCAL.test(local) || !BINDING_VENUE.test(venue)) throw invalid();
+  return `${local}@${venue}`;
+}
+
+/**
+ * The delegated resource for a binding. The assertion already carries the
+ * principal, session and workspace, so the resource names the canonical id and
+ * nothing else — it is never built by concatenating unvalidated input.
+ */
+export function bindingExposureResource(canonicalBindingId: string): string {
+  return `execution:screen:account-broker-360:${canonicalBindingId}`;
+}
+
 interface BulkheadWaiter {
   resolve: (release: () => void) => void;
   reject: (error: AnalyticsProxyError) => void;
@@ -201,11 +253,15 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
 
   bindingExposure(principal: AnalyticsPrincipal, bindingId: string): Promise<unknown> {
     this.requireAnalytics();
+    // Parse before anything else: an id that fails here never reaches the
+    // bulkhead, the delegation issuer or the transport.
+    const canonical = parseBindingId(bindingId);
     return this.request(
       principal,
       "GET",
-      `/internal/v1/screens/account-broker-360/${segment(bindingId)}/exposure`,
-      analyticsResource("account-broker-360", bindingId),
+      // Encoded exactly once, here, from the canonical form.
+      `/internal/v1/screens/account-broker-360/${encodeURIComponent(canonical)}/exposure`,
+      bindingExposureResource(canonical),
     );
   }
 

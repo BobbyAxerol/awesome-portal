@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-10",
- "route_count": 121,
+ "route_count": 122,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -163,7 +163,7 @@
    "interaction_class": "INTERACTION_READ",
    "consumer": "FRONTEND",
    "unused_capability": false,
-   "evidence": "frontend references path, sweep did not trigger it",
+   "evidence": "Phase 2A (round 2) unblocked it: every binding id carries an @ that the identifier grammar refused, so it answered 400 for every binding that exists. Binding Detail now reads it when a binding is opened.",
    "owner": "claude",
    "test_owner": "claude"
   },
@@ -1234,6 +1234,17 @@
    "evidence": "local write",
    "owner": "codex",
    "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/durable-mirror/integrity",
+   "controller": "execution/durable-mirror-integrity.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "Phase 2B (round 2) published it; the Operations Queue reads it on page load.",
+   "owner": "claude",
+   "test_owner": "claude"
   }
- ]
+ ],
+ "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database."
 }

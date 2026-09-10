@@ -24,6 +24,7 @@
  * for, and codex's stop gates require it stay visibly unavailable rather than
  * be hidden or filled with something else.
  */
+import { mirrorIntegritySentence, type MirrorIntegrity } from "../mirrorIntegrity";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { ExecutionSurface } from "../ExecutionSurface";
@@ -180,6 +181,7 @@ function ContractRow({ row, now, onOpen, selected, arrived }: { row: QueueRow; n
 
 export function OperationsQueueScreen({
   queue,
+  mirrorIntegrity = null,
   status = "ok",
   reason,
   filter = "NEEDS_ATTENTION",
@@ -196,6 +198,13 @@ export function OperationsQueueScreen({
   demo,
   demoTick,
 }: {
+  /**
+   * PHASE 2B (round 2) · the mirror's own gap and conflict aggregate.
+   *
+   * Null when the caller did not read it; the panel then says so rather than
+   * reporting a mirror with nothing wrong.
+   */
+  mirrorIntegrity?: MirrorIntegrity | null;
   queue: OperationsQueue | null;
   status?: PanelStatus;
   reason?: string;
@@ -252,6 +261,47 @@ export function OperationsQueueScreen({
       </header>
       {railOpen ? (
         <>
+          {/*
+            * PHASE 2B (round 2) · the mirror says what it knows it is missing.
+            *
+            * `0 gaps` appears only for a READY measurement. For anything else the
+            * panel says why there is no count, because a zero here would claim a
+            * clean mirror that was never looked at.
+            */}
+          <section className="exec-oq-panel" aria-label="Mirror integrity">
+            <header className="exec-af-kpilabel">Mirror integrity</header>
+            {mirrorIntegrity
+              ? (
+                <>
+                  <div data-state={mirrorIntegrity.state}>
+                    <b>{mirrorIntegrity.state}</b>
+                    {mirrorIntegrity.state === "READY" || mirrorIntegrity.state === "PARTIAL"
+                      ? <span className="exec-af-dim"> · {mirrorIntegrity.totalFindings} finding(s)</span>
+                      : null}
+                  </div>
+                  <p className="exec-af-dim">{mirrorIntegritySentence(mirrorIntegrity)}</p>
+                  {mirrorIntegrity.findings.length > 0
+                    ? (
+                      <table className="exec-af-table" aria-label="Mirror findings by relation">
+                        <thead><tr><th>kind</th><th>relation</th><th>reason</th>
+                          <th data-numeric="true">findings</th></tr></thead>
+                        <tbody>
+                          {mirrorIntegrity.findings.map((finding) => (
+                            <tr key={`${finding.kind}:${finding.relationKey}:${finding.reasonCode}`}>
+                              <td>{finding.kind}</td>
+                              <td>{finding.relationKey}</td>
+                              <td>{finding.reasonCode}</td>
+                              <td data-numeric="true">{finding.findings}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )
+                    : null}
+                </>
+              )
+              : <PanelState status="unavailable" reason="The mirror integrity report was not read for this screen." />}
+          </section>
           <section className="exec-oq-triage" aria-label="Triage">
             <div className="exec-oq-triagehead">{selectedId ? `Triage · ${selectedId}` : "Select an operation"}</div>
             {followNotice ? <p className="exec-oq-dim" role="status">{followNotice}</p> : null}
