@@ -4934,3 +4934,362 @@ Sáu dấu `—` còn lại đều đã kiểm ngữ cảnh: năm cái là dấu
 mệnh đề, cái thứ sáu đứng trước câu "No data yet · No feature in the current
 registry claims this route" — có câu giải thích đi kèm nên không phải giá trị
 bịa. Đúng con số §A32.3 đã chốt.
+
+## A37. ĐIỀU TRA SÂU TOÀN HỆ (10-09) — đo, không suy đoán
+
+Owner giao: điều tra hết, chi tiết nhất có thể — backend data, backend,
+frontend, kết nối giữa các service và giữa hai server. Rồi codex sẽ soi lại và
+bổ sung. Mọi con số dưới đây là đo trên máy đang chạy, không phải đọc code rồi
+đoán. Chỗ nào tôi không đo được, tôi nói thẳng là không đo được.
+
+### A37.1 Hoá ra không phải hai stack, mà bốn
+
+| Stack | Compose project | Cổng | Ai vào được |
+| --- | --- | --- | --- |
+| **dev** | `portal` | 127.0.0.1:8080 | `dev-portal.primusspark.com` |
+| **stable** | `portal-stable-v1-0-1` | 127.0.0.1:18081 | `portal.primusspark.com` |
+| **probe** | `portal-probe` | 127.0.0.1:8090 | không public — dùng để thử nghiệm |
+| **showcase** | container lẻ `portal-showcase` | 127.0.0.1:8081 | `execution-portal.primusspark.com` |
+
+Đường vào: Cloudflare Tunnel → nginx loopback (`/etc/nginx/conf.d/portal-loopback.conf`)
+→ upstream tương ứng. Ba hostname, ba upstream, không dùng chung gì.
+
+**Cảnh báo vận hành:** cổng 8090 là probe, không phải dev. Tôi đã một lần đo
+nhầm stack này và suýt báo cáo sai (§A30). Ai đo cũng phải xác nhận cổng trước.
+
+### A37.2 "Server thứ hai" — nó sống, và tải rất nặng
+
+Đây là chỗ tôi suýt kết luận sai. Không có container Edge nào chạy trên máy
+Portal, nên thoạt nhìn tưởng Portal không nối được Trading System. Sai. Edge
+chạy **trên chính server Trading System**, Portal nối sang qua WireGuard:
+
+| Đo | Kết quả |
+| --- | --- |
+| Interface | `portal0`, `10.70.0.1/30` trên máy Portal |
+| Peer | `10.70.0.2` — server Trading System |
+| Endpoint công khai của peer | `16.163.212.33:51820` |
+| Bắt tay gần nhất | 55 giây trước |
+| Đã truyền | **309.57 GiB nhận · 6.66 GiB gửi** |
+| Ping | 35 ms, mất gói 0% |
+| Cổng Edge `:8443` (paper) | MỞ |
+| Cổng Edge `:8444` (sandbox) | MỞ |
+| Cổng Edge `:8445` (live) | MỞ |
+| `EXECUTION_EDGE_PAPER_DNSE_ORIGIN` | **rỗng — chưa cấu hình** |
+
+Nói cách khác: đường ống giữa hai server đang mở, đang chạy, và đã chuyển hơn
+300 GiB. Ba trong bốn origin có thật; riêng **paper-DNSE (thị trường Việt Nam)
+chưa có origin nào** — đó là một lỗ hổng cấu hình, không phải lỗi code.
+
+Kiểm chứng thêm: 30 phút gần nhất control-api chạy 507 vòng
+`execution_profile_projection_ladder_drained`, **0 dòng lỗi** liên quan tới
+source hay edge.
+
+### A37.3 Backend data — 54% số bảng chưa bao giờ có một dòng nào
+
+73 bảng, giống hệt nhau ở dev và stable, cùng 30 migration. Nhưng:
+
+**40 trên 73 bảng (54%) rỗng ở CẢ dev lẫn stable.** Nhóm lại:
+
+| Nhóm | Số bảng | Màn hình phụ thuộc |
+| --- | --- | --- |
+| `governance_*` (approval, sandbox certification, paper exit, canary, promotion) | 20 | Approval Inbox, Sandbox Certification, Exit Reviews, Canary Control Room |
+| `execution_incident*` | 5 | Incident Detail |
+| `execution_activation_*` | 5 | Staged activation (panel tôi vừa dựng ở phase 5) |
+| `execution_authoritative_event_*` | 3 | ledger của migration 30 |
+| `execution_operation_queue_items`, `_workflow_events` | 2 | Operations Queue |
+| còn lại (`command_center_pins`, `command_plans_f0`, `durable_mirror_gaps`, `_conflicts`, `financial_query_cursors`) | 5 | — |
+
+**Ba đường chết, đã kiểm bằng grep toàn repo:**
+
+1. `execution_command_center_pins` — chỉ có một câu `SELECT`
+   (`command-center.repository.ts:620`). Lệnh `INSERT` **chỉ tồn tại trong
+   file test**. Tính năng "pin" trên Command Center vĩnh viễn không thể có dữ liệu.
+2. `governance_paper_exit_reviews` — có `SELECT` và `UPDATE`, nhưng `INSERT`
+   cũng **chỉ có trong test**. Không đường nào tạo được một exit review mới.
+3. `execution_durable_mirror_gaps` và `_conflicts` — code production **có ghi**,
+   nhưng **không có route API nào, không màn nào đọc**. Hệ thống phát hiện được
+   lỗ hổng và xung đột của mirror rồi cất đi, không ai nhìn thấy.
+
+Điểm chung của cả ba: **test vẫn xanh**, vì chính test tự chèn dữ liệu vào rồi
+đọc lại. Đây đúng kiểu lỗi mà suite không bắt được.
+
+### A37.4 Không một snapshot nào từng đạt COMPLETE
+
+| Đo | dev | stable |
+| --- | --- | --- |
+| `execution_profile_projection_snapshots` | 3 dòng (live/paper/sandbox) | 3 dòng |
+| completeness của cả 6 dòng | **PARTIAL** | **PARTIAL** |
+| tuổi lần refresh gần nhất | vài giây | vài giây |
+| dòng journal | 5 265 | 5 018 |
+| tỉ lệ journal `COMPLETE` | **0%** | **0%** |
+
+Toàn bộ journal ở cả hai stack là `PARTIAL` / `delta`, không một dòng `COMPLETE`
+nào — dù `"COMPLETE"` là giá trị hợp lệ và được dùng ở 14 chỗ trong code.
+
+**Phần đáng khen:** chuỗi này trung thực từ đầu tới cuối. API trả
+`completeness = PARTIAL` ra ngoài, và frontend có `CompletenessNote` render đúng
+nhãn đó. Không có chỗ nào giấu.
+
+### A37.5 dev và stable đang chạy hai cấu hình khác nhau — 8 cờ lệch
+
+| Cờ | dev | stable |
+| --- | --- | --- |
+| `FEATURE_EXECUTION_DURABLE_MIRROR` | **true** | false |
+| `FEATURE_EXECUTION_DURABLE_MIRROR_READS` | **true** | false |
+| `FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT` | **true** | false |
+| `FEATURE_EXECUTION_LOCAL_R0_TASKS` | **true** | false |
+| `FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES` | **true** | false |
+| `FEATURE_EXECUTION_MARKET_CONTEXT` | false | **true** |
+| `FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW` | (không có biến) | false |
+| `FEATURE_EXECUTION_SHADOW_QUERY` | (không có biến) | false |
+
+**Hệ quả nguy hiểm, và tôi đo được nó.** `historyTable()` chọn bảng theo
+`FEATURE_EXECUTION_DURABLE_MIRROR`. Vì cờ lệch, mỗi stack chỉ giữ tươi **một**
+bảng lịch sử, bảng còn lại mốc dần:
+
+| Bảng | dev | stable |
+| --- | --- | --- |
+| `execution_durable_mirror_range_rows` | ghi cách đây **5 phút** | ghi cách đây **1 ngày 5 giờ** |
+| `execution_timeseries_history` | ghi cách đây **4 ngày 14 giờ** | ghi cách đây **5 phút** |
+
+Nghĩa là: **bật `FEATURE_EXECUTION_DURABLE_MIRROR` trên stable sẽ khiến màn hình
+lập tức đọc một bảng có dòng mới nhất từ hơn một ngày trước** — và tắt nó trên
+dev cũng vậy, còn tệ hơn (4,6 ngày). Đây là cái bẫy: cờ trông như một công tắc
+hiển thị, thực chất là công tắc đổi nguồn dữ liệu. Lật nó mà không backfill là
+đưa dữ liệu cũ lên màn hình mà không ai báo.
+
+Và điều này có nghĩa: **owner nghiệm thu trên dev không phải là nghiệm thu cái
+production đang phục vụ.**
+
+### A37.6 Vài bảng rỗng ở stable không phải lỗi
+
+`execution_alpha_fleet_projection` (dev 144 / stable 0),
+`execution_binding_projection` (121 / 0), `execution_manager_projection_snapshots`
+(7 / 0). Tôi đã truy đường ghi: `manager-lists.service.ts:350` gọi
+`replaceAlphaFleet` **khi có người mở màn đó**. Đây là projection nạp theo yêu
+cầu, nên số 0 ở stable chỉ có nghĩa là chưa ai mở màn Alpha Fleet trên
+production kể từ khi DB này được tạo — không phải hỏng.
+
+Tôi **không kiểm được** stable qua API: tài khoản probe bị stable từ chối
+(`401`), và đó là đúng — production không nên có tài khoản probe. Mọi kết luận
+về stable ở đây là từ đọc database, không phải từ gọi API.
+
+### A37.7 Hạ tầng dựng lên nhưng gần như không dùng
+
+| Thành phần | Đo được | Nhận xét |
+| --- | --- | --- |
+| NATS (`portal-nats`) | uptime 2 ngày 18 giờ · **5 tin vào, 5 tin ra** · 70 subscription · 1 kết nối | Bus sự kiện dựng đủ, tải gần bằng 0 |
+| MinIO (`portal-minio`) | `/data` chỉ có `.minio.sys` — **0 bucket** | Object storage chưa từng dùng |
+| `portal-artifacts` volume | 15 MB | artifact đi đường local, không qua MinIO |
+
+Chuỗi gọi giữa các service trên dev: `control-api → roadmap-task-board-api:8000`
+và `→ portal-api:8000`; `portal-api → roadmap-task-board-api:8000`;
+`quant-worker-py → nats://portal-nats:4222` (và đó là kết nối NATS duy nhất).
+
+### A37.8 `/broker-bindings/{id}/exposure` — không phải "bị chặn", mà là **không bao giờ gọi được**
+
+Trước nay tôi ghi món này là "bị guard ký tự `@` chặn". Đo lại thì nó tệ hơn thế.
+
+Gọi `/broker-bindings` trên dev trả về **43 binding**. Id thật của chúng có
+dạng:
+
+```
+paper-binance-dynamic_grid_long_short_1h@BINANCE
+paper-binance-dynamic_grid_long_only_1h@BINANCE
+```
+
+Bộ kiểm định danh của analytics là:
+
+```
+/^[A-Za-z0-9._-]{1,128}$/
+```
+
+`@` không nằm trong đó. Kết quả gọi thật:
+
+```
+GET /api/v1/execution/broker-bindings/paper-binance-dynamic_grid_long_short_1h@BINANCE/exposure
+→ 400 {"code":"ANALYTICS_IDENTIFIER_INVALID"}
+```
+
+**43 trên 43 id đều chứa `@`.** Nghĩa là route này không phải thỉnh thoảng hỏng
+— nó **chưa từng và không thể** phục vụ một binding nào đang tồn tại. Hệ thống
+tự sinh ra một định dạng id mà chính nó từ chối.
+
+Chỗ cần sửa (để codex xác nhận trước khi ai đó động vào):
+`apps/control-api/src/execution/analytics.proxy.ts:41`,
+`apps/control-api/src/execution/local-query-analytics.service.ts:110` và `:136`.
+
+Hai hướng, tôi nghiêng hướng (a): (a) nới bộ kiểm để nhận `@` — nhưng phải nới
+đúng một ký tự, có test, và rà xem `@` có đi vào câu SQL/URL nào không;
+(b) đổi định dạng id ở nguồn — an toàn hơn về lâu dài nhưng đụng vào dữ liệu
+Trading System, không phải việc Portal tự quyết.
+
+### A37.9 Ba món "chưa ký được" ở §A33.1 — nay đã có lời giải bằng dữ liệu
+
+| # | Món | Vì sao chưa ký — nay đo được |
+| --- | --- | --- |
+| 1 | Sandbox Certification | `governance_sandbox_certifications` = **0 dòng ở cả dev lẫn stable**. Chưa từng có certification nào tồn tại, nên không có gì để ký. |
+| 2 | Binding Detail | Màn có dữ liệu thật (43 binding), nhưng route con `exposure` bị chặn 100% như §A37.8. Ký được phần danh sách, **không** ký được phần exposure. |
+| 3 | Panel Conditional (Blotter) | Nguồn tự khai `source_total: "0"`, panel để `state: EMPTY`. Đây là **hành vi đúng** — không bịa dữ liệu. Chỉ ký được trạng thái rỗng cho tới khi Trading System publish nhóm đầu tiên. |
+
+Cả ba đều cùng một gốc: **không phải code sai, mà là dữ liệu chưa bao giờ tồn
+tại.** Nên chúng không sửa được bằng cách viết thêm frontend.
+
+### A37.10 Frontend — quét 59 màn bằng trình duyệt thật
+
+Cách đo: đăng nhập, mở từng màn trong Chromium, ghi lại **mọi** request `/api/`
+mà trang tự phát ra, cùng console error và số ký tự nội dung. Không bấm nút nào
+(mutation để riêng, xem giới hạn bên dưới).
+
+| Đo | Kết quả |
+| --- | --- |
+| Màn quét | 59 |
+| Đường dẫn `/api/` thực sự được gọi | **149** |
+| Ứng với route công bố | **46 / 121** |
+| Chưa gọi | 75 (42 GET + 33 POST/PATCH) |
+| Route trả `>= 400` | **10**, tất cả đều là `404` |
+| Màn có console error | 10 — **toàn bộ** đến từ đúng 10 route 404 đó |
+| Màn **không gọi API nào** | 8 |
+
+**Cải chính con số cũ.** §A33.2 ghi "49/104". Con số đó không so sánh được với
+con số hôm nay: mẫu số 104 khác 121 (hôm nay đếm cả auth/health/admin/facade),
+và cách đo cũng khác. Quan trọng hơn: hôm nay tôi thử **ba** cách match tĩnh và
+ra **ba** kết quả khác nhau (67, 92, 105 trên 121) — nghĩa là đếm bằng grep trên
+mã nguồn **không đáng tin** ở codebase này, vì frontend gọi đường dẫn tương đối
+rồi client mới ghép `/api/v1/execution`. Từ nay chỉ nên tin số đo bằng trình
+duyệt.
+
+**Tám màn không gọi một API nào** — tức là màn tĩnh hoàn toàn:
+`/administration/profile-access`, `/backtests/approvals`, `/data/catalog`,
+`/governance/exit-reviews` (trang danh sách), `/portal-map`, `/research/alphas`,
+`/research/composer`, `/research/mining`.
+
+**Mười màn hỏng vì 404** — và mỗi cái đều khớp một bảng rỗng ở §A37.3:
+
+| Màn | Route 404 | Bảng rỗng tương ứng |
+| --- | --- | --- |
+| `/deployments/live/dep_63/canary`, `dep_88/canary` | `…/deployments/{id}/canary` | `governance_canary_envelopes` |
+| `/deployments/sandbox/dep_77`, `dep_91` | `…/deployments/{id}/certification` | `governance_sandbox_certifications` |
+| `/execution/operations/incidents/inc_28`, `31`, `44` | `…/operations/incidents/{id}` | `execution_incidents` |
+| `/governance/exit-reviews/cr_301`, `cr_307` | `…/governance/exit-reviews/{id}` | `governance_paper_exit_reviews` |
+| `/research/quantbt/runs/run_5498` | `/api/runs/{id}` | — |
+
+**Và đây là phần frontend làm đúng.** Tôi đọc nguyên văn chữ trên màn:
+
+- `Unavailable · CANARY_ENVELOPE_NOT_FOUND: canary envelope not found`
+- `Unavailable · SANDBOX_DEPLOYMENT_NOT_FOUND: Sandbox deployment not found.`
+- `Nothing to show · No incident is published, so this panel has nothing to show.`
+- `No decision can be taken on a review that is not published. EXIT_REVIEW_NOT_FOUND`
+
+Không một số 0 giả, không một dấu gạch bịa. Màn nào rỗng đều **nói mã lý do**.
+Đây chính là thứ 5 phase vừa rồi xây, và nó đứng vững.
+
+**Giới hạn của phép đo này, nói rõ để codex khỏi tin nhầm:**
+
+1. Probe **không bấm nút**, nên 33 route POST/PATCH đương nhiên nằm trong nhóm
+   "chưa gọi" — đó là do phương pháp, không phải bằng chứng chúng vô dụng.
+2. Vài route cần thao tác mới chạy: `activation/capabilities` sống trong drawer
+   phải mở ra; `derivations/conditional-groups/{id}` cần có nhóm tồn tại (hiện
+   là 0); `command-center/stream` là SSE. Chúng bị đếm là "chưa gọi" nhưng
+   thực ra là "chưa chạm tới".
+3. Harness probe **không có trường console error riêng cho từng loại** — tôi chỉ
+   đếm được số lượng, và đã kiểm tay rằng cả 11 lần đều là dòng
+   `Failed to load resource: 404`.
+
+### A37.11 Một nửa payload màn nặng là **cùng dữ liệu gửi hai lần**
+
+Đo trực tiếp trên dev, có phiên đăng nhập:
+
+| Endpoint | Kích thước | Trùng lặp | Tỉ lệ |
+| --- | --- | --- | --- |
+| `screens/paper` | **1 549 021 B** | 764 776 B ở 6 panel | **49%** |
+| `screens/blotter` | 434 354 B | 213 863 B ở 4 panel | **49%** |
+| `screens/sandbox` | 35 874 B | 15 996 B ở 2 panel | 44% |
+| `screens/live` | 6 624 B | 2 B | 0% |
+
+Nguyên nhân: envelope mang **cả hai** — `data.<panel>` và
+`panels.<panel>.data.rows` — và tôi đã băm sha256 từng cặp để chắc chắn: chúng
+**giống hệt nhau từng byte**, không phải hai góc nhìn khác nhau của cùng dữ
+liệu.
+
+Ví dụ trên `screens/paper`: `data.performance` 232 936 B và
+`panels.performance.data.rows` 232 936 B, cùng một digest. Tương tự
+`account_equity` 211 464 B, `sessions` 157 601 B, `portfolio_equity` 128 339 B,
+`deployments` 18 633 B, `positions` 15 803 B.
+
+Đây là khoản cắt được nhiều nhất mà chưa ai đụng: phase 5 đã cắt analytics từ
+4,06 MB xuống 183 KB, nhưng **màn paper vẫn 1,5 MB** vì đường screen-BFF là
+đường khác. Bỏ một trong hai nhánh là giảm gần một nửa, không mất thông tin nào.
+
+Cần codex xác nhận trước khi sửa: nhánh nào là nhánh chính thức (`data` hay
+`panels`), có consumer nào ngoài frontend đang đọc nhánh kia không.
+
+### A37.12 Danh sách việc — xếp theo "sửa được ngay" trước
+
+Đây là phần để codex soi lại và bổ sung. Mỗi dòng ghi rõ **bằng chứng đo được**,
+để ai đọc cũng kiểm lại được chứ không phải tin lời tôi.
+
+#### Nhóm 1 — sửa được ngay, giá trị cao nhất
+
+| # | Việc | Bằng chứng | Ước lượng |
+| --- | --- | --- | --- |
+| 1 | **Bỏ nhánh payload trùng** trong screen-BFF | sha256 giống hệt: paper 764 776 B, blotter 213 863 B, sandbox 15 996 B | giảm ~49% mỗi màn nặng |
+| 2 | **Nới bộ kiểm định danh analytics để nhận `@`** | 43/43 binding id chứa `@`; regex `/^[A-Za-z0-9._-]{1,128}$/` | mở khoá 1 route đang chết hoàn toàn |
+| 3 | **Phơi `durable_mirror_gaps` và `_conflicts` ra UI** | production code có `INSERT`, **0 route, 0 màn** đọc | hệ thống đang phát hiện lỗi rồi giấu đi |
+
+#### Nhóm 2 — rủi ro vận hành, cần owner quyết
+
+| # | Việc | Bằng chứng |
+| --- | --- | --- |
+| 4 | **8 cờ lệch dev ↔ stable**, trong đó `DURABLE_MIRROR` đổi hẳn bảng dữ liệu | dev đọc mirror (tươi 5 phút) / stable đọc timeseries (tươi 5 phút); bảng còn lại mốc 4 ngày 14 giờ và 1 ngày 5 giờ. **Lật cờ mà không backfill = đưa dữ liệu cũ lên màn** |
+| 5 | **`EXECUTION_EDGE_PAPER_DNSE_ORIGIN` rỗng** | ba origin Binance có thật và cổng mở; DNSE (thị trường VN) chưa có origin nào |
+| 6 | **Nghiệm thu trên dev không đại diện cho production** | hệ quả trực tiếp của #4 |
+
+#### Nhóm 3 — code chết, nên xoá hoặc nối cho xong
+
+| # | Việc | Bằng chứng |
+| --- | --- | --- |
+| 7 | `execution_command_center_pins` | chỉ có `SELECT` ở `command-center.repository.ts:620`; `INSERT` **chỉ có trong test** |
+| 8 | `governance_paper_exit_reviews` | có `SELECT`/`UPDATE`; `INSERT` **chỉ có trong test** |
+
+Cả hai đều làm suite xanh mà tính năng chết, vì test tự chèn dữ liệu rồi tự đọc.
+
+#### Nhóm 4 — không phải lỗi code, là dữ liệu chưa từng tồn tại
+
+- **40/73 bảng (54%) rỗng ở cả dev lẫn stable** — governance 20, incident 5,
+  activation 5, ledger 3, operations queue 2, còn lại 5.
+- **10 màn trả 404**, mỗi màn khớp đúng một bảng rỗng.
+- **6/6 snapshot projection là PARTIAL**, 0% journal đạt COMPLETE.
+- **8 màn không gọi API nào** — màn tĩnh.
+
+Viết thêm frontend không sửa được nhóm này. Nó cần Trading System publish dữ
+liệu, hoặc cần một đường seed có chủ đích.
+
+#### Nhóm 5 — hạ tầng dựng rồi để không
+
+- NATS: **5 tin vào / 5 tin ra trong 2 ngày 18 giờ**, 70 subscription.
+- MinIO: **0 bucket**, `/data` chỉ có `.minio.sys`.
+
+Không gấp, nhưng nên quyết: dùng thật, hay gỡ khỏi compose cho đỡ hiểu nhầm là
+hệ thống có event bus và object storage đang hoạt động.
+
+### A37.13 Tôi đề nghị làm gì trước
+
+Nếu owner hỏi thứ tự, tôi chọn **1 → 2 → 3**, vì cả ba đều sửa được trong
+Portal, đo được ngay sau khi sửa, và không phụ thuộc ai:
+
+1. **Payload trùng** — lớn nhất, rõ ràng nhất, không tranh cãi về hành vi.
+2. **Regex `@`** — nhỏ, nhưng nó mở một route đang chết 100%.
+3. **Gaps/conflicts ra UI** — đúng tinh thần "không giấu": hệ thống đã biết nó
+   thiếu dữ liệu, chỉ là chưa nói ra.
+
+Việc #4 (cờ lệch) tôi **không tự làm** — lật cờ là đổi nguồn dữ liệu của
+production, phải có owner và phải có backfill trước.
+
+**Điều tôi chưa đo được, ghi lại để khỏi ai tưởng đã đo:**
+
+- Stable qua API: tài khoản probe bị từ chối `401` (đúng). Mọi kết luận về
+  stable ở §A37 là từ đọc database, không từ gọi API.
+- Route POST/PATCH: probe không bấm nút, nên 33 route mutation chưa được chạm.
+- Nội dung thật sự chảy qua Edge: tôi thấy đường ống sống (309 GiB, bắt tay 55
+  giây) và 0 lỗi source trong 30 phút, nhưng **không đọc nội dung** truyền qua.
