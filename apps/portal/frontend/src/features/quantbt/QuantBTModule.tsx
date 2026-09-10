@@ -43,6 +43,7 @@ import { RunProgress } from "../runs/RunProgress";
 import { QuantBTSubnav } from "./QuantBTSubnav";
 import { RunPassport } from "./RunPassport";
 import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
+import { PortalApiError } from "../../lib/api";
 
 function RunStatusBadge({ status }: { status: string | null }) {
   if (!status) return null;
@@ -97,12 +98,24 @@ function RunWorkspace() {
     return <StateView kind="loading" message="Loading run…" />;
   }
   if (run.isError || !run.data) {
+    /*
+     * PHASE 5 (round 2): a run that does not exist is not a failure.
+     *
+     * Every 404 here rendered "✕ Something went wrong" with a Retry button —
+     * the one screen of the ten that answered a missing record worse than the
+     * execution screens do. Nothing went wrong, the id names nothing, and
+     * retrying the same id will keep naming nothing. `absent` and `failed` are
+     * different states and the reader acts differently on each.
+     */
+    const absent = run.error instanceof PortalApiError && run.error.status === 404;
     return (
       <StateView
-        kind="failed"
+        kind={absent ? "empty" : "failed"}
         code={runId}
-        message={run.error instanceof Error ? run.error.message : "This run could not be read."}
-        onRetry={() => void run.refetch()}
+        message={absent
+          ? "No run carries this id. A run appears here once QuantBT has accepted one; this id matches none in this workspace."
+          : run.error instanceof Error ? run.error.message : "This run could not be read."}
+        {...(absent ? {} : { onRetry: () => void run.refetch() })}
       />
     );
   }

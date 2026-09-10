@@ -7484,3 +7484,57 @@ vừa một dòng header.
 Tôi không tự quyết hai việc này vì chúng là câu hỏi *sản phẩm* — "tính năng
 Paper-Exit có nằm trong kế hoạch không" — chứ không phải câu hỏi có đáp án
 trong code. Mọi thứ cần để quyết đã đo xong và ghi ở trên.
+
+### A51.11 Màn thứ 10 — cái duy nhất **không** đạt chuẩn, và tôi suýt bỏ sót
+
+§A37.10 liệt kê 10 màn 404. Bốn component tôi sửa ở A51.6 phủ **9** route
+(canary ×2, sandbox ×2, incident ×3, exit-review ×2). Route thứ 10 là
+`/research/quantbt/runs/run_5498` → `/api/runs/{id}`, thuộc hệ QuantBT chứ
+không phải `/api/v1/execution`. Tôi mở nó ra đọc, và nó là màn **tệ nhất**
+trong cả mười:
+
+```
+✕ Something went wrong | run_5498 | run not found | Retry
+```
+
+Không có gì "went wrong". Id đó không trỏ tới run nào, và nút **Retry** thì
+không thể giúp được gì — bấm lại vẫn cùng một id, vẫn không có gì. Đây đúng là
+lỗi mà cả loop này đang xoá: `absent ≠ failed`.
+
+`QuantBTModule.tsx` trả `kind="failed"` cho **mọi** `run.isError`.
+`PortalApiError` vốn đã mang `status`, nên phân biệt được ngay:
+
+```ts
+const absent = run.error instanceof PortalApiError && run.error.status === 404;
+```
+
+404 → `empty` kèm câu nói ra cái gì mới làm nó có dữ liệu, và **bỏ nút Retry**.
+Mọi lỗi khác — 502, mất mạng — giữ nguyên `failed` **và giữ Retry**, vì với
+chúng bấm lại là hành động có nghĩa. 401/403 vẫn là câu trả lời về người đọc,
+không rơi vào nhánh `absent`.
+
+Đọc lại sau deploy:
+
+```
+— No data yet | run_5498 | No run carries this id. A run appears here once
+QuantBT has accepted one; this id matches none in this workspace.
+```
+
+### A51.12 Đính chính thứ hai cho §A37.10
+
+`/governance/exit-reviews` (trang danh sách) được xếp vào nhóm "không gọi API
+nào". Đo lại: nó **có** gọi `/execution/runtime-manifest` và
+`/execution/screen-contracts`; thứ nó không gọi là lệnh đọc review, vì route
+không nêu id nào. Cộng với đính chính `/portal-map` ở A51.7, nhóm "không gọi
+API nào" là **6** màn, không phải 8.
+
+Nguyên văn màn danh sách sau khi sửa:
+
+```
+PAPER_EXIT · no review named | Nothing to show | No exit review is named in
+this route, and none is published for this workspace. … No exit review can
+exist yet: Portal reads this record, but nothing in the platform writes one,
+so a Paper-exit decision cannot be started here.
+```
+
+Test: **484** control-api · **2 169** frontend (130 file).

@@ -5,6 +5,7 @@
  * always did. These assert that promise directly against the legacy forms.
  */
 import { describe, expect, it } from "vitest";
+import { PortalApiError } from "../../lib/api";
 
 import {
   QUANTBT_ROOT,
@@ -74,5 +75,36 @@ describe("legacy translation", () => {
     expect(canonicalQuantBTPath("/planning/board")).toBeNull();
     expect(canonicalQuantBTPath("/portal-map")).toBeNull();
     expect(canonicalQuantBTPath("/research/alphas")).toBeNull();
+  });
+});
+
+/**
+ * PHASE 5 (round 2) · the tenth 404 screen.
+ *
+ * Nine of the ten screens that answer a missing record already said so
+ * honestly. This one rendered "✕ Something went wrong" with a Retry button for
+ * a run id that simply names nothing — the reader is told a system failed when
+ * nothing failed, and offered an action that cannot help.
+ */
+describe("a run that does not exist is absent, not broken", () => {
+  it("separates a 404 from every other read failure", () => {
+    const notFound = new PortalApiError("404 Not Found", 404, "RUN_NOT_FOUND", null);
+    const upstream = new PortalApiError("502 Bad Gateway", 502, null, null);
+    const offline = new Error("network down");
+
+    const absent = (error: unknown) => error instanceof PortalApiError && error.status === 404;
+    expect(absent(notFound)).toBe(true);
+    // A gateway error and a dead network are real failures: they keep the
+    // failed frame and the Retry button, because retrying can work.
+    expect(absent(upstream)).toBe(false);
+    expect(absent(offline)).toBe(false);
+  });
+
+  it("keeps 401 and 403 out of the absent branch, since those are answers about the reader", () => {
+    for (const status of [401, 403]) {
+      const error = new PortalApiError(`${status}`, status, null, null);
+      expect(error.status === 404).toBe(false);
+      expect(error.isForbidden).toBe(true);
+    }
   });
 });
