@@ -5293,3 +5293,425 @@ production, phải có owner và phải có backfill trước.
 - Route POST/PATCH: probe không bấm nút, nên 33 route mutation chưa được chạm.
 - Nội dung thật sự chảy qua Edge: tôi thấy đường ống sống (309 GiB, bắt tay 55
   giây) và 0 lỗi source trong 30 phút, nhưng **không đọc nội dung** truyền qua.
+
+## A38. SÁU PHASE NÂNG CẤP (VÒNG 2) — gom toàn bộ §A37, cả backend lẫn frontend
+
+> **Đừng nhầm với 5 phase cũ.** §A32 (dòng 4027) là **vòng 1**, đã làm xong
+> 09-09. Sáu phase dưới đây là **vòng 2**, dựng trên kết quả điều tra §A37, nên
+> tiêu đề đều có chữ "(vòng 2)".
+
+Owner giao: gom kết quả điều tra thành 6 phase, viết chi tiết, backend và
+frontend đi cùng nhau (hai vai không còn tách). Mỗi phase dưới đây có: mục tiêu,
+việc backend, việc frontend, exit gate đo được, cách kiểm bằng mắt trên trình
+duyệt, và test phải có.
+
+**Nguyên tắc xếp thứ tự.** Phase 1–2 (vòng 2) làm được ngay, nằm gọn trong Portal, không
+phụ thuộc ai. Phase 3 phải có owner vì nó đổi nguồn dữ liệu production. Phase
+4–5 dọn nợ. Phase 6 nghiệm thu. Ai làm cũng được — Claude hay codex — miễn ghi
+lại vào đây.
+
+**Một quy tắc xuyên suốt, không phase nào được vi phạm:** không bịa dữ liệu.
+`loading ≠ empty ≠ partial ≠ stale ≠ denied ≠ unavailable ≠ terminal`. Giá trị
+không có **không bao giờ** được hiện thành `0`, `—`, hay `N/A`.
+
+---
+
+### PHASE 1 (vòng 2) — Cắt một nửa payload đang gửi hai lần
+
+**Vấn đề đo được (§A37.11).** Envelope screen-BFF mang **cả hai** nhánh
+`data.<panel>` và `panels.<panel>.data.rows`, nội dung **giống hệt nhau từng
+byte** (đã băm sha256 từng cặp để xác nhận):
+
+| Endpoint | Hiện tại | Trùng lặp | Sau khi sửa (dự kiến) |
+| --- | --- | --- | --- |
+| `screens/paper` | 1 549 021 B | 764 776 B ở 6 panel | ~784 KB |
+| `screens/blotter` | 434 354 B | 213 863 B ở 4 panel | ~220 KB |
+| `screens/sandbox` | 35 874 B | 15 996 B ở 2 panel | ~20 KB |
+| `screens/live` | 6 624 B | 2 B | không đổi |
+
+**Việc backend**
+
+1. Xác định nhánh nào là chính thức. Đọc `screen-bff.controller.ts` và các
+   service dựng envelope; tìm **mọi** consumer của nhánh kia — không chỉ
+   frontend, mà cả test contract, fixture, và bất kỳ service nào khác.
+2. Bỏ nhánh thừa khỏi response. **Không** bỏ bằng cách xoá dữ liệu — bỏ bằng
+   cách ngừng serialize nhánh trùng.
+3. Giữ nguyên mọi trường bao quanh: `state`, `clocks`, `coverage`,
+   `source_history_semantics`, `reason_code`, `retryable`. Đây là phần nói thật
+   của envelope, cắt nhầm là mất khả năng phân biệt trạng thái.
+
+**Việc frontend**
+
+4. Đổi consumer sang nhánh chính thức. Nếu adapter đang đọc nhánh sắp bỏ, sửa
+   `adapter.ts` và các container liên quan.
+5. **Không** thêm fallback im lặng kiểu `data ?? panels`. Nếu nhánh chính thức
+   thiếu, phải ra trạng thái lỗi có lý do, không được lặng lẽ nhảy sang nhánh
+   kia — vì như thế là giấu một hồi quy.
+
+**Exit gate** (cả bốn phải đạt)
+
+- `screens/paper` **< 800 KB**, `screens/blotter` **< 230 KB** đo bằng
+  `curl -o /dev/null -w "%{size_download}"` có phiên đăng nhập.
+- Script đối chiếu sha256 giữa `data.<k>` và `panels.<k>.data.rows` trả về
+  **0 cặp trùng** trên cả 4 endpoint.
+- Số dòng dữ liệu mỗi panel **không đổi** trước và sau (200 dòng vẫn là 200).
+- `npm run build` của frontend và control-api đều exit 0.
+
+**Kiểm bằng mắt trên trình duyệt**
+
+- `/deployments/paper` — bảng performance, account equity, sessions, positions
+  phải hiện **đúng số dòng như trước**, không panel nào chuyển sang rỗng.
+- `/deployments/blotter` — bảng chính và panel conditional giữ nguyên hành vi
+  (conditional vẫn `EMPTY` vì nguồn công bố 0, xem §A37.9).
+- Mở DevTools → Network, xem lại kích thước response của `screens/paper`:
+  phải nhỏ hơn một nửa.
+
+**Test bắt buộc**
+
+- Một test **guard** mới: dựng envelope mẫu, băm mọi cặp `data.<k>` và
+  `panels.<k>.data.rows`, **fail nếu có cặp nào trùng digest**. Test này ngăn
+  ai đó vô tình thêm lại nhánh trùng sau này.
+- Test contract hiện có phải xanh nguyên, không sửa expectation để chiều code.
+
+---
+
+### PHASE 2 (vòng 2) — Mở khoá route đang chết, và phơi cái hệ thống đang giấu
+
+Hai việc nhỏ nhưng đúng tinh thần "không giấu".
+
+#### 2A. `/broker-bindings/{id}/exposure` — hiện chết 100%
+
+**Vấn đề đo được (§A37.8).** Id binding thật có dạng
+`paper-binance-dynamic_grid_long_short_1h@BINANCE`. Bộ kiểm là
+`/^[A-Za-z0-9._-]{1,128}$/`, không nhận `@`. **43/43 binding đều chứa `@`** →
+route trả `400 ANALYTICS_IDENTIFIER_INVALID` cho mọi binding đang tồn tại.
+
+**Việc backend**
+
+1. Nới bộ kiểm để nhận `@`, tại `analytics.proxy.ts:41`,
+   `local-query-analytics.service.ts:110` và `:136`. Nới **đúng một ký tự**,
+   không mở rộng thành "cho qua hết".
+2. Trước khi nới, rà `@` có đi vào đâu nguy hiểm không: câu SQL (phải là tham
+   số hoá, không nối chuỗi), URL gửi sang Edge (phải encode), và khoá cache.
+   Ghi kết quả rà vào đây — đây là điều kiện để codex ký.
+3. Nếu bước 2 phát hiện rủi ro, chuyển sang hướng thay thế: giữ bộ kiểm, thêm
+   một lớp mã hoá id (ví dụ encode `@`) ở ranh giới route, và **nói rõ** trong
+   contract rằng id trên URL là dạng đã encode.
+
+**Việc frontend**
+
+4. Nối panel exposure vào Binding Detail. Trước khi có dữ liệu, panel phải ở
+   trạng thái trung thực (`EMPTY` hoặc `UNAVAILABLE` kèm reason code), tuyệt
+   đối không `0`.
+
+#### 2B. Mirror gaps và conflicts — ghi rồi giấu
+
+**Vấn đề đo được (§A37.3).** `execution_durable_mirror_gaps` và
+`execution_durable_mirror_conflicts` **được code production ghi vào**, nhưng
+**không route API nào, không màn nào đọc**. Hệ thống tự phát hiện lỗ hổng và
+xung đột của mirror rồi cất đi.
+
+**Việc backend**
+
+5. Thêm route đọc, dưới cờ nếu cần: `GET …/durable-mirror/integrity` trả về số
+   gap, số conflict, khoảng thời gian, và `source_as_of`. Envelope phải theo
+   đúng chuẩn hiện có (`state`/`clocks`/`coverage`/`reason_code`).
+6. Bảng đang rỗng, nên route phải trả `state: EMPTY` chứ không phải `200` với
+   mảng rỗng trần trụi — người đọc phải phân biệt được "chưa có gap" và "không
+   đo được".
+
+**Việc frontend**
+
+7. Một panel "Mirror integrity" trên màn vận hành. Rỗng thì nói "no gap
+   recorded", không đo được thì nói lý do. **Không** hiện `0 gaps` khi thực ra
+   là chưa đo.
+
+**Exit gate**
+
+- Gọi `exposure` với **cả 43** binding id thật → **43 lần `200`** (hoặc mã lỗi
+  nghiệp vụ hợp lệ, nhưng không được là `ANALYTICS_IDENTIFIER_INVALID`).
+- `durable-mirror/integrity` trả `200` với `state` đúng.
+- Số route được trình duyệt gọi tăng từ **46** lên **≥ 48**.
+
+**Kiểm bằng mắt**
+
+- Mở một Binding Detail bất kỳ ở `/deployments/accounts` → panel exposure hiện
+  ra, có số hoặc có câu nói vì sao chưa có số.
+- Panel Mirror integrity: chụp lại đúng chữ nó hiện, dán vào đây.
+
+**Test bắt buộc**
+
+- Test cho bộ kiểm: id có `@` **được nhận**, id có ký tự thật sự nguy hiểm
+  (khoảng trắng, `/`, `..`, `%00`) **vẫn bị từ chối**.
+- Test envelope của route integrity phân biệt được EMPTY và UNAVAILABLE.
+
+---
+
+### PHASE 3 (vòng 2) — Chốt chuyện dev và stable đang chạy khác nhau
+
+**Đây là phase phải có owner. Không ai tự làm.**
+
+**Vấn đề đo được (§A37.5).** 8 cờ lệch. Nguy hiểm nhất là
+`FEATURE_EXECUTION_DURABLE_MIRROR`, vì `historyTable()` dùng nó để **đổi hẳn
+bảng dữ liệu**, chứ không phải đổi cách hiển thị:
+
+| Bảng | dev | stable |
+| --- | --- | --- |
+| `execution_durable_mirror_range_rows` | tươi (5 phút) | **mốc 1 ngày 5 giờ** |
+| `execution_timeseries_history` | **mốc 4 ngày 14 giờ** | tươi (5 phút) |
+
+Lật cờ mà không backfill = màn hình lập tức đọc dữ liệu cũ, **và không có gì
+cảnh báo**.
+
+**Việc backend**
+
+1. Viết script đo, chạy được trên cả hai stack: với mỗi bảng lịch sử, in
+   `max(first_observed_at)` / `max(first_seen_at)`, `max(ts)`, và số dòng. Đây
+   là công cụ bắt buộc trước mọi lần lật cờ.
+2. Viết backfill: đổ dữ liệu từ bảng đang tươi sang bảng đang mốc, có kiểm
+   tra trùng khoá và có thể chạy lại. Backfill phải **idempotent**.
+3. Thêm một lớp bảo vệ trong code: khi đọc bảng lịch sử, nếu dòng mới nhất cũ
+   hơn một ngưỡng (đề nghị: 3× chu kỳ refresh), envelope phải trả
+   `state: STALE` kèm tuổi thật — chứ không im lặng trả dữ liệu cũ như dữ liệu
+   thường. **Đây là phần quan trọng nhất của phase này.**
+
+**Việc frontend**
+
+4. Hiển thị `STALE` cho ra `STALE`: một dải cảnh báo nói rõ "dữ liệu tới
+   HH:MM, cũ hơn X phút", không trộn lẫn với trạng thái bình thường.
+5. Rà lại: hiện có màn nào đang vẽ dữ liệu mà không hiện tuổi không.
+
+**Việc vận hành (chờ owner quyết)**
+
+6. Chốt: hai stack nên chạy **cùng** bộ cờ, hay cố ý khác nhau? Nếu cố ý khác,
+   phải ghi vào đây lý do từng cờ, để lần sau không ai tưởng là trôi dạt.
+7. `EXECUTION_EDGE_PAPER_DNSE_ORIGIN` đang **rỗng** — thị trường VN chưa có
+   origin. Cần owner cho biết đã có endpoint chưa.
+
+**Exit gate**
+
+- Cả hai bảng lịch sử trên **cả hai** stack đều có dòng mới nhất trong vòng 1
+  giờ; **hoặc** sự khác biệt được ghi lại ở đây kèm lý do và kèm dải STALE hiện
+  trên UI.
+- Có script đo, chạy được, kết quả dán vào đây.
+- Backfill chạy hai lần liên tiếp cho cùng kết quả (chứng minh idempotent).
+
+**Kiểm bằng mắt**
+
+- Trên dev, tạm trỏ một màn vào bảng đang mốc → phải thấy dải STALE với tuổi
+  thật. Nếu không thấy, phase này **chưa xong**, bất kể backfill đã chạy.
+
+**Test bắt buộc**
+
+- Test: bảng lịch sử có dòng mới nhất cũ hơn ngưỡng → envelope `STALE`, có
+  `age_ms` thật.
+- Test fail-closed: thiếu mốc thời gian → **không** được coi là tươi.
+
+---
+
+### PHASE 4 (vòng 2) — Dọn code chết mà test đang che
+
+**Vấn đề đo được (§A37.3).** Hai bảng chỉ có `INSERT` **trong file test**:
+
+| Bảng | Trạng thái |
+| --- | --- |
+| `execution_command_center_pins` | chỉ có `SELECT` ở `command-center.repository.ts:620`; `INSERT` chỉ ở `command-center.spec.ts` |
+| `governance_paper_exit_reviews` | có `SELECT`/`UPDATE`; `INSERT` chỉ ở 3 file test |
+
+Suite vẫn xanh vì **test tự chèn dữ liệu rồi tự đọc lại**. Đây đúng kiểu lỗi
+mà chạy test không bao giờ bắt được.
+
+**Việc backend**
+
+1. Với từng bảng, chốt một trong hai: **nối cho xong** (viết đường ghi thật,
+   có route, có màn) hoặc **gỡ sạch** (bỏ đường đọc, bỏ bảng bằng migration,
+   bỏ test).
+   - Đề nghị của tôi: `command_center_pins` → gỡ, vì không có yêu cầu sản phẩm
+     nào cho tính năng pin. `paper_exit_reviews` → nối, vì Exit Review là màn
+     có thật và đang 404.
+2. Viết một **test canh gác** chạy trong gate: quét mọi bảng trong migration;
+   với mỗi bảng, nếu `INSERT` chỉ xuất hiện trong `test/` mà không có trong
+   `src/`, **fail** kèm tên bảng. Có allowlist, nhưng allowlist ghi **từng
+   bảng một** kèm lý do — không tha cả thư mục.
+
+**Việc frontend**
+
+3. Nếu gỡ `command_center_pins`: bỏ phần UI liên quan, không để lại nút chết.
+4. Nếu nối `paper_exit_reviews`: màn Exit Review phải đi từ 404 sang trạng thái
+   có nội dung, hoặc rỗng-có-lý-do.
+
+**Exit gate**
+
+- Test canh gác chạy trong gate và **xanh**, với allowlist rỗng hoặc từng dòng
+  có lý do viết ra.
+- Không còn bảng nào có đường đọc mà không có đường ghi ngoài test.
+
+**Kiểm bằng mắt**
+
+- Command Center: không còn dấu vết tính năng pin (nếu gỡ).
+- `/governance/exit-reviews/cr_301`: không còn 404 trần, hoặc nói rõ vì sao.
+
+**Test bắt buộc**
+
+- Chính test canh gác nói trên. Nó phải **fail** khi cố tình thêm lại một bảng
+  chỉ-ghi-trong-test — chứng minh bằng cách chạy thử rồi hoàn tác.
+
+---
+
+### PHASE 5 (vòng 2) — 40 bảng rỗng và chuyện không snapshot nào từng COMPLETE
+
+Đây là phase **lớn nhất và ít chắc chắn nhất**. Nó không sửa được bằng cách
+viết thêm frontend.
+
+**Vấn đề đo được (§A37.3, §A37.4).**
+
+- **40/73 bảng (54%) rỗng ở cả dev lẫn stable**: governance 20, incident 5,
+  activation 5, ledger 3, operations queue 2, còn lại 5.
+- **10 màn trả 404**, mỗi màn khớp đúng một bảng rỗng.
+- **6/6 snapshot projection là `PARTIAL`**; 5 265 dòng journal trên dev và
+  5 018 trên stable, **0% đạt `COMPLETE`**, dù `"COMPLETE"` là giá trị hợp lệ
+  và được dùng ở 14 chỗ trong code.
+
+**Việc backend — chia làm hai câu hỏi tách bạch**
+
+1. **Vì sao không bao giờ COMPLETE?** Truy đường: ai đặt `input.completeness`
+   khi ghi journal, điều kiện nào cho ra `COMPLETE`, và điều kiện đó có bao giờ
+   thoả được không. Ba khả năng, phải xác định là cái nào:
+   - nguồn chưa bao giờ gửi đủ relation → đúng và trung thực, cần ghi lại;
+   - điều kiện trong code quá chặt → lỗi, phải sửa;
+   - điều kiện không thể thoả → thiết kế sai, phải thiết kế lại.
+   **Không được đoán.** Viết kết luận kèm dòng code vào đây.
+2. **40 bảng rỗng: phân loại từng nhóm**, mỗi nhóm chọn một trong ba:
+   - **Chờ nguồn** — Trading System sẽ publish, Portal không làm gì được. Ghi
+     rõ đang chờ cái gì.
+   - **Cần đường seed có chủ đích** — ví dụ incident và operation queue do
+     người vận hành tạo, cần route tạo + màn tạo.
+   - **Bỏ** — tính năng không còn trong kế hoạch.
+
+**Việc frontend**
+
+3. Mười màn 404 hiện đã trung thực (§A37.10 có nguyên văn:
+   `CANARY_ENVELOPE_NOT_FOUND`, `No incident is published…`). Giữ nguyên hành
+   vi đó. Việc cần làm là **thêm một câu nói rõ đang chờ gì** — "chờ Trading
+   System publish" khác hẳn "tính năng chưa làm", và người dùng phải phân biệt
+   được.
+4. Tám màn không gọi API nào (`/portal-map`, `/data/catalog`,
+   `/research/alphas`, `/research/composer`, `/research/mining`,
+   `/backtests/approvals`, `/administration/profile-access`,
+   `/governance/exit-reviews`): chốt từng màn là **tĩnh có chủ đích** hay
+   **chưa nối**. Màn tĩnh có chủ đích phải tự nói ra điều đó.
+
+**Exit gate**
+
+- Mỗi bảng trong 40 bảng có **một dòng phân loại** trong bảng tổng ở đây, kèm
+  người quyết.
+- Câu hỏi COMPLETE có câu trả lời dứt khoát kèm dòng code, không phải phỏng đoán.
+- Mỗi màn trong 10 màn 404 nói được **đang chờ gì**, không chỉ "không có".
+
+**Kiểm bằng mắt**
+
+- `/execution/operations/incidents/inc_28`, `/deployments/sandbox/dep_77`,
+  `/governance/exit-reviews/cr_301`: đọc nguyên văn, dán vào đây, và câu đó
+  phải trả lời được "vì sao rỗng" chứ không chỉ "rỗng".
+
+**Test bắt buộc**
+
+- Test: `COMPLETE` là đường đi được — dựng một cycle đủ điều kiện và khẳng định
+  nó ra `COMPLETE`. Nếu không dựng nổi, đó chính là câu trả lời cho câu hỏi 1.
+
+---
+
+### PHASE 6 (vòng 2) — Nghiệm thu nút bấm và phần route chưa chạm
+
+**Vấn đề đo được (§A37.10).** Quét 59 màn cho **46/121** route được gọi. Trong
+75 route còn lại: **33 là POST/PATCH** (probe cố ý không bấm nút) và **42 là
+GET** chưa màn nào gọi. Một số GET thực ra chỉ là "chưa chạm tới" chứ không
+phải "vô dụng": `activation/capabilities` nằm trong drawer phải mở,
+`derivations/conditional-groups/{id}` cần có nhóm tồn tại (hiện 0),
+`command-center/stream` là SSE.
+
+**Việc frontend**
+
+1. Mở rộng probe: biết mở drawer, chuyển tab, cuộn bảng, và mở SSE. Ghi lại
+   route nào chỉ xuất hiện sau thao tác — đó là dữ liệu mà bản quét thụ động
+   không thể có.
+2. Với 42 GET: chia ba nhóm — **đã nối nhưng cần thao tác**, **nên nối**,
+   **cố ý không nối** (kèm lý do). Nhóm giữa là việc thật.
+
+**Việc backend**
+
+3. Với 33 route mutation: mỗi route phải có ít nhất một đường bấm được từ UI,
+   **hoặc** một dòng ghi rõ vì sao chưa có. Route mutation không có đường bấm
+   là route không ai kiểm chứng được.
+4. Rà `@Post` nào chưa có test end-to-end đi qua controller thật.
+
+**Việc nghiệm thu (cần owner cho phép như lần trước)**
+
+5. Bấm thật trên dev từng nút mutation, ghi lại: nút nào ghi thật, nút nào mờ
+   và **câu lý do** nó hiện. Theo §3.5, nút mờ **bắt buộc** phải nêu lý do.
+6. Lần trước đo được 12 nút · 0 write (§A33.2). Lần này phải phủ nhiều hơn và
+   ghi rõ đã bấm những gì.
+
+**Exit gate**
+
+- Route được trình duyệt gọi tăng từ **46** lên một con số **đặt trước khi đo**
+  (đề nghị: **≥ 60** sau khi probe biết thao tác). Đặt số trước, đo sau — không
+  đo xong rồi mới đặt.
+- Mỗi nút mutation: hoặc bấm được, hoặc mờ **kèm lý do hiện trên màn**. Số nút
+  mờ không nêu lý do phải là **0**.
+- Không nút nào gây write ngoài ý muốn — đối chiếu số dòng bảng trước/sau.
+
+**Kiểm bằng mắt**
+
+- Mở Admin Action Drawer: panel Staged activation phải gọi
+  `activation/capabilities` thật (hiện đang bị đếm là "chưa gọi" vì probe không
+  mở drawer).
+- Duyệt 25 màn có nút, chụp lại từng nút mờ kèm câu lý do.
+
+**Test bắt buộc**
+
+- Test cho quy tắc §3.5: nút `disabled` mà không có lý do → **fail**.
+- Test end-to-end cho các route mutation vừa nối.
+
+---
+
+### A38.1 Bảng tổng — phase nào giải quyết phát hiện nào
+
+| Phát hiện ở §A37 | Phase |
+| --- | --- |
+| Payload trùng 49% (paper 765 KB, blotter 214 KB) | **1** |
+| `exposure` chết 100% vì regex `@` | **2A** |
+| Mirror gaps/conflicts ghi mà không ai đọc | **2B** |
+| 8 cờ lệch dev↔stable; bảng lịch sử mốc 4,6 ngày và 1,2 ngày | **3** |
+| `EXECUTION_EDGE_PAPER_DNSE_ORIGIN` rỗng | **3** |
+| `command_center_pins`, `paper_exit_reviews` chỉ ghi trong test | **4** |
+| 40/73 bảng rỗng, 10 màn 404 | **5** |
+| 6/6 snapshot PARTIAL, 0% COMPLETE | **5** |
+| 8 màn không gọi API nào | **5** |
+| 42 GET chưa gọi, 33 POST chưa bấm | **6** |
+| Ba món chưa ký ở §A33.1 | **2A** (binding), **5** (sandbox certification), **5** (conditional) |
+| NATS 5 tin/2,7 ngày · MinIO 0 bucket | chưa xếp — xem A38.2 |
+
+### A38.2 Cố ý để ngoài 6 phase
+
+**NATS và MinIO.** NATS chạy 2 ngày 18 giờ với **5 tin vào, 5 tin ra**, 70
+subscription. MinIO **0 bucket**. Cả hai đang dựng mà gần như không tải gì.
+
+Tôi **không** xếp chúng vào phase nào, vì đây là câu hỏi kiến trúc chứ không
+phải việc sửa lỗi: dùng thật hay gỡ khỏi compose. Gỡ thì compose gọn và không
+ai hiểu nhầm là hệ thống có event bus đang chạy; giữ thì phải có kế hoạch dùng.
+Cần owner quyết trước khi biến thành việc.
+
+### A38.3 Điều tôi chưa chắc, nói trước khi ai đó bắt tay vào
+
+1. **Phase 1** — tôi chưa xác định được nhánh nào (`data` hay `panels`) là
+   chính thức. Phải đọc kỹ trước khi cắt; cắt nhầm nhánh là hỏng nhiều màn.
+2. **Phase 2A** — nới regex nghe nhỏ, nhưng `@` có thể đi vào URL gửi sang
+   Edge. Chưa rà xong thì chưa được nới.
+3. **Phase 3** — ngưỡng STALE (đề nghị 3× chu kỳ refresh) là tôi tự chọn, chưa
+   có cơ sở đo. Cần codex hoặc owner chốt.
+4. **Phase 5** — tôi chưa biết vì sao không bao giờ COMPLETE. Cả phase này
+   xoay quanh câu trả lời đó, nên phải trả lời trước khi lập kế hoạch chi tiết.
+5. **Phase 6** — con số ≥ 60 là ước lượng. Nếu sau khi probe biết thao tác mà
+   trần thật thấp hơn, phải sửa mục tiêu và nói rõ vì sao, **không** hạ chuẩn
+   trong im lặng như tôi từng suýt làm ở §A32.5.
