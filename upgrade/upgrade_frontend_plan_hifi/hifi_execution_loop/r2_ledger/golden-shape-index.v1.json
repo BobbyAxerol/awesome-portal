@@ -1,0 +1,37 @@
+{
+ "schema": "golden-shape-index.v1",
+ "generated_at": "2026-09-10",
+ "digest_algorithm": "sha256 over a stable stringify: arrays in order, object keys sorted, primitives via JSON.stringify. Markers are ASCII on purpose, so the Python generator and the TypeScript CI check cannot disagree on escaping.",
+ "pins": [
+  {
+   "operation": "execution.paper-overview.v1",
+   "file": "golden/execution_paper-overview_v1.shape.json",
+   "structure_digest": "sha256:4e7260f363e19ab6b034e8b44bf4f8476bcada20db1db431ed327eccb765de7d"
+  },
+  {
+   "operation": "execution.full-blotter.v1",
+   "file": "golden/execution_full-blotter_v1.shape.json",
+   "structure_digest": "sha256:6f9a880150ea318d477e18634c4177daf3a58981b201cb2aa897ef0e805aeb5d"
+  },
+  {
+   "operation": "execution.sandbox-overview.v1",
+   "file": "golden/execution_sandbox-overview_v1.shape.json",
+   "structure_digest": "sha256:10518b8bdca41ff89d8f3d6dabe9fed3cae3e992b7bb247b1851cb2fa6dc5375"
+  },
+  {
+   "operation": "execution.live-overview.v1",
+   "file": "golden/execution_live-overview_v1.shape.json",
+   "structure_digest": "sha256:0640a280a0862040adafa05d3c59c7cdb0d9607b1c68174f25d5422e19b0fb9e"
+  },
+  {
+   "operation": "execution.bindings-list.v1",
+   "file": "golden/execution_bindings-list_v1.shape.json",
+   "structure_digest": "sha256:fff089e1d8fdb0c66a409f78899393f776bafab2413f3fe2fdcc2221658aa974"
+  },
+  {
+   "operation": "portal.execution.runtime-manifest.v1",
+   "file": "golden/portal_execution_runtime-manifest_v1.shape.json",
+   "structure_digest": "sha256:fbcb3e54635e37c162d350860917a11bb01156560998c47be4a04185896d69d0"
+  }
+ ]
+}

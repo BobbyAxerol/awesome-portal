@@ -1,0 +1,1239 @@
+{
+ "schema": "capability-inventory.v1",
+ "generated_at": "2026-09-10",
+ "route_count": 121,
+ "class_enum": [
+  "AUTO_READ",
+  "INTERACTION_READ",
+  "PORTAL_MUTATION",
+  "EDGE_COMMAND",
+  "INTENTIONALLY_UNEXPOSED"
+ ],
+ "taxonomy_gap": "The R2-0 enum has no class for a route that is published, healthy and has no consumer. Six such routes are recorded as INTERACTION_READ with unused_capability=true. Codex to decide whether to add PUBLISHED_UNCONSUMED.",
+ "edge_command_count_zero_because": "No command plane exists: issueCommand/sendCommand/commandPlane/EDGE_COMMAND/postToEdge appear nowhere in apps/control-api/src or the Rust crates. Every mutation route writes locally.",
+ "routes": [
+  {
+   "route": "GET /api/admin/users",
+   "controller": "admin/admin.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/auth/context",
+   "controller": "auth/auth.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/auth/csrf",
+   "controller": "auth/auth.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "NONE_YET",
+   "unused_capability": false,
+   "evidence": "csrf_token issued for the auth layer; no screen owns it",
+   "owner": "claude",
+   "test_owner": "codex",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/control/healthz",
+   "controller": "health/health.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/control/readyz",
+   "controller": "health/health.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "NONE_YET",
+   "unused_capability": false,
+   "evidence": "container readiness probe; infrastructure, not a screen",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/runs/:run_id/events",
+   "controller": "facade/facade.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/activation/capabilities",
+   "controller": "activation/activation.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/activation/plans/:plan_id",
+   "controller": "activation/activation.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "ACTIVATION_PLAN_NOT_FOUND: execution_activation_plans is empty on both stacks — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 404
+  },
+  {
+   "route": "GET /api/v1/execution/adapters/:environment/:capabilityId",
+   "controller": "execution/profile-read-adapter.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "REQUEST_REJECTED for an unknown capability id; needs a valid capability — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 404
+  },
+  {
+   "route": "GET /api/v1/execution/alphas",
+   "controller": "manager-lists/manager-lists.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/alphas/:alphaId/query-analytics",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/alphas/:alphaId/stage-drift",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/alphas/equity-sparklines",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/broker-bindings",
+   "controller": "manager-lists/manager-lists.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/broker-bindings/:bindingId/exposure",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/broker-bindings/:binding_id",
+   "controller": "manager-lists/manager-lists.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/command-center",
+   "controller": "command-center/command-center.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/command-center/realtime-snapshot",
+   "controller": "execution/realtime.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/command-center/stream",
+   "controller": "execution/realtime.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/commands/catalog",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/commands/tasks",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/compositions/admin-action-drawer",
+   "controller": "execution/operational-composition.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "healthy composition envelope, no screen consumes it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/v1/execution/compositions/approvals/:approval_id",
+   "controller": "execution/operational-composition.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "no frontend reference and the sweep never triggered it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/compositions/command-center",
+   "controller": "execution/operational-composition.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/compositions/exit-reviews/:review_id",
+   "controller": "execution/operational-composition.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "no frontend reference and the sweep never triggered it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/compositions/incidents/:incident_id",
+   "controller": "execution/operational-composition.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "no frontend reference and the sweep never triggered it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/compositions/operations",
+   "controller": "execution/operational-composition.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/compositions/waivers",
+   "controller": "execution/operational-composition.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/v1/execution/contract-authority",
+   "controller": "execution/contract-authority.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/current-source/:environment/screens/:screenId",
+   "controller": "execution/current-source.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "NONE_YET",
+   "unused_capability": false,
+   "evidence": "410 N20_RAW_SOURCE_BROWSER_FORBIDDEN by design: browsers must use the canonical screen BFF",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 410
+  },
+  {
+   "route": "GET /api/v1/execution/current-source/:environment/screens/:screenId/sources/:sourceId/relations/:relation",
+   "controller": "execution/current-source.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "NONE_YET",
+   "unused_capability": false,
+   "evidence": "410 N20_RAW_SOURCE_BROWSER_FORBIDDEN by design",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 410
+  },
+  {
+   "route": "GET /api/v1/execution/deployments/:deploymentId/query-analytics",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/deployments/:deployment_id/canary",
+   "controller": "canary/canary.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/deployments/:deployment_id/certification",
+   "controller": "sandbox/sandbox-certification.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/deployments/:deployment_id/live",
+   "controller": "live/live-operations.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/deployments/paper/:deploymentId/projection/:panel",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/derivations/alphas/:alpha_id/activity",
+   "controller": "execution/portal-derivations.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/derivations/conditional-groups/:group_id",
+   "controller": "execution/portal-derivations.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/derivations/deployments/:deployment_id/execution-quality",
+   "controller": "execution/portal-derivations.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/derivations/portfolios/:portfolio_id/capital",
+   "controller": "execution/portal-derivations.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/derivations/source-health",
+   "controller": "execution/portal-derivations.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/approvals",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/approvals/:approval_id/live",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/approvals/:approval_id/r1",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/approvals/:approval_id/r2",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/approvals/history",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/exit-reviews/:review_id",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/governance/waivers",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/history/:environment/:relationKey",
+   "controller": "execution/profile-history.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/live-gates/:approvalId/query-analytics",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "no frontend reference and the sweep never triggered it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/manager/current/:operationId",
+   "controller": "execution/maximum-data-operation.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/manager/deployments",
+   "controller": "execution/maximum-data-operation.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "healthy publication envelope, no screen consumes it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/v1/execution/manager/operations",
+   "controller": "execution/maximum-data-operation.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "healthy publication envelope, no screen consumes it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/v1/execution/market/candles",
+   "controller": "execution/market-context.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/market/latest",
+   "controller": "execution/market-context.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "requires query parameters; EDS11R4_MARKET_QUERY_INVALID without them — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 400
+  },
+  {
+   "route": "GET /api/v1/execution/market/venue-candles",
+   "controller": "execution/market-candles.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/operations",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/operations/:operation_id",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/operations/incidents/:incident_id",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/orders/:orderId/funnel",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/portfolios",
+   "controller": "manager-lists/manager-lists.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/portfolios/:portfolioId/capital-ledger",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/portfolios/:portfolioId/correlation",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/portfolios/:portfolioId/cross-equity",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/portfolios/:portfolioId/query-analytics",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/profiles/:environment/realtime-snapshot",
+   "controller": "execution/realtime.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/profiles/:environment/stream",
+   "controller": "execution/realtime.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/resources/accounts/:accountId/:relation",
+   "controller": "execution/subject-activity.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/resources/accounts/:resource_id",
+   "controller": "resource-read/resource-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/resources/alphas/:alphaId/:relation",
+   "controller": "execution/subject-activity.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/resources/alphas/:resource_id",
+   "controller": "resource-read/resource-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/resources/bindings/:resource_id",
+   "controller": "resource-read/resource-read.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/resources/portfolios/:resource_id",
+   "controller": "resource-read/resource-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/runtime-manifest",
+   "controller": "execution/runtime-manifest.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screen-contracts",
+   "controller": "screen-bff/screen-bff.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screen-contracts/:screen_id",
+   "controller": "screen-bff/screen-bff.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screens/accounts/:account_id",
+   "controller": "profile-read/profile-read.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screens/blotter",
+   "controller": "paper-read/paper-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screens/live",
+   "controller": "profile-read/profile-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screens/paper",
+   "controller": "paper-read/paper-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screens/paper/:deployment_id",
+   "controller": "paper-read/paper-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screens/paper/:deployment_id/vn-market",
+   "controller": "paper-read/paper-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/screens/sandbox",
+   "controller": "profile-read/profile-read.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/views/equity-chart",
+   "controller": "execution/financial-chart.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/views/observed-timeline",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "browser sweep saw it on page load",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/views/risk-decisions",
+   "controller": "execution/financial-chart.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "frontend references path, sweep did not trigger it",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/workspaces",
+   "controller": "facade/facade.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "returns workspaces; healthy but no screen consumes it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude",
+   "probed_status": 200
+  },
+  {
+   "route": "GET /api/workspaces/:workspace_id/runs",
+   "controller": "facade/facade.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "NONE_YET",
+   "unused_capability": true,
+   "evidence": "facade for run listing; no screen consumes it — reclassified from INTENTIONALLY_UNEXPOSED after probing it live",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "PATCH /api/admin/users/:user_id",
+   "controller": "admin/admin.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/users",
+   "controller": "admin/admin.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/users/:user_id/disable",
+   "controller": "admin/admin.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/users/:user_id/reset-credential",
+   "controller": "admin/admin.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/users/:user_id/revoke-sessions",
+   "controller": "admin/admin.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/auth/change-password",
+   "controller": "auth/auth.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/auth/login",
+   "controller": "auth/auth.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/auth/logout",
+   "controller": "auth/auth.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/activation/plans",
+   "controller": "activation/activation.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/v1/execution/activation/plans/:plan_id/apply",
+   "controller": "activation/activation.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/v1/execution/activation/plans/:plan_id/verify",
+   "controller": "activation/activation.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/v1/execution/alphas/:alphaId/insight-previews",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/v1/execution/approvals/:approvalId/capital-preview",
+   "controller": "execution/analytics.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/v1/execution/commands/plans",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/commands/tasks/:task_id/plan",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/commands/tasks/:task_id/run",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/approvals",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/canary-envelopes",
+   "controller": "canary/canary.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/sandbox-certifications",
+   "controller": "sandbox/sandbox-certification.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/sandbox-certifications/:certification_id/decisions",
+   "controller": "sandbox/sandbox-certification.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/sandbox-certifications/:certification_id/promotion-plans",
+   "controller": "sandbox/sandbox-certification.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/governance/sandbox-certifications/:certification_id/submit",
+   "controller": "sandbox/sandbox-certification.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/:operation_id/acknowledge",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/:operation_id/apply",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/:operation_id/resolve",
+   "controller": "governance/governance.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents/:incident_id/acknowledge",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents/:incident_id/annotations",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents/:incident_id/assign",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents/:incident_id/evidence",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents/:incident_id/mitigate",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents/:incident_id/operations",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/execution/operations/incidents/:incident_id/resolve",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": false,
+   "evidence": "local write",
+   "owner": "codex",
+   "test_owner": "codex"
+  }
+ ]
+}

@@ -1,0 +1,73 @@
+{
+ "schema": "performance-baseline.v1",
+ "generated_at": "2026-09-10",
+ "method": "30 sequential authenticated GETs per operation from the host against 127.0.0.1:8080; percentiles from the sorted sample. Repeat with scratchpad/r2-benchmark.sh to reproduce.",
+ "projection_age_at_capture": {
+  "dev_snapshots": "all three environments refreshed within seconds",
+  "completeness": "PARTIAL on all six snapshots (dev and stable)"
+ },
+ "source_call_count": "0 Edge/source errors in the 30 minutes around capture; 507 ladder drains logged",
+ "cache_admission_outcome": "not instrumented — no cache/admission counter is exposed today",
+ "operations": {
+  "screens/paper": {
+   "p50": 921.6,
+   "p95": 1258.0,
+   "p99": 1270.4,
+   "identity_bytes": 1549021
+  },
+  "screens/blotter": {
+   "p50": 1091.0,
+   "p95": 1531.8,
+   "p99": 1702.0,
+   "identity_bytes": 434354
+  },
+  "screens/sandbox": {
+   "p50": 12.7,
+   "p95": 25.2,
+   "p99": 34.1,
+   "identity_bytes": 35874
+  },
+  "screens/live": {
+   "p50": 10.6,
+   "p95": 25.0,
+   "p99": 42.4,
+   "identity_bytes": 6624
+  },
+  "alphas": {
+   "p50": 13.0,
+   "p95": 141.6,
+   "p99": 917.7,
+   "identity_bytes": 87768
+  },
+  "broker-bindings": {
+   "p50": 10.3,
+   "p95": 141.7,
+   "p99": 547.7,
+   "identity_bytes": 10287
+  },
+  "portfolios": {
+   "p50": 350.4,
+   "p95": 587.3,
+   "p99": 861.8,
+   "identity_bytes": 1266
+  },
+  "screen-contracts": {
+   "p50": 5.0,
+   "p95": 9.1,
+   "p99": 20.3,
+   "identity_bytes": 24269
+  },
+  "runtime-manifest": {
+   "p50": 4.9,
+   "p95": 12.5,
+   "p99": 14.3,
+   "identity_bytes": 3341
+  },
+  "activation/capabilities": {
+   "p50": 4.8,
+   "p95": 6.3,
+   "p99": 14.7,
+   "identity_bytes": 1981
+  }
+ }
+}

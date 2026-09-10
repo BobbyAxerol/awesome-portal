@@ -1,0 +1,82 @@
+{
+ "schema": "golden-shape.v1",
+ "operation": "portal.execution.runtime-manifest.v1",
+ "structure_digest": "sha256:fbcb3e54635e37c162d350860917a11bb01156560998c47be4a04185896d69d0",
+ "values_excluded": "Types and key paths only. No values are stored, because these responses carry live trading data.",
+ "captured_from": "dev stack 127.0.0.1:8080 on 2026-09-10",
+ "shape": {
+  "bounds": {
+   "maximum_cursor_bytes": "integer",
+   "maximum_page_rows": "integer",
+   "maximum_response_bytes": "integer"
+  },
+  "contract_authority": {
+   "action_count": "integer",
+   "field_definition_count": "integer",
+   "generated_digests": {
+    "action_manifest": "string",
+    "composite": "string",
+    "screen_data_manifest": "string"
+   },
+   "generated_source_schema": "string",
+   "schema_version": "string",
+   "screen_count": "integer"
+  },
+  "contract_status": {
+   "catalogue_digest": "string",
+   "e5_publication_manifest_digest": "string",
+   "e5_publication_revision": "string",
+   "e6_acceptance_manifest_digest": "string",
+   "edge_commit": "string",
+   "edge_image_digest": "string",
+   "frozen_field_mapping_count": "integer",
+   "frozen_screen_count": "integer",
+   "genuine_source_gap_count": "integer",
+   "manager_contract_revision": "string",
+   "return_pack_status": "string",
+   "serving_policy_digest": "string",
+   "source_commit": "string",
+   "state": "string"
+  },
+  "external_gates": [
+   {
+    "requirement_id": "string",
+    "status": "string"
+   },
+   "<list length varies>"
+  ],
+  "read_at_ms": "integer",
+  "record_authority": "string",
+  "redaction": {
+   "credential_or_certificate": "boolean",
+   "direct_database_or_redis": "boolean",
+   "raw_rows": "boolean",
+   "source_cursor": "boolean",
+   "source_origin": "boolean"
+  },
+  "runtime_delivery": {
+   "named_portal_operation": "string",
+   "profiles": [
+    {
+     "environment": "string",
+     "maximum_observed_concurrency": "integer",
+     "portal_bff_delivery": "string",
+     "profile_id": "string",
+     "qualified_delivery": "string"
+    },
+    "<list length varies>"
+   ],
+   "source_probe_performed_by_this_request": "boolean",
+   "state": "string"
+  },
+  "schema_version": "string",
+  "source_semantics": {
+   "authoritative_empty": "string",
+   "correction_replay": "string",
+   "global_event_ordering": "string",
+   "manager_read": "string",
+   "total_history": "string"
+  },
+  "workspace_id": "string"
+ }
+}

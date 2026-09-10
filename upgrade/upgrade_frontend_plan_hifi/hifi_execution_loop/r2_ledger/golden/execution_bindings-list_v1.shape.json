@@ -1,0 +1,52 @@
+{
+ "schema": "golden-shape.v1",
+ "operation": "execution.bindings-list.v1",
+ "structure_digest": "sha256:fff089e1d8fdb0c66a409f78899393f776bafab2413f3fe2fdcc2221658aa974",
+ "values_excluded": "Types and key paths only. No values are stored, because these responses carry live trading data.",
+ "captured_from": "dev stack 127.0.0.1:8080 on 2026-09-10",
+ "shape": {
+  "completeness": "string",
+  "delivery_profile": "string",
+  "environment": "string",
+  "freshness": "string",
+  "freshness_budget_ms": {
+   "fresh": "integer",
+   "stale": "integer"
+  },
+  "page": {
+   "applied_filters": [
+    "<empty list>"
+   ],
+   "applied_sort": [
+    {
+     "direction": "string",
+     "field": "string"
+    },
+    "<list length varies>"
+   ],
+   "filtered_count": "integer",
+   "has_more": "boolean",
+   "has_previous": "boolean",
+   "next_cursor": "null",
+   "prev_cursor": "null",
+   "rows": [
+    {
+     "account_id": "string",
+     "binding_id": "string",
+     "credential_state": "string",
+     "state": "string",
+     "updated_at": "string",
+     "venue": "string"
+    },
+    "<list length varies>"
+   ],
+   "total_count": "integer"
+  },
+  "read_at": "string",
+  "record_authority": "string",
+  "schema_version": "string",
+  "source_as_of": "string",
+  "source_authority": "string",
+  "workspace_id": "string"
+ }
+}

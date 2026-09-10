@@ -1,0 +1,326 @@
+{
+ "schema": "frontend-consumer-ledger.v1",
+ "generated_at": "2026-09-10",
+ "canonical_branch_proposed_by_codex": "panels.<panel_id> (A38.5)",
+ "totals": {
+  "data_branch_reads": 228,
+  "panels_branch_reads": 21,
+  "files_needing_v2_migration": 21,
+  "files_with_envelope_evidence_and_data_reads": 9,
+  "tighter_candidate_files": [
+   "api/fixtureApi.ts",
+   "api/httpApi.ts",
+   "api/observedTimeline.ts",
+   "api/rows.ts",
+   "components/DerivationTile.tsx",
+   "previewControllers.tsx",
+   "screens/SandboxOverview.tsx",
+   "screens/containers.tsx",
+   "screens/recomposeContainers.tsx"
+  ]
+ },
+ "same_origin_only": "Every request goes through httpApi.ts with BASE='/api/v1/execution'; no consumer calls the Edge directly.",
+ "consumers": [
+  {
+   "file": "api/rows.ts",
+   "reads_data_branch": 62,
+   "reads_panels_branch": 1,
+   "fixture_references": 1,
+   "direct_fetch_calls": 0,
+   "branch": "BOTH",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/recomposeContainers.tsx",
+   "reads_data_branch": 31,
+   "reads_panels_branch": 1,
+   "fixture_references": 1,
+   "direct_fetch_calls": 0,
+   "branch": "BOTH",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "analytics.ts",
+   "reads_data_branch": 29,
+   "reads_panels_branch": 0,
+   "fixture_references": 3,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "components/EquityChart.tsx",
+   "reads_data_branch": 18,
+   "reads_panels_branch": 0,
+   "fixture_references": 3,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "adapter.ts",
+   "reads_data_branch": 13,
+   "reads_panels_branch": 0,
+   "fixture_references": 3,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "api/httpApi.ts",
+   "reads_data_branch": 11,
+   "reads_panels_branch": 0,
+   "fixture_references": 1,
+   "direct_fetch_calls": 2,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "components/DerivationTile.tsx",
+   "reads_data_branch": 10,
+   "reads_panels_branch": 1,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "BOTH",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "api/financialChart.ts",
+   "reads_data_branch": 8,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "api/observedTimeline.ts",
+   "reads_data_branch": 8,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "derivedReads.ts",
+   "reads_data_branch": 7,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "components/marketChart.tsx",
+   "reads_data_branch": 6,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "previewControllers.tsx",
+   "reads_data_branch": 5,
+   "reads_panels_branch": 0,
+   "fixture_references": 30,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/LiveOverview.tsx",
+   "reads_data_branch": 5,
+   "reads_panels_branch": 0,
+   "fixture_references": 20,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "screens/SandboxOverview.tsx",
+   "reads_data_branch": 3,
+   "reads_panels_branch": 3,
+   "fixture_references": 23,
+   "direct_fetch_calls": 0,
+   "branch": "BOTH",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "operationalComposition.ts",
+   "reads_data_branch": 2,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "api/fixtureApi.ts",
+   "reads_data_branch": 2,
+   "reads_panels_branch": 0,
+   "fixture_references": 101,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/PaperOverview.tsx",
+   "reads_data_branch": 2,
+   "reads_panels_branch": 0,
+   "fixture_references": 1,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "screens/containers.tsx",
+   "reads_data_branch": 2,
+   "reads_panels_branch": 0,
+   "fixture_references": 10,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/profileContainers.tsx",
+   "reads_data_branch": 2,
+   "reads_panels_branch": 0,
+   "fixture_references": 2,
+   "direct_fetch_calls": 1,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "analytics.presentation.fixtures.ts",
+   "reads_data_branch": 1,
+   "reads_panels_branch": 0,
+   "fixture_references": 17,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "screens/WaiversRegister.tsx",
+   "reads_data_branch": 1,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "DATA_V1",
+   "migration_required_for_v2": true,
+   "envelope_evidence": false
+  },
+  {
+   "file": "liveFull.ts",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 1,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "PANELS",
+   "migration_required_for_v2": false,
+   "envelope_evidence": true
+  },
+  {
+   "file": "profileRealtime.ts",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 1,
+   "branch": "NONE",
+   "migration_required_for_v2": false,
+   "envelope_evidence": false
+  },
+  {
+   "file": "screenDataContract.ts",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 2,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "PANELS",
+   "migration_required_for_v2": false,
+   "envelope_evidence": true
+  },
+  {
+   "file": "api/contractAuthority.ts",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 0,
+   "fixture_references": 0,
+   "direct_fetch_calls": 1,
+   "branch": "NONE",
+   "migration_required_for_v2": false,
+   "envelope_evidence": false
+  },
+  {
+   "file": "api/profileRead.ts",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 1,
+   "fixture_references": 0,
+   "direct_fetch_calls": 0,
+   "branch": "PANELS",
+   "migration_required_for_v2": false,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/AlphaThreeSixty.tsx",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 1,
+   "fixture_references": 4,
+   "direct_fetch_calls": 0,
+   "branch": "PANELS",
+   "migration_required_for_v2": false,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/LiveFullOperations.tsx",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 4,
+   "fixture_references": 29,
+   "direct_fetch_calls": 0,
+   "branch": "PANELS",
+   "migration_required_for_v2": false,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/PaperExitReview.tsx",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 5,
+   "fixture_references": 3,
+   "direct_fetch_calls": 0,
+   "branch": "PANELS",
+   "migration_required_for_v2": false,
+   "envelope_evidence": true
+  },
+  {
+   "file": "screens/SandboxCertification.tsx",
+   "reads_data_branch": 0,
+   "reads_panels_branch": 1,
+   "fixture_references": 47,
+   "direct_fetch_calls": 0,
+   "branch": "PANELS",
+   "migration_required_for_v2": false,
+   "envelope_evidence": true
+  }
+ ],
+ "counting_caveat": "reads_data_branch counts every `data.<member>` access in the file, which also matches local variables named `data`. It is an UPPER BOUND on envelope-branch consumers, not a measurement of them. envelope_evidence=true marks files that also mention a screen BFF operation or `panels`, which is the tighter candidate set."
+}

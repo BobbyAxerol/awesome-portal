@@ -1,0 +1,77 @@
+{
+ "captured_at": "2026-09-10",
+ "authenticated": false,
+ "origins_contacted": [
+  "http://127.0.0.1:8080"
+ ],
+ "foreign_origin_requests": 0,
+ "cookie_names": [],
+ "cookie_values_recorded": false,
+ "cookie_flags": [],
+ "response_status_counts": {
+  "200": 80
+ },
+ "per_path": [
+  {
+   "path": "/",
+   "htmlSecretMatch": null,
+   "localStorageKeys": [
+    "portal.preferences.v1"
+   ],
+   "sessionStorageKeys": [],
+   "bodyText": "PRIMUSSPARK · QUANT PLATFORM"
+  },
+  {
+   "path": "/deployments/alphas",
+   "htmlSecretMatch": null,
+   "localStorageKeys": [
+    "portal.preferences.v1"
+   ],
+   "sessionStorageKeys": [],
+   "bodyText": "PRIMUSSPARK · QUANT PLATFORM"
+  },
+  {
+   "path": "/deployments/paper",
+   "htmlSecretMatch": null,
+   "localStorageKeys": [
+    "portal.preferences.v1"
+   ],
+   "sessionStorageKeys": [],
+   "bodyText": "PRIMUSSPARK · QUANT PLATFORM"
+  },
+  {
+   "path": "/execution",
+   "htmlSecretMatch": null,
+   "localStorageKeys": [
+    "portal.preferences.v1"
+   ],
+   "sessionStorageKeys": [],
+   "bodyText": "PRIMUSSPARK · QUANT PLATFORM"
+  },
+  {
+   "path": "/governance/approvals",
+   "htmlSecretMatch": null,
+   "localStorageKeys": [
+    "portal.preferences.v1"
+   ],
+   "sessionStorageKeys": [],
+   "bodyText": "PRIMUSSPARK · QUANT PLATFORM"
+  }
+ ],
+ "request_count": 80,
+ "schema": "anonymous-capture.v1",
+ "anonymous_api_probe": {
+  "method": "unauthenticated GET against five published operations",
+  "results": {
+   "screens/paper": 401,
+   "alphas": 401,
+   "broker-bindings": 401,
+   "runtime-manifest": 401,
+   "screen-contracts": 401
+  },
+  "error_code": "SESSION_REQUIRED",
+  "conclusion": "Every read refuses without a session. Nothing leaks to an anonymous caller."
+ },
+ "conclusion": "An anonymous browser reaches only the Portal origin, is issued no cookie, stores only portal.preferences.v1 in localStorage, and sees no value matching a credential, JWT or private-key pattern. Direct API reads without a session return 401 SESSION_REQUIRED.",
+ "values_recorded": "Names and flags only. No cookie value, storage value or response body is stored in this file."
+}

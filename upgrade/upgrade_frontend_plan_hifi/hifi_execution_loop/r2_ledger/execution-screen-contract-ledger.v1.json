@@ -1,0 +1,279 @@
+{
+ "schema": "execution-screen-contract-ledger.v1",
+ "generated_at": "2026-09-10",
+ "measured_on": "dev stack (compose project portal, 127.0.0.1:8080) at feat/execution-loop-next",
+ "finding_no_bounds": "No screen BFF envelope declares maximum_page_rows or maximum_response_bytes. The 1 MB bound in the runtime manifest belongs to the maximum-data intake operation, not to these screens.",
+ "finding_compression_off": "nginx.conf ships with '#gzip on;' commented out and no response carries Content-Encoding, so every byte above is sent uncompressed.",
+ "operations": [
+  {
+   "named_operation": "screens/paper",
+   "schema_version": "execution.paper-overview.v1",
+   "ui_route": "/deployments/paper",
+   "panel_count": 6,
+   "authority": "PORTAL_CONTROL/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 1549021,
+    "gzip_on_the_wire": 1549021,
+    "gzip_if_enabled": 98289,
+    "dedup_plus_gzip": 49557,
+    "duplicate_bytes": 764776
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 921.6,
+    "p95": 1258.0,
+    "p99": 1270.4,
+    "max": 1270.4
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "screens/blotter",
+   "schema_version": "execution.full-blotter.v1",
+   "ui_route": "/deployments/blotter",
+   "panel_count": 7,
+   "authority": "PORTAL_CONTROL/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 434354,
+    "gzip_on_the_wire": 434354,
+    "gzip_if_enabled": 37770,
+    "dedup_plus_gzip": 20005,
+    "duplicate_bytes": 213863
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 1091.0,
+    "p95": 1531.8,
+    "p99": 1702.0,
+    "max": 1702.0
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "screens/sandbox",
+   "schema_version": "execution.sandbox-overview.v1",
+   "ui_route": "/deployments/sandbox",
+   "panel_count": 4,
+   "authority": "PORTAL_CONTROL/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 35874,
+    "gzip_on_the_wire": 35874,
+    "gzip_if_enabled": 2633,
+    "dedup_plus_gzip": 2390,
+    "duplicate_bytes": 15996
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 12.7,
+    "p95": 25.2,
+    "p99": 34.1,
+    "max": 34.1
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "screens/live",
+   "schema_version": "execution.live-overview.v1",
+   "ui_route": "/deployments/live",
+   "panel_count": 8,
+   "authority": "PORTAL_CONTROL/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 6624,
+    "gzip_on_the_wire": 6624,
+    "gzip_if_enabled": null,
+    "dedup_plus_gzip": null,
+    "duplicate_bytes": 2
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 10.6,
+    "p95": 25.0,
+    "p99": 42.4,
+    "max": 42.4
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "alphas",
+   "schema_version": "execution.alpha-fleet-list.v2",
+   "ui_route": "/deployments/alphas",
+   "panel_count": 0,
+   "authority": "PORTAL_PROJECTION/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 87768,
+    "gzip_on_the_wire": 87768,
+    "gzip_if_enabled": 4025,
+    "dedup_plus_gzip": 4014,
+    "duplicate_bytes": null
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 13.0,
+    "p95": 141.6,
+    "p99": 917.7,
+    "max": 917.7
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "broker-bindings",
+   "schema_version": "execution.bindings-list.v1",
+   "ui_route": "/deployments/accounts",
+   "panel_count": 0,
+   "authority": "PORTAL_PROJECTION/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 10287,
+    "gzip_on_the_wire": 10287,
+    "gzip_if_enabled": null,
+    "dedup_plus_gzip": null,
+    "duplicate_bytes": null
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 10.3,
+    "p95": 141.7,
+    "p99": 547.7,
+    "max": 547.7
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "portfolios",
+   "schema_version": "execution.portfolio-list.v1",
+   "ui_route": "/deployments/portfolios",
+   "panel_count": 0,
+   "authority": "PORTAL_PROJECTION/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 1266,
+    "gzip_on_the_wire": 1266,
+    "gzip_if_enabled": null,
+    "dedup_plus_gzip": null,
+    "duplicate_bytes": null
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 350.4,
+    "p95": 587.3,
+    "p99": 861.8,
+    "max": 861.8
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "screen-contracts",
+   "schema_version": "execution.screen-bff-catalogue.v1",
+   "ui_route": "(all screens, availability)",
+   "panel_count": 0,
+   "authority": "PORTAL_PROJECTION/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 24269,
+    "gzip_on_the_wire": 24269,
+    "gzip_if_enabled": null,
+    "dedup_plus_gzip": null,
+    "duplicate_bytes": null
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 5.0,
+    "p95": 9.1,
+    "p99": 20.3,
+    "max": 20.3
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "runtime-manifest",
+   "schema_version": "portal.execution.runtime-manifest.v1",
+   "ui_route": "(all screens, page bounds)",
+   "panel_count": 0,
+   "authority": "PORTAL_PROJECTION/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 3341,
+    "gzip_on_the_wire": 3341,
+    "gzip_if_enabled": null,
+    "dedup_plus_gzip": null,
+    "duplicate_bytes": null
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 4.9,
+    "p95": 12.5,
+    "p99": 14.3,
+    "max": 14.3
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "named_operation": "activation/capabilities",
+   "schema_version": "execution.staged-activation-capabilities.v1",
+   "ui_route": "Admin Action Drawer",
+   "panel_count": 0,
+   "authority": "PORTAL_PROJECTION/TRADING_SYSTEM",
+   "path": "local-projection",
+   "byte_baseline": {
+    "identity": 1981,
+    "gzip_on_the_wire": 1981,
+    "gzip_if_enabled": null,
+    "dedup_plus_gzip": null,
+    "duplicate_bytes": null
+   },
+   "latency_ms": {
+    "samples": 30,
+    "p50": 4.8,
+    "p95": 6.3,
+    "p99": 14.7,
+    "max": 14.7
+   },
+   "declared_page_bound": null,
+   "declared_response_byte_bound": null,
+   "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
+   "owner": "codex",
+   "test_owner": "claude"
+  }
+ ]
+}

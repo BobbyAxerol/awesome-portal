@@ -6055,3 +6055,233 @@ Claude không đổi backend source trực tiếp; frontend changes do Claude ow
 Sau khi Bobby chọn phase đầu tiên, request cụ thể cho Claude sẽ được tách từ
 phần Frontend tương ứng ở trên, còn backend change sẽ được mirror vào Unified
 Backend Plan và implementation tracker trong cùng coherent slice.
+
+## A39. PHASE R2-0 ĐÃ LÀM (10-09) — bốn ledger, một baseline, một guard, và hai lỗi guard tự bắt
+
+Owner giao làm hết R2-0, đạt exit gate mới tính xong, không để lại nợ. R2-0 nói
+rõ nó **chỉ tạo inventory, schema, fixture và evidence** — không đổi payload
+production, không lật cờ. Tôi giữ đúng ranh giới đó: không một file backend
+runtime nào bị sửa; tất cả những gì thêm vào là ledger, fixture, script đo và
+một test canh gác.
+
+Mọi thứ nằm ở `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger/`.
+
+### A39.1 Sáu artifact đã tạo
+
+| File | Nội dung |
+| --- | --- |
+| `persistence-ownership.v1.json` | 73 bảng + 4 view, mỗi mục có writer owner, ingress, verb, số dòng dev/stable, retention, disposal |
+| `capability-inventory.v1.json` | 121 route, mỗi route có interaction class, consumer, owner, test owner, bằng chứng |
+| `execution-screen-contract-ledger.v1.json` | 10 named operation: schema version, UI route, panel count, authority, byte baseline, latency p50/p95/p99 |
+| `performance-baseline.v1.json` | baseline rút gọn + phương pháp tái lập |
+| `frontend-consumer-ledger.v1.json` | 30 file frontend đọc `data.*`/`panels.*`, kèm tập ứng viên phải chuyển V2 |
+| `panel-state-ledger.v1.json` | 25 panel, trạng thái quan sát được, ba từ vựng state đang tồn tại song song |
+| `anonymous-capture.v1.json` | capture trình duyệt không đăng nhập |
+| `golden/*.shape.json` + `golden-shape-index.v1.json` | 6 shape đã pin, **chỉ kiểu và đường khoá, không có giá trị** |
+| `r2-benchmark.sh` | script đo lại, đọc credential từ env, không hard-code |
+
+Test canh gác: `apps/portal/frontend/src/execution/r2Ledger.test.ts` — **22 phép
+kiểm, chạy trong gate frontend**.
+
+### A39.2 Ownership: truy bằng đồ thị gọi, không bằng grep — và tôi đã sai ở §A37
+
+A38.8 nói thẳng: không được kết luận ownership bằng cách grep `INSERT`. Tôi làm
+lại đúng cách: từ **mọi** câu `INSERT`/`UPDATE`/`DELETE` trong
+`apps/control-api/src` (loại test), tìm phương thức bao quanh, dựng đồ thị gọi
+ngược, rồi lần lên cho tới khi chạm `*.controller.ts` (ROUTE) hoặc worker/`@Cron`
+(WORKER).
+
+Kết quả:
+
+| Writer owner | Số bảng |
+| --- | --- |
+| `PORTAL_WORKFLOW` | 37 |
+| `TRADING_SYSTEM_READ` | 19 |
+| `RETIRED_PENDING_REMOVAL` | 9 |
+| `NEEDS_CODEX_REVIEW` | 6 |
+| `VIEW_DERIVED` | 4 |
+| `PORTAL_PROJECTION` | 1 |
+| `MIGRATION_ONLY` | 1 |
+
+**Cải chính §A37.** Tôi từng viết "hai bảng chỉ ghi trong test"
+(`command_center_pins`, `paper_exit_reviews`). Sai ở cả hai đầu:
+
+- Thực ra có **chín** bảng có đường đọc mà **không** có câu ghi nào trong src
+  production: `execution_command_center_pins`,
+  `governance_approval_analytics_scopes`, `governance_approval_findings`,
+  `governance_paper_exit_findings`, `governance_paper_exit_lineage`,
+  `governance_paper_exit_panels`, `governance_r2_lineage`,
+  `governance_sandbox_findings`, `governance_sandbox_step_evidence`.
+- Còn `governance_paper_exit_reviews` **không** thuộc nhóm đó: nó có `UPDATE`
+  gọi được từ một route. Vấn đề thật của nó khác và hẹp hơn: **có UPDATE, không
+  có INSERT** — dòng sửa được nhưng không tạo được.
+
+Tôi để chín bảng kia là `RETIRED_PENDING_REMOVAL` và `paper_exit_reviews` là
+`NEEDS_CODEX_REVIEW`, kèm ghi chú từng cái. **Không** tự quyết xoá hay nối —
+A38.8 nói quyết định đó thuộc owner sản phẩm, không phải suy ra từ việc database
+đang rỗng.
+
+### A39.3 Capability inventory: và một nhãn tôi phải gỡ xuống
+
+Phân loại 121 route: **46 AUTO_READ · 38 INTERACTION_READ · 33 PORTAL_MUTATION ·
+4 INTENTIONALLY_UNEXPOSED**.
+
+**`EDGE_COMMAND` = 0, và lý do quan trọng.** Không có command plane:
+`issueCommand`, `sendCommand`, `commandPlane`, `EDGE_COMMAND`, `postToEdge`
+không xuất hiện ở đâu trong `apps/control-api/src` lẫn các crate Rust. Mọi route
+mutation đều ghi **local**. Portal hiện **không** gửi được lệnh nào sang Trading
+System — đường nối là một chiều, chỉ đọc.
+
+**Tôi gán sai 12 route rồi tự gỡ xuống.** Ban đầu tôi xếp 16 route vào
+`INTENTIONALLY_UNEXPOSED` chỉ vì frontend không tham chiếu tới. Rồi tôi gọi thử
+từng cái, và:
+
+| Route | Gọi thật |
+| --- | --- |
+| `compositions/admin-action-drawer` | **200**, envelope đầy đủ |
+| `compositions/waivers` | **200**, envelope đầy đủ |
+| `manager/deployments` | **200**, có publication revision |
+| `manager/operations` | **200**, có catalogue sha256 |
+| `/api/workspaces` | **200** |
+
+Chúng không phải "cố ý không phơi" — chúng **đang chạy tốt và chưa ai dùng**. Chỉ
+bốn route thật sự là cố ý: `healthz`, `readyz`, `csrf`, và hai route
+`current-source/*` trả `410 N20_RAW_SOURCE_BROWSER_FORBIDDEN` **theo thiết kế**.
+
+Từ đó lộ ra một lỗ của chính taxonomy R2-0: **nó không có nhãn cho "đã publish,
+khoẻ, chưa có consumer"**. Tôi ghi 12 route đó là `INTERACTION_READ` kèm cờ
+`unused_capability: true`, và ghi thẳng lỗ này vào ledger để codex quyết có thêm
+`PUBLISHED_UNCONSUMED` hay không. Tôi không tự bẻ taxonomy cho vừa dữ liệu.
+
+### A39.4 Baseline: và khoản lớn nhất không phải cái tôi tưởng
+
+30 lượt gọi mỗi operation, tuần tự, có phiên đăng nhập:
+
+| Operation | p50 | p95 | p99 | identity |
+| --- | --- | --- | --- | --- |
+| `screens/blotter` | 1091 ms | 1532 ms | 1702 ms | 434 354 B |
+| `screens/paper` | 922 ms | 1258 ms | 1270 ms | 1 549 021 B |
+| `portfolios` | 350 ms | 587 ms | 862 ms | 1 266 B |
+| `alphas` | 13 ms | 142 ms | 918 ms | 87 768 B |
+| `screens/sandbox` | 12,7 ms | 25 ms | 34 ms | 35 874 B |
+| `screens/live` | 10,6 ms | 25 ms | 42 ms | 6 624 B |
+| `screen-contracts` | 5,0 ms | 9,1 ms | 20 ms | 24 269 B |
+| `runtime-manifest` | 4,9 ms | 12,5 ms | 14,3 ms | 3 341 B |
+| `activation/capabilities` | 4,8 ms | 6,3 ms | 14,7 ms | 1 981 B |
+
+`portfolios` đáng chú ý: 1 266 byte mà p50 tới 350 ms — chậm không phải vì to.
+
+**Nén đang tắt hoàn toàn.** Không response nào có `Content-Encoding`;
+`nginx.conf` ship với `#gzip on;` đã comment. Nghĩa là 1,5 MB kia đi trên dây
+nguyên vẹn. Đo thử:
+
+| | identity | gzip nếu bật | gzip + bỏ trùng |
+| --- | --- | --- | --- |
+| `screens/paper` | 1 549 021 B | **98 289 B (15,8×)** | **49 557 B (31×)** |
+| `screens/blotter` | 434 354 B | 37 770 B (11,5×) | 20 005 B (21,7×) |
+
+Đây là chỗ tôi phải sửa lại ưu tiên của chính mình ở §A38: tôi đặt "bỏ payload
+trùng" (2×) làm việc số một. Đo xong mới thấy **bật nén là 15,8×** — lớn gấp
+tám lần. Hai việc cộng lại là 31×. Phase 1 nên làm cả hai, và nén nên đi trước
+vì nó là đổi cấu hình, không đổi contract.
+
+**Screen BFF không khai trần nào.** Envelope `screens/paper` không có
+`maximum_page_rows`, không có `maximum_response_bytes`. Con số 1 MB trong runtime
+manifest thuộc về operation maximum-data intake, **không** áp cho các màn này —
+tôi đã suýt báo cáo "vượt trần của chính nó", và đó là sai.
+
+**Chưa đo được, ghi rõ:** không có counter cache/admission nào được phơi ra, nên
+mục "cache/admission outcome" của R2-0 tôi ghi là `not instrumented` chứ không
+bịa một con số.
+
+### A39.5 Consumer ledger: 228 là chặn trên, 9 mới là con số làm được
+
+Quét 30 file frontend: `data.*` xuất hiện **228** lần, `panels.*` 21 lần.
+
+Nhưng regex `data\.` khớp cả biến cục bộ tên `data`, nên **228 là chặn trên, không
+phải số đo**. Siết lại bằng điều kiện "file vừa nhắc tới screen BFF hoặc `panels`"
+thì tập ứng viên phải chuyển V2 còn **9 file**:
+
+`api/fixtureApi.ts`, `api/httpApi.ts`, `api/observedTimeline.ts`, `api/rows.ts`,
+`components/DerivationTile.tsx`, `previewControllers.tsx`,
+`screens/SandboxOverview.tsx`, `screens/containers.tsx`,
+`screens/recomposeContainers.tsx`.
+
+Ledger ghi rõ cả hai con số và nói cái nào là chặn trên — test bắt buộc trường
+`counting_caveat` phải tồn tại.
+
+### A39.6 Panel state: ba từ vựng, và `EMPTY` đang giấu chuyện
+
+| Nơi định nghĩa | Các state |
+| --- | --- |
+| `contracts.ts:425` `PanelStatus` | loading, ok, empty, partial, stale, denied, unavailable, insufficient_data, terminal |
+| `screenDataContract.ts:15` `EDS02_PANEL_STATES` | READY, EMPTY, PARTIAL, STALE, UNAVAILABLE, DENIED, ERROR |
+| `api/observedTimeline.ts:11` `ObservedPanelState` | READY, EMPTY, PARTIAL, STALE, UNAVAILABLE |
+
+Ba từ vựng cùng tồn tại và **không cái nào khớp bảy state R2-0 yêu cầu**: `READY`
+đối lại `ok`, `ACCESS_DENIED` đối lại `denied`/`DENIED`, `LOADING` chỉ có ở một
+nơi, còn `insufficient_data`/`terminal`/`ERROR` thì R2-0 không nhắc.
+
+Trạng thái **thật** trên dev, đọc từ 25 panel của bốn màn:
+
+| State | Số panel |
+| --- | --- |
+| EMPTY | 12 |
+| PARTIAL | 7 |
+| READY | 6 |
+| STALE · UNAVAILABLE · LOADING · ACCESS_DENIED | **0 — chưa từng thấy** |
+
+**Và đây là điều đáng lo nhất của mục này: cả 12 panel `EMPTY` đều có
+`reason_code = null`.** Người vận hành nhìn vào không phân biệt được "đúng là
+không có gì" với "chưa bao giờ đo". A38.9 cấm đúng điều này. Tôi ghi vào ledger
+kèm số đếm, và test bắt buộc số đếm đó phải khớp dữ liệu thật.
+
+Ngoài ra `screens/live` có **7 trên 8 panel** đang `EMPTY`.
+
+### A39.7 Guard tự bắt hai lỗi của tôi trước khi xanh
+
+Test không phải để đóng dấu. Lần chạy đầu nó **fail 2/18**, và cả hai đều là lỗi
+thật trong ledger tôi vừa viết:
+
+1. **Thiếu hai tên trong ownership ledger** — `execution_operation_queue_read` và
+   `governance_conditions_register`. Chúng là **VIEW**, còn tôi liệt kê bảng từ
+   `pg_stat_user_tables` nên bỏ sót. Sửa bằng cách bổ sung cả **4 view** với
+   `VIEW_DERIVED` và tên bảng nền, **không** nới test.
+2. **Digest shape không khớp** — generator Python escape `…` thành `…`, còn
+   `JSON.stringify` của TypeScript giữ nguyên. Sửa bằng cách bỏ hẳn ký tự
+   non-ASCII khỏi marker và dùng đúng một thuật toán stable-stringify ở cả hai
+   phía.
+
+Sau khi sửa: **22/22 xanh**.
+
+### A39.8 Exit gate — đối chiếu từng dòng
+
+| Yêu cầu của R2-0 | Trạng thái | Bằng chứng |
+| --- | --- | --- |
+| Ledger được validate trong CI | **đạt** | `r2Ledger.test.ts`, 22 phép kiểm, chạy trong gate frontend |
+| Không route "không owner" | **đạt** | test tự dựng lại danh sách route từ controller và fail nếu inventory lệch |
+| Không table "không owner" | **đạt** | 77 mục, test cross-check với mọi bảng mà control-api gọi tên trong SQL |
+| Không screen "không owner" | **đạt** | 10 named operation, mỗi cái có owner + test owner |
+| Anonymous capture không lộ cookie/secret | **đạt** | 0 request ra ngoài origin Portal, 0 cookie, chỉ `portal.preferences.v1` trong localStorage, không khớp mẫu secret; API ẩn danh trả `401 SESSION_REQUIRED` |
+| Baseline lặp lại được | **đạt** | `r2-benchmark.sh`, credential đọc từ env |
+| Là commit docs/test riêng | **đạt** | commit này, không đụng file backend runtime nào |
+
+### A39.9 Ba việc R2-0 giao mà tôi **không** làm, và vì sao
+
+1. **Không tự quyết số phận 9 bảng `RETIRED_PENDING_REMOVAL`.** A38.8 nói quyết
+   định retire/nối thuộc owner sản phẩm; ledger ghi trạng thái và chờ.
+2. **Không thêm nhãn mới vào taxonomy.** Lỗ "published nhưng chưa có consumer" đã
+   ghi vào ledger để codex quyết, thay vì tôi tự đặt nhãn rồi mọi người dùng theo.
+3. **Không đặt SLO.** R2-0 nói mục tiêu số phải chốt **từ** baseline. Baseline đã
+   có; đặt ngưỡng là việc của phase sau, sau khi owner và codex xem con số.
+
+### A39.10 Việc mở ra cho phase sau, từ chính R2-0
+
+- **Bật gzip** — 15,8× trên màn nặng nhất, chỉ là đổi cấu hình. Nên vào Phase 1
+  trước cả việc bỏ payload trùng.
+- **`EMPTY` phải có reason code** — 12 panel đang rỗng không lý do.
+- **Bốn state chưa từng xuất hiện** — `STALE`/`UNAVAILABLE`/`LOADING`/`ACCESS_DENIED`
+  chưa có bằng chứng đường code nào đi tới được. Phase 3 phụ thuộc `STALE` chạy
+  thật, nên phải chứng minh nó tồn tại trước.
+- **Ba từ vựng state** cần hợp nhất trước khi Phase 5 viết `SourceGapNarrative`.
+- **Screen BFF chưa khai trần nào** — Phase 1 phải thêm bound trước serialization.

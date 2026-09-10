@@ -1,0 +1,244 @@
+{
+ "schema": "golden-shape.v1",
+ "operation": "execution.sandbox-overview.v1",
+ "structure_digest": "sha256:10518b8bdca41ff89d8f3d6dabe9fed3cae3e992b7bb247b1851cb2fa6dc5375",
+ "values_excluded": "Types and key paths only. No values are stored, because these responses carry live trading data.",
+ "captured_from": "dev stack 127.0.0.1:8080 on 2026-09-10",
+ "shape": {
+  "actor": {
+   "roles": [
+    "string",
+    "<list length varies>"
+   ],
+   "user_id": "string",
+   "username": "string"
+  },
+  "as_of": "string",
+  "as_of_ms": "integer",
+  "capabilities": [
+   {
+    "capability_id": "string",
+    "reason_code": "null",
+    "relations": [
+     "<empty list>"
+    ],
+    "retryable": "boolean",
+    "state": "string"
+   },
+   "<list length varies>"
+  ],
+  "completeness": "string",
+  "composition": "string",
+  "data": {
+   "deployments": [
+    {
+     "account_id": "string",
+     "active": "boolean",
+     "created_at": "string",
+     "created_at_ms": "integer",
+     "currency": "string",
+     "deployment_id": "string",
+     "mode": "string",
+     "portfolio_id": "string",
+     "state": "string",
+     "strategy_id": "string",
+     "updated_at": "string",
+     "updated_at_ms": "integer",
+     "venue": "string"
+    },
+    "<list length varies>"
+   ],
+   "positions": [
+    "<empty list>"
+   ],
+   "reconciliation": [
+    "<empty list>"
+   ],
+   "sessions": [
+    "<empty list>"
+   ]
+  },
+  "delivery_profile": "string",
+  "freshness": "string",
+  "panels": {
+   "deployments": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      "<empty list>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": {
+     "rows": [
+      {
+       "account_id": "string",
+       "active": "boolean",
+       "created_at": "string",
+       "created_at_ms": "integer",
+       "currency": "string",
+       "deployment_id": "string",
+       "mode": "string",
+       "portfolio_id": "string",
+       "state": "string",
+       "strategy_id": "string",
+       "updated_at": "string",
+       "updated_at_ms": "integer",
+       "venue": "string"
+      },
+      "<list length varies>"
+     ]
+    },
+    "formula": "null",
+    "reason_code": "null",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "positions": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      "<empty list>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": "null",
+    "formula": "null",
+    "reason_code": "null",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "reconciliation": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      {
+       "from_ms": "integer",
+       "reason_code": "string",
+       "to_ms": "integer"
+      },
+      "<list length varies>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": {
+     "rows": [
+      "<empty list>"
+     ]
+    },
+    "formula": "null",
+    "reason_code": "string",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "sessions": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      "<empty list>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": "null",
+    "formula": "null",
+    "reason_code": "null",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   }
+  },
+  "projection": {
+   "epoch": "string",
+   "lastSuccessfulRefreshAt": "string",
+   "payloadDigest": "string",
+   "sequence": "integer",
+   "sourceCursor": "null"
+  },
+  "read_at": "string",
+  "read_at_ms": "integer",
+  "record_authority": "string",
+  "requested_environment": "string",
+  "resource": {
+   "id": "string",
+   "kind": "string"
+  },
+  "resource_resolution": {
+   "reason_code": "null"
+  },
+  "schema_version": "string",
+  "source_authority": "string",
+  "source_environment": "string",
+  "state": "string",
+  "unavailable_branches": [
+   "<empty list>"
+  ],
+  "workspace_id": "string"
+ }
+}
