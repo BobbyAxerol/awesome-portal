@@ -4794,3 +4794,55 @@ không mất theo phiên.
    xoá worktree không dùng — chờ owner chỉ worktree nào bỏ được.
 3. 264 dòng P4-E: chờ codex rebase lên dev, hoặc owner cho phép tôi commit
    nguyên trạng lên nhánh WIP tách từ `dcc4eda`.
+
+### A36.5 Dọn worktree (10-09, sau khi owner xác nhận dev ổn)
+
+Owner duyệt: dev không mất code, cho dọn. Nguyên tắc tôi tự đặt trước khi xoá
+bất cứ thứ gì — **xoá worktree thì không được mất commit nào**, nên mỗi ứng
+viên phải qua bốn cửa:
+
+1. `git status` sạch (0 file dirty),
+2. tip đã là tổ tiên của `1ced120` (tức việc của nó đã nằm trong dev),
+3. nhánh đã có trên remote đúng tip đó,
+4. không script/container nào trỏ vào.
+
+Chín worktree qua đủ bốn cửa và đã gỡ; **cả chín nhánh giữ nguyên**, local và
+remote khớp nhau từng cái:
+
+| worktree đã gỡ | nhánh còn lại |
+| --- | --- |
+| `portal-backend-next` | `feat/execution-loop-backend-n13b-n17b` `5a70f93` |
+| `portal-backend-plan` | `feat/execution-manager-campaign` `fd039ac` |
+| `portal-execution-next` | `feat/execution-source-qualification` `3b88ad5` |
+| `portal-eds12-failure-dr-release` | `feat/eds12-failure-dr-release` `8a7bd6f` |
+| `portal-eds12-evidence-closeout` | `feat/eds12-deployed-evidence-closeout` `ae0413c` |
+| `portal-fix-current-source-partials` | `fix/frontend-audit-gate-082e988` `8814cd2` |
+| `portal-product-active-integration` | `fix/refresh-m0-freeze-recovery` `09d5879` |
+| `portal-polish` | `feat/execution-loop-polish` `658f695` |
+| `/tmp/portal-u10-sse-error-close` | `fix/u10-sse-error-close` `a74d15e` |
+
+Một chỗ suýt làm sai: `portal-product-active-integration` có thư mục tên
+`runtime/control-api-secrets`. Tôi dừng lại kiểm trước khi xoá — nó **rỗng, 0
+file**, và worktree nào cũng có (compose tự tạo mount point). Không đọc nội
+dung gì, chỉ đếm file. Nếu nó có file thật thì tôi đã để nguyên và hỏi owner.
+
+Mười worktree giữ lại, mỗi cái có lý do: `portal-integration` (dev build từ
+đây, container mount vào), `portal-stable-v1.0.1` (container stable đang mount
+— đụng vào là sập production), `portal-dev` (`.env` của deploy-int.sh + gate
+mượn node_modules + 264 dòng P4-E của codex), `portal-eds-current-bff`
+(node_modules cho Playwright), `portal` (checkout gốc, còn 4 file dirty từ
+25-08), `portal-active-source-adapters` (đường dẫn tracker owner chỉ định),
+`portal-uiux-showcase` (bản showcase đóng băng để đối chiếu UI),
+`portal-uiux-next`, `portal-eds10-eds11`, `portal-hotfix-lark-stable-v1.0.1`
+(nhánh này có commit **chưa** nằm trong dev).
+
+Sau khi dọn: `/` còn trống 188 G. Dev không hề hấn — web/api vẫn `healthy`,
+`dev-portal.primusspark.com` trả `200`, bundle vẫn `index-BksXoOBd.js` đúng bản
+đã đo; `portal.primusspark.com` trả `302` (chuyển hướng đăng nhập, bình thường).
+
+### A36.6 Điểm xuất phát cho chặng tiếp theo
+
+`dev`, `main`, `feat/execution-loop-next` — cả ba, local lẫn remote, đều ở
+`1ced120`. Nhánh chung `feat/execution-loop-next` nằm ở worktree
+`/home/bobby/portal-integration`, sạch, và đó là chỗ tôi với codex cùng làm
+tiếp execution loop.
