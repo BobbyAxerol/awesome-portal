@@ -6,14 +6,16 @@
       "cell": "SGP_RESEARCH",
       "source_branch": "main",
       "compose_file": "deploy/compose.production.yaml",
-      "project_name": "portal-stable",
+      "project_name": "portal-stable-v1-0-1",
       "loopback_port": 18081,
       "public_origin": "https://portal.primusspark.com",
-      "database_namespace": "portal-stable_portal-postgres-data",
+      "database_namespace": "portal-stable-v1-0-1_portal-postgres-data",
       "mutable_volumes": [
-        "portal-stable_portal-artifacts",
-        "portal-stable_portal-postgres-data",
-        "portal-stable_roadmap-task-board-data"
+        "portal-stable-v1-0-1_portal-artifacts",
+        "portal-stable-v1-0-1_portal-postgres-data",
+        "portal-stable-v1-0-1_roadmap-task-board-data",
+        "portal-stable-v1-0-1_portal-nats-data",
+        "portal-stable-v1-0-1_portal-minio-data"
       ],
       "services": ["portal-api", "portal-web", "control-api", "roadmap-task-board-api"],
       "execution_source_enabled": false,

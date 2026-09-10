@@ -25,6 +25,11 @@ on:
         required: true
         default: /srv/portal
         type: string
+      resume_partial_runtime:
+        description: Resume only when durable stable services remain running after a bounded application bootstrap failure
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   actions: read
@@ -52,6 +57,7 @@ jobs:
       EXPECTED_RELEASE_MANIFEST_SHA256: ${{ inputs.release_manifest_sha256 }}
       ACCEPT_VULNERABILITY_EVIDENCE: ${{ inputs.accept_vulnerability_evidence }}
       DEPLOY_PATH: ${{ inputs.deployment_path }}
+      RESUME_PARTIAL_RUNTIME: ${{ inputs.resume_partial_runtime }}
 
     steps:
       - name: Check out deployment definition
@@ -91,6 +97,10 @@ jobs:
           fi
           if [[ "${ACCEPT_VULNERABILITY_EVIDENCE}" != "true" ]]; then
             echo 'Production owner must explicitly accept the exact vulnerability evidence.' >&2
+            exit 1
+          fi
+          if [[ "${RESUME_PARTIAL_RUNTIME}" != "true" && "${RESUME_PARTIAL_RUNTIME}" != "false" ]]; then
+            echo 'resume_partial_runtime must be true or false.' >&2
             exit 1
           fi
           if ! [[ "${DEPLOY_PATH}" =~ ^/[A-Za-z0-9._/-]+$ ]]; then
@@ -195,107 +205,174 @@ jobs:
           printf '%s\n' "${DEPLOY_KNOWN_HOSTS}" > ~/.ssh/known_hosts
           chmod 0600 ~/.ssh/known_hosts
 
-      - name: Transfer production Compose definition
+      - name: Transfer immutable production Compose bundle
         run: |
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "install -d -m 0750 '${DEPLOY_PATH}/deploy' '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}'"
-          scp -P "${DEPLOY_PORT}" deploy/compose.production.yaml \
-            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/deploy/compose.production.yaml.next"
-          scp -P "${DEPLOY_PORT}" -r release-pack/. \
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "install -d -m 0750 '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose' '${DEPLOY_PATH}/scripts'"
+          for compose_file in \
+            deploy/compose.production.yaml \
+            deploy/compose.production.stable-runtime.yaml \
+            deploy/compose.execution-current-source.yaml \
+            deploy/compose.execution-local-projection.yaml \
+            deploy/compose.execution-manager-analytics.yaml \
+            deploy/compose.execution-manager-realtime.yaml; do
+            scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+              -P "${DEPLOY_PORT}" "${compose_file}" \
+              "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/${compose_file##*/}"
+          done
+          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -P "${DEPLOY_PORT}" scripts/prepare-stable-release-takeover.py \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py"
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "chmod 0750 '${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py'"
+          scp -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -P "${DEPLOY_PORT}" -r release-pack/. \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/"
 
       - name: Back up, migrate and start immutable images
         run: |
-          ssh -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' PORTAL_API_IMAGE='${PORTAL_API_IMAGE}' PORTAL_WEB_IMAGE='${PORTAL_WEB_IMAGE}' PORTAL_CONTROL_API_IMAGE='${PORTAL_CONTROL_API_IMAGE}' PORTAL_ROADMAP_API_IMAGE='${PORTAL_ROADMAP_API_IMAGE}' N14_RELEASE_MANIFEST_SHA256='${N14_RELEASE_MANIFEST_SHA256}' N14_RELEASE_DECISION_SHA256='${N14_RELEASE_DECISION_SHA256}' bash -s" <<'REMOTE'
+          # Pulling digest-pinned images and Compose readiness can be silent
+          # for minutes. Keep the pinned SSH channel alive, but fail closed
+          # after a bounded ten-minute no-response window.
+          ssh -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o ConnectTimeout=20 \
+            -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "DEPLOY_PATH='${DEPLOY_PATH}' IMAGE_TAG='${IMAGE_TAG}' SOURCE_COMMIT='${SOURCE_COMMIT}' PORTAL_API_IMAGE='${PORTAL_API_IMAGE}' PORTAL_WEB_IMAGE='${PORTAL_WEB_IMAGE}' PORTAL_CONTROL_API_IMAGE='${PORTAL_CONTROL_API_IMAGE}' PORTAL_ROADMAP_API_IMAGE='${PORTAL_ROADMAP_API_IMAGE}' N14_RELEASE_MANIFEST_SHA256='${N14_RELEASE_MANIFEST_SHA256}' N14_RELEASE_DECISION_SHA256='${N14_RELEASE_DECISION_SHA256}' RESUME_PARTIAL_RUNTIME='${RESUME_PARTIAL_RUNTIME}' bash -s" <<'REMOTE'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
-          test -f .env.production
 
-          active_compose="${DEPLOY_PATH}/deploy/compose.production.yaml"
-          next_compose="${active_compose}.next"
-          test -f "${next_compose}"
+          # First rollout only: derive host-only runtime settings from the
+          # verified stable containers.  Later runs validate the same stable
+          # namespace and never overwrite its environment file.
+          takeover_preflight=(
+            --deployment-path "${DEPLOY_PATH}"
+          )
+          if [[ "${RESUME_PARTIAL_RUNTIME}" == "true" ]]; then
+            takeover_preflight+=(--resume-partial-runtime)
+          fi
+          python3 "${DEPLOY_PATH}/scripts/prepare-stable-release-takeover.py" "${takeover_preflight[@]}"
+          test -f .env.production
+          test -f "${DEPLOY_PATH}/transition/stable-takeover.env"
+
+          next_release_dir="${DEPLOY_PATH}/releases/${SOURCE_COMMIT}"
+          next_compose_dir="${next_release_dir}/compose"
+          next_compose_files=(
+            "${next_compose_dir}/compose.production.yaml"
+            "${next_compose_dir}/compose.production.stable-runtime.yaml"
+            "${next_compose_dir}/compose.execution-current-source.yaml"
+            "${next_compose_dir}/compose.execution-local-projection.yaml"
+            "${next_compose_dir}/compose.execution-manager-analytics.yaml"
+            "${next_compose_dir}/compose.execution-manager-realtime.yaml"
+          )
+          for compose_file in "${next_compose_files[@]}"; do
+            test -f "${compose_file}"
+          done
+
+          state_value() {
+            local key="$1" file="${DEPLOY_PATH}/transition/stable-takeover.env"
+            sed -n "s/^${key}=//p" "${file}" | tail -n 1
+          }
+          takeover_project="$(state_value TAKEOVER_PROJECT)"
+          takeover_postgres="$(state_value TAKEOVER_POSTGRES_CONTAINER)"
+          takeover_roadmap="$(state_value TAKEOVER_ROADMAP_CONTAINER)"
+          takeover_port="$(state_value TAKEOVER_LOOPBACK_PORT)"
+          takeover_commands="$(state_value TAKEOVER_COMMAND_RELAY)"
+          [[ "${takeover_project}" == "portal-stable-v1-0-1" ]] || { echo 'Stable project takeover identity drifted.' >&2; exit 1; }
+          [[ "${takeover_port}" == "18081" && "${takeover_commands}" == "false" ]] || { echo 'Stable takeover port or command authority drifted.' >&2; exit 1; }
+          [[ "${takeover_postgres}" =~ ^portal-stable-v1-0-1-portal-postgres-[0-9]+$ ]] || { echo 'Stable PostgreSQL container identity is unsafe.' >&2; exit 1; }
+          [[ "${takeover_roadmap}" =~ ^portal-stable-v1-0-1-roadmap-task-board-api-[0-9]+$ ]] || { echo 'Stable Roadmap container identity is unsafe.' >&2; exit 1; }
 
           compose_next() {
-            PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
-            PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
-            PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
-            PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
-            PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
-            docker compose \
-              --env-file .env.production \
-              -f "${next_compose}" "$@"
-          }
-
-          compose_next config -q
-
-          timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-          backup_dir="${DEPLOY_PATH}/backups/${timestamp}-${IMAGE_TAG}"
-          if [[ -f "${active_compose}" ]]; then
-            compose_active() {
+            local -a compose_args=()
+            local compose_file
+            for compose_file in "${next_compose_files[@]}"; do
+              compose_args+=( -f "${compose_file}" )
+            done
+            # sudo's default env_reset intentionally drops caller variables.
+            # Pass only reviewed, non-secret immutable image coordinates as
+            # arguments to env so Compose receives the exact candidate
+            # digests while all host-only runtime settings still come from
+            # .env.production.
+            sudo -n env \
               PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
               PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
               PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
               PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
               PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
               docker compose \
-                --env-file .env.production \
-                -f "${active_compose}" "$@"
-            }
-          fi
-
-          if [[ -f "${active_compose}" ]] \
-              && compose_active ps --services --status running | grep -qx portal-postgres; then
-            install -d -m 0700 "${backup_dir}"
-            compose_active exec -T portal-postgres sh -ec \
-              'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
-              > "${backup_dir}/portal-control.dump"
-            test -s "${backup_dir}/portal-control.dump"
-            (
-              cd "${backup_dir}"
-              sha256sum portal-control.dump > SHA256SUMS
-            )
-
-            if compose_active ps --services --status running | grep -qx roadmap-task-board-api; then
-              roadmap_tmp="/var/lib/roadmap-task-board/.predeploy-${timestamp}.db"
-              compose_active exec -T roadmap-task-board-api python -m backend.scripts.portal_db backup \
-                --database /var/lib/roadmap-task-board/portal.db \
-                --output "${roadmap_tmp}"
-              compose_active cp \
-                "roadmap-task-board-api:${roadmap_tmp}" \
-                "${backup_dir}/roadmap-task-board.db"
-              compose_active exec -T roadmap-task-board-api rm -f "${roadmap_tmp}"
-              test -s "${backup_dir}/roadmap-task-board.db"
-              (
-                cd "${backup_dir}"
-                sha256sum roadmap-task-board.db >> SHA256SUMS
-              )
-            fi
-            printf 'Pre-deploy backup written to %s\n' "${backup_dir}"
-          else
-            printf 'No running production PostgreSQL service; treating this as a first deployment.\n'
-          fi
-
-          compose_next pull
-          mv "${next_compose}" "${active_compose}"
-
-          compose() {
-            PORTAL_IMAGE_TAG="${IMAGE_TAG}" \
-            PORTAL_API_IMAGE="${PORTAL_API_IMAGE}" \
-            PORTAL_WEB_IMAGE="${PORTAL_WEB_IMAGE}" \
-            PORTAL_CONTROL_API_IMAGE="${PORTAL_CONTROL_API_IMAGE}" \
-            PORTAL_ROADMAP_API_IMAGE="${PORTAL_ROADMAP_API_IMAGE}" \
-            docker compose \
               --env-file .env.production \
-              -f "${active_compose}" "$@"
+              "${compose_args[@]}" "$@"
           }
 
-          compose up -d --remove-orphans --wait --wait-timeout 180
-          compose exec -T control-api node -e \
+          # Keep a failed takeover diagnosable without printing host env,
+          # credentials or mounted secret material.  These commands expose
+          # only Compose state and bounded service stdout/stderr.
+          release_failure_diagnostics() {
+            local status="${1:-$?}"
+            set +e
+            printf 'Stable release takeover failed; bounded service diagnostics follow.\n' >&2
+            compose_next ps >&2 || true
+            compose_next logs --tail 120 control-api-migrate control-api-bootstrap control-api >&2 || true
+            exit "${status}"
+          }
+          trap 'release_failure_diagnostics "$?"' ERR
+
+          compose_next config -q
+
+          timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          backup_dir="${DEPLOY_PATH}/backups/${timestamp}-${IMAGE_TAG}"
+          # Direct container identity is intentional: before first takeover
+          # /srv/portal has no prior Compose file and must not be mistaken for
+          # the stable database authority.
+          install -d -m 0700 "${backup_dir}"
+          [[ "$(sudo -n docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "${takeover_postgres}")" == "${takeover_project}" ]] || { echo 'PostgreSQL project label drifted before backup.' >&2; exit 1; }
+          [[ "$(sudo -n docker inspect --format '{{.State.Running}}' "${takeover_postgres}")" == "true" ]] || { echo 'Stable PostgreSQL is not running.' >&2; exit 1; }
+          sudo -n docker exec "${takeover_postgres}" sh -ec \
+            'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
+            > "${backup_dir}/portal-control.dump"
+          test -s "${backup_dir}/portal-control.dump"
+          (
+            cd "${backup_dir}"
+            sha256sum portal-control.dump > SHA256SUMS
+          )
+
+          [[ "$(sudo -n docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "${takeover_roadmap}")" == "${takeover_project}" ]] || { echo 'Roadmap project label drifted before backup.' >&2; exit 1; }
+          [[ "$(sudo -n docker inspect --format '{{.State.Running}}' "${takeover_roadmap}")" == "true" ]] || { echo 'Stable Roadmap API is not running.' >&2; exit 1; }
+          roadmap_tmp="/var/lib/roadmap-task-board/.predeploy-${timestamp}.db"
+          sudo -n docker exec "${takeover_roadmap}" python -m backend.scripts.portal_db backup \
+            --database /var/lib/roadmap-task-board/portal.db \
+            --output "${roadmap_tmp}"
+          sudo -n docker cp \
+            "${takeover_roadmap}:${roadmap_tmp}" \
+            "${backup_dir}/roadmap-task-board.db"
+          sudo -n docker exec "${takeover_roadmap}" rm -f "${roadmap_tmp}"
+          test -s "${backup_dir}/roadmap-task-board.db"
+          (
+            cd "${backup_dir}"
+            sha256sum roadmap-task-board.db >> SHA256SUMS
+          )
+          printf 'Pre-deploy backup written to %s\n' "${backup_dir}"
+
+          # Only accepted digest-pinned Portal images may be pulled here.
+          # NATS, MinIO and PostgreSQL are the already-running stable
+          # companions; preserving their local image bytes prevents a mutable
+          # tag refresh during an otherwise signed application rollout.
+          compose_next pull \
+            portal-api roadmap-task-board-api portal-web \
+            control-api control-api-migrate control-api-bootstrap quant-worker-py
+          set +e
+          compose_next up -d --remove-orphans --wait --wait-timeout 180 --pull never
+          compose_up_status=$?
+          set -e
+          if (( compose_up_status != 0 )); then
+            release_failure_diagnostics "${compose_up_status}"
+          fi
+          compose_next exec -T control-api node -e \
             "fetch('http://127.0.0.1:4000/api/control/readyz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-          compose exec -T portal-api python -c \
+          compose_next exec -T portal-api python -c \
             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
-          compose exec -T roadmap-task-board-api python -c \
+          compose_next exec -T roadmap-task-board-api python -c \
             "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ready', timeout=3)"
 
           marker_next="${DEPLOY_PATH}/.deployed-release.env.next"
@@ -310,8 +387,11 @@ jobs:
             printf 'PORTAL_ROADMAP_API_IMAGE=%s\n' "${PORTAL_ROADMAP_API_IMAGE}"
             printf 'RELEASE_MANIFEST_SHA256=%s\n' "${N14_RELEASE_MANIFEST_SHA256}"
             printf 'RELEASE_DECISION_SHA256=%s\n' "${N14_RELEASE_DECISION_SHA256}"
+            printf 'COMPOSE_RELEASE_DIR=%s\n' "${next_release_dir}"
+            printf 'DEPLOYMENT_COMPOSE_BUNDLE_SHA256=sha256:%s\n' \
+              "$(sha256sum "${next_release_dir}/deployment-compose-bundle.json" | cut -d' ' -f1)"
             printf 'DEPLOYED_AT_UTC=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > "${marker_next}"
           mv "${marker_next}" "${DEPLOY_PATH}/deployed-release.env"
-          compose ps
+          compose_next ps
           REMOTE

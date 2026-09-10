@@ -106,4 +106,38 @@ describe("Phase 2 profile screen composition", () => {
         data: null,
       });
   });
+
+  it("does not downgrade an available panel because another profile relation is partial", () => {
+    const source = new ProfileScreenSource({
+      state: "partial",
+      delivery_profile: "SANDBOX_BINANCE_USDM",
+      freshness: "FRESH",
+      completeness: "PARTIAL",
+      as_of: "2026-09-09T08:00:00.000Z",
+      capabilities: [
+        { capability_id: "source.risk_grants", state: "EMPTY", reason_code: null },
+        { capability_id: "source.sizing_decisions", state: "AVAILABLE", reason_code: null },
+        { capability_id: "source.broker_sync", state: "UNAVAILABLE", reason_code: "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE" },
+      ],
+      data: {
+        risk_grants: [],
+        sizing_decisions: [{ decision_id: "size_1", notional: "10.00" }],
+        broker_sync: [],
+      },
+    }, readAt);
+
+    expect(source.collection("risk", "EXECUTION", "risk_grants").envelope).toMatchObject({
+      panel_state: "empty",
+      source_verification_state: "VERIFIED",
+    });
+    expect(source.collection("sizing", "EXECUTION", "sizing_decisions").envelope).toMatchObject({
+      panel_state: "ready",
+      source_verification_state: "VERIFIED",
+    });
+    expect(source.panel("broker", "BROKER", ["broker_sync"], {})).toMatchObject({
+      panel_state: "unavailable",
+      source_verification_state: "UNAVAILABLE",
+      warnings: [{ code: "MANAGER_V2_SOURCE_RESPONSE_TOO_LARGE" }],
+    });
+  });
 });

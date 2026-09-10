@@ -20,6 +20,7 @@ fi
 for required in \
   "${ROOT_DIR}/compose.yaml" \
   "${ROOT_DIR}/deploy/compose.production.yaml" \
+  "${ROOT_DIR}/deploy/compose.production.stable-runtime.yaml" \
   "${ROOT_DIR}/deploy/.env.production.example" \
   "${ROOT_DIR}/deploy/.env.development.example" \
   "${ROOT_DIR}/constraints/portal.txt" \
@@ -220,6 +221,7 @@ for required in \
   "${ROOT_DIR}/deploy/nginx/portal-loopback.conf" \
   "${ROOT_DIR}/deploy/edge/README.md" \
   "${ROOT_DIR}/docs/release-and-deployment.md" \
+  "${ROOT_DIR}/deploy/runbooks/portal-stable-release-takeover-and-rollback.md" \
   "${ROOT_DIR}/.github/workflows/ci.yml" \
   "${ROOT_DIR}/.github/workflows/deploy.yml" \
   "${ROOT_DIR}/scripts/verify-migration-history.sh" \
@@ -666,6 +668,8 @@ for required in \
   "${ROOT_DIR}/deploy/runbooks/portal-n14a-source-dark-release-and-rollback.md" \
   "${ROOT_DIR}/scripts/portal-release-authority.py" \
   "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/prepare-stable-release-takeover.py" \
+  "${ROOT_DIR}/scripts/test_prepare_stable_release_takeover.py" \
   "${ROOT_DIR}/scripts/verify-buildx-attestations.py" \
   "${ROOT_DIR}/scripts/test_verify_buildx_attestations.py" \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
@@ -1692,6 +1696,8 @@ python3 -m py_compile \
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/portal-release-authority.py" \
   "${ROOT_DIR}/scripts/test_portal_release_authority.py" \
+  "${ROOT_DIR}/scripts/prepare-stable-release-takeover.py" \
+  "${ROOT_DIR}/scripts/test_prepare_stable_release_takeover.py" \
   "${ROOT_DIR}/scripts/portal-current-source-release.py" \
   "${ROOT_DIR}/scripts/test_portal_current_source_release.py" \
   "${ROOT_DIR}/scripts/execution-n17a-readiness.py" \
@@ -1717,6 +1723,7 @@ python3 "${ROOT_DIR}/scripts/execution-n12-command-publication-verify.py" --mode
 python3 "${ROOT_DIR}/scripts/test_execution_n12_command_publication_verify.py"
 python3 "${ROOT_DIR}/scripts/portal-release-authority.py" verify --mode template
 python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
+python3 "${ROOT_DIR}/scripts/test_prepare_stable_release_takeover.py"
 python3 "${ROOT_DIR}/scripts/test_verify_buildx_attestations.py"
 python3 "${ROOT_DIR}/scripts/test_portal_current_source_release.py"
 python3 "${ROOT_DIR}/scripts/execution-n18-census.py" --verify
@@ -1757,6 +1764,25 @@ docker compose --project-directory "${ROOT_DIR}" \
   --env-file "${ROOT_DIR}/deploy/.env.production.example" \
   -f "${ROOT_DIR}/deploy/compose.production.yaml" \
   -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" config --quiet
+PORTAL_RUNTIME_GID=991 \
+CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY=/srv/primus/control-api/execution-edge-secrets \
+EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID=workspace_execution_manager \
+EXECUTION_EDGE_ORIGIN=https://10.70.0.2:8443 \
+EXECUTION_EDGE_ENVIRONMENT=paper \
+EXECUTION_EDGE_MANAGER_V2_PROFILE_ID=PAPER_BINANCE_USDM \
+EXECUTION_EDGE_PROJECTION_WORKSPACE_ID=workspace_execution_manager \
+EXECUTION_EDGE_DELEGATION_AUDIENCE=portal-execution-edge-paper \
+EXECUTION_EDGE_PAPER_ORIGIN=https://10.70.0.2:8443 \
+EXECUTION_EDGE_PAPER_PROFILE_ID=PAPER_BINANCE_USDM \
+EXECUTION_EDGE_PAPER_AUDIENCE=portal-execution-edge-paper \
+docker compose --project-directory "${ROOT_DIR}" \
+  --env-file "${ROOT_DIR}/deploy/.env.production.example" \
+  -f "${ROOT_DIR}/deploy/compose.production.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.production.stable-runtime.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-local-projection.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-manager-analytics.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-manager-realtime.yaml" config --quiet
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
 "${ROOT_DIR}/scripts/execution-d2-test.sh"
 "${ROOT_DIR}/scripts/execution-d3-test.sh"

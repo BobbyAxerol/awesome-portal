@@ -53,6 +53,45 @@ python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
 "${DOCKER[@]}" compose \
   --env-file "${ROOT_DIR}/deploy/.env.production.example" \
   -f "${ROOT_DIR}/deploy/compose.production.yaml" config --quiet
+mkdir -p "${TMP_DIR}/control-api-secrets" "${TMP_DIR}/execution-edge-secrets"
+render_env="${TMP_DIR}/production.env"
+cp "${ROOT_DIR}/deploy/.env.production.example" "${render_env}"
+printf '%s\n' \
+  'PORTAL_RUNTIME_GID=987' \
+  "CONTROL_API_SECRETS_DIR=${TMP_DIR}/control-api-secrets" \
+  "CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY=${TMP_DIR}/execution-edge-secrets" \
+  'CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER=true' \
+  'CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX=true' \
+  'CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_LIVE=true' \
+  'CONTROL_API_FEATURE_EXECUTION_LOCAL_PROJECTION=true' \
+  'CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR=true' \
+  'CONTROL_API_FEATURE_EXECUTION_DURABLE_MIRROR_READS=true' \
+  'CONTROL_API_FEATURE_EXECUTION_MARKET_CONTEXT=true' \
+  'EXECUTION_EDGE_PAPER_ORIGIN=https://10.70.0.2:8443' \
+  'EXECUTION_EDGE_PAPER_PROFILE_ID=PAPER_BINANCE_USDM' \
+  'EXECUTION_EDGE_PAPER_AUDIENCE=portal-execution-edge-paper' \
+  'EXECUTION_EDGE_SANDBOX_ORIGIN=https://10.70.0.3:8443' \
+  'EXECUTION_EDGE_SANDBOX_PROFILE_ID=SANDBOX_BINANCE_USDM' \
+  'EXECUTION_EDGE_SANDBOX_AUDIENCE=portal-execution-edge-sandbox' \
+  'EXECUTION_EDGE_LIVE_ORIGIN=https://10.70.0.4:8443' \
+  'EXECUTION_EDGE_LIVE_PROFILE_ID=LIVE_BINANCE_USDM' \
+  'EXECUTION_EDGE_LIVE_AUDIENCE=portal-execution-edge-live' \
+  'EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID=workspace_execution_manager' \
+  'EXECUTION_EDGE_ORIGIN=https://10.70.0.2:8443' \
+  'EXECUTION_EDGE_ENVIRONMENT=paper' \
+  'EXECUTION_EDGE_MANAGER_V2_PROFILE_ID=PAPER_BINANCE_USDM' \
+  'EXECUTION_EDGE_PROJECTION_WORKSPACE_ID=workspace_execution_manager' \
+  'EXECUTION_EDGE_DELEGATION_AUDIENCE=portal-execution-edge-paper' \
+  >> "${render_env}"
+"${DOCKER[@]}" compose \
+  --env-file "${render_env}" \
+  -f "${ROOT_DIR}/deploy/compose.production.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.production.stable-runtime.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-local-projection.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-manager-analytics.yaml" \
+  -f "${ROOT_DIR}/deploy/compose.execution-manager-realtime.yaml" config --quiet
+python3 "${ROOT_DIR}/scripts/test_prepare_stable_release_takeover.py"
 "${DOCKER[@]}" compose \
   --env-file "${ROOT_DIR}/deploy/.env.execution-edge.example" \
   -f "${ROOT_DIR}/deploy/compose.execution-edge.yaml" config --quiet

@@ -88,6 +88,22 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
         self.assertEqual(set(services), set(MODULE.SERVICES))
         self.assertFalse(evidence["source_traffic_observed"])
         self.assertEqual(manifest["source_ref"], "refs/heads/main")
+        bundle = self.read(pack / "deployment-compose-bundle.json")
+        MODULE.validate_deployment_compose_bundle(bundle)
+        self.assertEqual(
+            [row["file"] for row in bundle["profiles"][0]["files"]],
+            list(MODULE.DEPLOYMENT_COMPOSE_FILES["research_sgp_stable"]),
+        )
+
+    def test_deployment_compose_bundle_tampering_is_rejected(self):
+        pack = self.pack()
+        bundle_path = pack / "deployment-compose-bundle.json"
+        bundle = self.read(bundle_path)
+        bundle["profiles"][0]["files"][1]["sha256"] = "sha256:" + "f" * 64
+        self.write(bundle_path, bundle)
+        manifest = self.read(pack / "release-manifest.json")
+        with self.assertRaisesRegex(MODULE.ReleaseError, "deployment Compose bundle"):
+            MODULE.validate_manifest(pack, manifest, "candidate")
 
     def test_acceptance_verifies_manifest_and_decision_signatures(self):
         pack = self.pack()
@@ -250,9 +266,43 @@ class PortalReleaseAuthorityTest(unittest.TestCase):
             "--mode acceptance", "ACCEPT_VULNERABILITY_EVIDENCE",
             "N14_RELEASE_MANIFEST_SHA256", "N14_RELEASE_DECISION_SHA256",
             "publication-workflow-run.json", ".github/workflows/publish-images.yml",
+            "deployment-compose-bundle.json", "prepare-stable-release-takeover.py",
+            "-o ServerAliveInterval=20", "-o ServerAliveCountMax=30",
+            "-o ConnectTimeout=20",
+            "release_failure_diagnostics()", "compose_next logs --tail 120",
+            "portal-stable-v1-0-1", "sudo -n env \\",
+            "compose_next pull \\", "control-api-migrate control-api-bootstrap quant-worker-py",
+            "--pull never", "portal-control.dump", "roadmap-task-board.db",
+            "resume_partial_runtime", "RESUME_PARTIAL_RUNTIME", "--resume-partial-runtime",
         ):
             self.assertIn(required, workflow)
+        self.assertNotIn("compose_next pull\n", workflow)
         self.assertNotIn("PORTAL_IMAGE_TAG=\"${IMAGE_TAG}\" docker compose", workflow)
+        # Pulling digest-pinned images and waiting for Compose can be quiet
+        # long enough for a network device to reap an idle SSH TCP flow.
+        # Keepalives apply to each transfer and the rollout channel without
+        # relaxing pinned host verification or retrying a failed deployment.
+        self.assertEqual(workflow.count("-o ServerAliveInterval=20"), 6)
+        self.assertEqual(workflow.count("-o ServerAliveCountMax=30"), 6)
+        self.assertEqual(workflow.count("-o ConnectTimeout=20"), 6)
+        self.assertIn("trap 'release_failure_diagnostics \"$?\"' ERR", workflow)
+        self.assertIn("compose_up_status=$?", workflow)
+        compose_next = workflow.split("compose_next() {", 1)[1].split(
+            "\n          }\n\n          compose_next config", 1
+        )[0]
+        # The remote deploy user intentionally runs Docker through sudo. Its
+        # env_reset would otherwise silently remove the reviewed digest
+        # coordinates before Compose interpolates the production bundle.
+        self.assertIn("sudo -n env \\", compose_next)
+        self.assertNotIn("sudo -n docker compose", compose_next)
+        for destination, source in (
+            ("PORTAL_IMAGE_TAG", "IMAGE_TAG"),
+            ("PORTAL_API_IMAGE", "PORTAL_API_IMAGE"),
+            ("PORTAL_WEB_IMAGE", "PORTAL_WEB_IMAGE"),
+            ("PORTAL_CONTROL_API_IMAGE", "PORTAL_CONTROL_API_IMAGE"),
+            ("PORTAL_ROADMAP_API_IMAGE", "PORTAL_ROADMAP_API_IMAGE"),
+        ):
+            self.assertIn(f'{destination}="${{{source}}}"', compose_next)
 
 
 if __name__ == "__main__":
