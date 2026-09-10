@@ -11,7 +11,8 @@
  * manifest says which table is live and which is not, and no age nobody
  * measured can come out as FRESH.
  */
-import { describe, expect, it } from "vitest";
+import { buildPool } from "../src/db/pool";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   BEHAVIOUR_FLAGS,
   DURABLE_MIRROR_HISTORY_TABLE,
@@ -37,6 +38,9 @@ const base = {
   EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS: "15000",
   EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS: "120000",
 };
+
+/** One config for the database-backed checks below. */
+const config = testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" });
 
 describe("the environment manifest", () => {
   it("names the table history is read from, and the one that is not", () => {
@@ -95,5 +99,41 @@ describe("the freshness policy", () => {
     expect(freshnessTier(59_999, 60_000)).toBe("FRESH");
     expect(freshnessTier(60_000, 60_000)).toBe("FRESH");
     expect(freshnessTier(60_001, 60_000)).toBe("STALE");
+  });
+});
+
+
+/**
+ * PHASE 3B (round 2) · the comparison that raised a false alarm.
+ *
+ * Comparing the two history tables on raw `ts` made 591,274 rows look like a
+ * disagreement about when a trade happened. Every one of them was millisecond
+ * truncation: the mirror stores EDS-02's canonical datetime64[ms] and the older
+ * table kept the source's microseconds. I reported the alarm before measuring
+ * the magnitude, which is the whole reason this test exists — comparing at the
+ * canonical precision is the only comparison that means anything, and a real
+ * disagreement must still survive it.
+ */
+describe("comparing two history tables", () => {
+  const CANONICAL = "date_trunc('milliseconds', $2::timestamptz)";
+  // One pool for the block: buildPool hands back a shared handle, so ending it
+  // per test closes it for the next one.
+  let pool: Pool;
+  beforeAll(() => { pool = buildPool(config.DATABASE_URL); });
+  afterAll(async () => { await pool.end(); });
+
+  const equal = async (left: string, right: string): Promise<boolean> => {
+    const result = await pool.query<{ equal: boolean }>(
+      `SELECT $1::timestamptz = ${CANONICAL} AS equal`, [left, right]);
+    return result.rows[0]?.equal === true;
+  };
+
+  it("treats a sub-millisecond difference as the same instant", async () => {
+    expect(await equal("2026-07-02T18:11:41.108+00", "2026-07-02T18:11:41.108010+00")).toBe(true);
+  });
+
+  it("still sees a difference that is larger than the canonical precision", async () => {
+    // One millisecond apart is a real difference and must not be absorbed.
+    expect(await equal("2026-07-02T18:11:41.108+00", "2026-07-02T18:11:41.109000+00")).toBe(false);
   });
 });

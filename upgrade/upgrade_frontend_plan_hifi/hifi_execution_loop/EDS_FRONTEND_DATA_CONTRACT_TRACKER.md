@@ -6989,3 +6989,116 @@ câu hỏi về dữ liệu giao dịch, không phải về cấu hình.
 Cái tôi làm được và đã làm: dựng bằng chứng, dựng công cụ đo, gộp chính sách
 tươi về một chỗ, và làm cho `UNKNOWN` không còn giả dạng. Cái còn lại cần owner
 và codex chốt **mốc nào là mốc đúng** trước khi ai đó chạm vào cờ.
+
+## A45. CẢI CHÍNH §A44.4 VÀ §A44.5 — không có bất đồng nào cả, và cờ quyết được
+
+Owner đẩy lại: *"đã bảo lấy hết dữ liệu, storage về server này nếu cần… hiện thị
+thì load phân trang chuẩn services… có thể thôi mà k quyết định được nhỉ"*.
+Đúng. Tôi đã né một quyết định vốn quyết được, và tôi né vì **đo sai**.
+
+### A45.1 Điều tôi viết sai
+
+§A44.4 tôi viết: *"Hai bảng bất đồng về thời điểm của cùng một dòng dữ liệu, ở
+80% số dòng"*, và §A44.5 kết luận *"cờ này không lật được bằng một backfill…
+phải có người quyết mốc nào đúng"*.
+
+**Cả hai đều sai.** Tôi đếm được 591 274 dòng lệch `ts` rồi dừng lại ở con số
+đếm, **không đo độ lớn của chênh lệch**. Đo rồi thì:
+
+```
+min(mirror.ts - timeseries.ts) = -00:00:00.000999
+max(mirror.ts - timeseries.ts) = -00:00:00.000001
+```
+
+Từ **1 micro-giây đến 999 micro-giây**, luôn cùng chiều. Và kiểm dứt điểm:
+
+```
+mirror.ts = date_trunc('milliseconds', timeseries.ts)  →  591 274 / 591 274
+```
+
+Toàn bộ "bất đồng" là **phép cắt xuống mili-giây**: mirror lưu đúng
+`datetime64[ms]` — wire chuẩn của EDS-02 — còn bảng cũ giữ micro-giây thô của
+nguồn. Không dòng nào bất đồng về thời điểm. Tôi báo động trước khi đo độ lớn,
+đúng cái lỗi mà cả dự án này đang chống: gán ý nghĩa cho một con số trước khi
+hiểu nó.
+
+### A45.2 Đo lại đủ, và câu trả lời hiện ra
+
+| Đối chiếu ở độ chính xác chuẩn | Số dòng |
+| --- | --- |
+| chỉ có ở mirror | 27 982 |
+| **chỉ có ở timeseries** | **0** |
+| **lệch quá một mili-giây** | **0** |
+| chỉ lệch dưới mili-giây | 591 274 |
+| **khác `fields`** | **0** |
+| khớp hoàn toàn | 119 261 |
+
+**Mirror là tập cha chặt.** Bảng cũ không có một dòng nào mà mirror thiếu, không
+một trường nào khác, không một mốc nào lệch quá độ chính xác hợp đồng.
+
+### A45.3 Quyết định — và tôi quyết, không đẩy sang owner
+
+**Durable mirror là kho lịch sử duy nhất.** Bốn lý do, đều đo được:
+
+1. **Tập cha chặt** — 0 dòng chỉ có ở bảng cũ.
+2. **Giàu hơn** — mang `strategy_id`, `deployment_id`, `account_id`,
+   `portfolio_id`, `binding_id`, `source_row_digest`, `first_observed_batch_id`.
+   Bảng cũ chỉ có `fields` và `first_seen_at`.
+3. **Khoá diễn tả được lịch sử** — `(…, ts, row_id)`. Khoá bảng cũ **không có
+   `ts`**, nên về mặt cấu trúc nó không thể giữ một dòng qua thời gian; nó là
+   một phép chiếu suy giảm.
+4. **Đọc đã phân trang chuẩn** — `rangePage` dùng `pageLimit` và cursor có ký;
+   response mang `has_more`, `next_cursor`, `returned_count`, `truncated`. Đúng
+   thứ owner gọi là "load phân trang chuẩn services", và nó nằm sẵn ở đường
+   mirror.
+
+Nên `FEATURE_EXECUTION_DURABLE_MIRROR` phải **bật ở mọi nơi**. **Stable mới là
+stack sai**, không phải dev. Và việc cần làm cho stable không phải "chọn mốc
+nào đúng" mà là: backfill **timeseries → mirror** phần mirror của stable còn
+thiếu, rồi bật cờ.
+
+### A45.4 Backfill đúng chiều — và vì sao chiều cũ sai về cấu trúc
+
+Tôi chạy **ngược chiều**: mirror → timeseries. Chiều đó **mất mát theo thiết
+kế**, vì khoá đích không có `ts`: mỗi `row_id` chỉ giữ được một bản, nên 591 274
+dòng va khoá và bị bỏ qua — trong khi lệnh in ra `INSERT 0 27936` và **báo thành
+công**.
+
+Chiều đúng là **timeseries → mirror**: khoá đích có `ts` nên chứa được mọi thứ
+nguồn có. Script nay:
+
+- chèn với `date_trunc('milliseconds', t.ts)` — đưa về đúng wire chuẩn, nên
+  chạy lần hai tìm thấy dòng đã có thay vì chèn một bản sinh đôi lệch một
+  micro-giây;
+- để `first_observed_batch_id = NULL` cho dòng backfill — nó **không** đến từ
+  một batch, và gán cho nó một batch id là nói dối về xuất xứ;
+- **từ chối** (exit 3) nếu còn dòng nào lệch **quá** một mili-giây — đó mới là
+  bất đồng thật, và khi ấy mới cần người quyết.
+
+Chạy trên dev: `INSERT 0 0` cả hai lần — đúng, vì mirror của dev đã đủ. Idempotent
+chứng minh được.
+
+### A45.5 `reconcile` không được phép báo động giả lần nữa
+
+Chế độ `reconcile` cũ so `ts` thô. Nay nó so ở **độ chính xác chuẩn** và tách
+riêng dòng "chỉ lệch dưới mili-giây" khỏi dòng "lệch quá một mili-giây" — hai
+thứ hoàn toàn khác nhau mà bản cũ gộp làm một.
+
+Kèm hai test khoá lại quy tắc: chênh lệch dưới mili-giây là **cùng một thời
+điểm**; chênh lệch một mili-giây **vẫn phải thấy được**, không bị nuốt.
+
+### A45.6 Còn lại cho owner — đúng một việc, và nó nhỏ
+
+Bật `FEATURE_EXECUTION_DURABLE_MIRROR` trên stable. Trước khi bật, chạy trên
+stable:
+
+```
+history-parity.sh reconcile portal-stable-v1-0-1-portal-postgres-1
+history-parity.sh backfill  portal-stable-v1-0-1-portal-postgres-1
+```
+
+Script sẽ tự từ chối nếu gặp bất đồng thật, và tự từ chối nếu chưa có bảng
+marker. Tôi **không chạy trên stable**: đó là ghi vào dữ liệu production, và
+lệnh đó là của owner — nhưng giờ nó là một lệnh, không còn là một câu hỏi.
+
+Test: **474/474** control-api.
