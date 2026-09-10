@@ -383,6 +383,49 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     expect(stale.freshness).toBe("STALE");
   });
 
+  /**
+   * PHASE 3 (round 2) · the header used to read "FRESH · 54s ago" against a
+   * 30-second budget. The tier came from our projection refresh, the age from
+   * `source_as_of`, and the two clocks were 40 seconds apart. Neither half was
+   * wrong alone; printed together they could not be reconciled.
+   */
+  it("publishes the instant its tier was computed from, not just the source's", async () => {
+    // Cursor-paged, for the reason the test above gives: a first-page read
+    // coalesces a background refresh that would overwrite the backdating.
+    const first = await service.fleet(principal(), { environment: "all", limit: 1 }) as Record<string, any>;
+    const cursor = first.page.next_cursor as string;
+    await pool.query(
+      `UPDATE execution_manager_projection_snapshots
+          SET refreshed_at = now() - interval '45 seconds',
+              source_as_of = now() - interval '5 seconds'`,
+    );
+    const envelope = await service.fleet(principal(), { environment: "all", limit: 1, after: cursor }) as Record<string, any>;
+    const refreshedAgeMs = Date.now() - Date.parse(envelope.projection_refreshed_at);
+    const sourceAgeMs = Date.now() - Date.parse(envelope.source_as_of);
+
+    // The tier is AGING because the projection refresh is 45 s old. The age a
+    // reader can now compute from the published basis agrees with that word;
+    // the source instant, five seconds old, would have contradicted it.
+    expect(envelope.freshness).toBe("AGING");
+    expect(refreshedAgeMs).toBeGreaterThan(envelope.freshness_budget_ms.fresh);
+    expect(sourceAgeMs).toBeLessThan(envelope.freshness_budget_ms.fresh);
+    expect(envelope.projection_refreshed_at).not.toBe(envelope.source_as_of);
+  });
+
+  /**
+   * The portfolio list is drained live from the source on every request and
+   * relays the word the SOURCE declared. Our projection cadence is not the
+   * rule that verdict was reached under, so sending our budget beside it
+   * reproduced the same contradiction from the other side: the screen read
+   * "FRESH · 39s ago" underneath "FRESH under 30s".
+   */
+  it("states no budget beside a tier the source decided, rather than lending it ours", async () => {
+    const portfolios = await service.portfolios(principal(), { environment: "all" }) as Record<string, any>;
+    expect(portfolios.freshness).toBeTruthy();
+    expect(portfolios.freshness_budget_ms).toBeUndefined();
+    expect(portfolios.projection_refreshed_at).toBeUndefined();
+  });
+
   it("rejects page sizes above the published BR-EX-72 bound", () => {
     expect(AlphaFleetQuerySchema.parse({}).environment).toBe("all");
     expect(AlphaFleetQuerySchema.safeParse({ limit: 51 }).success).toBe(false);

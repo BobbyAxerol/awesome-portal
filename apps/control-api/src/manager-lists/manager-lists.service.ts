@@ -131,7 +131,16 @@ export class ManagerListsService {
       environment,
       read_at: new Date().toISOString(),
       source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
+      // PHASE 3 (round 2) · the instant the tier is computed from.
+      //
+      // `freshness` measures how long ago this projection last refreshed;
+      // `source_as_of` is when the source published. Two clocks — and the
+      // header showed only the second beside a tier derived from the first:
+      // "FRESH · 54s ago" against a 30s budget, which a reader can neither
+      // check nor argue with. Publishing both makes the tier verifiable.
+      projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
       freshness: freshness(snapshot, projectionFreshnessBudget(this.config)),
+      freshness_budget_ms: projectionFreshnessBudget(this.config),
       item: bindingItem(item),
     };
   }
@@ -235,12 +244,17 @@ export class ManagerListsService {
       workspace_id: principal.workspaceId,
       environment: query.environment,
       read_at: new Date().toISOString(),
-      source_as_of: latestString(...pages.map((page) => page.asOf)),
+      source_as_of: oldestString(...pages.map((page) => page.asOf)),
       // Source-declared tiers pass through; UNKNOWN is never promoted.
       // UNKNOWN is not a kind of STALE. Collapsing it told the reader we had
       // measured an old value when we had measured nothing at all.
       freshness: pageFreshness,
-      freshness_budget_ms: projectionFreshnessBudget(this.config),
+      // No budget here on purpose. This list is drained live from the source
+      // on every request, and `pageFreshness` is the word the SOURCE
+      // declared — not a measurement against our projection cadence. Sending
+      // our budget beside someone else's verdict produced the contradiction
+      // this phase exists to remove: "FRESH · 39s ago" under "FRESH under
+      // 30s". We do not know the source's threshold, so we state none.
       completeness: truncated || branchDegraded
         ? "PARTIAL"
         : pageCompleteness === "UNKNOWN" ? "UNKNOWN" : pageCompleteness,
@@ -349,7 +363,7 @@ export class ManagerListsService {
       read.strategies, read.deployments, read.accounts, read.balances,
       read.portfolios, read.allocations, read.positions, read.findings, read.performance,
     ]);
-    const sourceAsOf = latestDate(...pages.map((page) => page.asOf));
+    const sourceAsOf = oldestDate(...pages.map((page) => page.asOf));
     await this.repository.replaceAlphaFleet({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
       completeness: completeness(...pages), rows, summary: fleetSummary(rows),
@@ -374,7 +388,7 @@ export class ManagerListsService {
       page("venue_accounts").items,
       page("broker_sync").items,
     );
-    const sourceAsOf = latestDate(accounts.asOf, venueAccounts.asOf, brokerSync.asOf);
+    const sourceAsOf = oldestDate(accounts.asOf, venueAccounts.asOf, brokerSync.asOf);
     await this.repository.replaceBindings({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
       completeness: completeness(accounts, venueAccounts, brokerSync), rows,
@@ -404,7 +418,8 @@ export class ManagerListsService {
       );
       const page = managerPage(response, relation, fields, context);
       items.push(...page.items);
-      asOf = latestString(asOf, page.asOf);
+      // Paired with `worstFreshness` below: the oldest page, not the newest.
+      asOf = oldestString(asOf, page.asOf);
       freshnessValue = worstFreshness(freshnessValue, page.freshness);
       completenessValue = worstCompleteness(completenessValue, page.completeness);
       if (!page.nextCursor) {
@@ -664,7 +679,7 @@ function combinePages(pages: readonly ManagerPage[], ...keyFields: string[]): Ma
   }
   return {
     items: [...records.values()], nextCursor: null,
-    asOf: latestString(...pages.map((page) => page.asOf)),
+    asOf: oldestString(...pages.map((page) => page.asOf)),
     freshness: pages.reduce((state, page) => worstFreshness(state, page.freshness), "FRESH" as ManagerPage["freshness"]),
     completeness: pages.reduce((state, page) => worstCompleteness(state, page.completeness), "COMPLETE" as ManagerPage["completeness"]),
   };
@@ -803,11 +818,28 @@ function completeness(...pages: ManagerPage[]): ProjectionSnapshot["sourceComple
   return pages.some((page) => page.completeness === "PARTIAL") ? "PARTIAL"
     : pages.some((page) => page.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
 }
-function latestString(...values: Array<string | null>): string | null {
-  return values.filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+/**
+ * PHASE 3 (round 2) · the instant that justifies the tier.
+ *
+ * A list spanning several environments takes the WORST freshness of its pages
+ * and used to publish the NEWEST instant beside it. On dev that read
+ * "AGING · 6s ago": the tier came from sandbox at 39 seconds, the age from
+ * paper at six, and nothing on screen let a reader reconcile them.
+ *
+ * Same rule codex applied to composite entity kinds in P4-E — an aggregate
+ * must not borrow a newer timestamp from a fresher contributor. When the tier
+ * is the worst of its parts, the age has to be the oldest of them.
+ */
+function oldestString(...values: Array<string | null>): string | null {
+  return values.filter((value): value is string => Boolean(value)).sort().at(0) ?? null;
 }
-function latestDate(...values: Array<string | null>): Date | null {
-  const value = latestString(...values); return value ? new Date(value) : null;
+/**
+ * A snapshot is only as current as its stalest relation, so its source instant
+ * is the oldest of them — the same rule `oldestString` states above, applied
+ * to the nine relations an Alpha Fleet snapshot is built from.
+ */
+function oldestDate(...values: Array<string | null>): Date | null {
+  const value = oldestString(...values); return value ? new Date(value) : null;
 }
 function worstFreshness(left: ManagerPage["freshness"], right: ManagerPage["freshness"]): ManagerPage["freshness"] {
   const rank = { FRESH: 0, AGING: 1, STALE: 2, UNKNOWN: 3 }; return rank[right] > rank[left] ? right : left;
@@ -887,6 +919,14 @@ function envelope(
     environment,
     read_at: new Date().toISOString(),
     source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
+    // PHASE 3 (round 2) · the instant the tier is computed from.
+    //
+    // `freshness` measures how long ago this projection last refreshed;
+    // `source_as_of` is when the source published. Two clocks — and the
+    // header showed only the second beside a tier derived from the first:
+    // "FRESH · 54s ago" against a 30s budget, which a reader can neither
+    // check nor argue with. Publishing both makes the tier verifiable.
+    projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
     freshness: freshness(snapshot, budget),
     freshness_budget_ms: budget,
     completeness: snapshot.sourceCompleteness,

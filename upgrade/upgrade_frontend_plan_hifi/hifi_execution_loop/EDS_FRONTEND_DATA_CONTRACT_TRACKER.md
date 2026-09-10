@@ -7102,3 +7102,168 @@ marker. Tôi **không chạy trên stable**: đó là ghi vào dữ liệu produ
 lệnh đó là của owner — nhưng giờ nó là một lệnh, không còn là một câu hỏi.
 
 Test: **474/474** control-api.
+
+## A46. ĐÓNG NỐT PHASE 3 — "FRESH · 54s ago": hai đồng hồ, một dòng chữ
+
+### A46.1 Cái tôi nhìn thấy trên browser, không phải trong code
+
+Sau khi deploy bản A45 tôi mở lại ba màn trên dev và đọc **chữ thật** trong
+header. Hai màn khớp: Portfolios `AGING · 34s` với ngân sách fresh 30s, Alphas
+`STALE · 448s`. Màn thứ ba, Accounts & Bindings, in:
+
+```
+BROKER · FRESH · 54s ago · source 2026-09-10 16:41:06 UTC
+```
+
+54 giây, ngân sách fresh 30 giây, mà tier là `FRESH`. Không nửa nào sai riêng
+lẻ — và đó mới là chỗ khó chịu.
+
+### A46.2 Nguyên nhân: tier và tuổi đến từ hai đồng hồ khác nhau
+
+`freshness` của envelope này tính từ `snapshot.refreshedAt` — lần **projection
+của Portal** refresh gần nhất. Con số bên cạnh lại đếm từ `source_as_of` — lúc
+**Trading System** publish. Hai mốc lệch 40 giây vì worker đọc lệch nhịp với
+nguồn. Cả hai đều đúng, về hai chuyện khác nhau, in cạnh nhau trên một dòng.
+
+Một reader làm đúng phép trừ sẽ ra một tier khác với tier đang in. Theo §3.3 đó
+là giá trị **không kiểm chứng được** — tệ hơn không in gì, vì nó trông như đã
+được đo.
+
+### A46.3 Sửa: envelope phải nói ra mốc mà tier của nó dựa vào
+
+`manager-lists.service.ts`, cả hai envelope dùng snapshot (list ở dòng ~928,
+binding detail ở ~141):
+
+```
+projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+freshness_budget_ms: budget,
+```
+
+`SourceFreshness` nhận thêm `tierBasisAsOf`: tuổi hiển thị đếm từ mốc đó,
+`source_as_of` vẫn in nguyên ở cuối dòng và vào `title`. Không mốc nào bị
+giấu; chỉ có con số đứng cạnh tier là con số sinh ra tier ấy.
+
+Đo lại trên dev sau deploy:
+
+```
+BROKER · STALE · 5m ago · source 2026-09-10 17:16:33 UTC
+  chip  title = "Older than the stale-after policy… FRESH under 30s, STALE past 60s."
+  age   title = "projection refreshed 17:17:25.493Z · source published 17:16:33.941Z"
+```
+
+### A46.4 Cùng một lỗi, tám chỗ nữa — và cách tôi tìm ra
+
+Lỗi thật không phải "bindings sai". Lỗi là **một aggregate lấy tier xấu nhất
+rồi in mốc mới nhất**. Tôi grep `.sort().at(-1)` toàn `apps/control-api/src`,
+được 9 chỗ, rồi đọc từng chỗ xem nó có được in cạnh một tier worst-of không:
+
+| Chỗ | Phán quyết |
+|---|---|
+| `resource-read.service.ts` `latestAsOf` | **Lỗi** → `oldestAsOf` |
+| `profile-read.service.ts` `latestAsOf` (2 call site) | **Lỗi** → `oldestAsOf` |
+| `paper-read.service.ts:551` | **Lỗi** → `oldestAsOf` |
+| `paper-read.service.ts:754` | **Không lỗi** — mốc này là *đầu mút cửa sổ 7 ngày*, phải là mới nhất |
+| `profile-projection.worker.ts` vòng lặp page | **Lỗi** → oldest |
+| `profile-projection.worker.ts` `latestAsOf(pages)` | **Lỗi** → `oldestAsOf` |
+| `manager-lists.service.ts` `latestString` trong drain | **Lỗi** → `oldestString` |
+| `manager-lists.service.ts` `latestDate` → `sourceAsOf` snapshot | **Lỗi** → `oldestDate` |
+| `portal-derivations.service.ts` `latestInputAsOf` | **Lỗi** → `oldestInputAsOf` |
+| `portal-derivations.service.ts` `latestTime(rows)` | **Không lỗi** — "bản ghi mới nhất", là dữ liệu |
+| `local-query-analytics.service.ts` `latestTimestamp` | **Không lỗi** — mép phải của chart, không in cạnh tier |
+| `command-center/contracts.ts` pins | **Không lỗi** — lần pin gần nhất |
+
+Bốn chỗ "không lỗi" quan trọng ngang bốn chỗ lỗi: một sweep mù sẽ làm hỏng cả
+bốn. `latestAsOf` ở `paper-read` vẫn còn — nó phục vụ mục đích khác, và tôi để
+comment nói rõ mục đích đó ngay trên định nghĩa.
+
+### A46.5 `as_of_ms` và `as_of` từng là hai giá trị khác nhau
+
+`stage-screen-wire.ts` publish `as_of_ms` bằng `Math.max(...)` trong khi `as_of`
+cạnh nó là oldest. Hai tên gọi cho cùng một thứ, hai giá trị. Đổi thành
+`oldestStageAsOfMs` với `Math.min`, sửa 2 service import nó.
+
+### A46.6 AlphaFleet tự dựng masthead — và tự chế bảng tone
+
+`AlphaFleet.tsx` không dùng `SourceFreshness` (nó cần `SourceClock` nhấp nháy,
+thứ component chung không làm được) nên có bản sao riêng:
+`tone={freshness === "FRESH" ? "good" : "warn"}`. Nghĩa là AGING, STALE và
+"chưa ai đo" trông giống hệt nhau — đúng cái §A44.2 đã sửa ở component chung.
+
+Theo §11 tôi export `tierTone` / `tierTitle` / `normaliseTier` / `budgetTitle`
+từ `SourceFreshness` và cho AlphaFleet dùng lại **logic**, giữ nguyên markup
+riêng. Tuổi ở đó cũng đếm từ `projectionRefreshedAt`.
+
+### A46.7 Browser bắt tiếp hai cái nữa mà test không bắt
+
+**Một:** `freshness_budget_ms` trên wire là **object** `{fresh, stale}`, không
+phải số. Reader của tôi đòi `typeof === "number"` nên trả `null`, và title mất
+im lặng — suite vẫn 2159 xanh. Chỉ đọc `title` thật trong browser mới thấy nó
+trống. Sửa reader đọc cả hai ngưỡng: *"FRESH under 30s, STALE past 60s."*
+
+**Hai, và đây là cái đáng kể:** sau khi thêm budget, Portfolios in
+
+```
+FRESH · 39s ago      chip title: "FRESH under 30s, STALE past 60s."
+```
+
+Tôi vừa tạo lại đúng cái mâu thuẫn mình đang xoá, từ phía kia. Lý do:
+`pageFreshness` của portfolio list là **chữ do nguồn khai** (`source.freshness`
+trong `managerPage`), không phải phép đo của Portal — list này drain live mỗi
+request, không đi qua snapshot. Ngân sách `projectionFreshnessBudget` là nhịp
+projection của Portal, **không phải luật đã sinh ra chữ đó**.
+
+Nên tôi gỡ `freshness_budget_ms` khỏi envelope portfolio list và gỡ luôn field
+khỏi `PortfolioListEnvelope` phía frontend. Chúng ta không biết ngưỡng của
+nguồn, nên **không khai một ngưỡng nào**. Quy tắc rút ra, viết vào code:
+
+> Một envelope chỉ được publish ngân sách **nếu chính ngân sách đó quyết ra
+> tier trong envelope**. Mượn ngân sách của mình đặt cạnh phán quyết của người
+> khác cũng là một dạng bịa số.
+
+### A46.8 Guard: test bám vào code, không chép lại quy tắc
+
+Test tôi viết ở A45 tự cài lại `oldest`/`newest` **trong file test** rồi assert
+lên bản sao đó — nó pin một *quy tắc*, không pin *implementation*. Ai lật
+`Math.min` về `Math.max` thì test vẫn xanh. Đã viết lại để import
+`oldestStageAsOfMs` thật.
+
+Thêm 2 test backend trong `manager-lists.spec.ts`:
+
+- backdate `refreshed_at` 45s và `source_as_of` 5s → envelope phải in tier
+  `AGING`, và mốc nó publish phải là mốc 45s chứ không phải mốc 5s;
+- portfolio list **không được** có `freshness_budget_ms` lẫn
+  `projection_refreshed_at`.
+
+Frontend thêm 7 test trong `SourceFreshness.test.tsx`, đắt nhất là: cho
+`sourceAsOf` 54s và `tierBasisAsOf` 12s, màn **phải** in `12s ago` và **không
+được** in `54s ago`.
+
+### A46.9 Đo lại
+
+| | Trước | Sau |
+|---|---|---|
+| control-api | 477 | **480** |
+| frontend vitest | 2159 | **2162** |
+| Accounts & Bindings | `FRESH · 54s ago`, ngân sách 30s | `STALE · 12m ago`, title nói cả hai ngưỡng và cả hai mốc |
+| Alpha Fleet | tone `FRESH?good:warn`, tuổi từ `source_as_of` | `FRESH · 2s ago`, bảng tone chung, tuổi từ mốc của tier |
+| Portfolios | `AGING · 34s` | `FRESH · 32s`, **không** khai ngân sách không phải của nó |
+
+Ba header đọc trên browser sau deploy, nguyên văn `title`:
+
+```
+[STALE] "…FRESH under 30s, STALE past 60s."
+[12m ago] "projection refreshed 17:23:15.689Z · source published 17:22:47.162Z"
+[FRESH] "Within the declared refresh cadence. FRESH under 30s, STALE past 60s."
+[2s ago] "projection refreshed 17:35:28.241Z · source published 17:34:30.587Z"
+[FRESH] "Within the declared refresh cadence."          ← portfolios, không ngưỡng
+```
+
+Và một sự thật mà việc sửa này **làm lộ ra**, chứ không tạo ra: projection
+`BINDINGS` trên dev có lúc trễ 12 phút trong khi `ALPHA_FLEET` chỉ 2 giây.
+Trước đây nó hiện `FRESH`; giờ nó hiện `STALE`. Không phải regression — đó là
+lần đầu con số nói đúng chuyện đang xảy ra.
+
+### A46.10 Còn lại cho owner — vẫn đúng một việc
+
+Không đổi so với §A45.6: bật `FEATURE_EXECUTION_DURABLE_MIRROR` trên stable,
+sau khi chạy `reconcile` rồi `backfill`. Phase 3 phía code đã đóng.

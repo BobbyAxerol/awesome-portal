@@ -325,7 +325,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
         relations,
       };
-      const sourceAsOf = latestAsOf(isolated.flatMap((item) => item.page ? [item.page] : []));
+      const sourceAsOf = oldestAsOf(isolated.flatMap((item) => item.page ? [item.page] : []));
       const completeness: ProjectionCompleteness = isolated.some((item) =>
         item.page?.completeness === "PARTIAL" || item.state === "PARTIAL" || item.state === "UNAVAILABLE")
         ? "PARTIAL"
@@ -391,7 +391,8 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       );
       const page = managerPage(response, binding.relation, binding.fields, context);
       items.push(...page.items);
-      asOf = [asOf, page.asOf].filter((value): value is string => value !== null).sort().at(-1) ?? null;
+      // Paired with `worseFreshness` below: the oldest page, not the newest.
+      asOf = [asOf, page.asOf].filter((value): value is string => value !== null).sort().at(0) ?? null;
       freshness = worseFreshness(freshness, page.freshness);
       completeness = worseCompleteness(completeness, page.completeness);
       if (!page.nextCursor) {
@@ -506,8 +507,16 @@ function enabledProfiles(config: ControlApiConfig): Array<{ environment: Project
   }));
 }
 
-function latestAsOf(pages: readonly ManagerPage[]): Date | null {
-  const value = pages.map((page) => page.asOf).filter((item): item is string => item !== null).sort().at(-1);
+/**
+ * PHASE 3 (round 2) · the aggregate age must belong to the tier beside it.
+ *
+ * `freshness` here is the WORST of the parts; publishing the NEWEST instant
+ * next to it described a different part than the tier did — a reader saw
+ * "STALE" with an age of seconds and could not reconcile the two. An
+ * aggregate never borrows a newer timestamp from a fresher contributor.
+ */
+function oldestAsOf(pages: readonly ManagerPage[]): Date | null {
+  const value = pages.map((page) => page.asOf).filter((item): item is string => item !== null).sort().at(0);
   return value ? new Date(value) : null;
 }
 

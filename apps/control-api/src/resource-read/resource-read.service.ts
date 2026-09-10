@@ -266,7 +266,7 @@ interface ResourceResponseInput {
 function composeResourceResponse(input: ResourceResponseInput): Record<string, unknown> {
   const { config, principal, kind, resourceId, requestedEnvironment, selections, found, merged, readAtMs } = input;
   const state = productState(found.length > 0, selections, merged);
-  const asOf = latestAsOf(merged);
+  const asOf = oldestAsOf(merged);
   const asOfMs = asOf ? Date.parse(asOf) : null;
   const selectedEnvironment = chosenEnvironment(found);
   const derived = found.length === 0 ? {} : resourceDerivedData(kind, merged);
@@ -769,7 +769,10 @@ function mergeRelations(selections: readonly RelationSelection[]): ReadonlyMap<R
     const filteredTotal = pages.some((candidate) => candidate.filteredTotal === null || candidate.filteredTotal === undefined)
       ? null : pages.reduce((total, candidate) => total + (candidate.filteredTotal ?? 0), 0);
     const page = pages.length === 0 ? null : {
-      asOf: pages.map((candidate) => candidate.asOf).filter((value): value is string => value !== null).sort().at(-1) ?? null,
+      // The freshness beside this is the WORST of the pages, so the instant has
+      // to be the OLDEST of them — an aggregate that borrows a fresher
+      // contributor's timestamp cannot justify the tier it is showing.
+      asOf: pages.map((candidate) => candidate.asOf).filter((value): value is string => value !== null).sort().at(0) ?? null,
       freshness: pages.reduce((value, candidate) => worseFreshness(value, candidate.freshness), "FRESH" as ProjectionFreshness),
       completeness: pages.reduce((value, candidate) => worseCompleteness(value, candidate.completeness), "COMPLETE" as ProjectionCompleteness),
       items: rows,
@@ -868,8 +871,16 @@ function mergedCompleteness(relations: ReadonlyMap<RelationAlias, MergedRelation
   return values.reduce((value, completeness) => worseCompleteness(value, completeness), "COMPLETE" as ProjectionCompleteness) ?? "UNKNOWN";
 }
 
-function latestAsOf(relations: ReadonlyMap<RelationAlias, MergedRelation>): string | null {
-  return [...relations.values()].flatMap((relation) => relation.page?.asOf ? [relation.page.asOf] : []).sort().at(-1) ?? null;
+/**
+ * The oldest instant across the relations, not the newest.
+ *
+ * `freshness` beside it is the WORST of the relations, so the newest instant
+ * described a different relation than the tier did: a resource could read
+ * "STALE · 3s ago" because one relation refreshed while another had not.
+ * The number now belongs to the relation the tier is about.
+ */
+function oldestAsOf(relations: ReadonlyMap<RelationAlias, MergedRelation>): string | null {
+  return [...relations.values()].flatMap((relation) => relation.page?.asOf ? [relation.page.asOf] : []).sort().at(0) ?? null;
 }
 
 function chosenEnvironment(found: readonly { readonly profile: LoadedProfile }[]): ResourceEnvironment | null {

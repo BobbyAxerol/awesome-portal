@@ -22,6 +22,8 @@ import {
   freshnessTier,
 } from "../src/execution/environment-parity";
 import { testConfig } from "./harness";
+import { oldestStageAsOfMs } from "../src/execution/stage-screen-wire";
+import type { ManagerPage } from "../src/paper-read/manager-records";
 
 const base = {
   FEATURE_EXECUTION_EDGE: "true",
@@ -135,5 +137,51 @@ describe("comparing two history tables", () => {
   it("still sees a difference that is larger than the canonical precision", async () => {
     // One millisecond apart is a real difference and must not be absorbed.
     expect(await equal("2026-07-02T18:11:41.108+00", "2026-07-02T18:11:41.109000+00")).toBe(false);
+  });
+});
+
+
+/**
+ * PHASE 3 (round 2) · an aggregate age must justify the aggregate tier.
+ *
+ * The lists that span several environments take the worst freshness of their
+ * pages. They used to publish the newest instant beside it, which on dev read
+ * "AGING · 6s ago" — the tier from sandbox at 39 seconds, the age from paper at
+ * six, and no way for a reader to reconcile the two. This is the same rule
+ * codex applied to composite entity kinds in P4-E: no borrowing a fresher
+ * contributor's timestamp.
+ */
+describe("an aggregate that shows the worst tier", () => {
+  const page = (asOf: string | null, freshness: "FRESH" | "AGING" | "STALE") => ({
+    key: `relation-${asOf ?? "none"}`,
+    state: "AVAILABLE" as const,
+    reasonCode: null,
+    page: { asOf, freshness, completeness: "COMPLETE", items: [], nextCursor: null } as unknown as ManagerPage,
+  });
+  const relations = [
+    page("2026-09-10T16:42:29.000Z", "FRESH"),
+    page("2026-09-10T16:41:50.000Z", "AGING"),
+    page("2026-09-10T16:41:55.000Z", "FRESH"),
+  ];
+
+  it("publishes the oldest contributing instant, not the newest", () => {
+    // The bug, written down: the newest instant belongs to a FRESH page and
+    // would have been shown beside an AGING tier, 39 seconds apart.
+    expect(oldestStageAsOfMs(relations)).toBe(Date.parse("2026-09-10T16:41:50.000Z"));
+    expect(oldestStageAsOfMs(relations)).not.toBe(Date.parse("2026-09-10T16:42:29.000Z"));
+  });
+
+  it("shows the instant that belongs to the relation the tier came from", () => {
+    const worst = relations.find((relation) => relation.page?.freshness === "AGING");
+    expect(oldestStageAsOfMs(relations)).toBe(Date.parse(worst!.page!.asOf!));
+  });
+
+  it("ignores relations that published no instant rather than counting them as now", () => {
+    expect(oldestStageAsOfMs([page(null, "STALE"), ...relations]))
+      .toBe(Date.parse("2026-09-10T16:41:50.000Z"));
+  });
+
+  it("returns null when no relation published an instant at all", () => {
+    expect(oldestStageAsOfMs([page(null, "STALE"), page(null, "FRESH")])).toBeNull();
   });
 });

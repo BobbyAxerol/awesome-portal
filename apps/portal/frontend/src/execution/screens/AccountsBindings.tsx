@@ -111,6 +111,8 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
                   label="BROKER"
                   freshness={list?.freshness ?? null}
                   sourceAsOf={list?.sourceAsOf ?? null}
+                  tierBasisAsOf={list?.projectionRefreshedAt ?? null}
+                  freshnessBudgetMs={list?.freshnessBudgetMs ?? null}
                   nowMs={clock.getTime()}
                   dot={<span className="exec-af-livedot" aria-hidden="true" title={dot.title}
                     data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />}

@@ -9,7 +9,7 @@
  */
 import { render, screen, cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { SourceFreshness, normaliseTier } from "./SourceFreshness";
+import { budgetTitle, SourceFreshness, normaliseTier } from "./SourceFreshness";
 import { ageFrom, ageLabel } from "./FreshnessBanner";
 
 afterEach(cleanup);
@@ -68,5 +68,73 @@ describe("the header itself", () => {
     render(<SourceFreshness label="BROKER" freshness={null} sourceAsOf={null} nowMs={NOW} />);
     expect(screen.getByText("UNKNOWN")).toBeTruthy();
     expect(screen.getByText("age not published")).toBeTruthy();
+  });
+});
+
+/**
+ * PHASE 3 (round 2) · the age on screen has to be the age the tier came from.
+ *
+ * On dev the bindings header read "FRESH · 54s ago" against a 30-second fresh
+ * budget. Neither half was a bug on its own: the tier came from our projection
+ * refresh, the age from `source_as_of`, and the two clocks were 40 seconds
+ * apart. Together they were unreadable — a reader who does the subtraction
+ * gets a different tier than the one printed beside it.
+ */
+describe("the age belongs to the tier, not to a second clock", () => {
+  const REFRESHED = "2026-09-10T11:59:48.000Z"; // 12s before NOW
+  const PUBLISHED = "2026-09-10T11:59:06.000Z"; // 54s before NOW
+
+  it("counts from the instant the tier was computed from", () => {
+    render(<SourceFreshness label="BROKER" freshness="FRESH"
+      sourceAsOf={PUBLISHED} tierBasisAsOf={REFRESHED} nowMs={NOW} />);
+    expect(screen.getByText("12s ago")).toBeTruthy();
+    expect(screen.queryByText("54s ago")).toBeNull();
+  });
+
+  it("still shows what the source published, so neither instant is hidden", () => {
+    render(<SourceFreshness label="BROKER" freshness="FRESH"
+      sourceAsOf={PUBLISHED} tierBasisAsOf={REFRESHED} nowMs={NOW} />);
+    expect(screen.getByText(/source 2026-09-10 11:59:06 UTC/)).toBeTruthy();
+    expect(screen.getByText("12s ago").getAttribute("title"))
+      .toBe(`projection refreshed ${REFRESHED} · source published ${PUBLISHED}`);
+  });
+
+  it("falls back to the published instant when no basis came over the wire", () => {
+    // An older contract carries no `projection_refreshed_at`. Showing nothing
+    // would be worse than showing the only instant we were given.
+    render(<SourceFreshness label="BROKER" freshness="AGING"
+      sourceAsOf={PUBLISHED} tierBasisAsOf={null} nowMs={NOW} />);
+    expect(screen.getByText("54s ago")).toBeTruthy();
+  });
+
+  it("says the age is not published when the basis is absent and so is the stamp", () => {
+    render(<SourceFreshness label="BROKER" freshness="FRESH"
+      sourceAsOf={null} tierBasisAsOf={null} nowMs={NOW} />);
+    expect(screen.getByText("age not published")).toBeTruthy();
+  });
+});
+
+/**
+ * The word without the policy is still an assertion the reader has to trust.
+ * "FRESH · 12s ago" only means something once the header says what FRESH is.
+ */
+describe("the chip carries the policy behind the word", () => {
+  it("states both thresholds, because AGING is the gap between them", () => {
+    expect(budgetTitle("Within the declared refresh cadence.", { freshMs: 30_000, staleMs: 60_000 }))
+      .toBe("Within the declared refresh cadence. FRESH under 30s, STALE past 60s.");
+  });
+
+  it("says nothing about a budget the server did not publish", () => {
+    const base = "Within the declared refresh cadence.";
+    expect(budgetTitle(base, null)).toBe(base);
+    expect(budgetTitle(base, undefined)).toBe(base);
+  });
+
+  it("puts the budget on the chip a reader hovers, not somewhere else", () => {
+    render(<SourceFreshness label="BROKER" freshness="FRESH"
+      sourceAsOf="2026-09-10T11:59:06.000Z" tierBasisAsOf="2026-09-10T11:59:48.000Z"
+      freshnessBudgetMs={{ freshMs: 30_000, staleMs: 60_000 }} nowMs={NOW} />);
+    expect(screen.getByText("FRESH").getAttribute("title"))
+      .toContain("FRESH under 30s, STALE past 60s.");
   });
 });

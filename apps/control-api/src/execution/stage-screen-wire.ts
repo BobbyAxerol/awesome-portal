@@ -42,14 +42,21 @@ export function wireStageRows(rows: readonly Record<string, unknown>[]): Record<
   return rows.map((row) => wireStageValue(row) as Record<string, unknown>);
 }
 
-export function latestStageAsOfMs(relations: readonly StageRelation[]): number | null {
+/**
+ * The OLDEST instant across the stage relations.
+ *
+ * It is published as `as_of_ms` beside `as_of`, which is the oldest too, and
+ * beside a tier that is the worst of the relations. Returning the newest here
+ * put two different instants under two names for the same thing.
+ */
+export function oldestStageAsOfMs(relations: readonly StageRelation[]): number | null {
   const values = relations.flatMap((relation) => {
     const raw = relation.page?.asOf;
     if (!raw) return [];
     const milliseconds = Date.parse(raw);
     return Number.isSafeInteger(milliseconds) ? [milliseconds] : [];
   });
-  return values.length === 0 ? null : utcEpochMs(Math.max(...values));
+  return values.length === 0 ? null : utcEpochMs(Math.min(...values));
 }
 
 export function stagePanels(relations: readonly StageRelation[], readAtMs: number): Record<string, PanelEnvelope<unknown>> {

@@ -12,7 +12,7 @@ import {
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import {
-  latestStageAsOfMs,
+  oldestStageAsOfMs,
   stagePanels,
   type StageRelation,
   wireStageValue,
@@ -196,7 +196,7 @@ export class ProfileReadService {
       workspace_id: principal.workspaceId,
       resource: { kind: "ACCOUNT", id: accountId },
       read_at: new Date().toISOString(),
-      as_of: selected ? latestAsOf(selected.relations) : null,
+      as_of: selected ? oldestAsOf(selected.relations) : null,
       state: ambiguous ? "partial" : !accountFound ? (relationState === "unavailable" ? "unavailable" : "empty")
         : freshness === "STALE" ? "stale" : relationState,
       freshness,
@@ -280,9 +280,9 @@ export class ProfileReadService {
       workspace_id: principal.workspaceId,
       resource: deploymentId ? { kind: "DEPLOYMENT", id: deploymentId } : { kind: "WORKSPACE", id: principal.workspaceId },
       read_at_ms: readAtMs,
-      as_of_ms: latestStageAsOfMs(asStageRelations(relations)),
+      as_of_ms: oldestStageAsOfMs(asStageRelations(relations)),
       read_at: new Date(readAtMs).toISOString(),
-      as_of: latestAsOf(relations),
+      as_of: oldestAsOf(relations),
       state: freshness === "STALE" && state === "ready" ? "stale" : state,
       freshness,
       completeness: relations.some((item) => item.state === "UNAVAILABLE" || item.state === "PARTIAL")
@@ -374,9 +374,17 @@ function productState(relations: readonly RelationResult[]): "ready" | "empty" |
   return "ready";
 }
 
-function latestAsOf(relations: readonly RelationResult[]): string | null {
+/**
+ * PHASE 3 (round 2) · the aggregate age must belong to the tier beside it.
+ *
+ * `freshness` here is the WORST of the parts; publishing the NEWEST instant
+ * next to it described a different part than the tier did — a reader saw
+ * "STALE" with an age of seconds and could not reconcile the two. An
+ * aggregate never borrows a newer timestamp from a fresher contributor.
+ */
+function oldestAsOf(relations: readonly RelationResult[]): string | null {
   return relations.map((item) => item.page?.asOf ?? null).filter((value): value is string => value !== null)
-    .sort().at(-1) ?? null;
+    .sort().at(0) ?? null;
 }
 
 function relationFreshness(relations: readonly RelationResult[]): "FRESH" | "AGING" | "STALE" | "UNKNOWN" {

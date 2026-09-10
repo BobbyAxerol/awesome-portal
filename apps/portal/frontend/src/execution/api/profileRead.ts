@@ -508,11 +508,42 @@ export interface BindingItem {
   updatedAt: string;
 }
 
+/** Both thresholds, because AGING is the gap between them. */
+export interface FreshnessBudgetMs {
+  readonly freshMs: number;
+  readonly staleMs: number;
+}
+
+/** A budget is only usable if both halves are positive and ordered. */
+function readFreshnessBudget(raw: unknown): FreshnessBudgetMs | null {
+  const value = obj(raw);
+  const freshMs = value?.fresh; const staleMs = value?.stale;
+  if (typeof freshMs !== "number" || typeof staleMs !== "number") return null;
+  if (!Number.isFinite(freshMs) || !Number.isFinite(staleMs)) return null;
+  if (freshMs <= 0 || staleMs < freshMs) return null;
+  return { freshMs, staleMs };
+}
+
 export interface ManagerListEnvelope<T> {
   environment: string;
   freshness: string;
   completeness: string;
   sourceAsOf: string | null;
+  /**
+   * PHASE 3 (round 2) · the instant `freshness` is computed from.
+   *
+   * `sourceAsOf` is when the source published; this is when our projection
+   * last refreshed, and the tier is derived from it. Showing one beside the
+   * other gave the reader a tier they could not check.
+   */
+  projectionRefreshedAt: string | null;
+  /**
+   * The two thresholds the tier was decided against, in milliseconds, as the
+   * server's own policy declares them. Published so the tier is checkable:
+   * without them the reader sees "FRESH · 12s ago" and has no way to know
+   * whether 12s is inside the budget.
+   */
+  freshnessBudgetMs: FreshnessBudgetMs | null;
   readAt: string;
   page: ManagerListPage<T>;
   summary?: AlphaFleetSummary;
@@ -549,7 +580,10 @@ function readManagerEnvelope<T>(
   const readAt = str(root.read_at);
   const parsedSummary = summary ? summary(root.summary) : undefined;
   if (!page || !environment || !freshness || !completeness || !readAt || (summary && !parsedSummary)) return null;
-  return { environment, freshness, completeness, sourceAsOf: str(root.source_as_of), readAt, page, ...(parsedSummary ? { summary: parsedSummary } : {}) };
+  return { environment, freshness, completeness, sourceAsOf: str(root.source_as_of),
+    projectionRefreshedAt: str(root.projection_refreshed_at),
+    freshnessBudgetMs: readFreshnessBudget(root.freshness_budget_ms),
+    readAt, page, ...(parsedSummary ? { summary: parsedSummary } : {}) };
 }
 
 /** Reused by the EDS-04 named Alpha resource BFF; no client-side joins. */
@@ -679,6 +713,12 @@ export interface PortfolioListEnvelope {
   environment: string;
   freshness: string;
   completeness: string;
+  /**
+   * Here the tier and this instant come from the same clock: the source
+   * declares both on the page it returns. There is no separate basis and no
+   * budget — the source publishes no threshold, and our projection cadence is
+   * not the rule this verdict was reached under.
+   */
   sourceAsOf: string | null;
   readAt: string;
   environmentBranches: Readonly<Record<string, MetricState>>;

@@ -380,7 +380,7 @@ export class PortalDerivationsService {
       data: Record<string, unknown>;
     },
   ): Record<string, unknown> {
-    const asOf = latestInputAsOf(value.inputs) ?? snapshot.sourceAsOf?.toISOString() ?? snapshot.lastSuccessfulRefreshAt.toISOString();
+    const asOf = oldestInputAsOf(value.inputs) ?? snapshot.sourceAsOf?.toISOString() ?? snapshot.lastSuccessfulRefreshAt.toISOString();
     return {
       schema_version: `execution.derivation.${operationId.replace(/^execution/, "").replace(/V1$/, "").replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`).replace(/^-/, "")}.v1`,
       logical_operation_id: operationId,
@@ -546,8 +546,16 @@ function worstCompleteness(values: readonly (ProjectionCompleteness | "UNKNOWN")
   return values.reduce((worst, value) => rank[value] > rank[worst] ? value : worst, "COMPLETE" as ProjectionCompleteness | "UNKNOWN");
 }
 
-function latestInputAsOf(inputs: readonly DerivationInput[]): string | null {
-  return inputs.flatMap((entry) => entry.asOf ? [entry.asOf] : []).sort().at(-1) ?? null;
+/**
+ * PHASE 3 (round 2) · the aggregate age must belong to the tier beside it.
+ *
+ * `freshness` here is the WORST of the parts; publishing the NEWEST instant
+ * next to it described a different part than the tier did — a reader saw
+ * "STALE" with an age of seconds and could not reconcile the two. An
+ * aggregate never borrows a newer timestamp from a fresher contributor.
+ */
+function oldestInputAsOf(inputs: readonly DerivationInput[]): string | null {
+  return inputs.flatMap((entry) => entry.asOf ? [entry.asOf] : []).sort().at(0) ?? null;
 }
 
 function toEpochMs(value: string | null): number | null {

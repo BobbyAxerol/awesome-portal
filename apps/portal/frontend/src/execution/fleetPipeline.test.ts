@@ -13,7 +13,7 @@ const alpha = (alphaId: string, deployments: AlphaFleetItem["deployments"], alph
   portfolios: [], deployments, allocations: [], balances: [], positionPnl: [], exposure: [], health: "OK", attentionReasons: [], metricsAvailability: {}, updatedAt: "2026-09-05T00:00:00Z",
 });
 const envelope = (rows: AlphaFleetItem[], filteredCount = rows.length): ManagerListEnvelope<AlphaFleetItem> => ({
-  environment: "all", freshness: "FRESH", completeness: "COMPLETE", sourceAsOf: null, readAt: "2026-09-05T00:00:00Z",
+  environment: "all", freshness: "FRESH", completeness: "COMPLETE", sourceAsOf: null, projectionRefreshedAt: null, freshnessBudgetMs: null, readAt: "2026-09-05T00:00:00Z",
   page: { rows, totalCount: filteredCount, filteredCount, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false },
 });
 

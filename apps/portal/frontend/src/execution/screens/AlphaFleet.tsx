@@ -8,6 +8,7 @@
  * module is deleted and this screen reads the contract with the same shape.
  */
 import { ageFrom, ageLabel } from "../components/FreshnessBanner";
+import { budgetTitle, normaliseTier, tierTitle, tierTone } from "../components/SourceFreshness";
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
@@ -118,6 +119,9 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
     // is a fact" — four claims, none of them known yet, all of them shown
     // before anybody had answered.
     const reading = status === "loading";
+    // The instant the tier was computed from. Older contracts carry only the
+    // source stamp, and showing that is better than showing nothing.
+    const tierBasis = list?.projectionRefreshedAt ?? list?.sourceAsOf ?? null;
     // P0-5: the hi-fi filters by venue and owner as well as by stage. Both come
     // from the rows themselves — a hardcoded venue list is a release every time
     // the desk adds an exchange (DS §3.2).
@@ -152,9 +156,20 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                     over a closed stream is a real state, and one dot cannot
                     say both. */}
                 <span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
+                {/* The age is counted from the instant the tier was computed
+                    from — our last projection refresh — not from when the
+                    source published. The two are different clocks, and the
+                    header used to print one beside a tier derived from the
+                    other: "FRESH · 54s ago" against a 30-second budget. */}
                 <b>EXECUTION</b> · {reading
                   ? <StatusChip label="READING" tone="mute" />
-                  : <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} />} · {`${ageLabel(ageFrom(list?.sourceAsOf ? Date.parse(list.sourceAsOf) : null, Date.now()))} · source `}
+                  : <StatusChip label={normaliseTier(list?.freshness)} tone={tierTone[normaliseTier(list?.freshness)]}
+                      title={budgetTitle(tierTitle[normaliseTier(list?.freshness)], list?.freshnessBudgetMs)} />} ·{" "}
+                <span className="exec-af-num" title={list?.projectionRefreshedAt
+                  ? `projection refreshed ${list.projectionRefreshedAt}${list.sourceAsOf ? ` · source published ${list.sourceAsOf}` : ""}`
+                  : list?.sourceAsOf ?? "The source published no instant for this read."}>
+                  {ageLabel(ageFrom(tierBasis ? Date.parse(tierBasis) : null, Date.now()))}
+                </span>{" · source "}
                 <SourceClock at={list?.sourceAsOf ?? null} />
               </span>
             </header>

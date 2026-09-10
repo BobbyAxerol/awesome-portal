@@ -21,7 +21,7 @@ import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 import {
-  latestStageAsOfMs,
+  oldestStageAsOfMs,
   stagePanels,
   type StageRelation,
   wireStageValue,
@@ -548,7 +548,7 @@ export class PaperReadService {
     ];
     const state = productState(relations, extraCapabilities);
     const readAtMs = Date.now();
-    const asOf = latestAsOf(relations);
+    const asOf = oldestAsOf(relations);
     const freshness = relations.some((item) => item.page?.freshness === "STALE") ? "STALE"
       : relations.some((item) => item.page?.freshness === "AGING") ? "AGING"
         : relations.some((item) => item.page?.freshness === "FRESH") ? "FRESH" : "UNKNOWN";
@@ -562,7 +562,7 @@ export class PaperReadService {
       // pre-existing v1 response contract for specialised consumers until
       // their separately versioned DTOs are promoted.
       read_at_ms: readAtMs,
-      as_of_ms: latestStageAsOfMs(asStageRelations(relations)),
+      as_of_ms: oldestStageAsOfMs(asStageRelations(relations)),
       read_at: new Date(readAtMs).toISOString(),
       as_of: asOf,
       state: freshness === "STALE" && state === "ready" ? "stale" : state,
@@ -836,6 +836,19 @@ function productState(
   return "ready";
 }
 
+/**
+ * PHASE 3 (round 2) · the aggregate age must belong to the tier beside it.
+ *
+ * `freshness` here is the WORST of the parts; publishing the NEWEST instant
+ * next to it described a different part than the tier did — a reader saw
+ * "STALE" with an age of seconds and could not reconcile the two. An
+ * aggregate never borrows a newer timestamp from a fresher contributor.
+ */
+function oldestAsOf(relations: readonly RelationResult[]): string | null {
+  return relations.map((item) => item.page?.asOf ?? null).filter((value): value is string => value !== null)
+    .sort().at(0) ?? null;
+}
+/** The newest instant — for a window END, never for an age beside a tier. */
 function latestAsOf(relations: readonly RelationResult[]): string | null {
   return relations.map((item) => item.page?.asOf ?? null).filter((value): value is string => value !== null)
     .sort().at(-1) ?? null;
