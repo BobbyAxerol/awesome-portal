@@ -291,7 +291,7 @@ export function PaperWorkbench({
 }: PaperWorkbenchProps) {
   const smoke = demo ?? null;
   const hifi = demoHifi ?? null;
-  const { now, age } = demoTick ?? { now: new Date(0), age: "—" };
+  const { now, age } = demoTick ?? { now: new Date(0), age: "not published" };
   const [report, setReport] = useState(false);
   if (status !== "ok" && status !== "partial") {
     return (

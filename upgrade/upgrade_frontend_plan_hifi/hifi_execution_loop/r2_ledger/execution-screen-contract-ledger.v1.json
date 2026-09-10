@@ -14,7 +14,7 @@
    "path": "local-projection",
    "byte_baseline": {
     "identity": 1549021,
-    "gzip_on_the_wire": 1549021,
+    "gzip_on_the_wire": null,
     "gzip_if_enabled": 98289,
     "dedup_plus_gzip": 49557,
     "duplicate_bytes": 764776
@@ -30,7 +30,14 @@
    "declared_response_byte_bound": null,
    "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
    "owner": "codex",
-   "test_owner": "claude"
+   "test_owner": "claude",
+   "v2_contract": {
+    "schema_version": "execution.paper-overview.v2",
+    "negotiated_on": "application/vnd.portal.execution.screen.v2+json",
+    "identity_bytes": 784162,
+    "gzip_bytes_on_the_wire": 57481,
+    "duplicate_collection_pairs": 0
+   }
   },
   {
    "named_operation": "screens/blotter",
@@ -41,7 +48,7 @@
    "path": "local-projection",
    "byte_baseline": {
     "identity": 434354,
-    "gzip_on_the_wire": 434354,
+    "gzip_on_the_wire": null,
     "gzip_if_enabled": 37770,
     "dedup_plus_gzip": 20005,
     "duplicate_bytes": 213863
@@ -57,7 +64,14 @@
    "declared_response_byte_bound": null,
    "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
    "owner": "codex",
-   "test_owner": "claude"
+   "test_owner": "claude",
+   "v2_contract": {
+    "schema_version": "execution.full-blotter.v2",
+    "negotiated_on": "application/vnd.portal.execution.screen.v2+json",
+    "identity_bytes": 220385,
+    "gzip_bytes_on_the_wire": 21557,
+    "duplicate_collection_pairs": 0
+   }
   },
   {
    "named_operation": "screens/sandbox",
@@ -68,7 +82,7 @@
    "path": "local-projection",
    "byte_baseline": {
     "identity": 35874,
-    "gzip_on_the_wire": 35874,
+    "gzip_on_the_wire": null,
     "gzip_if_enabled": 2633,
     "dedup_plus_gzip": 2390,
     "duplicate_bytes": 15996
@@ -84,7 +98,14 @@
    "declared_response_byte_bound": null,
    "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
    "owner": "codex",
-   "test_owner": "claude"
+   "test_owner": "claude",
+   "v2_contract": {
+    "schema_version": "execution.sandbox-overview.v2",
+    "negotiated_on": "application/vnd.portal.execution.screen.v2+json",
+    "identity_bytes": 19826,
+    "gzip_bytes_on_the_wire": 2517,
+    "duplicate_collection_pairs": 0
+   }
   },
   {
    "named_operation": "screens/live",
@@ -95,7 +116,7 @@
    "path": "local-projection",
    "byte_baseline": {
     "identity": 6624,
-    "gzip_on_the_wire": 6624,
+    "gzip_on_the_wire": null,
     "gzip_if_enabled": null,
     "dedup_plus_gzip": null,
     "duplicate_bytes": 2
@@ -111,7 +132,14 @@
    "declared_response_byte_bound": null,
    "freshness_budget": "UNDECLARED (envelope carries freshness=AGING but no budget)",
    "owner": "codex",
-   "test_owner": "claude"
+   "test_owner": "claude",
+   "v2_contract": {
+    "schema_version": "execution.live-overview.v2",
+    "negotiated_on": "application/vnd.portal.execution.screen.v2+json",
+    "identity_bytes": 6496,
+    "gzip_bytes_on_the_wire": 1301,
+    "duplicate_collection_pairs": 0
+   }
   },
   {
    "named_operation": "alphas",
@@ -275,5 +303,6 @@
    "owner": "codex",
    "test_owner": "claude"
   }
- ]
+ ],
+ "phase_1_round_2": "Compression was off when this ledger was captured, so byte_baseline.gzip_on_the_wire equalled identity. nginx now sends gzip, and each operation's v2_contract records what the browser actually receives. The v1 numbers stay as the before-picture they were captured to be."
 }

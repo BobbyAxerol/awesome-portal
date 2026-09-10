@@ -32,6 +32,27 @@
    "operation": "portal.execution.runtime-manifest.v1",
    "file": "golden/portal_execution_runtime-manifest_v1.shape.json",
    "structure_digest": "sha256:fbcb3e54635e37c162d350860917a11bb01156560998c47be4a04185896d69d0"
+  },
+  {
+   "operation": "execution.paper-overview.v2",
+   "file": "golden/execution_paper-overview_v2.shape.json",
+   "structure_digest": "sha256:fd557ceea94be28f5d601bb8f93615e0b3b771b9c8380486068c302c1b65083f"
+  },
+  {
+   "operation": "execution.full-blotter.v2",
+   "file": "golden/execution_full-blotter_v2.shape.json",
+   "structure_digest": "sha256:709bdc04df3a0c48b9cd375f28f68b9fd5f312e11c857ba9f1664589fa7469dd"
+  },
+  {
+   "operation": "execution.sandbox-overview.v2",
+   "file": "golden/execution_sandbox-overview_v2.shape.json",
+   "structure_digest": "sha256:3cc3d58eaaa863844e209d57cad2e4422846fbf860fd1bafde30cb95012804e0"
+  },
+  {
+   "operation": "execution.live-overview.v2",
+   "file": "golden/execution_live-overview_v2.shape.json",
+   "structure_digest": "sha256:88c215e2209d3f5c57876550eec81537e38bf21906a6ec9bf1701d8c45fe3555"
   }
- ]
+ ],
+ "note_v2": "Phase 1 (round 2) published a V2 contract negotiated on the media type application/vnd.portal.execution.screen.v2+json. The .v1 pins stay: V1 is still served to a caller that does not ask for V2, and its shape did not change."
 }

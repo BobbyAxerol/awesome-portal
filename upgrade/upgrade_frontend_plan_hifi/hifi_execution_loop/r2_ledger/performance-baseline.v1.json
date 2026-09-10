@@ -69,5 +69,6 @@
    "p99": 14.7,
    "identity_bytes": 1981
   }
- }
+ },
+ "superseded_note": "These are the pre-phase-1 numbers, kept as the baseline they were measured to be. Phase 1 (round 2) results live in the contract ledger's v2_contract and in tracker A40."
 }

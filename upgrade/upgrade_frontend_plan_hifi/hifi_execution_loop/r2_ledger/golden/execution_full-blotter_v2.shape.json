@@ -1,0 +1,436 @@
+{
+ "schema": "golden-shape.v1",
+ "operation": "execution.full-blotter.v2",
+ "structure_digest": "sha256:709bdc04df3a0c48b9cd375f28f68b9fd5f312e11c857ba9f1664589fa7469dd",
+ "values_excluded": "Types and key paths only. No values are stored, because these responses carry live trading data.",
+ "captured_from": "dev stack 127.0.0.1:8080 on 2026-09-10, after phase 1 (round 2)",
+ "shape": {
+  "actor": {
+   "roles": [
+    "string",
+    "<list length varies>"
+   ],
+   "user_id": "string",
+   "username": "string"
+  },
+  "as_of": "string",
+  "as_of_ms": "integer",
+  "capabilities": [
+   {
+    "capability_id": "string",
+    "lineage_rejects": {
+     "session": "integer"
+    },
+    "reason_code": "string",
+    "relations": [
+     "string",
+     "<list length varies>"
+    ],
+    "retryable": "boolean",
+    "state": "string"
+   },
+   "<list length varies>"
+  ],
+  "completeness": "string",
+  "delivery_profile": "string",
+  "freshness": "string",
+  "panels": {
+   "command_journal": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      {
+       "from_ms": "integer",
+       "reason_code": "string",
+       "to_ms": "integer"
+      },
+      "<list length varies>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "string",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": {
+     "rows": [
+      {
+       "accepted_at": "string",
+       "accepted_at_ms": "integer",
+       "account_id": "string",
+       "acknowledged_at": "null",
+       "aggregate_key": "string",
+       "alpha_id": "string",
+       "client_order_id": "string",
+       "command_id": "string",
+       "command_kind": "string",
+       "contract_revision": "string",
+       "dispatched_at": "null",
+       "engine_version": "string",
+       "mode": "string",
+       "outcome_class": "string",
+       "state": "string",
+       "terminal_at": "string",
+       "terminal_at_ms": "integer",
+       "updated_at": "string",
+       "updated_at_ms": "integer",
+       "venue": "string"
+      },
+      "<list length varies>"
+     ]
+    },
+    "formula": "null",
+    "reason_code": "string",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "conditional_groups": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      "<empty list>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": "null",
+    "formula": "null",
+    "reason_code": "null",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "conditional_legs": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      "<empty list>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": "null",
+    "formula": "null",
+    "reason_code": "null",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "fills": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      "<empty list>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": {
+     "rows": [
+      {
+       "account_id": "string",
+       "client_order_id": "string",
+       "commission": "string",
+       "commission_currency": "string",
+       "event_id": "null",
+       "execution_session_id": "null",
+       "fill_id": "integer",
+       "instrument_id": "string",
+       "liquidity_side": "string",
+       "mode": "string",
+       "price": "string",
+       "quantity": "string",
+       "realized_pnl": "string",
+       "side": "string",
+       "strategy_id": "string",
+       "trade_id": "string",
+       "trade_time": "string",
+       "trade_time_ms": "integer",
+       "venue": "string",
+       "venue_order_id": "string"
+      },
+      "<list length varies>"
+     ]
+    },
+    "formula": "null",
+    "reason_code": "null",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "orders": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      {
+       "from_ms": "integer",
+       "reason_code": "string",
+       "to_ms": "integer"
+      },
+      "<list length varies>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": {
+     "rows": [
+      {
+       "account_id": "string",
+       "client_order_id": "string",
+       "error_code": "null",
+       "error_message": "null",
+       "execution_session_id": "null",
+       "instrument_id": "string",
+       "mode": "string",
+       "order_id": "integer",
+       "order_type": "string",
+       "position_side": "string",
+       "post_only": "boolean",
+       "price": "null",
+       "quantity": "string",
+       "reduce_only": "boolean",
+       "risk_grant_id": "null",
+       "side": "string",
+       "status": "string",
+       "strategy_id": "string",
+       "submitted_at": "string",
+       "submitted_at_ms": "integer",
+       "symbol": "string",
+       "time_in_force": "string",
+       "trader_id": "string",
+       "trigger_price": "null",
+       "updated_at": "string",
+       "updated_at_ms": "integer",
+       "venue": "string",
+       "venue_order_id": "null"
+      },
+      "<list length varies>"
+     ]
+    },
+    "formula": "null",
+    "reason_code": "string",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "reconciliation": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      "<empty list>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "null",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": "null",
+    "formula": "null",
+    "reason_code": "null",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   },
+   "sessions": {
+    "clocks": {
+     "as_of_ms": "integer",
+     "event_time_ms": "integer",
+     "ingested_at_ms": "integer",
+     "processed_at_ms": "integer",
+     "read_at_ms": "integer",
+     "received_at_ms": "integer",
+     "source_published_at_ms": "integer"
+    },
+    "coverage": {
+     "downsampled": "boolean",
+     "filtered_total": "string",
+     "from_ms": "null",
+     "gaps": [
+      {
+       "from_ms": "integer",
+       "reason_code": "string",
+       "to_ms": "integer"
+      },
+      "<list length varies>"
+     ],
+     "has_more": "boolean",
+     "next_cursor": "string",
+     "returned_count": "integer",
+     "source_total": "string",
+     "to_ms": "integer",
+     "truncated": "boolean"
+    },
+    "data": {
+     "rows": [
+      {
+       "account_id": "string",
+       "accounting_recovered_count": "integer",
+       "broker_rejected_count": "integer",
+       "completed_at": "string",
+       "completed_at_ms": "integer",
+       "cycle_key": "string",
+       "execution_session_id": "string",
+       "filled_count": "integer",
+       "mode": "string",
+       "partial_fill_count": "integer",
+       "reconciliation_actionable_count": "integer",
+       "reconciliation_deferred_count": "integer",
+       "risk_approved_count": "integer",
+       "risk_rejected_count": "integer",
+       "sent_count": "integer",
+       "started_at": "string",
+       "started_at_ms": "integer",
+       "state": "string",
+       "strategy_id": "string",
+       "submitted_count": "integer",
+       "updated_at": "string",
+       "updated_at_ms": "integer",
+       "venue": "string"
+      },
+      "<list length varies>"
+     ]
+    },
+    "formula": "null",
+    "reason_code": "string",
+    "retryable": "boolean",
+    "source_history_semantics": "string",
+    "state": "string"
+   }
+  },
+  "read_at": "string",
+  "read_at_ms": "integer",
+  "record_authority": "string",
+  "schema_version": "string",
+  "screen_context": {
+   "aggregates": {
+    "side": {
+     "BUY": "integer",
+     "SELL": "integer"
+    },
+    "status": {
+     "CANCELED": "integer",
+     "FILLED": "integer",
+     "RISK_REJECTED": "integer"
+    },
+    "venue": {
+     "BINANCE": "integer"
+    }
+   },
+   "exact_total": "integer",
+   "filtered_total": "integer",
+   "page": {
+    "limit": "integer",
+    "next_cursor": "null",
+    "previous_cursor": "null"
+   },
+   "query": {
+    "count_scope": "string",
+    "filter_allowlist": [
+     "string",
+     "<list length varies>"
+    ],
+    "filters": {
+     "side": "null",
+     "status": "null",
+     "status_bucket": "null",
+     "symbol": "null",
+     "venue": "null"
+    },
+    "sort": "string",
+    "sort_allowlist": [
+     "string",
+     "<list length varies>"
+    ]
+   }
+  },
+  "source_authority": "string",
+  "state": "string",
+  "workspace_id": "string"
+ }
+}

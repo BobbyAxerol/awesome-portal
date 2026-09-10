@@ -438,7 +438,7 @@ export function LiveFullOperationsScreen({
                   <tr><th scope="row">state</th><td>{live.projectionContinuity?.state ?? "not stated"}</td></tr>
                   <tr><th scope="row">gap</th><td>{gap === null ? "not stated" : gap ? "detected" : "none"}</td></tr>
                   <tr><th scope="row">epoch · sequence</th><td className="exec-num">{live.projectionContinuity?.epoch ?? "epoch not published"} · {live.projectionContinuity?.sequence ?? "sequence not published"}</td></tr>
-                  <tr><th scope="row">affected authorities</th><td>{live.projectionContinuity?.affectedAuthorities.join(", ") || "—"}</td></tr>
+                  <tr><th scope="row">affected authorities</th><td>{live.projectionContinuity?.affectedAuthorities.join(", ") || "none published"}</td></tr>
                 </tbody>
               </table>
               {live.projectionContinuity?.blockerCodes.length ? (

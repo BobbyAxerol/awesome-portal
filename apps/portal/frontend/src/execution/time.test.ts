@@ -25,8 +25,8 @@ describe("utcStamp — second-resolution display, UTC anchor (owner 2026-09-08)"
     expect(utcStamp("2026-08-22")).toBe("2026-08-22");
   });
 
-  it("renders missing as em dash, never a fake time", () => {
-    expect(utcStamp(null)).toBe("—");
-    expect(utcStamp(undefined)).toBe("—");
+  it("says the time was not published, never a dash and never a fake time", () => {
+    expect(utcStamp(null)).toBe("not published");
+    expect(utcStamp(undefined)).toBe("not published");
   });
 });

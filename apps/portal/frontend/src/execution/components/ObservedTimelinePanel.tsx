@@ -111,7 +111,7 @@ export function ObservedTimelinePanel({ timeline, transport, reason = null, subj
                     <td data-numeric="true">{money(e.values.price)}</td>
                     <td data-numeric="true">{qty(e.values.quantity)}</td>
                     <td data-numeric="true" data-tone={e.values.realizedPnl ? (Number(e.values.realizedPnl) >= 0 ? "good" : "bad") : undefined}>{money(e.values.realizedPnl)}</td>
-                    <td className="exec-rp-dim">{[e.resource.instrumentId, e.resource.accountId, e.resource.sessionId ? `session ${e.resource.sessionId.slice(0, 12)}` : null].filter(Boolean).join(" · ") || "—"}{e.rejectedFields.length > 0 ? <span data-tone="warn"> · {e.rejectedFields.length} field{e.rejectedFields.length === 1 ? "" : "s"} rejected at the BFF</span> : null}</td>
+                    <td className="exec-rp-dim">{[e.resource.instrumentId, e.resource.accountId, e.resource.sessionId ? `session ${e.resource.sessionId.slice(0, 12)}` : null].filter(Boolean).join(" · ") || "no resource published"}{e.rejectedFields.length > 0 ? <span data-tone="warn"> · {e.rejectedFields.length} field{e.rejectedFields.length === 1 ? "" : "s"} rejected at the BFF</span> : null}</td>
                   </tr>
                 );
               })}

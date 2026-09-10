@@ -73,7 +73,7 @@ function Panel({ title, authority, freshness, meta, footer, label, children }: {
 
 function slaLabel(item: TriageItem): string {
   const parts = [item.slaState ? item.slaState.replace("_", " ") : null, item.ageSeconds !== null ? ageLabel(item.ageSeconds) : null].filter(Boolean);
-  return parts.join(" · ") || "—";
+  return parts.join(" · ") || "no SLA state published";
 }
 /** mm:ss for anything inside an hour — the deadline ticks, it does not step. */
 function clockLabel(seconds: number): string {
@@ -304,7 +304,12 @@ function CountUp({ value }: { value: number }) {
 }
 
 function MatrixCellView({ cell }: { cell: MatrixCell }) {
-  if (cell.kind === "none") return <span className="exec-cc-mx-none">—</span>;
+  // A matrix cell stays a mark rather than a sentence, so the reason lives in
+  // its title: this is a grid position with no command, not a value we failed
+  // to read.
+  if (cell.kind === "none") {
+    return <span className="exec-cc-mx-none" title="No command of this kind at this stage.">—</span>;
+  }
   if (cell.kind === "done") {
     return (
       <span className="exec-cc-mx-done">

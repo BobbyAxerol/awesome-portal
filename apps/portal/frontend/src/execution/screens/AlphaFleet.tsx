@@ -336,8 +336,8 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
         <td><A href={row.href} bold>{row.alpha}</A><div className="exec-af-sub"><A href={row.href}>{row.id}</A> · {row.digest}{row.status ? ` · ${row.status}` : ""}</div></td>
         <td className="exec-af-dim">{row.owner}{row.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{row.portfolios.map((p, i) => <span key={p.label}>{i ? " → " : ""}<A href={p.href}>{p.label}</A></span>)}</div> : null}</td>
         <td><span className="exec-af-stages">{row.stages.map((c) => <Chip key={c.label} chip={c} />)}</span></td>
-        <td data-numeric="true">{row.alloc ?? <span className="exec-af-mute">—</span>}{row.allocCcy ? <> <span data-tone="warn">{row.allocCcy}</span></> : null}</td>
-        <td data-numeric="true">{pnl ? <><span data-tone="good">{pnl}</span> <span className="exec-af-mute" data-tone={row.pnlCcy === "VND" ? "warn" : undefined}>{row.pnlCcy}</span>{row.pnlNote ? <div className="exec-af-sub" data-tone="warn">{row.pnlNote}</div> : null}</> : <span className="exec-af-mute">—</span>}</td>
+        <td data-numeric="true">{row.alloc ?? <span className="exec-af-absent" title="The fleet row publishes no allocation for this alpha.">not published</span>}{row.allocCcy ? <> <span data-tone="warn">{row.allocCcy}</span></> : null}</td>
+        <td data-numeric="true">{pnl ? <><span data-tone="good">{pnl}</span> <span className="exec-af-mute" data-tone={row.pnlCcy === "VND" ? "warn" : undefined}>{row.pnlCcy}</span>{row.pnlNote ? <div className="exec-af-sub" data-tone="warn">{row.pnlNote}</div> : null}</> : <span className="exec-af-absent" title="No net P&L is published for this alpha.">not published</span>}</td>
         <td data-numeric="true" data-tone={row.ddTone}>{row.dd ?? <span className="exec-af-mute">not published</span>}</td>
         <td>{row.spark ? <Spark pts={row.spark} /> : <span className="exec-af-mute">{row.sparkNote ?? "no series published"}</span>}</td>
         <td>
@@ -345,7 +345,7 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
             <><span data-tone={health.tone}>{health.text}</span>{health.link ? <>{health.text.endsWith(" ") ? null : health.tail}<a href={health.link.href}>{health.link.label}</a>{health.text.endsWith(" ") ? health.tail : null}</> : health.tail}</>
           )}
         </td>
-        <td className="exec-af-go">{row.href ? <a href={row.href} aria-label={`Open ${row.alpha}`}>→</a> : <span className="exec-af-mute">—</span>}</td>
+        <td className="exec-af-go">{row.href ? <a href={row.href} aria-label={`Open ${row.alpha}`}>→</a> : <span className="exec-af-absent" title="This alpha has no detail route published yet.">no link</span>}</td>
       </tr>
       <tr className="exec-af-note" data-dim={row.dim ? "true" : undefined}><td colSpan={10}>{expandable ? `${row.deployments!.length} deployments (strategy_deployments) · click to ${isOpen ? "collapse" : "expand"}` : <Note text={row.note} links={row.noteLinks} />}</td></tr>
       {isOpen && row.deployments ? row.deployments.map((d, i) => {
@@ -357,8 +357,8 @@ function FleetRows({ row, pnl, expandable, isOpen, onToggle, j, syncAge, inSessi
             <td className="exec-af-mute">{d.venueMode}</td>
             <td><Chip chip={d.chip} /> <span className="exec-af-mute" data-tone={d.chipNoteTone}><Note text={d.chipNote} links={d.chipNoteLinks} /></span></td>
             <td data-numeric="true">{d.alloc}</td>
-            <td data-numeric="true">{p ? <span data-tone="good">{p}{d.pnlCcy ? <> <span data-tone="warn">{d.pnlCcy}</span></> : null}</span> : <span className="exec-af-mute">—</span>}</td>
-            <td data-numeric="true" className="exec-af-dim">{d.dd ?? <span className="exec-af-mute">—</span>}</td>
+            <td data-numeric="true">{p ? <span data-tone="good">{p}{d.pnlCcy ? <> <span data-tone="warn">{d.pnlCcy}</span></> : null}</span> : <span className="exec-af-absent" title="No net P&L is published for this deployment.">not published</span>}</td>
+            <td data-numeric="true" className="exec-af-dim">{d.dd ?? <span className="exec-af-absent" title="No drawdown is published for this deployment.">not published</span>}</td>
             <td className="exec-af-mute"><a href={d.accountHref}>{d.account}</a> · {d.portfolio}</td>
             <td><span data-tone={d.healthTone}>{d.healthLink ? d.health.replace(d.healthLink.label, "") : d.health}{d.syncTick ? ` ${syncAge}` : ""}</span>{d.healthLink ? <a href={d.healthLink.href}>{d.healthLink.label}</a> : null}</td>
             <td className="exec-af-go"><a href={d.href} aria-label={`Open ${d.id}`}>→</a></td>
@@ -414,7 +414,12 @@ function FleetKpi({ label, values, empty, tone }: { label: string; values: reado
 
 /** One current-source fleet row, reduced by the server-owned v2 projection. */
 function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity, arrived }: { item: AlphaFleetItem; href: string; expandable: boolean; isOpen: boolean; onToggle: () => void; equity?: readonly number[] | "loading" | null; arrived?: boolean }) {
-  const mute = <span className="exec-af-mute">—</span>;
+  // Line 341 of this same table already says "not published" when a drawdown
+  // is missing. A dash in the neighbouring columns said the same thing in a
+  // way nobody can read, so they now say it too.
+  const notPublished = (
+    <span className="exec-af-absent" title="The source published no value for this field.">not published</span>
+  );
   const stageHref = (d: { deploymentId: string; stage: string }) =>
     d.stage.toLowerCase() === "paper" ? `/deployments/paper/${encodeURIComponent(d.deploymentId)}`
     : d.stage.toLowerCase() === "sandbox" ? `/deployments/sandbox/${encodeURIComponent(d.deploymentId)}`
@@ -424,13 +429,13 @@ function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity, arriv
       <tr className="exec-af-row" data-arrived={arrived ? "true" : undefined} onClick={expandable ? onToggle : undefined} role={expandable ? "button" : undefined} tabIndex={expandable ? 0 : undefined} aria-expanded={expandable ? isOpen : undefined} onKeyDown={expandable ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } } : undefined}>
         <td className="exec-af-mark">{expandable ? (isOpen ? "▾" : "▸") : ""}</td>
         <td><A href={href} bold>{item.alphaLabel}</A><div className="exec-af-sub"><A href={href}>{item.alphaId}</A> · v{item.version}</div></td>
-        <td className="exec-af-dim">{item.owner ?? mute}{item.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{item.portfolios.map((portfolio, index) => <span key={portfolio.portfolioId}>{index ? " · " : ""}<A href={`/deployments/portfolios/${encodeURIComponent(portfolio.portfolioId)}`}>{portfolio.name}</A></span>)}</div> : null}</td>
+        <td className="exec-af-dim">{item.owner ?? notPublished}{item.portfolios.length ? <div className="exec-af-sub exec-af-sub-link">{item.portfolios.map((portfolio, index) => <span key={portfolio.portfolioId}>{index ? " · " : ""}<A href={`/deployments/portfolios/${encodeURIComponent(portfolio.portfolioId)}`}>{portfolio.name}</A></span>)}</div> : null}</td>
         <td><span className="exec-af-stages">{item.stages.map((stage) => <Chip key={stage} chip={stageChip(stage)} />)}</span></td>
         <td data-numeric="true"><ExactLines values={item.allocations} empty="not allocated" /></td>
         <td data-numeric="true"><ExactLines values={item.positionPnl.map((value) => ({ currency: value.currency, value: value.net }))} empty="no position facts" tone="good" /></td>
         <td data-numeric="true"><ExactLines values={item.exposure} empty="flat" /></td>
-        <td>{item.balances.length ? item.balances.map((balance) => <div key={balance.currency}>{exactDisplay(balance.total)} <span className="exec-af-mute">{balance.currency}</span><div className="exec-af-sub">free {exactDisplay(balance.free)} · locked {exactDisplay(balance.locked)}</div></div>) : mute}</td>
-        <td className="exec-af-spark">{equity === "loading" ? <span className="exec-af-mute">loading…</span> : equity && equity.length > 1 ? <SparkLine points={equity.map((value, index) => [String(index), value] as const)} xKind="category" tone={equity[equity.length - 1] >= equity[0] ? "good" : "bad"} height={18} width={72} /> : <span className="exec-af-mute" title="The equity history mirror holds fewer than two daily closes for this alpha">no series</span>}</td>
+        <td>{item.balances.length ? item.balances.map((balance) => <div key={balance.currency}>{exactDisplay(balance.total)} <span className="exec-af-mute">{balance.currency}</span><div className="exec-af-sub">free {exactDisplay(balance.free)} · locked {exactDisplay(balance.locked)}</div></div>) : notPublished}</td>
+        <td className="exec-af-spark">{equity === "loading" ? <span className="exec-af-mute">loading…</span> : equity && equity.length > 1 ? <SparkLine points={equity.map((value, index) => [String(index), value] as const)} xKind="category" tone={equity[equity.length - 1] >= equity[0] ? "good" : "bad"} height={18} width={72} /> : <span className="exec-af-absent" title="The equity history mirror holds fewer than two daily closes for this alpha">no series</span>}</td>
         <td><span data-tone={item.health === "READY" ? "good" : item.health === "ATTENTION" ? "bad" : "warn"}>{item.health}</span><div className="exec-af-sub">{item.attentionReasons.length ? item.attentionReasons.join(" · ") : `updated ${utcStamp(item.updatedAt)}`}</div></td>
         <td className="exec-af-go"><a href={href} aria-label={`Open ${item.alphaLabel}`}>→</a></td>
       </tr>
@@ -440,10 +445,10 @@ function FleetItemRows({ item, href, expandable, isOpen, onToggle, equity, arriv
           <td>└ <a href={stageHref(d)}>{d.deploymentId}</a></td>
           <td className="exec-af-mute">{d.venue}<div className="exec-af-sub"><A href={`/deployments/accounts/${encodeURIComponent(d.accountId)}`}>{d.accountId}</A>{d.portfolioId ? <> · <A href={`/deployments/portfolios/${encodeURIComponent(d.portfolioId)}`}>{d.portfolioName ?? d.portfolioId}</A></> : null}</div></td>
           <td><Chip chip={stageChip(d.stage)} /> <span className="exec-af-mute">{d.state}</span></td>
-          <td data-numeric="true">{d.allocation === null ? mute : <>{exactDisplay(d.allocation)} <span className="exec-af-mute">{d.currency}</span></>}</td>
+          <td data-numeric="true">{d.allocation === null ? notPublished : <>{exactDisplay(d.allocation)} <span className="exec-af-mute">{d.currency}</span></>}</td>
           <td data-numeric="true"><span data-tone={d.netPnl.startsWith("-") ? "bad" : "good"}>{exactDisplay(d.netPnl)}</span> <span className="exec-af-mute">{d.currency}</span><div className="exec-af-sub">R {exactDisplay(d.realizedPnl)} · U {exactDisplay(d.unrealizedPnl)}</div></td>
           <td data-numeric="true">{exactDisplay(d.exposure)} <span className="exec-af-mute">{d.currency}</span></td>
-          <td className="exec-af-mute">{d.balanceTotal === null ? mute : <>{exactDisplay(d.balanceTotal)} {d.currency}<div className="exec-af-sub">free {exactDisplay(d.balanceFree ?? "0")} · locked {exactDisplay(d.balanceLocked ?? "0")}</div></>}</td>
+          <td className="exec-af-mute">{d.balanceTotal === null ? notPublished : <>{exactDisplay(d.balanceTotal)} {d.currency}<div className="exec-af-sub">free {exactDisplay(d.balanceFree ?? "0")} · locked {exactDisplay(d.balanceLocked ?? "0")}</div></>}</td>
           <td><span data-tone={d.health === "READY" ? "good" : "bad"}>{d.health}</span><div className="exec-af-sub">updated {utcStamp(d.updatedAt)}</div></td>
           <td className="exec-af-go"><a href={stageHref(d)} aria-label={`Open ${d.deploymentId}`}>→</a></td>
         </tr>

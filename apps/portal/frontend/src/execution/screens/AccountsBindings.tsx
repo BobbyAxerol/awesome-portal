@@ -70,7 +70,16 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
     const items = list?.page.rows ?? [];
     const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
     const sourceReason = reason ?? (!list ? "No bindings list was published for this workspace." : undefined);
-    const mute = <span className="exec-af-mute">—</span>;
+    // A dash in a value column reads as "zero" or "not applicable" to anyone
+    // scanning a row, and it is neither: this projection does not publish
+    // equity or virtual allocation at all. The footer says so once; the cell
+    // has to say it too, because a reader follows a row, not a footnote.
+    const notPublished = (
+      <span className="exec-af-absent"
+        title="Not published on this projection (N28 exposure population). The Account 360 states its own reason.">
+        not published
+      </span>
+    );
     // P0-5/P0-7: the hi-fi filters bindings by the facts the rows carry. Each
     // chip is derived from the rows themselves, so a venue or an environment
     // the desk adds appears without a release; a chip whose set is empty is
@@ -130,8 +139,8 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
                         <td><a href={`/deployments/accounts/${encodeURIComponent(item.accountId)}`}>{item.accountId}</a></td>
                         <td><ChipEl chip={{ label: item.state.toUpperCase(), tone: item.state.toLowerCase() === "active" ? "paper" : "warn" }} /></td>
                         <td className="exec-af-dim">{item.credentialState.toUpperCase()}</td>
-                        <td data-numeric="true">{mute}</td>
-                        <td data-numeric="true">{mute}</td>
+                        <td data-numeric="true">{notPublished}</td>
+                        <td data-numeric="true">{notPublished}</td>
                         <td className="exec-af-mute">{utcStamp(item.updatedAt)}{ageState(item.updatedAt, clock) ? <span className="exec-af-dim"> · {ageState(item.updatedAt, clock)!.label} ago</span> : null}</td>
                       </tr>
                     ))}
@@ -240,7 +249,7 @@ function FragmentRow({ r, expandable, isOpen, onToggle, phys, headroom, syncText
         <tr key={v.id} className="exec-af-dep" data-last={i === r.virtuals!.length - 1 ? "true" : undefined}>
           <td /><td>└ <a href={v.href}>{v.id}</a></td><td><ChipEl chip={v.chip} /></td>
           <td className="exec-af-mute"><Note text={v.who} links={v.whoLinks} /></td>
-          <td data-numeric="true" className="exec-af-dim">equity {v.equity}</td><td data-numeric="true" className="exec-af-dim">alloc {v.alloc}</td><td data-numeric="true" className="exec-af-mute">—</td>
+          <td data-numeric="true" className="exec-af-dim">equity {v.equity}</td><td data-numeric="true" className="exec-af-dim">alloc {v.alloc}</td><td data-numeric="true" className="exec-af-absent" title="Not published on this projection (N28 exposure population).">not published</td>
           <td data-tone={v.syncTone}>{v.sync}</td><td data-tone={v.healthTone}>{v.health}</td>
         </tr>
       )) : null}

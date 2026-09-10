@@ -99,11 +99,11 @@ describe("B14 — observed_total_count is a floor, not a total", () => {
     expect(label).toContain("~");
   });
 
-  it("renders an unknown count as an em dash, never as zero", () => {
-    expect(countLabel({ exactTotal: false, total: null, observed: null, returned: null, truncated: null, limit: null })).toBe("—");
+  it("says the count was not taken, never a dash and never a zero", () => {
+    expect(countLabel({ exactTotal: false, total: null, observed: null, returned: null, truncated: null, limit: null })).toBe("not counted");
   });
 
-  it("shows a fleet cell with no value as — rather than 0", () => {
+  it("shows a fleet cell with no value as a stated absence rather than 0", () => {
     render(<CommandCenterScreen onOpen={() => undefined} snapshot={snapshot("partial")} />);
     const fleet = screen.getByLabelText("Fleet health");
     // Whatever the fixture withholds must not appear as a zero.

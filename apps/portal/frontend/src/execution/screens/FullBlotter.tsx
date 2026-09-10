@@ -498,7 +498,10 @@ export function FullBlotter({
         // would claim the order was placed this instant.
         return aged
           ? <span className="exec-bl-dim exec-num" title={`placed ${row.at}`}>{aged.label}</span>
-          : <span className="exec-bl-dim">—</span>;
+          : <span className="exec-bl-dim"
+              title="No usable placement timestamp was published for this order, so its age cannot be computed.">
+            age unknown
+          </span>;
       },
     },
   ];

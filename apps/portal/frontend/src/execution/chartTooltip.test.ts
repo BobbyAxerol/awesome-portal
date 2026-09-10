@@ -14,7 +14,7 @@ describe("the stamp", () => {
 
   it("returns the original text rather than inventing a date it cannot read", () => {
     expect(tooltipStamp("bucket 4")).toBe("bucket 4");
-    expect(tooltipStamp(null)).toBe("—");
+    expect(tooltipStamp(null)).toBe("not published");
   });
 });
 

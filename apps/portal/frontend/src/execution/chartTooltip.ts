@@ -20,7 +20,8 @@
 
 /** `2026-08-29 07:30:00 UTC` — the one stamp a hover box ever shows. */
 export function tooltipStamp(value: string | number | Date | null | undefined): string {
-  if (value === null || value === undefined || value === "") return "—";
+  // A hover box has room for a word, and a dash here reads as zero.
+  if (value === null || value === undefined || value === "") return "not published";
   // Only a real instant is reformatted. `new Date()` accepts a startling range
   // of prose — "bucket 4" parses to April 2001 — so a string that is not an
   // ISO-ish stamp is handed back untouched rather than turned into a date the

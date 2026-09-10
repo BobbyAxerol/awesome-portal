@@ -14,6 +14,7 @@
  * When `EX-BE-05a` publishes its contract, what changes here is the row
  * mapping. The transport, the error mapping and the policy gate are done.
  */
+import { normaliseScreenBody, SCREEN_CONTRACT_MISMATCH, SCREEN_V2_MEDIA_TYPE } from "./screenV2";
 import {
   panelStatusForHttp,
   readKeysetPage,
@@ -99,10 +100,15 @@ const BASE = "/api/v1/execution";
 
 /** Same-origin only. The browser never talks to the AWS edge (master plan §9.1). */
 async function get(path: string, signal?: AbortSignal): Promise<Response> {
+  // Screen operations negotiate V2, which sends each collection once. Every
+  // other read keeps the plain JSON accept it has always had.
+  const accept = path.startsWith("/screens/")
+    ? `${SCREEN_V2_MEDIA_TYPE}, application/json`
+    : "application/json";
   return fetch(`${BASE}${path}`, {
     signal,
     credentials: "same-origin",
-    headers: { accept: "application/json" },
+    headers: { accept },
   });
 }
 
@@ -294,7 +300,14 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     if (!response.ok) return problem(response);
     let body: unknown = null;
     try { body = await response.json(); } catch { /* reader fails closed below */ }
-    const value = reader(body);
+    // A V2 screen envelope carries its rows once; derive the map the readers
+    // expect. A body that claims V2 without the shape becomes null here and
+    // falls into the unavailable branch below with its own code.
+    const normalised = normaliseScreenBody(body);
+    if (normalised === null && body !== null) {
+      return unavailable(`${what} arrived in a shape this build does not accept (${SCREEN_CONTRACT_MISMATCH}).`);
+    }
+    const value = reader(normalised);
     return value !== null && value !== undefined
       ? { ok: true as const, value }
       : unavailable(`${what} response could not be read.`);

@@ -161,7 +161,9 @@ export function readUtcEpochMs(value: unknown): UtcEpochMs | null {
 /** UTC-only `datetime64[ms]`; the browser timezone has no influence on output. */
 export function formatUtcEpochMs(value: UtcEpochMs): string {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  // Not an absent value but an unreadable one, and the reader is owed the
+  // difference.
+  if (Number.isNaN(date.getTime())) return "unreadable instant";
   const pad = (part: number, width = 2) => String(part).padStart(width, "0");
   return `${pad(date.getUTCFullYear(), 4)}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ` +
     `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`;

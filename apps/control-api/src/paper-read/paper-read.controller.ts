@@ -1,4 +1,5 @@
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Logger, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { screenEnvelopeV2From, screenResponseMetrics, wantsScreenV2 } from "../execution/screen-envelope-v2";
 import { FastifyRequest } from "fastify";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
@@ -20,6 +21,8 @@ interface PaperReadRequest extends FastifyRequest {
 @UseGuards(SessionGuard)
 @Controller("/api/v1/execution/screens")
 export class PaperReadController {
+  private readonly screenLog = new Logger("ExecutionScreenResponse");
+
   constructor(
     @Inject(PaperReadService) private readonly paper: PaperReadService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
@@ -30,7 +33,7 @@ export class PaperReadController {
     const query = PaperOverviewQuerySchema.safeParse(raw);
     if (!query.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    return this.paper.overview(this.principal(request, workspaceId));
+    return this.negotiate(request, await this.paper.overview(this.principal(request, workspaceId)));
   }
 
   @Get("/paper/:deployment_id")
@@ -56,7 +59,26 @@ export class PaperReadController {
     const query = PaperBlotterQuerySchema.safeParse(raw);
     if (!query.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    return this.paper.blotter(this.principal(request, workspaceId), query.data);
+    return this.negotiate(request, await this.paper.blotter(this.principal(request, workspaceId), query.data));
+  }
+
+  /**
+   * V2 is the envelope the services build. A caller that does not ask for the
+   * V2 media type gets V1 rebuilt from it, so the duplicate branch exists only
+   * in the legacy response and never alongside V2.
+   */
+  private negotiate(request: FastifyRequest, envelope: unknown): unknown {
+    const v1 = envelope as Record<string, unknown>;
+    const wantsV2 = wantsScreenV2(request.headers.accept);
+    const body = wantsV2 ? screenEnvelopeV2From(v1) : v1;
+    const operation = String(v1.schema_version ?? "unknown").replace(/\.v[12]$/, "");
+    // Per named operation, so the label set stays bounded no matter how many
+    // deployments or workspaces exist.
+    this.screenLog.log(JSON.stringify({
+      event: "execution_screen_response",
+      ...screenResponseMetrics(operation, wantsV2 ? "v2" : "v1", body),
+    }));
+    return body;
   }
 
   private async deploymentScreen(
@@ -69,7 +91,7 @@ export class PaperReadController {
     const deploymentId = PaperDeploymentIdSchema.safeParse(rawDeploymentId);
     if (!query.success || !deploymentId.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    return this.paper.workbench(this.principal(request, workspaceId), deploymentId.data, vnm);
+    return this.negotiate(request, await this.paper.workbench(this.principal(request, workspaceId), deploymentId.data, vnm));
   }
 
   private async workspace(request: PaperReadRequest, requested?: string): Promise<string> {

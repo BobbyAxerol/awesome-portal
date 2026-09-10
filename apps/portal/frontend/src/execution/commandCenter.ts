@@ -155,7 +155,9 @@ export function countLabel(counts: Counts): string {
       : `~${observed} seen`;
   }
   // Never 0. "We did not count" is a different claim from "there are none".
-  return "—";
+  // The comment above already says it: "we did not count" is not "there are
+  // none". A dash said neither.
+  return "not counted";
 }
 
 export interface TriageItem {

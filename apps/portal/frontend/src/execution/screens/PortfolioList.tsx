@@ -42,7 +42,19 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
   const clock = useNow();
   const sourceStatus = status !== "ok" && status !== "partial" ? status : !list ? "unavailable" : null;
   const sourceReason = reason ?? (!list ? "No portfolio list was published for this workspace." : undefined);
-  const mute = <span className="exec-af-mute">—</span>;
+  // Two different absences, and a bare dash would have told them apart for
+  // nobody: an owner the source never published, and an allocation set the
+  // source published as empty.
+  const ownerAbsent = (
+    <span className="exec-af-absent" title="The portfolio list does not publish an owner for this portfolio.">
+      not published
+    </span>
+  );
+  const noAllocation = (
+    <span className="exec-af-absent" title="The source published no allocation for this portfolio.">
+      none published
+    </span>
+  );
   const degraded = Object.entries(list?.environmentBranches ?? {})
     .filter(([, branch]) => branch.state === "UNAVAILABLE" || branch.state === "PARTIAL");
   return (
@@ -84,7 +96,7 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
                         ><b>{item.name}</b></a>
                         <div className="exec-af-sub">{item.portfolioId} · base {item.baseCurrency}</div>
                       </td>
-                      <td className="exec-af-dim">{item.owner ?? mute}</td>
+                      <td className="exec-af-dim">{item.owner ?? ownerAbsent}</td>
                       <td><StatusChip label={item.state} tone={item.state === "ACTIVE" ? "good" : "warn"} /></td>
                       <td className="exec-af-dim">{item.environments.map((environment) => environment.toUpperCase()).join(" · ")}</td>
                       <td data-numeric="true">{item.allocationCount}</td>
@@ -94,7 +106,7 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
                           const money = formatExactMoney(entry.value, entry.currency);
                           return <span key={entry.currency} title={money.full}>{money.display}</span>;
                         }).reduce<React.ReactNode[]>((out, node, index) => index === 0 ? [node] : [...out, " · ", node], [])
-                        : mute}</td>
+                        : noAllocation}</td>
                       <td className="exec-af-mute">{utcStamp(item.updatedAt)}{ageState(item.updatedAt, clock) ? <span className="exec-af-dim"> · {ageState(item.updatedAt, clock)!.label} ago</span> : null}</td>
                     </tr>
                   ))}

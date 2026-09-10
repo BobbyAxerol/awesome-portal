@@ -77,3 +77,60 @@ describe("no dash stands in for an unpublished value", () => {
     }
   });
 });
+
+/**
+ * A dash written straight into JSX, or returned from a helper, is the same lie
+ * as `?? "—"` — and neither shape was scanned until the Accounts screen was
+ * caught rendering 86 of them, two per row, under a footnote nobody follows.
+ *
+ * A dash may stay only when it is a mark rather than a value: a separator in a
+ * heading, or a grid glyph whose meaning is in its `title`.
+ */
+const PROSE_SEPARATORS: Readonly<Record<string, string>> = {
+  "screens/GateLiveReview.tsx": "heading separator between the screen name and its subject",
+  "screens/GateR1Review.tsx": "heading separator between the screen name and its subject",
+  "screens/GateR2Review.tsx": "heading separator between the screen name and its subject",
+  "screens/NewApprovalRequest.tsx": "heading separator between the screen name and its subject",
+  "screens/WaiversRegister.tsx": "heading separator between the screen name and its subject",
+  "screens/PaperExitReview.tsx": "separator between the review id and its subject",
+  "idLinks.tsx": "the dash appears inside a comment arguing against using one",
+  "components/PortfolioOverview.tsx": "styles a correlation cell whose dash the heatmap itself produces, with the reason in that cell's own label",
+};
+
+/**
+ * A file allowed more than one line, and why. The default is one: an allowlist
+ * that covers a file is how a real dash hid behind a legitimate one in phase 2.
+ */
+const PROSE_LINE_BUDGET: Readonly<Record<string, number>> = {
+  // Two cells compare against the dash the correlation data itself carries —
+  // the matrix row and the benchmark column. Neither renders one.
+  "components/PortfolioOverview.tsx": 2,
+};
+
+describe("no dash is written straight into JSX either", () => {
+  const root = __dirname;
+  const files = sourceFiles(root);
+
+  it("finds every remaining dash either allowlisted, prose, or carrying a title", () => {
+    const offenders: string[] = [];
+    for (const file of files) {
+      if (file in ALLOWED || file in PROSE_SEPARATORS) continue;
+      const body = readFileSync(join(root, file), "utf8");
+      for (const [index, line] of body.split("\n").entries()) {
+        if (!/"—"|>—</.test(line)) continue;
+        // A glyph keeps its dash when the same element says what it means.
+        if (/title=/.test(line)) continue;
+        offenders.push(`${file}:${index + 1} → ${line.trim().slice(0, 70)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps a prose allowlist to one line each, so a value cannot hide behind a heading", () => {
+    for (const [file, reason] of Object.entries(PROSE_SEPARATORS)) {
+      const body = readFileSync(join(root, file), "utf8");
+      const hits = body.split("\n").filter((line) => /"—"|>—</.test(line)).length;
+      expect(hits, `${file} (${reason})`).toBeLessThanOrEqual(PROSE_LINE_BUDGET[file] ?? 1);
+    }
+  });
+});

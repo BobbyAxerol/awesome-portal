@@ -5490,7 +5490,11 @@
 .exec-af-mark { padding-right: 0 !important; color: var(--accent); }
 .exec-af-sub { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); }
 .exec-af-sub[data-tone="warn"] { color: var(--warn); }
-.exec-af-dim { color: var(--ink-soft); } .exec-af-mute { color: var(--ink-mute); }
+.exec-af-dim { color: var(--ink-soft); }
+/* A stated absence is a word, and a word in a narrow numeric column wraps.
+   Forty-three identical absences wrapping onto two lines each read as
+   forty-three separate events; one line each reads as one column-wide fact. */
+.exec-af-absent { white-space: nowrap; color: var(--ink-mute); font: var(--exec-font-caption); } .exec-af-mute { color: var(--ink-mute); }
 .exec-af-table [data-tone="good"] { color: var(--good); } .exec-af-table [data-tone="bad"] { color: var(--bad); } .exec-af-table [data-tone="warn"] { color: var(--warn); } .exec-af-table [data-tone="mute"] { color: var(--ink-faint); }
 .exec-af-sum [data-tone="bad"] { color: var(--bad); }
 .exec-af-stages { display: inline-flex; flex-wrap: wrap; gap: 4px; }

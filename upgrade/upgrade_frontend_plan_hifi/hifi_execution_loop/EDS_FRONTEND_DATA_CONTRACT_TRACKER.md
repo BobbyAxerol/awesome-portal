@@ -6285,3 +6285,287 @@ Sau khi sửa: **22/22 xanh**.
   thật, nên phải chứng minh nó tồn tại trước.
 - **Ba từ vựng state** cần hợp nhất trước khi Phase 5 viết `SourceGapNarrative`.
 - **Screen BFF chưa khai trần nào** — Phase 1 phải thêm bound trước serialization.
+
+## A40. PHASE 1 (VÒNG 2) ĐÃ LÀM (10-09) — V1→V2, và một cấu hình nginx làm sập dev
+
+Owner giao làm hết Phase 1, đạt exit gate mới tính xong. Tôi bám **A38.5 của
+codex**, không bám bản Phase 1 tôi tự viết ở §A38 — A38.5 thay nó: đây là
+migration V1→V2 có adapter tương thích, **không phải xoá field**.
+
+### A40.1 Kết quả đo — exit gate
+
+| Điều kiện A38.5 | Đo được | |
+| --- | --- | --- |
+| Paper `< 800 KB` identity | **784 162 B** | đạt |
+| Blotter `< 230 KB` identity | **220 385 B** | đạt |
+| gzip được ghi | paper **57 481 B** · blotter **21 557 B** · `Content-Encoding: gzip` | đạt |
+| 0 cặp collection trùng trong V2 | **0** trên cả bốn màn | đạt |
+| V1/V2 semantic parity | khoá top-level, panel keys, data keys, `schema_version` đều khớp bản trước khi sửa | đạt |
+| RPS source-edge không tăng khi refresh | 24 lượt refresh → **31 → 30** vòng/2 phút | đạt |
+| Browser không gọi thẳng Edge | chỉ `http://127.0.0.1:8080`; cả 4 request `/screens/*` mang header V2 | đạt |
+
+Tổng cộng trên dây: **paper 1 549 021 → 57 481 B (26,9×)**, **blotter 434 354 →
+21 557 B (20,2×)**.
+
+Và quan trọng không kém: **màn hình không đổi**. Đo bằng trình duyệt, số ký tự
+nội dung trước/sau: accounts 7798→7798, alphas 13223→13223, sandbox
+11574→11574, live 1282→1282, blotter 4730→4756, paper 11744→11827 (chênh vài
+chục ký tự là do mốc thời gian). **0 route lỗi.**
+
+### A40.2 Thiết kế — vì sao chọn media type chứ không thêm route
+
+A38.5 cho chọn "path hoặc media type được ledger pin". Tôi chọn **media type**
+`application/vnd.portal.execution.screen.v2+json` vì một lý do an ninh cụ thể:
+`@UseGuards(SessionGuard)` nằm ở **cấp controller**. Thêm route mới là thêm một
+đường phải tự chứng minh nó có đủ guard; dùng content negotiation thì V2 đi
+đúng con đường V1 đã đi, không một dòng RBAC nào đổi.
+
+**Chiều của adapter cũng có chủ đích.** Service dựng **V2 làm bản gốc** (không
+trùng lặp), rồi `screenEnvelopeV1From()` dựng lại V1 từ nó. Ngược lại — dựng V1
+rồi cắt thành V2 — sẽ giữ nguyên nhánh trùng trong bộ nhớ và dễ vô tình phát cả
+hai. Cách này đảm bảo đúng câu của A38.5: *"V1 và V2 không cùng serialize hai
+nhánh duplicate trong một response."*
+
+Tái tạo được chính xác vì `wireStageRows(rows)` chính là `wireStageValue` áp lên
+mảng — cùng một phép biến đổi. Khác biệt duy nhất: panel `EMPTY`/`UNAVAILABLE`
+có `data: null`, còn V1 in ra `[]`. Adapter xử lý đúng chỗ đó, và có test khoá
+lại **kể cả thứ tự khoá**.
+
+### A40.3 Bốn envelope đã chuyển, một cái cố ý không đụng
+
+| Service | Màn | Xử lý |
+| --- | --- | --- |
+| `paper-read.service.ts` | paper, workbench, vn-market, blotter | chuyển V2 |
+| `profile-read.service.ts` | sandbox, live | chuyển V2 |
+| `resource-read.service.ts` (2 envelope) | resource 360 + byte-bound shell | chuyển V2 |
+| `profile-read.service.ts` — `accounts/:id` | Account 360 | **không đụng** |
+
+Màn `accounts/:id` không có nhánh `panels`; `data` của nó là nhánh **duy nhất**,
+không trùng cái gì. Cắt nó đi là mất dữ liệu chứ không phải bớt trùng lặp.
+
+Tương tự, envelope shell của `resource-read` có `data` mang
+`profile_coverage` và resource object — **không** phải bản sao của panels. Builder
+nhận ra điều đó: chỉ khoá nào **trùng tên với một panel** mới bị coi là trùng
+lặp; phần còn lại chuyển sang `screen_context` và adapter trả nó về đúng chỗ cũ
+trong `data`. Có test riêng cho trường hợp này.
+
+### A40.4 Nén: khoản lớn nhất, và cái bẫy trong đó
+
+`nginx.conf` ship với `#gzip on;` đã comment, nên toàn bộ 1,5 MB đi trên dây
+nguyên vẹn. Đã bật trong `deploy/nginx/portal.conf`, kèm `gzip_proxied any` —
+thiếu chỉ thị này thì nginx bỏ qua đúng những response lớn đi qua `proxy_pass`,
+tức là đúng thứ ta cần nén.
+
+**Loại `/api/auth/` ra khỏi nén.** Đó là các response duy nhất mang token. Một
+response trộn bí mật với văn bản do kẻ tấn công ảnh hưởng được, lại nén chung,
+chính là hình dạng của BREACH. `gzip_min_length 1024` giữ nốt các body ngắn còn
+lại ở dạng không nén.
+
+### A40.5 Tôi làm sập dev một lần, nói thẳng
+
+Lần deploy đầu, `portal-web` vào vòng lặp restart:
+
+```
+[emerg] could not build test_types_hash, you should increase test_types_hash_bucket_size: 64
+```
+
+Nguyên nhân: tôi đưa MIME type tự đặt (`application/vnd.portal.execution.screen.v2+json`,
+44 ký tự) vào `gzip_types`, vượt kích thước bucket mặc định của bảng băm MIME.
+
+Điều đáng nói: **script deploy vẫn in `image match` cho cả hai container** —
+ảnh đúng, chỉ là tiến trình bên trong chết. Thứ bắt được lỗi là dòng
+`dev web http=000` ở cuối. Nếu tôi chỉ nhìn `image match` rồi báo xong thì đã
+báo cáo một dev đang sập.
+
+Sửa bằng cách bỏ MIME type dài khỏi `gzip_types` — response thật vẫn là
+`application/json` (V2 thương lượng trên `Accept`, không đổi `Content-Type`),
+nên liệt kê nó vốn đã thừa. Deploy lại: `http=200`, healthy.
+
+Ba lỗi biên dịch khác cũng do tôi và đã sửa trước đó: `await` trong hàm không
+`async` (2 route), thiếu ép kiểu `unknown`, và một kiểu sai trong chính test tôi viết.
+
+### A40.6 Metrics theo named operation
+
+`screenResponseMetrics()` phát ra qua log có cấu trúc, nhãn là **tên operation**,
+không bao giờ là id tài nguyên — id thô làm nhãn metric là một lỗ cardinality
+không giới hạn. Đo thật trên dev:
+
+```
+{"event":"execution_screen_response","named_operation":"execution.paper-overview",
+ "contract":"v1","panel_count":6,"row_count":796,"uncompressed_bytes":1549021}
+{"event":"execution_screen_response","named_operation":"execution.full-blotter",
+ "contract":"v2","panel_count":7,"row_count":300,"uncompressed_bytes":220385}
+```
+
+Dòng đầu cho thấy đúng thiết kế: **V1 vẫn 1,5 MB** vì nó là đường tương thích và
+vẫn mang nhánh trùng. Trình duyệt không đi đường đó nữa.
+
+### A40.7 Hai phần của A38.5 tôi **chưa** làm — không giấu
+
+1. **Lazy tab.** A38.5 mục 6 yêu cầu tab nặng fetch khi user mở. Tôi kiểm bằng
+   trình duyệt: bốn màn này **không có tab UI** — thứ selector bắt được là các
+   phần tử `table`, không phải `role="tab"`. Không có tab thì không có gì để
+   lazy, và exit gate "mở các tab lazy" không có đối tượng để chạy. Tôi **không**
+   dựng tab mới chỉ để thoả một dòng gate.
+2. **Include/lazy-operation allowlist do BFF sở hữu.** Chưa làm. Page bound thì
+   đã đúng vị trí sẵn — số dòng bị chặn lúc **fetch relation**, trước khi dựng
+   JSON, nên yêu cầu "áp bound trước serialization" đã thoả bằng cấu trúc hiện
+   có. Nhưng cơ chế allowlist để một panel nặng được tải riêng thì chưa có.
+
+Cả hai đều là **việc frontend/BFF còn lại của A38.5**, và tôi ghi ra đây thay vì
+đánh dấu phase xanh toàn phần. Đề nghị: chúng thuộc về Phase 7 (vòng 2) — chỗ
+đã có sẵn mục "tab nặng fetch lazy" và chính sách cache/SSE — chứ không nên nhét
+vào Phase 1 rồi làm vội.
+
+### A40.8 Còn lại của V1
+
+V1 vẫn sống và vẫn mang nhánh trùng, đúng như A38.5 yêu cầu ("chỉ xoá V1 sau
+evidence rằng không còn consumer có chủ đích"). Bằng chứng cần thu: log
+`execution_screen_response` nay đếm được **từng contract**, nên chỉ cần theo dõi
+`contract:"v1"` về 0 trong một release window là có căn cứ xoá. Đó là việc của
+release sau, không phải của phase này.
+
+## A41. RÀ GAP HAI PHASE ĐÃ LÀM (10-09) — bốn lỗ, và cái lớn nhất nằm trong chính Phase 1
+
+Owner giao: soi kỹ hai phase đã làm, bằng trình duyệt và bằng mắt, đóng bất kỳ
+gap nào. Dưới đây là bốn thứ tìm được. Ba trong bốn là lỗi của chính tôi.
+
+### A41.1 Gap 1 — Phase 1 làm sai chiều, và 31 test backend trượt
+
+A38.5 nói rõ: *"không thay shape V1 in-place"*. Tôi đã làm đúng ngược lại —
+service dựng V2, controller tái tạo V1. Lập luận của tôi (dựng V2 trước thì
+không thể vô tình phát cả hai nhánh) nghe hợp lý, nhưng nó **đổi hợp đồng của
+service**, mà test hợp đồng hiện có chính là consumer của V1:
+
+```
+FAIL test/resource-read.spec.ts
+TypeError: Cannot read properties of undefined (reading 'positions')
+  → expect(value.data.positions.length).toBeLessThan(200);
+Test Files  3 failed | 50 passed
+     Tests  31 failed | 424 passed
+```
+
+Đã đảo lại đúng chiều: **service giữ V1 nguyên vẹn**, `screenEnvelopeV2From()`
+chiếu sang V2 ở controller khi được thương lượng. Ba service về đúng HEAD, không
+lệch một dòng. Suite control-api sau đó: **xanh**, kèm PostgreSQL restore drill.
+
+Bài học ghi lại: exit gate của Phase 1 tôi đo **chỉ trên dây** (byte, gzip,
+parity của response). Nó xanh trong khi 31 test đỏ, vì không có điều kiện nào
+trong gate hỏi "test hiện có còn chạy được không".
+
+### A41.2 Gap 2 — guard chống dấu gạch của tôi có lỗ, và trình duyệt tìm ra
+
+`absentValues.test.ts` chỉ bắt `?? "—"` **dạng chuỗi**. Nó không bắt:
+
+- dấu gạch viết thẳng trong JSX: `<span className="exec-af-mute">—</span>`
+- helper trả về dấu gạch: `return "—"`
+
+Kết quả: 2135 test xanh trong khi màn **Accounts & Bindings hiện 86 ô dấu gạch
+trần** — hai cột `physical equity` và `Σ virtual · headroom`, đủ 43 hàng, không
+`title`, không `aria-label`. Có một câu giải thích ở **footer** bảng, nhưng
+người đọc đi theo hàng chứ không đi theo chú thích cuối bảng.
+
+Guard nay kiểm cả ba dạng, và cho phép giữ dấu gạch **chỉ khi** phần tử mang
+`title` giải thích, hoặc nằm trong allowlist prose có ghi lý do từng file, với
+ngân sách dòng mặc định là 1.
+
+### A41.3 Gap 3 — mười bảy chỗ nói dối, trong đó năm chỗ là helper
+
+Sửa hết, dùng đúng từ vựng file đó vốn đã dùng (`AlphaFleet` dòng 341 đã nói
+"not published" từ trước):
+
+| Chỗ | Trước | Sau |
+| --- | --- | --- |
+| `AccountsBindings` 2 cột × 43 hàng + hàng mở rộng | `—` | `not published` + title N28 |
+| `PortfolioList` owner / allocation | `—` | `not published` / `none published` |
+| `AlphaFleet` alloc, drawdown, owner, P&L ×2, link, balances | `—` | `not published` / `no link` |
+| `FullBlotter` tuổi lệnh | `—` | `age unknown` + title |
+| `CommandCenter` nhãn SLA | `—` | `no SLA state published` |
+| `LiveFullOperations` affected authorities | `—` | `none published` |
+| `ObservedTimelinePanel` resource | `—` | `no resource published` |
+| `PaperWorkbench` tuổi tick | `—` | `not published` |
+| **helper** `chartTooltip.tooltipStamp` | `—` | `not published` |
+| **helper** `time.utcStamp` | `—` | `not published` |
+| **helper** `screenDataContract.formatUtcEpochMs` | `—` | `unreadable instant` |
+| **helper** `commandCenter.countLabel` | `—` | `not counted` |
+| **helper** `CommandCenter.slaLabel` | `—` | `no SLA state published` |
+| `CommandCenter` ô ma trận | `—` trần | `—` **kèm title** (mark trong lưới, không phải giá trị) |
+
+Hai helper đáng nói riêng: `time.ts` đã trả `"not published"` ở nhánh ngay bên
+trên và `"—"` ở nhánh dưới — cùng một sự vắng, hai cách nói. `commandCenter.ts`
+có sẵn dòng bình luận *"Never 0. 'We did not count' is a different claim from
+'there are none'"* rồi vẫn in dấu gạch, thứ không nói được cả hai.
+
+Đo lại bằng trình duyệt: **~106 → 12 dấu gạch**, và cả 12 đều là **dấu câu**
+trong tiêu đề hoặc câu văn ("Order funnel — 7d", "Cumulative return —
+normalized, own currency"). **Không còn dấu gạch nào đứng thay cho một giá trị.**
+
+### A41.4 Gap 4 — ba test đang bảo vệ đúng thứ §3.3 cấm
+
+Tên test viết thẳng ra:
+
+- `time.test.ts` — *"renders missing as em dash, never a fake time"*
+- `commandCenter.test.tsx` — *"renders an unknown count as an em dash, never as zero"*
+- `chartTooltip.test.ts` — `expect(tooltipStamp(null)).toBe("—")`
+
+Chúng bắt đúng nửa vấn đề (không được bịa số 0, không được bịa giờ) rồi chốt
+nửa còn lại vào một dấu gạch — thứ §3.3 cấm. Tôi **lật quyết định đã ghi đó**,
+đổi cả assertion lẫn tên test. Nói rõ ra đây vì đó là đảo một lựa chọn có chủ
+đích của người viết trước, không phải sửa một lỗi cẩu thả.
+
+### A41.5 Tôi tạo ra một lỗi UI rồi tự sửa
+
+Thay `—` bằng chữ làm hai cột số hẹp **xuống dòng ở cả 43 hàng** — bảng cao thêm
+khoảng một phần tư, và 43 sự vắng giống hệt nhau trông như 43 sự kiện khác nhau.
+Nhìn ảnh chụp mới thấy; không con số nào trong suite nói điều đó.
+
+Sửa bằng một class riêng: `white-space: nowrap` và role chữ nhỏ hơn. **Lần đầu
+tôi viết `font-size: 11px` và một guard khác bắt được** —
+`typeRoles.test.ts`: *"has no font-family or font-size declaration anywhere —
+every rule goes through a role"*. Đổi sang `font: var(--exec-font-caption)`.
+
+Phương án khác tôi **không** chọn: đưa câu giải thích lên tiêu đề cột và để ô
+trống. Gọn hơn, nhưng ô trống dễ bị đọc là "quên", và §3.3 thì cấm hẳn dấu gạch
+chứ không cấm chữ. Nếu owner thấy bảng vẫn nặng thì đây là lựa chọn thay thế.
+
+### A41.6 Ledger R2-0 đã cũ sau Phase 1 — đã cập nhật
+
+Phase 1 sinh ra một contract mới, nên ledger chụp trước đó không còn đủ:
+
+- `golden-shape-index.v1.json`: thêm **4 pin V2** (`execution.paper-overview.v2`
+  …), giữ nguyên 6 pin V1 — V1 vẫn được phục vụ và shape của nó không đổi.
+- `execution-screen-contract-ledger.v1.json`: mỗi operation nay có
+  `v2_contract` ghi media type, byte identity và **byte gzip thật trên dây**,
+  cùng `duplicate_collection_pairs: 0`.
+- `performance-baseline.v1.json`: ghi rõ đây là **mốc trước Phase 1**, giữ
+  nguyên làm ảnh chụp "trước".
+
+`capability-inventory` và `panel-state-ledger` **không cần sửa**: thương lượng
+bằng media type nên không thêm route nào, và trạng thái panel không đổi.
+
+### A41.7 Kiểm lại bằng mắt
+
+Chụp và **xem** bảy màn ở 1600×1200. Ghi lại được:
+
+| Màn | Chữ | Dấu `—` | Console error |
+| --- | --- | --- | --- |
+| paper | 11 827 | 4 (đều là tiêu đề panel) | 0 |
+| blotter | 4 756 | 0 | 0 |
+| sandbox | 11 574 | 5 (tiêu đề panel) | 0 |
+| live | 1 282 | 1 (câu văn) | 0 |
+| alphas | 13 295 | **0** | 0 |
+| accounts | 8 830 | 1 (footer) | 0 |
+| portfolio | 5 420 | 2 (tiêu đề) | 0 |
+
+Alpha Fleet nhìn tận mắt thì vốn đã trung thực sẵn: "no position facts",
+"flat", "exact current-source values" — và các số 0 trên đó là **số 0 thật do
+nguồn công bố**, không phải số 0 bịa.
+
+### A41.8 Một lỗi đo của chính tôi, ghi lại để không lặp
+
+Tôi grep tìm tham chiếu `mute` còn sót và **cắt output ở cột 140**. Tham chiếu
+thật nằm ở **cột 300** của một dòng dài, nên mọi lần grep đều báo "sạch" trong
+khi 4 test React đỏ với `ReferenceError: mute is not defined`. Chỉ khi đọc đúng
+`AlphaFleet.tsx:437:300` trong stack trace mới tìm ra.
+
+Bài học: khi đang tìm **sự vắng mặt** của một thứ, cắt cột là tự làm mù mình.

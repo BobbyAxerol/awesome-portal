@@ -29,7 +29,9 @@ export function utcStamp(iso: string | number | null | undefined): string {
     const epoch = readUtcEpochMs(iso);
     return epoch === null ? "not published" : formatUtcEpochMs(epoch);
   }
-  if (!iso) return "—";
+  // The branch above already says "not published" for the same absence;
+  // this one used to say it with a dash.
+  if (!iso) return "not published";
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?::(\d{2}))?(?:\.(\d{1,3})\d*)?(Z)?$/.exec(iso.trim());
   if (!m) return iso;
   return `${m[1]} ${m[2]}:${m[3] ?? "00"}${m[5] ? " UTC" : ""}`;
