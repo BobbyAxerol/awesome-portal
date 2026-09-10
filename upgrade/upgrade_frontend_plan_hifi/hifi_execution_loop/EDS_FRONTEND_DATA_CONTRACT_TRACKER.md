@@ -4692,3 +4692,105 @@ nào" tôi đặt `groupId: "—"`, tức là đúng thứ phase 2 vừa dọn. 
 3. **Phase 5 có được bấm nút mutation trên dev không** — probe sẽ chạy lệnh
    thật lên dữ liệu dev. Nếu owner không muốn, tôi chỉ nghiệm thu phần "mờ kèm
    lý do" và để phần bấm lại chờ.
+
+## A36. REBUILD DEV ĐỂ OWNER XEM, VÀ GOM CODE DIRTY VỀ (10-09)
+
+Owner giao ba việc: rebuild lại dev đúng nhánh/worktree cũ để owner vào xem,
+owner tự kiểm stable, rồi gom mấy chỗ code còn dirty ở nhánh khác về nhà.
+
+### A36.1 Dev đang chạy từ đâu — trả lời thẳng
+
+| Hỏi | Đáp |
+| --- | --- |
+| dev-portal.primusspark.com build từ nhánh nào | `feat/execution-loop-next` |
+| worktree nào | `/home/bobby/portal-integration` |
+| commit nào | `fba9803` (sạch, không dirty) |
+| stack | compose project `portal`, `127.0.0.1:8080` |
+| stable có build lại không | **Không.** Vẫn ảnh GHCR cũ, `revision=4291c5da10b3`, `version=main`, container lên 13 tiếng. Chưa có lệnh thì không đụng. |
+
+Kiểm chứng không bằng niềm tin mà bằng tên file bundle:
+
+- trong container `portal-portal-web-1`: `index-BksXoOBd.js`
+- trang `https://dev-portal.primusspark.com/` trả về: `index-BksXoOBd.js`
+
+Hai cái trùng nhau, nên host ngoài đang phục vụ đúng bản vừa build, không phải
+bản cũ còn trong cache.
+
+### A36.2 Lỗi lần thứ ba: build mới mà container vẫn chạy ảnh cũ
+
+`deploy-int.sh` báo `deploy exit=0`, nhưng đối chiếu ID ảnh thì lệch:
+
+| service | container đang chạy | tag vừa build |
+| --- | --- | --- |
+| `portal-portal-web-1` | `b95ceeafdffe` | `02d6fa191dca` |
+| `portal-control-api-1` | `afcfbe8a21af` | `711f4ae9c611` |
+
+Tức là compose dựng ảnh mới xong rồi để nguyên container cũ chạy tiếp. Đây là
+kiểu hỏng nguy hiểm nhất: **nó trông y hệt lúc thành công**. Đã dính ba lần, và
+mỗi lần đều suýt đi đo nhầm bản cũ rồi báo cáo nhầm (xem §A32.4).
+
+Đã sửa `deploy-int.sh` hai chỗ:
+
+1. thêm `--force-recreate` vào lệnh `compose up`, để không bao giờ còn cửa cho
+   container cũ sống sót qua một lần deploy;
+2. sau khi deploy thì so ID ảnh của container đang chạy với ID của tag, in
+   `image match: <svc>` hoặc `IMAGE MISMATCH: <svc> runs X, tag is Y`.
+
+Sau khi force-recreate: web `02d6fa191dca`, control-api `711f4ae9c611` — khớp
+tag, cả hai `healthy`, trang trả `200`.
+
+Bốn route mới của các phase trước đều còn sống trên bản vừa deploy:
+`cross-equity` 200, `activation/capabilities` 200, `screen-contracts` 200,
+`runtime-manifest` 200. Nghĩa là những gì phase 1→5 làm được vẫn nguyên, không
+bị chuyến merge/rebuild này nuốt mất.
+
+### A36.3 Code dirty ở nhánh khác — đã kiểm từng chỗ
+
+**Chỗ 1 — `portal-dev`: 264 dòng Rust chưa commit của codex (P4-E).**
+Năm file, nền là `dcc4eda` (07-09):
+
+```
+deploy/.env.execution-edge.example                        |   7 +
+deploy/compose.execution-edge.yaml                        |   3 +
+crates/edge-service/src/main.rs                           |  26 +
+crates/edge-service/src/manager_projection_command.rs     | 187 +++-
+crates/manager-projection/src/lib.rs                      |  62 +
+```
+
+Đã lưu bản sao ra `/home/bobby/wip-backup/codex-p4e-wip.2026-09-10.base-dcc4eda.patch`
+(507 dòng, sha256 `93635de0212bb2a30a102a61`). Thư mục đó **nằm ngoài mọi
+worktree git**, nên không lệnh `git clean` nào chạm tới được.
+
+**Cải chính lời tôi nói ở lượt trước.** Tôi có chạy `git apply --check` rồi in
+ra "áp sạch lên dev hiện tại". Câu đó **sai**, do tôi viết lệnh shell hỏng
+(`&& echo … || echo …` nên nhánh thành công in ra dù lệnh trước đã fail). Sự
+thật là patch **không áp được** lên dev hôm nay:
+
+```
+error: patch failed: deploy/compose.execution-edge.yaml:68
+error: patch failed: .../edge-service/src/main.rs:2
+```
+
+`lib.rs` thì vẫn cùng nền, `main.rs` và file compose đã đi xa. Nên **không** thể
+cứ thế đẩy 264 dòng Rust này vào `dev`/`main`: nó là code một tuần tuổi, chưa
+build, chưa test, và rebase nó là việc của codex — người biết P4-E định làm gì.
+Việc của tôi là làm cho nó không mất được, và điều đó đã xong.
+
+**Chỗ 2 — `portal-active-source-adapters`: tracker dirty 3233 dòng.**
+Nghe thì to, nhưng so sha256 thì file dirty đó **giống hệt từng byte** bản đã
+commit trong `portal-integration` (`907914dec0402c0acd867c58`). Nó chỉ là bản
+sao đang chờ, không mang chữ nào riêng. Xoá đi không mất gì.
+
+**Chỗ 3 — `deploy-int.sh`** trước nay chỉ sống trong scratchpad của phiên. Đã
+chép ra `/home/bobby/wip-backup/deploy-int.sh` để bản vá `--force-recreate`
+không mất theo phiên.
+
+### A36.4 Còn chờ owner
+
+1. Owner vào `dev-portal.primusspark.com` xem; và `portal.primusspark.com`
+   (stable) đúng như bảng §A36.1 mô tả — chưa build lại, vẫn `4291c5da10b3`.
+2. Ba refs cũ (`feat/execution-integration`, `feat/execution-data-activation`,
+   `feat/eds-current-bff`) vẫn ở `30e592f`; owner đã nói không xoá nhánh, chỉ
+   xoá worktree không dùng — chờ owner chỉ worktree nào bỏ được.
+3. 264 dòng P4-E: chờ codex rebase lên dev, hoặc owner cho phép tôi commit
+   nguyên trạng lên nhánh WIP tách từ `dcc4eda`.
