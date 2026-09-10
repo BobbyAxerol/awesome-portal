@@ -197,25 +197,6 @@ export interface FleetPanel extends PanelHeader {
   cells: readonly FleetCell[];
 }
 
-export interface Pin {
-  slot: number | null;
-  entityId: string | null;
-  label: string;
-  href: string | null;
-  /** What the pin points at, and whether it can be shown at all. */
-  targetLabel: string | null;
-  targetAvailable: boolean;
-  targetAuthority: Authority | null;
-  targetAsOf: string | null;
-  targetFreshness: FreshnessState | null;
-}
-
-export interface PinnedPanel extends PanelHeader {
-  total: number | null;
-  limit: number | null;
-  items: readonly Pin[];
-}
-
 export interface TodayItem {
   id: string;
   kind: TodayKind | null;
@@ -249,7 +230,6 @@ export interface CommandCenter {
   projectionSequence: number | null;
   needsYou: NeedsYouPanel | null;
   fleet: FleetPanel | null;
-  pinned: PinnedPanel | null;
   today: TodayPanel | null;
   warnings: readonly { code: string; message: string }[];
 }
@@ -283,7 +263,6 @@ export function readCommandCenter(raw: unknown): CommandCenter | null {
 
   const needsRaw = obj(panels?.needs_you);
   const fleetRaw = obj(panels?.fleet_health);
-  const pinnedRaw = obj(panels?.pinned_watchlist);
   const todayRaw = obj(panels?.today);
 
   return {
@@ -326,31 +305,6 @@ export function readCommandCenter(raw: unknown): CommandCenter | null {
                 label: str(o.label) ?? code ?? "",
                 value: int(o.value),
                 href: str(o.href),
-              },
-            ];
-          }),
-        }
-      : null,
-    pinned: pinnedRaw
-      ? {
-          ...readHeader(pinnedRaw),
-          total: int(pinnedRaw.total_count),
-          limit: int(pinnedRaw.limit),
-          items: (Array.isArray(pinnedRaw.items) ? pinnedRaw.items : []).flatMap((p) => {
-            const o = obj(p);
-            if (!o) return [];
-            return [
-              {
-                slot: int(o.slot),
-                entityId: str(o.entity_id),
-                label: str(o.label) ?? str(o.entity_id) ?? "",
-                href: str(o.href),
-                targetLabel: str(o.target_label),
-                // Only the literal "available" is available.
-                targetAvailable: o.target_state === "available",
-                targetAuthority: pick(o.target_authority, AUTHORITIES),
-                targetAsOf: str(o.target_as_of),
-                targetFreshness: pick(o.target_freshness_state, FRESHNESS),
               },
             ];
           }),

@@ -7538,3 +7538,132 @@ so a Paper-exit decision cannot be started here.
 ```
 
 Test: **484** control-api · **2 169** frontend (130 file).
+
+## A53. PHASE 4 (VÒNG 2) — một guard, và một tính năng bảo người dùng bấm cái nút không tồn tại
+
+### A53.1 `command_center_pins` không phải "bảng chết". Nó là một lời hướng dẫn sai.
+
+Spec mô tả nó là bảng chỉ có `INSERT` trong test. Mở màn ra thì nặng hơn thế.
+Panel **Pinned watchlist** trên Command Center in, khi rỗng:
+
+```
+Nothing pinned. Pin from any workbench.
+pin from any workbench header · max 5
+```
+
+Đo lại: **không có nút pin nào** trong toàn bộ `apps/portal/frontend/src`,
+**không có route POST nào** trong `apps/control-api/src`. Màn bảo người đọc đi
+làm một việc không tồn tại. Đó tệ hơn một bảng rỗng — bảng rỗng thì im lặng,
+còn cái này thì chủ động sai.
+
+### A53.2 Gỡ sạch — và bề mặt lớn hơn guide giả định
+
+Guide viết "bỏ đường đọc, bỏ bảng bằng migration, bỏ test". Thực tế chạm thêm:
+`pinned_watchlist` là field **`required`** trong contract v1 đã publish.
+
+| Nơi | Việc |
+| --- | --- |
+| `command-center.repository.ts` | gỡ `pins()`, `PinRow`, lời gọi |
+| `command-center/contracts.ts` | gỡ `CommandCenterPin`, `pinState`, panel |
+| migration `…029` | `DROP TABLE` (kèm Down dựng lại nguyên trạng) |
+| `commandCenter.ts` / `CommandCenter.tsx` | gỡ `Pin`, `PinnedPanel`, `PinnedWatchlist` |
+| `packages/contracts` | schema, OpenAPI, 5 fixture, generated `.d.ts`, snapshot digest |
+| `contractBinding.ts` | gỡ `_PinFields` |
+
+**Một chỗ tôi suýt làm hỏng.** Lần đầu tôi sửa contract bằng `json.dumps`
+round-trip. Nó format lại toàn bộ file: diff phình lên **2 456 dòng thêm /
+450 xoá** cho một thao tác đáng lẽ chỉ xoá vài chục dòng. Hoàn tác, cắt lại ở
+mức text bằng cách đếm ngoặc. Diff cuối: **10 thêm / 128 xoá**.
+
+**Một bước tôi không verify được ở đây, nói rõ chứ không giấu.**
+`packages/contracts/node_modules` không tồn tại trên máy này, nên tôi **không
+chạy được** `verify-generated.sh` để regenerate `execution-command-center.d.ts`
+rồi so. Tôi sửa tay đúng ba khối tương ứng ba khối đã gỡ khỏi OpenAPI (`Pin`,
+`PinnedPanel`, dòng `pinned_watchlist`). `contracts-snapshot.json` thì chạy
+được vì `snapshot.py` là Python thuần. Chỗ cần kiểm chứng là CI.
+
+### A53.3 Guard — và hai lần chính guard mắc đúng lỗi nó sinh ra để bắt
+
+`apps/control-api/test/table-write-path.spec.ts`: đọc mọi `CREATE TABLE` trong
+migration, rồi hỏi `src/` hai câu — có **đọc** không, có **tạo được dòng** không.
+
+**Lỗi thứ nhất.** Tôi quét cả file migration, mà mỗi file có phần
+`-- Down Migration` drop lại chính bảng nó vừa tạo. Kết quả: 73 bảng vừa
+"created" vừa "dropped", còn **22**. Một scan trông như chạy đúng trong khi bỏ
+sót hai phần ba schema. Giờ chỉ đọc phần Up, và có assertion `> 60` để một lần
+thu hẹp âm thầm nữa sẽ đỏ.
+
+**Lỗi thứ hai, đắt hơn.** Luật đầu tiên của tôi là *"đọc trong `src` + `INSERT`
+chỉ ở `test/`"* — chép đúng chữ của spec. Tôi thử bỏ `governance_sandbox_findings`
+khỏi allowlist để chứng minh guard fail được, và **guard vẫn xanh**. Vì bảng đó
+**không test nào ghi cả**: nó được sản phẩm đọc và không ai trên đời ghi. Đó là
+trường hợp **tệ hơn**, không phải trường hợp được tha.
+
+Luật đúng: *đọc trong `src` thì phải có đường tạo dòng trong `src`*. `INSERT`
+trong test chỉ là **bằng chứng ngoại phạm** giải thích vì sao suite xanh — nó
+không phải thứ làm bảng hỏng. Sửa xong, thử lại: guard đỏ và gọi tên đúng bảng.
+
+```
+AssertionError: expected [ 'governance_sandbox_findings' ] to deeply equal []
+```
+
+**Và một phân biệt nữa: `UPDATE` không phải đường ghi.**
+`governance_paper_exit_reviews` có cả `SELECT` lẫn `UPDATE` trong `src` mà vẫn
+bất khả dụng, vì `UPDATE` cần một dòng do thứ khác tạo ra, và không có thứ đó.
+Tính `UPDATE` là "có đường ghi" chính là cách khoảng trống này ẩn được lâu như
+vậy. Guard chỉ đếm `INSERT` / `COPY` / `MERGE`.
+
+### A53.4 Allowlist — 9 dòng, mỗi dòng một lý do
+
+Spec cho phép allowlist "ghi từng bảng một kèm lý do". Đây là 9 bảng còn lại
+sau khi gỡ pins, tất cả đều là **quyết định sản phẩm** chứ không phải lỗi kỹ
+thuật. Guard còn có một test riêng canh chính allowlist: mỗi mục phải **vẫn
+đang hỏng** và **vẫn được đọc** — cái nào đã sửa thì phải rời danh sách, nếu
+không danh sách thôi mô tả và bắt đầu bao che.
+
+Ba bảng `execution_authoritative_event_*` **không** nằm trong allowlist vì
+chúng có `INSERT` thật trong `src`. Khuyết tật của chúng khác: repository được
+`app.module` đăng ký mà **không service nào gọi**. Guard này không bắt lớp đó,
+và tôi ghi ra đây thay vì để nó trông như đã được phủ.
+
+### A53.5 Vì sao tôi **không** "nối" `paper_exit_reviews` như guide đề nghị
+
+Guide đề nghị nối, vì Exit Review là màn có thật đang 404. Tôi không làm, và
+đây là lý do chứ không phải né việc:
+
+`paper-exit.service.ts` đã có sẵn toàn bộ logic quyết định — quorum, evidence
+hash, blocker code, self-promotion, replay theo `request_key`. Thứ thiếu là
+**cửa vào**: một route tạo review, kèm luật ai được tạo, tạo từ đâu, điều kiện
+gì. Đó là **thiết kế một tính năng governance**, không phải nối một dây. Viết
+bừa một `POST /exit-reviews` để bảng hết rỗng sẽ tạo ra đúng thứ phase này đang
+xoá: một đường đi có thật nhưng không ai định nghĩa nó nghĩa là gì.
+
+Nên nó nằm trong allowlist với lý do viết ra, và guard đảm bảo **không có bảng
+thứ mười** lặng lẽ gia nhập.
+
+### A53.6 Kiểm bằng mắt
+
+`/execution` sau deploy — panel còn lại, đọc bằng `aria-label`:
+
+```
+Source health by environment | Needs you now | Fleet health |
+Promotion pipeline | Source health by profile | Redacted command journal | Today
+```
+
+Không còn "Pinned watchlist". Không dòng nào chứa chữ "pin". **0 console
+error.** Layout không thủng lỗ chỗ chỗ panel cũ. Trên dev, bảng đã biến mất
+(`to_regclass IS NULL`), tổng số bảng **74 → 73**.
+
+### A53.7 Đo lại
+
+| | trước | sau |
+| --- | --- | --- |
+| control-api | 484 | **487** (56 file) |
+| frontend vitest | 2 169 | **2 167** (130 file) |
+| Bảng trong schema | 74 | **73** |
+| Bảng đọc-mà-không-tạo-được | 10 | **9**, mỗi cái một dòng lý do, guard canh |
+
+Frontend giảm 2 test: khối `B16` kiểm một tính năng không dùng được đã được
+thay bằng ghi chú vì sao nó biến mất — quy tắc mà B16 sinh ra để bảo vệ (hàng
+có target không đọc được vẫn phải hiện) vẫn còn hiệu lực ở
+`governanceAdditions.test.tsx` cho những panel còn tồn tại.

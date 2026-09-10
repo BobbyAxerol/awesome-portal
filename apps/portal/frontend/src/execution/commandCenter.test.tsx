@@ -58,7 +58,6 @@ describe("B12 — every published panel state maps, and an unknown one is not ok
       for (const [title, panel] of [
         ["Needs you now", parsed.needsYou],
         ["Fleet health", parsed.fleet],
-        ["Pinned watchlist", parsed.pinned],
         ["Today", parsed.today],
       ] as const) {
         if (panel) expect(screen.getByLabelText(title)).toBeTruthy();
@@ -72,9 +71,11 @@ describe("B13 — authority and freshness belong to the panel", () => {
   it("gives each panel its own header rather than one page verdict", () => {
     const s = snapshot("partial");
     render(<CommandCenterScreen onOpen={() => undefined} snapshot={s} />);
-    // Four panel frames, each labelled; the assertion is that they exist
-    // separately, not that they agree.
-    for (const title of ["Needs you now", "Fleet health", "Pinned watchlist", "Today"]) {
+    // Three panel frames, each labelled; the assertion is that they exist
+    // separately, not that they agree. "Pinned watchlist" was a fourth until
+    // PHASE 4 (round 2) removed it: nothing could write a pin, so the panel
+    // asked the reader to use a control that did not exist.
+    for (const title of ["Needs you now", "Fleet health", "Today"]) {
       expect(screen.getByLabelText(title)).toBeTruthy();
     }
   });
@@ -83,7 +84,6 @@ describe("B13 — authority and freshness belong to the panel", () => {
     const s = snapshot("busy");
     expect(s.needsYou?.authority).toBe("DERIVED");
     expect(s.fleet?.authority).toBe("EXECUTION");
-    expect(s.pinned?.authority).toBe("PORTAL");
   });
 });
 
@@ -129,24 +129,21 @@ describe("B15 — the browser is not a second ranking authority", () => {
   });
 });
 
-describe("B16 — a pin whose target cannot be read stays visible", () => {
-  it("shows the pin and says the target is unavailable", () => {
-    const raw = fixture("busy");
-    raw.panels.pinned_watchlist.items[0].target_state = "unavailable";
-    raw.panels.pinned_watchlist.items[0].target_label = null;
-    render(<CommandCenterScreen onOpen={() => undefined} snapshot={readCommandCenter(raw)!} />);
-    const pinned = screen.getByLabelText("Pinned watchlist");
-    expect(pinned.textContent).toContain("target unavailable");
-    // Still listed — not filtered out to keep the panel tidy.
-    expect(pinned.querySelectorAll("li").length).toBeGreaterThan(0);
-  });
-
-  it("treats any target_state other than the literal available as unavailable", () => {
-    const raw = fixture("busy");
-    raw.panels.pinned_watchlist.items[0].target_state = "AVAILABLE";
-    expect(readCommandCenter(raw)?.pinned?.items[0].targetAvailable).toBe(false);
-  });
-});
+/**
+ * PHASE 4 (round 2) · B16 was a test for a feature that could not be used.
+ *
+ * The Pinned watchlist panel told the reader "Pin from any workbench", and
+ * there was no pin control in any workbench, no POST route, and no code that
+ * could write execution_command_center_pins — its only INSERT was in a spec
+ * file. The panel instructed an action that did not exist, and these tests
+ * passed because the fixture supplied the rows the product never could.
+ *
+ * The panel, its read path and its table are gone. What remains of B16 is the
+ * rule that produced it, which still holds elsewhere: a row whose target
+ * cannot be read stays visible and says so, rather than being filtered out to
+ * keep a panel tidy. `governanceAdditions.test.tsx` covers that for the panels
+ * that still exist.
+ */
 
 describe("B17 — no live control while the stream is dark", () => {
   it("says the page does not update itself when stream_available is false", () => {

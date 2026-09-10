@@ -90,15 +90,6 @@ export interface FleetSnapshot {
   deployment_labels: Record<string, string>;
 }
 
-export interface CommandCenterPin {
-  slot: number;
-  entity_type: "DEPLOYMENT";
-  entity_id: string;
-  label: string;
-  href: string;
-  pinned_at: string;
-}
-
 export interface TodayCandidate {
   id: string;
   kind: "REVIEW_DUE" | "CONDITION_EXPIRY" | "VERIFIED_OPERATION" | "JOURNAL_COMMAND";
@@ -115,7 +106,6 @@ export interface CommandCenterInputs {
   readAt: Date;
   triageSources: ExactSourceSlice<TriageCandidate>[];
   fleet: ExactSourceSlice<FleetSnapshot>;
-  pins: CommandCenterPin[];
   todaySources: ExactSourceSlice<TodayCandidate>[];
 }
 
@@ -293,25 +283,6 @@ export function composeCommandCenterSnapshot(input: CommandCenterInputs) {
     ["OPEN_FINDINGS", "Findings", "/execution/operations?filter=findings"],
   ].map(([code, label, href]) => ({ code, label, href, value: null })) as FleetCell[];
 
-  const pins = [...input.pins]
-    .sort((left, right) => left.slot - right.slot)
-    .slice(0, 5)
-    .map((pin) => ({
-      ...pin,
-      target_label: fleetSnapshot?.deployment_labels[pin.entity_id] ?? null,
-      target_state: fleetSnapshot ? "available" as const : "unavailable" as const,
-      target_authority: "EXECUTION" as const,
-      target_as_of: fleetSnapshot ? fleetStatus.as_of : null,
-      target_freshness_state: fleetSnapshot ? fleetStatus.freshness_state : "UNKNOWN" as const,
-    }));
-  const pinState: PanelState = pins.length === 0
-    ? "empty"
-    : fleetSnapshot === null
-      ? "partial"
-      : fleetState === "stale"
-        ? "stale"
-        : "ready";
-
   const todayStatuses = input.todaySources.map((source) => source.status);
   const todayItems = input.todaySources
     .flatMap((source) => source.items)
@@ -371,18 +342,6 @@ export function composeCommandCenterSnapshot(input: CommandCenterInputs) {
         total_deployments: fleetSnapshot?.total_deployments ?? null,
         source: publicSource(fleetStatus),
         cells: fleetCells,
-      },
-      pinned_watchlist: {
-        panel_state: pinState,
-        authority: "PORTAL" as const,
-        as_of: pins.length > 0 ? pins.map((pin) => pin.pinned_at).sort().at(-1) ?? null : null,
-        freshness_state: pins.length > 0 && fleetSnapshot === null
-          ? "UNKNOWN" as const
-          : fleetStatus.freshness_state,
-        exact_total: true,
-        total_count: input.pins.length,
-        limit: 5,
-        items: pins,
       },
       today: {
         panel_state: todayState,

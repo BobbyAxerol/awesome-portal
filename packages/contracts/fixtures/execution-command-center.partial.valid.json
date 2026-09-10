@@ -31,12 +31,6 @@
         { "code": "OPEN_FINDINGS", "label": "Findings", "value": null, "href": "/execution/operations?filter=findings" }
       ]
     },
-    "pinned_watchlist": {
-      "panel_state": "partial", "authority": "PORTAL", "as_of": "2026-08-22T10:00:00.000Z", "freshness_state": "UNKNOWN", "exact_total": true, "total_count": 1, "limit": 5,
-      "items": [
-        { "slot": 1, "entity_type": "DEPLOYMENT", "entity_id": "dep_88", "label": "Carry v3.2", "href": "/deployments/paper/dep_88", "pinned_at": "2026-08-22T10:00:00.000Z", "target_label": null, "target_state": "unavailable", "target_authority": "EXECUTION", "target_as_of": null, "target_freshness_state": "UNKNOWN" }
-      ]
-    },
     "today": {
       "panel_state": "partial", "authority": "DERIVED", "as_of": "2026-08-22T11:59:59.000Z", "freshness_state": "UNKNOWN", "exact_total": false, "total_count": null, "observed_total_count": 1, "returned_count": 1, "limit": 12, "truncated": null,
       "sources": [

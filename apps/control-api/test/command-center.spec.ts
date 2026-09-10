@@ -393,13 +393,6 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
          FROM generate_series(1, 20000) item`,
       [workspaceId, stanId],
     );
-    await ctx.pool.query(
-      `INSERT INTO execution_command_center_pins
-         (workspace_id, user_id, slot, entity_type, entity_id, label, href)
-       VALUES ($1, $2, 1, 'DEPLOYMENT', 'dep_88', 'Carry v3.2', '/deployments/paper/dep_88')`,
-      [workspaceId, bobbyId],
-    );
-
     const startedAt = performance.now();
     const response = await get(`/api/v1/execution/command-center?workspace_id=${workspaceId}`);
     const elapsedMs = performance.now() - startedAt;
@@ -425,10 +418,6 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
           panel_state: "unavailable",
           exact_total: false,
           total_deployments: null,
-        },
-        pinned_watchlist: {
-          panel_state: "partial",
-          total_count: 1,
         },
       },
     });
@@ -526,18 +515,15 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
     expect(JSON.stringify(response)).not.toContain('"source_cursor":"cursor"');
   });
 
-  it("enforces the five-slot, user-scoped watchlist in PostgreSQL", async () => {
-    await expect(ctx.pool.query(
-      `INSERT INTO execution_command_center_pins
-         (workspace_id, user_id, slot, entity_type, entity_id, label, href)
-       VALUES ($1, $2, 6, 'DEPLOYMENT', 'dep_99', 'Too many', '/deployments/paper/dep_99')`,
-      [workspaceId, bobbyId],
-    )).rejects.toThrow(/execution_command_center_pins_slot_check/);
-    await expect(ctx.pool.query(
-      `INSERT INTO execution_command_center_pins
-         (workspace_id, user_id, slot, entity_type, entity_id, label, href)
-       VALUES ($1, $2, 2, 'DEPLOYMENT', 'dep_bad', 'Bad path', 'https://private.invalid')`,
-      [workspaceId, bobbyId],
-    )).rejects.toThrow(/execution_command_center_pins_href_check/);
-  });
+  /*
+   * PHASE 4 (round 2): the five-slot watchlist constraint was the most
+   * thoroughly tested part of a feature nobody could use. These two assertions
+   * proved PostgreSQL would reject a sixth pin and an off-site href — real
+   * constraints, on a table whose only INSERT was this file. No pin control
+   * existed in any workbench, no route wrote a row, and the panel still told
+   * the reader to "pin from any workbench".
+   *
+   * The table, its read path and its panel are removed. `table-write-path`
+   * now fails on any table that reaches this state again.
+   */
 });

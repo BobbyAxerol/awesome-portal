@@ -217,43 +217,6 @@ export const CC_BUSY = {
         }
       ]
     },
-    "pinned_watchlist": {
-      "panel_state": "ready",
-      "authority": "PORTAL",
-      "as_of": "2026-08-22T11:00:00.000Z",
-      "freshness_state": "OK",
-      "exact_total": true,
-      "total_count": 2,
-      "limit": 5,
-      "items": [
-        {
-          "slot": 1,
-          "entity_type": "DEPLOYMENT",
-          "entity_id": "dep_88",
-          "label": "Carry v3.2",
-          "href": "/deployments/paper/dep_88",
-          "pinned_at": "2026-08-22T10:00:00.000Z",
-          "target_label": "Carry v3.2",
-          "target_state": "available",
-          "target_authority": "EXECUTION",
-          "target_as_of": "2026-08-22T11:59:59.000Z",
-          "target_freshness_state": "OK"
-        },
-        {
-          "slot": 2,
-          "entity_type": "DEPLOYMENT",
-          "entity_id": "dep_74",
-          "label": "Basis v2.1",
-          "href": "/deployments/sandbox/dep_74",
-          "pinned_at": "2026-08-22T11:00:00.000Z",
-          "target_label": "Basis v2.1",
-          "target_state": "available",
-          "target_authority": "EXECUTION",
-          "target_as_of": "2026-08-22T11:59:59.000Z",
-          "target_freshness_state": "OK"
-        }
-      ]
-    },
     "today": {
       "panel_state": "ready",
       "authority": "DERIVED",
@@ -493,16 +456,6 @@ export const CC_EMPTY = {
         }
       ]
     },
-    "pinned_watchlist": {
-      "panel_state": "empty",
-      "authority": "PORTAL",
-      "as_of": null,
-      "freshness_state": "OK",
-      "exact_total": true,
-      "total_count": 0,
-      "limit": 5,
-      "items": []
-    },
     "today": {
       "panel_state": "empty",
       "authority": "DERIVED",
@@ -729,30 +682,6 @@ export const CC_PARTIAL = {
           "label": "Findings",
           "value": null,
           "href": "/execution/operations?filter=findings"
-        }
-      ]
-    },
-    "pinned_watchlist": {
-      "panel_state": "partial",
-      "authority": "PORTAL",
-      "as_of": "2026-08-22T10:00:00.000Z",
-      "freshness_state": "UNKNOWN",
-      "exact_total": true,
-      "total_count": 1,
-      "limit": 5,
-      "items": [
-        {
-          "slot": 1,
-          "entity_type": "DEPLOYMENT",
-          "entity_id": "dep_88",
-          "label": "Carry v3.2",
-          "href": "/deployments/paper/dep_88",
-          "pinned_at": "2026-08-22T10:00:00.000Z",
-          "target_label": null,
-          "target_state": "unavailable",
-          "target_authority": "EXECUTION",
-          "target_as_of": null,
-          "target_freshness_state": "UNKNOWN"
         }
       ]
     },
@@ -1000,30 +929,6 @@ export const CC_STALE = {
         }
       ]
     },
-    "pinned_watchlist": {
-      "panel_state": "stale",
-      "authority": "PORTAL",
-      "as_of": "2026-08-22T10:00:00.000Z",
-      "freshness_state": "STALE",
-      "exact_total": true,
-      "total_count": 1,
-      "limit": 5,
-      "items": [
-        {
-          "slot": 1,
-          "entity_type": "DEPLOYMENT",
-          "entity_id": "dep_88",
-          "label": "Carry v3.2",
-          "href": "/deployments/paper/dep_88",
-          "pinned_at": "2026-08-22T10:00:00.000Z",
-          "target_label": "Carry v3.2",
-          "target_state": "available",
-          "target_authority": "EXECUTION",
-          "target_as_of": "2026-08-22T11:45:00.000Z",
-          "target_freshness_state": "STALE"
-        }
-      ]
-    },
     "today": {
       "panel_state": "stale",
       "authority": "DERIVED",
@@ -1244,16 +1149,6 @@ export const CC_UNAVAILABLE = {
           "href": "/execution/operations?filter=findings"
         }
       ]
-    },
-    "pinned_watchlist": {
-      "panel_state": "empty",
-      "authority": "PORTAL",
-      "as_of": null,
-      "freshness_state": "UNKNOWN",
-      "exact_total": true,
-      "total_count": 0,
-      "limit": 5,
-      "items": []
     },
     "today": {
       "panel_state": "unavailable",

@@ -14,7 +14,6 @@ import {
   type CommandCenter as CommandCenterSnapshot,
   type FleetPanel,
   type NeedsYouPanel,
-  type PinnedPanel,
   type TodayPanel,
   type TriageItem,
 } from "../commandCenter";
@@ -199,57 +198,6 @@ export function FleetHealth({ panel, demo, demoTick = 0 }: { panel: FleetPanel; 
             );
           })}
         </div>
-      )}
-    </Panel>
-  );
-}
-
-export function PinnedWatchlist({ panel, demo, demoTick = 0 }: { panel: PinnedPanel; demo?: CcDemo | null; demoTick?: number }) {
-  const smoke = demo ?? null;
-  const tick = demoTick;
-  const nudge = (figure: string): string => {
-    const m = /^([+−-])(\d+)$/.exec(figure);
-    if (!m) return figure;
-    const base = Number(m[2]) + Math.round(jitter(tick, 5) * 2);
-    return `${base >= 0 ? "+" : "−"}${Math.abs(base)}`;
-  };
-  return (
-    <Panel label="Pinned watchlist" title="Pinned — your watchlist" authority={panel.authority} freshness={panel.freshness} meta={panel.limit != null ? `pin from any workbench header · max ${panel.limit}` : undefined} footer={<>user-owned order · a pin never mutes alerts{smoke ? <span className="exec-cc-smoke"> · smoke stage/status</span> : null}</>}>
-      {panel.state !== "ok" ? (
-        <PanelState status={panel.state} />
-      ) : panel.items.length === 0 ? (
-        <p className="exec-cc-quiet">Nothing pinned. Pin from any workbench.</p>
-      ) : (
-        <ul className="exec-cc-pins">
-          {panel.items.map((pin) => (
-            <li className="exec-cc-pin" key={pin.entityId ?? pin.slot} data-target-state={pin.targetAvailable ? "available" : "unavailable"}>
-              {smoke?.pins[pin.label] ? <span className="exec-cc-stagechip" data-stage={smoke.pins[pin.label].stage}>{smoke.pins[pin.label].stage === "CANARY" ? "⛨ " : ""}{smoke.pins[pin.label].stage}</span> : null}
-              <span className="exec-cc-pinlabel">
-                {pin.label}
-                {smoke?.pins[pin.label] ? <span className="exec-cc-pinmeta"> · {smoke.pins[pin.label].venue} · {smoke.pins[pin.label].deploymentHref ? <a href={smoke.pins[pin.label].deploymentHref}>{smoke.pins[pin.label].deploymentId}</a> : smoke.pins[pin.label].deploymentId}</span> : null}
-              </span>
-              <span className="exec-cc-spacer" />
-              {pin.targetAvailable ? (
-                <>
-                  {smoke?.pins[pin.label] ? (
-                    <>
-                      <span className="exec-cc-pinfigure" data-tone={smoke.pins[pin.label].figureTone} data-tick={tick % 2 ? "b" : "a"}>{nudge(smoke.pins[pin.label].figure)}</span>
-                      <span className="exec-cc-status" data-status={smoke.pins[pin.label].status}>{smoke.pins[pin.label].status}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="exec-cc-pintarget">{pin.targetLabel ?? "target not published"}</span>
-                      {pin.targetAuthority ? <AuthorityWord authority={pin.targetAuthority} /> : null}
-                    </>
-                  )}
-                  {pin.targetFreshness ? <FreshnessIndicator state={pin.targetFreshness} /> : null}
-                </>
-              ) : (
-                <span className="exec-cc-pinunavailable">target unavailable from current sources</span>
-              )}
-            </li>
-          ))}
-        </ul>
       )}
     </Panel>
   );
@@ -456,7 +404,6 @@ export function CommandCenterScreen({ snapshot, onOpen, live, demo, demoTick = 0
           {snapshot.needsYou ? <NeedsYou panel={snapshot.needsYou} onOpen={onOpen} readAt={snapshot.readAt} demoElapsed={smoke ? clock : elapsed} /> : null}
           <div className="exec-cc-twoup">
             {snapshot.fleet ? <FleetHealth panel={snapshot.fleet} demo={demo} demoTick={demoTick} /> : null}
-            {snapshot.pinned ? <PinnedWatchlist panel={snapshot.pinned} demo={demo} demoTick={demoTick} /> : null}
           </div>
           {smoke ? <PromotionPipeline pipeline={smoke.pipeline} warning={smoke.warning} /> : pipeline ? <PromotionPipeline pipeline={pipeline} /> : null}
           {evidence}

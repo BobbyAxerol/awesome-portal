@@ -5,7 +5,6 @@ import { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import {
   CommandCenterInputs,
-  CommandCenterPin,
   ExactSourceSlice,
   FleetSnapshot,
   SourceStatus,
@@ -33,15 +32,6 @@ interface TodayRow {
   href: string;
   updated_at: Date;
   total_count: string;
-}
-
-interface PinRow {
-  slot: number;
-  entity_type: "DEPLOYMENT";
-  entity_id: string;
-  label: string;
-  href: string;
-  created_at: Date;
 }
 
 interface IncidentTriageRow {
@@ -128,7 +118,6 @@ export class CommandCenterRepository {
       await client.query("SET LOCAL idle_in_transaction_session_timeout = '2000ms'");
       const governance = await this.governanceTriage(client, workspaceId, actor, readAt);
       const today = await this.governanceToday(client, workspaceId, readAt);
-      const pins = await this.pins(client, workspaceId, actor.userId);
       const incidents = await this.incidentTriage(client, workspaceId, readAt);
       const operations = await this.operationTriage(client, workspaceId, readAt);
       const verifiedOperations = await this.verifiedOperationsToday(client, workspaceId, readAt);
@@ -150,7 +139,6 @@ export class CommandCenterRepository {
           reconciliation,
         ],
         fleet,
-        pins,
         todaySources: [
           today,
           verifiedOperations,
@@ -608,29 +596,6 @@ export class CommandCenterRepository {
         href: row.href,
       })),
     };
-  }
-
-  private async pins(
-    client: PoolClient,
-    workspaceId: string,
-    actorId: string,
-  ): Promise<CommandCenterPin[]> {
-    const result = await client.query<PinRow>(
-      `SELECT slot, entity_type, entity_id, label, href, created_at
-         FROM execution_command_center_pins
-        WHERE workspace_id = $1 AND user_id = $2
-        ORDER BY slot
-        LIMIT 5`,
-      [workspaceId, actorId],
-    );
-    return result.rows.map((row) => ({
-      slot: row.slot,
-      entity_type: row.entity_type,
-      entity_id: row.entity_id,
-      label: row.label,
-      href: row.href,
-      pinned_at: row.created_at.toISOString(),
-    }));
   }
 }
 

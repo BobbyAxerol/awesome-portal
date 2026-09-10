@@ -43,13 +43,6 @@
         { "code": "OPEN_FINDINGS", "label": "Findings", "value": 3, "href": "/execution/operations?filter=findings" }
       ]
     },
-    "pinned_watchlist": {
-      "panel_state": "ready", "authority": "PORTAL", "as_of": "2026-08-22T11:00:00.000Z", "freshness_state": "OK", "exact_total": true, "total_count": 2, "limit": 5,
-      "items": [
-        { "slot": 1, "entity_type": "DEPLOYMENT", "entity_id": "dep_88", "label": "Carry v3.2", "href": "/deployments/paper/dep_88", "pinned_at": "2026-08-22T10:00:00.000Z", "target_label": "Carry v3.2", "target_state": "available", "target_authority": "EXECUTION", "target_as_of": "2026-08-22T11:59:59.000Z", "target_freshness_state": "OK" },
-        { "slot": 2, "entity_type": "DEPLOYMENT", "entity_id": "dep_74", "label": "Basis v2.1", "href": "/deployments/sandbox/dep_74", "pinned_at": "2026-08-22T11:00:00.000Z", "target_label": "Basis v2.1", "target_state": "available", "target_authority": "EXECUTION", "target_as_of": "2026-08-22T11:59:59.000Z", "target_freshness_state": "OK" }
-      ]
-    },
     "today": {
       "panel_state": "ready", "authority": "DERIVED", "as_of": "2026-08-22T11:59:59.000Z", "freshness_state": "OK", "exact_total": true, "total_count": 3, "observed_total_count": 3, "returned_count": 3, "limit": 12, "truncated": false,
       "sources": [
