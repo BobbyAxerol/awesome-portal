@@ -3842,6 +3842,93 @@ lấy bản của main rồi chạy lại `repin.py`.
 dev (sự cố ledger migration, §A2x). Việc này cần owner gật, và tôi làm từng
 bước có kiểm chứng.
 
+## A34. RÀ TOÀN BỘ NHÁNH LOCAL ↔ REMOTE TRƯỚC KHI QUYẾT MERGE (10-09, owner yêu cầu)
+
+Owner yêu cầu rà trạng thái repo để **quyết định merge/pull cho chính xác và
+an toàn**. Đây là số đo, không phải cảm giác.
+
+### A34.1 Bức tranh nhánh
+
+| Đối tượng | Head | Quan hệ |
+|---|---|---|
+| `origin/main` | `4291c5d` | **đi trước `origin/dev` 11 commit**, không thiếu gì của dev |
+| `origin/dev` | `c0f6220` | — |
+| Nhánh tôi (`feat/execution-integration`) | `852cfab` | **+60 / −16** so với main · **+60 / −5** so với dev |
+
+Ba ref tôi đẩy (`feat/execution-integration`, `feat/execution-data-activation`,
+`feat/eds-current-bff`) trên remote **đều là `852cfab`** — cùng một commit.
+
+### A34.2 16 commit tôi còn thiếu, chia đúng loại
+
+| Loại | Số | Gồm |
+|---|---|---|
+| **Chạm code chạy** (`apps/`) | **3** | `617bcba` (**Fix C** — completeness thôi kéo panel xuống PARTIAL) · `d832bd3` · `67ba5e8` |
+| Deploy/release (`scripts/`, `deploy/`) | 12 | mạch stable takeover của codex, gồm `4291c5d` từ chối keyring sai định dạng |
+| Tài liệu | 1 | `876e34f` |
+
+### A34.3 Merge sẽ mang vào gì — và **vì sao lần này khác lần làm sập dev**
+
+Đo bằng `git diff HEAD...origin/main` (three-dot, chỉ thay đổi của main từ điểm
+rẽ — **không** phải hai chiều, hai chiều sẽ đếm cả việc xoá 60 commit của tôi
+và đọc ra "12 417 deletions" hoàn toàn sai):
+
+| Phạm vi | Thay đổi |
+|---|---|
+| Tổng | **23 file · +1 806 / −105** |
+| `apps/` (code chạy) | **4 file · +112 / −4** — worker, composer, và test của chúng |
+| `scripts/` | `prepare-stable-release-takeover.py` (+732) và test của nó |
+| `scripts/verify-workspace.sh` | **+26** — gate pre-commit của tôi sẽ chạy thêm một test python và một lượt `docker compose config` cho stable runtime |
+
+**Rủi ro thật, kiểm riêng:**
+
+| Câu hỏi | Trả lời đo được |
+|---|---|
+| Có đụng migration không? (nguyên nhân sập dev lần trước) | **KHÔNG** — `git log origin/main ^HEAD -- apps/control-api/migrations/** src/cli/migrate.ts` **rỗng** |
+| Có đụng compose/deploy của **dev** không? | **KHÔNG** — hai commit deploy chỉ chạm `compose.production.*` của stable host |
+| Xung đột | **1** — file pin `eds12-release-qualification-v1/MANIFEST.sha256`, hai bên cùng re-pin `qualification.v1.json`. `apps/` **sạch tuyệt đối** |
+
+### A34.4 Hai thứ cần biết trước khi thao tác git
+
+1. **Con trỏ local của hai nhánh tôi đẩy đang cũ.**
+   `feat/execution-data-activation` local = `dcc4eda`, `feat/eds-current-bff`
+   local = `5e00251`, trong khi remote của cả hai là `852cfab`. Cả hai commit
+   cũ **đều là tổ tiên** của `852cfab`, nên không mất gì — nhưng ai mở hai
+   worktree đó sẽ thấy **code cũ**, và tracker ở `portal-dev` là bản 1 249
+   dòng chứ không phải bản sống 4 371 dòng.
+
+2. **`portal-dev` đang giữ 264 dòng Rust chưa commit của codex.**
+   `manager_projection_command.rs`, `manager-projection/lib.rs`,
+   `compose.execution-edge.yaml` — "P4-E ingestion-class ladder (owner-approved
+   groundwork 2026-09-03)", sửa lần cuối **03-09**, tức đã nằm đó **7 ngày**.
+   Một lệnh `git checkout` sai chỗ trong worktree đó là mất. Tôi **không đụng**;
+   ghi lại để owner biết nó tồn tại.
+
+Ngoài ra `/home/bobby/portal` có 4 file untracked (artifact build, một doc) và
+`portal-active-source-adapters` có đúng một file sửa — **bản tracker tôi đồng
+bộ cho owner đọc**, đúng như chủ ý.
+
+### A34.5 Kết luận và cách làm an toàn
+
+**Merge `origin/main` vào nhánh này là an toàn**, và khác lần làm sập dev ở
+điểm quyết định: **lần đó merge mang theo thay đổi ledger migration; lần này
+không đụng một dòng migration nào.** Phần code chạy chỉ 4 file, đều là backend
+của codex, và một trong số đó (**Fix C**) là thứ tôi *cần* để số `ready`/
+`partial` trên màn phản ánh đúng.
+
+Nếu owner gật, tôi làm **từng bước có kiểm chứng**, dừng ngay khi một bước sai:
+
+1. Merge `origin/main`, giải xung đột pin bằng cách lấy bản của main rồi chạy
+   lại `scratchpad/repin.py`.
+2. `tsc` + toàn bộ vitest + `npm run build` control-api.
+3. Deploy dev, **đối chiếu thời điểm build ảnh với thời điểm sửa file** (bài
+   học §A32.4: deploy hỏng mà container cũ vẫn xanh).
+4. Kiểm tra migration của dev **trước và sau** bằng `pgmigrations` — lần trước
+   hỏng ở đúng chỗ này.
+5. Quét lại 25 màn: **Fix C sẽ làm nhiều panel đổi `partial` → `ready`**; phải
+   xem từng cái đổi có **đúng** không, vì một panel nói `ready` sai còn tệ hơn
+   nói `partial` thừa.
+6. Commit, và ghi số trước/sau vào đây.
+
 ## A3. Luật vận hành kế hoạch này
 
 1. Mỗi phiếu chấm trong ≤1 ngày từ lúc codex giao; trượt → DR mới + codex sửa

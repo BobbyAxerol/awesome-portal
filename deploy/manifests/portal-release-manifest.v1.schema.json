@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "release_id", "source_commit", "source_ref", "image_tag",
-    "delivery_profile", "created_at", "authority", "services", "profile_bindings",
+    "delivery_profile", "created_at", "authority", "services", "profile_bindings", "deployment_compose_bundle",
     "compatibility_matrix", "migration_chain", "candidate_evidence", "rollback"
   ],
   "properties": {
@@ -63,6 +63,7 @@
         }
       }
     },
+    "deployment_compose_bundle": {"$ref": "#/$defs/fileDigest"},
     "compatibility_matrix": {"$ref": "#/$defs/fileDigest"},
     "migration_chain": {
       "type": "object",

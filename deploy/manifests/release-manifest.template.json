@@ -24,9 +24,10 @@
     {"service_id": "source-proxy", "cell": "AWS_HK_EXECUTION", "image": "ghcr.io/example/portal-source-proxy@sha256:0000000000000000000000000000000000000000000000000000000000000000", "image_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source_enabled": false, "command_enabled": false}
   ],
   "profile_bindings": [
-    {"profile_id": "research_sgp_stable", "compose_file": "deploy/compose.production.yaml", "compose_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "project_name": "portal-stable", "database_namespace": "portal-stable_portal-postgres-data"},
+    {"profile_id": "research_sgp_stable", "compose_file": "deploy/compose.production.yaml", "compose_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "project_name": "portal-stable-v1-0-1", "database_namespace": "portal-stable-v1-0-1_portal-postgres-data"},
     {"profile_id": "execution_aws_hk_dark", "compose_file": "deploy/compose.execution-edge.yaml", "compose_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "project_name": "portal-execution-edge", "database_namespace": "portal-execution-projection-d4"}
   ],
+  "deployment_compose_bundle": {"file": "deployment-compose-bundle.json", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
   "compatibility_matrix": {"file": "compatibility-matrix.json", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},
   "migration_chain": {"directory": "apps/control-api/migrations", "file_count": 0, "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "policy": "FORWARD_ONLY_WITH_PROVEN_RESTORE_AND_FORWARD_FIX"},
   "candidate_evidence": {"file": "release-candidate-evidence.json", "sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"},

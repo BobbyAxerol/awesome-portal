@@ -32,6 +32,23 @@ SERVICES = {
     "execution-edge": "AWS_HK_EXECUTION",
     "source-proxy": "AWS_HK_EXECUTION",
 }
+DEPLOYMENT_COMPOSE_FILES = {
+    # The exact stable graph currently running in SGP.  The first file owns
+    # production credentials and the later files retain durable companions and
+    # the already-authorized read-only execution overlays.  This is a release
+    # binding, not an activation grant: command relay remains hard-disabled.
+    "research_sgp_stable": (
+        "deploy/compose.production.yaml",
+        "deploy/compose.production.stable-runtime.yaml",
+        "deploy/compose.execution-current-source.yaml",
+        "deploy/compose.execution-local-projection.yaml",
+        "deploy/compose.execution-manager-analytics.yaml",
+        "deploy/compose.execution-manager-realtime.yaml",
+    ),
+    "execution_aws_hk_dark": (
+        "deploy/compose.execution-edge.yaml",
+    ),
+}
 GATES = {
     "contracts", "control_api", "research_backend", "planning_backend",
     "frontend", "migration_restore", "channel_isolation", "rollback_forward_fix",
@@ -175,7 +192,7 @@ def validate_profiles(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
         profiles[identifier] = row
     research = profiles["research_sgp_stable"]
     execution = profiles["execution_aws_hk_dark"]
-    if research["source_branch"] != "main" or research["project_name"] != "portal-stable" or research["loopback_port"] != 18081 or research["public_origin"] != "https://portal.primusspark.com":
+    if research["source_branch"] != "main" or research["project_name"] != "portal-stable-v1-0-1" or research["loopback_port"] != 18081 or research["public_origin"] != "https://portal.primusspark.com":
         raise ReleaseError("stable SGP profile identity drifted")
     if execution["source_branch"] != "IMAGE_ONLY" or execution["project_name"] != "portal-execution-edge" or execution["loopback_port"] is not None or execution["public_origin"] is not None:
         raise ReleaseError("AWS-HK profile is not image-only/private")
@@ -191,7 +208,7 @@ def validate_profiles(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
         "PORTAL_IMAGE_TAG": "dev", "PORTAL_PUBLIC_ORIGIN": "https://dev-portal.primusspark.com",
     }
     expected_stable = {
-        "PORTAL_STACK_NAME": "portal-stable", "PORTAL_HTTP_PORT": "18081",
+        "PORTAL_STACK_NAME": "portal-stable-v1-0-1", "PORTAL_HTTP_PORT": "18081",
         "PORTAL_PUBLIC_ORIGIN": "https://portal.primusspark.com",
     }
     if any(dev.get(key) != value for key, value in expected_dev.items()):
@@ -203,6 +220,35 @@ def validate_profiles(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
     if dev["PORTAL_STACK_NAME"] == stable["PORTAL_STACK_NAME"] or dev["PORTAL_HTTP_PORT"] == stable["PORTAL_HTTP_PORT"] or dev["PORTAL_PUBLIC_ORIGIN"] == stable["PORTAL_PUBLIC_ORIGIN"]:
         raise ReleaseError("development and stable channels are not isolated")
     return profiles
+
+
+def deployment_compose_bundle() -> dict[str, Any]:
+    profiles = []
+    for profile_id in ("research_sgp_stable", "execution_aws_hk_dark"):
+        files = DEPLOYMENT_COMPOSE_FILES[profile_id]
+        rows = []
+        for relative in files:
+            path = ROOT / relative
+            if not path.is_file() or path.is_symlink():
+                raise ReleaseError(f"deployment Compose authority is missing: {relative}")
+            rows.append({"file": relative, "sha256": digest(path)})
+        profiles.append({"profile_id": profile_id, "files": rows})
+    return {
+        "schema_version": "portal.deployment-compose-bundle.v1",
+        "profiles": profiles,
+    }
+
+
+def validate_deployment_compose_bundle(payload: dict[str, Any]) -> None:
+    exact(payload, {"schema_version", "profiles"}, "deployment Compose bundle")
+    if payload["schema_version"] != "portal.deployment-compose-bundle.v1":
+        raise ReleaseError("deployment Compose bundle revision mismatch")
+    rows = payload["profiles"]
+    if not isinstance(rows, list) or len(rows) != len(DEPLOYMENT_COMPOSE_FILES):
+        raise ReleaseError("deployment Compose bundle profile coverage is incomplete")
+    expected = deployment_compose_bundle()["profiles"]
+    if rows != expected:
+        raise ReleaseError("deployment Compose bundle digest or ordering drifted")
 
 
 def validate_compatibility(payload: dict[str, Any]) -> None:
@@ -294,7 +340,7 @@ def validate_evidence(pack: pathlib.Path, payload: dict[str, Any], mode: str, so
 
 
 def validate_manifest(pack: pathlib.Path, payload: dict[str, Any], mode: str) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
-    required = {"schema_version", "release_id", "source_commit", "source_ref", "image_tag", "delivery_profile", "created_at", "authority", "services", "profile_bindings", "compatibility_matrix", "migration_chain", "candidate_evidence", "rollback"}
+    required = {"schema_version", "release_id", "source_commit", "source_ref", "image_tag", "delivery_profile", "created_at", "authority", "services", "profile_bindings", "deployment_compose_bundle", "compatibility_matrix", "migration_chain", "candidate_evidence", "rollback"}
     exact(payload, required, "release manifest")
     if payload["schema_version"] != "portal.release-manifest.v1" or payload["delivery_profile"] != "source-dark" or payload["authority"] != AUTHORITY:
         raise ReleaseError("release manifest authority widened or identity drifted")
@@ -337,6 +383,20 @@ def validate_manifest(pack: pathlib.Path, payload: dict[str, Any], mode: str) ->
                 raise ReleaseError("template compose digest became authoritative")
         elif binding["compose_sha256"] != actual:
             raise ReleaseError("release compose digest mismatch")
+
+    bundle_ref = payload["deployment_compose_bundle"]
+    exact(bundle_ref, {"file", "sha256"}, "deployment Compose bundle reference")
+    if bundle_ref["file"] != "deployment-compose-bundle.json":
+        raise ReleaseError("deployment Compose bundle reference path drifted")
+    if mode == "template":
+        if bundle_ref["sha256"] != ZERO_DIGEST:
+            raise ReleaseError("template deployment Compose bundle became authoritative")
+    else:
+        bundle_path = safe_pack_path(pack, bundle_ref["file"])
+        bundle = read_json(bundle_path)
+        if digest(bundle_path) != bundle_ref["sha256"]:
+            raise ReleaseError("deployment Compose bundle digest mismatch")
+        validate_deployment_compose_bundle(bundle)
 
     matrix_ref = payload["compatibility_matrix"]
     exact(matrix_ref, {"file", "sha256"}, "compatibility reference")
@@ -460,6 +520,8 @@ def generate(args: argparse.Namespace) -> dict[str, Any]:
 
     shutil.copyfile(MANIFEST_DIR / "compatibility-matrix.source-dark.json", output / "compatibility-matrix.json")
     shutil.copyfile(MANIFEST_DIR / "deployment-profiles.source-dark.json", output / "deployment-profiles.json")
+    bundle_path = output / "deployment-compose-bundle.json"
+    write_json(bundle_path, deployment_compose_bundle())
     evidence_dir = output / "evidence"
     evidence_dir.mkdir()
     image_rows = []
@@ -523,6 +585,7 @@ def generate(args: argparse.Namespace) -> dict[str, Any]:
         "image_tag": f"sha-{args.source_commit}", "delivery_profile": "source-dark",
         "created_at": dt.datetime.now(dt.timezone.utc).isoformat().replace("+00:00", "Z"),
         "authority": AUTHORITY, "services": service_rows, "profile_bindings": bindings,
+        "deployment_compose_bundle": {"file": bundle_path.name, "sha256": digest(bundle_path)},
         "compatibility_matrix": {"file": "compatibility-matrix.json", "sha256": digest(output / "compatibility-matrix.json")},
         "migration_chain": {"directory": "apps/control-api/migrations", "file_count": count, "sha256": chain, "policy": "FORWARD_ONLY_WITH_PROVEN_RESTORE_AND_FORWARD_FIX"},
         "candidate_evidence": {"file": "release-candidate-evidence.json", "sha256": digest(evidence_path)},

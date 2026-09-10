@@ -56,8 +56,13 @@ export class ProfileScreenSource {
     const capabilityStates = keys.map((key) => this.capability(key));
     const unavailable = !this.connected || capabilityStates.every((item) => item.state === "UNAVAILABLE");
     const rows = keys.reduce((count, key) => count + this.rows(key).length, 0);
-    const partial = capabilityStates.some((item) => item.state === "PARTIAL" || item.state === "UNAVAILABLE") ||
-      this.completeness === "PARTIAL";
+    // Profile completeness is an envelope-level signal: an unrelated source
+    // gap (for example Sandbox broker-account sync) must not downgrade a
+    // panel whose own named capability is AVAILABLE/EMPTY.  The relation
+    // states passed to this panel are the authority for its rendering state;
+    // the envelope still preserves PARTIAL for callers that need the overall
+    // profile qualification decision.
+    const partial = capabilityStates.some((item) => item.state === "PARTIAL" || item.state === "UNAVAILABLE");
     const panelState = suppress ? "suppressed" : unavailable ? "unavailable"
       : this.freshness === "STALE" ? "stale" : rows === 0 ? "empty" : partial ? "partial" : "ready";
     const warningCodes = capabilityStates.flatMap((item) => item.reasonCode ? [item.reasonCode] : []);

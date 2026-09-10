@@ -1,0 +1,104 @@
+# Stable SGP takeover overlay.
+#
+# `compose.production.yaml` owns the image-only, credentialed production core.
+# This overlay retains the durable companion services and secret mount topology
+# of the established stable stack.  It is always rendered with the production
+# Compose bundle, never as a standalone stack.  Current-source/read/realtime
+# settings remain in their own ordered execution overlays.
+services:
+  portal-api:
+    environment:
+      PORTAL_ALPHA_IMPORT_ROOT: /var/lib/portal/artifacts/alpha-imports
+      PORTAL_ALPHA_ARTIFACT_ROOT: /var/lib/portal/artifacts/alpha-inbox
+      PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:-required}
+      PORTAL_SUMMARY_DEADLINE_MS: ${PORTAL_SUMMARY_DEADLINE_MS:-500}
+      PORTAL_ENVIRONMENT: ${PORTAL_ENVIRONMENT:-research}
+
+  control-api-migrate:
+    volumes:
+      - type: bind
+        source: ${CONTROL_API_SECRETS_DIR:?set the root-owned Control API secret directory}
+        target: /run/secrets/control-api
+        read_only: true
+
+  control-api-bootstrap:
+    volumes:
+      - type: bind
+        source: ${CONTROL_API_SECRETS_DIR:?set the root-owned Control API secret directory}
+        target: /run/secrets/control-api
+        read_only: true
+
+  control-api:
+    volumes:
+      - type: bind
+        source: ${CONTROL_API_SECRETS_DIR:?set the root-owned Control API secret directory}
+        target: /run/secrets/control-api
+        read_only: true
+
+  # Preserve the existing stable durable service graph.  These containers are
+  # private; they receive no published ports and retain their current named
+  # volumes because the project name is pinned by the takeover preflight.
+  portal-nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    command: ["-js", "-m", "8222", "-sd", "/var/lib/nats"]
+    volumes:
+      - portal-nats-data:/var/lib/nats
+    expose:
+      - "4222"
+      - "8222"
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8222/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  portal-minio:
+    image: minio/minio:RELEASE.2024-09-13T20-26-02Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${PORTAL_MINIO_ROOT_USER:?set the existing stable MinIO root user}
+      MINIO_ROOT_PASSWORD: ${PORTAL_MINIO_ROOT_PASSWORD:?set the existing stable MinIO root password}
+    volumes:
+      - portal-minio-data:/data
+    expose:
+      - "9000"
+    networks:
+      - portal
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+  quant-worker-py:
+    image: ${PORTAL_API_IMAGE:?Set PORTAL_API_IMAGE to an immutable digest}
+    restart: unless-stopped
+    command: ["python", "-m", "portal_api.workers.durable_worker_main"]
+    environment:
+      NATS_URL: nats://portal-nats:4222
+      PORTAL_ARTIFACT_ROOT: /var/lib/portal/artifacts/runs
+      PORTAL_ALPHA_IMPORT_ROOT: /var/lib/portal/artifacts/alpha-imports
+      PORTAL_ALPHA_ARTIFACT_ROOT: /var/lib/portal/artifacts/alpha-inbox
+      PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_WORKER_HISTORICAL_DATA_MODE:-disabled}
+      PORTAL_CRYPTO_RESAMPLE_ENGINE: ${PORTAL_CRYPTO_RESAMPLE_ENGINE:-duckdb}
+      PORTAL_WORKER_LEASE_SECONDS: ${PORTAL_WORKER_LEASE_SECONDS:-60}
+      PORTAL_WORKER_GRACE_SECONDS: ${PORTAL_WORKER_GRACE_SECONDS:-10}
+    volumes:
+      - portal-artifacts:/var/lib/portal/artifacts
+    depends_on:
+      portal-nats:
+        condition: service_healthy
+    expose:
+      - "8000"
+    networks:
+      - portal
+
+volumes:
+  portal-nats-data:
+  portal-minio-data:
