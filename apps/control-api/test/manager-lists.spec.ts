@@ -250,9 +250,15 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
 
     const paper = await service.fleet(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
 
+    // The isolation guarantee is unchanged and is the point of this test: the
+    // foreign row and its figure never reach a Paper reader.
     expect(JSON.stringify(paper)).not.toContain("foreign_live_account");
     expect(JSON.stringify(paper)).not.toContain("999999");
-    expect(paper.completeness).toBe("PARTIAL");
+    // PHASE 5 (round 2): dropping a row that belongs to Live is Paper being
+    // correctly scoped, not Paper being short of data. Calling it PARTIAL made
+    // COMPLETE unreachable for every profile, permanently — `account_balances`
+    // carries no `mode`, so the source hands the same rows to all three.
+    expect(paper.completeness).toBe("COMPLETE");
   });
 
   it("keeps cursor pages pinned to the committed projection instead of refreshing mid-walk", async () => {
@@ -356,8 +362,10 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     const result = await service.portfolios(principal(), { environment: "paper" }) as Record<string, any>;
     expect(result.items).toHaveLength(1);
     expect(result.items[0].allocated_by_currency).toEqual([{ currency: "USDT", value: "30000" }]);
-    expect(result.environments.paper).toEqual({ state: "PARTIAL", reason_code: "N30_PROFILE_LINEAGE_REJECTED" });
-    expect(result.completeness).toBe("PARTIAL");
+    // The portfolio parent came back COMPLETE, so `pf_ghost` is proven not to
+    // be ours. Still dropped, still invisible — but not reported as missing.
+    expect(result.environments.paper).toEqual({ state: "AVAILABLE", reason_code: null });
+    expect(result.completeness).toBe("COMPLETE");
     expect(JSON.stringify(result.items)).not.toContain("pf_ghost");
   });
 

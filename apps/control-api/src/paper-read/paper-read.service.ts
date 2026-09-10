@@ -59,6 +59,7 @@ interface RelationResult {
   quarantinedRows?: number;
   /** P4-D: rejected-row diagnostics by missing-parent class (lineage guard). */
   lineageRejects?: Readonly<Record<string, number>>;
+  lineageScopedOut?: Readonly<Record<string, number>>;
 }
 
 interface PaperPrincipal {
@@ -543,6 +544,8 @@ export class PaperReadService {
         // P4-D: a lineage storm is a visible, counted fact — never a silent PARTIAL.
         ...(item.lineageRejects && Object.keys(item.lineageRejects).length > 0
           ? { lineage_rejects: item.lineageRejects } : {}),
+        ...(item.lineageScopedOut && Object.keys(item.lineageScopedOut).length > 0
+          ? { lineage_scoped_out: item.lineageScopedOut } : {}),
       })),
       ...extraCapabilities,
     ];

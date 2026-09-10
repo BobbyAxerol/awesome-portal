@@ -278,14 +278,20 @@ describe("N23 Sandbox and Live profile reads", () => {
 
     const result = await service(source).overview(principal(), "live") as Record<string, any>;
 
-    expect(result.state).toBe("partial");
-    expect(result.completeness).toBe("PARTIAL");
+    // This is Live on dev exactly: no accounts, and balance rows arriving
+    // anyway because the source cannot scope that relation. Zero balances is
+    // the truth about Live — EMPTY — and never the Paper figure.
+    expect(result.state).toBe("empty");
+    expect(result.completeness).toBe("COMPLETE");
     expect(result.data.account_balances).toEqual([]);
     expect(JSON.stringify(result)).not.toContain("paper_account_only");
     expect(result.capabilities).toContainEqual(expect.objectContaining({
       capability_id: "source.account_balances",
-      state: "PARTIAL",
-      reason_code: "N30_PROFILE_LINEAGE_REJECTED",
+      state: "EMPTY",
+      reason_code: null,
+      // The row that was turned away is still counted, under a name that says
+      // it was never ours rather than that we lost it.
+      lineage_scoped_out: { account: 1 },
     }));
   });
 

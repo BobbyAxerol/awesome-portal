@@ -432,12 +432,16 @@ describe("N22 full Paper read product BFF", () => {
     // diagnostic contract.
     const result = await service(source).overview(principal()) as Record<string, any>;
     const positions = result.capabilities.find((cap: any) => cap.capability_id === "source.positions");
-    // Two rows dropped; the storm is counted by parent class, not silent.
+    // Two rows dropped; the storm is still counted by parent class and still
+    // not silent — P4-D's whole point. PHASE 5 (round 2) only changes which
+    // bucket it lands in: both parents came back COMPLETE, so these rows are
+    // proven to belong elsewhere rather than to be unaccounted for.
     expect(positions).toMatchObject({
-      state: "PARTIAL",
-      reason_code: "N30_PROFILE_LINEAGE_REJECTED",
-      lineage_rejects: { account: 2, strategy: 1 },
+      state: "AVAILABLE",
+      reason_code: null,
+      lineage_scoped_out: { account: 2, strategy: 1 },
     });
+    expect(positions.lineage_rejects).toBeUndefined();
   });
 
   it("publishes the versioned observation policy and an honest gate verdict (P4-I / F16)", async () => {

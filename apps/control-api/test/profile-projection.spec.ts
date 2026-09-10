@@ -483,6 +483,96 @@ describe("Phase 1 SGP-local profile projection", () => {
     await worker.onApplicationShutdown();
   });
 
+  /**
+   * PHASE 5 (round 2) · the mandatory test: COMPLETE has to be reachable.
+   *
+   * On dev, 6,360 journal rows and three snapshots had never once been
+   * COMPLETE. The cause was not the source and not the condition — it was that
+   * `account_balances` carries no `mode`, so the source hands the SAME rows to
+   * every profile and each profile keeps its own. Live kept 0 of 85, Paper 42
+   * of 85, Sandbox 35 of 85, and all three were marked PARTIAL for correctly
+   * discarding rows that were never theirs. COMPLETE was unreachable by
+   * construction.
+   *
+   * This builds exactly that cycle — a profile-owned parent, a child relation
+   * carrying both its own rows and a foreign one — and asserts the outcome is
+   * COMPLETE with the foreign row gone and counted.
+   */
+  it("reaches COMPLETE when the only dropped rows belonged to another profile", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        if (relation === "accounts") {
+          return managerResponseWith(environment, relation, [
+            { account_id: "acc_paper", mode: environment, external_account_ref: "ext_paper" },
+          ]);
+        }
+        if (relation === "account_balances") {
+          // No `mode` on this relation — which is the whole reason the source
+          // cannot scope it and Portal has to.
+          return managerResponseWith(environment, relation, [
+            { account_id: "acc_paper", currency: "USDT", total: "10" },
+            { account_id: "acc_live", currency: "USDT", total: "9000" },
+          ]);
+        }
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+
+    expect(snapshot?.completeness).toBe("COMPLETE");
+    const balances = snapshot?.document.relations["manager.accounts:account_balances"];
+    expect(balances?.completeness).toBe("COMPLETE");
+    expect(balances?.items).toHaveLength(1);
+    // Document rows keep the source's narrowed values under `fields`, beside
+    // the lineage stamp the projection adds.
+    expect(balances?.items[0]).toMatchObject({ fields: { account_id: "acc_paper", currency: "USDT" } });
+    // The dropped row is not hidden: it is counted, under a name that says it
+    // was never ours rather than that we lost it.
+    expect(balances?.lineage_scoped_out).toEqual({ account: 1 });
+    expect(balances?.lineage_rejects).toBeUndefined();
+    await worker.onApplicationShutdown();
+  });
+
+  it("still reports PARTIAL when the parent page was cut short, because then the row is unaccounted for", async () => {
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        if (relation === "accounts") {
+          // The source itself says this page is incomplete, so an account we
+          // have not seen may still exist and the orphan proves nothing.
+          const response = managerResponseWith(environment, relation, [
+            { account_id: "acc_paper", mode: environment, external_account_ref: "ext_paper" },
+          ]) as Record<string, any>;
+          response.source.completeness = "PARTIAL";
+          return response;
+        }
+        if (relation === "account_balances") {
+          return managerResponseWith(environment, relation, [
+            { account_id: "acc_paper", currency: "USDT", total: "10" },
+            { account_id: "acc_unseen", currency: "USDT", total: "1" },
+          ]);
+        }
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    await worker.runOnce();
+    const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
+
+    expect(snapshot?.completeness).toBe("PARTIAL");
+    const balances = snapshot?.document.relations["manager.accounts:account_balances"];
+    expect(balances?.completeness).toBe("PARTIAL");
+    expect(balances?.lineage_rejects).toEqual({ account: 1 });
+    await worker.onApplicationShutdown();
+  });
+
   it("isolates a source relation that remains over the wire budget after bounded page reduction", async () => {
     const source = {
       relationForProjection: async (
@@ -772,6 +862,19 @@ function cataloguedDocument(alphaId: string, catalogue: string): ProfileProjecti
     for (const row of relation.items) row.lineage.source_catalogue_sha256 = catalogue;
   }
   return value;
+}
+
+/** The same envelope with rows, tagged the way the source tags them. */
+function managerResponseWith(
+  environment: string, relation: string,
+  rows: readonly Record<string, string>[],
+) {
+  const response = emptyManagerResponse(environment, relation) as Record<string, any>;
+  response.source.data.items = rows.map((row) => ({
+    relation: { schema: "public", relation }, record_key: "opaque",
+    fields: Object.fromEntries(Object.entries(row).map(([key, value]) => [key, { kind: "TEXT", value }])),
+  }));
+  return response;
 }
 
 function emptyManagerResponse(environment: string, relation: string) {

@@ -7267,3 +7267,220 @@ lần đầu con số nói đúng chuyện đang xảy ra.
 
 Không đổi so với §A45.6: bật `FEATURE_EXECUTION_DURABLE_MIRROR` trên stable,
 sau khi chạy `reconcile` rồi `backfill`. Phase 3 phía code đã đóng.
+
+## A51. PHASE 5 (VÒNG 2) — vì sao không snapshot nào từng COMPLETE, và 40 bảng rỗng là những loại rỗng nào
+
+### A51.1 Câu hỏi 1 — trả lời: **khả năng thứ ba, thiết kế sai**
+
+Điều kiện ở [`profile-projection.worker.ts:331-333`](../../../apps/control-api/src/execution/profile-projection.worker.ts):
+
+```ts
+isolated.some((item) => item.page?.completeness === "PARTIAL"
+  || item.state === "PARTIAL" || item.state === "UNAVAILABLE") ? "PARTIAL"
+  : isolated.some((item) => item.page?.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
+```
+
+Điều kiện này **đúng**. Cái sai nằm ở tín hiệu nuôi nó. Đo trên dev, mỗi
+environment chỉ hỏng 1–3 relation trên ~17:
+
+| env | relation | reason_code | giữ | loại |
+| --- | --- | --- | --- | --- |
+| live | `account_balances` | `N30_PROFILE_LINEAGE_REJECTED` | 0 | 85 |
+| paper | `account_balances` | lineage | 42 | 43 |
+| paper | `orders` | lineage (`session`) | 22 | 1 |
+| paper | `execution_sessions` | `SOURCE_PARTIAL` | 2000 | — |
+| paper | `command_journal` | `SOURCE_PARTIAL` | 407 | — |
+| sandbox | `account_balances` | lineage | 35 | 50 |
+| sandbox | `reconciliation_findings` | lineage | 0 | 20 |
+
+Đối chiếu số accounts: live **0 accounts**, paper **43**, sandbox **35** — và
+balance giữ lại đúng bằng số accounts của từng profile. Nguồn publish **cùng
+một tập ~85 dòng balance cho cả ba profile**, đúng như comment đã ghi sẵn ở
+[`profile-lineage.ts`](../../../apps/control-api/src/execution/profile-lineage.ts):
+`account_balances` **không mang trường `mode`**, nên nguồn không khoanh được,
+Portal phải khoanh.
+
+Portal loại **đúng**. Nhưng hàm ấy gán `completeness: "PARTIAL"` cho **mọi**
+lần có dòng bị loại. Vứt dòng của profile khác đi không phải là thiếu dữ liệu —
+đó là **khoanh đúng phạm vi**. Vì `account_balances` mất dòng ở **cả ba**
+environment do cấu trúc của nguồn, nó vĩnh viễn không `COMPLETE`, và snapshot
+vĩnh viễn `PARTIAL`. **6 360 dòng journal, 0 dòng COMPLETE** — không phải vì
+dữ liệu tệ, mà vì `COMPLETE` là đường **không đi được**.
+
+### A51.2 Phân biệt được, bằng dữ liệu đã có sẵn
+
+Một dòng bị loại là **khoanh phạm vi** khi relation cha trả về `COMPLETE` —
+tập cha là đủ, nên dòng đó chắc chắn thuộc profile khác. Là **thiếu thật** khi
+relation cha `PARTIAL` — trang cha bị cắt, nên ta *không biết* dòng đó có thuộc
+về mình hay không.
+
+Ca `orders`/`session` của paper chứng minh vế sau: `execution_sessions` đúng
+**2 000 dòng** = `WARM_WINDOW_MAX_ROWS`, bị cắt và nguồn tự khai `SOURCE_PARTIAL`,
+nên 1 order mồ côi là **partial thật**. Quy tắc này phân loại đúng cả 7 ca đo
+được ở bảng trên.
+
+Sửa: `enforceProfileLineage` tách hai rổ. `lineage_rejects` giữ nghĩa cũ —
+không giải thích được. `lineage_scoped_out` là dòng của profile khác, đếm riêng,
+publish cạnh nhau trên snapshot. Relation chỉ bị hạ `PARTIAL` khi rổ thứ nhất
+khác rỗng. Khi khoanh hết sạch dòng thì state là **`EMPTY`**, không phải
+`PARTIAL`: live không có account nào, nên live không có balance nào — đó là một
+**sự thật**, không phải một thất bại.
+
+Dự đoán sau khi sửa: live và sandbox lên `COMPLETE`; paper vẫn `PARTIAL` vì
+`execution_sessions` và `command_journal` là `SOURCE_PARTIAL` thật.
+
+### A51.3 Test bắt buộc — `COMPLETE` là đường đi được
+
+Spec yêu cầu: *"dựng một cycle đủ điều kiện và khẳng định nó ra COMPLETE. Nếu
+không dựng nổi, đó chính là câu trả lời."* Dựng được, và đã dựng đúng tình
+huống của dev — cha thuộc profile, con mang cả dòng của mình lẫn một dòng lạ:
+
+- `reaches COMPLETE when the only dropped rows belonged to another profile`
+- `still reports PARTIAL when the parent page was cut short`
+
+Cộng 2 test unit ở `profile-lineage.spec.ts`. **Ba test cũ đang neo đúng con
+bug** — chúng khẳng định "loại dòng lạ ⇒ PARTIAL" — đã viết lại.
+
+### A51.4 Câu hỏi 2 — 40/40 bảng rỗng, phân loại xong
+
+Cách đo: với mỗi bảng, truy `INSERT INTO <bảng>` trong `apps/control-api/src`,
+trong `apps/control-api/migrations` (seed), và trong `services/` (Rust cells);
+rồi truy repository → service → controller xem có route nào chạm tới không.
+
+| # | Nhóm | Phân loại | Bảng |
+| --- | --- | --- | --- |
+| # | Bảng | Phân loại | Vì sao rỗng | Đường ghi |
+| --- | --- | --- | --- | --- |
+| 1 | `execution_activation_plans` | Cần đường seed — **đã có** | chưa ai bấm | POST /activation/plans |
+| 2 | `execution_activation_events` | Cần đường seed — **đã có** | chưa ai bấm | POST /activation/plans/:id/apply |
+| 3 | `execution_activation_evidence_refs` | Cần đường seed — **đã có** | chưa ai bấm | POST /activation/plans |
+| 4 | `execution_activation_capabilities` | Cần đường seed — **đã có** | chưa ai bấm | POST /activation/plans/:id/verify |
+| 5 | `execution_activation_compatibility_requirements` | Cần đường seed — **đã có** | chưa ai bấm | POST /activation/plans |
+| 6 | `execution_incidents` | Cần đường seed — **đã có** | chưa ai bấm | POST /operations/incidents |
+| 7 | `execution_incident_events` | Cần đường seed — **đã có** | chưa ai bấm | POST /operations/incidents/:id/* |
+| 8 | `execution_incident_annotations` | Cần đường seed — **đã có** | chưa ai bấm | POST /operations/incidents/:id/annotations |
+| 9 | `execution_incident_evidence` | Cần đường seed — **đã có** | chưa ai bấm | POST /operations/incidents/:id/evidence |
+| 10 | `execution_incident_operation_links` | Cần đường seed — **đã có** | chưa ai bấm | POST /operations/incidents/:id/operations |
+| 11 | `execution_command_plans_f0` | Cần đường seed — **đã có** | chưa ai bấm | POST /commands/plans |
+| 12 | `execution_operation_queue_items` | Cần đường seed — **đã có** | chưa ai bấm | POST /commands/plans |
+| 13 | `execution_operation_workflow_events` | Cần đường seed — **đã có** | chưa ai bấm | POST /operations/:id/resolve |
+| 14 | `governance_approval_decisions` | Cần đường seed — **đã có** | chưa ai bấm | POST /governance/approvals |
+| 15 | `governance_decision_plans` | Cần đường seed — **đã có** | chưa ai bấm | POST /commands/plans |
+| 16 | `governance_approval_known_limitations` | Cần đường seed — **đã có** | chưa ai bấm | POST /governance/approvals |
+| 17 | `governance_canary_envelopes` | Cần đường seed — **đã có** | chưa ai bấm | POST /governance/canary-envelopes |
+| 18 | `governance_sandbox_certifications` | Cần đường seed — **đã có** | chưa ai bấm | POST /governance/sandbox-certifications |
+| 19 | `governance_sandbox_certification_events` | Cần đường seed — **đã có** | chưa ai bấm | POST /governance/sandbox-certifications/:id/submit |
+| 20 | `governance_sandbox_promotion_plans` | Cần đường seed — **đã có** | chưa ai bấm | POST /governance/sandbox-certifications/:id/promotion-plans |
+| 21 | `governance_sandbox_smoke_plans` | Cần đường seed — **đã có** | chưa ai bấm | POST /governance/sandbox-certifications/:id/submit |
+| 22 | `governance_paper_exit_decisions` | Cần đường seed — **chưa có** | route có, nhưng bị chặn | POST /commands/plans — chặn: cần review tồn tại |
+| 23 | `governance_paper_exit_decision_plans` | Cần đường seed — **chưa có** | route có, nhưng bị chặn | POST /commands/plans — chặn: cần review tồn tại |
+| 24 | `governance_promotion_authority_grants` | Cần đường seed — **chưa có** | route có, nhưng bị chặn | POST /operations/:id/apply — chặn: cần review tồn tại |
+| 25 | `execution_durable_mirror_gaps` | Không phải gap | máy dò: rỗng = không phát hiện gì | durable-mirror compareCurrentDocument() |
+| 26 | `execution_durable_mirror_conflicts` | Không phải gap | máy dò: rỗng = không phát hiện gì | durable-mirror compareCurrentDocument() |
+| 27 | `execution_financial_query_cursors` | Không phải gap | cache cursor | financial-query-cursor issue() |
+| 28 | `execution_authoritative_event_streams` | **Quyết định cần** | repository chết | authoritative-event-ledger.repository — không service nào gọi |
+| 29 | `execution_authoritative_event_entries` | **Quyết định cần** | repository chết | authoritative-event-ledger.repository — không service nào gọi |
+| 30 | `execution_authoritative_event_entities` | **Quyết định cần** | repository chết | authoritative-event-ledger.repository — không service nào gọi |
+| 31 | `execution_command_center_pins` | **Quyết định cần** | đọc mà không ai ghi | — (Phase 4 sở hữu) |
+| 32 | `governance_paper_exit_reviews` | **Quyết định cần** | đọc mà không ai ghi | — chặn toàn bộ luồng Paper-Exit |
+| 33 | `governance_paper_exit_findings` | **Quyết định cần** | đọc mà không ai ghi | — |
+| 34 | `governance_paper_exit_lineage` | **Quyết định cần** | đọc mà không ai ghi | — |
+| 35 | `governance_paper_exit_panels` | **Quyết định cần** | đọc mà không ai ghi | — |
+| 36 | `governance_approval_findings` | **Quyết định cần** | đọc mà không ai ghi | — |
+| 37 | `governance_approval_analytics_scopes` | **Quyết định cần** | đọc mà không ai ghi | — |
+| 38 | `governance_r2_lineage` | **Quyết định cần** | đọc mà không ai ghi | — |
+| 39 | `governance_sandbox_findings` | **Quyết định cần** | đọc mà không ai ghi | — |
+| 40 | `governance_sandbox_step_evidence` | **Quyết định cần** | đọc mà không ai ghi | — |
+
+Tổng: **40** bảng.
+
+Người quyết: **Claude**, dựa trên truy vết code; hai nhóm cuối cần owner/codex
+chốt hướng vì đó là quyết định sản phẩm, không phải quyết định kỹ thuật.
+
+### A51.5 Mười bảng Portal **đọc mà không ai ghi**
+
+`execution_command_center_pins`, `governance_approval_analytics_scopes`,
+`governance_approval_findings`, `governance_paper_exit_findings`,
+`governance_paper_exit_lineage`, `governance_paper_exit_panels`,
+`governance_paper_exit_reviews`, `governance_r2_lineage`,
+`governance_sandbox_findings`, `governance_sandbox_step_evidence`.
+
+Cả 10: **0 `INSERT` trong `src`**, **0 seed trong migrations**, **0 tham chiếu
+trong `services/` Rust**. Chỉ test ghi vài bảng. Migration tạo bảng, Portal đọc
+bảng, không ai viết vào bảng.
+
+**Hệ quả nặng nhất, và nó giải thích trọn vẹn một màn 404:**
+`governance_paper_exit_reviews` không có writer, mà
+[`paper-exit.service.ts:361`](../../../apps/control-api/src/governance/paper-exit.service.ts)
+gọi `verifiedSnapshot(workspaceId, reviewId)` — bắt buộc review phải tồn tại
+trước. `/governance/exit-reviews/:id` chỉ có `@Get`, không có `@Post` nào tạo
+review. Nghĩa là **toàn bộ luồng quyết định Paper-Exit không chạy được trong
+production**, và 3 bảng ghi được của nó cũng vĩnh viễn rỗng theo.
+
+### A51.6 Câu hỏi 3 — mười màn 404 giờ nói **đang chờ ai**
+
+Vòng trước các màn này đã trung thực: có mã lý do, không số 0 giả. Nhưng
+"nothing is published" đọc **y hệt nhau** ở ba nguyên nhân rất khác:
+
+| nguyên nhân | bảng | câu màn phải nói |
+| --- | --- | --- |
+| operator chưa tạo, route **có sẵn** | incidents, sandbox certs, canary envelopes | *"…opened by an operator from …. None has been opened yet."* |
+| **không ai ghi được** | paper exit reviews | *"Portal reads this record, but nothing in the platform writes one…"* |
+| chờ Trading System | — | (không màn nào rơi vào nhóm này) |
+
+Theo §11, một module dùng chung `recordProducer.ts` giữ bốn câu đó, mỗi câu
+**truy được về một writer thật trong backend** chứ không phải suy đoán, và
+`absenceReason()` giữ **mã lý do của contract đứng trước** — đó là phần
+operator dán vào ticket — rồi mới tới câu hành động.
+
+Bốn màn dùng nó: `IncidentDetail`, `SandboxCertification`, `CanaryControlRoom`,
+`PaperExitReview`.
+
+### A51.7 Câu hỏi 4 — tám màn không gọi API: **đã tĩnh có chủ đích, và đã tự nói ra**
+
+Đọc nguyên văn trên browser, cả 8 màn đều in maturity + data mode + câu:
+
+> `SOON` · `STATIC_PREVIEW` — *"This feature is part of the approved Portal
+> direction but is not built yet. No runtime is wired to it, so this page
+> carries only the brief and the contract."*
+
+Không cần sửa gì. **Một đính chính cho §A37.10**: `/portal-map` **có** gọi
+`/portal/links`, nên nó không thuộc nhóm "không gọi API nào" — nhóm đó là **7**
+màn, không phải 8.
+
+### A51.8 Đo lại
+
+Đo trên dev **sau khi deploy**, journal 20 phút gần nhất:
+
+| env | trước | sau | vì sao |
+| --- | --- | --- | --- |
+| live | PARTIAL | **COMPLETE** ×7 | `account_balances` scoped 85 dòng |
+| sandbox | PARTIAL | **COMPLETE** ×7 | `account_balances` 50, `reconciliation_findings` {account 21, strategy 21} |
+| paper | PARTIAL | PARTIAL ×26 | **đúng** — `execution_sessions` + `command_journal` là `SOURCE_PARTIAL` thật |
+
+Từ **0/6 360** dòng journal COMPLETE lên 14 dòng COMPLETE trong ~4 phút. Paper
+vẫn PARTIAL, và đó là câu trả lời trung thực chứ không phải lỗi còn sót.
+
+| | trước | sau |
+| --- | --- | --- |
+| control-api | 481 | **484** |
+| frontend vitest | 2 162 | **2 167** (130 file) |
+
+### A51.9 Một lỗi của tôi, browser bắt được sau khi 2 166 test đã xanh
+
+Tôi gắn câu "đang chờ ai" vào **cả** dòng lý do của màn **và** cả năm panel
+rỗng. Màn Incident in câu đó **sáu lần**, mỗi panel cao thêm một dòng. Không
+assertion nào đỏ; chỉ nhìn screenshot mới thấy. Đã sửa: nói **một lần**, ở chỗ
+người đọc đang tìm lý do. Thêm một test chặn độ dài câu ≤ 180 ký tự để nó luôn
+vừa một dòng header.
+
+### A51.10 Còn lại — hai quyết định sản phẩm, không phải kỹ thuật
+
+1. **13 bảng "đọc mà không ai ghi"** (10) **và repository chết** (3): xây
+   writer hay bỏ bảng. Nặng nhất là `governance_paper_exit_reviews` — nó chặn
+   luôn 3 bảng khác và cả màn Exit Review.
+2. **`execution_command_center_pins`** thuộc Phase 4, để nguyên ở đó.
+
+Tôi không tự quyết hai việc này vì chúng là câu hỏi *sản phẩm* — "tính năng
+Paper-Exit có nằm trong kế hoạch không" — chứ không phải câu hỏi có đáp án
+trong code. Mọi thứ cần để quyết đã đo xong và ghi ở trên.

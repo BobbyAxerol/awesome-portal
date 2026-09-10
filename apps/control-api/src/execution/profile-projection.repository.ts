@@ -49,6 +49,8 @@ export interface ProjectionRelation {
   window?: { days: number; max_rows: number; basis: "MERGED_SNAPSHOT_LADDER"; truncated: boolean };
   /** P4-D lineage observability: rejects by missing-parent class, when any. */
   lineage_rejects?: Readonly<Record<string, number>>;
+  /** Rows that belong to another profile — the filter working, not a loss. */
+  lineage_scoped_out?: Readonly<Record<string, number>>;
 }
 
 export interface ProfileProjectionDocument {

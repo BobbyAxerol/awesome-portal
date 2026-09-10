@@ -41,6 +41,10 @@ interface RelationResult {
   page: ManagerPage | null;
   state: CapabilityState;
   reasonCode: string | null;
+  /** Rows we could not account for, by missing-parent class. */
+  lineageRejects?: Readonly<Record<string, number>>;
+  /** Rows proven to belong to another profile, by parent class. */
+  lineageScopedOut?: Readonly<Record<string, number>>;
 }
 
 const DEPLOYMENT_FIELDS = [
@@ -211,6 +215,7 @@ export class ProfileReadService {
         relations: [],
         reason_code: item.reasonCode,
         retryable: false,
+        ...lineageCounts(item),
       })) : [],
       data: {
         ...data,
@@ -295,6 +300,7 @@ export class ProfileReadService {
         relations: [],
         reason_code: item.reasonCode,
         retryable: false,
+        ...lineageCounts(item),
       })),
       ...(resolution?.state !== "FOUND" ? {
         resource_resolution: { state: resolution?.state, reason_code: resolution?.reasonCode ?? null },
@@ -382,6 +388,23 @@ function productState(relations: readonly RelationResult[]): "ready" | "empty" |
  * "STALE" with an age of seconds and could not reconcile the two. An
  * aggregate never borrows a newer timestamp from a fresher contributor.
  */
+/**
+ * PHASE 5 (round 2) · both lineage counts, never merged.
+ *
+ * `lineage_rejects` is a row we could not account for; `lineage_scoped_out` is
+ * a row that was never ours. They look identical in a row count and mean
+ * opposite things, so a capability publishes whichever applies and never
+ * folds one into the other.
+ */
+function lineageCounts(item: RelationResult): Record<string, Readonly<Record<string, number>>> {
+  return {
+    ...(item.lineageRejects && Object.keys(item.lineageRejects).length > 0
+      ? { lineage_rejects: item.lineageRejects } : {}),
+    ...(item.lineageScopedOut && Object.keys(item.lineageScopedOut).length > 0
+      ? { lineage_scoped_out: item.lineageScopedOut } : {}),
+  };
+}
+
 function oldestAsOf(relations: readonly RelationResult[]): string | null {
   return relations.map((item) => item.page?.asOf ?? null).filter((value): value is string => value !== null)
     .sort().at(0) ?? null;

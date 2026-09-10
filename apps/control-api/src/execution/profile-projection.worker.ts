@@ -314,6 +314,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           // lineage storm is a counted, visible fact for the operator view.
           ...(item.lineageRejects && Object.keys(item.lineageRejects).length > 0
             ? { lineage_rejects: item.lineageRejects } : {}),
+          // Kept beside the rejects and never merged into them: one means we
+          // could not account for a row, the other means it was never ours.
+          ...(item.lineageScopedOut && Object.keys(item.lineageScopedOut).length > 0
+            ? { lineage_scoped_out: item.lineageScopedOut } : {}),
         }];
       }));
       const document: ProfileProjectionDocument = {

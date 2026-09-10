@@ -31,6 +31,7 @@ import {
 } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
 import { guardAsymmetry, type CanaryActionPolicy, type CanaryControlRoom, type PanelEnvelope } from "../certification";
+import { absenceReason } from "../components/recordProducer";
 
 export function ActionGroup({ policy, title, brokerStale }: { policy: CanaryActionPolicy; title: string; brokerStale: boolean }) {
   const blockedByBroker = brokerStale && policy.brokerSyncBlocks;
@@ -116,7 +117,7 @@ export function CanaryControlRoomScreen({
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-canary">
-        <PanelState status={status} reason={reason} />
+        <PanelState status={status} reason={absenceReason(reason, "canary-envelope")} />
       </ExecutionSurface>
     );
   }

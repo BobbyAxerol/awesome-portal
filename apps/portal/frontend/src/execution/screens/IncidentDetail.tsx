@@ -18,6 +18,7 @@ import { blockerText, incidentRail, type IncidentCollection, type IncidentDetail
 import { hhmm, incidentSparkSeries, mmss } from "../clock";
 import type { GateRow, IncidentDemo, IncidentLive, OpRow } from "../incident.smoke";
 import { targetHrefFor } from "../idLinks";
+import { absenceReason } from "../components/recordProducer";
 
 const PANEL_TITLE: Record<string, string> = {
   findings: "Findings",
@@ -139,7 +140,8 @@ export function IncidentDetailScreen({
             ))}
           </div>
         )}
-        <p className="exec-disabled-reason">{refused ? why : `No incident is published here, so there is nothing to acknowledge or resolve. ${why}`}</p>
+        <p className="exec-disabled-reason">{refused ? why
+          : `No incident is published here, so there is nothing to acknowledge or resolve. ${absenceReason(why, "incident")}`}</p>
         <div className="exec-inc2-grid">
           {INCIDENT_PANELS.map((title) => (
             <section className="exec-pf2-panel" key={title} aria-label={title}>

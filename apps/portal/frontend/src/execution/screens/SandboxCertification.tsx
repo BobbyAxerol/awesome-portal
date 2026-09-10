@@ -41,6 +41,7 @@ import {
   type RailBlocker,
 } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
+import { absenceReason } from "../components/recordProducer";
 import {
   certificationBlocked,
   type CertificationStep,
@@ -210,7 +211,7 @@ export function SandboxCertificationScreen({
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-cert">
-        <PanelState status={status} reason={reason} />
+        <PanelState status={status} reason={absenceReason(reason, "sandbox-certification")} />
       </ExecutionSurface>
     );
   }

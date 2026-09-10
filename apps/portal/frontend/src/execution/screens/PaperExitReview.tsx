@@ -30,6 +30,7 @@ import { useState } from "react";
 import type { PaperDemo } from "../paper.smoke";
 import { ExecutionDecisionBar } from "../components/decisionBar";
 import { ExecutionSectionTitle } from "../components/typography";
+import { absenceReason } from "../components/recordProducer";
 import {
   ExecutionContextRail,
   ExecutionDecisionStrip,
@@ -270,7 +271,8 @@ export function PaperExitReview({
         </div>
         )}
         <p className="exec-disabled-reason">
-          {refused ? why : `No decision can be taken on a review that is not published. ${why}`}
+          {refused ? why
+            : `No decision can be taken on a review that is not published. ${absenceReason(why, "paper-exit-review")}`}
         </p>
         <div className="exec-px-grid" data-cols="auto">
           {EXIT_EVIDENCE_PANELS.map((title) => (
