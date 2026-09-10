@@ -5,6 +5,7 @@
  * every panel shows exactly what it carries — a valid empty Live is empty.
  * The lab passes `demo` (the reviewed hi-fi bundle) instead.
  */
+import { ageFrom, ageLabel } from "../components/FreshnessBanner";
 import { useEffect, useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
@@ -100,7 +101,7 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
               <span className="exec-af-source">
                 <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
                 <span className="sr-only">{dot.title}</span>
-                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · current source · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
+                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · current source · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> <span className="exec-af-dim">{`(${ageLabel(ageFrom(envelope?.asOfMs ?? null, Date.now()))})`}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
               </span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}

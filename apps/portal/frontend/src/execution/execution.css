@@ -5494,7 +5494,20 @@
 /* A stated absence is a word, and a word in a narrow numeric column wraps.
    Forty-three identical absences wrapping onto two lines each read as
    forty-three separate events; one line each reads as one column-wide fact. */
-.exec-af-absent { white-space: nowrap; color: var(--ink-mute); font: var(--exec-font-caption); } .exec-af-mute { color: var(--ink-mute); }
+.exec-af-absent { white-space: nowrap; color: var(--ink-mute); font: var(--exec-font-caption); }
+
+/* PHASE 3C (round 2): a stale panel keeps its data and says so loudly. The
+   tier is the only thing that changes colour, because the age beside it is a
+   fact at every tier and should not shout on its own. */
+.exec-freshness { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap;
+  font: var(--exec-font-caption); color: var(--ink-mute); }
+.exec-freshness-tier { font: var(--exec-font-th); letter-spacing: .04em; }
+.exec-freshness[data-tier="FRESH"] .exec-freshness-tier { color: var(--ink-soft); }
+.exec-freshness[data-tier="AGING"] .exec-freshness-tier { color: var(--accent2); }
+.exec-freshness[data-tier="STALE"] .exec-freshness-tier { color: var(--bad); }
+/* UNKNOWN is not a warmer FRESH; it reads as its own state. */
+.exec-freshness[data-tier="UNKNOWN"] .exec-freshness-tier { color: var(--accent2); }
+.exec-freshness-age { color: var(--ink-soft); } .exec-af-mute { color: var(--ink-mute); }
 .exec-af-table [data-tone="good"] { color: var(--good); } .exec-af-table [data-tone="bad"] { color: var(--bad); } .exec-af-table [data-tone="warn"] { color: var(--warn); } .exec-af-table [data-tone="mute"] { color: var(--ink-faint); }
 .exec-af-sum [data-tone="bad"] { color: var(--bad); }
 .exec-af-stages { display: inline-flex; flex-wrap: wrap; gap: 4px; }

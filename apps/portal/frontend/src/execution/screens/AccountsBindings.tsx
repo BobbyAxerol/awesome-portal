@@ -2,6 +2,7 @@
  * Accounts & Bindings — hi-fi list, entry screen for WF 1g. Reads
  * `accounts.smoke.ts` until BR-EX-52 publishes `bindings-list.v1`.
  */
+import { SourceFreshness } from "../components/SourceFreshness";
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
@@ -12,7 +13,6 @@ import type { AccountsDemo, AccountsTick, BindingRow, Chip } from "../accounts.s
 import type { BindingItem, ManagerListEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
-import { StatusChip } from "../components/badges";
 import { ageState, useArrivals, useIds, useNow } from "../listMotion";
 import { liveDot } from "../sourceTone";
 
@@ -107,7 +107,14 @@ export function AccountsBindings({ list = null, status = "ok", reason, onNextPag
               <span className="exec-af-sum">{list?.page.filteredCount ?? items.length}/{list?.page.totalCount ?? "?"} bindings · {(list?.environment ?? "unknown").toUpperCase()}</span>
               <span className="exec-af-wf">entry screen for WF 1g</span>
               <span className="exec-af-spacer" />
-              <span className="exec-af-source"><span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} /><b>BROKER</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span></span>
+              <SourceFreshness
+                  label="BROKER"
+                  freshness={list?.freshness ?? null}
+                  sourceAsOf={list?.sourceAsOf ?? null}
+                  nowMs={clock.getTime()}
+                  dot={<span className="exec-af-livedot" aria-hidden="true" title={dot.title}
+                    data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />}
+                />
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
             <div className="exec-af-filters" role="group" aria-label="Binding filter">

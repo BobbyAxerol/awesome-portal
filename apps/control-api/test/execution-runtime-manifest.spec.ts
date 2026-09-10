@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { testConfig } from "./harness";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MAXIMUM_DATA_INTAKE_V1 } from "../src/execution/maximum-data-intake";
@@ -44,7 +45,21 @@ describe("EDS-00 runtime manifest intake", () => {
   });
 
   it("returns only sanitized intake and named-operation metadata without manufacturing a source probe", () => {
-    const manifest = new ExecutionRuntimeManifestService().manifest("ws_primary") as Record<string, any>;
+    const manifest = new ExecutionRuntimeManifestService(testConfig({
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_primary",
+      EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS: "15000",
+      EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS: "120000",
+      FEATURE_EXECUTION_EDGE: "true",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/test/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/run/secrets/test/ca.crt",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/run/secrets/test/client.crt",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/run/secrets/test/client.key",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper-edge.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+    })).manifest("ws_primary") as Record<string, any>;
     expect(manifest).toMatchObject({
       schema_version: "portal.execution.runtime-manifest.v1",
       workspace_id: "ws_primary",
@@ -80,7 +95,21 @@ describe("EDS-00 runtime manifest intake", () => {
   });
 
   it("keeps the metadata endpoint session/workspace-bound", async () => {
-    const service = new ExecutionRuntimeManifestService();
+    const service = new ExecutionRuntimeManifestService(testConfig({
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_primary",
+      EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS: "15000",
+      EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS: "120000",
+      FEATURE_EXECUTION_EDGE: "true",
+      EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/test/delegation.pem",
+      EXECUTION_EDGE_CA_FILE: "/run/secrets/test/ca.crt",
+      EXECUTION_EDGE_CLIENT_CERT_FILE: "/run/secrets/test/client.crt",
+      EXECUTION_EDGE_CLIENT_KEY_FILE: "/run/secrets/test/client.key",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper-edge.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+    }));
     const controller = new ExecutionRuntimeManifestController(
       service,
       { isMember: async (workspaceId: string, userId: string) => workspaceId === "ws_primary" && userId === "usr_bobby" } as never,

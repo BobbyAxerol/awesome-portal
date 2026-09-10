@@ -8,6 +8,7 @@
  * ExecutionWorkspace, PanelState, StatusChip and the `exec-af-*` table classes.
  * No new CSS, token or state word.
  */
+import { SourceFreshness } from "../components/SourceFreshness";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { ExecutionWorkspace } from "../components/workspace";
 import { PanelState } from "../components/states";
@@ -68,10 +69,14 @@ export function PortfolioList({ list = null, status = "ok", reason, onOpenPortfo
             </span>
             <span className="exec-af-wf">entry screen for Portfolio 360°</span>
             <span className="exec-af-spacer" />
-            <span className="exec-af-source">
-              <span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
-              <b>EXECUTION</b> · <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} /> · source <span className="exec-af-num">{utcStamp(list?.sourceAsOf ?? null)}</span>
-            </span>
+            <SourceFreshness
+              label="EXECUTION"
+              freshness={list?.freshness ?? null}
+              sourceAsOf={list?.sourceAsOf ?? null}
+              nowMs={clock.getTime()}
+              dot={<span className="exec-af-livedot" aria-hidden="true" title={dot.title}
+                data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />}
+            />
           </header>
           {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}
           {degraded.length > 0 ? (

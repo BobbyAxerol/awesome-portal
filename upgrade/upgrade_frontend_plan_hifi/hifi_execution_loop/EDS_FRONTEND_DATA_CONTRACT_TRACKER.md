@@ -6859,3 +6859,133 @@ tôi đã gán cho nó ý nghĩa nó không có, đúng cái lỗi mà cả dự
 
 Đường ống WireGuard thì vẫn thật (§A37.2: bắt tay 55 giây, 309 GiB) — nhưng lưu
 lượng đó **không phải** của control-api gọi Edge qua các route screens.
+
+## A44. PHASE 3 (VÒNG 2) — parity có bằng chứng, và hai bảng **bất đồng về dữ liệu**, không chỉ về độ mới
+
+Bám **A38.7**: 3A bằng chứng read-only, 3B backfill idempotent có rollback, 3C
+thả cờ có kiểm soát. Làm 3A và 3C; 3B thì làm ra công cụ, chạy thử, **và phát
+hiện tiền đề của chính nó sai**.
+
+### A44.1 3A — manifest tự khai, để so sánh là một cái diff chứ không phải một cuộc tranh luận
+
+Mở rộng `runtime-manifest` đã có (không thêm route thứ 123) bằng khối
+`environment_parity`. Đo trên dev:
+
+| Trường | Giá trị |
+| --- | --- |
+| bảng đang đọc | `execution_durable_mirror_range_rows` |
+| bảng **không** đọc | `execution_timeseries_history` |
+| chọn bởi | `FEATURE_EXECUTION_DURABLE_MIRROR = true` |
+| chính sách tươi | 15 000 ms × 3 + 15 000 ms jitter = **stale sau 60 000 ms** |
+| cờ hành vi khai báo | 12 |
+| `source.paper-dnse` | `UNAVAILABLE` · `EDS_DNSE_ORIGIN_NOT_CONFIGURED` |
+
+DNSE là **capability riêng** đúng như A38.7 yêu cầu: nó tự khai chưa cấu hình và
+**không** kéo theo paper/sandbox/live — cả ba đều có profile và origin.
+
+Kèm `r2_ledger/history-parity.sh` với bốn chế độ: `parity` (đếm dòng, mốc mới
+nhất, khoá trùng, digest thập phân chính xác), `plan`, `reconcile`, `backfill`.
+Chạy `parity` trên dev:
+
+```
+execution_durable_mirror_range_rows   500 dòng mẫu · mới nhất 2026-09-10 15:45
+execution_timeseries_history          500 dòng mẫu · mới nhất 2026-09-05 20:15
+```
+
+### A44.2 3C — một chính sách, và `UNKNOWN` thôi giả dạng
+
+Tìm ra **hai bản sao** của cùng bộ số magic, ở hai file, không gì buộc chúng
+với nhau:
+
+| Nơi | Ngưỡng cũ |
+| --- | --- |
+| `product-read-source.ts` | `poll × 2` → FRESH, `poll × 4` → AGING |
+| `manager-lists.service.ts` | `{ fresh: poll × 2, stale: poll × 4 }` |
+
+Hai màn có thể bất đồng về việc cùng một dữ liệu có tươi không, và **cả hai đều
+"đúng"**. Nay cả hai lấy ngưỡng từ `freshnessPolicies()` — đúng chính sách mà
+manifest công bố, nên con số màn hình hiện và con số manifest giải thích là một.
+
+Và hai chỗ `UNKNOWN` từng bị nuốt:
+
+- `product-read-source`: `ageMs` luôn là số, nên một snapshot có mốc thời gian
+  không đọc được sẽ rơi vào nhánh đầu và **hiện ra là FRESH**.
+- `manager-lists` dòng 239: `pageFreshness === "UNKNOWN" ? "STALE"` — gần đúng
+  hơn, nhưng vẫn nói "chúng tôi đã đo và nó cũ" về thứ **chưa ai đo**.
+
+Cả hai nay trả `UNKNOWN` thật.
+
+### A44.3 Frontend — năm header, một cách nói tuổi
+
+Năm màn mọc ra cùng một header một cách độc lập: chấm live, nhãn, chip
+freshness, mốc tuyệt đối. Thiếu đúng hai thứ ở cả năm:
+
+1. **Tuổi.** Mốc `2026-09-10 13:03:20 UTC` bắt người đọc trừ nhẩm với một cái
+   đồng hồ họ không thấy. Bốn phút hay bốn ngày mới là câu hỏi, và nó chưa bao
+   giờ có trên màn.
+2. **Tông riêng cho UNKNOWN.** Mọi tier khác FRESH đều tô "warn", nên AGING,
+   STALE và "không có mốc thời gian nào" trông y hệt nhau.
+
+Nay có `SourceFreshness` dùng chung (Accounts, Portfolios) và tuổi được thêm vào
+ba header còn lại. Đo trên trình duyệt:
+
+```
+accounts   STALE · 31m ago · source 2026-09-10 15:27:41 UTC
+portfolios AGING · 23s ago · source 2026-09-10 15:59:00 UTC
+alphas     STALE · 2h 31m ago
+sandbox    as_of 2026-09-10 15:59:28 UTC (2s ago)
+live       as_of 2026-09-10 15:59:33 UTC (1s ago)
+```
+
+### A44.4 3B — tôi chạy một backfill sai tiền đề, và đây là toàn bộ chuyện đó
+
+`plan` báo **619 210** dòng cần chép. Chạy `backfill`: chèn được **27 936**.
+Chênh lệch đó tôi **không bỏ qua**, và truy ra thứ quan trọng nhất của cả phase.
+
+Hai bảng có **khoá chính khác nhau**:
+
+- mirror: `(workspace, environment, profile, relation, ts, row_id)`
+- timeseries: `(workspace, environment, profile, relation, row_id)` — **không có `ts`**
+
+Đối chiếu từng dòng:
+
+| | Số dòng |
+| --- | --- |
+| chỉ có ở mirror | 27 936 |
+| **cùng `row_id`, khác `ts`** | **591 274** |
+| cùng `ts`, khác `fields` | 0 |
+| khớp hoàn toàn | 119 261 |
+
+**Hai bảng không phải "một tươi một cũ". Chúng bất đồng về *thời điểm* của cùng
+một dòng dữ liệu, ở 80% số dòng.** Và vì khoá đích không có `ts`, một phép chép
+**không thể** hoà giải: dòng đã nằm đó dưới cùng khoá với một `ts` khác.
+
+Nghĩa là lật `FEATURE_EXECUTION_DURABLE_MIRROR` không chỉ đổi sang bảng cũ hơn —
+nó đổi **mốc thời gian của 80% dòng lịch sử**. Đó là một câu hỏi về tính đúng
+đắn của dữ liệu, không phải một câu hỏi về độ trễ.
+
+**Điều tôi làm sai:** `ON CONFLICT DO NOTHING` khiến 591 274 dòng bị bỏ qua
+trong im lặng và lệnh chạy **báo thành công**. Nếu tôi chỉ nhìn "INSERT 0 27936"
+rồi đi tiếp thì đã kết luận backfill xong.
+
+**Đã hoàn tác chính xác:** xoá đúng 27 936 dòng (nhận diện bằng
+`first_seen_at > 2026-09-05 20:15:46`), bảng về đúng 710 535 dòng với mốc cũ
+nguyên vẹn. Marker giữ lại với `finished_at = NULL` — dấu vết của một lần chạy
+không hoàn tất, đúng thứ bảng marker sinh ra để ghi.
+
+**Đã sửa công cụ:** thêm chế độ `reconcile`, và `backfill` nay **từ chối** (exit
+3) khi có dòng cùng khoá khác `ts`, kèm câu giải thích vì sao một phép chép
+không hoà giải được chúng. Migration `1723680000028_execution-backfill-markers`
+tạo chỗ ghi dấu; script từ chối chép một dòng nào khi bảng đó chưa tồn tại — đã
+kiểm, exit 2.
+
+### A44.5 Vì sao tôi **không** lật cờ, và đây không phải né việc
+
+A38.7 chia Phase 3 làm ba để tránh việc cờ lặng lẽ đổi bảng thật. Sau 3A và
+3B, kết luận là: **cờ này không lật được bằng một backfill.** 591 274 dòng bất
+đồng `ts` phải có người quyết mốc nào đúng — mirror hay timeseries — và đó là
+câu hỏi về dữ liệu giao dịch, không phải về cấu hình.
+
+Cái tôi làm được và đã làm: dựng bằng chứng, dựng công cụ đo, gộp chính sách
+tươi về một chỗ, và làm cho `UNKNOWN` không còn giả dạng. Cái còn lại cần owner
+và codex chốt **mốc nào là mốc đúng** trước khi ai đó chạm vào cờ.

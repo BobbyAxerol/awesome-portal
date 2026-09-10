@@ -7,6 +7,7 @@
  * and says so at the foot. When BR-EX-49 delivers `fleet-list.v1`, the smoke
  * module is deleted and this screen reads the contract with the same shape.
  */
+import { ageFrom, ageLabel } from "../components/FreshnessBanner";
 import { useState, type ReactNode } from "react";
 import { ExecutionSurface } from "../ExecutionSurface";
 import { SparkLine } from "../components/marketChart";
@@ -153,7 +154,7 @@ export function AlphaFleet({ filter: controlled, onFilterChange, list = null, st
                 <span className="exec-af-livedot" aria-hidden="true" title={dot.title} data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
                 <b>EXECUTION</b> · {reading
                   ? <StatusChip label="READING" tone="mute" />
-                  : <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} />} · source{" "}
+                  : <StatusChip label={list?.freshness ?? "UNAVAILABLE"} tone={list?.freshness === "FRESH" ? "good" : "warn"} />} · {`${ageLabel(ageFrom(list?.sourceAsOf ? Date.parse(list.sourceAsOf) : null, Date.now()))} · source `}
                 <SourceClock at={list?.sourceAsOf ?? null} />
               </span>
             </header>

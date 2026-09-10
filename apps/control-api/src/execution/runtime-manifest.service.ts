@@ -1,6 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import type { ControlApiConfig } from "../config";
+import { CONTROL_API_CONFIG } from "../tokens";
 import { executionContractAuthorityEvidence } from "./contract-authority";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
+import { environmentParity } from "./environment-parity";
 
 /**
  * The browser-visible boundary is intentionally metadata-only.  It records
@@ -10,6 +13,8 @@ import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
  */
 @Injectable()
 export class ExecutionRuntimeManifestService {
+  constructor(@Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig) {}
+
   manifest(workspaceId: string) {
     const intake = MAXIMUM_DATA_INTAKE_V1;
     return {
@@ -65,6 +70,16 @@ export class ExecutionRuntimeManifestService {
         requirement_id,
         status: "OWNER_ACTION_REQUIRED",
       })),
+      /*
+       * PHASE 3A (round 2) · read-only parity evidence.
+       *
+       * Two stacks arguing about which is right is a conversation; two
+       * manifests side by side is a diff. This flips nothing and writes
+       * nothing — it states which table this stack reads history from, which
+       * flags made it so, and how old a read may be before it stops being
+       * fresh.
+       */
+      environment_parity: environmentParity(this.config),
       redaction: {
         raw_rows: false,
         source_cursor: false,

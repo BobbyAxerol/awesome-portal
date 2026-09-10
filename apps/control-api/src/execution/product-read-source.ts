@@ -1,4 +1,5 @@
 import { canonicalOrderStatus } from "../paper-read/order-status-map";
+import { freshnessPolicies } from "./environment-parity";
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -361,7 +362,7 @@ export class ExecutionProductReadSource {
     environment: ProjectionEnvironment;
     profileId: string;
     projectionWorkspaceId: string;
-    ageMs: number;
+    ageMs: number | null;
   }> {
     const environment: ProjectionEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
     const profileId = profile(this.config, environment);
@@ -373,8 +374,12 @@ export class ExecutionProductReadSource {
     if (!snapshot) throw new CurrentSourceProxyError("N31_PROJECTION_NOT_READY", 503, {
       availability: "UNAVAILABLE", retryable: true,
     });
-    const ageMs = Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf();
-    if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    // A refresh stamp that will not parse is an age nobody measured, not an
+    // age of zero: `valueOf()` gives NaN and every comparison below would then
+    // be false, which used to read as FRESH.
+    const refreshedAt = snapshot.lastSuccessfulRefreshAt.valueOf();
+    const ageMs = Number.isFinite(refreshedAt) ? Date.now() - refreshedAt : null;
+    if (ageMs !== null && ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
       throw new CurrentSourceProxyError("N31_PROJECTION_STALE_CEILING_EXCEEDED", 503, {
         availability: "UNAVAILABLE", retryable: true,
       });
@@ -657,9 +662,33 @@ function profile(config: ControlApiConfig, environment: ProjectionEnvironment): 
   return value;
 }
 
-function freshness(ageMs: number, pollIntervalMs: number): "FRESH" | "AGING" | "STALE" {
-  if (ageMs <= pollIntervalMs * 2) return "FRESH";
-  if (ageMs <= pollIntervalMs * 4) return "AGING";
+/**
+ * PHASE 3C (round 2) · the tier comes from a declared policy, not a multiplier
+ * somebody liked the look of.
+ *
+ * A38.7 item 3: stale-after is at least three declared poll intervals plus
+ * proven operational jitter — three because two missed cycles are ordinary
+ * under load and a third means the ladder is not running, and the jitter is
+ * the observed spread of drain completion rather than a guess. The thresholds
+ * live in `environment-parity.ts` beside the manifest that publishes them, so
+ * a screen showing a tier and the manifest explaining it cannot drift apart.
+ *
+ * An age nobody could compute is `UNKNOWN`. It used to be impossible to reach
+ * that branch here: `ageMs` was always a number, so a snapshot with no usable
+ * refresh timestamp would have been drawn as FRESH.
+ */
+function freshness(
+  ageMs: number | null,
+  pollIntervalMs: number,
+): "FRESH" | "AGING" | "STALE" | "UNKNOWN" {
+  if (ageMs === null || !Number.isFinite(ageMs) || ageMs < 0) return "UNKNOWN";
+  const [policy] = freshnessPolicies({
+    EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS: pollIntervalMs,
+  } as unknown as Parameters<typeof freshnessPolicies>[0]);
+  if (!policy) return "UNKNOWN";
+  // One cadence plus jitter is a read that arrived on time.
+  if (ageMs <= policy.declared_poll_interval_ms + policy.operational_jitter_ms) return "FRESH";
+  if (ageMs <= policy.stale_after_ms) return "AGING";
   return "STALE";
 }
 

@@ -9,6 +9,7 @@
  * Reads `sandbox.smoke.ts` until BR-EX-60 publishes `sandbox-overview.v1`.
  * Every figure on this screen is smoke and the page says so at the bottom.
  */
+import { ageFrom, ageLabel } from "../components/FreshnessBanner";
 import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { ExecutionSurface } from "../ExecutionSurface";
@@ -123,7 +124,7 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                     shows a still, muted dot instead of claiming to be live. */}
                 <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
                 <span className="sr-only">{dot.title}</span>
-                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
+                <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> <span className="exec-af-dim">{`(${ageLabel(ageFrom(envelope?.asOfMs ?? null, Date.now()))})`}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
               </span>
             </header>
             {sourceStatus ? <div className="exec-af-panel"><PanelState status={sourceStatus} reason={sourceReason} /></div> : null}

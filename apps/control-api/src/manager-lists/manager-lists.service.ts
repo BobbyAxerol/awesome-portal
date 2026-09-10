@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { freshnessPolicies } from "../execution/environment-parity";
 import { AuthSession, PortalUser } from "../domain";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { ExecutionProductReadSource } from "../execution/product-read-source";
@@ -236,7 +237,9 @@ export class ManagerListsService {
       read_at: new Date().toISOString(),
       source_as_of: latestString(...pages.map((page) => page.asOf)),
       // Source-declared tiers pass through; UNKNOWN is never promoted.
-      freshness: pageFreshness === "UNKNOWN" ? "STALE" : pageFreshness,
+      // UNKNOWN is not a kind of STALE. Collapsing it told the reader we had
+      // measured an old value when we had measured nothing at all.
+      freshness: pageFreshness,
       freshness_budget_ms: projectionFreshnessBudget(this.config),
       completeness: truncated || branchDegraded
         ? "PARTIAL"
@@ -832,13 +835,37 @@ export interface FreshnessBudgetMs {
   stale: number;
 }
 
+/**
+ * PHASE 3C (round 2) · one declared policy, not a second copy of it.
+ *
+ * This carried its own `poll * 2` / `poll * 4` — the same magic multipliers
+ * `product-read-source` carried, in a different file, with nothing tying them
+ * together. Two screens could disagree about whether the same data was fresh
+ * and both would be "right". The thresholds now come from the policy the
+ * runtime manifest publishes, so what a screen shows and what the manifest
+ * explains are the same number.
+ */
 export function projectionFreshnessBudget(config: ControlApiConfig): FreshnessBudgetMs {
-  const poll = config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS;
-  return { fresh: poll * 2, stale: poll * 4 };
+  const [policy] = freshnessPolicies(config);
+  if (!policy) {
+    const poll = config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS;
+    return { fresh: poll * 2, stale: poll * 4 };
+  }
+  return {
+    fresh: policy.declared_poll_interval_ms + policy.operational_jitter_ms,
+    stale: policy.stale_after_ms,
+  };
 }
 
-function freshness(snapshot: ProjectionSnapshot, budget: FreshnessBudgetMs): "FRESH" | "AGING" | "STALE" {
-  const age = Date.now() - snapshot.refreshedAt.valueOf();
+function freshness(snapshot: ProjectionSnapshot, budget: FreshnessBudgetMs): "FRESH" | "AGING" | "STALE" | "UNKNOWN" {
+  // An unusable refresh stamp is an age nobody measured. `valueOf()` gives NaN
+  // and every comparison below is then false, which used to fall through to
+  // STALE — close, but it says "we looked and it is old" about something
+  // nobody looked at.
+  const refreshedAt = snapshot.refreshedAt.valueOf();
+  if (!Number.isFinite(refreshedAt)) return "UNKNOWN";
+  const age = Date.now() - refreshedAt;
+  if (age < 0) return "UNKNOWN";
   if (age <= budget.fresh) return "FRESH";
   if (age <= budget.stale) return "AGING";
   return "STALE";
