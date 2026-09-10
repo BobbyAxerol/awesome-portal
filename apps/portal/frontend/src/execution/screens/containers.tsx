@@ -1120,7 +1120,17 @@ export function OperationsQueueContainer({
   const [selected, setSelected] = useState<QueueRow | null>(null);
   // PHASE 2B (round 2): a read of its own, so a mirror report that fails does
   // not take the queue down with it.
-  const mirrorState = useAnalyticsRead(() => api.getMirrorIntegrity("paper"), [api]);
+  // The route serves all three environments and this screen already lists
+  // source health by profile; reading one of them would have quietly reported
+  // paper's mirror as if it covered the others.
+  const mirrorPaper = useAnalyticsRead(() => api.getMirrorIntegrity("paper"), [api]);
+  const mirrorSandbox = useAnalyticsRead(() => api.getMirrorIntegrity("sandbox"), [api]);
+  const mirrorLive = useAnalyticsRead(() => api.getMirrorIntegrity("live"), [api]);
+  const mirrorIntegrity = [
+    { environment: "paper", integrity: mirrorPaper.value ?? null },
+    { environment: "sandbox", integrity: mirrorSandbox.value ?? null },
+    { environment: "live", integrity: mirrorLive.value ?? null },
+  ];
   const [followedOperation, setFollowedOperation] = useState<string | null>(null);
   const [effect, setEffect] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
@@ -1200,7 +1210,7 @@ export function OperationsQueueContainer({
           triage controls below are dark. */}
       <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
       <OperationsQueueScreen
-        mirrorIntegrity={mirrorState.value ?? null}
+        mirrorIntegrity={mirrorIntegrity}
         queue={queue}
         status={state.status}
         reason={state.reason}

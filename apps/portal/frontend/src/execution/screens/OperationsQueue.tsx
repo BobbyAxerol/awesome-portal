@@ -181,7 +181,7 @@ function ContractRow({ row, now, onOpen, selected, arrived }: { row: QueueRow; n
 
 export function OperationsQueueScreen({
   queue,
-  mirrorIntegrity = null,
+  mirrorIntegrity = [],
   status = "ok",
   reason,
   filter = "NEEDS_ATTENTION",
@@ -204,7 +204,8 @@ export function OperationsQueueScreen({
    * Null when the caller did not read it; the panel then says so rather than
    * reporting a mirror with nothing wrong.
    */
-  mirrorIntegrity?: MirrorIntegrity | null;
+  /** One entry per environment; the route serves all three. */
+  mirrorIntegrity?: readonly { environment: string; integrity: MirrorIntegrity | null }[];
   queue: OperationsQueue | null;
   status?: PanelStatus;
   reason?: string;
@@ -270,37 +271,29 @@ export function OperationsQueueScreen({
             */}
           <section className="exec-oq-panel" aria-label="Mirror integrity">
             <header className="exec-af-kpilabel">Mirror integrity</header>
-            {mirrorIntegrity
-              ? (
-                <>
-                  <div data-state={mirrorIntegrity.state}>
-                    <b>{mirrorIntegrity.state}</b>
-                    {mirrorIntegrity.state === "READY" || mirrorIntegrity.state === "PARTIAL"
-                      ? <span className="exec-af-dim"> · {mirrorIntegrity.totalFindings} finding(s)</span>
-                      : null}
-                  </div>
-                  <p className="exec-af-dim">{mirrorIntegritySentence(mirrorIntegrity)}</p>
-                  {mirrorIntegrity.findings.length > 0
+            {mirrorIntegrity.length === 0
+              ? <PanelState status="unavailable" reason="The mirror integrity report was not read for this screen." />
+              : mirrorIntegrity.map(({ environment, integrity }) => (
+                <div key={environment} className="exec-af-sub">
+                  <b>{environment.toUpperCase()}</b>{" · "}
+                  {integrity
                     ? (
-                      <table className="exec-af-table" aria-label="Mirror findings by relation">
-                        <thead><tr><th>kind</th><th>relation</th><th>reason</th>
-                          <th data-numeric="true">findings</th></tr></thead>
-                        <tbody>
-                          {mirrorIntegrity.findings.map((finding) => (
-                            <tr key={`${finding.kind}:${finding.relationKey}:${finding.reasonCode}`}>
-                              <td>{finding.kind}</td>
-                              <td>{finding.relationKey}</td>
-                              <td>{finding.reasonCode}</td>
-                              <td data-numeric="true">{finding.findings}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <>
+                        <span data-state={integrity.state}>{integrity.state}</span>
+                        {integrity.state === "READY" || integrity.state === "PARTIAL"
+                          ? <span className="exec-af-dim">{` · ${integrity.totalFindings} finding(s)`}</span>
+                          : null}
+                        <div className="exec-af-dim">{mirrorIntegritySentence(integrity)}</div>
+                        {integrity.findings.map((finding) => (
+                          <div key={`${finding.kind}:${finding.relationKey}:${finding.reasonCode}`} className="exec-af-dim">
+                            {`${finding.kind} · ${finding.relationKey} · ${finding.reasonCode} · ${finding.findings}`}
+                          </div>
+                        ))}
+                      </>
                     )
-                    : null}
-                </>
-              )
-              : <PanelState status="unavailable" reason="The mirror integrity report was not read for this screen." />}
+                    : <span className="exec-af-absent" title="This environment's report was not read.">not read</span>}
+                </div>
+              ))}
           </section>
           <section className="exec-oq-triage" aria-label="Triage">
             <div className="exec-oq-triagehead">{selectedId ? `Triage · ${selectedId}` : "Select an operation"}</div>

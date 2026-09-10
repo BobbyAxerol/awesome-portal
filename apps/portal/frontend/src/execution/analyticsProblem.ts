@@ -200,6 +200,21 @@ export function readAnalyticsFailure(
     };
   }
 
+  if (code === "ANALYTICS_UPSTREAM_ROUTE_ABSENT") {
+    // Not a refusal and not a permission problem: the other system has no such
+    // route. Saying "the computation failed" would send the reader to look at
+    // the request instead of at the contract between the two systems.
+    return {
+      code,
+      kind: "infrastructure",
+      panelStatus: "unavailable",
+      title: "The source system serves no route for this panel, so there is nothing to compute yet.",
+      action: null,
+      retryAfterSeconds,
+      keepLastKnownAsStale: false,
+    };
+  }
+
   return {
     code,
     kind: "unknown",

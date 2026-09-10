@@ -6728,3 +6728,134 @@ Kiểm lại trên trình duyệt sau khi sửa:
 3. **Chưa có route liệt kê finding theo thời gian.** Aggregate hiện đủ để biết
    *có* vấn đề; muốn điều tra sâu thì cần một đường riêng, và đường đó phải tự
    quyết mức phơi bày dữ liệu pháp y — không mở rộng route này.
+
+## A43. ĐÓNG NỐT PHASE 2 (10-09) — ba món treo, và một sự thật lớn hơn cả ba
+
+Owner: *"làm cho hết phase 2, xử lý hết những gì còn thắc mắc, phân vân, chuẩn
+hoá, không để gap và technical debt qua phase sau"*. §A42.8 tôi để ba món treo.
+Đóng cả ba, và trong lúc đóng món thứ nhất thì lộ ra thứ lớn hơn.
+
+### A43.1 Món 1 — không phải "chờ codex xác nhận" mà là một sự thật đo được
+
+Tôi viết ở §A42.8 rằng cần codex xác nhận Edge có triển khai
+`/internal/v1/screens/account-broker-360/{id}/exposure` không. Đó là tôi lười:
+**source của Edge nằm ngay trong repo này.**
+
+Truy đúng cách:
+
+1. Runtime manifest khai `edge_commit = 9266a6843d18…`.
+2. Commit đó **có trong repo** và **là tổ tiên của HEAD** — nghĩa là ảnh Edge
+   đang chạy được build từ chính cây mã này.
+3. Tại đúng commit ấy, crate Rust phục vụ **năm** route nội bộ:
+   `/internal/v1/compatibility`, `/internal/v1/query`, `/internal/v1/realtime`,
+   `/internal/v1/realtime/snapshot`, `/internal/v1/realtime/stream`.
+
+**Không có `/internal/v1/screens/*` nào.**
+
+Mà control-api thì gọi **bảy** đường Edge, không đường nào nằm trong năm route đó:
+
+| control-api gọi | Edge phục vụ |
+| --- | --- |
+| `/internal/v1/query-analytics/{subject}` | không |
+| `/internal/v1/screens/account-broker-360/{id}/exposure` | không |
+| `/internal/v1/screens/alpha-360/{id}` | không |
+| `/internal/v1/screens/blotter/orders/{id}` | không |
+| `/internal/v1/screens/gate-r2/{id}/capital-preview` | không |
+| `/internal/v1/screens/paper-workbench/{id}` | không |
+| `/internal/v1/screens/portfolio-360/{id}/correlation` | không |
+| `/internal/v1/current-source/screens/{id}` (current-source proxy) | không |
+
+Vậy **cả họ proxy analytics đang gọi vào một hợp đồng đường dẫn không tồn tại ở
+đầu kia**. Binding exposure không đặc biệt; nó chỉ là đường đầu tiên có người
+gỡ được cửa Portal nên mới lộ ra.
+
+Kiểm chứng thêm: `edge_commit` trong manifest đến từ **contract pack đã pin**
+(`intake.returnPack.edgeCommit`), không phải bắt tay trực tiếp — và trong 30
+phút log không có một lượt gọi Edge thành công nào. Projection worker đọc
+**local**, nên "0 lỗi source" mà tôi từng ghi ở §A37.2 là đúng theo nghĩa tầm
+thường: **không ai gọi thì không ai lỗi**. Đó là chỗ tôi đọc nhầm ý nghĩa của
+một con số 0.
+
+### A43.2 Chuẩn hoá: một guard để lớp lỗi này không tái diễn
+
+Sửa một đường thì đường khác vẫn im lặng hỏng. Nên thay vì vá, tôi dựng
+`edgePathContract.test.ts`: nó **đọc cả hai phía từ source** — mọi
+`/internal/v1/...` control-api gọi, và mọi route crate Rust phục vụ — rồi so.
+
+Tám đường chưa được phục vụ nằm trong allowlist, **mỗi đường một lý do viết
+ra**. Ba quy tắc:
+
+- đường mới không nằm trong danh sách phục vụ và không có lý do → **fail**;
+- đường trong allowlist mà Edge **đã** phục vụ → **fail** (buộc phải gỡ khỏi
+  danh sách, để nó không mốc);
+- mỗi lý do phải đủ dài để người đọc làm được gì đó với nó.
+
+Guard đặt ở suite frontend vì container test control-api chỉ mount vài thư mục,
+không có crate Rust — tôi thử ở đó trước và nó fail ngay ở phép tự vệ
+("đọc được cả hai phía"), đúng như thiết kế.
+
+**Chứng minh guard cắn:** thêm tạm `"/internal/v1/screens/does-not-exist/probe"`
+vào proxy → guard fail và **nêu đích danh** đường đó. Đã hoàn tác.
+
+### A43.3 Món 1b — `404` không phải "từ chối", và một giả định của tôi sai
+
+Proxy gộp **mọi** mã ngoài 2xx thành `ANALYTICS_UPSTREAM_REJECTED`. Câu đó đẩy
+người đọc đi soi quyền và payload cho một đường có thể **chưa bao giờ tồn tại**.
+Nay nó phân biệt: `404` → `ANALYTICS_UPSTREAM_ROUTE_ABSENT`, và frontend có câu
+riêng — *"The source system serves no route for this panel, so there is nothing
+to compute yet."*
+
+**Nhưng đo lại sau khi deploy thì mã vẫn là `ANALYTICS_UPSTREAM_REJECTED`.**
+Nghĩa là Edge trả **`400`, không phải `404`**. Tôi đã đoán sai khi viết rằng nó
+đáp 404.
+
+Nói cho đúng phạm vi hiểu biết: tôi **biết chắc** crate tại `edge_commit` đang
+chạy chỉ phục vụ năm route và không route nào là `screens` (§A43.1). Tôi **không
+biết chắc** `400` kia là do router từ chối đường không tồn tại hay do một tầng
+kiểm khác. Từ ngoài nhìn vào, một `400` không phân biệt được hai khả năng đó, và
+tôi **không ánh xạ `400` thành `ROUTE_ABSENT`** — làm vậy là đoán, đúng thứ cả
+dự án này đang chống. Nhánh `404` vẫn giữ vì nó đúng khi tình huống ấy xảy ra.
+
+### A43.4 Món 2 — panel mirror giờ đọc cả ba environment
+
+Panel cũ gọi cứng `environment=paper` trong khi route phục vụ cả ba, và màn
+Operations Queue thì vốn đã liệt kê source health theo **ba** profile. Một panel
+đọc paper rồi nằm cạnh bảng ba dòng là mời người ta hiểu nhầm nó nói cho cả ba.
+
+Nay ba lượt đọc riêng, mỗi environment một dòng trạng thái. Environment nào chưa
+đọc được thì nói `not read` — không mượn kết quả của environment khác.
+
+### A43.5 Món 3 — quyết định, không phải TODO
+
+"Chưa có route liệt kê finding theo thời gian" — tôi **quyết định không làm**, và
+đây là lý do, để phase sau không phải đoán lại:
+
+Aggregate hiện tại đủ trả lời câu hỏi vận hành: *relation nào không đầy đủ, bao
+nhiêu lần, từ bao giờ*. Một đường liệt kê từng finding sẽ phải phơi `entity_key`
+hoặc `row_id` mới có ích — mà đó chính là dữ liệu A38.6 cấm đưa ra màn. Làm nó
+tử tế nghĩa là phải tự quyết mức phơi bày, phân quyền riêng và đường audit
+riêng; làm ẩu nghĩa là mở một lỗ rò dữ liệu khách hàng để tiện điều tra.
+
+Nên nó **không phải nợ của Phase 2**. Nó là một tính năng riêng cần owner duyệt
+phạm vi trước. Ghi ở đây để không ai coi việc thiếu nó là một chỗ bỏ quên.
+
+### A43.6 Đo lại sau khi đóng
+
+| Kiểm | Kết quả |
+| --- | --- |
+| control-api | **465/465** + PostgreSQL restore drill |
+| mã lỗi exposure sau khi sửa | vẫn `ANALYTICS_UPSTREAM_REJECTED` (Edge trả `400`) — **không** phải `ROUTE_ABSENT`, xem A43.3 |
+| frontend | **128 file · 2147 test** (thêm 4 guard hợp đồng đường dẫn, 6 test reader mirror) |
+| guard hợp đồng Edge | xanh, và **chứng minh được là cắn** |
+| 43 binding | 0 còn `ANALYTICS_IDENTIFIER_INVALID` |
+| mirror integrity | paper/sandbox/live đều `READY`, mỗi cái một `measured_revision` |
+
+### A43.7 Điều tôi đọc sai trước đó, ghi lại
+
+§A37.2 tôi viết *"507 vòng ladder, 0 lỗi source hay edge"* và trình bày nó như
+bằng chứng đường ống Portal→Edge khoẻ. Sai. Projection worker đọc **local**;
+không lượt gọi Edge nào diễn ra. **Zero lỗi vì zero lượt gọi** — một con số 0 mà
+tôi đã gán cho nó ý nghĩa nó không có, đúng cái lỗi mà cả dự án này đang chống.
+
+Đường ống WireGuard thì vẫn thật (§A37.2: bắt tay 55 giây, 309 GiB) — nhưng lưu
+lượng đó **không phải** của control-api gọi Edge qua các route screens.

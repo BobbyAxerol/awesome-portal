@@ -410,9 +410,20 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       });
       stream.once("end", () => {
         if (status < 200 || status >= 300) {
+          /*
+           * PHASE 2 (round 2) · a route that is not there is not a refusal.
+           *
+           * Unblocking the binding identifier let a request reach the Edge for the
+           * first time. The deployed Edge serves five internal routes and no
+           * `screens` path is among them, so these calls cannot be routed — but it
+           * answers 400, not 404, and a 400 alone does not distinguish "no such
+           * route" from "bad request". Only a 404 is mapped here; guessing at the
+           * 400 would be the same sin as the dashes this codebase spent a phase
+           * removing. The proxy reports what it observed, never why.
+           */
           settle(new AnalyticsProxyError(
-            typedUpstreamProblemCode(Buffer.concat(chunks), responseIsJson, status) ??
-              "ANALYTICS_UPSTREAM_REJECTED",
+            typedUpstreamProblemCode(Buffer.concat(chunks), responseIsJson, status)
+              ?? (status === 404 ? "ANALYTICS_UPSTREAM_ROUTE_ABSENT" : "ANALYTICS_UPSTREAM_REJECTED"),
             status,
           ));
           return;
