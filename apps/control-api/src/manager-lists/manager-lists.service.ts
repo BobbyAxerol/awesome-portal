@@ -1,4 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { freshnessPolicies } from "../execution/environment-parity";
 import { AuthSession, PortalUser } from "../domain";
 import { ControlApiConfig, querySigningKeys } from "../config";
@@ -77,6 +77,7 @@ const PERFORMANCE_FIELDS = [
 
 @Injectable()
 export class ManagerListsService {
+  private readonly logger = new Logger(ManagerListsService.name);
   private readonly query: ControlPlaneQueryService;
   private readonly inFlight = new Map<string, Promise<ProjectionSnapshot>>();
 
@@ -290,6 +291,17 @@ export class ManagerListsService {
       ? this.refreshFleet(principal, environment)
       : this.refreshBindings(principal, sourceEnvironment(environment)))
       .catch((error) => {
+        // Serving the committed snapshot is right and stays exactly as it was.
+        // Discarding the reason was not: the snapshot lease is five seconds,
+        // so a projection that has stopped refreshing retries on every read
+        // and fails on every read, and on dev that ran fourteen minutes with
+        // nothing in the log. The same shape the profile projection worker
+        // already uses, so an operator greps one event name for both.
+        this.logger.warn(JSON.stringify({
+          event: "manager_list_projection_refresh_failed",
+          projection_kind: kind, environment, error_code: portfolioReadReason(error),
+          serving_committed_snapshot: existing !== null,
+        }));
         if (existing) return existing;
         throw error;
       })

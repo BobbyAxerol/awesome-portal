@@ -1,9 +1,10 @@
-import { beforeAll, afterAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
+import { Logger } from "@nestjs/common";
 import { AuthSession, PortalUser } from "../src/domain";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ManagerListsRepository } from "../src/manager-lists/manager-lists.repository";
-import { ManagerListsService } from "../src/manager-lists/manager-lists.service";
+import { ManagerListsError, ManagerListsService } from "../src/manager-lists/manager-lists.service";
 import { AlphaFleetQuerySchema, BindingsQuerySchema } from "../src/manager-lists/contracts";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
 
@@ -25,6 +26,8 @@ class FakeSource {
   readonly calls: string[] = [];
   pause: Promise<void> | null = null;
   leakUnscopedChildren = false;
+  /** Set to an error code to make every relation read fail until cleared. */
+  failNextRefresh: string | null = null;
   readonly rows: Record<string, Array<Record<string, Scalar>>> = {
     strategies: [
       { strategy_id: "str_a", alpha_id: "alpha_a", label: "Carry A", version: "3.2", trader_id: "Bobby-001", state: "READY", active: true, updated_at: "2026-08-31T09:00:00Z", secret_token: "never" },
@@ -62,6 +65,7 @@ class FakeSource {
     relation: string, query: { cursor?: string },
   ) {
     this.calls.push(`${environment}:${screenId}:${relation}`);
+    if (this.failNextRefresh) throw new ManagerListsError(this.failNextRefresh, 503);
     if (this.pause) await this.pause;
     const acceptedAccounts = new Set(this.rows.accounts
       .filter((row) => row.mode === environment)
@@ -424,6 +428,44 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     expect(portfolios.freshness).toBeTruthy();
     expect(portfolios.freshness_budget_ms).toBeUndefined();
     expect(portfolios.projection_refreshed_at).toBeUndefined();
+  });
+
+  /**
+   * The snapshot lease is five seconds, so a projection that has stopped
+   * refreshing is retried on every single read, and every failure was
+   * swallowed whole when a committed snapshot existed. On dev that ran for
+   * fourteen minutes with nothing in the log: "nobody read this lately" and
+   * "every attempt since has failed" looked identical to an operator.
+   *
+   * Serving the committed snapshot is deliberate and unchanged. Only the
+   * silence is fixed.
+   */
+  it("logs a failed refresh instead of ageing quietly, and still serves the snapshot", async () => {
+    await service.fleet(principal(), { environment: "all", limit: 1 });
+    const warned: string[] = [];
+    const spy = vi.spyOn(Logger.prototype, "warn").mockImplementation((message: unknown) => {
+      warned.push(String(message));
+    });
+    try {
+      source.failNextRefresh = "BR72_SOURCE_UNAVAILABLE";
+      await pool.query(`UPDATE execution_manager_projection_snapshots SET refreshed_at = now() - interval '90 seconds'`);
+      const during = await service.fleet(principal(), { environment: "all", limit: 1 }) as Record<string, any>;
+
+      // Unchanged: the committed projection is still served, not an error.
+      expect(during.page.rows.length).toBeGreaterThan(0);
+      expect(during.freshness).toBe("STALE");
+    } finally {
+      spy.mockRestore();
+      source.failNextRefresh = null;
+    }
+    const event = warned.find((line) => line.includes("manager_list_projection_refresh_failed"));
+    expect(event).toBeTruthy();
+    expect(JSON.parse(event!)).toMatchObject({
+      event: "manager_list_projection_refresh_failed",
+      projection_kind: "ALPHA_FLEET",
+      error_code: "BR72_SOURCE_UNAVAILABLE",
+      serving_committed_snapshot: true,
+    });
   });
 
   it("rejects page sizes above the published BR-EX-72 bound", () => {
