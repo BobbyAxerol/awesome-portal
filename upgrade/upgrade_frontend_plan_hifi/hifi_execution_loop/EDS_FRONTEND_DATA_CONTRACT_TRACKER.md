@@ -5715,3 +5715,343 @@ Cần owner quyết trước khi biến thành việc.
 5. **Phase 6** — con số ≥ 60 là ước lượng. Nếu sau khi probe biết thao tác mà
    trần thật thấp hơn, phải sửa mục tiêu và nói rõ vì sao, **không** hạ chuẩn
    trong im lặng như tôi từng suýt làm ở §A32.5.
+
+---
+
+### A38.4 Codex architecture review — amendments bắt buộc trước Vòng 2
+
+**Trạng thái:** `PROPOSED / INSPECTED 2026-09-10` — đây là kế hoạch chung
+Backend + Frontend. Chưa có thay đổi runtime, feature flag, schema hay nguồn
+Trading System nào được phép chỉ vì mục này đã được viết.
+
+#### A38.4.1 Những điều đã xác minh trong source, không phải suy đoán
+
+| Phát hiện | Bằng chứng source đã đọc | Kết luận kiến trúc |
+| --- | --- | --- |
+| Payload trùng không chỉ ở một fixture | `paper-read.service.ts` dựng cùng lúc `panels: stagePanels(...)` và `data: wireStageValue(...)` ở phần `envelope()`; pattern tương tự còn ở `resource-read.service.ts` và `profile-read.service.ts` | Không được sửa riêng Paper/Blotter. Đây là migration wire-contract có kiểm soát trên toàn bộ stage/resource/profile BFF. |
+| Hai nhánh không có cùng ý nghĩa hoàn toàn | `panels.<key>` giữ `state`, `clocks`, `coverage`, `reason_code`, `retryable` và `data.rows`; `data` còn chứa cả context như `page`, `query_analytics`, `observation_gate`, `history_windows` | Không thể xoá mù `data` hoặc đổi frontend sang `panels` bằng fallback. V2 phải tách rõ **panel data** với **screen context**. |
+| Binding Exposure chết trước khi đi lên Edge | `analytics.proxy.ts` dùng `IDENTIFIER=/^[A-Za-z0-9._-]{1,128}$/` trong cả `segment()` và `analyticsResource()`; `bindingExposure()` đi qua hai hàm đó | Đây là lỗi Portal BFF. `local-query-analytics.service.ts` dùng một validator khác cho subject analytics; chưa có bằng chứng nó nằm trong path Binding Exposure, vì vậy không được nới cả hai validator theo kiểu bulk change. |
+| Mirror có writer production thật | `durable-mirror.repository.ts` ghi conflict và gap trong transaction production; migrations giữ `entity_key`, `row_id` và digest nội bộ | Cần API integrity aggregate, nhưng browser không được nhận entity key, raw row id, digest, source cursor hoặc dữ liệu forensic. |
+| `COMPLETE` có đường code hợp lệ | `profile-projection.worker.ts`: khởi đầu `COMPLETE`, hạ khi input `PARTIAL`/`UNKNOWN`/`UNAVAILABLE`, và hạ khi drain vượt page budget | 0% COMPLETE hiện tại chưa chứng minh bug. Nó có thể là hệ quả trung thực của current source hoặc cửa sổ retained có giới hạn. Phase 5 phải tìm **nguyên nhân từng relation**, không được ép mọi snapshot thành COMPLETE. |
+| Pin không phải bảng vô chủ hiển nhiên | `command-center.repository.ts` và `CommandCenter.tsx` vẫn đọc/render pins; thiếu phần là writer product, không phải consumer | Không drop bảng chỉ vì `INSERT` hiện xuất hiện trong test. Quyết định phải dựa vào ownership inventory và UX được duyệt. |
+| NATS/MinIO không thể quyết chỉ từ lưu lượng thấp | NATS còn là adapter job broker của QuantBT; low traffic không chứng minh không còn consumer. MinIO cũng cần inventory artifact/lifecycle trước khi gỡ | Không tự xoá service, volume hay compose dependency trong vòng 2. Đây là quyết định vận hành có evidence, không phải cleanup cosmetic. |
+
+#### A38.4.2 Quy tắc data-plane áp dụng cho mọi phase sau
+
+Đường đọc sản phẩm chuẩn phải là:
+
+```text
+Browser
+  -> same-origin named Portal BFF operation
+  -> SGP-local atomic projection / bounded shared read
+  -> (chỉ projection worker có thể gọi private Execution Edge qua mTLS + delegated JWT)
+  -> Trading System current source
+```
+
+- Refresh, tab switch và SSE của browser **không được** tạo fan-out trực tiếp
+  sang AWS-HK/Execution Edge. Browser chỉ đọc snapshot local theo scope đã
+  authorize; worker mới lấy current source theo cadence, lease và admission
+  đã khai báo.
+- Cache/admission key luôn gồm ít nhất workspace, principal/RBAC scope,
+  environment, delivery profile, named operation và normalized query. Không
+  cache cross-workspace, cross-profile hoặc cross-role.
+- SSE chỉ phát local projection revision/invalidation đã authorize, không phát
+  raw Manager relation, cursor, JWT, mTLS metadata hoặc broker/CLI input.
+- Current transactional/projection facts ở PostgreSQL + bounded retention là
+  đúng lớp lưu trữ hiện tại. Không đưa current screen state vào Parquet/DuckDB
+  để "nhanh"; Parquet/DuckDB chỉ là lựa chọn cho cold analytical/export khi có
+  query workload, ownership và retention riêng đã được chứng minh.
+- Mọi số decimal vẫn là string chính xác; mọi clock browser-visible là UTC
+  milliseconds; `PARTIAL`, `EMPTY`, `STALE`, `UNAVAILABLE` là state dữ liệu,
+  không phải lý do để thay cả rich screen thành placeholder.
+
+---
+
+### PHASE R2-0 (mới) — Contract baseline, ownership ledger và rollout guard
+
+**Goal.** Khóa sự thật trước khi tối ưu: biết mỗi route/screen đang đọc contract
+nào, table nào có writer owner nào, consumer nào đang dùng V1, và baseline
+performance nào phải không bị hồi quy. Phase này chỉ tạo inventory, schema,
+fixture và evidence; không đổi payload production, không lật cờ.
+
+**Backend (Codex)**
+
+1. Tạo source-controlled `execution-screen-contract-ledger.v1`: named BFF
+   operation, current schema revision, UI route/panel, authority, source/local
+   path, byte baseline (identity và gzip), freshness budget, pagination bound,
+   owner và test owner.
+2. Tạo `persistence-ownership.v1` cho toàn bộ bảng execution/governance:
+   writer owner (`PORTAL_WORKFLOW`, `PORTAL_PROJECTION`, `TRADING_SYSTEM_READ`,
+   `MIGRATION_ONLY`, `RETIRED_PENDING_REMOVAL`), ingress, readers, retention và
+   disposal decision. Không dùng grep `INSERT` để kết luận ownership.
+3. Pin JSON schema/golden fixture cho response V1 hiện hành và lập capability
+   inventory cho 121 route. Mọi published route có `interaction_class`:
+   `AUTO_READ`, `INTERACTION_READ`, `PORTAL_MUTATION`, `EDGE_COMMAND`, hoặc
+   `INTENTIONALLY_UNEXPOSED` cùng reason.
+4. Benchmark bounded: p50/p95/p99 local BFF latency, response identity/gzip
+   bytes, local projection age, source call count và cache/admission outcome.
+   Mục tiêu số phải được chốt từ baseline này trước khi code tối ưu, không tự
+   chọn một SLO đẹp nhưng vô nghĩa.
+
+**Frontend (Claude)**
+
+5. Lập consumer ledger: route/container/hook nào đang đọc `data.*`,
+   `panels.*`, fixture/lab hay same-origin BFF; xác định screen/panel nào cần
+   retained previous value, manual retry, lazy tab hoặc stream invalidation.
+6. Ghi rõ 7 UI state trên từng panel: `READY`, `EMPTY`, `PARTIAL`, `STALE`,
+   `UNAVAILABLE`, `LOADING`, `ACCESS_DENIED`. Không tính screenshot fixture là
+   evidence cho production consumer.
+
+**Exit gate.** Ledger được validate trong CI; một anonymous browser capture
+không lộ cookie/secret; baseline repeatable; không có route/table/screen "không
+owner". Đây là prerequisite cho Phase 1–7 và là một commit docs/test riêng.
+
+---
+
+### A38.5 Amendment cho PHASE 1 — payload migration là V1 → V2, không phải xoá field
+
+**Quyết định đề xuất.** `panels.<panel_id>` là canonical cho collection theo
+panel vì nó giữ state/coverage/clocks. V2 đặt các giá trị không phải panel vào
+`screen_context` (ví dụ deployment, query, observation gate, history window).
+V2 **không** chứa `data.<panel>` trùng với `panels.<panel>.data.rows`.
+
+**Backend bắt buộc**
+
+1. Trace toàn bộ producer gồm Paper, Resource và Profile readers trước khi
+   chọn route V2. Publish named operation/DTO `execution.<screen>.v2` qua
+   revision/version explicit (path hoặc media type được ledger pin), không
+   thay shape V1 in-place.
+2. Giữ V1 qua compatibility adapter riêng trong release transition; V1 và V2
+   không cùng serialize hai nhánh duplicate trong một response. Chỉ xoá V1
+   sau evidence rằng không còn consumer có chủ đích trong release window đã
+   ghi vào manifest.
+3. Áp page bound trước serialization, không sau khi đã dựng JSON; giữ opaque
+   cursor, exact decimal, `source_history_semantics`, visibility/RBAC và
+   `coverage.has_more` nguyên vẹn. Mỗi large panel có include/lazy-operation
+   allowlist do BFF sở hữu; không có endpoint generic đọc relation.
+4. Thêm response metrics theo named operation: uncompressed/gzip bytes,
+   panel count, row count, cache/admission outcome. Không dùng raw ID làm
+   metric label.
+
+**Frontend bắt buộc**
+
+5. Chuyển container sang V2 bằng typed adapter đọc `panels` và
+   `screen_context`; cấm `data ?? panels`/fixture fallback im lặng. Contract
+   mismatch phải render panel-local `UNAVAILABLE` cùng code, không blank page.
+6. Rich layout giữ nguyên trong mọi state; chỉ rows/chart trong panel thay đổi.
+   Tab nặng fetch lazy khi user mở, nhưng label/state/freshness vẫn render tức
+   thời từ screen envelope. Giữ previous data chỉ khi nó có age/state nhìn
+   thấy; không vẽ giá trị cũ như FRESH.
+
+**Exit gate bổ sung.** Schema parity cho rows/context/metadata; V1 and V2
+semantic digest parity; 0 duplicate collection pairs trong V2; Paper `<800 KB`
+và Blotter `<230 KB` ở identity response **và** gzip được ghi; RPS source-edge
+không tăng khi browser refresh. Browser journey phải mở các tab lazy và kiểm
+tra không có direct Edge request.
+
+---
+
+### A38.6 Amendment cho PHASE 2 — binding safety và mirror integrity có scope riêng
+
+#### 2A — Binding Exposure
+
+1. Thay validator global bằng `parseBindingId` chỉ tại binding path. Grammar
+   được suy từ inventory 43 id hiện có, bounded và canonical; phải chấp nhận
+   delimiter `@` hợp lệ nhưng từ chối slash, backslash, whitespace/control,
+   `..`, raw/double-encoded percent và mọi ký tự không thuộc grammar.
+2. `managerQueryAnalyticsTarget()` và generic local analytics giữ validator
+   hiện có trừ khi trace chứng minh binding đi qua chúng. Đây tránh vô tình
+   nới subject ID của deployment/alpha/portfolio.
+3. Encode đúng một lần trước mTLS HTTP/2 path; authorization resource/cache
+   key dùng binding ID canonical + workspace/profile/principal scope, không
+   SQL string concatenation và không log raw sensitive identifiers.
+4. Test mock Edge xác nhận URI encoded, delegated resource đúng, 43 fixture
+   binding shape được nhận, và negative matrix nhận `400` trước transport.
+
+#### 2B — Durable Mirror Integrity
+
+5. Publish named read `executionDurableMirrorIntegrityV1` từ local PostgreSQL,
+   profile-bound và RBAC-bound. DTO chỉ có aggregate by relation/severity,
+   current revision, `as_of`/`read_at`, freshness, coverage và reason. Không
+   trả `entity_key`, raw row id, payload digest, cursor, forensic row hoặc
+   topology.
+6. Semantics bắt buộc: `READY` + count 0 chỉ khi có current measured revision;
+   `PARTIAL` khi có recorded gap/conflict; `UNAVAILABLE` khi mirror disabled,
+   no current measurement hoặc database read lỗi. Không dùng `EMPTY` để che
+   "chưa từng đo".
+
+**Frontend bắt buộc.** Binding Detail render exposure panel-local; Operations/
+Command Center render "Mirror integrity" aggregate với last measured age và
+reason. `0 gaps` chỉ xuất hiện cho `READY` measurement hiện tại, không phải
+cho `UNAVAILABLE`.
+
+**Exit gate bổ sung.** 43 valid id không còn `ANALYTICS_IDENTIFIER_INVALID`;
+negative identifier matrix pass; one no-measurement fixture, one clean fixture,
+one gap/conflict fixture; browser never sees forensic values.
+
+---
+
+### A38.7 Amendment cho PHASE 3 — parity có evidence trước, backfill có rollback
+
+Phase 3 tách ba cutover nhỏ để tránh việc feature flag lặng lẽ đổi bảng thật:
+
+1. **3A — read-only parity evidence:** render a versioned environment manifest
+   gồm flag set, profile, source table, migration/reconciliation revision,
+   freshness budget và expected retention. So sánh dev/stable bằng row count,
+   max clock, duplicate-key count, exact-decimal sample digest; chưa flip flag.
+2. **3B — idempotent backfill + shadow read:** checkpoint theo table/scope,
+   key conflict policy, checksum/cardinality reconciliation, rate/admission
+   bounds và rollback marker. Chạy lần hai phải zero unintended write và cùng
+   result. Shadow response so semantic state/age, không chỉ row count.
+3. **3C — controlled flag release:** `historyTable()` chỉ chọn table theo
+   manifest revision đã verified. Thiếu timestamp = `UNKNOWN`/unavailable,
+   stale-after là policy per ingestion class (`>= 3 × declared poll interval`
+   cộng operational jitter đã chứng minh), không một global magic number.
+
+**Frontend bắt buộc.** Every financial/history panel renders data age and
+freshness tier. `STALE` giữ chart/table đã biết nhưng có conspicuous age banner;
+`UNKNOWN` không masquerade thành FRESH. No browser retry storm during stale.
+
+`EXECUTION_EDGE_PAPER_DNSE_ORIGIN` là capability/source-readiness riêng: ghi
+typed unavailable khi rỗng; không dùng nó để block Paper/Sandbox/Live parity
+hoặc backfill đã có evidence.
+
+---
+
+### A38.8 Amendment cho PHASE 4 — table ownership trước khi remove hoặc seed
+
+1. Dùng `persistence-ownership.v1` của R2-0 để quyết từng bảng. Test guard
+   kiểm một exposed reader có writer/owner declaration hợp lệ; không scan text
+   "INSERT chỉ trong test" rồi fail sai các writer khác service/migration.
+2. `execution_command_center_pins` hiện có read contract + frontend. Quyết
+   định mặc định là **nối writer Portal-owned**: create/delete pin idempotent,
+   workspace+actor scoped, audit, CSRF/session/RBAC và UI affordance rõ. Chỉ
+   retire/drop sau owner quyết product không cần pins và migration/rollback
+   evidence, không phải vì database đang rỗng.
+3. `governance_paper_exit_reviews` phải được tạo từ governed Paper Exit
+   workflow: request key/idempotency, evidence references, audit/outbox, state
+   machine và duplicate/authorization negative tests. Không seed review giả để
+   làm màn hết 404.
+4. UI chỉ render action đã có contract. Nếu capability chưa activate, disabled
+   control luôn có human-readable reason + machine reason code; không để nút
+   chết hoặc fixture-only result.
+
+**Exit gate.** Mỗi reader table có ownership; Portal-owned writer có idempotency
+and audit test; retirement only through forward migration + rollback plan; no
+fake operational/Trading System facts are seeded.
+
+---
+
+### A38.9 Amendment cho PHASE 5 — truth census và completeness semantics
+
+Chia Phase 5 thành ba deliverable đóng độc lập:
+
+1. **5A — 73-table / screen truth census.** Mỗi table/màn nhận one status:
+   `SOURCE_AWAITED`, `PORTAL_WORKFLOW_TO_IMPLEMENT`, `INTENTIONALLY_EMPTY`,
+   `RETIRED`, hoặc `POPULATED`; owner, next action, retention and UI narrative
+   must be present. 404 generic chuyển thành typed narrative từ shared reason
+   registry, không hard-code prose rải từng component.
+2. **5B — completeness proof.** Lập relation-level trace từ Manager page qua
+   `profile-projection.worker` đến journal. `COMPLETE` chỉ có nghĩa **complete
+   within the declared bounded relation/window**, không phải total trading
+   history. Test one synthetically complete *contract-valid* cycle; nếu source
+   actual vẫn partial thì record `SOURCE_PARTIAL_BY_CONTRACT` và UI giữ PARTIAL.
+   Không fabricate row hoặc alter source metadata để đạt 100% COMPLETE.
+3. **5C — Portal-owned workflow population.** Implement only rows mà Portal
+   thật sự là author (approval, exit review, incident, queue, pin…). Trading
+   System-owned facts không được seed chỉ để rich UI nhìn đầy.
+
+**Frontend bắt buộc.** Một shared `SourceGapNarrative` maps typed reason →
+authority, scope/window, next condition and retry action. Màn static phải tự
+nhận là static-approved hoặc not-yet-connected; screen rich vẫn tồn tại khi
+panel source gap.
+
+**Exit gate.** Không còn "unknown empty table"; COMPLETE conclusion has code
+trace/evidence; every 404/empty screen tells operator whether it is exact zero,
+bounded partial, source-awaited, not authorized, or Portal workflow pending.
+
+---
+
+### A38.10 Amendment cho PHASE 6 — interaction acceptance theo capability, không chạy đua route count
+
+1. 121 route inventory được map mỗi route → screen/control → interaction
+   class → owner → contract/E2E. `≥60` chỉ là diagnostic baseline; exit quyết
+   theo coverage matrix đã approved, không hạ/tăng số sau khi thấy kết quả.
+2. `AUTO_READ` test page load; `INTERACTION_READ` test tab/drawer/filter/scroll;
+   SSE test reconnect, terminal auth behavior and delta coalescing. No console
+   warnings/errors and no hidden request outside same origin.
+3. `PORTAL_MUTATION` and `EDGE_COMMAND` are not automatically made clickable.
+   Each needs exact precondition, RBAC, idempotency key, confirmation, audit,
+   success/failure receipt and rollback/refusal UI. A disposable dev workspace
+   exercises allowed writes; production/live mutation remains fail-closed until
+   its named command release is approved.
+4. Frontend test rule: disabled action without visible reason fails. Backend
+   test rule: every declared exposed mutation has controller-path negative
+   authorization/idempotency coverage; `INTENTIONALLY_UNEXPOSED` has reason.
+
+---
+
+### PHASE 7 (mới, vòng 2) — Local data-plane performance, realtime và runtime decision
+
+**Goal.** Làm portal mượt bằng local projection/cache/SSE có bounded semantics,
+không tăng load/loss of control ở Execution Cell.
+
+**Backend (Codex)**
+
+1. Publish one projection-read policy per named BFF: freshness budget, stale
+   policy, cache/admission key, max response/rows, ETag/revalidation policy,
+   current revision and source-call prohibition on browser refresh.
+2. Coalesce equal in-flight local reads and use atomic projection revision;
+   invalidation only after committed revision. Backpressure returns typed 503,
+   never an unbounded queue. Metrics: local BFF p50/p95/p99, projection age,
+   source worker call rate, cache/coalesce result, SSE connected/reconnect/drop
+   count. No raw user/resource IDs in metric labels.
+3. SSE emits revision/freshness change rather than data dump; support local
+   `Last-Event-ID`, bounded replay or explicit resync, 401/403 terminal close
+   (no endless retry), and slow-client/reconnect limits.
+4. Produce an NATS/MinIO runtime decision record from consumer, persistence,
+   retention, restore and cost evidence. Retain/reuse/remove each only under a
+   separately reviewed compose change; current low traffic alone authorizes
+   neither removal nor a new event pipeline.
+
+**Frontend (Claude)**
+
+5. React query cache timing derives from envelope freshness budget; refetches
+   the named same-origin operation, uses SSE as invalidation signal and
+   coalesces visible panel reads. Retain prior data only with explicit age and
+   state; cancelled/inactive tabs do not keep polling.
+6. Verify browser Network contains Portal origin only; visual motion comes from
+   local SSE/revision updates. UI must distinguish initial loading, reconnecting,
+   stale previous value and hard unavailable rather than flashing whole screens.
+
+**Exit gate.** Measured benchmark meets the predeclared R2-0 SLO; repeated
+browser refresh does not increase Edge request count beyond worker cadence;
+slow/revoked browser does not exhaust SSE; restart/restore preserves truthful
+revision/freshness semantics; runtime decision has owner/rollback evidence.
+
+---
+
+### A38.11 Thứ tự thực thi, ownership và rules closeout
+
+| Order | Phase | Backend ownership | Frontend ownership | Không được làm trước khi xong |
+| --- | --- | --- | --- | --- |
+| 0 | R2-0 | contract/ownership/perf ledger | consumer/state ledger | Không cắt V1 field hay flip flag |
+| 1 | 1 | V2 DTO + compatibility adapter | typed V2 consumers/lazy panels | Không remove V1 in-place |
+| 2 | 2A + 2B | scoped Binding parser; integrity aggregate | exposure + integrity panels | Không leak forensic mirror data |
+| 3 | 3A → 3C | manifest, shadow, backfill/cutover | stale/age presentation | Không lật durable source table không evidence |
+| 4 | 4 | ownership-backed Portal workflow writers | real actions/no dead affordance | Không fake-seed TS facts/drop pins blindly |
+| 5 | 5A → 5C | census/completeness/workflow data | reason narrative/static declaration | Không ép COMPLETE hoặc hide gaps |
+| 6 | 7 | local cache/SSE/admission/runtime decision | local motion and reconnect UX | Không browser→Edge fan-out |
+| 7 | 6 | controller mutation/route coverage | behavioral E2E + visual acceptance | Không count routes as product acceptance |
+
+**Rules áp dụng cho từng phase.** Một phase chỉ `DONE` khi code, generated
+contract, backend tests, frontend tests, browser evidence, rollback condition
+và tracker entry cùng commit/PR đã xanh. Không mở phase để rồi tạo debt "sẽ
+làm sau" cho một rủi ro đã biết; nếu source capability thật sự thiếu, close
+panel with typed `SOURCE_GAP_CONFIRMED` and one owner record, không bịa dữ liệu
+và không block unrelated rich UI. Backend thay đổi contract được Codex review;
+Claude không đổi backend source trực tiếp; frontend changes do Claude owns.
+
+Sau khi Bobby chọn phase đầu tiên, request cụ thể cho Claude sẽ được tách từ
+phần Frontend tương ứng ở trên, còn backend change sẽ được mirror vào Unified
+Backend Plan và implementation tracker trong cùng coherent slice.
