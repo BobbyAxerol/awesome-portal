@@ -4878,3 +4878,59 @@ manager-projection and edge-service tests, and the complete Rust/Clippy/
 PostgreSQL restore gate. The remaining action is an owner-authorized
 target-cadence soak; journal push/tail is a separate future gate, not hidden
 inside this rebase.
+
+### A36.8 Đồng bộ dev và rebuild dev-portal trên `e2481d5` (10-09)
+
+Owner duyệt phương án: đẩy `dev`, giữ `main`. Lý do giữ `main` không phải cảm
+tính mà là cách CI được nối:
+
+| Đẩy vào | Cái gì tự chạy |
+| --- | --- |
+| `dev` | `ci.yml` — chạy test, hết |
+| `main` | `ci.yml` + `publish-images.yml` (build và publish **mọi** image lên GHCR, gồm cả `execution-edge`) + `security.yml` |
+| stable | không tự động — `deploy.yml` chỉ chạy tay, phải nhập image tag, publication run id, manifest sha256, và owner bấm chấp nhận bằng chứng Trivy |
+
+Publish bây giờ sẽ đẻ ra một ảnh `execution-edge` mà không ai deploy, vì service
+Edge **chưa chạy ở đâu cả** (đếm được 0 container edge, kể cả đã dừng). Nên
+`main` chờ một lát cắt hoàn chỉnh rồi đồng bộ một lượt.
+
+Sau khi đẩy: `dev` và `feat/execution-loop-next` cùng ở `e2481d5`, local khớp
+remote; `main` vẫn `796d18e`.
+
+**Rebuild:** `deploy-int.sh` chạy từ `/home/bobby/portal-integration`, build từ
+`e2481d5`. Lần này bản vá `--force-recreate` có tác dụng thật — **`image match`
+cả hai container**, không còn lệch như ba lần trước.
+
+**Một điểm dễ hiểu nhầm, nói trước:** tên bundle vẫn y hệt lần trước
+(`index-BksXoOBd.js`). Đó **không** phải dấu hiệu rebuild trượt. `e2481d5` không
+chạm một file nào trong `apps/`, nên cây nguồn frontend giống hệt và build ra
+đúng cùng nội dung. Bằng chứng rebuild có thật nằm ở chỗ khác: container được
+tạo lúc 10:08:58, và ID ảnh khớp tag mới.
+
+Đo sau deploy, có phiên đăng nhập:
+
+| Kiểm | Kết quả |
+| --- | --- |
+| `cross-equity` | 200 · 1602 B |
+| `activation/capabilities` | 200 · 1981 B |
+| `screen-contracts` | 200 · 24269 B |
+| `runtime-manifest` | 200 · 3341 B |
+| `views/equity-chart` | 200 · 1210 B |
+| durable mirror rows | 737 413 |
+| bundle container vs host ngoài | khớp |
+| `dev-portal.primusspark.com` | 200 |
+| `portal.primusspark.com` | 302 (đăng nhập, stable không đụng) |
+
+**Giới hạn của lần kiểm này, nói thẳng.** Probe trình duyệt chỉ thực sự dựng
+được Operations Queue (3 bảng, 9 nút). Hai deep link tôi thử —
+`/execution/operations/incidents/inc_28` và `/execution/operations/op_1249` —
+rơi vào trạng thái "No feature in the current registry claims this route", tức
+chúng là chuỗi trong mã nguồn chứ không phải route thật của bản này; nên không
+coi đó là đã nghiệm thu Incident Detail. Và harness probe **không bắt console
+error** — nó không có trường đó — nên tôi không tuyên bố "0 lỗi console"; tôi
+chỉ biết trang dựng được và có nội dung.
+
+Sáu dấu `—` còn lại đều đã kiểm ngữ cảnh: năm cái là dấu câu tiếng Anh giữa
+mệnh đề, cái thứ sáu đứng trước câu "No data yet · No feature in the current
+registry claims this route" — có câu giải thích đi kèm nên không phải giá trị
+bịa. Đúng con số §A32.3 đã chốt.
