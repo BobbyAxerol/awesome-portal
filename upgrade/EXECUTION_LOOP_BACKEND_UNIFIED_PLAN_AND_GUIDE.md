@@ -2662,6 +2662,18 @@ target cadence, the F17 chain on a real eligible evidence run, and Bobby's
 taxonomy decision + visual review + release train. Production flags remain
 untouched; command relay and Live mutation stay false.
 
+Status 2026-09-10: `P4_E_SOURCE_COMPLETE / RUNTIME_OVERLAY_OFF` — the
+owner-approved cadence groundwork was rebased safely onto the current Edge
+instead of applying the old WIP patch. The worker keeps a complete 13-feed
+cache, forces a full baseline after cold start or catalogue revision drift,
+then refreshes only due classes while committing a complete projection. Each
+entity-kind carries conservative cadence and freshness metadata (composite
+kinds use their slowest/oldest contributing feed). All three new optional
+class variables remain unset, so deployed behavior is exactly the legacy
+single cadence. No Source Proxy, Trading System, command, profile or runtime
+container was changed. Target-cadence soak remains required before activation;
+journal push/tail remains separately gated.
+
 New finding F18 (named, non-blocking): under heavy host load, two concurrent
 `POST /governance/approvals` with the same request key can race the
 unique-violation re-read before the winner commits and return a typed 409

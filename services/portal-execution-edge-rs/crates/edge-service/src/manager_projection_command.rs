@@ -1,4 +1,8 @@
-use std::{collections::BTreeSet, fs, time::Duration};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs,
+    time::Duration,
+};
 
 use chrono::{DateTime, Utc};
 use manager_compat_authority::{
@@ -6,10 +10,10 @@ use manager_compat_authority::{
     ManagerRequestContext, DELEGATED_RESOURCE,
 };
 use manager_projection::{
-    BuiltProjectionCycle, ManagerFeedSnapshot, ManagerProjectionCycle, ManagerProjectionFact,
-    ManagerProjectionFeed, ManagerProjectionProfile, ManagerProjectionSource, ProjectionMapError,
-    DEFAULT_POLL_INTERVAL_MS, FEEDS, MANAGER_PROJECTION_ADAPTER_VERSION, MAXIMUM_CYCLE_RECORDS,
-    MAXIMUM_FEED_PAGES, MAXIMUM_FEED_RECORDS,
+    BuiltProjectionCycle, FeedClass, ManagerFeedSnapshot, ManagerProjectionCycle,
+    ManagerProjectionFact, ManagerProjectionFeed, ManagerProjectionProfile,
+    ManagerProjectionSource, ProjectionMapError, FEEDS, MANAGER_PROJECTION_ADAPTER_VERSION,
+    MAXIMUM_CYCLE_RECORDS, MAXIMUM_FEED_PAGES, MAXIMUM_FEED_RECORDS,
 };
 use manager_v2_client::{ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError};
 use manager_v2_contract::{
@@ -64,6 +68,82 @@ struct ManagerProjectionRollbackReport {
     completed_at: DateTime<Utc>,
 }
 
+/// Outcome used only by the long-running scheduler. The JSON/CLI receipt is
+/// deliberately unchanged; this carries the refresh selection needed to set
+/// the independent cadence timers truthfully after a successful commit.
+#[derive(Debug)]
+struct ProjectionCycleAttempt {
+    report: ManagerProjectionRunReport,
+    refreshed_classes: Vec<FeedClass>,
+}
+
+/// In-memory, complete-feed cache for the P4-E cadence ladder. It is never an
+/// authority on its own: cold start or catalogue revision drift forces one
+/// complete source read before any partial-class refresh can commit.
+#[derive(Debug, Clone, Default)]
+struct ManagerProjectionFeedCache {
+    feeds: BTreeMap<&'static str, ManagerFeedSnapshot>,
+}
+
+impl ManagerProjectionFeedCache {
+    fn matches_catalogue(&self, profile: ManagerProjectionProfile, catalogue_digest: &str) -> bool {
+        self.feeds.len() == FEEDS.len()
+            && FEEDS.iter().all(|expected| {
+                self.feeds.get(expected.feed_id).is_some_and(|snapshot| {
+                    snapshot.feed == *expected
+                        && snapshot.profile == profile
+                        && snapshot.catalogue_digest == catalogue_digest
+                })
+            })
+    }
+
+    fn with_refreshed(
+        &self,
+        profile: ManagerProjectionProfile,
+        catalogue_digest: &str,
+        refreshed: Vec<ManagerFeedSnapshot>,
+    ) -> Result<Self, ManagerProjectionCommandError> {
+        let mut next = self.clone();
+        for snapshot in refreshed {
+            if !FEEDS.contains(&snapshot.feed)
+                || snapshot.profile != profile
+                || snapshot.catalogue_digest != catalogue_digest
+            {
+                return Err(ManagerProjectionCommandError::CycleMetadataDrift);
+            }
+            next.feeds.insert(snapshot.feed.feed_id, snapshot);
+        }
+        Ok(next)
+    }
+
+    fn complete_cycle(
+        &self,
+        profile: ManagerProjectionProfile,
+        catalogue_digest: &str,
+        fastest_interval: Duration,
+    ) -> Result<ManagerProjectionCycle, ManagerProjectionCommandError> {
+        if !self.matches_catalogue(profile, catalogue_digest) {
+            return Err(ManagerProjectionCommandError::ProjectionCacheIncomplete);
+        }
+        let feeds = FEEDS
+            .iter()
+            .map(|feed| {
+                self.feeds
+                    .get(feed.feed_id)
+                    .cloned()
+                    .ok_or(ManagerProjectionCommandError::ProjectionCacheIncomplete)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(ManagerProjectionCycle {
+            profile,
+            catalogue_digest: catalogue_digest.to_owned(),
+            poll_interval_ms: i64::try_from(fastest_interval.as_millis())
+                .map_err(|_| ManagerProjectionCommandError::InvalidPollInterval)?,
+            feeds,
+        })
+    }
+}
+
 /// Runs one complete, bounded Manager-v2 projection cycle.
 ///
 /// # Errors
@@ -74,16 +154,25 @@ struct ManagerProjectionRollbackReport {
 pub async fn run_once(
     config: &EdgeConfig,
 ) -> Result<ManagerProjectionRunReport, ManagerProjectionCommandError> {
-    run_once_mode(config, false).await
+    let mut cache = ManagerProjectionFeedCache::default();
+    Ok(run_once_mode(config, false, &FeedClass::ALL, &mut cache)
+        .await?
+        .report)
 }
 
 #[allow(clippy::too_many_lines)] // One bounded cycle keeps source-to-cutover ordering auditable.
 async fn run_once_mode(
     config: &EdgeConfig,
     force_rebuild: bool,
-) -> Result<ManagerProjectionRunReport, ManagerProjectionCommandError> {
+    requested_classes: &[FeedClass],
+    feed_cache: &mut ManagerProjectionFeedCache,
+) -> Result<ProjectionCycleAttempt, ManagerProjectionCommandError> {
     if !config.manager_projection_enabled.is_enabled() {
         return Err(ManagerProjectionCommandError::ProjectionDisabled);
+    }
+    let requested_classes = normalized_classes(requested_classes);
+    if requested_classes.is_empty() {
+        return Err(ManagerProjectionCommandError::NoFeedClassesRequested);
     }
     let profile_id = config
         .manager_v2_profile_id
@@ -134,7 +223,16 @@ async fn run_once_mode(
         &catalogue_digest,
     )
     .await?;
-    let cycle = load_cycle(
+    // A catalogue revision invalidates the complete cache atomically. The
+    // first cycle under a new revision is therefore a full source baseline,
+    // not a mixture of old and new contract metadata.
+    let refreshed_classes =
+        if force_rebuild || !feed_cache.matches_catalogue(profile, &catalogue_digest) {
+            FeedClass::ALL.to_vec()
+        } else {
+            requested_classes
+        };
+    let refreshed_feeds = load_feeds(
         &store,
         config,
         owner_digest,
@@ -142,11 +240,21 @@ async fn run_once_mode(
         bound,
         &catalogue,
         profile,
-        i64::try_from(config.manager_projection_poll_interval.as_millis())
-            .map_err(|_| ManagerProjectionCommandError::InvalidPollInterval)?,
+        &refreshed_classes,
+        config.manager_projection_class_intervals,
     )
-    .await?
-    .build()?;
+    .await?;
+    // Only install the updated cache after the complete candidate has passed
+    // projection persistence/lease validation. A failure leaves the last
+    // complete state intact and cannot publish a partial class as truth.
+    let candidate_cache = feed_cache.with_refreshed(profile, &catalogue_digest, refreshed_feeds)?;
+    let cycle = candidate_cache
+        .complete_cycle(
+            profile,
+            &catalogue_digest,
+            config.manager_projection_class_intervals.fastest(),
+        )?
+        .build()?;
 
     let scope = projection_core::ProjectionScope::new(
         execution_contracts::CanonicalId::parse("workspace_execution_manager")?,
@@ -217,21 +325,25 @@ async fn run_once_mode(
     store
         .release_manager_projection_lease(&scope, epoch.epoch_id, lease.proof())
         .await?;
-    Ok(ManagerProjectionRunReport {
-        schema_version: "portal.execution.manager-projection.run.v1",
-        environment: profile.environment().to_owned(),
-        profile_id: profile.profile_id().to_owned(),
-        epoch_id: epoch.epoch_id,
-        cycle_id: cycle.cycle_id.as_str().to_owned(),
-        catalogue_digest,
-        feed_count: cycle.feed_count,
-        snapshot_count: cycle.snapshots.len(),
-        record_count: cycle.record_count,
-        state_digest: cycle_receipt.state_digest,
-        activated,
-        retained_previous_epoch_id,
-        source_read_at: cycle.source_read_at,
-        completed_at: Utc::now(),
+    *feed_cache = candidate_cache;
+    Ok(ProjectionCycleAttempt {
+        report: ManagerProjectionRunReport {
+            schema_version: "portal.execution.manager-projection.run.v1",
+            environment: profile.environment().to_owned(),
+            profile_id: profile.profile_id().to_owned(),
+            epoch_id: epoch.epoch_id,
+            cycle_id: cycle.cycle_id.as_str().to_owned(),
+            catalogue_digest,
+            feed_count: cycle.feed_count,
+            snapshot_count: cycle.snapshots.len(),
+            record_count: cycle.record_count,
+            state_digest: cycle_receipt.state_digest,
+            activated,
+            retained_previous_epoch_id,
+            source_read_at: cycle.source_read_at,
+            completed_at: Utc::now(),
+        },
+        refreshed_classes,
     })
 }
 
@@ -259,7 +371,10 @@ pub async fn run_rebuild_once_cli(
     if !config.manager_projection_rebuild_authorized.is_enabled() {
         return Err(ManagerProjectionCommandError::RebuildNotAuthorized);
     }
-    let report = run_once_mode(config, true).await?;
+    let mut cache = ManagerProjectionFeedCache::default();
+    let report = run_once_mode(config, true, &FeedClass::ALL, &mut cache)
+        .await?
+        .report;
     println!("{}", serde_json::to_string(&report)?);
     Ok(())
 }
@@ -313,9 +428,76 @@ pub async fn run_rollback_once_cli(
     Ok(())
 }
 
-/// Polls forever at the configured bounded interval. Each cycle is a single
-/// attempt; failures wait for the next interval and never create an immediate
-/// retry storm against the Trading System.
+/// P4-E cadence configuration. Equal class intervals collapse into one source
+/// cycle, preserving the legacy one-cycle behavior when configuration is left
+/// unset.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ManagerProjectionClassIntervals {
+    pub transactional: Duration,
+    pub account_state: Duration,
+    pub metadata: Duration,
+}
+
+impl ManagerProjectionClassIntervals {
+    #[must_use]
+    pub fn of(self, class: FeedClass) -> Duration {
+        match class {
+            FeedClass::Transactional => self.transactional,
+            FeedClass::AccountState => self.account_state,
+            FeedClass::Metadata => self.metadata,
+        }
+    }
+
+    /// Classes at the same cadence share one source/persistence attempt.
+    #[must_use]
+    pub fn groups(self) -> Vec<(Duration, Vec<FeedClass>)> {
+        let mut groups: Vec<(Duration, Vec<FeedClass>)> = Vec::new();
+        for class in FeedClass::ALL {
+            let interval = self.of(class);
+            if let Some((_, classes)) = groups
+                .iter_mut()
+                .find(|(current_interval, _)| *current_interval == interval)
+            {
+                classes.push(class);
+            } else {
+                groups.push((interval, vec![class]));
+            }
+        }
+        groups
+    }
+
+    #[must_use]
+    pub fn fastest(self) -> Duration {
+        self.transactional
+            .min(self.account_state)
+            .min(self.metadata)
+    }
+}
+
+/// Returns indices whose group interval has elapsed. Kept pure for scheduler
+/// tests; an absent last-run is represented by `Duration::MAX` and is due.
+#[must_use]
+pub fn due_groups(groups: &[(Duration, Vec<FeedClass>)], elapsed: &[Duration]) -> Vec<usize> {
+    groups
+        .iter()
+        .enumerate()
+        .filter(|(index, (interval, _))| elapsed.get(*index).is_some_and(|age| *age >= *interval))
+        .map(|(index, _)| index)
+        .collect()
+}
+
+fn normalized_classes(classes: &[FeedClass]) -> Vec<FeedClass> {
+    FeedClass::ALL
+        .into_iter()
+        .filter(|class| classes.contains(class))
+        .collect()
+}
+
+/// Polls forever with independent bounded cadence classes. Every commit still
+/// contains all feeds: fresh class data is joined with an in-memory complete
+/// baseline, and a cold start/catalogue change reloads all feeds atomically.
+/// Failures retain the last complete projection and wait for their next due
+/// tick; no browser or source retry loop is created here.
 ///
 /// # Errors
 ///
@@ -324,20 +506,59 @@ pub async fn run_forever(config: &EdgeConfig) -> Result<(), ManagerProjectionCom
     if !config.manager_projection_enabled.is_enabled() {
         return Err(ManagerProjectionCommandError::ProjectionDisabled);
     }
-    let mut interval = tokio::time::interval(config.manager_projection_poll_interval);
+    let class_groups = config.manager_projection_class_intervals.groups();
+    let mut cache = ManagerProjectionFeedCache::default();
+    let mut interval = tokio::time::interval(config.manager_projection_class_intervals.fastest());
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut last_run: Vec<Option<tokio::time::Instant>> = vec![None; class_groups.len()];
     loop {
         interval.tick().await;
-        match run_once(config).await {
-            Ok(report) => info!(
-                environment = report.environment,
-                epoch_id = %report.epoch_id,
-                cycle_id = report.cycle_id,
-                record_count = report.record_count,
-                activated = report.activated,
-                "N24 Manager projection cycle committed"
-            ),
-            Err(error) => warn!(error = %error, "N24 Manager projection cycle failed closed"),
+        let now = tokio::time::Instant::now();
+        let elapsed = last_run
+            .iter()
+            .map(|previous| previous.map_or(Duration::MAX, |at| now.duration_since(at)))
+            .collect::<Vec<_>>();
+        let due = due_groups(&class_groups, &elapsed);
+        if due.is_empty() {
+            continue;
+        }
+        let requested_classes = due
+            .iter()
+            .flat_map(|index| class_groups[*index].1.iter().copied())
+            .collect::<Vec<_>>();
+        match run_once_mode(config, false, &requested_classes, &mut cache).await {
+            Ok(attempt) => {
+                let ProjectionCycleAttempt {
+                    report,
+                    refreshed_classes,
+                } = attempt;
+                for (index, (_, classes)) in class_groups.iter().enumerate() {
+                    if classes
+                        .iter()
+                        .all(|class| refreshed_classes.contains(class))
+                    {
+                        last_run[index] = Some(now);
+                    }
+                }
+                info!(
+                    environment = report.environment,
+                    epoch_id = %report.epoch_id,
+                    cycle_id = report.cycle_id,
+                    record_count = report.record_count,
+                    activated = report.activated,
+                    classes = ?refreshed_classes,
+                    "N24 Manager projection cadence cycle committed"
+                );
+            }
+            Err(error) => {
+                // Only the groups attempted on this tick are deferred. A
+                // failed account-state poll cannot slow the transactional
+                // class, and each class still has a bounded retry cadence.
+                for index in due {
+                    last_run[index] = Some(now);
+                }
+                warn!(error = %error, "N24 Manager projection cadence cycle failed closed");
+            }
         }
     }
 }
@@ -402,7 +623,7 @@ async fn load_and_validate_capabilities(
 }
 
 #[allow(clippy::too_many_arguments)] // Keep every immutable source/admission binding explicit.
-async fn load_cycle(
+async fn load_feeds(
     store: &PgProjectionStore,
     config: &EdgeConfig,
     owner_digest: &str,
@@ -410,15 +631,15 @@ async fn load_cycle(
     authority: BoundManagerAuthority<'_>,
     catalogue: &ManagerCatalogue,
     profile: ManagerProjectionProfile,
-    poll_interval_ms: i64,
-) -> Result<ManagerProjectionCycle, ManagerProjectionCommandError> {
-    if !(DEFAULT_POLL_INTERVAL_MS / 8..=60_000).contains(&poll_interval_ms) {
-        return Err(ManagerProjectionCommandError::InvalidPollInterval);
+    classes: &[FeedClass],
+    class_intervals: ManagerProjectionClassIntervals,
+) -> Result<Vec<ManagerFeedSnapshot>, ManagerProjectionCommandError> {
+    if classes.is_empty() {
+        return Err(ManagerProjectionCommandError::NoFeedClassesRequested);
     }
-    let catalogue_digest = catalogue.catalogue_revision().as_str().to_owned();
     let mut feeds = Vec::with_capacity(FEEDS.len());
     let mut record_count = 0_usize;
-    for feed in FEEDS {
+    for feed in FEEDS.iter().filter(|feed| classes.contains(&feed.class)) {
         let remaining = MAXIMUM_CYCLE_RECORDS
             .checked_sub(record_count)
             .ok_or(ManagerProjectionCommandError::CycleBoundExceeded)?;
@@ -430,7 +651,9 @@ async fn load_cycle(
             authority,
             catalogue,
             profile,
-            feed,
+            *feed,
+            i64::try_from(class_intervals.of(feed.class).as_millis())
+                .map_err(|_| ManagerProjectionCommandError::InvalidPollInterval)?,
             remaining,
         )
         .await?;
@@ -440,12 +663,7 @@ async fn load_cycle(
             .ok_or(ManagerProjectionCommandError::CycleBoundExceeded)?;
         feeds.push(snapshot);
     }
-    Ok(ManagerProjectionCycle {
-        profile,
-        catalogue_digest,
-        poll_interval_ms,
-        feeds,
-    })
+    Ok(feeds)
 }
 
 #[allow(clippy::too_many_arguments)] // Feed collection shares the exact cycle bindings above.
@@ -458,6 +676,7 @@ async fn load_feed(
     catalogue: &ManagerCatalogue,
     profile: ManagerProjectionProfile,
     feed: ManagerProjectionFeed,
+    poll_interval_ms: i64,
     remaining_cycle_records: usize,
 ) -> Result<ManagerFeedSnapshot, ManagerProjectionCommandError> {
     let mut cursor: Option<OpaqueCursor> = None;
@@ -520,6 +739,7 @@ async fn load_feed(
                 profile,
                 &meta,
                 source_read_at,
+                poll_interval_ms,
                 page_count,
                 facts,
             )
@@ -656,8 +876,15 @@ async fn commit_cycle(
     proof: projection_store_pg::ManagerProjectionLeaseProof,
     cycle: &BuiltProjectionCycle,
 ) -> Result<(), ManagerProjectionCommandError> {
-    let poll_interval_ms = cycle.poll_interval_ms;
     for snapshot in &cycle.snapshots {
+        let poll_interval_ms = *cycle
+            .snapshot_poll_intervals
+            .get(&snapshot.entity_kind)
+            .ok_or(ManagerProjectionCommandError::InvalidPollInterval)?;
+        let source_read_at = *cycle
+            .snapshot_source_read_ats
+            .get(&snapshot.entity_kind)
+            .ok_or(ManagerProjectionCommandError::ProjectionCacheIncomplete)?;
         store
             .commit_manager_projection_snapshot(
                 scope,
@@ -668,7 +895,7 @@ async fn commit_cycle(
                     profile_id: cycle.profile.profile_id().to_owned(),
                     catalogue_digest: cycle.catalogue_digest.clone(),
                     source_input_digest: manager_snapshot_semantic_digest(&snapshot.observations)?,
-                    source_read_at: cycle.source_read_at,
+                    source_read_at,
                     poll_interval_ms,
                     snapshot: snapshot.clone(),
                 },
@@ -718,6 +945,10 @@ pub enum ManagerProjectionCommandError {
     MissingClientIdentity,
     #[error("N24 Manager projection poll interval is invalid")]
     InvalidPollInterval,
+    #[error("N24 Manager projection cadence request selected no feed class")]
+    NoFeedClassesRequested,
+    #[error("N24 Manager projection cadence cache is not a complete current baseline")]
+    ProjectionCacheIncomplete,
     #[error("N24 Manager source returned typed unavailability")]
     SourceUnavailable,
     #[error("N24 Manager source admission budget denied the finite request")]
@@ -818,5 +1049,119 @@ mod tests {
             manager_projection_lease_ttl(80_000),
             Duration::from_secs(900)
         );
+    }
+
+    fn empty_feed_snapshot(
+        feed: ManagerProjectionFeed,
+        profile: ManagerProjectionProfile,
+        catalogue_digest: &str,
+        source_read_at: DateTime<Utc>,
+        poll_interval_ms: i64,
+    ) -> ManagerFeedSnapshot {
+        ManagerFeedSnapshot {
+            feed,
+            profile,
+            catalogue_digest: catalogue_digest.to_owned(),
+            as_of: at(1),
+            source_read_at,
+            poll_interval_ms,
+            completeness: Completeness::Complete,
+            page_count: 1,
+            facts: Vec::new(),
+        }
+    }
+
+    fn complete_cache(
+        profile: ManagerProjectionProfile,
+        catalogue_digest: &str,
+    ) -> ManagerProjectionFeedCache {
+        ManagerProjectionFeedCache {
+            feeds: FEEDS
+                .iter()
+                .map(|feed| {
+                    (
+                        feed.feed_id,
+                        empty_feed_snapshot(*feed, profile, catalogue_digest, at(2), 2_000),
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn equal_class_intervals_collapse_to_the_legacy_single_cycle() {
+        let intervals = ManagerProjectionClassIntervals {
+            transactional: Duration::from_millis(2_000),
+            account_state: Duration::from_millis(2_000),
+            metadata: Duration::from_millis(2_000),
+        };
+        let groups = intervals.groups();
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].0, Duration::from_millis(2_000));
+        assert_eq!(groups[0].1, FeedClass::ALL);
+        assert_eq!(intervals.fastest(), Duration::from_millis(2_000));
+    }
+
+    #[test]
+    fn distinct_class_intervals_only_make_due_groups_eligible() {
+        let intervals = ManagerProjectionClassIntervals {
+            transactional: Duration::from_millis(1_000),
+            account_state: Duration::from_millis(10_000),
+            metadata: Duration::from_millis(60_000),
+        };
+        let groups = intervals.groups();
+        assert_eq!(groups.len(), 3);
+        assert_eq!(
+            due_groups(
+                &groups,
+                &[
+                    Duration::from_millis(10_000),
+                    Duration::from_millis(10_000),
+                    Duration::from_millis(10_000),
+                ],
+            ),
+            vec![0, 1]
+        );
+    }
+
+    #[test]
+    fn never_run_groups_are_due_for_the_complete_cold_baseline() {
+        let intervals = ManagerProjectionClassIntervals {
+            transactional: Duration::from_millis(1_000),
+            account_state: Duration::from_millis(5_000),
+            metadata: Duration::from_millis(30_000),
+        };
+        let groups = intervals.groups();
+
+        assert_eq!(
+            due_groups(&groups, &vec![Duration::MAX; groups.len()]),
+            vec![0, 1, 2]
+        );
+    }
+
+    #[test]
+    fn cache_requires_a_full_baseline_and_preserves_sibling_feeds() {
+        let profile = ManagerProjectionProfile::Paper;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let empty = ManagerProjectionFeedCache::default();
+        assert!(matches!(
+            empty.complete_cycle(profile, &digest, Duration::from_millis(1_000)),
+            Err(ManagerProjectionCommandError::ProjectionCacheIncomplete)
+        ));
+
+        let baseline = complete_cache(profile, &digest);
+        let changed = empty_feed_snapshot(FEEDS[0], profile, &digest, at(20), 1_000);
+        let next = baseline
+            .with_refreshed(profile, &digest, vec![changed])
+            .expect("valid partial refresh preserves complete cache");
+        let cycle = next
+            .complete_cycle(profile, &digest, Duration::from_millis(1_000))
+            .expect("still a complete candidate cycle");
+
+        assert_eq!(cycle.feeds.len(), FEEDS.len());
+        assert_eq!(cycle.feeds[0].source_read_at, at(20));
+        assert_eq!(cycle.feeds[1].source_read_at, at(2));
+        assert!(next.matches_catalogue(profile, &digest));
+        assert!(!next.matches_catalogue(profile, &format!("sha256:{}", "b".repeat(64))));
     }
 }

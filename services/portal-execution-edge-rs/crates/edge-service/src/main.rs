@@ -4,6 +4,8 @@ mod d4_command;
 mod manager_event_ledger_command;
 mod manager_projection_command;
 
+use manager_projection_command::ManagerProjectionClassIntervals;
+
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque},
     convert::Infallible,
@@ -208,7 +210,9 @@ struct EdgeConfig {
     manager_projection_failed_epoch_id: Option<Uuid>,
     manager_projection_retained_epoch_id: Option<Uuid>,
     manager_projection_owner_digest: Option<String>,
-    manager_projection_poll_interval: Duration,
+    /// P4-E class cadence ladder. Leaving all three values unset preserves
+    /// the accepted single cadence exactly.
+    manager_projection_class_intervals: ManagerProjectionClassIntervals,
     manager_event_ledger_enabled: RuntimeGate,
     manager_event_ledger_reanchor_authorized: RuntimeGate,
     manager_event_ledger_admission_file: Option<PathBuf>,
@@ -361,6 +365,28 @@ impl EdgeConfig {
             250,
             60_000,
         )? as u64);
+        let base_poll_ms = usize::try_from(manager_projection_poll_interval.as_millis())
+            .map_err(|_| ConfigError::Invalid("EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS"))?;
+        let manager_projection_class_intervals = ManagerProjectionClassIntervals {
+            transactional: Duration::from_millis(bounded_usize(
+                "EDGE_MANAGER_PROJECTION_POLL_INTERVAL_TRANSACTIONAL_MS",
+                base_poll_ms,
+                250,
+                60_000,
+            )? as u64),
+            account_state: Duration::from_millis(bounded_usize(
+                "EDGE_MANAGER_PROJECTION_POLL_INTERVAL_ACCOUNT_STATE_MS",
+                base_poll_ms,
+                250,
+                60_000,
+            )? as u64),
+            metadata: Duration::from_millis(bounded_usize(
+                "EDGE_MANAGER_PROJECTION_POLL_INTERVAL_METADATA_MS",
+                base_poll_ms,
+                250,
+                60_000,
+            )? as u64),
+        };
         let manager_event_ledger_enabled =
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_EVENT_LEDGER_ENABLED", false)?);
         if manager_event_ledger_enabled.is_enabled() && !manager_v2_read_enabled.is_enabled() {
@@ -438,7 +464,7 @@ impl EdgeConfig {
             manager_projection_failed_epoch_id,
             manager_projection_retained_epoch_id,
             manager_projection_owner_digest,
-            manager_projection_poll_interval,
+            manager_projection_class_intervals,
             manager_event_ledger_enabled,
             manager_event_ledger_reanchor_authorized,
             manager_event_ledger_admission_file,

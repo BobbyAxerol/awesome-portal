@@ -5,6 +5,13 @@ Branch: `feat/execution-data-activation`
 Author: Claude (backend co-impl per owner grant 2026-09-02)
 Decision state: `CONFIG_MATRIX_PUBLISHED / PRODUCTION_ACTIVATION_NOT_AUTHORIZED`
 
+Implementation update (2026-09-10, `feat/execution-loop-next`): the P4-E
+per-class scheduler is now source-complete and covered by the Edge gates. Its
+three optional class variables remain unset in every deployed configuration;
+the active behavior is therefore still the accepted single 2,000 ms cycle.
+This document does not authorize an overlay, a worker restart or any source
+traffic change.
+
 Every row is a named environment variable with its measured dev value, the
 production target, the owning side and the rollback. Nothing in this file
 changes a runtime by itself: production activation runs through the unchanged
@@ -15,7 +22,8 @@ N36/Phase 3 release train (Bobby dev review → protected `dev` merge → signed
 
 | Variable | Dev (measured 2026-09-03) | Production target | Owner | Rollback |
 |---|---|---|---|---|
-| `EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS` | 2000 (compose default) | per ingestion class: 1000–5000 transactional delta poll · 5000–15000 account-state · 30000–60000 metadata | Edge (Rust) | single value 2000 |
+| `EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS` | 2000 (compose default) | fallback when all class values are unset | Edge (Rust) | 2000 |
+| `EDGE_MANAGER_PROJECTION_POLL_INTERVAL_{TRANSACTIONAL,ACCOUNT_STATE,METADATA}_MS` | unset → each inherits 2000 | 1000–5000 transactional · 5000–15000 account-state · 30000–60000 metadata | Edge (Rust) | unset all three; restores one complete 2000 ms cycle |
 | `EDGE_MANAGER_SHARED_CACHE_TTL_MS` | 750 | 750, re-validated under the §3 load numbers before widening | Edge (Rust) | 750 |
 | `EDGE_REALTIME_POLL_INTERVAL_MS` | 100 | 100 | Edge (Rust) | 100 |
 | `EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS` | 15000 | 5000 first; target replacement by edge journal push/tail with SGP pull as reconciliation fallback (edge work item) | Control API | 15000 |
@@ -28,9 +36,11 @@ N36/Phase 3 release train (Bobby dev review → protected `dev` merge → signed
 | `FEATURE_EXECUTION_COMMAND_RELAY` | false | false — unchanged by this phase | Owner | n/a |
 | Live mutation | false | false — unchanged by this phase | Owner | n/a |
 
-Per-class ceilings and the journal push/tail replacement are Rust edge work
-items; until they land, the single-value dev settings remain the active
-configuration everywhere and this matrix is the published target, not a claim.
+The per-class scheduler is source-complete, but it is deliberately not enabled:
+all three values above are unset, and every scheduled commit retains a complete
+13-feed baseline so a fast refresh cannot tombstone a slower sibling feed.
+Journal push/tail remains a separate Rust edge work item. This matrix is still
+a target, not an authorization to change deployed cadence.
 
 ### 1.1 Full-depth history store (owner directive 2026-09-03)
 
@@ -80,8 +90,9 @@ the per-class poll targets before flipping any row above.
 
 ## 4. Remaining before production GO
 
-1. Rust edge: per-class poll ceilings and journal push/tail (matrix rows 1
-   and 4) with their own gates.
+1. P4-E activation: run the target-cadence soak before setting any class
+   variable; journal push/tail (matrix row 4) remains a separate gated edge
+   item.
 2. Soak at target cadence (≥1 h, ingestion-driven traffic, SSE
    heartbeat/queue/eviction bounds re-proven) recorded next to §3.
 3. The F17 governance chain exercised end-to-end the day a real eligible

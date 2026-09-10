@@ -4846,3 +4846,35 @@ Sau khi dọn: `/` còn trống 188 G. Dev không hề hấn — web/api vẫn `
 `1ced120`. Nhánh chung `feat/execution-loop-next` nằm ở worktree
 `/home/bobby/portal-integration`, sạch, và đó là chỗ tôi với codex cùng làm
 tiếp execution loop.
+
+### A36.7 P4-E WIP rebase — complete projection cadence, runtime still off (2026-09-10)
+
+Codex reviewed the protected backup
+`/home/bobby/wip-backup/codex-p4e-wip.2026-09-10.base-dcc4eda.patch`
+(`sha256:93635de0212bb2a30a102a61fd3700b86e54cbfd8947a01bbeb1ec76d3f8698e`)
+against the current shared branch before touching `main.rs`. The five-file
+patch is intentionally still preserved and was **not** applied verbatim:
+its old per-class `run_once_for_classes` path loads an incomplete feed set,
+while the current `ManagerProjectionCycle::build()` correctly requires all 13
+feeds. Relaxing that invariant would permit a partial class refresh to publish
+as a complete snapshot and tombstone sibling data.
+
+The safe rebase is on `feat/execution-loop-next` and retains the newer current
+`main.rs` / Compose integration. It adds optional class intervals for
+Transactional, AccountState and Metadata while preserving exact legacy
+behavior whenever all three values are unset. The scheduler now:
+
+1. forces a full 13-feed baseline at cold start or catalogue-revision drift;
+2. retains that baseline in memory, refreshes only due classes, and rebuilds a
+   complete candidate before any persistence;
+3. installs the refreshed cache only after the fenced commit succeeds;
+4. reports conservative freshness: composite entity kinds use the slowest
+   cadence and oldest contributing source read; and
+5. leaves every P4-E overlay value unset, with no runtime/service/source/
+   command activation.
+
+Verification is recorded with the code commit: format check, focused
+manager-projection and edge-service tests, and the complete Rust/Clippy/
+PostgreSQL restore gate. The remaining action is an owner-authorized
+target-cadence soak; journal push/tail is a separate future gate, not hidden
+inside this rebase.

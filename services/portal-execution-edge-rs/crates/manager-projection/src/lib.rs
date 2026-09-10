@@ -76,12 +76,32 @@ impl ManagerProjectionProfile {
     }
 }
 
+/// P4-E ingestion cadence class. Every current-source feed belongs to exactly
+/// one class, while a projection epoch still remains a complete, atomic view.
+/// The worker may refresh classes independently only after it has a complete
+/// cached baseline; it never publishes a partial projection as a new truth.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FeedClass {
+    /// Orders, fills and the observed domain-event journal.
+    Transactional,
+    /// Positions, accounts, balances, reservations and reconciliation state.
+    AccountState,
+    /// Deployment, policy, portfolio, allocation and risk configuration.
+    Metadata,
+}
+
+impl FeedClass {
+    pub const ALL: [Self; 3] = [Self::Transactional, Self::AccountState, Self::Metadata];
+}
+
 /// The only current-source feeds allowed to populate N24 projection state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct ManagerProjectionFeed {
     pub feed_id: &'static str,
     pub entity_kind: ProjectionEntityKind,
     pub source: ManagerProjectionSource,
+    pub class: FeedClass,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -104,66 +124,79 @@ pub const FEEDS: [ManagerProjectionFeed; 13] = [
         feed_id: "manager.order",
         entity_kind: ProjectionEntityKind::Order,
         source: ManagerProjectionSource::Named(ProjectionKind::Order),
+        class: FeedClass::Transactional,
     },
     ManagerProjectionFeed {
         feed_id: "manager.fill",
         entity_kind: ProjectionEntityKind::Fill,
         source: ManagerProjectionSource::Named(ProjectionKind::Fill),
+        class: FeedClass::Transactional,
     },
     ManagerProjectionFeed {
         feed_id: "manager.position",
         entity_kind: ProjectionEntityKind::Position,
         source: ManagerProjectionSource::Named(ProjectionKind::Position),
+        class: FeedClass::AccountState,
     },
     ManagerProjectionFeed {
         feed_id: "manager.account",
         entity_kind: ProjectionEntityKind::Account,
         source: ManagerProjectionSource::Named(ProjectionKind::Account),
+        class: FeedClass::AccountState,
     },
     ManagerProjectionFeed {
         feed_id: "manager.reconciliation",
         entity_kind: ProjectionEntityKind::Reconciliation,
         source: ManagerProjectionSource::Named(ProjectionKind::Reconciliation),
+        class: FeedClass::AccountState,
     },
     ManagerProjectionFeed {
         feed_id: "manager.portfolio",
         entity_kind: ProjectionEntityKind::Performance,
         source: ManagerProjectionSource::Named(ProjectionKind::Portfolio),
+        class: FeedClass::Metadata,
     },
     ManagerProjectionFeed {
         feed_id: "relation.strategy_deployments",
         entity_kind: ProjectionEntityKind::Runtime,
         source: ManagerProjectionSource::Relation("public.strategy_deployments"),
+        class: FeedClass::Metadata,
     },
     ManagerProjectionFeed {
         feed_id: "relation.account_balances",
         entity_kind: ProjectionEntityKind::Account,
         source: ManagerProjectionSource::Relation("public.account_balances"),
+        class: FeedClass::AccountState,
     },
     ManagerProjectionFeed {
         feed_id: "relation.account_policies",
         entity_kind: ProjectionEntityKind::Account,
         source: ManagerProjectionSource::Relation("public.account_policies"),
+        class: FeedClass::Metadata,
     },
     ManagerProjectionFeed {
         feed_id: "relation.account_reservations",
         entity_kind: ProjectionEntityKind::Account,
         source: ManagerProjectionSource::Relation("public.account_reservations"),
+        class: FeedClass::AccountState,
     },
     ManagerProjectionFeed {
         feed_id: "relation.portfolio_allocations",
         entity_kind: ProjectionEntityKind::Performance,
         source: ManagerProjectionSource::Relation("public.portfolio_allocations"),
+        class: FeedClass::Metadata,
     },
     ManagerProjectionFeed {
         feed_id: "relation.risk_profiles",
         entity_kind: ProjectionEntityKind::Runtime,
         source: ManagerProjectionSource::Relation("public.risk_profiles"),
+        class: FeedClass::Metadata,
     },
     ManagerProjectionFeed {
         feed_id: "relation.domain_events",
         entity_kind: ProjectionEntityKind::Event,
         source: ManagerProjectionSource::Relation("public.domain_events"),
+        class: FeedClass::Transactional,
     },
 ];
 
@@ -253,6 +286,10 @@ pub struct ManagerFeedSnapshot {
     pub catalogue_digest: String,
     pub as_of: DateTime<Utc>,
     pub source_read_at: DateTime<Utc>,
+    /// The cadence that actually refreshed this feed. It is carried through
+    /// to its entity-kind snapshot; a fast transactional refresh must never
+    /// make cached metadata appear to have been polled just as fast.
+    pub poll_interval_ms: i64,
     pub completeness: Completeness,
     pub page_count: usize,
     pub facts: Vec<ManagerProjectionFact>,
@@ -269,10 +306,13 @@ impl ManagerFeedSnapshot {
         expected_profile: ManagerProjectionProfile,
         meta: &ManagerMeta,
         source_read_at: DateTime<Utc>,
+        poll_interval_ms: i64,
         page_count: usize,
         facts: Vec<ManagerProjectionFact>,
     ) -> Result<Self, ProjectionMapError> {
-        if meta.profile_id() != expected_profile.profile_id() {
+        if meta.profile_id() != expected_profile.profile_id()
+            || !(250..=60_000).contains(&poll_interval_ms)
+        {
             return Err(ProjectionMapError::ProfileBindingMismatch);
         }
         Ok(Self {
@@ -281,6 +321,7 @@ impl ManagerFeedSnapshot {
             catalogue_digest: meta.catalogue_sha256().as_str().to_owned(),
             as_of: meta.as_of(),
             source_read_at,
+            poll_interval_ms,
             completeness: meta.completeness(),
             page_count,
             facts,
@@ -306,6 +347,16 @@ pub struct BuiltProjectionCycle {
     pub feed_count: usize,
     pub record_count: usize,
     pub source_read_at: DateTime<Utc>,
+    /// Exact cadence per entity-kind snapshot. A composite kind takes the
+    /// slowest contributing feed interval so its freshness claim is never
+    /// stronger than the source data it contains.
+    pub snapshot_poll_intervals: BTreeMap<ProjectionEntityKind, i64>,
+    /// The oldest source read contributing to each entity-kind snapshot.
+    /// Entity-level freshness must not borrow a newer timestamp from another
+    /// cadence class in the same aggregate cycle.
+    pub snapshot_source_read_ats: BTreeMap<ProjectionEntityKind, DateTime<Utc>>,
+    /// The fastest cadence represented by the complete cycle. It is used only
+    /// for the aggregate heartbeat; per-snapshot cadence remains exact above.
     pub poll_interval_ms: i64,
     pub state_input_digest: String,
 }
@@ -330,6 +381,8 @@ impl ManagerProjectionCycle {
         let mut seen_feeds = BTreeSet::new();
         let mut total_records = 0_usize;
         let mut source_read_at: Option<DateTime<Utc>> = None;
+        let mut snapshot_poll_intervals = BTreeMap::new();
+        let mut snapshot_source_read_ats = BTreeMap::new();
         // A complete source cycle must always emit all entity-kind snapshots,
         // including empty ones. Empty is a truthful source state (notably for
         // Live before its first row) and is also how removed rows become
@@ -344,14 +397,28 @@ impl ManagerProjectionCycle {
             if !seen_feeds.insert(feed.feed.feed_id) {
                 return Err(ProjectionMapError::DuplicateFeed);
             }
+            if !(250..=60_000).contains(&feed.poll_interval_ms) {
+                return Err(ProjectionMapError::InvalidFeed);
+            }
+            let kind_poll_interval = snapshot_poll_intervals
+                .entry(feed.feed.entity_kind)
+                .or_insert(feed.poll_interval_ms);
+            *kind_poll_interval = (*kind_poll_interval).max(feed.poll_interval_ms);
+            let kind_source_read_at = snapshot_source_read_ats
+                .entry(feed.feed.entity_kind)
+                .or_insert(feed.source_read_at);
+            *kind_source_read_at = (*kind_source_read_at).min(feed.source_read_at);
             total_records = total_records
                 .checked_add(feed.facts.len())
                 .ok_or(ProjectionMapError::UnsafeBound)?;
             if total_records > MAXIMUM_CYCLE_RECORDS {
                 return Err(ProjectionMapError::UnsafeBound);
             }
+            // A cached full view is only as fresh as its oldest constituent
+            // feed. Reporting the newest read would falsely advertise a
+            // transactional refresh as fresh metadata/account state.
             source_read_at = Some(source_read_at.map_or(feed.source_read_at, |current| {
-                current.max(feed.source_read_at)
+                current.min(feed.source_read_at)
             }));
             for fact in feed.facts {
                 let entity_id = CanonicalId::parse(format!(
@@ -367,6 +434,7 @@ impl ManagerProjectionCycle {
                 input_facts.push(json!({
                     "feed": feed.feed.feed_id,
                     "entity_id": entity_id,
+                    "poll_interval_ms": feed.poll_interval_ms,
                     "payload": payload,
                 }));
                 observations.entry(feed.feed.entity_kind).or_default().push(
@@ -384,7 +452,7 @@ impl ManagerProjectionCycle {
                         source_sequence_semantics: SourceSequenceSemantics::PerEntityContiguous,
                         operation: projection_core::ProjectionOperation::Upsert,
                         source_completeness: SourceCompleteness::PollBounded,
-                        poll_interval_ms: Some(self.poll_interval_ms),
+                        poll_interval_ms: Some(feed.poll_interval_ms),
                         adapter_version: MANAGER_PROJECTION_ADAPTER_VERSION.to_owned(),
                         capability_snapshot_id: self.catalogue_digest.clone(),
                         payload,
@@ -394,6 +462,18 @@ impl ManagerProjectionCycle {
         }
         if seen_feeds != FEEDS.iter().map(|feed| feed.feed_id).collect() {
             return Err(ProjectionMapError::MissingFeed);
+        }
+        // `ProjectionSnapshot` is entity-kind scoped. When one kind combines
+        // feeds (for example Account includes balances and account policies),
+        // every observation inherits the conservative kind cadence required
+        // by the store's atomic complete-snapshot validation.
+        for (kind, kind_observations) in &mut observations {
+            let poll_interval_ms = *snapshot_poll_intervals
+                .get(kind)
+                .ok_or(ProjectionMapError::InvalidCycle)?;
+            for observation in kind_observations {
+                observation.poll_interval_ms = Some(poll_interval_ms);
+            }
         }
         input_facts.sort_by_key(Value::to_string);
         let state_input_digest = canonical_digest(&input_facts)?;
@@ -465,6 +545,8 @@ impl ManagerProjectionCycle {
             feed_count: FEEDS.len(),
             record_count: total_records,
             source_read_at,
+            snapshot_poll_intervals,
+            snapshot_source_read_ats,
             poll_interval_ms: self.poll_interval_ms,
             state_input_digest,
         })
@@ -484,6 +566,7 @@ fn validate_feed(
         || feed.page_count > MAXIMUM_FEED_PAGES
         || feed.facts.len() > MAXIMUM_FEED_RECORDS
         || feed.source_read_at < feed.as_of
+        || !(250..=60_000).contains(&feed.poll_interval_ms)
     {
         return Err(ProjectionMapError::InvalidFeed);
     }
@@ -593,6 +676,7 @@ mod tests {
                         catalogue_digest: catalogue.clone(),
                         as_of: at(10),
                         source_read_at: at(11),
+                        poll_interval_ms: DEFAULT_POLL_INTERVAL_MS,
                         completeness: Completeness::Complete,
                         page_count: 1,
                         facts: vec![ManagerProjectionFact::new(
@@ -902,5 +986,82 @@ mod tests {
         ] {
             assert!(feeds.contains(required));
         }
+    }
+
+    #[test]
+    fn current_feed_set_has_one_explicit_cadence_class_per_feed() {
+        let transactional = FEEDS
+            .iter()
+            .filter(|feed| feed.class == FeedClass::Transactional)
+            .count();
+        let account_state = FEEDS
+            .iter()
+            .filter(|feed| feed.class == FeedClass::AccountState)
+            .count();
+        let metadata = FEEDS
+            .iter()
+            .filter(|feed| feed.class == FeedClass::Metadata)
+            .count();
+
+        assert_eq!(transactional + account_state + metadata, FEEDS.len());
+        assert_eq!(transactional, 3);
+        assert_eq!(account_state, 5);
+        assert_eq!(metadata, 5);
+    }
+
+    #[test]
+    fn complete_cached_cycle_retains_each_entity_kind_cadence() {
+        let profile = ManagerProjectionProfile::Paper;
+        let mut input = cycle(profile);
+        input.poll_interval_ms = 1_000;
+        for feed in &mut input.feeds {
+            feed.poll_interval_ms = match feed.feed.class {
+                FeedClass::Transactional => 1_000,
+                FeedClass::AccountState => 10_000,
+                FeedClass::Metadata => 60_000,
+            };
+        }
+
+        let built = input.build().expect("complete cadence-aware cycle");
+        assert_eq!(built.poll_interval_ms, 1_000);
+        assert_eq!(
+            built
+                .snapshot_poll_intervals
+                .get(&ProjectionEntityKind::Event),
+            Some(&1_000)
+        );
+        assert_eq!(
+            built
+                .snapshot_poll_intervals
+                .get(&ProjectionEntityKind::Account),
+            // Account combines fast balances/reservations with the slower
+            // account-policy feed, so its composite truth uses the
+            // conservative slowest cadence.
+            Some(&60_000)
+        );
+        assert_eq!(
+            built
+                .snapshot_poll_intervals
+                .get(&ProjectionEntityKind::Runtime),
+            Some(&60_000)
+        );
+        for snapshot in &built.snapshots {
+            let expected = built.snapshot_poll_intervals[&snapshot.entity_kind];
+            assert!(snapshot
+                .observations
+                .iter()
+                .all(|observation| observation.poll_interval_ms == Some(expected)));
+        }
+    }
+
+    #[test]
+    fn cached_cycle_reports_oldest_source_read_as_global_freshness() {
+        let profile = ManagerProjectionProfile::Paper;
+        let mut input = cycle(profile);
+        input.feeds[0].source_read_at = at(30);
+        input.feeds[1].source_read_at = at(11);
+
+        let built = input.build().expect("complete cycle");
+        assert_eq!(built.source_read_at, at(11));
     }
 }

@@ -68,6 +68,12 @@ services:
       EDGE_MANAGER_PROJECTION_RETAINED_EPOCH_ID: ${EDGE_MANAGER_PROJECTION_RETAINED_EPOCH_ID:-}
       EDGE_MANAGER_PROJECTION_OWNER_DIGEST: ${EDGE_MANAGER_PROJECTION_OWNER_DIGEST:-}
       EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS: ${EDGE_MANAGER_PROJECTION_POLL_INTERVAL_MS:-2000}
+      # P4-E stays behaviourally identical while all class values are unset.
+      # A release overlay may set distinct bounded values only with fresh soak
+      # evidence; the worker always commits a complete cached projection.
+      EDGE_MANAGER_PROJECTION_POLL_INTERVAL_TRANSACTIONAL_MS: ${EDGE_MANAGER_PROJECTION_POLL_INTERVAL_TRANSACTIONAL_MS:-}
+      EDGE_MANAGER_PROJECTION_POLL_INTERVAL_ACCOUNT_STATE_MS: ${EDGE_MANAGER_PROJECTION_POLL_INTERVAL_ACCOUNT_STATE_MS:-}
+      EDGE_MANAGER_PROJECTION_POLL_INTERVAL_METADATA_MS: ${EDGE_MANAGER_PROJECTION_POLL_INTERVAL_METADATA_MS:-}
       # EDS-11R5 is a separate durable current-event lane.  The serving Edge
       # never consumes it directly; an explicit no-port worker overlay owns
       # the private cursor state and append/ACK barrier.
