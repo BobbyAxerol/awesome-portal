@@ -6054,6 +6054,19 @@ a Portal workaround.
   per-profile rollback.  The Buildx attestation parser's four test cases also
   passed.  These checks bound the release procedure and prevent release-path
   regression, while intentionally preserving the same deployed-evidence gate.
+- Remote read-only release audit on 2026-09-11 found the then-protected `main`
+  CI blocked specifically at the Portal web visual-baseline step; image
+  publication therefore stopped at its commit-bound CI wait and never reached
+  build, signing or candidate generation.  The reviewed candidate branch's
+  pinned visual gate passes locally, but a fresh protected-main CI run remains
+  required evidence rather than an assumption from that local result.
+- Both deployed cells were healthy at audit time, with read/query/realtime
+  flags and command relay disabled as expected, but their runtime source labels
+  predated the candidate that this phase would promote.  Neither cell contained
+  a sanitized EDS-12 evidence file or runtime-binding marker.  Health alone
+  does not bind a release digest, so these are correctly excluded from
+  `PRODUCT_ACTIVE` until the exact candidate is deployed and independently
+  marked.
 
 **Only remaining release evidence (not a technical-debt placeholder):** a
 protected-main signed/SBOM/provenance candidate plus one sanitized SGP marker
