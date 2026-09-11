@@ -9610,3 +9610,153 @@ sách). Không món nào mới; ghi lại để không ai tưởng đã đóng.
 Cây làm việc sạch, không file lạ; `snapshot.py --check` 145/145; `dev` và
 `feat/execution-loop-next` cùng ở một sha; nhánh tạm Phase 8 đã xoá từ trước;
 không nhánh rác nào của tôi ahead `dev`.
+
+---
+
+## A64. PHASE 11 · LÁT CẮT 1 — CONSUMER §8.58, VÀ BA QUYẾT ĐỊNH TÔI TỰ CHỐT (11-09)
+
+Bobby giao tôi tự quyết ba việc còn treo ở §A63 và chỉ báo cáo lại. Ghi cả
+quyết định lẫn lý do, kể cả cái tôi **bắt đầu làm rồi dừng**.
+
+### A64.1 Quyết định 1 — merge tài liệu handoff vào `dev`. **Đã làm.**
+
+`074ff164` là commit doc-only 155 dòng, cha của nó đã nằm trong lịch sử `dev`.
+Chọn **`git merge`** chứ không cherry-pick: giữ nguyên danh tính commit của
+codex, nên khi họ merge nhánh mình sau này **không sinh bản trùng**. Xác minh:
+`git ls-tree origin/dev` đã thấy file. **C3 đóng.**
+
+### A64.2 Quyết định 2 — rebuild dev: **bắt đầu, rồi dừng.** Đây là phần đáng đọc nhất.
+
+Tôi đã đi khá xa: dựng worktree sạch tại `0763cf00` (để **không** đóng gói code
+nửa vời của codex vào runtime chung), gắn nhãn rollback, build xong image
+`eaffc399cd49`.
+
+Rồi dừng ở bước đo cuối cùng:
+
+| Nguồn env | Số biến `FEATURE_*`/`EXECUTION_*`/`PORTAL_*` |
+| --- | --- |
+| container dev đang chạy | **72** |
+| `compose.yaml` thuần | **13** |
+
+Recreate bằng compose trần sẽ **xoá 59 biến**, gồm toàn bộ mTLS Edge, profile
+ID, delegation. Tôi lần ra đúng bộ 4 file compose từ label
+`com.docker.compose.project.config_files`, nhưng render vẫn đòi một chuỗi biến
+host (`PORTAL_RUNTIME_GID`, `CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY`,
+`EXECUTION_EDGE_PAPER_ORIGIN`, `…AUDIENCE`, `…PROFILE_ID`) **không có trong
+repo**.
+
+**Kết luận là một phát hiện, không phải một thất bại:** dev **không dựng lại
+được chỉ từ repo**. Env khởi chạy sống ngoài nó.
+
+Tôi **trả lại nguyên trạng** thay vì để lại bẫy: `:dev` đã bị tôi trỏ sang image
+mới, nên nếu ai restart container thì âm thầm nhận bản build của tôi. Đã trỏ
+`:dev` **về đúng image container đang chạy** (`6cd68a583e45`, đã đối chiếu ID
+khớp), giữ bản sạch dưới nhãn riêng `local/portal-control-api:p11-0763cf00`, và
+xoá worktree tạm.
+
+Việc còn lại là **một lệnh** cho người giữ env:
+`docker compose … up -d --no-deps --no-build control-api` sau khi
+`control-api-migrate` chạy (service one-shot này sẽ tự apply `…031`).
+
+### A64.3 Quyết định 3 — Phase 11 bắt đầu từ §8.58. **Đã làm.**
+
+Chọn §8.58 trước phần "BFF consumer preparation" còn lại vì nó là **contract
+duy nhất đang sống thật**: server phát ngay hôm nay, frontend tiêu thụ **0%**.
+Chuẩn bị double cho DTO chưa tồn tại có thể đợi; một màn không phân biệt được
+"đang phục hồi" với "đang tươi" thì không.
+
+#### Đo trước khi viết
+
+`STATUS_ONLY` / `snapshot_mode`: **0 lần**. `readProfileRealtime` giữ 6 trường và
+**vứt** `availability`, `freshness`, `recovery`.
+
+#### Ba lựa chọn thiết kế, và lý do
+
+| Lựa chọn | Vì sao |
+| --- | --- |
+| `source` là **trục riêng**, không nhét vào `phase` | `phase` nói ống dẫn có chảy không; `source` nói nguồn phía sau có đang lùi không. Hai thứ **thật sự trái nhau**: event `STATUS_ONLY` đến trên một stream hoàn toàn sống. Gộp lại là đúng lỗi "panel đeo độ tươi của fleet mà không đọc fleet" ở §A62.5 |
+| `STATUS_ONLY` **không** bump refresh | cùng cursor, không tiến epoch/sequence. Đọc lại cả profile là bắt một nguồn **vừa báo đang lùi** phục vụ thêm một lượt đọc đầy đủ — trong khi trạng thái gây ra event **đã nằm sẵn trên envelope**. Panel giữ last-good và đổi chỉ báo, đúng yêu cầu 1 |
+| dot **ngừng đập** khi coordinator recovering | `sourceTone` vốn đã từ chối chấm xanh trên stream chết vì *"màn trông sống trong khi không phải là loại motion tệ nhất"*. Ống sống trên nguồn đang lùi là **cùng lời nói dối, thấp hơn một tầng** |
+
+Và: **UNKNOWN không bao giờ lạc quan.** Thiếu `recovery` → `state: null` chứ
+không phải `HEALTHY`; `availability` lạ → `UNKNOWN` chứ không cho đi qua;
+`reason_code` đến mà không có `state` → **bỏ**, để một chuỗi trần không ám chỉ
+được một trạng thái.
+
+#### Test ràng vào **producer**, vì không có fixture
+
+Không fixture canonical nào mang envelope này (**gap G8** cho codex). Nên test
+đọc thẳng `profile-realtime.service.ts` và khẳng định các tên trường còn đó —
+đúng bài học `readPassportEntry` (§A59.11): một reader fail-closed mà tên không
+khớp producer sẽ trả *"không có gì"* **vĩnh viễn** trong lúc mọi suite vẫn xanh.
+
+**Đã chứng minh đỏ:** trả `readSourceRecovery` về `SOURCE_UNKNOWN` → đúng
+assertion *"keeps it on the parsed envelope instead of dropping it"* đỏ; khôi
+phục → xanh, file **byte-identical**.
+
+### A64.4 Evidence
+
+| Gate | Kết quả |
+| --- | --- |
+| test mới | **11 passed**, đã chứng minh đỏ được |
+| `vitest run` | **2 278 passed** · 1 skipped · 1 đỏ **không phải của tôi** (xem dưới) |
+| `tsc --noEmit` | **0 lỗi** trong `apps/portal/frontend/src` |
+| Browser | **CHƯA** — dev chưa dựng lại được (§A64.2), nên server chưa phát `recovery`. Nói thẳng chứ không đánh dấu xong |
+
+Một đỏ còn lại: `operations.test.tsx > the inlined documents have not drifted`.
+Đó là fixture `execution-operations-queue.valid.json` **codex đang stage** trong
+BE-R2-6. Cùng loại guard đã bắt lỗi của chính tôi ở §A62; bản sao inline phía
+frontend sẽ theo sau **khi contract của họ commit**, không phải trước.
+
+### A64.5 Trùng lặp phát hiện muộn — và nó hội tụ
+
+BE-R2-6 trong plan giao **đúng** việc `pinned_watchlist` cho lane backend của
+codex: *"restore… as an additive/deprecated compatibility member… regenerate all
+contract outputs through the canonical generator and reject hand-edited
+generated types."* Phase 10 của tôi đã làm phần hoàn nguyên + generator; codex
+bổ sung `deprecated: true`. Hai bên ra **cùng một kết quả**, và guard
+`snapshot.py --check` tôi thêm **không chặn họ** — họ regenerate đúng quy trình,
+check xanh 145/145.
+
+### A64.6 Mở cho codex
+
+| # | Việc |
+| --- | --- |
+| **G8** | Envelope realtime `portal.execution.profile-realtime.v1` (với `availability`/`recovery`) **không có fixture canonical**. Test của tôi phải ràng vào file service. Một fixture sẽ tốt hơn |
+| **G9** | `operations.test.tsx` drift: bản inline frontend sẽ cập nhật sau khi BE-R2-6 commit |
+| **G10** | dev không redeploy được từ repo (§A64.2). Env 72 biến nằm ngoài — nên ghi lại ở runbook |
+
+### A64.7 Sự cố worktree dùng chung: việc chưa commit của tôi **bị stash mất khỏi cây**
+
+Giữa lúc tôi vừa viết xong lát cắt này, toàn bộ thay đổi chưa commit của tôi
+**biến mất khỏi working tree**: `readSourceRecovery` đếm được 0, file test không
+còn, §A64 trong tracker cũng không còn.
+
+Nguyên nhân tìm ra trong `git stash list`:
+
+```
+stash@{0} ad82c701  On execution-loop-next: codex-temporary-be-r2-6-foreign-tracker
+stash@{1} 337d3c0c  On execution-loop-next: codex-temporary-be-r2-6-foreign-frontend
+```
+
+codex dọn cây để commit BE-R2-6 và **cất việc của tôi đi, có đặt nhãn rõ ràng**
+là "foreign" — tức là có chủ đích trả lại, không phải xoá. Và họ dùng
+`stash -u`, nên file test **untracked** cũng được giữ (nằm ở parent thứ 3 của
+stash commit). **Không mất gì.**
+
+Cách lấy lại — và chỗ này quan trọng: **không** `git stash pop`. Stash là kho
+dùng chung; pop sẽ dựng lại **cả** việc của codex thành uncommitted, đúng lúc họ
+vừa stage xong. Tôi lấy đúng 8 file của mình ra khỏi cây stash
+(`git show <stash>:<path>`, và `<stash>^3` cho file untracked), rồi mới commit.
+
+| Bài học | |
+| --- | --- |
+| Cửa sổ nguy hiểm là **giữa lúc viết xong và lúc commit** | càng để lâu càng dễ bị dọn |
+| `git stash list` là chỗ đầu tiên phải nhìn khi cây "tự sạch" | không phải `reflog` |
+| Lấy lại theo **từng file**, không `pop` | pop trộn việc hai người |
+| Ba lần trong một phiên tôi suýt nuốt việc của codex hoặc ngược lại | chỉ vì `git add` chạy khi index của người kia đang nạp |
+
+Cùng phiên này tôi đã ba lần phải gỡ file của mình khỏi index codex đang dựng
+(§A62, và hai lần ở đây). Guard tự viết cho script commit — *stage xong phải
+khẳng định tập staged **đúng bằng** tập của mình, nếu không thì huỷ* — là thứ
+duy nhất chặn được, và nó đã chặn thật.
