@@ -4110,9 +4110,10 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
       />,
     );
     expect(screen.getByText(/No record matches Overdue/)).toBeTruthy();
-    expect(screen.getByText(/5 pending outside it/)).toBeTruthy();
-    // The scope qualifier travels with the claim.
-    expect(screen.getByText(/this request's scope only/)).toBeTruthy();
+    expect(screen.getByText(/5 pending outside this view/)).toBeTruthy();
+    // The server's count *is* the scope qualifier here, so the generic one
+    // stands down rather than stacking a second "outside this view" beside it.
+    expect(screen.queryByText(/may exist outside this view/)).toBeNull();
   });
 
   /*
@@ -4134,7 +4135,7 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
     );
     expect(screen.getByText(/No record matches/)).toBeTruthy();
     expect(screen.getByText(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/)).toBeTruthy();
-    expect(screen.getByText(/this request's scope only/)).toBeTruthy();
+    expect(screen.getByText(/may exist outside this view/)).toBeTruthy();
   });
 });
 

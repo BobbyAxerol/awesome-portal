@@ -54,13 +54,22 @@ export function emptyScopeLine(
   /** What the rows are, so the sentence names them: "operation", "condition". */
   noun = "record",
 ): string {
-  const elsewhere = typeof alsoPending === "number" && alsoPending > 0
-    ? ` ${alsoPending} pending outside it.`
-    : "";
+  const counted = typeof alsoPending === "number" && alsoPending > 0;
+  const elsewhere = counted ? ` ${alsoPending} pending outside this view.` : "";
   if (!serverSaysEmpty(readTruth)) {
     // No claim about the set — only about what came back.
     return `No ${noun} came back for ${view}. The server did not state whether any exist outside this response.${elsewhere}`;
   }
+  /*
+   * Read on the screen, the first draft ran to four lines and said "outside
+   * it" twice: once generically, once with the server's count. When the count
+   * is published it is the better sentence, so the generic qualifier gives way
+   * to it rather than stacking on top. The server's own code goes last, where
+   * it is evidence rather than an interruption.
+   */
+  const scope = counted
+    ? elsewhere
+    : ` ${noun[0].toUpperCase()}${noun.slice(1)}s may exist outside this view — filters and the page cursor are part of the request.`;
   const because = readTruth?.reasonCode ? ` (${readTruth.reasonCode})` : "";
-  return `No ${noun} matches ${view}${because}. That is this request's scope only — filters and the page cursor are part of it, so ${noun}s may exist outside it.${elsewhere}`;
+  return `No ${noun} matches ${view}.${scope}${because}`;
 }

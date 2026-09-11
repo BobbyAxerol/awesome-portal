@@ -44,20 +44,20 @@ describe("§8.59 · silence is not emptiness", () => {
   it("always carries the scope with the claim", () => {
     const line = emptyScopeLine(EMPTY, "Overdue");
     expect(line).toMatch(/No record matches Overdue/);
-    expect(line).toMatch(/this request's scope only/);
+    expect(line).toMatch(/may exist outside this view/);
     expect(line).toMatch(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/);
   });
 
   it("counts what the server counted outside the scope, and stays silent when it counted nothing", () => {
-    expect(emptyScopeLine(EMPTY, "Overdue", 5)).toMatch(/5 pending outside it/);
+    expect(emptyScopeLine(EMPTY, "Overdue", 5)).toMatch(/5 pending outside this view/);
     // Not published is not zero: no sentence rather than "0 pending outside".
-    expect(emptyScopeLine(EMPTY, "Overdue", null)).not.toMatch(/pending outside it/);
-    expect(emptyScopeLine(EMPTY, "Overdue", 0)).not.toMatch(/pending outside it/);
+    expect(emptyScopeLine(EMPTY, "Overdue", null)).not.toMatch(/pending outside this view/);
+    expect(emptyScopeLine(EMPTY, "Overdue", 0)).not.toMatch(/pending outside this view/);
   });
 
   it("names the rows for the surface it is on", () => {
     expect(emptyScopeLine(EMPTY, "this view", null, "operation")).toMatch(/No operation matches/);
-    expect(emptyScopeLine(EMPTY, "this view", null, "operation")).toMatch(/operations may exist outside it/);
+    expect(emptyScopeLine(EMPTY, "this view", null, "operation")).toMatch(/Operations may exist outside this view/);
   });
 });
 

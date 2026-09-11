@@ -100,7 +100,7 @@ describe("#1 — initial, empty, filtered and exact-count states", () => {
     expect(screen.getByText(/No operation matches this view/)).toBeTruthy();
     expect(screen.getByText(/NO_MATCHING_PORTAL_OPERATION_RECORDS/)).toBeTruthy();
     // The qualifier is the point: it must not read as "the queue is empty".
-    expect(screen.getByText(/this request's scope only/)).toBeTruthy();
+    expect(screen.getByText(/may exist outside this view/)).toBeTruthy();
     expect(screen.queryByText(/queue is empty/)).toBeNull();
   });
 
