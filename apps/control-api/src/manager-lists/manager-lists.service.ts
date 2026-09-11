@@ -14,7 +14,8 @@ import {
   alphaFleetResource, bindingsRawQuery, bindingsResource, fleetRawQuery,
 } from "./contracts";
 import {
-  AlphaProjectionRecord, BindingProjectionRecord, ManagerListsRepository, ProjectionSnapshot,
+  AlphaProjectionRecord, BindingProjectionRecord, ManagerListsRepository,
+  ProjectionKind, ProjectionSnapshot,
 } from "./manager-lists.repository";
 
 export interface ManagerListPrincipal {
@@ -153,7 +154,64 @@ export class ManagerListsService {
    * projection active every drain is a bounded SGP snapshot read, so no third
    * projection kind or migration is needed for a <=100-row population.
    */
+  /**
+   * PHASE 7 (round 2) · served from the committed local projection.
+   *
+   * This used to drain the source on every browser request: two relations
+   * across three environments, so one page load meant six Edge calls and a
+   * p50 of 334 ms for a 1,214-byte response. `alphas` and `broker-bindings`
+   * were already projection-backed; this was the last list that was not, and
+   * it broke the invariant the local plane exists for — the cell should see
+   * worker cadence, never browser refreshes.
+   */
   async portfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
+    const snapshot = await this.ensureSnapshot(principal, query.environment, "PORTFOLIOS", true);
+    const scope = `${principal.workspaceId}:${query.environment}`;
+    const rows = await this.repository.portfolioRows(scope);
+    const summary = (snapshot.summary ?? {}) as {
+      branches?: Record<string, { state: string; reason_code: string | null }>;
+      truncated?: boolean;
+      total_portfolios?: number;
+      page_freshness?: ManagerPage["freshness"];
+    };
+    const budget = projectionFreshnessBudget(this.config);
+    return {
+      schema_version: "execution.portfolio-list.v1",
+      record_authority: "PORTAL_PROJECTION",
+      source_authority: "TRADING_SYSTEM",
+      delivery_profile: profile(query.environment),
+      workspace_id: principal.workspaceId,
+      environment: query.environment,
+      read_at: new Date().toISOString(),
+      source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
+      // PHASE 7 · the tier is now OURS, measured from our own refresh, so the
+      // budget that produced it is published beside it. While this list
+      // drained live the tier was the source's word and no budget of ours
+      // applied — that distinction is why §A51 removed the field then and why
+      // it returns now.
+      projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+      freshness: freshness(snapshot, budget),
+      freshness_budget_ms: budget,
+      completeness: snapshot.sourceCompleteness,
+      environments: summary.branches ?? {},
+      total_portfolios: summary.total_portfolios ?? rows.length,
+      truncated: summary.truncated ?? false,
+      items: rows.map((row) => ({
+        portfolio_id: row.portfolioId,
+        name: row.name,
+        owner: row.owner,
+        state: row.state,
+        base_currency: row.baseCurrency,
+        environments: row.environments as readonly ManagerListEnvironment[],
+        allocation_count: row.allocationCount,
+        deployment_count: row.deploymentCount,
+        allocated_by_currency: row.allocatedByCurrency,
+        updated_at: row.updatedAt.toISOString(),
+      })),
+    };
+  }
+
+  private async refreshPortfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
     const sourceEnvironments: readonly ManagerListEnvironment[] = query.environment === "all"
       ? MANAGER_LIST_ENVIRONMENTS : [query.environment];
     const branches: Record<string, { state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE"; reason_code: string | null }> = {};
@@ -237,39 +295,47 @@ export class ManagerListsService {
     const branchDegraded = Object.values(branches).some((branch) => branch.state === "UNAVAILABLE" || branch.state === "PARTIAL");
     const pageFreshness = pages.reduce((state, page) => worstFreshness(state, page.freshness), "FRESH" as ManagerPage["freshness"]);
     const pageCompleteness = pages.reduce((state, page) => worstCompleteness(state, page.completeness), "COMPLETE" as ManagerPage["completeness"]);
-    return {
-      schema_version: "execution.portfolio-list.v1",
-      record_authority: "PORTAL_PROJECTION",
-      source_authority: "TRADING_SYSTEM",
-      delivery_profile: profile(query.environment),
-      workspace_id: principal.workspaceId,
+    // PHASE 7 · commit instead of answering. Everything above is the same
+    // Everything above is the same drain and the same lineage guard; only the
+    // destination changed, from a response the browser waited on to a row the
+    // browser reads later.
+    await this.repository.replacePortfolios({
+      workspaceId: principal.workspaceId,
       environment: query.environment,
-      read_at: new Date().toISOString(),
-      source_as_of: oldestString(...pages.map((page) => page.asOf)),
-      // Source-declared tiers pass through; UNKNOWN is never promoted.
-      // UNKNOWN is not a kind of STALE. Collapsing it told the reader we had
-      // measured an old value when we had measured nothing at all.
-      freshness: pageFreshness,
-      // No budget here on purpose. This list is drained live from the source
-      // on every request, and `pageFreshness` is the word the SOURCE
-      // declared — not a measurement against our projection cadence. Sending
-      // our budget beside someone else's verdict produced the contradiction
-      // this phase exists to remove: "FRESH · 39s ago" under "FRESH under
-      // 30s". We do not know the source's threshold, so we state none.
+      sourceAsOf: oldestDate(...pages.map((page) => page.asOf)),
       completeness: truncated || branchDegraded
         ? "PARTIAL"
         : pageCompleteness === "UNKNOWN" ? "UNKNOWN" : pageCompleteness,
-      environments: branches,
-      total_portfolios: items.length,
-      truncated,
-      items: items.slice(0, PORTFOLIO_LIST_MAX_ITEMS),
-    };
+      rows: items.slice(0, PORTFOLIO_LIST_MAX_ITEMS).map((item) => ({
+        portfolioId: item.portfolio_id,
+        name: item.name,
+        owner: item.owner,
+        state: item.state,
+        baseCurrency: item.base_currency,
+        environments: item.environments,
+        allocationCount: item.allocation_count,
+        deploymentCount: item.deployment_count,
+        allocatedByCurrency: item.allocated_by_currency,
+        updatedAt: new Date(item.updated_at),
+      })),
+      // The per-environment branch verdicts and the truncation flag are
+      // facts about the READ, not about any one row, so they ride on the
+      // snapshot rather than being recomputed from rows that no longer
+      // remember which environment refused.
+      summary: {
+        branches,
+        truncated,
+        total_portfolios: items.length,
+        page_freshness: pageFreshness,
+      },
+    });
+    return requiredSnapshot(this.repository, principal.workspaceId, query.environment, "PORTFOLIOS");
   }
 
   private async ensureSnapshot(
     principal: ManagerListPrincipal,
     environment: AlphaFleetEnvironment,
-    kind: "ALPHA_FLEET" | "BINDINGS",
+    kind: ProjectionKind,
     refreshAllowed: boolean,
   ): Promise<ProjectionSnapshot> {
     const existing = await this.repository.snapshot(principal.workspaceId, environment, kind);
@@ -289,7 +355,9 @@ export class ManagerListsService {
     if (current) return existing ?? current;
     const task = (kind === "ALPHA_FLEET"
       ? this.refreshFleet(principal, environment)
-      : this.refreshBindings(principal, sourceEnvironment(environment)))
+      : kind === "PORTFOLIOS"
+        ? this.refreshPortfolios(principal, { environment } as PortfolioListQuery)
+        : this.refreshBindings(principal, sourceEnvironment(environment)))
       .catch((error) => {
         // Serving the committed snapshot is right and stays exactly as it was.
         // Discarding the reason was not: the snapshot lease is five seconds,
@@ -861,7 +929,7 @@ function worstCompleteness(left: ManagerPage["completeness"], right: ManagerPage
 }
 async function requiredSnapshot(
   repository: ManagerListsRepository, workspaceId: string, environment: AlphaFleetEnvironment,
-  kind: "ALPHA_FLEET" | "BINDINGS",
+  kind: ProjectionKind,
 ) {
   const snapshot = await repository.snapshot(workspaceId, environment, kind);
   if (!snapshot) throw new ManagerListsError("BR72_PROJECTION_COMMIT_FAILED", 500);

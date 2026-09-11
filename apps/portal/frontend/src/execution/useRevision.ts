@@ -48,5 +48,47 @@ export function usePollTick(intervalMs: number, active = true): number {
   return tick;
 }
 
-/** The projection's cadence on dev (EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS default 15 s). */
+/**
+ * The cadence to use until the server has told us its own.
+ *
+ * It mirrors `EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS` (15 s on dev), and
+ * it is a fallback rather than the rule: see `useFreshnessPoll`.
+ */
 export const PROJECTION_POLL_MS = 15_000;
+
+/**
+ * PHASE 7 (round 2) · poll at the cadence the server publishes, not at ours.
+ *
+ * Every projection-backed envelope carries `freshness_budget_ms`, and on dev
+ * that is `{ fresh: 30000, stale: 60000 }` — the window inside which the
+ * server itself calls the data fresh. Five call sites were polling at a
+ * hardcoded 15 s against it, so half of every screen's reads asked for a value
+ * the server had already promised would not change yet.
+ *
+ * Re-reading faster than the source refreshes does not make a screen more
+ * current; it makes the same answer arrive twice. Phase 7 asks for the cache
+ * timing to derive from the envelope, and this is that derivation.
+ *
+ * The budget arrives with the first response, so the first interval uses the
+ * fallback and every later one uses the server's number. A budget below the
+ * floor is ignored rather than obeyed: a mis-published 50 ms would turn one
+ * screen into a load generator, and a contract value is not a licence.
+ */
+export const MIN_POLL_MS = 5_000;
+
+export function freshnessPollMs(budget: { freshMs: number } | null | undefined): number {
+  const fresh = budget?.freshMs;
+  if (typeof fresh !== "number" || !Number.isFinite(fresh)) return PROJECTION_POLL_MS;
+  return Math.max(MIN_POLL_MS, Math.round(fresh));
+}
+
+/**
+ * A tick at the server's own freshness cadence, falling back to ours until it
+ * has published one.
+ */
+export function useFreshnessPoll(
+  budget: { freshMs: number } | null | undefined,
+  active = true,
+): number {
+  return usePollTick(freshnessPollMs(budget), active);
+}

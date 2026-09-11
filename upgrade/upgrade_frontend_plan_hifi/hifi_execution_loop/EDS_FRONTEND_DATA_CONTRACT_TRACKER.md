@@ -8362,3 +8362,241 @@ phẩm — sau `cut -c1-140` giấu tham chiếu ở cột 300, và guard quét 
 | Nút mờ trên dev | 37 · **0 thiếu lý do** (đếm cả hai hình dạng) |
 | Lệnh đọc approval mang workspace | **3/3** |
 | Tooltip lẫn động từ | **0** |
+
+---
+
+## A57. PHASE 7 (VÒNG 2) — SLO chốt trước, và lệnh gọi Edge cuối cùng nằm trên đường request
+
+Owner: *"đo từng tí 1, tối ưu chuẩn hệ thống, kiến trúc phù hợp"*.
+
+### A57.1 Exit gate trỏ tới một SLO chưa từng tồn tại
+
+Exit gate Phase 7 viết: *"Measured benchmark meets the **predeclared R2-0 SLO**"*.
+Nhưng §A39.9 ghi rõ R2-0 **cố ý không đặt SLO**:
+
+> *"R2-0 nói mục tiêu số phải chốt **từ** baseline. Baseline đã có; đặt ngưỡng
+> là việc của phase sau, sau khi owner và codex xem con số."*
+
+Vậy việc đầu tiên của Phase 7 là chốt ngưỡng. Tôi chốt **trước khi chạy bất kỳ
+phép đo nào**, ghi ra file có dấu thời gian `2026-09-11 06:25:03 UTC`.
+
+Chia **theo lớp**, không một ngưỡng chung — baseline chênh nhau hai bậc độ lớn
+(6 ms ↔ 1 532 ms), và R2-0 đã cảnh báo đúng cái bẫy đó: *"chọn một SLO đẹp
+nhưng vô nghĩa"*.
+
+| Lớp | Operation | **SLO p95** | **SLO p99** |
+| --- | --- | --- | --- |
+| Metadata/contract | `screen-contracts`, `runtime-manifest`, `activation/capabilities` | ≤ 50 ms | ≤ 100 ms |
+| List (projection-backed) | `alphas`, `portfolios`, `broker-bindings` | ≤ 300 ms | ≤ 600 ms |
+| Heavy screen | `screens/paper`, `screens/blotter`, `screens/sandbox`, `screens/live` | ≤ 800 ms | ≤ 1 600 ms |
+
+`p99 ≤ 2× p95` là kỷ luật đuôi: đạt p95 mà p99 gấp mười lần thì người dùng vẫn
+gặp treo.
+
+**Bất biến kiến trúc** (đúng/sai, không phải ngưỡng): refresh trình duyệt
+**không được** làm tăng lệnh gọi Edge · không response nào vượt 300 KB trên dây ·
+mọi request chỉ tới Portal origin · tab ẩn không poll · client SSE chậm/bị thu
+hồi quyền không làm cạn tài nguyên.
+
+### A57.2 Đo lại bằng đúng script R2-0 — 5/10 trượt
+
+`r2-benchmark.sh`, 30 lượt/operation, tuần tự, có phiên:
+
+| Operation | p50 | p95 | p99 | wire | SLO p95 | |
+| --- | --- | --- | --- | --- | --- | --- |
+| `screens/blotter` | 992 | **1 568** | 1 846 | gzip | 800 | ✗ |
+| `screens/paper` | 874 | **1 022** | 1 114 | gzip | 800 | ✗ |
+| `broker-bindings` | 10,7 | **659** | 770 | gzip | 300 | ✗ |
+| `alphas` | 22,6 | **437** | 580 | gzip | 300 | ✗ |
+| `portfolios` | **334** | **433** | 438 | gzip | 300 | ✗ |
+| `screens/sandbox` | 16,5 | 25,0 | 26,9 | gzip | 800 | ✓ |
+| `screens/live` | 11,2 | 19,4 | 20,5 | gzip | 800 | ✓ |
+| `screen-contracts` | 5,3 | 7,8 | 11,8 | gzip | 50 | ✓ |
+| `runtime-manifest` | 5,0 | 6,3 | 6,4 | gzip | 50 | ✓ |
+| `activation/capabilities` | 5,5 | 7,5 | 8,0 | gzip | 50 | ✓ |
+
+gzip đã bật trên **mọi** response — Phase 1 giao xong.
+
+### A57.3 Phát hiện trung tâm: lỗi **kiến trúc**, không phải lỗi tốc độ
+
+`portfolios` p50 **334 ms cho 1 214 byte**. Chậm không vì to. Truy ra:
+
+| List | Đường đọc |
+| --- | --- |
+| `alphas` | `ensureSnapshot(... "ALPHA_FLEET")` → projection local đã commit ✓ |
+| `broker-bindings` | `ensureSnapshot(... "BINDINGS")` → projection local ✓ |
+| **`portfolios`** | **`await this.drain(...)` LIVE mỗi request** ✗ |
+
+`portfolios()` drain **2 relation × 3 environment = 6 lệnh gọi Edge cho mỗi lần
+mở màn**. 334 ms chính là round-trip tới Execution Cell qua WireGuard.
+
+Đây là vi phạm thẳng bất biến trung tâm của Phase 7 — *"repeated browser
+refresh does not increase Edge request count"* — và §A38.11 dòng 6:
+*"Không browser→Edge fan-out"*.
+
+### A57.4 Đã cân nhắc tái dùng trước khi thêm bảng
+
+Projection fleet **đã có** cột `portfolios` và `allocations`. Nhưng đọc nội dung
+thật:
+
+```json
+portfolios:  [{"name": "...", "portfolio_id": "portfolio_types_pool", "base_currency": "USDT"}]
+allocations: [{"value": "40000", "currency": "USDT"}]
+```
+
+Thiếu `owner`, `state`, `allocation_count`, `deployment_count`, và allocations
+đã gộp theo currency chứ không còn từng dòng. Dựng danh sách từ đó sẽ phải
+**bịa** bốn trường — đúng thứ cả loop này cấm. Nên thêm projection riêng, sao
+**đúng khuôn `BINDINGS`** thay vì nghĩ kiểu mới.
+
+### A57.5 Thay đổi
+
+| Nơi | Việc |
+| --- | --- |
+| migration `…030` | `execution_portfolio_projection` — khoá `(scope_id, portfolio_id)`, decimal dạng chuỗi, kèm Down |
+| `manager-lists.repository.ts` | `ProjectionKind` mở rộng `PORTFOLIOS`; `replacePortfolios()` trong một transaction có advisory lock; `portfolioRows()` |
+| `manager-lists.service.ts` | `portfolios()` đọc projection; phần drain cũ thành `refreshPortfolios()` chạy qua `ensureSnapshot` |
+
+Branch verdict từng environment và cờ `truncated` là **sự thật về lần đọc**,
+không phải về một dòng nào, nên chúng đi trong `summary` của snapshot chứ không
+bị tính lại từ các dòng đã quên mình thuộc environment nào.
+
+**Và `freshness_budget_ms` quay lại trên envelope này.** §A51 gỡ nó đi vì lúc
+đó tier là chữ của **nguồn**, mượn ngân sách của ta đặt cạnh là bịa. Giờ list
+đọc từ projection của ta nên tier là **của ta**, và ngân sách sinh ra nó phải
+đứng cạnh nó. Luật không đổi — *publish đúng ngân sách đã quyết ra tier* — chỉ
+là ngân sách nào đã đổi.
+
+### A57.6 Hai lỗi của tôi, cả hai do test bắt
+
+**Một.** Phép chỉnh thụt lề bằng script đặt `return requiredSnapshot(...)` **vào
+bên trong** lời gọi `replacePortfolios`. `tsc` vẫn xanh — vì một hàm `async`
+không `return` vẫn hợp lệ kiểu — nhưng hàm không trả gì. Sửa lề bằng máy mà
+không đọc lại cấu trúc hàm là lỗi của tôi.
+
+**Hai, và đáng ghi hơn.** Migration của tôi tạo bảng mới nhưng quên rằng
+`execution_manager_projection_snapshots` có `CHECK (projection_kind IN
+('ALPHA_FLEET','BINDINGS'))`. Mọi lần ghi snapshot `PORTFOLIOS` đều bị
+PostgreSQL từ chối:
+
+```
+new row for relation "execution_manager_projection_snapshots"
+violates check constraint "…_projection_kind_check"
+```
+
+**Ràng buộc đó viết đúng.** Liệt kê thẳng hai kind đang tồn tại là cách nên
+viết — một kind mới **phải** khai báo ở đây, thay vì lọt vào như chuỗi tự do.
+Nếu cột để trống kiểu `text` không ràng buộc, lỗi này sẽ không nổ ở suite mà nổ
+trên dev, dưới dạng một bảng projection lặng lẽ không bao giờ được đọc.
+
+Migration giờ nới CHECK trong phần Up và **khôi phục đúng thứ tự** trong Down:
+xoá dòng `PORTFOLIOS` trước, rồi mới thắt lại ràng buộc — đảo thứ tự thì chính
+Down sẽ vi phạm ràng buộc nó vừa dựng.
+
+### A57.65 Đo lại sau khi sửa — và cả hệ thống cùng nhanh lên
+
+| Operation | p95 trước | **p95 sau** | SLO | |
+| --- | --- | --- | --- | --- |
+| `portfolios` | 433 | **8,2** | 300 | ✓ (p50 334 → **6,0 ms**) |
+| `broker-bindings` | 659 | **211** | 300 | ✓ |
+| `alphas` | 437 | **216** | 300 | ✓ |
+| `screens/blotter` | 1 568 | **1 106** | 800 | ✗ |
+| `screens/paper` | 1 022 | **964** | 800 | ✗ |
+| `screens/sandbox` | 25,0 | 20,9 | 800 | ✓ |
+| `screens/live` | 19,4 | 15,9 | 800 | ✓ |
+| metadata ×3 | 6–8 | 7–9 | 50 | ✓ |
+
+**8/10 đạt p95** (trước: 5/10 trượt). `portfolios` nhanh **53×** ở p95.
+
+Điều không lường trước: `alphas` và `broker-bindings` **cũng nhanh lên gấp
+đôi–ba** dù tôi không đụng vào chúng. Chúng dùng chung pool kết nối và chung
+ngân sách admission với `portfolios`; bỏ 6 lệnh gọi Edge khỏi mỗi lần đọc
+portfolio đã giải phóng đường chung. Một lỗi kiến trúc ở một route làm chậm
+những route không liên quan — đó là lý do đo cả hệ thống chứ không đo từng cái.
+
+**Còn trượt:** p99 của `alphas` là **927 ms** (SLO ≤ 600). Đuôi này là chu kỳ
+refresh nền rơi đúng vào lần đọc — xem B3.
+
+### A57.66 Bất biến trung tâm — đo trực tiếp
+
+40 lần đọc `portfolios` liên tiếp trong 6 giây, đếm số commit projection **riêng
+biệt**:
+
+```
+40 lần đọc của trình duyệt  →  3 lần gọi nguồn
+```
+
+| | trước | sau |
+| --- | --- | --- |
+| Lệnh gọi Edge cho 40 lần đọc | **240** (mỗi lần đọc × 6 drain) | **18** (3 chu kỳ × 6 drain) |
+| Tỉ lệ thuận với | **số lần đọc** | **thời gian** (lease 5 s) |
+
+Con số tuyệt đối giảm 13×; điều quan trọng hơn là **nó thôi tỉ lệ với số lần
+đọc**. Một người mở màn 100 lần không còn tạo ra 600 lệnh gọi tới Execution
+Cell. Đó chính là câu exit gate yêu cầu: *"repeated browser refresh does not
+increase Edge request count beyond worker cadence"*.
+
+### A57.67 Frontend: poll theo ngân sách server công bố, không theo hằng số của ta
+
+Đo được: **5 chỗ** dùng `usePollTick(PROJECTION_POLL_MS)` với
+`PROJECTION_POLL_MS = 15_000`, trong khi mọi envelope projection công bố
+`{ fresh: 30000, stale: 60000 }`. Frontend đọc lại **gấp đôi mức server nói là
+cần** — một nửa số lần đọc hỏi một giá trị server đã hứa chưa đổi.
+
+Đọc nhanh hơn nhịp nguồn không làm màn mới hơn; nó chỉ làm **cùng một câu trả
+lời tới hai lần**.
+
+Thêm `freshnessPollMs()` / `useFreshnessPoll()`: lấy nhịp từ envelope, dùng
+hằng số cũ làm **dự phòng** cho tới khi response đầu về, và **từ chối** ngân
+sách dưới sàn 5 s — một giá trị publish nhầm 50 ms sẽ biến một màn thành máy
+tạo tải nhắm vào chính cái cell mà local plane sinh ra để che. Contract là dữ
+liệu, không phải giấy phép. 4 test neo cả bốn nhánh.
+
+### A57.68 Guard R2-0 bắt lỗi thứ ba của tôi
+
+Bảng mới không được khai trong `persistence-ownership.v1.json`, và
+`r2Ledger.test.ts` đỏ ngay: *"covers every execution/governance table the
+control-api names in SQL"*. Đã khai, kèm ghi chú nó thay thế đường drain nào.
+Guard này do chính tôi viết ở R2-0 và hôm nay nó bắt tôi.
+
+### A57.7 Gap backend ↔ frontend — codex review, owner quyết
+
+Phần này viết riêng để codex soi và Bobby chốt. Mỗi mục ghi **ai chặn ai**,
+không trộn ba nhóm lại.
+
+#### (a) Cần codex quyết — kiến trúc backend
+
+| # | Gap | Số đo | Đề nghị của Claude |
+| --- | --- | --- | --- |
+| **B1** | `screens/blotter` p95 **1 568 ms**, p99 1 846 ms — vượt SLO 2×, và **tệ hơn baseline R2-0** (1 532/1 702) dù gzip đã bật | 434 KB identity | Đây là màn duy nhất *chậm đi* sau khi nén. Nghi phần lớn thời gian nằm ở compose phía server, không phải ở dây. Cần codex đo phân rã trong `screen-bff`: bao nhiêu ms là query, bao nhiêu là serialize |
+| **B2** | `screens/paper` identity **1 548 880 byte** (1,5 MB) | p95 1 022 ms | Phase 1 đã cắt payload trùng; 1,5 MB còn lại là dữ liệu thật. Có nên phân trang panel nặng nhất thay vì gửi cả không? Đây là quyết định contract, không phải tinh chỉnh |
+| **B3** | `alphas` p95 **437 ms** (baseline 142 ms — **xấu đi 3×**) | 87 KB | Đọc từ projection nên không phải fan-out. Nghi `ensureSnapshot` coalesce chưa che hết: lease 5 s nghĩa là mọi lần đọc sau 5 s đều kích hoạt refresh nền, và refresh đó tranh chấp cùng một pool |
+| **B4** | `SNAPSHOT_MAX_AGE_MS = 5_000` là hằng số **chung cho mọi projection kind** | — | Phase 7 §1 yêu cầu *"one projection-read policy per named BFF"*. Một hằng số 5 s cho cả fleet lẫn portfolios là chính thứ policy đó phủ nhận. Đề nghị codex cho nó vào `freshnessPolicies` như các ngưỡng khác |
+| **B5** | Không có metric nào cho p50/p95/p99 local BFF, projection age, cache/coalesce, SSE connect/drop | 0 | Phase 7 §2 yêu cầu. Hiện tôi phải đo bằng `curl` ngoài tiến trình — nghĩa là không ai quan sát được trong vận hành |
+
+#### (b) Cần owner (Bobby) quyết
+
+| # | Việc | Vì sao cần anh |
+| --- | --- | --- |
+| **O1** | **SLO ở §A57.1 có được chấp nhận làm chuẩn không** | R2-0 nói ngưỡng phải do owner + codex xem số rồi chốt. Tôi đề xuất, không tự phê duyệt |
+| **O2** | `screens/paper` 1,5 MB — cắt bớt hay giữ | Cắt là đổi contract, chạm màn Paper Workbench. Là quyết định sản phẩm |
+| **O3** | **NATS / MinIO runtime decision** (Phase 7 §4) | NATS chạy 2 ngày 18 giờ với **5 tin vào / 5 tin ra**, MinIO **0 bucket** (§A38.2). Phase 7 yêu cầu một bản ghi quyết định kèm bằng chứng consumer/persistence/retention/restore/cost. §A38.2 đã cố ý để ngoài 6 phase vì "đây là câu hỏi kiến trúc". Vẫn chưa ai quyết |
+| **O4** | 9 bảng allowlist + 3 repository chết (§A53) | Vẫn treo từ Phase 4 |
+
+#### (c) Claude làm được, không chờ ai — còn lại của Phase 7
+
+| # | Việc | Trạng thái |
+| --- | --- | --- |
+| F1 | `portfolios` đọc từ projection | **xong** (§A57.5) |
+| F2 | React query cache timing lấy từ `freshness_budget_ms` của envelope | chưa |
+| F3 | Tab ẩn dừng poll | chưa đo |
+| F4 | SSE làm tín hiệu invalidation thay vì poll | chưa |
+| F5 | Phân biệt 4 trạng thái: loading đầu · reconnecting · giá trị cũ có tuổi · unavailable hẳn | chưa |
+| F6 | Chứng minh mọi request chỉ tới Portal origin | chưa đo |
+
+**Một điều tôi muốn codex soi kỹ nhất:** tôi thêm một projection kind mới
+(`PORTFOLIOS`) và một bảng. Đó là thay đổi kiến trúc backend do frontend lead
+đề xuất. Nếu codex thấy nên gộp vào projection fleet (mở rộng cột thay vì bảng
+mới), tôi đổi — tôi chọn bảng riêng vì fleet đang khoá theo `alpha_id`, còn
+danh sách portfolio khoá theo `portfolio_id`, và nhồi hai hạt khác nhau vào một
+bảng là thứ sẽ phải gỡ ra sau.

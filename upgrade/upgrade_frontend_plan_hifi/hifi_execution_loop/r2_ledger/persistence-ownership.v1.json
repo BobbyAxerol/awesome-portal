@@ -1,1411 +1,1429 @@
 {
- "schema": "persistence-ownership.v1",
- "generated_at": "2026-09-10",
- "method": "reverse call-graph from every INSERT/UPDATE/DELETE statement in apps/control-api/src (tests excluded) up to a *.controller.ts (ROUTE) or worker/@Cron (WORKER). Text grep for INSERT alone is explicitly NOT the method (A38.8 item 1).",
- "owner_enum": [
-  "PORTAL_WORKFLOW",
-  "PORTAL_PROJECTION",
-  "TRADING_SYSTEM_READ",
-  "MIGRATION_ONLY",
-  "RETIRED_PENDING_REMOVAL",
-  "NEEDS_CODEX_REVIEW",
-  "VIEW_DERIVED"
- ],
- "tables": [
-  {
-   "table": "activation_credentials",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 5,
-   "rows_stable": 12,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "admin.controller.ts,auth.controller.ts"
-  },
-  {
-   "table": "auth_audit_events",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 533,
-   "rows_stable": 70,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "auth_sessions",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 4,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 499,
-   "rows_stable": 25,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_activation_capabilities",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 1,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,auth.controller.ts"
-  },
-  {
-   "table": "execution_activation_compatibility_requirements",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "execution_activation_events",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,auth.controller.ts"
-  },
-  {
-   "table": "execution_activation_evidence_refs",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "execution_activation_plans",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,auth.controller.ts"
-  },
-  {
-   "table": "execution_alpha_fleet_projection",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 1,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 144,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "manager-lists.controller.ts"
-  },
-  {
-   "table": "execution_authoritative_event_entities",
-   "writer_owner": "NEEDS_CODEX_REVIEW",
-   "ingress": "UNREACHED",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 1,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "write method exists but the call graph does not reach a controller or worker",
-   "reached_via": "-"
-  },
-  {
-   "table": "execution_authoritative_event_entries",
-   "writer_owner": "NEEDS_CODEX_REVIEW",
-   "ingress": "UNREACHED",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "write method exists but the call graph does not reach a controller or worker",
-   "reached_via": "-"
-  },
-  {
-   "table": "execution_authoritative_event_streams",
-   "writer_owner": "NEEDS_CODEX_REVIEW",
-   "ingress": "UNREACHED",
-   "verbs": {
-    "insert": 1,
-    "update": 4,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "write method exists but the call graph does not reach a controller or worker",
-   "reached_via": "-"
-  },
-  {
-   "table": "execution_binding_projection",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 1,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 121,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "manager-lists.controller.ts"
-  },
-  {
-   "table": "execution_command_center_pins",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "execution_command_plans_f0",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_durable_mirror_batches",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 22862,
-   "rows_stable": 2973,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_durable_mirror_conflicts",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_durable_mirror_continuations",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 53,
-   "rows_stable": 53,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_durable_mirror_current_entities",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 1,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 2910,
-   "rows_stable": 2909,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_durable_mirror_gaps",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_durable_mirror_observations",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 4
-   },
-   "readers": 4,
-   "rows_dev": 402785,
-   "rows_stable": 52793,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_durable_mirror_range_rows",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 5
-   },
-   "readers": 5,
-   "rows_dev": 733487,
-   "rows_stable": 732157,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_durable_mirror_revisions",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 6
-   },
-   "readers": 6,
-   "rows_dev": 22862,
-   "rows_stable": 2947,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_financial_query_cursors",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 2,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_incident_annotations",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_incident_events",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_incident_evidence",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_incident_operation_links",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 2,
-    "update": 0,
-    "delete": 0,
-    "read": 5
-   },
-   "readers": 5,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_incidents",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 1,
-    "delete": 0,
-    "read": 4
-   },
-   "readers": 4,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_manager_operation_continuations",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 2,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 2,
-   "rows_stable": 2,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_manager_projection_snapshots",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 7,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "manager-lists.controller.ts"
-  },
-  {
-   "table": "execution_operation_queue_items",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 8
-   },
-   "readers": 8,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_operation_workflow_events",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_profile_projection_journal",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 2,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 4859,
-   "rows_stable": 5019,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_profile_projection_leases",
-   "writer_owner": "PORTAL_PROJECTION",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 1,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 1,
-   "rows_stable": 1,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written by a background worker only",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_profile_projection_snapshots",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 1,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 3,
-   "rows_stable": 3,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_profile_relation_cursors",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 2,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 13,
-   "rows_stable": 13,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "execution_shared_admission_leases",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 3,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 1,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_shared_admission_state",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 1,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 109,
-   "rows_stable": 78,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_shared_read_cache",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 344498,
-   "rows_stable": 51172,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_shared_read_flights",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 3,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 6,
-   "rows_stable": 2,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "execution_timeseries_history",
-   "writer_owner": "TRADING_SYSTEM_READ",
-   "ingress": "WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 710537,
-   "rows_stable": 738358,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "local mirror/projection of Trading System facts",
-   "reached_via": "profile-projection.worker.ts"
-  },
-  {
-   "table": "external_identity_bindings",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 1,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 4,
-   "rows_stable": 3,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "governance_approval_analytics_scopes",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_approval_decisions",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_approval_evidence",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 1,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "governance.controller.ts"
-  },
-  {
-   "table": "governance_approval_findings",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_approval_known_limitations",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_approval_requests",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 15
-   },
-   "readers": 15,
-   "rows_dev": 1,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_canary_envelopes",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "governance_decision_plans",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_paper_exit_decision_plans",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_paper_exit_decisions",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_paper_exit_findings",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_paper_exit_lineage",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_paper_exit_panels",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_paper_exit_reviews",
-   "writer_owner": "NEEDS_CODEX_REVIEW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 0,
-    "update": 1,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "UPDATE/DELETE only, no INSERT: rows can be modified but never created",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_promotion_authority_grants",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "governance_r2_lineage",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_sandbox_certification_events",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "governance_sandbox_certifications",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 1,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "governance_sandbox_findings",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_sandbox_promotion_plans",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 4
-   },
-   "readers": 4,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "sandbox-certification.controller.ts"
-  },
-  {
-   "table": "governance_sandbox_smoke_plans",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 2,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "governance_sandbox_step_evidence",
-   "writer_owner": "RETIRED_PENDING_REMOVAL",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 0,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
-   "reached_via": "-"
-  },
-  {
-   "table": "outbox_messages",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 6,
-    "update": 2,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 3,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "password_credentials",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": 3,
-   "rows_stable": 3,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "auth.controller.ts"
-  },
-  {
-   "table": "pgmigrations",
-   "writer_owner": "MIGRATION_ONLY",
-   "ingress": "NO_WRITE_SQL",
-   "verbs": {
-    "insert": 2,
-    "update": 4,
-    "delete": 1,
-    "read": 8
-   },
-   "readers": 8,
-   "rows_dev": 30,
-   "rows_stable": 30,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "node-pg-migrate bookkeeping",
-   "reached_via": "-"
-  },
-  {
-   "table": "portal_users",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 1,
-    "update": 4,
-    "delete": 0,
-    "read": 12
-   },
-   "readers": 12,
-   "rows_dev": 4,
-   "rows_stable": 3,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "product_audit_events",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE,WORKER",
-   "verbs": {
-    "insert": 14,
-    "update": 0,
-    "delete": 0,
-    "read": 0
-   },
-   "readers": 0,
-   "rows_dev": 5,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "activation.controller.ts,admin.controller.ts"
-  },
-  {
-   "table": "run_read_models",
-   "writer_owner": "PORTAL_WORKFLOW",
-   "ingress": "ROUTE",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 4
-   },
-   "readers": 4,
-   "rows_dev": 1,
-   "rows_stable": 0,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "written on a Portal request path",
-   "reached_via": "facade.controller.ts,governance.controller.ts"
-  },
-  {
-   "table": "workspace_members",
-   "writer_owner": "NEEDS_CODEX_REVIEW",
-   "ingress": "UNREACHED",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 3
-   },
-   "readers": 3,
-   "rows_dev": 4,
-   "rows_stable": 3,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "write method exists but the call graph does not reach a controller or worker",
-   "reached_via": "-"
-  },
-  {
-   "table": "workspaces",
-   "writer_owner": "NEEDS_CODEX_REVIEW",
-   "ingress": "UNREACHED",
-   "verbs": {
-    "insert": 1,
-    "update": 0,
-    "delete": 0,
-    "read": 2
-   },
-   "readers": 2,
-   "rows_dev": 3,
-   "rows_stable": 3,
-   "retention": "UNDECLARED",
-   "disposal_decision": "PENDING_OWNER",
-   "note": "write method exists but the call graph does not reach a controller or worker",
-   "reached_via": "-"
-  },
-  {
-   "table": "execution_operation_queue_read",
-   "relkind": "VIEW",
-   "writer_owner": "VIEW_DERIVED",
-   "ingress": "NONE (a view has no writer; its rows come from the tables below)",
-   "backing_tables": "execution_incident_operation_links, execution_operation_queue_items, portal_users",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": null,
-   "rows_stable": null,
-   "retention": "INHERITED_FROM_BACKING_TABLES",
-   "disposal_decision": "FOLLOWS_BACKING_TABLES",
-   "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_conditions_register",
-   "relkind": "VIEW",
-   "writer_owner": "VIEW_DERIVED",
-   "ingress": "NONE (a view has no writer; its rows come from the tables below)",
-   "backing_tables": "governance_approval_known_limitations, governance_approval_requests",
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": null,
-   "rows_stable": null,
-   "retention": "INHERITED_FROM_BACKING_TABLES",
-   "disposal_decision": "FOLLOWS_BACKING_TABLES",
-   "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_approval_history",
-   "relkind": "VIEW",
-   "writer_owner": "VIEW_DERIVED",
-   "ingress": "NONE (a view has no writer; its rows come from the tables below)",
-   "backing_tables": null,
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": null,
-   "rows_stable": null,
-   "retention": "INHERITED_FROM_BACKING_TABLES",
-   "disposal_decision": "FOLLOWS_BACKING_TABLES",
-   "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
-   "reached_via": "-"
-  },
-  {
-   "table": "governance_approval_inbox",
-   "relkind": "VIEW",
-   "writer_owner": "VIEW_DERIVED",
-   "ingress": "NONE (a view has no writer; its rows come from the tables below)",
-   "backing_tables": null,
-   "verbs": {
-    "insert": 0,
-    "update": 0,
-    "delete": 0,
-    "read": 1
-   },
-   "readers": 1,
-   "rows_dev": null,
-   "rows_stable": null,
-   "retention": "INHERITED_FROM_BACKING_TABLES",
-   "disposal_decision": "FOLLOWS_BACKING_TABLES",
-   "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
-   "reached_via": "-"
-  }
- ],
- "views_note": "PostgreSQL reports four views in public. They are read by the control-api, so they are listed; a view never has its own writer."
+  "schema": "persistence-ownership.v1",
+  "generated_at": "2026-09-10",
+  "method": "reverse call-graph from every INSERT/UPDATE/DELETE statement in apps/control-api/src (tests excluded) up to a *.controller.ts (ROUTE) or worker/@Cron (WORKER). Text grep for INSERT alone is explicitly NOT the method (A38.8 item 1).",
+  "owner_enum": [
+    "PORTAL_WORKFLOW",
+    "PORTAL_PROJECTION",
+    "TRADING_SYSTEM_READ",
+    "MIGRATION_ONLY",
+    "RETIRED_PENDING_REMOVAL",
+    "NEEDS_CODEX_REVIEW",
+    "VIEW_DERIVED"
+  ],
+  "tables": [
+    {
+      "table": "activation_credentials",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 5,
+      "rows_stable": 12,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "admin.controller.ts,auth.controller.ts"
+    },
+    {
+      "table": "auth_audit_events",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 533,
+      "rows_stable": 70,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "auth_sessions",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 4,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 499,
+      "rows_stable": 25,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_activation_capabilities",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,auth.controller.ts"
+    },
+    {
+      "table": "execution_activation_compatibility_requirements",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "execution_activation_events",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,auth.controller.ts"
+    },
+    {
+      "table": "execution_activation_evidence_refs",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "execution_activation_plans",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,auth.controller.ts"
+    },
+    {
+      "table": "execution_alpha_fleet_projection",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 1,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 144,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "manager-lists.controller.ts"
+    },
+    {
+      "table": "execution_authoritative_event_entities",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNREACHED",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 1,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "write method exists but the call graph does not reach a controller or worker",
+      "reached_via": "-"
+    },
+    {
+      "table": "execution_authoritative_event_entries",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNREACHED",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "write method exists but the call graph does not reach a controller or worker",
+      "reached_via": "-"
+    },
+    {
+      "table": "execution_authoritative_event_streams",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNREACHED",
+      "verbs": {
+        "insert": 1,
+        "update": 4,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "write method exists but the call graph does not reach a controller or worker",
+      "reached_via": "-"
+    },
+    {
+      "table": "execution_binding_projection",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 1,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 121,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "manager-lists.controller.ts"
+    },
+    {
+      "table": "execution_command_center_pins",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "execution_command_plans_f0",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_durable_mirror_batches",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 22862,
+      "rows_stable": 2973,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_durable_mirror_conflicts",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_durable_mirror_continuations",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 53,
+      "rows_stable": 53,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_durable_mirror_current_entities",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 1,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 2910,
+      "rows_stable": 2909,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_durable_mirror_gaps",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_durable_mirror_observations",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 4
+      },
+      "readers": 4,
+      "rows_dev": 402785,
+      "rows_stable": 52793,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_durable_mirror_range_rows",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 5
+      },
+      "readers": 5,
+      "rows_dev": 733487,
+      "rows_stable": 732157,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_durable_mirror_revisions",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 6
+      },
+      "readers": 6,
+      "rows_dev": 22862,
+      "rows_stable": 2947,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_financial_query_cursors",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 2,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_incident_annotations",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_incident_events",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_incident_evidence",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_incident_operation_links",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 2,
+        "update": 0,
+        "delete": 0,
+        "read": 5
+      },
+      "readers": 5,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_incidents",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 4
+      },
+      "readers": 4,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_manager_operation_continuations",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 2,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 2,
+      "rows_stable": 2,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_manager_projection_snapshots",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 7,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "manager-lists.controller.ts"
+    },
+    {
+      "table": "execution_operation_queue_items",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 8
+      },
+      "readers": 8,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_operation_queue_read",
+      "relkind": "VIEW",
+      "writer_owner": "VIEW_DERIVED",
+      "ingress": "NONE (a view has no writer; its rows come from the tables below)",
+      "backing_tables": "execution_incident_operation_links, execution_operation_queue_items, portal_users",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "INHERITED_FROM_BACKING_TABLES",
+      "disposal_decision": "FOLLOWS_BACKING_TABLES",
+      "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
+      "reached_via": "-"
+    },
+    {
+      "table": "execution_operation_workflow_events",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_portfolio_projection",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 1,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 2,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "PHASE 7: local projection of the portfolio identity list. Replaces a live source drain that ran on every browser request; replaced wholesale per refresh, never appended.",
+      "reached_via": "manager-lists.controller.ts"
+    },
+    {
+      "table": "execution_profile_projection_journal",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 2,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 4859,
+      "rows_stable": 5019,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_profile_projection_leases",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 1,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 1,
+      "rows_stable": 1,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written by a background worker only",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_profile_projection_snapshots",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 3,
+      "rows_stable": 3,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_profile_relation_cursors",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 2,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 13,
+      "rows_stable": 13,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_shared_admission_leases",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 3,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 1,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_shared_admission_state",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 109,
+      "rows_stable": 78,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_shared_read_cache",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 344498,
+      "rows_stable": 51172,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_shared_read_flights",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 3,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 6,
+      "rows_stable": 2,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_timeseries_history",
+      "writer_owner": "TRADING_SYSTEM_READ",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 710537,
+      "rows_stable": 738358,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "local mirror/projection of Trading System facts",
+      "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "external_identity_bindings",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 4,
+      "rows_stable": 3,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "governance_approval_analytics_scopes",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_approval_decisions",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_approval_evidence",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 1,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "governance.controller.ts"
+    },
+    {
+      "table": "governance_approval_findings",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_approval_history",
+      "relkind": "VIEW",
+      "writer_owner": "VIEW_DERIVED",
+      "ingress": "NONE (a view has no writer; its rows come from the tables below)",
+      "backing_tables": null,
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "INHERITED_FROM_BACKING_TABLES",
+      "disposal_decision": "FOLLOWS_BACKING_TABLES",
+      "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_approval_inbox",
+      "relkind": "VIEW",
+      "writer_owner": "VIEW_DERIVED",
+      "ingress": "NONE (a view has no writer; its rows come from the tables below)",
+      "backing_tables": null,
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "INHERITED_FROM_BACKING_TABLES",
+      "disposal_decision": "FOLLOWS_BACKING_TABLES",
+      "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_approval_known_limitations",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_approval_requests",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 15
+      },
+      "readers": 15,
+      "rows_dev": 1,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_canary_envelopes",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "governance_conditions_register",
+      "relkind": "VIEW",
+      "writer_owner": "VIEW_DERIVED",
+      "ingress": "NONE (a view has no writer; its rows come from the tables below)",
+      "backing_tables": "governance_approval_known_limitations, governance_approval_requests",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "INHERITED_FROM_BACKING_TABLES",
+      "disposal_decision": "FOLLOWS_BACKING_TABLES",
+      "note": "Read surface only. Ownership and retention are whatever the backing tables declare; listing it here keeps the exit gate honest, because a reader exists.",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_decision_plans",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_paper_exit_decision_plans",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_paper_exit_decisions",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_paper_exit_findings",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_paper_exit_lineage",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_paper_exit_panels",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_paper_exit_reviews",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 0,
+        "update": 1,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "UPDATE/DELETE only, no INSERT: rows can be modified but never created",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_promotion_authority_grants",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "governance_r2_lineage",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_sandbox_certification_events",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "governance_sandbox_certifications",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "governance_sandbox_findings",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "governance_sandbox_promotion_plans",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 4
+      },
+      "readers": 4,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "sandbox-certification.controller.ts"
+    },
+    {
+      "table": "governance_sandbox_smoke_plans",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 2,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "governance_sandbox_step_evidence",
+      "writer_owner": "RETIRED_PENDING_REMOVAL",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 0,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 0,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "read path exists, no INSERT/UPDATE/DELETE in production src — owner decision required (A38.8)",
+      "reached_via": "-"
+    },
+    {
+      "table": "outbox_messages",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 6,
+        "update": 2,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 3,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "password_credentials",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": 3,
+      "rows_stable": 3,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "auth.controller.ts"
+    },
+    {
+      "table": "pgmigrations",
+      "writer_owner": "MIGRATION_ONLY",
+      "ingress": "NO_WRITE_SQL",
+      "verbs": {
+        "insert": 2,
+        "update": 4,
+        "delete": 1,
+        "read": 8
+      },
+      "readers": 8,
+      "rows_dev": 30,
+      "rows_stable": 30,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "node-pg-migrate bookkeeping",
+      "reached_via": "-"
+    },
+    {
+      "table": "portal_users",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 4,
+        "delete": 0,
+        "read": 12
+      },
+      "readers": 12,
+      "rows_dev": 4,
+      "rows_stable": 3,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "product_audit_events",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE,WORKER",
+      "verbs": {
+        "insert": 14,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": 5,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "run_read_models",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 4
+      },
+      "readers": 4,
+      "rows_dev": 1,
+      "rows_stable": 0,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "written on a Portal request path",
+      "reached_via": "facade.controller.ts,governance.controller.ts"
+    },
+    {
+      "table": "workspace_members",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNREACHED",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 3
+      },
+      "readers": 3,
+      "rows_dev": 4,
+      "rows_stable": 3,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "write method exists but the call graph does not reach a controller or worker",
+      "reached_via": "-"
+    },
+    {
+      "table": "workspaces",
+      "writer_owner": "NEEDS_CODEX_REVIEW",
+      "ingress": "UNREACHED",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": 3,
+      "rows_stable": 3,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "write method exists but the call graph does not reach a controller or worker",
+      "reached_via": "-"
+    }
+  ],
+  "views_note": "PostgreSQL reports four views in public. They are read by the control-api, so they are listed; a view never has its own writer."
 }

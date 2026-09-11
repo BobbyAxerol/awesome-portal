@@ -74,6 +74,27 @@ export interface AlphaProjectionRecord {
   updatedAt: Date;
 }
 
+/**
+ * PHASE 7 (round 2): `PORTFOLIOS` joins the two projection kinds that already
+ * existed, so the portfolio list is served from committed local state rather
+ * than from a source call on the browser's request path.
+ */
+export type ProjectionKind = "ALPHA_FLEET" | "BINDINGS" | "PORTFOLIOS";
+
+/** One committed portfolio identity row, exactly as the list screen reads it. */
+export interface PortfolioProjectionRecord {
+  portfolioId: string;
+  name: string;
+  owner: string | null;
+  state: string;
+  baseCurrency: string;
+  environments: readonly string[];
+  allocationCount: number;
+  deploymentCount: number;
+  allocatedByCurrency: readonly { currency: string; value: string }[];
+  updatedAt: Date;
+}
+
 export interface BindingProjectionRecord {
   bindingId: string;
   accountId: string;
@@ -90,7 +111,7 @@ export class ManagerListsRepository {
   async snapshot(
     workspaceId: string,
     environment: ProjectionEnvironment,
-    kind: "ALPHA_FLEET" | "BINDINGS",
+    kind: ProjectionKind,
   ): Promise<ProjectionSnapshot | null> {
     const result = await this.pool.query<{
       source_as_of: Date | null; source_completeness: ProjectionSnapshot["sourceCompleteness"];
@@ -163,6 +184,55 @@ export class ManagerListsRepository {
     });
   }
 
+  async replacePortfolios(input: {
+    workspaceId: string; environment: ManagerListEnvironment | "all"; sourceAsOf: Date | null;
+    completeness: ProjectionSnapshot["sourceCompleteness"];
+    rows: readonly PortfolioProjectionRecord[];
+    summary: Record<string, unknown>;
+  }): Promise<void> {
+    await this.transaction(`portfolios:${input.workspaceId}:${input.environment}`, async (client, refreshedAt) => {
+      const scope = `${input.workspaceId}:${input.environment}`;
+      await client.query(`DELETE FROM execution_portfolio_projection WHERE scope_id = $1`, [scope]);
+      for (const row of input.rows) {
+        await client.query(
+          `INSERT INTO execution_portfolio_projection
+             (scope_id, workspace_id, environment, portfolio_id, name, owner, state, base_currency,
+              environments, allocation_count, deployment_count, allocated_by_currency,
+              updated_at, source_as_of, projection_refreshed_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12::jsonb,$13,$14,$15)`,
+          [scope, input.workspaceId, input.environment, row.portfolioId, row.name, row.owner,
+            row.state, row.baseCurrency, JSON.stringify(row.environments), row.allocationCount,
+            row.deploymentCount, JSON.stringify(row.allocatedByCurrency), row.updatedAt,
+            input.sourceAsOf, refreshedAt],
+        );
+      }
+      await this.upsertSnapshot(client, input.workspaceId, input.environment as ProjectionEnvironment,
+        "PORTFOLIOS", input.sourceAsOf, input.completeness, input.rows.length, refreshedAt, input.summary);
+    });
+  }
+
+  /** Committed portfolio identities for one scope, ordered the way the list reads them. */
+  async portfolioRows(scopeId: string): Promise<PortfolioProjectionRecord[]> {
+    const result = await this.pool.query<{
+      portfolio_id: string; name: string; owner: string | null; state: string; base_currency: string;
+      environments: string[]; allocation_count: number; deployment_count: number;
+      allocated_by_currency: { currency: string; value: string }[]; updated_at: Date;
+    }>(
+      `SELECT portfolio_id, name, owner, state, base_currency, environments,
+              allocation_count, deployment_count, allocated_by_currency, updated_at
+         FROM execution_portfolio_projection
+        WHERE scope_id = $1
+        ORDER BY portfolio_id`,
+      [scopeId],
+    );
+    return result.rows.map((row) => ({
+      portfolioId: row.portfolio_id, name: row.name, owner: row.owner, state: row.state,
+      baseCurrency: row.base_currency, environments: row.environments,
+      allocationCount: row.allocation_count, deploymentCount: row.deployment_count,
+      allocatedByCurrency: row.allocated_by_currency, updatedAt: row.updated_at,
+    }));
+  }
+
   async binding(scopeId: string, bindingId: string): Promise<BindingProjectionRecord | null> {
     const result = await this.pool.query<{
       binding_id: string; account_id: string; venue: string; state: string;
@@ -200,7 +270,7 @@ export class ManagerListsRepository {
 
   private upsertSnapshot(
     client: PoolClient, workspaceId: string, environment: ProjectionEnvironment,
-    kind: "ALPHA_FLEET" | "BINDINGS", sourceAsOf: Date | null,
+    kind: ProjectionKind, sourceAsOf: Date | null,
     completeness: ProjectionSnapshot["sourceCompleteness"], rowCount: number, refreshedAt: Date,
     summary: Record<string, unknown>,
   ) {

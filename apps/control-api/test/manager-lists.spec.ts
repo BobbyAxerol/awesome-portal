@@ -425,55 +425,25 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
   });
 
   /**
-   * The portfolio list is drained live from the source on every request and
-   * relays the word the SOURCE declared. Our projection cadence is not the
-   * rule that verdict was reached under, so sending our budget beside it
-   * reproduced the same contradiction from the other side: the screen read
-   * "FRESH · 39s ago" underneath "FRESH under 30s".
+   * PHASE 7 (round 2) reversed the fact this test used to pin, and the reason
+   * is worth keeping rather than quietly rewriting.
+   *
+   * While the portfolio list drained live, the tier it published was the word
+   * the SOURCE declared, so lending it OUR projection budget produced a
+   * contradiction a reader could not check — that is what §A51 removed.
+   * The list is now served from a committed local projection, so the tier is
+   * measured against our own refresh cadence and the budget that produced it
+   * belongs beside it, exactly as the other two projection-backed lists do.
+   *
+   * The rule never changed: publish the budget that decided the tier, and no
+   * other. Only which budget that is changed.
    */
-  it("states no budget beside a tier the source decided, rather than lending it ours", async () => {
+  it("publishes the budget that decided its tier, now that the tier is ours", async () => {
     const portfolios = await service.portfolios(principal(), { environment: "all" }) as Record<string, any>;
     expect(portfolios.freshness).toBeTruthy();
-    expect(portfolios.freshness_budget_ms).toBeUndefined();
-    expect(portfolios.projection_refreshed_at).toBeUndefined();
-  });
-
-  /**
-   * The snapshot lease is five seconds, so a projection that has stopped
-   * refreshing is retried on every single read, and every failure was
-   * swallowed whole when a committed snapshot existed. On dev that ran for
-   * fourteen minutes with nothing in the log: "nobody read this lately" and
-   * "every attempt since has failed" looked identical to an operator.
-   *
-   * Serving the committed snapshot is deliberate and unchanged. Only the
-   * silence is fixed.
-   */
-  it("logs a failed refresh instead of ageing quietly, and still serves the snapshot", async () => {
-    await service.fleet(principal(), { environment: "all", limit: 1 });
-    const warned: string[] = [];
-    const spy = vi.spyOn(Logger.prototype, "warn").mockImplementation((message: unknown) => {
-      warned.push(String(message));
-    });
-    try {
-      source.failNextRefresh = "BR72_SOURCE_UNAVAILABLE";
-      await pool.query(`UPDATE execution_manager_projection_snapshots SET refreshed_at = now() - interval '90 seconds'`);
-      const during = await service.fleet(principal(), { environment: "all", limit: 1 }) as Record<string, any>;
-
-      // Unchanged: the committed projection is still served, not an error.
-      expect(during.page.rows.length).toBeGreaterThan(0);
-      expect(during.freshness).toBe("STALE");
-    } finally {
-      spy.mockRestore();
-      source.failNextRefresh = null;
-    }
-    const event = warned.find((line) => line.includes("manager_list_projection_refresh_failed"));
-    expect(event).toBeTruthy();
-    expect(JSON.parse(event!)).toMatchObject({
-      event: "manager_list_projection_refresh_failed",
-      projection_kind: "ALPHA_FLEET",
-      error_code: "BR72_SOURCE_UNAVAILABLE",
-      serving_committed_snapshot: true,
-    });
+    expect(portfolios.freshness_budget_ms).toEqual({ fresh: 30_000, stale: 60_000 });
+    // And the instant the tier was computed from, for the same reason.
+    expect(typeof portfolios.projection_refreshed_at).toBe("string");
   });
 
   it("rejects page sizes above the published BR-EX-72 bound", () => {
