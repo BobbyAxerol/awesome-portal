@@ -9024,3 +9024,165 @@ bảng dưới đây là sàn, không phải trần.
 
 `passportReader.test.ts` là mẫu: nạp `execution-governance.r2-review.valid.json`
 **và** payload nguyên văn probe trả về; chứng minh đỏ được với reader cũ (2/4).
+
+---
+
+## A60. PHASE 9 (VÒNG 2) ĐÃ LÀM (11-09) — guard cho lớp lỗi trình bày, và cái guard tôi vứt đi trước
+
+Nhánh `feat/execution-empty-composition`, commit `15f60ff8` → `39e32587`.
+
+### A60.1 Codex sửa cách làm của tôi, và codex đúng
+
+Kế hoạch của tôi: *"quét text node thật… **Chạy trong probe browser, không phải
+unit test**"*. Handoff BE-R2 §3 bác: *"Do not create an expensive blanket browser
+scan on every PR"*, dùng **focused formatter/unit tests + targeted browser
+probes**, allowlist **per control/route**.
+
+Nhận. Guard nằm trong jsdom (rẻ, chạy mọi lần), browser chỉ dùng làm bằng chứng
+có chủ đích, ghi lại một lần.
+
+### A60.2 Đo lại trước: một lỗi **không tái hiện trên probe**
+
+| Màn | probe `:8090` (backend 07-09) | dev `:8080` (backend 11-09) |
+| --- | ---: | ---: |
+| Account/Broker 360 — số thô `\d+\.\d{7,}` | **0** | **3** |
+
+Suýt kết luận "sản phẩm đã đúng". Bằng chứng gốc §A54 đo trên **dev**; probe chạy
+control-api cũ hơn 4 ngày và không trả cùng hình dạng. **Luật §A56.3 lại cứu một
+lần nữa: chứng minh phép đo trước khi kết luận sản phẩm.**
+
+Tôi có thử nâng control-api của probe lên cùng commit — nó làm **hỏng dữ liệu
+probe** (equity thành `not published`, DB probe không khớp backend mới). Đã
+rollback về image cũ (`local/portal-control-api:eds-probe-rollback-0911`) và
+chuyển sang đo trên dev. Trên dev **chỉ deploy `portal-web`** (`--no-deps`),
+control-api của codex không bị đụng; rollback frontend:
+`local/portal-portal-web:dev-rollback-0911`.
+
+### A60.3 Ba lỗi kế hoạch nêu — trạng thái thật
+
+| # | Lỗi | Trạng thái |
+| --- | --- | --- |
+| 1 | Số thô 18 chữ số trên Account/Broker 360 | **ĐÃ SỬA** — và tìm thêm **hai chỗ nữa** kế hoạch không biết |
+| 2 | Nút `Open` của QuantBT Run Library disabled không lý do | **ĐÃ SỬA TỪ PHASE 6** (`RunLibrary.tsx:92-108`, có comment). Probe xác nhận 0 vi phạm. **Tôi không nhận công việc này** |
+| 3 | Ô `exec-num` mất `title` trên Portfolio 360 | **ĐÃ SỬA** — không phải 1 ô như ghi, mà **9 ô** |
+
+### A60.4 Bốn chỗ in số thô, không phải một
+
+Kế hoạch ghi ba ô. Đo và sửa xong mới lộ ra chỗ thứ tư:
+
+| Chỗ | Phát hiện khi nào |
+| --- | --- |
+| `EQUITY` · `CASH FREE` · `CASH LOCKED` (`Fact`) | §A54, đã biết |
+| `virtual exposure` trong bảng **linked accounts** | **sau khi sửa ba ô trên rồi đo lại dev** — hai tài khoản `p182-ordinary-*` vẫn in `0.000000000000000000` |
+| `free balance 20000` ở dòng headroom | **nhìn ảnh** — cùng màn, cùng con số, viết hai kiểu, ba dòng cách nhau |
+| 9 ô `<td>` ở Portfolio 360 | format inline rồi vứt bản gốc |
+
+Dòng headroom đáng nói riêng: nó in `free balance 20000` ngay dưới
+`EQUITY 20,000.00`. **Một màn đã tự mâu thuẫn về số của chính nó thì thêm một ô
+sai nữa đọc như bình thường** — đó là lý do lớp lỗi này sống lâu.
+
+### A60.5 Cách sửa: dùng lại, không viết bản sao thứ năm
+
+`components/cells.tsx` đã ghi trong doc của nó: *"three screens had each grown
+their own copy that printed the raw string"*. `Fact` là bản thứ tư.
+
+- `Fact` đi qua `Money`/`Num`/`Published` dùng chung.
+- **`extra` phải khai `unit`, không có mặc định** — danh sách đó trộn tiền
+  (`cash free`) với chữ (`account sync` = `SYNCED`). Đoán theo nhãn là cách một
+  status string bị chèn dấu phẩy hàng nghìn; đoán chiều ngược lại là cách 18 chữ
+  số lên màn. Kiểu bắt **mọi** call site còn lại tự khai (count khai là count).
+- Thêm `exactTitle()` vào `cells.tsx` cho ô `<td>` format inline: trả
+  `undefined` khi không có gì bị làm tròn, để không lặp lại giá trị đã hiện.
+
+### A60.6 Fixture đã nói dối, và đó là lý do test xanh
+
+| Fixture | Trước | Sau |
+| --- | --- | --- |
+| `account360.fixtures` headline/extra | `"61,204.00"` — đã nhóm, đã 2 chữ số | `"61204.000000000000000000"` |
+| `account360.fixtures` virtualExposure ×3 | `"18,400.00"` … | `"18400.000000000000000000"` … |
+
+Fixture format sẵn ⇒ mọi test chạy trên một đường **server không bao giờ đi**, và
+màn in thô vẫn xanh. Sau khi đổi, chính fixture này làm guard bắt được ô
+`virtual exposure`.
+
+### A60.7 Guard: cái tôi vứt đi trước khi viết cái dùng được
+
+Guard rẻ nhất là đọc JSX: mọi phần tử có `disabled` phải có `title`. **Tôi viết
+nó trước và đo nó trước khi tin**:
+
+```
+phần tử có disabled: 113   THIẾU title: 46      ← source scan
+browser trên cùng màn:  0 vi phạm
+```
+
+46 báo oan, vì phần lớn chỉ disabled trong lúc submit đang bay, hoặc mang lý do
+ở wrapper, hoặc **không bao giờ disabled ở trạng thái người đọc chạm tới**. Một
+guard kêu oan 46 lần là guard không ai đọc — §A56.3 áp cho **dụng cụ đo** chứ
+không riêng sản phẩm. Vứt.
+
+**Bốn guard dùng được** (`presentationGuards.test.tsx`, 13 test, jsdom):
+
+| | Bất biến |
+| --- | --- |
+| 1 | Không text node nào lọt `\d+\.\d{7,}` ra màn |
+| 2 | **Mọi giá trị nguồn vẫn lấy lại được** từ text hoặc `title` |
+| 3 | Control **đang thật sự disabled** phải có lý do ≥ 8 ký tự; allowlist per-control, **hiện đang rỗng** |
+| 4 | `Num` giữ đúng lời hứa **cả hai chiều**: có title khi làm tròn, **không** có title khi không |
+
+Mỗi guard tự khẳng định **nó có tìm thấy gì để kiểm** trước khi kiểm. Khẳng định
+đó ăn lương ngay lập tức: nó **đỏ ở guard Portfolio**, và nguyên nhân là test của
+tôi đọc `firstText` trên row có trường tên `firstEquity` — filter khớp 0 phần tử,
+guard sẽ "xanh" mà không chứng minh gì.
+
+### A60.8 Chứng minh từng guard đỏ được (exit gate bắt buộc)
+
+| Phá có chủ ý | Kết quả |
+| --- | --- |
+| `Fact` quay về `<span className="exec-num">{value}</span>` | **1 đỏ** (guard 1) |
+| Bỏ `title={exactTitle(...)}` khỏi ô Portfolio | **1 đỏ** (guard 2) |
+| Bỏ lý do khỏi nút Deny của Gate R1 | **1 đỏ** (guard 3) |
+| `virtual exposure` quay về span thô | **1 đỏ** (guard 1 — chứng minh fixture mới có tác dụng) |
+| Khôi phục cả bốn | **13/13 xanh** |
+
+### A60.9 Nghiệm thu bằng mắt trên dev (dữ liệu thật)
+
+```
+EQUITY      20,000.00 USDT   title=20000.000000000000000000
+CASH FREE   20,000.00        title=20000.000000000000000000
+CASH LOCKED 0.00             title=0.000000000000000000
+AGGREGATE HEADROOM … maintenance requirement not published vs free balance 20,000.00
+Portfolio 360  2,000,000.00  title=2000000.000000000000000000
+               26,135.7234   title=26135.723399168080000374
+```
+
+Quét 10 route trên dev: **số thô = 0 ở tất cả**, **nút thiếu lý do = 0 ở tất cả**.
+Trước đó 3 màn account mỗi màn 3 ô thô, 2 màn account khác mỗi màn 1 ô.
+
+### A60.10 Evidence
+
+| Gate | Kết quả |
+| --- | --- |
+| `vitest run` | **2 234 passed** · 3 skipped · **136 file** · 0 đỏ |
+| `tsc --noEmit` (src/) | sạch |
+| Pre-commit hook | xanh cả 4 commit (N29 re-pin bằng `repin.py`, không pin tay) |
+| Browser | 10 route trên dev, ảnh trong `scratchpad/p9dev/`, đã mở xem |
+| Rollback | web dev `local/portal-portal-web:dev-rollback-0911` · probe api `:eds-probe-rollback-0911` |
+
+### A60.11 Reuse report (§11.3)
+
+| Dùng lại | Của ai |
+| --- | --- |
+| `Num` · `Money` · `Published` · `Stamp` | `components/cells.tsx` — có sẵn, đúng việc |
+| `formatExact` / `formatExactMoney` | `formatExact.ts` — authority format duy nhất |
+| Harness test | `account360.fixtures` + `accountHandlers` + `analytics.presentation.fixtures` có sẵn |
+
+**Mới**: `exactTitle()` (17 dòng trong `cells.tsx`), `presentationGuards.test.tsx`.
+**Không mới**: không component mới, không token mới, không CSS mới.
+
+### A60.12 Còn treo, nói thẳng
+
+- **`exec-num` không có `title`** vẫn còn 11–116 ô mỗi màn. **Không phải lỗi**:
+  phần lớn là id, count, status word — không có "giá trị gốc" nào để giấu. Guard
+  2 kiểm đúng thứ cần (giá trị nguồn lấy lại được), không kiểm con số thô này.
+- **Probe không dùng để nghiệm thu Phase 9 được** cho tới khi DB probe khớp
+  backend mới. Đã rollback, ghi lại để lần sau không mất thời gian như tôi.
