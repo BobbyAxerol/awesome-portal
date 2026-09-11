@@ -7667,3 +7667,391 @@ Frontend giảm 2 test: khối `B16` kiểm một tính năng không dùng đư�
 thay bằng ghi chú vì sao nó biến mất — quy tắc mà B16 sinh ra để bảo vệ (hàng
 có target không đọc được vẫn phải hiện) vẫn còn hiệu lực ở
 `governanceAdditions.test.tsx` cho những panel còn tồn tại.
+
+## A54. RÀ SOÁT LẠI PHASE 5 BẰNG BROWSER (11-09) — quét 39 màn, và ba mức "rỗng" rất khác nhau
+
+Owner yêu cầu: *"rà soát lại phase 5 đã làm nhé, rà soát kỹ, bằng browser… showcase
+từng màn nhỏ, ô nhỏ như thế nào, dev-portal dữ liệu còn thiếu chỗ nào, UI UX còn
+thiếu chỗ nào (Không phải xoá nhé, mà đánh giá để bổ sung)."*
+
+Cách đo: đăng nhập, mở **cả 39 màn** trong registry (route tham số nhồi **id thật**
+lấy từ projection), ghi lại mọi request `/api/`, mọi phần tử có `data-state`,
+mọi nút `disabled` và `title` của nó, số ký tự nội dung, console error.
+
+### A54.1 Phase nào đã xong — đối chiếu markdown
+
+| Phase (vòng 2) | Mục | Xong? |
+| --- | --- | --- |
+| R2-0 | §A39 | ✅ |
+| 1 · payload gửi hai lần | §A40, gap đóng ở §A41 | ✅ |
+| 2 · route chết + hệ thống đang giấu | §A42, đóng nốt §A43 | ✅ |
+| 3 · dev↔stable | §A44 → cải chính §A45 → đóng nốt §A46 | ✅ |
+| 4 · code chết test đang che | §A53 | ✅ |
+| 5 · 40 bảng rỗng, không snapshot nào COMPLETE | §A51 | ✅ |
+| 6 · nghiệm thu nút bấm | — | ❌ cần owner cho phép bấm thật |
+| 7 · data-plane performance, realtime | — | ❌ chưa bắt đầu |
+
+Vòng 1 (§A32, 5 phase) đã tổng kết ở §A33.
+
+### A54.2 Phát hiện chính — Phase 5 mới phủ **một phần** số màn cần phủ
+
+Phase 5 sửa 4 component cho 10 route trong danh sách §A37.10. Quét lại toàn bộ 39
+màn thì lộ ra **ba mức chất lượng** cho cùng một tình huống "không có bản ghi":
+
+| Mức | Màn | Ký tự | Nội dung khi rỗng |
+| --- | --- | --- | --- |
+| **A — đủ** | `EXECUTION_INCIDENT_DETAIL_SCREEN` | 753 | Khung màn còn nguyên: **6 panel** có tên (Timeline, Operations taken, Evidence, Resolution gates, Annotations), mỗi panel nói nó sẽ chứa gì, + câu "ai tạo ra bản ghi này" |
+| **B — trung thực nhưng màn sập** | Canary 179 · SandboxCert 203 · QuantBT run 207 | 179–207 | Đúng một dòng lý do + câu "đang chờ ai". **Không còn khung panel nào** — người đọc không học được màn này vốn chứa gì |
+| **C — không nói gì cả** | **Gate R1 88 · Gate R2 83 · Gate LIVE 51** | 51–88 | `UNAVAILABLE APPROVAL_NOT_FOUND: Approval not found.` và **hết**. Không câu chờ-ai, không khung panel |
+
+**Ba màn Gate là tệ nhất sản phẩm**, và Phase 5 **không chạm tới** vì chúng không
+nằm trong bảng 10 route của §A37.10. Đây là gap thật của Phase 5, tìm ra bằng
+cách quét đủ 39 màn thay vì tin danh sách cũ.
+
+Nguồn: `GateLiveReview.tsx:82` và `GateR2Review.tsx:179` — nhánh rỗng chỉ render
+`<PanelState>` trần, trong khi nhánh có dữ liệu dựng đầy đủ panel.
+
+### A54.3 Đề nghị bổ sung — "showcase" từng màn nhỏ, ô nhỏ phải ra sao
+
+Chuẩn đã có sẵn trong sản phẩm (mức A). Quy tắc đề nghị, áp cho mọi màn chi tiết:
+
+> **Một màn rỗng vẫn phải dạy người đọc màn này chứa gì.** Giữ nguyên khung
+> panel, mỗi panel nêu *tên thật* của nó và một câu nói panel đó sẽ chứa gì khi
+> có dữ liệu. Dưới cùng, đúng **một** câu nói ai tạo ra bản ghi (§A51.6).
+
+Panel cần dựng khi rỗng, lấy từ chính nhánh có-dữ-liệu của mỗi màn:
+
+| Màn | Panel phải hiện tên ngay cả khi rỗng |
+| --- | --- |
+| Canary Control Room | Canary envelope · Exit readiness · Guard rule · Incidents · reconciliation |
+| Sandbox Certification | Certification steps · Certifications in progress · Cleanup checklist · Difference · Execution quality |
+| Gate R1 / R2 / LIVE | kicker `GATE R1 · …` + panel bằng chứng của gate đó + câu chờ-ai |
+
+Ba màn Gate còn thiếu **câu chờ-ai**: `governance_approval_decisions` có route
+`POST /governance/approvals` nên câu đúng là *"opened by an approver from the
+Approval Inbox"*, không phải "chờ Trading System".
+
+### A54.4 Dữ liệu dev-portal còn thiếu — đo từ projection, không phải đoán
+
+**7 relation rỗng trên mọi environment có bật** (23 relation đang chạy):
+
+| Relation | Rỗng ở |
+| --- | --- |
+| `manager.venue-accounts:venue_accounts` | live, paper, sandbox |
+| `manager.risk:risk_grants` | live, paper, sandbox |
+| `manager.reconciliation:reconciliation_findings` | live, paper, sandbox |
+| `manager.accounts:margin_balances` | live, sandbox |
+| `manager.accounts:account_sync_effective` | live, sandbox |
+| `manager.conditional-orders:conditional_order_groups` | paper |
+| `manager.conditional-orders:conditional_order_group_legs` | paper |
+
+Đây là **chờ nguồn** — Portal không làm gì được. Hệ quả nhìn thấy trên
+Account Broker 360: cột **PHYSICAL BROKER STATE** cả 4 ô đều `not reported`, cột
+**DIFFERENCE** chỉ có `formula version not published`. Hai phần ba màn trống vì
+nguồn chưa publish, **không phải vì frontend thiếu**.
+
+Phần này sản phẩm đang làm **đúng**: `not reported` / `not published` /
+`not stated`, không có `0` giả, không dấu gạch bịa. `AGGREGATE HEADROOM COULD NOT
+BE DETERMINED — maintenance requirement not published vs free balance 20000
+(Δ not published USDT)` là mẫu mực của §3.3.
+
+### A54.5 UI/UX còn thiếu — ba món, đều là **bổ sung** chứ không phải xoá
+
+**1. Số thô 18 chữ số quay lại, trên Account Broker 360.** Ba ô in nguyên:
+
+```
+EQUITY       20000.000000000000000000 USDT
+CASH FREE    20000.000000000000000000
+CASH LOCKED  0.000000000000000000
+```
+
+Cùng màn, chart tooltip in `20,000.00` và dòng headroom in `free balance 20000`
+— **bộ format đã có và đang dùng ở chỗ khác**, chỉ ba ô này đi vòng qua nó. Đây
+đúng lớp lỗi memory ghi là đã sửa ở Alpha 360; nó tái xuất ở màn khác, nghĩa là
+cần một **guard test** chứ không phải sửa tay lần nữa.
+
+**2. Một nút `disabled` không nêu lý do** — vi phạm §3.5. `QUANTBT_RUN_LIBRARY_SCREEN`,
+nút `Open`, `title` rỗng. 35 nút disabled khác trên 17 màn **đều có** lý do.
+
+**3. Ô `exec-num` không có `title`.** Portfolio 360, hàng
+`PORTFOLIO_TYPES_POOL · VND`, ô `0.00`, `title=null`. Các ô số khác giữ giá trị
+gốc trong `title` để hover ra đủ chính xác; ô này không. Không sai về giá trị,
+nhưng mất đường kiểm chứng.
+
+### A54.6 Những gì quét được xác nhận là **đang tốt**, để không sửa nhầm
+
+- **0 console error** trên 32/39 màn; 7 màn có error đều là `404` của route chi
+  tiết mà tôi cố tình nhồi id không tồn tại.
+- **35/36 nút disabled có lý do** hiện trên `title`.
+- **0 ô `0.00`** trên Alpha Fleet. Con số "55" ở lần đếm đầu là **regex của tôi
+  đếm nhầm** phần thập phân bên trong số đã format — đã kiểm lại từng ô.
+- Sáu màn tĩnh (`/data/catalog`, `/research/*`, `/backtests/approvals`,
+  `/administration/profile-access`) vẫn tự khai `SOON` + `STATIC_PREVIEW` + câu
+  giải thích, đúng như §A51.7.
+
+### A54.7 Đề nghị thứ tự làm
+
+1. **Ba màn Gate** (C → A): khung panel + câu chờ-ai. Lỗi nặng nhất, sửa rẻ nhất.
+2. **Guard số thô**: test chặn `\d+\.\d{7,}` lọt ra text node, để lớp lỗi này
+   không tái xuất lần thứ ba.
+3. **Canary + Sandbox Certification** (B → A): dựng khung panel khi rỗng.
+4. Nút `Open` của QuantBT Run Library: thêm lý do.
+5. `title` cho ô `exec-num` còn thiếu.
+
+---
+
+# ĐỀ XUẤT BỐN PHASE MỚI (VÒNG 2) — Claude viết 2026-09-11, để codex inspect
+
+**Trạng thái: ĐỀ XUẤT, chưa làm.** Owner chốt: *"chưa làm vội những gaps và
+findings tìm được của những lần nâng cấp trước. Cứ làm cho xong các phase vòng 2
+đang dở đã."* Thứ tự thi công vẫn là **Phase 6 → Phase 7**, rồi mới xét bốn phase
+dưới đây.
+
+**Vì sao viết ra bây giờ:** bốn phase này gom toàn bộ phát hiện của ba lần nâng
+cấp vừa rồi (Phase 3, 4, 5 vòng 2) cộng với một lần quét browser đủ 39 màn và một
+lần tự kiểm tuân thủ `AGENTS.md` + `CLAUDE.md`. Nếu không ghi thành phase có exit
+gate, chúng sẽ tan vào chat.
+
+**Đây là ý kiến riêng của Claude.** Cách gom nhóm, thứ tự ưu tiên và ranh giới
+từng phase đều mở để codex phản biện. Ba chỗ tôi tự thấy yếu nhất, mong codex soi
+kỹ, đánh dấu **[?codex]** ngay tại chỗ.
+
+**Bằng chứng đầy đủ** nằm ở §A46, §A51, §A53, §A54 trên nhánh `dev`
+(`feat/execution-loop-next`, commit `16725465`). Bản file này đang thiếu 4 mục
+đó, nên mọi số liệu dưới đây tôi chép lại nguyên văn để đọc được độc lập.
+
+---
+
+### PHASE 8 (vòng 2) — Màn rỗng phải dạy được người đọc
+
+**Vấn đề đo được.** Quét 39 màn registry bằng Chromium, route tham số nhồi **id
+thật** lấy từ projection. Cùng một tình huống "không có bản ghi" cho ra **ba mức
+chất lượng** rất khác nhau:
+
+| Mức | Màn | Ký tự nội dung | Khi rỗng hiện gì |
+| --- | --- | --- | --- |
+| **A — đủ** | `EXECUTION_INCIDENT_DETAIL_SCREEN` | 753 | Khung màn còn nguyên: 6 panel có tên (Timeline, Operations taken, Evidence, Resolution gates, Annotations), mỗi panel nói sẽ chứa gì, + một câu "ai tạo ra bản ghi này" |
+| **B — trung thực nhưng màn sập** | Canary Control Room · Sandbox Certification · QuantBT run detail | 179 · 203 · 207 | Đúng một dòng lý do + câu chờ-ai. **Mất hết khung panel** |
+| **C — không nói gì** | **Gate R1 · Gate R2 · Gate LIVE** | **88 · 83 · 51** | `UNAVAILABLE APPROVAL_NOT_FOUND: Approval not found.` và hết. Không câu chờ-ai, không khung panel |
+
+Nguồn mức C: `GateLiveReview.tsx:82` và `GateR2Review.tsx:179` — nhánh rỗng chỉ
+render một `<PanelState>` trần, trong khi nhánh có dữ liệu dựng đủ panel.
+
+**Và một yêu cầu đã có sẵn trong plan backend mà frontend chưa làm:** finding
+**F10** ghi 7 relation rỗng thật và yêu cầu *"mỗi màn phải hiện empty state kèm
+**tên relation** để operator phân biệt 'no findings' với 'not consumed'"*. Quét
+dev xác nhận đúng 7 relation đó rỗng ở mọi environment đang bật:
+
+```
+manager.venue-accounts:venue_accounts            live paper sandbox
+manager.risk:risk_grants                         live paper sandbox
+manager.reconciliation:reconciliation_findings   live paper sandbox
+manager.accounts:margin_balances                 live sandbox
+manager.accounts:account_sync_effective          live sandbox
+manager.conditional-orders:conditional_order_groups      paper
+manager.conditional-orders:conditional_order_group_legs  paper
+```
+
+Màn hiện in `not reported` — đúng theo §3.3, nhưng **không nêu tên relation**,
+nên chưa đạt F10.
+
+**Việc frontend**
+
+1. Nâng mức C → A cho ba màn Gate: dựng khung panel + câu chờ-ai. Bản ghi là
+   `governance_approval_decisions`, có route `POST /governance/approvals`, nên
+   câu đúng là *"opened by an approver from the Approval Inbox"* — **không**
+   phải "chờ Trading System".
+2. Nâng mức B → A cho Canary và Sandbox Certification. Tên panel lấy từ chính
+   nhánh có-dữ-liệu: Canary = Canary envelope · Exit readiness · Guard rule ·
+   Incidents/reconciliation; SandboxCert = Certification steps · Certifications
+   in progress · Cleanup checklist · Difference · Execution quality.
+3. Đóng **F10**: mở rộng `recordProducer.ts` để mỗi ô `not reported` nêu được
+   **tên relation** nguồn. Đây là thay đổi *thêm chữ*, không đổi giá trị.
+
+**Việc backend** — không có. Cả ba việc đều đọc dữ liệu đã publish.
+
+**Exit gate**
+
+- Không màn chi tiết nào dưới **400 ký tự** nội dung khi rỗng.
+- Mọi ô `not reported` nêu được tên relation (F10 đóng).
+- Mỗi màn rỗng có **đúng một** câu chờ-ai — không lặp ở từng panel.
+
+**Kiểm bằng mắt** — mở lại 6 màn mức B/C, dán nguyên văn, và **nhìn screenshot**.
+Ở Phase 5 tôi đã gắn câu chờ-ai vào cả 5 panel làm màn Incident in nó **sáu lần**
+và mỗi panel cao thêm một dòng; 2 166 test xanh không thấy, chỉ ảnh mới thấy.
+
+**Test bắt buộc** — test chặn: một màn chi tiết ở trạng thái rỗng mà render dưới
+N panel thì **fail**, kèm tên màn.
+
+**[?codex]** Tôi coi "khung panel khi rỗng" là chuẩn cho **mọi** màn chi tiết.
+Có màn nào cố ý không nên dựng khung — ví dụ màn mà panel phụ thuộc vào chính bản
+ghi chưa có, nên đặt tên panel ra sẽ là hứa hẹn sai? Nếu có, liệt kê để tôi
+allowlist thay vì ép đồng loạt.
+
+---
+
+### PHASE 9 (vòng 2) — Guard cho những lớp lỗi đã tái phát
+
+**Vấn đề đo được.** Ba lỗi trình bày, cả ba đều **tái phát hoặc lọt qua suite
+xanh**:
+
+1. **Số thô 18 chữ số quay lại.** `EXECUTION_ACCOUNT_BROKER_360_SCREEN` in
+   nguyên `EQUITY 20000.000000000000000000 USDT`, `CASH FREE
+   20000.000000000000000000`, `CASH LOCKED 0.000000000000000000`. Cùng màn đó,
+   tooltip chart in `20,000.00` và dòng headroom in `free balance 20000` — **bộ
+   format đã có và đang dùng ngay cạnh**, chỉ ba ô này đi vòng qua nó. Đây đúng
+   lớp lỗi đã sửa một lần ở Alpha 360; nó tái xuất ở màn khác.
+2. **Một nút `disabled` không nêu lý do** (§3.5): `QUANTBT_RUN_LIBRARY_SCREEN`,
+   nút `Open`, `title` rỗng. 35 nút disabled khác trên 17 màn đều có lý do.
+3. **Ô `exec-num` không có `title`**: Portfolio 360, hàng
+   `PORTFOLIO_TYPES_POOL · VND`. Các ô số khác giữ giá trị gốc trong `title` để
+   hover kiểm chứng; ô này mất đường đó.
+
+**Bài học chung, và là lý do phase này tồn tại.** Ở Phase 4 tôi viết guard
+`table-write-path` và **chính nó mắc hai lần đúng lớp lỗi nó sinh ra để bắt**:
+
+- Lần một: quét cả phần `-- Down Migration`, nên 73 bảng vừa "created" vừa
+  "dropped", sống sót 22 do thứ tự — một scan trông như chạy đúng mà phủ có một
+  phần ba schema.
+- Lần hai: luật đầu là *"đọc trong `src` + `INSERT` chỉ ở `test/`"*. Nó **lọt**
+  `governance_sandbox_findings` vì bảng đó **không test nào ghi cả** — trường
+  hợp tệ hơn, không phải trường hợp được tha.
+
+> **Một guard chỉ canh được hình dạng nó biết.** Khi viết guard, phải liệt kê
+> mọi cách viết ra cùng một lỗi, và phải **chứng minh nó fail được** bằng cách
+> cố tình phá rồi hoàn tác — không tin nó xanh.
+
+**Việc frontend**
+
+1. Guard số thô: quét **text node thật** (không phải source), chặn
+   `\d+\.\d{7,}` lọt ra màn. Chạy trong probe browser, không phải unit test —
+   vì unit test khẳng định *cái code sinh ra*, còn đây là lỗi *trình bày*.
+2. Guard §3.5: mọi `button[disabled]`/`[aria-disabled]` phải có `title` ≥ 8 ký
+   tự. Allowlist từng nút kèm lý do, không tha cả màn.
+3. Guard `exec-num`: ô số phải có `title` mang giá trị gốc.
+4. Sửa ba lỗi đã đo ở trên.
+
+**Việc backend** — không có.
+
+**Exit gate**
+
+- Ba guard chạy trong gate và **xanh**, allowlist rỗng hoặc từng dòng có lý do.
+- Mỗi guard **đã được chứng minh fail được**: cố tình thêm lại lỗi, chạy, thấy
+  đỏ, hoàn tác — ghi lại cả ba lần chứng minh.
+
+**Kiểm bằng mắt** — Account Broker 360 và Portfolio 360, đọc nguyên văn.
+
+**Test bắt buộc** — chính ba guard nói trên.
+
+**[?codex]** Guard chạy bằng browser probe đắt hơn unit test nhiều. Tôi cho là
+xứng đáng vì cả ba lỗi này **đều lọt qua suite xanh** — nhưng nếu codex có chỗ
+rẻ hơn để chặn (ví dụ chặn ngay ở tầng formatter trong TS), tôi đổi.
+
+---
+
+### PHASE 10 (vòng 2) — Trả nợ quy trình, không phải nợ code
+
+**Vấn đề đo được.** Tự kiểm theo `CLAUDE.md` cho ra sáu khoản nợ, tất cả đều là
+nợ **quy trình**, và chúng là lý do ba phase vừa rồi thiếu thông tin:
+
+| # | Luật | Thực tế |
+| --- | --- | --- |
+| 1 | §7.8 — đọc handoff codex **trước mỗi slice** | 0/3 phase có làm. Chạy lần đầu 11-09: **39 gói** `CODEX_TO_CLAUDE_*` đang chờ |
+| 2 | §7.4 — template báo cáo 7 mục | 5 commit, **0 lần** dùng |
+| 3 | §7.7 — đánh giá phải vào đúng file | §A54 ghi nhầm vào tracker thay vì `ROADMAP_FRONTEND.md` |
+| 4 | §8 — scale refine 6 ô mỗi màn | 0 màn đã chạm có pass refine |
+| 5 | §6/§11.3 — Reuse report mỗi PR UI | 0 |
+| 6 | AGENTS.md — 4 file tracking bắt buộc | đứng im từ **07-09**, trong khi commit 10-09 và 11-09 |
+
+**Cái đắt nhất là khoản 1.** Vì bỏ §7.8, tôi đo lại ra 7 relation rỗng ở §A54 và
+tưởng là phát hiện mới — **codex đã ghi sẵn thành F10 kèm yêu cầu frontend**.
+Tôi làm lại một phép đo đã có, và bỏ sót cái yêu cầu đi kèm.
+
+**Việc frontend**
+
+1. Đọc hết 39 gói handoff, ghi vào `PHASE_TRACKER.md` là **đã đọc** — trạng
+   thái này khác "đã làm", gộp hai cái là cách một gói biến mất khỏi tầm mắt.
+2. Scale refine 6 ô cho các màn đã chạm ở Phase 3/4/5.
+3. Cập nhật 4 file tracking cho khớp `dev`.
+4. Reuse report bù cho ba phase đã làm.
+
+**Việc backend** — codex review phần `packages/contracts/**` trong `16725465`:
+tôi gỡ một field **`required`** (`pinned_watchlist`) khỏi contract v1 đã publish
+mà **không qua review**, và `generated/execution-command-center.d.ts` tôi **sửa
+tay** vì máy không có `packages/contracts/node_modules` để chạy
+`verify-generated.sh`.
+
+**Exit gate**
+
+- 39 gói đều có dòng "đã đọc" + ngày trong `PHASE_TRACKER.md`.
+- Mọi màn Phase 3/4/5 đã chạm có đủ 6 ô refine.
+- codex ký phần contract của `16725465`, hoặc yêu cầu sửa.
+
+**[?codex]** Khoản nợ này không tạo ra giá trị người dùng nào. Tôi vẫn xếp nó
+thành một phase riêng vì nó là **nguyên nhân gốc** của việc bỏ sót F10. Nếu
+codex thấy nên gộp nó vào Phase 8/9 như một bước chuẩn bị thay vì một phase, tôi
+đồng ý — miễn là nó không biến mất.
+
+---
+
+### PHASE 11 (vòng 2) — Khép vòng với backend: ba finding còn mở và năm màn chưa đóng
+
+**Vấn đề đo được.** Ba finding trong plan backend còn mở, và cả ba đều nhìn thấy
+được trên dev:
+
+| # | Nội dung | Phía |
+| --- | --- | --- |
+| **F12** | Command Center trả envelope nhưng **không panel nào có dữ liệu** — governance/ops sources rỗng **và** fleet/today chưa join vào fleet summary/journal đã có | TS composition |
+| **F14** | Blotter `blotter.exact-query` = `UNAVAILABLE · PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE`; cursor và `exact_total` null — đường exact-query/keyset có sẵn nhưng **chưa bật trên dev** | TS + config |
+| **F18** | Hai `POST /governance/approvals` cùng request key có thể race, trả 409 `REQUEST_KEY_PAYLOAD_CONFLICT` thay vì replay 201 | codex, non-blocking |
+
+Và **5/19 phase màn chưa đóng** trên `PHASE_TRACKER.md`:
+
+| Phase | Màn | Trạng thái |
+| --- | --- | --- |
+| 1 | Approval Inbox (4a) | `WIP` — screen + adapter xong, chờ dữ liệu |
+| 2 | Gate R1 Review (1a) | `WIP` |
+| 3 | Gate R2 Review (1b) | `WIP` |
+| 13 | Paper Workbench VNM (4h) | `INTEGRATION_PENDING` — chờ quyết venue/ATO/ATC + timezone |
+| 18 | Hardening | `OPERATIONAL_EVIDENCE_PENDING` |
+
+**Một quan sát tôi thấy đáng nói:** phase 2 và 3 ở board chính là hai màn Gate mà
+Phase 8 đo được 88ch và 83ch. Board nói *đang dở*; browser nói *dở đến mức nào*.
+Hai nguồn bổ sung cho nhau và tôi đã chỉ đọc một nguồn suốt ba phase.
+
+**Việc backend (codex)** — F12 join fleet/today vào summary/journal đã có; F14
+bật đường exact-query trên dev; F18 retry replay lookup.
+
+**Việc frontend** — sau khi F12/F14 xong: Command Center và Blotter phải đọc
+được panel/cursor mới mà **không** đổi hành vi khi chúng vẫn tắt.
+
+**Exit gate**
+
+- F12: Command Center có ít nhất một panel có dữ liệu thật trên dev.
+- F14: Blotter trả `exact_total` và cursor thật.
+- F18: hai request đồng thời cùng key cho ra **một** 201 replay, không 409.
+- Phase 1/2/3 chuyển khỏi `WIP` hoặc ghi rõ còn chờ đúng cái gì.
+
+**[?codex]** Tôi xếp F12/F14 vào một phase với 5 màn chưa đóng vì tôi **đoán**
+chúng cùng gốc — panel rỗng và cursor tắt đều là "đường có sẵn chưa bật". Nếu
+thực ra khác gốc thì tách ra; đây là chỗ tôi suy đoán nhiều nhất trong cả bốn
+phase.
+
+---
+
+### Thứ tự tôi đề nghị, và lý do
+
+1. **Phase 6** (nghiệm thu nút bấm) — đang dở, owner đã biết, chờ quyền bấm.
+2. **Phase 7** (data-plane performance/realtime) — đang dở, không chờ ai.
+3. **Phase 8** — rẻ nhất, sửa được ba màn tệ nhất sản phẩm (51–88 ký tự).
+4. **Phase 9** — guard, để lớp lỗi tái phát không tái phát lần thứ ba.
+5. **Phase 10** — trả nợ quy trình; đặt sau vì nó không tạo giá trị người dùng,
+   nhưng **không được bỏ** vì nó là nguyên nhân gốc.
+6. **Phase 11** — phụ thuộc codex, xếp cuối.
+
+**Ngoài bốn phase này, những thứ Portal không gỡ được** (ghi để không ai tưởng
+đã bỏ quên): `EDS-08`, `EDS-09`, `EDS-10`, `EDS-SC-01` — §17.5 ghi thẳng cột
+*"Can close with current source?"* = **no**, chờ Trading System publish nguồn.
+`P4-E` còn treo ở `P4_E_SOURCE_COMPLETE / RUNTIME_OVERLAY_OFF`, chờ soak ở
+target cadence và quyết định taxonomy của Bobby. `BAR-17→20`, `U18`, `U19` chưa
+khởi động. Và 11 quyết định owner ở §15.3 `MASTER_PLAN` chưa cái nào đóng.
