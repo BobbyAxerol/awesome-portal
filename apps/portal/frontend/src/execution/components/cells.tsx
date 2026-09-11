@@ -65,6 +65,26 @@ export function Published({ value, absent = "not published" }: { value: string |
   return <span className="exec-num">{value}</span>;
 }
 
+/**
+ * The exact source values behind a formatted cell, for its `title`.
+ *
+ * `Num` already keeps the original one hover away, but a table cell that
+ * formats inline — `<td>{formatExact(v).display}</td>` — throws the original
+ * away, and the reader has no way back to it. Portfolio 360 lost the exact
+ * figure on nine cells that way.
+ *
+ * Returns `undefined` when nothing was rounded or grouped, so a cell whose
+ * display already IS the source does not carry a title that repeats it.
+ */
+export function exactTitle(...values: readonly (string | null | undefined)[]): string | undefined {
+  const kept: string[] = [];
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") continue;
+    if (formatExact(value, "money").display !== value) kept.push(value);
+  }
+  return kept.length > 0 ? kept.join(" → ") : undefined;
+}
+
 const Exact = Num;
 
 /** A capital figure: grouped, two decimals minimum, eight at most. */

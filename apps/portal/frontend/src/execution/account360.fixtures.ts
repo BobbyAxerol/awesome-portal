@@ -63,10 +63,19 @@ const EXPOSURE_FOR_THREE = {
 const INTERNAL: StateColumn = {
   positions: "2",
   openOrders: "1",
-  headline: { label: "equity", value: "61,204.00", currency: "USDT" },
+  /*
+   * Source-shaped, not pre-formatted.
+   *
+   * These read "61,204.00" until 2026-09-11 — already grouped, already at two
+   * places — so every test over them exercised a path the server never takes,
+   * and the screen printing `20000.000000000000000000` verbatim passed them
+   * all. The source sends an exact decimal string with up to eighteen places;
+   * so does this fixture now, and the formatting is the screen's job to prove.
+   */
+  headline: { label: "equity", value: "61204.000000000000000000", currency: "USDT" },
   extra: [
-    { label: "cash free", value: "44,180.00" },
-    { label: "locked / reserved", value: "2,020.00" },
+    { label: "cash free", value: "44180.000000000000000000", unit: "money" as const },
+    { label: "locked / reserved", value: "2020.000000000000000000", unit: "money" as const },
   ],
   envelope: { authority: "EXECUTION", asOf: "2026-08-22T10:42:01Z", freshness: "OK" },
 };

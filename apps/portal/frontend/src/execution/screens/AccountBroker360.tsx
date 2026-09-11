@@ -25,7 +25,8 @@ import type { BindingExposure } from "../analytics";
 import { isFullPopulation } from "../analytics";
 import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badges";
 import { PanelState } from "../components/states";
-import { Stamp } from "../components/cells";
+import { Money, Num, Published, Stamp } from "../components/cells";
+import type { ExactUnit } from "../formatExact";
 import { capNotice, capPreserving } from "../components/cap";
 
 /**
@@ -53,7 +54,14 @@ export interface StateColumn {
   openOrders: string | null;
   /** `equity` on the internal side, `balance` on the broker's. */
   headline: { label: string; value: string | null; currency: string | null };
-  extra?: readonly { label: string; value: string | null }[];
+  /**
+   * `unit` is required per row and there is no default, because this list
+   * mixes money with status words: "cash free" is a decimal and "account sync"
+   * is `SYNCED`. Guessing from the label is how a status string ends up
+   * grouped with thousands separators, and guessing the other way is how
+   * `20000.000000000000000000` reached the screen.
+   */
+  extra?: readonly { label: string; value: string | null; unit: ExactUnit | "text" }[];
   envelope: Envelope;
   /** Broker column only — the snapshot this column was read from. */
   digest?: string | null;
@@ -172,35 +180,48 @@ function Column({ title, column }: { title: string; column: StateColumn }) {
         {column.digest ? <span className="exec-num">digest {column.digest}</span> : null}
       </div>
       <dl className="exec-360-facts">
-        <Fact label="positions" value={column.positions} />
-        <Fact label="open orders" value={column.openOrders} />
-        <Fact
-          label={column.headline.label}
-          value={
-            column.headline.value
-              ? `${column.headline.value}${column.headline.currency ? ` ${column.headline.currency}` : ""}`
-              : null
-          }
-        />
+        <Fact label="positions" value={column.positions} unit="count" />
+        <Fact label="open orders" value={column.openOrders} unit="count" />
+        <Fact label={column.headline.label} value={column.headline.value} unit="money" currency={column.headline.currency} />
         {(column.extra ?? []).map((entry) => (
-          <Fact key={entry.label} label={entry.label} value={entry.value} />
+          <Fact key={entry.label} label={entry.label} value={entry.value} unit={entry.unit} />
         ))}
       </dl>
     </section>
   );
 }
 
-function Fact({ label, value }: { label: string; value: string | null }) {
+/**
+ * One labelled fact.
+ *
+ * This used to print `{value}` into an `exec-num` span itself, which is how
+ * `EQUITY 20000.000000000000000000 USDT`, `CASH FREE 20000.000000000000000000`
+ * and `CASH LOCKED 0.000000000000000000` reached a reconciliation screen while
+ * the chart tooltip two panels away read `20,000.00`. `components/cells.tsx`
+ * says why in its own doc — "three screens had each grown their own copy that
+ * printed the raw string" — and this was the fourth. It now goes through the
+ * shared cells, which round half-up on the string, never in float, and keep
+ * the server's exact original one hover away in `title`.
+ *
+ * "not reported" rather than the shared "not available": on a reconciliation
+ * screen a figure the source did not send IS the finding.
+ */
+function Fact({ label, value, unit, currency }: {
+  label: string;
+  value: string | null;
+  unit: ExactUnit | "text";
+  currency?: string | null;
+}) {
   return (
     <>
       <dt>{label}</dt>
       <dd>
-        {value !== null ? (
-          <span className="exec-num">{value}</span>
+        {unit === "text" ? (
+          <Published value={value} absent="not reported" />
+        ) : unit === "money" ? (
+          <Money value={value} absent="not reported" currency={currency ?? undefined} />
         ) : (
-          // Not a zero and not a dash. A figure the source did not report is a
-          // gap, and on a reconciliation screen a gap is the finding.
-          <span className="exec-gate-unverified">not reported</span>
+          <Num value={value} unit={unit} absent="not reported" />
         )}
       </dd>
     </>
@@ -562,6 +583,7 @@ export function AccountBroker360({
             <Fact
               label="open findings"
               value={openFindings !== null ? String(openFindings) : null}
+              unit="count"
             />
             <dt>last dry-run</dt>
             <dd>
@@ -578,6 +600,7 @@ export function AccountBroker360({
             <Fact
               label="resolved (30d)"
               value={resolvedFindings !== null ? String(resolvedFindings) : null}
+              unit="count"
             />
           </dl>
           {/* Hidden, not disabled. A button an actor may never press is a

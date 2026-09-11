@@ -2035,11 +2035,12 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
     openOrders: null,
     headline: { label: "equity", value: text(balance?.total), currency: text(balance?.currency) },
     extra: [
-      { label: "cash free", value: text(balance?.free) },
-      { label: "cash locked", value: text(balance?.locked) },
-      { label: "initial margin", value: text(margin?.initial) },
-      { label: "maintenance", value: text(margin?.maintenance) },
-      { label: "account sync", value: text(accountSync?.status) },
+      { label: "cash free", value: text(balance?.free), unit: "money" as const },
+      { label: "cash locked", value: text(balance?.locked), unit: "money" as const },
+      { label: "initial margin", value: text(margin?.initial), unit: "money" as const },
+      { label: "maintenance", value: text(margin?.maintenance), unit: "money" as const },
+      // A status word, not a quantity: `SYNCED` must never be grouped.
+      { label: "account sync", value: text(accountSync?.status), unit: "text" as const },
     ],
     envelope: { ...sourceEnvelope, authority: "EXECUTION" as Authority },
   };
@@ -2047,7 +2048,7 @@ export function AccountBroker360RichContainer({ api, accountId }: { api: Executi
     positions: null,
     openOrders: null,
     headline: { label: "buying power", value: text(brokerSync?.buying_power), currency: text(brokerSync?.currency) },
-    extra: [{ label: "sync status", value: text(brokerSync?.status) }],
+    extra: [{ label: "sync status", value: text(brokerSync?.status), unit: "text" as const }],
     envelope: { ...sourceEnvelope, authority: "BROKER" as Authority },
   };
   return (
