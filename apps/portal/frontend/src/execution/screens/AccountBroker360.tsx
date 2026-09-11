@@ -506,7 +506,12 @@ export function AccountBroker360({
                 </th>
                 <td>{row.alpha}</td>
                 <td>
-                  <span className="exec-num">{row.virtualExposure}</span>
+                  {/* Server-stated exposure, and the server states it with
+                      eighteen places: `0.000000000000000000` reached the
+                      linked-accounts table on dev even after the three facts
+                      above were fixed, because this cell had its own copy of
+                      the raw string too. */}
+                  <Num value={row.virtualExposure} unit="money" absent="not reported" />
                 </td>
                 <td>
                   <EnvironmentBadge stage={row.stage} />

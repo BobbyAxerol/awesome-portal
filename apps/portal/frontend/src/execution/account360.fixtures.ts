@@ -92,20 +92,20 @@ const LINKED: LinkedAccount[] = [
   {
     accountId: "acct-live-grid-v21",
     alpha: "Grid v2.1",
-    virtualExposure: "18,400.00",
+    virtualExposure: "18400.000000000000000000",
     stage: "LIVE_FULL",
     current: true,
   },
   {
     accountId: "acct-live-carry-v32",
     alpha: "Carry v3.2",
-    virtualExposure: "14,900.00",
+    virtualExposure: "14900.000000000000000000",
     stage: "LIVE_FULL",
   },
   {
     accountId: "acct-canary-mm-v11",
     alpha: "MM v1.1",
-    virtualExposure: "7,700.00",
+    virtualExposure: "7700.000000000000000000",
     stage: "LIVE_CANARY",
   },
 ];
