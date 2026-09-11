@@ -1856,16 +1856,17 @@ durable run/attempt events. Detailed evidence:
   stale manifest cannot qualify it for promotion. Its dependent N29 BR-EX-72
   source-boundary evidence is re-pinned in the same commit.
 
-## Backend state — 2026-09-11 (BE-R2-1 implemented; dev evidence pending)
+## Backend state — 2026-09-11 (BE-R2-1 complete in dev)
 
 - **BE-R2-1** now has an opt-in Portal-only lifecycle worker and a dry-run
   default manual CLI for the recomputable `execution_shared_read_cache` table.
   It uses the existing expiry index, lock-friendly bounded deletes, per-profile
   inventory/deletion facts, a row/byte reservation ceiling and a kill switch;
   it has no source/command/projection/Trading-System dependency. Full Control
-  API PostgreSQL tests are green. The named dev dry-run/apply evidence is the
-  remaining closeout action; use the cache lifecycle runbook, never a raw SQL
-  shortcut or `VACUUM FULL`.
+  API PostgreSQL tests are green. The named dev staged drain and real lifecycle
+  worker are evidenced: the worker is `APPLY`-enabled only in dev, drains the
+  observed expired set on its bounded cadence, and preserves fresh entries.
+  Use the cache lifecycle runbook, never a raw SQL shortcut or `VACUUM FULL`.
 - The BE-R2 compose change re-pins the EDS-12 static qualification digest and
   package manifest; it does not claim or alter a deployed protected-main
   release.

@@ -2020,10 +2020,10 @@ activation or the phase):**
 
 The current-source audit is now translated into the finite **BE-R2** campaign
 in [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §18](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--active-named-work-2026-09-11).
-Bobby started BE-R2-1. Its source is implemented and test-accepted; the
-dev-only dry-run/apply evidence is deliberately still required before that
-phase is operationally closed. The remaining phases are planning-only. The
-locked scope is:
+Bobby completed BE-R2-1 in the named dev namespace. The staged cleanup and
+opt-in lifecycle worker are live only there, with a bounded cadence and a
+healthy Control API; stable was not restarted. The remaining phases are
+planning-only. The locked scope is:
 
 - bounded staged cleanup of expired `execution_shared_read_cache` rows, never
   `VACUUM FULL` or business/projection/source deletion;

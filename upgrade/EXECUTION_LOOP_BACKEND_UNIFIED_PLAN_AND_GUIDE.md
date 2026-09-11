@@ -5376,12 +5376,12 @@ operations.
 
 ## 18. BE-R2 operational closeout campaign — active named work (2026-09-11)
 
-**Status:** `BE_R2_1_IMPLEMENTED_TESTED_AWAITING_STAGED_DEV_EVIDENCE`.
+**Status:** `BE_R2_1_COMPLETE_DEV_LIFECYCLE_ACTIVE`.
 Bobby approved every decision in §18.1 on 2026-09-11 and named **BE-R2-1**.
-Only that phase is active: its Portal-only implementation and isolated
-PostgreSQL test gate are complete; the explicitly approved dev dry-run/apply
-record remains the final operational exit item. BE-R2-2 through BE-R2-7 remain
-planning only and authorize no source call, command, restart or deployment.
+BE-R2-1 is now complete in the named dev namespace: its Portal-only
+implementation, isolated PostgreSQL test gate, staged drain and ongoing bounded
+lifecycle worker are evidenced below. BE-R2-2 through BE-R2-7 remain planning
+only and authorize no source call, command, restart or deployment.
 
 **Why this is a separate closeout sequence:** the EDS/N29 work established a
 safe current-data path, but a read-only audit found a finite set of operational
@@ -5532,8 +5532,35 @@ through existing operational diagnostics, never as a business status.
 - The operator procedure and honest ordinary-`VACUUM (ANALYZE)` expectation
   are in
   [`deploy/runbooks/execution-shared-read-cache-lifecycle.md`](../deploy/runbooks/execution-shared-read-cache-lifecycle.md).
-  The pending dev record must use the named dev namespace only; it must not
-  restart stable or alter a source profile.
+
+**Dev lifecycle evidence — 2026-09-11 UTC:**
+
+- The isolated dev namespace first drained the historical expired backlog with
+  the bounded CLI; no business, source, durable-projection, governance or
+  command row was selected. A subsequent scoped runtime rollout recreated only
+  `portal-control-api-1` from source commit
+  `b61ad10cfe9309577139a47cb96829e08d1fa9ac`; dev `portal-web` and every
+  stable container remained running unchanged.
+- The active worker is explicitly stamped `APPLY`, interval `60000ms`, maximum
+  runtime `2000ms`, `128` rows / `8388608` bytes per batch and active-cache
+  ceilings of `20000` rows / `268435456` bytes. The worker does not use an
+  upstream credential or have a source-call code path.
+- Its startup sweep reported `DRAINED`, deleting `134` expired rows
+  (`29,725,474` bytes) across Paper, Sandbox and Live with zero active rows
+  afterwards; the following scheduled sweep also reported `DRAINED`, deleting
+  `73` rows (`9,392,893` bytes) while preserving one fresh cache entry. The
+  Control API `/api/control/readyz` returned `200` after rollout.
+- Very short-lived cache entries can expire between minute-level sweeps. That
+  is expected TTL behaviour, not an authority or cleanup failure: every logged
+  cycle drains the bounded expired set it observes and fresh rows are never
+  deleted. `N21_SHARED_CACHE_CAPACITY_ALARM` remains the fail-closed response
+  if a new source leader cannot reserve cache capacity.
+- One ordinary `VACUUM (ANALYZE)` probe on this table alone was deliberately
+  cancelled when it competed for dev PostgreSQL CPU. It was not `VACUUM FULL`,
+  did not roll back or alter the committed staged deletes, and is not required
+  for lifecycle correctness. Reusable-space maintenance may be scheduled in a
+  quiet, separately approved window; it must never become a broad vacuum or a
+  data-deletion operation.
 
 ### BE-R2-2 — D3 GET-only evidence and current-source truth ledger
 

@@ -75,7 +75,10 @@ not change cache reads or source transport.
 5. After a drained batch window and normal DB health/read-latency observation,
    an operator may run ordinary `VACUUM (ANALYZE)` on exactly this table. It
    makes deleted space reusable but does **not** promise immediate disk/volume
-   shrinkage. Never run `VACUUM FULL` for this procedure.
+   shrinkage. If it competes with active PostgreSQL workload, cancel it safely
+   and schedule it for a quiet maintenance window; cleanup rows already
+   committed by the worker remain correct. Never run `VACUUM FULL` for this
+   procedure.
 
 ## Acceptance evidence
 
@@ -83,3 +86,18 @@ Store only non-secret operational facts: the dry-run JSON, apply-cycle totals,
 health/read-latency/lock observation, ordinary-VACUUM result if used, and a
 final `DRAINED` inventory with no expired sample. Do not store database URLs,
 credentials, cached payloads, principal digests, cursor values or source data.
+
+## Recorded dev evidence — 2026-09-11 UTC
+
+The approved dev rollout recreated only `portal-control-api-1` with the worker
+enabled in `APPLY` mode (`60s` cadence, `2s` runtime, `128` rows / `8MiB` per
+batch). Its startup cycle drained `134` expired rows (`29,725,474` bytes), and
+the next scheduled cycle drained `73` more (`9,392,893` bytes); both reported
+`DRAINED` and `WITHIN_LIMIT`. The internal readiness route returned `200`.
+
+Small quantities of rows can expire between cycles because current-source
+responses have short TTLs. This is expected: it demonstrates why the worker is
+continuous, not why a broad delete or a new source call is needed. A scoped
+ordinary `VACUUM (ANALYZE)` probe was cancelled when it competed for dev
+PostgreSQL CPU. No `VACUUM FULL`, truncate, reindex, volume operation, stable
+restart or non-cache data mutation occurred.
