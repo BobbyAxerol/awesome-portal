@@ -331,6 +331,16 @@ export interface GateR1Detail {
    * neither, so every plan was made with no version at all.
    */
   expectedVersion: number | null;
+  /**
+   * Manifest entries that arrived and could not be read.
+   *
+   * The count already existed — it is the source of the "N evidence manifest
+   * entries unreadable" warning — but only at page level, so the passport
+   * panel could not tell "the source published no passport" from "the source
+   * published one we could not parse". Those are different claims and the
+   * panel drew the same blank box for both.
+   */
+  passportUnreadable: number;
   gaps: readonly string[];
 }
 
@@ -427,6 +437,7 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
           }
         : null,
     expectedVersion: int(approval.approval_version ?? data.approval_version),
+    passportUnreadable: passportRaw.length - passport.length,
     gaps,
   };
 }

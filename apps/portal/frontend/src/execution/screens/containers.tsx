@@ -514,6 +514,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
         actor={detail?.actor ?? "unknown"}
         sla={detail?.sla ?? undefined}
         passport={detail?.passport ?? []}
+        passportUnreadable={detail?.passportUnreadable ?? 0}
         checklist={detail?.checklist ?? []}
         locks={detail?.locks ?? []}
         eligibility={detail?.eligibility}

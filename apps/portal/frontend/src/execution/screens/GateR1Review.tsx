@@ -86,6 +86,8 @@ export function GateR1Review({
   actorId = null,
   sla,
   passport,
+  /** Manifest entries that arrived unreadable — see below. */
+  passportUnreadable = 0,
   checklist,
   limitations,
   locks = [],
@@ -119,6 +121,16 @@ export function GateR1Review({
   actorId?: string | null;
   sla?: Sla;
   passport: readonly PassportEntry[];
+  /**
+   * How many manifest entries arrived and could not be read.
+   *
+   * Without it an empty `passport` drew a NAMED PANEL WITH NOTHING IN IT — no
+   * rows, no state, no reason — on a populated screen, found on probe
+   * 2026-09-11 against a real PENDING approval. "The source published no
+   * passport" and "the source published one we could not parse" are different
+   * claims and the reader could not tell which they were looking at.
+   */
+  passportUnreadable?: number;
   checklist: readonly ChecklistItem[];
   limitations?: readonly LimitationRow[] | null;
   locks?: readonly DecisionLock[];
@@ -281,6 +293,16 @@ export function GateR1Review({
       <div className="exec-gov-grid2" data-ratio="1.15">
         <div className="exec-gov-panel">
           <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Artifact passport — immutable</span></div>
+          {passport.length === 0 ? (
+            <PanelState
+              status={passportUnreadable > 0 ? "unavailable" : "empty"}
+              reason={
+                passportUnreadable > 0
+                  ? `${passportUnreadable} evidence manifest ${passportUnreadable === 1 ? "entry" : "entries"} arrived in a shape this reader could not parse, so no passport line can be shown. The entries exist; what is missing is our ability to read them.`
+                  : "No artifact passport was published for this approval, read from governance_approval_evidence."
+              }
+            />
+          ) : null}
           <div className="exec-gov-kv">
             {passport.map((entry) => (
               <Fragment key={entry.label}>

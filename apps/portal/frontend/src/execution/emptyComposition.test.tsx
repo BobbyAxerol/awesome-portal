@@ -149,3 +149,52 @@ describe("a refusal is not an absence", () => {
     }
   });
 });
+
+/**
+ * Found by eye on probe, not by a test: a real PENDING approval rendered
+ * `ARTIFACT PASSPORT — IMMUTABLE` as a named panel containing literally
+ * nothing — no rows, no state, no reason — because the manifest's single entry
+ * arrived in a shape the reader could not parse and `passport.map` over an
+ * empty array renders an empty div. Zero characters, zero state elements,
+ * measured in the DOM.
+ */
+describe("a panel with no rows still says which kind of nothing", () => {
+  it("says the entries were unreadable, not that none were published", () => {
+    render(
+      <GateR1Review
+        approvalId="AP-201" alphaLabel="RSI v1.7" quorumMet={0} quorumRequired={1}
+        policyVersion="approval.v3" creator="Minh" actor="Lan"
+        passport={[]} passportUnreadable={1} checklist={[]}
+        onRequestCondition={() => undefined}
+      />,
+    );
+    expect(screen.getByText(/could not parse/)).toBeTruthy();
+    expect(screen.queryByText(/No artifact passport was published/)).toBeNull();
+  });
+
+  it("says none was published when none arrived", () => {
+    render(
+      <GateR1Review
+        approvalId="AP-201" alphaLabel="RSI v1.7" quorumMet={0} quorumRequired={1}
+        policyVersion="approval.v3" creator="Minh" actor="Lan"
+        passport={[]} passportUnreadable={0} checklist={[]}
+        onRequestCondition={() => undefined}
+      />,
+    );
+    expect(screen.getByText(/No artifact passport was published/)).toBeTruthy();
+    expect(screen.queryByText(/could not parse/)).toBeNull();
+  });
+
+  it("draws no state box once a passport line exists", () => {
+    const { container } = render(
+      <GateR1Review
+        approvalId="AP-201" alphaLabel="RSI v1.7" quorumMet={0} quorumRequired={1}
+        policyVersion="approval.v3" creator="Minh" actor="Lan"
+        passport={[{ label: "artifact", value: "sha256:abc", verification: "✓ verified" }]}
+        checklist={[]} onRequestCondition={() => undefined}
+      />,
+    );
+    expect(container.querySelector(".exec-gov-kv")?.textContent).toContain("sha256:abc");
+    expect(screen.queryByText(/No artifact passport was published/)).toBeNull();
+  });
+});
