@@ -8971,3 +8971,56 @@ bỏ khỏi response.
 | `vitest run` | **2 221 passed** · 3 skipped · **135 file** · 0 đỏ |
 | `tsc --noEmit` (src/) | sạch |
 | Probe sau deploy | panel hiện `PINNED RESEARCH ARTIFACT · d734e2c443d14a92 · SERVER_PINNED`; badge `PARTIAL` đã hết |
+
+### A59.12 QUÉT CẢ LỚP: còn reader nào đọc tên field không ai publish?
+
+`readPassportEntry` sai suốt mà không ai biết ⇒ câu hỏi đúng không phải "sửa nó
+xong chưa" mà **"còn bao nhiêu cái như nó"**. Quét ba tập hợp rồi lấy hiệu:
+
+1. tên field frontend **đọc** (`o.x`, `data.x`, `row.x` … trong reader),
+2. tên field contract **khai** (`packages/contracts` — generated + schemas + fixtures),
+3. tên field backend **có nhắc** (`apps/control-api/src`) và Rust edge.
+
+```
+field frontend đọc       : 323
+field contract khai      : 1 320
+field backend có nhắc    : 1 522
+MỒ CÔI (không ai publish):    20     ← toàn repo
+                             11     ← chỉ trong reader lõi
+```
+
+#### Giới hạn của phép đo — nói trước, không giấu
+
+Quét theo **tên** không bắt được chính con bug đã mở ra việc này. `value` là từ
+phổ thông, xuất hiện hợp lệ ở hàng chục schema khác, nên nó **không bao giờ mồ
+côi theo tên**. Bug thật là *"đọc `value` trên một object mà schema của nó không
+có `value`"* — cần đối chiếu **theo từng kiểu**, không theo tên toàn cục. Cái
+bảng dưới đây là sàn, không phải trần.
+
+#### Triage 11 cái trong reader lõi
+
+| Field | Reader | Ai publish | Hệ quả | Mức |
+| --- | --- | --- | --- | --- |
+| `value` | `readPassportEntry` | **không ai** | entry bị bỏ → panel trắng → **màn tự báo `PARTIAL` sai** | **ĐÃ SỬA** (`598eb113`) |
+| `virtual_total` · `physical_total` · `evaluated_by` | `readAggregateVerdict` | **không ai** | verdict bị từ chối. **Hôm nay đúng** — BR-EX-26 chưa giao nên màn nói `unavailable` trung thực. Nhưng khi codex giao, reader sẽ **im lặng hỏng y hệt passport** | **ngầm — cần chốt tên field trước** |
+| `fee_currency` | `workbenchOrderRow` | **không ai** | `FullBlotter.tsx:491` in `fee {row.fee}{feeCurrency ? …}` → nếu có phí mà không có tiền tệ thì ra **một con số không đơn vị**. Hôm nay chưa xảy ra vì `fee` cũng null | thấp, nhưng là rủi ro §3.3 |
+| `fee` | `workbenchOrderRow` | **không có trong contract paper-read** (backend gửi `fee_total`) | render "not published" — trung thực | thấp |
+| `deployment_candidate` | `readGateR2Detail` | **không ai** | dòng tuỳ chọn không bao giờ hiện | thấp |
+| `reject_reason` · `unrealised_pnl` · `unrealised` · `passport` · `decided` | nhiều | — | đều là **fallback đứng sau một tên đã khai** (`error_message`, `unrealized_pnl`, `manifest.entries`, `decisions[]`) | vô hại |
+| 10 field `tradeReplayGroups` | component | chờ OR-4/DR-23 | dưới cờ, chưa bật | chờ chốt |
+
+#### Ba việc cần codex quyết
+
+| # | Việc |
+| --- | --- |
+| **G1** | `display_value` · `verification` · `note` — control-api **đang gửi**, contract **không khai**. Bổ sung vào contract, hay bỏ khỏi response? Nếu bỏ `display_value`, panel tự lùi về `sha256`, vẫn đúng |
+| **G2** | **BR-EX-26**: chốt tên field của aggregate verdict **trước khi** giao. Frontend đang đọc `virtual_total`/`physical_total`/`evaluated_by`; backend hiện chỉ có `{currency, free, maintenance, headroom, verdict}` (`resource-read.service.ts:1239`). Không chốt thì lặp lại đúng bug passport |
+| **G3** | `fee` / `fee_currency` trên workbench order row: backend gửi `fee_total` và không có currency. Contract cần khai cái gì? |
+
+#### Bài học ghi lại thành luật
+
+> Một reader chỉ được coi là đã kiểm khi có **một test nạp fixture canonical**
+> hoặc payload thật, chứ không phải test tự dựng object rồi đưa thẳng cho màn.
+
+`passportReader.test.ts` là mẫu: nạp `execution-governance.r2-review.valid.json`
+**và** payload nguyên văn probe trả về; chứng minh đỏ được với reader cũ (2/4).
