@@ -73,16 +73,21 @@ export function EmptyRecordFrame({
           appear twice on every empty screen, which is the exact shape of
           boilerplate this phase exists to remove. */}
       <p className="exec-disabled-reason">{producerSentence(spec.recordKind)}</p>
-      <div className="exec-inc2-grid">
+      <div className="exec-inc2-grid exec-empty-frame">
         {spec.panels.map((panel) => (
           <section className="exec-pf2-panel" key={panel.title} aria-label={panel.title}>
             <header className="exec-pf2-head"><span className="exec-pf2-title">{panel.title}</span></header>
+            {/* The sentence above already said no record is published. Each
+                panel says only what IS missing and what the panel would hold —
+                the first draft repeated "No record is published here, so this
+                panel is empty" once per panel, eight times on Gate Live. */}
             <PanelState
               status="empty"
+              title={panel.missing}
               reason={
                 panel.relation
-                  ? `No record is published here, so this panel is empty. It holds ${panel.holds}, read from ${panel.relation}.`
-                  : `No record is published here, so this panel is empty. It holds ${panel.holds}.`
+                  ? `Holds ${panel.holds}, read from ${panel.relation}.`
+                  : `Holds ${panel.holds}.`
               }
             />
           </section>

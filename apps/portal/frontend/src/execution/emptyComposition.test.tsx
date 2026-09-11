@@ -82,6 +82,11 @@ describe("the allowlist is internally coherent", () => {
     for (const w of spec.withheld) expect(w.because.length).toBeGreaterThan(40);
     // "holds" is the teaching part; an empty one makes the panel a label.
     for (const p of spec.panels) expect(p.holds.length).toBeGreaterThan(10);
+    // Each panel names ITS OWN absence. Two panels sharing a label on one
+    // screen is the boilerplate coming back under a new name.
+    const missing = spec.panels.map((p) => p.missing);
+    expect(new Set(missing).size).toBe(missing.length);
+    for (const m of missing) expect(m.length).toBeGreaterThan(4);
   });
 });
 
@@ -98,6 +103,24 @@ describe("an absent record keeps the reviewed hierarchy", () => {
     const sentence = RECORD_PRODUCERS[EMPTY_COMPOSITION[key].recordKind].sentence;
     const text = document.body.textContent ?? "";
     expect(text.split(sentence).length - 1).toBe(1);
+  });
+
+  /* The screen-level sentence says the record is absent. A panel repeating
+     that is boilerplate, and eight panels repeating it is the defect this
+     phase exists to remove — measured on the Gate Live screenshot before the
+     panels were given their own words. */
+  it.each(SCREENS)("%s states the absence once, not once per panel", (key) => {
+    RENDERERS[key]("unavailable");
+    const text = document.body.textContent ?? "";
+    expect(text).not.toContain("No record is published here");
+    expect(text.split("Nothing to show").length - 1).toBe(0);
+  });
+
+  it.each(SCREENS)("%s names what each panel is missing", (key) => {
+    RENDERERS[key]("unavailable");
+    for (const panel of EMPTY_COMPOSITION[key].panels) {
+      expect(screen.getAllByText(panel.missing, { exact: false }).length).toBeGreaterThan(0);
+    }
   });
 
   it.each(SCREENS)("%s never labels a withheld panel empty", (key) => {

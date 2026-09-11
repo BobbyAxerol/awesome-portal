@@ -7035,3 +7035,29 @@ tr[data-arrived="true"] > :first-child,
     animation: exec-sk-sweep 1.6s linear infinite;
   }
 }
+
+/* PHASE 8 (round 2) — the empty-record frame.
+   `.exec-gov .exec-state[data-status="empty"] .exec-state-title` sets 22px,
+   which is right for ONE empty panel and wrong for eight: the Gate Live
+   screenshot was eight display-size headings reading "Nothing to show" while
+   the informative line sat under each in grey. In the frame the heading names
+   the specific absence ("No artifact passport") at meta size, so the reader
+   scans what is missing. Scoped to the frame; every other screen's PanelState
+   keeps the large heading it was designed with. */
+.exec-gov .exec-empty-frame .exec-state[data-status="empty"],
+.exec-empty-frame .exec-state[data-status="empty"] {
+  align-items: flex-start;
+  text-align: left;
+  gap: var(--space-1);
+  /* 48px of air is right under one "Inbox zero"; across eight cards it turns
+     the page into a column of blank boxes the reader has to scroll past. */
+  padding: var(--space-4);
+}
+.exec-gov .exec-empty-frame .exec-state[data-status="empty"] .exec-state-title,
+.exec-empty-frame .exec-state[data-status="empty"] .exec-state-title {
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.exec-empty-frame .exec-state-reason { text-align: left; }
