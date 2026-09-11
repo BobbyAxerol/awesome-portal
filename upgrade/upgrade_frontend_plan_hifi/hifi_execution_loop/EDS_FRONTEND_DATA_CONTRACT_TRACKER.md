@@ -8267,3 +8267,98 @@ Không có đường gọi ở đây là **tuân thủ luật**, không phải t
 mở chi tiết — không tăng, vì các hàng điều hướng bằng `href` chứ không phải
 handler. **Tôi để nguyên con số và không chỉnh mốc.** 22 route nhóm A sẽ tự
 được gọi khi dev có bản ghi; 4 route nhóm B là việc thật, ghi vào roadmap.
+
+---
+
+## A56. RÀ LẠI PHASE 4 VÀ PHASE 6 (11-09) — ba gap, và một lần probe của tôi báo oan
+
+Owner: *"kiểm tra chi tiết lại 2 phase đã làm vừa rồi, test kỹ các kiểu, đóng
+toàn bộ gap phát hiện được."*
+
+### A56.1 Phase 4 — không tìm thấy gap
+
+| Kiểm | Kết quả |
+| --- | --- |
+| `contracts-snapshot.json` khớp file thật | **✓** — chạy lại `snapshot.py`, diff sạch |
+| Dấu vết `pinned_watchlist` / `PinnedPanel` / `command_center_pins` | **✓ sạch** — chỉ còn migration gốc `…005`, là lịch sử bất biến, và `…029` drop nó |
+| Bảng trên dev | **✓** `to_regclass` = NULL, 73 bảng |
+| Guard `table-write-path` | **✓** xanh trong 487/487 |
+
+### A56.2 Phase 6 — ba gap, đã đóng cả ba
+
+**Gap 1 · `/governance/approvals/history` không mang `workspace_id`.**
+Tôi nối workspace cho `listApprovals` và ba màn gate, nhưng **bỏ sót panel lịch
+sử ngay dưới nó**. Hệ quả: hai nửa của **cùng một màn** có thể mô tả **hai
+workspace khác nhau** — danh sách của workspace A, "recently decided" của
+workspace B. Không ai nhận ra vì cả hai đều rỗng.
+
+Sửa: `getApprovalHistory(workspaceId?)` + dependency trong effect. Đo lại, cả
+ba lệnh đọc đều `+ws`:
+
+```
++ws /governance/approvals   ·   +ws /governance/approvals/history   ·   +ws /governance/approvals
+INBOX → 1 hàng (lọc All)
+```
+
+**Gap 2 · tooltip `Approve` nói lý do của `Deny`.**
+Tôi dùng chung mảng `reasons` cho cả hai nút, nên nút **Approve** hiện:
+
+```
+Deny blocked — this request expired. There is nothing live to refuse.
+```
+
+Một reviewer đọc câu đó trên nút Approve học **sai** về lý do không approve
+được — tệ hơn cái tooltip trống mà nó thay thế. Tách `approveReasons` và
+`denyReasons`, và khử trùng lặp (bản đầu in "Deny blocked" **hai lần**).
+
+Sau khi sửa:
+
+```
+[Deny]    → Deny blocked — this request expired. There is nothing live to refuse.
+[Approve] → This request expired. It must be resubmitted rather than decided now.
+```
+
+**Gap 3 · chính xác hoá một khẳng định của tôi ở §A55.4.**
+Tôi viết "Inbox 0 → 1 hàng". Đúng hơn: **1 hàng ở bộ lọc `All`**. Bộ lọc mặc
+định `INBOX` vẫn 0 — và đó **đúng**, vì approval đã `EXPIRED` nên không còn
+pending. Số 0 kia luôn trung thực; thứ hỏng là reader, và tôi đã gộp hai chuyện
+vào một câu.
+
+### A56.3 Một lần probe của tôi báo oan — lần thứ ba cùng lớp lỗi
+
+Sweep nghiệm thu báo Gate R1 có **1 nút mờ thiếu lý do**, trong khi guard nguồn
+xanh. Truy ra: `<button class="exec-btn-ghost" disabled>Attach condition</button>`.
+
+Nó **không thiếu lý do**. Ngay cạnh nó trong DOM:
+
+```html
+<span class="exec-disabled-reason">You cannot attach a condition to this decision.</span>
+```
+
+Probe chỉ nhìn `title`, và nút nằm trong `<details>` thu gọn nên `innerText`
+rỗng — thành ra vừa mất nhãn vừa mất luôn câu lý do. **Sản phẩm đúng, phép đo
+của tôi sai.**
+
+Đã sửa probe: mở mọi `<details>` trước khi kiểm kê, dùng `textContent` thay
+`innerText`, và biết **cả hai** hình dạng nêu lý do. Đo lại:
+
+```
+37 nút mờ · thiếu CẢ title LẪN câu-nhóm: 0
+```
+
+Đây là lần thứ ba trong loop này phép đo của tôi là thứ hỏng, không phải sản
+phẩm — sau `cut -c1-140` giấu tham chiếu ở cột 300, và guard quét cả phần
+`Down Migration`. Ghi lại thành luật:
+
+> **Trước khi kết luận sản phẩm sai, chứng minh phép đo đúng.** Một check kêu
+> oan sẽ bị bỏ qua, và nó đắt hơn không có check.
+
+### A56.4 Đo lại sau khi đóng
+
+| | |
+| --- | --- |
+| control-api | **487/487** (56 file) |
+| frontend | **2 172** (132 file) |
+| Nút mờ trên dev | 37 · **0 thiếu lý do** (đếm cả hai hình dạng) |
+| Lệnh đọc approval mang workspace | **3/3** |
+| Tooltip lẫn động từ | **0** |

@@ -214,6 +214,30 @@ export function GateR2Review({
   );
   const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
   // The R1 sentence is printed once, in the banner; the bar points at it.
+
+  /*
+   * PHASE 6 (round 2) · verification pass — the tooltip must be about the verb
+   * it sits on.
+   *
+   * `reasons` is the shared bar sentence and mixes both verbs, so Approve was
+   * showing "Deny blocked — this request expired. There is nothing live to
+   * refuse." A reviewer reading that on Approve learns the wrong thing about
+   * why they cannot approve, which is worse than the bare tooltip it replaced.
+   */
+  const approveReasons = [...new Set([
+    ...(decisionsBlockedReason ? [decisionsBlockedReason] : []),
+    ...effectiveLocks.map((lock) => LOCK_REASON[lock]),
+    ...(!serverAllowsApprove && effectiveLocks.length === 0
+      ? ["Approve blocked — the server did not grant it for this actor."] : []),
+  ])];
+  const denyReasons = [...new Set([
+    ...(decisionsBlockedReason ? [decisionsBlockedReason] : []),
+    ...denyLocks.map((lock) => DENY_LOCK_REASON[lock]),
+    // Only when nothing more specific was said: a lock already named the
+    // cause, and repeating "Deny blocked" after it reads like a stutter.
+    ...(!serverAllowsDeny && denyLocks.length === 0
+      ? ["Deny blocked — the server did not grant it for this actor."] : []),
+  ])];
   const reasons: string[] = [
     ...effectiveLocks.map((lock) => LOCK_REASON[lock]),
     ...denyLocks.map((lock) => DENY_LOCK_REASON[lock]),
@@ -458,7 +482,7 @@ export function GateR2Review({
               Request changes
             </button>
             <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked}
-              title={denyLocked ? (reasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onDeny}>
+              title={denyLocked ? (denyReasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onDeny}>
               Deny
             </button>
             <button
@@ -471,7 +495,7 @@ export function GateR2Review({
               Approve with condition
             </button>
             <button type="button" className="exec-role-control exec-btn-apply" disabled={locked}
-              title={locked ? (reasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onApprove}>
+              title={locked ? (approveReasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onApprove}>
               Approve
             </button>
           </>

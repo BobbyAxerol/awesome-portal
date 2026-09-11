@@ -214,14 +214,14 @@ export function ApprovalInboxContainer({
   const [history, setHistory] = useState<KeysetPage<DecidedRow> | null>(null);
   useEffect(() => {
     let cancelled = false;
-    void api.getApprovalHistory().then((result) => {
+    void api.getApprovalHistory(workspaceId).then((result) => {
       if (cancelled) return;
       // `totalCount` is the server's own population, not `rows.length`: a page
       // is not a count, and the section's footer says which it is showing.
       setHistory(result.ok ? { rows: result.value.rows, totalCount: result.value.totalCount } : null);
     });
     return () => { cancelled = true; };
-  }, [api]);
+  }, [api, workspaceId]);
   const [state, setState] = useState<
     LoadState<{
       page: KeysetPage<ApprovalRow>;

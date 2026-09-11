@@ -338,9 +338,15 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     readGet("/activation/capabilities", readStagedActivation, "The activation capabilities");
   const getSourceHealthRead = (): Promise<Result<SourceHealthRead>> =>
     readGet("/derivations/source-health", readSourceHealthRead, "The source health envelope");
-  const getApprovalHistory = (): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>> =>
+  const getApprovalHistory = (workspaceId?: string): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>> =>
     readGet(
-      "/governance/approvals/history",
+      /*
+       * PHASE 6 (round 2) · verification pass. The inbox forwards the
+       * workspace and its decided-history panel below it did not, so the two
+       * halves of one screen could describe two different workspaces.
+       */
+      "/governance/approvals/history"
+        + (workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : ""),
       (raw) => {
         const envelope = readApprovalHistoryEnvelope(raw);
         if (!envelope) return null;

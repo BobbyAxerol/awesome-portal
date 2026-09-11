@@ -497,7 +497,7 @@ export interface ExecutionApi {
    * Rows come back as `DecidedRow`, read by the same parser the inbox has
    * always used for this contract.
    */
-  getApprovalHistory(): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>>;
+  getApprovalHistory(workspaceId?: string): Promise<Result<{ rows: readonly DecidedRow[]; totalCount: number | null; deliveryProfile: string | null }>>;
   /** `GET /derivations/conditional-groups/{groupId}` — the legs of one group. */
   getConditionalGroup(groupId: string, environment: string): Promise<Result<ConditionalGroupRead>>;
   /**
