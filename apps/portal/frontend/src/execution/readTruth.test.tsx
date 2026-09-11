@@ -31,7 +31,7 @@ describe("§8.59 · silence is not emptiness", () => {
   it("claims nothing when the server said nothing", () => {
     expect(serverSaysEmpty(null)).toBe(false);
     expect(serverSaysEmpty(undefined)).toBe(false);
-    expect(emptyScopeTitle(null)).toBe("No rows in this response");
+    expect(emptyScopeTitle(null)).toBe("Nothing came back");
     expect(emptyScopeLine(null, "Inbox")).toMatch(/did not state whether any exist/);
     expect(emptyScopeLine(null, "Inbox")).not.toMatch(/matches/);
   });

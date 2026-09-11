@@ -33,7 +33,10 @@ export function serverSaysEmpty(readTruth: ReadTruth | null | undefined): boolea
  * scoped its answer to the request, so the title is scoped too.
  */
 export function emptyScopeTitle(readTruth: ReadTruth | null | undefined): string {
-  return serverSaysEmpty(readTruth) ? "Nothing in this view" : "No rows in this response";
+  // "Nothing came back" rather than "No rows in this response": seen on the
+  // screen, the second reads like a debug line, and the title slot is the one
+  // piece of copy a reader takes in without reading the sentence under it.
+  return serverSaysEmpty(readTruth) ? "Nothing in this view" : "Nothing came back";
 }
 
 /**

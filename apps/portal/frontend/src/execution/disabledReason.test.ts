@@ -76,23 +76,31 @@ const GROUP_REASON = /exec-disabled-reason|exec-admin-nofooter|aria-describedby/
  * §3.5 is about a control the reader expected to use and cannot; these say
  * why in their own label and a tooltip would be noise.
  *
- * Per file and line, each with the reason it is here — never a directory.
+ * Keyed per file and per **disabled expression**, each with the reason it is
+ * here — never a directory.
+ *
+ * It used to be keyed by file and line, and that was a defect in the guard
+ * rather than in the code: editing anything above an allowlisted control
+ * renumbered it, the entry stopped matching, and a control that had been
+ * reviewed and excused resurfaced as a violation. Phase 11 tripped exactly
+ * that by deleting four lines from the Inbox. The expression is what was
+ * actually reviewed, it is stable under unrelated edits, and if two controls
+ * in one file share it they share the same reason too.
  */
 const STRUCTURAL: Readonly<Record<string, string>> = {
-  "execution/components/table.tsx:461": "pagination: greyed only while its own page is loading",
-  "execution/components/table.tsx:466": "pagination: greyed only while its own page is loading",
-  "execution/components/zoom.tsx:116": "zoom control at the end of its own range",
-  "execution/components/drawer.tsx:372": "drawer paging, disabled at the edge of the list",
-  "execution/components/ObservedTimelinePanel.tsx:123": "timeline paging at the edge of the window",
-  "execution/lab/adminCliDemo.tsx:587": "fixture lab, not a product route",
-  "features/runs/CancelRunButton.tsx:28": "cancel is disabled only while its own request is in flight",
-  "auth/LoginScreen.tsx:278": "submit greyed while submitting; the label itself changes to 'Signing in…'",
-  "execution/screens/ApprovalInbox.tsx:396": "filter chip, not a mutation; inert when its own filter has no rows",
-  "execution/screens/ApprovalInbox.tsx:466": "pagination into decided history",
-  "execution/screens/profileContainers.tsx:322": "pagination: no previous cursor",
-  "execution/screens/profileContainers.tsx:323": "pagination: no next cursor",
-  "features/command-center/CommandCenter.tsx:322": "refresh greyed while its own fetch is in flight",
-  "features/command-center/CommandCenter.tsx:401": "refresh greyed while its own fetch is in flight",
+  "execution/components/table.tsx|disabled={loading || !onLoadNewer}": "pagination: greyed only while its own page is loading",
+  "execution/components/table.tsx|disabled={loading || !onLoadOlder}": "pagination: greyed only while its own page is loading",
+  "execution/components/zoom.tsx|disabled={loading}": "zoom control at the end of its own range",
+  "execution/components/drawer.tsx|disabled={index >= items.length - 1}": "drawer paging, disabled at the edge of the list",
+  "execution/components/ObservedTimelinePanel.tsx|disabled={loadingMore}": "timeline paging at the edge of the window",
+  "execution/lab/adminCliDemo.tsx|disabled": "fixture lab, not a product route",
+  "features/runs/CancelRunButton.tsx|disabled={cancel.pending}": "cancel is disabled only while its own request is in flight",
+  "auth/LoginScreen.tsx|disabled={submitting}": "submit greyed while submitting; the label itself changes to 'Signing in…'",
+  "execution/screens/ApprovalInbox.tsx|disabled={status === \"loading\" || status === \"denied\" || status === \"unavailable\"}": "filter chip, not a mutation; inert only while the read is loading, denied or unavailable — the state panel beside it carries the reason",
+  "execution/screens/ApprovalInbox.tsx|disabled={!onLoadOlderDecided}": "pagination into decided history",
+  "execution/screens/profileContainers.tsx|disabled={!prevCursor}": "pagination: no previous cursor",
+  "execution/screens/profileContainers.tsx|disabled={!nextCursor}": "pagination: no next cursor",
+  "features/command-center/CommandCenter.tsx|disabled={summary.isFetching}": "refresh greyed while its own fetch is in flight",
 };
 
 describe("§3.5 — a disabled control states its reason", () => {
@@ -108,8 +116,12 @@ describe("§3.5 — a disabled control states its reason", () => {
       // A reason may be `title=`, or the whole control may be `aria-describedby`.
       if (/\btitle=/.test(tag) || /\baria-describedby=/.test(tag)) continue;
       if (GROUP_REASON.test(source)) continue;
-      if (`${rel}:${line}` in STRUCTURAL) continue;
-      offenders.push(`${rel}:${line}`);
+      // The expression, whitespace-collapsed, is the stable identity; the line
+      // number is kept only so a failure says where to look.
+      const expression = (/\bdisabled(?:=\{(?:[^{}]|\{[^{}]*\})*\})?/.exec(tag)?.[0] ?? "disabled")
+        .replace(/\s+/g, " ");
+      if (`${rel}|${expression}` in STRUCTURAL) continue;
+      offenders.push(`${rel}:${line} — ${expression}`);
     }
   }
 

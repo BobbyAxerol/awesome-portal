@@ -1156,6 +1156,23 @@ export default function ExecutionFixtures() {
                 actor="Lan"
               />
             </Case>
+            <Case caption="empty — the server said so, and said how far it meant it (§8.59)">
+              <ApprovalInbox onCopyProvenance={() => undefined}
+                page={{
+                  rows: [], totalCount: 5, filteredCount: 0,
+                  readTruth: { state: "EMPTY", reasonCode: "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS", scope: "REQUEST" },
+                }}
+                counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
+                filter="OVERDUE"
+              />
+            </Case>
+            <Case caption="empty — the server said nothing, so neither does the screen">
+              <ApprovalInbox onCopyProvenance={() => undefined}
+                page={{ rows: [], totalCount: 5, filteredCount: 0 }}
+                counts={{ pending: 5, overdue: 0, dueSoon: 0 }}
+                filter="OVERDUE"
+              />
+            </Case>
             <Case caption="loading — no counts yet, and none invented">
               <ApprovalInbox onCopyProvenance={() => undefined} page={{ rows: [], totalCount: 0 }} counts={null} filter="INBOX" status="loading" />
             </Case>
