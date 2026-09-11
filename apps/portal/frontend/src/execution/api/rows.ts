@@ -110,7 +110,19 @@ export interface ApprovalRowRead {
 export function readApprovalRow(raw: Record<string, unknown>): ApprovalRowRead {
   const gaps: string[] = [];
 
-  const id = readId(raw.approval_id) as ApprovalId | null;
+  /*
+   * PHASE 6 (round 2): the wire names this field `id`, not `approval_id`.
+   *
+   * Reading only `approval_id` returned null for every row, and a null id is
+   * a hard drop — so the one approval on dev arrived, was parsed, and was
+   * thrown away, leaving the inbox `PARTIAL` with nothing in it. The list had
+   * never shown a row, and the screen said so honestly, which is exactly why
+   * nobody caught that it was a reader bug rather than an empty table.
+   *
+   * Both names are accepted: the envelope is the contract, and a build that
+   * insists on one spelling of it fails closed on the other for no gain.
+   */
+  const id = (readId(raw.id) ?? readId(raw.approval_id)) as ApprovalId | null;
   const gateParsed = readEnum(raw.gate, GATES);
   const sla = readSla(raw.sla);
 
@@ -158,7 +170,8 @@ const OUTCOMES = ["APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQU
 
 export function readDecidedRow(raw: Record<string, unknown>): { row: DecidedRow | null; gaps: readonly string[] } {
   const gaps: string[] = [];
-  const id = readId(raw.approval_id) as ApprovalId | null;
+  /* Same wire spelling as the pending row above: `id`, with `approval_id` accepted. */
+  const id = (readId(raw.id) ?? readId(raw.approval_id)) as ApprovalId | null;
   const gateParsed = readEnum(raw.gate, GATES);
   const outcomeParsed = readEnum(raw.outcome, OUTCOMES);
   if (!id) return { row: null, gaps: ["approval_id"] };

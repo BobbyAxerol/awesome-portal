@@ -64,6 +64,14 @@ export const REQUEST_CHANGES_DENIED_REASON =
 
 
 
+/**
+ * PHASE 6 (round 2) · §3.5 — the two decision verbs were the only controls on
+ * this bar without a reason. `Approve with condition` beside them already
+ * carried one, so the bar taught the reader that a greyed button explains
+ * itself, and then two of them did not.
+ */
+const DECISION_CLOSED = "The server did not grant this decision to you on this review, and published no reason for it.";
+
 export function GateR1Review({
   approvalId,
   alphaLabel,
@@ -363,7 +371,8 @@ export function GateR1Review({
               >
                 Request changes
               </button>
-              <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
+              <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked}
+              title={denyLocked ? (reasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onDeny}>
                 Deny
               </button>
               <button
@@ -375,7 +384,8 @@ export function GateR1Review({
               >
                 Approve with condition
               </button>
-              <button type="button" className="exec-role-control exec-btn-apply" disabled={approveLocked} onClick={onApprove}>
+              <button type="button" className="exec-role-control exec-btn-apply" disabled={approveLocked}
+              title={approveLocked ? (reasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onApprove}>
                 Approve
               </button>
             </>

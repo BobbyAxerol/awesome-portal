@@ -362,8 +362,13 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
     );
   const getOperatorTasks = (): Promise<Result<OperatorTaskCatalogue>> =>
     readGet("/commands/tasks", readOperatorTasks, "The operator task catalogue");
-  const getLiveReview = (approvalId: string): Promise<Result<LiveReviewPayload>> =>
-    readGet(`/governance/approvals/${encodeURIComponent(approvalId)}/live`, readLiveReview, "The live review");
+  const getLiveReview = (approvalId: string, workspaceId?: string): Promise<Result<LiveReviewPayload>> =>
+    readGet(
+      `/governance/approvals/${encodeURIComponent(approvalId)}/live`
+        + (workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : ""),
+      readLiveReview,
+      "The live review",
+    );
   const getAccountBroker360 = (accountId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/screens/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account 360");
   const getAlpha360Resource = (alphaId: string): Promise<Result<ProfileEnvelope>> =>
@@ -598,10 +603,21 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       // (`governance/contracts.ts` approvalListQuery), so sending the wrong
       // name silently served the inbox for every chip — an operator pressing
       // "Overdue" got a list that looked right and was not.
+      /*
+       * PHASE 6 (round 2) · a record in another workspace is unreachable, not absent.
+       *
+       * dev holds one PENDING R1 approval. The inbox read "0 PENDING" and the
+       * review answered `APPROVAL_NOT_FOUND`, because the probe user's own
+       * workspace is not the one the approval lives in — and no screen ever
+       * sent the workspace the URL named. `getIncident` already threads it;
+       * these four did not, so every decision button on a real approval was
+       * unreachable by construction rather than by policy.
+       */
       const params = new URLSearchParams({ view: query.filter });
       if (query.after) params.set("after", query.after);
       if (query.before) params.set("before", query.before);
       if (query.limit) params.set("limit", String(query.limit));
+      if (query.workspaceId) params.set("workspace_id", query.workspaceId);
 
       const response = await get(`/governance/approvals?${params}`, signal);
       if (!response.ok) return problem(response);
@@ -639,10 +655,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
       };
     },
 
-    async getGateR1(approvalId: string) {
+    async getGateR1(approvalId: string, workspaceId?: string) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
-      const response = await get(`/governance/approvals/${encodeURIComponent(approvalId)}/r1`, signal);
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      const response = await get(`/governance/approvals/${encodeURIComponent(approvalId)}/r1${qs}`, signal);
       if (!response.ok) return problem(response);
       const detail = readGateR1Detail(await response.json());
       return detail
@@ -1030,10 +1047,11 @@ export function createHttpApi({ policy, signal }: HttpApiOptions): ExecutionApi 
         : unavailable("The binding exposure response could not be read.");
     },
 
-    async getGateR2(approvalId: string) {
+    async getGateR2(approvalId: string, workspaceId?: string) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
-      const response = await get(`/governance/approvals/${encodeURIComponent(approvalId)}/r2`, signal);
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      const response = await get(`/governance/approvals/${encodeURIComponent(approvalId)}/r2${qs}`, signal);
       if (!response.ok) return problem(response);
       const detail = readGateR2Detail(await response.json());
       return detail

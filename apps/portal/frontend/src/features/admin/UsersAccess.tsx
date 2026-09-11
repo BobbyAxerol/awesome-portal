@@ -171,6 +171,17 @@ export function UsersAccess() {
                     disableMutation.isPending ||
                     resetMutation.isPending;
                   const disabled = user.status === "DISABLED" || Boolean(user.disabledAt);
+                  /*
+                   * PHASE 6 (round 2) · §3.5 — these three are mutations on a
+                   * real account, and they were greying with no reason at all.
+                   * "Busy" and "this account is already disabled" are
+                   * different answers and the reader acts differently on each.
+                   */
+                  const why = (needsActive: boolean) => (busy
+                    ? "Another action on this account is still running."
+                    : needsActive && disabled
+                      ? `${user.username} is already disabled, so this action has nothing to act on.`
+                      : undefined);
                   return (
                     <tr key={user.userId} data-testid={`admin-user-${user.username}`} data-self={isSelf}>
                       <td className="mono">
@@ -218,6 +229,7 @@ export function UsersAccess() {
                           type="button"
                           className="btn-ghost"
                           disabled={busy || disabled}
+                          title={why(true)}
                           onClick={() => {
                             clear();
                             if (
@@ -237,6 +249,7 @@ export function UsersAccess() {
                           type="button"
                           className="btn-ghost"
                           disabled={busy}
+                          title={why(false)}
                           onClick={() => {
                             clear();
                             if (
@@ -262,6 +275,7 @@ export function UsersAccess() {
                           type="button"
                           className="btn-ghost admin-danger"
                           disabled={busy || disabled}
+                          title={why(true)}
                           onClick={() => {
                             clear();
                             if (

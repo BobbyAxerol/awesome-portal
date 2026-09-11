@@ -181,9 +181,12 @@ export function useAnalyticsRead<T>(
 export function ApprovalInboxContainer({
   api,
   onOpenRequest,
+  workspaceId,
 }: {
   api: ExecutionApi;
   onOpenRequest?: (id: string, gate: ApprovalGate) => void;
+  /** PHASE 6 (round 2): the workspace the URL named; omitted = the caller's own. */
+  workspaceId?: string;
 }) {
   const [filter, setFilter] = useState<InboxFilter>("INBOX");
   /**
@@ -254,7 +257,7 @@ export function ApprovalInboxContainer({
     if (!usable && (cursor.after || cursor.before)) {
       setCursorReset("The list changed, so the page reference no longer applies — showing the first page.");
     }
-    void api.listApprovals({ filter, after, before, limit: PAGE_SIZE }).then((result) => {
+    void api.listApprovals({ filter, after, before, limit: PAGE_SIZE, ...(workspaceId ? { workspaceId } : {}) }).then((result) => {
       if (cancelled) return;
       setState(
         result.ok
@@ -290,7 +293,7 @@ export function ApprovalInboxContainer({
     return () => {
       cancelled = true;
     };
-  }, [api, filter, cursor, scope.limit, scope.sort, scope.resource]);
+  }, [api, filter, cursor, scope.limit, scope.sort, scope.resource, workspaceId]);
 
   const changeFilter = useCallback((next: InboxFilter) => {
     // A cursor is only meaningful inside the query that produced it. Carrying
@@ -348,7 +351,7 @@ export function ApprovalInboxContainer({
 const POLL_MS = 1_500;
 const MAX_POLLS = 40;
 
-export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
+export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: ExecutionApi; approvalId: string; workspaceId?: string }) {
   const [state, setState] = useState<LoadState<GateR1Detail>>(loading);
   // Composed on the screen, held here, and sent with the plan. Approving with
   // a condition that never reaches the server is the decision failing to mean
@@ -364,7 +367,7 @@ export function GateR1ReviewContainer({ api, approvalId }: { api: ExecutionApi; 
   useEffect(() => {
     let cancelled = false;
     setState(loading);
-    void api.getGateR1(approvalId).then((result) => {
+    void api.getGateR1(approvalId, workspaceId).then((result) => {
       if (cancelled) return;
       setState(
         result.ok
@@ -698,6 +701,8 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
 export function GateR2ReviewContainer({
   api,
   approvalId,
+  /** PHASE 6 (round 2): the workspace the URL named; omitted = the caller's own. */
+  workspaceId,
   /**
    * What the preview is computed against.
    *
@@ -715,6 +720,7 @@ export function GateR2ReviewContainer({
 }: {
   api: ExecutionApi;
   approvalId: string;
+  workspaceId?: string;
   /**
    * Overrides the scope taken from the review row. Tests use it; screens do not.
    *
@@ -736,7 +742,7 @@ export function GateR2ReviewContainer({
   useEffect(() => {
     let cancelled = false;
     setState(loading);
-    void api.getGateR2(approvalId).then((result) => {
+    void api.getGateR2(approvalId, workspaceId).then((result) => {
       if (cancelled) return;
       setState(
         result.ok
@@ -956,14 +962,14 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
  * still opened the R2 screen; the canary evidence panels are the screen's own
  * declared smoke until BR-EX-70.
  */
-export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi; approvalId: string }) {
+export function GateLiveReviewContainer({ api, approvalId, workspaceId }: { api: ExecutionApi; approvalId: string; workspaceId?: string }) {
   const [state, setState] = useState<LoadState<LiveReviewPayload>>(loading);
   const [note, setNote] = useState("");
   const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
   useEffect(() => {
     let cancelled = false;
     setState(loading);
-    void api.getLiveReview(approvalId).then((result) => {
+    void api.getLiveReview(approvalId, workspaceId).then((result) => {
       if (cancelled) return;
       setState(
         result.ok
@@ -980,6 +986,15 @@ export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi
   const d = state.value ? readGateR2Detail(state.value.governanceBackbone) : null;
   const locked = !(d?.eligibility.canApprove ?? false);
   const denyLocked = !(d?.eligibility.canDeny ?? false);
+  /*
+   * PHASE 6 (round 2) · §3.5. `separationOfDuties` exists precisely to explain
+   * why the verbs are false, and this screen was dropping it.
+   */
+  const lockReason = d === null
+    ? "This review published no governance document, so no decision can be addressed to it."
+    : d.eligibility.separationOfDuties === "VIOLATION"
+      ? "You requested or created this artifact, so you may not decide it — separation of duties."
+      : undefined;
   return (
     <GateLiveReview
       approvalId={approvalId}
@@ -995,6 +1010,8 @@ export function GateLiveReviewContainer({ api, approvalId }: { api: ExecutionApi
       onNoteChange={setNote}
       locked={locked}
       denyLocked={denyLocked}
+      lockReason={lockReason}
+      denyLockReason={lockReason}
       trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
       onApprove={() => void decide(approvalId, "APPROVE", note.trim() || "Canary evidence accepted for the live step.", d?.expectedVersion ?? null, { conditions: [] })}
       onDeny={() => void decide(approvalId, "DENY", note.trim() || "Back to canary observation.", d?.expectedVersion ?? null, { conditions: [] })}

@@ -73,6 +73,14 @@ const LOCK_REASON: Record<R2Lock, string> = {
   NOT_ELIGIBLE: "You do not hold a role that can decide this gate.",
 };
 
+/**
+ * PHASE 6 (round 2) · §3.5 — the two decision verbs were the only controls on
+ * this bar without a reason. `Approve with condition` beside them already
+ * carried one, so the bar taught the reader that a greyed button explains
+ * itself, and then two of them did not.
+ */
+const DECISION_CLOSED = "The server did not grant this decision to you on this review, and published no reason for it.";
+
 export function GateR2Review({
   approvalId,
   subject,
@@ -449,7 +457,8 @@ export function GateR2Review({
             >
               Request changes
             </button>
-            <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
+            <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked}
+              title={denyLocked ? (reasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onDeny}>
               Deny
             </button>
             <button
@@ -461,7 +470,8 @@ export function GateR2Review({
             >
               Approve with condition
             </button>
-            <button type="button" className="exec-role-control exec-btn-apply" disabled={locked} onClick={onApprove}>
+            <button type="button" className="exec-role-control exec-btn-apply" disabled={locked}
+              title={locked ? (reasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onApprove}>
               Approve
             </button>
           </>

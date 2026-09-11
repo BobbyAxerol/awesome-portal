@@ -8055,3 +8055,165 @@ phase.
 `P4-E` còn treo ở `P4_E_SOURCE_COMPLETE / RUNTIME_OVERLAY_OFF`, chờ soak ở
 target cadence và quyết định taxonomy của Bobby. `BAR-17→20`, `U18`, `U19` chưa
 khởi động. Và 11 quyết định owner ở §15.3 `MASTER_PLAN` chưa cái nào đóng.
+
+---
+
+## A55. PHASE 6 (VÒNG 2) ĐÃ LÀM (11-09) — bấm thật, và hai lỗi chỉ lộ ra khi bấm
+
+Owner cho phép: *"thực hiện nút bấm nào k ăn thì sửa luôn"*. Đây là lần đầu
+probe **bấm nút mutation thật trên dev**, sau khi chụp số dòng toàn bộ 73 bảng.
+
+### A55.1 Mốc đặt TRƯỚC khi đo
+
+Exit gate yêu cầu đặt số trước. Tôi chốt **≥ 60 route** (theo đề nghị của spec)
+trước khi chạy probe đầu tiên.
+
+**Kết quả: 56/122. Chưa đạt.** Ghi thẳng thay vì chỉnh mốc sau khi đo.
+
+| | |
+| --- | --- |
+| Route backend (đếm từ `@Controller`+`@Get/@Post`) | **122** (89 GET · 32 POST · 1 PATCH) |
+| Trước Phase 6 (§A37.10, quét thụ động) | 46 |
+| Sau Phase 6 (probe biết mở drawer, bấm tab, cuộn bảng, mở SSE) | **56** |
+| Trong đó **chỉ xuất hiện sau thao tác** | **25** |
+
+25 route đó là thứ bản quét thụ động **không thể** có — đúng như spec dự đoán.
+
+### A55.2 Hai lỗi đo của chính tôi trên đường đi
+
+**Một.** Probe đầu báo "77 route được gọi". Sai: đó là số **URL** phân biệt, gồm
+cả URL không khớp route nào. Khớp lại theo pattern thì còn **53**.
+
+**Hai.** Sweep chỉ duyệt `screens[]` trong registry, bỏ qua `features[].canonical_route`
+— nên màn danh sách Portfolios và Exit Reviews không bao giờ được vào. Thêm 4
+route đó vào mới ra 56.
+
+### A55.3 Lỗi thật thứ nhất — `workspace_id` bị vứt, nên nút **không thể** xuất hiện
+
+dev có **một approval thật**: `apr_06G6ANQZ032XWF1SF63024XJP1`, gate R1,
+workspace `ws_06G19F61YB8CFR7TEWMS7HQ660`. Nhưng:
+
+```
+/governance/approvals/{id}/r1        → 404 APPROVAL_NOT_FOUND   (88 ký tự)
+Approval Inbox                       → "0 PENDING"
+```
+
+Gọi thẳng API kèm `?workspace_id=` thì **200 với đủ dữ liệu**. Nguyên nhân:
+`claude-probe` có workspace riêng, approval nằm ở workspace của Bobby, và
+**không màn nào forward `workspace_id` mà URL đã mang sẵn**. `getIncident` đã
+có sẵn mẫu này; bốn đường đọc approval/gate thì không, và
+`IncidentDetailContainer` tuy **có** prop `workspaceId` nhưng route **chưa bao
+giờ truyền**.
+
+Sửa: `ExecutionPreviewRoute` đọc `search.get("workspace_id")` và truyền xuống
+5 container; `listApprovals`, `getGateR1`, `getGateR2`, `getLiveReview` mang
+tham số; `InboxQuery` có `workspaceId`.
+
+Đo lại sau deploy — **Gate R1 từ 88 → 1 338 ký tự**, dữ liệu thật
+`delta-rsi-polynomial-alpha`, và **cả 5 nút đều nêu lý do**, kể cả lý do nghiệp
+vụ thật:
+
+```
+MỜ [Deny]     → This request expired. It must be resubmitted rather than decided now.
+MỜ [Approve]  → This request expired. It must be resubmitted rather than decided now.
+MỜ [Approve with condition] → Attach at least one condition first…
+MỜ [Request changes]        → the server did not grant this verb for this actor.
+```
+
+**Điều này cải chính §A54.2 của tôi.** Tôi xếp ba màn Gate vào "mức C — không
+nói gì" và gọi chúng là màn tệ nhất sản phẩm. Sai: chúng **không hỏng**, chúng
+**không với tới được**. Với id thật và workspace đúng, Gate R1 là màn đầy đủ
+nhất trong ba màn tôi đo hôm đó. Phase 8 đề xuất phải sửa lại theo.
+
+### A55.4 Lỗi thật thứ hai — Inbox đọc sai tên trường, nên **mọi** hàng bị vứt
+
+Sau khi sửa workspace, Inbox vẫn 0 hàng nhưng đổi sang `PARTIAL`. `PARTIAL`
+nghĩa là hàng **về tới nơi** rồi bị reader loại. Đọc envelope:
+
+```
+khoá của hàng: id, gate, subject, subject_id, release_candidate, target, …
+```
+
+Wire gửi **`id`**. `readApprovalRow` đọc `raw.approval_id`, không thấy, và
+`if (!id) return { row: null }` là **loại cứng**. Nên approval duy nhất trên
+dev đã tới, đã parse, và bị vứt — Approval Inbox **chưa bao giờ hiện một dòng
+nào**, ở bất kỳ workspace nào.
+
+Cái làm nó ẩn lâu: màn báo `PARTIAL` **rất trung thực**, nên nó đọc như "bảng
+rỗng" chứ không như "reader hỏng". Một màn thành thật vẫn có thể che một lỗi.
+
+Sửa: đọc `raw.id ?? raw.approval_id` ở cả `readApprovalRow` và `readDecidedRow`.
+Đo lại: **Inbox 0 → 1 hàng**, hết `PARTIAL`.
+
+### A55.5 §3.5 — từ 13 vi phạm xuống 0, và guard bắt hơn browser
+
+Bấm thật trên dev: **21 nút**, và **0 nút gửi request mutation** — lặp lại kết
+quả §A33.2 (12 nút · 0 write). Browser chỉ thấy **1** nút mờ thiếu lý do.
+
+Guard nguồn `disabledReason.test.ts` thấy **33**, vì browser chỉ tới được
+những trạng thái nó chạm được — nút `Open` của Run Library hiện/ẩn tuỳ ô nhập
+đã gõ hay chưa.
+
+Guard phải học **cả ba cách nêu lý do** đang dùng trong sản phẩm, nếu không nó
+ép sản phẩm về phía tệ hơn:
+
+1. `title=` trên chính nút;
+2. `aria-describedby=`;
+3. **một câu cho cả nhóm** (`exec-disabled-reason`, `exec-admin-nofooter`) —
+   Incident Detail và Paper Exit Review làm thế: 5 nút, 1 câu bên dưới, đọc tốt
+   hơn 5 tooltip giống nhau.
+
+Cộng allowlist **từng dòng** cho nút mờ do *cấu trúc* (phân trang khi đang tải,
+zoom ở cuối dải, submit khi đang submit). Còn lại **13 vi phạm thật**, đã sửa
+hết:
+
+| Màn | Nút | Lý do giờ hiện |
+| --- | --- | --- |
+| Gate R1 | Deny · Approve | `reasons.join(" · ")` — lý do server đã tính sẵn |
+| Gate R2 | Deny · Approve | như trên |
+| Gate LIVE | Deny · Approve | `separationOfDuties` — thứ `Eligibility` sinh ra để giải thích |
+| Users & Access | Reset credential · Revoke sessions · Disable | "đang chạy việc khác" ≠ "tài khoản đã bị vô hiệu" |
+| QuantBT Run Library | Open | "Paste a run id first…" |
+
+`Eligibility` **đã có sẵn** comment: *"a button disabled with no reason and a
+button disabled because you are the person who requested it are different
+messages."* Codebase biết luật; ba màn Gate chỉ là chưa áp dụng.
+
+### A55.6 Không write ngoài ý muốn
+
+Chụp **73 bảng** trước và sau. Tổng 2 368 916 → 2 372 410 dòng.
+
+| Bảng tăng | Vì sao |
+| --- | --- |
+| `auth_audit_events` +11, `auth_sessions` +11 | login của chính probe |
+| `execution_durable_mirror_*`, `execution_shared_read_cache`, `*_journal` | projection worker chạy nền |
+
+**0 bảng mutation thay đổi**: incidents, operation queue, command plans,
+approval decisions, decision plans, activation, canary envelopes, sandbox
+certifications, workflow events — tất cả vẫn 0.
+
+### A55.7 33 route mutation — vì sao chưa bấm được, ghi rõ
+
+Không route mutation nào được gọi, và đó **không** phải lỗi: mọi màn mutation
+trên dev đều chưa có bản ghi để thao tác (Phase 5 đã đo: 21 bảng có route POST
+nhưng rỗng vì chưa ai tạo). Admin Action Drawer liệt kê 64 lệnh canonical và
+mỗi lệnh tự khai `no CLI form published` — đó chính là "một dòng ghi rõ vì sao
+chưa có" mà spec §3 yêu cầu, và nó đã có sẵn.
+
+### A55.8 Exit gate
+
+| Điều kiện | Kết quả |
+| --- | --- |
+| Route gọi được ≥ 60 (đặt trước) | **56 — CHƯA ĐẠT**, thiếu 4 |
+| Nút mờ không nêu lý do = 0 | **ĐẠT** (13 → 0, guard canh) |
+| Không write ngoài ý muốn | **ĐẠT** (0 bảng mutation đổi) |
+| Test §3.5 | **ĐẠT** — `disabledReason.test.ts` |
+| Test end-to-end cho route vừa nối | **ĐẠT** — `rows.test.ts` 3 test neo lỗi tên trường |
+
+Test: **132 file · 2 172** frontend (từ 2 169).
+
+**Vì sao 56 chứ không 60, nói thẳng:** 33 GET còn lại phần lớn cần một bản ghi
+chưa tồn tại (`conditional-groups/{id}` cần một nhóm, hiện 0), hoặc là route hạ
+tầng browser không bao giờ gọi (`/api/control/healthz`, `readyz`), hoặc cần
+thao tác sâu hơn probe hiện tại (chọn một dòng order để mở `orders/{id}/funnel`).
+Nâng tiếp là việc thật, không phải chỉnh mốc.

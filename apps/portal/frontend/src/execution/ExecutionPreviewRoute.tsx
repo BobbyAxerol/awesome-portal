@@ -153,6 +153,18 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
   // unit tests and the fixture lab.
   const api = useMemo(() => createHttpApi({ policy }), [policy]);
   /*
+   * PHASE 6 (round 2) · the workspace the URL names, sent to the reads that
+   * accept one.
+   *
+   * dev holds one PENDING R1 approval. The inbox showed "0 PENDING" and the
+   * review answered APPROVAL_NOT_FOUND, because the approval lives in a
+   * workspace that is not the reader's own and no screen ever forwarded the
+   * `workspace_id` the URL already carried. Omitting it still means "my own
+   * workspace", which is the right default; dropping one the caller supplied
+   * was not a default, it was a discard.
+   */
+  const routeWorkspaceId = search.get("workspace_id") ?? undefined;
+  /*
    * Phase 3 · 11-6. The server publishes, per screen, whether it serves it and
    * why not. Every screen on dev reads AVAILABLE today, so this branch cannot
    * be signed off by eye here — but the mechanism has to exist before the
@@ -220,26 +232,26 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null 
       content = <OperationsQueueContainer api={api} requestedOperation={search.get("operation")} />;
       break;
     case "EXECUTION_INCIDENT_DETAIL_SCREEN":
-      content = <IncidentDetailContainer api={api} incidentId={incidentId} />;
+      content = <IncidentDetailContainer api={api} incidentId={incidentId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
       // EL-V2-05: a row (and the rail's Open) navigates to the review its gate owns.
-      content = <ApprovalInboxContainer api={api} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
+      content = <ApprovalInboxContainer api={api} workspaceId={routeWorkspaceId} onOpenRequest={(id, gate) => navigate(reviewRouteFor({ id, gate }))} />;
       break;
     case "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN":
       content = <NewApprovalRequestContainer api={api} />;
       break;
     case "EXECUTION_GATE_LIVE_REVIEW_SCREEN":
-      content = <GateLiveReviewContainer api={api} approvalId={approvalId} />;
+      content = <GateLiveReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_WAIVERS_REGISTER_SCREEN":
       content = <WaiversRegisterContainer api={api} />;
       break;
     case "EXECUTION_GATE_R1_REVIEW_SCREEN":
-      content = <GateR1ReviewContainer api={api} approvalId={approvalId} />;
+      content = <GateR1ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_GATE_R2_REVIEW_SCREEN":
-      content = <GateR2ReviewContainer api={api} approvalId={approvalId} />;
+      content = <GateR2ReviewContainer api={api} approvalId={approvalId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_PAPER_EXIT_REVIEW_SCREEN":
       content = <PaperExitReviewContainer api={api} reviewId={reviewId} />;

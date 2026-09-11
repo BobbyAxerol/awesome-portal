@@ -83,6 +83,14 @@ export interface InboxQuery {
   after?: string | null;
   before?: string | null;
   limit?: number;
+  /**
+   * PHASE 6 (round 2): the workspace the URL named, when it named one.
+   *
+   * Omitted means "the caller's own". Every screen omitted it, so the one
+   * PENDING approval on dev — which lives in another workspace — read as
+   * "0 PENDING" rather than as "none in this workspace".
+   */
+  workspaceId?: string;
 }
 
 export interface InboxResult {
@@ -303,7 +311,7 @@ export interface ExecutionApi {
   /** Runs only a server-classified CONNECTED R0 task. */
   runOperatorTask(taskId: string, params: Readonly<Record<string, string | number | boolean | null>>): Promise<Result<OperatorTaskRunResult>>;
   /** `GET /governance/approvals/{id}/live` — `governance.live-review.v1`. */
-  getLiveReview(approvalId: string): Promise<Result<LiveReviewPayload>>;
+  getLiveReview(approvalId: string, workspaceId?: string): Promise<Result<LiveReviewPayload>>;
   /** `GET /screens/accounts/{id}` — N28 typed unavailable until published. */
   getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
   /** EDS-04 exact resource BFFs. Each resolves the resource server-side first. */
@@ -353,9 +361,9 @@ export interface ExecutionApi {
 
   getWaivers(query?: WaiverQuery): Promise<Result<ConditionsPage>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r1` */
-  getGateR1(approvalId: string): Promise<Result<GateR1Detail>>;
+  getGateR1(approvalId: string, workspaceId?: string): Promise<Result<GateR1Detail>>;
   /** `GET /api/v1/execution/governance/approvals/{id}/r2` */
-  getGateR2(approvalId: string): Promise<Result<GateR2Detail>>;
+  getGateR2(approvalId: string, workspaceId?: string): Promise<Result<GateR2Detail>>;
   /**
    * `POST /api/v1/execution/approvals/{approvalId}/capital-preview`
    *

@@ -89,7 +89,24 @@ export function RunLibrary() {
               }}
             />
           </label>
-          <button type="button" className="btn-primary" disabled={!pasteId || Boolean(lookupId)} onClick={() => openRun(pasteId)}>
+          {/*
+            * PHASE 6 (round 2) · §3.5 — a control the reader cannot press has
+            * to say why. This was the one disabled button in the product
+            * without a reason: 35 others across 17 screens carried one, and a
+            * greyed Open beside an empty box reads as broken rather than as
+            * waiting for input.
+            */}
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={!pasteId || Boolean(lookupId)}
+            title={!pasteId
+              ? "Paste a run id first — there is nothing to open yet."
+              : lookupId
+                ? "Already opening that run; the lookup is still in flight."
+                : undefined}
+            onClick={() => openRun(pasteId)}
+          >
             <Search size={13} />
             Open
           </button>

@@ -26,6 +26,9 @@ import { PanelState } from "../components/states";
 import type { PanelStatus, Sla } from "../contracts";
 import { SlaCell } from "../components/evidence";
 
+/** Said when the server granted nothing and named no reason of its own. */
+const DECISION_CLOSED = "The server did not grant this decision to you on this review, and published no reason for it.";
+
 export function GateLiveReview({
   approvalId,
   subject,
@@ -42,6 +45,8 @@ export function GateLiveReview({
   onDeny,
   locked,
   denyLocked,
+  lockReason,
+  denyLockReason,
   trail,
   canaryDeploymentId,
   branches,
@@ -64,6 +69,16 @@ export function GateLiveReview({
   onDeny: () => void;
   locked: boolean;
   denyLocked: boolean;
+  /**
+   * PHASE 6 (round 2) · §3.5 — why the decision is closed to this reader.
+   *
+   * `Eligibility` already carries the answer and says so in its own doc
+   * comment: "a button disabled with no reason and a button disabled because
+   * you are the person who requested it are different messages." This screen
+   * was rendering the first kind.
+   */
+  lockReason?: string;
+  denyLockReason?: string;
   trail?: ReactNode;
   /** `canary_ref.deployment_id` — the room the evidence window lives in. */
   canaryDeploymentId?: string | null;
@@ -288,10 +303,12 @@ export function GateLiveReview({
         trail={trail}
         actions={
           <>
-            <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked} onClick={onDeny}>
+            <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked}
+              title={denyLocked ? denyLockReason ?? DECISION_CLOSED : undefined} onClick={onDeny}>
               Deny — back to canary
             </button>
-            <button type="button" className="exec-role-control exec-btn-apply" disabled={locked} onClick={onApprove}>
+            <button type="button" className="exec-role-control exec-btn-apply" disabled={locked}
+              title={locked ? lockReason ?? DECISION_CLOSED : undefined} onClick={onApprove}>
               Approve live step
             </button>
           </>
