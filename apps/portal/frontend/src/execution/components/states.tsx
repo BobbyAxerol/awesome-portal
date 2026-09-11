@@ -66,6 +66,7 @@ export function PanelState({
   lastGood,
   actions,
   title: ownTitle,
+  prominentEmpty = false,
 }: {
   status: Exclude<PanelStatus, "ok">;
   reason?: string;
@@ -79,6 +80,13 @@ export function PanelState({
    * neutral word.
    */
   title?: string;
+  /**
+   * A deliberately prominent empty result, used only where an empty list is
+   * the primary answer to the operator's question (for example, Inbox zero).
+   * Most empty panels name one missing fact among several; making all of those
+   * display-size headings turns a dense review into a stack of blank cards.
+   */
+  prominentEmpty?: boolean;
 }) {
   if (status === "loading") return <PanelSkeleton />;
 
@@ -89,7 +97,12 @@ export function PanelState({
   const line = soonReason(reason);
 
   return (
-    <div className="exec-state" data-status={status} data-soon={title === "Soon" ? "true" : undefined}>
+    <div
+      className="exec-state"
+      data-status={status}
+      data-soon={title === "Soon" ? "true" : undefined}
+      data-prominent-empty={status === "empty" && prominentEmpty ? "true" : undefined}
+    >
       <span className="exec-state-title">{title}</span>
       {line ? <span className="exec-state-reason">{line}</span> : null}
       {lastGood ? <div className="exec-state-lastgood">{lastGood}</div> : null}

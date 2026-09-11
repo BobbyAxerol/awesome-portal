@@ -138,4 +138,20 @@ describe("§8.59 point 3 · a refusal is never rendered as an absence", () => {
     );
     expect(screen.queryByText(EMPTINESS_CLAIMS[0])).not.toBeNull();
   });
+
+  it("makes only the primary Inbox result prominent", () => {
+    const { container } = render(
+      <ApprovalInbox onCopyProvenance={vi.fn()}
+        page={{ rows: [], totalCount: 0, filteredCount: 0, readTruth: EMPTY }}
+        counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
+        filter="INBOX"
+      />,
+    );
+
+    // The screen also has a secondary decided-history panel. An empty response
+    // there remains a compact panel fact: repeating the 22px primary outcome
+    // would overwhelm a dense governance review.
+    expect(container.querySelectorAll('.exec-state[data-prominent-empty="true"]')).toHaveLength(1);
+    expect(container.querySelector('.exec-state[data-prominent-empty="true"]')?.textContent).toMatch(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/);
+  });
 });

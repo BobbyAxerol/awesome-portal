@@ -5999,6 +5999,21 @@ a Portal workaround.
   Journey assertions now prove the current blocked/typed states rather than
   stale text, and the shared Playwright settle helper is navigation-safe under
   parallel rendering.  A clean browser run must pass without an update flag.
+- Governance empty-state hierarchy is now explicit rather than accidental:
+  only the primary Approval Inbox result may opt into the prominent empty
+  treatment; secondary history/evidence panels remain compact inside their
+  reviewed rich shells.  The staged-activation grid in the Admin Action Drawer
+  is reachable through an explicit bounded horizontal scroll surface at narrow
+  widths.  This is presentation-only: no availability, RBAC, command or source
+  state is inferred by the browser.
+- The pinned Playwright image completed the clean no-update acceptance run on
+  2026-09-11 with **307 passed / 16 intentionally skipped** checks.  The suite
+  includes the same-origin BFF boundary, rich-route journeys, responsive
+  mobile-to-workstation surface audit, locked type scale, contrast, keyboard
+  labels, horizontal-overflow/clipping and DOM-budget assertions.  The one
+  earlier R2 laptop timeout was reproduced in isolation after concurrent build
+  writers stopped and passed at both laptop and workstation sizes; it was test
+  infrastructure contention, not a product-state or visual regression.
 - EDS-12 now separates **semantic deployed evidence** from the final runtime
   decision. `verify-deployed` can only return
   `EDS12_DEPLOYED_EVIDENCE_SEMANTICALLY_VALID_RUNTIME_BINDING_PENDING`.

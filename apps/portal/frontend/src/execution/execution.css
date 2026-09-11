@@ -274,7 +274,7 @@
 }
 
 /* The masthead's stage badge is the same word as every other stage label. */
-.exec-chip[data-axis="stage"] { font: 400 10px/14px var(--font-mono); letter-spacing: 0.06em; padding: 0 5px; }
+.exec-chip[data-axis="stage"] { font: 400 11px/14px var(--font-mono); letter-spacing: 0.06em; padding: 0 5px; }
 .exec-chip[data-tone="good"] {
   color: var(--good);
   border-color: var(--good);
@@ -330,7 +330,7 @@
  */
 .exec-env,
 .exec-stage {
-  font: 400 10px/14px var(--font-mono);
+  font: 400 11px/14px var(--font-mono);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1197,11 +1197,12 @@
 .exec-gov .exec-inbox-filter[data-active="true"] { font-weight: 600; }
 /* The hi-fi's empty register is its own bordered block, centred, with the
    outcome as the largest words on the page — "Inbox zero" is a result, and
-   the reader should be able to read it from across a desk. Dev drew it as a
-   small left-aligned notice, which reads as a footnote about a table that
-   failed. Existing tokens and `font:` shorthand only. */
-.exec-gov .exec-state[data-status="empty"] { padding: 48px 20px; text-align: center; align-items: center; }
-.exec-gov .exec-state[data-status="empty"] .exec-state-title { font: 300 22px/1.3 var(--font-body); color: var(--ink); text-transform: none; letter-spacing: 0; }
+   the reader should be able to read it from across a desk. This is an explicit
+   primary-result choice, not a property of every empty sub-panel in Governance:
+   a 22px "Nothing to show" repeated through a dense review is neither useful
+   nor on the locked type scale. */
+.exec-gov .exec-state[data-status="empty"][data-prominent-empty="true"] { padding: 48px 20px; text-align: center; align-items: center; }
+.exec-gov .exec-state[data-status="empty"][data-prominent-empty="true"] .exec-state-title { font: 300 22px/1.3 var(--font-body); color: var(--ink); text-transform: none; letter-spacing: 0; }
 
 .exec-inbox-sort {
   font: var(--exec-font-meta);
@@ -4733,7 +4734,16 @@
 /* Blocker codes and panel ids are tokens; in a 340px rail they wrap anywhere rather than clip. */
 .exec-context-rail, .exec-source-tile, .exec-cert dt, .exec-canary dt, .exec-live dt, .exec-state { overflow-wrap: anywhere; }
 .exec-guard-pair { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
-@media (min-width: 1600px) { .exec-guard-pair { grid-template-columns: 1fr 1fr; } }
+.exec-guard-pair > * { min-width: 0; }
+/* The lab's wide comparison gives Canary and Live one column each at 1600px+
+   so their guards can be compared. Their nested two-column operational panels
+   still need a usable reading measure; collapse those inner grids rather than
+   letting labels and policy copy paint past their cells. Product routes keep
+   their normal multi-column layouts. */
+@media (min-width: 1600px) {
+  .exec-guard-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .exec-guard-pair .exec-pf2-grid[data-ratio] { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* ── EL-V2-07 · operations workflow ─────────────────────────────────── */
 .exec-cc-rows { display: flex; flex-direction: column; gap: 4px; }
@@ -6318,7 +6328,7 @@
    cells 8px/12px with a 10px label, lineage strip 7px/12px at 11px, and the
    panels 14px apart. ── */
 .exec-pw .exec-rail, .exec-px .exec-rail { gap: 0; border: 1px solid var(--line-soft); background: var(--paper-sunken); }
-.exec-pw .exec-rail-step, .exec-px .exec-rail-step { flex-direction: row; align-items: baseline; gap: 6px; padding: 5px 12px; background: transparent; font: 400 10px/14px var(--font-mono); flex: 0 0 auto; }
+.exec-pw .exec-rail-step, .exec-px .exec-rail-step { flex-direction: row; align-items: baseline; gap: 6px; padding: 5px 12px; background: transparent; font: 400 11px/14px var(--font-mono); flex: 0 0 auto; }
 .exec-pw .exec-rail-step[data-state="current"], .exec-px .exec-rail-step[data-state="current"] { box-shadow: none; border: 1px solid var(--accent); padding: 4px 11px; color: var(--ink); font-weight: 600; }
 .exec-pw .exec-rail-step[data-state="done"], .exec-px .exec-rail-step[data-state="done"] { color: var(--good); }
 .exec-pw .exec-rail-step[data-state="done"] .exec-rail-link, .exec-px .exec-rail-step[data-state="done"] .exec-rail-link { color: var(--good); }
@@ -6571,7 +6581,7 @@
 .exec-cli-head { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--paper); flex-wrap: wrap; }
 .exec-cli-headchip { font: 700 10px/1.6 var(--font-mono); letter-spacing: 0.08em; color: var(--bad); border: 1px solid var(--bad); padding: 1px 7px; }
 .exec-cli-headline { font: 400 11px/1.5 var(--font-mono); color: var(--ink-soft); }
-.exec-cli-wf { font: 400 9px/1.6 var(--font-mono); color: var(--ink-faint); border: 1px dashed var(--line-strong); padding: 1px 6px; }
+.exec-cli-wf { font: 400 11px/1.6 var(--font-mono); color: var(--ink-faint); border: 1px dashed var(--line-strong); padding: 1px 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .exec-cli-headgap, .exec-cli-footgap { flex: 1; }
 .exec-cli-stepup { font: 400 10px/1.5 var(--font-mono); color: var(--ink-mute); }
 .exec-cli-actor { font: 600 10px/1.6 var(--font-mono); padding: 2px 8px; border: 1px solid var(--line-strong); color: var(--ink-mute); }
@@ -6580,7 +6590,7 @@
 .exec-cli-opref { font: 400 11px/1.6 var(--font-mono); color: var(--ink-soft); border: 1px dashed var(--accent); padding: 7px 12px; margin: 10px 16px 0; }
 .exec-cli-body { display: flex; align-items: stretch; min-width: 0; min-height: 0; }
 .exec-cli-catalog { flex: 1; min-width: 0; max-width: 100%; padding: 14px 16px; box-sizing: border-box; }
-.exec-cli-hint { font: 400 10px/1.6 var(--font-mono); color: var(--ink-faint); margin: 0 0 10px; }
+.exec-cli-hint { font: 400 11px/1.6 var(--font-mono); color: var(--ink-faint); margin: 0 0 10px; overflow-wrap: anywhere; }
 .exec-cli-group { min-width: 0; max-width: 100%; margin-bottom: 14px; }
 .exec-cli-groupname { font: 400 10px/1.6 var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-mute); padding-bottom: 5px; border-bottom: 1px solid var(--line); margin: 0 0 4px; }
 .exec-cli-row { display: block; width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; text-align: left; padding: 7px 10px; border: 1px solid var(--line-soft); border-left: 3px solid transparent; background: var(--paper); margin-bottom: 3px; cursor: pointer; color: inherit; }
@@ -6709,8 +6719,10 @@
 }
 
 @media (max-width: 640px) {
+  .exec-cli,
   .exec-cli-head,
   .exec-cli-catalog,
+  .exec-cli-activation,
   .exec-cli-drawhead,
   .exec-cli-drawbody,
   .exec-cli-foot {

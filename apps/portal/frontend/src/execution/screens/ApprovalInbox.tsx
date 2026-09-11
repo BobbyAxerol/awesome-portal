@@ -423,6 +423,7 @@ export function ApprovalInbox({
           rowEmphasis={rowEmphasis}
           neverVirtualize
           emptyTitle={status === "ok" && page.rows.length === 0 ? emptyScopeTitle(page.readTruth) : undefined}
+          prominentEmpty
           overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
           status={status}
           reason={
