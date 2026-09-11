@@ -22,6 +22,7 @@ import { useState, type ReactNode } from "react";
 import { CapGauges, HistogramChart, OrderTypeMatrix, PositionsTable, SparkTile } from "../components/visuals";
 import type { StageVisuals } from "../stage.types";
 import { ExecutionSurface } from "../ExecutionSurface";
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { AuthorityWord } from "../components/badges";
 import { SourceTile } from "../components/stageWorkbench";
@@ -41,7 +42,6 @@ import {
   type RailBlocker,
 } from "../components/workspace";
 import type { PanelStatus } from "../contracts";
-import { absenceReason } from "../components/recordProducer";
 import {
   certificationBlocked,
   type CertificationStep,
@@ -211,7 +211,7 @@ export function SandboxCertificationScreen({
   if (status !== "ok" && status !== "partial") {
     return (
       <ExecutionSurface kind="deployments" className="exec-cert">
-        <PanelState status={status} reason={absenceReason(reason, "sandbox-certification")} />
+        <EmptyRecordFrame screen="sandbox-certification" status={status} reason={reason} />
       </ExecutionSurface>
     );
   }

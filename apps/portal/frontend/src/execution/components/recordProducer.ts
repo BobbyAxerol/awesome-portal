@@ -49,6 +49,19 @@ export const RECORD_PRODUCERS = {
     kind: "OPERATOR",
     sentence: "A canary envelope is created by an operator before a canary starts. None has been created for this deployment yet.",
   },
+  /*
+   * Traced 2026-09-11, not guessed: `POST /governance/approvals`
+   * (governance.controller.ts) reaches `INSERT INTO
+   * governance_approval_requests` (governance.repository.ts:569), and the
+   * frontend reaches that route from `/governance/approvals/new`, linked off
+   * the Approval Inbox as "New request". So an approval is operator-created
+   * and the screen can name where. R1, R2 and Live are gates ON that request,
+   * not separate records — one absent request empties all three screens.
+   */
+  "governance-approval": {
+    kind: "OPERATOR",
+    sentence: "An approval request is opened by an operator from the Approval Inbox, and the R1, R2 and Live gates are stages of that one request. None is open at this reference.",
+  },
   "paper-exit-review": {
     kind: "UNBUILT",
     sentence: "No exit review can exist yet: Portal reads this record, but nothing in the platform writes one, so a Paper-exit decision cannot be started here.",

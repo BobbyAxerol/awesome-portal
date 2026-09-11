@@ -22,6 +22,7 @@ import {
 } from "../components/conditions";
 import { ExecutionDecisionBar } from "../components/decisionBar";
 
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 
 export interface PassportEntry {
@@ -152,7 +153,7 @@ export function GateR1Review({
     return (
       <section className="exec-gate exec-gov" aria-label={`Gate R1 review ${approvalId}`} data-hifi-exact="gate-r1-1a">
         <div className="exec-gate-kicker">GATE R1 · Research Evidence Approval</div>
-        <PanelState status={status} reason={reason ?? "This review cannot be shown."} />
+        <EmptyRecordFrame screen="gate-r1" status={status} reason={reason ?? "This review cannot be shown."} />
       </section>
     );
   }

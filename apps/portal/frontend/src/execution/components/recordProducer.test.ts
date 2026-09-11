@@ -15,7 +15,7 @@ describe("what an absent record says about itself", () => {
   const kinds = Object.keys(RECORD_PRODUCERS) as RecordKind[];
 
   it("names a producer for every record kind a screen can be missing", () => {
-    expect(kinds).toEqual(["incident", "sandbox-certification", "canary-envelope", "paper-exit-review"]);
+    expect(kinds).toEqual(["incident", "sandbox-certification", "canary-envelope", "governance-approval", "paper-exit-review"]);
     for (const kind of kinds) {
       const sentence = producerSentence(kind);
       expect(sentence.length).toBeGreaterThan(30);

@@ -20,6 +20,7 @@ import {
   type TypedCondition,
 } from "../components/conditions";
 import { ExecutionDecisionBar } from "../components/decisionBar";
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { shortDigest } from "../components/workspace";
 import { REQUEST_CHANGES_DENIED_REASON, REQUEST_CHANGES_NOTE_REASON } from "./GateR1Review";
@@ -184,7 +185,7 @@ export function GateR2Review({
     return (
       <section className="exec-gate exec-gov" aria-label={`Gate R2 review ${approvalId}`} data-hifi-exact="gate-r2-1b">
         <div className="exec-gate-kicker">GATE R2 · Operational Readiness</div>
-        <PanelState status={status} reason={reason ?? "This review cannot be shown."} />
+        <EmptyRecordFrame screen="gate-r2" status={status} reason={reason ?? "This review cannot be shown."} />
       </section>
     );
   }

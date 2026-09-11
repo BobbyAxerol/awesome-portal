@@ -22,6 +22,7 @@ import type { LiveGateDemo } from "../governance.smoke";
 import type { BranchCapability, ProfileEnvelope } from "../api/profileRead";
 import { LinesChart } from "../components/marketChart";
 import { ExecutionDecisionBar } from "../components/decisionBar";
+import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import type { PanelStatus, Sla } from "../contracts";
 import { SlaCell } from "../components/evidence";
@@ -95,7 +96,8 @@ export function GateLiveReview({
   if (status !== "ok" && status !== "partial") {
     return (
       <section className="exec-gate exec-gov" aria-label={`Gate LIVE review ${approvalId}`}>
-        <PanelState status={status} reason={reason} />
+        <div className="exec-gate-kicker">GATE LIVE · Canary Evidence Approval</div>
+        <EmptyRecordFrame screen="gate-live" status={status} reason={reason} />
       </section>
     );
   }
