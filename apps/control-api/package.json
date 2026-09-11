@@ -10,7 +10,8 @@
     "migrate:up": "node dist/cli/migrate.js",
     "start": "node dist/main.js",
     "bootstrap": "node dist/cli/bootstrap.js",
-    "probe:d3-assertions": "node dist/cli/execution-d3-assertions.js"
+    "probe:d3-assertions": "node dist/cli/execution-d3-assertions.js",
+    "sweep:shared-read-cache": "node dist/cli/execution-shared-read-cache-sweep.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",

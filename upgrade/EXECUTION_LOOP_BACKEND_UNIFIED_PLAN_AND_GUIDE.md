@@ -5374,12 +5374,14 @@ operation, one real frozen-frontend vertical, complete negative/security
 matrix and immutable dev-image proof before widening to the remaining
 operations.
 
-## 18. BE-R2 operational closeout campaign — approved planning only (2026-09-11)
+## 18. BE-R2 operational closeout campaign — active named work (2026-09-11)
 
-**Status:** `PLANNED_OWNER_DECISIONS_LOCKED`. Bobby approved every decision in
-§18.1 on 2026-09-11. This section is a plan and handoff only: it authorizes no
-code, migration, cache deletion, feature-flag change, service restart, source
-call, command dispatch or deployment until Bobby names the individual phase.
+**Status:** `BE_R2_1_IMPLEMENTED_TESTED_AWAITING_STAGED_DEV_EVIDENCE`.
+Bobby approved every decision in §18.1 on 2026-09-11 and named **BE-R2-1**.
+Only that phase is active: its Portal-only implementation and isolated
+PostgreSQL test gate are complete; the explicitly approved dev dry-run/apply
+record remains the final operational exit item. BE-R2-2 through BE-R2-7 remain
+planning only and authorize no source call, command, restart or deployment.
 
 **Why this is a separate closeout sequence:** the EDS/N29 work established a
 safe current-data path, but a read-only audit found a finite set of operational
@@ -5499,6 +5501,39 @@ reclamation expectations are documented honestly.
 
 **Frontend handoff:** none required; Phase 9 may display cache/freshness only
 through existing operational diagnostics, never as a business status.
+
+**Implementation journal — 2026-09-11:**
+
+- The pre-existing `execution_shared_read_cache_expiry_idx` remains the only
+  required schema support; BE-R2-1 adds no migration and never widens table
+  authority.
+- `ExecutionSharedReadCacheMaintenanceWorker` is an opt-in, jittered
+  `setTimeout` lifecycle worker. `runSharedReadCacheSweep` defaults to
+  inventory-only dry-run and its `APPLY` path uses an expiry-indexed,
+  `FOR UPDATE SKIP LOCKED` row/byte/time-bounded batch. It reports the single
+  `N21_SHARED_READ` cache class, per-profile deletion totals, oldest sampled
+  expiry, physical table bytes and an explicit capacity alarm.
+- `execution-shared-read-cache-sweep` is a manual, dry-run-default CLI. It
+  touches only this recomputable Portal table; it has no Edge/Source Proxy,
+  Trading System, Redis, broker, browser, command, projection or migration
+  dependency.
+- Before a source leader is admitted, the existing shared admission repository
+  atomically reserves bounded active cache/flight capacity. It denies a new
+  miss before upstream I/O instead of evicting any fresh coalesced response.
+- Focused PostgreSQL tests cover dry-run, expired-only/profile-isolated drain,
+  fresh reader plus concurrent writer plus sweeper, expiry-index selection,
+  `SKIP LOCKED` concurrency, cancellation, time budget, capacity refusal and
+  shutdown. The full Control API gate passed: TypeScript build plus **490
+  tests / 57 files**. The N21 static gate also passed.
+- `compose.execution-current-source.yaml` is an EDS-12 immutable input. Its
+  changed SHA-256 and the EDS-12 contract manifest were re-pinned together;
+  static qualification plus all nine EDS-12 mutation cases pass. This is not a
+  deployment promotion or a change to command/source authority.
+- The operator procedure and honest ordinary-`VACUUM (ANALYZE)` expectation
+  are in
+  [`deploy/runbooks/execution-shared-read-cache-lifecycle.md`](../deploy/runbooks/execution-shared-read-cache-lifecycle.md).
+  The pending dev record must use the named dev namespace only; it must not
+  restart stable or alter a source profile.
 
 ### BE-R2-2 — D3 GET-only evidence and current-source truth ledger
 

@@ -48,11 +48,61 @@ export interface SharedReadCacheValue {
   expiresAt: string;
 }
 
+export interface SharedReadCacheProfileInventory {
+  profileId: string;
+  activeRows: number;
+  activeBytes: number;
+  expiredSampleRows: number;
+  expiredSampleBytes: number;
+  oldestExpiredAt: string | null;
+}
+
+/**
+ * A bounded, low-cost inventory. `expiredSample*` is intentionally a sample,
+ * not an unbounded aggregate over a potentially large historical cache. The
+ * sweeper's deletion totals are exact; when this sample is empty after a
+ * drain, no expired row remains at that instant.
+ */
+export interface SharedReadCacheInventory {
+  capturedAt: string;
+  activeRows: number;
+  activeBytes: number;
+  expiredSampleRows: number;
+  expiredSampleBytes: number;
+  expiredSampleHasMore: boolean;
+  oldestExpiredAt: string | null;
+  physicalBytes: number;
+  maximumRows: number;
+  maximumBytes: number;
+  capacityState: "WITHIN_LIMIT" | "AT_CAPACITY" | "OVER_CAPACITY";
+  profiles: SharedReadCacheProfileInventory[];
+}
+
+export interface SharedReadCacheSweepProfile {
+  profileId: string;
+  deletedRows: number;
+  deletedBytes: number;
+  oldestExpiredAt: string | null;
+}
+
+export interface SharedReadCacheSweepBatch {
+  deletedRows: number;
+  deletedBytes: number;
+  profiles: SharedReadCacheSweepProfile[];
+}
+
 export type SharedReadAdmission =
   | { kind: "CACHE_HIT"; cacheKey: string; value: SharedReadCacheValue }
   | { kind: "FOLLOWER"; cacheKey: string }
   | { kind: "LEADER"; cacheKey: string; leaderId: string; leaseId: string; waitMs: number }
-  | { kind: "DENIED"; cacheKey: string; reasonCode: "N21_SHARED_CONCURRENCY_EXHAUSTED" | "N21_SHARED_RATE_BUDGET_EXHAUSTED" };
+  | {
+    kind: "DENIED";
+    cacheKey: string;
+    reasonCode:
+      | "N21_SHARED_CONCURRENCY_EXHAUSTED"
+      | "N21_SHARED_RATE_BUDGET_EXHAUSTED"
+      | "N21_SHARED_CACHE_CAPACITY_EXHAUSTED";
+  };
 
 interface CacheRow {
   response_body: unknown;
@@ -96,6 +146,14 @@ export class ExecutionSharedReadRepository {
         await client.query("COMMIT");
         return { kind: "CACHE_HIT", cacheKey: identity.cacheKey, value: cached };
       }
+      // Cache capacity is a Portal-local invariant, shared by replicas. A
+      // transaction advisory lock keeps the brief flight reservation atomic;
+      // it never wraps upstream I/O.  We reserve the largest allowed response
+      // for every active flight, so a leader can always publish a row for its
+      // coalesced followers instead of fetching truth then failing to cache it.
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtext('portal.execution_shared_read_cache.capacity.v1'))",
+      );
       const flight = await client.query<{ leader_id: string }>(
         `INSERT INTO execution_shared_read_flights
            (cache_key, source_id, profile_id, workspace_id, principal_digest,
@@ -119,6 +177,18 @@ export class ExecutionSharedReadRepository {
       if (flight.rows.length === 0 || flight.rows[0].leader_id !== leaderId) {
         await client.query("COMMIT");
         return { kind: "FOLLOWER", cacheKey: identity.cacheKey };
+      }
+      if (!(await this.hasCacheCapacityReservation(client))) {
+        await client.query(
+          "DELETE FROM execution_shared_read_flights WHERE cache_key=$1 AND leader_id=$2",
+          [identity.cacheKey, leaderId],
+        );
+        await client.query("COMMIT");
+        return {
+          kind: "DENIED",
+          cacheKey: identity.cacheKey,
+          reasonCode: "N21_SHARED_CACHE_CAPACITY_EXHAUSTED",
+        };
       }
       const admission = await this.acquireQuota(client, scope, leaseId, leaderId);
       if (admission.kind === "DENIED") {
@@ -231,6 +301,161 @@ export class ExecutionSharedReadRepository {
     );
   }
 
+  /**
+   * Delete one lock-friendly batch of expired cache rows. The CTE takes rows
+   * through the existing expiry index, locks only that small candidate set and
+   * never sees or modifies a fresh entry. An oversized single cached response
+   * is still allowed to make forward progress by itself.
+   */
+  async sweepExpiredBatch(maximumRows: number, maximumBytes: number): Promise<SharedReadCacheSweepBatch> {
+    validateSweepBudget(maximumRows, maximumBytes);
+    const result = await this.pool.query<{
+      profile_id: string;
+      deleted_rows: number;
+      deleted_bytes: string;
+      oldest_expired_at: Date | null;
+    }>(
+      `WITH reference AS MATERIALIZED (
+         SELECT clock_timestamp() AS now
+       ), candidates AS MATERIALIZED (
+         SELECT cache_key,profile_id,response_bytes,expires_at
+         FROM execution_shared_read_cache AS cache
+         CROSS JOIN reference
+         WHERE cache.expires_at <= reference.now
+         ORDER BY cache.expires_at ASC,cache.cache_key ASC
+         LIMIT $1
+         FOR UPDATE SKIP LOCKED
+       ), budgeted AS (
+         SELECT *,sum(response_bytes) OVER (ORDER BY expires_at ASC,cache_key ASC) AS cumulative_bytes
+         FROM candidates
+       ), deleted AS (
+         DELETE FROM execution_shared_read_cache AS cache
+         USING budgeted
+         WHERE cache.cache_key=budgeted.cache_key
+           AND (budgeted.cumulative_bytes <= $2::bigint
+                OR budgeted.cumulative_bytes=budgeted.response_bytes)
+         RETURNING budgeted.profile_id,budgeted.response_bytes,budgeted.expires_at
+       )
+       SELECT profile_id,
+              count(*)::integer AS deleted_rows,
+              coalesce(sum(response_bytes),0)::bigint AS deleted_bytes,
+              min(expires_at) AS oldest_expired_at
+       FROM deleted
+       GROUP BY profile_id
+       ORDER BY profile_id ASC`,
+      [maximumRows, maximumBytes],
+    );
+    const profiles = result.rows.map((row) => ({
+      profileId: row.profile_id,
+      deletedRows: row.deleted_rows,
+      deletedBytes: safeCount(row.deleted_bytes, "shared-read cache deleted bytes"),
+      oldestExpiredAt: row.oldest_expired_at?.toISOString() ?? null,
+    }));
+    return {
+      deletedRows: profiles.reduce((total, item) => total + item.deletedRows, 0),
+      deletedBytes: profiles.reduce((total, item) => total + item.deletedBytes, 0),
+      profiles,
+    };
+  }
+
+  /**
+   * The normal lifecycle path must remain O(active rows + one expiry-index
+   * page), even if an older deployment left a large expired physical table.
+   * `physicalBytes` is deliberately reported separately: ordinary VACUUM
+   * makes space reusable but does not promise immediate volume shrinkage.
+   */
+  async inventory(expiredSampleLimit: number): Promise<SharedReadCacheInventory> {
+    if (!Number.isInteger(expiredSampleLimit) || expiredSampleLimit < 1 || expiredSampleLimit > 1_000) {
+      throw new Error("shared-read cache inventory sample limit is invalid");
+    }
+    const [active, expired, physical] = await Promise.all([
+      this.pool.query<{
+        profile_id: string;
+        active_rows: number;
+        active_bytes: string;
+      }>(
+        `WITH reference AS (SELECT clock_timestamp() AS now)
+         SELECT profile_id,count(*)::integer AS active_rows,
+                coalesce(sum(response_bytes),0)::bigint AS active_bytes
+         FROM execution_shared_read_cache AS cache
+         CROSS JOIN reference
+         WHERE cache.expires_at > reference.now
+         GROUP BY profile_id
+         ORDER BY profile_id ASC`,
+      ),
+      this.pool.query<{
+        profile_id: string;
+        response_bytes: number;
+        expires_at: Date;
+      }>(
+        `WITH reference AS (SELECT clock_timestamp() AS now)
+         SELECT profile_id,response_bytes,expires_at
+         FROM execution_shared_read_cache AS cache
+         CROSS JOIN reference
+         WHERE cache.expires_at <= reference.now
+         ORDER BY cache.expires_at ASC,cache.cache_key ASC
+         LIMIT $1`,
+        [expiredSampleLimit + 1],
+      ),
+      this.pool.query<{ captured_at: Date; physical_bytes: string }>(
+        `SELECT clock_timestamp() AS captured_at,
+                pg_total_relation_size('execution_shared_read_cache')::bigint AS physical_bytes`,
+      ),
+    ]);
+    const profiles = new Map<string, SharedReadCacheProfileInventory>();
+    for (const row of active.rows) {
+      profiles.set(row.profile_id, {
+        profileId: row.profile_id,
+        activeRows: row.active_rows,
+        activeBytes: safeCount(row.active_bytes, "shared-read cache active bytes"),
+        expiredSampleRows: 0,
+        expiredSampleBytes: 0,
+        oldestExpiredAt: null,
+      });
+    }
+    const expiredSampleHasMore = expired.rows.length > expiredSampleLimit;
+    for (const row of expired.rows.slice(0, expiredSampleLimit)) {
+      const metric = profiles.get(row.profile_id) ?? {
+        profileId: row.profile_id,
+        activeRows: 0,
+        activeBytes: 0,
+        expiredSampleRows: 0,
+        expiredSampleBytes: 0,
+        oldestExpiredAt: null,
+      };
+      metric.expiredSampleRows += 1;
+      metric.expiredSampleBytes += row.response_bytes;
+      metric.oldestExpiredAt ??= row.expires_at.toISOString();
+      profiles.set(row.profile_id, metric);
+    }
+    const profileRows = [...profiles.values()].sort((left, right) => left.profileId.localeCompare(right.profileId));
+    const activeRows = profileRows.reduce((total, item) => total + item.activeRows, 0);
+    const activeBytes = profileRows.reduce((total, item) => total + item.activeBytes, 0);
+    const physicalRow = physical.rows[0];
+    const physicalBytes = safeCount(physicalRow?.physical_bytes ?? "0", "shared-read cache physical bytes");
+    const capacityState = activeRows > this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS ||
+      activeBytes > this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES
+      ? "OVER_CAPACITY"
+      : activeRows === this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS ||
+          activeBytes === this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES
+        ? "AT_CAPACITY"
+        : "WITHIN_LIMIT";
+    return {
+      capturedAt: physicalRow?.captured_at.toISOString() ?? new Date().toISOString(),
+      activeRows,
+      activeBytes,
+      expiredSampleRows: profileRows.reduce((total, item) => total + item.expiredSampleRows, 0),
+      expiredSampleBytes: profileRows.reduce((total, item) => total + item.expiredSampleBytes, 0),
+      expiredSampleHasMore,
+      oldestExpiredAt: expired.rows[0]?.expires_at.toISOString() ?? null,
+      physicalBytes,
+      maximumRows: this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS,
+      maximumBytes: this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES,
+      capacityState,
+      profiles: profileRows,
+    };
+  }
+
   private async acquireQuota(
     client: PoolClient,
     scope: SharedReadScope,
@@ -306,6 +531,43 @@ export class ExecutionSharedReadRepository {
         this.config.EXECUTION_EDGE_CURRENT_SOURCE_LEASE_TTL_MS],
     );
     return { kind: "ACCEPTED", waitMs };
+  }
+
+  /**
+   * `begin()` holds the short advisory lock while calling this method. Each
+   * active flight reserves the maximum allowed source response, preventing a
+   * cache-cap configuration from breaking leader/follower coalescing later.
+   */
+  private async hasCacheCapacityReservation(client: PoolClient): Promise<boolean> {
+    const result = await client.query<{
+      reserved_rows: string;
+      reserved_bytes: string;
+    }>(
+      `WITH reference AS (SELECT clock_timestamp() AS now),
+         active_cache AS (
+           SELECT count(*)::bigint AS row_count,
+                  coalesce(sum(response_bytes),0)::bigint AS byte_count
+           FROM execution_shared_read_cache AS cache
+           CROSS JOIN reference
+           WHERE cache.expires_at > reference.now
+         ), active_flights AS (
+           SELECT count(*)::bigint AS row_count
+           FROM execution_shared_read_flights AS flight
+           CROSS JOIN reference
+           WHERE flight.expires_at > reference.now
+         )
+       SELECT (active_cache.row_count + active_flights.row_count)::bigint AS reserved_rows,
+              (active_cache.byte_count +
+               active_flights.row_count * $1::bigint)::bigint AS reserved_bytes
+       FROM active_cache CROSS JOIN active_flights`,
+      [this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES],
+    );
+    const row = result.rows[0];
+    if (!row) throw new Error("N21 shared-read cache capacity reservation missing");
+    return safeCount(row.reserved_rows, "shared-read cache reserved rows") <=
+      this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS &&
+      safeCount(row.reserved_bytes, "shared-read cache reserved bytes") <=
+      this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES;
   }
 
   private async cache(
@@ -400,4 +662,17 @@ async function rollback(client: PoolClient): Promise<void> {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function validateSweepBudget(maximumRows: number, maximumBytes: number): void {
+  if (!Number.isInteger(maximumRows) || maximumRows < 1 || maximumRows > 1_000 ||
+    !Number.isSafeInteger(maximumBytes) || maximumBytes < 64 * 1024 || maximumBytes > 64 * 1024 * 1024) {
+    throw new Error("shared-read cache sweep budget is invalid");
+  }
+}
+
+function safeCount(value: string | number, label: string): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) throw new Error(`${label} is outside safe integer range`);
+  return parsed;
 }

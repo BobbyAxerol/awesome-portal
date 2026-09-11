@@ -1856,11 +1856,21 @@ durable run/attempt events. Detailed evidence:
   stale manifest cannot qualify it for promotion. Its dependent N29 BR-EX-72
   source-boundary evidence is re-pinned in the same commit.
 
-## Backend state — 2026-09-11 (BE-R2 planning only)
+## Backend state — 2026-09-11 (BE-R2-1 implemented; dev evidence pending)
 
-- The finite BE-R2 operational closeout campaign is planned, not implemented.
-  It is deliberately split into cache lifecycle, GET-only D3 evidence,
-  current-screen BFF/derived exact query, Paper-first Market Context,
+- **BE-R2-1** now has an opt-in Portal-only lifecycle worker and a dry-run
+  default manual CLI for the recomputable `execution_shared_read_cache` table.
+  It uses the existing expiry index, lock-friendly bounded deletes, per-profile
+  inventory/deletion facts, a row/byte reservation ceiling and a kill switch;
+  it has no source/command/projection/Trading-System dependency. Full Control
+  API PostgreSQL tests are green. The named dev dry-run/apply evidence is the
+  remaining closeout action; use the cache lifecycle runbook, never a raw SQL
+  shortcut or `VACUUM FULL`.
+- The BE-R2 compose change re-pins the EDS-12 static qualification digest and
+  package manifest; it does not claim or alter a deployed protected-main
+  release.
+- BE-R2-2 through BE-R2-7 remain planned. They are deliberately split into
+  GET-only D3 evidence, current-screen BFF/derived exact query, Paper-first Market Context,
   realtime/pacing, governance/V1/idempotency, and immutable release evidence.
 - Bobby locked six guardrails: staged expired-cache deletion only; D3 remains
   GET-only; Market Context qualifies Paper first; no direct
@@ -1871,5 +1881,5 @@ durable run/attempt events. Detailed evidence:
   work. Any unresolved source fact remains one named
   `SOURCE_GAP_CONFIRMED`, never a direct-data workaround.
 
-See [Execution Loop unified plan §18](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--approved-planning-only-2026-09-11)
+See [Execution Loop unified plan §18](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--active-named-work-2026-09-11)
 for phase exits, tests, rollback and the frontend handoff.

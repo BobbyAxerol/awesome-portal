@@ -219,6 +219,25 @@ const EnvSchema = z.object({
   EXECUTION_EDGE_CURRENT_SOURCE_CACHE_TTL_MS: z.coerce.number().int().min(50).max(5_000).default(750),
   EXECUTION_EDGE_CURRENT_SOURCE_COALESCE_WAIT_MS: z.coerce.number().int().min(10).max(5_000).default(750),
   EXECUTION_EDGE_CURRENT_SOURCE_LEASE_TTL_MS: z.coerce.number().int().min(500).max(35_000).default(7_000),
+  // BE-R2-1: lifecycle is deliberately independent from source activation.
+  // A disabled source can still have expired, recomputable cache rows from an
+  // earlier accepted read window; a Portal-owned worker may remove only those
+  // rows.  It is off and dry-run by default so a deployment has an explicit
+  // kill switch and cannot silently turn a cache cleanup into a release side
+  // effect.
+  FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER: z.enum(["true", "false"]).default("false"),
+  EXECUTION_SHARED_READ_CACHE_SWEEPER_DRY_RUN: z.enum(["true", "false"]).default("true"),
+  EXECUTION_SHARED_READ_CACHE_SWEEPER_INTERVAL_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(60_000),
+  EXECUTION_SHARED_READ_CACHE_SWEEPER_STARTUP_JITTER_MS: z.coerce.number().int().min(0).max(60_000).default(5_000),
+  EXECUTION_SHARED_READ_CACHE_SWEEPER_MAX_RUNTIME_MS: z.coerce.number().int().min(50).max(30_000).default(2_000),
+  EXECUTION_SHARED_READ_CACHE_SWEEPER_BATCH_ROWS: z.coerce.number().int().min(1).max(1_000).default(128),
+  EXECUTION_SHARED_READ_CACHE_SWEEPER_BATCH_BYTES: z.coerce.number().int().min(64 * 1024).max(64 * 1024 * 1024).default(8 * 1024 * 1024),
+  // This is a reservation ceiling over active cache rows plus active source
+  // flights.  It never evicts a fresh value (which would break coalesced
+  // callers); instead a new miss is denied before it can create an
+  // uncacheable flight.  Expired rows are handled only by the worker below.
+  EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS: z.coerce.number().int().min(128).max(500_000).default(20_000),
+  EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES: z.coerce.number().int().min(8 * 1024 * 1024).max(1024 * 1024 * 1024).default(256 * 1024 * 1024),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 
@@ -325,6 +344,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(
       "FEATURE_EXECUTION_EDGE=true requires EXECUTION_EDGE_PRIVATE_KEY_FILE",
+    );
+  }
+  if (config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES < config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES) {
+    throw new Error(
+      "EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES must cover one bounded current-source response",
     );
   }
   if (config.FEATURE_EXECUTION_COMMAND_RELAY === "true") {

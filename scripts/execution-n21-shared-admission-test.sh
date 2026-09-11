@@ -11,11 +11,15 @@ import sys
 root = pathlib.Path(sys.argv[1])
 control_migration = (root / "apps/control-api/migrations/1723680000014_execution-shared-admission.sql").read_text()
 control_repo = (root / "apps/control-api/src/execution/shared-read.repository.ts").read_text()
+control_maintenance = (root / "apps/control-api/src/execution/shared-read-cache-maintenance.ts").read_text()
+control_cli = (root / "apps/control-api/src/cli/execution-shared-read-cache-sweep.ts").read_text()
+control_config = (root / "apps/control-api/src/config.ts").read_text()
 control_proxy = (root / "apps/control-api/src/execution/current-source.proxy.ts").read_text()
 edge_migration = (root / "services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0011_shared_source_admission.sql").read_text()
 edge_store = (root / "services/portal-execution-edge-rs/crates/projection-store-pg/src/source_admission.rs").read_text()
 edge_service = (root / "services/portal-execution-edge-rs/crates/edge-service/src/main.rs").read_text()
 compose = (root / "deploy/compose.execution-edge.yaml").read_text()
+current_source_compose = (root / "deploy/compose.execution-current-source.yaml").read_text()
 control_test = (root / "scripts/control-api-test.sh").read_text()
 edge_test = (root / "scripts/execution-edge-test.sh").read_text()
 
@@ -40,6 +44,7 @@ for token in [
 for token in [
     "CACHE_HIT", "FOLLOWER", "LEADER", "DENIED",
     "N21_SHARED_CONCURRENCY_EXHAUSTED", "N21_SHARED_RATE_BUDGET_EXHAUSTED",
+    "N21_SHARED_CACHE_CAPACITY_EXHAUSTED",
     "sourceMetadata", "etag", "workspaceId", "principalId", "principalRole",
 ]:
     assert token in control_repo, token
@@ -56,10 +61,33 @@ assert ".execute(request)" in edge_service
 assert "tokio::time::sleep(lease.wait)" in edge_service
 assert "EDGE_MANAGER_SHARED_ADMISSION_MAXIMUM_RPS:-8" in compose
 assert "EDGE_MANAGER_SHARED_CACHE_TTL_MS:-750" in compose
+for token in [
+    "FEATURE_EXECUTION_SHARED_READ_CACHE_SWEEPER",
+    "EXECUTION_SHARED_READ_CACHE_SWEEPER_DRY_RUN",
+    "EXECUTION_SHARED_READ_CACHE_SWEEPER_BATCH_ROWS",
+    "EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES",
+]:
+    assert token in control_config and token in current_source_compose, token
+for token in [
+    "FOR UPDATE SKIP LOCKED",
+    "expires_at <= reference.now",
+    "pg_advisory_xact_lock",
+    "N21_SHARED_CACHE_CAPACITY_EXHAUSTED",
+]:
+    assert token in control_repo, token
+for token in [
+    "runSharedReadCacheSweep",
+    "TIME_BUDGET",
+    "CANCELLED",
+    "execution_shared_read_cache_sweep",
+    "N21_SHARED_CACHE_CAPACITY_ALARM",
+]:
+    assert token in control_maintenance, token
+assert "--apply" in control_cli and "--dry-run" in control_cli
 assert "maximum_page_rows\": 200" in (root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json").read_text()
 assert "maximum_response_bytes\": 1048576" in (root / "services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/adapter-matrix.v1.json").read_text()
 
-for forbidden in ["redis", "automatic retry", "setTimeout(() => this.request", "setInterval(() => this.request"]:
+for forbidden in ["redis", "automatic retry", "setTimeout(() => this.request", "setInterval(() => this.request", "VACUUM FULL"]:
     assert forbidden.lower() not in control_repo.lower(), forbidden
 PY
 

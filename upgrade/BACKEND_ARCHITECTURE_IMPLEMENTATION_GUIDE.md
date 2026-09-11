@@ -2016,11 +2016,14 @@ activation or the phase):**
   discrepancies (compose.production, publish-images, deploy.yml
   environments) are binding review items before BAR-17 starts.
 
-### 14.1.1 BE-R2 operational closeout planning (2026-09-11)
+### 14.1.1 BE-R2 operational closeout — BE-R2-1 implemented (2026-09-11)
 
 The current-source audit is now translated into the finite **BE-R2** campaign
-in [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §18](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--approved-planning-only-2026-09-11).
-It is planning-only until Bobby starts a named phase. The locked scope is:
+in [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §18](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--active-named-work-2026-09-11).
+Bobby started BE-R2-1. Its source is implemented and test-accepted; the
+dev-only dry-run/apply evidence is deliberately still required before that
+phase is operationally closed. The remaining phases are planning-only. The
+locked scope is:
 
 - bounded staged cleanup of expired `execution_shared_read_cache` rows, never
   `VACUUM FULL` or business/projection/source deletion;
@@ -2036,4 +2039,4 @@ It is planning-only until Bobby starts a named phase. The locked scope is:
 not a Portal source. Portal retains the server-side Manager-v2 contract path;
 there is no direct database, Redis, broker, Source Proxy upstream or browser
 connection. The full phase-to-frontend handoff is in
-[`apps/portal/registry/FRONTEND_HANDOFF.md` §8.56](../apps/portal/registry/FRONTEND_HANDOFF.md#856-be-r2-frontend-coordination--planning-only-2026-09-11).
+[`apps/portal/registry/FRONTEND_HANDOFF.md` §8.56](../apps/portal/registry/FRONTEND_HANDOFF.md#856-be-r2-frontend-coordination--be-r2-1-implementation-received-2026-09-11).

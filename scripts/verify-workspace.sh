@@ -523,6 +523,10 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_24_N21_SHARED_ADMISSION_CACHE_FRESHNESS.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N21_SHARED_ADMISSION_HANDOFF.md" \
+  "${ROOT_DIR}/apps/control-api/src/execution/shared-read-cache-maintenance.ts" \
+  "${ROOT_DIR}/apps/control-api/src/cli/execution-shared-read-cache-sweep.ts" \
+  "${ROOT_DIR}/apps/control-api/test/execution-shared-read-cache-maintenance.spec.ts" \
+  "${ROOT_DIR}/deploy/runbooks/execution-shared-read-cache-lifecycle.md" \
   "${ROOT_DIR}/scripts/execution-n22-full-paper-read-test.sh" \
   "${ROOT_DIR}/scripts/portal-full-paper-read-release.py" \
   "${ROOT_DIR}/scripts/test_portal_full_paper_read_release.py" \

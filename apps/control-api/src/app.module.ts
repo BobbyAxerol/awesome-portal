@@ -40,6 +40,7 @@ import { MaximumDataOperationService } from "./execution/maximum-data-operation.
 import { Portfolio360LocalService } from "./execution/portfolio360-local.service";
 import { MaximumDataContinuationRepository } from "./execution/maximum-data-continuation.repository";
 import { ExecutionSharedReadRepository } from "./execution/shared-read.repository";
+import { ExecutionSharedReadCacheMaintenanceWorker } from "./execution/shared-read-cache-maintenance";
 import { ExecutionProfileProjectionRepository } from "./execution/profile-projection.repository";
 import { ExecutionDurableMirrorRepository } from "./execution/durable-mirror.repository";
 import { ExecutionDurableFinancialRepository } from "./execution/durable-financial.repository";
@@ -191,6 +192,7 @@ export class AppModule {
         PortalDerivationsService,
         OperationalCompositionService,
         ExecutionSharedReadRepository,
+        ExecutionSharedReadCacheMaintenanceWorker,
         MarketContextService,
         ExecutionRuntimeManifestService,
         ExecutionContractAuthorityService,

@@ -2224,13 +2224,15 @@ not Product GO.  After an immutable protected-main release, Codex will hand
 over the exact BFF evidence shape for the final per-profile browser matrix;
 until then no frontend release assertion should claim `PRODUCT_ACTIVE`.
 
-### 8.56 BE-R2 frontend coordination — planning only (2026-09-11)
+### 8.56 BE-R2 frontend coordination — BE-R2-1 implementation received (2026-09-11)
 
 The owner has locked a finite backend closeout plan in
-[`upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §18](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--approved-planning-only-2026-09-11).
-It does **not** authorize a frontend feature implementation by itself. Its
-purpose is to prevent UI/backend drift while individual named slices are later
-started.
+[`upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §18](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--active-named-work-2026-09-11).
+BE-R2-1 is now implemented and has no browser DTO, route, visual or runtime
+contract change: it only bounds the Portal-owned recomputable shared-read
+cache. The approved rich hierarchy remains untouched in every state. The
+remaining BE-R2 phases still require their own named backend handoff before
+frontend implementation starts.
 
 Frontend ownership is limited to the following prepared work:
 
