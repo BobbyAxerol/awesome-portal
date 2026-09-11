@@ -34,6 +34,7 @@ import { formatAge } from "../components/badges";
 import { ExecutionWorkspace } from "../components/workspace";
 import { usePresentationChrome } from "../../app/presentation";
 import type { PanelStatus } from "../contracts";
+import { emptyScopeLine } from "../readTruthCopy";
 import type { OperationsQueue, QueueRow, TriageState } from "../operations";
 import { fmtAge, throughputSeries } from "../clock";
 import type { DetailPart, QueueDemo, QueueSmokeRow } from "../operationsQueue.smoke";
@@ -415,7 +416,7 @@ export function OperationsQueueScreen({
                         {smokeRows.map((item) => <SmokeRow key={item.row.operationId} item={item} elapsed={elapsed} sub={sub} onOpen={onOpen} selected={item.row.operationId === selectedId} />)}
                         {rows.map((row) => <ContractRow key={row.operationId} row={row} now={at} onOpen={onOpen} selected={row.operationId === selectedId} arrived={arrivals.has(row.operationId)} />)}
                         {rows.length === 0 ? (
-                          <tr className="exec-oq-emptyrow"><td colSpan={7}>{smokeRows.length > 0 ? "published rows: none — " : ""}No operations match this view. The queue is empty, which is different from a queue that could not be read.</td></tr>
+                          <tr className="exec-oq-emptyrow"><td colSpan={7}>{smokeRows.length > 0 ? "published rows: none — " : ""}{emptyScopeLine(page?.readTruth, "this view", null, "operation")}</td></tr>
                         ) : null}
                       </tbody>
                     </table>

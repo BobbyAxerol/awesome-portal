@@ -25,7 +25,7 @@
  * anywhere: a screen that folded these into one "status" column would let
  * `RESOLVED` sit over a `FAILED` source and read as success.
  */
-import type { Authority, FreshnessState, PanelStatus } from "./contracts";
+import type { Authority, FreshnessState, PanelStatus, ReadTruth } from "./contracts";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -115,6 +115,11 @@ export interface QueueRow {
 
 export interface QueuePage {
   rows: readonly QueueRow[];
+  /**
+   * §8.59: the server's own answer for this exact request scope. The screen
+   * never decides emptiness by counting its own rows.
+   */
+  readTruth?: ReadTruth | null;
   /** Server-counted, both of them. The browser never counts its own rows. */
   totalCount: number | null;
   filteredCount: number | null;
@@ -180,6 +185,7 @@ export function readOperationsQueue(raw: unknown): OperationsQueue | null {
       prevCursor: str(page.prev_cursor),
       hasMore: page.has_more === true,
       hasPrevious: page.has_previous === true,
+      readTruth: readReadTruth(root.read_truth),
       appliedSort: (Array.isArray(page.applied_sort) ? page.applied_sort : []).flatMap((s) => {
         const entry = obj(s);
         const field = str(entry?.field);
@@ -534,4 +540,21 @@ export function blockerText(code: string): string {
   // can read is still a blocker, and hiding it would make the button look
   // arbitrarily disabled.
   return INCIDENT_BLOCKER_TEXT[code] ?? code;
+}
+
+/**
+ * §8.59's `read_truth`, fail-closed: anything that is not the published shape
+ * reads as `null`, because a field the browser could not understand must not be
+ * able to tell a screen that there is nothing there.
+ */
+function readReadTruth(raw: unknown): ReadTruth | null {
+  const o = obj(raw);
+  if (!o) return null;
+  if (o.state !== "AVAILABLE" && o.state !== "EMPTY") return null;
+  if (o.scope !== "REQUEST") return null;
+  return {
+    state: o.state,
+    reasonCode: typeof o.reason_code === "string" && o.reason_code.length > 0 ? o.reason_code : null,
+    scope: "REQUEST",
+  };
 }

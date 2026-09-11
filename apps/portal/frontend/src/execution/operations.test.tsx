@@ -85,11 +85,41 @@ describe("#1 — initial, empty, filtered and exact-count states", () => {
     expect(screen.getByText(/12 in this view · 4180 total/)).toBeTruthy();
   });
 
-  it("says empty is empty, not unreadable", () => {
+  /*
+   * §8.59 replaced the sentence this used to assert. The old copy said "the
+   * queue is empty" — a claim about the whole queue, made from a page the
+   * server had chosen by an opaque cursor. The server now answers the question
+   * itself and answers it scoped, so the screen repeats the server's scope
+   * instead of widening it.
+   */
+  it("says empty for this request scope, and says it is the scope", () => {
     const raw = JSON.parse(JSON.stringify(OPERATIONS_QUEUE_FIXTURE));
     raw.page.rows = [];
+    raw.read_truth = { state: "EMPTY", reason_code: "NO_MATCHING_PORTAL_OPERATION_RECORDS", scope: "REQUEST" };
     render(<OperationsQueueScreen onOpen={() => undefined} queue={readOperationsQueue(raw)!} now={NOW} />);
-    expect(screen.getByText(/queue is empty, which is different/)).toBeTruthy();
+    expect(screen.getByText(/No operation matches this view/)).toBeTruthy();
+    expect(screen.getByText(/NO_MATCHING_PORTAL_OPERATION_RECORDS/)).toBeTruthy();
+    // The qualifier is the point: it must not read as "the queue is empty".
+    expect(screen.getByText(/may exist outside this view/)).toBeTruthy();
+    expect(screen.queryByText(/queue is empty/)).toBeNull();
+  });
+
+  it("will not claim the set is empty when the server did not say so", () => {
+    const raw = JSON.parse(JSON.stringify(OPERATIONS_QUEUE_FIXTURE));
+    raw.page.rows = [];
+    delete raw.read_truth;
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={readOperationsQueue(raw)!} now={NOW} />);
+    expect(screen.getByText(/did not state whether any exist outside this response/)).toBeTruthy();
+    expect(screen.queryByText(/No operation matches this view/)).toBeNull();
+  });
+
+  it("treats an unreadable read_truth as silence, never as empty", () => {
+    const raw = JSON.parse(JSON.stringify(OPERATIONS_QUEUE_FIXTURE));
+    raw.page.rows = [];
+    // Right field, wrong scope: a shape the browser does not understand.
+    raw.read_truth = { state: "EMPTY", reason_code: null, scope: "WORKSPACE" };
+    render(<OperationsQueueScreen onOpen={() => undefined} queue={readOperationsQueue(raw)!} now={NOW} />);
+    expect(screen.getByText(/did not state whether any exist outside this response/)).toBeTruthy();
   });
 
   it("shows the port's failure rather than an empty queue", () => {

@@ -23,6 +23,7 @@
 import type { ReactNode } from "react";
 
 import { slaOverdue, type ApprovalId, type KeysetPage, type PanelStatus, type Sla } from "../contracts";
+import { emptyScopeLine, emptyScopeTitle } from "../readTruthCopy";
 import { StatusChip } from "../components/badges";
 import { SlaCell } from "../components/evidence";
 import { KeysetTable, type Column } from "../components/table";
@@ -336,10 +337,14 @@ export function ApprovalInbox({
   // hiding an approaching deadline from the one reader who has no other way to
   // notice it. Still 0 on the fixtures page, where baselines must be still.
   const tick = useAgeTick();
-  const emptyInThisView =
-    page.rows.length === 0 &&
-    ((page.filteredCount ?? 0) === 0) &&
-    (counts?.pending ?? 0) > 0;
+  /*
+   * §8.59: the server now answers "is this empty?" itself, scoped to the exact
+   * request. The screen used to decide it from `rows.length === 0` and print
+   * "Inbox zero" — a claim about the workspace, made from a page the server had
+   * selected by an opaque cursor. That derivation is gone; `page.readTruth` is
+   * the only thing allowed to say the set is empty, and it says it about this
+   * request only.
+   */
   // The next row to breach its SLA: smallest remaining budget among the
   // not-yet-overdue. Derived from the server's own age/budget, never invented.
   const nextBreach = page.rows
@@ -417,15 +422,13 @@ export function ApprovalInbox({
           rowKey={(r) => r.id}
           rowEmphasis={rowEmphasis}
           neverVirtualize
-          emptyTitle={status === "ok" && page.rows.length === 0 && !emptyInThisView ? "Inbox zero" : undefined}
+          emptyTitle={status === "ok" && page.rows.length === 0 ? emptyScopeTitle(page.readTruth) : undefined}
           overflowNotice="This queue is over 200 pending items. That is an operational condition, not a display limit — it is shown in full on purpose."
           status={status}
           reason={
             reason ??
             (status === "ok" && page.rows.length === 0
-              ? emptyInThisView
-                ? `Nothing in ${FILTER_LABEL[filter]}. ${counts?.pending ?? 0} still pending in the queue.`
-                : "Nothing waits on you — pending requests owned by other approvers stay in All."
+              ? emptyScopeLine(page.readTruth, FILTER_LABEL[filter], counts?.pending ?? null)
               : undefined)
           }
           onRowClick={onOpenRequest ? (r) => onOpenRequest(r.id, r.gate) : undefined}

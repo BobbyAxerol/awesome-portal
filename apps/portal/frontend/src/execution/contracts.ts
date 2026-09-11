@@ -352,8 +352,32 @@ export interface FilterEcho {
  * browser never counts its own rows — that stays correct until the day the list
  * paginates and then becomes confidently wrong (mechanism M7).
  */
+/**
+ * The server's own answer to "is this empty?", published by BE-R2-6
+ * (`FRONTEND_HANDOFF.md` §8.59) on the Inbox, approval history, the
+ * conditions register and the Operations Queue.
+ *
+ * `scope: "REQUEST"` is the entire point. `EMPTY` means zero Portal-owned
+ * records matched **this authorized request** — this view, these filters, this
+ * opaque cursor. It is never a statement about the workspace. A screen that
+ * counts its own rows and announces "Inbox zero" makes exactly that larger
+ * claim on a page the server chose, which is why the derivation is replaced
+ * rather than merely corroborated.
+ *
+ * Absent or unreadable reads as `null`, never as `EMPTY`: not knowing is not
+ * the same as knowing there is nothing.
+ */
+export interface ReadTruth {
+  state: "AVAILABLE" | "EMPTY";
+  /** The server's own code, e.g. `NO_MATCHING_PORTAL_GOVERNANCE_RECORDS`. */
+  reasonCode: string | null;
+  scope: "REQUEST";
+}
+
 export interface KeysetPage<T> {
   rows: readonly T[];
+  /** What the server says about this exact request scope; never derived here. */
+  readTruth?: ReadTruth | null;
   /**
    * Exact, across the whole dataset. Hi-fi footer: "48,213 total".
    *

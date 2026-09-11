@@ -9760,3 +9760,164 @@ Cùng phiên này tôi đã ba lần phải gỡ file của mình khỏi index c
 (§A62, và hai lần ở đây). Guard tự viết cho script commit — *stage xong phải
 khẳng định tập staged **đúng bằng** tập của mình, nếu không thì huỷ* — là thứ
 duy nhất chặn được, và nó đã chặn thật.
+
+---
+
+## A65. PHASE 11 · LÁT CẮT 2 — `read_truth`, VÀ BỐN THỨ CHỈ LỘ RA KHI NHÌN (11-09)
+
+Làm trên **worktree riêng** `feat/execution-phase11` — index tách biệt, nên sự
+cố mất việc ở §A64.7 **không thể lặp lại**. Đó là sửa cấu trúc, không phải hứa
+cẩn thận hơn.
+
+### A65.1 Đo trước: backend đã trả lời câu hỏi mà màn hình vẫn tự đoán
+
+BE-R2-6 publish `read_truth` (§8.59) trên Inbox, approval history, waivers và
+Operations Queue. Frontend tiêu thụ **0 lần**.
+
+Đo trên dữ liệu thật (dev, workspace của Bobby):
+
+```
+GET /governance/approvals?workspace_id=ws_06G19F61…
+  counts.pending = 0 · page.filtered_count = 0 · page.total_count = 1
+  read_truth     = (không có — control-api đang chạy cũ hơn BE-R2-6)
+```
+
+Code cũ: `emptyInThisView = rows0 && filtered0 && pending>0` → **false**, nên
+màn in **"Inbox zero"** — trong khi workspace **có 1 approval**. Không phải giả
+định: đó là trạng thái thật của dev lúc đo.
+
+§8.59 điểm 2 gọi đúng tên: *một trang do cursor mờ chọn không phải lời khẳng
+định rằng workspace không có bản ghi nào.*
+
+### A65.2 Ba quy tắc, và cái thứ ba là cái khó
+
+| Quy tắc | Thể hiện |
+| --- | --- |
+| Server sở hữu câu trả lời | `read_truth.state === "EMPTY"` là **thứ duy nhất** được phép nói tập rỗng. Phép tự suy đã gỡ bỏ |
+| **Im lặng ≠ rỗng** | Không có `read_truth`, hoặc đọc không hiểu → câu yếu hơn nhưng đúng: *"Nothing came back… the server did not state whether any exist outside this response."* Backend cũ rơi vào đây, và đó **là** câu đúng |
+| **Từ chối ≠ vắng mặt** | 401/403/404 che/`unavailable`/policy-blocked **không bao giờ** thành rỗng (§8.59 điểm 3) |
+
+Và *chưa publish ≠ 0*: số việc còn chờ ngoài bộ lọc chỉ in khi server có công bố.
+
+### A65.3 Guard đầu tiên của tôi **không guard gì cả**
+
+Viết xong 12 test cho điểm 3, chạy thử với một regression cố ý (bỏ điều kiện
+`status === "ok"`) — **12 xanh hết**.
+
+Lý do: màn đọc `reason ?? <câu tính toán>`. Test nào cũng truyền `reason`, nên
+nhánh của tôi **chưa bao giờ chạy**. Test khẳng định đúng thứ nó không kiểm.
+
+Guard giờ phủ thêm ca **từ chối mà server không gửi reason** — chỗ nó thực sự
+phải giữ. Cùng regression đó làm **đúng 4 trạng thái** đỏ.
+
+Đây là lần thứ hai trong hai phase tôi suýt nhận một guard không thể đỏ. Cách
+duy nhất phát hiện là **luôn chạy thử regression**, không ngoại lệ.
+
+### A65.4 Guard §3.5 của tôi tự mục vì khoá sai
+
+Suite đỏ ở `disabledReason.test.ts` trên code tôi **không hề chạm**: allowlist
+khoá theo `file:dòng`, mà tôi xoá 4 dòng trong Inbox → hai control đã được
+duyệt bị đánh số lại và hiện nguyên thành vi phạm.
+
+Đó là lỗi **của guard**, không phải của màn: một allowlist mục nát sau mọi sửa
+đổi không liên quan sẽ dạy người ta đánh số lại mà không đọc lại — ngược hẳn
+mục đích.
+
+Đổi khoá sang **chính biểu thức `disabled`** — thứ thực sự được duyệt. Chứng
+minh: chèn 3 dòng trống rồi chạy lại, **vẫn xanh**.
+
+Sửa nó cũng sửa tôi: **6 trên 8** biểu thức tôi viết theo trí nhớ là **sai**,
+gồm cả chip lọc của Inbox — nó inert khi read đang *loading/denied/unavailable*,
+chứ không phải khi bộ lọc của nó không có dòng nào.
+
+### A65.5 Test bằng mắt — và một phát hiện về chính hạ tầng
+
+**dev không bao giờ render các màn Execution.** `PortalRoutes` chỉ đăng ký
+chúng khi `EXECUTION_PREVIEW_ENABLED`, mà dev build `false`. `/governance/approvals`
+trên dev là **placeholder registry**, không phải sản phẩm. Stack xem hình là
+**probe (:8090)**.
+
+Đã build và deploy `portal-web` lên probe bằng **tag tường minh**
+(`PORTAL_IMAGE_TAG=p11-probe3`), **không ghi đè nhãn `:dev`** — rollback chỉ là
+bỏ biến đi.
+
+Hai lỗi chữ **chỉ lộ ra khi nhìn**:
+
+| Nhìn thấy | Sửa |
+| --- | --- |
+| Tiêu đề *"No rows in this response"* đặt cỡ lớn, đọc như dòng debug; "response" là từ của tầng vận chuyển, không phải của người đọc | → **"Nothing came back"** |
+| Câu nhánh EMPTY dài **4 dòng**, nói *"outside it"* **hai lần** — một lần chung chung, một lần kèm số của server | số cụ thể **thay** câu chung; mã lý do lùi về cuối, thành bằng chứng chứ không cắt ngang mệnh đề |
+
+Kết quả trên probe, 0 console error:
+
+```
+Nothing in this view
+  No record matches Overdue. 5 pending outside this view. (NO_MATCHING_PORTAL_GOVERNANCE_RECORDS)
+Nothing came back
+  No record came back for Overdue. The server did not state whether any exist
+  outside this response. 5 pending outside this view.
+```
+
+Và §8.59 điểm 3 tự chứng minh ngoài thực địa: Operations Queue trên probe trả
+`EDS05_QUERY_INVALID` → màn vẽ **Unavailable**, **không** biến thành "không có
+operation". (Lỗi query đó của probe, có sẵn từ trước, **không** phải của tôi.)
+
+### A65.6 SỬA LẠI §A64.2 — dev **có** redeploy được từ repo
+
+Kết luận hôm trước *"dev không dựng lại được chỉ từ repo"* dựa trên **phép đo
+sai**: tôi render **mỗi `compose.yaml`** (13 biến) rồi so với container (72).
+
+Đo lại cho đúng: 4 file compose chỉ có **7 biến bắt buộc**; phần còn lại có
+default, và operator đã ghi đè **23 giá trị** — trong đó **11 cờ FEATURE_** sẽ
+tắt, Edge sandbox/live mất cấu hình, `PORTAL_PUBLIC_ORIGIN` về localhost. Tức
+nguy hiểm là thật, nhưng lý do tôi đưa ra thì sai.
+
+Suy ngược **cơ học** từ env container (ánh xạ `KEY: ${VAR:-default}`) ra 60 giá
+trị, render lại và so:
+
+```
+diff env-running.txt env-overlay.txt   →   IDENTICAL (72/72)
+```
+
+Nên dev **redeploy được**, miễn cấp file env đó. Lưu ở
+`/tmp/claude-1000/dev-combined.env` (không secret — chỉ origin, audience,
+profile id, đường dẫn; **không** mở file khoá nào).
+
+### A65.7 Evidence
+
+| Gate | Kết quả |
+| --- | --- |
+| `vitest run` | **2 295 passed** · 3 skipped · **0 đỏ** (138/138 file) |
+| `tsc --noEmit` | **0 lỗi** trong `apps/portal/frontend/src` |
+| Hook | xanh 3 lần (`0be03c67`, `4b9fb112`, `9e428e6a`) |
+| Guard đỏ được | 2 lần chứng minh: §8.59 điểm 3 (4 trạng thái), §3.5 ổn định khi dịch dòng |
+| Browser | probe :8090, 5 trạng thái rỗng, **0 console error**, ảnh `scratchpad/p11shots/` |
+| Backend probe | 4 bề mặt §8.59 trên dev: đều 200, **đều chưa có `read_truth`** |
+
+### A65.8 Phase 11 còn lại
+
+| Lane (handoff §3) | Trạng thái |
+| --- | --- |
+| Command Center / Operations · panel-local truth | **xong** (Queue + Inbox qua `read_truth`; Command Center đã có từ Phase 8) |
+| Gate/Approval · server policy/refusal authoritative | **xong** (§8.59 điểm 3, guard đã chứng minh đỏ) |
+| §8.58 realtime recovery consumer | **xong** ở §A64.3 |
+| Blotter · `exact_total: null` giữ unavailable tới khi BFF đánh dấu `DERIVED` | **CHƯA** |
+| Admin Action Drawer · chỉ read/workflow khi command relay còn tắt | **CHƯA** |
+| Xem `EMPTY` thật trên runtime | **CHƯA** — cần deploy control-api có BE-R2-6; hôm nay chỉ xem được nhánh im lặng + gallery |
+
+### A65.9 Hai lane cuối: một cái đúng-nhưng-không-ai-canh, một cái đã xong hẳn
+
+**Blotter** — hành vi **đã đúng** từ trước: `page.totalCount ?? "an unstated
+number of"`, và ghi chú export nói thẳng *"bounded to this page, not the … total"*.
+Không chỗ nào lấy số dòng trình duyệt làm tổng.
+
+Cái thiếu là **thứ sẽ báo nếu điều đó thôi đúng**. Một dòng `?? page.rows.length`
+sẽ đọc như tổng chính xác trên đúng một trang đã tải, và **không test nào phản
+đối**. Đã thêm 2 test, và chứng minh đỏ bằng đúng regression đó — cả hai đỏ,
+file khôi phục byte-identical.
+
+**Admin Action Drawer** — **đã xong hẳn** từ EL-V2-07, và xong đúng cách: test
+khẳng định drawer có **0 nút** khi relay tắt — *vắng mặt*, không phải *disable*.
+Lý do ghi ngay trong test: *"a disabled button advertises a capability that does
+not exist and teaches the operator that blockers are negotiable."* Không thêm gì;
+ghi lại để không ai tưởng còn nợ.
