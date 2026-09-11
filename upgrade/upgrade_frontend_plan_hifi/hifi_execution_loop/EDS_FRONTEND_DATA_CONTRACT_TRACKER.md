@@ -9904,3 +9904,20 @@ profile id, đường dẫn; **không** mở file khoá nào).
 | Blotter · `exact_total: null` giữ unavailable tới khi BFF đánh dấu `DERIVED` | **CHƯA** |
 | Admin Action Drawer · chỉ read/workflow khi command relay còn tắt | **CHƯA** |
 | Xem `EMPTY` thật trên runtime | **CHƯA** — cần deploy control-api có BE-R2-6; hôm nay chỉ xem được nhánh im lặng + gallery |
+
+### A65.9 Hai lane cuối: một cái đúng-nhưng-không-ai-canh, một cái đã xong hẳn
+
+**Blotter** — hành vi **đã đúng** từ trước: `page.totalCount ?? "an unstated
+number of"`, và ghi chú export nói thẳng *"bounded to this page, not the … total"*.
+Không chỗ nào lấy số dòng trình duyệt làm tổng.
+
+Cái thiếu là **thứ sẽ báo nếu điều đó thôi đúng**. Một dòng `?? page.rows.length`
+sẽ đọc như tổng chính xác trên đúng một trang đã tải, và **không test nào phản
+đối**. Đã thêm 2 test, và chứng minh đỏ bằng đúng regression đó — cả hai đỏ,
+file khôi phục byte-identical.
+
+**Admin Action Drawer** — **đã xong hẳn** từ EL-V2-07, và xong đúng cách: test
+khẳng định drawer có **0 nút** khi relay tắt — *vắng mặt*, không phải *disable*.
+Lý do ghi ngay trong test: *"a disabled button advertises a capability that does
+not exist and teaches the operator that blockers are negotiable."* Không thêm gì;
+ghi lại để không ai tưởng còn nợ.

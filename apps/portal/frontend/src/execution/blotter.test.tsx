@@ -45,6 +45,33 @@ function blotter(over: Record<string, unknown> = {}) {
   );
 }
 
+/*
+ * Round-2 Phase 11: the Blotter's total is the server's or it is nothing.
+ *
+ * The handoff is explicit — source `exact_total: null` stays unavailable until
+ * a BFF marks a local complete-scope total as DERIVED, and a partial browser
+ * page is never counted in its place. The screen already behaves this way; what
+ * was missing is anything that would notice if it stopped. A single `?? rows.length`
+ * would read as an exact total over one loaded page and no test would object.
+ */
+describe("Phase 11 — an unpublished total is never the page's own row count", () => {
+  it("says the total is unstated instead of counting what happens to be loaded", () => {
+    const page = { ...blotterPage(), totalCount: null, filteredCount: null };
+    render(blotter({ page }));
+    expect(screen.getByText(/an unstated number of rows total/)).toBeTruthy();
+    // The loaded-row count exists on screen, but never as the total.
+    expect(screen.queryByText(new RegExp(`${page.rows.length} rows total`))).toBeNull();
+  });
+
+  it("holds no sentence anywhere that presents loaded rows as a complete total", () => {
+    const page = { ...blotterPage(), totalCount: null };
+    const { container } = render(blotter({ page }));
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(new RegExp(`${page.rows.length} rows total`));
+    expect(text).not.toMatch(new RegExp(`of ${page.rows.length}\\b`));
+  });
+});
+
 describe("Full Blotter — numbers say what they mean", () => {
   it("never abbreviates a count, a price or a fee", () => {
     render(blotter());
