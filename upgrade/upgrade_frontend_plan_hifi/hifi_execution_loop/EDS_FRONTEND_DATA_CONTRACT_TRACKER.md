@@ -8217,3 +8217,53 @@ chưa tồn tại (`conditional-groups/{id}` cần một nhóm, hiện 0), hoặ
 tầng browser không bao giờ gọi (`/api/control/healthz`, `readyz`), hoặc cần
 thao tác sâu hơn probe hiện tại (chọn một dòng order để mở `orders/{id}/funnel`).
 Nâng tiếp là việc thật, không phải chỉnh mốc.
+
+### A55.9 Đóng nốt hai mục "kiểm bằng mắt" và phân loại 32 GET còn lại
+
+**Eye-check 1 — Admin Action Drawer gọi `activation/capabilities` thật.**
+§A37.10 ghi route này "chưa gọi vì probe không mở drawer". Mở đúng route
+`/administration/actions`:
+
+```
+200 /activation/capabilities
+200 /commands/catalog
+200 /commands/tasks
+200 /compositions/admin-action-drawer
+```
+
+**Gọi thật, 200.** Nút mờ trên drawer: 0. Mục này đóng.
+(Lần đầu tôi probe nhầm `/execution/admin-action-drawer` — route không tồn tại,
+0 API, suýt kết luận sai. Route đúng lấy từ registry.)
+
+**Eye-check 2 — mọi nút mờ kèm câu lý do, trên toàn bộ màn.**
+
+```
+44 nút mờ · 33 màn · thiếu lý do: 0
+```
+
+| Màn | Nút mờ | Ví dụ câu lý do |
+| --- | --- | --- |
+| Live Operations | 4 | "No published live deployment is all." |
+| Full Blotter | 4 | "Scope filters are not published by the blotter contract (BR-EX…)" |
+| Operations Queue | 3 | "The operations endpoint publishes no actor filter…" |
+| Incident Detail | 2 | "INCIDENT_NOT_FOUND: Incident not found." |
+| Alpha Fleet | 2 | "this is the first page of the fleet" |
+| Accounts & Bindings | 2 | "This is the first page of the published set." |
+
+Lý do có **nội dung thật**, không phải chữ lấp chỗ.
+
+**Phân loại 32 GET chưa gọi — ba nhóm như spec yêu cầu:**
+
+| Nhóm | Số | Nghĩa |
+| --- | --- | --- |
+| **A · đã nối, chưa chạm tới** | **22** | client có đường gọi; chưa gọi vì (a) cần bản ghi chưa tồn tại — 0 incident, 0 operation, 0 conditional group, 0 activation plan, 0 exit review; hoặc (b) cần thao tác sâu hơn probe hiện tại |
+| **B · NÊN NỐI — việc thật** | **4** | `contract-authority` · `adapters/{env}/{capabilityId}` · `views/risk-decisions` · `runs/{id}/events` (QuantBT, ngoài scope §0) |
+| **C · cố ý không nối, có lý do** | **6** | `/api/control/healthz`, `/readyz`, `/api/auth/csrf`, `/api/workspaces*` — hạ tầng, browser không gọi. Cộng **`current-source/{env}/screens/{id}/sources/{sid}/relations/{rel}`**: AGENTS.md cấm thẳng *"Never expose raw Manager relations… to the browser"* — **không nối là đúng**, không phải gap |
+
+Tôi xếp nhầm route cuối vào nhóm B lúc đầu, chỉ vì client không có đường gọi.
+Không có đường gọi ở đây là **tuân thủ luật**, không phải thiếu sót.
+
+**Route cuối cùng: 57/122 (mốc đặt trước: 60).** Đã thử thêm bấm hàng bảng để
+mở chi tiết — không tăng, vì các hàng điều hướng bằng `href` chứ không phải
+handler. **Tôi để nguyên con số và không chỉnh mốc.** 22 route nhóm A sẽ tự
+được gọi khi dev có bản ghi; 4 route nhóm B là việc thật, ghi vào roadmap.
