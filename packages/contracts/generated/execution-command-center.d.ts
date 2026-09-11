@@ -128,6 +128,35 @@ export interface components {
             source: components["schemas"]["SourceStatus"];
             cells: components["schemas"]["FleetCell"][];
         };
+        Pin: {
+            slot: number;
+            /** @constant */
+            entity_type: "DEPLOYMENT";
+            entity_id: components["schemas"]["Identifier"];
+            label: string;
+            href: string;
+            pinned_at: components["schemas"]["DateTime"];
+            target_label: string | null;
+            /** @enum {string} */
+            target_state: "available" | "unavailable";
+            /** @constant */
+            target_authority: "EXECUTION";
+            target_as_of: components["schemas"]["NullableDateTime"];
+            target_freshness_state: components["schemas"]["Freshness"];
+        };
+        PinnedPanel: {
+            panel_state: components["schemas"]["PanelState"];
+            /** @constant */
+            authority: "PORTAL";
+            as_of: components["schemas"]["NullableDateTime"];
+            freshness_state: components["schemas"]["Freshness"];
+            /** @constant */
+            exact_total: true;
+            total_count: number;
+            /** @constant */
+            limit: 5;
+            items: components["schemas"]["Pin"][];
+        };
         TodayItem: {
             id: components["schemas"]["Identifier"];
             /** @enum {string} */
@@ -183,6 +212,7 @@ export interface components {
             panels: {
                 needs_you: components["schemas"]["NeedsYouPanel"];
                 fleet_health: components["schemas"]["FleetPanel"];
+                pinned_watchlist: components["schemas"]["PinnedPanel"];
                 today: components["schemas"]["TodayPanel"];
             };
             warnings: {

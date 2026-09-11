@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-09-10",
- "route_count": 122,
+ "route_count": 123,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -693,6 +693,16 @@
    "evidence": "browser sweep saw it on page load",
    "owner": "claude",
    "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/execution/realtime/diagnostics",
+   "controller": "execution/realtime.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "NONE_YET",
+   "unused_capability": false,
+   "evidence": "ADMIN-only by design: the handler raises N31_REALTIME_DIAGNOSTICS_FORBIDDEN 403 for every non-ADMIN role, and its own contract note calls it restricted operational telemetry rather than a browser data contract. No screen reads it; the consumer is the runbook deploy/runbooks/execution-local-realtime-degradation.md.",
+   "owner": "codex",
+   "test_owner": "codex"
   },
   {
    "route": "GET /api/v1/execution/resources/accounts/:accountId/:relation",

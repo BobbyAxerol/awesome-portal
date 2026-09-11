@@ -190,8 +190,53 @@ def main(argv: list[str] | None = None) -> int:
         default=CONTRACTS_ROOT,
         help="contracts directory (default: packages/contracts)",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "verify contracts-snapshot.json against the files on disk and exit "
+            "non-zero on drift, instead of rewriting it"
+        ),
+    )
     args = parser.parse_args(argv)
     target = args.output_root / "contracts-snapshot.json"
+    if args.check:
+        expected = build_snapshot()
+        try:
+            recorded = json.loads(target.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            print(f"{target} is missing", file=sys.stderr)
+            return 1
+        drifted = sorted(
+            relative
+            for relative, digest in expected["file_digests"].items()
+            if recorded.get("file_digests", {}).get(relative) != digest
+        )
+        stale = sorted(
+            set(recorded.get("file_digests", {})) - set(expected["file_digests"])
+        )
+        if recorded.get("schema_version") != expected["schema_version"]:
+            print(
+                f"contracts-snapshot.json schema_version is "
+                f"{recorded.get('schema_version')!r}, expected "
+                f"{expected['schema_version']!r}",
+                file=sys.stderr,
+            )
+            return 1
+        if drifted or stale:
+            for relative in drifted:
+                print(f"drifted: {relative}", file=sys.stderr)
+            for relative in stale:
+                print(f"not tracked any more: {relative}", file=sys.stderr)
+            print(
+                "contracts-snapshot.json no longer describes the contracts it "
+                "tracks. Run `python3 packages/contracts/tooling/snapshot.py` "
+                "after changing a published contract, fixture or generated type.",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"{target} matches all {len(expected['file_digests'])} tracked files")
+        return 0
     target.write_text(
         json.dumps(build_snapshot(), ensure_ascii=False, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",

@@ -29,6 +29,7 @@
         { "code": "OPEN_FINDINGS", "label": "Findings", "value": null, "href": "/execution/operations?filter=findings" }
       ]
     },
+    "pinned_watchlist": { "panel_state": "empty", "authority": "PORTAL", "as_of": null, "freshness_state": "UNKNOWN", "exact_total": true, "total_count": 0, "limit": 5, "items": [] },
     "today": {
       "panel_state": "unavailable", "authority": "DERIVED", "as_of": null, "freshness_state": "UNKNOWN", "exact_total": false, "total_count": null, "observed_total_count": 0, "returned_count": 0, "limit": 12, "truncated": null,
       "sources": [

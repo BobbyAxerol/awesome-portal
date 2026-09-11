@@ -517,13 +517,37 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
 
   /*
    * PHASE 4 (round 2): the five-slot watchlist constraint was the most
-   * thoroughly tested part of a feature nobody could use. These two assertions
+   * thoroughly tested part of a feature nobody could use. Two assertions here
    * proved PostgreSQL would reject a sixth pin and an off-site href — real
    * constraints, on a table whose only INSERT was this file. No pin control
    * existed in any workbench, no route wrote a row, and the panel still told
-   * the reader to "pin from any workbench".
+   * the reader to "pin from any workbench". The table, its read path and its
+   * panel are removed, and `table-write-path` now fails on any table that
+   * reaches that state again.
    *
-   * The table, its read path and its panel are removed. `table-write-path`
-   * now fails on any table that reaches this state again.
+   * PHASE 10: that same removal also stripped `pinned_watchlist` from the
+   * published V1 envelope, which a UI slice had no authority to do. Codex's
+   * BE-R2 decision keeps the field as deprecated compatibility, so the
+   * contract is restored and the server emits a constant. What follows asserts
+   * a compatibility value, not a feature returning: the set is exactly empty
+   * because nothing anywhere can write a pin, and the panel borrows no as_of
+   * or freshness from a source it does not read.
    */
+  it("emits pinned_watchlist as deprecated V1 compatibility over a table that stays dropped", async () => {
+    const response = await get(`/api/v1/execution/command-center?workspace_id=${workspaceId}`);
+    expect(response.statusCode).toBe(200);
+    expect(response.json().panels.pinned_watchlist).toEqual({
+      panel_state: "empty",
+      authority: "PORTAL",
+      as_of: null,
+      freshness_state: "UNKNOWN",
+      exact_total: true,
+      total_count: 0,
+      limit: 5,
+      items: [],
+    });
+    await expect(
+      ctx.pool.query("SELECT 1 FROM execution_command_center_pins"),
+    ).rejects.toThrow(/execution_command_center_pins/);
+  });
 });

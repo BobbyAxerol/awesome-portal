@@ -147,6 +147,39 @@
           "cells": { "type": "array", "minItems": 6, "maxItems": 6, "items": { "$ref": "#/components/schemas/FleetCell" } }
         }
       },
+      "Pin": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slot", "entity_type", "entity_id", "label", "href", "pinned_at", "target_label", "target_state", "target_authority", "target_as_of", "target_freshness_state"],
+        "properties": {
+          "slot": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "entity_type": { "type": "string", "const": "DEPLOYMENT" },
+          "entity_id": { "$ref": "#/components/schemas/Identifier" },
+          "label": { "type": "string" },
+          "href": { "type": "string" },
+          "pinned_at": { "$ref": "#/components/schemas/DateTime" },
+          "target_label": { "type": ["string", "null"] },
+          "target_state": { "type": "string", "enum": ["available", "unavailable"] },
+          "target_authority": { "type": "string", "const": "EXECUTION" },
+          "target_as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "target_freshness_state": { "$ref": "#/components/schemas/Freshness" }
+        }
+      },
+      "PinnedPanel": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["panel_state", "authority", "as_of", "freshness_state", "exact_total", "total_count", "limit", "items"],
+        "properties": {
+          "panel_state": { "$ref": "#/components/schemas/PanelState" },
+          "authority": { "type": "string", "const": "PORTAL" },
+          "as_of": { "$ref": "#/components/schemas/NullableDateTime" },
+          "freshness_state": { "$ref": "#/components/schemas/Freshness" },
+          "exact_total": { "type": "boolean", "const": true },
+          "total_count": { "type": "integer", "maximum": 5 },
+          "limit": { "type": "integer", "const": 5 },
+          "items": { "type": "array", "maxItems": 5, "items": { "$ref": "#/components/schemas/Pin" } }
+        }
+      },
       "TodayItem": {
         "type": "object",
         "additionalProperties": false,
@@ -193,7 +226,7 @@
           "actor": { "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"], "properties": { "user_id": { "$ref": "#/components/schemas/Identifier" }, "username": { "type": "string" }, "roles": { "type": "array", "items": { "type": "string", "enum": ["ADMIN", "USER"] } } } },
           "mode": { "type": "string", "enum": ["BUSY", "QUIET", "DEGRADED"] },
           "snapshot": { "type": "object", "additionalProperties": false, "required": ["projection_epoch", "projection_sequence", "cursor", "stream_available", "resnapshot_not_before"], "properties": { "projection_epoch": { "type": "null" }, "projection_sequence": { "type": "null" }, "cursor": { "type": "null" }, "stream_available": { "type": "boolean", "const": false }, "resnapshot_not_before": { "type": "null" } } },
-          "panels": { "type": "object", "additionalProperties": false, "required": ["needs_you", "fleet_health", "today"], "properties": { "needs_you": { "$ref": "#/components/schemas/NeedsYouPanel" }, "fleet_health": { "$ref": "#/components/schemas/FleetPanel" }, "today": { "$ref": "#/components/schemas/TodayPanel" } } },
+          "panels": { "type": "object", "additionalProperties": false, "required": ["needs_you", "fleet_health", "pinned_watchlist", "today"], "properties": { "needs_you": { "$ref": "#/components/schemas/NeedsYouPanel" }, "fleet_health": { "$ref": "#/components/schemas/FleetPanel" }, "pinned_watchlist": { "$ref": "#/components/schemas/PinnedPanel" }, "today": { "$ref": "#/components/schemas/TodayPanel" } } },
           "warnings": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
         }
       }

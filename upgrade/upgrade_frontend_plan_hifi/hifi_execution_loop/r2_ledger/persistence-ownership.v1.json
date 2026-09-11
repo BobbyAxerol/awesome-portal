@@ -681,6 +681,24 @@
       "reached_via": "profile-projection.worker.ts"
     },
     {
+      "table": "execution_profile_projection_refresh_health",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 2,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 6,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "UNDECLARED",
+      "disposal_decision": "PENDING_OWNER",
+      "note": "BE-R2-5 source-recovery backoff state so a Control API restart cannot turn a 429/502/503 into an immediate retry burst. Both writes are upserts in profile-projection.repository.ts; refreshHealth() is read from six call sites across the worker, the profile realtime service and the ADMIN diagnostics route. Migration 1723680000031 is in the repository but is applied on neither dev nor stable, so both row counts are unmeasured rather than reported as zero.",
+      "reached_via": "profile-projection.repository.ts"
+    },
+    {
       "table": "execution_profile_projection_snapshots",
       "writer_owner": "TRADING_SYSTEM_READ",
       "ingress": "WORKER",

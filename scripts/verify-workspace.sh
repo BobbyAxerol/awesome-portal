@@ -1704,6 +1704,11 @@ bash -n \
   "${ROOT_DIR}/features/roadmap-task-board/tooling/clean-generated.sh"
 
 (cd "${ROOT_DIR}/apps/portal" && sha256sum -c strategy/PROTECTED_SHA256)
+# The published contracts must match the integrity record that describes them.
+# `contracts-snapshot.json` was verified only by CI, so a contract, fixture or
+# generated type could change locally and leave the record behind it; nine files
+# had drifted that way before this check existed. Digest-only, no container.
+python3 "${ROOT_DIR}/packages/contracts/tooling/snapshot.py" --check
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-iam-verify.py" \
   "${ROOT_DIR}/scripts/test_execution_iam_verify.py" \

@@ -90,6 +90,26 @@ export interface FleetSnapshot {
   deployment_labels: Record<string, string>;
 }
 
+/*
+ * Shape of one item in the deprecated `pinned_watchlist` panel, mirroring the
+ * published V1 `Pin` schema. The array is always empty — see the panel's note
+ * in `composeCommandCenterSnapshot` — so this type describes what the contract
+ * would carry, not anything this service can produce.
+ */
+export interface PinnedWatchlistItem {
+  slot: number;
+  entity_type: "DEPLOYMENT";
+  entity_id: string;
+  label: string;
+  href: string;
+  pinned_at: string;
+  target_label: string | null;
+  target_state: "available" | "unavailable";
+  target_authority: "EXECUTION";
+  target_as_of: string | null;
+  target_freshness_state: "OK" | "AGING" | "STALE" | "PAUSED" | "UNKNOWN";
+}
+
 export interface TodayCandidate {
   id: string;
   kind: "REVIEW_DUE" | "CONDITION_EXPIRY" | "VERIFIED_OPERATION" | "JOURNAL_COMMAND";
@@ -342,6 +362,31 @@ export function composeCommandCenterSnapshot(input: CommandCenterInputs) {
         total_deployments: fleetSnapshot?.total_deployments ?? null,
         source: publicSource(fleetStatus),
         cells: fleetCells,
+      },
+      /*
+       * Deprecated V1 compatibility field. The pin capability was retired in
+       * `16725465`: migration 1723680000029 dropped
+       * `execution_command_center_pins`, because no route, control or writer
+       * for it ever existed anywhere in this repository. That removal also
+       * took the field off the published V1 envelope, which it had no
+       * authority to do; codex's BE-R2 decision keeps the field as
+       * compatibility, so it is restored here.
+       *
+       * The value is a constant, and every part of it is a fact rather than a
+       * placeholder: the table is gone, so the set of pins is exactly empty
+       * and cannot become otherwise. Nothing is read to produce it, so it
+       * reports no `as_of` and no known freshness rather than borrowing the
+       * fleet's. It is compatibility, not UI state: no screen reads it.
+       */
+      pinned_watchlist: {
+        panel_state: "empty" as const,
+        authority: "PORTAL" as const,
+        as_of: null,
+        freshness_state: "UNKNOWN" as const,
+        exact_total: true as const,
+        total_count: 0,
+        limit: 5 as const,
+        items: [] as PinnedWatchlistItem[],
       },
       today: {
         panel_state: todayState,

@@ -145,6 +145,11 @@ export type _NeedsYouFields = Requires<
   | "items"
 >;
 
+export type _PinFields = Requires<
+  CommandCenter["schemas"]["Pin"],
+  "slot" | "entity_id" | "label" | "href" | "target_label" | "target_state" | "target_authority" | "target_freshness_state"
+>;
+
 export type _FleetCellFields = Requires<
   CommandCenter["schemas"]["FleetCell"],
   "code" | "label" | "value" | "href"
