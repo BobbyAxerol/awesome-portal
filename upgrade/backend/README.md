@@ -1889,8 +1889,13 @@ durable run/attempt events. Detailed evidence:
   restart-as-retry behavior. The EDS-12 static inputs and package manifest are
   re-pinned to the exact `current_source_proxy`, projection worker and
   projection repository revisions; this is provenance only, not a runtime
-  promotion. BE-R2-6/7 remain planned:
-  governance/V1/idempotency and immutable release evidence.
+  promotion. **BE-R2-6 is code-complete and runtime-unchanged:** published
+  Governance Inbox/read-truth contracts, deprecated fixed-empty V1
+  `pinned_watchlist`, and concurrent approval idempotency are closed without
+  fake shared runtime data.  See
+  [BE-R2-6 closeout](BE_R2_6_GOVERNANCE_READ_TRUTH_V1_IDEMPOTENCY_CLOSEOUT.md).
+  **BE-R2-7 alone remains planned:** immutable release/provenance and accepted
+  runtime evidence.
 - Bobby locked six guardrails: staged expired-cache deletion only; D3 remains
   GET-only; Market Context qualifies Paper first; no direct
   `live_data_executor` access; deprecated V1 `pinned_watchlist` compatibility

@@ -86,6 +86,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-governance-r2-review.v1.schema.json",
   "execution-governance.r1-review.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json#/$defs/R1ReviewResponse",
+  "execution-governance.approval-inbox.valid.json":
+    "https://schemas.primusspark.com/portal/execution-governance-product.v1.schema.json#/$defs/ApprovalInboxResponse",
   "execution-governance.approval-history.valid.json":
     "https://schemas.primusspark.com/portal/execution-governance-approval-workflow.v1.schema.json#/$defs/ApprovalHistoryResponse",
   "execution-governance.paper-exit-review.valid.json":
@@ -1191,6 +1193,10 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
 
   it("generated governance and realtime types cover their narrow boundaries", () => {
     const governance = readFileSync(join(ROOT, "generated", "execution-governance.d.ts"), "utf8");
+    expect(governance).toContain('"/api/v1/execution/governance/approvals"');
+    expect(governance).toContain("executionApprovalInbox");
+    expect(governance).toContain("ApprovalInboxResponse");
+    expect(governance).toContain("NO_MATCHING_PORTAL_GOVERNANCE_RECORDS");
     expect(governance).toContain('"/api/v1/execution/governance/approvals/{approval_id}/r2"');
     expect(governance).toContain("R2ReviewResponse");
     expect(governance).toContain("portfolio_id");
@@ -1204,6 +1210,9 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     expect(governance).toContain('"/api/v1/execution/governance/sandbox-certifications/{certification_id}/decisions"');
     expect(governance).toContain("CertificationResponse");
     expect(governance).toContain("PromotionPlanResponse");
+
+    const operations = readFileSync(join(ROOT, "generated", "execution-operations.d.ts"), "utf8");
+    expect(operations).toContain("NO_MATCHING_PORTAL_OPERATION_RECORDS");
 
     const realtime = readFileSync(join(ROOT, "generated", "execution-realtime.d.ts"), "utf8");
     expect(realtime).toContain('"/api/v1/execution/command-center/stream"');

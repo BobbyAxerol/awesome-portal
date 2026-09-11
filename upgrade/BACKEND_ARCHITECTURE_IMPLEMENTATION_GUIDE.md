@@ -2093,3 +2093,25 @@ deployed evidence or promote a runtime.
 No runtime flag, mTLS material, Source Proxy, Trading System store, command or
 deployment was changed. The phase's isolated PostgreSQL build/test/restore
 gate is required before any later runtime promotion.
+
+### 14.1.4 BE-R2-6 governance read truth, V1 compatibility and idempotency closeout (2026-09-11)
+
+BE-R2-6 closes the remaining Portal-owned governance contract debt without
+inventing a source integration.  The V1 `pinned_watchlist` member remains
+published, required and deprecated with one fixed authoritative-empty value;
+the retired writer is not recreated.  Its OpenAPI/schema/generated TypeScript
+and snapshot are produced only by the canonical generator.
+
+Approval Inbox is a formal named GET operation.  Inbox, history, conditions
+and Operations Queue now carry request-scoped `read_truth`.  `EMPTY` is only
+zero matching Portal-owned records for the authorized query scope.  A
+cursor-page that happens to contain no rows is not falsely global-empty.
+Authentication, role denial, concealed workspace scope, external panel
+unavailability and server policy locks keep their existing separate contracts.
+
+Approval creation is verified under an actual overlapping insert delay: one
+canonical create and idempotent replays settle for a byte-identical request
+key/payload, while changed payload and distinct work remain typed conflicts.
+The isolated Control API Docker/PostgreSQL gate is the review-data proof; it
+does not seed shared dev/stable state or touch Trading System/Edge/runtime
+resources.  See the [BE-R2-6 closeout record](backend/BE_R2_6_GOVERNANCE_READ_TRUTH_V1_IDEMPOTENCY_CLOSEOUT.md).

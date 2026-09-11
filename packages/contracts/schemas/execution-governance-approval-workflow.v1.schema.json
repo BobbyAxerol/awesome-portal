@@ -7,6 +7,22 @@
     "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "Timestamp": { "type": "string", "format": "date-time" },
     "NullableTimestamp": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+    "PageReadTruth": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Truth for the exact server-bound request scope. EMPTY does not assert that the workspace has no records outside the requested filters or opaque cursor.",
+      "required": ["state", "reason_code", "scope"],
+      "properties": {
+        "state": { "enum": ["AVAILABLE", "EMPTY"] },
+        "reason_code": {
+          "oneOf": [
+            { "type": "null" },
+            { "const": "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS" }
+          ]
+        },
+        "scope": { "const": "REQUEST" }
+      }
+    },
     "Actor": {
       "type": "object", "additionalProperties": false,
       "required": ["user_id", "username"],
@@ -152,13 +168,14 @@
     },
     "ApprovalHistoryResponse": {
       "type": "object", "additionalProperties": false,
-      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "actor", "page"],
+      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "actor", "read_truth", "page"],
       "properties": {
         "schema_version": { "const": "governance.approval-history.v1" },
         "record_authority": { "const": "PORTAL" },
         "delivery_profile": { "const": "fixture" },
         "read_at": { "$ref": "#/$defs/Timestamp" },
         "actor": { "$ref": "#/$defs/Actor" },
+        "read_truth": { "$ref": "#/$defs/PageReadTruth" },
         "page": {
           "type": "object", "additionalProperties": false,
           "required": ["rows", "total_count", "filtered_count", "next_cursor", "prev_cursor", "has_more", "has_previous", "applied_filters", "applied_sort"],

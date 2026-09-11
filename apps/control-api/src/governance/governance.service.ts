@@ -10,6 +10,7 @@ import {
 import { AuthSession, PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { ControlPlaneQueryService, KeysetCursorCodec, RawKeysetQuery } from "../query";
+import { exactPageReadTruth } from "../query/read-truth";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { TypedCondition } from "../operations/contracts";
 import { ProfileReadService } from "../profile-read/profile-read.service";
@@ -200,6 +201,7 @@ export class GovernanceService {
         overdue: counts.overdue,
         due_soon: counts.dueSoon,
       },
+      read_truth: exactPageReadTruth(page, "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS"),
       page,
     };
   }
@@ -216,6 +218,7 @@ export class GovernanceService {
       delivery_profile: "fixture",
       read_at: new Date().toISOString(),
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      read_truth: exactPageReadTruth(page, "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS"),
       page,
     };
   }
@@ -232,6 +235,7 @@ export class GovernanceService {
       delivery_profile: "portal",
       read_at: new Date().toISOString(),
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      read_truth: exactPageReadTruth(page, "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS"),
       page,
     };
   }

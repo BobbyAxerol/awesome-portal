@@ -21,7 +21,11 @@
       "properties": {
         "needs_you": { "$ref": "#/$defs/NeedsYouPanel" },
         "fleet_health": { "$ref": "#/$defs/FleetPanel" },
-        "pinned_watchlist": { "$ref": "#/$defs/PinnedPanel" },
+        "pinned_watchlist": {
+          "$ref": "#/$defs/PinnedPanel",
+          "deprecated": true,
+          "description": "Deprecated V1 compatibility field. It remains required and is an authoritative fixed empty panel because no pin writer is published."
+        },
         "today": { "$ref": "#/$defs/TodayPanel" }
       }
     },
@@ -176,6 +180,8 @@
     },
     "PinnedPanel": {
       "type": "object",
+      "deprecated": true,
+      "description": "Deprecated V1 compatibility member. The pin writer was retired, so the Portal returns the authoritative fixed empty value; clients must not treat it as an active pin feature.",
       "additionalProperties": false,
       "required": ["panel_state", "authority", "as_of", "freshness_state", "exact_total", "total_count", "limit", "items"],
       "properties": {

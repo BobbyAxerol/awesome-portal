@@ -72,3 +72,9 @@ replay.
 All three require actual protected-main deployed evidence before
 `PRODUCT_ACTIVE`, but none requires direct Trading System DB, Redis, broker or
 CLI access.
+
+On 2026-09-11, the N29 input pin was refreshed after BE-R2-6 closed the
+Portal-owned Governance Inbox/read-truth contract and deprecated V1
+compatibility metadata.  The EDS-12 decision and every runtime authority stay
+unchanged: this is a static provenance refresh, not deployed evidence or
+activation.

@@ -2324,5 +2324,37 @@ Frontend requirements for this handoff:
    still requires the established bounded resnapshot path; recovering is not a
    terminal error.
 
+### 8.59 BE-R2-6 governance read truth and V1 compatibility handoff (2026-09-11)
+
+The Portal-owned governance contract closeout is available to frontend work;
+it does **not** activate a source, command or shared runtime fixture.
+
+1. Use the named same-origin Inbox operation
+   `GET /api/v1/execution/governance/approvals`
+   (`executionApprovalInbox`) and generated types.  Do not construct an
+   alternative query shape, hand-edit generated declarations or infer filters
+   client-side.
+2. Inbox, approval history, conditions/waivers and Operations Queue include
+   `read_truth`.  Treat `EMPTY` as only “zero Portal-owned records matching
+   this authorized exact request scope.” Keep the approved rich hierarchy
+   mounted and render one compact panel-local empty state. A page selected by
+   an opaque cursor is not a claim that the workspace has no records.
+3. Never translate a `401`, `403`, concealed `404`, named external panel
+   `unavailable` state or server `eligibility.locks`/`inert: BLOCKED` into an
+   empty state. Retain existing session, permission, concealed-scope and
+   policy rendering. The server remains the policy enforcer.
+4. `pinned_watchlist` remains a mandatory but **deprecated** V1 compatibility
+   field with its fixed empty value. Do not add a pin writer, revive pin UI or
+   treat the field as an active feature.
+5. Do not inject fixture records into shared dev/stable UI to fill these
+   panels. Visual-review data belongs only to an explicitly approved isolated
+   review workspace through normal authenticated APIs.
+
+The backend acceptance evidence covers the canonical generator, fixtures,
+exact-empty/cursor semantics, workspace/role/CSRF negatives, unavailable
+versus policy-blocked state inputs, and a four-request idempotent approval
+race.  This handoff is additive and does not require a frontend transport or
+policy rewrite.
+
 Claude may wire this consumer behavior in the frontend branch with the normal
 TypeScript, unit, DOM-warning and authenticated same-origin browser evidence.

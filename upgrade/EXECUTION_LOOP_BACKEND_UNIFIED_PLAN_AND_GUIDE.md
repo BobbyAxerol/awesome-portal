@@ -5466,7 +5466,7 @@ System PostgreSQL, Redis, broker, Source Proxy upstream or shell.
 | BE-R2-3 | maximum current Screen BFF + derived exact query | Phase 11 Command Center/Blotter consumers | BE-R2-2 ledger |
 | BE-R2-4 | Paper Market Context BFF qualification | chart empty/loading/partial consumer preparation | named Paper capability evidence |
 | BE-R2-5 | local realtime/resilience hardening | realtime state/motion and virtualized list checks | BE-R2-1 through BE-R2-3 |
-| BE-R2-6 | governance, V1 compatibility and idempotency closeout | Gate/Approval empty shells and workflow verification | BE-R2-3 |
+| BE-R2-6 | governance, V1 compatibility and idempotency closeout — **code complete; runtime unchanged** | Gate/Approval empty shells and workflow verification | BE-R2-3 |
 | BE-R2-7 | immutable release/provenance and product acceptance | final authenticated route/network/visual matrix | accepted BE-R2-1 through BE-R2-6 scope |
 
 ### BE-R2-1 — Bounded cache lifecycle, retention and cleanup
@@ -5920,6 +5920,35 @@ they are empty or blocked.
 **Frontend handoff:** Phase 8 owns rich empty shells for Gate/Approval routes;
 frontend must use the server reason and must not repeat “waiting for” copy in
 every panel. Phase 10 records the contract generator and handoff receipt.
+
+#### BE-R2-6 implementation journal — Portal contract closeout complete (2026-09-11)
+
+The Portal-owned closeout is complete without waiting for Trading System data:
+
+- the published V1 `pinned_watchlist` member is retained as a deprecated,
+  fixed authoritative-empty compatibility value; canonical OpenAPI/JSON
+  Schema/generated declarations/snapshot were regenerated together;
+- `GET /api/v1/execution/governance/approvals` is now a published named Inbox
+  operation, and Inbox/history/conditions/operations list DTOs expose
+  request-scoped `read_truth` rather than making a browser infer emptiness;
+- `EMPTY` means zero matching records in the authorized exact filter scope.
+  `401`, `403`, concealed `404`, external panel unavailability and server
+  policy locks retain their distinct existing semantics and are never coerced
+  to empty;
+- approval request-key idempotency is exercised under an actual overlapping
+  insert race: one canonical create and byte-identical replay results settle
+  deterministically, while changed-payload and distinct-work conflicts retain
+  their typed `409` outcomes;
+- the only review-data procedure is the disposable isolated Control API
+  PostgreSQL gate.  It does not seed a shared dev/stable runtime or touch
+  Edge, Trading System, command, source or container configuration.
+
+The full contract/build/PostgreSQL/restore gate and focused fixture/race/state
+tests are required evidence for this journal.  No runtime flag, source call,
+credential, command, migration or deployment has changed.  BE-R2-7 remains a
+separate release/provenance/accepted-runtime-evidence phase, not a hidden
+BE-R2-6 debt.  The precise implementation and review procedure are in
+[`BE_R2_6_GOVERNANCE_READ_TRUTH_V1_IDEMPOTENCY_CLOSEOUT.md`](backend/BE_R2_6_GOVERNANCE_READ_TRUTH_V1_IDEMPOTENCY_CLOSEOUT.md).
 
 ### BE-R2-7 — Immutable release, provenance and product acceptance
 

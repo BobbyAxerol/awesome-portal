@@ -11,7 +11,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description Returns the Portal-owned approval inbox for one authorized workspace. read_truth is scoped to this exact view, filter set and opaque cursor; a 403/404 remains an authorization or concealed-scope outcome, never an empty inbox. */
+        get: operations["executionApprovalInbox"];
         put?: never;
         /** @description Creates one Portal-owned R1 request from a workspace-bound completed run. The server pins the registered artifact digest and rejects duplicate open alpha/run requests. */
         post: operations["executionNewApprovalRequestV1"];
@@ -303,6 +304,86 @@ export interface components {
             request_id: string;
         };
         "$defs-Identifier": string;
+        /** Format: date-time */
+        Timestamp: string;
+        Actor: {
+            user_id: components["schemas"]["$defs-Identifier"];
+            username: string;
+            roles?: ("ADMIN" | "USER")[];
+        };
+        /** @description Truth for the exact server-bound request scope. EMPTY does not assert that the workspace has no records outside the requested view, filters or opaque cursor. */
+        PageReadTruth: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY";
+            reason_code: null | "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS";
+            /** @constant */
+            scope: "REQUEST";
+        };
+        ApprovalInboxItem: {
+            id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            gate: "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
+            subject: string;
+            subject_id: components["schemas"]["$defs-Identifier"];
+            release_candidate: string | null;
+            target: string;
+            /** @enum {unknown} */
+            environment: "RESEARCH" | "PAPER" | "SANDBOX" | "LIVE";
+            requester: components["schemas"]["Actor"];
+            creator: components["schemas"]["Actor"];
+            /** @enum {unknown} */
+            status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+            policy_version: string;
+            approval_version: number;
+            evidence_set_hash: components["schemas"]["Hash"];
+            evidence_complete: boolean;
+            blocker_count: number;
+            blocker_summary: string | null;
+            sla: {
+                /** @enum {unknown} */
+                state: "ON_TRACK" | "DUE_SOON" | "OVERDUE" | "EXPIRED";
+                age_minutes: number;
+                budget_minutes: number;
+                due_at: components["schemas"]["Timestamp"];
+                expires_at: components["schemas"]["Timestamp"];
+            };
+            quorum_met: number;
+            quorum_required: number;
+            inert: ("SELF" | "QUORUM" | "BLOCKED") | null;
+            needs_you: boolean;
+            /** @constant */
+            record_authority: "PORTAL";
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        ApprovalInboxPage: {
+            rows: components["schemas"]["ApprovalInboxItem"][];
+            total_count: number;
+            filtered_count: number;
+            next_cursor: string | null;
+            prev_cursor: string | null;
+            has_more: boolean;
+            has_previous: boolean;
+            applied_filters: Record<string, never>[];
+            applied_sort: Record<string, never>[];
+        };
+        ApprovalInboxResponse: {
+            /** @constant */
+            schema_version: "governance.approval-inbox.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            workspace_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            delivery_profile: "fixture";
+            read_at: components["schemas"]["Timestamp"];
+            actor: components["schemas"]["Actor"];
+            counts: {
+                pending: number;
+                overdue: number;
+                due_soon: number;
+            };
+            read_truth: components["schemas"]["PageReadTruth"];
+            page: components["schemas"]["ApprovalInboxPage"];
+        };
         ApprovalCreateRequest: {
             /** @constant */
             schema_version: "governance.approval-create-request.v1";
@@ -315,13 +396,6 @@ export interface components {
             methodology_claim_id: components["schemas"]["$defs-Identifier"];
             summary: string;
         };
-        Actor: {
-            user_id: components["schemas"]["$defs-Identifier"];
-            username: string;
-            roles?: ("ADMIN" | "USER")[];
-        };
-        /** Format: date-time */
-        Timestamp: string;
         Approval: {
             approval_id: components["schemas"]["$defs-Identifier"];
             /** @constant */
@@ -404,6 +478,7 @@ export interface components {
             delivery_profile: "portal";
             read_at: components["schemas"]["Timestamp"];
             actor: components["schemas"]["Actor"];
+            read_truth: components["schemas"]["PageReadTruth"];
             page: components["schemas"]["ConditionPage"];
         };
         Eligibility: {
@@ -447,6 +522,14 @@ export interface components {
                 linked_panels: Record<string, never>[];
             };
         };
+        /** @description Truth for the exact server-bound request scope. EMPTY does not assert that the workspace has no records outside the requested filters or opaque cursor. */
+        "$defs-PageReadTruth": {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY";
+            reason_code: null | "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS";
+            /** @constant */
+            scope: "REQUEST";
+        };
         ApprovalHistoryRow: {
             id: components["schemas"]["$defs-Identifier"];
             approval_id: components["schemas"]["$defs-Identifier"];
@@ -471,6 +554,7 @@ export interface components {
             delivery_profile: "fixture";
             read_at: components["schemas"]["Timestamp"];
             actor: components["schemas"]["Actor"];
+            read_truth: components["schemas"]["$defs-PageReadTruth"];
             page: {
                 rows: components["schemas"]["ApprovalHistoryRow"][];
                 total_count: number;
@@ -1383,6 +1467,54 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionApprovalInbox: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                after?: string;
+                before?: string;
+                limit?: number;
+                sort?: string;
+                view?: "INBOX" | "ALL" | "R1" | "R2" | "PAPER" | "SANDBOX" | "LIVE_GATES" | "EXIT_REVIEWS" | "OVERDUE";
+                status?: string;
+                gate?: string;
+                environment?: string;
+                sla_state?: string;
+                requester?: string;
+                subject?: string;
+                evidence_complete?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Portal-owned approval inbox with exact page counts and request-scoped truth */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalInboxResponse"];
+                };
+            };
+            /** @description Role policy denied */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Workspace not found or not visible to the session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     executionNewApprovalRequestV1: {
         parameters: {
             query?: never;

@@ -9,6 +9,7 @@ import {
   QueryTelemetrySample,
   normalizeKeysetQuery,
 } from "../src/query";
+import { exactPageReadTruth } from "../src/query/read-truth";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
@@ -193,6 +194,21 @@ describe("EX-BE-04a control-plane query primitives", () => {
       { field: "sla_due_at", direction: "asc" },
       { field: "approval_id", direction: "asc" },
     ]);
+  });
+
+  it("publishes request-scoped empty truth only from the exact filtered count", () => {
+    expect(exactPageReadTruth({ filtered_count: 0 }, "NO_MATCHING_TEST_RECORDS")).toEqual({
+      state: "EMPTY",
+      reason_code: "NO_MATCHING_TEST_RECORDS",
+      scope: "REQUEST",
+    });
+    // A cursor can be stale or point beyond the returned slice while matching
+    // records still exist. That is not permission to claim the scope is empty.
+    expect(exactPageReadTruth({ filtered_count: 4 }, "NO_MATCHING_TEST_RECORDS")).toEqual({
+      state: "AVAILABLE",
+      reason_code: null,
+      scope: "REQUEST",
+    });
   });
 
   it("returns an exact 182k count, a bounded first page, and no sensitive column", async () => {

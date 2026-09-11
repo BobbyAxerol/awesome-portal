@@ -167,6 +167,8 @@
       },
       "PinnedPanel": {
         "type": "object",
+        "deprecated": true,
+        "description": "Deprecated V1 compatibility member. The pin writer was retired, so the Portal returns the authoritative fixed empty value; clients must not treat it as an active pin feature.",
         "additionalProperties": false,
         "required": ["panel_state", "authority", "as_of", "freshness_state", "exact_total", "total_count", "limit", "items"],
         "properties": {
@@ -226,7 +228,7 @@
           "actor": { "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"], "properties": { "user_id": { "$ref": "#/components/schemas/Identifier" }, "username": { "type": "string" }, "roles": { "type": "array", "items": { "type": "string", "enum": ["ADMIN", "USER"] } } } },
           "mode": { "type": "string", "enum": ["BUSY", "QUIET", "DEGRADED"] },
           "snapshot": { "type": "object", "additionalProperties": false, "required": ["projection_epoch", "projection_sequence", "cursor", "stream_available", "resnapshot_not_before"], "properties": { "projection_epoch": { "type": "null" }, "projection_sequence": { "type": "null" }, "cursor": { "type": "null" }, "stream_available": { "type": "boolean", "const": false }, "resnapshot_not_before": { "type": "null" } } },
-          "panels": { "type": "object", "additionalProperties": false, "required": ["needs_you", "fleet_health", "pinned_watchlist", "today"], "properties": { "needs_you": { "$ref": "#/components/schemas/NeedsYouPanel" }, "fleet_health": { "$ref": "#/components/schemas/FleetPanel" }, "pinned_watchlist": { "$ref": "#/components/schemas/PinnedPanel" }, "today": { "$ref": "#/components/schemas/TodayPanel" } } },
+          "panels": { "type": "object", "additionalProperties": false, "required": ["needs_you", "fleet_health", "pinned_watchlist", "today"], "properties": { "needs_you": { "$ref": "#/components/schemas/NeedsYouPanel" }, "fleet_health": { "$ref": "#/components/schemas/FleetPanel" }, "pinned_watchlist": { "$ref": "#/components/schemas/PinnedPanel", "deprecated": true, "description": "Deprecated V1 compatibility field. It remains required and is an authoritative fixed empty panel because no pin writer is published." }, "today": { "$ref": "#/components/schemas/TodayPanel" } } },
           "warnings": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["code", "message"], "properties": { "code": { "type": "string" }, "message": { "type": "string" } } } }
         }
       }

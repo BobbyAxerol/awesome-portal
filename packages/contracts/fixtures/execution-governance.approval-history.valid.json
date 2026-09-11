@@ -4,6 +4,7 @@
   "delivery_profile": "fixture",
   "read_at": "2026-08-26T09:30:00Z",
   "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "read_truth": { "state": "AVAILABLE", "reason_code": null, "scope": "REQUEST" },
   "page": {
     "rows": [
       {

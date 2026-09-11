@@ -1,0 +1,53 @@
+{
+  "schema_version": "governance.approval-inbox.v1",
+  "record_authority": "PORTAL",
+  "workspace_id": "ws_fixture_governance",
+  "delivery_profile": "fixture",
+  "read_at": "2026-09-11T09:00:00.000Z",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "counts": { "pending": 1, "overdue": 0, "due_soon": 0 },
+  "read_truth": { "state": "AVAILABLE", "reason_code": null, "scope": "REQUEST" },
+  "page": {
+    "rows": [
+      {
+        "id": "apr_fixture_r1",
+        "gate": "R1",
+        "subject": "Carry v3.2",
+        "subject_id": "alpha_carry_v32",
+        "release_candidate": "RC-42",
+        "target": "research · R1",
+        "environment": "RESEARCH",
+        "requester": { "user_id": "usr_stan", "username": "stan" },
+        "creator": { "user_id": "usr_stan", "username": "stan" },
+        "status": "PENDING",
+        "policy_version": "approval.v3",
+        "approval_version": 1,
+        "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "evidence_complete": true,
+        "blocker_count": 0,
+        "blocker_summary": null,
+        "sla": {
+          "state": "ON_TRACK",
+          "age_minutes": 5,
+          "budget_minutes": 240,
+          "due_at": "2026-09-11T13:00:00.000Z",
+          "expires_at": "2026-09-12T09:00:00.000Z"
+        },
+        "quorum_met": 0,
+        "quorum_required": 1,
+        "inert": null,
+        "needs_you": true,
+        "record_authority": "PORTAL",
+        "updated_at": "2026-09-11T08:59:00.000Z"
+      }
+    ],
+    "total_count": 1,
+    "filtered_count": 1,
+    "next_cursor": null,
+    "prev_cursor": null,
+    "has_more": false,
+    "has_previous": false,
+    "applied_filters": [{ "field": "status", "op": "eq", "value": "PENDING" }],
+    "applied_sort": [{ "field": "sla_due_at", "direction": "asc" }]
+  }
+}

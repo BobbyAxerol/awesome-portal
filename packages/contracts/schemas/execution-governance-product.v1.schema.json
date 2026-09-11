@@ -6,6 +6,109 @@
     "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
     "Timestamp": { "type": "string", "format": "date-time" },
     "NullableTimestamp": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+    "PageReadTruth": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Truth for the exact server-bound request scope. EMPTY does not assert that the workspace has no records outside the requested view, filters or opaque cursor.",
+      "required": ["state", "reason_code", "scope"],
+      "properties": {
+        "state": { "enum": ["AVAILABLE", "EMPTY"] },
+        "reason_code": {
+          "oneOf": [
+            { "type": "null" },
+            { "const": "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS" }
+          ]
+        },
+        "scope": { "const": "REQUEST" }
+      }
+    },
+    "ApprovalInboxItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "gate", "subject", "subject_id", "release_candidate", "target", "environment",
+        "requester", "creator", "status", "policy_version", "approval_version", "evidence_set_hash",
+        "evidence_complete", "blocker_count", "blocker_summary", "sla", "quorum_met",
+        "quorum_required", "inert", "needs_you", "record_authority", "updated_at"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Identifier" },
+        "gate": { "enum": ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "subject_id": { "$ref": "#/$defs/Identifier" },
+        "release_candidate": { "type": ["string", "null"], "maxLength": 256 },
+        "target": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "environment": { "enum": ["RESEARCH", "PAPER", "SANDBOX", "LIVE"] },
+        "requester": { "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Actor" },
+        "creator": { "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Actor" },
+        "status": { "enum": ["PENDING", "APPROVED", "APPROVED_WITH_CONDITION", "DENIED", "CHANGES_REQUESTED", "EXPIRED"] },
+        "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "approval_version": { "type": "integer", "minimum": 1 },
+        "evidence_set_hash": { "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Hash" },
+        "evidence_complete": { "type": "boolean" },
+        "blocker_count": { "type": "integer", "minimum": 0 },
+        "blocker_summary": { "type": ["string", "null"], "maxLength": 2000 },
+        "sla": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "age_minutes", "budget_minutes", "due_at", "expires_at"],
+          "properties": {
+            "state": { "enum": ["ON_TRACK", "DUE_SOON", "OVERDUE", "EXPIRED"] },
+            "age_minutes": { "type": "integer", "minimum": 0 },
+            "budget_minutes": { "type": "integer", "minimum": 0 },
+            "due_at": { "$ref": "#/$defs/Timestamp" },
+            "expires_at": { "$ref": "#/$defs/Timestamp" }
+          }
+        },
+        "quorum_met": { "type": "integer", "minimum": 0 },
+        "quorum_required": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "inert": { "oneOf": [{ "enum": ["SELF", "QUORUM", "BLOCKED"] }, { "type": "null" }] },
+        "needs_you": { "type": "boolean" },
+        "record_authority": { "const": "PORTAL" },
+        "updated_at": { "$ref": "#/$defs/Timestamp" }
+      }
+    },
+    "ApprovalInboxPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rows", "total_count", "filtered_count", "next_cursor", "prev_cursor", "has_more", "has_previous", "applied_filters", "applied_sort"],
+      "properties": {
+        "rows": { "type": "array", "maxItems": 250, "items": { "$ref": "#/$defs/ApprovalInboxItem" } },
+        "total_count": { "type": "integer", "minimum": 0 },
+        "filtered_count": { "type": "integer", "minimum": 0 },
+        "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "prev_cursor": { "type": ["string", "null"], "maxLength": 4096 },
+        "has_more": { "type": "boolean" },
+        "has_previous": { "type": "boolean" },
+        "applied_filters": { "type": "array", "maxItems": 12, "items": { "type": "object" } },
+        "applied_sort": { "type": "array", "minItems": 1, "maxItems": 5, "items": { "type": "object" } }
+      }
+    },
+    "ApprovalInboxResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_authority", "workspace_id", "delivery_profile", "read_at", "actor", "counts", "read_truth", "page"],
+      "properties": {
+        "schema_version": { "const": "governance.approval-inbox.v1" },
+        "record_authority": { "const": "PORTAL" },
+        "workspace_id": { "$ref": "#/$defs/Identifier" },
+        "delivery_profile": { "const": "fixture" },
+        "read_at": { "$ref": "#/$defs/Timestamp" },
+        "actor": { "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Actor" },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pending", "overdue", "due_soon"],
+          "properties": {
+            "pending": { "type": "integer", "minimum": 0 },
+            "overdue": { "type": "integer", "minimum": 0 },
+            "due_soon": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "read_truth": { "$ref": "#/$defs/PageReadTruth" },
+        "page": { "$ref": "#/$defs/ApprovalInboxPage" }
+      }
+    },
     "ApprovalCreateRequest": {
       "type": "object",
       "additionalProperties": false,
@@ -76,13 +179,14 @@
     },
     "ConditionsRegisterResponse": {
       "type": "object", "additionalProperties": false,
-      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "actor", "page"],
+      "required": ["schema_version", "record_authority", "delivery_profile", "read_at", "actor", "read_truth", "page"],
       "properties": {
         "schema_version": { "const": "governance.conditions-register.v1" },
         "record_authority": { "const": "PORTAL_CONTROL" },
         "delivery_profile": { "const": "portal" },
         "read_at": { "$ref": "#/$defs/Timestamp" },
         "actor": { "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Actor" },
+        "read_truth": { "$ref": "#/$defs/PageReadTruth" },
         "page": { "$ref": "#/$defs/ConditionPage" }
       }
     }

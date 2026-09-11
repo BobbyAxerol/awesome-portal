@@ -786,6 +786,14 @@ export interface components {
                     "ADMIN"
                 ];
             };
+            /** @description Truth for the exact server-bound queue request. EMPTY does not assert that a workspace has no operations outside the requested filters or opaque cursor. */
+            read_truth: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "EMPTY";
+                reason_code: null | "NO_MATCHING_PORTAL_OPERATION_RECORDS";
+                /** @constant */
+                scope: "REQUEST";
+            };
             page: {
                 rows: components["schemas"]["OperationQueueItem"][];
                 total_count: number;

@@ -837,6 +837,14 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     expect(denied.statusCode).toBe(403);
     expect(denied.json().error.code).toBe("QUERY_FORBIDDEN");
 
+    const empty = await inject(bobby, `/api/v1/execution/operations?workspace_id=${workspaceId}`);
+    expect(empty.statusCode).toBe(200);
+    expect(empty.json().read_truth).toEqual({
+      state: "EMPTY",
+      reason_code: "NO_MATCHING_PORTAL_OPERATION_RECORDS",
+      scope: "REQUEST",
+    });
+
     for (let index = 0; index < 4; index += 1) {
       const created = await mutation(bobby, "/api/v1/execution/commands/plans", payload({
         request_key: `ops:queue:${index}`,
@@ -855,6 +863,7 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       record_authority: "PORTAL",
       delivery_profile: "fixture",
       source_integration_state: "UNAVAILABLE",
+      read_truth: { state: "AVAILABLE", reason_code: null, scope: "REQUEST" },
       page: {
         total_count: 4,
         filtered_count: 4,

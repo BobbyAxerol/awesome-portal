@@ -10,6 +10,7 @@ import {
   RawKeysetQuery,
 } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { exactPageReadTruth } from "../query/read-truth";
 import {
   OperationAcknowledgeRequest,
   OperationQueueQuery,
@@ -160,6 +161,7 @@ export class OperationsWorkflowService {
       source_integration_state: "UNAVAILABLE",
       read_at: new Date().toISOString(),
       actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+      read_truth: exactPageReadTruth(page, "NO_MATCHING_PORTAL_OPERATION_RECORDS"),
       page,
     };
   }

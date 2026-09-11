@@ -41,3 +41,10 @@ normal development review, but the pack cannot authorize stable deployment,
 source activation or any Live mutation. Product release becomes eligible only
 when the protected main workflow returns verified image evidence. The closed
 `N29-FE-01` and `N29-BE-72` evidence remains digest-bound in this pack.
+
+On 2026-09-11, BE-R2-6 added the published Approval Inbox GET contract and
+request-scoped governance read truth, while preserving the deprecated fixed
+empty V1 `pinned_watchlist` compatibility field.  The three governance
+schema/OpenAPI/test evidence digests were re-pinned together.  This is a
+Portal-only contract closeout: it changes no source, command, release or
+runtime authority.

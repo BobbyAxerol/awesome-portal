@@ -9,6 +9,37 @@
   "security": [{ "portalSession": [] }],
   "paths": {
     "/api/v1/execution/governance/approvals": {
+      "get": {
+        "operationId": "executionApprovalInbox",
+        "description": "Returns the Portal-owned approval inbox for one authorized workspace. read_truth is scoped to this exact view, filter set and opaque cursor; a 403/404 remains an authorization or concealed-scope outcome, never an empty inbox.",
+        "parameters": [
+          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "maxLength": 256 } },
+          { "name": "view", "in": "query", "schema": { "type": "string", "enum": ["INBOX", "ALL", "R1", "R2", "PAPER", "SANDBOX", "LIVE_GATES", "EXIT_REVIEWS", "OVERDUE"], "default": "INBOX" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "gate", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "environment", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "sla_state", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
+          { "name": "requester", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
+          { "name": "subject", "in": "query", "schema": { "type": "string", "maxLength": 160 } },
+          { "name": "evidence_complete", "in": "query", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Portal-owned approval inbox with exact page counts and request-scoped truth",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalInboxResponse" }
+              }
+            }
+          },
+          "403": { "description": "Role policy denied" },
+          "404": { "description": "Workspace not found or not visible to the session" }
+        }
+      },
       "post": {
         "operationId": "executionNewApprovalRequestV1",
         "description": "Creates one Portal-owned R1 request from a workspace-bound completed run. The server pins the registered artifact digest and rejects duplicate open alpha/run requests.",

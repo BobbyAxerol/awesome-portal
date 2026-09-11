@@ -314,7 +314,7 @@
       "additionalProperties": false,
       "required": [
         "schema_version", "record_authority", "delivery_profile",
-        "source_integration_state", "read_at", "actor", "page"
+        "source_integration_state", "read_at", "actor", "read_truth", "page"
       ],
       "properties": {
         "schema_version": { "const": "execution.operations-queue.v1" },
@@ -330,6 +330,22 @@
             "user_id": { "$ref": "#/$defs/Identifier" },
             "username": { "type": "string", "minLength": 1, "maxLength": 128 },
             "roles": { "type": "array", "const": ["ADMIN"] }
+          }
+        },
+        "read_truth": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Truth for the exact server-bound queue request. EMPTY does not assert that a workspace has no operations outside the requested filters or opaque cursor.",
+          "required": ["state", "reason_code", "scope"],
+          "properties": {
+            "state": { "enum": ["AVAILABLE", "EMPTY"] },
+            "reason_code": {
+              "oneOf": [
+                { "type": "null" },
+                { "const": "NO_MATCHING_PORTAL_OPERATION_RECORDS" }
+              ]
+            },
+            "scope": { "const": "REQUEST" }
           }
         },
         "page": {

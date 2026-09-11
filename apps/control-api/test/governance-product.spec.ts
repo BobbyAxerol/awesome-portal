@@ -152,6 +152,30 @@ describe("N29 governance product closeout", () => {
     return { userId: user!.userId, username, cookie: cookies(login), csrf: csrfCookie(login) };
   }
 
+  async function withConcurrentApprovalInsertDelay<T>(run: () => Promise<T>): Promise<T> {
+    await ctx.pool.query(`
+      CREATE OR REPLACE FUNCTION test_governance_approval_insert_delay() RETURNS trigger
+      LANGUAGE plpgsql AS $$
+      BEGIN
+        PERFORM pg_sleep(0.15);
+        RETURN NEW;
+      END;
+      $$;
+      CREATE TRIGGER test_governance_approval_insert_delay
+      BEFORE INSERT ON governance_approval_requests
+      FOR EACH ROW EXECUTE FUNCTION test_governance_approval_insert_delay();
+    `);
+    try {
+      return await run();
+    } finally {
+      await ctx.pool.query(`
+        DROP TRIGGER IF EXISTS test_governance_approval_insert_delay
+          ON governance_approval_requests;
+        DROP FUNCTION IF EXISTS test_governance_approval_insert_delay();
+      `);
+    }
+  }
+
   function createPayload(requestKey = "n29-create-1", summary = "Ready for independent R1 review.") {
     return {
       schema_version: "governance.approval-create-request.v1",
@@ -245,13 +269,17 @@ describe("N29 governance product closeout", () => {
   });
 
   it("serializes concurrent retries and duplicate alpha/run intents", async () => {
-    const sameKey = await Promise.all([
-      mutation(stan, "/api/v1/execution/governance/approvals", createPayload("n29-race-same")),
-      mutation(stan, "/api/v1/execution/governance/approvals", createPayload("n29-race-same")),
-    ]);
-    expect(sameKey.map((item) => item.statusCode)).toEqual([201, 201]);
-    expect(new Set(sameKey.map((item) => item.json().approval.approval_id)).size).toBe(1);
-    expect(sameKey.map((item) => item.json().replayed).sort()).toEqual([false, true]);
+    await withConcurrentApprovalInsertDelay(async () => {
+      const sameKey = await Promise.all(
+        Array.from({ length: 4 }, () =>
+          mutation(stan, "/api/v1/execution/governance/approvals", createPayload("n29-race-same")),
+        ),
+      );
+      expect(sameKey.map((item) => item.statusCode)).toEqual([201, 201, 201, 201]);
+      expect(new Set(sameKey.map((item) => item.json().approval.approval_id)).size).toBe(1);
+      expect(sameKey.map((item) => item.json().replayed).sort()).toEqual([false, true, true, true]);
+    });
+    expect((await ctx.pool.query("SELECT 1 FROM governance_approval_requests")).rowCount).toBe(1);
 
     await ctx.pool.query(
       `TRUNCATE governance_approval_decisions, governance_decision_plans,
@@ -266,6 +294,60 @@ describe("N29 governance product closeout", () => {
     expect(distinctKeys.map((item) => item.statusCode).sort()).toEqual([201, 409]);
     expect(distinctKeys.find((item) => item.statusCode === 409)?.json().error.code)
       .toBe("DUPLICATE_OPEN_APPROVAL");
+  });
+
+  it("separates empty request scope, policy block and unavailable external panels", async () => {
+    const emptyInbox = await request(
+      bobby,
+      `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&view=ALL`,
+    );
+    expect(emptyInbox.statusCode).toBe(200);
+    expect(emptyInbox.json().read_truth).toEqual({
+      state: "EMPTY",
+      reason_code: "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS",
+      scope: "REQUEST",
+    });
+    const emptyHistory = await request(
+      bobby,
+      `/api/v1/execution/governance/approvals/history?workspace_id=${workspaceId}`,
+    );
+    expect(emptyHistory.json().read_truth).toEqual(emptyInbox.json().read_truth);
+    const emptyConditions = await request(
+      bobby,
+      `/api/v1/execution/governance/waivers?workspace_id=${workspaceId}`,
+    );
+    expect(emptyConditions.json().read_truth).toEqual(emptyInbox.json().read_truth);
+
+    const created = await mutation(stan, "/api/v1/execution/governance/approvals", createPayload());
+    expect(created.statusCode).toBe(201);
+    const approvalId = created.json().approval.approval_id as string;
+    await ctx.pool.query(
+      `UPDATE governance_approval_requests
+          SET evidence_complete = false, blocker_count = 1,
+              blocker_summary = 'Evidence review is incomplete.'
+        WHERE approval_id = $1`,
+      [approvalId],
+    );
+    const blockedList = await request(
+      lan,
+      `/api/v1/execution/governance/approvals?workspace_id=${workspaceId}&view=ALL`,
+    );
+    expect(blockedList.json()).toMatchObject({
+      read_truth: { state: "AVAILABLE", reason_code: null, scope: "REQUEST" },
+      page: { rows: [expect.objectContaining({ id: approvalId, inert: "BLOCKED" })] },
+    });
+    const detail = await request(
+      lan,
+      `/api/v1/execution/governance/approvals/${approvalId}/r1?workspace_id=${workspaceId}`,
+    );
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().data.eligibility.locks).toContain("BLOCKING_FINDINGS");
+    expect(detail.json().data.linked_panels).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        panel_state: "unavailable",
+        warnings: [expect.objectContaining({ code: "EXTERNAL_PROJECTION_NOT_COMMISSIONED" })],
+      }),
+    ]));
   });
 
   it("persists decision conditions and serves exact stateful keyset rows", async () => {

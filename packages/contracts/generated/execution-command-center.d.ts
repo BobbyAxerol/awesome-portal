@@ -144,6 +144,10 @@ export interface components {
             target_as_of: components["schemas"]["NullableDateTime"];
             target_freshness_state: components["schemas"]["Freshness"];
         };
+        /**
+         * @deprecated
+         * @description Deprecated V1 compatibility member. The pin writer was retired, so the Portal returns the authoritative fixed empty value; clients must not treat it as an active pin feature.
+         */
         PinnedPanel: {
             panel_state: components["schemas"]["PanelState"];
             /** @constant */
@@ -212,6 +216,10 @@ export interface components {
             panels: {
                 needs_you: components["schemas"]["NeedsYouPanel"];
                 fleet_health: components["schemas"]["FleetPanel"];
+                /**
+                 * @deprecated
+                 * @description Deprecated V1 compatibility field. It remains required and is an authoritative fixed empty panel because no pin writer is published.
+                 */
                 pinned_watchlist: components["schemas"]["PinnedPanel"];
                 today: components["schemas"]["TodayPanel"];
             };
