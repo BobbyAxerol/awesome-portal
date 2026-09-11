@@ -38,8 +38,15 @@ const FILES = {
   wrongEnvironment: "wrong-environment.jwt",
   missingScope: "missing-scope.jwt",
 } as const;
+const MANAGER_AUDIT_FILES = {
+  ...FILES,
+  wrongResource: "wrong-resource.jwt",
+  missingResource: "missing-resource.jwt",
+  wrongProfile: "wrong-profile.jwt",
+} as const;
 
 export type D3AssertionResource = (typeof D3_ASSERTION_RESOURCES)[number];
+export type D3AssertionMatrix = "legacy-v1" | "manager-audit-v1";
 
 export interface D3AssertionCorpusOptions {
   privateKeyFile: string;
@@ -55,6 +62,12 @@ export interface D3AssertionCorpusOptions {
    */
   resource?: D3AssertionResource;
   profileId?: string;
+  /**
+   * `legacy-v1` is deliberately the default so the original D3 corpus and
+   * its operator runbook stay byte-for-byte compatible. The stricter Manager
+   * metadata-only audit is opt-in and adds exact resource/profile negatives.
+   */
+  matrix?: D3AssertionMatrix;
   now?: Date;
 }
 
@@ -74,6 +87,7 @@ export async function issueD3AssertionCorpus(
 ): Promise<{ manifestFile: string; records: AssertionRecord[] }> {
   validateOptions(options);
   const resource = options.resource ?? DEFAULT_D3_ASSERTION_RESOURCE;
+  const matrix = options.matrix ?? "legacy-v1";
   await validatePrivateBoundary(options.privateKeyFile, options.outputDirectory);
   const privateKeyPem = await readFile(options.privateKeyFile, "utf8");
   if (Buffer.byteLength(privateKeyPem, "utf8") > 16 * 1024) {
@@ -114,7 +128,7 @@ export async function issueD3AssertionCorpus(
     modulusLength: 2048,
   });
 
-  const tokens: Record<keyof typeof FILES, string> = {
+  const tokens: Record<keyof typeof MANAGER_AUDIT_FILES, string> = {
     valid,
     malformed: "not-a-jwt",
     wrongSignature: await sign(variant({}), untrustedKey),
@@ -134,12 +148,19 @@ export async function issueD3AssertionCorpus(
       variant({ environment: options.environment === "paper" ? "sandbox" : "paper" }),
     ),
     missingScope: await sign(variant({ scopes: [] })),
+    wrongResource: await sign(variant({ resources: ["execution:command-center"] })),
+    missingResource: await sign(variant({ resources: [] })),
+    wrongProfile: await sign(
+      variant({ profile_id: `${options.environment.toUpperCase()}_D3_AUDIT_WRONG` }),
+    ),
   };
   const records: AssertionRecord[] = [];
-  for (const [name, file] of Object.entries(FILES) as Array<
-    [keyof typeof FILES, string]
-  >) {
-    await writeSecret(resolve(options.outputDirectory, file), tokens[name]);
+  const fileSet = matrix === "manager-audit-v1" ? MANAGER_AUDIT_FILES : FILES;
+  for (const [name, file] of Object.entries(fileSet)) {
+    await writeSecret(
+      resolve(options.outputDirectory, file),
+      tokens[name as keyof typeof MANAGER_AUDIT_FILES],
+    );
     records.push({
       case: name,
       file,
@@ -152,6 +173,13 @@ export async function issueD3AssertionCorpus(
     JSON.stringify(
       {
         schema_version: "portal.execution.d3.assertion-corpus.v1",
+        ...(matrix === "manager-audit-v1"
+          ? {
+              audit_matrix: matrix,
+              audit_scope: "manager-v2-metadata-only",
+              profile_id: options.profileId,
+            }
+          : {}),
         created_at: now.toISOString(),
         change_window_id: options.changeWindowId,
         issuer: options.issuer,
@@ -169,14 +197,18 @@ export async function issueD3AssertionCorpus(
 }
 
 function validateOptions(options: D3AssertionCorpusOptions): void {
+  const matrix = options.matrix ?? "legacy-v1";
   if (
     !IDENTIFIER.test(options.keyId) ||
     options.issuer.trim() === "" ||
     options.audience.trim() === "" ||
     !["paper", "sandbox", "live"].includes(options.environment) ||
     !CHANGE_WINDOW.test(options.changeWindowId) ||
+    !["legacy-v1", "manager-audit-v1"].includes(matrix) ||
     (options.resource !== undefined && !D3_ASSERTION_RESOURCES.includes(options.resource)) ||
     (options.resource === "execution:manager-v2:read" && options.profileId === undefined) ||
+    (matrix === "manager-audit-v1" &&
+      (options.resource !== "execution:manager-v2:read" || options.profileId === undefined)) ||
     !isAbsolute(options.privateKeyFile) ||
     !isAbsolute(options.outputDirectory)
   ) {
@@ -235,7 +267,12 @@ function optionalArgument(args: string[], name: string): string | undefined {
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
-  if (argument(args, "--acknowledge") !== "D3_AUTH_NEGATIVE_MATRIX") {
+  const matrix = (optionalArgument(args, "--matrix") ?? "legacy-v1") as D3AssertionMatrix;
+  const expectedAcknowledgement =
+    matrix === "manager-audit-v1"
+      ? "D3_MANAGER_AUDIT_NEGATIVE_MATRIX"
+      : "D3_AUTH_NEGATIVE_MATRIX";
+  if (argument(args, "--acknowledge") !== expectedAcknowledgement) {
     throw new Error("D3 explicit acknowledgement is required");
   }
   const environment = argument(args, "--environment");
@@ -252,6 +289,7 @@ async function main(): Promise<void> {
     changeWindowId: argument(args, "--change-window-id"),
     resource: optionalArgument(args, "--resource") as D3AssertionResource | undefined,
     profileId: optionalArgument(args, "--profile-id"),
+    matrix,
   });
   console.log(`D3 assertion corpus written without token output: ${result.records.length} cases`);
 }

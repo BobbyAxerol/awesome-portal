@@ -5376,11 +5376,13 @@ operations.
 
 ## 18. BE-R2 operational closeout campaign — active named work (2026-09-11)
 
-**Status:** `BE_R2_1_COMPLETE_DEV_LIFECYCLE_ACTIVE`.
+**Status:** `BE_R2_1_COMPLETE_DEV_LIFECYCLE_ACTIVE` +
+`BE_R2_2_COMPLETE_D3_GET_ONLY_EVIDENCE`.
 Bobby approved every decision in §18.1 on 2026-09-11 and named **BE-R2-1**.
 BE-R2-1 is now complete in the named dev namespace: its Portal-only
 implementation, isolated PostgreSQL test gate, staged drain and ongoing bounded
-lifecycle worker are evidenced below. BE-R2-2 through BE-R2-7 remain planning
+lifecycle worker are evidenced below. BE-R2-2 is separately complete as a D3
+GET-only observation/evidence scope. BE-R2-3 through BE-R2-7 remain planning
 only and authorize no source call, command, restart or deployment.
 
 **Why this is a separate closeout sequence:** the EDS/N29 work established a
@@ -5605,6 +5607,43 @@ database table.
 **Frontend handoff:** Claude may consume only the resulting named status and
 panel-state metadata. No frontend transport, proxy, fixture fallback or direct
 relation client is permitted.
+
+**Implementation and evidence journal — 2026-09-11 UTC:**
+
+- `manager-audit-v1` adds the exact Manager resource/profile negative cases
+  without changing the legacy D3 corpus default or its prior operator
+  runbook. Its temporary corpus, request headers, generated wrong identity and
+  response bodies live in one caller-owned `0700` directory and are destroyed
+  on every exit path.
+- The new runner called no relation or record route. It passed the positive
+  mTLS/TLS1.3/HTTP2 Manager metadata path and the full no-client,
+  wrong-client, missing-assertion and 13 Manager-JWT negative matrix for
+  `PAPER_BINANCE_USDM`, `SANDBOX_BINANCE_USDM` and
+  `LIVE_BINANCE_USDM`. Each accepted Manager catalogue had the active
+  `0c71…` digest, 96 metadata relations and five capabilities.
+- Legacy `/internal/v1/compatibility` reached HTTP/2 under mTLS but correctly
+  returned typed `503` after its valid legacy assertion. The current D2
+  compatibility facade is fail-closed and is not used as Manager authority;
+  the observed 503 is recorded rather than retried, bypassed or treated as a
+  successful data read.
+- The private `0600` evidence set produced a deterministic truth ledger with
+  34 E5 fields/capabilities, 96 relations, 54 named product operations and 23
+  frozen screen classifications. It records metadata-only coverage with null
+  item counts, so it makes no authoritative-empty, history or replay claim.
+- `live_data_executor` is explicitly recorded only from the committed
+  runtime-manifest metadata as a 99-relation/1,387-column raw Paper candidate.
+  The ledger proves no Portal direct DB access and no substitution for the
+  Live Manager profile.
+- Historical runtime/return-pack metadata still names `9040…`, while the
+  current Portal pin and live Manager metadata name `0c71…`. No running image
+  was changed. The versioned, non-secret reconciliation record is
+  [`execution-d3-current-source-reconciliation.v1.json`](../deploy/manifests/execution-d3-current-source-reconciliation.v1.json);
+  it makes the discrepancy a release-evidence item rather than an implicit
+  assumption or a rewrite of history.
+- Code/operator reference:
+  [`BE_R2_2_D3_GET_ONLY_EVIDENCE_AND_CURRENT_SOURCE_TRUTH_LEDGER.md`](backend/BE_R2_2_D3_GET_ONLY_EVIDENCE_AND_CURRENT_SOURCE_TRUTH_LEDGER.md).
+  Verification is split between the offline audit runner guard, ledger unit
+  contract tests and the full Control API PostgreSQL gate.
 
 ### BE-R2-3 — Maximum current Screen BFF and derived exact-query completion
 

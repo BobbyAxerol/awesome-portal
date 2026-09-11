@@ -373,6 +373,11 @@ for required in \
   "${ROOT_DIR}/scripts/execution-d3-render-probe-env.sh" \
   "${ROOT_DIR}/scripts/execution-d3-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d3-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-manager-live-audit.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-manager-audit-test.sh" \
+  "${ROOT_DIR}/scripts/execution-be-r2-2-test.sh" \
+  "${ROOT_DIR}/deploy/manifests/execution-d3-current-source-reconciliation.v1.json" \
+  "${ROOT_DIR}/upgrade/backend/BE_R2_2_D3_GET_ONLY_EVIDENCE_AND_CURRENT_SOURCE_TRUTH_LEDGER.md" \
   "${ROOT_DIR}/scripts/execution-d4-authorization.py" \
   "${ROOT_DIR}/scripts/test_execution_d4_authorization.py" \
   "${ROOT_DIR}/scripts/execution-d4-dormant-closeout.py" \
@@ -757,8 +762,11 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/adr/ADR-007-PORTAL-PROJECTION-EPOCH-CURSOR-AND-FRESHNESS.md" \
   "${ROOT_DIR}/apps/control-api/src/execution/delegation.ts" \
   "${ROOT_DIR}/apps/control-api/src/cli/execution-d3-assertions.ts" \
+  "${ROOT_DIR}/apps/control-api/src/cli/execution-current-source-truth-ledger.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/current-source-truth-ledger.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-delegation.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/execution-d3-assertions.spec.ts" \
+  "${ROOT_DIR}/apps/control-api/test/current-source-truth-ledger.spec.ts" \
   "${ROOT_DIR}/apps/control-api/test/facade.spec.ts" \
   "${ROOT_DIR}/upgrade/backend/BAR_07_CONTROL_API_FACADE.md" \
   "${ROOT_DIR}/apps/control-api/src/main.ts" \
@@ -1169,6 +1177,11 @@ for tracked_source in \
   scripts/execution-d3-render-probe-env.sh \
   scripts/execution-d3-live-probe.sh \
   scripts/execution-d3-test.sh \
+  scripts/execution-d3-manager-live-audit.sh \
+  scripts/execution-d3-manager-audit-test.sh \
+  scripts/execution-be-r2-2-test.sh \
+  deploy/manifests/execution-d3-current-source-reconciliation.v1.json \
+  upgrade/backend/BE_R2_2_D3_GET_ONLY_EVIDENCE_AND_CURRENT_SOURCE_TRUTH_LEDGER.md \
   scripts/execution-d4-authorization.py \
   scripts/test_execution_d4_authorization.py \
   scripts/execution-d4-dormant-closeout.py \
@@ -1606,6 +1619,9 @@ bash -n \
   "${ROOT_DIR}/scripts/verify-release-channel.sh" \
   "${ROOT_DIR}/scripts/portal-release-authority-test.sh" \
   "${ROOT_DIR}/scripts/portal-current-source-release-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-manager-live-audit.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-manager-audit-test.sh" \
+  "${ROOT_DIR}/scripts/execution-be-r2-2-test.sh" \
   "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh" \
   "${ROOT_DIR}/scripts/execution-n16a-emergency-routing-test.sh" \
@@ -1641,6 +1657,9 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-d3-render-probe-env.sh" \
   "${ROOT_DIR}/scripts/execution-d3-live-probe.sh" \
   "${ROOT_DIR}/scripts/execution-d3-test.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-manager-live-audit.sh" \
+  "${ROOT_DIR}/scripts/execution-d3-manager-audit-test.sh" \
+  "${ROOT_DIR}/scripts/execution-be-r2-2-test.sh" \
   "${ROOT_DIR}/scripts/execution-d4-storage-preflight.sh" \
   "${ROOT_DIR}/scripts/execution-d4-render-source-proxy.sh" \
   "${ROOT_DIR}/scripts/execution-d4-source-proxy-preflight.sh" \
@@ -1790,6 +1809,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-d1-test.sh"
 "${ROOT_DIR}/scripts/execution-d2-test.sh"
 "${ROOT_DIR}/scripts/execution-d3-test.sh"
+"${ROOT_DIR}/scripts/execution-be-r2-2-test.sh"
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
 "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh"
