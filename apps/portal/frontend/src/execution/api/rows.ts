@@ -199,7 +199,26 @@ export function readPassportEntry(raw: unknown): PassportEntry | null {
   const o = obj(raw);
   if (!o) return null;
   const label = str(o.label);
-  const value = str(o.value);
+  /*
+   * The value has three spellings and this reader knew none of them.
+   *
+   * It required `o.value`, which appears in NEITHER the published contract nor
+   * anything the server sends, so every real manifest entry was dropped and
+   * the Artifact passport panel had been empty for every approval since the
+   * reader was written. Measured on probe 2026-09-11 against a live PENDING
+   * R1: one entry in, zero out.
+   *
+   * `generated/execution-governance.d.ts` gives the entry as `evidence_id,
+   * ordinal, kind, label, sha256, schema_version, source_authority,
+   * captured_at` — the digest IS the passport value there, and the canonical
+   * fixture carries nothing else to show. The running control-api additionally
+   * sends `display_value` (governance.repository.ts:202), which is the
+   * human-readable artifact reference and the better line when it is present.
+   *
+   * So: the server's own words first, the contract's digest second. Both are
+   * published facts; neither is derived here.
+   */
+  const value = str(o.display_value) ?? str(o.value) ?? str(o.sha256) ?? str(o.artifact_id);
   if (!label || !value) return null;
   return {
     label,
