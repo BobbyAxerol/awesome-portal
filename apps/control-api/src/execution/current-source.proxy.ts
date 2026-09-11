@@ -11,6 +11,12 @@ import {
   MANAGER_V2_READ_RESOURCE,
 } from "./delegation";
 import {
+  MARKET_CONTEXT_INTERVALS,
+  MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS,
+  MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES,
+  MARKET_CONTEXT_VENUE,
+} from "./market-context.registry";
+import {
   ExecutionSharedReadRepository,
   SharedReadCacheValue,
   SharedReadScope,
@@ -28,6 +34,8 @@ const CANARY_SCREEN = "EXECUTION_CANARY_CONTROL_ROOM_SCREEN";
 const MANAGER_RELATION_PAGE_PATH = /^\/internal\/v2\/manager\/relations\/public\/[a-z][a-z0-9_]{1,127}$/;
 const MAXIMUM_MANAGER_PAGE_LIMIT = 200;
 const MAXIMUM_ADAPTIVE_MANAGER_PAGE_ATTEMPTS = 8;
+const MARKET_CONTEXT_INSTRUMENT = /^[A-Z0-9]{2,30}$/;
+const MARKET_CONTEXT_INTERVAL_SET = new Set<string>(MARKET_CONTEXT_INTERVALS);
 
 const N17B_PAPER_RELATIONS = Object.freeze({
   "manager.deployments": Object.freeze(["strategy_deployments"]),
@@ -1265,7 +1273,41 @@ function assertMarketContextFixedPathPolicy(
   ) {
     throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
   }
+  const venue = parsed.searchParams.get("venue");
+  const instrument = parsed.searchParams.get("instrument");
+  if (venue !== MARKET_CONTEXT_VENUE || instrument === null || !MARKET_CONTEXT_INSTRUMENT.test(instrument)) {
+    throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
+  }
+  if (!latest) {
+    const interval = parsed.searchParams.get("interval");
+    const fromMs = boundedMarketTimestamp(parsed.searchParams.get("from_ms"));
+    const toMs = boundedMarketTimestamp(parsed.searchParams.get("to_ms"));
+    const pointLimit = boundedMarketPointLimit(parsed.searchParams.get("point_limit"));
+    if (
+      interval === null || !MARKET_CONTEXT_INTERVAL_SET.has(interval) ||
+      fromMs === null || toMs === null || pointLimit === null ||
+      toMs <= fromMs || toMs - fromMs > MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS
+    ) {
+      throw new CurrentSourceProxyError("EDS11R4_MARKET_OPERATION_POLICY_INVALID", 500);
+    }
+  }
   return maximumResponseBytes;
+}
+
+function boundedMarketTimestamp(value: string | null): number | null {
+  if (value === null || !/^[0-9]{1,16}$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 8_640_000_000_000_000
+    ? parsed
+    : null;
+}
+
+function boundedMarketPointLimit(value: string | null): number | null {
+  if (value === null || !/^[1-9][0-9]{0,3}$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 1 && parsed <= MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES
+    ? parsed
+    : null;
 }
 
 export function eds11rManagerV2Path(

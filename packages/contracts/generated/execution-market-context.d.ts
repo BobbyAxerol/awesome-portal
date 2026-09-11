@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns at most 200 current market observations for one exact venue/instrument. This is a current observation, never an event replay or correction feed. */
+        /** @description Returns at most 200 Paper current market observations for BINANCE and one exact instrument. This is a current observation, never an event replay or correction feed. */
         get: operations["executionMarketContextLatestV1"];
         put?: never;
         post?: never;
@@ -28,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Returns one bounded provider OHLCV series: at most 2,000 source candles, 8 MiB and 366 days. The Portal must not infer global lifecycle ordering or replay semantics from this series. */
+        /** @description Returns one bounded Paper provider OHLCV series: at most 2,000 visual points, a source raw-page ceiling of 1,500, 8 MiB and 366 days. The Portal must not infer global lifecycle ordering or replay semantics from this series. */
         get: operations["executionMarketContextCandlesV1"];
         put?: never;
         post?: never;
@@ -43,8 +43,10 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         Token: string;
-        Venue: string;
-        Interval: string;
+        /** @constant */
+        Venue: "BINANCE";
+        /** @enum {unknown} */
+        Interval: "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "2h" | "4h" | "6h" | "8h" | "12h" | "1d" | "3d" | "1w" | "1M";
         UtcMilliseconds: number;
         LatestResponse: components["schemas"]["CommonResponse"] & ({
             /** @constant */
@@ -56,7 +58,7 @@ export interface components {
                 history_semantics?: "CURRENT_MARKET_OBSERVATION_NO_REPLAY_CLAIM";
             };
             observations: components["schemas"]["Observation"][];
-        } & (unknown & unknown & unknown & unknown));
+        } & (unknown & unknown));
         CandlesResponse: components["schemas"]["CommonResponse"] & ({
             /** @constant */
             schema_version?: "portal.execution.market-context.candles.v1";
@@ -74,31 +76,27 @@ export interface components {
                 to_ms: components["schemas"]["UtcMilliseconds"];
                 point_limit: number;
             };
-            /** @enum {unknown} */
-            coverage: "COMPLETE" | "PARTIAL" | "UNKNOWN";
-            /** @enum {unknown} */
-            sampling: "NONE" | "SOURCE_BOUNDED" | "SOURCE_AGGREGATED";
+            /** @constant */
+            coverage: "UNKNOWN";
+            /** @constant */
+            sampling: "SOURCE_BOUNDED";
             candles: components["schemas"]["Candle"][];
-        } & (unknown & unknown & unknown & unknown));
+        } & (unknown & unknown));
         Problem: {
             error: {
                 /** @enum {unknown} */
-                code: "EDS11R4_MARKET_QUERY_INVALID" | "PENDING_MARKET_CONTEXT_ADAPTER" | "MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED" | "MARKET_CONTEXT_PROFILE_NOT_ACCEPTED" | "MARKET_CONTEXT_OWNER_RETURN_INVALID" | "EDS11R4_SOURCE_CONTRACT_REJECTED" | "EDS11R4_RESPONSE_TOO_LARGE" | "WORKSPACE_NOT_FOUND" | "SESSION_REQUIRED" | "REQUEST_REJECTED";
+                code: "EDS11R4_MARKET_QUERY_INVALID" | "PENDING_MARKET_CONTEXT_ADAPTER" | "MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED" | "MARKET_CONTEXT_PROFILE_NOT_ACCEPTED" | "MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING" | "MARKET_CONTEXT_OWNER_RETURN_INVALID" | "EDS11R4_SOURCE_CONTRACT_REJECTED" | "EDS11R4_RESPONSE_TOO_LARGE" | "WORKSPACE_NOT_FOUND" | "SESSION_REQUIRED" | "REQUEST_REJECTED";
                 message: string;
             };
             request_id: string;
         };
-        /** @enum {string} */
-        Environment: "paper" | "sandbox" | "live";
-        /** @enum {string} */
-        ProfileId: "PAPER_BINANCE_USDM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
         SourceHealth: {
             /** @constant */
             availability: "AVAILABLE";
             /** @enum {unknown} */
             freshness: "FRESH" | "AGING" | "DEGRADED" | "STALE";
-            /** @enum {unknown} */
-            completeness: "COMPLETE" | "PARTIAL" | "POLL_BOUNDED";
+            /** @constant */
+            completeness: "POLL_BOUNDED";
             as_of_ms: components["schemas"]["UtcMilliseconds"];
         };
         CommonResponse: {
@@ -106,8 +104,10 @@ export interface components {
             /** @constant */
             authority: "PORTAL_CONTROL_API";
             logical_operation_id: string;
-            environment: components["schemas"]["Environment"];
-            profile_id: components["schemas"]["ProfileId"];
+            /** @constant */
+            environment: "paper";
+            /** @constant */
+            profile_id: "PAPER_BINANCE_USDM";
             provenance: {
                 /** @constant */
                 source_contract_revision: "trading-system.portal-execution.market-context.v1";

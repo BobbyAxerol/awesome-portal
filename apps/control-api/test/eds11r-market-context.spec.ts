@@ -12,7 +12,10 @@ import {
   marketCandlesPolicy,
   marketLatestPath,
   marketLatestPolicy,
+  MARKET_CONTEXT_INTERVALS,
   MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS,
+  MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES,
+  MARKET_CONTEXT_VENUE,
 } from "../src/execution/market-context.registry";
 import {
   MarketContextError,
@@ -70,13 +73,20 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
       operationId: "managerMarketContextCandlesV1", sourceId: "market.context", maximumResponseBytes: 8_388_608,
     });
     expect(() => marketLatestPath({ venue: "BINANCE&bad=true", instrument: "BTCUSDT" })).toThrow(/MARKET_QUERY_INVALID/);
+    expect(() => marketLatestPath({ venue: "binance", instrument: "BTCUSDT" })).toThrow(/MARKET_QUERY_INVALID/);
+    expect(() => marketLatestPath({ venue: MARKET_CONTEXT_VENUE, instrument: "btc-usdt" })).toThrow(/MARKET_QUERY_INVALID/);
     expect(() => marketCandlesPath({
       venue: "BINANCE", instrument: "BTCUSDT", interval: "1m", fromMs: 0,
       toMs: MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS + 1, pointLimit: 200,
     })).toThrow(/MARKET_QUERY_INVALID/);
+    expect(() => marketCandlesPath({
+      venue: "BINANCE", instrument: "BTCUSDT", interval: "7m", fromMs: 1_000, toMs: 2_000, pointLimit: 200,
+    })).toThrow(/MARKET_QUERY_INVALID/);
+    expect(MARKET_CONTEXT_INTERVALS).toContain("1M");
+    expect(MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES).toBe(2_000);
   });
 
-  it("activates only through the checked-in Portal adapter manifest plus the runtime flag", async () => {
+  it("keeps Paper source-dark until a distinct runtime qualification is accepted", async () => {
     const source = new FakeCurrentSource();
     const service = new MarketContextService(
       source as unknown as ExecutionCurrentSourceProxy,
@@ -84,8 +94,8 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
     );
     await expect(service.latest(principal, {
       environment: "paper", venue: "BINANCE", instrument: "BTCUSDT",
-    })).resolves.toMatchObject({ state: "POPULATED" });
-    expect(source.calls).toHaveLength(1);
+    })).rejects.toMatchObject({ code: "MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING", status: 503 });
+    expect(source.calls).toHaveLength(0);
   });
 
   it("preserves typed source-dark and invalid-query HTTP failures", () => {
@@ -117,23 +127,34 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
     });
   });
 
-  it("requires an accepted, manifest-pinned capability for each profile", () => {
-    expect(acceptedMarketContextCapability(
+  it("requires a manifest-pinned capability and separate accepted Paper evidence", () => {
+    expect(() => acceptedMarketContextCapability(
       MARKET_CONTEXT_PUBLICATION_INTAKE_V1,
       "managerMarketContextLatestV1",
       "paper",
-    )).toMatchObject({ operationId: "managerMarketContextLatestV1" });
+    )).toThrow(/MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING/);
     expect(() => acceptedMarketContextCapability(
       pendingPublication(),
       "managerMarketContextLatestV1",
       "paper",
     )).toThrow(/PENDING_MARKET_CONTEXT_ADAPTER/);
     const accepted = acceptedPublication();
-    expect(acceptedMarketContextCapability(accepted, "managerMarketContextLatestV1", "live")).toMatchObject({
+    expect(acceptedMarketContextCapability(accepted, "managerMarketContextLatestV1", "paper")).toMatchObject({
       operationId: "managerMarketContextLatestV1",
     });
-    expect(() => acceptedMarketContextCapability(accepted, "managerMarketContextCandlesV1", "sandbox"))
+    expect(() => acceptedMarketContextCapability(accepted, "managerMarketContextLatestV1", "live"))
       .toThrow(/MARKET_CONTEXT_PROFILE_NOT_ACCEPTED/);
+    const ownerFacadeBindingDrift: MarketContextPublicationIntake = {
+      ...accepted,
+      runtimeQualifications: {
+        PAPER: {
+          ...accepted.runtimeQualifications!.PAPER!,
+          adapterRevision: "portal.execution.market-context-data-layer.v1",
+        },
+      },
+    };
+    expect(() => acceptedMarketContextCapability(ownerFacadeBindingDrift, "managerMarketContextLatestV1", "paper"))
+      .toThrow(/MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING/);
   });
 
   it("preserves exact decimal and UTC values while withholding the Edge envelope", () => {
@@ -143,6 +164,7 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
     expect(latest).toMatchObject({
       schema_version: "portal.execution.market-context.latest.v1",
       state: "POPULATED",
+      source_health: { completeness: "POLL_BOUNDED" },
       observations: [{ value: "105123.000000000000000001", observed_at_ms: 1_788_566_400_000 }],
     });
     const serialized = JSON.stringify(latest);
@@ -157,7 +179,9 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
     expect(candles).toMatchObject({
       schema_version: "portal.execution.market-context.candles.v1",
       state: "POPULATED",
-      coverage: "COMPLETE",
+      coverage: "UNKNOWN",
+      sampling: "SOURCE_BOUNDED",
+      source_health: { completeness: "POLL_BOUNDED" },
       candles: [{ open: "100", high: "110", low: "90", close: "105", volume: "12.500" }],
     });
   });
@@ -181,6 +205,13 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
     const data = (malformed.source as Record<string, unknown>).data as Record<string, unknown>;
     ((data.items as Array<Record<string, unknown>>)[0]).high = "99";
     expect(() => translateMarketCandles(malformed, {
+      environment: "paper", venue: "BINANCE", instrument: "BTCUSDT", interval: "1m",
+      fromMs: 1_000, toMs: 3_000, pointLimit: 2,
+    })).toThrow(/EDS11R4_SOURCE_CONTRACT_REJECTED/);
+
+    const semanticDrift = candlesEnvelope();
+    ((semanticDrift.source as Record<string, unknown>).data as Record<string, unknown>).coverage = "COMPLETE";
+    expect(() => translateMarketCandles(semanticDrift, {
       environment: "paper", venue: "BINANCE", instrument: "BTCUSDT", interval: "1m",
       fromMs: 1_000, toMs: 3_000, pointLimit: 2,
     })).toThrow(/EDS11R4_SOURCE_CONTRACT_REJECTED/);
@@ -229,6 +260,18 @@ describe("EDS-11R4 Market Context current-source BFF", () => {
       ...policy,
       maximumResponseBytes: 2 * 1024 * 1024,
     })).toThrow(/EDS11R4_MARKET_OPERATION_POLICY_INVALID/);
+    expect(() => proxy.fixedPathForNamedOperation(principal, "paper", {
+      ...policy,
+      fixedPath: policy.fixedPath.replace("venue=BINANCE", "venue=OKX"),
+    })).toThrow(/EDS11R4_MARKET_OPERATION_POLICY_INVALID/);
+    expect(() => proxy.fixedPathForNamedOperation(principal, "paper", {
+      ...policy,
+      fixedPath: policy.fixedPath.replace("interval=1m", "interval=7m"),
+    })).toThrow(/EDS11R4_MARKET_OPERATION_POLICY_INVALID/);
+    expect(() => proxy.fixedPathForNamedOperation(principal, "paper", {
+      ...policy,
+      fixedPath: policy.fixedPath.replace("point_limit=200", "point_limit=2001"),
+    })).toThrow(/EDS11R4_MARKET_OPERATION_POLICY_INVALID/);
   });
 });
 
@@ -241,9 +284,22 @@ function acceptedPublication(): MarketContextPublicationIntake {
     ownerReturnManifestSha256: digest,
     sourceCommit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     sourceImageDigest: digest,
+    ownerAdapterRevision: "trading-system.portal-execution.market-context-facade.v1",
+    ownerAdapterManifestSha256: digest,
+    runtimeQualifications: {
+      PAPER: {
+        schemaVersion: "portal.execution.market-context-runtime-qualification.v1",
+        environment: "PAPER",
+        status: "ACCEPTED",
+        adapterRevision: "trading-system.portal-execution.market-context-facade.v1",
+        adapterManifestSha256: digest,
+        evidenceSha256: digest,
+        qualifiedOperations: ["managerMarketContextLatestV1", "managerMarketContextCandlesV1"],
+      },
+    },
     capabilities: {
       managerMarketContextLatestV1: {
-        operationId: "managerMarketContextLatestV1", profiles: ["PAPER", "LIVE"],
+        operationId: "managerMarketContextLatestV1", profiles: ["PAPER"],
         responseSchemaSha256: digest, fixtureIndexSha256: digest, acceptanceSha256: digest,
       },
       managerMarketContextCandlesV1: {
@@ -280,7 +336,7 @@ function latestEnvelope() {
       profile_id: "PAPER_BINANCE_USDM",
       availability: "AVAILABLE",
       freshness: "FRESH",
-      completeness: "COMPLETE",
+      completeness: "POLL_BOUNDED",
       as_of_ms: 1_788_566_400_500,
       data: {
         operation_id: "managerMarketContextLatestV1",
@@ -308,11 +364,11 @@ function candlesEnvelope() {
       profile_id: "PAPER_BINANCE_USDM",
       availability: "AVAILABLE",
       freshness: "FRESH",
-      completeness: "COMPLETE",
+      completeness: "POLL_BOUNDED",
       as_of_ms: 3_000,
       data: {
         operation_id: "managerMarketContextCandlesV1",
-        venue: "BINANCE", instrument: "BTCUSDT", interval: "1m", coverage: "COMPLETE", sampling: "NONE",
+        venue: "BINANCE", instrument: "BTCUSDT", interval: "1m", coverage: "UNKNOWN", sampling: "SOURCE_BOUNDED",
         items: [{ open_ms: 1_000, close_ms: 1_999, open: "100", high: "110", low: "90", close: "105", volume: "12.500" }],
       },
     },

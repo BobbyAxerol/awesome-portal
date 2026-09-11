@@ -15,9 +15,25 @@ export interface MarketContextAcceptedCapability {
 }
 
 /**
+ * A deployment flag is never qualification evidence. Each profile needs a
+ * separate, non-secret probe record before its fixed Market Context routes
+ * can be admitted. Paper leads; Sandbox/Live cannot borrow Paper authority.
+ */
+export interface MarketContextRuntimeQualification {
+  readonly schemaVersion: "portal.execution.market-context-runtime-qualification.v1";
+  readonly environment: Uppercase<MaximumDataEnvironment>;
+  readonly status: "PENDING" | "ACCEPTED";
+  readonly adapterRevision: string;
+  readonly adapterManifestSha256: string;
+  readonly evidenceSha256: string | null;
+  readonly qualifiedOperations: readonly MarketContextOperationId[];
+}
+
+/**
  * The initial v1 value was deliberately source-dark. This v2 intake accepts a
  * checked-in Portal-owned adapter only when its exact manifest and profile
- * bounds validate; no environment flag can bypass this state.
+ * bounds validate. Paper is qualified independently; no environment flag can
+ * bypass that proof and Sandbox/Live cannot inherit it.
  */
 export interface MarketContextPublicationIntake {
   readonly schemaVersion:
@@ -28,10 +44,21 @@ export interface MarketContextPublicationIntake {
   readonly ownerReturnManifestSha256: string | null;
   readonly sourceCommit: string | null;
   readonly sourceImageDigest: string | null;
+  /**
+   * An owner-return may publish the frozen envelope through a Manager facade
+   * rather than the Portal Data Layer adapter. Its route revision and manifest
+   * must be committed here before a runtime qualification can name it.
+   */
+  readonly ownerAdapterRevision?: string;
+  readonly ownerAdapterManifestSha256?: string;
   /** A Portal-owned source adapter is accepted from a checked-in, exact
    * contract manifest. It does not grant direct source access. */
   readonly portalAdapterRevision?: string;
   readonly portalAdapterManifestSha256?: string;
+  readonly runtimeQualifications?: Readonly<Partial<Record<
+    Uppercase<MaximumDataEnvironment>,
+    MarketContextRuntimeQualification
+  >>>;
   readonly capabilities: Readonly<Partial<Record<MarketContextOperationId, MarketContextAcceptedCapability>>>;
 }
 
@@ -42,12 +69,14 @@ export const MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION =
   "portal.execution.market-context-data-layer.v1";
 export const MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256 =
   "sha256:f697f711661365507e4440872cb435d95b34d1e20a01a47f5d65dd4efc9dcf85";
+/** Set only from the sanitized, committed Paper GET-only qualification proof. */
+export const MARKET_CONTEXT_PAPER_QUALIFICATION_EVIDENCE_SHA256: string | null = null;
 
 /**
  * Current-source activation accepts the existing loopback Data Layer only via
  * the narrow Portal Source Proxy/Edge adapter contract. This is not a feature
  * flag bypass: the static manifest, exact profiles and per-operation bounds
- * are checked here, while runtime probes bind it to the deployed image.
+ * are checked here, while a per-profile runtime proof binds it to deployment.
  */
 export const MARKET_CONTEXT_PUBLICATION_INTAKE_V1: MarketContextPublicationIntake = Object.freeze({
   schemaVersion: "portal.execution.market-context-intake.v2",
@@ -58,17 +87,31 @@ export const MARKET_CONTEXT_PUBLICATION_INTAKE_V1: MarketContextPublicationIntak
   sourceImageDigest: null,
   portalAdapterRevision: MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION,
   portalAdapterManifestSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
+  runtimeQualifications: Object.freeze({
+    PAPER: Object.freeze({
+      schemaVersion: "portal.execution.market-context-runtime-qualification.v1",
+      environment: "PAPER",
+      status: "PENDING",
+      adapterRevision: MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION,
+      adapterManifestSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
+      evidenceSha256: MARKET_CONTEXT_PAPER_QUALIFICATION_EVIDENCE_SHA256,
+      qualifiedOperations: Object.freeze([
+        "managerMarketContextLatestV1",
+        "managerMarketContextCandlesV1",
+      ] as const),
+    }),
+  }),
   capabilities: Object.freeze({
     managerMarketContextLatestV1: Object.freeze({
       operationId: "managerMarketContextLatestV1",
-      profiles: Object.freeze(["PAPER", "SANDBOX", "LIVE"] as const),
+      profiles: Object.freeze(["PAPER"] as const),
       responseSchemaSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
       fixtureIndexSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
       acceptanceSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
     }),
     managerMarketContextCandlesV1: Object.freeze({
       operationId: "managerMarketContextCandlesV1",
-      profiles: Object.freeze(["PAPER", "SANDBOX", "LIVE"] as const),
+      profiles: Object.freeze(["PAPER"] as const),
       responseSchemaSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
       fixtureIndexSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
       acceptanceSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
@@ -104,13 +147,38 @@ export function acceptedMarketContextCapability(
   const ownerReturnValid = intake.status === "ACCEPTED_OWNER_RETURN" &&
     /^sha256:[a-f0-9]{64}$/.test(intake.ownerReturnManifestSha256 ?? "") &&
     /^[a-f0-9]{40}$/.test(intake.sourceCommit ?? "") &&
-    /^sha256:[a-f0-9]{64}$/.test(intake.sourceImageDigest ?? "");
+    /^sha256:[a-f0-9]{64}$/.test(intake.sourceImageDigest ?? "") &&
+    /^[A-Za-z0-9][A-Za-z0-9._:-]{2,190}$/.test(intake.ownerAdapterRevision ?? "") &&
+    /^sha256:[a-f0-9]{64}$/.test(intake.ownerAdapterManifestSha256 ?? "");
   const portalAdapterValid = intake.status === "ACCEPTED_PORTAL_SOURCE_ADAPTER" &&
     intake.schemaVersion === "portal.execution.market-context-intake.v2" &&
     intake.portalAdapterRevision === MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION &&
     intake.portalAdapterManifestSha256 === MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256;
   if (!commonValid || (!ownerReturnValid && !portalAdapterValid)) {
     throw new MarketContextIntakeError("MARKET_CONTEXT_OWNER_RETURN_INVALID", 502);
+  }
+  const expectedAdapter = portalAdapterValid
+    ? {
+      revision: MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION,
+      manifestSha256: MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256,
+    }
+    : {
+      revision: intake.ownerAdapterRevision!,
+      manifestSha256: intake.ownerAdapterManifestSha256!,
+    };
+  const profile = environment.toUpperCase() as Uppercase<MaximumDataEnvironment>;
+  const qualification = intake.runtimeQualifications?.[profile];
+  const qualificationValid = qualification !== undefined &&
+    qualification.schemaVersion === "portal.execution.market-context-runtime-qualification.v1" &&
+    qualification.environment === profile &&
+    qualification.status === "ACCEPTED" &&
+    qualification.adapterRevision === expectedAdapter.revision &&
+    qualification.adapterManifestSha256 === expectedAdapter.manifestSha256 &&
+    qualification.evidenceSha256 !== null &&
+    /^sha256:[a-f0-9]{64}$/.test(qualification.evidenceSha256) &&
+    qualification.qualifiedOperations.includes(operationId);
+  if (!qualificationValid) {
+    throw new MarketContextIntakeError("MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING", 503);
   }
   return capability;
 }

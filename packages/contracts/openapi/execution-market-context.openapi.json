@@ -3,7 +3,7 @@
   "info": {
     "title": "Primus Portal EDS-11R4 Market Context API",
     "version": "1.0.0",
-    "description": "Two named same-origin, session-protected Portal BFF routes. They are source-dark until a digest-pinned Trading System Market Context owner return is accepted and the separate runtime flag is enabled. No browser calls the Execution Edge, Data Layer, Redis, broker or Trading System directly."
+    "description": "Two named same-origin, session-protected Portal BFF routes. A successful response is Paper-only until Sandbox and Live independently pass their own evidence. They remain source-dark until the checked-in adapter, sanitized Paper qualification evidence and separate runtime flag are all accepted. No browser calls the Execution Edge, Data Layer, Redis, broker or Trading System directly."
   },
   "servers": [{ "url": "/" }],
   "security": [{ "portalSession": [] }],
@@ -11,7 +11,7 @@
     "/api/v1/execution/market/latest": {
       "get": {
         "operationId": "executionMarketContextLatestV1",
-        "description": "Returns at most 200 current market observations for one exact venue/instrument. This is a current observation, never an event replay or correction feed.",
+        "description": "Returns at most 200 Paper current market observations for BINANCE and one exact instrument. This is a current observation, never an event replay or correction feed.",
         "parameters": [
           { "$ref": "#/components/parameters/Workspace" },
           { "$ref": "#/components/parameters/Environment" },
@@ -32,7 +32,7 @@
     "/api/v1/execution/market/candles": {
       "get": {
         "operationId": "executionMarketContextCandlesV1",
-        "description": "Returns one bounded provider OHLCV series: at most 2,000 source candles, 8 MiB and 366 days. The Portal must not infer global lifecycle ordering or replay semantics from this series.",
+        "description": "Returns one bounded Paper provider OHLCV series: at most 2,000 visual points, a source raw-page ceiling of 1,500, 8 MiB and 366 days. The Portal must not infer global lifecycle ordering or replay semantics from this series.",
         "parameters": [
           { "$ref": "#/components/parameters/Workspace" },
           { "$ref": "#/components/parameters/Environment" },
@@ -76,9 +76,9 @@
       }
     },
     "schemas": {
-      "Token": { "type": "string", "minLength": 1, "maxLength": 191, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$" },
-      "Venue": { "type": "string", "minLength": 1, "maxLength": 96, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$" },
-      "Interval": { "type": "string", "minLength": 1, "maxLength": 32, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$" },
+      "Token": { "type": "string", "minLength": 2, "maxLength": 30, "pattern": "^[A-Z0-9]{2,30}$" },
+      "Venue": { "const": "BINANCE" },
+      "Interval": { "enum": ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"] },
       "UtcMilliseconds": { "type": "integer", "minimum": 0, "maximum": 8640000000000000 },
       "LatestResponse": { "$ref": "../schemas/execution-market-context.v1.schema.json#/$defs/LatestResponse" },
       "CandlesResponse": { "$ref": "../schemas/execution-market-context.v1.schema.json#/$defs/CandlesResponse" },
@@ -98,6 +98,7 @@
                   "PENDING_MARKET_CONTEXT_ADAPTER",
                   "MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED",
                   "MARKET_CONTEXT_PROFILE_NOT_ACCEPTED",
+                  "MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING",
                   "MARKET_CONTEXT_OWNER_RETURN_INVALID",
                   "EDS11R4_SOURCE_CONTRACT_REJECTED",
                   "EDS11R4_RESPONSE_TOO_LARGE",

@@ -1870,9 +1870,14 @@ durable run/attempt events. Detailed evidence:
 - The BE-R2 compose change re-pins the EDS-12 static qualification digest and
   package manifest; it does not claim or alter a deployed protected-main
   release.
-- BE-R2-2 through BE-R2-7 remain planned. They are deliberately split into
-  GET-only D3 evidence, current-screen BFF/derived exact query, Paper-first Market Context,
-  realtime/pacing, governance/V1/idempotency, and immutable release evidence.
+- BE-R2-2 (GET-only D3 truth ledger) and BE-R2-3 (maximum current Screen BFF
+  plus coverage-proven derived exact query) are implemented. BE-R2-4 now has
+  its sealed Paper-first BFF/schema/static gates and one committed sanitized
+  source-contract mismatch record; it deliberately remains runtime-dark until
+  the exact two-route Paper adapter or frozen Manager-facade envelope passes
+  the positive/negative qualification matrix. BE-R2-5 through BE-R2-7 remain
+  planned: realtime/pacing, governance/V1/idempotency and immutable release
+  evidence.
 - Bobby locked six guardrails: staged expired-cache deletion only; D3 remains
   GET-only; Market Context qualifies Paper first; no direct
   `live_data_executor` access; deprecated V1 `pinned_watchlist` compatibility

@@ -1,0 +1,50 @@
+{
+  "schema_version": "portal.execution.market-context-paper-qualification.v1",
+  "observed_at_utc": "2026-09-11T14:20:14Z",
+  "change_window_id": "BE-R2-4-PAPER-20260911",
+  "scope": "PAPER_GET_ONLY_FIXED_MARKET_CONTEXT",
+  "decision": "SOURCE_DEPLOYMENT_CONTRACT_MISMATCH",
+  "runtime_mutation": false,
+  "browser_direct_access": false,
+  "raw_market_payload_persisted": false,
+  "delegated_resource": "execution:manager-v2:read",
+  "expected_adapter": {
+    "adapter_revision": "portal.execution.market-context-data-layer.v1",
+    "adapter_manifest_sha256": "sha256:f697f711661365507e4440872cb435d95b34d1e20a01a47f5d65dd4efc9dcf85",
+    "contract_revision": "trading-system.portal-execution.market-context.v1",
+    "profile": "PAPER_BINANCE_USDM"
+  },
+  "observed_transport": {
+    "tls_version": "TLSv1.3",
+    "http_version": "h2",
+    "mtls": true,
+    "delegated_jwt_profile_binding": true
+  },
+  "observed_probe": {
+    "operation_id": "managerMarketContextLatestV1",
+    "http_status": 502,
+    "typed_code": "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+    "raw_response_persisted": false
+  },
+  "deployed_proxy_shape": {
+    "route_family": "eds11r-r4-r5-manager-facade-extension",
+    "market_route_upstream": "loopback_mtls_manager_facade",
+    "expected_data_layer_adapter_upstream": "loopback_data_layer_only",
+    "match": false
+  },
+  "required_owner_resolution": {
+    "single_resolution_record": "Publish one exact Paper market route shape that either restores the checked-in Data Layer adapter or returns the frozen Market Context v1 envelope through the Manager facade with a checked-in owner-return adapter revision and manifest binding.",
+    "required_positive_evidence": [
+      "managerMarketContextLatestV1 HTTP 200 envelope",
+      "managerMarketContextCandlesV1 HTTP 200 envelope",
+      "invalid interval HTTP 400",
+      "wrong profile delegated JWT HTTP 403"
+    ],
+    "forbidden_workarounds": [
+      "Portal direct Data Layer or Trading System database access",
+      "cross-profile fallback",
+      "runtime feature activation before Paper evidence"
+    ]
+  },
+  "portal_status": "PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION"
+}

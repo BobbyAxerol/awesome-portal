@@ -2248,3 +2248,36 @@ For every subsequent backend handoff, consume only named same-origin BFF
 operations. Keep the reviewed hierarchy mounted and replace a local panel
 state—not an entire route. Browser evidence must retain TypeScript/unit/DOM
 warning checks plus representative authenticated same-origin network evidence.
+
+### 8.57 BE-R2-4 Paper Market Context handoff — runtime-dark exact gap (2026-09-11)
+
+Two browser-safe DTOs are now frozen and generated:
+
+- `GET /api/v1/execution/market/latest` →
+  `executionMarketContextLatestV1`;
+- `GET /api/v1/execution/market/candles` →
+  `executionMarketContextCandlesV1`.
+
+They accept only the server-bound Paper profile, `BINANCE`, an uppercase
+instrument token, one sealed interval and a bounded UTC-millisecond range. A
+successful payload preserves exact decimal strings, `as_of_ms`, freshness,
+`POLL_BOUNDED`, `UNKNOWN` candle coverage and `SOURCE_BOUNDED` sampling.
+It remains a current observation/bounded provider series—never lifecycle
+replay, benchmark, correction or complete market history.
+
+The current runtime is intentionally **not consumable yet**:
+`MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING` is expected before a named
+Paper source qualification succeeds. The safe Paper probe proved mTLS/JWT
+transport but the source returned typed
+`MANAGER_V2_SOURCE_CONTRACT_REJECTED`, recorded in
+[`execution-market-context-paper-qualification.v1.json`](../../../deploy/manifests/execution-market-context-paper-qualification.v1.json).
+Therefore frontend work is limited to keeping the approved rich chart/panel
+mounted and rendering a local `UNAVAILABLE` state with the typed reason. Do
+not issue a direct Edge/Data Layer call, import fixtures as runtime fallback,
+borrow Sandbox/Live data, create timer candles or replace the route shell.
+
+After Codex supplies a positive Paper requalification handoff—against either
+the pinned Data Layer adapter or a separately checked-in owner-return facade
+binding—Claude may bind only these two named same-origin consumers to the
+corresponding chart panels; Sandbox and Live each require their own later
+handoff and may not infer a fallback from Paper.

@@ -49,6 +49,9 @@ portal_openapi = json.loads((portal_contracts / "openapi/execution-market-contex
 portal_latest_fixture = json.loads((portal_contracts / "fixtures/execution-market-context.latest.valid.json").read_text())
 portal_candles_fixture = json.loads((portal_contracts / "fixtures/execution-market-context.candles.valid.json").read_text())
 portal_generated = (portal_contracts / "generated/execution-market-context.d.ts").read_text()
+adapter_contract = json.loads((root / "services/portal-execution-edge-rs/contracts/portal-market-context-data-layer-adapter-v1/market-context-data-layer-adapter.v1.json").read_text())
+qualification_record = json.loads((root / "deploy/manifests/execution-market-context-paper-qualification.v1.json").read_text())
+qualification_runner = (root / "scripts/execution-market-context-paper-qualification.mjs").read_text()
 
 ids = ["market.latest.v1", "market.candles.v1", "venue.calendar.v1", "market.benchmark.v1", "market.vnm-constraints.v1"]
 assert request["schema_version"] == "portal.execution.eds11r.market-context-owner-request.v1"
@@ -160,6 +163,9 @@ assert f'MARKET_CONTEXT_REQUEST_MANIFEST_SHA256 =\n  "{manifest_digest}"' in int
 assert 'status: "ACCEPTED_PORTAL_SOURCE_ADAPTER"' in intake_source
 assert 'MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION' in intake_source
 assert 'MARKET_CONTEXT_DATA_LAYER_ADAPTER_MANIFEST_SHA256' in intake_source
+assert 'MARKET_CONTEXT_PAPER_QUALIFICATION_EVIDENCE_SHA256: string | null = null' in intake_source
+assert 'MarketContextRuntimeQualification' in intake_source
+assert 'MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING' in intake_source
 assert 'acceptedMarketContextCapability' in intake_source
 for token in (
     'managerMarketContextLatestV1', 'managerMarketContextCandlesV1',
@@ -201,7 +207,19 @@ assert portal_openapi["paths"]["/api/v1/execution/market/candles"]["get"]["opera
 assert portal_latest_fixture["provenance"]["history_semantics"] == "CURRENT_MARKET_OBSERVATION_NO_REPLAY_CLAIM"
 assert portal_candles_fixture["provenance"]["history_semantics"] == "BOUNDED_PROVIDER_SERIES_NO_REPLAY_CLAIM"
 assert portal_latest_fixture["profile_id"] == "PAPER_BINANCE_USDM"
-assert portal_candles_fixture["profile_id"] == "SANDBOX_BINANCE_USDM"
+assert portal_candles_fixture["profile_id"] == "PAPER_BINANCE_USDM"
+assert portal_schema["$defs"]["Venue"] == {"const": "BINANCE"}
+assert "Environment" not in portal_schema["$defs"]
+assert "ProfileId" not in portal_schema["$defs"]
+assert portal_schema["$defs"]["Interval"]["enum"] == [
+    "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h",
+    "1d", "3d", "1w", "1M",
+]
+assert portal_schema["$defs"]["SourceHealth"]["properties"]["completeness"] == {"const": "POLL_BOUNDED"}
+assert portal_schema["$defs"]["CommonResponse"]["properties"]["environment"] == {"const": "paper"}
+assert portal_schema["$defs"]["CommonResponse"]["properties"]["profile_id"] == {"const": "PAPER_BINANCE_USDM"}
+assert portal_candles_fixture["coverage"] == "UNKNOWN"
+assert portal_candles_fixture["sampling"] == "SOURCE_BOUNDED"
 for token in ("executionMarketContextLatestV1", "executionMarketContextCandlesV1"):
     assert token in portal_generated
 route_surface = json.dumps({
@@ -210,6 +228,36 @@ route_surface = json.dumps({
 }, sort_keys=True).lower()
 for forbidden in ("/internal/v2/", "manager/market", "cursor", "mtls", "delegated", "credential"):
     assert forbidden not in route_surface
+
+# BE-R2-4 only admits a deployed Paper adapter after a positive proof.  The
+# checked-in rejected record proves the current live mismatch without
+# promoting it; it is intentionally not substituted as success evidence.
+assert adapter_contract["adapter_revision"] == "portal.execution.market-context-data-layer.v1"
+assert qualification_record["decision"] == "SOURCE_DEPLOYMENT_CONTRACT_MISMATCH"
+assert qualification_record["runtime_mutation"] is False
+assert qualification_record["raw_market_payload_persisted"] is False
+assert qualification_record["expected_adapter"]["adapter_revision"] == adapter_contract["adapter_revision"]
+assert qualification_record["expected_adapter"]["profile"] == "PAPER_BINANCE_USDM"
+assert qualification_record["observed_probe"] == {
+    "operation_id": "managerMarketContextLatestV1",
+    "http_status": 502,
+    "typed_code": "MANAGER_V2_SOURCE_CONTRACT_REJECTED",
+    "raw_response_persisted": False,
+}
+assert qualification_record["deployed_proxy_shape"]["match"] is False
+assert qualification_record["portal_status"] == "PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION"
+for token in (
+    'const PROFILE = "PAPER_BINANCE_USDM";',
+    'const RESOURCE = "execution:manager-v2:read";',
+    'ALPNProtocols: ["h2"]',
+    'minVersion: "TLSv1.3"',
+    'raw_market_payload_persisted: false',
+    'runtime_mutation: false',
+):
+    assert token in qualification_runner, token
+assert "const [latest, candles, invalidInterval, profileMismatch] = await Promise.all([" not in qualification_runner
+for forbidden in ("postgres", "redis", "broker", "child_process", "writeFile", "appendFile", "fetch(", "axios"):
+    assert forbidden not in qualification_runner.lower(), forbidden
 PY
 
 # The owner receives one campaign directory.  Exercise the builder rather
@@ -222,5 +270,6 @@ test -f "${PACKET_DIR}/contracts/eds11r-market-context-v1-request/schemas/market
 (cd "${PACKET_DIR}/contracts/eds11r-market-context-v1-request" && sha256sum --quiet -c MANIFEST.sha256)
 (cd "${PACKET_DIR}" && sha256sum --quiet -c INPUT_MANIFEST.sha256)
 
+bash "${ROOT_DIR}/scripts/execution-market-context-paper-qualification-test.sh"
 bash -n "${ROOT_DIR}/scripts/execution-eds11r-market-context-test.sh"
 printf '%s\n' 'EDS-11R4 Market Context request, Portal-owned adapter and authority gates passed.'
