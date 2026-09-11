@@ -8714,3 +8714,116 @@ thay vì in `image match` rồi đi tiếp.
   một dev-portal sinh ra để làm: xem trước code chưa commit.
 - **"Đẩy lên, chưa ổn thì lùi"** — giờ mới thật sự làm được, vì đã có tag theo
   sha để lùi chính xác và có `build_commit` để biết đang ở đâu.
+
+---
+
+## A59. PHASE 8 (VÒNG 2) ĐÃ LÀM (11-09) — màn rỗng giữ được khung, và cái test xanh không nhìn thấy
+
+Nhánh tạm `feat/execution-empty-composition` (owner duyệt 11-09), worktree
+`/home/bobby/portal-empty-composition`. Commit `7cf82d95` + `906e933d`.
+
+### A59.1 Codex sửa exit gate của tôi, và codex đúng
+
+Tôi đề xuất *"không màn chi tiết nào dưới **400 ký tự** khi rỗng"*. Handoff BE-R2
+§3 bác: dùng **allowlist ngữ nghĩa**, *"do not impose a blanket 'every empty page
+must have N characters' requirement"*.
+
+Bằng chứng cho việc codex đúng đến từ chính lần làm này. Bản đầu của tôi đạt
+1 637 ký tự trên Gate Live. Bản sau **giảm còn 1 192** mà nói **nhiều hơn** —
+vì 445 ký tự kia là hai câu lặp lại tám lần. Nếu ngưỡng 400 là gate, nó sẽ
+thưởng cho bản tệ hơn.
+
+### A59.2 Đo trước: ba mức "rỗng"
+
+| Màn | Trước | Sau | Panel giữ được |
+| --- | ---: | ---: | ---: |
+| Gate R1 | **88** | **866** | 4 |
+| Gate R2 | **83** | **857** | 5 |
+| Gate LIVE | **51** | **1 192** | 8 |
+| Sandbox Certification | **203** | **1 037** | 8 |
+| Canary Control Room | **179** | **924** | 7 |
+
+Đo bằng Chromium trên probe `:8090`, đăng nhập thật, route nhồi id không tồn tại.
+
+### A59.3 Allowlist — hai panel **cố ý không** dựng, kèm lý do
+
+Câu hỏi cho từng panel: *khi không có bản ghi, câu "panel này không có gì" có
+**đúng** không?*
+
+- **Đúng** với panel gắn vào chính bản ghi đang thiếu → dựng.
+- **Sai** với panel gắn vào thứ khác → **không dựng**. `Certifications in
+  progress` liệt kê certification *khác*; màn chưa hề hỏi danh sách đó, nên gọi
+  nó rỗng là báo cáo kết quả của một truy vấn không chạy. `Promotion plans` gắn
+  vào portfolio, không vào certification này.
+- **Sai** với panel chỉ xuất hiện trong một chế độ lỗi → không dựng. `Why this
+  preview cannot be decided against` chỉ vẽ khi capital preview thiếu authority
+  envelope; nêu tên nó trên màn rỗng là hứa một panel mà bản ghi khoẻ mạnh không
+  bao giờ vẽ.
+
+Hai panel bị giữ lại được ghi **trong code** kèm `because`, và test khẳng định
+hai danh sách không bao giờ giao nhau.
+
+### A59.4 Lỗi của chính tôi, chỉ ảnh mới bắt được
+
+Bản đầu: 2 204 test xanh, tsc sạch, và **sai** khi mở trên probe. Gate Live vẽ
+tám thẻ, mỗi thẻ đội tiêu đề **"Nothing to show" cỡ 22px**, bên dưới lặp lại
+*"No record is published here, so this panel is empty"*. Hai câu × tám panel =
+**16 lần**, và chữ to nhất trên màn không mang thông tin nào.
+
+Đúng loại lỗi §A54 đã ghi (câu chờ-ai in sáu lần trên Incident Detail dưới 2 166
+test xanh). Lần này tôi vẫn mắc lại — khác ở chỗ lần này tôi **có mở ảnh ra xem**
+trước khi báo cáo xong.
+
+Sửa: mỗi panel nêu **đúng cái đang thiếu** — `No artifact passport`, `No exit
+gates`, `No drift measurement` — và chỉ nói nó *holds* gì. Tiêu đề 22px thuộc về
+một register rỗng đơn lẻ ("Inbox zero" là một kết quả, đáng đọc từ xa), nên nó
+được thu về cỡ meta **chỉ trong khung này** (`.exec-empty-frame`), không đụng 39
+màn còn lại.
+
+### A59.5 F10 đóng
+
+Panel đọc đúng một relation thì nêu tên relation. Nhìn thấy trên ảnh probe:
+`execution_artifact_passports`, `governance_approval_checklists`,
+`governance_approval_decisions`, `manager.reconciliation:reconciliation_findings`.
+
+### A59.6 Producer sentence — truy nguồn, không đoán
+
+`recordProducer.ts` có luật riêng: *"traced to a writer in the backend, not
+guessed"*. Nên trước khi viết câu cho approval tôi truy:
+`POST /governance/approvals` (`governance.controller.ts:201`) →
+`INSERT INTO governance_approval_requests` (`governance.repository.ts:569`),
+frontend gọi từ `/governance/approvals/new`, link "New request ▸" trên Approval
+Inbox (`ApprovalInbox.tsx:363`). Nên `kind: "OPERATOR"`, và R1/R2/Live là **ba
+gate trên cùng một request**, không phải ba bản ghi — một request vắng làm rỗng
+cả ba màn.
+
+### A59.7 Guard chứng minh đỏ được
+
+Không nhận một test xanh làm bằng chứng. Tôi quay Gate R1 về một dòng như cũ:
+**3 test đỏ, và chỉ đỏ đúng gate-r1**. Khôi phục xong mới đi tiếp.
+
+### A59.8 Evidence
+
+| Gate | Kết quả |
+| --- | --- |
+| `tsc --noEmit` (src/) | sạch |
+| `vitest run` | **2 214 passed** · 3 skipped · 134 file · 0 đỏ |
+| Test mới | 47 (40 `emptyComposition` + 7 sửa `recordProducer`) |
+| Pre-commit hook | xanh cả hai commit (gồm 490 test backend) |
+| Ảnh probe | 5 màn, `scratchpad/p8shots/*.png`, đã **mở xem từng tấm** |
+| Design guard | `typeRoles` bắt `text-transform: uppercase` của tôi → sửa theo luật, không nới luật |
+
+**Không đụng**: `scripts/verify-workspace.sh`, `apps/portal/registry/FRONTEND_HANDOFF.md`
+(codex vừa sửa trong `b61ad10c`), backend, migration, compose.
+
+### A59.9 Reuse report (§11.3)
+
+| Dùng lại | Của ai |
+| --- | --- |
+| Pattern khung rỗng | `IncidentDetail.tsx` — màn duy nhất đã làm đúng; tổng quát hoá chứ không viết mới |
+| `PanelState` + prop `title` | `components/states.tsx` — prop có sẵn cho đúng việc này |
+| `producerSentence` / `RECORD_PRODUCERS` | `components/recordProducer.ts` (Phase 6), thêm một kind |
+| `.exec-inc2-grid`, `.exec-pf2-panel` | lớp lưới/panel có sẵn |
+
+**Mới**: `components/emptyComposition.ts` (registry allowlist),
+`components/EmptyRecordFrame.tsx` (86 dòng), 1 khối CSS scoped.
