@@ -44,7 +44,6 @@ const BINDING_DETAIL = canonical("execution-binding-detail.valid.json") as Recor
 const LIVE_REVIEW = canonical("governance-live-review.valid.json") as Record<string, unknown>;
 const ACCOUNT_BROKER_READY = canonical("execution-account-broker-360.ready.valid.json") as Record<string, unknown>;
 
-
 import {
   APPROVAL_ROWS,
   CONDITION_FIXTURES,
@@ -64,6 +63,13 @@ import {
   OPERATION_WORKFLOW_FIXTURE,
 } from "../src/execution/operations.fixtures";
 import { COMMAND_CATALOGUE_FIXTURE, COMMAND_PLAN_FIXTURE } from "../src/execution/adminCatalog.fixtures";
+import {
+  ACTIVATION_CAPABILITIES,
+  APPROVAL_HISTORY,
+  SOURCE_HEALTH_READ,
+} from "../src/execution/derivedReads.fixtures";
+import { CROSS_EQUITY, RUNTIME_MANIFEST } from "../src/execution/analytics.presentation.fixtures";
+import { SCREEN_CONTRACTS } from "../src/execution/screenContracts.fixtures";
 
 interface Answer {
   status: number;
@@ -723,11 +729,194 @@ function resourceEnvelope(kind: "alpha" | "portfolio" | "account" | "binding", i
   return { ...base, schema_version: "execution.binding-resource.v1", state: "ready", data: { ...common, binding, profile_coverage: { paper: { state: "FOUND" } } } };
 }
 
+/**
+ * The paper-workbench contract is resource-scoped.  Canonical fixtures retain
+ * a deterministic deployment payload, while the route supplies the resource
+ * identity; make that binding explicit in the test BFF instead of leaking
+ * `dep_1` into every rich workbench journey.
+ */
+function paperWorkbenchEnvelope(deploymentId: string, variant: "standard" | "vn-market"): Record<string, unknown> {
+  const fixture = variant === "vn-market" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL;
+  const data = (fixture.data as Record<string, unknown>) ?? {};
+  const deployment = (data.deployment as Record<string, unknown>) ?? {};
+  const deployments = objectRows(data.deployments).map((row) => ({ ...row, deployment_id: deploymentId }));
+
+  return {
+    ...fixture,
+    resource: { ...((fixture.resource as Record<string, unknown>) ?? {}), id: deploymentId },
+    data: {
+      ...data,
+      deployment: { ...deployment, deployment_id: deploymentId },
+      deployments,
+    },
+  };
+}
+
+/**
+ * The composition routes are their screen's one bounded read.  Keeping a
+ * controlled raw answer here makes the browser exercise the exact
+ * `getOperationalComposition()` path rather than quietly falling back to a
+ * standalone fixture read.  Command authority remains explicitly fail-closed.
+ */
+function operationalCompositionEnvelope(
+  surface: "command-center" | "operations" | "waivers" | "admin-action-drawer",
+  search: URLSearchParams,
+): Record<string, unknown> {
+  const data = surface === "command-center"
+    ? { command_center: CC_SNAPSHOT_BUSY }
+    : surface === "operations"
+      ? { operations_queue: OPERATIONS_QUEUE_FIXTURE }
+      : surface === "waivers"
+        ? { waivers_register: waiversPage(search).body }
+        : {
+          task_catalogue: COMMAND_TASKS,
+          command_authority: {
+            state: "FAIL_CLOSED",
+            relay_active: false,
+            source_side_effect_requested: false,
+          },
+        };
+  return {
+    schema_version: "execution.operational-composition.v1",
+    logical_operation_id: `execution${surface.replace(/(^|-)\w/g, (part) => part.replace("-", "").toUpperCase()).replace(/\s/g, "")}V1`,
+    record_authority: "PORTAL_CONTROL",
+    source_authority: "PORTAL_CONTROL_PLUS_ACCEPTED_TRADING_SYSTEM_OBSERVATIONS",
+    workspace_id: "workspace_execution_manager",
+    read_at: E2E_READ_AT,
+    read_at_ms: E2E_READ_AT_MS,
+    composite_revision: `sha256:${surface.replace(/-/g, "").padEnd(64, "0")}`,
+    source_health: SOURCE_HEALTH_READ,
+    redacted_command_journal: {
+      state: "AVAILABLE",
+      reason_code: null,
+      retention: "E2E_REDACTED_JOURNAL",
+      entries: [],
+    },
+    canary_twin_comparison: {
+      state: "UNAVAILABLE",
+      reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED",
+    },
+    command_authority: {
+      state: "UNCHANGED_FAIL_CLOSED",
+      source_side_effect_requested: false,
+    },
+    data,
+  };
+}
+
+/** One alpha's sparse current-stage series; not an implied historical replay. */
+function stageDriftEnvelope(alphaId: string): Record<string, unknown> {
+  return {
+    calendar: ["2026-09-04", "2026-09-05", "2026-09-06"],
+    window: { days: 3, daily_basis: "UTC close" },
+    research_binding: { alpha_id: alphaId, reason_code: null },
+    stages: {
+      paper: { deployed: true, reason_code: null, series: [20000, 20061.59802, 20123.19605] },
+      sandbox: { deployed: false, reason_code: "NO_DEPLOYMENT_IN_STAGE", series: [] },
+      live: { deployed: false, reason_code: "NO_DEPLOYMENT_IN_STAGE", series: [] },
+    },
+  };
+}
+
+const MANAGER_CURRENT_ROUTES = new Set([
+  "orders",
+  "fills",
+  "strategies",
+  "strategy-deployments",
+  "order-brackets",
+  "order-bracket-legs",
+  "conditional-order-groups",
+  "conditional-order-group-legs",
+  "portfolio-capital-ledger",
+  "portfolio-equity-snapshots",
+  "sizing-decisions",
+  "execution-sessions",
+  "command-journal",
+  "broker-account-sync-current-state",
+  "reconciliation-findings",
+]);
+
+/**
+ * A page from the approved Manager-v2 relation catalogue.  This deliberately
+ * keeps the continuation opaque and bounds the page; it never teaches a
+ * product screen that a current relation page is authoritative replay.
+ */
+function managerCurrentRelationEnvelope(routeId: string, environment: "paper" | "sandbox" | "live"): Record<string, unknown> {
+  const values: Record<string, string | number | boolean | null> = {
+    relation_id: routeId,
+    strategy_id: "adaptive_hma_cpp_00115m",
+    account_id: "paper-binance-adaptive_hma_cpp_00115m",
+    portfolio_id: "PF-CRYPTO",
+    order_id: "ord-e2e-1",
+    fill_id: "fill-e2e-1",
+    status: "FILLED",
+    venue: "BINANCE",
+    symbol: "ETHUSDT",
+    quantity: "0.08",
+    price: "1859.89",
+    updated_at: E2E_AS_OF_MS,
+  };
+  return {
+    schema_version: "portal.execution.manager-relation-page.v1",
+    logical_operation_id: `executionManager${routeId.replace(/(^|-)\w/g, (part) => part.replace("-", "").toUpperCase()).replace(/\s/g, "")}V1`,
+    environment,
+    profile_id: e2eProfileId(environment),
+    state: "AVAILABLE",
+    source_history_semantics: "CURRENT_CATALOGUE_BOUND_PAGE_NOT_AUTHORITATIVE_REPLAY",
+    source_retention_semantics: "SOURCE_CURRENT_PAGESET_ONLY",
+    source_health: {
+      availability: "AVAILABLE",
+      freshness: "FRESH",
+      completeness: "COMPLETE",
+      as_of_ms: E2E_AS_OF_MS,
+    },
+    page: {
+      next_cursor: null,
+      has_more: false,
+      total_unknown: true,
+      maximum_page_rows: 200,
+      truncated: false,
+    },
+    records: [{ resource_id: `${routeId}-e2e-1`, values }],
+  };
+}
+
+function mirrorIntegrityEnvelope(environment: "paper" | "sandbox" | "live"): Record<string, unknown> {
+  return {
+    schema_version: "execution.durable-mirror-integrity.v1",
+    environment,
+    state: "UNAVAILABLE",
+    reason_code: "EDS06_MIRROR_NEVER_MEASURED",
+    measured_revision: null,
+    measured_at_ms: null,
+    read_at_ms: E2E_READ_AT_MS,
+    gap_findings: null,
+    conflict_findings: null,
+    total_findings: null,
+    findings: [],
+  };
+}
+
 export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams): Answer {
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
 
   if (method === "GET") {
+    if (path === "/runtime-manifest") return ok(RUNTIME_MANIFEST);
+    if (path === "/screen-contracts") return ok(SCREEN_CONTRACTS);
+    if (path === "/activation/capabilities") return ok(ACTIVATION_CAPABILITIES);
+    if (path === "/governance/approvals/history") return ok(APPROVAL_HISTORY);
+    if (seg[0] === "durable-mirror" && seg[1] === "integrity" && seg.length === 2) {
+      const environment = search.get("environment");
+      if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
+      return ok(mirrorIntegrityEnvelope(environment));
+    }
+    if (seg[0] === "compositions" && seg.length === 2) {
+      const surface = seg[1];
+      if (surface === "command-center" || surface === "operations" || surface === "waivers" || surface === "admin-action-drawer") {
+        return ok(operationalCompositionEnvelope(surface, search));
+      }
+    }
     if (path === "/command-center") return ok(CC_SNAPSHOT_BUSY);
     if (path === "/command-center/realtime-snapshot") return realtimeSnapshot("command-center");
     if (path === "/command-center/stream") {
@@ -746,8 +935,10 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if (path === "/screens/sandbox") return ok(SANDBOX_OVERVIEW_READY);
     if (path === "/screens/live") return ok(LIVE_OVERVIEW_EMPTY);
     if (path === "/screens/blotter") return ok(FULL_BLOTTER_PARTIAL);
-    if (seg[0] === "screens" && seg[1] === "paper" && seg.length === 4 && seg[3] === "vn-market") return ok(PAPER_WORKBENCH_VNM_PARTIAL);
-    if (seg[0] === "screens" && seg[1] === "paper" && seg.length === 3) return ok(PAPER_WORKBENCH_PARTIAL);
+    if (seg[0] === "screens" && seg[1] === "paper" && seg.length === 4 && seg[3] === "vn-market")
+      return ok(paperWorkbenchEnvelope(seg[2], "vn-market"));
+    if (seg[0] === "screens" && seg[1] === "paper" && seg.length === 3)
+      return ok(paperWorkbenchEnvelope(seg[2], "standard"));
     if (seg[0] === "screens" && seg[1] === "accounts") {
       return ok({
         ...ACCOUNT_BROKER_READY,
@@ -796,6 +987,9 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
       return { status: 200, contentType: "text/event-stream", body: `event: heartbeat\ndata: ${event}\n\n` };
     }
     if (seg[0] === "derivations") {
+      // This aggregate read is deliberately profile-wide. The three scoped
+      // derivations below still require an environment, just like Control API.
+      if (seg[1] === "source-health" && seg.length === 2 && !search.has("environment")) return ok(SOURCE_HEALTH_READ);
       const environment = search.get("environment");
       if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
       if (seg[1] === "source-health" && seg.length === 2) return ok(sourceHealthEnvelope(environment));
@@ -809,6 +1003,21 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if (path === "/views/equity-chart") return ok(financialChartEnvelope(search));
     if (path === "/views/observed-timeline") return ok(observedTimelineEnvelope(search));
     if (path === "/market/venue-candles") return ok(unavailableMarketCandles(search));
+    if (seg[0] === "manager" && seg[1] === "current" && seg.length === 3) {
+      const environment = search.get("environment");
+      if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
+      if (MANAGER_CURRENT_ROUTES.has(seg[2])) return ok(managerCurrentRelationEnvelope(seg[2], environment));
+    }
+    if (path === "/alphas/equity-sparklines") {
+      return ok({
+        schema_version: "portal.execution.equity-sparklines.v1",
+        series: {
+          adaptive_hma_cpp_00115m: [20000, 20061.59802, 20123.19605],
+          av_2041: [20000, 20061.59802, 20123.19605],
+        },
+      });
+    }
+    if (seg[0] === "alphas" && seg[2] === "stage-drift" && seg.length === 3) return ok(stageDriftEnvelope(seg[1]));
     if ((seg[0] === "alphas" || seg[0] === "portfolios") && seg[2] === "query-analytics") return ok(QUERY_ANALYTICS_EMPTY);
     if (path === "/commands/tasks") return ok(COMMAND_TASKS);
     if (path === "/commands/catalog") return ok(COMMAND_CATALOGUE_FIXTURE);
@@ -837,6 +1046,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     if (seg[0] === "orders" && seg[2] === "funnel") return ok(ORDER_FUNNEL);
     if (seg[0] === "portfolios" && seg[2] === "correlation") return ok(CORRELATION);
     if (seg[0] === "portfolios" && seg[2] === "capital-ledger") return ok(CAPITAL_LEDGER);
+    if (seg[0] === "portfolios" && seg[2] === "cross-equity") return ok(CROSS_EQUITY);
     if (seg[0] === "broker-bindings" && seg[2] === "exposure") return ok(BINDING_EXPOSURE);
   }
 

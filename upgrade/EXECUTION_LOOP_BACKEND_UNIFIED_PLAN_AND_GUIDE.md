@@ -5985,6 +5985,44 @@ empty, partial and externally missing. No BE-R2 item remains as an unnamed
 technical debt; any later source work is a single explicit owner contract, not
 a Portal workaround.
 
+#### BE-R2-7 implementation journal — candidate binding hardening (2026-09-11)
+
+**Status: `CODE_COMPLETE_RUNTIME_EVIDENCE_PENDING`; not `PRODUCT_ACTIVE`.**
+
+- The browser's same-origin BFF double now covers every named current product
+  read that the rich execution routes consume.  Its Manager relation allowlist
+  remains exact and unknown relation ids return typed `501`; the Paper
+  workbench fixture also binds its resource id to the URL, so one subject's
+  deterministic fixture cannot silently render under another subject's route.
+- The reviewed rich Paper, VNM, Alpha, Portfolio, Account, Blotter and
+  governance visual corpus was re-recorded only after direct visual inspection.
+  Journey assertions now prove the current blocked/typed states rather than
+  stale text, and the shared Playwright settle helper is navigation-safe under
+  parallel rendering.  A clean browser run must pass without an update flag.
+- EDS-12 now separates **semantic deployed evidence** from the final runtime
+  decision. `verify-deployed` can only return
+  `EDS12_DEPLOYED_EVIDENCE_SEMANTICALLY_VALID_RUNTIME_BINDING_PENDING`.
+  `verify-runtime-binding` is the sole path to `PRODUCT_ACTIVE`, and requires
+  the same digest-pinned N14A candidate pack, SGP's four service images,
+  AWS-HK Edge/Source-Proxy images, source commit, image tag and Compose bundle
+  hash. It rejects unhealthy/missing services and any command, Live-mutation
+  or direct-source widening.
+- The two runtime markers are non-secret deployment artifacts kept outside
+  Git. They do not contain DSNs, mTLS material, delegated JWTs, records or
+  browser-facing cursors. `root:root/0600` is the operational convention; the
+  verifier additionally rejects symlinks, malformed fields and secret-shaped
+  content.
+- Local completion evidence is: N29 static acceptance, EDS-12 static/
+  mutation gate, and the isolated Rust `eds12-qualification` crate. No source
+  call, source profile, command relay, Live mutation, container or deployment
+  changed during this closeout.
+
+**Only remaining release evidence (not a technical-debt placeholder):** a
+protected-main signed/SBOM/provenance candidate plus one sanitized SGP marker
+and one sanitized AWS-HK marker that bind to that exact candidate. Until all
+three are supplied and verified, release truth remains `NO_GO` and runtime
+authority remains fail-closed.
+
 ### 18.5 Claude handoff and phase ownership
 
 Claude owns visual composition and frontend consumer work. Codex owns all

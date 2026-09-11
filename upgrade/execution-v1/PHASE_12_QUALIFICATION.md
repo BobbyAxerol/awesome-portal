@@ -71,6 +71,14 @@ provenance, create a sanitized evidence object outside Git and run:
 ```bash
 python3 ./scripts/execution-eds12-qualification.py verify-deployed \
   --evidence /secure/portal-execution-eds12-deployed-evidence.json
+
+# The prior command is semantic-only. PRODUCT_ACTIVE is only permitted after
+# the signed candidate and both deployed cells bind to the exact same digest.
+python3 ./scripts/execution-eds12-qualification.py verify-runtime-binding \
+  --evidence /secure/portal-execution-eds12-deployed-evidence.json \
+  --release-pack /secure/portal-release-candidate/<release-id> \
+  --sgp-runtime-marker /secure/portal-sgp-runtime-binding.env \
+  --aws-hk-runtime-marker /secure/portal-aws-hk-runtime-binding.json
 ```
 
 The evidence must bind:

@@ -35,6 +35,7 @@ EVIDENCE_PATHS = {
     "frontend_consumer_evidence_sha256": ROOT / "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CLAUDE_TO_CODEX_N29_CONSUMER_EVIDENCE.md",
     "frontend_same_origin_bff_double_sha256": ROOT / "apps/portal/frontend/e2e/bffDouble.ts",
     "frontend_same_origin_bff_contract_test_sha256": ROOT / "apps/portal/frontend/e2e/bffDouble.contract.spec.ts",
+    "frontend_execution_journeys_sha256": ROOT / "apps/portal/frontend/e2e/execution-journeys.spec.ts",
     "n17b_real_paper_acceptance_sha256": ROOT / "packages/contracts/fixtures/execution-production-acceptance.current-paper.accepted.json",
     "release_workflow_sha256": ROOT / ".github/workflows/publish-images.yml",
     "recovery_runbook_sha256": ROOT / "deploy/runbooks/portal-n17a-source-dark-production-dr.md",
@@ -236,6 +237,9 @@ def validate_screen_and_ui(acceptance: dict[str, Any]) -> None:
     for token in ["ExecutionPreviewRoute", "createFixtureApi", "CC_FIXTURES", ".smoke", ".fixtures"]:
         require(token in boundary, f"frontend product-boundary gate missing: {token}")
     require("FRONTEND_CONSUMER_ACCEPTANCE_READY_FOR_CODEX" in return_packet, "frontend return verdict missing")
+    journeys = EVIDENCE_PATHS["frontend_execution_journeys_sha256"].read_text(encoding="utf-8")
+    for token in ["same-origin BFF double", "toBeGreaterThanOrEqual(12)", "Trade replay"]:
+        require(token in journeys, f"frontend rich journey invariant missing: {token}")
     require(acceptance["accepted_scope"]["commissioned_requests"]["frontend_source_consumer_accepted"] == 31, "frontend request acceptance drifted")
     require(acceptance["release_gates"]["frontend_http_consumer"] == "PASS_SAME_ORIGIN_CONSUMER_ACCEPTED", "same-origin frontend acceptance missing")
     require(acceptance["authority"]["product_release_authorized"] is False, "frontend acceptance widened product authority")

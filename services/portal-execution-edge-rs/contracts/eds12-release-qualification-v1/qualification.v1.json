@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:07243bcce9dc1312bed58b157c5d11a0fd36feb3c03cd1a539a256199d4a4f92"
+      "sha256": "sha256:a983e3733066ad661671abc59419ea73c4ab12f067d29689ee7c2e15f6a35991"
     },
     {
       "id": "n29_debt",
@@ -203,14 +203,24 @@
       "sha256": "sha256:0ae4f81e480219e7f74138bc460ba7d51780ac594ae073443dd094dfa642db2b"
     },
     {
+      "id": "qualification_verifier",
+      "file": "scripts/execution-eds12-qualification.py",
+      "sha256": "sha256:93be0b51dd5b543535874309b0136ddf0d10c46d6e738f6fe0ff0398c65c6598"
+    },
+    {
+      "id": "qualification_mutation_test",
+      "file": "scripts/test_execution_eds12_qualification.py",
+      "sha256": "sha256:2f1e5226ba6bc1ff4a054b561656a91c1ba3b5dd100dd90e392805498567198a"
+    },
+    {
       "id": "phase12_qualification",
       "file": "upgrade/execution-v1/PHASE_12_QUALIFICATION.md",
-      "sha256": "sha256:0845cb8560e9165d2de903fd2f8bea24fd2a6b1b65abbaca1ce985bdc95187b4"
+      "sha256": "sha256:99cc880ba890df2a6c139075172e2838746c5efb704126dbb8965d333434c235"
     },
     {
       "id": "operations_runbook",
       "file": "upgrade/execution-v1/OPERATIONS_RUNBOOK.md",
-      "sha256": "sha256:06d45c7d72af4b79d412e0f544e52a77165f600e593f7059140483f158899167"
+      "sha256": "sha256:6320bd49e0fb518f3e1e732eae43afce6f2518a4a6c9df1de711b1abfa1a69a8"
     },
     {
       "id": "rollback_runbook",

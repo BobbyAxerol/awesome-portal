@@ -171,399 +171,399 @@
   "route": "/administration/actions",
   "index": 24,
   "tag": "BUTTON",
-  "text": "All",
-  "verdict": "skipped:hidden"
+  "text": "All 24",
+  "verdict": "skipped:selected"
  },
  {
   "route": "/administration/actions",
   "index": 25,
   "tag": "BUTTON",
-  "text": "R0 read",
-  "verdict": "skipped:hidden"
+  "text": "Supported, inactive 14",
+  "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 26,
   "tag": "BUTTON",
-  "text": "R1 paper",
-  "verdict": "skipped:hidden"
+  "text": "Incompatible 10",
+  "verdict": "changed"
  },
  {
   "route": "/administration/actions",
   "index": 27,
   "tag": "BUTTON",
-  "text": "R2 sandbox",
+  "text": "All",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 28,
   "tag": "BUTTON",
-  "text": "R3 protective",
+  "text": "R0 read",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 29,
   "tag": "BUTTON",
-  "text": "R4 risk-increasing",
+  "text": "R1 paper",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 30,
   "tag": "BUTTON",
-  "text": "account policyR1 · paper mutationowner reviewOBS",
+  "text": "R2 sandbox",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 31,
   "tag": "BUTTON",
-  "text": "account reconcile-open-ordersR2 · sandboxowner r",
+  "text": "R3 protective",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 32,
   "tag": "BUTTON",
-  "text": "account reconcile-positionsR2 · sandboxowner rev",
+  "text": "R4 risk-increasing",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 33,
   "tag": "BUTTON",
-  "text": "account seed-paperR1 · paper mutationowner revie",
+  "text": "account policyR1 · paper mutationowner reviewOBS",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 34,
   "tag": "BUTTON",
-  "text": "account stateR0 · readOBSERVEDGET /v1/admin/acco",
+  "text": "account reconcile-open-ordersR2 · sandboxowner r",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 35,
   "tag": "BUTTON",
-  "text": "account syncR2 · sandboxowner reviewOBSERVEDPOST",
+  "text": "account reconcile-positionsR2 · sandboxowner rev",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 36,
   "tag": "BUTTON",
-  "text": "allocation <root>R1 · paper mutationowner review",
+  "text": "account seed-paperR1 · paper mutationowner revie",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 37,
   "tag": "BUTTON",
-  "text": "authority createR1 · paper mutationowner reviewD",
+  "text": "account stateR0 · readOBSERVEDGET /v1/admin/acco",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 38,
   "tag": "BUTTON",
-  "text": "authority listR0 · readDIRECT_ACCESS_PROHIBITEDn",
+  "text": "account syncR2 · sandboxowner reviewOBSERVEDPOST",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 39,
   "tag": "BUTTON",
-  "text": "capital historyR0 · readOBSERVEDGET /v1/admin/po",
+  "text": "allocation <root>R1 · paper mutationowner review",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 40,
   "tag": "BUTTON",
-  "text": "portfolio createR1 · paper mutationowner reviewA",
+  "text": "authority createR1 · paper mutationowner reviewD",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 41,
   "tag": "BUTTON",
-  "text": "portfolio listR0 · readOBSERVEDGET /v1/admin/por",
+  "text": "authority listR0 · readDIRECT_ACCESS_PROHIBITEDn",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 42,
   "tag": "BUTTON",
-  "text": "portfolio stateR1 · paper mutationowner reviewOB",
+  "text": "capital historyR0 · readOBSERVEDGET /v1/admin/po",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 43,
   "tag": "BUTTON",
-  "text": "alpha inspectR0 · readAMBIGUOUSno HTTP route pub",
+  "text": "portfolio createR1 · paper mutationowner reviewA",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 44,
   "tag": "BUTTON",
-  "text": "alpha registerR1 · paper mutationowner reviewOBS",
+  "text": "portfolio listR0 · readOBSERVEDGET /v1/admin/por",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 45,
   "tag": "BUTTON",
-  "text": "copy policiesR0 · readAMBIGUOUSno HTTP route pub",
+  "text": "portfolio stateR1 · paper mutationowner reviewOB",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 46,
   "tag": "BUTTON",
-  "text": "copy policyunclassifiedAMBIGUOUSno HTTP route pu",
+  "text": "alpha inspectR0 · readAMBIGUOUSno HTTP route pub",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 47,
   "tag": "BUTTON",
-  "text": "deployment stateR1 · paper mutationowner reviewO",
+  "text": "alpha registerR1 · paper mutationowner reviewOBS",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 48,
   "tag": "BUTTON",
-  "text": "bracket-audit <root>R1 · paper mutationowner rev",
+  "text": "copy policiesR0 · readAMBIGUOUSno HTTP route pub",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 49,
   "tag": "BUTTON",
-  "text": "order-group listR0 · readAMBIGUOUSno HTTP route ",
+  "text": "copy policyunclassifiedAMBIGUOUSno HTTP route pu",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 50,
   "tag": "BUTTON",
-  "text": "order-group showR0 · readAMBIGUOUSno HTTP route ",
+  "text": "deployment stateR1 · paper mutationowner reviewO",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 51,
   "tag": "BUTTON",
-  "text": "replay compareR0 · readOBSERVEDGET /v1/admin/rep",
+  "text": "bracket-audit <root>R1 · paper mutationowner rev",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 52,
   "tag": "BUTTON",
-  "text": "replay createR1 · paper mutationowner reviewAMBI",
+  "text": "order-group listR0 · readAMBIGUOUSno HTTP route ",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 53,
   "tag": "BUTTON",
-  "text": "replay eventsR0 · readOBSERVEDGET /v1/admin/even",
+  "text": "order-group showR0 · readAMBIGUOUSno HTTP route ",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 54,
   "tag": "BUTTON",
-  "text": "replay exportR1 · paper mutationowner reviewOBSE",
+  "text": "replay compareR0 · readOBSERVEDGET /v1/admin/rep",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 55,
   "tag": "BUTTON",
-  "text": "replay jobsR0 · readAMBIGUOUSno HTTP route publi",
+  "text": "replay createR1 · paper mutationowner reviewAMBI",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 56,
   "tag": "BUTTON",
-  "text": "replay lifecycleR0 · readOBSERVEDGET /v1/admin/r",
+  "text": "replay eventsR0 · readOBSERVEDGET /v1/admin/even",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 57,
   "tag": "BUTTON",
-  "text": "replay quantbt-diffR1 · paper mutationowner revi",
+  "text": "replay exportR1 · paper mutationowner reviewOBSE",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 58,
   "tag": "BUTTON",
-  "text": "replay runR1 · paper mutationowner reviewOBSERVE",
+  "text": "replay jobsR0 · readAMBIGUOUSno HTTP route publi",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 59,
   "tag": "BUTTON",
-  "text": "replay showR0 · readAMBIGUOUSno HTTP route publi",
+  "text": "replay lifecycleR0 · readOBSERVEDGET /v1/admin/r",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 60,
   "tag": "BUTTON",
-  "text": "ops alertsR0 · readUNPUBLISHEDno HTTP route publ",
+  "text": "replay quantbt-diffR1 · paper mutationowner revi",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 61,
   "tag": "BUTTON",
-  "text": "ops alpha-activityR0 · readUNPUBLISHEDno HTTP ro",
+  "text": "replay runR1 · paper mutationowner reviewOBSERVE",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 62,
   "tag": "BUTTON",
-  "text": "ops command-journalR0 · readUNPUBLISHEDno HTTP r",
+  "text": "replay showR0 · readAMBIGUOUSno HTTP route publi",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 63,
   "tag": "BUTTON",
-  "text": "ops dead-lettersR0 · readUNPUBLISHEDno HTTP rout",
+  "text": "ops alertsR0 · readUNPUBLISHEDno HTTP route publ",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 64,
   "tag": "BUTTON",
-  "text": "ops emergency-closeR3 · live protectiveowner rev",
+  "text": "ops alpha-activityR0 · readUNPUBLISHEDno HTTP ro",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 65,
   "tag": "BUTTON",
-  "text": "ops emergency-close-verifyR3 · live protectiveow",
+  "text": "ops command-journalR0 · readUNPUBLISHEDno HTTP r",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 66,
   "tag": "BUTTON",
-  "text": "ops findingsR0 · readUNPUBLISHEDno HTTP route pu",
+  "text": "ops dead-lettersR0 · readUNPUBLISHEDno HTTP rout",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 67,
   "tag": "BUTTON",
-  "text": "ops redis-retentionR0 · readUNPUBLISHEDno HTTP r",
+  "text": "ops emergency-closeR3 · live protectiveowner rev",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 68,
   "tag": "BUTTON",
-  "text": "ops streamsR0 · readUNPUBLISHEDno HTTP route pub",
+  "text": "ops emergency-close-verifyR3 · live protectiveow",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 69,
   "tag": "BUTTON",
-  "text": "ops trace-orderR0 · readUNPUBLISHEDno HTTP route",
+  "text": "ops findingsR0 · readUNPUBLISHEDno HTTP route pu",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 70,
   "tag": "BUTTON",
-  "text": "broker bindingsR0 · readAMBIGUOUSno HTTP route p",
+  "text": "ops redis-retentionR0 · readUNPUBLISHEDno HTTP r",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 71,
   "tag": "BUTTON",
-  "text": "broker exposureR0 · readOBSERVEDGET /v1/admin/br",
+  "text": "ops streamsR0 · readUNPUBLISHEDno HTTP route pub",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 72,
   "tag": "BUTTON",
-  "text": "broker reconcile-open-ordersR2 · sandboxowner re",
+  "text": "ops trace-orderR0 · readUNPUBLISHEDno HTTP route",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 73,
   "tag": "BUTTON",
-  "text": "broker reconcile-positionsR2 · sandboxowner revi",
+  "text": "broker bindingsR0 · readAMBIGUOUSno HTTP route p",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 74,
   "tag": "BUTTON",
-  "text": "broker stateR0 · readOBSERVEDGET /v1/admin/broke",
+  "text": "broker exposureR0 · readOBSERVEDGET /v1/admin/br",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 75,
   "tag": "BUTTON",
-  "text": "config applyR1 · paper mutationowner reviewAMBIG",
+  "text": "broker reconcile-open-ordersR2 · sandboxowner re",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 76,
   "tag": "BUTTON",
-  "text": "config planR0 · readAMBIGUOUSno HTTP route publi",
+  "text": "broker reconcile-positionsR2 · sandboxowner revi",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 77,
   "tag": "BUTTON",
-  "text": "health <root>R0 · readOBSERVEDGET /v1/health",
+  "text": "broker stateR0 · readOBSERVEDGET /v1/admin/broke",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 78,
   "tag": "BUTTON",
-  "text": "performance accountR0 · readAMBIGUOUSno HTTP rou",
+  "text": "config applyR1 · paper mutationowner reviewAMBIG",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 79,
   "tag": "BUTTON",
-  "text": "performance account-historyR0 · readOBSERVEDGET ",
+  "text": "config planR0 · readAMBIGUOUSno HTTP route publi",
   "verdict": "skipped:hidden"
  },
  {
   "route": "/administration/actions",
   "index": 80,
   "tag": "BUTTON",
-  "text": "performance dashboardR0 · readOBSERVEDGET /v1/ad",
+  "text": "health <root>R0 · readOBSERVEDGET /v1/health",
   "verdict": "skipped:hidden"
  },
  {
@@ -600,40 +600,68 @@
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 4,
   "tag": "BUTTON",
-  "text": "Table",
+  "text": "1W",
   "verdict": "changed"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 5,
   "tag": "BUTTON",
-  "text": "Expand",
+  "text": "1M",
   "verdict": "changed"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 6,
   "tag": "BUTTON",
-  "text": "Export",
+  "text": "3M",
   "verdict": "changed"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
   "index": 7,
+  "tag": "BUTTON",
+  "text": "ALL",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/accounts/acct-live-grid-v21",
+  "index": 11,
   "tag": "SELECT",
   "text": "Candle interval",
   "verdict": "changed"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 8,
+  "index": 12,
   "tag": "BUTTON",
   "text": "Expand chart",
   "verdict": "changed"
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 9,
+  "index": 13,
   "tag": "A",
   "text": "",
   "verdict": "skipped:external",
@@ -641,7 +669,7 @@
  },
  {
   "route": "/deployments/accounts/acct-live-grid-v21",
-  "index": 10,
+  "index": 14,
   "tag": "A",
   "text": "TradingView Lightweight Charts™",
   "verdict": "skipped:external",
@@ -679,13 +707,20 @@
  {
   "route": "/deployments/alphas/av_2041",
   "index": 4,
+  "tag": "SELECT",
+  "text": "30d90d1yAll",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/alphas/av_2041",
+  "index": 5,
   "tag": "BUTTON",
   "text": "Overview",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 5,
+  "index": 6,
   "tag": "BUTTON",
   "text": "Insight Charts",
   "verdict": "navigated",
@@ -693,7 +728,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 6,
+  "index": 7,
   "tag": "BUTTON",
   "text": "Trade Replay",
   "verdict": "navigated",
@@ -701,7 +736,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 7,
+  "index": 8,
   "tag": "BUTTON",
   "text": "Positions",
   "verdict": "navigated",
@@ -709,7 +744,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 8,
+  "index": 9,
   "tag": "BUTTON",
   "text": "Orders & Fills",
   "verdict": "navigated",
@@ -717,7 +752,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 9,
+  "index": 10,
   "tag": "BUTTON",
   "text": "Risk",
   "verdict": "navigated",
@@ -725,7 +760,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 10,
+  "index": 11,
   "tag": "BUTTON",
   "text": "Sessions",
   "verdict": "navigated",
@@ -733,7 +768,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 11,
+  "index": 12,
   "tag": "BUTTON",
   "text": "Accounting",
   "verdict": "navigated",
@@ -741,7 +776,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 12,
+  "index": 13,
   "tag": "BUTTON",
   "text": "Reconciliation",
   "verdict": "navigated",
@@ -749,7 +784,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 13,
+  "index": 14,
   "tag": "BUTTON",
   "text": "Audit",
   "verdict": "navigated",
@@ -757,42 +792,42 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 14,
+  "index": 15,
   "tag": "BUTTON",
   "text": "Lin",
   "verdict": "skipped:selected"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 15,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Log",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 16,
+  "index": 17,
   "tag": "BUTTON",
   "text": "Table",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 17,
+  "index": 18,
   "tag": "BUTTON",
   "text": "Expand",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 18,
+  "index": 19,
   "tag": "BUTTON",
   "text": "Export",
   "verdict": "changed"
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 19,
+  "index": 20,
   "tag": "BUTTON",
   "text": "dep_a",
   "verdict": "navigated",
@@ -800,7 +835,7 @@
  },
  {
   "route": "/deployments/alphas/av_2041",
-  "index": 20,
+  "index": 21,
   "tag": "BUTTON",
   "text": "acc_a",
   "verdict": "navigated",
@@ -902,13 +937,20 @@
   "route": "/deployments/blotter",
   "index": 13,
   "tag": "BUTTON",
+  "text": "Conditional",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/blotter",
+  "index": 14,
+  "tag": "BUTTON",
   "text": "Filled (1)",
   "verdict": "navigated",
   "detail": "/deployments/blotter?filter=FILLED"
  },
  {
   "route": "/deployments/blotter",
-  "index": 14,
+  "index": 15,
   "tag": "BUTTON",
   "text": "Partial",
   "verdict": "navigated",
@@ -916,7 +958,7 @@
  },
  {
   "route": "/deployments/blotter",
-  "index": 15,
+  "index": 16,
   "tag": "BUTTON",
   "text": "Rejected (3)",
   "verdict": "navigated",
@@ -1104,34 +1146,6 @@
   "detail": "/deployments/paper/dep_94?tab=Evidence"
  },
  {
-  "route": "/deployments/paper/dep_94",
-  "index": 7,
-  "tag": "A",
-  "text": "dep_94",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 8,
-  "tag": "A",
-  "text": "dep_94",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 9,
-  "tag": "A",
-  "text": "account not published",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/paper/dep_94",
-  "index": 10,
-  "tag": "A",
-  "text": "venue not published",
-  "verdict": "skipped:hidden"
- },
- {
   "route": "/deployments/paper/dep_vnm/vn-market",
   "index": 0,
   "tag": "BUTTON",
@@ -1185,34 +1199,6 @@
   "text": "Evidence",
   "verdict": "navigated",
   "detail": "/deployments/paper/dep_vnm/vn-market?tab=Evidence"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 7,
-  "tag": "A",
-  "text": "dep_vnm",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 8,
-  "tag": "A",
-  "text": "dep_vnm",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 9,
-  "tag": "A",
-  "text": "account not published",
-  "verdict": "skipped:hidden"
- },
- {
-  "route": "/deployments/paper/dep_vnm/vn-market",
-  "index": 10,
-  "tag": "A",
-  "text": "venue not published",
-  "verdict": "skipped:hidden"
  },
  {
   "route": "/deployments/portfolios/PF-CRYPTO",
@@ -1274,6 +1260,69 @@
   "text": "Audit",
   "verdict": "navigated",
   "detail": "/deployments/portfolios/PF-CRYPTO?tab=Audit"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 8,
+  "tag": "BUTTON",
+  "text": "Lin",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 9,
+  "tag": "BUTTON",
+  "text": "Log",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 10,
+  "tag": "BUTTON",
+  "text": "1W",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 11,
+  "tag": "BUTTON",
+  "text": "1M",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 12,
+  "tag": "BUTTON",
+  "text": "3M",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 13,
+  "tag": "BUTTON",
+  "text": "ALL",
+  "verdict": "skipped:selected"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 14,
+  "tag": "BUTTON",
+  "text": "Table",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 15,
+  "tag": "BUTTON",
+  "text": "Expand",
+  "verdict": "changed"
+ },
+ {
+  "route": "/deployments/portfolios/PF-CRYPTO",
+  "index": 16,
+  "tag": "BUTTON",
+  "text": "Export",
+  "verdict": "changed"
  },
  {
   "route": "/deployments/sandbox/dep_77",
@@ -1418,6 +1467,14 @@
  {
   "route": "/execution/operations",
   "index": 3,
+  "tag": "A",
+  "text": "paper-account-1",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/paper-account-1"
+ },
+ {
+  "route": "/execution/operations",
+  "index": 4,
   "tag": "BUTTON",
   "text": "Close alerts",
   "verdict": "changed"
@@ -1425,6 +1482,14 @@
  {
   "route": "/execution/operations/incidents/inc_fixture_44",
   "index": 0,
+  "tag": "A",
+  "text": "acct_paper_grid_v21",
+  "verdict": "navigated",
+  "detail": "/deployments/accounts/acct_paper_grid_v21"
+ },
+ {
+  "route": "/execution/operations/incidents/inc_fixture_44",
+  "index": 1,
   "tag": "BUTTON",
   "text": "op_fixture_1253",
   "verdict": "navigated",

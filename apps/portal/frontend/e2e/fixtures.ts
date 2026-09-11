@@ -247,7 +247,13 @@ export async function freezeClock(page: Page): Promise<void> {
  * the shutter opens.
  */
 export async function settle(page: Page): Promise<void> {
-  await page.evaluate(() => document.fonts.ready);
+  // Do not await `document.fonts.ready` itself.  That browser-owned Promise
+  // is invalidated if a route finishes its last navigation between the call
+  // being scheduled and the renderer completing it, which leaves Playwright
+  // with "Resulting promise was garbage collected" under parallel visual
+  // runs.  Polling the stable status is equivalent for the shutter while
+  // remaining bound to Playwright's navigation-aware execution context.
+  await page.waitForFunction(() => !document.fonts || document.fonts.status === "loaded");
   await page.waitForFunction(() => {
     const pending = document.querySelectorAll("[role='status']").length;
     return pending === 0 || document.querySelector("main") !== null;

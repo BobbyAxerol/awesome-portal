@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import pathlib
 import re
@@ -28,6 +29,7 @@ MANIFEST_PATH = PACK / "MANIFEST.sha256"
 MAX_BYTES = 16 * 1024 * 1024
 SHA256 = re.compile(r"sha256:[a-f0-9]{64}\Z")
 COMMIT = re.compile(r"[a-f0-9]{40}\Z")
+IMAGE_REF = re.compile(r"[^@\s]+@(sha256:[a-f0-9]{64})\Z")
 SENSITIVE_KEY_PARTS = {
     "password", "secret", "token", "private_key", "credential", "cookie",
     "authorization", "database_url", "dsn", "redis_url", "broker_key",
@@ -69,6 +71,8 @@ INPUTS = (
     ("market_context_chart_translator", "apps/control-api/src/execution/market-candles.service.ts"),
     ("market_context_adapter", "services/portal-execution-edge-rs/contracts/portal-market-context-data-layer-adapter-v1/market-context-data-layer-adapter.v1.json"),
     ("market_context_proxy_template", "deploy/execution-d1/source-proxy/manager-market-context-data-layer-locations.conf.template"),
+    ("qualification_verifier", "scripts/execution-eds12-qualification.py"),
+    ("qualification_mutation_test", "scripts/test_execution_eds12_qualification.py"),
     ("phase12_qualification", "upgrade/execution-v1/PHASE_12_QUALIFICATION.md"),
     ("operations_runbook", "upgrade/execution-v1/OPERATIONS_RUNBOOK.md"),
     ("rollback_runbook", "upgrade/execution-v1/ROLLBACK_RUNBOOK.md"),
@@ -97,6 +101,25 @@ UI_STATES = {"ready", "empty", "partial", "stale", "unavailable", "denied", "err
 SERVICE_IDS = {
     "portal-api", "portal-web", "control-api", "roadmap-task-board-api",
     "execution-edge", "source-proxy",
+}
+SGP_SERVICE_ENV = {
+    "portal-api": "PORTAL_API_IMAGE",
+    "portal-web": "PORTAL_WEB_IMAGE",
+    "control-api": "PORTAL_CONTROL_API_IMAGE",
+    "roadmap-task-board-api": "PORTAL_ROADMAP_API_IMAGE",
+}
+AWS_SERVICE_IDS = {"execution-edge", "source-proxy"}
+SGP_RUNTIME_BINDING_KEYS = {
+    "SCHEMA_VERSION",
+    "SOURCE_COMMIT",
+    "IMAGE_TAG",
+    "RELEASE_MANIFEST_SHA256",
+    "DEPLOYMENT_COMPOSE_BUNDLE_SHA256",
+    *SGP_SERVICE_ENV.values(),
+    "COMMANDS_ENABLED",
+    "LIVE_MUTATION_ENABLED",
+    "DIRECT_SOURCE_ACCESS",
+    "HEALTH",
 }
 
 
@@ -137,6 +160,28 @@ def read_json(path: pathlib.Path) -> dict[str, Any]:
     return value
 
 
+def read_runtime_env(path: pathlib.Path) -> dict[str, str]:
+    """Read a strict, non-secret SGP deployment binding marker."""
+    safe_file(path)
+    values: dict[str, str] = {}
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        raise QualificationError(f"invalid runtime marker: {path}") from error
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise QualificationError("runtime marker contains a malformed line")
+        key, value = line.split("=", 1)
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]*", key) or key in values:
+            raise QualificationError("runtime marker key is invalid or duplicated")
+        values[key] = value
+    reject_sensitive(values)
+    return values
+
+
 def reject_sensitive(value: Any) -> None:
     if isinstance(value, dict):
         for key, child in value.items():
@@ -168,6 +213,13 @@ def sha256(value: Any) -> bool:
     return isinstance(value, str) and SHA256.fullmatch(value) is not None
 
 
+def image_digest(value: Any) -> str:
+    match = IMAGE_REF.fullmatch(value) if isinstance(value, str) else None
+    if match is None:
+        raise QualificationError("runtime image reference is not digest-pinned")
+    return match.group(1)
+
+
 def validate_manifest() -> None:
     safe_file(MANIFEST_PATH)
     rows: dict[str, str] = {}
@@ -183,6 +235,7 @@ def validate_manifest() -> None:
         "qualification.v1.json",
         "failure-matrix.v1.json",
         "deployed-evidence.v1.schema.json",
+        "runtime-binding.v1.schema.json",
     }
     require(set(rows) == expected_names, "EDS-12 manifest file set drifted")
     for name, expected in rows.items():
@@ -327,7 +380,7 @@ def validate_release_and_authority(qualification: dict[str, Any]) -> None:
 
 def validate_docs_and_workspace() -> None:
     docs = {
-        "upgrade/execution-v1/PHASE_12_QUALIFICATION.md": ["STATIC_QUALIFIED", "PRODUCT_ACTIVE", "BR-EX-81", "Market Context", "protected-main"],
+        "upgrade/execution-v1/PHASE_12_QUALIFICATION.md": ["STATIC_QUALIFIED", "PRODUCT_ACTIVE", "BR-EX-81", "Market Context", "protected-main", "verify-runtime-binding"],
         "upgrade/execution-v1/OPERATIONS_RUNBOOK.md": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "CANARY_OVER_LIVE", "LIVE_BINANCE_USDM"],
         "upgrade/execution-v1/ROLLBACK_RUNBOOK.md": ["PROFILE_LOCAL_READER_ROLLBACK_ONLY", "projection", "Trading System"],
         "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md": ["BR-EX-80", "BR-EX-81", "Market Context", "EDS-12"],
@@ -379,6 +432,135 @@ def validate_static() -> dict[str, Any]:
 def validate_deployed(evidence_path: pathlib.Path) -> dict[str, Any]:
     evidence = read_json(evidence_path)
     return validate_deployed_payload(evidence)
+
+
+def safe_directory(path: pathlib.Path) -> pathlib.Path:
+    try:
+        metadata = path.lstat()
+    except OSError as error:
+        raise QualificationError(f"required release pack is missing: {path}") from error
+    if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISDIR(metadata.st_mode):
+        raise QualificationError("release pack must be a real directory, not a symlink")
+    return path
+
+
+def validate_candidate_pack(pack: pathlib.Path) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    """Delegate immutable candidate validation to the N14A release authority."""
+    pack = safe_directory(pack)
+    authority_path = ROOT / "scripts/portal-release-authority.py"
+    spec = importlib.util.spec_from_file_location("portal_release_authority_for_eds12", authority_path)
+    if spec is None or spec.loader is None:
+        raise QualificationError("N14A release authority could not be loaded")
+    authority = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(authority)
+    try:
+        manifest_path = pack / "release-manifest.json"
+        manifest = authority.read_json(manifest_path)
+        services, _evidence = authority.validate_manifest(pack, manifest, "candidate")
+    except (authority.ReleaseError, OSError, TypeError, ValueError, json.JSONDecodeError) as error:
+        raise QualificationError(f"candidate release pack is invalid: {error}") from error
+    return manifest, services
+
+
+def validate_sgp_runtime_marker(
+    marker_path: pathlib.Path,
+    *,
+    release: dict[str, Any],
+    release_manifest_sha256: str,
+    images: dict[str, str],
+) -> None:
+    marker = read_runtime_env(marker_path)
+    exact(marker, SGP_RUNTIME_BINDING_KEYS, "SGP runtime binding marker")
+    require(marker["SCHEMA_VERSION"] == "portal.sgp-runtime-binding.v1", "SGP runtime marker revision drifted")
+    require(marker["SOURCE_COMMIT"] == release["source_commit"], "SGP runtime source commit does not match candidate")
+    require(marker["IMAGE_TAG"] == release["image_tag"], "SGP runtime image tag does not match candidate")
+    require(marker["RELEASE_MANIFEST_SHA256"] == release_manifest_sha256, "SGP runtime manifest does not match candidate")
+    bundle = release["deployment_compose_bundle"]
+    require(marker["DEPLOYMENT_COMPOSE_BUNDLE_SHA256"] == bundle["sha256"], "SGP runtime Compose bundle does not match candidate")
+    for service_id, key in SGP_SERVICE_ENV.items():
+        require(image_digest(marker[key]) == images[service_id], f"SGP runtime image does not match candidate: {service_id}")
+    require(marker["COMMANDS_ENABLED"] == "false", "SGP runtime command authority is enabled")
+    require(marker["LIVE_MUTATION_ENABLED"] == "false", "SGP runtime Live mutation authority is enabled")
+    require(marker["DIRECT_SOURCE_ACCESS"] == "false", "SGP runtime direct source access is enabled")
+    require(marker["HEALTH"] == "HEALTHY", "SGP runtime health proof is not healthy")
+
+
+def validate_aws_hk_runtime_marker(
+    marker_path: pathlib.Path,
+    *,
+    release: dict[str, Any],
+    release_manifest_sha256: str,
+    images: dict[str, str],
+) -> None:
+    marker = read_json(marker_path)
+    exact(marker, {
+        "schema_version", "source_commit", "image_tag", "release_manifest_sha256",
+        "deployment_compose_bundle_sha256", "services", "command_relay_enabled",
+        "live_mutation_enabled", "direct_source_access", "health",
+    }, "AWS-HK runtime binding marker")
+    require(marker["schema_version"] == "portal.execution-edge-runtime-binding.v1", "AWS-HK runtime marker revision drifted")
+    require(marker["source_commit"] == release["source_commit"], "AWS-HK runtime source commit does not match candidate")
+    require(marker["image_tag"] == release["image_tag"], "AWS-HK runtime image tag does not match candidate")
+    require(marker["release_manifest_sha256"] == release_manifest_sha256, "AWS-HK runtime manifest does not match candidate")
+    bundle = release["deployment_compose_bundle"]
+    require(marker["deployment_compose_bundle_sha256"] == bundle["sha256"], "AWS-HK runtime Compose bundle does not match candidate")
+    rows = marker["services"]
+    require(isinstance(rows, list) and len(rows) == len(AWS_SERVICE_IDS), "AWS-HK runtime service evidence is incomplete")
+    seen: set[str] = set()
+    for row in rows:
+        require(isinstance(row, dict), "AWS-HK runtime service row must be an object")
+        exact(row, {"service_id", "image_digest", "health"}, "AWS-HK runtime service row")
+        service_id = row["service_id"]
+        require(service_id in AWS_SERVICE_IDS and service_id not in seen, "AWS-HK runtime service identity is invalid")
+        require(row["image_digest"] == images[service_id], f"AWS-HK runtime image does not match candidate: {service_id}")
+        require(row["health"] == "HEALTHY", f"AWS-HK runtime health proof is not healthy: {service_id}")
+        seen.add(service_id)
+    require(seen == AWS_SERVICE_IDS, "AWS-HK runtime service set drifted")
+    require(marker["command_relay_enabled"] is False, "AWS-HK command relay is enabled")
+    require(marker["live_mutation_enabled"] is False, "AWS-HK Live mutation authority is enabled")
+    require(marker["direct_source_access"] is False, "AWS-HK direct source access is enabled")
+    require(marker["health"] == "HEALTHY", "AWS-HK runtime health proof is not healthy")
+
+
+def validate_runtime_binding(
+    evidence_path: pathlib.Path,
+    release_pack: pathlib.Path,
+    sgp_runtime_marker: pathlib.Path,
+    aws_hk_runtime_marker: pathlib.Path,
+) -> dict[str, Any]:
+    """Return PRODUCT_ACTIVE only after semantic and two-cell provenance bind."""
+    evidence = read_json(evidence_path)
+    semantic = validate_deployed_payload(evidence)
+    release, release_services = validate_candidate_pack(release_pack)
+    release_manifest_sha256 = digest(release_pack / "release-manifest.json")
+    evidence_release = evidence["release_manifest"]
+    require(evidence_release["manifest_sha256"] == release_manifest_sha256, "deployed evidence manifest does not match candidate")
+    require(evidence_release["source_ref"] == release["source_ref"], "deployed evidence source ref does not match candidate")
+    require(evidence_release["source_commit"] == release["source_commit"], "deployed evidence source commit does not match candidate")
+    require(evidence_release["image_tag"] == release["image_tag"], "deployed evidence image tag does not match candidate")
+    evidence_images = {row["service_id"]: row["image_digest"] for row in evidence["images"]}
+    candidate_images = {service_id: row["image_digest"] for service_id, row in release_services.items()}
+    require(evidence_images == candidate_images, "deployed evidence image set does not match candidate")
+    validate_sgp_runtime_marker(
+        sgp_runtime_marker,
+        release=release,
+        release_manifest_sha256=release_manifest_sha256,
+        images=candidate_images,
+    )
+    validate_aws_hk_runtime_marker(
+        aws_hk_runtime_marker,
+        release=release,
+        release_manifest_sha256=release_manifest_sha256,
+        images=candidate_images,
+    )
+    return {
+        **semantic,
+        "decision": "PRODUCT_ACTIVE",
+        "product_active": True,
+        "operations_qualified": True,
+        "source_commit": release["source_commit"],
+        "release_manifest_sha256": release_manifest_sha256,
+    }
 
 
 def validate_deployed_payload(evidence: dict[str, Any]) -> dict[str, Any]:
@@ -460,8 +642,14 @@ def validate_deployed_payload(evidence: dict[str, Any]) -> dict[str, Any]:
 
     require(evidence["p0_p1_open"] == 0 and evidence["owner_visual_data_action_parity"] is True, "integrity or owner parity gate failed")
     authority = evidence["authority"]
-    require(authority == {"commands_enabled": False, "live_mutation_enabled": False, "direct_source_access": False, "product_active": True, "operations_qualified": True}, "deployed authority is unsafe or incomplete")
-    return {**static, "decision": "PRODUCT_ACTIVE", "product_active": True, "operations_qualified": True, "source_commit": release["source_commit"]}
+    require(authority == {"commands_enabled": False, "live_mutation_enabled": False, "direct_source_access": False, "product_active": False, "operations_qualified": False}, "deployed authority is unsafe or incomplete")
+    return {
+        **static,
+        "decision": "EDS12_DEPLOYED_EVIDENCE_SEMANTICALLY_VALID_RUNTIME_BINDING_PENDING",
+        "product_active": False,
+        "operations_qualified": False,
+        "source_commit": release["source_commit"],
+    }
 
 
 def main() -> int:
@@ -470,9 +658,24 @@ def main() -> int:
     subcommands.add_parser("verify-static")
     deployed = subcommands.add_parser("verify-deployed")
     deployed.add_argument("--evidence", required=True, type=pathlib.Path)
+    runtime = subcommands.add_parser("verify-runtime-binding")
+    runtime.add_argument("--evidence", required=True, type=pathlib.Path)
+    runtime.add_argument("--release-pack", required=True, type=pathlib.Path)
+    runtime.add_argument("--sgp-runtime-marker", required=True, type=pathlib.Path)
+    runtime.add_argument("--aws-hk-runtime-marker", required=True, type=pathlib.Path)
     args = parser.parse_args()
     try:
-        result = validate_static() if args.command == "verify-static" else validate_deployed(args.evidence)
+        if args.command == "verify-static":
+            result = validate_static()
+        elif args.command == "verify-deployed":
+            result = validate_deployed(args.evidence)
+        else:
+            result = validate_runtime_binding(
+                args.evidence,
+                args.release_pack,
+                args.sgp_runtime_marker,
+                args.aws_hk_runtime_marker,
+            )
     except (QualificationError, OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
         print(f"EDS-12 qualification rejected: {error}", file=sys.stderr)
         return 1
