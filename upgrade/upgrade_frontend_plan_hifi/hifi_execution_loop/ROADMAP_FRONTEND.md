@@ -827,3 +827,173 @@ timezone** · HTTP/2-3 evidence cho SSE same-origin.
 bốn nhóm trên, và nhóm lớn nhất — 4 phase EDS — **không phải việc của Portal**.
 Việc của tôi mà tôi chưa làm là **F10**, và tôi chỉ biết đến nó hôm nay vì
 trước đó chưa đọc plan backend theo §7.8.
+
+---
+
+# BẢN ĐỒ NHÁNH (đo 2026-09-11 09:52) — ai đang ở đâu, và chỗ nào đang chồng lên nhau
+
+Owner hỏi: *"nhánh nào codex và bạn đang làm, bạn lại viết vào nhánh khác rồi
+thiếu tài liệu hay code lung tung đúng k?"* Đây là số đo, không phải trí nhớ.
+
+## B1. Trả lời ngắn
+
+**Không mất gì.** `dev` chứa nhiều nhất: 8716 dòng tracker, đủ A40→A58 + đề xuất
+Phase 8–11. Mọi thứ tôi viết đều nằm trên `dev`.
+
+**Nhưng có một chuyện thật sự rối, và nó mới xảy ra hôm nay:** codex đang sửa
+code **trực tiếp trong worktree `/home/bobby/portal-integration`** — đúng thư mục
+tôi đang làm việc — thay vì trong worktree của nó. Chi tiết ở §B4.
+
+## B2. Nhánh nào ahead so với `dev` / `main`
+
+| Nhánh | ahead `dev` | behind `dev` | ahead `main` | Là gì |
+| --- | ---: | ---: | ---: | --- |
+| **`dev` = `feat/execution-loop-next`** | 0 | 0 | **26** | **Việc đang làm.** 26 commit chờ vào `main` |
+| `feat/execution-n08-sse-activation` | 8 | 561 | 8 | Docs BR-EX-67/68/69/70/71 (30-08), chưa bao giờ merge |
+| `fix/v1.0.1-lark-org-user-id` | 5 | 668 | 5 | Dòng stable v1.0.1 — **cố ý không merge vào dev** |
+| `fix/v1.0.1-bobby-activation` | 3 | 668 | 3 | tập con của nhánh trên |
+| `fix/v1.0.1-lark-stable` | 2 | 668 | 2 | tập con của nhánh trên |
+| `feat/eds-current-bff` · `feat/execution-data-activation` · `feat/execution-integration` | 1 | 30 | 1 | cùng trỏ `30e592fb`, một commit merge `main` (10-09) |
+| `chore/primus-origin-mirror-policy` | 1 | 1024 | 1 | docs policy từ 14-08 |
+
+Mọi nhánh khác (**gồm cả `feat/execution-active-source-adapters` của codex**)
+đều **ahead = 0**: đã nằm trọn trong `dev`.
+
+## B3. `feat/execution-active-source-adapters` — nhánh owner đang mở trong IDE
+
+| | |
+| --- | --- |
+| remote `14aebb6f` | ahead `dev` **0**, behind `dev` **146** |
+| local worktree `074ff164` | ahead remote **1** — commit *"docs(execution): hand off BE-R2 frontend lanes"*, **chưa push** |
+| commit đó chứa | đúng một file: `CODEX_TO_CLAUDE_BE_R2_HANDOFF_2026-09-11.md`, 155 dòng |
+| File handoff đó có trong `dev` chưa | **CHƯA** |
+
+**Vì sao mở file ở đó thấy thiếu.** Tracker trên nhánh đó:
+
+| | dòng |
+| --- | ---: |
+| đã commit trên `feat/execution-active-source-adapters` HEAD | **1 465** |
+| đang nằm trong working tree (chưa commit, 5 908 dòng thêm) | **7 362** |
+| đã commit trên `origin/dev` | **8 716** |
+
+Tôi đã diff 7 362 dòng đó với `dev`: **1–7 105 giống hệt nhau**. Chênh lệch nằm ở
+đuôi — `dev` có thêm **A46, A51, A53, A54, A55, A56, A57, A58**; bản kia nhảy
+thẳng sang khối đề xuất Phase 8–11. Khối Phase 8–11 thì **hai bản giống hệt**.
+
+Nên: **không mất dữ liệu**, chỉ là bản trên nhánh codex là *tập con* của `dev`,
+và 5 908 dòng của nó **chưa được commit ở đâu trên nhánh đó** — chính là thứ
+handoff gọi là *"Claude-owned uncommitted work"* và dặn đừng ghi đè.
+
+## B4. Chuyện thật sự rối: hai agent chung một worktree
+
+`/home/bobby/portal-integration` là worktree tôi làm. Đo lúc 09:52:
+
+| Thời điểm | Việc |
+| --- | --- |
+| 09:32:50 | tôi commit `3294163f` (receipt), tree sạch |
+| **09:33:53** | file lạ bắt đầu xuất hiện: `config.ts`, `shared-read.repository.ts` |
+| 09:34:49 → 09:49:56 | thêm 16 file nữa |
+| 09:52 | `control-api-test-node-3232975` đang chạy, up ~1 phút |
+
+**18 file chưa commit, không file nào là của tôi:**
+
+```
+M  .env.example · apps/control-api/package.json · src/app.module.ts · src/config.ts
+M  src/execution/shared-read.repository.ts · scripts/verify-workspace.sh
+M  scripts/execution-n21-shared-admission-test.sh · deploy/.env.{development,production}.example
+M  deploy/compose.execution-current-source.yaml
+M  apps/portal/registry/FRONTEND_HANDOFF.md
+M  upgrade/{BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE,EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE}.md
+M  upgrade/backend/README.md
+??  apps/control-api/src/cli/execution-shared-read-cache-sweep.ts
+??  apps/control-api/src/execution/shared-read-cache-maintenance.ts
+??  apps/control-api/test/execution-shared-read-cache-maintenance.spec.ts
+??  deploy/runbooks/execution-shared-read-cache-lifecycle.md
+```
+
+Đây là **BE-R2 slice 1** — *"bounded expired-cache cleanup only"*, đúng dòng đầu
+bảng quyết định trong handoff. Tức codex **đã bắt đầu implement**, dù handoff tự
+ghi `PLANNED_ONLY / NO_IMPLEMENTATION_STARTED`.
+
+### Vì sao điều này nguy hiểm, cụ thể
+
+| Rủi ro | Cơ chế |
+| --- | --- |
+| **Commit của tôi nuốt code dở của codex** | tôi `git add` theo *thư mục* (`apps/control-api/src`, `packages/contracts`…). Script commit gần nhất của tôi có đúng dòng đó. Lần sau chạy là stage nhầm 18 file này |
+| **Hook chạy trên cây trộn hai người** | pre-commit chạy toàn cây. Test của tôi có thể đỏ vì code codex đang viết dở, và ngược lại |
+| **Luật "đóng băng code khi hook chạy" vỡ** | hook của tôi và container `control-api-test-*` của codex cùng đọc một cây |
+| **`FRONTEND_HANDOFF.md` là file của tôi** | nó đang nằm trong 18 file codex sửa. §7.3 CLAUDE.md giao file này cho frontend |
+
+### Việc cần owner quyết — một câu
+
+**Codex làm BE-R2 ở worktree nào?** Ba lựa chọn:
+
+| | Cách | Hệ quả |
+| --- | --- | --- |
+| **a** | codex chuyển sang worktree riêng của nó (`portal-active-source-adapters`), rebase lên `dev` | sạch nhất; codex phải kéo 146 commit về trước |
+| **b** | codex ở lại `portal-integration`, **tôi dừng commit** cho tới khi nó xong slice | tôi bị chặn, nhưng không có rủi ro trộn |
+| **c** | giữ nguyên như đang có | tôi phải đổi mọi script commit sang `git add` từng file một, và vẫn không giải được chuyện hook chạy trên cây trộn |
+
+Tôi đề nghị **(a)**. Trong lúc chờ, tôi **không commit** vào `portal-integration`
+nữa — receipt `3294163f` đã push xong, không có gì của tôi đang treo.
+
+---
+
+# §C. NHÁNH TẠM CHO PHASE 8–9 (owner duyệt 2026-09-11)
+
+**Quyết định owner:** *"Cứ tách tạm rồi khi làm sao các phase rồi merge vào nhánh
+codex đang làm rồi merge vào dev"* + *"làm gọn gàng thôi, đừng có phình và tách
+nhánh k cần thiết"*.
+
+## C1. Vòng đời nhánh — một nhánh, có ngày chết
+
+| | |
+| --- | --- |
+| Tên | `feat/execution-empty-composition` |
+| Worktree | `/home/bobby/portal-empty-composition` |
+| Tách từ | HEAD của `feat/execution-loop-next` tại thời điểm tách |
+| Chứa | **chỉ** Phase 8 và Phase 9. Không nhận việc khác |
+| Đóng | merge `--no-ff` về `feat/execution-loop-next` → push `dev` → **xoá cả nhánh lẫn worktree** |
+| Nhánh mới khác | **không**. Phase 10/11 đi thẳng trên nhánh chung |
+
+Lý do tách: hai agent chung một worktree va `index.lock` (đo được 10:01). Tách
+thư mục là tách index. Hết Phase 9 thì lý do đó không còn, nên nhánh không còn.
+
+## C2. Ba nhóm việc
+
+### (a) Owner quyết — đang chặn
+
+| # | Việc | Vì sao cần owner |
+| --- | --- | --- |
+| **C1-contract** | `pinned_watchlist`: codex chốt giữ lại dạng *deprecated compatibility*; commit `16725465` của tôi đã gỡ hẳn + sửa tay file generated | Handoff §4 cấm tôi sửa contract/generated. **Không chặn Phase 8** |
+| **C2-boundary** | Handoff §4 cấm sửa Control API / migration / Compose; Phase 7 (`1353644a`) và provenance (`53b09ee2`) đã sửa cả ba dưới quyền backend owner giao 2026-09-02 | Hai văn bản mâu thuẫn, tôi không tự chọn bản tiện hơn |
+| **C3-handoff** | `CODEX_TO_CLAUDE_BE_R2_HANDOFF_2026-09-11.md` **chưa push**, chỉ nằm trong worktree codex | Nhánh tôi không chứa tài liệu giao việc cho chính tôi. Cần codex push, hoặc owner cho phép tôi chép |
+
+### (b) Tôi làm ngay, không chờ ai
+
+| Phase | Nội dung | Exit gate |
+| --- | --- | --- |
+| **8** | Gate R1/R2/Live, Canary Control Room, Sandbox Certification: giữ phân cấp panel khi không có bản ghi; **một** câu actor/next-source ở cấp màn; tên relation producer cho `not reported` (F10) | **allowlist ngữ nghĩa** — liệt kê đích danh panel sẽ nói dối nếu thiếu bản ghi. **Bỏ** ngưỡng "400 ký tự" tôi từng đề xuất; codex đã bác và codex đúng |
+| **9** | Account/Broker 360 số thập phân qua formatter chuẩn, giữ giá trị thô ở title; QuantBT `Open` disabled phải có lý do; Portfolio 360 khôi phục title số thô | Mỗi guard phải **chứng minh fail được** trên một regression cố ý, rồi ghi lại. Không quét browser toàn bộ mỗi PR |
+
+Bằng chứng phải nộp cho cả hai: fixture empty-state hẹp, một structural test mỗi
+lớp màn, **screenshot có đăng nhập đủ 5 màn**, và allowlist rationale viết ra.
+
+**Soi bằng mắt ở đâu:** probe stack `:8090` (sống 4–5 ngày, postgres riêng).
+**Không đụng dev-portal** — codex đang dùng. Ghi chú: lúc 11:27 dev-portal chạy
+**trộn hai commit** (control-api build 11:02 của codex, portal-web build 08:19
+của tôi), nên dev-portal không phải chỗ đo được gì lúc này.
+
+### (c) Chờ codex
+
+- Gap **B6** — composition envelope chưa publish `freshness_budget_ms`, nên
+  `useFreshnessPoll` chưa có call site hợp lệ.
+- `blotter` p95 **1106** / `alphas` p99 **927** còn trượt SLO §A57.1.
+- Review `execution_portfolio_projection` + phần `packages/contracts` trong `16725465`.
+
+## C3. Hai file tôi không đụng trong suốt Phase 8–9
+
+`scripts/verify-workspace.sh` và `apps/portal/registry/FRONTEND_HANDOFF.md` —
+codex vừa sửa cả hai trong `b61ad10c`. Tránh để merge không sinh conflict ở chỗ
+không đáng. Việc ngoài phạm vi plan sẽ ghi tạm vào file này, chuyển sang
+`FRONTEND_HANDOFF.md` §8 sau khi merge.
