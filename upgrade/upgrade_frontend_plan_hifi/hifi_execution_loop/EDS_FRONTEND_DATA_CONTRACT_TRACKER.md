@@ -9518,3 +9518,95 @@ Component mới: **0**. File tracking mới: **0**.
 | **G5** | 9 digest mốc ở §A62.6 đã sửa cơ học. Nếu CI trên `dev` từng đỏ ở `test_canonical_contracts`, đó là nguyên nhân | codex xác nhận |
 | **G6** | `rows_dev`/`rows_stable` của `execution_profile_projection_refresh_health` để `null` vì migration `…031` **chưa apply** ở dev lẫn stable. Có định apply không? | Bobby / codex |
 | **G7** | `retention` + `disposal_decision` của bảng đó: tôi không đoán hộ | codex |
+
+---
+
+## A63. QUÉT NGOÀI KẾ HOẠCH TRƯỚC KHI VÀO PHASE 11 (11-09)
+
+Bobby yêu cầu rà xem còn gì **nằm ngoài kế hoạch mà chưa xử lý**. Bảy món, mỗi
+món đo tại chỗ chứ không nhớ lại. Xếp theo mức độ cần quyết.
+
+### A63.1 Tôi tự tạo ra một chỗ lệch: runtime dev **không còn khớp** contract vừa hoàn nguyên
+
+```
+GET /api/v1/execution/command-center  (dev, 127.0.0.1:8080)  → 200
+schema_version: "execution.command-center-snapshot.v1"
+panels: ['fleet_health', 'needs_you', 'today']        ← 3 khoá
+```
+
+Contract V1 vừa khôi phục đòi **4**. Container `portal-control-api-1` chạy image
+**6 tiếng tuổi**, dựng trước cả `059d4161` lẫn `fb64dc2a`.
+
+Trước Phase 10: contract 3 / runtime 3 — khớp. Sau Phase 10: contract 4 /
+runtime 3 — **lệch cho tới khi rebuild**.
+
+Không màn nào vỡ (không màn nào đọc field đó, và control-api **không** tự
+validate response với schema — xem §A62). Nhưng đây là chỗ lệch thật do thay
+đổi của tôi, và tôi **không tự rebuild**: rebuild sẽ kéo theo backend mới của
+codex, mà migration `…031` thì chưa apply. Đó là quyết định của Bobby.
+
+### A63.2 §8.58 (BE-R2-5) — contract mới, frontend **chưa tiêu thụ chút nào**
+
+Đo trong `apps/portal/frontend/src`:
+
+| Ký hiệu §8.58 | Số lần xuất hiện |
+| --- | --- |
+| `STATUS_ONLY` | **0** |
+| `snapshot_mode` | **0** |
+| `recovery.state` / `RECOVERING` của stream | **0** (các kết quả grep khác là nhãn/prose không liên quan) |
+| `resnapshot_not_before` | có sẵn — đường `projection.gap` terminal cũ, `sse.ts:176` |
+
+Codex nói event dùng lại tên `snapshot` và cursor cũ nên **không vỡ ngược**.
+Nhưng yêu cầu 1 — *giữ last-good + chỉ báo `recovering` cục bộ theo panel* —
+chưa có, nên người đọc **không phân biệt được "đang phục hồi" với "đang tươi"**.
+Đây là việc frontend thật sự, ứng viên số một cho Phase 11.
+
+### A63.3 §8.57 (BE-R2-4) — không có việc mới, nhưng một nghi vấn copy
+
+Handoff giới hạn frontend ở *"giữ panel và render `UNAVAILABLE` kèm lý do có
+kiểu"* vì runtime **cố ý chưa consumable**. Không có việc mới.
+
+Nghi vấn: `candleRefusalLine` (`api/marketContext.ts:171`) chỉ đổi
+`PENDING_MARKET_CONTEXT_ADAPTER` thành câu người đọc được; **mọi reason khác trả
+nguyên xi**. dev trả `MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED` (404), §8.57 hứa
+`MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING` — **không cái nào được ánh xạ**.
+Mới đo API, **chưa nhìn màn**, nên ghi là nghi vấn (§A56.3). Xác minh bằng
+browser khi Phase 11 mở.
+
+### A63.4 C3 — văn bản chi phối Phase 8–11 vẫn **chỉ nằm trên máy**
+
+```
+074ff164 docs(execution): hand off BE-R2 frontend lanes   (09:05 hôm nay)
+  → 1 file, 155 dòng, CODEX_TO_CLAUDE_BE_R2_HANDOFF_2026-09-11.md
+  → commit local trên feat/execution-active-source-adapters
+  → origin/feat/execution-active-source-adapters ở sha KHÁC (14aebb6f)
+```
+
+Tức tài liệu tôi thi công theo suốt cả ngày **không đọc được từ `dev`**. Một
+commit doc-only, merge là xong. Tôi **không tự đẩy nhánh của codex** — có thể họ
+còn sửa. Cần một câu đồng ý.
+
+### A63.5 Migration `…031` **chưa apply** ở đâu cả
+
+`to_regclass('execution_profile_projection_refresh_health')` → `does not exist`
+trên **cả** `portal-portal-postgres-1` (dev) lẫn stable. Đây là lý do
+`rows_dev`/`rows_stable` trong ledger để `null` chứ không phải `0` (§A62.8).
+
+### A63.6 B6 vẫn mở — `useFreshnessPoll` export nhưng **không ai gọi**
+
+Grep toàn `src`, loại file test: chỉ có **định nghĩa** (`useRevision.ts:89`) và
+**một dòng comment** trỏ tới nó. Zero call site. `freshness_budget_ms` thì đã có
+thật trong contract (2 fixture + generated), nên cái thiếu là chỗ dùng, không
+phải dữ liệu. Cùng lớp với `pinned_watchlist`: **một thứ trông như đang sống.**
+
+### A63.7 Chín bảng governance sản phẩm **đọc được mà không gì ghi được**
+
+`KNOWN_READ_WITHOUT_WRITE` vẫn đúng 9 mục, mỗi mục kèm lý do, guard
+`table-write-path` giữ danh sách trung thực (mục nào được sửa là phải rời danh
+sách). Không món nào mới; ghi lại để không ai tưởng đã đóng.
+
+### A63.8 Những thứ **đã kiểm và sạch**
+
+Cây làm việc sạch, không file lạ; `snapshot.py --check` 145/145; `dev` và
+`feat/execution-loop-next` cùng ở một sha; nhánh tạm Phase 8 đã xoá từ trước;
+không nhánh rác nào của tôi ahead `dev`.

@@ -3293,3 +3293,23 @@ Status ở đây, chi tiết + bằng chứng ở `EDS_FRONTEND_DATA_CONTRACT_TR
 | **Phase 11** — named BFF consumer preparation | **chưa bắt đầu** | — | chờ; handoff §3 đã đọc, chưa có slice nào Bobby mở |
 
 **Đang chờ codex** (không chặn Phase 11): C1' annotation `deprecated`, C3 push file handoff lên `dev`, G4 envelope khẳng định deployment không tồn tại, G5 CI digest, G6/G7 migration `…031` và retention bảng refresh-health.
+
+### Handoff receipt — `FRONTEND_HANDOFF.md` §8.57 và §8.58 (đọc 2026-09-11, sau Phase 10)
+
+Rà trước Phase 11 thì lộ ra: tracker mới chỉ ghi nhận **§8.56**. Hai mục giao
+cùng ngày chưa ai ghi là đã đọc — đúng thứ điều khoản 1 của Phase 10 bắt phải
+làm **trước** mỗi lát cắt.
+
+| | §8.57 — BE-R2-4 Paper Market Context | §8.58 — BE-R2-5 local realtime/recovery |
+| --- | --- | --- |
+| Trạng thái | **ĐÃ ĐỌC** | **ĐÃ ĐỌC** |
+| Yêu cầu frontend | giữ panel/chart đã duyệt, render `UNAVAILABLE` kèm lý do có kiểu; **không** gọi Edge, không fixture fallback, không mượn Sandbox/Live, không nến bịa | giữ composition đã duyệt, giữ giá trị last-good + chỉ báo `recovering` cục bộ theo panel; chỉ revalidate BFF same-origin đã đặt tên; `STATUS_ONLY` **không phải** điểm chart/lifecycle/replay; giữ nguyên ngữ nghĩa terminal `projection.gap` + `auth.expired` |
+| Đã làm chưa | **Chưa có việc mới phải làm** — runtime cố ý chưa consumable | **CHƯA** — đo trong `apps/portal/frontend/src`: `STATUS_ONLY` và `snapshot_mode` **0 lần xuất hiện**; không chỗ nào đọc `recovery.state`/`retry_not_before` của stream |
+| Rủi ro nếu để nguyên | thấp | thấp về vỡ: codex nói event dùng lại tên `snapshot` + cursor cũ nên **backwards compatible**; nhưng yêu cầu 1 (chỉ báo recovering cục bộ) **chưa có**, nên người đọc không phân biệt được "đang phục hồi" với "đang tươi" |
+
+**Một chỗ đo được, chưa kết luận:** `candleRefusalLine` (`api/marketContext.ts:171`)
+chỉ ánh xạ `PENDING_MARKET_CONTEXT_ADAPTER` thành câu; mọi `reason` khác **trả
+nguyên xi**. dev hôm nay trả `MARKET_CONTEXT_RUNTIME_NOT_ACTIVATED` (404), còn
+§8.57 nói sẽ là `MARKET_CONTEXT_PROFILE_QUALIFICATION_PENDING` — **không token
+nào trong hai được ánh xạ**. Tôi mới đo API, **chưa nhìn màn**, nên ghi là nghi
+vấn chứ không ghi là lỗi (§A56.3). Xác minh bằng browser khi mở Phase 11.
