@@ -8827,3 +8827,65 @@ Không nhận một test xanh làm bằng chứng. Tôi quay Gate R1 về một 
 
 **Mới**: `components/emptyComposition.ts` (registry allowlist),
 `components/EmptyRecordFrame.tsx` (86 dòng), 1 khối CSS scoped.
+
+### A59.10 RÀ LẠI PHASE 8 BẰNG MẮT (owner yêu cầu) — và một lỗi lớn hơn cả phase
+
+Owner hỏi *"đã test bằng mắt kỹ chưa"*. Câu trả lời thật lúc đó: **chưa**. Sau
+lần sửa tôi mới mở 3/5 ảnh; Gate R1 chỉ xem **bản trước khi sửa**, Gate R2 **chưa
+xem lần nào**. Chưa soi `denied`, chưa soi màn có dữ liệu, chưa soi viewport hẹp,
+chưa đọc console. Rà lại đủ 8 ca:
+
+| Ca | Viewport | Khung rỗng | Tràn ngang | Console |
+| --- | ---: | ---: | --- | --- |
+| Gate R1 **có dữ liệu thật** (`apr_06G6ANQZ…`) | 1440 | **0** ✓ | không | **sạch** |
+| Gate R1 có dữ liệu, **không** `workspace_id` | 1440 | **0** ✓ | không | **sạch** |
+| Gate R1 rỗng | 1440 | 4 | không | 404 (đúng kỳ vọng) |
+| Gate R2 rỗng | 1440 | 5 | không | 404 |
+| Gate LIVE rỗng | **400** | 8 | không | 404 |
+| Sandbox Cert rỗng | **400** | 8 | không | 404 |
+| Canary rỗng | **400** | 7 | không | 404 |
+| workspace lạ → `WORKSPACE_NOT_FOUND` | 1440 | 4 | không | 404 |
+
+Màn **có dữ liệu dựng 0 khung** — chứng minh thay đổi không rò sang nhánh
+populated. 400px xếp một cột, không màn nào tràn ngang.
+
+`denied` **chưa dựng được trên probe** (claude-probe là ADMIN, không tạo được
+refusal thật). Chỉ có unit test phủ — ghi đúng như vậy, không nhận là đã nhìn.
+
+#### Lỗi tìm được, và nó không nằm trong phạm vi Phase 8
+
+Trên Gate R1 **có dữ liệu thật**, panel `ARTIFACT PASSPORT — IMMUTABLE` là **một
+header trên một ô trắng rỗng**: đo trong DOM được **0 ký tự nội dung, 0 phần tử
+state**. Cả phase này nói về màn *không có bản ghi*; đây là đúng lỗi đó trên màn
+*đầy bản ghi*, và không lần quét nào trước đó bắt được vì bản ghi **có tồn tại**.
+
+Nguyên nhân: `passport.map` trên mảng rỗng render một `div` rỗng — và mảng rỗng
+vì **một manifest entry về ở dạng reader không parse nổi**. Con số đó *đã được
+đếm* (nó sinh ra cảnh báo "1 evidence manifest entries unreadable") nhưng chỉ ở
+**cấp trang**, nên panel không phân biệt được:
+
+- *nguồn không publish passport nào* → câu trả lời sạch, không phải lỗi;
+- *nguồn publish một cái ta đọc không nổi* → parser cần sửa.
+
+Panel vẽ **cùng một ô trắng** cho cả hai. Đúng kiểu gộp mà §3.4 tồn tại để chặn.
+
+Đã sửa (`a2048473`): `passportUnreadable` đi từ `rows.ts` → container → panel.
+Kiểm lại trên chính approval đó sau deploy:
+
+```
+ARTIFACT PASSPORT — IMMUTABLE
+UNAVAILABLE · 1 evidence manifest entry arrived in a shape this reader could not
+parse, so no passport line can be shown. The entries exist; what is missing is
+our ability to read them.
+```
+
+**Gửi codex:** `governance_approval_evidence` có 1 dòng trên probe mà
+`readPassportEntry` trả `null`. Frontend giờ nói thật về việc đọc không nổi,
+nhưng **shape thật của dòng đó cần codex xác nhận** — hoặc reader sai, hoặc
+contract và dữ liệu lệch nhau. Ghi thành gap, không tự đoán rồi nới reader.
+
+| Gate sau khi rà | Kết quả |
+| --- | --- |
+| `vitest run` | **2 217 passed** · 3 skipped · 134 file · 0 đỏ (thêm 3 test cho panel passport) |
+| `tsc --noEmit` (src/) | sạch |
+| Ảnh | 8 ca trong `scratchpad/p8sweep/`, đã mở xem |
