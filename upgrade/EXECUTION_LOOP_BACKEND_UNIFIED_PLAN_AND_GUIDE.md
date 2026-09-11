@@ -6046,6 +6046,14 @@ a Portal workaround.
   AWS-HK runtime-binding markers; then run `verify-runtime-binding` against
   all three.  A missing, mismatched or unhealthy marker is a release `NO_GO`;
   it cannot be bypassed by a static, browser, database or Rust test.
+- Release isolation was also independently rehearsed on 2026-09-11: the N14A
+  source-dark authority test proved separate dev/stable volumes plus
+  backup/restore and expand/forward-fix behavior; the N14B current-source
+  candidate rendered and rolled back without starting a container or calling a
+  source; N23 independently verified the Sandbox/Live profile set and its
+  per-profile rollback.  The Buildx attestation parser's four test cases also
+  passed.  These checks bound the release procedure and prevent release-path
+  regression, while intentionally preserving the same deployed-evidence gate.
 
 **Only remaining release evidence (not a technical-debt placeholder):** a
 protected-main signed/SBOM/provenance candidate plus one sanitized SGP marker
