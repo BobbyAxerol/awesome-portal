@@ -21,7 +21,8 @@ import type { SandboxDemo, SandboxTick, SbLink, SbRow } from "../sandbox.smoke";
 import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
-import { liveDot, sourceTone } from "../sourceTone";
+import { liveDot, sourceRecoveryNote, sourceTone } from "../sourceTone";
+import type { SourceRecovery } from "../profileRealtime";
 import { pulses, useArrivals, useIds } from "../listMotion";
 import { ID_ROUTES, IdLink } from "../idLinks";
 
@@ -79,10 +80,16 @@ export interface SandboxOverviewProps {
   } | null;
   /** The projection stream's phase, for the masthead dot. */
   realtimePhase?: string | null;
+  /**
+   * What the source coordinator says about itself (§8.58). A separate axis from
+   * `realtimePhase`: the stream can be live while the source is backing off.
+   */
+  sourceRecovery?: SourceRecovery | null;
 }
 
-export function SandboxOverview({ envelope = null, status = "ok", reason, demo, demoTick, panels = null, realtimePhase = null }: SandboxOverviewProps) {
-  const dot = liveDot(realtimePhase);
+export function SandboxOverview({ envelope = null, status = "ok", reason, demo, demoTick, panels = null, realtimePhase = null, sourceRecovery = null }: SandboxOverviewProps) {
+  const dot = liveDot(realtimePhase, sourceRecovery);
+  const recoveryNote = sourceRecoveryNote(sourceRecovery);
   const smoke = demo ?? null;
   const { now, orders, filled, ack, fill } = demoTick ?? { now: new Date(0), orders: 0, filled: 0, ack: 0, fill: 0 };
   const [filter, setFilter] = useState<SandboxFilter>("all");
@@ -124,6 +131,7 @@ export function SandboxOverview({ envelope = null, status = "ok", reason, demo, 
                     shows a still, muted dot instead of claiming to be live. */}
                 <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
                 <span className="sr-only">{dot.title}</span>
+                {recoveryNote ? <span data-tone={recoveryNote.tone ?? undefined} title={recoveryNote.title}>{recoveryNote.line} · </span> : null}
                 <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> <span className="exec-af-dim">{`(${ageLabel(ageFrom(envelope?.asOfMs ?? null, Date.now()))})`}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
               </span>
             </header>

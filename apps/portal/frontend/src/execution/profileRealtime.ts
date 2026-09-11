@@ -10,11 +10,43 @@ import { useEffect, useState } from "react";
 
 export type ProfileRealtimePhase = "idle" | "connecting" | "live" | "recovering" | "auth_expired" | "closed";
 
+/**
+ * The Portal source coordinator's own health, published beside the transport by
+ * BE-R2-5 (`FRONTEND_HANDOFF.md` §8.58).
+ *
+ * This is a **different axis** from `phase`. `phase` says whether the browser's
+ * stream is delivering; this says whether the source behind it is backing off.
+ * The stream can be perfectly live while the coordinator is in retry, and a
+ * reader who cannot tell those apart reads a recovering screen as a fresh one.
+ * So it is carried separately rather than folded into `phase`.
+ *
+ * `state: null` means the server said nothing, which is not the same as
+ * `HEALTHY`. `availability`/`freshness` fall back to `UNKNOWN` for the same
+ * reason: an unparsed field is not a healthy one.
+ */
+export interface SourceRecovery {
+  availability: "AVAILABLE" | "DEGRADED" | "UNKNOWN";
+  freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
+  state: "HEALTHY" | "RECOVERING" | null;
+  reasonCode: string | null;
+  retryNotBefore: string | null;
+}
+
+export const SOURCE_UNKNOWN: SourceRecovery = {
+  availability: "UNKNOWN",
+  freshness: "UNKNOWN",
+  state: null,
+  reasonCode: null,
+  retryNotBefore: null,
+};
+
 export interface ProfileRealtimeState {
   phase: ProfileRealtimePhase;
   refreshKey: number;
   cursor: string | null;
   reason: string | null;
+  /** What the source coordinator says about itself; never derived from `phase`. */
+  source: SourceRecovery;
 }
 
 interface RealtimeEnvelope {
@@ -24,10 +56,40 @@ interface RealtimeEnvelope {
   cursor: string | null;
   projection_epoch: string | null;
   projection_sequence: number | null;
+  source: SourceRecovery;
   payload?: Record<string, unknown>;
 }
 
-const INITIAL: ProfileRealtimeState = { phase: "idle", refreshKey: 0, cursor: null, reason: null };
+const INITIAL: ProfileRealtimeState = {
+  phase: "idle", refreshKey: 0, cursor: null, reason: null, source: SOURCE_UNKNOWN,
+};
+
+function oneOf<T extends string>(raw: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof raw === "string" && (allowed as readonly string[]).includes(raw) ? raw as T : fallback;
+}
+
+/**
+ * Reads §8.58's coordinator status off an envelope. Anything it cannot read as
+ * the published shape becomes `UNKNOWN`/`null` rather than an optimistic value.
+ */
+export function readSourceRecovery(item: Record<string, unknown>): SourceRecovery {
+  const raw = item.recovery;
+  const recovery = raw && typeof raw === "object" && !Array.isArray(raw)
+    ? raw as Record<string, unknown>
+    : null;
+  const state = recovery && (recovery.state === "HEALTHY" || recovery.state === "RECOVERING")
+    ? recovery.state
+    : null;
+  return {
+    availability: oneOf(item.availability, ["AVAILABLE", "DEGRADED", "UNKNOWN"] as const, "UNKNOWN"),
+    freshness: oneOf(item.freshness, ["FRESH", "AGING", "STALE", "UNKNOWN"] as const, "UNKNOWN"),
+    state,
+    reasonCode: state !== null && typeof recovery?.reason_code === "string" ? recovery.reason_code : null,
+    retryNotBefore: state !== null && typeof recovery?.retry_not_before === "string"
+      ? recovery.retry_not_before
+      : null,
+  };
+}
 
 export function readProfileRealtime(raw: unknown): RealtimeEnvelope | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -44,6 +106,7 @@ export function readProfileRealtime(raw: unknown): RealtimeEnvelope | null {
     cursor: typeof item.cursor === "string" ? item.cursor : null,
     projection_epoch: typeof item.projection_epoch === "string" ? item.projection_epoch : null,
     projection_sequence: typeof sequence === "number" ? sequence : null,
+    source: readSourceRecovery(item),
     payload: item.payload && typeof item.payload === "object" && !Array.isArray(item.payload)
       ? item.payload as Record<string, unknown> : undefined,
   };
@@ -113,9 +176,19 @@ export function useProfileRealtime(environment: "paper" | "sandbox" | "live" | n
         refreshKey: current.refreshKey,
         cursor: event.cursor ?? current.cursor,
         reason: null,
+        source: event.source,
       }));
       // A heartbeat proves liveness; it never triggers a full data reread.
-      if (refresh && event.event_type !== "heartbeat") bumpRefresh();
+      //
+      // Neither does a STATUS_ONLY snapshot. §8.58 emits one when the source
+      // coordinator's own state changes, not when data does: same cursor, no
+      // advance of epoch or sequence. Re-reading the whole profile would ask a
+      // source that has just said it is backing off to serve another full
+      // read, and the status that prompted it is already on this envelope. The
+      // panel keeps its last-good values and changes its indicator instead,
+      // which is what the handoff asks for.
+      const statusOnly = event.payload?.snapshot_mode === "STATUS_ONLY";
+      if (refresh && event.event_type !== "heartbeat" && !statusOnly) bumpRefresh();
     };
     const decode = (message: MessageEvent<string>): RealtimeEnvelope | null => {
       try { return readProfileRealtime(JSON.parse(message.data)); } catch { return null; }

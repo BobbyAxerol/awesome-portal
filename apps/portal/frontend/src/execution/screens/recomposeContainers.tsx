@@ -297,6 +297,7 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
       status={state.status}
       reason={state.reason}
       realtimePhase={realtime.phase}
+      sourceRecovery={realtime.source}
       sourceHealth={health.status !== "ok"
         ? `source health not read · ${health.reason ?? "no reason published"}`
         : paper
@@ -328,7 +329,7 @@ export function SandboxOverviewRichContainer({ api }: { api: ExecutionApi }) {
     loading: relations.status === "loading",
     deployments: state.value?.data.deployments ?? [],
   });
-  return <SandboxOverview envelope={state.value} status={state.status} reason={state.reason} panels={panels} realtimePhase={realtime.phase} />;
+  return <SandboxOverview envelope={state.value} status={state.status} reason={state.reason} panels={panels} realtimePhase={realtime.phase} sourceRecovery={realtime.source} />;
 }
 
 export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
@@ -337,7 +338,7 @@ export function LiveOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
   const state = useApiRead<ProfileEnvelope>(() => api.getScreenProfile("live"), [api, realtime.refreshKey], { keepValue: true });
-  return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} realtimePhase={realtime.phase} />;
+  return <LiveOverview envelope={state.value} status={state.status} reason={state.reason} realtimePhase={realtime.phase} sourceRecovery={realtime.source} />;
 }
 
 /* ── paper workbench ──────────────────────────────────────────────────── */

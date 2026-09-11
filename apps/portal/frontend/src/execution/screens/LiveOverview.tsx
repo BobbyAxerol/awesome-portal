@@ -18,7 +18,8 @@ import type { LiveDemo, LiveRow, LiveTick } from "../live.smoke";
 import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
-import { liveDot, sourceTone } from "../sourceTone";
+import { liveDot, sourceRecoveryNote, sourceTone } from "../sourceTone";
+import type { SourceRecovery } from "../profileRealtime";
 import { pulses, useArrivals, useIds } from "../listMotion";
 import { ID_ROUTES, IdLink } from "../idLinks";
 
@@ -44,10 +45,16 @@ export interface LiveOverviewProps {
   demoTick?: LiveTick;
   /** The projection stream's phase, for the masthead dot. */
   realtimePhase?: string | null;
+  /**
+   * What the source coordinator says about itself (§8.58). A separate axis from
+   * `realtimePhase`: the stream can be live while the source is backing off.
+   */
+  sourceRecovery?: SourceRecovery | null;
 }
 
-export function LiveOverview({ envelope = null, status = "ok", reason, demo, demoTick, realtimePhase = null }: LiveOverviewProps) {
-  const dot = liveDot(realtimePhase);
+export function LiveOverview({ envelope = null, status = "ok", reason, demo, demoTick, realtimePhase = null, sourceRecovery = null }: LiveOverviewProps) {
+  const dot = liveDot(realtimePhase, sourceRecovery);
+  const recoveryNote = sourceRecoveryNote(sourceRecovery);
   const smoke = demo ?? null;
   const { now, j, price, prev, sp } = demoTick ?? { now: new Date(0), j: 0, price: 0, prev: 0, sp: [] };
   const [filter, setFilter] = useState<LiveFilter>("all");
@@ -101,6 +108,7 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
               <span className="exec-af-source">
                 <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
                 <span className="sr-only">{dot.title}</span>
+                {recoveryNote ? <span data-tone={recoveryNote.tone ?? undefined} title={recoveryNote.title}>{recoveryNote.line} · </span> : null}
                 <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · current source · as_of <span className="exec-af-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> <span className="exec-af-dim">{`(${ageLabel(ageFrom(envelope?.asOfMs ?? null, Date.now()))})`}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span>
               </span>
             </header>

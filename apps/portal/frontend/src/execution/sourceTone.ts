@@ -8,6 +8,8 @@
  * all rather than a guessed one.
  */
 
+import type { SourceRecovery } from "./profileRealtime";
+
 /** Tones the execution surface defines. `null` means "draw it plain". */
 export type SourceTone = "good" | "warn" | "bad" | "mute" | null;
 
@@ -61,7 +63,44 @@ export interface LiveDot {
  * alive while its stream is down. The dot is bound to the channel's own phase,
  * so it stops when the stream stops.
  */
-export function liveDot(phase: RealtimePhase | null | undefined): LiveDot {
+/**
+ * What the source coordinator says about itself (`FRONTEND_HANDOFF.md` §8.58),
+ * as one compact panel-local line — or null when it says nothing to show.
+ *
+ * `RECOVERING` is deliberately not an error: the handoff is explicit that the
+ * approved composition stays mounted and keeps its last-good values. The line
+ * exists so a reader can tell a recovering screen from a fresh one, which is
+ * the whole difference the server started publishing.
+ */
+export function sourceRecoveryNote(
+  source: SourceRecovery | null | undefined,
+): { tone: SourceTone; line: string; title: string } | null {
+  if (!source || source.state !== "RECOVERING") return null;
+  const because = source.reasonCode ? ` · ${source.reasonCode}` : "";
+  return {
+    tone: "warn",
+    line: `Source recovering${because}`,
+    title: source.retryNotBefore
+      ? `The Portal source coordinator is backing off and will not retry before ${source.retryNotBefore}. These values are the last good read, not a fresh one.`
+      : "The Portal source coordinator is backing off. These values are the last good read, not a fresh one.",
+  };
+}
+
+/**
+ * The dot takes the source state too, because the two can disagree: §8.58's
+ * STATUS_ONLY events keep arriving on a perfectly live stream while the source
+ * behind it is in backoff. Pulsing green then would be true about the pipe and
+ * false about the data, which is the failure this module already refuses for a
+ * dead stream. A recovering source stops the pulse and says why.
+ */
+export function liveDot(
+  phase: RealtimePhase | null | undefined,
+  source?: SourceRecovery | null,
+): LiveDot {
+  if (phase === "live" && source?.state === "RECOVERING") {
+    const note = sourceRecoveryNote(source)!;
+    return { live: false, tone: note.tone, title: note.title };
+  }
   switch (phase) {
     case "live":
       return { live: true, tone: "good", title: "The projection stream is delivering; this screen re-reads as deltas arrive." };

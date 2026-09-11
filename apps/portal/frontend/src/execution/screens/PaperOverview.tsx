@@ -24,7 +24,8 @@ import type { ProfileEnvelope } from "../api/profileRead";
 import type { PanelStatus } from "../contracts";
 import { utcStamp } from "../time";
 import { soonReason } from "../soon";
-import { liveDot, sourceTone } from "../sourceTone";
+import { liveDot, sourceRecoveryNote, sourceTone } from "../sourceTone";
+import type { SourceRecovery } from "../profileRealtime";
 import { pulses, useArrivals, useIds } from "../listMotion";
 import { ID_ROUTES, IdLink } from "../idLinks";
 
@@ -41,6 +42,11 @@ export interface PaperOverviewProps {
   demoTick?: { now: Date };
   /** The projection stream's phase, for the masthead dot. */
   realtimePhase?: string | null;
+  /**
+   * What the source coordinator says about itself (§8.58). A separate axis from
+   * `realtimePhase`: the stream can be live while the source is backing off.
+   */
+  sourceRecovery?: SourceRecovery | null;
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : null);
@@ -52,8 +58,9 @@ const count = (value: unknown): number | null => typeof value === "number" && Nu
   ? value : typeof value === "string" && /^\d+$/.test(value) ? Number(value) : null;
 const chartTones = ["accent", "good", "warn", "paper", "mute"] as const;
 
-export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick, realtimePhase = null, sourceHealth = null }: PaperOverviewProps) {
-  const dot = liveDot(realtimePhase);
+export function PaperOverview({ envelope = null, status = "ok", reason, demo, demoWarning, demoTick, realtimePhase = null, sourceRecovery = null, sourceHealth = null }: PaperOverviewProps) {
+  const dot = liveDot(realtimePhase, sourceRecovery);
+  const recoveryNote = sourceRecoveryNote(sourceRecovery);
   const PO = demo ?? null;
   const now = demoTick?.now ?? new Date(0);
   const [venue, setVenue] = useState("All");
@@ -103,7 +110,8 @@ export function PaperOverview({ envelope = null, status = "ok", reason, demo, de
                 {/* Bound to the stream's own phase: a still, muted dot when it
                     is closed, rather than a green one that implies delivery. */}
                 <span className="exec-af-livedot" aria-hidden="true" data-live={dot.live ? undefined : "false"} data-tone={dot.tone ?? undefined} />
-                <span className="sr-only">{dot.title}</span>{" "}
+                <span className="sr-only">{dot.title}</span>
+                {recoveryNote ? <span data-tone={recoveryNote.tone ?? undefined} title={recoveryNote.title}>{recoveryNote.line} · </span> : null}{" "}
                 <b>{envelope?.sourceAuthority ?? "authority not stated"}</b> · as_of{" "}
                 <span className="exec-po-num">{utcStamp(envelope?.asOfMs ?? envelope?.asOf ?? null)}</span> · <span data-tone={sourceTone(envelope?.state) ?? undefined}>{(envelope?.state ?? "unavailable").toUpperCase()}</span> · <span data-tone={sourceTone(envelope?.freshness) ?? undefined}>{envelope?.freshness ?? "freshness not stated"}</span>
               </span>
