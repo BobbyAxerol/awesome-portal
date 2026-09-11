@@ -344,4 +344,42 @@ describe("N20 session, RBAC, workspace and resource boundary", () => {
       });
     }
   });
+
+  it("serves authenticated Command Center and Blotter shells through named same-origin BFFs without a raw source escape", async () => {
+    const blotter = await inject(
+      admin,
+      `/api/v1/execution/screens/blotter?workspace_id=${workspaceId}&limit=25`,
+    );
+    expect(blotter.statusCode).toBe(200);
+    expect(blotter.json()).toMatchObject({
+      schema_version: "execution.full-blotter.v1",
+      workspace_id: workspaceId,
+      data: {
+        exact_total: null,
+        filtered_total: null,
+        exact_query: {
+          schema_version: "execution.blotter-exact-query.v1",
+          state: "UNAVAILABLE",
+          reason_code: "PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE",
+        },
+      },
+    });
+    expect(JSON.stringify(blotter.json())).not.toMatch(/\/internal\/v2\/manager|source_cursor|record_key/i);
+
+    const commandCenter = await inject(
+      admin,
+      `/api/v1/execution/compositions/command-center?workspace_id=${workspaceId}`,
+    );
+    expect(commandCenter.statusCode).toBe(200);
+    expect(commandCenter.json()).toMatchObject({
+      schema_version: "execution.operational-composition.v1",
+      logical_operation_id: "executionOperationalCommandCenterV1",
+      workspace_id: workspaceId,
+      command_authority: { state: "UNCHANGED_FAIL_CLOSED", source_side_effect_requested: false },
+      data: {
+        command_center: { state: "UNAVAILABLE", reason_code: "COMMAND_CENTER_SNAPSHOT_DISABLED" },
+      },
+    });
+    expect(JSON.stringify(commandCenter.json())).not.toMatch(/\/internal\/v2\/manager|source_cursor|record_key/i);
+  });
 });

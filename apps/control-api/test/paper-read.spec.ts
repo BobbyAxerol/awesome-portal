@@ -93,6 +93,33 @@ class FakeCurrentSource {
   }
 }
 
+/** A committed local projection fixture, distinguished from a direct Manager page. */
+class FakeLocalProjectionSource extends FakeCurrentSource {
+  partialOrders = false;
+
+  override async relation(
+    principal: unknown,
+    environment: string,
+    screenId: string,
+    sourceId: string,
+    relation: string,
+    query: Record<string, unknown>,
+  ) {
+    const response = await super.relation(principal, environment, screenId, sourceId, relation, query) as Record<string, any>;
+    if (relation === "orders") {
+      response.source.completeness = this.partialOrders ? "PARTIAL" : "COMPLETE";
+      response.projection = {
+        epoch: "projection-epoch-1",
+        sequence: 42,
+        payload_digest: `sha256:${"a".repeat(64)}`,
+        source_cursor: null,
+        last_successful_refresh_at: "2026-09-11T00:00:00.000Z",
+      };
+    }
+    return response;
+  }
+}
+
 type FixtureScope = {
   deploymentId: string;
   strategyId: string;
@@ -184,6 +211,13 @@ function managerResponse(
     previousCursor?: string;
     aggregates?: Record<string, Record<string, number>>;
     scope?: { state: "EXACT" | "PARTIAL"; reasonCode: string | null };
+    completeness?: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+    projection?: {
+      epoch: string;
+      sequence: number;
+      payloadDigest: string;
+      lastSuccessfulRefreshAt: string;
+    };
   } = {},
 ) {
   return {
@@ -196,7 +230,7 @@ function managerResponse(
       profile_id: "PAPER_BINANCE_USDM",
       availability: "AVAILABLE",
       freshness,
-      completeness: "COMPLETE",
+      completeness: metadata.completeness ?? "COMPLETE",
       as_of: "2026-08-30T12:00:00Z",
       data: {
         relation: { schema: "public", relation },
@@ -214,6 +248,15 @@ function managerResponse(
         ...(metadata.scope === undefined ? {} : { scope: { state: metadata.scope.state, reason_code: metadata.scope.reasonCode } }),
       },
     },
+    ...(metadata.projection === undefined ? {} : {
+      projection: {
+        epoch: metadata.projection.epoch,
+        sequence: metadata.projection.sequence,
+        payload_digest: metadata.projection.payloadDigest,
+        source_cursor: null,
+        last_successful_refresh_at: metadata.projection.lastSuccessfulRefreshAt,
+      },
+    }),
   };
 }
 
@@ -703,6 +746,65 @@ describe("N22 full Paper read product BFF", () => {
       capability_id: "blotter.exact-query", state: "AVAILABLE", reason_code: null,
     }));
     expect(PaperBlotterQuerySchema.safeParse({ status: "NOT_A_REAL_STATUS" }).success).toBe(false);
+  });
+
+  it("labels a complete local Blotter aggregate DERIVED and withholds it as soon as the mirror is partial", async () => {
+    const source = new FakeLocalProjectionSource();
+    source.rows.set("orders", [
+      { order_id: "ord_1", status: "FILLED", mode: "paper", venue: "BINANCE", side: "BUY" },
+    ]);
+    source.exactTotals.set("orders", 12);
+    source.filteredTotals.set("orders", 1);
+    source.aggregates.set("orders", {
+      status: { FILLED: 1 }, venue: { BINANCE: 1 }, side: { BUY: 1 },
+    });
+
+    const complete = await service(source).blotter(principal(), {
+      limit: 50, status: "FILLED", venue: "BINANCE", side: "BUY",
+    }) as Record<string, any>;
+    expect(complete.data).toMatchObject({
+      exact_total: 12,
+      filtered_total: 1,
+      exact_query: {
+        state: "AVAILABLE",
+        authority: "DERIVED",
+        formula_version: "portal.current-projection.orders-exact-query.v1",
+        mirror_revision: {
+          projection_epoch: "projection-epoch-1",
+          projection_sequence: 42,
+          payload_digest: `sha256:${"a".repeat(64)}`,
+        },
+        coverage: {
+          relation_completeness: "COMPLETE",
+          scope_state: "EXACT",
+          current_population_rows: 12,
+          filtered_population_rows: 1,
+        },
+      },
+    });
+    expect(complete.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "blotter.exact-query",
+      state: "AVAILABLE",
+      authority: "DERIVED",
+    }));
+
+    source.partialOrders = true;
+    const partial = await service(source).blotter(principal(), { limit: 50 }) as Record<string, any>;
+    expect(partial.data).toMatchObject({
+      exact_total: null,
+      filtered_total: null,
+      aggregates: null,
+      exact_query: {
+        state: "PARTIAL",
+        authority: "DERIVED",
+        reason_code: "BE_R2_3_LOCAL_MIRROR_INCOMPLETE",
+      },
+    });
+    expect(partial.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "blotter.exact-query",
+      state: "PARTIAL",
+      reason_code: "BE_R2_3_LOCAL_MIRROR_INCOMPLETE",
+    }));
   });
 
   it("keeps the exact-query plane active when source rows need status normalization (P4-G / F14)", async () => {

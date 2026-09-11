@@ -88,6 +88,9 @@ export interface components {
             retryable: false;
             quarantined_rows?: number;
             status_map_version?: string;
+            /** @enum {string|null} */
+            authority?: "DERIVED" | "TRADING_SYSTEM" | null;
+            formula_version?: string | null;
             lineage_rejects?: {
                 [key: string]: number;
             };
@@ -152,8 +155,41 @@ export interface components {
                     [key: string]: number;
                 };
             } | null;
+            exact_query?: components["schemas"]["BlotterExactQuery"];
             derived_insights?: components["schemas"]["DerivedInsights"] | null;
         };
+        BlotterMirrorRevision: {
+            projection_epoch: string;
+            projection_sequence: number;
+            payload_digest: string;
+            /** Format: date-time */
+            last_successful_refresh_at: string;
+        };
+        BlotterExactQueryCoverage: {
+            /** @enum {string} */
+            relation_completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+            /** @enum {string} */
+            scope_state: "EXACT" | "PARTIAL";
+            returned_page_rows: number;
+            current_population_rows: number | null;
+            filtered_population_rows: number | null;
+        };
+        BlotterExactQuery: {
+            /** @constant */
+            schema_version: "execution.blotter-exact-query.v1";
+            /** @constant */
+            relation: "orders";
+            /** @constant */
+            history_semantics: "CURRENT_PROJECTION_POPULATION_NOT_FULL_HISTORY";
+            /** @enum {string} */
+            state: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+            /** @enum {string|null} */
+            authority: "DERIVED" | "TRADING_SYSTEM" | null;
+            formula_version: string | null;
+            reason_code: string | null;
+            mirror_revision?: components["schemas"]["BlotterMirrorRevision"];
+            coverage: components["schemas"]["BlotterExactQueryCoverage"] | null;
+        } & (unknown & unknown & unknown);
         DerivedInsights: {
             formula_version: string;
             /** Format: date-time */

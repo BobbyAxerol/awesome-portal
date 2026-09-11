@@ -56,6 +56,8 @@
         "retryable": { "const": false },
         "quarantined_rows": { "type": "integer", "minimum": 1 },
         "status_map_version": { "type": "string", "pattern": "^[a-z0-9.-]{3,64}$" },
+        "authority": { "oneOf": [{ "enum": ["DERIVED", "TRADING_SYSTEM"] }, { "type": "null" }] },
+        "formula_version": { "oneOf": [{ "type": "string", "pattern": "^[a-z0-9.-]{3,96}$" }, { "type": "null" }] },
         "lineage_rejects": {
           "type": "object", "minProperties": 1, "maxProperties": 7,
           "propertyNames": { "enum": ["account", "external_account", "deployment", "strategy", "portfolio", "session", "group"] },
@@ -107,6 +109,74 @@
         "type": "object", "maxProperties": 200,
         "additionalProperties": { "type": "integer", "minimum": 0 }
       }
+    },
+    "BlotterMirrorRevision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["projection_epoch", "projection_sequence", "payload_digest", "last_successful_refresh_at"],
+      "properties": {
+        "projection_epoch": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "projection_sequence": { "type": "integer", "minimum": 0 },
+        "payload_digest": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "last_successful_refresh_at": { "$ref": "#/$defs/DateTime" }
+      }
+    },
+    "BlotterExactQueryCoverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["relation_completeness", "scope_state", "returned_page_rows", "current_population_rows", "filtered_population_rows"],
+      "properties": {
+        "relation_completeness": { "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
+        "scope_state": { "enum": ["EXACT", "PARTIAL"] },
+        "returned_page_rows": { "type": "integer", "minimum": 0, "maximum": 200 },
+        "current_population_rows": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+        "filtered_population_rows": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] }
+      }
+    },
+    "BlotterExactQuery": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema_version", "relation", "history_semantics", "state", "authority", "formula_version", "reason_code", "coverage"],
+      "properties": {
+        "schema_version": { "const": "execution.blotter-exact-query.v1" },
+        "relation": { "const": "orders" },
+        "history_semantics": { "const": "CURRENT_PROJECTION_POPULATION_NOT_FULL_HISTORY" },
+        "state": { "enum": ["AVAILABLE", "PARTIAL", "UNAVAILABLE"] },
+        "authority": { "oneOf": [{ "enum": ["DERIVED", "TRADING_SYSTEM"] }, { "type": "null" }] },
+        "formula_version": { "oneOf": [{ "type": "string", "pattern": "^[a-z0-9.-]{3,96}$" }, { "type": "null" }] },
+        "reason_code": { "oneOf": [{ "type": "string", "pattern": "^[A-Z0-9_]{3,128}$" }, { "type": "null" }] },
+        "mirror_revision": { "$ref": "#/$defs/BlotterMirrorRevision" },
+        "coverage": { "oneOf": [{ "$ref": "#/$defs/BlotterExactQueryCoverage" }, { "type": "null" }] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "authority": { "const": "DERIVED" } }, "required": ["authority"] },
+          "then": {
+            "required": ["mirror_revision"],
+            "properties": {
+              "formula_version": { "const": "portal.current-projection.orders-exact-query.v1" },
+              "mirror_revision": { "$ref": "#/$defs/BlotterMirrorRevision" },
+              "coverage": { "$ref": "#/$defs/BlotterExactQueryCoverage" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "authority": { "const": "TRADING_SYSTEM" } }, "required": ["authority"] },
+          "then": {
+            "properties": {
+              "formula_version": { "type": "null" },
+              "coverage": { "$ref": "#/$defs/BlotterExactQueryCoverage" }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "state": { "const": "AVAILABLE" } }, "required": ["state"] },
+          "then": {
+            "properties": {
+              "authority": { "enum": ["DERIVED", "TRADING_SYSTEM"] },
+              "reason_code": { "type": "null" },
+              "coverage": { "$ref": "#/$defs/BlotterExactQueryCoverage" }
+            }
+          }
+        }
+      ]
     },
     "QueryAnalytics": {
       "type": "object", "minProperties": 1, "maxProperties": 40,
@@ -171,6 +241,7 @@
         "exact_total": { "type": ["integer", "null"], "minimum": 0 },
         "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
         "aggregates": { "oneOf": [{ "$ref": "#/$defs/Aggregates" }, { "type": "null" }] },
+        "exact_query": { "$ref": "#/$defs/BlotterExactQuery" },
         "derived_insights": { "oneOf": [{ "$ref": "#/$defs/DerivedInsights" }, { "type": "null" }] }
       }
     }
