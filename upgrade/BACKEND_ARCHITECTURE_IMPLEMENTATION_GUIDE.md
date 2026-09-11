@@ -2015,3 +2015,25 @@ activation or the phase):**
   DR/game-day — per §14 above; the v0.5 §8.2 audit matrix + §8.3
   discrepancies (compose.production, publish-images, deploy.yml
   environments) are binding review items before BAR-17 starts.
+
+### 14.1.1 BE-R2 operational closeout planning (2026-09-11)
+
+The current-source audit is now translated into the finite **BE-R2** campaign
+in [`EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §18](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--approved-planning-only-2026-09-11).
+It is planning-only until Bobby starts a named phase. The locked scope is:
+
+- bounded staged cleanup of expired `execution_shared_read_cache` rows, never
+  `VACUUM FULL` or business/projection/source deletion;
+- one GET-only D3 mTLS/delegated-JWT evidence window;
+- maximum current Screen BFF completion, with only coverage-proven local
+  derived exact totals;
+- Paper-first Market Context qualification, then independent Sandbox/Live
+  qualification; and
+- V1 `pinned_watchlist` compatibility, governance/idempotency hardening and
+  immutable release evidence, while command relay/Live mutation stay disabled.
+
+`live_data_executor` is explicitly a raw Paper-candidate/archive audit input,
+not a Portal source. Portal retains the server-side Manager-v2 contract path;
+there is no direct database, Redis, broker, Source Proxy upstream or browser
+connection. The full phase-to-frontend handoff is in
+[`apps/portal/registry/FRONTEND_HANDOFF.md` §8.56](../apps/portal/registry/FRONTEND_HANDOFF.md#856-be-r2-frontend-coordination--planning-only-2026-09-11).

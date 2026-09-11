@@ -1855,3 +1855,21 @@ durable run/attempt events. Detailed evidence:
   projection worker and Manager decoder that implement this correction; a
   stale manifest cannot qualify it for promotion. Its dependent N29 BR-EX-72
   source-boundary evidence is re-pinned in the same commit.
+
+## Backend state — 2026-09-11 (BE-R2 planning only)
+
+- The finite BE-R2 operational closeout campaign is planned, not implemented.
+  It is deliberately split into cache lifecycle, GET-only D3 evidence,
+  current-screen BFF/derived exact query, Paper-first Market Context,
+  realtime/pacing, governance/V1/idempotency, and immutable release evidence.
+- Bobby locked six guardrails: staged expired-cache deletion only; D3 remains
+  GET-only; Market Context qualifies Paper first; no direct
+  `live_data_executor` access; deprecated V1 `pinned_watchlist` compatibility
+  returns; and command relay/Live mutation remain off.
+- The durable local projection stays the Portal hot read store. Parquet/DuckDB
+  is not an online shortcut and must be proposed separately as cold archival
+  work. Any unresolved source fact remains one named
+  `SOURCE_GAP_CONFIRMED`, never a direct-data workaround.
+
+See [Execution Loop unified plan §18](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--approved-planning-only-2026-09-11)
+for phase exits, tests, rollback and the frontend handoff.

@@ -5373,3 +5373,379 @@ E5 operation authority**. It is deliberately small enough to close fully: one
 operation, one real frozen-frontend vertical, complete negative/security
 matrix and immutable dev-image proof before widening to the remaining
 operations.
+
+## 18. BE-R2 operational closeout campaign — approved planning only (2026-09-11)
+
+**Status:** `PLANNED_OWNER_DECISIONS_LOCKED`. Bobby approved every decision in
+§18.1 on 2026-09-11. This section is a plan and handoff only: it authorizes no
+code, migration, cache deletion, feature-flag change, service restart, source
+call, command dispatch or deployment until Bobby names the individual phase.
+
+**Why this is a separate closeout sequence:** the EDS/N29 work established a
+safe current-data path, but a read-only audit found a finite set of operational
+and product-composition gaps. They must be closed as named, testable slices
+rather than become another open-ended request list. This campaign supersedes
+only the residual work described below; it does not reopen accepted EDS
+authority, alter the Execution Edge contract, or turn a current observation
+into an event/replay claim.
+
+### 18.1 Owner decisions now locked
+
+| Decision | Locked direction | Consequence for implementation |
+|---|---|---|
+| Cache lifecycle | Deploy a bounded TTL sweeper; staged-delete only expired `execution_shared_read_cache` rows; never run `VACUUM FULL` in this campaign | Cache entries are recomputable operational data, not business/projection/source records. Deletion is batched, observable and rollback-safe. |
+| D3 transport proof | Run one named `D3-AUDIT-*` window against GET-only compatibility and Manager-read operations | It proves mTLS/delegated-JWT positive and negative paths. It does not read business rows, enable a command, restart a service or alter an Edge profile. |
+| Market Context | Qualify Paper first, then enable each profile only when its own named capability passes | A route existing in a proxy is not acceptance evidence. No broad all-profile switch. |
+| `live_data_executor` | Never grant Portal direct database access; classify it as a Paper candidate/archive until the Trading System publishes a canonical Manager-v2 mapping | Portal continues to consume only the private Edge/Manager contract. A raw DB table is not a browser or Portal authority. |
+| V1 compatibility | Restore `pinned_watchlist` compatibility in the published V1 contract as deprecated; regenerate generated types through canonical tooling | Do not silently break a V1 wire just because the current UI no longer uses a field. |
+| Command plane | Keep command relay and Live mutation disabled during this data campaign | A later command campaign must use an exact catalogue, role/RBAC, idempotency, audit and approval contract. It is not bundled into read activation. |
+
+### 18.2 Audit facts that constrain every BE-R2 phase
+
+The following are observed facts, not desired target state:
+
+| Boundary | Observed fact | Planning implication |
+|---|---|---|
+| SGP Portal → AWS-HK | Current snapshots are arriving through the server-side mTLS/delegated-JWT path; unauthenticated mTLS access is rejected fail-closed | Do not introduce a second client, direct source URL, browser Edge call or direct database route. |
+| AWS-HK Manager projection | Paper, Sandbox and Live workers commit their current profile observations on the configured cadence | Profile freshness must be represented per profile/panel; `EMPTY`, `PARTIAL` and `UNAVAILABLE` remain distinct. |
+| `live_data_executor` raw database | It has useful tables and Paper-mode records, but no observed `mode=live` orders/fills/positions/sessions and its latest raw activity is not proof of current Live authority | It is an audit input only. Any usable data must be surfaced by a Trading-System-owned Manager adapter, not a Portal SQL query. |
+| Portal local mirror | The current projection/durable mirror already serves source-backed local reads and prevents browser-driven AWS-HK amplification | PostgreSQL remains the hot operational/read authority. Parquet/DuckDB remain cold/offline options only after an explicit archival decision. |
+| Shared read cache | The audit found a large set of expired entries retained after expiry | BE-R2-1 is P0. A cache hit/miss must never change source truth or expand source traffic without admission control. |
+| Governance/operations data | Several Portal-owned governance and operations tables are genuinely empty | A BFF must expose an honest empty state and preserve the rich screen shell; it must not seed or invent operational history. |
+| Command transport | Portal and Edge command relay are intentionally disabled | The Admin Action Drawer can show workflow/task/read authority, but cannot imply a Trading-System CLI mutation is available. |
+
+The enduring data path is therefore:
+
+```text
+Browser
+  → same-origin Screen BFF (session, RBAC, CSRF, named DTO)
+  → committed SGP PostgreSQL projection / bounded cache
+  → private HTTP/2 TLS 1.3 mTLS + short-lived delegated read assertion
+  → AWS-HK Rust Execution Edge / Manager-v2 Source Proxy
+  → Trading System authority
+```
+
+No BE-R2 phase may bypass a layer in this path. In particular, no JavaScript,
+Portal process, query tool, CLI or migration connects directly to Trading
+System PostgreSQL, Redis, broker, Source Proxy upstream or shell.
+
+### 18.3 Campaign-wide closure rules
+
+1. One phase has one bounded output, migration/rollback story, test matrix and
+   journal entry. A phase is not closed as “backend ready” while its known
+   consumer, cleanup or evidence is deferred unnamed.
+2. Existing Manager-v2 capabilities are consumed first. A missing source fact
+   becomes exactly one `SOURCE_GAP_CONFIRMED` ledger item with its owner and
+   expected contract, never a direct-DB workaround.
+3. Every read DTO retains profile, availability, freshness, completeness,
+   `as_of_ms`, contract/catalogue revision, coverage and exact decimal strings.
+   Derived values additionally name inputs, formula/revision and `DERIVED`.
+4. `EMPTY` means the authorized source answered zero rows. `PARTIAL` preserves
+   usable rows plus its reason. `UNAVAILABLE`/`DENIED`/`ERROR` are never
+   coerced to empty. A current page or Portal observation is never replay.
+5. Browser traffic may not multiply cross-cell reads. Cache, lease, bulkhead,
+   page/byte bounds, backpressure, profile isolation and cleanup are release
+   gates, not future technical debt.
+6. Commands stay fail-closed. The D3 audit is GET-only transport evidence, not
+   command commissioning.
+7. A frontend screen keeps its approved rich hierarchy in every state. Backend
+   changes only the named panel DTO/state; it does not replace a route with a
+   generic envelope page.
+
+### 18.4 Phase sequence and ownership
+
+| Phase | Primary output | Frontend parallel lane | Blocking dependency |
+|---|---|---|---|
+| BE-R2-1 | bounded cache lifecycle and cleanup | Phase 8/9 UX/guard work | none |
+| BE-R2-2 | D3 read evidence and current-source truth ledger | read/acknowledge handoff, no new transport | named audit window |
+| BE-R2-3 | maximum current Screen BFF + derived exact query | Phase 11 Command Center/Blotter consumers | BE-R2-2 ledger |
+| BE-R2-4 | Paper Market Context BFF qualification | chart empty/loading/partial consumer preparation | named Paper capability evidence |
+| BE-R2-5 | local realtime/resilience hardening | realtime state/motion and virtualized list checks | BE-R2-1 through BE-R2-3 |
+| BE-R2-6 | governance, V1 compatibility and idempotency closeout | Gate/Approval empty shells and workflow verification | BE-R2-3 |
+| BE-R2-7 | immutable release/provenance and product acceptance | final authenticated route/network/visual matrix | accepted BE-R2-1 through BE-R2-6 scope |
+
+### BE-R2-1 — Bounded cache lifecycle, retention and cleanup
+
+**Goal:** remove expired shared-read cache pressure without deleting any
+business, source, projection, governance or command record.
+
+**Backend work:**
+
+- add an index-backed, bounded sweeper for `execution_shared_read_cache` that
+  deletes only rows whose `expires_at <= clock_timestamp()`;
+- use a small server-owned batch limit, cancellation/time budget and jitter so
+  the sweeper cannot monopolize PostgreSQL or compete with projection work;
+- add cache class TTL/maximum-row/maximum-byte policy, per-profile metrics,
+  deletion counters, oldest-expired age and overflow alarm;
+- run a dry-run inventory before deletion, then staged batches with health,
+  DB-lock and read-latency monitoring; use ordinary `VACUUM (ANALYZE)` only
+  after a safe batch window, never `VACUUM FULL`;
+- make expiry cleanup part of the operational worker lifecycle rather than a
+  one-off shell command; retain a feature/interval kill switch that stops new
+  cleanup without changing read semantics.
+
+**Explicit non-scope:** no truncation, no deletion of durable mirror rows, no
+schema-wide vacuum/reindex, no Docker volume action and no cache promotion to
+an authority store.
+
+**Tests/evidence:** fresh/current/expired cache cases; concurrent reader,
+writer and sweeper; cancellation between batches; profile isolation; index-plan
+assertion; max-budget enforcement; metrics; a staged dev cleanup record proving
+fresh entries remain and source request count does not increase.
+
+**Exit:** cache growth is bounded, expired entries are eventually removed,
+fresh reads behave unchanged, cleanup is observable/interruptible, and disk
+reclamation expectations are documented honestly.
+
+**Frontend handoff:** none required; Phase 9 may display cache/freshness only
+through existing operational diagnostics, never as a business status.
+
+### BE-R2-2 — D3 GET-only evidence and current-source truth ledger
+
+**Goal:** turn the existing live data path into a measured capability/profile
+ledger before widening any BFF or UI consumer.
+
+**Backend work:**
+
+- create the ephemeral D3 assertion corpus in a caller-owned `0700` directory;
+  execute only GET compatibility and named Manager-read probes during one
+  `D3-AUDIT-*` window; securely destroy corpus files when evidence is sealed;
+- prove TLS 1.3, HTTP/2, valid short-lived delegated assertion and exact
+  environment/audience/profile binding; record expected negative outcomes for
+  missing/expired/wrong-resource/wrong-profile/wrong-audience assertion and
+  absent/wrong client certificate;
+- generate one source truth ledger across each published Manager capability,
+  relation and product operation: source state, row/page/coverage result,
+  exact partial reason, freshness, profile, safe screen consumer and owner;
+- separately inventory `live_data_executor` metadata/counts as a raw
+  Paper-candidate audit source, explicitly proving it is not a Portal source
+  authority or a substitute for the Live Manager profile;
+- reconcile runtime image/release labels against declared manifests without
+  changing a running image; record any provenance discrepancy as a release
+  evidence item.
+
+**Explicit non-scope:** no raw business payload capture, no command call, no
+database write, no feature flip, no direct Trading-System query and no claim of
+event/replay continuity.
+
+**Tests/evidence:** D3 positive/negative matrix; redaction scan of evidence;
+profile-crossing rejection; source/page bound checks; deterministic ledger
+generator test; one fresh Paper/Sandbox/Live snapshot evidence set.
+
+**Exit:** every existing screen requirement is classified `AVAILABLE_DIRECT`,
+`AVAILABLE_DERIVED_AT_PORTAL`, `AUTHORITATIVE_EMPTY`, `PARTIAL`, or one named
+`SOURCE_GAP_CONFIRMED`; no category is inferred from a container name or a raw
+database table.
+
+**Frontend handoff:** Claude may consume only the resulting named status and
+panel-state metadata. No frontend transport, proxy, fixture fallback or direct
+relation client is permitted.
+
+### BE-R2-3 — Maximum current Screen BFF and derived exact-query completion
+
+**Goal:** consume every currently valid Manager-v2 fact through named
+same-origin operations and close the known composition/query gaps without
+requiring a Trading System upgrade.
+
+**Backend work:**
+
+- complete the screen-operation map for existing Manager-v2 catalogue and
+  accepted legacy screen/query routes, resolving resource identity, filters,
+  sort and Portal cursors server-side;
+- compose Command Center, Operations, Waivers and Admin Drawer read DTOs from
+  Portal-owned workflow plus accepted Manager facts; where governance/ops data
+  is empty, return an honest panel-local empty state rather than seeded/demo
+  rows or a collapsed whole screen;
+- add an exact local-derived Blotter count/aggregate only when the committed
+  durable mirror has complete, scope-compatible rows for that named relation;
+  mark it `DERIVED`, include mirror revision/coverage/formula, and retain the
+  source `null` total unchanged when derivation is not justified;
+- maintain bounded server-owned paging and source admission. No global source
+  page is fetched then filtered client-side;
+- add a concurrent duplicate approval-request regression test proving one
+  accepted request plus replay semantics under unique/serialization conflict.
+
+**Explicit non-scope:** do not populate governance data, change command relay,
+invent full history, expose a generic relation route or calculate totals from
+an incomplete page.
+
+**Tests/evidence:** direct/derived/empty/partial/unavailable screen fixtures;
+exact-count proof against local mirror; cursor rebind and deep-page tests;
+workspace/profile isolation; decimal/currency assertions; duplicate approval
+concurrency integration test; authenticated BFF/network evidence for Command
+Center and Blotter.
+
+**Exit:** F12 is closed as an honest composition (not fake populated data),
+F14 is `AVAILABLE_DERIVED_AT_PORTAL` only where justified, F18 has a real
+concurrency regression test, and every unserved panel has one typed source or
+Portal-owned reason.
+
+**Frontend handoff:** retain rich shells for Command Center, Blotter,
+Operations, Waivers and Admin Drawer; consume exact/derived labels and panel
+states rather than swapping the route for a generic unavailable screen.
+
+### BE-R2-4 — Paper-first Market Context qualification and named BFFs
+
+**Goal:** use existing Market/Data Layer capabilities only after the exact
+Paper adapter proves contract, freshness and profile isolation.
+
+**Backend work:**
+
+- validate the checked-in Trading-System-owned Market Context adapter manifest
+  against the private Edge route, profile, source capability and Data Layer
+  revision;
+- qualify fixed named `latest` and bounded `candles` operations for Paper with
+  server-owned symbol/venue/interval/time-range allowlists, row/byte limits,
+  UTC milliseconds, exact decimal strings, returned-range/coverage and source
+  revision;
+- publish only named same-origin Market Context DTOs. Sandbox and Live are
+  evaluated independently after Paper; a missing profile capability stays typed
+  unavailable and does not fall back across profiles;
+- reuse the existing private Manager transport and local read/cache controls;
+  retain market data as current/bounded observation, never lifecycle replay or
+  a benchmark/correction claim.
+
+**Explicit non-scope:** no direct Data Layer browser call, no general market
+query endpoint, no unbounded OHLCV export, no Parquet/DuckDB online path, no
+synthetic candle/benchmark/calendar/VNM result.
+
+**Tests/evidence:** Paper contract and mTLS/delegation qualification; wrong
+symbol/profile/interval rejection; bounds/decimal/UTC/gap tests; source stale
+and typed unavailable tests; authenticated Paper chart BFF evidence. Each later
+profile repeats the same independent evidence before activation.
+
+**Exit:** Paper Market Context is either source-backed and consumer-ready, or
+the exact adapter/capability gap is recorded once. No feature flag is enabled
+merely because a proxy location exists.
+
+**Frontend handoff:** Claude may prepare charts for `READY/EMPTY/PARTIAL/STALE/
+UNAVAILABLE`, but replaces a panel-local typed gap only after the named DTO is
+published. It must not synthesize series from UI state.
+
+### BE-R2-5 — Local realtime, source pacing and degradation hardening
+
+**Goal:** preserve smooth local updates without turning browser tabs into a
+cross-cell polling amplifier or masking source failure.
+
+**Backend work:**
+
+- ensure each profile has one bounded source coordinator and one local
+revision/journal fan-out path; browser reconnects resume only via Portal
+`Last-Event-ID` semantics;
+- tune retry/backoff/jitter and explicit `429` handling for source coordinators
+  so transient pacing rejection degrades a panel to stale/recovering rather
+  than failing a profile cycle or retrying aggressively;
+- bind every delta to operation/resource/profile/revision and retain source
+  freshness/completeness in the local snapshot; no source cursor/checkpoint
+  reaches the browser;
+- publish lag, reconnect, coalescing, queue depth, stale-age, source request
+  and degradation metrics with alert thresholds; rehearse source-dark and
+  recovery behavior without losing committed local state.
+
+**Explicit non-scope:** no authoritative event/replay/correction claim, no
+command activation, no browser-to-Edge SSE, no multi-profile fallback and no
+new durable source event store.
+
+**Tests/evidence:** one/ten/one-hundred subscriber coalescing; slow reader;
+auth expiry; reconnect/resume; gap/resync; source `429`/`502`/`503`; profile
+isolation; restart/recovery; fresh/stale panel transition; source-request count
+remains constant as browser count grows.
+
+**Exit:** local realtime is measurable, bounded and honest under failure;
+existing rich components update their own panels without full-route reload or
+source amplification.
+
+**Frontend handoff:** connect motion/live indicators only to real local
+realtime phases; retain last good panel data on `STALE`/`RECOVERING`; do not use
+timer-driven fake activity.
+
+### BE-R2-6 — Governance read truth, V1 compatibility and idempotency closeout
+
+**Goal:** close the Portal-owned contract/process debts independently of
+Trading System data availability.
+
+**Backend work:**
+
+- restore the published V1 `pinned_watchlist` field as an additive/deprecated
+  compatibility member with a defined authoritative-empty/default behavior;
+  regenerate all contract outputs through the canonical generator and reject
+  hand-edited generated types;
+- make governance/approval/operations DTOs distinguish no record, not
+  authorized, source unavailable and policy blocked; no fake incident,
+  approval, queue or command data is seeded in shared development runtime;
+- harden idempotent approval creation and verify duplicate request-key payload
+  replay under concurrent transactions;
+- record a small real test-workspace procedure for populating review data when
+  the owner wants a demo, isolated from production/stable workflow state.
+
+**Explicit non-scope:** no Trading System command, no fake shared runtime data,
+no V1 breaking change and no frontend-driven policy enforcement.
+
+**Tests/evidence:** V1 compatibility consumer fixture; generated-digest check;
+concurrent request-key test; role/workspace/CSRF negatives; each governance
+empty/denied/blocked state; test-workspace isolation evidence.
+
+**Exit:** no published V1 consumer breaks, generated types are reproducible,
+approval replay is deterministic, and governance screens accurately state why
+they are empty or blocked.
+
+**Frontend handoff:** Phase 8 owns rich empty shells for Gate/Approval routes;
+frontend must use the server reason and must not repeat “waiting for” copy in
+every panel. Phase 10 records the contract generator and handoff receipt.
+
+### BE-R2-7 — Immutable release, provenance and product acceptance
+
+**Goal:** promote only the accepted read-only capability set with evidence that
+ties source contract, Edge, Control API, local data model and frozen consumer
+together.
+
+**Backend/release work:**
+
+- bind the source/Manager contract revision, Edge digest, Control API digest,
+  compose/runtime manifest, migration, generated contract and frontend bundle
+  in one release evidence record; reconcile source-label/release provenance
+  drift before an acceptance claim;
+- run the declared profile matrix: Paper, Sandbox and Live read; Market Context
+  only where accepted; SSE/current-read degradation; cache cleanup health;
+  BFF security and browser consumption; keep command relay and mutation false;
+- rehearse rollback to the prior immutable read release without deleting
+  projection/mirror/cache forensic evidence; prove restore and source-dark
+  behavior separately;
+- publish signed image/SBOM/provenance only after all scoped gates pass, and
+  mark every external source gap explicitly in the release manifest.
+
+**Explicit non-scope:** no claim that raw archive data is Live authority, no
+command/CLI mutation, no event replay certification, no unqualified profile
+activation and no stable release shortcut around protected evidence.
+
+**Tests/evidence:** full contract/generator suite; Control API/Rust/PostgreSQL
+fresh restore; D3 audit record; cache lifecycle metrics; profile/browser
+matrix; source-dark/recovery; image/SBOM/provenance verification; rollback and
+deployed-manifest digest check.
+
+**Exit:** the release truthfully declares exactly what is active, derived,
+empty, partial and externally missing. No BE-R2 item remains as an unnamed
+technical debt; any later source work is a single explicit owner contract, not
+a Portal workaround.
+
+### 18.5 Claude handoff and phase ownership
+
+Claude owns visual composition and frontend consumer work. Codex owns all
+server contracts, cache/projection/transport/governance code and release
+evidence. Claude must not edit backend, proxy, Edge, migrations, flags or
+runtime containers for this campaign.
+
+Claude can begin the following work immediately, in parallel, without waiting
+for a backend feature flag:
+
+| Tracker phase | Assigned frontend result |
+|---|---|
+| Phase 8 | Upgrade Gate R1/R2/Live, Canary and Sandbox empty states only where panel semantics remain true; include relation producer names for `not reported`; do not enforce a blanket character-count rule or invent panels. |
+| Phase 9 | Repair the three measured format/disabled/title issues; add cheap formatter/unit guards plus a targeted browser probe, with an explicitly justified allowlist rather than a costly blanket scan on every PR. |
+| Phase 10 | Read/acknowledge the backend handoff before each slice; update tracking/reuse reports; do not hand-edit generated contracts or types. |
+| Phase 11 preparation | Keep Command Center, Blotter, Gate/Approval and Admin Drawer rich shells mounted; add consumers/test doubles for named BFF states only. Do not assume populated governance data, exact totals, Market Context or command authority before the BFF publishes them. |
+| BE-R2-4/5 consumer prep | Make chart/realtime components accept UTC/exact-decimal/coverage/derived labels and real `live/connecting/recovering/closed` state, without fake timer motion or direct source calls. |
+
+Before a frontend slice claims completion, it must run its existing TypeScript,
+unit, browser/DOM warning and representative authenticated network/visual
+evidence; it must also confirm that every browser request remains same-origin.

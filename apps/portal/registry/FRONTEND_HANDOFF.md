@@ -2223,3 +2223,26 @@ The backend decision is `EDS12_QUALIFICATION_READY_DEPLOYED_EVIDENCE_PENDING`,
 not Product GO.  After an immutable protected-main release, Codex will hand
 over the exact BFF evidence shape for the final per-profile browser matrix;
 until then no frontend release assertion should claim `PRODUCT_ACTIVE`.
+
+### 8.56 BE-R2 frontend coordination — planning only (2026-09-11)
+
+The owner has locked a finite backend closeout plan in
+[`upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md` §18](../../../upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#18-be-r2-operational-closeout-campaign--approved-planning-only-2026-09-11).
+It does **not** authorize a frontend feature implementation by itself. Its
+purpose is to prevent UI/backend drift while individual named slices are later
+started.
+
+Frontend ownership is limited to the following prepared work:
+
+| Tracker lane | Frontend responsibility | Server truth that must remain intact |
+|---|---|---|
+| Round-2 Phase 8 | Preserve rich Gate R1/R2/Live, Canary and Sandbox detail shells in true empty states; show the relation producer for `not reported`. Use a small semantic allowlist where a record-dependent panel would make a false promise. | `EMPTY`, `PARTIAL`, `UNAVAILABLE`, `DENIED` and `ERROR` are panel-local, distinct states; no invented governance or Trading System records. |
+| Round-2 Phase 9 | Fix measured formatting/disabled/title defects and add focused formatter/browser guards with justified allowlists. | Do not replace server exact decimals or freshness labels with client-only values. |
+| Round-2 Phase 10 | Record handoff receipt, reuse reports and tracking reconciliation; generated contract files are never hand-edited. | Contract changes arrive only through the canonical generator and named BFF DTOs. |
+| Round-2 Phase 11 preparation | Keep Command Center, Blotter, Gate/Approval and Admin Drawer compositions mounted; prepare test doubles for named same-origin BFF states. | Governance can be honestly empty; `exact_total` can be source-null; command authority remains disabled. |
+| BE-R2-4/5 preparation | Make chart and realtime components capable of UTC-millisecond/exact-decimal/coverage/derived labels and real connection state. | No fake timer motion, no direct Data Layer/Edge call, no source cursor/JWT/mTLS input in JavaScript. |
+
+For every subsequent backend handoff, consume only named same-origin BFF
+operations. Keep the reviewed hierarchy mounted and replace a local panel
+state—not an entire route. Browser evidence must retain TypeScript/unit/DOM
+warning checks plus representative authenticated same-origin network evidence.
