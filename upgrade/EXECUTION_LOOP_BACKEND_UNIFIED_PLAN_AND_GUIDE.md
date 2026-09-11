@@ -6031,6 +6031,21 @@ a Portal workaround.
   mutation gate, and the isolated Rust `eds12-qualification` crate. No source
   call, source profile, command relay, Live mutation, container or deployment
   changed during this closeout.
+- On 2026-09-11, the immutable-image trust-chain static gate passed without
+  publishing an image.  The full N29 + Control API gate also passed with the
+  declared `503` checks, including its isolated PostgreSQL restore drill;
+  EDS-12's official offline-DR suite passed the source-dark, WAL/PITR,
+  encrypted logical-restore, deterministic-projection-rebuild and eight
+  rotation/rollback scenarios.  The Rust `eds12-qualification` crate passed
+  its three focused tests from a read-only source mount with temporary Cargo
+  state only.  These are local/offline evidence records, not substituted
+  deployed evidence.
+- The evidence order is intentionally fixed: publish the protected-main
+  candidate and obtain its signed/SBOM/provenance artifacts; construct the
+  sanitized deployed-evidence record; collect independently generated SGP and
+  AWS-HK runtime-binding markers; then run `verify-runtime-binding` against
+  all three.  A missing, mismatched or unhealthy marker is a release `NO_GO`;
+  it cannot be bypassed by a static, browser, database or Rust test.
 
 **Only remaining release evidence (not a technical-debt placeholder):** a
 protected-main signed/SBOM/provenance candidate plus one sanitized SGP marker
