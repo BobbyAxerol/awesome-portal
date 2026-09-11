@@ -8600,3 +8600,34 @@ không trộn ba nhóm lại.
 mới), tôi đổi — tôi chọn bảng riêng vì fleet đang khoá theo `alpha_id`, còn
 danh sách portfolio khoá theo `portfolio_id`, và nhồi hai hạt khác nhau vào một
 bảng là thứ sẽ phải gỡ ra sau.
+
+### A57.8 Exit gate Phase 7 — đo từng mục
+
+| Điều kiện | Kết quả | Bằng chứng |
+| --- | --- | --- |
+| Benchmark đạt SLO đã chốt trước | **8/10 p95 đạt** (trước: 5/10 trượt) | §A57.65; hai cái trượt là `blotter` 1 106 và `paper` 964 (SLO 800) → B1/B2 |
+| Refresh trình duyệt **không** tăng lệnh gọi Edge | **ĐẠT** | 40 lần đọc → **3** lần gọi nguồn; chặn bởi lease 5 s, không bởi số lần đọc |
+| Client chậm / bị thu hồi quyền không làm cạn SSE | **ĐẠT** | không phiên → `readyState 2 (CLOSED)`, 1 error, **0 lần retry lại** |
+| Restart/restore giữ đúng ngữ nghĩa revision/freshness | **ĐẠT** | sau restart: 200 trong **13 ms**, 2 dòng, tự khai `STALE` tuổi 651 s so ngưỡng 60 s; rồi tự lành `STALE → FRESH (9 s)` khi refresh nền commit |
+| Mọi request chỉ tới Portal origin | **ĐẠT** | 34/34 request tới `127.0.0.1:8080`, **0** origin lạ |
+| Runtime decision NATS/MinIO có bằng chứng owner/rollback | **CHƯA** | cần Bobby — O3 |
+
+### A57.9 Lỗi đo thứ tư của tôi, cùng lớp với ba lần trước
+
+Tôi mở `EventSource('/command-center/stream')` trần, nhận `400
+REALTIME_CURSOR_AMBIGUOUS`, và suýt ghi vào đây là "SSE bật cờ nhưng hỏng".
+
+Đọc code thì `resolveResumeCursor` **bắt buộc** có `Last-Event-ID` hoặc
+`cursor` — đó chính là bounded replay mà Phase 7 §3 yêu cầu. Lấy cursor từ
+`realtime-snapshot` rồi mở lại:
+
+```
+200 text/event-stream
+event: projection.heartbeat
+data: {"event_type":"projection.heartbeat","schema_version":"execution.realtime.v1", …}
+```
+
+**Backend đúng; probe của tôi thiếu tham số bắt buộc.** Đây là lần thứ tư
+trong loop này phép đo là thứ hỏng — sau `cut -c1-140`, guard quét phần `Down
+Migration`, và probe chỉ nhìn `title`. Luật ở §A56.3 giữ nguyên và vừa được
+dùng đúng lúc: **chứng minh phép đo đúng trước khi kết luận sản phẩm sai.**
