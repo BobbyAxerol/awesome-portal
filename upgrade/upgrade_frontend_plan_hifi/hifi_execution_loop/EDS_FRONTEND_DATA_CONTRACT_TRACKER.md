@@ -8631,3 +8631,86 @@ data: {"event_type":"projection.heartbeat","schema_version":"execution.realtime.
 trong loop này phép đo là thứ hỏng — sau `cut -c1-140`, guard quét phần `Down
 Migration`, và probe chỉ nhìn `title`. Luật ở §A56.3 giữ nguyên và vừa được
 dùng đúng lúc: **chứng minh phép đo đúng trước khi kết luận sản phẩm sai.**
+
+## A58. CẢI CHÍNH §A57.67, VÀ MỘT DEPLOY KHÔNG HỀ XẢY RA (11-09)
+
+Owner hỏi một câu rất đúng chỗ: *"dev-portal hiện tại đã được rebuild theo code
+mới chưa nhỉ?"* Đo ra hai sự thật, cả hai đều bất lợi cho tôi.
+
+### A58.1 `useFreshnessPoll` **không có tác dụng gì** — tôi viết như thể nó đang chạy
+
+§A57.67 viết *"Thêm `freshnessPollMs()` / `useFreshnessPoll()`: lấy nhịp từ
+envelope"*, và đọc như một tối ưu đã giao. Kiểm lại:
+
+```
+grep -rn "useFreshnessPoll\|freshnessPollMs" --exclude useRevision.ts --exclude *.test.*
+→ (trống)
+```
+
+**Không component nào import nó.** Bundler tree-shake mất, và năm chỗ poll vẫn
+chạy ở hằng số 15 giây y như trước. Hook đúng, test đúng, và **hiệu lực bằng
+không**.
+
+Tệ hơn: khi đi tìm chỗ nối, tôi phát hiện mình đã đề xuất sai hướng. Hai màn
+list mang `freshness_budget_ms` — Alpha Fleet và Accounts & Bindings —
+**không poll**; chúng đọc lại qua `realtime.refreshKey`, tức **SSE làm tín
+hiệu invalidation**. Đó chính xác là thứ Phase 7 §5 muốn, và chúng đã làm
+trước khi tôi đến.
+
+Còn năm chỗ *có* poll thì đọc composition envelope, mà composition **không
+publish `freshness_budget_ms`**. Nên hook không có chỗ nối đúng nào hôm nay.
+
+**Giữ lại hook và 4 test** vì cơ chế đúng và sẽ dùng được ngay khi composition
+công bố ngân sách — nhưng **không tính là đã giao**. Thêm một gap cho codex:
+
+| # | Gap | Phía |
+| --- | --- | --- |
+| **B6** | Composition envelope (`compositions/*`) không publish `freshness_budget_ms`, nên frontend **không thể** suy ra nhịp đọc cho năm màn đang poll. Phase 7 §1 yêu cầu *"one projection-read policy per named BFF"* — composition cũng là named BFF | codex |
+
+### A58.2 Một deploy không hề xảy ra, và log đọc như thành công
+
+dev-portal build từ **thư mục làm việc**, không từ một git ref
+(`deploy-int.sh` dòng 6 là `cd /home/bobby/portal-integration`). Nên "nó đang ở
+commit của nhánh dev" chỉ đúng **tình cờ**, khi cây sạch và các ref trùng nhau.
+
+Đo lúc owner hỏi:
+
+```
+bundle đang phục vụ : /assets/index-BDmFUDMY.js
+khớp 'freshnessPoll' trong BUNDLE : 0     ← nhưng đây KHÔNG phải bằng chứng thiếu deploy
+```
+
+Và lần deploy trước đó in ra `image match` cho **cả hai** container — tôi đã
+đọc dòng đó như "cả hai đều mới". **`image match` chỉ so container đang chạy
+với tag `:dev`**; nó không nói tag `:dev` có được build lại từ source hiện tại
+hay không. Một câu trả lời nghe chắc chắn mà không chứng minh điều người đọc
+tưởng.
+
+**Một lỗi đo nữa của tôi trong cùng lượt:** tôi dùng `docker inspect .Created`
+làm giờ build và kết luận ảnh web "cũ hơn code 24 phút". Sai — BuildKit giữ
+nguyên `Created` của config, không phải giờ build. Ảnh **đã** đổi ID
+(`10f4f88d` → `9c1cb1dd`). Cái thiếu không phải deploy, mà là **code chưa được
+ai gọi**, như §A58.1.
+
+### A58.3 Sửa cái làm cho câu hỏi đó không trả lời được
+
+| Nơi | Việc |
+| --- | --- |
+| `health.controller.ts` | `/healthz` trả `build_commit` và `build_dirty`; mặc định `"unknown"` khi không ai đóng dấu — không bịa commit, cũng không im lặng |
+| `compose.yaml` | `PORTAL_BUILD_COMMIT` / `PORTAL_BUILD_DIRTY`, có mặc định an toàn nên không đổi hành vi khi không set |
+| `deploy-int.sh` | đóng dấu commit **và cờ dirty**; gắn thêm tag `local/portal-*:<sha>` bên cạnh `:dev` làm mốc lùi có tên; và in `BUILD PROVENANCE OK / MISMATCH` bằng cách hỏi **chính tiến trình đang chạy**, không hỏi tag |
+
+Phép kiểm cuối là cái lẽ ra đã bắt được chuyện hôm nay: nó so commit mà
+`/healthz` khai với commit vừa build, nên một deploy không xảy ra sẽ **nói ra**
+thay vì in `image match` rồi đi tiếp.
+
+### A58.4 Trả lời thẳng câu của owner
+
+- **Trỏ dev-portal vào đâu?** Không cần trỏ đi đâu. Nó đã build từ
+  `/home/bobby/portal-integration` — chính là nhánh chung
+  `feat/execution-loop-next`. Hiện `dev`, nhánh đó và `HEAD` là **cùng một
+  commit**, cả local lẫn remote.
+- **Có nên build theo ref `dev` cố định không?** Không. Làm thế sẽ mất đúng thứ
+  một dev-portal sinh ra để làm: xem trước code chưa commit.
+- **"Đẩy lên, chưa ổn thì lùi"** — giờ mới thật sự làm được, vì đã có tag theo
+  sha để lùi chính xác và có `build_commit` để biết đang ở đâu.
