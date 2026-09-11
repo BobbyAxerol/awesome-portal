@@ -3290,9 +3290,9 @@ Status ở đây, chi tiết + bằng chứng ở `EDS_FRONTEND_DATA_CONTRACT_TR
 | **Phase 8** — rich, truthful empty composition | **xong**, đã rà debt | `64fa7771` | §A59, §A61 — registry allowlist 9 màn, 5 panel withheld; lớp đóng hẳn chứ không chỉ 5 instance |
 | **Phase 9** — presentation/interaction guards | **xong**, đã rà debt | `bfa2d90a` · `64fa7771` | §A60, §A61 — 4 guard, mỗi cái đã chứng minh đỏ được; 4 chỗ số thô chứ không phải 1 |
 | **Phase 10** — process & contract discipline | **xong** | `059d4161` · `85e3e2ad` | §A62 — hoàn nguyên vi phạm contract V1 của chính tôi, `snapshot.py --check` vào gate, 2 mục ledger R2, 9 digest mốc của codex |
-| **Phase 11** — named BFF consumer preparation | **chưa bắt đầu** | — | chờ; handoff §3 đã đọc, chưa có slice nào Bobby mở |
+| **Phase 11** — named BFF consumer preparation | **xong phần dựng được** | `e1d30b54` · `0be03c67` · `4b9fb112` · `9e428e6a` · `54d0e211` | §A64.3 (§8.58 realtime recovery) · §A65 (§8.59 `read_truth`) · §A65.9 (Blotter, Admin Drawer). Còn **một** việc không tự làm được: xem nhánh `EMPTY` trên runtime, cần control-api có BE-R2-6 |
 
-**Đang chờ codex** (không chặn Phase 11): C1' annotation `deprecated`, C3 push file handoff lên `dev`, G4 envelope khẳng định deployment không tồn tại, G5 CI digest, G6/G7 migration `…031` và retention bảng refresh-health.
+**Đang chờ codex** (không chặn việc frontend, chặn phần nghiệm thu runtime của Phase 11): C1' annotation `deprecated`, C3 push file handoff lên `dev`, G4 envelope khẳng định deployment không tồn tại, G5 CI digest, G6/G7 migration `…031` và retention bảng refresh-health.
 
 ### Handoff receipt — `FRONTEND_HANDOFF.md` §8.57 và §8.58 (đọc 2026-09-11, sau Phase 10)
 
