@@ -3243,3 +3243,40 @@ API, contract, Rust and dependency gates pass. Bobby's inspection of the
 rebuilt dev runtime is the remaining Product GO decision; protected `main` and
 stable have not changed. Detail:
 [`EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md`](../../backend/EX_BE_PHASE3_RICH_UI_PRODUCT_ACCEPTANCE.md).
+
+---
+
+## Handoff receipt — `CODEX_TO_CLAUDE_BE_R2_HANDOFF_2026-09-11.md`
+
+| | |
+| --- | --- |
+| Trạng thái | **ĐÃ ĐỌC HẾT** (155 dòng, cả §4 boundaries và §5 return packet) |
+| Ngày đọc | 2026-09-11 |
+| Đã làm chưa | **CHƯA** — handoff ghi `PLANNED_ONLY / NO_IMPLEMENTATION_STARTED`, và owner chưa duyệt slice nào |
+| Điều kiện tiên quyết đã kiểm | `FRONTEND_HANDOFF.md` §8.56 ✓ có trong base · plan §18 BE-R2 ✓ có trong base (20 tham chiếu) |
+| File handoff nằm ở | nhánh `feat/execution-active-source-adapters`, **chưa có** trong worktree `portal-integration` |
+
+"Đã đọc" ≠ "đã làm". Ghi tách ra đúng luật CLAUDE.md §7.8.
+
+### Ba điểm handoff **sửa lại** đề xuất Phase 8–11 của tôi
+
+| # | Tôi đề xuất | Codex chốt | Nhận |
+| --- | --- | --- | --- |
+| 1 | Exit gate Phase 8: *"không màn chi tiết nào dưới **400 ký tự**"* | *"do not impose a blanket 'every empty page must have N characters' requirement"*; thay bằng **allowlist ngữ nghĩa** cho panel phụ thuộc bản ghi | **Codex đúng.** Đếm ký tự là proxy, và nó sẽ đẩy màn tới chỗ độn chữ cho đủ ngưỡng. Đây đúng là câu `[?codex]` số 1 tôi tự đánh dấu là yếu nhất |
+| 2 | Phase 9: guard chạy bằng browser probe | *"Do not create an expensive blanket browser scan on every PR"* + mỗi guard phải **chứng minh fail được** rồi ghi lại | Khớp với cách tôi đã làm ở Phase 4/6; nhận ràng buộc "không quét toàn bộ mỗi PR" |
+| 3 | Phase 11: tôi **đoán** F12/F14 cùng gốc | Codex tách rõ: Blotter `exact_total: null` **giữ nguyên unavailable** cho tới khi BFF đánh dấu `DERIVED`; không bao giờ đếm một trang trình duyệt | Câu `[?codex]` số 3 đã được trả lời. Đoán của tôi sai hướng |
+
+### Hai chỗ handoff **chạm vào việc tôi đã làm rồi** — cần owner quyết
+
+| # | Việc đã làm | Handoff nói | Vì sao cần quyết |
+| --- | --- | --- | --- |
+| **C1** | Phase 4 (`16725465`) tôi **gỡ hẳn** `pinned_watchlist` khỏi schema/OpenAPI/generated/fixtures, và **sửa tay** `generated/execution-command-center.d.ts` | *"V1 `pinned_watchlist` returns as **deprecated compatibility**"* · *"Do not remove/hand-edit generated consumer types"* | Đo trong base: `pinned_watchlist` = **0** ở cả OpenAPI lẫn generated. Tức nhánh của tôi đã gỡ thứ codex định giữ lại dưới dạng deprecated. **Phải hoàn nguyên phần contract**, giữ lại phần gỡ UI/bảng hay không là quyết định của owner + codex |
+| **C2** | Phase 7 (`1353644a`) tôi thêm **migration** `execution_portfolio_projection`, sửa **Control API** service/repository, sửa **`compose.yaml`** | §4: *"Do not edit … Control API … database migrations … runtime Compose"* | Ranh giới này viết cho **BE-R2 frontend work**. Phase 7 làm trước, dưới quyền backend owner giao 2026-09-02. Nhưng hai văn bản đang mâu thuẫn, và tôi **không tự chọn bản tiện hơn** — ghi lại để codex/owner chốt |
+
+### Đã nhận, không thắc mắc
+
+- Data path bắt buộc: Browser → same-origin named Screen BFF → Portal projection → mTLS/delegated → Manager-v2. Không thêm lệnh gọi Edge/Trading System từ trình duyệt, không cursor thô, không fixture fallback trên route sản phẩm.
+- Market Context phải render đủ 7 state, **không fallback sang profile khác**, không nến tổng hợp. Paper phải nghiệm thu trước Sandbox/Live.
+- Admin Action Drawer chỉ hiện read/workflow được server cho phép; **không quảng cáo quyền CLI**.
+- Phase 10: mỗi slice phải có receipt handoff + báo cáo 7 mục + reuse report + đối chiếu file tracking với `dev`.
+- Return packet 7 mục sau **mỗi** slice đã bắt đầu.
