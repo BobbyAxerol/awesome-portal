@@ -35,6 +35,7 @@ import {
   type FilterEcho,
   type FreshnessState,
   type KeysetPage,
+  type ReadTruth,
   type PanelStatus,
   type RetentionOutcome,
   type RetentionState,
@@ -419,6 +420,24 @@ export function readKeysetPage<T>(
     appliedSort: readSort(data.applied_sort),
     appliedFilters: readFilters(data.applied_filters),
     retention: readRetention(data.retention ?? o.retention),
+    readTruth: readReadTruth(o.read_truth ?? data.read_truth),
+  };
+}
+
+/**
+ * §8.59's `read_truth`, read fail-closed. Anything that is not the published
+ * shape becomes `null` — an unreadable field must not be able to tell a screen
+ * that there is nothing there.
+ */
+function readReadTruth(raw: unknown): ReadTruth | null {
+  const o = obj(raw);
+  if (!o) return null;
+  if (o.state !== "AVAILABLE" && o.state !== "EMPTY") return null;
+  if (o.scope !== "REQUEST") return null;
+  return {
+    state: o.state,
+    reasonCode: typeof o.reason_code === "string" && o.reason_code.length > 0 ? o.reason_code : null,
+    scope: "REQUEST",
   };
 }
 

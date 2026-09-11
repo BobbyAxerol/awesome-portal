@@ -1840,7 +1840,9 @@ describe("Approval Inbox", () => {
       />,
     );
     expect(container.querySelector('.exec-state[data-status="empty"]')).not.toBeNull();
-    expect(screen.getByText(/Inbox zero/)).toBeTruthy();
+    // §8.59: this page carries no `read_truth`, so the screen may say only what
+    // came back, never that the inbox is clear.
+    expect(screen.getByText(/did not state whether any exist outside this response/)).toBeTruthy();
   });
 
   it("keeps decided requests out of the pending table", () => {
@@ -2088,7 +2090,11 @@ describe("Approval Inbox — the full state set", () => {
       // element that replaced the table.
       expect(container.querySelectorAll('tbody tr[aria-hidden="true"]').length).toBeGreaterThan(0);
       expect(container.querySelector("thead")).not.toBeNull();
-      expect(screen.queryByText(/Inbox zero/)).toBeNull();
+      // Re-pointed for §8.59: "Inbox zero" no longer exists anywhere, so
+      // asserting its absence had become an assertion that cannot fail. These
+      // are the two sentences the screen can actually produce.
+      expect(screen.queryByText(/matches/)).toBeNull();
+      expect(screen.queryByText(/did not state whether any exist/)).toBeNull();
     } finally {
       // Without the finally, a failure here leaves fake timers installed for
       // every test after it in this file — one broken assertion took 97 others
@@ -3083,7 +3089,10 @@ describe("containers — the port meets the screens", () => {
     // before it has been told anything.
     const { container } = render(<ApprovalInboxContainer api={createFixtureApi()} />);
     expect(container.querySelectorAll('tbody tr[aria-hidden="true"]').length).toBe(0);
-    expect(screen.queryByText(/Inbox zero/)).toBeNull();
+    // Same re-pointing as above: assert the claims that exist, not a string
+    // that was deleted.
+    expect(screen.queryByText(/matches/)).toBeNull();
+    expect(screen.queryByText(/did not state whether any exist/)).toBeNull();
     // Settle the container's trailing async dispatch inside act — the N29
     // acceptance requires a warning-free suite.
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
@@ -4086,30 +4095,46 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
     expect(r.value.page.totalCount).toBe(5);
   });
 
-  it("does not announce inbox zero when a filter emptied the view", () => {
-    // Selecting Overdue with five pending requests would otherwise say the
-    // queue is clear.
+  it("names the filter as the scope, and the work still waiting outside it", () => {
+    // Selecting Overdue with five pending requests would otherwise read as a
+    // clear queue. The server scopes its EMPTY to the request; the screen says
+    // so, and says how much the server counted outside that scope.
     render(
       <ApprovalInbox onCopyProvenance={vi.fn()}
-        page={{ rows: [], totalCount: 5, filteredCount: 0 }}
+        page={{
+          rows: [], totalCount: 5, filteredCount: 0,
+          readTruth: { state: "EMPTY", reasonCode: "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS", scope: "REQUEST" },
+        }}
         counts={{ pending: 5, overdue: 1, dueSoon: 1 }}
         filter="OVERDUE"
       />,
     );
-    expect(screen.getByText(/Nothing in Overdue/)).toBeTruthy();
-    expect(screen.getByText(/5 still pending in the queue/)).toBeTruthy();
-    expect(screen.queryByText(/Inbox zero/)).toBeNull();
+    expect(screen.getByText(/No record matches Overdue/)).toBeTruthy();
+    expect(screen.getByText(/5 pending outside it/)).toBeTruthy();
+    // The scope qualifier travels with the claim.
+    expect(screen.getByText(/this request's scope only/)).toBeTruthy();
   });
 
-  it("still says inbox zero when the queue really is clear", () => {
+  /*
+   * This test used to assert "Inbox zero" from zero rows and a zero count.
+   * §8.59 is explicit that a page selected by an opaque cursor is not a claim
+   * that the workspace holds no records, so the screen no longer makes it. The
+   * server does, scoped to its own request, and the screen repeats that scope.
+   */
+  it("says the queue is clear only when the server says so, and keeps its scope", () => {
     render(
       <ApprovalInbox onCopyProvenance={vi.fn()}
-        page={{ rows: [], totalCount: 0, filteredCount: 0 }}
+        page={{
+          rows: [], totalCount: 0, filteredCount: 0,
+          readTruth: { state: "EMPTY", reasonCode: "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS", scope: "REQUEST" },
+        }}
         counts={{ pending: 0, overdue: 0, dueSoon: 0 }}
         filter="INBOX"
       />,
     );
-    expect(screen.getByText(/Inbox zero/)).toBeTruthy();
+    expect(screen.getByText(/No record matches/)).toBeTruthy();
+    expect(screen.getByText(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/)).toBeTruthy();
+    expect(screen.getByText(/this request's scope only/)).toBeTruthy();
   });
 });
 
