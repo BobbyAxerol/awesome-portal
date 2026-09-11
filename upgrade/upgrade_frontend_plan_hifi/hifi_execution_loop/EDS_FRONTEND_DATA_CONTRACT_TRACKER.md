@@ -9186,3 +9186,335 @@ Trước đó 3 màn account mỗi màn 3 ô thô, 2 màn account khác mỗi m�
   2 kiểm đúng thứ cần (giá trị nguồn lấy lại được), không kiểm con số thô này.
 - **Probe không dùng để nghiệm thu Phase 9 được** cho tới khi DB probe khớp
   backend mới. Đã rollback, ghi lại để lần sau không mất thời gian như tôi.
+
+---
+
+## A61. RÀ TECHNICAL DEBT PHASE 8 + 9 TRƯỚC KHI VÀO PHASE 10 (11-09)
+
+Owner yêu cầu rà debt trước Phase 10. Kết quả: **5 món debt thật**, đã đóng 5;
+**1 gap backend** phải chuyển codex.
+
+### A61.1 Debt 1 — Phase 8 chỉ đóng **5 instance**, không đóng **cả lớp**
+
+Quét mọi màn chi tiết tìm `if (status !== "ok") return (<một PanelStateduy nhất>)`:
+
+| Màn | Trước |
+| --- | --- |
+| `LiveFullOperations.tsx:77` | **sập khung** |
+| `PaperWorkbench.tsx:296` | **sập khung** |
+
+Không màn nào nằm trong 5 màn kế hoạch nêu — và đó chính là vấn đề: **kế hoạch
+liệt kê 5 ví dụ của một lớp, tôi đóng đúng 5 ví dụ đó.** Đã thêm vào registry
+và nối khung.
+
+### A61.2 Debt 2 — ba bản cài đặt cho một ý
+
+`IncidentDetail` và `PaperExitReview` đã giải bài này **trước khi** khung dùng
+chung tồn tại, mỗi màn một file, mỗi màn một cách viết. Cả hai **chưa từng bị
+hỏi câu allowlist**, nên chưa từng phải nói panel nào sẽ nói dối khi rỗng.
+
+Đưa cả hai vào registry. Trả lời câu đó tìm ra **2 panel không được vẽ**:
+
+- `Deployments in paper` — liệt kê **mọi deployment paper khác**; màn không hỏi.
+- `Observation report — preview` — chỉ vẽ khi báo cáo quan sát sản xuất được.
+
+### A61.3 Debt 3 — `deployment` là record **SOURCE** đầu tiên, và phải truy nguồn
+
+Truy chứ không đoán: **không có** `INSERT INTO strategy_deployments`, **không
+có** route tạo deployment nào trong `apps/control-api/src`. Portal đọc từ
+`manager.deployments` và chiếu lại. Nên `kind: "SOURCE"`, và câu **không được**
+gợi ý rằng operator tạo được ở đây.
+
+### A61.4 Debt 4 — lỗi trong chính component Phase 8 của tôi
+
+Nhánh `denied` in lý do **hai lần**: `PanelState` in, rồi `<p>` in lại.
+**Đúng loại trùng lặp phase này sinh ra để diệt, phạm ngay bên trong component
+diệt nó.** Không phải tôi tìm ra — một test Paper Workbench có sẵn bắt được
+(`Found multiple elements with the text: Not your deployment.`).
+
+### A61.5 Debt 5 — `exactTitle` cứng lớp `money`
+
+Nó nhận giá trị bất kỳ lớp nào nhưng so bằng `formatExact(value, "money")`. Một
+ô qty có thể bị làm tròn theo lớp của nó mà bị `money` phán là "không đổi" —
+hoặc ngược lại. **Title lệch với con số ngay trên nó còn tệ hơn không có title.**
+`unit` giờ là tham số đầu, bắt buộc.
+
+### A61.6 Đo lại sau khi đóng (dev, id không tồn tại)
+
+| Màn | Panel dựng | Ký tự |
+| --- | ---: | ---: |
+| Incident Detail | **5** | 667 |
+| Paper Exit Review | **4** | 811 |
+| Gate R1 / R2 / LIVE · Canary · Sandbox Cert | 4 / 5 / 8 / 7 / 8 | 857–1 192 |
+
+### A61.7 GAP CHO CODEX — **G4: backend trả 200 cho deployment không tồn tại**
+
+`LiveFullOperations` và `PaperWorkbench` **không vào nhánh unavailable** của tôi.
+Lý do đo được:
+
+```
+GET /api/v1/execution/deployments/dep_nope_x9/live   →  200
+{ "schema_version":"execution.live-full-operations.v1",
+  "record_authority":"PORTAL",
+  "source_integration_state":"SOURCE_BACKED",
+  "delivery_profile":"LIVE_BINANCE_USDM", … }
+```
+
+Backend khẳng định **`SOURCE_BACKED`** và **`LIVE_BINANCE_USDM`** cho một
+deployment **không hề tồn tại**. Màn vì thế vẽ trang LIVE đầy đủ với badge
+`LIVE_FULL`, `✗ MISMATCH`, `runtime not stated` — đọc như một deployment **thật
+đang hỏng**, không phải một deployment **không có**.
+
+`/api/v1/execution/screens/paper/dep_nope_x9` cũng 200.
+
+**Tôi không vá phía client.** Suy ra "vắng" từ việc mọi field đều null là *suy
+diễn state* — §3.5 cấm, và handoff §4 nói thẳng: *"For a missing fact, retain
+the rich panel with its typed source state. It is a single
+`SOURCE_GAP_CONFIRMED`, not a client-side workaround."* Nhánh unavailable tôi
+vừa nối vẫn đúng và sẽ hoạt động ngay khi envelope nói thật.
+
+**Cần codex quyết:** 404, hay 200 kèm `state: "EMPTY"` / `source_integration_state`
+nói đúng sự thật? Envelope hiện tại đang **khẳng định sai**, không chỉ thiếu.
+
+### A61.8 Kiểm lại những gì tôi từng khẳng định là "không phải lỗi"
+
+| Tôi từng nói | Kiểm lại |
+| --- | --- |
+| `.display` thiếu `title` còn 24 chỗ | **Không đo được bằng parse nguồn.** Quét theo dòng cho 32, theo thẻ bao cho 14 — cả hai đều kêu oan (bắt cả generic TS, cả nhánh fallback, cả comment). Dụng cụ đúng là guard 2 trong DOM |
+| `exec-num` thiếu `title` 11–116 ô/màn | Xác nhận **không phải lỗi**: id, count, status word — không có giá trị gốc nào bị giấu |
+| `denied` chỉ có unit test phủ | Vẫn đúng — nhưng nhờ test Paper Workbench mà nhánh `denied` lộ ra lỗi in hai lần. Vẫn **chưa dựng được refusal thật trên dev** |
+
+### A61.9 Một guard mới, miễn phí
+
+Map renderer của test khoá theo chính union của registry
+(`Record<EmptyRecordScreen, …>`). **Thêm màn vào registry mà quên chứng minh thì
+không compile được.** Đã tự chứng minh: bốn màn mới bắt buộc phải có renderer
+trước khi `tsc` xanh.
+
+### A61.10 Evidence
+
+| Gate | Kết quả |
+| --- | --- |
+| `vitest run` | **2 268 passed** · 1 skipped · 0 đỏ |
+| `tsc --noEmit` (src/) | sạch |
+| Hook | xanh (`64fa7771`) |
+| Browser | 4 màn trên dev, ảnh `scratchpad/p10/`, đã mở xem |
+| Registry khung rỗng | **5 → 9 màn**, withheld **3 → 5 panel** kèm lý do |
+
+---
+
+## A62. PHASE 10 — KỶ LUẬT QUY TRÌNH VÀ CONTRACT (11-09)
+
+Handoff §3 giao Phase 10 **bốn điều khoản** cho mọi lát cắt UI về sau. Ba điều là
+thủ tục. Điều thứ tư — *"do not modify generated files or published V1 contracts
+by hand"* — thì **tôi đã vi phạm từ trước khi Phase 10 được giao**, nên phần lớn
+phase này là đi dọn chính mình.
+
+| # | Điều khoản | Trạng thái | Bằng chứng |
+| --- | --- | --- | --- |
+| 1 | Ghi nhận handoff là **đã đọc** trong `PHASE_TRACKER.md` | **xong từ trước** | mục *Handoff receipt* cuối `PHASE_TRACKER.md`, có tách "đã đọc" ≠ "đã làm" |
+| 2 | Báo cáo 7 mục + reuse report | **xong** | §A62.10 và §A62.11 dưới đây |
+| 3 | Đối chiếu file tracking với `dev` hiện tại | **xong, và tìm ra 2 chỗ lệch** | §A62.6 và §A62.8 |
+| 4 | Không sửa tay file generated / contract V1 đã publish | **vi phạm cũ đã hoàn nguyên + dựng guard** | §A62.1 → §A62.7 |
+
+### A62.1 Vi phạm mà Phase 10 sinh ra để bắt thì đã nằm sẵn trong nhánh của tôi
+
+Commit `16725465` (Phase 4 round 2) gỡ `pinned_watchlist` khỏi **contract V1 đã
+publish**, và **sửa tay** `generated/execution-command-center.d.ts`.
+
+Bảng quyết định của codex khoá đúng hai điều ngược lại: *"V1 `pinned_watchlist`
+returns as **deprecated compatibility**"* và *"Do not remove/hand-edit generated
+consumer types."*
+
+Đo trong cây hôm nay trước khi sửa: `pinned_watchlist` xuất hiện **0 lần** trên
+toàn repo. Không phải "chưa khớp" — là đã biến mất hẳn.
+
+### A62.2 Lý do tôi viện khi đó **sai ngay tại lúc viết**
+
+Commit message tự khai: *"I cannot run verify-generated.sh here — packages/contracts
+has no node_modules — so the generated .d.ts is hand-edited… That step is verified
+by CI, not by me."*
+
+`scripts/contracts-test.sh` **tự cấp node_modules trong docker** rồi chạy
+`verify-generated.sh`. Hôm nay tôi chạy nó, không cài gì thêm, và nó chạy trọn.
+Tức công cụ luôn có sẵn; cái thiếu là tôi đi tìm. Ghi lại nguyên văn vì đây là
+lớp sai nguy hiểm nhất: **một lý do kỹ thuật nghe hợp lý, không ai kiểm, và sai.**
+
+### A62.3 Bản sửa tay khi đó **đúng** — và chính vì đúng nên không ai bắt được
+
+Trước khi hoàn nguyên, tôi chạy `contracts-test.sh` trên trạng thái cũ:
+**PASS**. `verify-generated.sh` sinh lại `.d.ts` từ OpenAPI đã bị sửa và so sánh —
+khớp từng byte với bản tôi gõ tay.
+
+Kết luận phải rút ra, không được làm nhẹ đi: **đúng không phải là được phép.**
+Một thay đổi contract có thẩm quyền và một thay đổi không có thẩm quyền là
+**byte-identical**. Không guard nào phân biệt được hai thứ đó. Cái máy kiểm được
+là *tính nhất quán*, còn *thẩm quyền* thì chỉ người kiểm được.
+
+### A62.4 Hoàn nguyên cái gì, và **cố ý không** hoàn nguyên cái gì
+
+Nguyên tắc tách đôi lấy thẳng từ chữ của codex: *"deprecated compatibility, **not
+new UI state**"*. Contract quay lại; cái panel nói dối thì không.
+
+| Hiện vật | Xử lý | Vì sao |
+| --- | --- | --- |
+| `openapi/execution-command-center.openapi.json` | hoàn nguyên **đúng byte** từ `16725465^` | contract V1 đã publish |
+| `schemas/execution-command-center-snapshot.v1.schema.json` | hoàn nguyên đúng byte | idem |
+| `generated/execution-command-center.d.ts` | hoàn nguyên, rồi **generator thật xác nhận** | §A62.5 |
+| 5 fixture `execution-command-center.*.valid.json` | hoàn nguyên đúng byte | fixture canonical của contract |
+| `contractBinding.ts` (`_PinFields`) | hoàn nguyên đúng byte | chứng minh binding compile-time |
+| `commandCenter.fixtures.ts` (bản inline FE) | hoàn nguyên đúng byte | test drift so bản inline với fixture canonical; contract có field thì bản sao phải có |
+| `CommandCenter.tsx` — panel Pinned watchlist | **KHÔNG** hoàn nguyên | đây mới là UI state |
+| `commandCenter.ts` — reader `pinned_watchlist` | **KHÔNG** hoàn nguyên | không màn nào đọc |
+| migration `…029` drop bảng | **KHÔNG** hoàn nguyên | bảng không ghi được từ bất cứ đâu; guard `table-write-path` sẽ báo nếu dựng lại |
+| `command-center.repository.ts` — hàm `pins()` đọc bảng | **KHÔNG** hoàn nguyên | bảng đã drop; đọc là lỗi runtime |
+
+`git diff '16725465^'` trên 9 file hoàn nguyên: **rỗng**. Không phải "gần giống".
+
+### A62.5 Đúng một chỗ không thể là revert thuần
+
+Contract đòi field, mà bảng đã drop — nên backend buộc phải phát ra **hằng số**.
+Đây là chỗ duy nhất có phán xét, nên ghi rõ từng trường và lý do:
+
+| Trường | Giá trị | Vì sao đó là **sự thật**, không phải chỗ trống |
+| --- | --- | --- |
+| `panel_state` | `"empty"` | tập pin rỗng **chắc chắn**: không route, không control, không writer nào tồn tại |
+| `total_count` / `exact_total` | `0` / `true` | biết chính xác bằng 0, không phải "không rõ" |
+| `as_of` | `null` | không đọc gì cả |
+| `freshness_state` | `"UNKNOWN"` | **cố ý không** mượn `fleetStatus.freshness_state` như code cũ — panel không đọc fleet thì không được đeo độ tươi của fleet |
+| `items` | `[]` kiểu `PinnedWatchlistItem[]` | kiểu mô tả cái contract *sẽ* mang, không phải cái service này tạo được |
+
+**Một ý tôi đã cân nhắc rồi bỏ:** thêm `deprecated: true` vào OpenAPI cho đúng
+chữ "deprecated". Bỏ, vì đó **lại là tự ý sửa contract V1 đã publish**, chỉ lịch
+sự hơn lần trước. Phase 10 tồn tại để dừng đúng phản xạ đó. Chuyển thành đề xuất
+cho codex ở §A62.12.
+
+Generator thật xác nhận sau khi hoàn nguyên: `contracts-test.sh` → **PASS**,
+`.d.ts` khớp bản `openapi-typescript` sinh ra. Lần này không có byte nào do tay tôi.
+
+### A62.6 Đo một thứ, lòi ra thứ khác: `contracts-snapshot.json` **đã mốc sẵn trên nhánh**
+
+Sinh lại manifest bằng `tooling/snapshot.py` thì **17 digest** đổi. 8 là của tôi.
+**9 cái còn lại không phải**: `market-context` (5), `paper-read` (3),
+`full-blotter` (1) — đều là hàng codex giao.
+
+Chứng minh bằng file tôi chưa từng chạm, đọc thẳng từ commit:
+
+```
+git show HEAD:packages/contracts/openapi/execution-market-context.openapi.json | sha256sum
+  → 5b415866daa9b534466418e4d68a1efd084c911fecad4bfcb8959dc357b32d8a
+manifest ghi                                                        
+  → sha256:5a7d979cf1ca70205c45746418562f72344bd0b5d9e6a723394a17e5e6a1775d
+```
+
+Tức **bản ghi toàn vẹn của contract đang nói sai về chính contract**, và đã nằm
+trên `dev` như thế.
+
+Vì sao lọt: `test_contracts_snapshot_digests_verify_every_tracked_file` chỉ chạy
+ở **CI** (`ci.yml:117`). Gate local (`.githooks/pre-commit` → `verify-workspace.sh`)
+chỉ hỏi *"file `verify-generated.sh` có tồn tại không"* — dòng 19 là
+`for required in … ; do`, một vòng lặp kiểm **sự tồn tại**, kết thúc ở dòng 833.
+Nó **chưa bao giờ chạy** script đó. Tôi không quan sát được CI (không có `gh`),
+nên chỉ khẳng định thứ đã đo: tại HEAD, 9 digest ghi trong manifest **không khớp**
+file thật.
+
+Đã sửa bằng chính công cụ canonical, không gõ tay digest nào.
+
+### A62.7 Guard: `snapshot.py --check`
+
+Thêm `--check` vào **chính** `tooling/snapshot.py` (theo idiom `--check` repo đã
+có ở `generate-execution-command-catalog.mjs`), thay vì viết bản băm thứ hai có
+thể bất đồng với bản gốc. Nối vào `verify-workspace.sh` ngay cạnh
+`sha256sum -c strategy/PROTECTED_SHA256` — tiền lệ kiểm digest sẵn có trong gate.
+
+Chứng minh **đỏ được** rồi mới nhận (kỷ luật codex đặt ở Phase 9):
+
+```
+đổi 1 byte trong packages/contracts/package.json, không đụng manifest
+  → drifted: package.json                              exit 1
+khôi phục
+  → matches all 145 tracked files                      exit 0
+git diff packages/contracts/package.json               → rỗng
+```
+
+Giá: chỉ băm file, **không container, không mạng**, dưới một giây. Không vi phạm
+ràng buộc *"do not create an expensive blanket scan on every PR"*.
+
+Guard này **không** phân biệt được thẩm quyền (§A62.3). Nó chỉ đảm bảo bản ghi
+không nói dối về file. Nói rõ giới hạn còn hơn để người đọc tưởng nó bảo vệ nhiều
+hơn thực tế.
+
+### A62.8 Đối chiếu ledger R2 với `dev` mới (commit codex `fb64dc2a`)
+
+Giữa lúc tôi đang đo, codex commit `fb64dc2a feat(execution): harden local realtime
+recovery`. Hai guard R2 của tôi **chuyển đỏ ngay**, và cả hai đều đúng:
+
+| Guard | Thiếu gì | Sự thật đọc từ code codex |
+| --- | --- | --- |
+| *covers exactly the routes the controllers publish* | `GET /api/v1/execution/realtime/diagnostics` | ADMIN-only, ném `N31_REALTIME_DIAGNOSTICS_FORBIDDEN` 403 cho mọi role khác; chính chú thích của nó gọi là telemetry vận hành, **không** phải browser data contract → `INTENTIONALLY_UNEXPOSED`, consumer là runbook `execution-local-realtime-degradation.md` |
+| *covers every execution/governance table the control-api names in SQL* | `execution_profile_projection_refresh_health` | 2 INSERT (đều upsert) + 1 SELECT trong `profile-projection.repository.ts`; `refreshHealth()` được gọi ở **6 chỗ** thuộc worker, profile realtime service và route diagnostics → `PORTAL_PROJECTION` / `WORKER` |
+
+`rows_dev` và `rows_stable` để **`null`**, không phải `0`: đo trên cả hai
+PostgreSQL thì `relation … does not exist` — migration `…031` có trong repo nhưng
+**chưa apply** ở đâu cả. Chưa triển khai ≠ rỗng (§3.3).
+
+`disposal_decision` để `PENDING_OWNER` và `retention` để `UNDECLARED`: bảng của
+codex, tôi đọc được **cách nó được ghi**, nhưng không đọc được **ý định giữ bao
+lâu**. Đoán hộ là đúng thứ ledger này sinh ra để cấm.
+
+`route_count` 122 → 123, `tables` 78 → 79. Chèn đúng chỗ thứ tự sẵn có, **không
+sắp xếp lại file** — bản nháp đầu của tôi sort cả file và làm xê dịch một mục cũ
+(`durable-mirror/integrity`); đã làm lại cho diff tối thiểu.
+
+### A62.9 Evidence
+
+| Gate | Kết quả |
+| --- | --- |
+| `contracts-test.sh` **trước** hoàn nguyên | PASS — chứng minh bản sửa tay khớp generator (§A62.3) |
+| `contracts-test.sh` **sau** hoàn nguyên | PASS — `.d.ts` do `openapi-typescript 7.13.0` sinh, khớp |
+| `snapshot.py --check` | 145/145 file khớp; đã chứng minh đỏ được rồi xanh lại |
+| `vitest run` (frontend) | **2 268 passed** · 1 skipped · **0 đỏ** (136/136 file) |
+| `tsc --noEmit` | **0 lỗi** trong `apps/portal/frontend/src`; 88 lỗi còn lại **toàn bộ** thuộc `features/roadmap-task-board`, kéo vào qua alias `@/*`, do node_modules của app đó **rỗng 0 mục** trong worktree — hiện vật môi trường, đã đo chứ không suy đoán |
+| `git diff '16725465^'` trên 9 file hoàn nguyên | rỗng |
+
+### A62.10 Return packet 7 mục (handoff §5)
+
+1. **Phase / SHA / phạm vi.** Round-2 Phase 10. Contract: `execution-command-center`
+   (OpenAPI, schema, 5 fixture, generated, binding, fixture inline FE). Backend:
+   `command-center/contracts.ts`. Gate: `tooling/snapshot.py`, `verify-workspace.sh`.
+   Ledger: `capability-inventory.v1.json`, `persistence-ownership.v1.json`.
+   **Không route sản phẩm nào đổi hiển thị** — không màn nào đọc field khôi phục.
+2. **Operation BFF / double tiêu thụ.** Không thêm. `executionCommandCenterSnapshot`
+   giữ nguyên operationId, envelope quay lại đúng hình dạng V1 đã publish.
+3. **Ma trận state / cô lập profile.** Không đổi: không màn nào render field này.
+   `pinned_watchlist` là compatibility, không phải state của màn.
+4. **TS / unit / DOM / network.** §A62.9. Control-api suite: kết quả ghi khi chạy xong.
+5. **Ảnh.** Không có và **không cần**: thay đổi không chạm pixel nào. Nói thẳng
+   thay vì đính ảnh cho đủ mục.
+6. **Khoảng trống DTO cần backend.** Không phát sinh mới. G4 (§A61.7) vẫn mở.
+7. **Xác nhận.** Không gọi source trực tiếp, không fixture fallback trên route sản
+   phẩm, **không sửa tay file generated** (generator thật sinh ra và đối chiếu),
+   không thêm hành vi command.
+
+### A62.11 Reuse report (§11)
+
+| Thứ dùng lại | Thay vì |
+| --- | --- |
+| `tooling/snapshot.py` — thêm `--check` vào chính nó | viết script băm thứ hai, có thể bất đồng với bản sinh |
+| idiom `--check` của `generate-execution-command-catalog.mjs` | phát minh cờ mới |
+| chỗ `sha256sum -c strategy/PROTECTED_SHA256` trong gate | dựng bước gate mới |
+| `scripts/contracts-test.sh` (docker + node_modules sẵn có) | cài openapi-typescript bằng tay |
+| `git show '16725465^:path'` để hoàn nguyên | gõ lại nội dung contract |
+| enum `NEEDS_CODEX_REVIEW` / `PENDING_OWNER` / `UNDECLARED` có sẵn của ledger | tự chế trạng thái mới cho bảng của codex |
+
+Component mới: **0**. File tracking mới: **0**.
+
+### A62.12 Mở cho codex / Bobby
+
+| # | Việc | Cần ai quyết |
+| --- | --- | --- |
+| **C1'** | Contract đã hoàn nguyên. Còn lại: có gắn `deprecated: true` + mô tả vào `PinnedPanel`/`pinned_watchlist` trong OpenAPI không? Tôi **cố ý không tự làm** (§A62.5) | codex |
+| **C3** | `CODEX_TO_CLAUDE_BE_R2_HANDOFF_2026-09-11.md` **vẫn chưa có trên `dev`** — văn bản chi phối Phase 8–11 không đọc được từ nhánh chung. Tôi không copy sang, vì nhân bản tài liệu tracking là đúng thứ luật cấm | codex push |
+| **G5** | 9 digest mốc ở §A62.6 đã sửa cơ học. Nếu CI trên `dev` từng đỏ ở `test_canonical_contracts`, đó là nguyên nhân | codex xác nhận |
+| **G6** | `rows_dev`/`rows_stable` của `execution_profile_projection_refresh_health` để `null` vì migration `…031` **chưa apply** ở dev lẫn stable. Có định apply không? | Bobby / codex |
+| **G7** | `retention` + `disposal_decision` của bảng đó: tôi không đoán hộ | codex |
