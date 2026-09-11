@@ -19,6 +19,11 @@ export const OPERATIONS_QUEUE_FIXTURE = {
       "ADMIN"
     ]
   },
+  "read_truth": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "scope": "REQUEST"
+  },
   "page": {
     "rows": [
       {
