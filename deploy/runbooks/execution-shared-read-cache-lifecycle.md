@@ -101,3 +101,10 @@ continuous, not why a broad delete or a new source call is needed. A scoped
 ordinary `VACUUM (ANALYZE)` probe was cancelled when it competed for dev
 PostgreSQL CPU. No `VACUUM FULL`, truncate, reindex, volume operation, stable
 restart or non-cache data mutation occurred.
+
+PostgreSQL autovacuum remained enabled for exactly this table and had completed
+`191` cycles, including a cycle during the rollout. The physical relation size
+is therefore a reusable-space metric, not a promise that every expired payload
+immediately shrinks the volume. Do not disable autovacuum; a manual ordinary
+vacuum is optional capacity observation only and never a prerequisite for a
+correct cache lifecycle.

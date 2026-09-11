@@ -5558,7 +5558,10 @@ through existing operational diagnostics, never as a business status.
 - One ordinary `VACUUM (ANALYZE)` probe on this table alone was deliberately
   cancelled when it competed for dev PostgreSQL CPU. It was not `VACUUM FULL`,
   did not roll back or alter the committed staged deletes, and is not required
-  for lifecycle correctness. Reusable-space maintenance may be scheduled in a
+  for lifecycle correctness. PostgreSQL autovacuum is enabled for this exact
+  table and had already completed `191` cycles (including one during the
+  rollout), so ordinary deleted-page reuse remains active without a manual
+  maintenance action. Any future capacity-led manual observation must be in a
   quiet, separately approved window; it must never become a broad vacuum or a
   data-deletion operation.
 
