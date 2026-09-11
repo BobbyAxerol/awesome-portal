@@ -7,6 +7,10 @@ x-control-api-image: &control-api-image
   image: ${PORTAL_IMAGE_PREFIX:-local/portal}-control-api:${PORTAL_IMAGE_TAG:-dev}
 
 x-control-api-environment: &control-api-environment
+  # Stamped by the deploy so the running process can say which source it was
+  # built from; `unknown` when nobody stamped it.
+  PORTAL_BUILD_COMMIT: ${PORTAL_BUILD_COMMIT:-unknown}
+  PORTAL_BUILD_DIRTY: ${PORTAL_BUILD_DIRTY:-false}
   PORTAL_ENV: ${PORTAL_ENV:-local}
   AUTH_MODE: ${CONTROL_API_AUTH_MODE:-dev}
   DATABASE_URL: postgres://portal:portal@portal-postgres:5432/portal_control
