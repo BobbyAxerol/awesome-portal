@@ -3280,3 +3280,16 @@ stable have not changed. Detail:
 - Admin Action Drawer chỉ hiện read/workflow được server cho phép; **không quảng cáo quyền CLI**.
 - Phase 10: mỗi slice phải có receipt handoff + báo cáo 7 mục + reuse report + đối chiếu file tracking với `dev`.
 - Return packet 7 mục sau **mỗi** slice đã bắt đầu.
+
+### Trạng thái bốn lane Round-2 (cập nhật 2026-09-11)
+
+Status ở đây, chi tiết + bằng chứng ở `EDS_FRONTEND_DATA_CONTRACT_TRACKER.md`.
+
+| Lane | Trạng thái | Commit | Chi tiết |
+| --- | --- | --- | --- |
+| **Phase 8** — rich, truthful empty composition | **xong**, đã rà debt | `64fa7771` | §A59, §A61 — registry allowlist 9 màn, 5 panel withheld; lớp đóng hẳn chứ không chỉ 5 instance |
+| **Phase 9** — presentation/interaction guards | **xong**, đã rà debt | `bfa2d90a` · `64fa7771` | §A60, §A61 — 4 guard, mỗi cái đã chứng minh đỏ được; 4 chỗ số thô chứ không phải 1 |
+| **Phase 10** — process & contract discipline | **xong** | `059d4161` · `85e3e2ad` | §A62 — hoàn nguyên vi phạm contract V1 của chính tôi, `snapshot.py --check` vào gate, 2 mục ledger R2, 9 digest mốc của codex |
+| **Phase 11** — named BFF consumer preparation | **chưa bắt đầu** | — | chờ; handoff §3 đã đọc, chưa có slice nào Bobby mở |
+
+**Đang chờ codex** (không chặn Phase 11): C1' annotation `deprecated`, C3 push file handoff lên `dev`, G4 envelope khẳng định deployment không tồn tại, G5 CI digest, G6/G7 migration `…031` và retention bảng refresh-health.
