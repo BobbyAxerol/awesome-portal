@@ -551,6 +551,18 @@ interface BulkheadWaiter {
   timer: ReturnType<typeof setTimeout>;
 }
 
+interface CurrentSourceProxyCounters {
+  cacheHits: number;
+  coalescedFollowers: number;
+  leaders: number;
+  admissionDenied: number;
+  sourceRequests: number;
+  sourceSuccesses: number;
+  sourceRateLimited: number;
+  sourceUnavailable: number;
+  sourceRejected: number;
+}
+
 /** Process-local FIFO admission bound instantiated independently per profile. */
 export class CurrentSourceBulkhead {
   private active = 0;
@@ -597,6 +609,15 @@ export class CurrentSourceBulkhead {
       waiter.resolve(this.releasePermit());
     };
   }
+
+  diagnostics(): { active: number; queueDepth: number; maximumConcurrency: number; maximumQueue: number } {
+    return {
+      active: this.active,
+      queueDepth: this.queue.length,
+      maximumConcurrency: this.maximumConcurrency,
+      maximumQueue: this.maximumQueue,
+    };
+  }
 }
 
 type MillisecondClock = () => number;
@@ -612,6 +633,7 @@ type Delay = (milliseconds: number) => Promise<void>;
 export class CurrentSourceRateLimiter {
   private nextPermitAt = 0;
   private readonly intervalMs: number;
+  private granted = 0;
 
   constructor(
     maximumRequestsPerSecond: number,
@@ -644,7 +666,16 @@ export class CurrentSourceRateLimiter {
       });
     }
     this.nextPermitAt = scheduledAt + this.intervalMs;
+    this.granted += 1;
     if (waitMs > 0) await this.delay(waitMs);
+  }
+
+  diagnostics(now = this.now()): { intervalMs: number; pendingWaitMs: number; granted: number } {
+    return {
+      intervalMs: this.intervalMs,
+      pendingWaitMs: Math.max(0, this.nextPermitAt - now),
+      granted: this.granted,
+    };
   }
 }
 
@@ -656,6 +687,7 @@ export class CurrentSourceRateLimiter {
 export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
   private readonly bulkheads = new Map<string, CurrentSourceBulkhead>();
   private readonly rateLimiters = new Map<string, CurrentSourceRateLimiter>();
+  private readonly counters = new Map<string, CurrentSourceProxyCounters>();
 
   private constructor(
     private readonly config: ControlApiConfig,
@@ -673,6 +705,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND,
         config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS,
       ));
+      this.counters.set(profile.profileId, emptyCurrentSourceCounters());
     }
   }
 
@@ -884,6 +917,35 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     this.close();
   }
 
+  /**
+   * Process-local, admin-safe admission telemetry.  It has no credentials,
+   * rows, paths, source cursors, cache keys, user identity, or relation names;
+   * it measures only the bounded gateway that already exists.
+   */
+  diagnostics(): Record<string, unknown> {
+    return {
+      schema_version: "portal.execution.current-source-admission-metrics.v1",
+      source_request_retry_policy: "NO_TRANSPORT_RETRY_EXCEPT_BOUNDED_RESPONSE_SIZE_REDUCTION",
+      profiles: [...this.profiles.values()].map((profile) => ({
+        environment: profile.environment,
+        admission: {
+          ...(this.bulkheads.get(profile.profileId)?.diagnostics() ?? {
+            active: 0, queueDepth: 0,
+            maximumConcurrency: this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_CONCURRENCY,
+            maximumQueue: this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_QUEUE,
+          }),
+          ...(this.rateLimiters.get(profile.profileId)?.diagnostics() ?? {
+            intervalMs: Math.ceil(1_000 / this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_REQUESTS_PER_SECOND),
+            pendingWaitMs: 0,
+            granted: 0,
+          }),
+          maximumPaceWaitMs: this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS,
+        },
+        counters: { ...(this.counters.get(profile.profileId) ?? emptyCurrentSourceCounters()) },
+      })),
+    };
+  }
+
   private async request(
     principal: CurrentSourceIdentity,
     requestedEnvironment: CurrentSourceEnvironment,
@@ -921,12 +983,14 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     };
     const shared = await this.sharedReads.begin(scope);
     if (shared.kind === "CACHE_HIT") {
+      this.increment(profile.profileId, "cacheHits");
       return this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
         shared.value, "HIT", gatewayContext,
       );
     }
     if (shared.kind === "FOLLOWER") {
+      this.increment(profile.profileId, "coalescedFollowers");
       const value = await this.sharedReads.waitForLeader(scope, shared.cacheKey);
       if (!value) {
         throw new CurrentSourceProxyError("N21_COALESCED_SOURCE_UNAVAILABLE", 503, {
@@ -939,11 +1003,13 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       );
     }
     if (shared.kind === "DENIED") {
+      this.increment(profile.profileId, "admissionDenied");
       throw new CurrentSourceProxyError(shared.reasonCode, 503, {
         availability: "DEGRADED", retryable: false,
       });
     }
     let sharedCompleted = false;
+    this.increment(profile.profileId, "leaders");
     const bulkhead = this.bulkheads.get(profile.profileId);
     const rateLimiter = this.rateLimiters.get(profile.profileId);
     if (!bulkhead || !rateLimiter) {
@@ -976,6 +1042,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       let source: unknown;
       let candidatePath = path;
       for (let attempt = 0; ; attempt += 1) {
+        this.increment(profile.profileId, "sourceRequests");
         try {
           source = await this.sendRequest(
             session,
@@ -984,8 +1051,10 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
             operationPolicy?.maximumResponseBytes,
             operationPolicy ? "EDS01_RESPONSE_TOO_LARGE" : "N13B_RESPONSE_TOO_LARGE",
           );
+          this.increment(profile.profileId, "sourceSuccesses");
           break;
         } catch (error) {
+          this.recordSourceFailure(profile.profileId, error);
           const reducedPath = operationPolicy && attempt < MAXIMUM_ADAPTIVE_MANAGER_PAGE_ATTEMPTS
             ? nextAdaptiveManagerRelationPagePath(candidatePath, error)
             : null;
@@ -1140,6 +1209,24 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       });
       stream.end();
     });
+  }
+
+  private increment(profileId: string, field: keyof CurrentSourceProxyCounters): void {
+    const counters = this.counters.get(profileId) ?? emptyCurrentSourceCounters();
+    counters[field] += 1;
+    this.counters.set(profileId, counters);
+  }
+
+  private recordSourceFailure(profileId: string, error: unknown): void {
+    if (error instanceof CurrentSourceProxyError && error.code === "N17B_SOURCE_RATE_LIMITED") {
+      this.increment(profileId, "sourceRateLimited");
+      return;
+    }
+    if (error instanceof CurrentSourceProxyError && [502, 503, 504].includes(error.status)) {
+      this.increment(profileId, "sourceUnavailable");
+      return;
+    }
+    this.increment(profileId, "sourceRejected");
   }
 
   private async getSession(profile: ProfileTransport): Promise<ClientHttp2Session> {
@@ -1812,6 +1899,20 @@ export class CurrentSourceProxyError extends Error {
   ) {
     super(code);
   }
+}
+
+function emptyCurrentSourceCounters(): CurrentSourceProxyCounters {
+  return {
+    cacheHits: 0,
+    coalescedFollowers: 0,
+    leaders: 0,
+    admissionDenied: 0,
+    sourceRequests: 0,
+    sourceSuccesses: 0,
+    sourceRateLimited: 0,
+    sourceUnavailable: 0,
+    sourceRejected: 0,
+  };
 }
 
 function enabledProfileConfigurations(config: ControlApiConfig): Array<{

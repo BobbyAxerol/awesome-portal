@@ -2281,3 +2281,48 @@ the pinned Data Layer adapter or a separately checked-in owner-return facade
 binding—Claude may bind only these two named same-origin consumers to the
 corresponding chart panels; Sandbox and Live each require their own later
 handoff and may not infer a fallback from Paper.
+
+### 8.58 BE-R2-5 local realtime/recovery handoff — additive server contract (2026-09-11)
+
+The existing same-origin local profile stream remains the only browser
+transport. It now adds `availability: "DEGRADED"` and a nullable `recovery`
+object:
+
+```ts
+recovery: {
+  state: "HEALTHY" | "RECOVERING";
+  reason_code: string | null;
+  retry_not_before: string | null;
+} | null
+```
+
+When the Portal source coordinator becomes recovering or its local freshness
+changes, it emits a **nonterminal** event with the existing event name
+`snapshot`, the existing cursor, and:
+
+```ts
+payload: { snapshot_mode: "STATUS_ONLY", reason_code, resnapshot_not_before }
+```
+
+This is a Portal-local state update, not a new source delta. It does not
+advance `projection_epoch`/`projection_sequence`, disclose a source cursor or
+authorize an Edge/Data Layer call. Existing consumers that treat `snapshot` as
+a same-origin named-BFF revalidation remain backwards compatible.
+
+Frontend requirements for this handoff:
+
+1. Keep the approved rich panel/composition mounted. Retain last-good values
+   while showing a compact panel-local `recovering`/stale indicator; do not
+   replace a full route with an unavailable envelope.
+2. Revalidate only the already named same-origin BFF for the current route;
+   never construct an Edge/Manager URL, retry the source, use browser timers
+   for fake motion, or inspect source relation/cursor/credential inputs.
+3. Render source-provided exact values/UTC freshness as-is. `STATUS_ONLY` is
+   not a chart point, lifecycle event, replay instruction or global ordering
+   signal.
+4. Preserve terminal `projection.gap` and `auth.expired` semantics. A gap
+   still requires the established bounded resnapshot path; recovering is not a
+   terminal error.
+
+Claude may wire this consumer behavior in the frontend branch with the normal
+TypeScript, unit, DOM-warning and authenticated same-origin browser evidence.

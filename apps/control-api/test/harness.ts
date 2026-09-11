@@ -18,6 +18,7 @@ export const TEST_TABLES = [
   "execution_durable_mirror_batches",
   "execution_profile_projection_journal",
   "execution_profile_projection_snapshots",
+  "execution_profile_projection_refresh_health",
   "execution_profile_projection_leases",
   "execution_profile_relation_cursors",
   "execution_manager_operation_continuations",
@@ -69,6 +70,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_profile_projection_leases: boolean;
       has_profile_projection_snapshots: boolean;
       has_profile_projection_journal: boolean;
+      has_profile_projection_refresh_health: boolean;
       has_manager_operation_continuations: boolean;
       has_durable_batches: boolean;
       has_durable_revisions: boolean;
@@ -112,6 +114,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_profile_projection_leases') IS NOT NULL AS has_profile_projection_leases,
          to_regclass('public.execution_profile_projection_snapshots') IS NOT NULL AS has_profile_projection_snapshots,
          to_regclass('public.execution_profile_projection_journal') IS NOT NULL AS has_profile_projection_journal,
+         to_regclass('public.execution_profile_projection_refresh_health') IS NOT NULL AS has_profile_projection_refresh_health,
          to_regclass('public.execution_manager_operation_continuations') IS NOT NULL AS has_manager_operation_continuations,
          to_regclass('public.execution_durable_mirror_batches') IS NOT NULL AS has_durable_batches,
          to_regclass('public.execution_durable_mirror_revisions') IS NOT NULL AS has_durable_revisions,
@@ -154,6 +157,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_profile_projection_leases ||
       !row.has_profile_projection_snapshots ||
       !row.has_profile_projection_journal ||
+      !row.has_profile_projection_refresh_health ||
       !row.has_manager_operation_continuations ||
       !row.has_durable_batches ||
       !row.has_durable_revisions ||
@@ -189,6 +193,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `profile_projection_leases=${row.has_profile_projection_leases}, ` +
         `profile_projection_snapshots=${row.has_profile_projection_snapshots}, ` +
         `profile_projection_journal=${row.has_profile_projection_journal}, ` +
+        `profile_projection_refresh_health=${row.has_profile_projection_refresh_health}, ` +
         `manager_operation_continuations=${row.has_manager_operation_continuations}, ` +
         `durable_batches=${row.has_durable_batches}, ` +
         `durable_revisions=${row.has_durable_revisions}, ` +

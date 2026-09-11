@@ -5377,7 +5377,8 @@ operations.
 ## 18. BE-R2 operational closeout campaign — active named work (2026-09-11)
 
 **Status:** `BE_R2_1_COMPLETE_DEV_LIFECYCLE_ACTIVE` +
-`BE_R2_2_COMPLETE_D3_GET_ONLY_EVIDENCE`.
+`BE_R2_2_COMPLETE_D3_GET_ONLY_EVIDENCE` +
+`BE_R2_5_CODE_COMPLETE_RUNTIME_UNCHANGED`.
 Bobby approved every decision in §18.1 on 2026-09-11 and named **BE-R2-1**.
 BE-R2-1 is now complete in the named dev namespace: its Portal-only
 implementation, isolated PostgreSQL test gate, staged drain and ongoing bounded
@@ -5828,6 +5829,63 @@ source amplification.
 **Frontend handoff:** connect motion/live indicators only to real local
 realtime phases; retain last good panel data on `STALE`/`RECOVERING`; do not use
 timer-driven fake activity.
+
+#### BE-R2-5 implementation journal — local recovery authority complete (2026-09-11)
+
+**Delivered scope.** The Portal now persists a minimal, per
+`workspace/environment/profile` recovery decision in
+`execution_profile_projection_refresh_health`. It contains only a sanitized
+reason code, bounded failure count and `retry_not_before`; it is explicitly
+not a Trading System event ledger, source cursor store or browser DTO. A
+`429`, `502`, `503` or `504` transport/pacing failure now preserves the last
+atomically committed projection and opens this durable retry gate. A restart
+therefore cannot turn an upstream incident into a fresh retry burst. A named,
+contract-declared unavailable relation remains relation-local and typed; it
+does not incorrectly open a profile-wide circuit.
+
+**Realtime boundary.** One local journal tail still serves each profile scope;
+one, ten and one hundred subscribers share it. The browser resumes only via
+the Portal cursor/`Last-Event-ID` contract. On a recovery-state or freshness
+transition, the service emits an additive, nonterminal `snapshot` envelope
+with `payload.snapshot_mode = STATUS_ONLY`, the unchanged local cursor and
+`recovery`; it is not a source event or a replay assertion. Slow subscribers
+are removed without retaining an empty fan-out group. No browser call can
+trigger an Edge/Source request.
+
+**Pacing, observability and operation.** Coordinator retries use deterministic
+capped exponential backoff with stable per-profile jitter. The existing
+cross-replica PostgreSQL admission/cache authority remains the source request
+bound; new counters merely expose local cache/coalescing/admission/request and
+degradation facts. `GET /api/v1/execution/realtime/diagnostics` is an
+authenticated `ADMIN`-only Portal operational endpoint. It emits bounded
+environment-level freshness/recovery and admission telemetry only—never rows,
+relation names, source paths/cursors, mTLS/JWT material or identity inputs.
+The operator procedure is
+[`deploy/runbooks/execution-local-realtime-degradation.md`](../deploy/runbooks/execution-local-realtime-degradation.md).
+
+**Verification.** The isolated Control API PostgreSQL gate covers migration,
+full TypeScript build, all tests and dump/restore. Focused tests cover
+one/ten/one-hundred local subscribers, slow-reader cleanup, Portal cursor
+recovery status, `429`/`502`/`503`, restart-safe retry suppression, healthy
+recovery, deterministic capped jitter, existing auth-expiry and terminal
+gap/resync semantics. Existing shared-admission tests prove source leadership
+remains one request for one/ten/one-hundred same named BFF arrivals.
+
+**Release provenance.** Because the EDS-12 static package deliberately pins
+the source-admission and projection-writer implementation, this phase re-pins
+the exact `current_source_proxy`, `projection_worker` and
+`projection_repository` evidence inputs and regenerates the package manifest.
+The static verifier must reject any later drift in those paths. This is
+source-code provenance only; it neither asserts deployed evidence nor changes
+a runtime release decision. The nested N29 BR-EX-72 source-boundary pin and
+its manifest are regenerated in the same atomic evidence update, so neither
+release layer can silently retain the pre-hardening source-boundary digest.
+
+**Runtime decision.** This commit deliberately changes no Edge route,
+credential, source call, profile flag, container, deployment or command
+authority. Enabling it in any runtime remains a later release decision with
+the normal read-only preflight; there is no untracked BE-R2-5 implementation
+debt.
 
 ### BE-R2-6 — Governance read truth, V1 compatibility and idempotency closeout
 

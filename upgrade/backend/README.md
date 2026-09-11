@@ -1856,7 +1856,7 @@ durable run/attempt events. Detailed evidence:
   stale manifest cannot qualify it for promotion. Its dependent N29 BR-EX-72
   source-boundary evidence is re-pinned in the same commit.
 
-## Backend state — 2026-09-11 (BE-R2-1 complete in dev)
+## Backend state — 2026-09-11 (BE-R2-5 code complete; runtime unchanged)
 
 - **BE-R2-1** now has an opt-in Portal-only lifecycle worker and a dry-run
   default manual CLI for the recomputable `execution_shared_read_cache` table.
@@ -1875,9 +1875,22 @@ durable run/attempt events. Detailed evidence:
   its sealed Paper-first BFF/schema/static gates and one committed sanitized
   source-contract mismatch record; it deliberately remains runtime-dark until
   the exact two-route Paper adapter or frozen Manager-facade envelope passes
-  the positive/negative qualification matrix. BE-R2-5 through BE-R2-7 remain
-  planned: realtime/pacing, governance/V1/idempotency and immutable release
-  evidence.
+  the positive/negative qualification matrix.
+- **BE-R2-5** is code-complete and runtime-dark: the durable local projection
+  coordinator now persists bounded recovery/backoff state for transient
+  `429`/`502`/`503`/`504` failures, preserves the last committed snapshot and
+  shares one local revision tail across all browser tabs in a profile scope.
+  The additive `STATUS_ONLY` Portal SSE snapshot makes a panel honestly
+  `DEGRADED`/`STALE`/`RECOVERING` without inventing a source event or causing a
+  full-route reload. Admin-only bounded diagnostics cover local fan-out and
+  source admission metrics. Read the
+  [realtime degradation runbook](../../deploy/runbooks/execution-local-realtime-degradation.md)
+  before any later activation; it forbids direct source/browser paths and
+  restart-as-retry behavior. The EDS-12 static inputs and package manifest are
+  re-pinned to the exact `current_source_proxy`, projection worker and
+  projection repository revisions; this is provenance only, not a runtime
+  promotion. BE-R2-6/7 remain planned:
+  governance/V1/idempotency and immutable release evidence.
 - Bobby locked six guardrails: staged expired-cache deletion only; D3 remains
   GET-only; Market Context qualifies Paper first; no direct
   `live_data_executor` access; deprecated V1 `pinned_watchlist` compatibility

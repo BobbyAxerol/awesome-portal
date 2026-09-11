@@ -79,6 +79,24 @@ export interface ProfileProjectionSnapshot {
   sourceCatalogueSha256: string | null;
 }
 
+/**
+ * Operational state for one source coordinator.  It intentionally says
+ * nothing about Trading System event authority or row history: it records
+ * only whether the Portal should wait before its next bounded current-page
+ * refresh after a transient source failure.
+ */
+export type ProjectionRefreshState = "HEALTHY" | "RECOVERING";
+
+export interface ProfileProjectionRefreshHealth {
+  state: ProjectionRefreshState;
+  consecutiveFailures: number;
+  /** Present only while recovering; it is a sanitized Portal error code. */
+  reasonCode: string | null;
+  lastFailureAt: Date | null;
+  retryNotBefore: Date | null;
+  lastRecoveredAt: Date | null;
+}
+
 export interface ProfileProjectionJournalEntry {
   workspaceId: string;
   environment: ProjectionEnvironment;
@@ -190,6 +208,97 @@ export class ExecutionProfileProjectionRepository {
       `DELETE FROM execution_profile_projection_leases
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND owner_id=$4`,
       [workspaceId, environment, profileId, ownerId],
+    );
+  }
+
+  /**
+   * Read the durable recovery decision for one profile.  A missing row is
+   * deliberately healthy: operational status is created only after the first
+   * committed refresh or transient failure, and must never make a profile
+   * without a snapshot appear ready.
+   */
+  async refreshHealth(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+  ): Promise<ProfileProjectionRefreshHealth> {
+    const result = await this.pool.query<{
+      state: ProjectionRefreshState;
+      consecutive_failures: number;
+      last_failure_code: string | null;
+      last_failure_at: Date | null;
+      retry_not_before: Date | null;
+      last_recovered_at: Date | null;
+    }>(
+      `SELECT state, consecutive_failures, last_failure_code, last_failure_at,
+              retry_not_before, last_recovered_at
+         FROM execution_profile_projection_refresh_health
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
+      [workspaceId, environment, profileId],
+    );
+    const row = result.rows[0];
+    if (!row) return healthyRefreshHealth();
+    return {
+      state: row.state,
+      consecutiveFailures: row.consecutive_failures,
+      // A past failure is useful operationally, but must not be emitted as a
+      // current reason after recovery.
+      reasonCode: row.state === "RECOVERING" ? row.last_failure_code : null,
+      lastFailureAt: row.last_failure_at,
+      retryNotBefore: row.retry_not_before,
+      lastRecoveredAt: row.last_recovered_at,
+    };
+  }
+
+  /** Persist one bounded recovery delay after a transient source rejection. */
+  async deferRefresh(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    input: { reasonCode: string; failedAt: Date; retryNotBefore: Date },
+  ): Promise<void> {
+    if (!/^[A-Z][A-Z0-9_]{1,95}$/.test(input.reasonCode)) {
+      throw new Error("N31_REFRESH_HEALTH_REASON_INVALID");
+    }
+    if (!Number.isFinite(input.failedAt.valueOf()) ||
+        !Number.isFinite(input.retryNotBefore.valueOf()) ||
+        input.retryNotBefore.valueOf() <= input.failedAt.valueOf()) {
+      throw new Error("N31_REFRESH_HEALTH_RETRY_INVALID");
+    }
+    await this.pool.query(
+      `INSERT INTO execution_profile_projection_refresh_health
+         (workspace_id,environment,profile_id,state,consecutive_failures,
+          last_failure_code,last_failure_at,retry_not_before,updated_at)
+       VALUES ($1,$2,$3,'RECOVERING',1,$4,$5,$6,clock_timestamp())
+       ON CONFLICT (workspace_id,environment,profile_id) DO UPDATE SET
+         state='RECOVERING',
+         consecutive_failures=LEAST(64, execution_profile_projection_refresh_health.consecutive_failures + 1),
+         last_failure_code=EXCLUDED.last_failure_code,
+         last_failure_at=EXCLUDED.last_failure_at,
+         retry_not_before=EXCLUDED.retry_not_before,
+         updated_at=clock_timestamp()`,
+      [workspaceId, environment, profileId, input.reasonCode, input.failedAt, input.retryNotBefore],
+    );
+  }
+
+  /** A committed local snapshot clears only the temporary recovery gate. */
+  async confirmRefreshHealthy(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+  ): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO execution_profile_projection_refresh_health
+         (workspace_id,environment,profile_id,state,consecutive_failures,last_recovered_at,updated_at)
+       VALUES ($1,$2,$3,'HEALTHY',0,clock_timestamp(),clock_timestamp())
+       ON CONFLICT (workspace_id,environment,profile_id) DO UPDATE SET
+         state='HEALTHY',
+         consecutive_failures=0,
+         retry_not_before=NULL,
+         last_recovered_at=clock_timestamp(),
+         updated_at=clock_timestamp()
+       WHERE execution_profile_projection_refresh_health.state <> 'HEALTHY'`,
+      [workspaceId, environment, profileId],
     );
   }
 
@@ -804,6 +913,17 @@ export class ExecutionProfileProjectionRepository {
 }
 
 export function projectionDigest(value: unknown): string { return digest(value); }
+
+function healthyRefreshHealth(): ProfileProjectionRefreshHealth {
+  return {
+    state: "HEALTHY",
+    consecutiveFailures: 0,
+    reasonCode: null,
+    lastFailureAt: null,
+    retryNotBefore: null,
+    lastRecoveredAt: null,
+  };
+}
 
 function digest(value: unknown): string {
   return `sha256:${createHash("sha256").update(canonical(value), "utf8").digest("hex")}`;

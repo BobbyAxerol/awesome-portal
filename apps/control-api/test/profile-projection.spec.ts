@@ -21,7 +21,12 @@ import {
   profileProjectionBindingAdmission,
   profileProjectionCatalog,
 } from "../src/execution/profile-projection.catalog";
-import { ExecutionProfileProjectionWorker, mergeTimeSeriesWindow, provenanceCompatibleRows } from "../src/execution/profile-projection.worker";
+import {
+  ExecutionProfileProjectionWorker,
+  mergeTimeSeriesWindow,
+  projectionRecoveryDelayMs,
+  provenanceCompatibleRows,
+} from "../src/execution/profile-projection.worker";
 import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
 import { MAXIMUM_DATA_INTAKE_V1 } from "../src/execution/maximum-data-intake";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
@@ -416,54 +421,145 @@ describe("Phase 1 SGP-local profile projection", () => {
     }
   });
 
-  it("fans one sanitized local revision to 100 clients without multiplying journal reads", async () => {
+  it("fans one sanitized local revision to one, ten and one hundred clients without multiplying journal reads", async () => {
     vi.useFakeTimers();
-    const realtime = new ExecutionProfileRealtimeService(config, repository);
-    const stops: Array<() => void> = [];
-    const batches: Array<Array<Record<string, unknown>>> = [];
-    let journalAfter: { mockRestore: () => void } | null = null;
     try {
-      const first = await commit(document("alpha-1"), "cursor-private-first");
-      for (let index = 0; index < 100; index += 1) {
-        const batch: Array<Record<string, unknown>> = [];
-        batches.push(batch);
-        stops.push(await realtime.subscribe(
-          workspaceId,
-          "paper",
-          profileId,
-          `${first.projectionEpoch}:${first.projectionSequence}`,
-          (event) => { batch.push(event as unknown as Record<string, unknown>); return true; },
-        ));
-      }
-      journalAfter = vi.spyOn(repository, "journalAfter");
-      await commit(document("alpha-2"), "cursor-private-second");
-      await (realtime as unknown as { tick(): Promise<void> }).tick();
+      for (const subscriberCount of [1, 10, 100]) {
+        const realtime = new ExecutionProfileRealtimeService(config, repository);
+        const stops: Array<() => void> = [];
+        const batches: Array<Array<Record<string, unknown>>> = [];
+        const first = await commit(
+          document(`alpha-${subscriberCount}-first`),
+          `cursor-private-${subscriberCount}-first`,
+        );
+        try {
+          for (let index = 0; index < subscriberCount; index += 1) {
+            const batch: Array<Record<string, unknown>> = [];
+            batches.push(batch);
+            stops.push(await realtime.subscribe(
+              workspaceId,
+              "paper",
+              profileId,
+              `${first.projectionEpoch}:${first.projectionSequence}`,
+              (event) => { batch.push(event as unknown as Record<string, unknown>); return true; },
+            ));
+          }
+          expect(realtime.diagnostics()).toMatchObject({
+            active_scope_groups: 1,
+            active_subscribers: subscriberCount,
+          });
+          const journalAfter = vi.spyOn(repository, "journalAfter");
+          try {
+            await commit(
+              document(`alpha-${subscriberCount}-second`),
+              `cursor-private-${subscriberCount}-second`,
+            );
+            await (realtime as unknown as { tick(): Promise<void> }).tick();
 
-      expect(journalAfter).toHaveBeenCalledTimes(1);
-      expect(batches).toHaveLength(100);
-      for (const batch of batches) {
-        expect(batch).toHaveLength(1);
-        expect(batch[0]).toMatchObject({
-          event_type: "delta",
-          payload: {
-            schema_version: "portal.execution.observation-revision.v1",
-            revalidation: {
-              mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
-              revision_tick: {
-                projection_epoch: first.projectionEpoch,
-                projection_sequence: 2,
-              },
-            },
-          },
-        });
-        expect(JSON.stringify(batch[0])).not.toContain("cursor-private");
-        expect(JSON.stringify(batch[0])).not.toContain("manager.");
+            expect(journalAfter).toHaveBeenCalledTimes(1);
+            expect(batches).toHaveLength(subscriberCount);
+            for (const batch of batches) {
+              expect(batch).toHaveLength(1);
+              expect(batch[0]).toMatchObject({
+                event_type: "delta",
+                payload: {
+                  schema_version: "portal.execution.observation-revision.v1",
+                  revalidation: {
+                    mode: "REFETCH_CURRENT_ROUTE_NAMED_BFF",
+                    revision_tick: {
+                      projection_epoch: first.projectionEpoch,
+                      projection_sequence: first.projectionSequence + 1,
+                    },
+                  },
+                },
+              });
+              expect(JSON.stringify(batch[0])).not.toContain("cursor-private");
+              expect(JSON.stringify(batch[0])).not.toContain("manager.");
+            }
+          } finally {
+            journalAfter.mockRestore();
+          }
+        } finally {
+          for (const stop of stops) stop();
+          realtime.onApplicationShutdown();
+        }
       }
     } finally {
-      for (const stop of stops) stop();
-      journalAfter?.mockRestore();
-      realtime.onApplicationShutdown();
       vi.useRealTimers();
+    }
+  });
+
+  it("drops a slow reader without retaining an empty local fan-out group", async () => {
+    const first = await commit(document("alpha-slow-first"), "cursor-slow-first");
+    const realtime = new ExecutionProfileRealtimeService(config, repository);
+    try {
+      await realtime.subscribe(
+        workspaceId,
+        "paper",
+        profileId,
+        `${first.projectionEpoch}:${first.projectionSequence}`,
+        () => false,
+      );
+      await commit(document("alpha-slow-second"), "cursor-slow-second");
+      await (realtime as unknown as { tick(): Promise<void> }).tick();
+      expect(realtime.diagnostics()).toMatchObject({
+        active_scope_groups: 0,
+        active_subscribers: 0,
+        counters: { slowReaderDrops: 1 },
+      });
+    } finally {
+      realtime.onApplicationShutdown();
+    }
+  });
+
+  it("publishes a nonterminal same-cursor recovery status without replacing the retained panel", async () => {
+    const first = await commit(document("alpha-recovery"), "cursor-recovery");
+    const realtime = new ExecutionProfileRealtimeService(config, repository);
+    const events: Array<Record<string, unknown>> = [];
+    try {
+      const stop = await realtime.subscribe(
+        workspaceId,
+        "paper",
+        profileId,
+        `${first.projectionEpoch}:${first.projectionSequence}`,
+        (event) => { events.push(event as unknown as Record<string, unknown>); return true; },
+      );
+      try {
+        const failedAt = new Date();
+        await repository.deferRefresh(workspaceId, "paper", profileId, {
+          reasonCode: "N17B_SOURCE_RATE_LIMITED",
+          failedAt,
+          retryNotBefore: new Date(failedAt.valueOf() + 30_000),
+        });
+        const groups = (realtime as unknown as {
+          groups: Map<string, { nextHealthCheckAt: number }>;
+        }).groups;
+        const group = groups.values().next().value as { nextHealthCheckAt: number } | undefined;
+        expect(group).toBeDefined();
+        group!.nextHealthCheckAt = 0;
+        await (realtime as unknown as { tick(): Promise<void> }).tick();
+
+        expect(events).toHaveLength(1);
+        expect(events[0]).toMatchObject({
+          event_type: "snapshot",
+          terminal: false,
+          reconnect_required: false,
+          cursor: `${first.projectionEpoch}:${first.projectionSequence}`,
+          availability: "DEGRADED",
+          freshness: "STALE",
+          recovery: {
+            state: "RECOVERING",
+            reason_code: "N17B_SOURCE_RATE_LIMITED",
+          },
+          payload: { snapshot_mode: "STATUS_ONLY" },
+        });
+        expect((await repository.snapshot(workspaceId, "paper", profileId))?.projectionSequence)
+          .toBe(first.projectionSequence);
+      } finally {
+        stop();
+      }
+    } finally {
+      realtime.onApplicationShutdown();
     }
   });
 
@@ -516,6 +612,88 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(after?.projectionEpoch).toBe(before?.projectionEpoch);
     expect(after?.projectionSequence).toBe(before?.projectionSequence);
     await worker.onApplicationShutdown();
+  });
+
+  it("persists a bounded recovery gate for 429/502/503 without a restart retry burst", async () => {
+    let calls = 0;
+    let outage: CurrentSourceProxyError | null = null;
+    const source = {
+      relationForProjection: async (
+        _workspace: string, environment: string, _screen: string,
+        _source: string, relation: string,
+      ) => {
+        calls += 1;
+        if (outage) throw outage;
+        return emptyManagerResponse(environment, relation);
+      },
+    };
+    const primary = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    try {
+      await primary.runOnce();
+      const committed = await repository.snapshot(workspaceId, "paper", profileId);
+      expect(committed).not.toBeNull();
+
+      for (const candidate of [
+        { code: "N17B_SOURCE_RATE_LIMITED", status: 429 },
+        { code: "N13B_UPSTREAM_UNAVAILABLE", status: 502 },
+        { code: "N13B_UPSTREAM_REJECTED", status: 503 },
+      ]) {
+        outage = new CurrentSourceProxyError(candidate.code, candidate.status);
+        const beforeFailureCalls = calls;
+        await expect(primary.runOnce()).resolves.toBeUndefined();
+        expect(calls).toBe(beforeFailureCalls + 1);
+        expect(await repository.refreshHealth(workspaceId, "paper", profileId)).toMatchObject({
+          state: "RECOVERING",
+          reasonCode: candidate.code,
+          consecutiveFailures: 1,
+          retryNotBefore: expect.any(Date),
+        });
+        const retained = await repository.snapshot(workspaceId, "paper", profileId);
+        expect(retained?.projectionEpoch).toBe(committed?.projectionEpoch);
+        expect(retained?.projectionSequence).toBe(committed?.projectionSequence);
+
+        // A new worker models a Control API restart. The durable gate must
+        // skip every source call until its retry-not-before time, rather than
+        // using a fresh process to create a cross-cell retry burst.
+        const restarted = new ExecutionProfileProjectionWorker(config, source as never, repository);
+        try {
+          await restarted.runOnce();
+          expect(calls).toBe(beforeFailureCalls + 1);
+          await pool.query(
+            `UPDATE execution_profile_projection_refresh_health
+                SET retry_not_before = clock_timestamp() - interval '1 second'
+              WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
+            [workspaceId, "paper", profileId],
+          );
+          outage = null;
+          await restarted.runOnce();
+          expect(await repository.refreshHealth(workspaceId, "paper", profileId)).toMatchObject({
+            state: "HEALTHY",
+            consecutiveFailures: 0,
+            reasonCode: null,
+            retryNotBefore: null,
+            lastRecoveredAt: expect.any(Date),
+          });
+        } finally {
+          await restarted.onApplicationShutdown();
+        }
+      }
+    } finally {
+      await primary.onApplicationShutdown();
+    }
+  });
+
+  it("uses deterministic, capped coordinator backoff with stable jitter", () => {
+    const first = projectionRecoveryDelayMs(15_000, 60_000, 1, "paper\u0000PAPER_BINANCE_USDM");
+    const repeat = projectionRecoveryDelayMs(15_000, 60_000, 1, "paper\u0000PAPER_BINANCE_USDM");
+    const later = projectionRecoveryDelayMs(15_000, 60_000, 4, "paper\u0000PAPER_BINANCE_USDM");
+    const capped = projectionRecoveryDelayMs(15_000, 60_000, 99, "paper\u0000PAPER_BINANCE_USDM");
+    expect(repeat).toBe(first);
+    expect(first).toBeGreaterThanOrEqual(1_000);
+    expect(first).toBeLessThanOrEqual(60_000);
+    expect(later).toBeGreaterThan(first);
+    expect(capped).toBeGreaterThanOrEqual(1_000);
+    expect(capped).toBeLessThanOrEqual(60_000);
   });
 
   /**

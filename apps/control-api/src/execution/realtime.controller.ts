@@ -23,11 +23,12 @@ import {
   LocalRealtimeEnvelope,
   LocalRealtimeError,
 } from "./profile-realtime.service";
-import { ProjectionEnvironment } from "./profile-projection.repository";
+import { ExecutionProfileProjectionRepository, ProjectionEnvironment } from "./profile-projection.repository";
 import {
   ExecutionRealtimeProxy,
   RealtimeProxyError,
 } from "./realtime.proxy";
+import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 
 interface RealtimeRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -42,8 +43,74 @@ export class ExecutionRealtimeController {
     @Inject(ExecutionRealtimeProxy) private readonly proxy: ExecutionRealtimeProxy,
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(ExecutionProfileRealtimeService) private readonly localRealtime: ExecutionProfileRealtimeService,
+    @Inject(ExecutionCurrentSourceProxy) private readonly currentSource: ExecutionCurrentSourceProxy,
+    @Inject(ExecutionProfileProjectionRepository) private readonly projectionRepository: ExecutionProfileProjectionRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
+
+  /**
+   * BE-R2-5 restricted operational telemetry.  This is deliberately an
+   * ADMIN-only Portal endpoint rather than a browser data contract: it reports
+   * bounded local fan-out/source-admission health without leaking a Manager
+   * selector, source cursor, request path, profile input, credential or row.
+   */
+  @Get("/realtime/diagnostics")
+  async realtimeDiagnostics(@Req() request: RealtimeRequest) {
+    if (request.portalUser.role !== "ADMIN") {
+      throw new LocalRealtimeError("N31_REALTIME_DIAGNOSTICS_FORBIDDEN", 403);
+    }
+    const readAt = new Date();
+    const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    const profiles = workspaceId
+      ? await Promise.all(diagnosticProfiles(this.config).map(async ({ environment, profileId }) => {
+        const [snapshot, health] = await Promise.all([
+          this.projectionRepository.snapshot(workspaceId, environment, profileId),
+          this.projectionRepository.refreshHealth(workspaceId, environment, profileId),
+        ]);
+        const ageMs = snapshot
+          ? Math.max(0, readAt.valueOf() - snapshot.lastSuccessfulRefreshAt.valueOf())
+          : null;
+        const freshness = health.state === "RECOVERING" ? "STALE"
+          : ageMs === null ? "UNKNOWN"
+            : ageMs <= this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS * 2 ? "FRESH"
+              : ageMs <= this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS * 4 ? "AGING" : "STALE";
+        const alert = !snapshot ? "N31_PROJECTION_NOT_READY"
+          : ageMs !== null && ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS
+            ? "N31_PROJECTION_STALE_CEILING_EXCEEDED"
+            : health.state === "RECOVERING" ? "N31_PROFILE_REFRESH_RECOVERING" : null;
+        return {
+          environment,
+          snapshot_present: snapshot !== null,
+          freshness,
+          availability: health.state === "RECOVERING" ? "DEGRADED" : snapshot ? "AVAILABLE" : "UNKNOWN",
+          last_successful_refresh_at: snapshot?.lastSuccessfulRefreshAt.toISOString() ?? null,
+          stale_age_ms: ageMs,
+          recovery: {
+            state: health.state,
+            reason_code: health.reasonCode,
+            retry_not_before: health.retryNotBefore?.toISOString() ?? null,
+            consecutive_failures: health.consecutiveFailures,
+          },
+          alert_code: alert,
+        };
+      }))
+      : [];
+    return {
+      schema_version: "portal.execution.realtime-diagnostics.v1",
+      authority: "PORTAL_CONTROL_API",
+      read_at: readAt.toISOString(),
+      thresholds: {
+        local_projection_poll_ms: this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+        stale_ceiling_ms: this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS,
+        source_maximum_queue: this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_QUEUE,
+        source_maximum_pace_wait_ms: this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAXIMUM_PACE_WAIT_MS,
+      },
+      profiles,
+      local_realtime: this.localRealtime.diagnostics(),
+      source_admission: this.currentSource.diagnostics(),
+      browser_to_edge_or_source: "FORBIDDEN",
+    };
+  }
 
   @Get("/profiles/:environment/realtime-snapshot")
   async profileSnapshot(
@@ -282,6 +349,20 @@ function localScope(
   const workspaceId = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
   if (!workspaceId) throw new LocalRealtimeError("N31_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
   return { environment, profileId, workspaceId };
+}
+
+function diagnosticProfiles(config: ControlApiConfig): Array<{
+  environment: ProjectionEnvironment;
+  profileId: string;
+}> {
+  const configured = [
+    { environment: "paper" as const, profileId: config.EXECUTION_EDGE_PAPER_PROFILE_ID },
+    { environment: "sandbox" as const, profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID },
+    { environment: "live" as const, profileId: config.EXECUTION_EDGE_LIVE_PROFILE_ID },
+  ];
+  return configured.filter((entry): entry is { environment: ProjectionEnvironment; profileId: string } =>
+    typeof entry.profileId === "string" && entry.profileId.length > 0,
+  );
 }
 
 function sse(event: LocalRealtimeEnvelope): string {

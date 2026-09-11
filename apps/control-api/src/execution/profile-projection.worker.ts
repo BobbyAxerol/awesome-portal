@@ -3,7 +3,7 @@ import { Inject, Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdo
 import { ControlApiConfig } from "../config";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { CONTROL_API_CONFIG } from "../tokens";
-import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
+import { CurrentSourceProxyError, ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import { enforceProfileLineage } from "./profile-lineage";
 import { profileProjectionCatalog, ProfileProjectionBinding, WARM_WINDOW_DAYS, WARM_WINDOW_MAX_ROWS } from "./profile-projection.catalog";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
@@ -71,6 +71,19 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       try {
         await this.refreshProfile(profile.environment, profile.profileId);
       } catch (error) {
+        if (isTransientSourceFailure(error)) {
+          await this.deferProfile(profile.environment, profile.profileId, error).catch((deferError: unknown) => {
+            const code = safeFailureCode(deferError);
+            failures.push(`${profile.environment}:${code}`);
+            this.logger.warn(JSON.stringify({
+              event: "execution_profile_projection_degradation_record_failed",
+              environment: profile.environment,
+              profile_id: profile.profileId,
+              error_code: code,
+            }));
+          });
+          continue;
+        }
         const code = safeFailureCode(error);
         failures.push(`${profile.environment}:${code}`);
         this.logger.warn(JSON.stringify({
@@ -89,6 +102,13 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
 
   private async refreshProfile(environment: ProjectionEnvironment, profileId: string): Promise<void> {
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+    const recovery = await this.repository.refreshHealth(workspaceId, environment, profileId);
+    if (recovery.state === "RECOVERING" && recovery.retryNotBefore !== null &&
+        recovery.retryNotBefore.valueOf() > Date.now()) {
+      // No lease and no source read while the durable circuit gate is open.
+      // Other profiles continue normally in this cycle.
+      return;
+    }
     const acquired = await this.repository.tryAcquireLease(
       workspaceId, environment, profileId, this.ownerId,
       this.config.EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS,
@@ -139,6 +159,13 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             error_code: safeFailureCode(error),
             source_reason_code: safeSourceReasonCode(error),
           }));
+          // A transport/pacing incident is profile-coordinator truth, not an
+          // honest per-relation absence.  Let the outer cycle persist its
+          // retry-not-before gate so a 429/502/503 cannot be disguised as a
+          // newly partial snapshot and immediately retried by the next loop.
+          // Contract-declared absence remains below as the intentionally
+          // relation-local, typed partial/unavailable case.
+          if (isTransientSourceFailure(error)) throw error;
           // An accumulated time-series window is a local mirror of rows the
           // source already accepted — one failed refresh (cursor expiry,
           // transient rejection) must defer the refresh, never erase the
@@ -354,6 +381,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         // coherent again.
         throw new Error(receipt.reasonCode ?? "EDS09B_DURABLE_OBSERVATION_QUARANTINED");
       }
+      // Clear a persisted recovery gate only after the snapshot/epoch/journal
+      // transaction has committed.  A successful source read that cannot be
+      // committed is not recovery and must not re-open browser pressure.
+      await this.repository.confirmRefreshHealthy(workspaceId, environment, profileId);
     } finally {
       await this.repository.releaseLease(workspaceId, environment, profileId, this.ownerId)
         .catch(() => undefined);
@@ -443,6 +474,46 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
   }
 
   private enabled(): boolean { return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true"; }
+
+  /**
+   * A transient upstream rejection never restarts this profile's whole cycle.
+   * The last committed snapshot remains the browser truth while the next
+   * worker cycle observes a durable, bounded retry-not-before gate.  The gate
+   * is keyed by profile and survives a Control API restart, so a restart does
+   * not accidentally become a retry storm.
+   */
+  private async deferProfile(
+    environment: ProjectionEnvironment,
+    profileId: string,
+    error: unknown,
+  ): Promise<void> {
+    const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+    const previous = await this.repository.refreshHealth(workspaceId, environment, profileId);
+    const failedAt = new Date();
+    const consecutiveFailures = Math.max(1, previous.consecutiveFailures + 1);
+    const delayMs = projectionRecoveryDelayMs(
+      this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+      this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS,
+      consecutiveFailures,
+      `${environment}\u0000${profileId}`,
+    );
+    const retryNotBefore = new Date(failedAt.valueOf() + delayMs);
+    const reasonCode = safeFailureCode(error);
+    await this.repository.deferRefresh(workspaceId, environment, profileId, {
+      reasonCode,
+      failedAt,
+      retryNotBefore,
+    });
+    this.logger.warn(JSON.stringify({
+      event: "execution_profile_projection_refresh_deferred",
+      environment,
+      profile_id: profileId,
+      error_code: reasonCode,
+      consecutive_failures: consecutiveFailures,
+      retry_not_before: retryNotBefore.toISOString(),
+      retry_delay_ms: delayMs,
+    }));
+  }
 
   private schedule(): void {
     if (this.stopped || !this.enabled()) return;
@@ -569,6 +640,58 @@ function safeSourceReasonCode(error: unknown): string | null {
   if (typeof details !== "object" || details === null || !("reason_code" in details)) return null;
   const reason = String((details as { reason_code?: unknown }).reason_code ?? "");
   return /^[A-Z][A-Z0-9_]{1,95}$/.test(reason) ? reason : null;
+}
+
+/**
+ * Deterministic capped exponential backoff for a single local profile
+ * coordinator.  A small stable jitter de-phases Paper/Sandbox/Live after a
+ * shared transient incident without allowing a retry sooner than one second
+ * or later than the stale ceiling.  It is intentionally not a browser
+ * backoff: browsers never call the source in this design.
+ */
+export function projectionRecoveryDelayMs(
+  pollIntervalMs: number,
+  staleCeilingMs: number,
+  consecutiveFailures: number,
+  seed: string,
+): number {
+  const base = Math.max(1_000, Math.min(pollIntervalMs, staleCeilingMs));
+  const ceiling = Math.max(base, Math.min(staleCeilingMs, 300_000));
+  const exponent = Math.min(8, Math.max(0, consecutiveFailures - 1));
+  const unjittered = Math.min(ceiling, base * (2 ** exponent));
+  const spread = Math.max(1, Math.floor(unjittered * 0.1));
+  const hash = stableHash(`${seed}:${consecutiveFailures}`);
+  const signedJitter = (hash % (spread * 2 + 1)) - spread;
+  return Math.max(1_000, Math.min(ceiling, unjittered + signedJitter));
+}
+
+function stableHash(value: string): number {
+  let hash = 2_166_136_261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return hash >>> 0;
+}
+
+function isTransientSourceFailure(error: unknown): boolean {
+  // A relation that the checked-in source contract explicitly says is absent
+  // is a stable product truth, even when the gateway represents it with a
+  // 502-sized response.  It must remain a typed per-relation state rather
+  // than opening a profile-wide recovery circuit.
+  if (isSourceContractUnavailable(error)) return false;
+  if (error instanceof CurrentSourceProxyError) {
+    return [429, 502, 503, 504].includes(error.status);
+  }
+  return new Set([
+    "N17B_SOURCE_RATE_LIMITED",
+    "N13B_UPSTREAM_UNAVAILABLE",
+    "N13B_UPSTREAM_REJECTED",
+    "N13B_UPSTREAM_TIMEOUT",
+    "N13B_CONNECT_FAILED",
+    "N13B_CONNECT_TIMEOUT",
+    "N17B_RATE_LIMIT_QUEUE_TIMEOUT",
+  ]).has(safeFailureCode(error));
 }
 
 function isSourceContractUnavailable(error: unknown): boolean {

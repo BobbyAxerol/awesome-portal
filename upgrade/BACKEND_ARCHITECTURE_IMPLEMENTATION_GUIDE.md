@@ -2059,3 +2059,37 @@ owner-return adapter revision and manifest binding. The committed sanitized evid
 It is not positive activation evidence: the runtime flag remains false and no
 source, container or profile changed. See the unified plan's BE-R2-4 journal
 for the one fixed owner resolution and requalification matrix.
+
+### 14.1.3 BE-R2-5 local realtime, pacing and degradation closeout (2026-09-11)
+
+BE-R2-5 closes the Portal-local recovery path without widening any
+cross-cell authority. The Control API holds a durable per-profile recovery
+record beside its committed projection. It contains a sanitized failure code,
+bounded failure count and retry-not-before only; it never stores a raw Manager
+cursor, source event, relation selector or browser-visible credential. On a
+transient `429`/`502`/`503`/`504`, the worker preserves the last committed
+snapshot and waits with deterministic capped backoff plus stable jitter. A
+restart observes the same gate rather than issuing an immediate new source
+request. A contract-declared missing relation remains an honest typed
+per-relation state, not a false profile outage.
+
+The local SSE service retains one tail per profile scope and emits a
+nonterminal `snapshot` with `STATUS_ONLY` only when Portal recovery/freshness
+state changes. It preserves the existing cursor and does not claim a source
+delta, replay, correction or global order. Slow reader cleanup removes empty
+groups, while reconnect remains Portal `Last-Event-ID`/cursor resume only.
+The new `/api/v1/execution/realtime/diagnostics` surface is Portal-session
+`ADMIN` only and exports bounded environment telemetry—not rows, source
+selectors, checkpoints or security material. See the BE-R2-5 implementation
+journal in the [unified plan](./EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#be-r2-5--local-realtime-source-pacing-and-degradation-hardening) and its
+[operator runbook](../deploy/runbooks/execution-local-realtime-degradation.md).
+
+The frozen EDS-12 qualification inputs for `current_source_proxy`,
+`projection_worker` and `projection_repository` are re-pinned to this exact
+hardening revision and its package manifest regenerated. Those static pins
+detect later source-admission/projection-writer drift; they do not produce
+deployed evidence or promote a runtime.
+
+No runtime flag, mTLS material, Source Proxy, Trading System store, command or
+deployment was changed. The phase's isolated PostgreSQL build/test/restore
+gate is required before any later runtime promotion.

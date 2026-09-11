@@ -3,6 +3,7 @@ import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionProfileProjectionRepository,
+  ProfileProjectionRefreshHealth,
   ProfileProjectionJournalEntry,
   ProfileProjectionSnapshot,
   ProjectionEnvironment,
@@ -15,6 +16,10 @@ import {
 const CURSOR = /^([0-9a-f-]{36}):(\d+)$/;
 const REPLAY_LIMIT = 1_000;
 const SHARED_POLL_MS = 250;
+// Health changes are durable and need not be polled at the 250ms journal-tail
+// cadence.  One bounded second keeps a recovering panel responsive without
+// turning status observation into a PostgreSQL hot loop.
+const HEALTH_CHECK_MS = 1_000;
 
 export type LocalRealtimeKind =
   | "snapshot"
@@ -70,9 +75,18 @@ export interface LocalRealtimeEnvelope {
   source_as_of: string | null;
   received_at: string;
   last_successful_refresh_at: string | null;
-  availability: "AVAILABLE" | "UNKNOWN";
+  availability: "AVAILABLE" | "DEGRADED" | "UNKNOWN";
   freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+  /**
+   * Portal-local source-coordinator status.  It is not a Trading System Event,
+   * raw source cursor, retry handle, or browser instruction to call AWS-HK.
+   */
+  recovery: {
+    state: "HEALTHY" | "RECOVERING";
+    reason_code: string | null;
+    retry_not_before: string | null;
+  } | null;
   /** Null for transport heartbeats/session-expiry, never a source Event. */
   observation: PortalObservationDescriptor | null;
   payload: Record<string, unknown>;
@@ -89,6 +103,9 @@ interface ScopeGroup {
   epoch: string;
   sequence: number;
   subscribers: Set<Subscriber>;
+  health: ProfileProjectionRefreshHealth;
+  statusSignature: string;
+  nextHealthCheckAt: number;
 }
 
 /** One SGP-local projection tail per scope; browser count never increases AWS-HK reads. */
@@ -97,6 +114,16 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
   private readonly groups = new Map<string, ScopeGroup>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private ticking = false;
+  private readonly counters = {
+    groupsStarted: 0,
+    subscriptions: 0,
+    resumedSubscriptions: 0,
+    snapshotEmissions: 0,
+    deltaEmissions: 0,
+    statusEmissions: 0,
+    slowReaderDrops: 0,
+    gapEmissions: 0,
+  };
 
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
@@ -109,11 +136,13 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     profileId: string,
   ): Promise<LocalRealtimeEnvelope> {
     const snapshot = await this.requiredSnapshot(workspaceId, environment, profileId);
+    const health = await this.repository.refreshHealth(workspaceId, environment, profileId);
     return envelope(
       "snapshot",
       snapshot,
       cursorPayload(snapshot),
       this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+      health,
     );
   }
 
@@ -125,10 +154,12 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     emit: Subscriber["emit"],
   ): Promise<() => void> {
     const snapshot = await this.requiredSnapshot(workspaceId, environment, profileId);
+    const health = await this.repository.refreshHealth(workspaceId, environment, profileId);
     const cursor = parseCursor(rawCursor);
     if (cursor && (cursor.epoch !== snapshot.projectionEpoch || cursor.sequence > snapshot.projectionSequence)) {
       emit(gap(snapshot, "N31_CURSOR_EPOCH_OR_SEQUENCE_MISMATCH",
-        this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS));
+        this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS, health));
+      this.counters.gapEmissions += 1;
       return () => undefined;
     }
     if (!cursor) {
@@ -137,19 +168,24 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
         snapshot,
         cursorPayload(snapshot),
         this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+        health,
       ))) return () => undefined;
+      this.counters.snapshotEmissions += 1;
     } else if (cursor.sequence < snapshot.projectionSequence) {
+      this.counters.resumedSubscriptions += 1;
       const replay = await this.repository.journalAfter(
         workspaceId, environment, profileId, cursor.epoch, cursor.sequence, REPLAY_LIMIT,
       );
       if (!contiguous(replay, cursor.sequence, snapshot.projectionSequence)) {
         emit(gap(snapshot, "N31_CURSOR_HISTORY_EVICTED",
-          this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS));
+          this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS, health));
+        this.counters.gapEmissions += 1;
         return () => undefined;
       }
       for (const entry of replay) {
         if (!emit(delta(entry, snapshot.lastSuccessfulRefreshAt,
-          this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS))) return () => undefined;
+          this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS, health))) return () => undefined;
+        this.counters.deltaEmissions += 1;
       }
     }
 
@@ -161,11 +197,18 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
         epoch: snapshot.projectionEpoch,
         sequence: snapshot.projectionSequence,
         subscribers: new Set(),
+        health,
+        statusSignature: freshnessSignature(
+          snapshot, health, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+        ),
+        nextHealthCheckAt: Date.now() + HEALTH_CHECK_MS,
       };
       this.groups.set(key, group);
+      this.counters.groupsStarted += 1;
     }
     const subscriber = { emit };
     group.subscribers.add(subscriber);
+    this.counters.subscriptions += 1;
     this.ensureTimer();
     return () => {
       group!.subscribers.delete(subscriber);
@@ -189,7 +232,7 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
       cursor: null, projection_epoch: null, projection_sequence: null, payload_digest: null,
       source_as_of: null, received_at: new Date().toISOString(),
       last_successful_refresh_at: null, availability: "UNKNOWN", freshness: "UNKNOWN", completeness: "UNKNOWN",
-      observation: null,
+      recovery: null, observation: null,
       payload: {},
     };
   }
@@ -211,6 +254,29 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
     this.groups.clear();
   }
 
+  /**
+   * Admin-safe process telemetry.  It intentionally exposes bounded local
+   * counters and fixed environment-independent thresholds only; no user,
+   * source relation, cursor, JWT, mTLS material, request path or business row
+   * enters this diagnostic surface.
+   */
+  diagnostics(): Record<string, unknown> {
+    const activeSubscribers = [...this.groups.values()]
+      .reduce((total, group) => total + group.subscribers.size, 0);
+    return {
+      active_scope_groups: this.groups.size,
+      active_subscribers: activeSubscribers,
+      local_tail_poll_ms: SHARED_POLL_MS,
+      health_check_ms: HEALTH_CHECK_MS,
+      thresholds: {
+        slow_reader_policy: "TERMINAL_PROJECTION_GAP",
+        reconnect_policy: "PORTAL_CURSOR_RESUME_ONLY",
+        browser_source_calls: 0,
+      },
+      counters: { ...this.counters },
+    };
+  }
+
   private ensureTimer(): void {
     if (this.timer) return;
     this.timer = setInterval(() => void this.tick(), SHARED_POLL_MS);
@@ -226,9 +292,25 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
           .catch(() => null);
         if (!snapshot || snapshot.projectionEpoch !== group.epoch) {
           if (snapshot) this.broadcast(group, gap(snapshot, "N31_PROJECTION_EPOCH_CHANGED",
-            this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS));
+            this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS, group.health));
           this.groups.delete(key);
           continue;
+        }
+        if (Date.now() >= group.nextHealthCheckAt) {
+          group.health = await this.repository.refreshHealth(
+            group.workspaceId, group.environment, group.profileId,
+          ).catch(() => group.health);
+          group.nextHealthCheckAt = Date.now() + HEALTH_CHECK_MS;
+        }
+        const nextSignature = freshnessSignature(
+          snapshot, group.health, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+        );
+        if (nextSignature !== group.statusSignature) {
+          this.broadcast(group, statusSnapshot(
+            snapshot, group.health, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS,
+          ));
+          group.statusSignature = nextSignature;
+          this.counters.statusEmissions += group.subscribers.size;
         }
         if (snapshot.projectionSequence <= group.sequence) continue;
         const entries = await this.repository.journalAfter(
@@ -237,13 +319,13 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
         );
         if (!contiguous(entries, group.sequence, snapshot.projectionSequence)) {
           this.broadcast(group, gap(snapshot, "N31_PROJECTION_HISTORY_GAP",
-            this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS));
+            this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS, group.health));
           this.groups.delete(key);
           continue;
         }
         for (const entry of entries) {
           this.broadcast(group, delta(entry, snapshot.lastSuccessfulRefreshAt,
-            this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS));
+            this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS, group.health));
           group.sequence = entry.projectionSequence;
         }
       }
@@ -253,8 +335,27 @@ export class ExecutionProfileRealtimeService implements OnApplicationShutdown {
   }
 
   private broadcast(group: ScopeGroup, event: LocalRealtimeEnvelope): void {
+    let delivered = 0;
     for (const subscriber of group.subscribers) {
-      if (!subscriber.emit(event)) group.subscribers.delete(subscriber);
+      if (!subscriber.emit(event)) {
+        group.subscribers.delete(subscriber);
+        this.counters.slowReaderDrops += 1;
+      } else {
+        delivered += 1;
+      }
+    }
+    if (event.event_type === "delta") this.counters.deltaEmissions += delivered;
+    if (event.event_type === "projection.gap") this.counters.gapEmissions += delivered;
+    // A backpressured downstream must not leave an empty tail group/timer in
+    // memory.  It has already received a terminal gap at the controller
+    // boundary, so removing this local group cannot discard a resumable
+    // browser subscription.
+    if (group.subscribers.size === 0) {
+      this.groups.delete(scopeKey(group.workspaceId, group.environment, group.profileId));
+      if (this.groups.size === 0 && this.timer) {
+        clearInterval(this.timer);
+        this.timer = null;
+      }
     }
   }
 
@@ -294,6 +395,7 @@ function delta(
   entry: ProfileProjectionJournalEntry,
   lastRefresh: Date,
   pollIntervalMs: number,
+  health: ProfileProjectionRefreshHealth,
 ): LocalRealtimeEnvelope {
   return {
     schema_version: "portal.execution.profile-realtime.v1",
@@ -303,9 +405,10 @@ function delta(
     projection_epoch: entry.projectionEpoch, projection_sequence: entry.projectionSequence,
     payload_digest: entry.payloadDigest, source_as_of: entry.sourceAsOf?.toISOString() ?? null,
     received_at: entry.receivedAt.toISOString(), last_successful_refresh_at: lastRefresh.toISOString(),
-    availability: "AVAILABLE",
-    freshness: ageFreshness(Date.now() - lastRefresh.valueOf(), pollIntervalMs),
+    availability: availabilityFor(health),
+    freshness: freshnessFor(Date.now() - lastRefresh.valueOf(), pollIntervalMs, health),
     completeness: entry.completeness,
+    recovery: recoveryEnvelope(health),
     observation: observationFromEntry(entry),
     payload: safeObservationPayload(entry),
   };
@@ -331,6 +434,7 @@ function envelope(
   snapshot: ProfileProjectionSnapshot,
   payload: Record<string, unknown>,
   pollIntervalMs: number,
+  health: ProfileProjectionRefreshHealth,
 ): LocalRealtimeEnvelope {
   return {
     schema_version: "portal.execution.profile-realtime.v1",
@@ -342,9 +446,10 @@ function envelope(
     payload_digest: snapshot.payloadDigest, source_as_of: snapshot.sourceAsOf?.toISOString() ?? null,
     received_at: snapshot.receivedAt.toISOString(),
     last_successful_refresh_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
-    availability: "AVAILABLE",
-    freshness: ageFreshness(Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf(), pollIntervalMs),
+    availability: availabilityFor(health),
+    freshness: freshnessFor(Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf(), pollIntervalMs, health),
     completeness: snapshot.completeness,
+    recovery: recoveryEnvelope(health),
     observation: observationFromSnapshot(snapshot),
     payload,
   };
@@ -437,17 +542,72 @@ function utcMs(value: Date | null): number | null {
   return value ? value.valueOf() : null;
 }
 
-function gap(snapshot: ProfileProjectionSnapshot, reason: string, pollIntervalMs: number): LocalRealtimeEnvelope {
+function statusSnapshot(
+  snapshot: ProfileProjectionSnapshot,
+  health: ProfileProjectionRefreshHealth,
+  pollIntervalMs: number,
+): LocalRealtimeEnvelope {
+  return envelope("snapshot", snapshot, {
+    snapshot_mode: "STATUS_ONLY",
+    reason_code: health.reasonCode,
+    resnapshot_not_before: health.retryNotBefore?.toISOString() ?? null,
+  }, pollIntervalMs, health);
+}
+
+function gap(
+  snapshot: ProfileProjectionSnapshot,
+  reason: string,
+  pollIntervalMs: number,
+  health: ProfileProjectionRefreshHealth,
+): LocalRealtimeEnvelope {
   return {
-    ...envelope("snapshot", snapshot, { reason_code: reason }, pollIntervalMs),
+    ...envelope("snapshot", snapshot, { reason_code: reason }, pollIntervalMs, health),
     event_type: "projection.gap", terminal: true, reconnect_required: true,
   };
+}
+
+function freshnessFor(
+  ageMs: number,
+  pollIntervalMs: number,
+  health: ProfileProjectionRefreshHealth,
+): "FRESH" | "AGING" | "STALE" {
+  // A current projection remains safe to render while its coordinator is
+  // recovering, but must never be labelled fresh.  The browser retains its
+  // own panel and waits for a Portal-local revision/status update.
+  if (health.state === "RECOVERING") return "STALE";
+  return ageFreshness(ageMs, pollIntervalMs);
 }
 
 function ageFreshness(ageMs: number, pollIntervalMs: number): "FRESH" | "AGING" | "STALE" {
   if (ageMs <= pollIntervalMs * 2) return "FRESH";
   if (ageMs <= pollIntervalMs * 4) return "AGING";
   return "STALE";
+}
+
+function availabilityFor(health: ProfileProjectionRefreshHealth): "AVAILABLE" | "DEGRADED" {
+  return health.state === "RECOVERING" ? "DEGRADED" : "AVAILABLE";
+}
+
+function recoveryEnvelope(health: ProfileProjectionRefreshHealth): LocalRealtimeEnvelope["recovery"] {
+  return {
+    state: health.state,
+    reason_code: health.reasonCode,
+    retry_not_before: health.retryNotBefore?.toISOString() ?? null,
+  };
+}
+
+function freshnessSignature(
+  snapshot: ProfileProjectionSnapshot,
+  health: ProfileProjectionRefreshHealth,
+  pollIntervalMs: number,
+): string {
+  return [
+    availabilityFor(health),
+    freshnessFor(Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf(), pollIntervalMs, health),
+    health.state,
+    health.reasonCode ?? "",
+    health.retryNotBefore?.toISOString() ?? "",
+  ].join("|");
 }
 
 function scopeKey(workspaceId: string, environment: ProjectionEnvironment, profileId: string): string {
