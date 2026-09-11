@@ -8889,3 +8889,85 @@ contract và dữ liệu lệch nhau. Ghi thành gap, không tự đoán rồi n
 | `vitest run` | **2 217 passed** · 3 skipped · 134 file · 0 đỏ (thêm 3 test cho panel passport) |
 | `tsc --noEmit` (src/) | sạch |
 | Ảnh | 8 ca trong `scratchpad/p8sweep/`, đã mở xem |
+
+### A59.11 ĐÀO `readPassportEntry` (owner giao) — reader đòi một field chưa từng tồn tại
+
+Owner: *"Đào và fix luôn, bạn cũng là backend mà: readPassportEntry, trace xem
+lỗi ở đâu"*. Truy đủ ba nguồn, không đoán.
+
+#### Nguồn 1 — server thật trả gì (probe, approval `apr_06G6ANQZ…`)
+
+```json
+{ "evidence_id":"ev_06G6ANQZ036X846N5WW61RX245", "ordinal":0,
+  "kind":"ALPHA_ARTIFACT", "label":"Pinned research artifact",
+  "display_value":"d734e2c443d14a92",
+  "note":"R1 gate entry for delta-rsi-polynomial-alpha …",
+  "verification":"SERVER_PINNED",
+  "sha256":"sha256:c652df98…", "source_authority":"RESEARCH", … }
+```
+
+#### Nguồn 2 — contract đã publish (`generated/execution-governance.d.ts:542`)
+
+`evidence_id · ordinal · kind · label · sha256 · schema_version ·
+source_authority · captured_at` — **digest chính là giá trị passport**.
+Fixture canonical `execution-governance.r2-review.valid.json` khớp đúng vậy.
+
+#### Nguồn 3 — reader của frontend (`api/rows.ts:198`)
+
+```ts
+const value = str(o.value);        // ← tên này KHÔNG có ở cả hai nguồn trên
+if (!label || !value) return null;
+```
+
+#### Kết luận: lỗi ở **frontend**, và nó chưa từng chạy đúng
+
+`value` không tồn tại trong contract, cũng không có trong bất kỳ response nào
+của control-api. Nên **mọi** entry thật đều bị bỏ, và panel Artifact passport đã
+rỗng với **mọi approval** kể từ khi reader được viết. Không phải bug mới — là
+bug chưa ai nhìn.
+
+#### Hệ quả thứ hai, nặng hơn cái panel rỗng
+
+Entry bị bỏ làm `passportRaw.length !== passport.length` → sinh gap
+*"1 evidence manifest entries unreadable"* → màn gắn badge **`PARTIAL`**.
+
+Tức một R1 **đầy đủ và lành lặn** đang nói với reviewer rằng bằng chứng của nó
+**suy giảm** — do chính parser của ta, về dữ liệu không có vấn đề gì. `partial`
+và `ok` là hai tuyên bố khác nhau về thế giới (§3.4) và ta đang publish sai cái.
+Sau khi sửa, badge `PARTIAL` **biến mất** trên probe.
+
+#### Vì sao không test nào bắt được
+
+Test passport duy nhất **tự dựng `PassportEntry` bằng tay** rồi đưa thẳng cho
+màn — reader nằm giữa wire và màn **chưa từng được chạy**. Đúng điều CLAUDE.md
+§7.8 cảnh báo: *"nếu fixture canonical tồn tại thì test phải nạp nó, không phải
+chép lại nó"*.
+
+Test mới `passportReader.test.ts` **nạp fixture canonical** + payload nguyên văn
+probe trả về. Chứng minh đỏ được: quay reader về `str(o.value)` → **2/4 đỏ**.
+
+#### Sửa gì
+
+```ts
+const value = str(o.display_value) ?? str(o.value) ?? str(o.sha256) ?? str(o.artifact_id);
+```
+
+Lời của server trước, digest của contract sau. Cả hai đều là sự thật đã publish;
+không suy diễn gì thêm.
+
+#### Gap gửi codex — **contract thiếu field server đang gửi**
+
+`display_value`, `verification`, `note` có trong response của control-api
+(`governance.repository.ts:202`) nhưng **không được khai** trong
+`packages/contracts/generated/execution-governance.d.ts` hay fixture canonical.
+Frontend đang đọc chúng vì server publish chúng. Theo handoff §4 tôi **không tự
+sửa contract** — ghi thành gap để codex quyết: hoặc bổ sung vào contract, hoặc
+bỏ khỏi response.
+
+Ảnh hưởng nếu codex bỏ `display_value`: panel tự lùi về `sha256`, vẫn đúng.
+
+| Gate | Kết quả |
+| --- | --- |
+| `vitest run` | **2 221 passed** · 3 skipped · **135 file** · 0 đỏ |
+| `tsc --noEmit` (src/) | sạch |
+| Probe sau deploy | panel hiện `PINNED RESEARCH ARTIFACT · d734e2c443d14a92 · SERVER_PINNED`; badge `PARTIAL` đã hết |
