@@ -1,0 +1,49 @@
+{
+  "schema_version": "portal.execution.d3.current-source-reconciliation.v1",
+  "status": "RECONCILED_WITH_PROVENANCE_DISCREPANCY_RECORDED",
+  "observed_at": "2026-09-11T12:24:18.917Z",
+  "change_window_id": "D3-AUDIT-20260911-BE-R2-2",
+  "scope": {
+    "manager_metadata_only": true,
+    "business_rows_read": false,
+    "command_called": false,
+    "runtime_mutation": false,
+    "running_image_changed": false
+  },
+  "active_manager": {
+    "contract_revision": "trading-system.portal-execution.manager-v2.runtime.v1",
+    "catalogue_sha256": "sha256:0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44",
+    "catalogue_relation_count": 96,
+    "published_capability_count_per_profile": 5,
+    "profiles": [
+      "PAPER_BINANCE_USDM",
+      "SANDBOX_BINANCE_USDM",
+      "LIVE_BINANCE_USDM"
+    ]
+  },
+  "private_evidence_sha256": {
+    "paper_d3_manager_audit": "sha256:17a254dc0c65990b776ef420d2d0d0bc71510dfdc5fb9db4ca6de5f01a5fe01b",
+    "sandbox_d3_manager_audit": "sha256:fa535023aef29e96dd0d2cf4f70782444bcd68bac91798b00b406aaf081a4af9",
+    "live_d3_manager_audit": "sha256:045103c027ee7a8ced374d19cd89b812c4a8efb8ba09f0aa1faa51a2d5b7b24d",
+    "current_source_truth_ledger": "sha256:a133d57a4be9366e33cf083d6a391163f9af5f450add5a6ccd0442c3b01d3ec4"
+  },
+  "legacy_compatibility": {
+    "state": "TYPED_UNAVAILABLE_FAIL_CLOSED",
+    "http_status": 503,
+    "protocol": "HTTP_2",
+    "interpretation": "The legacy D2 compatibility facade is not Manager-v2 read authority. Its typed unavailable state neither authorizes nor blocks the independent Manager metadata audit."
+  },
+  "release_label_reconciliation": {
+    "state": "PROVENANCE_DISCREPANCY_RECORDED_NO_RUNTIME_CHANGE",
+    "historical_runtime_manifest_catalogue_sha256": "sha256:9040f0897d8f452a486e51ce35abb7f3165b2238d07221b6b0e684d9829b012e",
+    "active_portal_pin_catalogue_sha256": "sha256:0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44",
+    "required_release_action": "Carry this reconciliation record into the next signed release manifest; do not rewrite the historical deployed runtime manifest."
+  },
+  "live_data_executor": {
+    "classification": "RAW_PAPER_CANDIDATE_AUDIT_ONLY",
+    "application_relation_count": 99,
+    "application_column_count": 1387,
+    "portal_direct_database_access": false,
+    "live_manager_substitute": false
+  }
+}
