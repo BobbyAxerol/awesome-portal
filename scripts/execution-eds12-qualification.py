@@ -49,8 +49,11 @@ INPUTS = (
     ("n17b_current_acceptance", "scripts/execution-n17b-current-acceptance-test.sh"),
     ("n29_release_profile", "deploy/manifests/execution-manager-product-release-profile.v1.json"),
     ("protected_release_workflow", ".github/workflows/publish-images.yml"),
+    ("protected_deploy_workflow", ".github/workflows/deploy.yml"),
+    ("ci_qualification_gate", ".github/workflows/ci.yml"),
     ("cosign_signature_adapter", "scripts/verify-cosign-signature.py"),
     ("image_publication_gate", "scripts/execution-image-publication-test.sh"),
+    ("release_authority_workflow_test", "scripts/test_portal_release_authority.py"),
     ("current_source_compose", "deploy/compose.execution-current-source.yaml"),
     ("profile_runtime_prepare", "scripts/execution-profile-runtime-prepare.sh"),
     ("market_context_static_gate", "scripts/execution-market-context-data-layer-adapter-test.sh"),
@@ -73,6 +76,9 @@ INPUTS = (
     ("market_context_proxy_template", "deploy/execution-d1/source-proxy/manager-market-context-data-layer-locations.conf.template"),
     ("qualification_verifier", "scripts/execution-eds12-qualification.py"),
     ("qualification_mutation_test", "scripts/test_execution_eds12_qualification.py"),
+    ("runtime_binding_collector", "scripts/collect-eds12-runtime-binding.py"),
+    ("runtime_binding_collector_test", "scripts/test_collect_eds12_runtime_binding.py"),
+    ("qualification_test_runner", "scripts/execution-eds12-qualification-test.sh"),
     ("phase12_qualification", "upgrade/execution-v1/PHASE_12_QUALIFICATION.md"),
     ("operations_runbook", "upgrade/execution-v1/OPERATIONS_RUNBOOK.md"),
     ("rollback_runbook", "upgrade/execution-v1/ROLLBACK_RUNBOOK.md"),
@@ -380,7 +386,7 @@ def validate_release_and_authority(qualification: dict[str, Any]) -> None:
 
 def validate_docs_and_workspace() -> None:
     docs = {
-        "upgrade/execution-v1/PHASE_12_QUALIFICATION.md": ["STATIC_QUALIFIED", "PRODUCT_ACTIVE", "BR-EX-81", "Market Context", "protected-main", "verify-runtime-binding"],
+        "upgrade/execution-v1/PHASE_12_QUALIFICATION.md": ["STATIC_QUALIFIED", "PRODUCT_ACTIVE", "BR-EX-81", "Market Context", "protected-main", "verify-runtime-binding", "collect-eds12-runtime-binding.py"],
         "upgrade/execution-v1/OPERATIONS_RUNBOOK.md": ["PAPER_BINANCE_USDM", "SANDBOX_BINANCE_USDM", "CANARY_OVER_LIVE", "LIVE_BINANCE_USDM"],
         "upgrade/execution-v1/ROLLBACK_RUNBOOK.md": ["PROFILE_LOCAL_READER_ROLLBACK_ONLY", "projection", "Trading System"],
         "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md": ["BR-EX-80", "BR-EX-81", "Market Context", "EDS-12"],

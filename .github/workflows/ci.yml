@@ -89,6 +89,9 @@ jobs:
       - name: Validate N28 genuine gaps and owner packet
         run: ./scripts/execution-n28-missing-capability-test.sh
 
+      - name: Validate EDS-12 release qualification and runtime-binding collector
+        run: ./scripts/execution-eds12-qualification-test.sh
+
       - name: Test Rust execution edge
         run: ./scripts/execution-edge-test.sh
 

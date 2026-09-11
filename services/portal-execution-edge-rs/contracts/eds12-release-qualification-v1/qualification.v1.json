@@ -93,6 +93,16 @@
       "sha256": "sha256:d820535230e0d5da6462ef23f8445de143666e16ac30d9a7127443638a75e9e8"
     },
     {
+      "id": "protected_deploy_workflow",
+      "file": ".github/workflows/deploy.yml",
+      "sha256": "sha256:7cb983e0b5433224899f3967359e03dc10f6feb46be9f135fdc9d043b0bf6e29"
+    },
+    {
+      "id": "ci_qualification_gate",
+      "file": ".github/workflows/ci.yml",
+      "sha256": "sha256:8ca64475c1ac4c52179f4961b7e87c8232c49ac55c2982c868e82596610a1394"
+    },
+    {
       "id": "cosign_signature_adapter",
       "file": "scripts/verify-cosign-signature.py",
       "sha256": "sha256:d4e3624dc0bb8ba5ee09a11a2b949c5a421eba079b223259d8f5e0c37454b67d"
@@ -101,6 +111,11 @@
       "id": "image_publication_gate",
       "file": "scripts/execution-image-publication-test.sh",
       "sha256": "sha256:90c2d2f6404a4c8dd697bc4de91b64ff92925ca9a2203a91f2f4ba26e130f600"
+    },
+    {
+      "id": "release_authority_workflow_test",
+      "file": "scripts/test_portal_release_authority.py",
+      "sha256": "sha256:28abbc01b8cf6a3003193e265e5e745f8e7bee40e95cbfb855d376159ab4f251"
     },
     {
       "id": "current_source_compose",
@@ -205,7 +220,7 @@
     {
       "id": "qualification_verifier",
       "file": "scripts/execution-eds12-qualification.py",
-      "sha256": "sha256:93be0b51dd5b543535874309b0136ddf0d10c46d6e738f6fe0ff0398c65c6598"
+      "sha256": "sha256:d010fff2d10dc7fcbdd7d89e592747b972c9f59c0046073d8cac14a06945a6c9"
     },
     {
       "id": "qualification_mutation_test",
@@ -213,14 +228,29 @@
       "sha256": "sha256:2f1e5226ba6bc1ff4a054b561656a91c1ba3b5dd100dd90e392805498567198a"
     },
     {
+      "id": "runtime_binding_collector",
+      "file": "scripts/collect-eds12-runtime-binding.py",
+      "sha256": "sha256:5cc98ea33378cfafde28ef7fe04d0ebe91e491014568d29f2b1d237935c004cc"
+    },
+    {
+      "id": "runtime_binding_collector_test",
+      "file": "scripts/test_collect_eds12_runtime_binding.py",
+      "sha256": "sha256:9d59e11fe8d8db1deb0272bc496b443a89d9b728d0c7e2dc085bdbb156db3709"
+    },
+    {
+      "id": "qualification_test_runner",
+      "file": "scripts/execution-eds12-qualification-test.sh",
+      "sha256": "sha256:620dd789dc892ccc19879d96b2d5771a0c3e230b97167f7bf535d2a6d3655cfe"
+    },
+    {
       "id": "phase12_qualification",
       "file": "upgrade/execution-v1/PHASE_12_QUALIFICATION.md",
-      "sha256": "sha256:99cc880ba890df2a6c139075172e2838746c5efb704126dbb8965d333434c235"
+      "sha256": "sha256:6cf02a11894613e67141f3b2ee5fcaa0b6ba36401b01611746fce2518442c4fb"
     },
     {
       "id": "operations_runbook",
       "file": "upgrade/execution-v1/OPERATIONS_RUNBOOK.md",
-      "sha256": "sha256:6320bd49e0fb518f3e1e732eae43afce6f2518a4a6c9df1de711b1abfa1a69a8"
+      "sha256": "sha256:aa8f366031c4c73789643e64e891f7544297e18df09c82f41a3bedb2e9206310"
     },
     {
       "id": "rollback_runbook",

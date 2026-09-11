@@ -14,10 +14,14 @@ fi
 
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-eds12-qualification.py" \
-  "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py"
+  "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py" \
+  "${ROOT_DIR}/scripts/collect-eds12-runtime-binding.py" \
+  "${ROOT_DIR}/scripts/test_collect_eds12_runtime_binding.py"
 python3 "${ROOT_DIR}/scripts/execution-n29-product-acceptance.py"
 python3 "${ROOT_DIR}/scripts/execution-eds12-qualification.py" verify-static
 python3 "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py"
+python3 "${ROOT_DIR}/scripts/test_collect_eds12_runtime_binding.py"
+python3 "${ROOT_DIR}/scripts/test_portal_release_authority.py"
 
 if command -v cargo >/dev/null 2>&1; then
   (cd "${ROOT_DIR}/services/portal-execution-edge-rs" && cargo test -p eds12-qualification)

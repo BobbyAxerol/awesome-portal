@@ -40,6 +40,20 @@ short-lived delegated JWT at the private Execution Edge boundary.
 # Includes the disposable PostgreSQL PITR/restore/rebuild drill.
 ./scripts/execution-eds12-qualification-test.sh --offline-dr
 
+# After an exact signed candidate is deployed, collect each cell's non-secret
+# marker from Docker labels, image repo digests, health and release metadata.
+# The collector neither contacts a source nor reads mounted credentials/data.
+# SGP's protected workflow writes/uploads its marker automatically; AWS-HK
+# runs the second command from its immutable release copy after its companion
+# digest-pinned rollout.
+sudo -n python3 ./scripts/collect-eds12-runtime-binding.py sgp \
+  --release-manifest /srv/portal/releases/<commit>/release-manifest.json \
+  --deployment-state /srv/portal/deployed-release.env \
+  --output /secure/portal-sgp-runtime-binding.env
+sudo -n python3 ./scripts/collect-eds12-runtime-binding.py aws-hk \
+  --release-manifest /srv/primus/portal/releases/<commit>/release-manifest.json \
+  --output /secure/portal-aws-hk-runtime-binding.json
+
 # After protected-main has produced signed images and a deployed browser run,
 # this is only a semantic evidence check; it remains non-active:
 python3 ./scripts/execution-eds12-qualification.py verify-deployed \
@@ -63,6 +77,13 @@ rejects a candidate/image/manifest mismatch, missing SGP or AWS-HK service,
 unhealthy runtime marker, command/live mutation/direct-source widening or a
 symlinked evidence input. Neither command deploys, restarts, migrates,
 activates a source, dispatches a command or mutates Live.
+
+The collector refuses an ambiguous Compose identity, image without the exact
+candidate repo digest, source-revision mismatch, unhealthy service, command
+relay, direct-source-shaped runtime input or existing marker without an
+explicit replacement flag. It collapses the three AWS-HK Paper/Sandbox/Live
+profile projects only after all six Edge/Source Proxy instances prove the same
+exact candidate image; it never lets one healthy profile stand in for another.
 
 The protected publisher converts Cosign's array output into the exact
 `portal.cosign-signature-evidence.v1` object before it enters the immutable

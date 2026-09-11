@@ -61,3 +61,12 @@ sanitized AWS-HK marker (root:root/0600 is the recommended convention). Only
 the latter can emit `PRODUCT_ACTIVE`; it refuses evidence that is
 non-main, unsigned, profile-mixed, incomplete, secret-shaped, command-enabled,
 missing either cell, unhealthy or bound to a different manifest/image set.
+
+The protected SGP workflow collects and uploads its marker after the immutable
+Compose rollout; do not hand-author it. AWS-HK runs the same pinned collector
+only after all three Paper/Sandbox/Live Edge and Source Proxy projects use the
+same candidate. The collector reads release metadata plus Docker
+labels/repo-digests/health only. It does not read a secret mount, source row,
+DSN, delegated JWT or mTLS material, and it cannot start/restart a container.
+If either collector rejects a mixed revision or unhealthy service, stop: do not
+replace it with a manually composed marker.

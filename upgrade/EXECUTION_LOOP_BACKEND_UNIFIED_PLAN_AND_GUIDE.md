@@ -6067,6 +6067,19 @@ a Portal workaround.
   does not bind a release digest, so these are correctly excluded from
   `PRODUCT_ACTIVE` until the exact candidate is deployed and independently
   marked.
+- The protected SGP deploy workflow now invokes the pinned
+  `collect-eds12-runtime-binding.py` only after its immutable Compose rollout
+  is healthy, then uploads a root-owned, non-secret marker as a bounded
+  workflow artifact.  The same collector must run on AWS-HK after its
+  companion rollout and verifies all Paper, Sandbox and Live Edge/Source Proxy
+  projects before it emits one marker.  It reads only the accepted manifest,
+  non-secret SGP deployment state and Docker metadata (labels, repo digests,
+  health); it cannot contact a source, inspect secret mounts, start/restart a
+  container or widen command/Live authority.  The collector, its focused
+  fail-closed tests, the deploy workflow and the CI qualification gate are
+  digest-pinned by the EDS-12 pack.  This closes the prior source-level marker
+  collection gap, but does not conceal the currently observed SGP/AWS-HK
+  provenance mismatch or assert runtime activation.
 
 **Only remaining release evidence (not a technical-debt placeholder):** a
 protected-main signed/SBOM/provenance candidate plus one sanitized SGP marker
