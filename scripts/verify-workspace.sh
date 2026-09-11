@@ -571,6 +571,8 @@ for required in \
   "${ROOT_DIR}/upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md" \
   "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
   "${ROOT_DIR}/scripts/execution-eds11r-market-context-test.sh" \
+  "${ROOT_DIR}/scripts/execution-market-context-paper-qualification-test.sh" \
+  "${ROOT_DIR}/scripts/execution-market-context-paper-qualification.mjs" \
   "${ROOT_DIR}/apps/control-api/src/execution/market-context.registry.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution/market-context.intake.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution/market-context.service.ts" \
@@ -597,6 +599,8 @@ for required in \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/activation.candidate.example.json" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/portal-market-context-data-layer-adapter-v1/market-context-data-layer-adapter.v1.json" \
+  "${ROOT_DIR}/deploy/manifests/execution-market-context-paper-qualification.v1.json" \
   "${ROOT_DIR}/packages/contracts/schemas/execution-market-context.v1.schema.json" \
   "${ROOT_DIR}/packages/contracts/openapi/execution-market-context.openapi.json" \
   "${ROOT_DIR}/packages/contracts/generated/execution-market-context.d.ts" \
@@ -1437,6 +1441,8 @@ for tracked_source in \
   upgrade/backend/EX_BE_30_N27_ADMIN_ACTION_DRAWER_COMMAND_PLANE.md \
   scripts/execution-n28-missing-capability-test.sh \
   scripts/execution-eds11r-market-context-test.sh \
+  scripts/execution-market-context-paper-qualification-test.sh \
+  scripts/execution-market-context-paper-qualification.mjs \
   apps/control-api/src/execution/market-context.registry.ts \
   apps/control-api/src/execution/market-context.intake.ts \
   apps/control-api/src/execution/market-context.service.ts \
@@ -1464,6 +1470,8 @@ for tracked_source in \
   services/portal-execution-edge-rs/contracts/n26-manager-realtime-v2/MANIFEST.sha256 \
   services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/MANIFEST.sha256 \
   services/portal-execution-edge-rs/contracts/eds11r-market-context-v1-request/MANIFEST.sha256 \
+  services/portal-execution-edge-rs/contracts/portal-market-context-data-layer-adapter-v1/market-context-data-layer-adapter.v1.json \
+  deploy/manifests/execution-market-context-paper-qualification.v1.json \
   packages/contracts/schemas/execution-market-context.v1.schema.json \
   packages/contracts/openapi/execution-market-context.openapi.json \
   packages/contracts/generated/execution-market-context.d.ts \
@@ -1685,6 +1693,7 @@ bash -n \
   "${ROOT_DIR}/scripts/execution-n26-n27-test.sh" \
   "${ROOT_DIR}/scripts/execution-n28-missing-capability-test.sh" \
   "${ROOT_DIR}/scripts/execution-eds11r-market-context-test.sh" \
+  "${ROOT_DIR}/scripts/execution-market-context-paper-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-n29-product-acceptance-test.sh" \
   "${ROOT_DIR}/scripts/execution-eds12-qualification-test.sh" \
   "${ROOT_DIR}/scripts/execution-phase2-screen-command-test.sh" \

@@ -33,8 +33,22 @@ export interface MarketContextOperation {
 }
 
 export const MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS = 366 * 24 * 60 * 60 * 1_000;
-const TOKEN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/;
-const INTERVAL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/;
+/**
+ * These values are deliberately the intersection of the fixed Edge request
+ * and the Source Proxy/Data Layer adapter. They are not a generic market
+ * catalogue and must stay narrow enough that a browser cannot turn the BFF
+ * into a provider query surface.
+ */
+export const MARKET_CONTEXT_VENUE = "BINANCE";
+export const MARKET_CONTEXT_INTERVALS = Object.freeze([
+  "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h",
+  "1d", "3d", "1w", "1M",
+] as const);
+export const MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES = 2_000;
+/** The Edge clamps this source provider's raw page request to this bound. */
+export const MARKET_CONTEXT_DATA_LAYER_MAXIMUM_RAW_CANDLES = 1_500;
+const INSTRUMENT = /^[A-Z0-9]{2,30}$/;
+const INTERVALS = new Set<string>(MARKET_CONTEXT_INTERVALS);
 
 const REGISTRY = Object.freeze({
   managerMarketContextLatestV1: Object.freeze({
@@ -52,7 +66,7 @@ const REGISTRY = Object.freeze({
     sourceId: "market.context",
     sourceContractRevision: "trading-system.portal-execution.market-context.v1",
     maximumResponseBytes: 8_388_608,
-    maximumItems: 2_000,
+    maximumItems: MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES,
     sourceMaximumConcurrency: 2,
   }),
 } satisfies Record<MarketContextOperationId, MarketContextOperation>);
@@ -86,8 +100,8 @@ export function marketCandlesPolicy(
 }
 
 export function marketLatestPath(query: MarketLatestQuery): string {
-  assertToken(query.venue, "venue");
-  assertToken(query.instrument, "instrument");
+  assertVenue(query.venue);
+  assertInstrument(query.instrument);
   return `/internal/v2/manager/market/latest?${new URLSearchParams({
     venue: query.venue,
     instrument: query.instrument,
@@ -95,9 +109,9 @@ export function marketLatestPath(query: MarketLatestQuery): string {
 }
 
 export function marketCandlesPath(query: MarketCandlesQuery): string {
-  assertToken(query.venue, "venue");
-  assertToken(query.instrument, "instrument");
-  if (!INTERVAL.test(query.interval)) throw invalidQuery("interval");
+  assertVenue(query.venue);
+  assertInstrument(query.instrument);
+  if (!INTERVALS.has(query.interval)) throw invalidQuery("interval");
   if (
     !Number.isSafeInteger(query.fromMs) ||
     !Number.isSafeInteger(query.toMs) ||
@@ -134,8 +148,12 @@ function fixedPathPolicy(
   });
 }
 
-function assertToken(value: string, field: string): void {
-  if (!TOKEN.test(value)) throw invalidQuery(field);
+function assertVenue(value: string): void {
+  if (value !== MARKET_CONTEXT_VENUE) throw invalidQuery("venue");
+}
+
+function assertInstrument(value: string): void {
+  if (!INSTRUMENT.test(value)) throw invalidQuery("instrument");
 }
 
 function invalidQuery(field: string): Error {

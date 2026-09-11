@@ -441,7 +441,7 @@ export class PaperReadService {
     const previousCursor = orders?.page?.previousCursor
       ? this.encodeCursor(orders.page.previousCursor, principal.workspaceId, query, "before")
       : null;
-    const exactQueryAvailable = orders?.page?.exactTotal !== null && orders?.page?.exactTotal !== undefined;
+    const exactQuery = blotterExactQuery(orders);
     return this.envelope(
       "execution.full-blotter.v1",
       principal,
@@ -462,17 +462,26 @@ export class PaperReadService {
           sort_allowlist: ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"],
           count_scope: "COMMITTED_HOT_PROJECTION",
         },
-        exact_total: orders?.page?.exactTotal ?? null,
-        filtered_total: orders?.page?.filteredTotal ?? orders?.page?.exactTotal ?? null,
-        aggregates: orders?.page?.aggregates ?? null,
+        // The total and aggregate live beside their proof.  A local projection
+        // may only publish them after it has proved this relation complete;
+        // an incomplete retained window keeps source totals null rather than
+        // looking exact because it happened to contain a convenient page.
+        exact_total: exactQuery.exactTotal,
+        filtered_total: exactQuery.filteredTotal,
+        aggregates: exactQuery.aggregates,
+        exact_query: exactQuery.detail,
       },
       [
-        capability(
-          "blotter.exact-query",
-          exactQueryAvailable ? "AVAILABLE" : "UNAVAILABLE",
-          ["exact_total", "filters", "sort", "aggregates"],
-          exactQueryAvailable ? null : "PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE",
-        ),
+        {
+          ...capability(
+            "blotter.exact-query",
+            exactQuery.state,
+            ["exact_total", "filters", "sort", "aggregates"],
+            exactQuery.reasonCode,
+          ),
+          authority: exactQuery.authority,
+          formula_version: exactQuery.formulaVersion,
+        },
       ],
     );
   }
@@ -808,6 +817,201 @@ function deriveOverviewInsights(relations: readonly RelationResult[]): {
     },
     state: anyPartial ? "PARTIAL" : "AVAILABLE",
     reason: anyPartial ? "SOURCE_PARTIAL" : null,
+  };
+}
+
+/**
+ * The Manager current-page transport deliberately has no global count
+ * contract.  A local durable projection can answer a Blotter count exactly,
+ * but only for its *current retained population* and only after its orders
+ * relation has declared COMPLETE under an exact server-owned scope.
+ *
+ * Keep this proof here, at the product DTO boundary, rather than letting a
+ * caller infer exactness from a positive number.  A partial local window must
+ * preserve source null totals; it is not allowed to borrow truth from rows
+ * that happened to arrive first.
+ */
+interface BlotterExactQuery {
+  state: CapabilityState;
+  reasonCode: string | null;
+  authority: "DERIVED" | "TRADING_SYSTEM" | null;
+  formulaVersion: string | null;
+  exactTotal: number | null;
+  filteredTotal: number | null;
+  aggregates: Record<string, Record<string, number>> | null;
+  detail: Record<string, unknown>;
+}
+
+function blotterExactQuery(orders: RelationResult | undefined): BlotterExactQuery {
+  const page = orders?.page;
+  const localProjection = page?.projection ?? null;
+  const sourceHasExactTotals = page?.exactTotal !== null && page?.exactTotal !== undefined;
+  const sourceHasFilteredTotal = page?.filteredTotal !== null && page?.filteredTotal !== undefined;
+  const sourceHasAggregates = page?.aggregates !== null && page?.aggregates !== undefined;
+
+  const base = {
+    schema_version: "execution.blotter-exact-query.v1",
+    relation: "orders",
+    history_semantics: "CURRENT_PROJECTION_POPULATION_NOT_FULL_HISTORY",
+  };
+
+  if (!page) {
+    return unavailableBlotterExactQuery(base, "PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE");
+  }
+
+  if (localProjection) {
+    const scopeState = page.scope?.state ?? "EXACT";
+    const coverage = {
+      relation_completeness: page.completeness,
+      scope_state: scopeState,
+      returned_page_rows: page.items.length,
+      // These values remain null until the same local BFF proved the current
+      // relation complete.  They never become a misleading estimate.
+      current_population_rows: sourceHasExactTotals ? page.exactTotal : null,
+      filtered_population_rows: sourceHasFilteredTotal ? page.filteredTotal : null,
+    };
+    const mirrorRevision = {
+      projection_epoch: localProjection.epoch,
+      projection_sequence: localProjection.sequence,
+      payload_digest: localProjection.payloadDigest,
+      last_successful_refresh_at: localProjection.lastSuccessfulRefreshAt,
+    };
+    if (page.completeness !== "COMPLETE") {
+      return {
+        state: "PARTIAL",
+        reasonCode: "BE_R2_3_LOCAL_MIRROR_INCOMPLETE",
+        authority: "DERIVED",
+        formulaVersion: "portal.current-projection.orders-exact-query.v1",
+        exactTotal: null,
+        filteredTotal: null,
+        aggregates: null,
+        detail: {
+          ...base,
+          state: "PARTIAL",
+          authority: "DERIVED",
+          formula_version: "portal.current-projection.orders-exact-query.v1",
+          reason_code: "BE_R2_3_LOCAL_MIRROR_INCOMPLETE",
+          mirror_revision: mirrorRevision,
+          coverage,
+        },
+      };
+    }
+    if (scopeState !== "EXACT") {
+      return {
+        state: "PARTIAL",
+        reasonCode: "BE_R2_3_LOCAL_SCOPE_PARTIAL",
+        authority: "DERIVED",
+        formulaVersion: "portal.current-projection.orders-exact-query.v1",
+        exactTotal: null,
+        filteredTotal: null,
+        aggregates: null,
+        detail: {
+          ...base,
+          state: "PARTIAL",
+          authority: "DERIVED",
+          formula_version: "portal.current-projection.orders-exact-query.v1",
+          reason_code: "BE_R2_3_LOCAL_SCOPE_PARTIAL",
+          mirror_revision: mirrorRevision,
+          coverage,
+        },
+      };
+    }
+    if (!sourceHasExactTotals || !sourceHasFilteredTotal || !sourceHasAggregates) {
+      return {
+        state: "UNAVAILABLE",
+        reasonCode: "BE_R2_3_LOCAL_EXACT_QUERY_PROOF_MISSING",
+        authority: "DERIVED",
+        formulaVersion: "portal.current-projection.orders-exact-query.v1",
+        exactTotal: null,
+        filteredTotal: null,
+        aggregates: null,
+        detail: {
+          ...base,
+          state: "UNAVAILABLE",
+          authority: "DERIVED",
+          formula_version: "portal.current-projection.orders-exact-query.v1",
+          reason_code: "BE_R2_3_LOCAL_EXACT_QUERY_PROOF_MISSING",
+          mirror_revision: mirrorRevision,
+          coverage,
+        },
+      };
+    }
+    return {
+      state: "AVAILABLE",
+      reasonCode: null,
+      authority: "DERIVED",
+      formulaVersion: "portal.current-projection.orders-exact-query.v1",
+      exactTotal: page.exactTotal!,
+      filteredTotal: page.filteredTotal!,
+      aggregates: page.aggregates!,
+      detail: {
+        ...base,
+        state: "AVAILABLE",
+        authority: "DERIVED",
+        formula_version: "portal.current-projection.orders-exact-query.v1",
+        reason_code: null,
+        mirror_revision: mirrorRevision,
+        coverage,
+      },
+    };
+  }
+
+  // A future Manager contract may publish an exact total itself.  Preserve
+  // that direct authority instead of rewriting it as a Portal derivation.
+  if (sourceHasExactTotals) {
+    return {
+      state: "AVAILABLE",
+      reasonCode: null,
+      authority: "TRADING_SYSTEM",
+      formulaVersion: null,
+      exactTotal: page.exactTotal!,
+      filteredTotal: sourceHasFilteredTotal ? page.filteredTotal! : page.exactTotal!,
+      aggregates: sourceHasAggregates ? page.aggregates! : null,
+      detail: {
+        ...base,
+        state: "AVAILABLE",
+        authority: "TRADING_SYSTEM",
+        formula_version: null,
+        reason_code: null,
+        coverage: {
+          relation_completeness: page.completeness,
+          scope_state: page.scope?.state ?? "EXACT",
+          returned_page_rows: page.items.length,
+          current_population_rows: page.exactTotal,
+          filtered_population_rows: sourceHasFilteredTotal ? page.filteredTotal : page.exactTotal,
+        },
+      },
+    };
+  }
+
+  return unavailableBlotterExactQuery(
+    base,
+    orders?.state === "PARTIAL" ? "SOURCE_PARTIAL" : "PHASE2_LOCAL_EXACT_QUERY_NOT_ACTIVE",
+    orders?.state === "PARTIAL" ? "PARTIAL" : "UNAVAILABLE",
+  );
+}
+
+function unavailableBlotterExactQuery(
+  base: Record<string, unknown>,
+  reasonCode: string,
+  state: CapabilityState = "UNAVAILABLE",
+): BlotterExactQuery {
+  return {
+    state,
+    reasonCode,
+    authority: null,
+    formulaVersion: null,
+    exactTotal: null,
+    filteredTotal: null,
+    aggregates: null,
+    detail: {
+      ...base,
+      state,
+      authority: null,
+      formula_version: null,
+      reason_code: reasonCode,
+      coverage: null,
+    },
   };
 }
 

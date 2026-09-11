@@ -2040,3 +2040,22 @@ not a Portal source. Portal retains the server-side Manager-v2 contract path;
 there is no direct database, Redis, broker, Source Proxy upstream or browser
 connection. The full phase-to-frontend handoff is in
 [`apps/portal/registry/FRONTEND_HANDOFF.md` §8.56](../apps/portal/registry/FRONTEND_HANDOFF.md#856-be-r2-frontend-coordination--be-r2-1-implementation-received-2026-09-11).
+
+### 14.1.2 BE-R2-4 Market Context contract closeout (2026-09-11)
+
+BE-R2-4 now has its complete server-side named BFF contract and a fail-closed
+Paper qualification gate. The only success schema is Paper-bound and accepts
+only `BINANCE`, fixed uppercase instruments, the sealed interval set, bounded
+UTC ranges, exact decimal strings and bounded response sizes. Sandbox and Live
+cannot use the Paper profile or return a fallback response.
+
+The deployed Paper probe has proven mTLS, TLS 1.3, HTTP/2 and delegated JWT
+profile binding but was correctly rejected by the source with typed
+`MANAGER_V2_SOURCE_CONTRACT_REJECTED`. The static adapter expects a direct
+loopback Data Layer route while the observed proxy supplies a Manager-facade
+extension. A future facade path is accepted only with a checked-in,
+owner-return adapter revision and manifest binding. The committed sanitized evidence record is
+[`execution-market-context-paper-qualification.v1.json`](../deploy/manifests/execution-market-context-paper-qualification.v1.json).
+It is not positive activation evidence: the runtime flag remains false and no
+source, container or profile changed. See the unified plan's BE-R2-4 journal
+for the one fixed owner resolution and requalification matrix.

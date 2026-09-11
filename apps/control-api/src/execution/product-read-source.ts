@@ -304,6 +304,25 @@ export class ExecutionProductReadSource {
       ? encodeCursor(start + rows.length, snapshot.payloadDigest) : null;
     const previous = start > 0
       ? encodeCursor(Math.max(0, start - limit), snapshot.payloadDigest) : null;
+    /*
+     * A hot projection is a current observation, not automatically a complete
+     * population.  In particular, the worker marks a relation PARTIAL after
+     * its bounded page budget.  Returning `projected_total_items` in that
+     * state made a window look like an exact source count to Blotter.
+     *
+     * The only local exact-query proof this boundary may publish is one
+     * complete relation under an exact server-owned scope.  It remains
+     * explicitly Portal-derived downstream; it is never a claim about all
+     * historical Trading-System rows.
+     */
+    const exactCurrentProjection = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" &&
+      projected.completeness === "COMPLETE" && scoped.state === "EXACT";
+    // Existing non-Blotter resource pages use their local count purely as a
+    // bounded page/navigation aid.  Blotter is the only consumer that labels
+    // a count an exact query result, so its stricter proof must not silently
+    // change those independent response contracts.
+    const publishPageCounts = !(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders") ||
+      exactCurrentProjection;
     return {
       schema_version: "portal.execution.local-projection-bff.v1",
       authority: "PORTAL_CONTROL_API",
@@ -342,16 +361,20 @@ export class ExecutionProductReadSource {
           })),
           next_cursor: next,
           previous_cursor: previous,
-          projected_total_items: projected.items.length,
-          filtered_total_items: scopedItems.length,
+          ...(publishPageCounts ? {
+            // These are deliberately derived from the one committed current
+            // projection, after the same server-owned filter used for rows.
+            // Do not emit them for an incomplete relation or ambiguous scope.
+            projected_total_items: projected.items.length,
+            filtered_total_items: scopedItems.length,
+            ...(exactCurrentProjection ? { window_aggregates: countByDimensions(scopedItems) } : {}),
+          } : {}),
           scope: query.deploymentScope ? {
             resource_kind: "DEPLOYMENT",
             resource_id: query.deploymentScope.deploymentId,
             state: scoped.state,
             reason_code: scoped.reasonCode,
           } : undefined,
-          window_aggregates: screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
-            ? countByDimensions(projected.items) : null,
         },
       },
     };

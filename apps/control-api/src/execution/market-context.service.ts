@@ -21,9 +21,6 @@ import type { MaximumDataEnvironment } from "./maximum-data-intake";
 
 const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 const FRESHNESS = new Set(["FRESH", "AGING", "DEGRADED", "STALE"]);
-const COMPLETENESS = new Set(["COMPLETE", "PARTIAL", "POLL_BOUNDED"]);
-const CANDLE_COVERAGE = new Set(["COMPLETE", "PARTIAL", "UNKNOWN"]);
-const CANDLE_SAMPLING = new Set(["NONE", "SOURCE_BOUNDED", "SOURCE_AGGREGATED"]);
 const OBSERVATION_KIND = new Set(["TRADE", "MARK", "INDEX", "BAR_CLOSE"]);
 
 export interface MarketContextPrincipal {
@@ -97,7 +94,7 @@ export class MarketContextService {
 
 export function translateMarketLatest(response: unknown, request: MarketContextLatestRequest) {
   const operation = marketContextOperation("managerMarketContextLatestV1");
-  const source = sourceEnvelope(response, operation.operationId, request.environment);
+  const source = sourceEnvelope(response, operation.operationId, request.environment, "latest");
   const data = asObject(source.data);
   const items = asArray(data.items, operation.maximumItems).map((item) => {
     const observation = asObject(item);
@@ -139,15 +136,15 @@ export function translateMarketLatest(response: unknown, request: MarketContextL
 
 export function translateMarketCandles(response: unknown, request: MarketContextCandlesRequest) {
   const operation = marketContextOperation("managerMarketContextCandlesV1");
-  const source = sourceEnvelope(response, operation.operationId, request.environment);
+  const source = sourceEnvelope(response, operation.operationId, request.environment, "candles");
   const data = asObject(source.data);
   if (
     boundedString(data.venue, 96) !== request.venue ||
     boundedString(data.instrument, 191) !== request.instrument ||
     boundedString(data.interval, 32) !== request.interval
   ) throw sourceContractRejected();
-  const coverage = stringIn(data.coverage, CANDLE_COVERAGE);
-  const sampling = stringIn(data.sampling, CANDLE_SAMPLING);
+  const coverage = stringExact(data.coverage, "UNKNOWN");
+  const sampling = stringExact(data.sampling, "SOURCE_BOUNDED");
   let previousOpenMs = -1;
   const candles = asArray(data.items, operation.maximumItems).map((item) => {
     const candle = asObject(item);
@@ -209,6 +206,7 @@ function sourceEnvelope(
   response: unknown,
   operationId: MarketContextOperationId,
   environment: MaximumDataEnvironment,
+  operationKind: "latest" | "candles",
 ): Record<string, unknown> {
   const bff = asObject(response);
   const profile = marketContextProfileBinding(environment);
@@ -227,11 +225,15 @@ function sourceEnvelope(
     source.profile_id !== profile.profileId ||
     source.availability !== "AVAILABLE" ||
     !FRESHNESS.has(String(source.freshness)) ||
-    !COMPLETENESS.has(String(source.completeness)) ||
+    source.completeness !== "POLL_BOUNDED" ||
     !isUtcMilliseconds(source.as_of_ms)
   ) throw sourceContractRejected();
   const data = asObject(source.data);
   if (data.operation_id !== operationId) throw sourceContractRejected();
+  if (
+    (operationKind === "latest" && (data.coverage !== undefined || data.sampling !== undefined)) ||
+    (operationKind === "candles" && (data.coverage !== "UNKNOWN" || data.sampling !== "SOURCE_BOUNDED"))
+  ) throw sourceContractRejected();
   return source;
 }
 
@@ -262,6 +264,11 @@ function boundedString(value: unknown, maximumLength: number): string {
 function stringIn(value: unknown, values: Set<string>): string {
   if (typeof value !== "string" || !values.has(value)) throw sourceContractRejected();
   return value;
+}
+
+function stringExact(value: unknown, expected: string): string {
+  if (value !== expected) throw sourceContractRejected();
+  return expected;
 }
 
 function decimal(value: unknown): string {

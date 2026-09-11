@@ -12,7 +12,7 @@
   "source_health": {
     "availability": "AVAILABLE",
     "freshness": "FRESH",
-    "completeness": "COMPLETE",
+    "completeness": "POLL_BOUNDED",
     "as_of_ms": 1788566400500
   },
   "state": "POPULATED",

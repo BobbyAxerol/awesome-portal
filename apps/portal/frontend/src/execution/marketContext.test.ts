@@ -51,9 +51,21 @@ describe("market-context candles", () => {
   });
 
   it("names the source and repeats the bound in the source's own words", () => {
-    const line = candleProvenanceLine(readMarketContextCandles(FIXTURE)!);
+    const payload = readMarketContextCandles(FIXTURE)!;
+    const line = candleProvenanceLine(payload);
     expect(line).toContain("TRADING_SYSTEM_DATA_LAYER");
-    expect(line).toContain("coverage PARTIAL");
+    /*
+     * The coverage word is read from the fixture, not written here.
+     *
+     * This asserted the literal "coverage PARTIAL", so when codex changed the
+     * canonical fixture to UNKNOWN the test failed for a reason that had
+     * nothing to do with the behaviour it guards: the line must echo whatever
+     * bound the source published, in the source's own word, and a test that
+     * pins one value is testing the fixture rather than the code.
+     */
+    const coverage = (FIXTURE as { coverage?: string }).coverage;
+    expect(coverage, "the fixture must publish a coverage or this proves nothing").toBeTruthy();
+    expect(line).toContain(`coverage ${coverage}`);
     expect(line).toContain("not a replay-grade history");
   });
 

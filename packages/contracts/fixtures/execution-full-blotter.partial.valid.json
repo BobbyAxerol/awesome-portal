@@ -2,11 +2,19 @@
   "schema_version": "execution.full-blotter.v1", "record_authority": "PORTAL_CONTROL", "source_authority": "TRADING_SYSTEM", "delivery_profile": "PAPER_BINANCE_USDM",
   "workspace_id": "ws_fixture", "read_at": "2026-08-30T12:00:01Z", "as_of": "2026-08-30T12:00:00Z", "state": "ready", "freshness": "FRESH", "completeness": "COMPLETE",
   "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
-  "capabilities": [{ "capability_id": "blotter.exact-query", "state": "AVAILABLE", "relations": ["orders", "fills"], "reason_code": null, "retryable": false }],
+  "capabilities": [{ "capability_id": "blotter.exact-query", "state": "AVAILABLE", "relations": ["orders", "fills"], "reason_code": null, "retryable": false, "authority": "DERIVED", "formula_version": "portal.current-projection.orders-exact-query.v1" }],
   "data": {
     "orders": [{ "order_id": "ord_1", "mode": "paper", "quantity": "1.25", "status": "FILLED" }], "fills": [], "conditional_groups": [], "conditional_legs": [], "sessions": [], "reconciliation": [], "command_journal": [],
     "page": { "limit": 50, "next_cursor": null, "previous_cursor": "kc1.previous" },
     "query": { "filters": { "status": null, "status_bucket": "FILLED", "venue": null, "symbol": null, "side": null }, "sort": "submitted_at_desc", "filter_allowlist": ["status", "venue", "symbol", "side"], "sort_allowlist": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"], "count_scope": "COMMITTED_HOT_PROJECTION" },
-    "exact_total": 12, "filtered_total": 1, "aggregates": { "status": { "FILLED": 1, "REJECTED": 3 }, "venue": { "BINANCE": 12 } }
+    "exact_total": 12, "filtered_total": 1, "aggregates": { "status": { "FILLED": 1, "REJECTED": 3 }, "venue": { "BINANCE": 12 } },
+    "exact_query": {
+      "schema_version": "execution.blotter-exact-query.v1", "relation": "orders",
+      "history_semantics": "CURRENT_PROJECTION_POPULATION_NOT_FULL_HISTORY",
+      "state": "AVAILABLE", "authority": "DERIVED",
+      "formula_version": "portal.current-projection.orders-exact-query.v1", "reason_code": null,
+      "mirror_revision": { "projection_epoch": "projection_epoch_1", "projection_sequence": 42, "payload_digest": "sha256:fixture-derived-current-orders", "last_successful_refresh_at": "2026-08-30T12:00:00Z" },
+      "coverage": { "relation_completeness": "COMPLETE", "scope_state": "EXACT", "returned_page_rows": 1, "current_population_rows": 12, "filtered_population_rows": 1 }
+    }
   }
 }

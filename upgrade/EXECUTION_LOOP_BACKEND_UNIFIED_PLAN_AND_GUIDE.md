@@ -5688,6 +5688,39 @@ Portal-owned reason.
 Operations, Waivers and Admin Drawer; consume exact/derived labels and panel
 states rather than swapping the route for a generic unavailable screen.
 
+**Implementation and evidence journal — 2026-09-11 UTC:**
+
+- Completed the named BFF/composition integrity slice without enabling a
+  runtime service or widening any source authority. The full rationale and
+  operator/frontend handoff are in
+  [`BE_R2_3_MAXIMUM_CURRENT_SCREEN_BFF_AND_DERIVED_EXACT_QUERY_COMPLETION.md`](backend/BE_R2_3_MAXIMUM_CURRENT_SCREEN_BFF_AND_DERIVED_EXACT_QUERY_COMPLETION.md).
+- Found and closed one real exact-query defect: a `PARTIAL` local `orders`
+  projection could expose its bounded window length as a Blotter exact total,
+  and its aggregate was computed before the server-owned filter. The BFF now
+  emits derived count/aggregate only for `COMPLETE` + `EXACT` current
+  projection proof and computes the aggregate after that exact scope filter.
+  Partial/incomplete proof returns null totals and one typed reason instead.
+- Every accepted local derivation carries `DERIVED`, the formula version,
+  mirror revision, coverage and explicit current-population/not-full-history
+  semantics. A direct future Manager exact total remains
+  `TRADING_SYSTEM`-authoritative and is not relabelled by Portal.
+- Added the corresponding canonical Paper Read JSON Schema, OpenAPI,
+  regenerated TypeScript declaration and valid/negative fixture proof, so
+  `exact_query` is a versioned DTO rather than an undocumented response field.
+- Fixed the dark-projection composition routing condition so Portal-owned
+  Command Center/Operations/Waivers/Admin Drawer reads do not incorrectly
+  return `404` merely because no local projection workspace is configured;
+  strict workspace binding still applies once one is configured.
+- Added direct/derived/partial BFF tests, an actual PostgreSQL 201-order
+  filter/aggregate proof and named authenticated Command Center/Blotter route
+  coverage. The established real concurrent approval serialization/replay
+  test remains the F18 evidence.
+- `./scripts/control-api-test.sh` passed: TypeScript build plus 58 test files
+  / 496 tests, including the focused projection, Paper Read, Screen BFF and
+  governance concurrency cases. `./scripts/contracts-test.sh` also passed:
+  121 canonical fixture/schema/OpenAPI/generated-type tests. No runtime,
+  source, command or database production action was performed.
+
 ### BE-R2-4 — Paper-first Market Context qualification and named BFFs
 
 **Goal:** use existing Market/Data Layer capabilities only after the exact
@@ -5695,9 +5728,9 @@ Paper adapter proves contract, freshness and profile isolation.
 
 **Backend work:**
 
-- validate the checked-in Trading-System-owned Market Context adapter manifest
-  against the private Edge route, profile, source capability and Data Layer
-  revision;
+- validate the checked-in Portal-owned Market Context compatibility-adapter
+  manifest and frozen Trading-System envelope contract against the private
+  Edge route, profile, source capability and Data Layer revision;
 - qualify fixed named `latest` and bounded `candles` operations for Paper with
   server-owned symbol/venue/interval/time-range allowlists, row/byte limits,
   UTC milliseconds, exact decimal strings, returned-range/coverage and source
@@ -5725,6 +5758,39 @@ merely because a proxy location exists.
 **Frontend handoff:** Claude may prepare charts for `READY/EMPTY/PARTIAL/STALE/
 UNAVAILABLE`, but replaces a panel-local typed gap only after the named DTO is
 published. It must not synthesize series from UI state.
+
+**Implementation journal — 2026-09-11 (CODE/STATIC-CONTRACT COMPLETE,
+PAPER RUNTIME GATE BLOCKED):**
+
+- The two Portal BFF operations are now sealed server-side: `BINANCE` only,
+  uppercase `[A-Z0-9]{2,30}` instruments, the exact provider interval
+  allowlist, UTC millisecond range bounded to 366 days, at most 2,000 visual
+  points/8 MiB and the source's 1,500-row raw-page ceiling. Their generated
+  same-origin contracts preserve exact decimal strings, `as_of_ms`,
+  `POLL_BOUNDED`, `UNKNOWN` coverage and `SOURCE_BOUNDED` sampling.
+- A deployment flag cannot admit a request. The compiled intake now demands a
+  separate accepted, manifest-pinned Paper runtime qualification for both
+  named operations; Sandbox and Live remain independently typed unavailable
+  and cannot borrow Paper or fall back across profiles.
+- The one-shot server-side qualifier uses only short-lived delegated read JWT,
+  mTLS, TLS 1.3 and HTTP/2. It performs fixed GET paths serially with strict
+  byte/decimal/UTC/envelope validation and retains only a sanitized summary.
+  It neither persists raw market data nor calls a database, Redis, broker, CLI
+  or browser endpoint.
+- The executed Paper evidence proved transport/profile binding but received
+  `502 MANAGER_V2_SOURCE_CONTRACT_REJECTED` on fixed `latest`. Remote
+  configuration inspection shows an `eds11r-r4-r5-manager-facade-extension`
+  upstream whereas the accepted adapter pins a direct loopback Data Layer
+  shape. The exact non-secret rejection record is
+  [`execution-market-context-paper-qualification.v1.json`](../deploy/manifests/execution-market-context-paper-qualification.v1.json).
+- This closes the phase's allowed exact-gap exit once: Paper stays
+  `PAPER_TYPED_UNAVAILABLE_PENDING_REQUALIFICATION`; no feature flag, source
+  proxy, runtime container or profile was changed. The sole follow-up is one
+  owner resolution—restore the pinned two-route adapter **or** publish the
+  frozen v1 envelopes through the Manager facade with a checked-in
+  owner-return adapter revision/manifest binding—then run the positive
+  latest/candles and negative interval/profile matrix in a new GET-only
+  change window. It is not a request for direct Portal source access.
 
 ### BE-R2-5 — Local realtime, source pacing and degradation hardening
 

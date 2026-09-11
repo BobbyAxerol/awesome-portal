@@ -112,7 +112,13 @@ export class OperationalCompositionController {
     const workspaceId = parsed.data.workspace_id
       ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
       ?? request.portalWorkspaceId;
-    if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
+    // Portal-owned composition remains useful before a local projection is
+    // configured (for example Command Center's own workflow panels).  Once a
+    // projection workspace exists, it is the only permitted source-bound
+    // composition scope.  Comparing against `undefined` previously made all
+    // dark/local Portal reads return a misleading 404.
+    if (this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
+        workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new PortalDerivationError("EDS05_PROJECTION_WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
     if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {

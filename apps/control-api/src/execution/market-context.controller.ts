@@ -5,21 +5,26 @@ import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { MarketContextError, MarketContextService } from "./market-context.service";
-import { MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS } from "./market-context.registry";
+import {
+  MARKET_CONTEXT_INTERVALS,
+  MARKET_CONTEXT_MAXIMUM_CANDLE_RANGE_MS,
+  MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES,
+  MARKET_CONTEXT_VENUE,
+} from "./market-context.registry";
 
 const WorkspaceQuery = z.string().trim().min(1).max(96).optional();
-const TokenQuery = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/);
+const MarketInstrumentQuery = z.string().regex(/^[A-Z0-9]{2,30}$/);
 const LatestQuerySchema = z.object({
   workspace_id: WorkspaceQuery,
   environment: z.enum(["paper", "sandbox", "live"]).default("paper"),
-  venue: TokenQuery,
-  instrument: TokenQuery,
+  venue: z.literal(MARKET_CONTEXT_VENUE),
+  instrument: MarketInstrumentQuery,
 }).strict();
 const CandlesQuerySchema = LatestQuerySchema.extend({
-  interval: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/),
+  interval: z.enum(MARKET_CONTEXT_INTERVALS),
   from_ms: z.coerce.number().int().min(0).max(8_640_000_000_000_000),
   to_ms: z.coerce.number().int().min(0).max(8_640_000_000_000_000),
-  point_limit: z.coerce.number().int().min(1).max(2_000).default(200),
+  point_limit: z.coerce.number().int().min(1).max(MARKET_CONTEXT_MAXIMUM_VISUAL_CANDLES).default(200),
 }).strict();
 
 interface MarketContextRequest extends FastifyRequest {

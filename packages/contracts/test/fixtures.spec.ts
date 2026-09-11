@@ -253,6 +253,30 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     });
   }
 
+  it("requires a complete scoped mirror proof before Blotter claims a derived exact query", () => {
+    const blotter = loadJson(
+      join(fixtureDir, "execution-full-blotter.partial.valid.json"),
+    ) as { data: { exact_query: Record<string, unknown> } } & Record<string, unknown>;
+    const validate = ajv.getSchema(
+      "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+    );
+    expect(validate).toBeDefined();
+    expect(validate!(blotter)).toBe(true);
+
+    const { mirror_revision: _mirrorRevision, ...withoutMirror } = blotter.data.exact_query;
+    expect(validate!({
+      ...blotter,
+      data: { ...blotter.data, exact_query: withoutMirror },
+    })).toBe(false);
+    expect(validate!({
+      ...blotter,
+      data: {
+        ...blotter.data,
+        exact_query: { ...blotter.data.exact_query, state: "AVAILABLE", authority: null },
+      },
+    })).toBe(false);
+  });
+
   it("rejects unknown fields in every canonical schema", () => {
     const problem = loadJson(join(fixtureDir, "problem.valid.json")) as Record<string, unknown>;
     const validate = ajv.getSchema(
@@ -1256,9 +1280,12 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     });
     expect(candles).toMatchObject({
       logical_operation_id: "managerMarketContextCandlesV1",
-      environment: "sandbox",
-      profile_id: "SANDBOX_BINANCE_USDM",
+      environment: "paper",
+      profile_id: "PAPER_BINANCE_USDM",
       provenance: { history_semantics: "BOUNDED_PROVIDER_SERIES_NO_REPLAY_CLAIM", derived: false },
+      source_health: { completeness: "POLL_BOUNDED" },
+      coverage: "UNKNOWN",
+      sampling: "SOURCE_BOUNDED",
     });
     expect(latest.observations).toHaveLength(1);
     expect(candles.candles).toHaveLength(2);

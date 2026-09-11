@@ -246,6 +246,41 @@ describe("Phase 1 SGP-local profile projection", () => {
     expect(namedCalls).toBe(0);
   });
 
+  it("publishes Blotter derived totals only for a complete local orders population and aggregates the filtered scope", async () => {
+    const complete = deploymentScopeDocument();
+    complete.relations["manager.orders:orders"].items[0]!.fields.status = "FILLED";
+    await commit(complete, "cursor-r2-3-complete");
+    const source = new ExecutionProductReadSource(config, repository, {
+      relationPage: async () => { throw new Error("unexpected named warm-up read"); },
+    } as never);
+    const principal = {
+      principalId: "usr_bobby", sessionId: "ses_r2_3", workspaceId,
+      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
+    };
+
+    const exact = await source.relation(
+      principal, "paper", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders", "orders",
+      { limit: 50, status: "FILLED", sort: "submitted_at_desc" },
+    ) as any;
+    expect(exact.source.data).toMatchObject({
+      projected_total_items: 201,
+      filtered_total_items: 1,
+      window_aggregates: { status: { FILLED: 1 }, venue: { BINANCE: 1 }, side: { UNKNOWN: 1 } },
+    });
+
+    const partial = deploymentScopeDocument();
+    partial.relations["manager.orders:orders"].items[0]!.fields.status = "FILLED";
+    partial.relations["manager.orders:orders"].completeness = "PARTIAL";
+    await commit(partial, "cursor-r2-3-partial");
+    const withheld = await source.relation(
+      principal, "paper", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders", "orders",
+      { limit: 50, status: "FILLED", sort: "submitted_at_desc" },
+    ) as any;
+    expect(withheld.source.data).not.toHaveProperty("projected_total_items");
+    expect(withheld.source.data).not.toHaveProperty("filtered_total_items");
+    expect(withheld.source.data).not.toHaveProperty("window_aggregates");
+  });
+
   it("rejects cross-profile row lineage before persistence", async () => {
     const invalid = document("alpha-1");
     invalid.relations[relationKey].items[0].lineage.profile_id = "LIVE_BINANCE_USDM";
