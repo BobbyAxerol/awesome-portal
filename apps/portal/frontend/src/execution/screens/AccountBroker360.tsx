@@ -25,7 +25,8 @@ import type { BindingExposure } from "../analytics";
 import { isFullPopulation } from "../analytics";
 import { AuthorityBadge, EnvironmentBadge, StatusChip } from "../components/badges";
 import { PanelState } from "../components/states";
-import { Money, Num, Published, Stamp } from "../components/cells";
+import { Money, Num, Published, Stamp, exactTitle } from "../components/cells";
+import { formatExact } from "../formatExact";
 import type { ExactUnit } from "../formatExact";
 import { capNotice, capPreserving } from "../components/cap";
 
@@ -317,10 +318,24 @@ export function HeadroomBanner({
             ? "Aggregate virtual exposure is within physical broker headroom"
             : "Aggregate headroom could not be determined"}
       </div>
+      {/*
+        * Through the formatter like every other figure on this screen. This
+        * line read `free balance 20000` three rows under `EQUITY 20,000.00`,
+        * which is the same number written two ways on one screen — and the
+        * reason the raw-decimal defect was easy to miss in the first place.
+        * A value the source did not send passes through untouched, because
+        * "not published" is not a number and must never be grouped.
+        */}
       <p className="exec-360-headroomline">
-        <span className="exec-num">{aggregate.virtualLabel ?? "Σ virtual"} {aggregate.virtualTotal}</span> vs{" "}
-        <span className="exec-num">{aggregate.physicalLabel ?? "physical"} {aggregate.physicalTotal}</span> (
-        <span className="exec-num">Δ {aggregate.headroom}</span> {aggregate.currency})
+        <span className="exec-num" title={exactTitle(aggregate.virtualTotal)}>
+          {aggregate.virtualLabel ?? "Σ virtual"} {formatExact(aggregate.virtualTotal, "money").display}
+        </span> vs{" "}
+        <span className="exec-num" title={exactTitle(aggregate.physicalTotal)}>
+          {aggregate.physicalLabel ?? "physical"} {formatExact(aggregate.physicalTotal, "money").display}
+        </span> (
+        <span className="exec-num" title={exactTitle(aggregate.headroom)}>
+          Δ {formatExact(aggregate.headroom, "money").display}
+        </span> {aggregate.currency})
       </p>
       {aggregate.verdict === "EXCEEDED" ? (
         <p className="exec-360-note">
